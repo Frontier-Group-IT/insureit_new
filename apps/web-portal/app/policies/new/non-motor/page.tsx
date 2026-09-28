@@ -16,6 +16,7 @@ type IntermediaryRow = {
   display_name: string;
   intermediary_code: string | null;
   associate_employee_id: string | null;
+  mobile: string | null;
 };
 
 export default async function NewNonMotorPolicyPage() {
@@ -32,7 +33,7 @@ export default async function NewNonMotorPolicyPage() {
   const [insurersResult, customersResult, intermediariesResult] = await Promise.all([
     admin.from("insurance_companies").select("id,name").eq("is_active", true).order("name", { ascending: true }).returns<InsurerRow[]>(),
     admin.from("customers").select("id,contact_name,company_name,phone,email").order("contact_name", { ascending: true }).limit(750).returns<CustomerRow[]>(),
-    admin.from("intermediaries").select("id,intermediary_type,display_name,intermediary_code,associate_employee_id").in("intermediary_type", ["posp", "misp", "partner"]).eq("account_status", "active").order("display_name", { ascending: true }).returns<IntermediaryRow[]>(),
+    admin.from("intermediaries").select("id,intermediary_type,display_name,intermediary_code,associate_employee_id,mobile").in("intermediary_type", ["posp", "misp", "partner"]).eq("account_status", "active").order("display_name", { ascending: true }).returns<IntermediaryRow[]>(),
   ]);
 
   if (insurersResult.error || customersResult.error || intermediariesResult.error) return <SetupError />;
@@ -55,6 +56,7 @@ export default async function NewNonMotorPolicyPage() {
         code: item.intermediary_code!.trim(),
         rmName: associate?.full_name?.trim() || "",
         rmCode: associate?.employee_code?.trim() || "",
+        mobile: item.mobile?.replace(/\D/g, "").slice(-10) || "",
       };
     });
 
