@@ -304,8 +304,8 @@ jobs:
           elif grep -qx 'supabase/migrations/20260925103000_customer_signup_direct_master_kyc_submit.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-customer-signup-direct-master-kyc-submit.yml"
             echo "Customer signup direct-master/KYC-submit migration detected. Waiting for its schema workflow..."
-          elif grep -qx 'supabase/migrations/202609280001_link_customer_policy_copy_to_external_policy.sql' <<<"$changed_migrations"; then
-            unexpected_migrations=$(grep -vx 'supabase/migrations/202609280001_link_customer_policy_copy_to_external_policy.sql' <<<"$changed_migrations" || true)
+          elif grep -qx 'supabase/migrations/20260928061127_link_customer_policy_copy_to_external_policy.sql' <<<"$changed_migrations"; then
+            unexpected_migrations=$(grep -vx 'supabase/migrations/20260928061127_link_customer_policy_copy_to_external_policy.sql' <<<"$changed_migrations" || true)
             if [[ -n "$unexpected_migrations" ]]; then
               echo "::error::External policy copy release contains an unrelated migration:"
               echo "$unexpected_migrations"
