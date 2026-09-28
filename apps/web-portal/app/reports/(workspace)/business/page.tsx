@@ -18,6 +18,13 @@ const PERIODS = [
   { value: "all", label: "All time" },
 ] as const;
 
+const STANDARD_BUSINESS_TYPES = [
+  { key: "motor", name: "Motor" },
+  { key: "non motor", name: "Non Motor" },
+  { key: "life", name: "Life" },
+  { key: "health", name: "Health" },
+] as const;
+
 type BusinessPageQuery = PolicyBusinessQuery & { mix?: string };
 type Props = { searchParams: Promise<BusinessPageQuery> };
 type CommercialRow = {
@@ -39,22 +46,13 @@ export default async function ReportsPage({ searchParams }: Props) {
   const query = await searchParams;
   const businessQuery: PolicyBusinessQuery = { ...query, page: "1", pageSize: "5000" };
   const financeQuery: FinanceQuery = { ...query, period: query.period ?? "mtd", page: "1", pageSize: "5000" };
-
   const [businessResult, financeResult] = await Promise.all([
-    loadCompletePolicyBusinessNetReport(profile, businessQuery)
-      .then((data) => ({ data, error: null as unknown }))
-      .catch((error) => ({ data: null, error })),
-    loadCompleteFinanceReport(profile, financeQuery)
-      .then((data) => ({ data, error: null as unknown }))
-      .catch((error) => ({ data: null, error })),
+    loadCompletePolicyBusinessNetReport(profile, businessQuery).then((data) => ({ data, error: null as unknown })).catch((error) => ({ data: null, error })),
+    loadCompleteFinanceReport(profile, financeQuery).then((data) => ({ data, error: null as unknown })).catch((error) => ({ data: null, error })),
   ]);
 
-  if (businessResult.error) {
-    console.error("[reports] business report failed", businessResult.error instanceof Error ? businessResult.error.message : "unknown error");
-  }
-  if (financeResult.error) {
-    console.error("[reports] business commercials failed", financeResult.error instanceof Error ? financeResult.error.message : "unknown error");
-  }
+  if (businessResult.error) console.error("[reports] business report failed", businessResult.error instanceof Error ? businessResult.error.message : "unknown error");
+  if (financeResult.error) console.error("[reports] business commercials failed", financeResult.error instanceof Error ? financeResult.error.message : "unknown error");
 
   const report = businessResult.data?.report ?? emptyBusinessReport();
   const filters = businessResult.data?.filters ?? fallbackFilters();
@@ -62,7 +60,6 @@ export default async function ReportsPage({ searchParams }: Props) {
   const loadError = Boolean(businessResult.error || financeResult.error);
   const mixMode = query.mix === "insurer" || query.mix === "rm" ? query.mix : "business-type";
   const exportHref = reportHref("/reports/export/policy-business", filters);
-
   const insurerRows = buildInsurerRows(finance);
   const rmRows = buildRmRows(finance);
   const intermediaryRows = buildIntermediaryRows(finance, report);
@@ -75,146 +72,102 @@ export default async function ReportsPage({ searchParams }: Props) {
   const mixTitle = mixMode === "insurer" ? "Insurer" : mixMode === "rm" ? "RM" : "Business Type";
 
   return (
-    <ReportPageShell persistentHeader
-        title="Business"
-        loadError={loadError}
-        actions={<ReportExportLink href={exportHref} />}
-        controls={
-          <ReportQueryShortcuts
-            label="Period"
-            param="period"
-            activeValue={filters.period}
-            options={PERIODS}
-            showActiveFilterCount={false}
-            trailing={
-              <>
-                {filters.period === "custom" ? <CustomDateRange filters={filters} /> : null}
-                <ReportCompactFilters
-                  path="/reports/business"
-                  businessLine={filters.businessLine}
-                  category={filters.category}
-                  categories={report.filters.categories}
-                  period={filters.period}
-                  fromDate={filters.fromDate}
-                  toDate={filters.toDate}
-                  compactDrawer
-                  clearAppliedFilters
-                  fields={[
-                    { name: "insurer", label: "Insurance company", value: filters.insurerId ?? "", options: report.filters.insurers.map((item) => ({ value: item.id, label: item.name })) },
-                    { name: "rm", label: "Relationship manager", value: filters.rmEmployeeId ?? "", options: report.filters.rms.map((item) => ({ value: item.id, label: item.name })) },
-                    { name: "intermediary", label: "Partner / intermediary", value: filters.intermediaryCode ?? "", options: report.filters.intermediaries.map((item) => ({ value: item.code, label: item.name !== item.code ? item.name + " · " + item.code : item.name })) },
-                  ]}
-                />
-              </>
-            }
-          />
-        }
-      >
-        <CommercialFlow finance={finance} policyCount={report.summary.policy_count} />
+    <ReportPageShell
+      persistentHeader
+      title="Business"
+      loadError={loadError}
+      actions={<ReportExportLink href={exportHref} />}
+      controls={
+        <ReportQueryShortcuts
+          label="Period"
+          param="period"
+          activeValue={filters.period}
+          options={PERIODS}
+          showActiveFilterCount={false}
+          trailing={
+            <>
+              {filters.period === "custom" ? <CustomDateRange filters={filters} /> : null}
+              <ReportCompactFilters
+                path="/reports/business"
+                businessLine={filters.businessLine}
+                category={filters.category}
+                categories={report.filters.categories}
+                period={filters.period}
+                fromDate={filters.fromDate}
+                toDate={filters.toDate}
+                compactDrawer
+                clearAppliedFilters
+                fields={[
+                  { name: "insurer", label: "Insurance company", value: filters.insurerId ?? "", options: report.filters.insurers.map((item) => ({ value: item.id, label: item.name })) },
+                  { name: "rm", label: "Relationship manager", value: filters.rmEmployeeId ?? "", options: report.filters.rms.map((item) => ({ value: item.id, label: item.name })) },
+                  { name: "intermediary", label: "Partner / intermediary", value: filters.intermediaryCode ?? "", options: report.filters.intermediaries.map((item) => ({ value: item.code, label: item.name !== item.code ? item.name + " · " + item.code : item.name })) },
+                ]}
+              />
+            </>
+          }
+        />
+      }
+    >
+      <CommercialFlow finance={finance} policyCount={report.summary.policy_count} />
 
-        <section className="grid gap-3 xl:grid-cols-2">
-          <article className="portal-card overflow-hidden">
-            <div className="flex min-h-12 flex-wrap items-center justify-between gap-2 border-b border-[#e6ebf2] px-4 py-2.5">
-              <HeaderTitle title="Business Mix" />
-              <div className="inline-flex overflow-hidden rounded-lg border border-[#dbe3ee] bg-white text-[9px] font-bold">
-                <MixTab href={reportHref("/reports/business", filters, "business-type")} active={mixMode === "business-type"}>Business Type</MixTab>
-                <MixTab href={reportHref("/reports/business", filters, "insurer")} active={mixMode === "insurer"}>Insurer</MixTab>
-                <MixTab href={reportHref("/reports/business", filters, "rm")} active={mixMode === "rm"}>RM</MixTab>
-              </div>
+      <section className="grid gap-3 xl:grid-cols-2">
+        <article className="portal-card flex h-[238px] min-h-0 flex-col overflow-hidden">
+          <div className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[#e6ebf2] px-4 py-2.5">
+            <HeaderTitle title="Business Mix" />
+            <div className="inline-flex overflow-hidden rounded-lg border border-[#dbe3ee] bg-white text-[9px] font-bold">
+              <MixTab href={reportHref("/reports/business", filters, "business-type")} active={mixMode === "business-type"}>Business Type</MixTab>
+              <MixTab href={reportHref("/reports/business", filters, "insurer")} active={mixMode === "insurer"}>Insurer</MixTab>
+              <MixTab href={reportHref("/reports/business", filters, "rm")} active={mixMode === "rm"}>RM</MixTab>
             </div>
-            <BusinessMix rows={mixRows} label={mixTitle} />
-          </article>
+          </div>
+          <BusinessMix rows={mixRows} label={mixTitle} />
+        </article>
 
-          <article className="portal-card overflow-hidden">
-            <Header title="Insurer" />
-            <InsurerTable rows={insurerRows} />
-          </article>
-        </section>
+        <article className="portal-card flex h-[238px] min-h-0 flex-col overflow-hidden">
+          <Header title="Insurer" />
+          <InsurerTable rows={insurerRows} />
+        </article>
+      </section>
 
-        <section className="portal-card overflow-hidden">
-          <Header title="RM Performance" />
-          <RmTable rows={rmRows} />
-        </section>
+      <section className="portal-card overflow-hidden">
+        <Header title="RM Performance" />
+        <RmTable rows={rmRows} />
+      </section>
 
-        <section className="portal-card overflow-hidden">
-          <Header title="Intermediaries Business" />
-          <IntermediaryTable rows={intermediaryRows} />
-        </section>
-      </ReportPageShell>
+      <section className="portal-card overflow-hidden">
+        <Header title="Intermediaries Business" />
+        <IntermediaryTable rows={intermediaryRows} />
+      </section>
+    </ReportPageShell>
   );
 }
 
-async function loadCompletePolicyBusinessNetReport(
-  profile: Parameters<typeof loadPolicyBusinessNetReport>[0],
-  query: PolicyBusinessQuery,
-) {
+async function loadCompletePolicyBusinessNetReport(profile: Parameters<typeof loadPolicyBusinessNetReport>[0], query: PolicyBusinessQuery) {
   const first = await loadPolicyBusinessNetReport(profile, query);
   const pageSize = Math.max(first.report.register.page_size, 1);
   const totalPages = Math.max(1, Math.ceil(first.report.register.total_count / pageSize));
   if (totalPages === 1) return first;
-
-  const remaining = await Promise.all(
-    Array.from({ length: totalPages - 1 }, (_, index) =>
-      loadPolicyBusinessNetReport(profile, {
-        ...query,
-        page: String(index + 2),
-        pageSize: String(pageSize),
-      }),
-    ),
-  );
+  const remaining = await Promise.all(Array.from({ length: totalPages - 1 }, (_, index) => loadPolicyBusinessNetReport(profile, { ...query, page: String(index + 2), pageSize: String(pageSize) })));
   const allRows = [first, ...remaining].flatMap((result) => result.report.register.rows);
   const uniqueRows = Array.from(new Map(allRows.map((row) => [row.id, row])).values());
-  return {
-    ...first,
-    report: {
-      ...first.report,
-      register: {
-        ...first.report.register,
-        rows: uniqueRows,
-      },
-    },
-  };
+  return { ...first, report: { ...first.report, register: { ...first.report.register, rows: uniqueRows } } };
 }
 
-async function loadCompleteFinanceReport(
-  profile: Parameters<typeof loadFinanceReport>[0],
-  query: FinanceQuery,
-) {
+async function loadCompleteFinanceReport(profile: Parameters<typeof loadFinanceReport>[0], query: FinanceQuery) {
   const first = await loadFinanceReport(profile, query);
   const pageSize = Math.max(first.report.register.page_size, 1);
   const totalPages = Math.max(1, Math.ceil(first.report.register.total_count / pageSize));
   if (totalPages === 1) return first;
-
-  const remaining = await Promise.all(
-    Array.from({ length: totalPages - 1 }, (_, index) =>
-      loadFinanceReport(profile, {
-        ...query,
-        page: String(index + 2),
-        pageSize: String(pageSize),
-      }),
-    ),
-  );
+  const remaining = await Promise.all(Array.from({ length: totalPages - 1 }, (_, index) => loadFinanceReport(profile, { ...query, page: String(index + 2), pageSize: String(pageSize) })));
   const allRows = [first, ...remaining].flatMap((result) => result.report.register.rows);
   const uniqueRows = Array.from(new Map(allRows.map((row) => [row.id, row])).values());
-  return {
-    ...first,
-    report: {
-      ...first.report,
-      register: {
-        ...first.report.register,
-        rows: uniqueRows,
-      },
-    },
-  };
+  return { ...first, report: { ...first.report, register: { ...first.report.register, rows: uniqueRows } } };
 }
 
 function CommercialFlow({ finance, policyCount }: { finance: FinanceReport; policyCount: number }) {
   const retentionRate = ratio(finance.summary.retention_amount, finance.summary.projected_payin);
   return (
     <section className="portal-card overflow-hidden">
-      <div className="border-b border-[#e6ebf2] px-4 py-3">
-        <HeaderTitle title="Commercial Flow" />
-      </div>
       <div className="grid sm:grid-cols-2 xl:grid-cols-4">
         <FlowMetric label="Net Premium" value={currency(finance.summary.net_premium)} note={integer(policyCount) + " policies"} />
         <FlowMetric label="Expected Pay-in" value={currency(finance.summary.projected_payin)} note={percent(ratio(finance.summary.projected_payin, finance.summary.net_premium)) + " of net premium"} />
@@ -240,11 +193,11 @@ function MixTab({ href, active, children }: { href: string; active: boolean; chi
 }
 
 function BusinessMix({ rows, label }: { rows: Array<{ key: string; name: string; policies: number; value: number }>; label: string }) {
-  if (!rows.length) return <Empty />;
+  if (!rows.length) return <div className="min-h-0 flex-1 overflow-y-auto"><Empty /></div>;
   const total = Math.max(rows.reduce((sum, row) => sum + row.value, 0), 1);
   const max = Math.max(...rows.map((row) => row.value), 1);
   return (
-    <div className="max-h-[330px] overflow-y-auto">
+    <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="sticky top-0 z-10 grid grid-cols-[28px_minmax(120px,1fr)_minmax(180px,1.5fr)_58px] gap-2 bg-[#f8fafc] px-4 py-2 text-[8px] font-black uppercase tracking-[.06em] text-[#7a899c]">
         <span>#</span><span>{label}</span><span>Net Premium</span><span className="text-right">Share</span>
       </div>
@@ -258,7 +211,7 @@ function BusinessMix({ rows, label }: { rows: Array<{ key: string; name: string;
             </div>
             <div className="grid grid-cols-[minmax(0,1fr)_62px] items-center gap-2">
               <div className="h-2 overflow-hidden rounded-sm bg-[#e9eef5]">
-                <div className="h-full rounded-sm bg-[#347ed0]" style={{ width: Math.max((row.value / max) * 100, 2) + "%" }} />
+                <div className="h-full rounded-sm bg-[#347ed0]" style={{ width: row.value > 0 ? Math.max((row.value / max) * 100, 2) + "%" : "0%" }} />
               </div>
               <span className="text-right font-bold tabular-nums">{compactCurrency(row.value)}</span>
             </div>
@@ -271,18 +224,13 @@ function BusinessMix({ rows, label }: { rows: Array<{ key: string; name: string;
 }
 
 function InsurerTable({ rows }: { rows: CommercialRow[] }) {
-  if (!rows.length) return <Empty />;
+  if (!rows.length) return <div className="min-h-0 flex-1 overflow-auto"><Empty /></div>;
   return (
-    <div className="max-h-[330px] overflow-auto">
+    <div className="min-h-0 flex-1 overflow-auto">
       <table className="w-full min-w-[840px] border-collapse">
         <thead className="sticky top-0 z-10 bg-[#f8fafc]">
           <tr className="text-[8px] font-black uppercase tracking-[.06em] text-[#7a899c]">
-            <th className="px-4 py-2.5 text-left">Insurer Name</th>
-            <th className="px-3 py-2.5 text-right">Policies</th>
-            <th className="px-3 py-2.5 text-right">Net Premium</th>
-            <th className="px-3 py-2.5 text-right">Pay-in</th>
-            <th className="px-3 py-2.5 text-right">Retention Amount</th>
-            <th className="px-4 py-2.5 text-right">%</th>
+            <th className="px-4 py-2.5 text-left">Insurer Name</th><th className="px-3 py-2.5 text-right">Policies</th><th className="px-3 py-2.5 text-right">Net Premium</th><th className="px-3 py-2.5 text-right">Pay-in</th><th className="px-3 py-2.5 text-right">Retention Amount</th><th className="px-4 py-2.5 text-right">%</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-[#edf1f5]">
@@ -290,17 +238,8 @@ function InsurerTable({ rows }: { rows: CommercialRow[] }) {
             const logo = getInsurerLogo(row.name);
             return (
               <tr key={row.key} className="text-[9.5px] text-[#40536d]">
-                <td className="px-4 py-2.5 font-semibold">
-                  <div className="flex min-w-0 items-center gap-2">
-                    {logo ? <Image src={logo} alt={row.name + " logo"} width={24} height={20} className="max-h-5 max-w-7 shrink-0 object-contain" /> : null}
-                    <span className="truncate">{row.name}</span>
-                  </div>
-                </td>
-                <td className="px-3 py-2.5 text-right tabular-nums">{integer(row.policies)}</td>
-                <td className="px-3 py-2.5 text-right font-bold tabular-nums">{currency(row.netPremium)}</td>
-                <td className="px-3 py-2.5 text-right tabular-nums">{currency(row.payin)}</td>
-                <td className="px-3 py-2.5 text-right tabular-nums">{currency(row.retention)}</td>
-                <td className="px-4 py-2.5 text-right tabular-nums">{percent(ratio(row.retention, row.payin))}</td>
+                <td className="px-4 py-2.5 font-semibold"><div className="flex min-w-0 items-center gap-2">{logo ? <Image src={logo} alt={row.name + " logo"} width={24} height={20} className="max-h-5 max-w-7 shrink-0 object-contain" /> : null}<span className="truncate">{row.name}</span></div></td>
+                <td className="px-3 py-2.5 text-right tabular-nums">{integer(row.policies)}</td><td className="px-3 py-2.5 text-right font-bold tabular-nums">{currency(row.netPremium)}</td><td className="px-3 py-2.5 text-right tabular-nums">{currency(row.payin)}</td><td className="px-3 py-2.5 text-right tabular-nums">{currency(row.retention)}</td><td className="px-4 py-2.5 text-right tabular-nums">{percent(ratio(row.retention, row.payin))}</td>
               </tr>
             );
           })}
@@ -313,72 +252,14 @@ function InsurerTable({ rows }: { rows: CommercialRow[] }) {
 function RmTable({ rows }: { rows: CommercialRow[] }) {
   if (!rows.length) return <Empty />;
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[1110px] border-collapse">
-        <thead className="sticky top-0 z-10 bg-[#f8fafc]">
-          <tr className="text-[8px] font-black uppercase tracking-[.06em] text-[#7a899c]">
-            <th className="px-5 py-2.5 text-left">RM Name</th>
-            <th className="px-3 py-2.5 text-right">Policies</th>
-            <th className="px-3 py-2.5 text-right">Net Premium</th>
-            <th className="px-3 py-2.5 text-right">Pay-in</th>
-            <th className="px-3 py-2.5 text-right">Payout</th>
-            <th className="px-3 py-2.5 text-right">Retention Amount</th>
-            <th className="px-5 py-2.5 text-right">%</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-[#edf1f5]">
-          {rows.map((row) => (
-            <tr key={row.key} className="text-[9.8px] text-[#40536d]">
-              <td className="px-5 py-2.5 font-semibold">{row.name}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{integer(row.policies)}</td>
-              <td className="px-3 py-2.5 text-right font-bold tabular-nums">{currency(row.netPremium)}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{currency(row.payin)}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{currency(row.payout)}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{currency(row.retention)}</td>
-              <td className="px-5 py-2.5 text-right tabular-nums">{percent(ratio(row.retention, row.payin))}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <div className="overflow-x-auto"><table className="w-full min-w-[1110px] border-collapse"><thead className="sticky top-0 z-10 bg-[#f8fafc]"><tr className="text-[8px] font-black uppercase tracking-[.06em] text-[#7a899c]"><th className="px-5 py-2.5 text-left">RM Name</th><th className="px-3 py-2.5 text-right">Policies</th><th className="px-3 py-2.5 text-right">Net Premium</th><th className="px-3 py-2.5 text-right">Pay-in</th><th className="px-3 py-2.5 text-right">Payout</th><th className="px-3 py-2.5 text-right">Retention Amount</th><th className="px-5 py-2.5 text-right">%</th></tr></thead><tbody className="divide-y divide-[#edf1f5]">{rows.map((row) => <tr key={row.key} className="text-[9.8px] text-[#40536d]"><td className="px-5 py-2.5 font-semibold">{row.name}</td><td className="px-3 py-2.5 text-right tabular-nums">{integer(row.policies)}</td><td className="px-3 py-2.5 text-right font-bold tabular-nums">{currency(row.netPremium)}</td><td className="px-3 py-2.5 text-right tabular-nums">{currency(row.payin)}</td><td className="px-3 py-2.5 text-right tabular-nums">{currency(row.payout)}</td><td className="px-3 py-2.5 text-right tabular-nums">{currency(row.retention)}</td><td className="px-5 py-2.5 text-right tabular-nums">{percent(ratio(row.retention, row.payin))}</td></tr>)}</tbody></table></div>
   );
 }
 
 function IntermediaryTable({ rows }: { rows: CommercialRow[] }) {
   if (!rows.length) return <Empty />;
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[1370px] border-collapse">
-        <thead className="sticky top-0 z-10 bg-[#f8fafc]">
-          <tr className="text-[8px] font-black uppercase tracking-[.06em] text-[#7a899c]">
-            <th className="px-5 py-2.5 text-left">Name / Intermediary</th>
-            <th className="px-3 py-2.5 text-left">Type</th>
-            <th className="px-3 py-2.5 text-left">RM</th>
-            <th className="px-3 py-2.5 text-right">Policies</th>
-            <th className="px-3 py-2.5 text-right">Net Premium</th>
-            <th className="px-3 py-2.5 text-right">Pay-in</th>
-            <th className="px-3 py-2.5 text-right">Payout</th>
-            <th className="px-3 py-2.5 text-right">Retention Amount</th>
-            <th className="px-5 py-2.5 text-right">%</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-[#edf1f5]">
-          {rows.map((row) => (
-            <tr key={row.key} className="text-[9.8px] text-[#40536d]">
-              <td className="px-5 py-2.5 font-semibold">{row.name}</td>
-              <td className="px-3 py-2.5 font-semibold uppercase">{row.type || "—"}</td>
-              <td className="px-3 py-2.5">{row.rm || "Unassigned"}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{integer(row.policies)}</td>
-              <td className="px-3 py-2.5 text-right font-bold tabular-nums">{currency(row.netPremium)}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{currency(row.payin)}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{currency(row.payout)}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{currency(row.retention)}</td>
-              <td className="px-5 py-2.5 text-right tabular-nums">{percent(ratio(row.retention, row.payin))}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <div className="overflow-x-auto"><table className="w-full min-w-[1370px] border-collapse"><thead className="sticky top-0 z-10 bg-[#f8fafc]"><tr className="text-[8px] font-black uppercase tracking-[.06em] text-[#7a899c]"><th className="px-5 py-2.5 text-left">Name / Intermediary</th><th className="px-3 py-2.5 text-left">Type</th><th className="px-3 py-2.5 text-left">RM</th><th className="px-3 py-2.5 text-right">Policies</th><th className="px-3 py-2.5 text-right">Net Premium</th><th className="px-3 py-2.5 text-right">Pay-in</th><th className="px-3 py-2.5 text-right">Payout</th><th className="px-3 py-2.5 text-right">Retention Amount</th><th className="px-5 py-2.5 text-right">%</th></tr></thead><tbody className="divide-y divide-[#edf1f5]">{rows.map((row) => <tr key={row.key} className="text-[9.8px] text-[#40536d]"><td className="px-5 py-2.5 font-semibold">{row.name}</td><td className="px-3 py-2.5 font-semibold uppercase">{row.type || "—"}</td><td className="px-3 py-2.5">{row.rm || "Unassigned"}</td><td className="px-3 py-2.5 text-right tabular-nums">{integer(row.policies)}</td><td className="px-3 py-2.5 text-right font-bold tabular-nums">{currency(row.netPremium)}</td><td className="px-3 py-2.5 text-right tabular-nums">{currency(row.payin)}</td><td className="px-3 py-2.5 text-right tabular-nums">{currency(row.payout)}</td><td className="px-3 py-2.5 text-right tabular-nums">{currency(row.retention)}</td><td className="px-5 py-2.5 text-right tabular-nums">{percent(ratio(row.retention, row.payin))}</td></tr>)}</tbody></table></div>
   );
 }
 
@@ -418,39 +299,38 @@ function buildIntermediaryRows(finance: FinanceReport, report: PolicyBusinessNet
     addCommercialRow(current, row.net_premium, row.projected_payin, row.gross_payout, row.retention_amount);
     totals.set(code, current);
   }
-  return Array.from(totals.values())
-    .map((row) => ({ ...row, rm: row.rmNames.size === 0 ? "Unassigned" : row.rmNames.size === 1 ? Array.from(row.rmNames)[0] : "Multiple RMs" }))
-    .sort((a, b) => b.netPremium - a.netPremium || b.policies - a.policies || a.name.localeCompare(b.name));
+  return Array.from(totals.values()).map((row) => ({ ...row, rm: row.rmNames.size === 0 ? "Unassigned" : row.rmNames.size === 1 ? Array.from(row.rmNames)[0] : "Multiple RMs" })).sort((a, b) => b.netPremium - a.netPremium || b.policies - a.policies || a.name.localeCompare(b.name));
+}
+
+function canonicalBusinessType(value: string) {
+  const normalized = value.trim().toLowerCase().replace(/[-_]+/g, " ").replace(/\s+/g, " ");
+  if (normalized === "motor") return { key: "motor", name: "Motor" };
+  if (normalized === "non motor" || normalized === "nonmotor") return { key: "non motor", name: "Non Motor" };
+  if (normalized === "life") return { key: "life", name: "Life" };
+  if (normalized === "health") return { key: "health", name: "Health" };
+  return { key: normalized || "unclassified", name: value.trim() || "Unclassified" };
 }
 
 function buildBusinessTypeRows(report: PolicyBusinessNetReport) {
   const totals = new Map<string, { key: string; name: string; policies: number; value: number }>();
+  for (const item of STANDARD_BUSINESS_TYPES) totals.set(item.key, { ...item, policies: 0, value: 0 });
   for (const row of report.register.rows) {
-    const name = row.business_type?.trim() || row.business_line?.trim() || row.category?.trim() || "Unclassified";
-    const key = name.toLowerCase();
-    const current = totals.get(key) ?? { key, name, policies: 0, value: 0 };
+    const source = row.business_type?.trim() || row.business_line?.trim() || row.category?.trim() || "Unclassified";
+    const type = canonicalBusinessType(source);
+    const current = totals.get(type.key) ?? { ...type, policies: 0, value: 0 };
     current.policies += 1;
     current.value += row.net_premium || 0;
-    totals.set(key, current);
+    totals.set(type.key, current);
   }
-  return Array.from(totals.values()).sort((a, b) => b.value - a.value || b.policies - a.policies || a.name.localeCompare(b.name));
+  const standardKeys = new Set(STANDARD_BUSINESS_TYPES.map((item) => item.key));
+  const standardRows = STANDARD_BUSINESS_TYPES.map((item) => totals.get(item.key)!);
+  const extraRows = Array.from(totals.values()).filter((row) => !standardKeys.has(row.key)).sort((a, b) => b.value - a.value || b.policies - a.policies || a.name.localeCompare(b.name));
+  return [...standardRows, ...extraRows];
 }
 
-function baseCommercialRow(key: string, name: string): CommercialRow {
-  return { key, name, policies: 0, netPremium: 0, payin: 0, payout: 0, retention: 0 };
-}
-
-function addCommercialRow(target: CommercialRow, netPremium: number, payin: number, payout: number, retention: number) {
-  target.policies += 1;
-  target.netPremium += netPremium || 0;
-  target.payin += payin || 0;
-  target.payout += payout || 0;
-  target.retention += retention || 0;
-}
-
-function sortCommercialRows(totals: Map<string, CommercialRow>) {
-  return Array.from(totals.values()).sort((a, b) => b.netPremium - a.netPremium || b.policies - a.policies || a.name.localeCompare(b.name));
-}
+function baseCommercialRow(key: string, name: string): CommercialRow { return { key, name, policies: 0, netPremium: 0, payin: 0, payout: 0, retention: 0 }; }
+function addCommercialRow(target: CommercialRow, netPremium: number, payin: number, payout: number, retention: number) { target.policies += 1; target.netPremium += netPremium || 0; target.payin += payin || 0; target.payout += payout || 0; target.retention += retention || 0; }
+function sortCommercialRows(totals: Map<string, CommercialRow>) { return Array.from(totals.values()).sort((a, b) => b.netPremium - a.netPremium || b.policies - a.policies || a.name.localeCompare(b.name)); }
 
 function CustomDateRange({ filters }: { filters: PolicyBusinessFilters }) {
   return (
@@ -461,64 +341,26 @@ function CustomDateRange({ filters }: { filters: PolicyBusinessFilters }) {
       {filters.intermediaryCode ? <input type="hidden" name="intermediary" value={filters.intermediaryCode} /> : null}
       {filters.businessLine ? <input type="hidden" name="business" value={filters.businessLine} /> : null}
       {filters.category ? <input type="hidden" name="category" value={filters.category} /> : null}
-      <label className="grid gap-1 text-[8px] font-black uppercase tracking-[.08em] text-[#7b8799]">
-        From
-        <input name="from" type="date" required defaultValue={filters.fromDate ?? ""} className="h-8 min-w-[132px] rounded-lg border border-[#d7dfeb] bg-white px-2.5 text-[10px] font-semibold text-[#263750] outline-none focus:border-[#5871aa]" />
-      </label>
-      <label className="grid gap-1 text-[8px] font-black uppercase tracking-[.08em] text-[#7b8799]">
-        To
-        <input name="to" type="date" required defaultValue={filters.toDate ?? ""} className="h-8 min-w-[132px] rounded-lg border border-[#d7dfeb] bg-white px-2.5 text-[10px] font-semibold text-[#263750] outline-none focus:border-[#5871aa]" />
-      </label>
+      <label className="grid gap-1 text-[8px] font-black uppercase tracking-[.08em] text-[#7b8799]">From<input name="from" type="date" required defaultValue={filters.fromDate ?? ""} className="h-8 min-w-[132px] rounded-lg border border-[#d7dfeb] bg-white px-2.5 text-[10px] font-semibold text-[#263750] outline-none focus:border-[#5871aa]" /></label>
+      <label className="grid gap-1 text-[8px] font-black uppercase tracking-[.08em] text-[#7b8799]">To<input name="to" type="date" required defaultValue={filters.toDate ?? ""} className="h-8 min-w-[132px] rounded-lg border border-[#d7dfeb] bg-white px-2.5 text-[10px] font-semibold text-[#263750] outline-none focus:border-[#5871aa]" /></label>
       <button type="submit" className="h-8 rounded-lg bg-[#223a78] px-3 text-[9.5px] font-bold text-white transition hover:bg-[#1c3167]">Apply</button>
     </form>
   );
 }
 
-function HeaderTitle({ title }: { title: string }) {
-  return <h2 className="text-[13px] font-bold text-[#1b2943]">{title}</h2>;
-}
-
-function Header({ title }: { title: string }) {
-  return <div className="border-b border-[#e6ebf2] px-4 py-3"><HeaderTitle title={title} /></div>;
-}
-
-function Empty() {
-  return <ReportEmptyState />;
-}
-
-
-function ratio(value: number, base: number) {
-  return base > 0 ? (value / base) * 100 : 0;
-}
-
-function currency(value: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0);
-}
-
-function compactCurrency(value: number) {
-  const number = Math.abs(value || 0);
-  const format = (amount: number, suffix: string) => "₹" + new Intl.NumberFormat("en-IN", { maximumFractionDigits: 1 }).format(amount) + " " + suffix;
-  if (number >= 1e7) return format(number / 1e7, "Cr");
-  if (number >= 1e5) return format(number / 1e5, "L");
-  if (number >= 1e3) return format(number / 1e3, "K");
-  return "₹" + integer(number);
-}
-
-function integer(value: number) {
-  return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value || 0);
-}
-
-function percent(value: number) {
-  return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 1 }).format(value || 0) + "%";
-}
+function HeaderTitle({ title }: { title: string }) { return <h2 className="text-[13px] font-bold text-[#1b2943]">{title}</h2>; }
+function Header({ title }: { title: string }) { return <div className="shrink-0 border-b border-[#e6ebf2] px-4 py-3"><HeaderTitle title={title} /></div>; }
+function Empty() { return <ReportEmptyState />; }
+function ratio(value: number, base: number) { return base > 0 ? (value / base) * 100 : 0; }
+function currency(value: number) { return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0); }
+function compactCurrency(value: number) { const number = Math.abs(value || 0); const format = (amount: number, suffix: string) => "₹" + new Intl.NumberFormat("en-IN", { maximumFractionDigits: 1 }).format(amount) + " " + suffix; if (number >= 1e7) return format(number / 1e7, "Cr"); if (number >= 1e5) return format(number / 1e5, "L"); if (number >= 1e3) return format(number / 1e3, "K"); return "₹" + integer(number); }
+function integer(value: number) { return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value || 0); }
+function percent(value: number) { return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 1 }).format(value || 0) + "%"; }
 
 function reportHref(path: string, filters: PolicyBusinessFilters, mix?: string) {
   const search = new URLSearchParams();
   search.set("period", filters.period);
-  if (filters.period === "custom") {
-    if (filters.fromDate) search.set("from", filters.fromDate);
-    if (filters.toDate) search.set("to", filters.toDate);
-  }
+  if (filters.period === "custom") { if (filters.fromDate) search.set("from", filters.fromDate); if (filters.toDate) search.set("to", filters.toDate); }
   if (filters.insurerId) search.set("insurer", filters.insurerId);
   if (filters.rmEmployeeId) search.set("rm", filters.rmEmployeeId);
   if (filters.intermediaryCode) search.set("intermediary", filters.intermediaryCode);
@@ -528,18 +370,10 @@ function reportHref(path: string, filters: PolicyBusinessFilters, mix?: string) 
   return path + "?" + search.toString();
 }
 
-function fallbackFilters(): PolicyBusinessFilters {
-  return { period: "mtd", fromDate: null, toDate: null, insurerId: null, rmEmployeeId: null, intermediaryCode: null, businessLine: null, category: null, page: 1 };
-}
-
+function fallbackFilters(): PolicyBusinessFilters { return { period: "mtd", fromDate: null, toDate: null, insurerId: null, rmEmployeeId: null, intermediaryCode: null, businessLine: null, category: null, page: 1 }; }
 function emptyBusinessReport(): PolicyBusinessNetReport {
   return {
     summary: { policy_count: 0, active_policy_count: 0, gross_premium: 0, net_premium: 0, od_premium: 0, tp_premium: 0, cpa_amount: 0, average_net_premium: 0, insurer_count: 0, intermediary_count: 0, motor_policy_count: 0, non_motor_policy_count: 0, motor_net_premium: 0, non_motor_net_premium: 0 },
-    trend: [],
-    category_mix: [],
-    insurers: [],
-    rms: [],
-    filters: { insurers: [], rms: [], intermediaries: [], categories: [] },
-    register: { rows: [], total_count: 0, page: 1, page_size: 25 },
+    trend: [], category_mix: [], insurers: [], rms: [], filters: { insurers: [], rms: [], intermediaries: [], categories: [] }, register: { rows: [], total_count: 0, page: 1, page_size: 25 },
   };
 }
