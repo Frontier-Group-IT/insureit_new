@@ -14,7 +14,10 @@ export default function ReportsWorkspaceLayout({ children }: { children: ReactNo
               </div>
               <ReportWorkspaceNavigation />
             </div>
-            <div id="reports-workspace-toolbar" className="reports-reference-toolbar" />
+            <div
+              id="reports-workspace-toolbar"
+              className="reports-reference-toolbar reports-overview-reference"
+            />
           </div>
         </header>
         {children}
