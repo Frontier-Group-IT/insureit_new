@@ -1,0 +1,47 @@
+/* Reports Overview header controls: keep MTD, All Business and Export compact and inline. */
+.reports-overview-reference .reports-reference-toolbar {
+  flex: 0 0 auto;
+  min-width: max-content;
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+.reports-overview-reference .reports-reference-toolbar .ov-toolbar {
+  display: flex;
+  width: auto;
+  min-width: max-content;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.reports-overview-reference .reports-reference-toolbar .ov-toolbar > * {
+  flex: 0 0 auto;
+}
+
+.reports-overview-reference .reports-reference-toolbar .ov-control {
+  min-height: 32px;
+  height: 32px;
+  gap: 5px;
+  padding-inline: 9px;
+  white-space: nowrap;
+}
+
+@media (max-width: 980px) {
+  .reports-overview-reference .reports-reference-toolbar {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+
+  .reports-overview-reference .reports-reference-toolbar .ov-toolbar {
+    width: max-content;
+    min-width: max-content;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+  }
+}
