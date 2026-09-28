@@ -107,7 +107,7 @@ export function ReportResetLink({ href, label = "Reset" }: { href: string; label
 
 export function ReportExportLink({ href, label = "Export" }: { href: string; label?: string }) {
   return (
-    <a href={href} className="report-secondary-action inline-flex h-9 items-center gap-1.5 rounded-md border border-[#0e5da5] bg-[#0e5da5] px-3 text-[10.5px] font-bold text-white transition hover:border-[#0b4d89] hover:bg-[#0b4d89] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7692b6] focus-visible:ring-offset-2">
+    <a href={href} className="report-export-action inline-flex h-9 items-center gap-1.5 rounded-md border border-[#0e5da5] bg-[#0e5da5] px-3 text-[10.5px] font-bold text-white transition hover:border-[#0b4d89] hover:bg-[#0b4d89] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7692b6] focus-visible:ring-offset-2">
       <Download className="h-3.5 w-3.5" /> {label}
     </a>
   );
