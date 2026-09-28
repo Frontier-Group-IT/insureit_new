@@ -207,7 +207,6 @@ function DocumentPickerControl({
             <Upload className="h-3.5 w-3.5" />
             Add {label}
           </button>
-          <span className="pl-1 text-[8px] font-medium leading-3 text-[#98A2B3]">PDF, JPG, PNG or WebP</span>
         </div>
       )}
     </div>
