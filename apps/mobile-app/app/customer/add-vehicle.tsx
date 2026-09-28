@@ -132,7 +132,7 @@ export default function AddVehicleScreen() {
 
   useEffect(() => {
     if (!rcSuccessPopup) return;
-    const timeout = setTimeout(() => setRcSuccessPopup(''), 2500);
+    const timeout = setTimeout(() => setRcSuccessPopup(''), 1500);
     return () => clearTimeout(timeout);
   }, [rcSuccessPopup]);
 
@@ -260,7 +260,7 @@ export default function AddVehicleScreen() {
         setRcLookupMessage('Vehicle and policy details found. Please confirm the insurer before saving.');
       } else {
         setRcLookupMessage('');
-        setRcSuccessPopup('Vehicle and policy details found. Please review the filled information.');
+        setRcSuccessPopup('VEHICLE & POLICY DETAILS FOUND SUCCESSFULLY');
       }
     } catch (error) {
       setRcLookupState('error');
@@ -486,7 +486,7 @@ export default function AddVehicleScreen() {
       <Modal visible={Boolean(rcSuccessPopup)} transparent animationType="fade" statusBarTranslucent>
         <View pointerEvents="none" style={styles.fetchPopupOverlay}>
           <View style={styles.fetchPopupCard}>
-            <MaterialCommunityIcons name="check-circle" size={22} color="#12805C" />
+            <MaterialCommunityIcons name="check-circle" size={20} color="#12805C" />
             <Text style={styles.fetchPopupText}>{rcSuccessPopup}</Text>
           </View>
         </View>
@@ -833,9 +833,9 @@ const styles = StyleSheet.create({
   fetchedInsurerThreeRowShell: { minHeight: 64, paddingVertical: 8, alignItems: 'flex-start' },
   fetchedInsurerRows: { flex: 1, justifyContent: 'center', gap: 2 },
   lockedCodeField: { backgroundColor: '#EEF2F6', opacity: 0.72 },
-  fetchPopupOverlay: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, backgroundColor: 'rgba(8,29,63,0.08)' },
-  fetchPopupCard: { width: '100%', maxWidth: 360, minHeight: 84, borderRadius: 18, borderWidth: 1, borderColor: '#B9E6D0', backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 10, shadowColor: '#0A2D55', shadowOpacity: 0.16, shadowRadius: 16, elevation: 8 },
-  fetchPopupText: { flex: 1, color: '#314258', fontSize: 12, lineHeight: 18, fontWeight: '800' },
+  fetchPopupOverlay: { flex: 1, alignItems: 'flex-end', justifyContent: 'flex-start', paddingTop: 130, paddingRight: 14, paddingLeft: 64, backgroundColor: 'transparent' },
+  fetchPopupCard: { maxWidth: 300, minHeight: 54, borderRadius: 14, borderWidth: 1, borderColor: '#B9E6D0', backgroundColor: '#FFFFFF', paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 8, shadowColor: '#0A2D55', shadowOpacity: 0.16, shadowRadius: 12, elevation: 8 },
+  fetchPopupText: { flexShrink: 1, color: '#244536', fontSize: 10.5, lineHeight: 14, fontWeight: '900', textAlign: 'right' },
   calendarScreen: { flex: 1, backgroundColor: '#EEF7FF', paddingHorizontal: 18, paddingTop: 18, paddingBottom: 18 },
   calendarAccent: { position: 'absolute', left: -70, right: -70, top: 118, height: 120, borderRadius: 70, backgroundColor: 'rgba(255,255,255,0.64)', transform: [{ rotate: '-7deg' }] },
   calendarTopBar: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 20 },
