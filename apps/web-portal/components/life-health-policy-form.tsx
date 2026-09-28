@@ -10,7 +10,7 @@ import { CustomerSearchField } from "@/components/customer-search-field";
 
 export type LifeHealthSourceOption = { type: "POSP" | "MISP" | "SIBL / Partner"; value: string; label: string; code: string; rmName: string; rmCode: string; mobile?: string };
 export type LifeHealthCustomerOption = { id: string; name: string; contactName: string; phone: string; email: string };
-type Props = { policyType: "Life" | "Health"; insurers: Array<{ label: string; value: string }>; customers: LifeHealthCustomerOption[]; sources: LifeHealthSourceOption[]; summaryTarget?: HTMLElement | null };
+type Props = { policyType: "Life" | "Health"; insurers: Array<{ label: string; value: string }>; customers: LifeHealthCustomerOption[]; sources: LifeHealthSourceOption[]; summaryTarget?: HTMLElement | null; footerTarget?: HTMLElement | null };
 type CustomerMode = "new" | "existing";
 type State = { customerMode: CustomerMode; customerId: string; insuredName: string; phone: string; email: string; insurerId: string; productName: string; proposalNumber: string; ppt: string; pd: string; paymentFrequency: string; premiumAmount: string; paymentMode: string; remarks: string };
 type SourceSnapshot = { sourcingDate: string; intermediaryType: string; sourceId: string; leadSource: string; intermediaryCode: string; rmName: string; rmCode: string };
@@ -32,7 +32,7 @@ function sourceSnapshot(sources: LifeHealthSourceOption[]): SourceSnapshot {
   return { sourcingDate, intermediaryType, sourceId, leadSource: selected?.label ?? "", intermediaryCode: selected?.code ?? "", rmName: selected?.rmName ?? "", rmCode: selected?.rmCode ?? "" };
 }
 
-export function LifeHealthPolicyForm({ policyType, insurers, customers, sources, summaryTarget }: Props) {
+export function LifeHealthPolicyForm({ policyType, insurers, customers, sources, summaryTarget, footerTarget }: Props) {
   const router = useRouter();
   const [form, setForm] = useState<State>({ customerMode: "new", customerId: "", insuredName: "", phone: "", email: "", insurerId: "", productName: "", proposalNumber: "", ppt: "", pd: "", paymentFrequency: "", premiumAmount: "", paymentMode: "", remarks: "" });
   const [files, setFiles] = useState<Record<string, File | null>>({ proposalForm: null, benefitIllustration: null, premiumReceipt: null });
@@ -53,6 +53,19 @@ export function LifeHealthPolicyForm({ policyType, insurers, customers, sources,
   }
 
   const summary = <FollowSummary completion={completion} proposal={form.proposalNumber} insurer={selectedInsurer} product={form.productName} customer={form.insuredName} mobile={form.phone} premium={form.premiumAmount} frequency={form.paymentFrequency} paymentMode={form.paymentMode} documentCount={documentCount} />;
+  const bottomSection = <section className="w-full rounded-2xl border border-[#D9E2F0] bg-white shadow-sm">
+    <div className="flex flex-col gap-3 p-3 xl:flex-row xl:items-center xl:justify-between">
+      <div className="grid flex-1 gap-2 sm:grid-cols-3 xl:max-w-[900px]">
+        <DocumentTile label="Proposal Form" file={files.proposalForm} onChange={(file) => setFiles((c) => ({ ...c, proposalForm: file }))} />
+        <DocumentTile label="Benefit Illustration" file={files.benefitIllustration} onChange={(file) => setFiles((c) => ({ ...c, benefitIllustration: file }))} />
+        <DocumentTile label="Premium Receipt" file={files.premiumReceipt} onChange={(file) => setFiles((c) => ({ ...c, premiumReceipt: file }))} />
+      </div>
+      <div className="flex shrink-0 justify-end gap-2">
+        <Link href="/policies/life-health-cases" className="inline-flex h-10 items-center justify-center rounded-xl border border-[#CBD5E1] px-4 text-[10px] font-semibold text-[#344054]">View Cases</Link>
+        <button type="button" onClick={submit} disabled={isPending} className="inline-flex h-10 items-center justify-center rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white disabled:opacity-60">{isPending ? "Creating case…" : "Create Case"}</button>
+      </div>
+    </div>
+  </section>;
 
   return <>
     <div className="space-y-3">
@@ -77,22 +90,9 @@ export function LifeHealthPolicyForm({ policyType, insurers, customers, sources,
       </Section>
 
       {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-[10px] font-semibold text-red-700">{error}</div> : null}
-
-      <section className="rounded-2xl border border-[#D9E2F0] bg-white shadow-sm">
-        <div className="flex flex-col gap-3 p-3 xl:flex-row xl:items-end xl:justify-between">
-          <div className="grid flex-1 gap-2 sm:grid-cols-3 xl:max-w-[760px]">
-            <DocumentTile label="Proposal Form" file={files.proposalForm} onChange={(file) => setFiles((c) => ({ ...c, proposalForm: file }))} />
-            <DocumentTile label="Benefit Illustration" file={files.benefitIllustration} onChange={(file) => setFiles((c) => ({ ...c, benefitIllustration: file }))} />
-            <DocumentTile label="Premium Receipt" file={files.premiumReceipt} onChange={(file) => setFiles((c) => ({ ...c, premiumReceipt: file }))} />
-          </div>
-          <div className="flex shrink-0 justify-end gap-2">
-            <Link href="/policies/life-health-cases" className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold text-[#344054]">View Cases</Link>
-            <button type="button" onClick={submit} disabled={isPending} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-60">{isPending ? "Creating case…" : "Create Case"}</button>
-          </div>
-        </div>
-      </section>
     </div>
     {summaryTarget ? createPortal(summary, summaryTarget) : summary}
+    {footerTarget ? createPortal(bottomSection, footerTarget) : <div className="mt-3">{bottomSection}</div>}
   </>;
 }
 
@@ -136,6 +136,6 @@ function Required() { return <span className="text-red-500">*</span> }
 function Field({ label, required, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string }) { return <div><label className={labelClass}>{label}{required ? <Required/> : null}</label><input {...props} required={required} className={inputClass}/></div> }
 function Select({ label, required, children, ...props }: SelectHTMLAttributes<HTMLSelectElement> & { label: string; children: ReactNode }) { return <div><label className={labelClass}>{label}{required ? <Required/> : null}</label><select {...props} required={required} className={inputClass}>{children}</select></div> }
 function Segmented({ value, onChange }: { value: CustomerMode; onChange: (value: CustomerMode) => void }) { return <div><label className={labelClass}>Customer record</label><div className="inline-flex h-10 w-full rounded-xl border border-[#D8DEE9] bg-[#F7F9FC] p-1"><button type="button" onClick={() => onChange("new")} className={`flex-1 rounded-lg text-[9.5px] font-bold transition ${value === "new" ? "bg-[#17365D] text-white shadow" : "text-[#667085]"}`}>New</button><button type="button" onClick={() => onChange("existing")} className={`flex-1 rounded-lg text-[9.5px] font-bold transition ${value === "existing" ? "bg-[#17365D] text-white shadow" : "text-[#667085]"}`}>Existing</button></div></div> }
-function DocumentTile({ label, file, onChange }: { label: string; file: File | null; onChange: (file: File | null) => void }) { const id = `lh-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`; return <div className={`rounded-xl border px-3 py-2.5 ${file ? "border-emerald-200 bg-emerald-50/40" : "border-[#D8E1EC] bg-white"}`}><div className="flex items-center gap-2"><span className={`grid h-7 w-7 place-items-center rounded-lg ${file ? "bg-emerald-100 text-emerald-700" : "bg-[#EEF4FB] text-[#315B9A]"}`}>{file ? <CheckCircle2 className="h-4 w-4"/> : <FileText className="h-4 w-4"/>}</span><div className="min-w-0 flex-1"><p className="truncate text-[9.5px] font-bold text-[#17365D]">{label}</p><p className="truncate text-[8px] text-[#667085]">{file ? file.name : "Not uploaded"}</p></div><label htmlFor={id} className="grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-lg border border-[#CAD7E7] bg-white text-[#315B9A]" aria-label={`${file ? "Replace" : "Upload"} ${label}`} title={`${file ? "Replace" : "Upload"} ${label}`}><Upload className="h-3.5 w-3.5"/></label><input id={id} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => onChange(e.target.files?.[0] ?? null)}/></div></div> }
+function DocumentTile({ label, file, onChange }: { label: string; file: File | null; onChange: (file: File | null) => void }) { const id = `lh-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`; return <div className={`rounded-xl border px-3 py-2.5 ${file ? "border-emerald-200 bg-emerald-50/40" : "border-[#D8E1EC] bg-white"}`}><div className="flex items-center gap-2"><span className={`grid h-7 w-7 place-items-center rounded-lg ${file ? "bg-emerald-100 text-emerald-700" : "bg-[#EEF4FB] text-[#315B9A]"}`}>{file ? <CheckCircle2 className="h-4 w-4"/> : <FileText className="h-4 w-4"/>}</span><div className="min-w-0 flex-1"><p className="truncate text-[9.5px] font-bold text-[#17365D]">{label}</p><p className="truncate text-[8px] text-[#667085]">{file ? file.name : "Not uploaded"}</p></div><label htmlFor={id} className="grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-xl border border-[#CAD7E7] bg-white text-[#315B9A]" aria-label={`${file ? "Replace" : "Upload"} ${label}`} title={`${file ? "Replace" : "Upload"} ${label}`}><Upload className="h-3.5 w-3.5"/></label><input id={id} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => onChange(e.target.files?.[0] ?? null)}/></div></div> }
 function SummaryBlock({ title, rows }: { title: string; rows: Array<[string, string]> }) { return <div><p className="mb-1 text-[8px] font-bold uppercase tracking-[.1em] text-[#64748B]">{title}</p><div className="divide-y divide-[#E8EDF3]">{rows.map(([label, value]) => <div key={label} className="flex items-start justify-between gap-3 py-1.5 text-[9.5px]"><span className="text-[#667085]">{label}</span><span className="max-w-[190px] truncate text-right font-semibold text-[#17365D]" title={value}>{value}</span></div>)}</div></div> }
 function numeric(value: string) { const normalized = value.replace(/[^0-9.]/g, ""); const parts = normalized.split("."); return parts.length > 2 ? `${parts.shift()}.${parts.join("")}` : normalized }
