@@ -5,8 +5,9 @@ import { createPortal } from "react-dom";
 import { LifeHealthPolicyForm, type LifeHealthCustomerOption, type LifeHealthSourceOption } from "@/components/life-health-policy-form";
 
 const SAOD_BLOCKED_CLASSES = new Set(["GCV", "PCV", "CPM", "MISD"]);
+const LIFE_HEALTH_SECTIONS = ["Source", "Customer / Proposer", "Policy Product & Case", "Premium & Payment"];
 type Props = { insurers: Array<{ label: string; value: string }>; customers: LifeHealthCustomerOption[]; sources: LifeHealthSourceOption[] };
-type LifeHealthMount = { formTarget: HTMLElement; summaryTarget: HTMLElement; footerTarget: HTMLElement };
+type LifeHealthMount = { formTarget: HTMLElement; summaryTarget: HTMLElement; footerTarget: HTMLElement; navTarget: HTMLElement };
 
 function fieldControl(labelText: string) {
   const labels = Array.from(document.querySelectorAll("label"));
@@ -32,13 +33,51 @@ function setReactValue(input: HTMLInputElement, value: string) {
   input.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
+function lifeHealthSection(index: number) {
+  return document.getElementById(`policy-section-${index + 1}`) ?? document.getElementById(`policy-section-${String(index + 1).padStart(2, "0")}`);
+}
+
+function LifeHealthSectionNav() {
+  const [activeSection, setActiveSection] = useState(0);
+
+  useEffect(() => {
+    const elements = LIFE_HEALTH_SECTIONS.map((_, index) => lifeHealthSection(index)).filter((item): item is HTMLElement => Boolean(item));
+    if (!elements.length) return;
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+      if (!visible[0]) return;
+      const index = elements.indexOf(visible[0].target as HTMLElement);
+      if (index >= 0) setActiveSection(index);
+    }, { rootMargin: "-145px 0px -58% 0px", threshold: [0, .05, .2] });
+    elements.forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, []);
+
+  function goToSection(index: number) {
+    setActiveSection(index);
+    lifeHealthSection(index)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  return <nav aria-label="Life and Health policy sections" className="sticky top-[72px] z-50 mb-3 flex min-h-[36px] items-stretch gap-4 overflow-x-auto rounded-b-xl border border-t-0 border-[#D9E2F0] bg-white/96 px-4 shadow-[0_5px_14px_rgba(15,23,42,.06)] backdrop-blur">
+    {LIFE_HEALTH_SECTIONS.map((section, index) => {
+      const active = activeSection === index;
+      return <button key={section} type="button" onClick={() => goToSection(index)} aria-current={active ? "step" : undefined} className={`group relative flex min-w-fit items-center gap-1.5 border-b-2 px-0.5 py-2 text-[9px] font-semibold transition ${active ? "border-[#4F46E5] text-[#3346B8]" : "border-transparent text-[#667085] hover:border-[#CBD5E1] hover:text-[#344054]"}`}>
+        <span className={`text-[8px] font-bold tabular-nums ${active ? "text-[#4F46E5]" : "text-[#98A2B3]"}`}>{String(index + 1).padStart(2, "0")}</span>
+        <span>{section}</span>
+      </button>;
+    })}
+  </nav>;
+}
+
 function restoreLifeHealthMounts() {
   document.querySelectorAll<HTMLElement>("[data-life-health-layout='true']").forEach((layout) => {
     const source = layout.querySelector<HTMLElement>("[data-life-health-source='true']");
     const parent = layout.parentElement;
     const footer = parent?.querySelector<HTMLElement>("[data-life-health-footer='true']") ?? null;
+    const nav = parent?.querySelector<HTMLElement>("[data-life-health-nav='true']") ?? null;
     if (source && parent) { delete source.dataset.lifeHealthSource; parent.insertBefore(source, layout); }
     footer?.remove();
+    nav?.remove();
     layout.remove();
   });
   document.querySelectorAll<HTMLElement>("[data-life-health-notice-hidden='true']").forEach((notice) => { notice.style.display = ""; delete notice.dataset.lifeHealthNoticeHidden; });
@@ -50,7 +89,8 @@ function ensureLifeHealthMount(policyType: "Life" | "Health"): LifeHealthMount |
     const formTarget = existing.querySelector<HTMLElement>("[data-life-health-portal='true']");
     const summaryTarget = existing.querySelector<HTMLElement>("[data-life-health-summary='true']");
     const footerTarget = existing.parentElement?.querySelector<HTMLElement>("[data-life-health-footer='true']") ?? null;
-    if (formTarget && summaryTarget && footerTarget) return { formTarget, summaryTarget, footerTarget };
+    const navTarget = existing.parentElement?.querySelector<HTMLElement>("[data-life-health-nav='true']") ?? null;
+    if (formTarget && summaryTarget && footerTarget && navTarget) return { formTarget, summaryTarget, footerTarget, navTarget };
   }
   const heading = Array.from(document.querySelectorAll("h2")).find((item) => item.textContent?.trim() === `${policyType} onboarding`);
   const notice = heading?.closest("section") as HTMLElement | null;
@@ -60,6 +100,7 @@ function ensureLifeHealthMount(policyType: "Life" | "Health"): LifeHealthMount |
 
   notice.dataset.lifeHealthNoticeHidden = "true";
   notice.style.display = "none";
+  const navTarget = document.createElement("div"); navTarget.dataset.lifeHealthNav = "true";
   const layout = document.createElement("div");
   layout.dataset.lifeHealthLayout = "true";
   layout.className = "grid gap-4 xl:grid-cols-[minmax(0,1fr)_336px]";
@@ -68,10 +109,11 @@ function ensureLifeHealthMount(policyType: "Life" | "Health"): LifeHealthMount |
   const summaryTarget = document.createElement("div"); summaryTarget.dataset.lifeHealthSummary = "true"; summaryTarget.className = "self-start";
   const footerTarget = document.createElement("div"); footerTarget.dataset.lifeHealthFooter = "true"; footerTarget.className = "mt-3 w-full";
   source.dataset.lifeHealthSource = "true";
+  parent.insertBefore(navTarget, source);
   parent.insertBefore(layout, source);
   left.appendChild(source); left.appendChild(formTarget); layout.appendChild(left); layout.appendChild(summaryTarget);
   parent.insertBefore(footerTarget, notice);
-  return { formTarget, summaryTarget, footerTarget };
+  return { formTarget, summaryTarget, footerTarget, navTarget };
 }
 
 export function PolicyOnboardingProductGuard({ insurers, customers, sources }: Props) {
@@ -86,7 +128,7 @@ export function PolicyOnboardingProductGuard({ insurers, customers, sources }: P
       if (policyType === "Life" || policyType === "Health") {
         const next = ensureLifeHealthMount(policyType);
         setLifeHealthType((current) => current === policyType ? current : policyType);
-        if (next) setMount((current) => current?.formTarget === next.formTarget && current?.footerTarget === next.footerTarget ? current : next);
+        if (next) setMount((current) => current?.formTarget === next.formTarget && current?.footerTarget === next.footerTarget && current?.navTarget === next.navTarget ? current : next);
       } else {
         if (lastPolicyType === "Life" || lastPolicyType === "Health" || document.querySelector("[data-life-health-layout='true']")) restoreLifeHealthMounts();
         setLifeHealthType(null); setMount(null);
@@ -123,5 +165,8 @@ export function PolicyOnboardingProductGuard({ insurers, customers, sources }: P
     return () => { document.removeEventListener("change", onChange, true); observer.disconnect(); window.clearInterval(timer); restoreLifeHealthMounts(); };
   }, [sources]);
 
-  return mount && lifeHealthType ? createPortal(<LifeHealthPolicyForm policyType={lifeHealthType} insurers={insurers} customers={customers} sources={sources} summaryTarget={mount.summaryTarget} footerTarget={mount.footerTarget} />, mount.formTarget) : null;
+  return mount && lifeHealthType ? <>
+    {createPortal(<LifeHealthSectionNav />, mount.navTarget)}
+    {createPortal(<LifeHealthPolicyForm policyType={lifeHealthType} insurers={insurers} customers={customers} sources={sources} summaryTarget={mount.summaryTarget} footerTarget={mount.footerTarget} />, mount.formTarget)}
+  </> : null;
 }
