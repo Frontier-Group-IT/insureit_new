@@ -34,6 +34,7 @@ export default function PolicyDetailScreen() {
   const [premiumDetails, setPremiumDetails] = useState<PolicyPremiumDetails | null>(null);
   const [policyCopy, setPolicyCopy] = useState<PolicyCopyDocument | null>(null);
   const [policyCopyUrl, setPolicyCopyUrl] = useState<string | null>(null);
+  const [policyCopyAspectRatio, setPolicyCopyAspectRatio] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -80,9 +81,18 @@ export default function PolicyDetailScreen() {
         const nextPolicyCopy = (documentResult.data ?? null) as PolicyCopyDocument | null;
         setPolicyCopy(nextPolicyCopy);
         setPolicyCopyUrl(null);
+        setPolicyCopyAspectRatio(null);
         if (nextPolicyCopy?.storage_bucket && nextPolicyCopy.storage_path) {
           const signedUrlResult = await supabase.storage.from(nextPolicyCopy.storage_bucket).createSignedUrl(nextPolicyCopy.storage_path, 10 * 60);
-          if (active && !signedUrlResult.error) setPolicyCopyUrl(signedUrlResult.data?.signedUrl ?? null);
+          if (active && !signedUrlResult.error) {
+            const signedUrl = signedUrlResult.data?.signedUrl ?? null;
+            setPolicyCopyUrl(signedUrl);
+            if (signedUrl && isImagePolicyCopy(nextPolicyCopy)) {
+              Image.getSize(signedUrl, (width, height) => {
+                if (active && width > 0 && height > 0) setPolicyCopyAspectRatio(width / height);
+              }, () => undefined);
+            }
+          }
         }
       }
       if (active) setLoading(false);
@@ -124,7 +134,7 @@ export default function PolicyDetailScreen() {
               <View style={styles.policyCopyContent}><Text style={styles.policyCopyTitle}>Policy copy</Text><Text style={styles.policyCopyFileName} numberOfLines={1}>{policyCopy.file_name || 'Policy document'}</Text><Text style={styles.policyCopyMeta}>{formatFileSize(policyCopy.file_size)}</Text></View>
             </View>
             {policyCopyUrl && isImagePolicyCopy(policyCopy) ? (
-              <Image source={{ uri: policyCopyUrl }} resizeMode="contain" style={styles.policyCopyPreview} accessibilityLabel="Policy copy preview" />
+              <Image source={{ uri: policyCopyUrl }} resizeMode="contain" style={[styles.policyCopyPreview, policyCopyAspectRatio ? { aspectRatio: policyCopyAspectRatio } : styles.policyCopyPreviewFallback]} accessibilityLabel="Policy copy preview" />
             ) : (
               <View style={styles.policyCopyPreviewUnavailable}><MaterialCommunityIcons name="file-document-outline" size={28} color="#78879A" /><Text style={styles.policyCopyMissing}>{policyCopyUrl ? 'Inline preview is not available for this file format.' : 'Policy copy preview unavailable'}</Text></View>
             )}
@@ -158,6 +168,6 @@ const styles = StyleSheet.create({
   pageHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 }, pageTitle: { color: palette.navy, fontSize: 21, lineHeight: 26, fontWeight: '900', flexShrink: 1 }, pageRenewAction: { minHeight: 32, borderRadius: 999, backgroundColor: '#EAF8F2', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }, pageRenewActionText: { color: '#0F8A61', fontSize: 10.5, lineHeight: 13, fontWeight: '900' }, contentStack: { alignSelf: 'stretch', flexGrow: 0, flexShrink: 1 },
   heroLayout: { alignSelf: 'stretch', marginBottom: 8, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 12, overflow: 'hidden' }, heroAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 }, heroTop: { flexDirection: 'row', alignItems: 'center', gap: 9, minHeight: 30 }, policyNo: { color: palette.navy, fontSize: 16.5, lineHeight: 20, fontWeight: '900', flexShrink: 1 }, heroMetaRow: { flexDirection: 'row', gap: 7, marginTop: 7 }, heroMetric: { flex: 1, minHeight: 48, borderRadius: 11, backgroundColor: '#FBFCFE', borderWidth: 1, borderColor: '#E1E8F0', paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', gap: 8 }, heroMetricIconImage: { width: 21, height: 21 }, heroMetricCopy: { flex: 1, minWidth: 0 }, heroMetricLabel: { color: '#64748B', fontSize: 8.5, fontWeight: '900', textTransform: 'uppercase' }, heroMetricValue: { color: palette.navy, fontSize: 10.8, lineHeight: 14, fontWeight: '900', marginTop: 2 },
   dateFinancialMetric: { flex: 1, minHeight: 92, borderRadius: 11, backgroundColor: '#FBFCFE', borderWidth: 1, borderColor: '#E1E8F0', paddingHorizontal: 9, paddingVertical: 8 }, dateFinancialRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 31 }, dateFinancialIcon: { width: 21, height: 21 }, dateFinancialCopy: { flex: 1, minWidth: 0 }, dateFinancialValue: { color: palette.navy, fontSize: 10.8, lineHeight: 14, fontWeight: '900', marginTop: 2 }, dateFinancialDivider: { height: 1, backgroundColor: '#E1E8F0', marginVertical: 6 }, statusBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }, statusText: { fontSize: 9, lineHeight: 12, fontWeight: '900' },
-  policyCopyCard: { marginBottom: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', borderRadius: 18, padding: 12, overflow: 'hidden' }, policyCopyHeader: { flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 10 }, policyCopyIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#EEF5FF', borderWidth: 1, borderColor: '#D5E5FB', alignItems: 'center', justifyContent: 'center' }, policyCopyIconMuted: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#F4F7FA', borderWidth: 1, borderColor: '#E3E8EF', alignItems: 'center', justifyContent: 'center' }, policyCopyContent: { flex: 1, minWidth: 0 }, policyCopyTitle: { color: palette.navy, fontSize: 14, lineHeight: 17, fontWeight: '900' }, policyCopyFileName: { color: '#33445C', fontSize: 11.5, lineHeight: 15, fontWeight: '700', marginTop: 2 }, policyCopyMeta: { color: '#78879A', fontSize: 9.5, lineHeight: 12, fontWeight: '600', marginTop: 2 }, policyCopyPreview: { width: '100%', height: 520, borderRadius: 12, backgroundColor: '#F7F9FC' }, policyCopyPreviewUnavailable: { minHeight: 120, borderRadius: 12, backgroundColor: '#F7F9FC', alignItems: 'center', justifyContent: 'center', padding: 18, gap: 8 }, policyCopyMissing: { color: '#78879A', fontSize: 11.5, lineHeight: 15, fontWeight: '700', textAlign: 'center' }, policyCopyMissingCard: { minHeight: 76, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 11 },
+  policyCopyCard: { marginBottom: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', borderRadius: 18, padding: 12, overflow: 'hidden' }, policyCopyHeader: { flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 10 }, policyCopyIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#EEF5FF', borderWidth: 1, borderColor: '#D5E5FB', alignItems: 'center', justifyContent: 'center' }, policyCopyIconMuted: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#F4F7FA', borderWidth: 1, borderColor: '#E3E8EF', alignItems: 'center', justifyContent: 'center' }, policyCopyContent: { flex: 1, minWidth: 0 }, policyCopyTitle: { color: palette.navy, fontSize: 14, lineHeight: 17, fontWeight: '900' }, policyCopyFileName: { color: '#33445C', fontSize: 11.5, lineHeight: 15, fontWeight: '700', marginTop: 2 }, policyCopyMeta: { color: '#78879A', fontSize: 9.5, lineHeight: 12, fontWeight: '600', marginTop: 2 }, policyCopyPreview: { width: '100%', borderRadius: 12, backgroundColor: '#F7F9FC' }, policyCopyPreviewFallback: { aspectRatio: 0.707 }, policyCopyPreviewUnavailable: { minHeight: 120, borderRadius: 12, backgroundColor: '#F7F9FC', alignItems: 'center', justifyContent: 'center', padding: 18, gap: 8 }, policyCopyMissing: { color: '#78879A', fontSize: 11.5, lineHeight: 15, fontWeight: '700', textAlign: 'center' }, policyCopyMissingCard: { minHeight: 76, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 11 },
   vehicleCard: { minHeight: 78, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 11 }, vehicleBrandIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#F4F7FB', alignItems: 'center', justifyContent: 'center' }, vehicleBrandIconImage: { width: 31, height: 31 }, vehicleSummaryCopy: { flex: 1, minWidth: 0 }, vehicleSummaryTitle: { color: palette.navy, fontSize: 14, lineHeight: 17, fontWeight: '900' }, vehicleSummaryNumber: { color: palette.slate, fontSize: 12, lineHeight: 15, fontWeight: '700', marginTop: 2 },
 });
