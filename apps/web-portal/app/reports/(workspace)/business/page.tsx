@@ -77,10 +77,11 @@ async function loadCompleteFinanceReport(profile: Parameters<typeof loadFinanceR
 
 function CommercialFlow({ finance, policyCount }: { finance: FinanceReport; policyCount: number }) {
   const payin = finance.summary.payin_after_tds;
+  const payinTds = Math.max(finance.summary.projected_payin - payin, 0);
   const retentionRate = ratio(finance.summary.retention_amount, payin);
   return <section className="portal-card overflow-hidden"><div className="grid sm:grid-cols-2 xl:grid-cols-4">
     <FlowMetric label="Net Premium" value={currency(finance.summary.net_premium)} note={integer(policyCount) + " policies"} />
-    <FlowMetric label="Expected Pay-in" value={currency(payin)} note="Less TDS" />
+    <FlowMetric label="Expected Pay-in" value={currency(payin)} note={"Less TDS - " + currency(payinTds)} />
     <FlowMetric label="Partner Payout" value={currency(finance.summary.gross_payout)} note={percent(ratio(finance.summary.gross_payout, payin)) + " of pay-in"} />
     <FlowMetric label="Retention" value={currency(finance.summary.retention_amount)} note={percent(retentionRate) + " of pay-in"} last />
   </div></section>;
