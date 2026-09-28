@@ -1,19 +1,44 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { LifeHealthPolicyForm, type LifeHealthCustomerOption, type LifeHealthSourceOption } from "@/components/life-health-policy-form";
 
 const SAOD_BLOCKED_CLASSES = new Set(["GCV", "PCV", "CPM", "MISD"]);
 const LIFE_HEALTH_SECTIONS = ["Source", "Customer / Proposer", "Policy Product & Case", "Premium & Payment"];
-type Props = { insurers: Array<{ label: string; value: string }>; customers: LifeHealthCustomerOption[]; sources: LifeHealthSourceOption[] };
+type InsurerOption = { label: string; value: string; segment?: "general" | "life" | "health" };
+type Props = { insurers: InsurerOption[]; customers: LifeHealthCustomerOption[]; sources: LifeHealthSourceOption[] };
 type LifeHealthMount = { formTarget: HTMLElement; summaryTarget: HTMLElement; footerTarget: HTMLElement; navTarget: HTMLElement };
+
+function allowedInsurerSegments(policyType: string) {
+  if (policyType === "Motor" || policyType === "Non-Motor") return new Set(["general"]);
+  if (policyType === "Life" || policyType === "Health") return new Set(["life", "health"]);
+  return null;
+}
 
 function fieldControl(labelText: string) {
   const labels = Array.from(document.querySelectorAll("label"));
   const label = labels.find((item) => item.textContent?.trim().toLowerCase().startsWith(labelText.toLowerCase()));
   const container = label?.parentElement;
   return container?.querySelector("select, input") as HTMLSelectElement | HTMLInputElement | null;
+}
+
+function syncInsurerOptions(policyType: string, insurers: InsurerOption[]) {
+  const allowed = allowedInsurerSegments(policyType);
+  if (!allowed) return;
+  const insurerSelect = fieldControl("Insurance company") as HTMLSelectElement | null;
+  if (!insurerSelect) return;
+  const segmentById = new Map(insurers.map((item) => [item.value, item.segment]));
+  for (const option of Array.from(insurerSelect.options)) {
+    if (!option.value) continue;
+    const valid = allowed.has(segmentById.get(option.value) ?? "");
+    option.hidden = !valid;
+    option.disabled = !valid;
+  }
+  if (insurerSelect.value && !allowed.has(segmentById.get(insurerSelect.value) ?? "")) {
+    insurerSelect.value = "";
+    insurerSelect.dispatchEvent(new Event("change", { bubbles: true }));
+  }
 }
 
 function syncSourcingDateProxy() {
@@ -119,12 +144,14 @@ function ensureLifeHealthMount(policyType: "Life" | "Health"): LifeHealthMount |
 export function PolicyOnboardingProductGuard({ insurers, customers, sources }: Props) {
   const [lifeHealthType, setLifeHealthType] = useState<"Life" | "Health" | null>(null);
   const [mount, setMount] = useState<LifeHealthMount | null>(null);
+  const lifeHealthInsurers = useMemo(() => insurers.filter((item) => item.segment === "life" || item.segment === "health"), [insurers]);
 
   useEffect(() => {
     let lastClass = "", lastProduct = "", lastPolicyType = "";
     const sync = () => {
       const policyType = (fieldControl("Policy type") as HTMLSelectElement | null)?.value.trim() ?? "";
       syncSourcingDateProxy();
+      syncInsurerOptions(policyType, insurers);
       if (policyType === "Life" || policyType === "Health") {
         const next = ensureLifeHealthMount(policyType);
         setLifeHealthType((current) => current === policyType ? current : policyType);
@@ -160,13 +187,13 @@ export function PolicyOnboardingProductGuard({ insurers, customers, sources }: P
       const policyType = (fieldControl("Policy type") as HTMLSelectElement | null)?.value.trim() ?? "";
       const vehicleClass = (fieldControl("Class") as HTMLSelectElement | null)?.value.trim().toUpperCase() ?? "";
       const product = (fieldControl("Policy product") as HTMLSelectElement | null)?.value.trim().toUpperCase() ?? "";
-      if (policyType !== lastPolicyType || vehicleClass !== lastClass || product !== lastProduct) sync(); else syncSourcingDateProxy();
+      if (policyType !== lastPolicyType || vehicleClass !== lastClass || product !== lastProduct) sync(); else { syncSourcingDateProxy(); syncInsurerOptions(policyType, insurers); }
     }, 250);
     return () => { document.removeEventListener("change", onChange, true); observer.disconnect(); window.clearInterval(timer); restoreLifeHealthMounts(); };
-  }, [sources]);
+  }, [insurers, sources]);
 
   return mount && lifeHealthType ? <>
     {createPortal(<LifeHealthSectionNav />, mount.navTarget)}
-    {createPortal(<LifeHealthPolicyForm policyType={lifeHealthType} insurers={insurers} customers={customers} sources={sources} summaryTarget={mount.summaryTarget} footerTarget={mount.footerTarget} />, mount.formTarget)}
+    {createPortal(<LifeHealthPolicyForm policyType={lifeHealthType} insurers={lifeHealthInsurers} customers={customers} sources={sources} summaryTarget={mount.summaryTarget} footerTarget={mount.footerTarget} />, mount.formTarget)}
   </> : null;
 }
