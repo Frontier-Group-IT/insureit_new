@@ -25,7 +25,7 @@ const displayNames: Record<(typeof requiredFieldLabels)[number], string> = {
   "ENGINE NUMBER": "Engine Number",
 };
 
-const policyActionLabels = new Set(["Book Active Policy", "Upload Policy", "Save Policy Changes", "Continue"]);
+const policyActionLabels = new Set(["Book Active Policy", "Upload Policy", "Create Policy", "Save Policy Changes", "Continue"]);
 type RequiredControl = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 type RequiredField = { control: RequiredControl; displayName: string };
 type MissingRequiredField = { control: RequiredControl; section: HTMLElement; displayName: string };
