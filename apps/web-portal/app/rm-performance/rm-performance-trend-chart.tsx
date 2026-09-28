@@ -14,20 +14,18 @@ export function RmPerformanceTrendChart({ rows }: { rows: TrendRow[] }) {
     <div className="relative" onMouseLeave={() => setHoveredIndex(null)}>
       <div className="grid h-[104px] grid-cols-6 items-end gap-2 px-1 pt-5">
         {values.map((row, index) => {
-          const height = row.net_premium > 0 ? Math.max((row.net_premium / max) * 76, 18) : 4;
+          const height = row.net_premium > 0 ? Math.max((row.net_premium / max) * 70, 18) : 4;
           const active = hoveredIndex === index;
           return (
             <div key={row.month} className="relative flex h-full min-w-0 flex-col items-center justify-end" onMouseEnter={() => setHoveredIndex(index)}>
               <span className="absolute text-[8px] font-black text-[#43556F]" style={{ bottom: `${height + 3}px` }}>{number(row.policy_count)}</span>
-              <div className={"relative w-full max-w-[34px] rounded-t-md transition-all " + (active ? "bg-[#17365D]" : "bg-[#2E6CB5]")} style={{ height: `${height}px` }}>
-                {row.net_premium > 0 ? <span className="absolute inset-0 flex items-center justify-center overflow-hidden text-[7px] font-black text-white [writing-mode:vertical-rl] rotate-180">{compactMoney(row.net_premium)}</span> : null}
-              </div>
+              {active ? <div className="pointer-events-none absolute left-1/2 z-20 w-max -translate-x-1/2 rounded-lg border border-[#DCE5F1] bg-white px-2 py-1.5 text-center shadow-md" style={{ bottom: `${height + 17}px` }}><p className="text-[8px] font-black uppercase text-[#647286]">{monthLabel(row.month)}</p><p className="text-[9px] font-black text-[#17365D]">{compactMoney(row.net_premium)}</p><p className="text-[8px] text-[#667386]">{number(row.policy_count)} policies</p></div> : null}
+              <div className={"relative w-full max-w-[34px] rounded-t-md transition-all " + (active ? "bg-[#17365D]" : "bg-[#2E6CB5]")} style={{ height: `${height}px` }} />
             </div>
           );
         })}
       </div>
-      <div className="mt-1 grid grid-cols-6 gap-2 text-center">{values.map((row, index) => <button key={row.month} type="button" onMouseEnter={() => setHoveredIndex(index)} onFocus={() => setHoveredIndex(index)} className={"text-[9px] font-bold transition-colors " + (hoveredIndex === index ? "text-[#17365D]" : "text-[#657286]")}>{monthLabel(row.month)}</button>)}</div>
-      {hoveredIndex !== null ? <div className="pointer-events-none absolute right-0 top-0 rounded-lg border border-[#DCE5F1] bg-white px-2 py-1.5 text-right shadow-sm"><p className="text-[8px] font-black uppercase text-[#647286]">{monthLabel(values[hoveredIndex].month)}</p><p className="text-[9px] font-black text-[#17365D]">{compactMoney(values[hoveredIndex].net_premium)}</p><p className="text-[8px] text-[#667386]">{number(values[hoveredIndex].policy_count)} policies</p></div> : null}
+      <div className="mt-1 grid grid-cols-6 gap-2 text-center">{values.map((row, index) => <button key={row.month} type="button" onMouseEnter={() => setHoveredIndex(index)} onFocus={() => setHoveredIndex(index)} onBlur={() => setHoveredIndex(null)} className={"min-w-0 transition-colors " + (hoveredIndex === index ? "text-[#17365D]" : "text-[#657286]")}><span className="block text-[9px] font-bold">{monthLabel(row.month)}</span><span className="mt-0.5 block truncate text-[7.5px] font-black text-[#43556F]">{compactMoney(row.net_premium)}</span></button>)}</div>
     </div>
   );
 }
