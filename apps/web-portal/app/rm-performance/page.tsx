@@ -76,14 +76,20 @@ function PerformancePanel({ eyebrow, title, policies, motor, nonMotor, life, hea
       <p className="text-[10px] font-black tracking-[.14em] text-[#566477]">{eyebrow}</p>
       <div className="mt-1 grid grid-cols-[1.15fr_.85fr] gap-4">
         <div className="min-w-0">
-          <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-[24px] font-semibold tracking-[-.035em] text-[#13233E]">{title}</p><p className="text-[10px] font-medium text-[#647286]">Net Premium</p></div><div className="pt-0.5 text-right"><p className="text-[15px] font-black text-[#24364F]">{number(policies)}</p><p className="text-[10px] font-medium text-[#647286]">Policies</p></div></div>
-          <div className="mt-2.5 space-y-1.5 border-t border-[#EEF1F5] pt-2.5 text-[10px]"><p className="font-medium text-[#667386]">Projected Pay-in <strong className="ml-1 text-[#34445B]">{money(payin)}</strong></p><p className="font-medium text-[#667386]">Projected Payout <strong className="ml-1 text-[#34445B]">{money(payout)}</strong></p></div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0"><p className="truncate text-[24px] font-semibold tracking-[-.035em] text-[#13233E]">{title}</p><p className="text-[10px] font-medium text-[#647286]">Net Premium</p></div>
+            <div className="pt-0.5 text-right"><p className="text-[15px] font-black text-[#24364F]">{number(policies)}</p><p className="text-[10px] font-medium text-[#647286]">Policies</p></div>
+          </div>
+          <div className="mt-2.5 space-y-1.5 border-t border-[#EEF1F5] pt-2.5 text-[9.5px]">
+            <BusinessMetric label="Motor" value={motor} />
+            <BusinessMetric label="Non-Motor" value={nonMotor} />
+            <BusinessMetric label="Life" value={life} />
+            <BusinessMetric label="Health" value={health} />
+          </div>
         </div>
-        <div className="grid grid-cols-2 content-start gap-x-3 gap-y-2 border-l border-[#EEF1F5] pl-4 pt-1 text-[9.5px]">
-          <BusinessMetric label="Motor" value={motor} />
-          <BusinessMetric label="Non-Motor" value={nonMotor} />
-          <BusinessMetric label="Life" value={life} />
-          <BusinessMetric label="Health" value={health} />
+        <div className="space-y-2 border-l border-[#EEF1F5] pl-4 pt-1 text-[9.5px]">
+          <BusinessMetric label="Projected Pay-in" value={payin} />
+          <BusinessMetric label="Projected Payout" value={payout} />
         </div>
       </div>
     </div>
