@@ -152,16 +152,15 @@ export default function ClaimsScreen() {
                 <Text style={[styles.modeLabel, { color: externalClaim ? externalStatusColor : tone.accent }]}>{externalClaim ? externalModeLabel : claimStageLabel(claim.current_status)}</Text>
                 <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle?.vehicle_no ?? 'Vehicle linked'}</Text>
               </View>
-              <View style={[styles.milestoneRight, !externalClaim && (internalProjection?.substage ?? claim.current_status) === 'Initial documents required' && styles.milestoneRightWide]}>
+              <View style={styles.milestoneRight}>
                 <Text
                   style={[
                     styles.milestoneRightValue,
-                    externalClaim && styles.externalMilestoneRightValue,
-                    !externalClaim && (internalProjection?.substage ?? claim.current_status) === 'Initial documents required' && styles.internalInitialDocumentsRequired,
+                    styles.externalMilestoneRightValue,
                   ]}
                   numberOfLines={1}
                 >
-                  {externalClaim ? externalCurrentMilestone(claimMilestones) : internalProjection?.substage ?? claim.current_status}
+                  {externalClaim ? externalCurrentMilestone(claimMilestones) : internalProjection?.stageLabel ?? claim.current_status}
                 </Text>
               </View>
             </View>
