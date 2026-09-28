@@ -260,7 +260,7 @@ export default function AddVehicleScreen() {
         setRcLookupMessage('Vehicle and policy details found. Please confirm the insurer before saving.');
       } else {
         setRcLookupMessage('');
-        setRcSuccessPopup('VEHICLE & POLICY DETAILS FOUND SUCCESSFULLY');
+        setRcSuccessPopup('Vehicle Details Fetched Successfully');
       }
     } catch (error) {
       setRcLookupState('error');
@@ -483,11 +483,16 @@ export default function AddVehicleScreen() {
         {saving ? <ActivityIndicator color={palette.navy} /> : null}
       </Card>
       <PremiumCalendarModal target={dateTarget} onClose={() => setDateTarget(null)} onSelect={(value) => { dateTarget?.onChange(value); setDateTarget(null); }} />
-      <Modal visible={Boolean(rcSuccessPopup)} transparent animationType="fade" statusBarTranslucent>
-        <View pointerEvents="none" style={styles.fetchPopupOverlay}>
+      <Modal visible={Boolean(rcSuccessPopup)} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setRcSuccessPopup('')}>
+        <View style={styles.fetchPopupOverlay}>
           <View style={styles.fetchPopupCard}>
-            <MaterialCommunityIcons name="check-circle" size={20} color="#12805C" />
-            <Text style={styles.fetchPopupText}>{rcSuccessPopup}</Text>
+            <View style={styles.fetchPopupIcon}>
+              <MaterialCommunityIcons name="check" size={15} color="#FFFFFF" />
+            </View>
+            <Text style={styles.fetchPopupText} numberOfLines={1}>{rcSuccessPopup}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close success message" onPress={() => setRcSuccessPopup('')} style={styles.fetchPopupClose}>
+              <MaterialCommunityIcons name="close" size={16} color="#27815C" />
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -833,9 +838,11 @@ const styles = StyleSheet.create({
   fetchedInsurerThreeRowShell: { minHeight: 64, paddingVertical: 8, alignItems: 'flex-start' },
   fetchedInsurerRows: { flex: 1, justifyContent: 'center', gap: 2 },
   lockedCodeField: { backgroundColor: '#EEF2F6', opacity: 0.72 },
-  fetchPopupOverlay: { flex: 1, alignItems: 'flex-end', justifyContent: 'flex-start', paddingTop: 130, paddingRight: 14, paddingLeft: 64, backgroundColor: 'transparent' },
-  fetchPopupCard: { maxWidth: 300, minHeight: 54, borderRadius: 14, borderWidth: 1, borderColor: '#B9E6D0', backgroundColor: '#FFFFFF', paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 8, shadowColor: '#0A2D55', shadowOpacity: 0.16, shadowRadius: 12, elevation: 8 },
-  fetchPopupText: { flexShrink: 1, color: '#244536', fontSize: 10.5, lineHeight: 14, fontWeight: '900', textAlign: 'right' },
+  fetchPopupOverlay: { flex: 1, alignItems: 'flex-end', justifyContent: 'flex-start', paddingTop: 126, paddingRight: 12, paddingLeft: 96, backgroundColor: 'transparent' },
+  fetchPopupCard: { width: '100%', maxWidth: 286, minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: '#BDE8CE', backgroundColor: '#F3FFF8', paddingLeft: 8, paddingRight: 6, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 7, shadowColor: '#0A5B3F', shadowOpacity: 0.12, shadowRadius: 9, shadowOffset: { width: 0, height: 3 }, elevation: 6 },
+  fetchPopupIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#13915F', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  fetchPopupText: { flex: 1, minWidth: 0, color: '#14744E', fontSize: 10.2, lineHeight: 13, fontWeight: '800' },
+  fetchPopupClose: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   calendarScreen: { flex: 1, backgroundColor: '#EEF7FF', paddingHorizontal: 18, paddingTop: 18, paddingBottom: 18 },
   calendarAccent: { position: 'absolute', left: -70, right: -70, top: 118, height: 120, borderRadius: 70, backgroundColor: 'rgba(255,255,255,0.64)', transform: [{ rotate: '-7deg' }] },
   calendarTopBar: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 20 },
