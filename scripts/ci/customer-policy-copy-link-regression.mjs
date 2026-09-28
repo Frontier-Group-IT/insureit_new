@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 
-const migrationPath = 'supabase/migrations/202609280001_link_customer_policy_copy_to_external_policy.sql';
+const migrationPath = 'supabase/migrations/20260928061127_link_customer_policy_copy_to_external_policy.sql';
 const sql = fs.readFileSync(migrationPath, 'utf8');
 
 const required = [
