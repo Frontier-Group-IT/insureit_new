@@ -66,6 +66,7 @@ type IntermediaryOption = {
   intermediary_code: string | null;
   associate_employee_id: string | null;
   application_id: string | null;
+  mobile: string | null;
 };
 type ApplicationPartnerRow = { id: string; partner_record_id: string | null };
 type PartnerAssociateRow = { partner_record_id: string | null; associate_employee_id: string | null; created_at: string };
@@ -126,7 +127,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     admin.from("insurance_companies").select("id,name,is_active").eq("id", policy.insurance_company_id).maybeSingle<InsurerOption>(),
     loadPospMispAssociates(admin),
     admin.from("intermediaries")
-      .select("id,intermediary_type,display_name,intermediary_code,associate_employee_id,application_id")
+      .select("id,intermediary_type,display_name,intermediary_code,associate_employee_id,application_id,mobile")
       .in("intermediary_type", ["posp","misp","partner"])
       .eq("account_status", "active")
       .order("display_name", { ascending: true })
@@ -233,7 +234,8 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
       label: item.display_name.trim(),
       code: item.intermediary_code!.trim(),
       rmName: associate?.full_name?.trim() || "",
-      rmCode: associate?.employee_code?.trim() || ""
+      rmCode: associate?.employee_code?.trim() || "",
+      mobile: item.mobile?.replace(/\D/g, "").slice(-10) || ""
     };
   });
 

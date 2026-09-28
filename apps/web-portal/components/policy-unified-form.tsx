@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { ArrowDownToLine, CheckCircle2, ChevronRight, HandCoins, IndianRupee } from "lucide-react";
+import { ArrowDownToLine, CheckCircle2, ChevronRight, HandCoins, IndianRupee, Phone } from "lucide-react";
 import { savePolicyIntakeOnboardingDraft, type PolicyIntakeDraft } from "@/app/policy-intakes/handoff-actions";
 import { lookupPolicyRegistrationRc, type PolicyRcReview } from "@/app/policies/authbridge-rc-actions";
 import { updatePolicyOnboarding, type PolicyEditPayload } from "@/app/policies/policy-edit-actions";
@@ -42,6 +42,7 @@ export type PolicySourceOption = {
   code: string;
   rmName: string;
   rmCode: string;
+  mobile?: string;
 };
 export type PolicyRmOption = { value: string; label: string };
 export type PolicyUnifiedInitialValues = {
@@ -278,6 +279,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
   function changeVehicleClass(value:string){if(isEdit)return;setForm(current=>({...current,vehicleClass:value,capacity:"",policyProduct:"",...(value==="CPM"?{tp:"0",cpa:"0",cpaOpted:"No" as const}:{})}));}
 
   const availableSources=useMemo(()=>sources.filter(item=>item.type===form.intermediaryType),[sources,form.intermediaryType]);
+  const selectedSource=availableSources.find(item=>item.code===form.intermediaryCode&&item.label.trim().toLowerCase()===form.leadSource.trim().toLowerCase());
   const selectedSourceId=useMemo(()=>availableSources.find(item=>item.code===form.intermediaryCode&&item.label.trim().toLowerCase()===form.leadSource.trim().toLowerCase())?.value??"",[availableSources,form.intermediaryCode,form.leadSource]);
   useEffect(()=>{if(form.rmName||!selectedSourceId)return;const selected=availableSources.find(item=>item.value===selectedSourceId);if(selected?.rmName)setForm(current=>current.rmName?current:{...current,rmName:selected.rmName});},[availableSources,form.rmName,selectedSourceId]);
   function changeIntermediaryType(value:string){ setForm(current=>({...current,intermediaryType:value,leadSource:"",intermediaryCode:"",rmName:""})); }
@@ -419,7 +421,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
     <div><DateField label="Policy issuance date" value={form.issuanceDate} onChange={value=>update("issuanceDate",value)} required/><CompactSourceMeta label="Month" value={form.issuanceDate?new Date(`${form.issuanceDate}T00:00:00`).toLocaleDateString("en-US",{month:"short",year:"2-digit"}):"—"}/></div>
     <div><Select label="Policy type" value={form.businessLine} onChange={e=>update("businessLine",e.target.value)} options={policyTypeOptions} placeholder="Select policy type" required/></div>
     <div><Select label="Intermediary type" value={form.intermediaryType} onChange={e=>changeIntermediaryType(e.target.value)} options={["POSP","MISP","SIBL / Partner"]} placeholder="Select type" required/><CompactSourceMeta label="RM" value={form.rmName||"Select lead source"}/><input type="hidden" aria-label="RM name" value={form.rmName} readOnly/></div>
-    <div><label className={labelClass}>Lead source <Required/></label><select className={inputClass} value={selectedSourceId} onChange={e=>changeLeadSource(e.target.value)} disabled={!form.intermediaryType} required><option value="">{form.intermediaryType?"Select registered source":"Select intermediary type first"}</option>{availableSources.map(item=><option key={item.value} value={item.value}>{item.label} · {item.code}</option>)}</select><CompactSourceMeta label="ID" value={form.intermediaryCode||"Select lead source"}/><input type="hidden" aria-label="Intermediary code" value={form.intermediaryCode} readOnly/></div>
+    <div><label className={labelClass}>Lead source <Required/></label><select className={inputClass} value={selectedSourceId} onChange={e=>changeLeadSource(e.target.value)} disabled={!form.intermediaryType} required><option value="">{form.intermediaryType?"Select registered source":"Select intermediary type first"}</option>{availableSources.map(item=><option key={item.value} value={item.value}>{item.label} · {item.code}</option>)}</select><div className="flex min-w-0 flex-wrap items-center gap-x-3"><CompactSourceMeta label="ID" value={form.intermediaryCode||"Select lead source"}/>{selectedSource?.mobile?<span className="mt-1.5 inline-flex min-h-[18px] items-center gap-1 text-[10px] font-semibold text-[#244C73]" aria-label={`Lead source mobile ${selectedSource.mobile}`}><Phone className="h-3 w-3" aria-hidden="true"/>{selectedSource.mobile}</span>:null}</div><input type="hidden" aria-label="Intermediary code" value={form.intermediaryCode} readOnly/></div>
   </Section>;
 
   const progressAt=(index:number):SectionProgress=>sectionProgress[index]??{filled:0,total:1,complete:false,empty:true,remaining:1};

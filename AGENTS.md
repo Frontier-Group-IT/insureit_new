@@ -61,6 +61,8 @@ The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` 
 
 ### Latest implementation ledger
 
+- **2026-09-28 — Policy onboarding lead source phone:** branch `feature/policy-lead-source-phone`; the source line beneath Lead source shows the selected source ID and, when available, a phone icon with its mobile number across unified create/edit and legacy non-motor onboarding. The number comes from the existing intermediaries record and is display only. **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
 - **2026-09-25 — INSUREIT Private Voice Agent Phase 0:** branch `feature/insureit-private-voice-phase0`; documented the existing Sarvam managed-agent production architecture and the phased private-agent migration plan, introduced the mandatory private-agent rollout continuity file, and added an IT-Super-User-only UI-only `Insureit Agent` workspace under Development → Voice Agents. No private runtime, schema, telephony, STT/TTS, LLM, campaign execution, or Sarvam production behavior is changed. **IMPLEMENTED; PR/CI/merge/deployment pending.** See `docs/INSUREIT_PRIVATE_VOICE_AGENT_ROLLOUT.md`.
 
 

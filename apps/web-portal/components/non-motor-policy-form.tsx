@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
-import { ChevronDown, ChevronUp, FileText, IndianRupee, MapPin, ShieldCheck } from "lucide-react";
+import { ChevronDown, ChevronUp, FileText, IndianRupee, MapPin, ShieldCheck, Phone } from "lucide-react";
 import { createNonMotorPolicy, type NonMotorPolicyPayload } from "@/app/policies/non-motor-policy-actions";
 import { CustomerSearchField } from "@/components/customer-search-field";
 import type { PolicyRmOption, PolicySourceOption } from "@/components/policy-unified-form";
@@ -98,6 +98,7 @@ export function NonMotorPolicyForm({ insurers, customers, rms, sources }: Props)
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((current) => ({ ...current, [key]: value }));
 
   const availableSources = useMemo(() => sources.filter((item) => item.type === form.intermediaryType), [sources, form.intermediaryType]);
+  const selectedSourceMobile = availableSources.find((item) => item.value === form.sourceId)?.mobile;
   const selectedInsurer = insurers.find((item) => item.value === form.insurerId)?.label ?? "Not selected";
   const selectedRmLabel = rms.find((rm) => rm.value === form.rmName)?.label ?? form.rmName;
   const riskLocation = form.riskLocation || form.transitFrom || form.projectName || "Not entered";
@@ -163,7 +164,7 @@ export function NonMotorPolicyForm({ insurers, customers, rms, sources }: Props)
             </div>
             <div>
               <Select label="Lead source" value={form.sourceId} onChange={(e) => changeSource(e.target.value)} disabled={!form.intermediaryType} required><option value="">{form.intermediaryType ? "Select registered source" : "Select intermediary type first"}</option>{availableSources.map((item) => <option key={item.value} value={item.value}>{item.label} · {item.code}</option>)}</Select>
-              <CompactSourceMeta label="ID" value={form.intermediaryCode || "Select lead source"} />
+              <div className="flex min-w-0 flex-wrap items-center gap-x-3"><CompactSourceMeta label="ID" value={form.intermediaryCode || "Select lead source"} />{selectedSourceMobile ? <span className="mt-1.5 inline-flex min-h-5 items-center gap-1 text-[10px] font-semibold text-[#475467]" aria-label={`Lead source mobile ${selectedSourceMobile}`}><Phone className="h-3 w-3" aria-hidden="true" />{selectedSourceMobile}</span> : null}</div>
               <input type="hidden" aria-label="Intermediary code" value={form.intermediaryCode} readOnly />
             </div>
           </Section>
