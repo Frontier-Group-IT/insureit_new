@@ -430,9 +430,9 @@ export default function AddVehicleScreen() {
 
         <FormSection title="Vehicle ownership" icon="truck-outline" tone="vehicle">
           <RcLookupField value={vehicleNo} state={rcLookupState} valid={rcReady} fetched={rcLookupState === 'success' && lastFetchedRc === normalizedRc} onChangeText={changeVehicleNo} onFetch={() => void fetchRcDetails()} />
-          {rcLookupMessage && rcLookupState !== 'error' ? (
-            <View style={[styles.rcStatus, rcLookupState === 'success' ? styles.rcStatusSuccess : styles.rcStatusInfo]}>
-              {rcLookupState === 'loading' ? <ActivityIndicator size="small" color="#0A43A3" /> : <MaterialCommunityIcons name={rcLookupState === 'success' ? 'check-circle-outline' : 'information-outline'} size={17} color={rcLookupState === 'success' ? '#12805C' : '#0A43A3'} />}
+          {rcLookupMessage && rcLookupState === 'success' ? (
+            <View style={[styles.rcStatus, styles.rcStatusSuccess]}>
+              <MaterialCommunityIcons name="information-outline" size={17} color="#12805C" />
               <Text style={styles.rcStatusText}>{rcLookupMessage}</Text>
             </View>
           ) : null}
@@ -570,7 +570,7 @@ function FuelDropdown({ value, onSelect }: { value: string; onSelect: (value: st
 
 function SearchInsurer({ query, selectedInsurer, companies, open, onToggle, onChange, onSelect, locked = false }: { query: string; selectedInsurer: InsuranceCompany | null; companies: InsuranceCompany[]; open: boolean; onToggle: () => void; onChange: (value: string) => void; onSelect: (company: InsuranceCompany) => void; locked?: boolean }) {
   if (locked) {
-    return <View style={styles.field}><Text style={styles.fieldLabel}>Insurer</Text><View style={[styles.inputShell, styles.fetchedInsurerShell, styles.fetchedInsurerThreeRowShell]}><View style={styles.fetchedInsurerRows}><Text style={styles.fetchedInsurerText}>••••••••••••••••••••••••••••</Text><Text style={styles.fetchedInsurerText}>••••••••••••••••••••••••</Text><Text style={styles.fetchedInsurerText}>••••••••••••••••••••</Text></View></View></View>;
+    return <View style={styles.field}><Text style={styles.fieldLabel}>Insurer</Text><View style={[styles.inputShell, styles.fetchedInsurerShell]}><Text style={styles.fetchedInsurerText} numberOfLines={1}>••••••••••••••••••••••••••••</Text></View></View>;
   }
   return (
     <AnchoredSearchSelect
@@ -728,7 +728,7 @@ function defaultPolicyEndDate(startIso: string) { const start = parseDate(startI
 function isMissingVehicleRpcSignature(error: { code?: string; message?: string } | null | undefined, functionName: string) { const message = error?.message?.toLowerCase() ?? ''; return error?.code === 'PGRST202' || (message.includes(functionName.toLowerCase()) && (message.includes('schema cache') || message.includes('could not find the function'))); }
 function parseDate(value: string) { if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null; const [year, month, day] = value.split('-').map(Number); const parsed = new Date(year, month - 1, day); if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) return null; return parsed; }
 function monthStart(date: Date) { return new Date(date.getFullYear(), date.getMonth(), 1); }
-function buildMonthDays(month: Date) { const first = monthStart(month); const start = new Date(first); start.setDate(first.getDate() - first.getDay()); return Array.from({ length: 42 }, (_, index) => { const date = new Date(start); date.setDate(start.getDate() + index); return { date, inMonth: date.getMonth() === month.getMonth() }; }); }
+function buildMonthDays(month: Date) { const first = monthStart(month); const start = new Date(first); start.setDate(first.getDate() - first.getDay()); return Array.from({ length: 42 }, (_, index) => { const date = new Date(start); date.setDate(start.getDate() + index); return { date, inMonth: date.date?.getMonth?.() === month.getMonth() ? true : date.getMonth() === month.getMonth() }; }); }
 function sameDate(a: Date, b: Date) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
 function formatIsoDate(date: Date) { const year = date.getFullYear(); const month = String(date.getMonth() + 1).padStart(2, '0'); const day = String(date.getDate()).padStart(2, '0'); return `${year}-${month}-${day}`; }
 function formatDisplayDate(value: string) { const parsed = parseDate(value); return parsed ? parsed.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : value; }
