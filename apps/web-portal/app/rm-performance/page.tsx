@@ -55,8 +55,8 @@ export default async function RmPerformancePage({ searchParams }: { searchParams
 
         <section className="mt-3 overflow-hidden rounded-[18px] border border-[#DCE4EE] bg-white shadow-[0_10px_28px_rgba(30,49,80,.04)]">
           <div className="grid xl:grid-cols-[1fr_1fr_1.05fr]">
-            <PerformancePanel eyebrow="TODAY" title={money(data.today.net_premium)} policies={data.today.policy_count} motor={data.today.motor_net_premium} nonMotor={data.today.non_motor_net_premium} life={mixAmount(data.today.category_mix, "life")} health={mixAmount(data.today.category_mix, "health")} payin={todayFinance?.report.summary.projected_payin ?? 0} payout={todayFinance?.report.summary.gross_payout ?? 0} />
-            <PerformancePanel eyebrow="MONTH TO DATE" title={money(data.mtd.net_premium)} policies={data.mtd.policy_count} motor={data.mtd.motor_net_premium} nonMotor={data.mtd.non_motor_net_premium} life={mixAmount(data.mtd.category_mix, "life")} health={mixAmount(data.mtd.category_mix, "health")} payin={mtdFinance?.report.summary.projected_payin ?? 0} payout={mtdFinance?.report.summary.gross_payout ?? 0} bordered />
+            <PerformancePanel eyebrow="TODAY" title={money(data.today.net_premium)} policies={data.today.policy_count} motor={data.today.motor_net_premium} nonMotor={data.today.non_motor_net_premium} life={mixAmount(data.todayCategoryMix, "life")} health={mixAmount(data.todayCategoryMix, "health")} payin={todayFinance?.report.summary.projected_payin ?? 0} payout={todayFinance?.report.summary.gross_payout ?? 0} />
+            <PerformancePanel eyebrow="MONTH TO DATE" title={money(data.mtd.net_premium)} policies={data.mtd.policy_count} motor={data.mtd.motor_net_premium} nonMotor={data.mtd.non_motor_net_premium} life={mixAmount(data.mtdCategoryMix, "life")} health={mixAmount(data.mtdCategoryMix, "health")} payin={mtdFinance?.report.summary.projected_payin ?? 0} payout={mtdFinance?.report.summary.gross_payout ?? 0} bordered />
             <MtdContextPanel rows={data.ytdTrend} />
           </div>
         </section>
