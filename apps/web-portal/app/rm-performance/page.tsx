@@ -55,8 +55,8 @@ export default async function RmPerformancePage({ searchParams }: { searchParams
 
         <section className="mt-3 overflow-hidden rounded-[18px] border border-[#DCE4EE] bg-white shadow-[0_10px_28px_rgba(30,49,80,.04)]">
           <div className="grid xl:grid-cols-[1fr_1fr_1.05fr]">
-            <PerformancePanel eyebrow="TODAY" title={money(data.today.net_premium)} policies={data.today.policy_count} motor={data.today.motor_net_premium} nonMotor={data.today.non_motor_net_premium} life={mixAmount(data.todayCategoryMix, "life")} health={mixAmount(data.todayCategoryMix, "health")} payin={todayFinance?.report.summary.projected_payin ?? 0} payout={todayFinance?.report.summary.gross_payout ?? 0} />
-            <PerformancePanel eyebrow="MONTH TO DATE" title={money(data.mtd.net_premium)} policies={data.mtd.policy_count} motor={data.mtd.motor_net_premium} nonMotor={data.mtd.non_motor_net_premium} life={mixAmount(data.mtdCategoryMix, "life")} health={mixAmount(data.mtdCategoryMix, "health")} payin={mtdFinance?.report.summary.projected_payin ?? 0} payout={mtdFinance?.report.summary.gross_payout ?? 0} bordered />
+            <PerformancePanel eyebrow="TODAY" title={money(data.today.net_premium)} policies={data.today.policy_count} motor={data.today.motor_net_premium} nonMotor={data.today.non_motor_net_premium} life={mixAmount(data.todayCategoryMix, "life")} health={mixAmount(data.todayCategoryMix, "health")} payin={todayFinance?.report.summary.payin_after_tds ?? 0} payout={todayFinance?.report.summary.gross_payout ?? 0} />
+            <PerformancePanel eyebrow="MONTH TO DATE" title={money(data.mtd.net_premium)} policies={data.mtd.policy_count} motor={data.mtd.motor_net_premium} nonMotor={data.mtd.non_motor_net_premium} life={mixAmount(data.mtdCategoryMix, "life")} health={mixAmount(data.mtdCategoryMix, "health")} payin={mtdFinance?.report.summary.payin_after_tds ?? 0} payout={mtdFinance?.report.summary.gross_payout ?? 0} bordered />
             <MtdContextPanel rows={data.ytdTrend} />
           </div>
         </section>
@@ -71,32 +71,33 @@ export default async function RmPerformancePage({ searchParams }: { searchParams
 }
 
 function PerformancePanel({ eyebrow, title, policies, motor, nonMotor, life, health, payin, payout, bordered = false }: { eyebrow: string; title: string; policies: number; motor: number; nonMotor: number; life: number; health: number; payin: number; payout: number; bordered?: boolean }) {
+  const retention = payin - payout;
   return (
     <div className={"px-5 py-3.5 " + (bordered ? "border-t border-[#E9EDF3] xl:border-l xl:border-t-0" : "")}>
       <p className="text-[10px] font-black tracking-[.14em] text-[#566477]">{eyebrow}</p>
-      <div className="mt-1 grid grid-cols-[1.15fr_.85fr] gap-4">
-        <div className="min-w-0">
-          <div className="min-w-0"><p className="truncate text-[24px] font-semibold tracking-[-.035em] text-[#13233E]">{title}</p><p className="text-[10px] font-medium text-[#647286]">Net Premium</p></div>
-          <div className="mt-2.5 space-y-1.5 border-t border-[#EEF1F5] pt-2.5 text-[9.5px]">
-            <BusinessMetric label="Motor" value={motor} />
-            <BusinessMetric label="Non-Motor" value={nonMotor} />
-            <BusinessMetric label="Life" value={life} />
-            <BusinessMetric label="Health" value={health} />
-          </div>
+      <div className="mt-1 flex items-start justify-between gap-4">
+        <div className="min-w-0"><p className="truncate text-[24px] font-semibold tracking-[-.035em] text-[#13233E]">{title}</p><p className="text-[10px] font-medium text-[#647286]">Net Premium</p></div>
+        <div className="pt-0.5 text-right"><p className="text-[15px] font-black text-[#24364F]">{number(policies)}</p><p className="text-[10px] font-medium text-[#647286]">Policies</p></div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 border-t border-[#E7ECF2] pt-3 text-[9.5px]">
+        <div className="space-y-1.5 pr-4">
+          <InlineMetric label="Motor" value={motor} />
+          <InlineMetric label="Non-Motor" value={nonMotor} />
+          <InlineMetric label="Life" value={life} />
+          <InlineMetric label="Health" value={health} />
         </div>
-        <div className="border-l border-[#EEF1F5] pl-4 pt-0.5">
-          <div><p className="text-[15px] font-black text-[#24364F]">{number(policies)}</p><p className="text-[10px] font-medium text-[#647286]">Policies</p></div>
-          <div className="mt-3 space-y-2 border-t border-[#EEF1F5] pt-3 text-[9.5px]">
-            <BusinessMetric label="Projected Pay-in" value={payin} />
-            <BusinessMetric label="Projected Payout" value={payout} />
-          </div>
+        <div className="space-y-2 border-l border-[#DDE5EF] pl-4">
+          <BusinessMetric label="Projected Pay-in" value={payin} helper="Less TDS" />
+          <BusinessMetric label="Projected Payout" value={payout} />
+          <BusinessMetric label="Retention" value={retention} />
         </div>
       </div>
     </div>
   );
 }
 
-function BusinessMetric({ label, value }: { label: string; value: number }) { return <div className="min-w-0"><p className="font-medium text-[#667386]">{label}</p><p className="truncate font-black text-[#34445B]">{money(value)}</p></div>; }
+function InlineMetric({ label, value }: { label: string; value: number }) { return <div className="flex min-w-0 items-center justify-between gap-2"><span className="font-medium text-[#667386]">{label}</span><span className="truncate font-black text-[#34445B]">{money(value)}</span></div>; }
+function BusinessMetric({ label, value, helper }: { label: string; value: number; helper?: string }) { return <div className="min-w-0"><div className="flex items-center gap-1.5"><p className="font-medium text-[#667386]">{label}</p>{helper ? <span className="text-[8px] font-semibold text-[#8A96A8]">{helper}</span> : null}</div><p className="truncate font-black text-[#34445B]">{money(value)}</p></div>; }
 
 function MtdContextPanel({ rows }: { rows: Awaited<ReturnType<typeof loadRmPerformance>>["ytdTrend"] }) {
   const latest = rows.at(-1); const previous = rows.at(-2); const movement = latest && previous && previous.net_premium > 0 ? ((latest.net_premium - previous.net_premium) / previous.net_premium) * 100 : null;
