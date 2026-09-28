@@ -292,6 +292,7 @@
 .reports-overview-reference .ov-control--primary:hover {
   border-color: #0b4d89;
   background: #0b4d89;
+  color: #fff;
 }
 
 .reports-overview-reference .ov-filter-count {
@@ -2512,6 +2513,50 @@
   flex-wrap: nowrap;
 }
 
+/* Portaled Overview toolbar is outside .reports-overview-reference, so keep its desktop row styles here. */
+.reports-reference-toolbar .ov-toolbar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.reports-reference-toolbar .ov-control {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid #ced9e6;
+  border-radius: 5px;
+  background: #fff;
+  padding: 0 9px;
+  color: #23456d;
+  font-size: 9.5px;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(16, 41, 92, .03);
+  white-space: nowrap;
+}
+
+.reports-reference-toolbar .ov-control:hover {
+  border-color: #91a9c3;
+  background: #f8fbff;
+}
+
+.reports-reference-toolbar .ov-control--primary {
+  border-color: #0e5da5;
+  background: #0e5da5;
+  color: #fff;
+}
+
+.reports-reference-toolbar .ov-control--primary:hover {
+  border-color: #0b4d89;
+  background: #0b4d89;
+  color: #fff;
+}
+
 .reports-overview-reference .ov-toolbar {
   display: flex;
   flex-wrap: nowrap;
@@ -2553,7 +2598,8 @@
 
   .reports-reference-filter-area,
   .reports-reference-actions,
-  .reports-overview-reference .ov-toolbar {
+  .reports-overview-reference .ov-toolbar,
+  .reports-reference-toolbar .ov-toolbar {
     flex-wrap: wrap;
     justify-content: flex-start;
   }
