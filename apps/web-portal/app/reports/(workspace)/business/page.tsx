@@ -322,7 +322,7 @@ function buildBusinessTypeRows(report: PolicyBusinessNetReport) {
     current.value += row.net_premium || 0;
     totals.set(type.key, current);
   }
-  const standardKeys = new Set(STANDARD_BUSINESS_TYPES.map((item) => item.key));
+  const standardKeys = new Set<string>(STANDARD_BUSINESS_TYPES.map((item) => item.key));
   const standardRows = STANDARD_BUSINESS_TYPES.map((item) => totals.get(item.key)!);
   const extraRows = Array.from(totals.values()).filter((row) => !standardKeys.has(row.key)).sort((a, b) => b.value - a.value || b.policies - a.policies || a.name.localeCompare(b.name));
   return [...standardRows, ...extraRows];
