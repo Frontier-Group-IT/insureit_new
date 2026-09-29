@@ -144,7 +144,7 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
     }
   };
 
-  const refreshAfterImport = async () => {
+  const refreshReconciliationSnapshot = async () => {
     const href = accountsHref(filters.period, filters.fromDate, filters.toDate, filters.insurerId ?? "");
     setIsPending(true);
     setLoadError("");
@@ -160,7 +160,7 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
       cache.current.set(cacheKey(result.filters.period, result.filters.fromDate, result.filters.toDate, result.filters.insurerId ?? ""), result);
       applyResult(result, href);
     } catch {
-      setLoadError("Reconciliation was imported, but the dashboard could not refresh automatically. Apply the filters again to reload the latest figures.");
+      setLoadError("Reconciliation was saved, but the dashboard could not refresh automatically. Apply the filters again to reload the latest figures.");
     } finally {
       setIsPending(false);
     }
@@ -250,7 +250,7 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-1.5">
-          <ReconciliationTools onImported={refreshAfterImport} />
+          <ReconciliationTools onImported={refreshReconciliationSnapshot} />
           <span className="h-5 w-px bg-[#dce4ee]" aria-hidden="true" />
           <a href={exportHref} title="Export / download Business MIS" aria-label="Export / download Business MIS" className="grid h-8 w-8 place-items-center rounded-lg border border-[#17365D] bg-white text-[#17365D] shadow-sm transition hover:bg-[#f3f7fb]">
             <Download className="h-3.5 w-3.5" />
@@ -311,7 +311,7 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
     <ReconciliationOverviewPanel overview={reconciliation} policyCount={snapshot.rows.length} />
 
     <BusinessMisTable rows={snapshot.rows} loadFailed={misLoadFailed} onOpenReconciliation={setReconciliationLookup} />
-    <AccountsPolicyReconciliationDrawer lookup={reconciliationLookup} onClose={() => setReconciliationLookup(null)} />
+    <AccountsPolicyReconciliationDrawer lookup={reconciliationLookup} onClose={() => setReconciliationLookup(null)} onPosted={refreshReconciliationSnapshot} />
   </div>;
 }
 
@@ -356,7 +356,7 @@ function ReconciliationOverviewPanel({ overview, policyCount }: { overview: Reco
   </section>;
 }
 
-function ReconciliationProgress({ title, projectedLabel, actualLabel, projected, actual, pending, progress, reconciled }: { title: string; projectedLabel: string; actualLabel: string; projected: number; actual: number; pending: number; progress: number; reconciled: number }) {
+function ReconciliationProgress({ title, projectedLabel, actualLabel, projected, actual, pending, progress, reconciled }: { title: string; projectedLabel: string; actualLabel: string; projected: number; actualLabel: string; actual: number; pending: number; progress: number; reconciled: number }) {
   return <article className="rounded-xl border border-[#e1e7ef] bg-[#fbfcfe] px-3 py-2.5">
     <div className="flex items-center justify-between gap-3">
       <div>
