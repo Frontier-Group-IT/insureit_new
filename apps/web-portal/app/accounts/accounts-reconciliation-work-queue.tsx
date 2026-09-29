@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, Loader2, Search, X } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import type { BusinessMisClientCell } from "@/lib/accounts-business-mis-schema";
 import { AccountsPolicyReconciliationDrawer } from "./accounts-policy-reconciliation-drawer";
 import type { AccountsPolicyReconciliationLookup } from "./accounts-reconciliation-detail-actions";
@@ -23,30 +24,33 @@ const QUEUES: Array<{ value: Queue; label: string }> = [
   { value: "not_applicable", label: "N/A" },
 ];
 
-const URL_CHANGE_EVENT = "insureit:accounts-url-change";
-
 export function AccountsReconciliationWorkQueue({ rows }: Props) {
+  const searchParams = useSearchParams();
+  const searchSignature = searchParams.toString();
   const [queue, setQueue] = useState<Queue>("all");
   const [query, setQuery] = useState("");
   const [liveRows, setLiveRows] = useState(rows);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [reconciliationLookup, setReconciliationLookup] = useState<AccountsPolicyReconciliationLookup | null>(null);
   const requestRef = useRef(0);
+  const didObserveInitialSearchRef = useRef(false);
 
   useEffect(() => setLiveRows(rows), [rows]);
 
   useEffect(() => {
-    const originalReplaceState = window.history.replaceState;
-    const patchedReplaceState: History["replaceState"] = function (...args) {
-      originalReplaceState.apply(window.history, args);
-      window.dispatchEvent(new Event(URL_CHANGE_EVENT));
-    };
-    window.history.replaceState = patchedReplaceState;
+    // The initial server render already contains the correct scoped rows. Skip only
+    // that first observation; later returning to the same URL scope must refresh.
+    if (!didObserveInitialSearchRef.current) {
+      didObserveInitialSearchRef.current = true;
+      return;
+    }
+
+    const requestId = ++requestRef.current;
+    const params = new URLSearchParams(searchSignature);
+    const period = params.get("period") === "mtd" ? "mtd" : params.get("period") === "custom" ? "custom" : "last_month";
+    let active = true;
 
     const refresh = async () => {
-      const requestId = ++requestRef.current;
-      const params = new URLSearchParams(window.location.search);
-      const period = params.get("period") === "mtd" ? "mtd" : params.get("period") === "custom" ? "custom" : "last_month";
       setIsRefreshing(true);
       try {
         const result = await loadAccountsSnapshotAction({
@@ -55,22 +59,19 @@ export function AccountsReconciliationWorkQueue({ rows }: Props) {
           to: period === "custom" ? params.get("to") ?? undefined : undefined,
           insurer: params.get("insurer") ?? undefined,
         });
-        if (requestRef.current === requestId) setLiveRows(result.snapshot.rows);
+        if (active && requestRef.current === requestId) setLiveRows(result.snapshot.rows);
       } catch {
         // Keep the last known queue snapshot; the dashboard surfaces its own refresh error.
       } finally {
-        if (requestRef.current === requestId) setIsRefreshing(false);
+        if (active && requestRef.current === requestId) setIsRefreshing(false);
       }
     };
 
-    window.addEventListener(URL_CHANGE_EVENT, refresh);
-    window.addEventListener("popstate", refresh);
+    void refresh();
     return () => {
-      window.removeEventListener(URL_CHANGE_EVENT, refresh);
-      window.removeEventListener("popstate", refresh);
-      if (window.history.replaceState === patchedReplaceState) window.history.replaceState = originalReplaceState;
+      active = false;
     };
-  }, []);
+  }, [searchSignature]);
 
   const indexed = useMemo(() => liveRows.map((row, index) => ({ row, index, state: reconciliationState(row) })), [liveRows]);
   const counts = useMemo(() => {
