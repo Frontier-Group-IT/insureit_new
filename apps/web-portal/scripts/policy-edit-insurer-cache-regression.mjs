@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const source = await readFile(new URL("../app/policies/[id]/edit/page.tsx", import.meta.url), "utf8");
+// The shared edit route now only dispatches Life/Health policies away from the
+// standard editor. Motor and Non-Motor edit behaviour lives unchanged in the
+// extracted standard implementation, so cache invariants belong there.
+const source = await readFile(
+  new URL("../app/policies/[id]/edit/policy-edit-standard.tsx", import.meta.url),
+  "utf8",
+);
 
 assert.ok(
   source.includes("getActiveInsuranceCompanyOptions()"),
