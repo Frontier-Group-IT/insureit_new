@@ -5,6 +5,13 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { requireCapability } from "@/lib/master-data-server";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 
+export type AccountsPolicyReconciliationLookup = {
+  policyNumber: string;
+  registrationNumber?: string;
+  insuredName?: string;
+  insurerName?: string;
+};
+
 export type AccountsPayinHistoryItem = {
   id: string;
   invoiceId: string;
@@ -81,6 +88,46 @@ type PaymentRow = {
   created_at: string;
   created_by: string | null;
 };
+
+export async function loadAccountsPolicyReconciliationDetailForRowAction(
+  lookup: AccountsPolicyReconciliationLookup,
+): Promise<AccountsPolicyReconciliationDetail> {
+  const policyNumber = String(lookup?.policyNumber ?? "").trim();
+  if (!policyNumber) throw new Error("Policy number is required.");
+
+  const profile = await requireCapability("view_accounts");
+  if (!canAccessPolicyCommercials(profile)) throw new Error("Commercial details restricted");
+
+  const db = createSupabaseAdminClient();
+  const { data, error } = await db
+    .from("policies")
+    .select("id")
+    .eq("policy_no", policyNumber)
+    .limit(25);
+
+  if (error) throw new Error("Unable to resolve the selected policy.");
+  const candidateIds = (data ?? []).map((item) => String(item.id ?? "")).filter(Boolean);
+  if (!candidateIds.length) throw new Error("The selected policy is no longer available.");
+
+  const scopedRecords = await loadBusinessMisRecordsByPolicyIds(profile, candidateIds);
+  const normalizedRegistration = normalizeText(lookup.registrationNumber);
+  const normalizedInsured = normalizeText(lookup.insuredName);
+  const normalizedInsurer = normalizeText(lookup.insurerName);
+
+  const matching = scopedRecords.filter((record) => {
+    const row = record.row;
+    if (normalizeText(row[12]) !== normalizeText(policyNumber)) return false;
+    if (normalizedRegistration && normalizeText(row[6]) !== normalizedRegistration) return false;
+    if (normalizedInsured && normalizeText(row[7]) !== normalizedInsured) return false;
+    if (normalizedInsurer && normalizeText(row[13]) !== normalizedInsurer) return false;
+    return true;
+  });
+
+  if (!matching.length) throw new Error("Policy is not available in your Accounts scope.");
+  if (matching.length > 1) throw new Error("More than one policy matches this Business MIS row. Please narrow the selection before opening reconciliation history.");
+
+  return loadAccountsPolicyReconciliationDetailAction(matching[0].policyId);
+}
 
 export async function loadAccountsPolicyReconciliationDetailAction(
   policyId: string,
@@ -226,4 +273,8 @@ function amount(value: unknown) {
 
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
+}
+
+function normalizeText(value: unknown) {
+  return String(value ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase("en-IN");
 }
