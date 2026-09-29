@@ -506,4 +506,5 @@ Update this section with every Accounts V2 change.
 - Pay-In history is loaded from policy-linked `accounts_invoice_lines` + `accounts_invoices`; cancelled invoices are excluded.
 - Payout history is loaded from `partner_payables` + `partner_payment_allocations` + `partner_payments`.
 - The loader returns projected values, cumulative actual values and remaining differences using the same Business MIS semantics.
+- Production RPC inspection confirmed the existing controlled posting path can append new invoice/line and payment/allocation records; direct-write UX remains disabled until duplicate/reference validation is designed.
 - This commit is read-only: no schema/data mutation and no direct Add Pay-In/Add Payout is enabled yet.
