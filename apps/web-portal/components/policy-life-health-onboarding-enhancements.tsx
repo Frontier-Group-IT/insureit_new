@@ -38,14 +38,33 @@ function syncLifeHealthSourcingDate() {
     mirror = document.createElement("input");
     mirror.type = "hidden";
     mirror.dataset.lifeHealthSourcingDate = "true";
-    // Life/Health sourceSnapshot reads the first input in this field. Put an
-    // ISO mirror first so the server receives YYYY-MM-DD, while the user keeps
-    // seeing and editing DD/MM/YYYY in the normal date control.
     label.insertAdjacentElement("afterend", mirror);
   }
 
   const iso = toIsoDate(visible.value);
   if (mirror.value !== iso) mirror.value = iso;
+}
+
+function syncLifeHealthDesktopLayout() {
+  const layout = document.querySelector<HTMLElement>("[data-life-health-layout='true']");
+  if (!layout) return;
+
+  // The Life/Health form is mounted into a DOM-created grid. Keep that grid and
+  // its children eligible to consume the full policy workspace; otherwise the
+  // portal can shrink-wrap and leave a large unused area on wide screens.
+  layout.classList.add("w-full", "min-w-0");
+  layout.parentElement?.classList.add("w-full", "min-w-0");
+  (layout.firstElementChild as HTMLElement | null)?.classList.add("min-w-0");
+  layout.querySelector<HTMLElement>("[data-life-health-summary='true']")?.classList.add("min-w-0");
+
+  // Four source fields are too narrow when the summary rail is present at
+  // desktop widths. Use two columns until the viewport has genuine 2xl space.
+  const source = layout.querySelector<HTMLElement>("[data-life-health-source='true']");
+  const sourceContent = source?.querySelector<HTMLElement>(":scope > div:last-child");
+  if (sourceContent?.classList.contains("xl:grid-cols-4")) {
+    sourceContent.classList.remove("xl:grid-cols-4");
+    sourceContent.classList.add("xl:grid-cols-2", "2xl:grid-cols-4");
+  }
 }
 
 function syncRmEmployeeId(sources: OnboardingSource[]) {
@@ -65,16 +84,11 @@ function syncRmEmployeeId(sources: OnboardingSource[]) {
     return;
   }
 
-  // Employee ID belongs to the selected RM/source and is applicable to every
-  // policy business line (Motor, Non-Motor, Health and Life).
   rmMeta.style.display = "inline-flex";
   rmMeta.style.verticalAlign = "middle";
 
   const employeeIdText = `ID · ${rmCode}`;
   if (existing) {
-    // Avoid mutating the DOM when the value is already correct. Rewriting the
-    // same text triggers the body MutationObserver again and can create an
-    // endless requestAnimationFrame/mutation loop.
     if (existing.textContent !== employeeIdText) existing.textContent = employeeIdText;
     return;
   }
@@ -90,17 +104,20 @@ export function PolicyLifeHealthOnboardingEnhancements({ sources }: { sources: O
   useEffect(() => {
     const sync = () => requestAnimationFrame(() => {
       syncLifeHealthSourcingDate();
+      syncLifeHealthDesktopLayout();
       syncRmEmployeeId(sources);
     });
     const observer = new MutationObserver(sync);
     observer.observe(document.body, { childList: true, subtree: true });
     document.addEventListener("input", sync, true);
     document.addEventListener("change", sync, true);
+    window.addEventListener("resize", sync);
     sync();
     return () => {
       observer.disconnect();
       document.removeEventListener("input", sync, true);
       document.removeEventListener("change", sync, true);
+      window.removeEventListener("resize", sync);
     };
   }, [sources]);
   return null;
