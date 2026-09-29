@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Search, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Loader2, Search, X } from "lucide-react";
 import type { BusinessMisClientCell } from "@/lib/accounts-business-mis-schema";
+import { loadAccountsSnapshotAction } from "./accounts-snapshot-actions";
 
 type Queue = "all" | "pending" | "partial" | "variance" | "reconciled" | "not_applicable";
 type State = Exclude<Queue, "all">;
@@ -20,11 +21,55 @@ const QUEUES: Array<{ value: Queue; label: string }> = [
   { value: "not_applicable", label: "N/A" },
 ];
 
+const URL_CHANGE_EVENT = "insureit:accounts-url-change";
+
 export function AccountsReconciliationWorkQueue({ rows }: Props) {
   const [queue, setQueue] = useState<Queue>("all");
   const [query, setQuery] = useState("");
+  const [liveRows, setLiveRows] = useState(rows);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const requestRef = useRef(0);
 
-  const indexed = useMemo(() => rows.map((row, index) => ({ row, index, state: reconciliationState(row) })), [rows]);
+  useEffect(() => setLiveRows(rows), [rows]);
+
+  useEffect(() => {
+    const originalReplaceState = window.history.replaceState;
+    const patchedReplaceState: History["replaceState"] = function (...args) {
+      originalReplaceState.apply(window.history, args);
+      window.dispatchEvent(new Event(URL_CHANGE_EVENT));
+    };
+    window.history.replaceState = patchedReplaceState;
+
+    const refresh = async () => {
+      const requestId = ++requestRef.current;
+      const params = new URLSearchParams(window.location.search);
+      const period = params.get("period") === "mtd" ? "mtd" : params.get("period") === "custom" ? "custom" : "last_month";
+      setIsRefreshing(true);
+      try {
+        const result = await loadAccountsSnapshotAction({
+          period,
+          from: period === "custom" ? params.get("from") ?? undefined : undefined,
+          to: period === "custom" ? params.get("to") ?? undefined : undefined,
+          insurer: params.get("insurer") ?? undefined,
+        });
+        if (requestRef.current === requestId) setLiveRows(result.snapshot.rows);
+      } catch {
+        // Keep the last known queue snapshot; the dashboard surfaces its own refresh error.
+      } finally {
+        if (requestRef.current === requestId) setIsRefreshing(false);
+      }
+    };
+
+    window.addEventListener(URL_CHANGE_EVENT, refresh);
+    window.addEventListener("popstate", refresh);
+    return () => {
+      window.removeEventListener(URL_CHANGE_EVENT, refresh);
+      window.removeEventListener("popstate", refresh);
+      if (window.history.replaceState === patchedReplaceState) window.history.replaceState = originalReplaceState;
+    };
+  }, []);
+
+  const indexed = useMemo(() => liveRows.map((row, index) => ({ row, index, state: reconciliationState(row) })), [liveRows]);
   const counts = useMemo(() => {
     const next: Record<Queue, number> = { all: indexed.length, pending: 0, partial: 0, variance: 0, reconciled: 0, not_applicable: 0 };
     for (const item of indexed) next[item.state] += 1;
@@ -41,7 +86,10 @@ export function AccountsReconciliationWorkQueue({ rows }: Props) {
   return <section className="rounded-2xl border border-[#dbe3ee] bg-white px-3 py-2.5 shadow-sm">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div>
-        <h2 className="text-[11.5px] font-semibold text-[#17365D]">Reconciliation work queue</h2>
+        <div className="flex items-center gap-1.5">
+          <h2 className="text-[11.5px] font-semibold text-[#17365D]">Reconciliation work queue</h2>
+          {isRefreshing ? <Loader2 className="h-3 w-3 animate-spin text-[#7c899b]" aria-label="Refreshing reconciliation work queue" /> : null}
+        </div>
         <p className="mt-0.5 text-[7.5px] text-[#7c899b]">Search policy, registration, customer, bill / UTR reference or transaction date.</p>
       </div>
       <div className="relative w-full sm:w-[360px]">
