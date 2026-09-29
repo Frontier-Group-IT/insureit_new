@@ -1,6 +1,13 @@
-/* Life / Health uses a DOM-mounted layout inside the unified policy form.
-   Size the real mount directly so it consumes the same desktop workspace as
-   the onboarding header/navigation instead of shrink-wrapping to its content. */
+/* Life / Health is portal-mounted inside the fallback wrapper used before the
+   dedicated form is attached. That wrapper was becoming the containing block
+   for the two-column layout, so making only the inner grid 100% could never
+   make it as wide as Motor. Remove that wrapper from layout once the real
+   Life/Health grid exists; its children then size against the same 1480px
+   PolicyUnifiedForm workspace used by Motor. */
+.space-y-4:has(> [data-life-health-layout="true"]) {
+  display: contents;
+}
+
 [data-life-health-layout="true"] {
   width: 100% !important;
   min-width: 0 !important;
@@ -14,6 +21,7 @@
 }
 
 @media (min-width: 1280px) {
+  /* Match Motor exactly: flexible main form plus a fixed 336px summary rail. */
   [data-life-health-layout="true"] {
     grid-template-columns: minmax(0, 1fr) 336px !important;
   }
