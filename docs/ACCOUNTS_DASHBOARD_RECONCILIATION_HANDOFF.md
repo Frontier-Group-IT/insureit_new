@@ -339,7 +339,7 @@ That is also structurally compatible with multiple payout installments.
 
 The redesign should reuse the existing controlled posting primitives where safe rather than creating a second parallel accounting ledger.
 
-Before each direct-entry or new Excel posting feature is enabled, verify that the existing RPC/function behavior supports repeated policy-wise entries safely and that its duplicate/reference rules match the UX.
+Production inspection on 2026-09-29 confirmed that the RPC intentionally does not reject duplicate Bill Numbers as its primary duplicate key, creates a new Accounts invoice + invoice line for each Pay-In group, and posts payout allocations through the existing partner payable/payment functions. The read path must therefore remain append-oriented, while UI/import duplicate protection needs to be handled deliberately before direct posting is enabled.
 
 ## 11. Known current blocker in the existing Excel workflow
 
@@ -498,3 +498,12 @@ Update this section with every Accounts V2 change.
 - Target model is one policy summary row with unlimited underlying Pay-In/Payout entries.
 - Existing summary aggregation and posting primitives are to be reused where safe.
 - Phase 1 begins with permission-scoped read-only policy reconciliation history before direct write workflows are enabled.
+
+### 2026-09-29 — Phase 1 history loader started
+
+- Added `apps/web-portal/app/accounts/accounts-reconciliation-detail-actions.ts`.
+- The loader requires `view_accounts`, preserves commercial-access checks and reuses the canonical policy scope before loading any detail.
+- Pay-In history is loaded from policy-linked `accounts_invoice_lines` + `accounts_invoices`; cancelled invoices are excluded.
+- Payout history is loaded from `partner_payables` + `partner_payment_allocations` + `partner_payments`.
+- The loader returns projected values, cumulative actual values and remaining differences using the same Business MIS semantics.
+- This commit is read-only: no schema/data mutation and no direct Add Pay-In/Add Payout is enabled yet.
