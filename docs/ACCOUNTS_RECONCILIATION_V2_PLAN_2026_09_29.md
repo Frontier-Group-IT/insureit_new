@@ -68,7 +68,9 @@ The current summary code already supports cumulative underlying rows in importan
 - Payout Business MIS uses `partner_payables` + `partner_payment_allocations` + `partner_payments`, sums allocated amounts and aggregates dates/references.
 - The existing controlled RPC `post_accounts_excel_reconciliation` creates the accounting records used by the current workflow.
 
-Therefore V2 should reuse these primitives where safe instead of creating a parallel ledger simply to support installments.
+Production inspection on 2026-09-29 confirmed that the RPC creates a new Accounts invoice + line for each Pay-In group and uses existing partner payment allocation functions for Payout. The current one-installment blocker is therefore primarily the existing full-MIS validation/UX, not the summary aggregation itself.
+
+V2 should reuse these primitives where safe instead of creating a parallel ledger simply to support installments.
 
 ## Required UX
 
@@ -168,9 +170,11 @@ Document working principles, verify existing tables/RPCs and identify the one-sl
 
 Expose policy identifiers safely to the Accounts UI, add a permission-scoped reconciliation detail loader and a read-only policy drawer using existing accounting history.
 
+**Started:** `accounts-reconciliation-detail-actions.ts` now provides the permission-scoped read-only history loader for Pay-In and Payout. The drawer/UI wiring is the next Phase 1 step.
+
 ### Phase 2 — direct portal posting
 
-Add `+ Add Pay-In` and `+ Add Payout`, reusing controlled posting primitives where repeated installments are safe.
+Add `+ Add Pay-In` and `+ Add Payout`, reusing controlled posting primitives where repeated installments are safe and duplicate/reference checks are explicit.
 
 ### Phase 3 — transaction Excel flow
 
