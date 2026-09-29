@@ -5,7 +5,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type ViewerProfile = { id: string; role: string | null };
 export type PolicyBusinessQuery = { period?: string; from?: string; to?: string; insurer?: string; rm?: string; intermediary?: string; business?: string; category?: string; page?: string; pageSize?: string };
-export type PolicyBusinessFilters = { period: "90d" | "mtd" | "ytd" | "all" | "custom"; fromDate: string | null; toDate: string | null; insurerId: string | null; rmEmployeeId: string | null; intermediaryCode: string | null; businessLine: "Motor" | "Non Motor" | null; category: string | null; page: number };
+export type PolicyBusinessFilters = { period: "90d" | "mtd" | "ytd" | "all" | "custom"; fromDate: string | null; toDate: string | null; insurerId: string | null; rmEmployeeId: string | null; intermediaryCode: string | null; businessLine: "Motor" | "Non Motor" | "Life" | "Health" | null; category: string | null; page: number };
 export type PolicyBusinessReport = {
  summary:{policy_count:number;active_policy_count:number;gross_premium:number;net_premium:number;od_premium:number;tp_premium:number;cpa_amount:number;average_premium:number;insurer_count:number;intermediary_count:number;motor_policy_count:number;non_motor_policy_count:number;motor_gross_premium:number;non_motor_gross_premium:number};
  trend:Array<{month:string;policy_count:number;gross_premium:number}>;
@@ -45,7 +45,6 @@ export async function loadPolicyBusinessNetReport(profile:ViewerProfile,query:Po
  return{report:normalizePolicyBusinessNetReport(reportResult.data,filters.page),filters,scopeMode:scope.mode};
 }
 
-
 export async function loadPolicyBusinessDailyTrend(profile:ViewerProfile,query:PolicyBusinessQuery){
  const {filters,scopeRmEmployeeIds}=await reportContext(profile,query);
  if(scopeRmEmployeeIds!==null&&scopeRmEmployeeIds.length===0)return[] as Array<{date:string;policy_count:number;net_premium:number}>;
@@ -72,7 +71,6 @@ export async function loadPolicyBusinessDailyTrend(profile:ViewerProfile,query:P
  return[...totals.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([date,total])=>({date,...total}));
 }
 
-
 export async function loadPolicyBusinessSourceMix(profile:ViewerProfile,query:PolicyBusinessQuery){
  const {filters,scopeRmEmployeeIds}=await reportContext(profile,query);
  if(scopeRmEmployeeIds!==null&&scopeRmEmployeeIds.length===0)return[] as Array<{key:string;name:string;policy_count:number;net_premium:number;share_percent:number}>;
@@ -87,26 +85,17 @@ export async function loadPolicyBusinessSourceMix(profile:ViewerProfile,query:Po
   const result=await admin.rpc("get_policy_business_report_v5",reportRpcArgs(scopeRmEmployeeIds,pageFilters,pageSize));
   if(result.error)throw new Error(`Policy business source mix query failed: ${result.error.message}`);
   const report=normalizePolicyBusinessNetReport(result.data,page);
-  for(const source of report.filters.intermediaries){
-   sourceNames.set(source.code,source.name||source.code);
-  }
+  for(const source of report.filters.intermediaries){sourceNames.set(source.code,source.name||source.code)}
   for(const row of report.register.rows){
    const key=row.intermediary_code?.trim()||"unassigned";
    const name=key==="unassigned"?"Unassigned":(sourceNames.get(key)||key);
    const current=totals.get(key)??{name,policy_count:0,net_premium:0};
-   current.name=name;
-   current.policy_count+=1;
-   current.net_premium+=row.net_premium||0;
-   totals.set(key,current);
+   current.name=name;current.policy_count+=1;current.net_premium+=row.net_premium||0;totals.set(key,current);
   }
-  totalPages=Math.max(1,Math.ceil(report.register.total_count/pageSize));
-  page+=1;
+  totalPages=Math.max(1,Math.ceil(report.register.total_count/pageSize));page+=1;
  }while(page<=totalPages);
  const totalPremium=[...totals.values()].reduce((sum,row)=>sum+row.net_premium,0);
- return[...totals.entries()]
-  .map(([key,row])=>({key,...row,share_percent:totalPremium>0?(row.net_premium/totalPremium)*100:0}))
-  .sort((a,b)=>b.net_premium-a.net_premium||b.policy_count-a.policy_count||a.name.localeCompare(b.name))
-  .slice(0,12);
+ return[...totals.entries()].map(([key,row])=>({key,...row,share_percent:totalPremium>0?(row.net_premium/totalPremium)*100:0})).sort((a,b)=>b.net_premium-a.net_premium||b.policy_count-a.policy_count||a.name.localeCompare(b.name)).slice(0,12);
 }
 
 async function reportContext(profile:ViewerProfile,query:PolicyBusinessQuery){
@@ -125,27 +114,11 @@ export function reportScopeLabel(mode:"organization"|"hierarchy"|"self"|"none"){
 
 function normalizePolicyBusinessReport(value:unknown,page:number):PolicyBusinessReport{
  const raw=objectValue(value),summary=objectValue(raw.summary),register=objectValue(raw.register),filters=normalizeFilters(raw.filters);
- return{
-  summary:{policy_count:numberValue(summary.policy_count),active_policy_count:numberValue(summary.active_policy_count),gross_premium:numberValue(summary.gross_premium),net_premium:numberValue(summary.net_premium),od_premium:numberValue(summary.od_premium),tp_premium:numberValue(summary.tp_premium),cpa_amount:numberValue(summary.cpa_amount),average_premium:numberValue(summary.average_premium),insurer_count:numberValue(summary.insurer_count),intermediary_count:numberValue(summary.intermediary_count),motor_policy_count:numberValue(summary.motor_policy_count),non_motor_policy_count:numberValue(summary.non_motor_policy_count),motor_gross_premium:numberValue(summary.motor_gross_premium),non_motor_gross_premium:numberValue(summary.non_motor_gross_premium)},
-  trend:arrayValue(raw.trend).map(row=>{const x=objectValue(row);return{month:stringValue(x.month),policy_count:numberValue(x.policy_count),gross_premium:numberValue(x.gross_premium)}}),
-  category_mix:arrayValue(raw.category_mix).map(row=>{const x=objectValue(row);return{category:stringValue(x.category),policy_count:numberValue(x.policy_count),gross_premium:numberValue(x.gross_premium)}}),
-  insurers:arrayValue(raw.insurers).map(row=>{const x=objectValue(row);return{id:stringValue(x.id),name:stringValue(x.name),policy_count:numberValue(x.policy_count),gross_premium:numberValue(x.gross_premium),share_percent:numberValue(x.share_percent)}}),
-  rms:arrayValue(raw.rms).map(row=>{const x=objectValue(row);return{employee_id:nullableString(x.employee_id),name:stringValue(x.name),policy_count:numberValue(x.policy_count),intermediary_count:numberValue(x.intermediary_count),gross_premium:numberValue(x.gross_premium),average_premium:numberValue(x.average_premium)}}),
-  filters,
-  register:{rows:arrayValue(register.rows).map(normalizeRow),total_count:numberValue(register.total_count),page:numberValue(register.page)||page,page_size:numberValue(register.page_size)||25}
- };
+ return{summary:{policy_count:numberValue(summary.policy_count),active_policy_count:numberValue(summary.active_policy_count),gross_premium:numberValue(summary.gross_premium),net_premium:numberValue(summary.net_premium),od_premium:numberValue(summary.od_premium),tp_premium:numberValue(summary.tp_premium),cpa_amount:numberValue(summary.cpa_amount),average_premium:numberValue(summary.average_premium),insurer_count:numberValue(summary.insurer_count),intermediary_count:numberValue(summary.intermediary_count),motor_policy_count:numberValue(summary.motor_policy_count),non_motor_policy_count:numberValue(summary.non_motor_policy_count),motor_gross_premium:numberValue(summary.motor_gross_premium),non_motor_gross_premium:numberValue(summary.non_motor_gross_premium)},trend:arrayValue(raw.trend).map(row=>{const x=objectValue(row);return{month:stringValue(x.month),policy_count:numberValue(x.policy_count),gross_premium:numberValue(x.gross_premium)}}),category_mix:arrayValue(raw.category_mix).map(row=>{const x=objectValue(row);return{category:stringValue(x.category),policy_count:numberValue(x.policy_count),gross_premium:numberValue(x.gross_premium)}}),insurers:arrayValue(raw.insurers).map(row=>{const x=objectValue(row);return{id:stringValue(x.id),name:stringValue(x.name),policy_count:numberValue(x.policy_count),gross_premium:numberValue(x.gross_premium),share_percent:numberValue(x.share_percent)}}),rms:arrayValue(raw.rms).map(row=>{const x=objectValue(row);return{employee_id:nullableString(x.employee_id),name:stringValue(x.name),policy_count:numberValue(x.policy_count),intermediary_count:numberValue(x.intermediary_count),gross_premium:numberValue(x.gross_premium),average_premium:numberValue(x.average_premium)}}),filters,register:{rows:arrayValue(register.rows).map(normalizeRow),total_count:numberValue(register.total_count),page:numberValue(register.page)||page,page_size:numberValue(register.page_size)||25}};
 }
 function normalizePolicyBusinessNetReport(value:unknown,page:number):PolicyBusinessNetReport{
  const raw=objectValue(value),summary=objectValue(raw.summary),register=objectValue(raw.register),filters=normalizeFilters(raw.filters);
- return{
-  summary:{policy_count:numberValue(summary.policy_count),active_policy_count:numberValue(summary.active_policy_count),gross_premium:numberValue(summary.gross_premium),net_premium:numberValue(summary.net_premium),od_premium:numberValue(summary.od_premium),tp_premium:numberValue(summary.tp_premium),cpa_amount:numberValue(summary.cpa_amount),average_net_premium:numberValue(summary.average_net_premium),insurer_count:numberValue(summary.insurer_count),intermediary_count:numberValue(summary.intermediary_count),motor_policy_count:numberValue(summary.motor_policy_count),non_motor_policy_count:numberValue(summary.non_motor_policy_count),motor_net_premium:numberValue(summary.motor_net_premium),non_motor_net_premium:numberValue(summary.non_motor_net_premium)},
-  trend:arrayValue(raw.trend).map(row=>{const x=objectValue(row);return{month:stringValue(x.month),policy_count:numberValue(x.policy_count),net_premium:numberValue(x.net_premium)}}),
-  category_mix:arrayValue(raw.category_mix).map(row=>{const x=objectValue(row);return{category:stringValue(x.category),policy_count:numberValue(x.policy_count),net_premium:numberValue(x.net_premium)}}),
-  insurers:arrayValue(raw.insurers).map(row=>{const x=objectValue(row);return{id:stringValue(x.id),name:stringValue(x.name),policy_count:numberValue(x.policy_count),net_premium:numberValue(x.net_premium),share_percent:numberValue(x.share_percent)}}),
-  rms:arrayValue(raw.rms).map(row=>{const x=objectValue(row);return{employee_id:nullableString(x.employee_id),name:stringValue(x.name),policy_count:numberValue(x.policy_count),intermediary_count:numberValue(x.intermediary_count),net_premium:numberValue(x.net_premium),average_net_premium:numberValue(x.average_net_premium)}}),
-  filters,
-  register:{rows:arrayValue(register.rows).map(normalizeRow),total_count:numberValue(register.total_count),page:numberValue(register.page)||page,page_size:numberValue(register.page_size)||25}
- };
+ return{summary:{policy_count:numberValue(summary.policy_count),active_policy_count:numberValue(summary.active_policy_count),gross_premium:numberValue(summary.gross_premium),net_premium:numberValue(summary.net_premium),od_premium:numberValue(summary.od_premium),tp_premium:numberValue(summary.tp_premium),cpa_amount:numberValue(summary.cpa_amount),average_net_premium:numberValue(summary.average_net_premium),insurer_count:numberValue(summary.insurer_count),intermediary_count:numberValue(summary.intermediary_count),motor_policy_count:numberValue(summary.motor_policy_count),non_motor_policy_count:numberValue(summary.non_motor_policy_count),motor_net_premium:numberValue(summary.motor_net_premium),non_motor_net_premium:numberValue(summary.non_motor_net_premium)},trend:arrayValue(raw.trend).map(row=>{const x=objectValue(row);return{month:stringValue(x.month),policy_count:numberValue(x.policy_count),net_premium:numberValue(x.net_premium)}}),category_mix:arrayValue(raw.category_mix).map(row=>{const x=objectValue(row);return{category:stringValue(x.category),policy_count:numberValue(x.policy_count),net_premium:numberValue(x.net_premium)}}),insurers:arrayValue(raw.insurers).map(row=>{const x=objectValue(row);return{id:stringValue(x.id),name:stringValue(x.name),policy_count:numberValue(x.policy_count),net_premium:numberValue(x.net_premium),share_percent:numberValue(x.share_percent)}}),rms:arrayValue(raw.rms).map(row=>{const x=objectValue(row);return{employee_id:nullableString(x.employee_id),name:stringValue(x.name),policy_count:numberValue(x.policy_count),intermediary_count:numberValue(x.intermediary_count),net_premium:numberValue(x.net_premium),average_net_premium:numberValue(x.average_net_premium)}}),filters,register:{rows:arrayValue(register.rows).map(normalizeRow),total_count:numberValue(register.total_count),page:numberValue(register.page)||page,page_size:numberValue(register.page_size)||25}};
 }
 function normalizeFilters(value:unknown):PolicyBusinessFilterOptions{const filters=objectValue(value);return{insurers:arrayValue(filters.insurers).map(row=>{const x=objectValue(row);return{id:stringValue(x.id),name:stringValue(x.name)}}).filter(x=>x.id&&x.name),rms:arrayValue(filters.rms).map(row=>{const x=objectValue(row);return{id:stringValue(x.id),name:stringValue(x.name)}}).filter((x):x is {id:string;name:string}=>Boolean(x.id&&x.name)),intermediaries:arrayValue(filters.intermediaries).map(row=>{const x=objectValue(row);return{code:stringValue(x.code),type:nullableString(x.type),name:stringValue(x.name)}}).filter(x=>x.code),categories:arrayValue(filters.categories).map(stringValue).filter(Boolean)}}
 function normalizeRow(row:unknown):PolicyBusinessRow{const x=objectValue(row);return{id:stringValue(x.id),policy_no:stringValue(x.policy_no),business_date:stringValue(x.business_date),policy_type:stringValue(x.policy_type),policy_product:stringValue(x.policy_product),business_type:nullableString(x.business_type),business_line:stringValue(x.business_line)||"Motor",category:stringValue(x.category)||stringValue(x.policy_type),start_date:stringValue(x.start_date),end_date:stringValue(x.end_date),status:stringValue(x.status),customer_name:stringValue(x.customer_name),customer_code:stringValue(x.customer_code),vehicle_no:stringValue(x.vehicle_no),risk_reference:stringValue(x.risk_reference),risk_secondary:nullableString(x.risk_secondary),insurer_name:stringValue(x.insurer_name),rm_name:nullableString(x.rm_name),intermediary_code:nullableString(x.intermediary_code),intermediary_type:nullableString(x.intermediary_type),gross_premium:numberValue(x.gross_premium),net_premium:numberValue(x.net_premium),od_premium:numberValue(x.od_premium),tp_premium:numberValue(x.tp_premium),cpa_amount:numberValue(x.cpa_amount),insured_declared_value:nullableNumber(x.insured_declared_value)}}
@@ -156,7 +129,7 @@ function isPeriod(value:string|undefined):value is PolicyBusinessFilters["period
 function validDate(value:string|undefined){return value&&/^\d{4}-\d{2}-\d{2}$/.test(value)?value:null}
 function validUuid(value:string|undefined){return value&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)?value:null}
 function cleanText(value:string|undefined,max:number){const cleaned=value?.trim();return cleaned?cleaned.slice(0,max):null}
-function businessLine(value:string|undefined):PolicyBusinessFilters["businessLine"]{return value==="Motor"||value==="Non Motor"?value:null}
+function businessLine(value:string|undefined):PolicyBusinessFilters["businessLine"]{return value==="Motor"||value==="Non Motor"||value==="Life"||value==="Health"?value:null}
 function positiveInteger(value:string|undefined){const parsed=Number.parseInt(value??"1",10);return Number.isFinite(parsed)&&parsed>0?parsed:1}
 function positiveLimitedInteger(value:string|undefined,fallback:number,max:number){const parsed=Number.parseInt(value??String(fallback),10);return Number.isFinite(parsed)&&parsed>0?Math.min(parsed,max):fallback}
 function addDays(date:Date,days:number){const copy=new Date(date);copy.setDate(copy.getDate()+days);return copy}
