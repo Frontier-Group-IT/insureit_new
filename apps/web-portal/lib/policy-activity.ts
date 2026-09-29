@@ -55,7 +55,13 @@ type AdminClient = ReturnType<typeof createSupabaseAdminClient>;
 type AuditRow = { id: string; actor_id: string | null; action: string; created_at: string };
 type DocumentRow = { uploaded_by: string | null; created_at: string; updated_at: string };
 type ProfileRow = { id: string; full_name: string | null };
-type LifeHealthCaseActivityRow = { id: string; created_at: string | null; converted_at: string | null };
+type LifeHealthCaseActivityRow = {
+  id: string;
+  created_at: string | null;
+  created_by: string | null;
+  converted_at: string | null;
+  converted_by: string | null;
+};
 
 type ActivityCandidate = {
   id: string;
@@ -142,7 +148,7 @@ export async function loadPolicyActivityHistory({
       .maybeSingle<DocumentRow>(),
     admin
       .from("life_health_cases")
-      .select("id,created_at,converted_at")
+      .select("id,created_at,created_by,converted_at,converted_by")
       .eq("final_policy_id", policyId)
       .order("converted_at", { ascending: false })
       .limit(1)
@@ -171,7 +177,7 @@ export async function loadPolicyActivityHistory({
     candidates.push({
       id: `life-health-case:${lifeHealthCase.id}:created`,
       action: POLICY_ACTIVITY_ACTIONS.LIFE_HEALTH_CASE_CREATED,
-      actorId: null,
+      actorId: lifeHealthCase.created_by,
       at: lifeHealthCase.created_at,
     });
   }
@@ -179,7 +185,7 @@ export async function loadPolicyActivityHistory({
     candidates.push({
       id: `life-health-case:${lifeHealthCase.id}:closed`,
       action: POLICY_ACTIVITY_ACTIONS.LIFE_HEALTH_CASE_CLOSED,
-      actorId: createdBy,
+      actorId: lifeHealthCase.converted_by,
       at: lifeHealthCase.converted_at,
     });
   }
