@@ -67,6 +67,51 @@ function syncLifeHealthDesktopLayout() {
   }
 }
 
+function syncLifeHealthDocumentUploadStates() {
+  const footer = document.querySelector<HTMLElement>("[data-life-health-footer='true']");
+  if (!footer) return;
+
+  footer.querySelectorAll<HTMLInputElement>('input[type="file"]').forEach((input) => {
+    const label = input.closest("label") as HTMLLabelElement | null;
+    const text = label?.querySelector<HTMLElement>("span:not([data-life-health-upload-check])");
+    if (!label || !text) return;
+
+    const currentText = text.textContent?.trim() ?? "";
+    const baseLabel = label.dataset.lifeHealthDocumentLabel
+      || currentText.replace(/^Add\s+/, "").replace(/\s+Uploaded$/, "");
+    if (!baseLabel) return;
+    label.dataset.lifeHealthDocumentLabel = baseLabel;
+
+    const hasFile = Boolean(input.files?.[0]);
+    let check = label.querySelector<HTMLElement>("[data-life-health-upload-check]");
+
+    if (hasFile) {
+      label.classList.remove("border-[#8BB8F5]", "bg-white", "text-[#0A43A3]", "hover:border-[#5E9DEB]", "hover:bg-[#F5F9FF]");
+      label.classList.add("border-[#A6D9BE]", "bg-[#EDF9F2]", "text-[#18794E]", "hover:border-[#7CC69E]", "hover:bg-[#E4F5EB]");
+      const uploadIcon = label.querySelector<SVGElement>("svg");
+      if (uploadIcon) uploadIcon.style.display = "none";
+      if (!check) {
+        check = document.createElement("span");
+        check.dataset.lifeHealthUploadCheck = "true";
+        check.className = "grid h-4 w-4 shrink-0 place-items-center rounded-full bg-[#18794E] text-[10px] font-bold leading-none text-white";
+        check.textContent = "✓";
+        label.insertBefore(check, text);
+      }
+      text.textContent = `${baseLabel} Uploaded`;
+      label.setAttribute("aria-label", `Replace ${baseLabel}`);
+      return;
+    }
+
+    label.classList.remove("border-[#A6D9BE]", "bg-[#EDF9F2]", "text-[#18794E]", "hover:border-[#7CC69E]", "hover:bg-[#E4F5EB]");
+    label.classList.add("border-[#8BB8F5]", "bg-white", "text-[#0A43A3]", "hover:border-[#5E9DEB]", "hover:bg-[#F5F9FF]");
+    const uploadIcon = label.querySelector<SVGElement>("svg");
+    if (uploadIcon) uploadIcon.style.removeProperty("display");
+    check?.remove();
+    text.textContent = `Add ${baseLabel}`;
+    label.setAttribute("aria-label", `Upload ${baseLabel}`);
+  });
+}
+
 function syncRmEmployeeId(sources: OnboardingSource[]) {
   const rmInput = document.querySelector<HTMLInputElement>('input[aria-label="RM name"]');
   const leadSelect = findControl("Lead source") as HTMLSelectElement | null;
@@ -105,6 +150,7 @@ export function PolicyLifeHealthOnboardingEnhancements({ sources }: { sources: O
     const sync = () => requestAnimationFrame(() => {
       syncLifeHealthSourcingDate();
       syncLifeHealthDesktopLayout();
+      syncLifeHealthDocumentUploadStates();
       syncRmEmployeeId(sources);
     });
     const observer = new MutationObserver(sync);
