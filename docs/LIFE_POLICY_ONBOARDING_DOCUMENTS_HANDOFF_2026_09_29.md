@@ -15,7 +15,7 @@ Health keeps its existing Proposal Form / Benefit Illustration / Premium Receipt
 
 Life/Health case documents continue to use `public.life_health_case_documents` with one row per `(case_id, document_type)`.
 
-Migration `20260929062841_extend_life_health_case_document_types.sql` widens the existing `document_type` check constraint to allow:
+The production `life_health_case_documents_document_type_check` now allows:
 
 - `proposal_form`
 - `benefit_illustration`
@@ -24,17 +24,17 @@ Migration `20260929062841_extend_life_health_case_document_types.sql` widens the
 - `kyc`
 - `other_document`
 
-No table shape, RLS, storage bucket or uniqueness rule changes.
+The production schema change was applied through the Supabase migration service as `extend_life_health_case_document_types`, recorded remotely as version `20260929062841`. The applied DDL drops and recreates only the existing document-type check constraint with the six allowed values above, then validates it. No table shape, RLS, storage bucket or uniqueness rule changed.
 
 ## Evidence state
 
 - UI/document wiring: **IMPLEMENTED** on PR #2534.
-- Production constraint before migration: **VERIFIED** to allow only proposal_form / benefit_illustration / premium_receipt / policy_copy.
-- Migration `extend_life_health_case_document_types`: **APPLIED** to production Supabase project `ilzhsfqqjyppzzvfscmh` on 2026-09-29 and recorded remotely as version `20260929062841`.
+- Production constraint before schema change: **VERIFIED** to allow only proposal_form / benefit_illustration / premium_receipt / policy_copy.
+- Production schema change: **APPLIED** to Supabase project `ilzhsfqqjyppzzvfscmh` on 2026-09-29.
 - Post-apply verification: **VERIFIED**; `life_health_case_documents_document_type_check` is validated and allows all six document types including `kyc` and `other_document`.
-- Automated schema workflow: `.github/workflows/apply-life-health-document-types.yml` verifies/applies the exact migration version and checks the constraint contract.
+- The schema was applied and verified before web deployment so the new KYC / Other Document uploads cannot hit the old four-value constraint.
 - Merge/deployment: pending canonical `Verify web portal` success and production release workflow completion.
 
 ## Continuation
 
-The production schema prerequisite for the Life compact-upload UI is now APPLIED + VERIFIED. Merge only after the canonical PR verification succeeds, then deploy through the protected production GitHub Actions workflow and verify the exact Vercel production deployment before marking the feature DEPLOYED.
+The production schema prerequisite for the Life compact-upload UI is APPLIED + VERIFIED. Merge only after the canonical PR verification succeeds, then deploy through the protected production GitHub Actions workflow and verify the exact Vercel production deployment before marking the feature DEPLOYED.
