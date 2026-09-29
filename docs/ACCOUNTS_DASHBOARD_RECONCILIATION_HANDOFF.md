@@ -104,7 +104,7 @@ The underlying history still preserves all three entries with their own bill/ref
 
 The same working principle applies to Payout:
 
-Projected/Gross Payout = ₹1,000
+Projected/Gross Payout = **₹1,000**
 
 - payment 1 = ₹300
 - payment 2 = ₹450
@@ -349,6 +349,29 @@ The browser does not receive or trust a new hidden policy ID just to open the hi
 
 If more than one scoped record still matches the same visible row identity, the action fails safely instead of guessing which policy to open.
 
+### Phase 2 direct-posting path
+
+Direct portal posting is intentionally separate from the Excel-import RPC so portal transactions do not carry misleading `Accounts Excel reconciliation` provenance.
+
+Migration `20260929134500_accounts_policy_reconciliation_entry.sql` introduces service-role-only `post_accounts_policy_reconciliation_entry(uuid,uuid,text,jsonb)`.
+
+For direct Pay-In it:
+- locks the policy row before duplicate checking/writing so two direct users cannot append the same policy transaction concurrently;
+- requires insurer, Bill Number, Bill Date and positive Bill Amount;
+- blocks only an exact same-policy duplicate using normalized Bill Number + Bill Date + Bill Amount;
+- continues to allow the same Bill Number in legitimate different policy/date/amount contexts;
+- appends a new Accounts invoice/line and receivable/event history instead of replacing prior installments;
+- preserves optional remarks and optional Actual TDS through the existing TDS posting primitive.
+
+For direct Payout it:
+- requires exactly one policy payout record and fails safely instead of guessing when multiple payout records exist;
+- requires entered/reviewed commercial data and intermediary code;
+- blocks an already-used normalized UTR/reference for the intermediary;
+- reuses the existing payable approval/payment primitives;
+- preserves optional remarks and appends payment/allocation history.
+
+The server actions re-resolve the visible Business MIS row through canonical Accounts scope immediately before posting. A browser-supplied policy ID is not treated as authority.
+
 ## 11. Known current blocker in the existing Excel workflow
 
 `reconciliation-upload-actions.ts` compares the uploaded row against live Business MIS values.
@@ -366,6 +389,8 @@ The V2 transaction template must not use that mutable-state comparison model. It
 Uploading the same transaction file twice must not double-post the same installment.
 
 Duplicate protection should consider appropriate policy/reference/date/amount context plus import batch identity. A likely duplicate should be blocked or sent to review.
+
+Direct portal posting now has same-policy duplicate protection and policy-level write serialization. Phase 3 Excel idempotency still needs import-batch-aware protection.
 
 ### Corrections
 
@@ -392,7 +417,7 @@ Endorsement/cancellation/commercial corrections can change projected Pay-In or P
 
 ### Overpayment / over-payout
 
-Do not cap cumulative actual at projection. Show the excess as Variance and keep the real transaction value.
+The status model supports Variance when cumulative actual exceeds projection, but the existing controlled partner-payable ledger currently prevents a payout payment above the remaining payable outstanding amount. Phase 2 deliberately preserves that accounting invariant rather than bypassing it. If INSUREIT later needs intentional over-payout posting, change the accounting model explicitly and auditably; do not weaken the existing payable guard incidentally.
 
 ### TDS
 
@@ -400,7 +425,7 @@ Keep TDS aligned with the current Accounts calculation. Do not redesign its acco
 
 ### Concurrent users
 
-Two Accounts users can post at nearly the same time. Writes must remain atomic and duplicate-safe.
+Two Accounts users can post at nearly the same time. Phase 2 direct writes serialize on the policy row before duplicate checking/writing. Excel/import concurrency remains a separate Phase 3 hardening concern.
 
 ### Performance
 
@@ -514,17 +539,26 @@ Update this section with every Accounts V2 change.
 - Pay-In history is loaded from policy-linked `accounts_invoice_lines` + `accounts_invoices`; cancelled invoices are excluded.
 - Payout history is loaded from `partner_payables` + `partner_payment_allocations` + `partner_payments`.
 - The loader returns projected values, cumulative actual values and remaining differences using the same Business MIS semantics.
-- Production RPC inspection confirmed the existing controlled posting path can append new invoice/line and payment/allocation records; direct-write UX remains disabled until duplicate/reference validation is designed.
-- This commit is read-only: no schema/data mutation and no direct Add Pay-In/Add Payout is enabled yet.
+- Production RPC inspection confirmed the existing controlled posting path can append new invoice/line and payment/allocation records.
 
 ### 2026-09-29 — Phase 1 read-only reconciliation drawer wired
 
 - Added `apps/web-portal/app/accounts/accounts-policy-reconciliation-drawer.tsx`.
-- The existing Policy Number cell is now the compact entry point to history; no Business MIS column was added, removed or reordered.
+- The existing Policy Number cell is the compact entry point to history; no Business MIS column was added, removed or reordered.
 - The drawer lazy-loads Pay-In and Payout history only after a policy is opened.
 - It shows policy context, projected amounts, cumulative received/paid amounts, remaining balances, derived status, TDS context and chronological transaction history.
-- The Accounts overview wording now says `Received Pay-In` rather than `Posted Pay-In`, matching the user-confirmed Bill Amount semantics.
+- The Accounts overview wording says `Received Pay-In` rather than `Posted Pay-In`, matching the user-confirmed Bill Amount semantics.
 - The selected row is resolved server-side from visible row identity and then revalidated against Accounts scope; ambiguous matches fail safely instead of exposing or trusting a client-supplied policy ID.
-- Phase 1 remains read-only. Direct Add Pay-In/Add Payout and transaction-oriented Excel posting are still disabled pending duplicate/reference/idempotency controls.
-- No schema migration, production accounting mutation, RLS change, mobile change, APK/AAB or native-runtime work is included.
-- Latest acceptance gate after this documentation update: Verify web portal run #4925 is pending; replace this note with the final result before merge.
+- Phase 1 verification passed on the earlier PR #2541 head in Verify web portal run #4926; that PR remained unmerged and is superseded by the current Phase 2 branch.
+
+### 2026-09-29 — Phase 2 direct policy-wise posting implemented
+
+- PR #2559 carries Phase 1 onto current `main` and adds direct `+ Add Pay-In` / `+ Add Payout` inside the existing reconciliation drawer.
+- Pay-In fields are Bill Number, Bill Date, Bill Amount, Actual TDS and optional Remarks; Payout fields are Paid Amount, Paid Date, UTR/reference and optional Remarks.
+- Both forms preview the projected amount, current cumulative actual, cumulative amount after the new entry and remaining/status before save.
+- Successful posts reload the drawer history and refresh the dashboard reconciliation summary without changing visible Business MIS columns or the existing full MIS/template structure.
+- `accounts-reconciliation-post-actions.ts` re-resolves the visible policy through scoped Accounts access immediately before posting.
+- Migration `20260929134500_accounts_policy_reconciliation_entry.sql` adds a service-role-only atomic portal-posting RPC with policy-row serialization, exact same-policy Pay-In duplicate protection, UTR/reference protection and correct portal provenance.
+- Payout posting reuses the existing payable/payment primitives and currently preserves their no-overpayment rule; intentional over-payout variance remains a future accounting-model decision.
+- `.github/workflows/apply-accounts-policy-reconciliation-entry.yml` applies/verifies the migration only after merge to `main`; `deploy-production.yml` now waits for that schema workflow before allowing Vercel deployment for this migration.
+- **IMPLEMENTED on PR #2559; production migration NOT APPLIED; merge/deployment NOT performed. Latest exact-head Verify web portal result must be recorded before merge.**
