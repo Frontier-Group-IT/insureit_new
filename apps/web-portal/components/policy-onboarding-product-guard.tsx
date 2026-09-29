@@ -125,15 +125,17 @@ function ensureLifeHealthMount(policyType: "Life" | "Health"): LifeHealthMount |
 
   notice.dataset.lifeHealthNoticeHidden = "true";
   notice.style.display = "none";
-  const navTarget = document.createElement("div"); navTarget.dataset.lifeHealthNav = "true";
+  parent.classList.add("w-full", "min-w-0");
+  const navTarget = document.createElement("div"); navTarget.dataset.lifeHealthNav = "true"; navTarget.className = "w-full min-w-0";
   const layout = document.createElement("div");
   layout.dataset.lifeHealthLayout = "true";
-  layout.className = "grid gap-4 xl:grid-cols-[minmax(0,1fr)_336px]";
-  const left = document.createElement("div"); left.className = "space-y-3";
-  const formTarget = document.createElement("div"); formTarget.dataset.lifeHealthPortal = "true";
-  const summaryTarget = document.createElement("div"); summaryTarget.dataset.lifeHealthSummary = "true"; summaryTarget.className = "self-start";
-  const footerTarget = document.createElement("div"); footerTarget.dataset.lifeHealthFooter = "true"; footerTarget.className = "mt-3 w-full";
+  layout.className = "grid w-full min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_336px]";
+  const left = document.createElement("div"); left.className = "w-full min-w-0 space-y-3";
+  const formTarget = document.createElement("div"); formTarget.dataset.lifeHealthPortal = "true"; formTarget.className = "w-full min-w-0";
+  const summaryTarget = document.createElement("div"); summaryTarget.dataset.lifeHealthSummary = "true"; summaryTarget.className = "min-w-0 self-start";
+  const footerTarget = document.createElement("div"); footerTarget.dataset.lifeHealthFooter = "true"; footerTarget.className = "mt-3 w-full min-w-0";
   source.dataset.lifeHealthSource = "true";
+  source.classList.add("w-full", "min-w-0");
   parent.insertBefore(navTarget, source);
   parent.insertBefore(layout, source);
   left.appendChild(source); left.appendChild(formTarget); layout.appendChild(left); layout.appendChild(summaryTarget);
