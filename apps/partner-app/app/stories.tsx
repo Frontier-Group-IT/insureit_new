@@ -5,7 +5,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { getPartnerStories, type PartnerStory, type PartnerStoriesData } from '@/lib/stories';
 import { formatIndianCurrency } from '@/lib/format';
-import { partnerTheme } from '@/lib/theme';
 
 export default function StoriesScreen() {
   const router = useRouter();
@@ -63,6 +62,7 @@ export default function StoriesScreen() {
 
   return (
     <View style={styles.screen}>
+      <View style={styles.ambientGlow} pointerEvents="none" />
       <View style={styles.top}>
         <View style={styles.progress}>
           {progress.map((active, itemIndex) => (
@@ -98,25 +98,15 @@ export default function StoriesScreen() {
             <View style={[styles.storyIcon, storyToneStyle(story.tone)]}>
               <Ionicons name={storyIcon(story.kind)} size={25} color="#FFFFFF" />
             </View>
-
             <Text style={styles.eyebrow}>{story.eyebrow}</Text>
-
-            {story.metric !== undefined ? (
-              <Text style={styles.metric}>{formatMetric(story)}</Text>
-            ) : null}
-
+            {story.metric !== undefined ? <Text style={styles.metric}>{formatMetric(story)}</Text> : null}
             <Text style={styles.title}>{story.title}</Text>
             <Text style={styles.body}>{story.body}</Text>
 
             {story.progress_current !== undefined && story.progress_target ? (
               <View style={styles.storyProgressWrap}>
                 <View style={styles.storyProgressTrack}>
-                  <View
-                    style={[
-                      styles.storyProgressFill,
-                      { width: `${Math.min(100, Math.max(0, (story.progress_current / story.progress_target) * 100))}%` },
-                    ]}
-                  />
+                  <View style={[styles.storyProgressFill, { width: `${Math.min(100, Math.max(0, (story.progress_current / story.progress_target) * 100))}%` }]} />
                 </View>
                 <View style={styles.storyProgressMeta}>
                   <Text style={styles.storyProgressText}>{story.progress_current}</Text>
@@ -134,9 +124,9 @@ export default function StoriesScreen() {
           </View>
 
           <View style={styles.footer}>
-            <Pressable onPress={openStory} style={styles.openButton}>
-              <Text style={styles.openButtonText}>{story.kind === 'learn' ? 'Open 60 Sec Learn' : 'Open'}</Text>
-              <Ionicons name="arrow-forward" size={15} color="#FFFFFF" />
+            <Pressable onPress={openStory} hitSlop={14} style={styles.openLink}>
+              <Text style={styles.openLinkText}>{story.kind === 'learn' ? 'Open 60 Sec Learn' : 'Open'}</Text>
+              <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
             </Pressable>
             <Text style={styles.footerHint}>{index + 1} of {data?.items.length || 0}</Text>
           </View>
@@ -168,59 +158,52 @@ function storyToneStyle(tone: PartnerStory['tone']) {
 
 function formatMetric(story: PartnerStory) {
   const value = Number(story.metric || 0);
-  if (story.metric_label?.toLowerCase().includes('idv') || story.metric_label?.toLowerCase().includes('premium')) {
-    return formatIndianCurrency(value);
-  }
+  if (story.metric_label?.toLowerCase().includes('idv') || story.metric_label?.toLowerCase().includes('premium')) return formatIndianCurrency(value);
   return String(story.metric);
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#101827', paddingTop: 38, paddingHorizontal: 16, paddingBottom: 18 },
+  screen: { flex: 1, overflow: 'hidden', backgroundColor: '#071733', paddingTop: 10, paddingHorizontal: 11, paddingBottom: 14 },
+  ambientGlow: { position: 'absolute', left: -80, right: -80, top: 170, bottom: -120, borderRadius: 240, backgroundColor: '#082A62', opacity: 0.62 },
   top: { zIndex: 4 },
   progress: { flexDirection: 'row', gap: 4 },
-  progressTrack: { flex: 1, height: 3, overflow: 'hidden', borderRadius: 999, backgroundColor: '#344055' },
-  progressFill: { width: '0%', height: '100%', backgroundColor: '#FFFFFF' },
+  progressTrack: { flex: 1, height: 3, overflow: 'hidden', borderRadius: 999, backgroundColor: '#40516F' },
+  progressFill: { width: '0%', height: '100%', backgroundColor: '#7B73FF' },
   progressFillActive: { width: '100%' },
   header: { marginTop: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  brandMark: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: '#4F46C8' },
-  brandMarkText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
-  brandTitle: { color: '#FFFFFF', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.9 },
-  brandMeta: { marginTop: 2, color: '#929DB0', fontSize: 7.5 },
-  close: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#202B3D' },
-
+  brandMark: { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#5B4CE3' },
+  brandMarkText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' },
+  brandTitle: { color: '#FFFFFF', fontSize: 8, fontWeight: '900', letterSpacing: 0.8 },
+  brandMeta: { marginTop: 1, color: '#A5AFC0', fontSize: 6.8 },
+  close: { width: 29, height: 29, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#182A4A' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   errorText: { color: '#CDD4E0', fontSize: 10, textAlign: 'center' },
   retry: { marginTop: 12, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: '#4F46C8' },
   retryText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800' },
-
-  content: { zIndex: 2, flex: 1, justifyContent: 'center', paddingHorizontal: 4, paddingBottom: 42 },
-  storyIcon: { width: 46, height: 46, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  toneAttention: { backgroundColor: '#A5681B' },
+  content: { zIndex: 2, position: 'absolute', left: 11, right: 11, top: '27%' },
+  storyIcon: { width: 42, height: 42, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  toneAttention: { backgroundColor: '#C97A16' },
   toneImpact: { backgroundColor: '#0F8B8D' },
   toneJourney: { backgroundColor: '#675FD4' },
   toneBusiness: { backgroundColor: '#34549C' },
   toneLearn: { backgroundColor: '#8E5F1A' },
   toneCalm: { backgroundColor: '#49627A' },
-  eyebrow: { marginTop: 14, color: '#AAA5FF', fontSize: 9, fontWeight: '900', letterSpacing: 1.4 },
-  metric: { marginTop: 7, color: '#FFFFFF', fontSize: 36, fontWeight: '900', letterSpacing: -0.8 },
-  title: { marginTop: 7, maxWidth: 340, color: '#FFFFFF', fontSize: 25, lineHeight: 32, fontWeight: '900' },
-  body: { marginTop: 8, maxWidth: 330, color: '#B7C0CF', fontSize: 11, lineHeight: 18 },
-
-  storyProgressWrap: { marginTop: 15, maxWidth: 330 },
-  storyProgressTrack: { height: 8, overflow: 'hidden', borderRadius: 999, backgroundColor: '#303C50' },
-  storyProgressFill: { height: '100%', borderRadius: 999, backgroundColor: '#8E87FF' },
+  eyebrow: { marginTop: 12, color: '#B8B3FF', fontSize: 8, fontWeight: '900', letterSpacing: 1.5 },
+  metric: { marginTop: 7, color: '#FFFFFF', fontSize: 28, lineHeight: 33, fontWeight: '900', letterSpacing: -0.6 },
+  title: { marginTop: 5, maxWidth: 340, color: '#FFFFFF', fontSize: 21, lineHeight: 27, fontWeight: '900' },
+  body: { marginTop: 5, maxWidth: 330, color: '#CBD4E3', fontSize: 10, lineHeight: 16 },
+  storyProgressWrap: { marginTop: 14, maxWidth: 330 },
+  storyProgressTrack: { height: 7, overflow: 'hidden', borderRadius: 999, backgroundColor: '#304A70' },
+  storyProgressFill: { height: '100%', borderRadius: 999, backgroundColor: '#7B73FF' },
   storyProgressMeta: { marginTop: 6, flexDirection: 'row', justifyContent: 'space-between' },
-  storyProgressText: { color: '#97A3B6', fontSize: 8 },
-
+  storyProgressText: { color: '#AAB5C7', fontSize: 8 },
   completedPill: { alignSelf: 'flex-start', marginTop: 13, minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 11, backgroundColor: '#18382D' },
   completedText: { color: '#BDE8CD', fontSize: 8.5, fontWeight: '800' },
-
-  footer: { zIndex: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  openButton: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 14, paddingHorizontal: 16, backgroundColor: '#4F46C8' },
-  openButtonText: { color: '#FFFFFF', fontSize: 9.5, fontWeight: '900' },
-  footerHint: { color: '#8490A3', fontSize: 8.5 },
-
-  leftZone: { position: 'absolute', zIndex: 1, left: 0, top: 120, bottom: 90, width: '28%' },
-  rightZone: { position: 'absolute', zIndex: 1, right: 0, top: 120, bottom: 90, width: '28%' },
+  footer: { position: 'absolute', zIndex: 5, left: 12, right: 12, bottom: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  openLink: { minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingRight: 8 },
+  openLinkText: { color: '#FFFFFF', fontSize: 9.5, fontWeight: '800' },
+  footerHint: { color: '#C2CBDA', fontSize: 8 },
+  leftZone: { position: 'absolute', zIndex: 1, left: 0, top: 75, bottom: 70, width: '28%' },
+  rightZone: { position: 'absolute', zIndex: 1, right: 0, top: 75, bottom: 70, width: '28%' },
 });
