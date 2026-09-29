@@ -151,6 +151,8 @@ Status is derived from current projection versus cumulative posted entries so pr
 - concurrent Accounts users;
 - server-side aggregation and lazy history loading for performance.
 
+Direct portal duplicate/concurrency protection is now implemented for Phase 2. Import-batch idempotency, correction/reversal and broader audit controls remain Phase 3/5 work. Intentional payout above the remaining payable is not enabled: the existing payable ledger still blocks it, so any future over-payout variance feature must be an explicit accounting-model change.
+
 ## Explicitly not driving this redesign
 
 - pooled insurer receipts across multiple policies;
@@ -166,15 +168,19 @@ Status is derived from current projection versus cumulative posted entries so pr
 
 Document working principles, verify existing tables/RPCs and identify the one-slot limitation.
 
+**Completed for the current design.**
+
 ### Phase 1 — multi-entry foundation + read-only history
 
-Expose policy identifiers safely to the Accounts UI, add a permission-scoped reconciliation detail loader and a read-only policy drawer using existing accounting history.
+Resolve the selected Business MIS row safely on the server, add a permission-scoped reconciliation detail loader and a read-only policy drawer using existing accounting history.
 
-**Started:** `accounts-reconciliation-detail-actions.ts` now provides the permission-scoped read-only history loader for Pay-In and Payout. The drawer/UI wiring is the next Phase 1 step.
+**Implemented and carried into PR #2559.** The drawer opens from the existing Policy Number cell; no visible Business MIS column was added.
 
 ### Phase 2 — direct portal posting
 
 Add `+ Add Pay-In` and `+ Add Payout`, reusing controlled posting primitives where repeated installments are safe and duplicate/reference checks are explicit.
+
+**Implemented on PR #2559, not merged/deployed.** The drawer now supports append-only Pay-In/Payout entry with before-save balance preview, scoped server re-resolution, direct-post duplicate/reference checks, policy-row write serialization and immediate history/dashboard refresh. Migration `20260929134500_accounts_policy_reconciliation_entry.sql` plus its schema workflow/deployment gate are committed; production schema is **not applied** until the approved merge/release path runs.
 
 ### Phase 3 — transaction Excel flow
 
@@ -186,7 +192,7 @@ Add compact status queues, policy/registration/customer/reference search and tra
 
 ### Phase 5 — controls and audit hardening
 
-Add stronger duplicate/idempotency checks, corrections/reversals, import history, concurrency tests and projection-change regressions.
+Add stronger import idempotency checks, corrections/reversals, import history, concurrency tests and projection-change regressions.
 
 ## Safety boundary
 
