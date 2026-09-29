@@ -10,6 +10,7 @@ on:
       - 'scripts/partner/patch-0-1-home-refinements.mjs'
       - 'scripts/partner/patch-0-1-business-date-filter.mjs'
       - 'scripts/partner/patch-0-1-policy-intake-network.mjs'
+      - 'scripts/partner/patch-0-1-policy-claims-readable-kpis.mjs'
       - 'scripts/partner/compat/partner-business-date-filter.tsx'
       - 'scripts/partner/compat/partner-business-reference-0-1.tsx'
       - 'apps/partner-app/assets/partner/banners/business-growth-11.png'
@@ -148,6 +149,17 @@ jobs:
           ! grep -q "Support. Settle. Keep" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
           ! grep -q "heroSubtitle" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
 
+      - name: Apply Policies and Claims readability + KPI shortcuts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tooling/scripts/partner/patch-0-1-policy-claims-readable-kpis.mjs compat/apps/partner-app
+          grep -q 'summaryCardActive' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q "setLifecycle(itemLifecycle)" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q 'kpiCardActive' 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q "setState('assistance')" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q "'completed' | 'assistance'" 'compat/apps/partner-app/lib/claims.ts'
+
       - name: Install current More/Profile layout
         shell: bash
         run: |
@@ -237,7 +249,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 cumulative Home + Business + Policies + Claims + More + Search + Policy Details + Send Policy" \
+            --message "Partner 0.1.0 cumulative Home + Business + Policies + Claims + More + Search + Policy Details + Send Policy + readable KPI shortcuts" \
             --clear-cache \
             --non-interactive
 
@@ -253,8 +265,8 @@ jobs:
             echo "- Runtime: 0.1.0"
             echo "- Home refinements: preserved"
             echo "- Business refinements: preserved"
-            echo "- Policies refinements: preserved"
-            echo "- Claims refinements: preserved"
+            echo "- Policies refinements: preserved + readable/clickable summary cards"
+            echo "- Claims refinements: preserved + readable/clickable summary cards"
             echo "- More/Profile refinements: preserved"
             echo "- Search refinements: preserved"
             echo "- Policy Details reference redesign: included"
