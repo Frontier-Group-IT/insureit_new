@@ -27,6 +27,8 @@ type Props = {
   initialSnapshot: AccountsDashboardClientSnapshot;
 };
 
+type ReconciliationState = "reconciled" | "partial" | "pending" | "variance" | "not_applicable";
+
 type ReconciliationOverview = {
   projectedPayin: number;
   postedPayin: number;
@@ -42,6 +44,7 @@ type ReconciliationOverview = {
   partial: number;
   pending: number;
   variance: number;
+  notApplicable: number;
 };
 
 const PRESET_PERIODS: Array<{ value: Exclude<Period, "custom">; label: string }> = [
@@ -321,6 +324,7 @@ function ReconciliationOverviewPanel({ overview, policyCount }: { overview: Reco
         <StatusChip label="Partial" value={overview.partial} tone="warning" />
         <StatusChip label="Pending" value={overview.pending} />
         <StatusChip label="Variance" value={overview.variance} tone={overview.variance ? "danger" : "neutral"} />
+        <StatusChip label="Not applicable" value={overview.notApplicable} />
       </div>
     </div>
 
@@ -436,6 +440,7 @@ function buildReconciliationOverview(rows: BusinessMisClientCell[][]): Reconcili
   let partial = 0;
   let pending = 0;
   let variance = 0;
+  let notApplicable = 0;
 
   for (const row of rows) {
     const payinProjection = amount(row[19]);
@@ -451,10 +456,23 @@ function buildReconciliationOverview(rows: BusinessMisClientCell[][]): Reconcili
     const payoutState = reconcileState(payoutProjection, payoutActual);
     if (payinState === "reconciled") payinReconciled += 1;
     if (payoutState === "reconciled") payoutReconciled += 1;
-    if (payinState === "variance" || payoutState === "variance") variance += 1;
-    if (payinState === "reconciled" && payoutState === "reconciled") fullyReconciled += 1;
-    else if (payinState === "partial" || payoutState === "partial" || payinState === "reconciled" || payoutState === "reconciled") partial += 1;
-    else pending += 1;
+
+    const states = [payinState, payoutState];
+    if (states.includes("variance")) {
+      variance += 1;
+      continue;
+    }
+
+    const applicableStates = states.filter((state): state is Exclude<ReconciliationState, "not_applicable"> => state !== "not_applicable");
+    if (!applicableStates.length) {
+      notApplicable += 1;
+    } else if (applicableStates.every((state) => state === "reconciled")) {
+      fullyReconciled += 1;
+    } else if (applicableStates.every((state) => state === "pending")) {
+      pending += 1;
+    } else {
+      partial += 1;
+    }
   }
 
   return {
@@ -472,11 +490,12 @@ function buildReconciliationOverview(rows: BusinessMisClientCell[][]): Reconcili
     partial,
     pending,
     variance,
+    notApplicable,
   };
 }
 
-function reconcileState(projected: number, actual: number): "reconciled" | "partial" | "pending" | "variance" {
-  if (projected <= 0) return actual > 0.01 ? "variance" : "reconciled";
+function reconcileState(projected: number, actual: number): ReconciliationState {
+  if (projected <= 0.01) return actual > 0.01 ? "variance" : "not_applicable";
   if (actual > projected + 0.01) return "variance";
   if (Math.abs(actual - projected) <= 0.01) return "reconciled";
   if (actual > 0.01) return "partial";
