@@ -22,6 +22,7 @@ on:
       - 'scripts/partner/compat/partner-search-home-reference-0-1.tsx'
       - 'scripts/partner/compat/partner-policy-detail-reference-0-1.tsx'
       - 'scripts/partner/compat/partner-policy-intake-reference-0-1.tsx'
+      - 'apps/partner-app/app/stories.tsx'
       - 'scripts/partner/patch-0-1-partner-screen-hide-topbar.mjs'
   workflow_dispatch:
 
@@ -212,6 +213,17 @@ jobs:
           ! grep -q 'onBack={requestClose}' 'compat/apps/partner-app/app/policy-intake-new.tsx'
           ! grep -q 'usePartnerNetwork' 'compat/apps/partner-app/app/policy-intake-new.tsx'
 
+      - name: Install current Stories reference layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tooling/apps/partner-app/app/stories.tsx compat/apps/partner-app/app/stories.tsx
+          grep -q "business-growth-11.png" compat/apps/partner-app/app/stories.tsx
+          grep -q "accessibilityRole={story.route ? 'link' : undefined}" compat/apps/partner-app/app/stories.tsx
+          grep -q 'Your business, in moments' compat/apps/partner-app/app/stories.tsx
+          ! grep -q 'openLink' compat/apps/partner-app/app/stories.tsx
+          ! grep -q "Open 60 Sec Learn" compat/apps/partner-app/app/stories.tsx
+
       - name: Require Expo token
         shell: bash
         run: |
@@ -249,7 +261,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 cumulative Home + Business + Policies + Claims + More + Search + Policy Details + Send Policy + readable KPI shortcuts" \
+            --message "Partner 0.1.0 cumulative Home + Business + Policies + Claims + More + Search + Policy Details + Send Policy + Stories + readable KPI shortcuts" \
             --clear-cache \
             --non-interactive
 
@@ -271,5 +283,6 @@ jobs:
             echo "- Search refinements: preserved"
             echo "- Policy Details reference redesign: included"
             echo "- Send Policy to Operations reference redesign: included"
+            echo "- Stories reference redesign: included; CTA moved to clickable story text"
             echo "- Native APK/AAB build: not used"
           } >> "$GITHUB_STEP_SUMMARY"
