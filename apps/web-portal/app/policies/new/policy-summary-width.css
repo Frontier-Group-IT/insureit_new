@@ -11,14 +11,14 @@
   }
 }
 
-/* Remarks should use the same single-row control height as Premium Amount and Payment Mode. */
+/* Remarks should occupy one normal grid column and match standard control height. */
+.grid > div:has(> label + textarea[placeholder="Optional servicing / underwriting note"]) {
+  grid-column: auto !important;
+}
+
 textarea[placeholder="Optional servicing / underwriting note"] {
   height: 2.5rem !important;
   min-height: 2.5rem !important;
   padding-top: 0.65rem !important;
   padding-bottom: 0.65rem !important;
-}
-
-textarea[placeholder="Optional servicing / underwriting note"]:parent {
-  grid-column: auto;
 }
