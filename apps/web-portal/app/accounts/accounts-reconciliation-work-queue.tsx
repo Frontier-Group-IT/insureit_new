@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Search, X } from "lucide-react";
+import { ChevronRight, Loader2, Search, X } from "lucide-react";
 import type { BusinessMisClientCell } from "@/lib/accounts-business-mis-schema";
+import { AccountsPolicyReconciliationDrawer } from "./accounts-policy-reconciliation-drawer";
+import type { AccountsPolicyReconciliationLookup } from "./accounts-reconciliation-detail-actions";
 import { loadAccountsSnapshotAction } from "./accounts-snapshot-actions";
 
 type Queue = "all" | "pending" | "partial" | "variance" | "reconciled" | "not_applicable";
@@ -28,6 +30,7 @@ export function AccountsReconciliationWorkQueue({ rows }: Props) {
   const [query, setQuery] = useState("");
   const [liveRows, setLiveRows] = useState(rows);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [reconciliationLookup, setReconciliationLookup] = useState<AccountsPolicyReconciliationLookup | null>(null);
   const requestRef = useRef(0);
 
   useEffect(() => setLiveRows(rows), [rows]);
@@ -83,34 +86,53 @@ export function AccountsReconciliationWorkQueue({ rows }: Props) {
     return searchableText(item.row).includes(normalizedQuery);
   }), [indexed, normalizedQuery, queue]);
 
-  return <section className="rounded-2xl border border-[#dbe3ee] bg-white px-3 py-2.5 shadow-sm">
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <div>
-        <div className="flex items-center gap-1.5">
-          <h2 className="text-[11.5px] font-semibold text-[#17365D]">Reconciliation work queue</h2>
-          {isRefreshing ? <Loader2 className="h-3 w-3 animate-spin text-[#7c899b]" aria-label="Refreshing reconciliation work queue" /> : null}
+  const openReconciliation = (row: BusinessMisClientCell[]) => {
+    setReconciliationLookup({
+      policyNumber: text(row[12]),
+      registrationNumber: text(row[6]),
+      insuredName: text(row[7]),
+      insurerName: text(row[13]),
+    });
+  };
+
+  return <>
+    <section className="rounded-2xl border border-[#dbe3ee] bg-white px-3 py-2.5 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="flex items-center gap-1.5">
+            <h2 className="text-[11.5px] font-semibold text-[#17365D]">Reconciliation work queue</h2>
+            {isRefreshing ? <Loader2 className="h-3 w-3 animate-spin text-[#7c899b]" aria-label="Refreshing reconciliation work queue" /> : null}
+          </div>
+          <p className="mt-0.5 text-[7.5px] text-[#7c899b]">Search policy, registration, customer, bill / UTR reference or transaction date. Open a policy to reconcile it directly.</p>
         </div>
-        <p className="mt-0.5 text-[7.5px] text-[#7c899b]">Search policy, registration, customer, bill / UTR reference or transaction date.</p>
+        <div className="relative w-full sm:w-[360px]">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#98a2b3]" />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Policy / RC / customer / reference / date" className="h-8 w-full rounded-lg border border-[#dce4ee] bg-white pl-8 pr-8 text-[8.5px] font-semibold text-[#344054] outline-none transition placeholder:font-medium placeholder:text-[#98a2b3] focus:border-[#17365D]" />
+          {query ? <button type="button" title="Clear search" aria-label="Clear search" onClick={() => setQuery("")} className="absolute right-1.5 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded-md text-[#7c899b] hover:bg-[#f2f5f9] hover:text-[#17365D]"><X className="h-3 w-3" /></button> : null}
+        </div>
       </div>
-      <div className="relative w-full sm:w-[360px]">
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#98a2b3]" />
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Policy / RC / customer / reference / date" className="h-8 w-full rounded-lg border border-[#dce4ee] bg-white pl-8 pr-8 text-[8.5px] font-semibold text-[#344054] outline-none transition placeholder:font-medium placeholder:text-[#98a2b3] focus:border-[#17365D]" />
-        {query ? <button type="button" title="Clear search" aria-label="Clear search" onClick={() => setQuery("")} className="absolute right-1.5 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded-md text-[#7c899b] hover:bg-[#f2f5f9] hover:text-[#17365D]"><X className="h-3 w-3" /></button> : null}
+
+      <div className="mt-2 flex flex-wrap items-center gap-1 border-t border-[#edf1f5] pt-2">
+        {QUEUES.map((item) => <button key={item.value} type="button" onClick={() => setQueue(item.value)} className={`rounded-full border px-2.5 py-1 text-[7.5px] font-bold tabular-nums transition ${queue === item.value ? "border-[#17365D] bg-[#17365D] text-white" : queueTone(item.value)}`}>{item.label} {integer(counts[item.value])}</button>)}
+        <span className="ml-auto text-[7.5px] font-semibold tabular-nums text-[#7c899b]">Showing {integer(matches.length)}</span>
       </div>
-    </div>
 
-    <div className="mt-2 flex flex-wrap items-center gap-1 border-t border-[#edf1f5] pt-2">
-      {QUEUES.map((item) => <button key={item.value} type="button" onClick={() => setQueue(item.value)} className={`rounded-full border px-2.5 py-1 text-[7.5px] font-bold tabular-nums transition ${queue === item.value ? "border-[#17365D] bg-[#17365D] text-white" : queueTone(item.value)}`}>{item.label} {integer(counts[item.value])}</button>)}
-      <span className="ml-auto text-[7.5px] font-semibold tabular-nums text-[#7c899b]">Showing {integer(matches.length)}</span>
-    </div>
+      <div className="mt-2 max-h-[260px] overflow-auto rounded-xl border border-[#e4eaf1]">
+        <table className="w-full min-w-[920px] table-fixed text-left">
+          <thead className="sticky top-0 z-10 bg-[#f8fafc]"><tr className="text-[7px] font-black uppercase tracking-[.04em] text-[#667085]"><th className="w-[155px] px-2 py-1.5">Policy</th><th className="w-[125px] px-2 py-1.5">Registration</th><th className="w-[190px] px-2 py-1.5">Customer</th><th className="w-[95px] px-2 py-1.5">Status</th><th className="w-[130px] px-2 py-1.5">Bill No.</th><th className="w-[112px] px-2 py-1.5">Bill Date</th><th className="w-[150px] px-2 py-1.5">UTR / Ref.</th><th className="w-[112px] px-2 py-1.5">Paid Date</th></tr></thead>
+          <tbody>{matches.length ? matches.map(({ row, index, state }) => <tr key={`${index}-${String(row[12] ?? "")}`} className="border-t border-[#edf1f5] text-[8px] text-[#475467] hover:bg-[#f8fbff]"><td className="truncate px-2 py-1.5 font-semibold text-[#17365D]" title={text(row[12])}><button type="button" onClick={() => openReconciliation(row)} className="group inline-flex max-w-full items-center gap-1 text-left font-semibold text-[#17365D] underline decoration-[#b8c8d9] decoration-dotted underline-offset-2 transition hover:text-[#0f766e] hover:decoration-[#0f766e]" title={`Open reconciliation for ${display(row[12])}`}><span className="truncate">{display(row[12])}</span><ChevronRight className="h-3 w-3 shrink-0 opacity-55 transition-transform group-hover:translate-x-0.5" /></button></td><td className="truncate px-2 py-1.5" title={text(row[6])}>{display(row[6])}</td><td className="truncate px-2 py-1.5" title={text(row[7])}>{display(row[7])}</td><td className="px-2 py-1.5"><StatePill state={state} /></td><td className="truncate px-2 py-1.5" title={text(row[20])}>{display(row[20])}</td><td className="truncate px-2 py-1.5">{displayDate(row[22])}</td><td className="truncate px-2 py-1.5" title={text(row[31])}>{display(row[31])}</td><td className="truncate px-2 py-1.5">{displayDate(row[30])}</td></tr>) : <tr><td colSpan={8} className="px-4 py-9 text-center text-[8.5px] font-medium text-[#98a2b3]">No reconciliation rows match this queue and search.</td></tr>}</tbody>
+        </table>
+      </div>
+    </section>
 
-    <div className="mt-2 max-h-[260px] overflow-auto rounded-xl border border-[#e4eaf1]">
-      <table className="w-full min-w-[920px] table-fixed text-left">
-        <thead className="sticky top-0 z-10 bg-[#f8fafc]"><tr className="text-[7px] font-black uppercase tracking-[.04em] text-[#667085]"><th className="w-[155px] px-2 py-1.5">Policy</th><th className="w-[125px] px-2 py-1.5">Registration</th><th className="w-[190px] px-2 py-1.5">Customer</th><th className="w-[95px] px-2 py-1.5">Status</th><th className="w-[130px] px-2 py-1.5">Bill No.</th><th className="w-[112px] px-2 py-1.5">Bill Date</th><th className="w-[150px] px-2 py-1.5">UTR / Ref.</th><th className="w-[112px] px-2 py-1.5">Paid Date</th></tr></thead>
-        <tbody>{matches.length ? matches.map(({ row, index, state }) => <tr key={`${index}-${String(row[12] ?? "")}`} className="border-t border-[#edf1f5] text-[8px] text-[#475467] hover:bg-[#f8fbff]"><td className="truncate px-2 py-1.5 font-semibold text-[#17365D]" title={text(row[12])}>{display(row[12])}</td><td className="truncate px-2 py-1.5" title={text(row[6])}>{display(row[6])}</td><td className="truncate px-2 py-1.5" title={text(row[7])}>{display(row[7])}</td><td className="px-2 py-1.5"><StatePill state={state} /></td><td className="truncate px-2 py-1.5" title={text(row[20])}>{display(row[20])}</td><td className="truncate px-2 py-1.5">{displayDate(row[22])}</td><td className="truncate px-2 py-1.5" title={text(row[31])}>{display(row[31])}</td><td className="truncate px-2 py-1.5">{displayDate(row[30])}</td></tr>) : <tr><td colSpan={8} className="px-4 py-9 text-center text-[8.5px] font-medium text-[#98a2b3]">No reconciliation rows match this queue and search.</td></tr>}</tbody>
-      </table>
-    </div>
-  </section>;
+    <AccountsPolicyReconciliationDrawer
+      lookup={reconciliationLookup}
+      onClose={() => setReconciliationLookup(null)}
+      onPosted={() => {
+        window.location.reload();
+      }}
+    />
+  </>;
 }
 
 function reconciliationState(row: BusinessMisClientCell[]): State {

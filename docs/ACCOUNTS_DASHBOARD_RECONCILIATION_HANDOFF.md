@@ -2,64 +2,66 @@
 
 > **Mandatory living context for future AI agents and developers working on `/accounts`.**
 >
-> Read this file before changing the Accounts Dashboard, Business MIS reconciliation, Pay-In posting, Payout posting, Accounts Excel import/export, or reconciliation status logic. Update this file in the same PR whenever the working principle, data model, UX, calculation, or rollout status changes.
+> Read this file before changing the Accounts Dashboard, Business MIS reconciliation, Pay-In posting, Payout posting, Accounts Excel import/export, reconciliation status logic, or Accounts work queues. Update this file in the same PR whenever the working principle, data model, UX, calculation, rollout status, or release state changes.
 
 Last updated: 2026-09-29
-Status: active redesign / staged implementation
+Status: Phases 0–4 production-deployed; Phase 5 implementation in progress
 
 ## 1. Product goal
 
-The Accounts Dashboard should become the single practical workspace for policy-wise Pay-In and Payout reconciliation while preserving the existing Business MIS structure that the Accounts team already understands.
+The Accounts Dashboard is being redesigned into the single practical workspace for **policy-wise Pay-In and Payout reconciliation** while preserving the Business MIS structure already used by the Accounts team.
 
-The redesign is not intended to build a general bank-reconciliation or pooled insurer-receipt system. The working unit in INSUREIT is the **individual policy**.
+The working unit is the **individual policy**. The redesign is not a general bank-reconciliation engine.
 
-The target experience is:
+Target operating model:
 
-- one summary row per policy in Business MIS;
-- unlimited Pay-In reconciliation entries under that policy;
-- unlimited Payout reconciliation entries under that policy;
-- cumulative policy-level totals shown in the existing Business MIS columns;
-- direct portal entry for small day-to-day work;
-- compact transaction-oriented Excel import for bulk work;
-- no need to download and edit the entire MIS simply to post the next installment;
-- full transaction history and auditability;
-- reconciliation status derived from current projection versus cumulative posted entries.
+- one Business MIS summary row per policy;
+- unlimited Pay-In installments beneath that policy;
+- unlimited Payout installments beneath that policy;
+- cumulative policy-level values shown in the existing Business MIS columns;
+- direct portal entry for day-to-day posting;
+- transaction-oriented Excel for bulk posting;
+- targeted Pending/Partial/Variance work queues;
+- lazy-loaded transaction history and auditability;
+- reconciliation status derived from current projection versus cumulative posted entries;
+- no need to download and edit the whole MIS just to post installment 2, 3, or later.
 
 ## 2. User-confirmed accounting semantics — do not reinterpret without approval
 
 ### Bill Amount
 
-For the current INSUREIT Accounts workflow, **Bill Amount is treated as the received Pay-In amount for the policy**. Preserve this meaning for the redesign.
+For the current INSUREIT Accounts workflow:
 
-Do not independently rename or split the current Business MIS into separate `Billed` and `Received` concepts unless the user explicitly approves a future accounting-model change.
+**Bill Amount = received Pay-In amount for the policy.**
 
-Current policy-level Pay-In summary remains based on:
+Preserve this meaning. Do not split the current Business MIS into separate Billed and Received concepts unless explicitly approved later.
+
+Current Pay-In summary semantics:
 
 - `Total Pay-in` = projected Pay-In;
 - `Bill Number` = Pay-In reference/bill number;
-- `Bill Amount` = received/posting amount used by the current Accounts calculation;
+- `Bill Amount` = received Pay-In amount used in the Accounts calculation;
 - `Bill Date` = transaction/bill date;
 - `Difference` = projected Pay-In minus cumulative Bill Amount;
-- `TDS` = current TDS value/calculation used by the existing system.
+- `TDS` = current approved TDS value/calculation.
 
 ### Policy-wise reconciliation
 
-Pay-In and Payout details are entered and reconciled **individually for each policy**.
+Pay-In and Payout are entered and reconciled **individually for each policy**.
 
-Current scope explicitly does **not** prioritize:
+The following are explicitly not priorities for this redesign:
 
-- one insurer bank receipt being allocated across many policies;
+- one insurer receipt allocated across many policies;
 - partially allocated pooled bank receipts;
-- unallocated-cash work queues;
-- a general bank-statement reconciliation engine.
+- unallocated-cash queues;
+- bank-statement matching;
+- a general pooled cash-allocation engine.
 
-Existing database tables may support those accounting concepts, but they are not the product model driving this redesign.
+## 3. Business MIS is a stable summary contract
 
-## 3. Existing Business MIS contract must remain stable
+The main Business MIS remains **one row per policy** and retains its existing visible column structure/order unless separately approved.
 
-The main Business MIS table is the familiar reporting surface and must remain **one row per policy**.
-
-Current visible columns stay in the existing structure and order unless separately approved. In particular, the reconciliation-related columns remain:
+Reconciliation columns remain:
 
 ### Pay-In
 - Total Pay-in
@@ -76,366 +78,260 @@ Current visible columns stay in the existing structure and order unless separate
 - Paid Date
 - UTR Details
 
-The redesign happens underneath and around this table, not by converting the Business MIS into a transaction table.
+The redesign happens underneath and around this table. Do not turn Business MIS into a transaction table.
 
-## 4. Fundamental redesign principle: summary row + one-to-many history
+## 4. Fundamental data principle: summary row + one-to-many history
 
-A policy can have more than one Pay-In receipt/installment and more than one Payout payment/installment.
+A policy may have many Pay-In entries and many Payout entries.
 
-The current one-slot workflow is insufficient because the next entry becomes impossible to post cleanly after the first amount is already present.
-
-### Canonical example
+Canonical Pay-In example:
 
 Projected Pay-In = **₹1,000**
 
-1. First Pay-In entry = ₹400 → remaining ₹600
-2. Second Pay-In entry = ₹450 → remaining ₹150
-3. Third Pay-In entry = ₹150 → remaining ₹0
+1. ₹400 received → remaining ₹600
+2. ₹450 received → remaining ₹150
+3. ₹150 received → remaining ₹0
 
-The first ₹400 must never be overwritten by the later ₹450.
+The earlier ₹400 and ₹450 must never be overwritten. The Business MIS row eventually shows cumulative Bill Amount ₹1,000 and Difference ₹0 while history preserves all three entries.
 
-The Business MIS policy row should finally show the cumulative state:
+The same rule applies to Payout. If Gross Payout is ₹1,000 and payments are ₹300 + ₹450 + ₹250, Business MIS shows cumulative Paid Amount ₹1,000 while history retains all three payments.
 
-- Total Pay-in = ₹1,000
-- Bill Amount = ₹1,000
-- Difference = ₹0
+## 5. Current summary aggregation
 
-The underlying history still preserves all three entries with their own bill/reference numbers, dates, users, timestamps and source.
-
-The same working principle applies to Payout:
-
-Projected/Gross Payout = **₹1,000**
-
-- payment 1 = ₹300
-- payment 2 = ₹450
-- payment 3 = ₹250
-- cumulative Paid Amount = ₹1,000
-- remaining = ₹0
-
-## 5. Summary display rules when multiple transactions exist
-
-The Business MIS row remains compact.
-
-Recommended aggregation rules:
+The existing read model is already compatible with multiple transactions.
 
 ### Pay-In
-- `Bill Amount`: sum of all valid policy Pay-In entries.
-- `Difference`: `Total Pay-in - cumulative Bill Amount`.
-- `Bill Date`: latest valid Pay-In transaction date.
-- `Bill Number`: preserve the existing aggregate/reference behavior; where UX is later refined, show the latest reference plus a compact count such as `B003 +2` rather than losing older references.
-- `TDS`: cumulative/current value according to existing approved TDS semantics.
+
+`apps/web-portal/lib/accounts-business-mis.ts` aggregates policy-linked `accounts_invoice_lines` and `accounts_invoices`.
+
+It already:
+
+- sums invoice-line amounts into Business MIS Bill Amount;
+- aggregates bill references;
+- uses the latest bill date;
+- calculates Difference from projected Pay-In minus cumulative Bill Amount.
 
 ### Payout
-- `Paid Amount`: sum of all valid policy payout payment entries.
-- `Paid Date`: latest valid payout payment date.
-- `UTR Details`: preserve all references in history; summary may show latest reference plus a count when compacting is approved.
 
-No summary field should destroy the historical transaction records beneath it.
+Business MIS aggregates `partner_payables` → `partner_payment_allocations` → `partner_payments`.
+
+It already sums allocated payment amounts and aggregates dates/references.
+
+Therefore prior installments should remain append-only in the underlying ledger and Business MIS should remain the cumulative summary.
 
 ## 6. Reconciliation status rules
 
-Pay-In and Payout are calculated independently and then combined for the policy-level status.
+Pay-In and Payout are evaluated independently and then combined at policy level.
 
-For an applicable side:
+For each applicable side:
 
-- projection > 0 and cumulative actual = 0 → `Pending`
-- projection > 0 and cumulative actual between 0 and projection → `Partial`
-- projection > 0 and cumulative actual equals projection (₹0.01 tolerance) → `Reconciled`
-- cumulative actual exceeds projection → `Variance`
-- projection = 0 and actual = 0 → `Not applicable`
-- projection = 0 and actual > 0 → `Variance`
+- projection > 0 and actual = 0 → `Pending`
+- projection > 0 and 0 < actual < projection → `Partial`
+- projection > 0 and actual equals projection within ₹0.01 → `Reconciled`
+- actual > projection + ₹0.01 → `Variance`
+- projection <= ₹0.01 and actual <= ₹0.01 → `Not applicable`
+- projection <= ₹0.01 and actual > ₹0.01 → `Variance`
+
+Policy-level rules:
+
+- any side Variance → `Variance`;
+- no applicable side → `Not applicable`;
+- all applicable sides Reconciled → `Reconciled`;
+- all applicable sides Pending → `Pending`;
+- otherwise → `Partial`.
 
 Zero-projection/zero-actual rows must never inflate reconciled counts.
 
-Status must be **derived**, not permanently typed into the row, so a projection change can automatically move a previously reconciled policy back to Partial or Variance without deleting transaction history.
+Status is **derived**, not permanently stored, so commercial/projection changes automatically reclassify a policy without deleting transaction history.
 
-## 7. Target Accounts Dashboard UX
+## 7. Direct policy reconciliation drawer
 
-### A. Summary first
+The existing policy reconciliation drawer is the canonical detail/action surface.
 
-Keep the compact KPI and reconciliation overview at the top.
+It resolves a selected visible Business MIS row server-side using policy number plus registration/customer/insurer context, reapplies `view_accounts` and commercial-access checks, then verifies the candidate through canonical Accounts scope. The browser-supplied visible identity is not treated as an authoritative policy ID.
 
-The overview should provide trustworthy counts and cumulative amounts without explanatory filler text.
+If more than one scoped policy remains ambiguous, the action fails safely rather than guessing.
 
-### B. Policy reconciliation drawer
+Drawer contents:
 
-A Business MIS policy row should expose a compact reconciliation action. Opening it should show a side drawer/panel containing:
-
-#### Policy context
+### Policy context
 - policy number
 - insured/customer
 - insurer
 - registration number
-- relevant business date
 
-#### Pay-In section
-- Projected Pay-In
-- cumulative Bill Amount
+### Pay-In
+- projected Pay-In
+- cumulative Bill Amount / received Pay-In
 - remaining Difference
-- reconciliation percentage/status
+- status
 - chronological transaction history
 - `+ Add Pay-In`
 
-Recommended history columns:
-- Bill Date
-- Bill Number
-- Bill Amount
-- TDS where applicable
-- remaining after entry when useful
-- source
-- added by / timestamp
-
-#### Payout section
-- Gross/Projected Payout
+### Payout
+- projected/Gross Payout
 - cumulative Paid Amount
 - remaining
-- reconciliation percentage/status
+- status
 - chronological payment history
 - `+ Add Payout`
 
-Recommended history columns:
-- Paid Date
-- Paid Amount
-- UTR/reference
-- source
-- added by / timestamp
+History is lazy-loaded only when the drawer opens.
 
-The drawer loads details only when opened so the dashboard does not pull every transaction into the browser.
+## 8. Direct posting rules
 
-Current Phase 1 implementation opens the drawer from the existing **Policy Number** cell. No extra visible Business MIS column was added.
+Migration `20260929134500_accounts_policy_reconciliation_entry.sql` provides service-role-only `post_accounts_policy_reconciliation_entry(...)`.
 
-### C. Direct Add Pay-In
+### Direct Pay-In
 
-Accounts should be able to post a new policy-wise Pay-In entry directly from the drawer.
-
-Initial fields should follow the current structure:
+Fields:
 - Bill Number
-- Bill Amount
 - Bill Date
-- TDS where currently supported/required
-- optional remarks
+- Bill Amount
+- Actual TDS
+- optional Remarks
 
-Before save, show the projected amount, already received cumulative Bill Amount, new amount and expected remaining Difference.
+Rules:
 
-Saving creates a **new transaction**, never overwrites the previous installment.
+- append a new invoice/line entry; never overwrite an earlier installment;
+- serialize direct writes on the policy row;
+- require positive Bill Amount and valid required references/date;
+- block an exact same-policy duplicate using normalized Bill Number + Bill Date + Bill Amount;
+- allow the same Bill Number in legitimate different policy/date/amount contexts;
+- preserve remarks and TDS through existing posting primitives.
 
-### D. Direct Add Payout
+### Direct Payout
 
-Initial fields:
+Fields:
 - Paid Amount
 - Paid Date
-- UTR Details / payment reference
-- optional remarks
-
-Again, saving creates a new payment transaction and recalculates cumulative Paid Amount and remaining payout.
-
-## 8. Excel redesign
-
-The current full Business MIS workbook remains useful as a report, but it must stop being the primary mechanism for every new reconciliation entry.
-
-The redesigned bulk flow should use **transaction-oriented templates**.
-
-### Pay-In transaction template
-
-Recommended columns:
-- System Policy ID (hidden/protected where appropriate)
-- Policy Number
-- Registration No.
-- Insured Name
-- Insurance Company
-- Projected Pay-In
-- Already Received / Current Bill Amount
-- Current Difference
-- New Bill Number
-- New Bill Amount
-- New Bill Date
-- TDS
-- Remarks
-
-Each uploaded row means: **add this new Pay-In transaction**.
-
-The same policy can appear more than once if multiple new installments are being posted.
-
-### Payout transaction template
-
-Recommended columns:
-- System Policy ID / System Payout ID
-- Policy Number
-- Insured Name
-- Intermediary identifiers required by the existing payout posting RPC
-- Gross/Projected Payout
-- Already Paid
-- Remaining
-- New Paid Amount
-- New Paid Date
-- New UTR/reference
-- Remarks
-
-Each row means: **add this new Payout payment**.
-
-### Downloads should be targeted
-
-Accounts should be able to download only the working set they need, for example:
-- Pay-In Pending
-- Pay-In Partial
-- Payout Pending
-- Payout Partial
-- Variance
-- selected insurer
-- selected date period
-- search result / selected policies
-- blank transaction template
-
-This eliminates the current need to download the whole MIS merely to post one or a few new entries.
-
-## 9. Filters and work queues
-
-Current date and insurer filters remain, but operational reconciliation should progressively support:
-
-- Pay-In / Payout
-- Pending / Partial / Reconciled / Variance / Not applicable
-- insurer
-- policy number
-- registration number
-- customer / insured name
-- Bill Number
 - UTR/reference
-- policy/business date
-- transaction date
+- optional Remarks
 
-Useful quick work queues:
-- Pay-In Pending
-- Pay-In Partial
-- Payout Pending
-- Payout Partial
+Rules:
+
+- append payment/allocation history;
+- require exactly one eligible policy payout record;
+- block already-used normalized UTR/reference for the intermediary;
+- preserve the existing payable-ledger rule that Paid Amount cannot exceed current outstanding payable;
+- do not weaken payable controls simply to create a Variance state.
+
+The direct RPC is executable by `service_role` only; `anon` and `authenticated` direct EXECUTE are revoked.
+
+## 9. Transaction-oriented Excel
+
+The full Business MIS export/upload remains available for its existing reporting/reconciliation compatibility, but bulk installment posting now has a separate transaction workflow.
+
+Phase 3 introduced targeted Pay-In/Payout transaction templates and atomic batch posting.
+
+### Pay-In transaction workflow
+
+A row represents **one new Pay-In transaction**, not a replacement state.
+
+Context includes policy identity, projected/current values, and new Bill Number/Amount/Date/TDS/Remarks.
+
+### Payout transaction workflow
+
+A row represents **one new Payout transaction**, not a replacement state.
+
+Context includes policy/payout identity, projected/current values, and new Paid Amount/Date/UTR/Remarks.
+
+### Batch safety
+
+Migration `20260929153000_accounts_reconciliation_transaction_batch.sql` provides service-role-only `post_accounts_policy_reconciliation_batch(...)`.
+
+The batch path:
+
+- revalidates hidden IDs against current scoped Accounts data;
+- treats workbook context values as informational, not authoritative;
+- reuses Phase 2 posting protections;
+- is atomic: a failed row prevents partial posting of the batch;
+- supports repeated policies as separate new transactions;
+- caps a batch at 500 transaction rows;
+- warns on Pay-In above projected remaining as a variance condition;
+- blocks Payout above remaining because the payable ledger does not allow it.
+
+The batch RPC is executable by `service_role` only; `anon` and `authenticated` direct EXECUTE are revoked.
+
+## 10. Reconciliation work queue
+
+Phase 4 added a compact operational work queue above the existing dashboard.
+
+Queues:
+
+- All
+- Pending
+- Partial
 - Variance
-- Recently reconciled
+- Reconciled
+- N/A
 
-Do not add complex filter menus simply because fields exist. Keep the page compact and task-oriented.
+Search covers:
 
-## 10. Current implementation architecture and reuse strategy
+- Policy Number
+- Registration Number
+- Customer/insured name
+- Bill Number
+- Bill Date
+- UTR/reference
+- Paid Date
 
-The existing summary layer already aggregates multiple underlying accounting rows in important places.
+The queue follows the same status rules as the reconciliation overview and stays synchronized with the dashboard's current date/insurer scope.
 
-### Pay-In summary today
+## 11. Phase 5 — actionable work queue
 
-`apps/web-portal/lib/accounts-business-mis.ts` reads policy-linked `accounts_invoice_lines` and their `accounts_invoices`.
+Phase 5 makes the work queue an action surface rather than a read-only list.
 
-It already:
-- sums `accounts_invoice_lines.invoice_line_amount` into Business MIS `Bill Amount`;
-- aggregates invoice/bill references;
-- uses the latest bill date;
-- derives Difference from Total Pay-In minus Bill Amount.
+Planned/current behavior:
 
-Therefore the summary architecture is already compatible with multiple Pay-In entries per policy. The main blocker is the current upload UX/validation, which treats an already-posted policy row as non-editable for a second installment.
+- Policy Number in the work queue opens the same canonical policy reconciliation drawer already used from Business MIS.
+- Accounts can move directly from `Pending`, `Partial`, or `Variance` → policy → history → Add Pay-In/Add Payout without locating the row again in Business MIS.
+- No additional accounting write path is introduced. The queue reuses the existing scoped drawer and Phase 2 posting actions.
+- After a successful post initiated from the queue, the page refreshes to guarantee the KPI, reconciliation overview, queue counts, and Business MIS all show the same newly committed state.
+- No Business MIS column/order/template change.
+- No database migration is required for this Phase 5 queue action.
 
-### Payout summary today
+Future refinement may replace the full-page refresh with a shared client refresh coordinator, but correctness takes priority over avoiding a reload.
 
-The Business MIS reads `partner_payables` → `partner_payment_allocations` → `partner_payments` and already sums allocated payment amounts and aggregates payment dates/references.
+## 12. Known future hardening needs
 
-That is also structurally compatible with multiple payout installments.
+### Corrections / reversals
 
-### Current posting RPC
+Posted history must not silently disappear. Future correction UX must preserve:
 
-`post_accounts_excel_reconciliation` is the existing controlled accounting posting path. It creates Accounts invoices/lines and related receipt/TDS records for Pay-In, and partner payable/payment allocations for Payout.
+- original transaction;
+- corrected/reversal record;
+- reason;
+- actor;
+- timestamp;
+- relationship between original and corrective entry.
 
-The redesign should reuse the existing controlled posting primitives where safe rather than creating a second parallel accounting ledger.
+### Import-batch history and idempotency
 
-Production inspection on 2026-09-29 confirmed that the RPC intentionally does not reject duplicate Bill Numbers as its primary duplicate key, creates a new Accounts invoice + invoice line for each Pay-In group, and posts payout allocations through the existing partner payable/payment functions. The read path must therefore remain append-oriented, while UI/import duplicate protection needs to be handled deliberately before direct posting is enabled.
-
-### Phase 1 row resolution
-
-The browser does not receive or trust a new hidden policy ID just to open the history drawer. The current implementation sends the visible Business MIS identity fields (policy number plus registration/insured/insurer context) to a server action. The server resolves candidate policies, reapplies `view_accounts` and commercial-access rules, then verifies the candidate through the canonical Accounts scope before returning reconciliation detail.
-
-If more than one scoped record still matches the same visible row identity, the action fails safely instead of guessing which policy to open.
-
-### Phase 2 direct-posting path
-
-Direct portal posting is intentionally separate from the Excel-import RPC so portal transactions do not carry misleading `Accounts Excel reconciliation` provenance.
-
-Migration `20260929134500_accounts_policy_reconciliation_entry.sql` introduces service-role-only `post_accounts_policy_reconciliation_entry(uuid,uuid,text,jsonb)`.
-
-For direct Pay-In it:
-- locks the policy row before duplicate checking/writing so two direct users cannot append the same policy transaction concurrently;
-- requires insurer, Bill Number, Bill Date and positive Bill Amount;
-- blocks only an exact same-policy duplicate using normalized Bill Number + Bill Date + Bill Amount;
-- continues to allow the same Bill Number in legitimate different policy/date/amount contexts;
-- appends a new Accounts invoice/line and receivable/event history instead of replacing prior installments;
-- preserves optional remarks and optional Actual TDS through the existing TDS posting primitive.
-
-For direct Payout it:
-- requires exactly one policy payout record and fails safely instead of guessing when multiple payout records exist;
-- requires entered/reviewed commercial data and intermediary code;
-- blocks an already-used normalized UTR/reference for the intermediary;
-- reuses the existing payable approval/payment primitives;
-- preserves optional remarks and appends payment/allocation history.
-
-The server actions re-resolve the visible Business MIS row through canonical Accounts scope immediately before posting. A browser-supplied policy ID is not treated as authority.
-
-## 11. Known current blocker in the existing Excel workflow
-
-`reconciliation-upload-actions.ts` compares the uploaded row against live Business MIS values.
-
-If a policy already has Pay-In values, a different uploaded Pay-In is rejected as an edit to a posted Pay-In. The same pattern exists for posted Payout.
-
-This is why installment 2 cannot currently be entered cleanly through the same policy row.
-
-The V2 transaction template must not use that mutable-state comparison model. It should validate each row as a **new transaction to append**.
-
-## 12. Important future blockers we must design for
-
-### Duplicate posting / idempotency
-
-Uploading the same transaction file twice must not double-post the same installment.
-
-Duplicate protection should consider appropriate policy/reference/date/amount context plus import batch identity. A likely duplicate should be blocked or sent to review.
-
-Direct portal posting now has same-policy duplicate protection and policy-level write serialization. Phase 3 Excel idempotency still needs import-batch-aware protection.
-
-### Corrections
-
-Posted history should not silently disappear. If an entry is wrong, correction must retain:
-- original value
-- corrected/reversed value
-- reason
-- user
-- timestamp
-
-A full reversal-ledger model can be phased later, but audit history is mandatory.
+The transaction batch already reuses duplicate protections, but a durable import-batch history/receipt should eventually show who uploaded which workbook, when, how many rows succeeded, and a stable batch identity for operational audit.
 
 ### Cross-period transactions
 
-A policy issued in one month may receive Pay-In or Payout in a later month. The system must distinguish:
-- policy/business date;
-- transaction/payment date.
-
-Future reporting should support both views without hiding older policies that receive money today.
+A policy issued in one month can receive Pay-In/Payout later. Reporting must continue distinguishing policy/business date from transaction/payment date.
 
 ### Projection changes
 
-Endorsement/cancellation/commercial corrections can change projected Pay-In or Payout after transactions exist. Keep the transactions; recalculate status against the latest approved projection.
-
-### Overpayment / over-payout
-
-The status model supports Variance when cumulative actual exceeds projection, but the existing controlled partner-payable ledger currently prevents a payout payment above the remaining payable outstanding amount. Phase 2 deliberately preserves that accounting invariant rather than bypassing it. If INSUREIT later needs intentional over-payout posting, change the accounting model explicitly and auditably; do not weaken the existing payable guard incidentally.
-
-### TDS
-
-Keep TDS aligned with the current Accounts calculation. Do not redesign its accounting meaning incidentally as part of installment support.
+Endorsement/cancellation/commercial correction may change projected Pay-In/Payout after transactions exist. Preserve transactions and recalculate status against the latest approved projection.
 
 ### Concurrent users
 
-Two Accounts users can post at nearly the same time. Phase 2 direct writes serialize on the policy row before duplicate checking/writing. Excel/import concurrency remains a separate Phase 3 hardening concern.
+Direct writes serialize on policy rows. Batch posting is atomic. Keep adding regression coverage for simultaneous portal/batch operations rather than weakening these controls.
 
 ### Performance
 
-Dashboard queries should return policy summaries. Transaction history should be lazy-loaded when a policy is opened.
+Dashboard should load policy summaries. Detailed transaction history remains lazy-loaded.
 
 ### Auditability
 
-Every new transaction should ultimately expose:
+Every transaction should ultimately expose:
+
 - policy ID
-- transaction type
+- type
 - amount
 - date
 - reference
@@ -444,121 +340,114 @@ Every new transaction should ultimately expose:
 - import batch where relevant
 - created by
 - created at
-- correction/reversal relationship when applicable
+- correction/reversal relationship where applicable.
 
 ## 13. Explicitly out of current scope
 
-Unless the user later changes direction, do not make these prerequisites for Accounts V2:
+Do not make these prerequisites unless direction changes:
 
-- pooled insurer bank receipts split across many policies;
+- pooled insurer receipts split across policies;
 - partially allocated bank receipts;
 - unallocated bank cash;
 - bank-statement matching;
-- redesigning the Business MIS column structure;
-- replacing the existing Bill Amount meaning with a new billed-vs-received accounting definition.
+- redesigning Business MIS columns;
+- replacing Bill Amount's received-Pay-In meaning;
+- APK/AAB/mobile/native work.
 
-## 14. Delivery phases
+## 14. Delivery status
 
-### Phase 0 — document and verify semantics
+### Phase 0 — semantics and architecture
+**COMPLETE**
 
-- Maintain this living handoff.
-- Verify current summary and posting primitives.
-- Preserve Bill Amount = received Pay-In meaning.
-- Identify exactly where the one-slot limitation exists.
+- Bill Amount meaning frozen as received Pay-In.
+- Policy-wise reconciliation confirmed.
+- Business MIS stability boundary confirmed.
+- Existing append-capable accounting primitives inspected.
 
-### Phase 1 — multi-entry foundation + read-only policy history
+### Phase 1 — multi-entry history + drawer
+**COMPLETE / MERGED / DEPLOYED**
 
-- resolve the selected Business MIS policy safely on the server without changing visible columns;
-- add a permission-scoped policy reconciliation detail loader;
-- load Pay-In history from existing invoice/line records;
-- load Payout history from existing payable/payment allocation records;
-- calculate cumulative totals and remaining amounts using current semantics;
-- add a read-only reconciliation drawer from Business MIS.
+- scoped row resolution;
+- lazy Pay-In/Payout history;
+- cumulative totals/remaining;
+- read-only drawer.
 
 ### Phase 2 — direct portal posting
+**COMPLETE / MERGED / DATABASE APPLIED / DEPLOYED**
 
-- add `+ Add Pay-In` using existing controlled Accounts posting primitives;
-- add `+ Add Payout` using existing controlled payout posting primitives;
-- preview remaining balance before save;
-- refresh summary + history immediately after save;
-- prevent duplicate/reference mistakes.
+- PR #2559 merged as `7f9eb7b3efd6a806175dc71a77679e830901de12`;
+- direct Add Pay-In/Add Payout;
+- append-only history;
+- duplicate/reference controls;
+- policy-level write serialization;
+- migration `20260929134500_accounts_policy_reconciliation_entry` present in production migration history;
+- direct RPC production privileges verified on 2026-09-29: `service_role=true`, `anon=false`, `authenticated=false`.
+
+### Phase 2 security hardening
+**COMPLETE / MERGED / DATABASE APPLIED / DEPLOYED**
+
+- PR #2562 hardened direct RPC privileges;
+- production privileges re-verified after rollout.
 
 ### Phase 3 — transaction-oriented Excel
+**COMPLETE / MERGED / DATABASE APPLIED / DEPLOYED**
 
-- add Pay-In transaction template;
-- add Payout transaction template;
-- allow repeated policies across transaction rows;
-- add pending/partial/selected-policy downloads;
-- keep full Business MIS export as reporting output.
+- PR #2565 merged as `ddc5f565c397aa2d001518143ff77889a19f7ba8`;
+- targeted Pay-In/Payout templates;
+- preview/validation;
+- atomic append-only batch import;
+- migration `20260929153000_accounts_reconciliation_transaction_batch` present in production migration history;
+- production batch RPC privileges verified on 2026-09-29: `service_role=true`, `anon=false`, `authenticated=false`.
 
-### Phase 4 — work queues and search
+### Phase 4 — operational queue/search
+**COMPLETE / MERGED / DEPLOYED**
 
-- status filters;
-- policy/registration/customer/reference search;
-- transaction-date filtering;
-- compact Pending/Partial/Variance queues.
+- PR #2572 merged as `09e3a71ef68325f243c335e92d88796bba2d6fd6`;
+- All/Pending/Partial/Variance/Reconciled/N/A queues;
+- policy/RC/customer/reference/date search;
+- filter synchronization;
+- no schema change.
 
-### Phase 5 — audit hardening
+### Production deployment verification
+**CONFIRMED 2026-09-29**
 
-- correction/reversal UX;
-- import batch history;
-- duplicate/idempotency hardening;
-- concurrency tests;
-- projection-change regression coverage;
-- period-close controls only if/when required.
+- production schema-parity false-positive was fixed by PR #2576;
+- latest verified Vercel production deployment is READY on main commit `a9650a07d5ece2bf5541397412faeaa05eaf7b31`;
+- GitHub comparison confirms Phase 4 merge commit `09e3a71...` is an ancestor of that production commit, therefore Phases 1–4 application code are included in the deployed release;
+- Supabase production migration history contains both Accounts V2 migrations (`20260929134500`, `20260929153000`);
+- production RPC privilege checks confirm both direct and batch posting RPCs are service-role-only.
+
+### Phase 5 — actionable work queue
+**IN PROGRESS**
+
+- branch: `feature/accounts-phase5-actionable-work-queue`;
+- work-queue Policy Number opens the canonical reconciliation drawer;
+- reuses existing direct posting controls; no new schema/write primitive;
+- full page refresh after queue-initiated posting keeps every Accounts surface consistent;
+- canonical Verify web portal must pass before merge.
 
 ## 15. Safety boundaries
 
-- Do not change the visible Business MIS structure unless explicitly approved.
+- Do not change the visible Business MIS structure without explicit approval.
 - Do not reinterpret Bill Amount semantics without explicit approval.
 - Do not introduce bank-allocation complexity into the core workflow.
-- Do not overwrite prior installments.
-- Do not silently change production accounting records while building UI.
-- Schema changes, if eventually required, must be migration-controlled and verified separately.
-- Keep existing permissions/commercial-access boundaries.
-- No mobile/APK/AAB/native-runtime work is part of this Accounts redesign.
+- Never overwrite prior installments.
+- Do not silently mutate production accounting data while building UI.
+- Schema changes must remain migration-controlled and separately verified.
+- Preserve existing permissions/commercial-access boundaries.
+- Use service-role-only server paths for privileged accounting RPCs.
+- No APK/AAB/mobile/native-runtime work belongs to this Accounts redesign.
 
-## 16. Implementation ledger
+## 16. Continuity rule
 
-Update this section with every Accounts V2 change.
+Every future Accounts PR must update this file with:
 
-### 2026-09-29 — working principles frozen
-
-- User confirmed Bill Amount remains the received Pay-In amount in the current Accounts calculation.
-- User confirmed reconciliation remains policy-wise.
-- Pooled multi-policy insurer receipt allocation and partially allocated bank receipts were removed from current scope.
-- Existing Business MIS structure remains unchanged.
-- Target model is one policy summary row with unlimited underlying Pay-In/Payout entries.
-- Existing summary aggregation and posting primitives are to be reused where safe.
-- Phase 1 begins with permission-scoped read-only policy reconciliation history before direct write workflows are enabled.
-
-### 2026-09-29 — Phase 1 history loader started
-
-- Added `apps/web-portal/app/accounts/accounts-reconciliation-detail-actions.ts`.
-- The loader requires `view_accounts`, preserves commercial-access checks and reuses the canonical policy scope before loading any detail.
-- Pay-In history is loaded from policy-linked `accounts_invoice_lines` + `accounts_invoices`; cancelled invoices are excluded.
-- Payout history is loaded from `partner_payables` + `partner_payment_allocations` + `partner_payments`.
-- The loader returns projected values, cumulative actual values and remaining differences using the same Business MIS semantics.
-- Production RPC inspection confirmed the existing controlled posting path can append new invoice/line and payment/allocation records.
-
-### 2026-09-29 — Phase 1 read-only reconciliation drawer wired
-
-- Added `apps/web-portal/app/accounts/accounts-policy-reconciliation-drawer.tsx`.
-- The existing Policy Number cell is the compact entry point to history; no Business MIS column was added, removed or reordered.
-- The drawer lazy-loads Pay-In and Payout history only after a policy is opened.
-- It shows policy context, projected amounts, cumulative received/paid amounts, remaining balances, derived status, TDS context and chronological transaction history.
-- The Accounts overview wording says `Received Pay-In` rather than `Posted Pay-In`, matching the user-confirmed Bill Amount semantics.
-- The selected row is resolved server-side from visible row identity and then revalidated against Accounts scope; ambiguous matches fail safely instead of exposing or trusting a client-supplied policy ID.
-- Phase 1 verification passed on the earlier PR #2541 head in Verify web portal run #4926; that PR remained unmerged and is superseded by the current Phase 2 branch.
-
-### 2026-09-29 — Phase 2 direct policy-wise posting implemented
-
-- PR #2559 carries Phase 1 onto current `main` and adds direct `+ Add Pay-In` / `+ Add Payout` inside the existing reconciliation drawer.
-- Pay-In fields are Bill Number, Bill Date, Bill Amount, Actual TDS and optional Remarks; Payout fields are Paid Amount, Paid Date, UTR/reference and optional Remarks.
-- Both forms preview the projected amount, current cumulative actual, cumulative amount after the new entry and remaining/status before save.
-- Successful posts reload the drawer history and refresh the dashboard reconciliation summary without changing visible Business MIS columns or the existing full MIS/template structure.
-- `accounts-reconciliation-post-actions.ts` re-resolves the visible policy through scoped Accounts access immediately before posting.
-- Migration `20260929134500_accounts_policy_reconciliation_entry.sql` adds a service-role-only atomic portal-posting RPC with policy-row serialization, exact same-policy Pay-In duplicate protection, UTR/reference protection and correct portal provenance.
-- Payout posting reuses the existing payable/payment primitives and currently preserves their no-overpayment rule; intentional over-payout variance remains a future accounting-model decision.
-- `.github/workflows/apply-accounts-policy-reconciliation-entry.yml` applies/verifies the migration only after merge to `main`; `deploy-production.yml` now waits for that schema workflow before allowing Vercel deployment for this migration.
-- **IMPLEMENTED on PR #2559; production migration NOT APPLIED; merge/deployment NOT performed. Latest exact-head Verify web portal result must be recorded before merge.**
+1. what behavior changed;
+2. whether Business MIS structure changed (normally `no`);
+3. whether schema/migration changed;
+4. exact migration/RPC security impact if any;
+5. PR and canonical CI status;
+6. merge state;
+7. database application state;
+8. production deployment evidence when actually verified;
+9. the next unfinished Accounts phase or blocker.
