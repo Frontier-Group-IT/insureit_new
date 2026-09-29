@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell";
+import { LifeHealthCaseBottomActions } from "@/components/life-health-case-bottom-actions";
 import { LifeHealthCaseDetail } from "@/components/life-health-case-detail";
 import { LifeHealthCaseErrorPopupGuard } from "@/components/life-health-case-error-popup-guard";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
@@ -42,38 +43,42 @@ export default async function LifeHealthCasePage({ params }: { params: Promise<{
   return (
     <AppShell title="Life / Health Case">
       <LifeHealthCaseErrorPopupGuard />
-      <LifeHealthCaseDetail
-        caseData={{
-          id: caseRow.id,
-          caseNumber: caseRow.case_number,
-          businessLine: caseRow.business_line,
-          status: caseRow.status,
-          sourcingDate: caseRow.sourcing_date,
-          customerName: customer?.company_name?.trim() || customer?.contact_name || "Customer",
-          customerPhone: customer?.phone || "",
-          customerEmail: customer?.email || "",
-          insurerName: insurer?.name || "Insurer",
-          productName: caseRow.product_name,
-          proposalNumber: caseRow.proposal_number,
-          ppt: caseRow.premium_paying_term || "",
-          pd: caseRow.policy_duration || "",
-          paymentFrequency: caseRow.payment_frequency,
-          paymentMode: caseRow.payment_mode,
-          premiumAmount: Number(caseRow.premium_amount || 0),
-          intermediaryType: caseRow.intermediary_type || "",
-          intermediaryCode: caseRow.intermediary_code || "",
-          leadSource: caseRow.lead_source || "",
-          intermediaryMobile: caseRow.intermediary_mobile || "",
-          rmName: caseRow.rm_name || "",
-          rmCode: caseRow.rm_code || "",
-          remarks: caseRow.remarks || "",
-          finalPolicyId: caseRow.final_policy_id,
-          finalPolicyNo: policyResult.data?.policy_no || null,
-          finalPolicyCode: policyResult.data?.policy_code || null,
-          convertedAt: caseRow.converted_at,
-        }}
-        documents={documentsResult.data ?? []}
-      />
+      <div className="life-health-case-detail-actions">
+        <LifeHealthCaseDetail
+          caseData={{
+            id: caseRow.id,
+            caseNumber: caseRow.case_number,
+            businessLine: caseRow.business_line,
+            status: caseRow.status,
+            sourcingDate: caseRow.sourcing_date,
+            customerName: customer?.company_name?.trim() || customer?.contact_name || "Customer",
+            customerPhone: customer?.phone || "",
+            customerEmail: customer?.email || "",
+            insurerName: insurer?.name || "Insurer",
+            productName: caseRow.product_name,
+            proposalNumber: caseRow.proposal_number,
+            ppt: caseRow.premium_paying_term || "",
+            pd: caseRow.policy_duration || "",
+            paymentFrequency: caseRow.payment_frequency,
+            paymentMode: caseRow.payment_mode,
+            premiumAmount: Number(caseRow.premium_amount || 0),
+            intermediaryType: caseRow.intermediary_type || "",
+            intermediaryCode: caseRow.intermediary_code || "",
+            leadSource: caseRow.lead_source || "",
+            intermediaryMobile: caseRow.intermediary_mobile || "",
+            rmName: caseRow.rm_name || "",
+            rmCode: caseRow.rm_code || "",
+            remarks: caseRow.remarks || "",
+            finalPolicyId: caseRow.final_policy_id,
+            finalPolicyNo: policyResult.data?.policy_no || null,
+            finalPolicyCode: policyResult.data?.policy_code || null,
+            convertedAt: caseRow.converted_at,
+          }}
+          documents={documentsResult.data ?? []}
+        />
+        {!caseRow.final_policy_id ? <LifeHealthCaseBottomActions /> : null}
+        <style>{`.life-health-case-detail-actions aside button { display: none; }`}</style>
+      </div>
     </AppShell>
   );
 }
