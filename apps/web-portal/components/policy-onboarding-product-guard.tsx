@@ -80,7 +80,7 @@ function ensureLifeHealthMount(policyType: "Life" | "Health"): LifeHealthMount |
 
   const target = document.createElement("div");
   target.dataset.lifeHealthNativePortal = "true";
-  target.className = "contents";
+  target.className = "xl:col-span-2 xl:col-start-1 xl:row-start-3 w-full min-w-0";
   parent.insertBefore(target, notice);
   return { target, parent, source, notice };
 }
@@ -166,6 +166,6 @@ export function PolicyOnboardingProductGuard({ insurers, customers, sources }: P
   }, [insurers]);
 
   return mount && lifeHealthType
-    ? createPortal(<LifeHealthPolicyForm policyType={lifeHealthType} insurers={lifeHealthInsurers} customers={customers} sources={sources} portalGrid />, mount.target)
+    ? createPortal(<LifeHealthPolicyForm policyType={lifeHealthType} insurers={lifeHealthInsurers} customers={customers} sources={sources} />, mount.target)
     : null;
 }
