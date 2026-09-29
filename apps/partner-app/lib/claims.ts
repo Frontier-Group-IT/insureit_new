@@ -7,14 +7,14 @@ export type PartnerClaimSummary = {
   assistance_requested: number;
 };
 
-export type PartnerClaimState = 'all' | 'active' | 'completed';
+export type PartnerClaimState = 'all' | 'active' | 'completed' | 'assistance';
 
 export type PartnerClaimRow = {
   claim_id: string;
   claim_no: string | null;
   insurer_claim_no: string | null;
   current_status: string | null;
-  claim_state: Exclude<PartnerClaimState, 'all'>;
+  claim_state: 'active' | 'completed';
   claim_service_mode: string | null;
   assistance_status: string | null;
   customer_id: string;
@@ -58,7 +58,6 @@ export async function listPartnerClaims({
   if (error) throw error;
   return (data ?? []) as PartnerClaimRow[];
 }
-
 
 export type PartnerClaimDetail = {
   claim: {
