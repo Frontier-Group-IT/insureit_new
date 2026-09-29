@@ -1,13 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
-import { LifeHealthPolicyForm, type LifeHealthCustomerOption, type LifeHealthSourceOption } from "@/components/life-health-policy-form";
+import { useEffect } from "react";
 
 const SAOD_BLOCKED_CLASSES = new Set(["GCV", "PCV", "CPM", "MISD"]);
 type InsurerOption = { label: string; value: string; segment?: "general" | "life" | "health" };
-type Props = { insurers: InsurerOption[]; customers: LifeHealthCustomerOption[]; sources: LifeHealthSourceOption[] };
-type LifeHealthMount = { target: HTMLElement; notice: HTMLElement };
+type Props = { insurers: InsurerOption[] };
 
 function allowedInsurerSegments(policyType: string) {
   if (policyType === "Motor" || policyType === "Non-Motor" || policyType === "Non Motor") return new Set(["general"]);
@@ -40,93 +37,24 @@ function syncInsurerOptions(policyType: string, insurers: InsurerOption[]) {
   }
 }
 
-function syncSourcingDateProxy() {
-  const labels = Array.from(document.querySelectorAll("label"));
-  const label = labels.find((item) => item.textContent?.trim().toLowerCase().startsWith("policy issuance date"));
-  const container = label?.parentElement;
-  const actualDate = container?.querySelector('input[type="date"]') as HTMLInputElement | null;
-  if (!container || !actualDate) return;
-  let proxy = container.querySelector('input[data-life-health-source-date="true"]') as HTMLInputElement | null;
-  if (!proxy) {
-    proxy = document.createElement("input");
-    proxy.type = "hidden";
-    proxy.dataset.lifeHealthSourceDate = "true";
-    container.appendChild(proxy);
-  }
-  proxy.value = actualDate.value;
-}
-
 function setReactValue(input: HTMLInputElement, value: string) {
   Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(input, value);
   input.dispatchEvent(new Event("input", { bubbles: true }));
   input.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
-function ensureLifeHealthMount(policyType: "Life" | "Health"): LifeHealthMount | null {
-  const existingTarget = document.querySelector<HTMLElement>("[data-life-health-native-portal='true']");
-  if (existingTarget) {
-    const parent = existingTarget.parentElement;
-    const notice = parent?.querySelector<HTMLElement>("[data-life-health-native-notice='true']") ?? null;
-    if (notice) {
-      notice.style.display = "none";
-      return { target: existingTarget, notice };
-    }
-  }
-
-  const heading = Array.from(document.querySelectorAll("h2")).find((item) => item.textContent?.trim() === `${policyType} onboarding`);
-  const notice = heading?.closest("section") as HTMLElement | null;
-  const parent = notice?.parentElement;
-  if (!notice || !parent) return null;
-
-  // Keep the React-owned fallback wrapper and source section completely untouched.
-  // Only suppress the development notice and insert a full-width mount point in
-  // normal block flow. LifeHealthPolicyForm owns its own responsive two-column grid.
-  notice.dataset.lifeHealthNativeNotice = "true";
-  notice.style.display = "none";
-
-  const target = document.createElement("div");
-  target.dataset.lifeHealthNativePortal = "true";
-  target.className = "w-full min-w-0";
-  target.style.width = "100%";
-  parent.insertBefore(target, notice);
-  return { target, notice };
-}
-
-function restoreLifeHealthMount() {
-  const target = document.querySelector<HTMLElement>("[data-life-health-native-portal='true']");
-  const parent = target?.parentElement ?? null;
-  const notice = parent?.querySelector<HTMLElement>("[data-life-health-native-notice='true']") ?? null;
-  target?.remove();
-  if (notice) {
-    notice.style.removeProperty("display");
-    delete notice.dataset.lifeHealthNativeNotice;
-  }
-}
-
-export function PolicyOnboardingProductGuard({ insurers, customers, sources }: Props) {
-  const [lifeHealthType, setLifeHealthType] = useState<"Life" | "Health" | null>(null);
-  const [mount, setMount] = useState<LifeHealthMount | null>(null);
-  const lifeHealthInsurers = useMemo(() => insurers.filter((item) => item.segment === "life" || item.segment === "health"), [insurers]);
-
+export function PolicyOnboardingProductGuard({ insurers }: Props) {
   useEffect(() => {
     let lastClass = "", lastProduct = "", lastPolicyType = "";
     const sync = () => {
       const policyType = (fieldControl("Policy type") as HTMLSelectElement | null)?.value.trim() ?? "";
-      syncSourcingDateProxy();
       syncInsurerOptions(policyType, insurers);
-
-      if (policyType === "Life" || policyType === "Health") {
-        const next = ensureLifeHealthMount(policyType);
-        setLifeHealthType((current) => current === policyType ? current : policyType);
-        if (next) setMount((current) => current?.target === next.target ? current : next);
-      } else {
-        if (lastPolicyType === "Life" || lastPolicyType === "Health" || document.querySelector("[data-life-health-native-portal='true']")) restoreLifeHealthMount();
-        setLifeHealthType(null);
-        setMount(null);
-      }
-
       lastPolicyType = policyType;
-      if (policyType !== "Motor") return;
+      if (policyType !== "Motor") {
+        lastClass = "";
+        lastProduct = "";
+        return;
+      }
 
       const classSelect = fieldControl("Class") as HTMLSelectElement | null;
       const productSelect = fieldControl("Policy product") as HTMLSelectElement | null;
@@ -169,23 +97,17 @@ export function PolicyOnboardingProductGuard({ insurers, customers, sources }: P
     sync();
     const timer = window.setInterval(() => {
       const policyType = (fieldControl("Policy type") as HTMLSelectElement | null)?.value.trim() ?? "";
-      const vehicleClass = (fieldControl("Class") as HTMLSelectElement | null)?.value.trim().toUpperCase() ?? "";
-      const product = (fieldControl("Policy product") as HTMLSelectElement | null)?.value.trim().toUpperCase() ?? "";
+      const vehicleClass = policyType === "Motor" ? (fieldControl("Class") as HTMLSelectElement | null)?.value.trim().toUpperCase() ?? "" : "";
+      const product = policyType === "Motor" ? (fieldControl("Policy product") as HTMLSelectElement | null)?.value.trim().toUpperCase() ?? "" : "";
       if (policyType !== lastPolicyType || vehicleClass !== lastClass || product !== lastProduct) sync();
-      else {
-        syncSourcingDateProxy();
-        syncInsurerOptions(policyType, insurers);
-      }
+      else syncInsurerOptions(policyType, insurers);
     }, 250);
     return () => {
       document.removeEventListener("change", onChange, true);
       observer.disconnect();
       window.clearInterval(timer);
-      restoreLifeHealthMount();
     };
   }, [insurers]);
 
-  return mount && lifeHealthType
-    ? createPortal(<LifeHealthPolicyForm policyType={lifeHealthType} insurers={lifeHealthInsurers} customers={customers} sources={sources} />, mount.target)
-    : null;
+  return null;
 }

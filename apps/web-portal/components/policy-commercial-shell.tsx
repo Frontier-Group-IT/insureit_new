@@ -15,7 +15,7 @@ import {
 
 export type PolicyCommercialShellProps = {
   mode: "create" | "edit";
-  insurers: Array<{ label: string; value: string }>;
+  insurers: Array<{ label: string; value: string; segment?: "general" | "life" | "health" }>;
   customers?: NonMotorCustomerOption[];
   rms: PolicyRmOption[];
   sources: PolicySourceOption[];

@@ -2,7 +2,6 @@ import { loadPolicyIntakeOnboardingDraft } from "@/app/policy-intakes/handoff-ac
 import { PolicyCommercialShell } from "@/components/policy-commercial-shell";
 import { type PolicyRmOption } from "@/components/policy-unified-form";
 import { PolicyOnboardingProductGuard } from "@/components/policy-onboarding-product-guard";
-import { PolicyLifeHealthOnboardingEnhancements } from "@/components/policy-life-health-onboarding-enhancements";
 import { PolicyRemarksActionStyle } from "@/components/policy-remarks-action-style";
 import { AppShell } from "@/components/shell";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
@@ -88,8 +87,7 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
   return (
     <AppShell title="Add Policy">
       <PolicyRemarksActionStyle />
-      <PolicyLifeHealthOnboardingEnhancements sources={sourceOptions.map(({ value, rmCode }) => ({ value, rmCode }))} />
-      <PolicyOnboardingProductGuard insurers={insurerOptions} customers={customerOptions} sources={sourceOptions} />
+      <PolicyOnboardingProductGuard insurers={insurerOptions} />
       <PolicyCommercialShell mode="create" insurers={insurerOptions} customers={customerOptions} rms={rmOptions} sources={sourceOptions} manufacturers={manufacturerOptions} commercialAccess={commercialAccess} initialValues={workflowInitialValues} initialRegistrationMode={workflowRegistrationMode} authoritativeInitialValues={vehicleHandoff} preselectedCustomerId={preselectedCustomerId} preselectedVehicleId={vehicleHandoff ? params.vehicle_id ?? null : null} sourceIntakeId={sourceIntakeId} initialDraftRevision={initialDraftRevision} />
     </AppShell>
   );
