@@ -48,7 +48,7 @@ type PolicyRow = {
 
 type SourceOption = { value: string; label: string };
 type ViewKey = "all" | "active" | "expiring" | "expired" | "claims";
-type BusinessFilter = "all" | "Motor" | "Non Motor";
+type BusinessFilter = "all" | "Motor" | "Non Motor" | "Life" | "Health";
 type TimeScope = "mtd" | "all";
 type QuickDateRange = "mtd" | "90" | "365";
 type PolicyRegisterReturnState = {
@@ -93,7 +93,7 @@ function PolicyBusinessFilter({
   onBusinessChange: (value: BusinessFilter) => void;
   onCategoryChange: (value: string) => void;
 }) {
-  const label = business === "all" ? "All Policies" : business === "Motor" ? "Motor" : category === "all" ? "Non Motor" : `Non Motor · ${category}`;
+  const label = business === "all" ? "All Policies" : business === "Non Motor" && category !== "all" ? `Non Motor · ${category}` : business;
   return (
     <details className="group relative">
       <summary className="flex h-10 min-w-[150px] cursor-pointer list-none items-center justify-between gap-2 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[11px] font-semibold text-[#334155] outline-none transition hover:border-[#9FB2C8] focus-visible:ring-2 focus-visible:ring-[#17365D]/10 [&::-webkit-details-marker]:hidden">
@@ -101,8 +101,8 @@ function PolicyBusinessFilter({
       </summary>
       <div className="absolute left-0 top-11 z-30 w-[250px] rounded-xl border border-[#D7E0EA] bg-white p-2 shadow-[0_18px_45px_rgba(15,23,42,.16)]">
         <p className="px-2 pb-1.5 pt-1 text-[8px] font-black uppercase tracking-[.1em] text-[#8A96A7]">Business line</p>
-        {([["all","All Policies"],["Motor","Motor"],["Non Motor","Non Motor"]] as const).map(([value, text]) => (
-          <button key={value} type="button" onClick={() => onBusinessChange(value)} className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[10.5px] font-semibold transition ${business === value ? "bg-[#EEF4FB] text-[#17365D]" : "text-[#475569] hover:bg-[#F8FAFC]"}`}>
+        {([["all","All Policies"],["Motor","Motor"],["Non Motor","Non Motor"],["Life","Life"],["Health","Health"]] as const).map(([value, text]) => (
+          <button key={value} type="button" onClick={(event) => { onBusinessChange(value); event.currentTarget.closest("details")?.removeAttribute("open"); }} className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[10.5px] font-semibold transition ${business === value ? "bg-[#EEF4FB] text-[#17365D]" : "text-[#475569] hover:bg-[#F8FAFC]"}`}>
             {text}<span className={`h-2 w-2 rounded-full border ${business === value ? "border-[#17365D] bg-[#17365D]" : "border-[#CBD5E1]"}`} />
           </button>
         ))}
@@ -156,14 +156,14 @@ function PolicyDateRangeFilter({
               <button
                 key={range}
                 type="button"
-                onClick={() => onQuickRange(range)}
+                onClick={(event) => { onQuickRange(range); event.currentTarget.closest("details")?.removeAttribute("open"); }}
                 className={`min-w-[48px] rounded-lg border px-2.5 py-1.5 text-[9px] font-bold transition ${activeQuickRange === range ? "border-[#7DA7E8] bg-[#EAF2FF] text-[#174EA6]" : "border-[#D7E0EA] bg-[#F8FAFC] text-[#475569] hover:border-[#AFC3DB] hover:bg-[#F1F5F9]"}`}
               >
                 {range === "mtd" ? "MTD" : range}
               </button>
             ))}
           </div>
-          <button type="button" onClick={onClear} className="shrink-0 rounded-lg px-2.5 py-1.5 text-[9px] font-bold text-[#64748B] hover:bg-[#F8FAFC]">Clear dates</button>
+          <button type="button" onClick={(event) => { onClear(); event.currentTarget.closest("details")?.removeAttribute("open"); }} className="shrink-0 rounded-lg px-2.5 py-1.5 text-[9px] font-bold text-[#64748B] hover:bg-[#F8FAFC]">Clear dates</button>
         </div>
       </div>
     </details>
@@ -219,7 +219,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
       if (typeof saved.query === "string") setQuery(saved.query);
       if (["all", "active", "expiring", "expired", "claims"].includes(saved.view ?? "")) setView(saved.view as ViewKey);
       if (saved.timeScope === "mtd" || saved.timeScope === "all") setTimeScope(saved.timeScope);
-      if (saved.business === "all" || saved.business === "Motor" || saved.business === "Non Motor") setBusiness(saved.business);
+      if (saved.business === "all" || saved.business === "Motor" || saved.business === "Non Motor" || saved.business === "Life" || saved.business === "Health") setBusiness(saved.business);
       if (typeof saved.category === "string") setCategory(saved.category);
       if (typeof saved.source === "string") setSource(saved.source);
       if (typeof saved.rm === "string") setRm(saved.rm);
