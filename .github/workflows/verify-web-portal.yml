@@ -53,6 +53,8 @@ jobs:
         run: npm run access-control:backoffice-data-entry-regression
       - name: Policy intake workflow regression
         run: npm run policy-intake:workflow-regression
+      - name: Life Health native onboarding architecture regression
+        run: npm run policy-onboarding:life-health-native-regression
       - name: Sales Executive policy access regression
         run: node --experimental-strip-types scripts/sales-executive-policy-access-regression.mjs
       - name: Policy Intake Policy Register quick-link regression
@@ -196,6 +198,7 @@ jobs:
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Data safety: high-volume PostgREST reads are bounded/paged before client aggregation"
             echo "- Access control: V2 catalogue, scope, legacy compatibility, portal lifecycle, employee portal governance, release-blocker, Backoffice data-entry, policy-intake workflow, Policy Intake Policy Register quick-link, Partner web core, external renewal intake visibility, external renewal Administration import, Partner push-device registration and Partner push-template regressions"
+            echo "- Policy onboarding: Life/Health is rendered natively from React state without DOM portal mounting or width-rescue observers"
             echo "- Vehicle regressions: canonical NEW prefix and standard/BH-series registration validation"
             echo "- Claim regressions: spot multi-upload/intimation, External Claim read-only legacy protection, and External Claim canonical Operations workflow"
             echo "- Private voice regressions: training redaction including identity-mismatch provider narratives, permanent-test boundaries and deterministic dataset snapshot hashes"
