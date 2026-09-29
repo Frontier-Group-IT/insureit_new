@@ -97,7 +97,7 @@ function PerformancePanel({ eyebrow, title, policies, motor, nonMotor, life, hea
   );
 }
 
-function InlineMetric({ label, value }: { label: string; value: number }) { return <div className="flex min-w-0 items-center justify-between gap-2"><span className="font-medium text-[#667386]">{label}</span><span className="truncate font-black text-[#34445B]">{money(value)}</span></div>; }
+function InlineMetric({ label, value }: { label: string; value: number }) { return <div className="flex min-w-0 items-center gap-2"><span className="min-w-0 whitespace-nowrap font-medium text-[#667386]">{label}</span><span className="ml-auto shrink-0 whitespace-nowrap text-right font-black text-[#34445B]">{money(value)}</span></div>; }
 
 function MtdContextPanel({ rows }: { rows: Awaited<ReturnType<typeof loadRmPerformance>>["ytdTrend"] }) {
   const latest = rows.at(-1); const previous = rows.at(-2); const movement = latest && previous && previous.net_premium > 0 ? ((latest.net_premium - previous.net_premium) / previous.net_premium) * 100 : null;
