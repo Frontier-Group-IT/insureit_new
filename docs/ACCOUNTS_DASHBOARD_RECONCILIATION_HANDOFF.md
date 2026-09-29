@@ -527,4 +527,4 @@ Update this section with every Accounts V2 change.
 - The selected row is resolved server-side from visible row identity and then revalidated against Accounts scope; ambiguous matches fail safely instead of exposing or trusting a client-supplied policy ID.
 - Phase 1 remains read-only. Direct Add Pay-In/Add Payout and transaction-oriented Excel posting are still disabled pending duplicate/reference/idempotency controls.
 - No schema migration, production accounting mutation, RLS change, mobile change, APK/AAB or native-runtime work is included.
-- Verify web portal for the drawer commit sequence is the acceptance gate; do not merge until the latest run is green.
+- Latest acceptance gate after this documentation update: Verify web portal run #4925 is pending; replace this note with the final result before merge.
