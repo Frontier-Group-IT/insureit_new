@@ -9,6 +9,7 @@ on:
       - 'scripts/partner/patch-0-1-home-hero-reference.mjs'
       - 'scripts/partner/patch-0-1-home-refinements.mjs'
       - 'scripts/partner/patch-0-1-business-date-filter.mjs'
+      - 'scripts/partner/patch-0-1-policy-intake-network.mjs'
       - 'scripts/partner/compat/partner-business-date-filter.tsx'
       - 'scripts/partner/compat/partner-business-reference-0-1.tsx'
       - 'apps/partner-app/assets/partner/banners/business-growth-11.png'
@@ -19,6 +20,7 @@ on:
       - 'apps/partner-app/assets/partner/banners/claims-header-reference.jpg'
       - 'scripts/partner/compat/partner-search-home-reference-0-1.tsx'
       - 'scripts/partner/compat/partner-policy-detail-reference-0-1.tsx'
+      - 'scripts/partner/compat/partner-policy-intake-reference-0-1.tsx'
       - 'scripts/partner/patch-0-1-partner-screen-hide-topbar.mjs'
   workflow_dispatch:
 
@@ -182,6 +184,22 @@ jobs:
           grep -q 'Customer & Vehicle' 'compat/apps/partner-app/app/policy/[id].tsx'
           ! grep -q 'onBack={() => router.back()}' 'compat/apps/partner-app/app/policy/[id].tsx'
 
+      - name: Install current Send Policy to Operations layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tooling/scripts/partner/compat/partner-policy-intake-reference-0-1.tsx 'compat/apps/partner-app/app/policy-intake-new.tsx'
+          node tooling/scripts/partner/patch-0-1-policy-intake-network.mjs 'compat/apps/partner-app/app/policy-intake-new.tsx'
+          grep -q '<Text style={styles.headerTitle}>Send Policy to Operations</Text>' 'compat/apps/partner-app/app/policy-intake-new.tsx'
+          grep -q 'Search partner, lead source or POSP...' 'compat/apps/partner-app/app/policy-intake-new.tsx'
+          grep -q '<Text style={styles.sectionTitle}>Lead Source</Text>' 'compat/apps/partner-app/app/policy-intake-new.tsx'
+          grep -q '<Text style={styles.cancelText}>Cancel</Text>' 'compat/apps/partner-app/app/policy-intake-new.tsx'
+          grep -q '<Text style={styles.continueText}>Continue</Text>' 'compat/apps/partner-app/app/policy-intake-new.tsx'
+          ! grep -q 'NEW POLICY INTAKE' 'compat/apps/partner-app/app/policy-intake-new.tsx'
+          ! grep -q 'Review details, attach the policy copy, then submit' 'compat/apps/partner-app/app/policy-intake-new.tsx'
+          ! grep -q 'onBack={requestClose}' 'compat/apps/partner-app/app/policy-intake-new.tsx'
+          ! grep -q 'usePartnerNetwork' 'compat/apps/partner-app/app/policy-intake-new.tsx'
+
       - name: Require Expo token
         shell: bash
         run: |
@@ -219,7 +237,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 cumulative Home + Business + Policies + Claims + More + Search + Policy Details" \
+            --message "Partner 0.1.0 cumulative Home + Business + Policies + Claims + More + Search + Policy Details + Send Policy" \
             --clear-cache \
             --non-interactive
 
@@ -240,5 +258,6 @@ jobs:
             echo "- More/Profile refinements: preserved"
             echo "- Search refinements: preserved"
             echo "- Policy Details reference redesign: included"
+            echo "- Send Policy to Operations reference redesign: included"
             echo "- Native APK/AAB build: not used"
           } >> "$GITHUB_STEP_SUMMARY"
