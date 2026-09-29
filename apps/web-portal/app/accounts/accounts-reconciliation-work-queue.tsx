@@ -33,14 +33,17 @@ export function AccountsReconciliationWorkQueue({ rows }: Props) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [reconciliationLookup, setReconciliationLookup] = useState<AccountsPolicyReconciliationLookup | null>(null);
   const requestRef = useRef(0);
-  const initialSearchSignatureRef = useRef(searchSignature);
+  const didObserveInitialSearchRef = useRef(false);
 
   useEffect(() => setLiveRows(rows), [rows]);
 
   useEffect(() => {
-    // The initial server render already contains the correct scoped rows. Refresh only
-    // after the Accounts dashboard actually changes its URL-backed filter state.
-    if (searchSignature === initialSearchSignatureRef.current) return;
+    // The initial server render already contains the correct scoped rows. Skip only
+    // that first observation; later returning to the same URL scope must refresh.
+    if (!didObserveInitialSearchRef.current) {
+      didObserveInitialSearchRef.current = true;
+      return;
+    }
 
     const requestId = ++requestRef.current;
     const params = new URLSearchParams(searchSignature);
