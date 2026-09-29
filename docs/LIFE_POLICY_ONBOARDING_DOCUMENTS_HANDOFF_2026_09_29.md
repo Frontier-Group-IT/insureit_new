@@ -15,7 +15,7 @@ Health keeps its existing Proposal Form / Benefit Illustration / Premium Receipt
 
 Life/Health case documents continue to use `public.life_health_case_documents` with one row per `(case_id, document_type)`.
 
-Migration `20260929070000_extend_life_health_case_document_types.sql` widens the existing `document_type` check constraint to allow:
+Migration `20260929062841_extend_life_health_case_document_types.sql` widens the existing `document_type` check constraint to allow:
 
 - `proposal_form`
 - `benefit_illustration`
@@ -30,8 +30,9 @@ No table shape, RLS, storage bucket or uniqueness rule changes.
 
 - UI/document wiring: **IMPLEMENTED** on PR #2534.
 - Production constraint before migration: **VERIFIED** to allow only proposal_form / benefit_illustration / premium_receipt / policy_copy.
-- Migration `extend_life_health_case_document_types`: **APPLIED** to production Supabase project `ilzhsfqqjyppzzvfscmh` on 2026-09-29.
+- Migration `extend_life_health_case_document_types`: **APPLIED** to production Supabase project `ilzhsfqqjyppzzvfscmh` on 2026-09-29 and recorded remotely as version `20260929062841`.
 - Post-apply verification: **VERIFIED**; `life_health_case_documents_document_type_check` is validated and allows all six document types including `kyc` and `other_document`.
+- Automated schema workflow: `.github/workflows/apply-life-health-document-types.yml` verifies/applies the exact migration version and checks the constraint contract.
 - Merge/deployment: pending canonical `Verify web portal` success and production release workflow completion.
 
 ## Continuation
