@@ -4,4 +4,21 @@
     min-width: 336px !important;
     max-width: 336px !important;
   }
+
+  /* Life / Health Premium & Payment: keep all three controls equal width. */
+  .grid:has(textarea[placeholder="Optional servicing / underwriting note"]) {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Remarks should use the same single-row control height as Premium Amount and Payment Mode. */
+textarea[placeholder="Optional servicing / underwriting note"] {
+  height: 2.5rem !important;
+  min-height: 2.5rem !important;
+  padding-top: 0.65rem !important;
+  padding-bottom: 0.65rem !important;
+}
+
+textarea[placeholder="Optional servicing / underwriting note"]:parent {
+  grid-column: auto;
 }
