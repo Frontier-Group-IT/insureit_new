@@ -4,6 +4,7 @@ Read `../../docs/PARTNER_APP_HANDOFF_2026_09_13.md`, `../../docs/PARTNER_APP_HOM
 
 ## Current installed-build rules
 
+- **Standing delivery rule (user-confirmed 2026-09-29): Any Partner App change given to the user must be delivered to the latest installed Partner APK through runtime/OTA. The current latest installed APK is `0.1.0 (5)`, so all Partner App changes must target runtime `0.1.0`. Do not publish Partner changes to runtime `0.2.0` or another runtime unless the user explicitly authorizes moving to a newer installed build.**
 - The user's currently installed Partner APK is `preview`, runtime/app version `0.1.0`, Android version code `5` (confirmed 2026-09-19). The successful native build is EAS build `a97a3ee6-b871-4825-b135-2a93f5a7eabb`; it was produced from the approved 0.1.0 compatibility source line.
 - For that installed `0.1.0 (5)` APK, use the approved compatibility source `74039199991888777911deb30cf248e8f36cf8a8` plus narrow OTA-safe patches.
 - **Never publish current `main` to runtime `0.1.0` by only changing the version/runtime label.** That previously caused fallback to the embedded old dashboard.
