@@ -6,6 +6,7 @@ import type { AccountsDashboardClientSnapshot, BusinessMisClientCell } from "@/l
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { requireCapability } from "@/lib/master-data-server";
 import { AccountsDashboardClient } from "./accounts-dashboard-client";
+import { AccountsReconciliationWorkQueue } from "./accounts-reconciliation-work-queue";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -25,6 +26,7 @@ export default async function AccountsPage({ searchParams }: Props) {
   };
 
   return <AppShell title="Accounts Dashboard">
+    <AccountsReconciliationWorkQueue rows={initialSnapshot.rows} />
     <AccountsDashboardClient initialFilters={filters} initialSnapshot={initialSnapshot} />
   </AppShell>;
 }
