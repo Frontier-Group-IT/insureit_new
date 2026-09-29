@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { deleteMasterRecord } from "@/app/master-record-delete-actions";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -25,9 +26,6 @@ export async function deleteLifeHealthCase(caseId: string): Promise<DeleteLifeHe
     .maybeSingle<{ id: string; case_number: string; final_policy_id: string | null }>();
   if (existingError) return { ok: false, error: `Unable to verify the case: ${existingError.message}` };
   if (!existing) return { ok: false, error: "This Life / Health case no longer exists." };
-  if (existing.final_policy_id) {
-    return { ok: false, error: "Cannot delete this case because an issued policy is linked to it. Delete or resolve the linked policy first." };
-  }
 
   const { data: documents, error: documentsError } = await admin
     .from("life_health_case_documents")
@@ -35,6 +33,44 @@ export async function deleteLifeHealthCase(caseId: string): Promise<DeleteLifeHe
     .eq("case_id", caseId)
     .returns<CaseDocument[]>();
   if (documentsError) return { ok: false, error: `Unable to verify linked case documents: ${documentsError.message}` };
+
+  // An issued Life / Health case and its generated policy point at each other.
+  // Break only that case -> policy link before asking the existing guarded policy
+  // deletion workflow to remove the policy. All normal policy dependency guards
+  // (claims, accounts, reconciliation, active intakes, etc.) still apply.
+  if (existing.final_policy_id) {
+    const linkedPolicyId = existing.final_policy_id;
+    const { data: unlinkedCase, error: unlinkError } = await admin
+      .from("life_health_cases")
+      .update({ final_policy_id: null })
+      .eq("id", caseId)
+      .eq("final_policy_id", linkedPolicyId)
+      .select("id")
+      .maybeSingle<{ id: string }>();
+
+    if (unlinkError) {
+      return { ok: false, error: `Unable to release the linked issued policy: ${unlinkError.message}` };
+    }
+    if (!unlinkedCase) {
+      return { ok: false, error: "The linked policy changed while preparing deletion. Refresh and try again." };
+    }
+
+    const policyDelete = await deleteMasterRecord("policy", linkedPolicyId);
+    if (!policyDelete.ok) {
+      const { error: restoreError } = await admin
+        .from("life_health_cases")
+        .update({ final_policy_id: linkedPolicyId })
+        .eq("id", caseId)
+        .is("final_policy_id", null);
+
+      return {
+        ok: false,
+        error: restoreError
+          ? `${policyDelete.error} The case-to-policy link could not be restored automatically; review this case before retrying.`
+          : policyDelete.error
+      };
+    }
+  }
 
   const { error: deleteError } = await admin.from("life_health_cases").delete().eq("id", caseId).is("final_policy_id", null);
   if (deleteError) {
@@ -54,9 +90,16 @@ export async function deleteLifeHealthCase(caseId: string): Promise<DeleteLifeHe
     action: "delete",
     entity_type: "life_health_case",
     entity_id: caseId,
-    metadata: { case_number: existing.case_number, deleted_by: "it_super_user", document_count: documents?.length ?? 0 }
+    metadata: {
+      case_number: existing.case_number,
+      deleted_by: "it_super_user",
+      document_count: documents?.length ?? 0,
+      linked_policy_deleted: Boolean(existing.final_policy_id),
+      linked_policy_id: existing.final_policy_id
+    }
   });
 
   revalidatePath("/policies/life-health-cases");
+  revalidatePath("/policies");
   return { ok: true };
 }
