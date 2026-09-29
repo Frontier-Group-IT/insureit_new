@@ -202,6 +202,8 @@ Recommended history columns:
 
 The drawer loads details only when opened so the dashboard does not pull every transaction into the browser.
 
+Current Phase 1 implementation opens the drawer from the existing **Policy Number** cell. No extra visible Business MIS column was added.
+
 ### C. Direct Add Pay-In
 
 Accounts should be able to post a new policy-wise Pay-In entry directly from the drawer.
@@ -341,6 +343,12 @@ The redesign should reuse the existing controlled posting primitives where safe 
 
 Production inspection on 2026-09-29 confirmed that the RPC intentionally does not reject duplicate Bill Numbers as its primary duplicate key, creates a new Accounts invoice + invoice line for each Pay-In group, and posts payout allocations through the existing partner payable/payment functions. The read path must therefore remain append-oriented, while UI/import duplicate protection needs to be handled deliberately before direct posting is enabled.
 
+### Phase 1 row resolution
+
+The browser does not receive or trust a new hidden policy ID just to open the history drawer. The current implementation sends the visible Business MIS identity fields (policy number plus registration/insured/insurer context) to a server action. The server resolves candidate policies, reapplies `view_accounts` and commercial-access rules, then verifies the candidate through the canonical Accounts scope before returning reconciliation detail.
+
+If more than one scoped record still matches the same visible row identity, the action fails safely instead of guessing which policy to open.
+
 ## 11. Known current blocker in the existing Excel workflow
 
 `reconciliation-upload-actions.ts` compares the uploaded row against live Business MIS values.
@@ -435,7 +443,7 @@ Unless the user later changes direction, do not make these prerequisites for Acc
 
 ### Phase 1 — multi-entry foundation + read-only policy history
 
-- expose policy IDs safely to the Accounts UI without changing visible Business MIS columns;
+- resolve the selected Business MIS policy safely on the server without changing visible columns;
 - add a permission-scoped policy reconciliation detail loader;
 - load Pay-In history from existing invoice/line records;
 - load Payout history from existing payable/payment allocation records;
@@ -508,3 +516,14 @@ Update this section with every Accounts V2 change.
 - The loader returns projected values, cumulative actual values and remaining differences using the same Business MIS semantics.
 - Production RPC inspection confirmed the existing controlled posting path can append new invoice/line and payment/allocation records; direct-write UX remains disabled until duplicate/reference validation is designed.
 - This commit is read-only: no schema/data mutation and no direct Add Pay-In/Add Payout is enabled yet.
+
+### 2026-09-29 — Phase 1 read-only reconciliation drawer wired
+
+- Added `apps/web-portal/app/accounts/accounts-policy-reconciliation-drawer.tsx`.
+- The existing Policy Number cell is now the compact entry point to history; no Business MIS column was added, removed or reordered.
+- The drawer lazy-loads Pay-In and Payout history only after a policy is opened.
+- It shows policy context, projected amounts, cumulative received/paid amounts, remaining balances, derived status, TDS context and chronological transaction history.
+- The Accounts overview wording now says `Received Pay-In` rather than `Posted Pay-In`, matching the user-confirmed Bill Amount semantics.
+- The selected row is resolved server-side from visible row identity and then revalidated against Accounts scope; ambiguous matches fail safely instead of exposing or trusting a client-supplied policy ID.
+- Phase 1 remains read-only. Direct Add Pay-In/Add Payout and transaction-oriented Excel posting are still disabled pending duplicate/reference/idempotency controls.
+- No schema migration, production accounting mutation, RLS change, mobile change, APK/AAB or native-runtime work is included.
