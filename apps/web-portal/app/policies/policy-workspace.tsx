@@ -56,7 +56,6 @@ type PolicyRegisterReturnState = {
   view: ViewKey;
   timeScope: TimeScope;
   business: BusinessFilter;
-  category: string;
   source: string;
   rm: string;
   fromDate: string;
@@ -82,18 +81,12 @@ function policySourceKey(row: Pick<PolicyRow, "intermediary_type" | "intermediar
 
 function PolicyBusinessFilter({
   business,
-  category,
-  categories,
   onBusinessChange,
-  onCategoryChange,
 }: {
   business: BusinessFilter;
-  category: string;
-  categories: string[];
   onBusinessChange: (value: BusinessFilter) => void;
-  onCategoryChange: (value: string) => void;
 }) {
-  const label = business === "all" ? "All Policies" : business === "Non Motor" && category !== "all" ? `Non Motor · ${category}` : business;
+  const label = business === "all" ? "All Policies" : business;
   return (
     <details className="group relative">
       <summary className="flex h-10 min-w-[150px] cursor-pointer list-none items-center justify-between gap-2 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[11px] font-semibold text-[#334155] outline-none transition hover:border-[#9FB2C8] focus-visible:ring-2 focus-visible:ring-[#17365D]/10 [&::-webkit-details-marker]:hidden">
@@ -106,15 +99,6 @@ function PolicyBusinessFilter({
             {text}<span className={`h-2 w-2 rounded-full border ${business === value ? "border-[#17365D] bg-[#17365D]" : "border-[#CBD5E1]"}`} />
           </button>
         ))}
-        {business === "Non Motor" ? (
-          <div className="mt-2 border-t border-[#EEF2F6] px-2 pt-2">
-            <label className="block text-[8px] font-black uppercase tracking-[.08em] text-[#8A96A7]">Category</label>
-            <select value={category} onChange={(event) => onCategoryChange(event.target.value)} className="mt-1.5 h-9 w-full rounded-lg border border-[#D7E0EA] bg-white px-2.5 text-[10px] font-semibold text-[#334155] outline-none focus:border-[#17365D]">
-              <option value="all">All categories</option>
-              {categories.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-          </div>
-        ) : null}
       </div>
     </details>
   );
@@ -201,7 +185,6 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
   const [view, setView] = useState<ViewKey>("all");
   const [timeScope, setTimeScope] = useState<TimeScope>("mtd");
   const [business, setBusiness] = useState<BusinessFilter>("all");
-  const [category, setCategory] = useState("all");
   const [source, setSource] = useState("all");
   const [rm, setRm] = useState("all");
   const [fromDate, setFromDate] = useState("");
@@ -220,7 +203,6 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
       if (["all", "active", "expiring", "expired", "claims"].includes(saved.view ?? "")) setView(saved.view as ViewKey);
       if (saved.timeScope === "mtd" || saved.timeScope === "all") setTimeScope(saved.timeScope);
       if (saved.business === "all" || saved.business === "Motor" || saved.business === "Non Motor" || saved.business === "Life" || saved.business === "Health") setBusiness(saved.business);
-      if (typeof saved.category === "string") setCategory(saved.category);
       if (typeof saved.source === "string") setSource(saved.source);
       if (typeof saved.rm === "string") setRm(saved.rm);
       if (typeof saved.fromDate === "string") setFromDate(saved.fromDate);
@@ -233,7 +215,6 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
 
   const enriched = useMemo(() => rows.map((row) => ({ ...row, status: policyStatus(row.end_date), daysLeft: daysUntil(row.end_date) })), [rows]);
   const rms = useMemo(() => Array.from(new Set(rows.map((row) => row.rm_name?.trim()).filter((item): item is string => Boolean(item)))).sort((a, b) => a.localeCompare(b)), [rows]);
-  const categories = useMemo(() => Array.from(new Set(rows.filter((row) => policyBusinessLine(row) === "Non Motor").map((row) => policyCategory(row)).filter(Boolean))).sort(), [rows]);
   const visibleSourceOptions = useMemo(() => {
     if (rm === "all") return sourceOptions;
     const rmSourceKeys = new Set(
@@ -263,15 +244,14 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
   const controlFiltered = useMemo(() => enriched.filter((row) => {
     const haystack = [row.policy_no, row.business_line, row.policy_type, row.policy_product, row.insurance_companies?.name, row.rm_name, row.vehicles?.vehicle_no, row.vehicles?.chassis_no, row.vehicles?.engine_no, row.customers?.company_name, row.customers?.contact_name, row.intermediary_type, row.intermediary_code, row.source_name, policyCategory(row), riskAssetPrimary(row), riskAssetSecondary(row)].filter(Boolean).join(" ").toLowerCase();
     const matchesBusiness = business === "all" || policyBusinessLine(row) === business;
-    const matchesCategory = business !== "Non Motor" || category === "all" || policyCategory(row) === category;
     const matchesSource = source === "all" || policySourceKey(row) === source;
     const matchesRm = rm === "all" || row.rm_name?.trim() === rm;
     const businessDate = policyBusinessDate(row);
     const matchesFromDate = !fromDate || businessDate >= fromDate;
     const matchesToDate = !toDate || businessDate <= toDate;
     const matchesQuery = !query.trim() || haystack.includes(query.trim().toLowerCase());
-    return matchesBusiness && matchesCategory && matchesSource && matchesRm && matchesFromDate && matchesToDate && matchesQuery;
-  }), [business, category, enriched, fromDate, query, rm, source, toDate]);
+    return matchesBusiness && matchesSource && matchesRm && matchesFromDate && matchesToDate && matchesQuery;
+  }), [business, enriched, fromDate, query, rm, source, toDate]);
 
   const mtdFiltered = useMemo(() => controlFiltered.filter((row) => {
     const businessDate = policyBusinessDate(row);
@@ -339,7 +319,6 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
   function resetFilters() {
     setQuery("");
     setBusiness("all");
-    setCategory("all");
     setSource("all");
     setRm("all");
     setTimeScope("mtd");
@@ -350,7 +329,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
   }
 
   function rememberReturnState() {
-    const snapshot: PolicyRegisterReturnState = { query, view, timeScope, business, category, source, rm, fromDate, toDate, page: safePage };
+    const snapshot: PolicyRegisterReturnState = { query, view, timeScope, business, source, rm, fromDate, toDate, page: safePage };
     try {
       window.sessionStorage.setItem(POLICY_REGISTER_RETURN_STATE_KEY, JSON.stringify(snapshot));
     } catch {
@@ -406,15 +385,11 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:grid xl:grid-cols-[minmax(150px,0.86fr)_minmax(150px,0.9fr)_minmax(160px,1fr)_minmax(170px,0.9fr)_minmax(330px,auto)] xl:gap-1.5">
           <PolicyBusinessFilter
             business={business}
-            category={category}
-            categories={categories}
             onBusinessChange={(value) => {
               setBusiness(value);
-              if (value !== "Non Motor") setCategory("all");
               if (value === "Non Motor" && view === "claims") setView("all");
               setPage(1);
             }}
-            onCategoryChange={(value) => { setCategory(value); setPage(1); }}
           />
           <div className="[&>label]:block [&>label]:w-full [&_select]:min-w-[170px] [&_select]:w-full">
             <RegisterSelect value={sourceSelectValue} onChange={(value) => { setSource(value); setPage(1); }} label="Lead source">
