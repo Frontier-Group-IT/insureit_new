@@ -17,6 +17,7 @@ export const POLICY_ACTIVITY_ACTIONS = {
 } as const;
 
 export type PolicyActivityAction = (typeof POLICY_ACTIVITY_ACTIONS)[keyof typeof POLICY_ACTIVITY_ACTIONS];
+type AuditedPolicyActivityAction = Exclude<PolicyActivityAction, "life_health_case_created" | "life_health_case_closed">;
 
 const ACTION_LABELS: Record<PolicyActivityAction, string> = {
   policy_created: "Policy Created",
@@ -34,9 +35,19 @@ const ACTION_LABELS: Record<PolicyActivityAction, string> = {
   life_health_case_closed: "Policy Created & Case Closed",
 };
 
-const TRACKED_ACTIONS = Object.values(POLICY_ACTIVITY_ACTIONS).filter(
-  (action) => action !== POLICY_ACTIVITY_ACTIONS.LIFE_HEALTH_CASE_CREATED && action !== POLICY_ACTIVITY_ACTIONS.LIFE_HEALTH_CASE_CLOSED,
-);
+const TRACKED_ACTIONS: AuditedPolicyActivityAction[] = [
+  POLICY_ACTIVITY_ACTIONS.POLICY_CREATED,
+  POLICY_ACTIVITY_ACTIONS.POLICY_EDITED,
+  POLICY_ACTIVITY_ACTIONS.POLICY_DOC_UPLOADED,
+  POLICY_ACTIVITY_ACTIONS.POLICY_DOC_REPLACED,
+  POLICY_ACTIVITY_ACTIONS.POLICY_DOC_REMOVED,
+  POLICY_ACTIVITY_ACTIONS.PAYIN_BILLING_ADDED,
+  POLICY_ACTIVITY_ACTIONS.PAYIN_BILLING_UPDATED,
+  POLICY_ACTIVITY_ACTIONS.POLICY_SUPERSEDED,
+  POLICY_ACTIVITY_ACTIONS.POLICY_REPLACEMENT_CREATED,
+  POLICY_ACTIVITY_ACTIONS.POLICY_DATA_CORRECTED,
+  POLICY_ACTIVITY_ACTIONS.VEHICLE_DATA_CORRECTED,
+];
 const ACTIVITY_TABLE_NAME = "policies";
 const RECONCILIATION_ACTOR_NAME = "System Reconciliation";
 
@@ -61,8 +72,8 @@ export type PolicyActivityDisplay = {
   at: string;
 };
 
-function asTrackedAction(value: string): PolicyActivityAction | null {
-  return TRACKED_ACTIONS.includes(value as PolicyActivityAction) ? value as PolicyActivityAction : null;
+function asTrackedAction(value: string): AuditedPolicyActivityAction | null {
+  return TRACKED_ACTIONS.includes(value as AuditedPolicyActivityAction) ? value as AuditedPolicyActivityAction : null;
 }
 
 function reconciliationActorName(action: PolicyActivityAction, actorId: string | null) {
@@ -140,7 +151,7 @@ export async function loadPolicyActivityHistory({
 
   const auditRows = auditResult.data ?? [];
   const candidates: ActivityCandidate[] = [];
-  const auditActions = new Set<PolicyActivityAction>();
+  const auditActions = new Set<AuditedPolicyActivityAction>();
 
   for (const row of auditRows) {
     const action = asTrackedAction(row.action);
