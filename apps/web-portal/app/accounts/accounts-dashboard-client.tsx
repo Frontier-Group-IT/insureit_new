@@ -316,7 +316,6 @@ function ReconciliationOverviewPanel({ overview, policyCount }: { overview: Reco
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div>
         <h2 className="text-[11.5px] font-semibold text-[#17365D]">Reconciliation overview</h2>
-        <p className="mt-0.5 text-[7.5px] text-[#7c899b]">Live status from the same Pay-In / Pay-Out fields used in the Business MIS template.</p>
       </div>
       <div className="flex flex-wrap items-center gap-1">
         <StatusChip label="All" value={policyCount} />
