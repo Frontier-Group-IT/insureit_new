@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePolicyCreator } from "@/lib/policy-access-server";
+import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export type LifeHealthIssuedPolicyEditResult = { ok: true } | { ok: false; error: string };
@@ -13,7 +13,7 @@ const amount = (value: unknown) => {
 };
 
 export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<LifeHealthIssuedPolicyEditResult> {
-  await requirePolicyCreator();
+  await requirePolicyEditor();
   const admin = createSupabaseAdminClient();
   const policyId = clean(formData.get("policyId"));
   const caseId = clean(formData.get("caseId"));
@@ -36,8 +36,8 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
   if (!sourceId || !insurerId || !productName || !proposalNumber || !paymentFrequency || !paymentMode || premiumAmount === null) return { ok: false, error: "Complete all required policy onboarding fields." };
 
   const [{ data: policy }, { data: caseRow }, { data: source }] = await Promise.all([
-    admin.from("policies").select("id,business_line").eq("id", policyId).maybeSingle<{ id: string; business_line: string | null }>(),
-    admin.from("life_health_cases").select("id,final_policy_id,customer_id").eq("id", caseId).eq("final_policy_id", policyId).maybeSingle<{ id: string; final_policy_id: string | null; customer_id: string }>(),
+    admin.from("policies").select("id,business_line,rm_employee_id,rm_name").eq("id", policyId).maybeSingle<{ id: string; business_line: string | null; rm_employee_id: string | null; rm_name: string | null }>(),
+    admin.from("life_health_cases").select("id,final_policy_id,customer_id,intermediary_id,rm_employee_id,rm_name,rm_code").eq("id", caseId).eq("final_policy_id", policyId).maybeSingle<{ id: string; final_policy_id: string | null; customer_id: string; intermediary_id: string | null; rm_employee_id: string | null; rm_name: string | null; rm_code: string | null }>(),
     admin.from("intermediaries").select("id,intermediary_type,intermediary_code,display_name,mobile,associate_employee_id").eq("id", sourceId).eq("account_status", "active").maybeSingle<{ id: string; intermediary_type: string; intermediary_code: string | null; display_name: string; mobile: string | null; associate_employee_id: string | null }>(),
   ]);
   if (!policy || !caseRow || !source) return { ok: false, error: "The linked policy, Life/Health case or lead source is no longer available." };
@@ -45,12 +45,19 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
   const intermediaryType = source.intermediary_type === "posp" ? "POSP" : source.intermediary_type === "misp" ? "MISP" : "SIBL / Partner";
   const intermediaryCode = clean(source.intermediary_code);
   const leadSource = clean(source.display_name);
+  let rmEmployeeId = source.associate_employee_id;
   let rmName: string | null = null;
   let rmCode: string | null = null;
-  if (source.associate_employee_id) {
-    const { data: employee } = await admin.from("employees").select("full_name,employee_code").eq("id", source.associate_employee_id).maybeSingle<{ full_name: string | null; employee_code: string | null }>();
+  if (rmEmployeeId) {
+    const { data: employee } = await admin.from("employees").select("full_name,employee_code").eq("id", rmEmployeeId).maybeSingle<{ full_name: string | null; employee_code: string | null }>();
     rmName = employee?.full_name?.trim() || null;
     rmCode = employee?.employee_code?.trim() || null;
+  } else if (caseRow.intermediary_id === sourceId) {
+    // A Partner source can inherit RM ownership through onboarding rather than the direct intermediary column.
+    // When the source is unchanged, retain that established ownership instead of clearing it on an unrelated edit.
+    rmEmployeeId = caseRow.rm_employee_id || policy.rm_employee_id || null;
+    rmName = caseRow.rm_name?.trim() || policy.rm_name?.trim() || null;
+    rmCode = caseRow.rm_code?.trim() || null;
   }
 
   const { error: caseError } = await admin.from("life_health_cases").update({
@@ -69,7 +76,7 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
     intermediary_code: intermediaryCode || null,
     lead_source: leadSource,
     intermediary_mobile: source.mobile || null,
-    rm_employee_id: source.associate_employee_id,
+    rm_employee_id: rmEmployeeId,
     rm_name: rmName,
     rm_code: rmCode,
     remarks: remarks || null,
@@ -89,7 +96,7 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
     intermediary_code: intermediaryCode || null,
     lead_source: leadSource,
     rm_name: rmName,
-    rm_employee_id: source.associate_employee_id,
+    rm_employee_id: rmEmployeeId,
     remarks: remarks || null,
     updated_at: new Date().toISOString(),
   }).eq("id", policyId);
