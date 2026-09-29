@@ -225,5 +225,9 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.post_accounts_policy_reconciliation_entry(uuid,uuid,text,jsonb) FROM public;
+-- Supabase can maintain direct EXECUTE grants for anon/authenticated independently of PUBLIC.
+-- Revoke all browser-facing roles explicitly; only server-side service_role may call this RPC.
+REVOKE ALL ON FUNCTION public.post_accounts_policy_reconciliation_entry(uuid,uuid,text,jsonb) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.post_accounts_policy_reconciliation_entry(uuid,uuid,text,jsonb) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.post_accounts_policy_reconciliation_entry(uuid,uuid,text,jsonb) FROM authenticated;
 GRANT EXECUTE ON FUNCTION public.post_accounts_policy_reconciliation_entry(uuid,uuid,text,jsonb) TO service_role;
