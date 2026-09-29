@@ -1,130 +1,17 @@
 "use client";
-
 import Link from "next/link";
-import { useMemo, useState, useTransition, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { useMemo,useState,useTransition,type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, FileText, ShieldCheck, Upload } from "lucide-react";
-import { convertLifeHealthCaseToPolicy, uploadLifeHealthCaseDocument } from "@/app/policies/life-health-policy-actions";
-
-type CaseData = {
-  id: string; caseNumber: string; businessLine: "Life" | "Health"; status: string; sourcingDate: string;
-  customerName: string; customerPhone: string; customerEmail: string; insurerName: string; productName: string;
-  proposalNumber: string; ppt: string; pd: string; paymentFrequency: string; paymentMode: string; premiumAmount: number;
-  intermediaryType: string; intermediaryCode: string; leadSource: string; intermediaryMobile: string; rmName: string; rmCode: string;
-  remarks: string; finalPolicyId: string | null; finalPolicyNo: string | null; finalPolicyCode: string | null; convertedAt: string | null;
-};
-type DocumentRow = { id: string; document_type: string; file_name: string; created_at: string };
-type IssueState = { policyNumber: string; issuanceDate: string; startDate: string; endDate: string; finalPremium: string; sumInsured: string };
-
-type Props = { caseData: CaseData; documents: DocumentRow[] };
-const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
-const inputClass = "h-10 w-full rounded-xl border border-[#D8DEE9] bg-white px-3 text-[11px] font-medium text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]";
-const labelClass = "mb-1.5 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.055em] text-[#475467]";
-const today = () => new Date().toISOString().slice(0, 10);
-const plusYearMinusDay = (start: string) => { if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return ""; const date = new Date(`${start}T00:00:00Z`); date.setUTCFullYear(date.getUTCFullYear() + 1); date.setUTCDate(date.getUTCDate() - 1); return date.toISOString().slice(0, 10); };
-
-const documentLabels: Record<string, string> = {
-  proposal_form: "Proposal Form",
-  benefit_illustration: "Benefit Illustration",
-  premium_receipt: "Premium Receipt",
-  policy_copy: "Policy Copy",
-};
-
-export function LifeHealthCaseDetail({ caseData, documents }: Props) {
-  const router = useRouter();
-  const documentMap = useMemo(() => new Map(documents.map((item) => [item.document_type, item])), [documents]);
-  const [error, setError] = useState<string | null>(null);
-  const [uploading, startUpload] = useTransition();
-  const [converting, startConvert] = useTransition();
-  const [issue, setIssue] = useState<IssueState>({ policyNumber: "", issuanceDate: today(), startDate: today(), endDate: plusYearMinusDay(today()), finalPremium: String(caseData.premiumAmount || ""), sumInsured: "" });
-  const isIssued = Boolean(caseData.finalPolicyId);
-
-  function upload(documentType: string, file: File | null) {
-    if (!file) return;
-    setError(null);
-    const data = new FormData();
-    data.set("caseId", caseData.id);
-    data.set("documentType", documentType);
-    data.set("file", file);
-    startUpload(async () => {
-      const result = await uploadLifeHealthCaseDocument(data);
-      if (!result.ok) { setError(result.error); return; }
-      router.refresh();
-    });
-  }
-
-  function convert(policyCopy: File | null) {
-    setError(null);
-    const data = new FormData();
-    data.set("caseId", caseData.id);
-    Object.entries(issue).forEach(([key, value]) => data.set(key, value));
-    if (policyCopy) data.set("policyCopy", policyCopy);
-    startConvert(async () => {
-      const result = await convertLifeHealthCaseToPolicy(data);
-      if (!result.ok) { setError(result.error); return; }
-      router.push("/policies");
-      router.refresh();
-    });
-  }
-
-  return (
-    <div className="mx-auto max-w-[1480px] space-y-4 pb-10">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#D9E2F0] bg-white px-4 py-3 shadow-sm">
-        <div><div className="flex items-center gap-2 text-[9px] text-[#667085]"><Link href="/policies" className="hover:text-[#315B9A]">Policies</Link><span>›</span><Link href="/policies/life-health-cases" className="hover:text-[#315B9A]">Life / Health Cases</Link><span>›</span><span>{caseData.caseNumber}</span></div><h1 className="mt-1 text-[15px] font-semibold text-[#17365D]">{caseData.businessLine} Case · {caseData.caseNumber}</h1></div>
-        <span className={`rounded-full px-3 py-1.5 text-[9px] font-bold ${isIssued ? "bg-[#EAF7F2] text-[#18794E]" : "bg-[#FFF3CD] text-[#A96A00]"}`}>{isIssued ? "Issued / Closed" : "Awaiting Policy"}</span>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-4">
-          <Card title="Case summary" icon={<ShieldCheck className="h-4 w-4" />}>
-            <Info label="Customer" value={`${caseData.customerName}${caseData.customerPhone ? ` · ${caseData.customerPhone}` : ""}`} />
-            <Info label="Insurer" value={caseData.insurerName} />
-            <Info label="Product" value={caseData.productName} />
-            <Info label="Proposal No." value={caseData.proposalNumber} />
-            <Info label="PPT" value={caseData.ppt || "—"} />
-            <Info label="PD / Policy Term" value={caseData.pd || "—"} />
-            <Info label="Premium" value={money.format(caseData.premiumAmount)} />
-            <Info label="Payment" value={`${caseData.paymentFrequency} · ${caseData.paymentMode}`} />
-          </Card>
-
-          <Card title="Source & ownership">
-            <Info label="Sourcing date" value={caseData.sourcingDate} />
-            <Info label="RM" value={[caseData.rmName, caseData.rmCode].filter(Boolean).join(" · ") || "—"} />
-            <Info label="Lead source" value={[caseData.leadSource, caseData.intermediaryCode].filter(Boolean).join(" · ") || "—"} />
-            <Info label="Source mobile" value={caseData.intermediaryMobile || "—"} />
-          </Card>
-
-          <Card title="Case documents" subtitle="Upload or replace documents while the case is open. These exact files are linked to the final policy without uploading them again.">
-            <DocumentRow caseId={caseData.id} type="proposal_form" existing={documentMap.get("proposal_form")} disabled={isIssued || uploading} onUpload={upload} />
-            <DocumentRow caseId={caseData.id} type="benefit_illustration" existing={documentMap.get("benefit_illustration")} disabled={isIssued || uploading} onUpload={upload} />
-            <DocumentRow caseId={caseData.id} type="premium_receipt" existing={documentMap.get("premium_receipt")} disabled={isIssued || uploading} onUpload={upload} />
-            <DocumentRow caseId={caseData.id} type="policy_copy" existing={documentMap.get("policy_copy")} disabled={isIssued || uploading} onUpload={upload} />
-          </Card>
-
-          {caseData.remarks ? <Card title="Remarks"><div className="col-span-full rounded-xl bg-[#F8FAFC] px-3 py-3 text-[10px] leading-5 text-[#475467]">{caseData.remarks}</div></Card> : null}
-          {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">{error}</div> : null}
-        </div>
-
-        <aside className="self-start overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-[0_10px_30px_rgba(15,23,42,.08)] xl:sticky xl:top-[90px]">
-          {isIssued ? (
-            <div><div className="border-b bg-[#F0FAF5] px-4 py-4"><div className="flex items-center gap-2 text-[#18794E]"><CheckCircle2 className="h-5 w-5" /><h2 className="text-[13px] font-bold">Policy Issued</h2></div><p className="mt-1 text-[9px] text-[#4B6F60]">The case is closed and remains available as an audit trail.</p></div><div className="space-y-3 px-4 py-4"><InfoLine label="Policy No." value={caseData.finalPolicyNo || "—"} /><InfoLine label="Policy Code" value={caseData.finalPolicyCode || "—"} /><Link href={`/policies/${caseData.finalPolicyId}`} className="block rounded-xl bg-[#17365D] px-4 py-2.5 text-center text-[10px] font-bold text-white">View Policy</Link></div></div>
-          ) : (
-            <IssuePanel issue={issue} setIssue={setIssue} hasPolicyCopy={documentMap.has("policy_copy")} converting={converting} onConvert={convert} />
-          )}
-        </aside>
-      </div>
-    </div>
-  );
-}
-
-function IssuePanel({ issue, setIssue, hasPolicyCopy, converting, onConvert }: { issue: IssueState; setIssue: Dispatch<SetStateAction<IssueState>>; hasPolicyCopy: boolean; converting: boolean; onConvert: (file: File | null) => void }) {
-  const [copy, setCopy] = useState<File | null>(null);
-  const update = (key: keyof IssueState, value: string) => setIssue((current) => ({ ...current, [key]: value }));
-  return <div><div className="border-b bg-[#F8FAFC] px-4 py-4"><p className="text-[8px] font-bold uppercase tracking-[.1em] text-[#64748B]">Close case</p><h2 className="mt-1 text-[13px] font-semibold text-[#17365D]">Mark Policy Issued</h2><p className="mt-1 text-[8.5px] leading-4 text-[#667085]">Enter only the final issuance details. Case data and existing documents are reused automatically.</p></div><div className="space-y-3 px-4 py-4"><MiniField label="Policy number" value={issue.policyNumber} onChange={(value) => update("policyNumber", value.toUpperCase())} /><MiniField label="Issuance date" type="date" value={issue.issuanceDate} onChange={(value) => update("issuanceDate", value)} /><MiniField label="Policy start date" type="date" value={issue.startDate} onChange={(value) => { update("startDate", value); update("endDate", plusYearMinusDay(value)); }} /><MiniField label="Policy end / maturity date" type="date" value={issue.endDate} onChange={(value) => update("endDate", value)} /><MiniField label="Final premium" value={issue.finalPremium} onChange={(value) => update("finalPremium", value.replace(/[^0-9.]/g, ""))} /><MiniField label="Sum assured / insured" value={issue.sumInsured} onChange={(value) => update("sumInsured", value.replace(/[^0-9.]/g, ""))} placeholder="Optional" /><div><label className={labelClass}>Policy copy {!hasPolicyCopy ? <span className="text-red-500">*</span> : null}</label><label className="flex min-h-10 cursor-pointer items-center justify-between gap-2 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px] font-semibold text-[#315B9A]"><span className="truncate">{copy?.name || (hasPolicyCopy ? "Already uploaded — replace optional" : "Choose issued policy copy")}</span><Upload className="h-3.5 w-3.5 shrink-0" /><input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => setCopy(event.target.files?.[0] ?? null)} /></label></div></div><div className="border-t border-[#E6EBF2] bg-[#F8FAFC] px-4 py-4"><p className="mb-3 text-[8px] font-bold uppercase tracking-[.1em] text-[#64748B]">Case actions</p><div className="grid grid-cols-2 gap-2"><Link href="/policies/life-health-cases" className="flex min-h-10 items-center justify-center rounded-xl border border-[#CAD7E7] bg-white px-3 text-center text-[9px] font-bold text-[#17365D] transition hover:bg-[#F1F5F9]">Cancel</Link><button type="button" onClick={() => onConvert(copy)} disabled={converting} className="min-h-10 rounded-xl bg-[#17365D] px-3 text-[9px] font-bold text-white disabled:opacity-60">{converting ? "Creating policy…" : "Create Policy & Close Case"}</button></div><p className="mt-3 text-[8px] leading-4 text-[#7A8798]">The case is marked Issued only after the policy record, Life/Health details, premium details and document links are all created successfully.</p></div></div>;
-}
-
-function Card({ title, subtitle, icon, children }: { title: string; subtitle?: string; icon?: ReactNode; children: ReactNode }) { return <section className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="border-b bg-[#FBFCFE] px-4 py-3"><div className="flex items-center gap-2 text-[#17365D]">{icon}<h2 className="text-[12px] font-semibold">{title}</h2></div>{subtitle ? <p className="mt-1 text-[8.5px] text-[#667085]">{subtitle}</p> : null}</div><div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">{children}</div></section>; }
-function Info({ label, value }: { label: string; value: string }) { return <div className="min-w-0"><p className="text-[8px] font-bold uppercase tracking-[.06em] text-[#7A8798]">{label}</p><p className="mt-1 truncate text-[10.5px] font-semibold text-[#17365D]" title={value}>{value}</p></div>; }
-function InfoLine({ label, value }: { label: string; value: string }) { return <div className="flex items-start justify-between gap-3 border-b border-[#E8EDF3] pb-2 text-[9.5px]"><span className="text-[#667085]">{label}</span><span className="text-right font-semibold text-[#17365D]">{value}</span></div>; }
-function MiniField({ label, value, onChange, type = "text", placeholder }: { label: string; value: string; onChange: (value: string) => void; type?: string; placeholder?: string }) { return <div><label className={labelClass}>{label}</label><input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className={inputClass} /></div>; }
-function DocumentRow({ type, existing, disabled, onUpload }: { caseId: string; type: string; existing?: DocumentRow; disabled: boolean; onUpload: (type: string, file: File | null) => void }) { const id = `case-doc-${type}`; return <div className={`col-span-full flex items-center gap-3 rounded-xl border px-3 py-3 ${existing ? "border-emerald-200 bg-emerald-50/30" : "border-[#DCE3EC] bg-white"}`}><span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${existing ? "bg-emerald-100 text-emerald-700" : "bg-[#EEF4FB] text-[#315B9A]"}`}>{existing ? <CheckCircle2 className="h-4 w-4" /> : <FileText className="h-4 w-4" />}</span><div className="min-w-0 flex-1"><p className="text-[9.5px] font-bold text-[#17365D]">{documentLabels[type] || type}</p><p className="truncate text-[8px] text-[#667085]">{existing?.file_name || "Not uploaded"}</p></div>{!disabled ? <label htmlFor={id} className="cursor-pointer rounded-lg border border-[#CAD7E7] bg-white px-2.5 py-1.5 text-[8px] font-bold text-[#315B9A]">{existing ? "Replace" : "Upload"}<input id={id} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => onUpload(type, event.target.files?.[0] ?? null)} /></label> : null}</div>; }
+import { ChevronDown,FileText,Upload } from "lucide-react";
+import { convertLifeHealthCaseToPolicy,uploadLifeHealthCaseDocument } from "@/app/policies/life-health-policy-actions";
+import { updateLifeHealthCaseDetails } from "@/app/policies/life-health-case-edit-actions";
+type CaseData={id:string;caseNumber:string;businessLine:"Life"|"Health";status:string;sourcingDate:string;customerId:string;customerName:string;customerPhone:string;customerEmail:string;insurerId:string;insurerName:string;productName:string;proposalNumber:string;ppt:string;pd:string;paymentFrequency:string;paymentMode:string;premiumAmount:number;intermediaryType:string;intermediaryCode:string;leadSource:string;intermediaryMobile:string;rmName:string;rmCode:string;remarks:string;finalPolicyId:string|null;finalPolicyNo:string|null;finalPolicyCode:string|null;convertedAt:string|null};
+type DocumentRow={id:string;document_type:string;file_name:string;created_at:string}; type Props={caseData:CaseData;insurers:Array<{id:string;name:string}>;documents:DocumentRow[]}; type IssueState={policyNumber:string;issuanceDate:string;startDate:string;endDate:string;finalPremium:string;sumInsured:string};
+const field="h-10 w-full rounded-lg border border-[#D7DFEA] bg-white px-3 text-[11px] text-[#172B4D] outline-none focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]"; const label="mb-1.5 block text-[8.5px] font-bold uppercase tracking-[.055em] text-[#667085]"; const today=()=>new Date().toISOString().slice(0,10); const plusYearMinusDay=(s:string)=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(s))return"";const d=new Date(`${s}T00:00:00Z`);d.setUTCFullYear(d.getUTCFullYear()+1);d.setUTCDate(d.getUTCDate()-1);return d.toISOString().slice(0,10)}; const docs=[{type:"proposal_form",label:"Proposal Form"},{type:"benefit_illustration",label:"Benefit Illustration"},{type:"premium_receipt",label:"Premium Receipt"},{type:"policy_copy",label:"Policy Copy"}];
+export function LifeHealthCaseDetail({caseData,insurers,documents}:Props){const router=useRouter(),isIssued=Boolean(caseData.finalPolicyId),docMap=useMemo(()=>new Map(documents.map(d=>[d.document_type,d])),[documents]);const[saving,startSave]=useTransition(),[uploading,startUpload]=useTransition(),[converting,startConvert]=useTransition(),[error,setError]=useState<string|null>(null),[saved,setSaved]=useState(false),[copy,setCopy]=useState<File|null>(null),[activityOpen,setActivityOpen]=useState(false);const[form,setForm]=useState({customerName:caseData.customerName,customerPhone:caseData.customerPhone,customerEmail:caseData.customerEmail,insurerId:caseData.insurerId,productName:caseData.productName,proposalNumber:caseData.proposalNumber,ppt:caseData.ppt,pd:caseData.pd,paymentFrequency:caseData.paymentFrequency,paymentMode:caseData.paymentMode,premiumAmount:String(caseData.premiumAmount||""),sourcingDate:caseData.sourcingDate,rmName:caseData.rmName,rmCode:caseData.rmCode,leadSource:caseData.leadSource,intermediaryCode:caseData.intermediaryCode,intermediaryMobile:caseData.intermediaryMobile,remarks:caseData.remarks});const[issue,setIssue]=useState<IssueState>({policyNumber:"",issuanceDate:today(),startDate:today(),endDate:plusYearMinusDay(today()),finalPremium:String(caseData.premiumAmount||""),sumInsured:""});const set=(k:string,v:string)=>setForm(x=>({...x,[k]:v}));const setI=(k:keyof IssueState,v:string)=>setIssue(x=>({...x,[k]:v}));const save=()=>{setError(null);setSaved(false);const d=new FormData();d.set("caseId",caseData.id);d.set("customerId",caseData.customerId);Object.entries(form).forEach(([k,v])=>d.set(k,v));startSave(async()=>{const r=await updateLifeHealthCaseDetails(d);if(!r.ok){setError(r.error);return}setSaved(true);router.refresh()})};const upload=(type:string,file:File|null)=>{if(!file)return;const d=new FormData();d.set("caseId",caseData.id);d.set("documentType",type);d.set("file",file);startUpload(async()=>{const r=await uploadLifeHealthCaseDocument(d);if(!r.ok){setError(r.error);return}router.refresh()})};const convert=()=>{const d=new FormData();d.set("caseId",caseData.id);Object.entries(issue).forEach(([k,v])=>d.set(k,v));if(copy)d.set("policyCopy",copy);startConvert(async()=>{const r=await convertLifeHealthCaseToPolicy(d);if(!r.ok){setError(r.error);return}router.push("/policies/life-health-cases");router.refresh()})};if(isIssued)return <div className="mx-auto max-w-[1540px] rounded-xl border bg-white p-5 text-[11px] text-[#17365D]">This case is issued and closed. <Link className="font-bold underline" href={`/policies/${caseData.finalPolicyId}`}>View Policy {caseData.finalPolicyNo}</Link></div>;return <div className="mx-auto max-w-[1540px] space-y-3 pb-8">
+<Section title="Case summary"><Grid><F t="Customer name"><input className={field} value={form.customerName} onChange={e=>set("customerName",e.target.value)}/></F><F t="Mobile"><input className={field} value={form.customerPhone} onChange={e=>set("customerPhone",e.target.value)}/></F><F t="Email"><input className={field} value={form.customerEmail} onChange={e=>set("customerEmail",e.target.value)}/></F><F t="Insurer"><select className={field} value={form.insurerId} onChange={e=>set("insurerId",e.target.value)}>{insurers.map(i=><option key={i.id} value={i.id}>{i.name}</option>)}</select></F><F t="Product"><input className={field} value={form.productName} onChange={e=>set("productName",e.target.value)}/></F><F t="Proposal no."><input className={field} value={form.proposalNumber} onChange={e=>set("proposalNumber",e.target.value)}/></F><F t="PPT"><input className={field} value={form.ppt} onChange={e=>set("ppt",e.target.value)}/></F><F t="Policy duration / term"><input className={field} value={form.pd} onChange={e=>set("pd",e.target.value)}/></F><F t="Premium"><input className={field} value={form.premiumAmount} onChange={e=>set("premiumAmount",e.target.value.replace(/[^0-9.]/g,""))}/></F><F t="Payment frequency"><input className={field} value={form.paymentFrequency} onChange={e=>set("paymentFrequency",e.target.value)}/></F><F t="Payment mode"><input className={field} value={form.paymentMode} onChange={e=>set("paymentMode",e.target.value)}/></F></Grid></Section>
+<Section title="Source & ownership"><Grid><F t="Sourcing date"><input type="date" className={field} value={form.sourcingDate} onChange={e=>set("sourcingDate",e.target.value)}/></F><F t="RM"><input className={field} value={form.rmName} onChange={e=>set("rmName",e.target.value)}/></F><F t="Employee ID"><input className={field} value={form.rmCode} onChange={e=>set("rmCode",e.target.value)}/></F><F t="Lead source"><input className={field} value={form.leadSource} onChange={e=>set("leadSource",e.target.value)}/></F><F t="Source ID"><input className={field} value={form.intermediaryCode} onChange={e=>set("intermediaryCode",e.target.value)}/></F><F t="Source mobile"><input className={field} value={form.intermediaryMobile} onChange={e=>set("intermediaryMobile",e.target.value)}/></F></Grid></Section>
+<Section title="Mark Policy Issued"><Grid><F t="Policy number"><input className={field} value={issue.policyNumber} onChange={e=>setI("policyNumber",e.target.value.toUpperCase())}/></F><F t="Issuance date"><input type="date" className={field} value={issue.issuanceDate} onChange={e=>setI("issuanceDate",e.target.value)}/></F><F t="Policy start date"><input type="date" className={field} value={issue.startDate} onChange={e=>{setI("startDate",e.target.value);setI("endDate",plusYearMinusDay(e.target.value))}}/></F><F t="Policy end / maturity date"><input type="date" className={field} value={issue.endDate} onChange={e=>setI("endDate",e.target.value)}/></F><F t="Final premium"><input className={field} value={issue.finalPremium} onChange={e=>setI("finalPremium",e.target.value.replace(/[^0-9.]/g,""))}/></F><F t="Sum assured / insured"><input className={field} value={issue.sumInsured} onChange={e=>setI("sumInsured",e.target.value.replace(/[^0-9.]/g,""))}/></F></Grid></Section>
+<section className="overflow-hidden rounded-xl border border-[#D9E2F0] bg-white"><button type="button" onClick={()=>setActivityOpen(v=>!v)} className="flex w-full items-center justify-between px-4 py-3 text-left text-[11px] font-semibold text-[#17365D]"><span>Activity Status</span><ChevronDown className={`h-4 w-4 ${activityOpen?"rotate-180":""}`}/></button>{activityOpen?<div className="border-t p-4"><F t="Remarks / activity note"><textarea className={`${field} h-20 py-2`} value={form.remarks} onChange={e=>set("remarks",e.target.value)}/></F><p className="mt-2 text-[9px] text-[#667085]">Current status: <b>{caseData.status.replaceAll("_"," ")}</b></p></div>:null}</section>{error?<div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">{error}</div>:null}
+<section className="rounded-xl border border-[#D9E2F0] bg-white p-3"><div className="flex flex-col gap-3 xl:flex-row"><div className="grid flex-1 grid-cols-2 gap-2 md:grid-cols-4">{docs.map(d=><Doc key={d.type} type={d.type} title={d.label} existing={docMap.get(d.type)} disabled={uploading} onUpload={upload}/>)}</div><div className="flex min-w-[330px] items-end justify-end gap-2 border-t pt-3 xl:border-l xl:border-t-0 xl:pl-3 xl:pt-0"><Link href="/policies/life-health-cases" className="flex h-10 min-w-[120px] items-center justify-center rounded-lg border border-[#CAD7E7] bg-white px-4 text-[9px] font-bold text-[#17365D]">Cancel</Link><button type="button" onClick={convert} disabled={converting} className="h-10 min-w-[190px] rounded-lg bg-[#17365D] px-4 text-[9px] font-bold text-white disabled:opacity-60">{converting?"Creating policy…":"Create Policy & Close Case"}</button></div></div><div className="mt-3 flex items-center justify-end gap-3 border-t pt-3"><span className="text-[9px] text-emerald-700">{saved?"Changes saved":""}</span><button type="button" onClick={save} disabled={saving} className="h-9 rounded-lg bg-[#315B9A] px-5 text-[9px] font-bold text-white">{saving?"Saving…":"Save changes"}</button></div>{!docMap.has("policy_copy")?<label className="mt-2 block text-right text-[8px] text-[#667085]">Issued policy copy can be uploaded in the Policy Copy tile before closing.<input type="file" className="hidden" onChange={e=>setCopy(e.target.files?.[0]??null)}/></label>:null}</section></div>}
+function Section({title,children}:{title:string;children:ReactNode}){return <section className="overflow-hidden rounded-xl border border-[#D9E2F0] bg-white"><div className="border-b px-4 py-3 text-[11px] font-semibold text-[#17365D]">{title}</div><div className="p-4">{children}</div></section>} function Grid({children}:{children:ReactNode}){return <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{children}</div>} function F({t,children}:{t:string;children:ReactNode}){return <label><span className={label}>{t}</span>{children}</label>} function Doc({type,title,existing,disabled,onUpload}:{type:string;title:string;existing?:DocumentRow;disabled:boolean;onUpload:(type:string,file:File|null)=>void}){return <label className={`flex min-h-[92px] cursor-pointer flex-col items-center justify-center rounded-xl border p-3 text-center ${existing?"border-emerald-200 bg-emerald-50/30":"border-[#DCE3EC] bg-[#FBFCFE]"}`}><span className="grid h-8 w-8 place-items-center rounded-lg bg-[#EEF4FB] text-[#315B9A]"><FileText className="h-4 w-4"/></span><b className="mt-2 text-[9px] text-[#17365D]">{title}</b><span className="max-w-full truncate text-[8px] text-[#7A8798]">{existing?.file_name||"Not uploaded"}</span><span className="mt-1 flex items-center gap-1 text-[8px] font-semibold text-[#315B9A]"><Upload className="h-3 w-3"/>{existing?"Replace":"Upload"}</span><input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" disabled={disabled} className="hidden" onChange={e=>onUpload(type,e.target.files?.[0]??null)}/></label>}
