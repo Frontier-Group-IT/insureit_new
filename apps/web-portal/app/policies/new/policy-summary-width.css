@@ -1,11 +1,10 @@
-/* Life / Health is portal-mounted inside the fallback wrapper used before the
-   dedicated form is attached. That wrapper was becoming the containing block
-   for the two-column layout, so making only the inner grid 100% could never
-   make it as wide as Motor. Remove that wrapper from layout once the real
-   Life/Health grid exists; its children then size against the same 1480px
-   PolicyUnifiedForm workspace used by Motor. */
-.space-y-4:has(> [data-life-health-layout="true"]) {
-  display: contents;
+/* The unified onboarding root is max-width constrained but is not explicitly
+   full-width. Motor's native two-column grid gives that root enough intrinsic
+   width to fill the workspace; the Life/Health portal tree does not, so the
+   root can shrink to its contents. Force the actual shared 1480px onboarding
+   workspace to occupy the available width whenever Life/Health is mounted. */
+.mx-auto.max-w-\[1480px\]:has([data-life-health-layout="true"]) {
+  width: 100% !important;
 }
 
 [data-life-health-layout="true"] {
@@ -21,12 +20,13 @@
 }
 
 @media (min-width: 1280px) {
-  /* Match Motor exactly: flexible main form plus a fixed 336px summary rail. */
+  /* Match Motor: flexible main form plus a fixed 336px summary rail. */
   [data-life-health-layout="true"] {
     grid-template-columns: minmax(0, 1fr) 336px !important;
   }
 
-  #policy-summary-fixed-card {
+  #policy-summary-fixed-card,
+  #life-health-summary-fixed-card {
     width: 336px !important;
     min-width: 336px !important;
     max-width: 336px !important;
