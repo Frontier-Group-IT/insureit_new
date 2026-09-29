@@ -15,6 +15,7 @@ import "./globals.css";
 import "./experience.css";
 import "./mobile.css";
 import "./document-grid.css";
+import "./life-health-case-documents.css";
 import "./accounts-navigation-labels.css";
 import "./policy-summary-stability.css";
 import "./policy-section-nav.css";
