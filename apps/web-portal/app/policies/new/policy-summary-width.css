@@ -1,4 +1,23 @@
+/* Life / Health uses a DOM-mounted layout inside the unified policy form.
+   Size the real mount directly so it consumes the same desktop workspace as
+   the onboarding header/navigation instead of shrink-wrapping to its content. */
+[data-life-health-layout="true"] {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+
+[data-life-health-layout="true"] > :first-child,
+[data-life-health-layout="true"] [data-life-health-portal="true"],
+[data-life-health-layout="true"] [data-life-health-summary="true"] {
+  min-width: 0 !important;
+}
+
 @media (min-width: 1280px) {
+  [data-life-health-layout="true"] {
+    grid-template-columns: minmax(0, 1fr) 336px !important;
+  }
+
   #policy-summary-fixed-card {
     width: 336px !important;
     min-width: 336px !important;
