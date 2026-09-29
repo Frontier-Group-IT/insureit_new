@@ -11,6 +11,8 @@ import {
   type BusinessMisClientCell,
 } from "@/lib/accounts-business-mis-schema";
 import { loadAccountsSnapshotAction } from "./accounts-snapshot-actions";
+import { AccountsPolicyReconciliationDrawer } from "./accounts-policy-reconciliation-drawer";
+import type { AccountsPolicyReconciliationLookup } from "./accounts-reconciliation-detail-actions";
 import { ReconciliationTools } from "./reconciliation-tools";
 
 type Period = "last_month" | "mtd" | "custom";
@@ -64,6 +66,7 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
   const [customFrom, setCustomFrom] = useState(initialFilters.fromDate);
   const [customTo, setCustomTo] = useState(initialFilters.toDate);
   const [customError, setCustomError] = useState("");
+  const [reconciliationLookup, setReconciliationLookup] = useState<AccountsPolicyReconciliationLookup | null>(null);
   const customRef = useRef<HTMLDivElement>(null);
   const cache = useRef(new Map<string, Result>([
     [cacheKey(initialFilters.period, initialFilters.fromDate, initialFilters.toDate, initialFilters.insurerId ?? ""), {
@@ -141,7 +144,7 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
     }
   };
 
-  const refreshAfterImport = async () => {
+  const refreshReconciliationSnapshot = async () => {
     const href = accountsHref(filters.period, filters.fromDate, filters.toDate, filters.insurerId ?? "");
     setIsPending(true);
     setLoadError("");
@@ -157,7 +160,7 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
       cache.current.set(cacheKey(result.filters.period, result.filters.fromDate, result.filters.toDate, result.filters.insurerId ?? ""), result);
       applyResult(result, href);
     } catch {
-      setLoadError("Reconciliation was imported, but the dashboard could not refresh automatically. Apply the filters again to reload the latest figures.");
+      setLoadError("Reconciliation was saved, but the dashboard could not refresh automatically. Apply the filters again to reload the latest figures.");
     } finally {
       setIsPending(false);
     }
@@ -247,7 +250,7 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-1.5">
-          <ReconciliationTools onImported={refreshAfterImport} />
+          <ReconciliationTools onImported={refreshReconciliationSnapshot} />
           <span className="h-5 w-px bg-[#dce4ee]" aria-hidden="true" />
           <a href={exportHref} title="Export / download Business MIS" aria-label="Export / download Business MIS" className="grid h-8 w-8 place-items-center rounded-lg border border-[#17365D] bg-white text-[#17365D] shadow-sm transition hover:bg-[#f3f7fb]">
             <Download className="h-3.5 w-3.5" />
@@ -307,7 +310,8 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
 
     <ReconciliationOverviewPanel overview={reconciliation} policyCount={snapshot.rows.length} />
 
-    <BusinessMisTable rows={snapshot.rows} loadFailed={misLoadFailed} />
+    <BusinessMisTable rows={snapshot.rows} loadFailed={misLoadFailed} onOpenReconciliation={setReconciliationLookup} />
+    <AccountsPolicyReconciliationDrawer lookup={reconciliationLookup} onClose={() => setReconciliationLookup(null)} onPosted={refreshReconciliationSnapshot} />
   </div>;
 }
 
@@ -316,7 +320,6 @@ function ReconciliationOverviewPanel({ overview, policyCount }: { overview: Reco
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div>
         <h2 className="text-[11.5px] font-semibold text-[#17365D]">Reconciliation overview</h2>
-        <p className="mt-0.5 text-[7.5px] text-[#7c899b]">Live status from the same Pay-In / Pay-Out fields used in the Business MIS template.</p>
       </div>
       <div className="flex flex-wrap items-center gap-1">
         <StatusChip label="All" value={policyCount} />
@@ -332,7 +335,7 @@ function ReconciliationOverviewPanel({ overview, policyCount }: { overview: Reco
       <ReconciliationProgress
         title="Pay-In reconciliation"
         projectedLabel="Projected Pay-In"
-        actualLabel="Posted Pay-In"
+        actualLabel="Received Pay-In"
         projected={overview.projectedPayin}
         actual={overview.postedPayin}
         pending={overview.pendingPayin}
@@ -380,7 +383,7 @@ function StatusChip({ label, value, tone = "neutral" }: { label: string; value: 
   return <span className={`rounded-full border px-2 py-1 text-[7.5px] font-bold tabular-nums ${cls}`}>{label} {integer(value)}</span>;
 }
 
-function BusinessMisTable({ rows, loadFailed }: { rows: BusinessMisClientCell[][]; loadFailed: boolean }) {
+function BusinessMisTable({ rows, loadFailed, onOpenReconciliation }: { rows: BusinessMisClientCell[][]; loadFailed: boolean; onOpenReconciliation: (lookup: AccountsPolicyReconciliationLookup) => void }) {
   return <section className="min-w-0 overflow-hidden rounded-2xl border border-[#dbe3ee] bg-white shadow-sm">
     <div className="flex items-center justify-between gap-3 border-b border-[#e8edf4] px-3 py-2">
       <h2 className="text-[11.5px] font-semibold text-[#17365D]">Business MIS</h2>
@@ -394,7 +397,7 @@ function BusinessMisTable({ rows, loadFailed }: { rows: BusinessMisClientCell[][
           </thead>
           <tbody>
             {rows.length ? rows.map((row, rowIndex) => <tr key={`${rowIndex}-${String(row[12] ?? "")}`} className="group hover:bg-[#f8fbff]">
-              {row.map((cell, columnIndex) => <td key={columnIndex} className={cellClass(columnIndex)}>{formatMisCell(cell, columnIndex)}</td>)}
+              {row.map((cell, columnIndex) => <td key={columnIndex} className={cellClass(columnIndex)}>{columnIndex === 12 && String(cell ?? "").trim() ? <button type="button" title="Open reconciliation history" onClick={() => onOpenReconciliation({ policyNumber: String(row[12] ?? ""), registrationNumber: String(row[6] ?? ""), insuredName: String(row[7] ?? ""), insurerName: String(row[13] ?? "") })} className="group/policy inline-flex items-center gap-1.5 text-left font-semibold text-[#17365D] underline decoration-[#b8c8d9] decoration-dotted underline-offset-2 transition hover:text-[#0f766e] hover:decoration-[#0f766e]"><span>{formatMisCell(cell, columnIndex)}</span><span className="rounded border border-[#dce4ee] bg-white px-1 py-0 text-[6px] font-bold uppercase tracking-[.04em] text-[#7c899b] opacity-0 transition group-hover/policy:opacity-100 group-focus/policy:opacity-100">History</span></button> : formatMisCell(cell, columnIndex)}</td>)}
             </tr>) : <tr><td colSpan={BUSINESS_MIS_HEADERS.length} className="px-4 py-12 text-center text-[9px] font-medium text-[#98a2b3]">No Business MIS records are available for the selected filters.</td></tr>}
           </tbody>
         </table>
