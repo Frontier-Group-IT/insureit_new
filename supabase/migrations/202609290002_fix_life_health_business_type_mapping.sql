@@ -1,13 +1,5 @@
--- Keep Life/Health policy reporting classification aligned with the canonical business line.
--- business_type is also used for lifecycle values such as New, so Life/Health must not
--- leak those values into the Business Mix report.
-
-update public.policies
-set business_type = 'Life'
-where lower(trim(coalesce(business_line, ''))) = 'life'
-  and business_type is distinct from 'Life';
-
-update public.policies
-set business_type = 'Health'
-where lower(trim(coalesce(business_line, ''))) = 'health'
-  and business_type is distinct from 'Health';
+-- Life/Health classification is canonical in policies.business_line.
+-- Do not rewrite policies.business_type here: that field carries lifecycle values such as
+-- New/Renewal and must remain intact. Reporting must group Life/Health by business_line.
+-- This migration intentionally contains no data mutation so existing lifecycle semantics
+-- are preserved while the report-side mapping is corrected in application code.
