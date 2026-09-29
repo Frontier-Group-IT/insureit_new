@@ -1,0 +1,77 @@
+name: Apply Accounts policy reconciliation entry
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260929134500_accounts_policy_reconciliation_entry.sql'
+      - '.github/workflows/apply-accounts-policy-reconciliation-entry.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply and verify Accounts policy reconciliation entry
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout exact main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/20260929134500_accounts_policy_reconciliation_entry.sql
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply migration when required
+        shell: bash
+        run: |
+          set -euo pipefail
+          exists=$(supabase db query --linked --output-format json "select to_regprocedure('public.post_accounts_policy_reconciliation_entry(uuid,uuid,text,jsonb)') is not null as exists;")
+          if ! echo "$exists" | grep -Eq '"exists"[[:space:]]*:[[:space:]]*true'; then
+            supabase db query --linked --file supabase/migrations/20260929134500_accounts_policy_reconciliation_entry.sql
+          fi
+          applied=$(supabase db query --linked --output-format json "select exists(select 1 from supabase_migrations.schema_migrations where version='20260929134500') as applied;")
+          if ! echo "$applied" | grep -Eq '"applied"[[:space:]]*:[[:space:]]*true'; then
+            supabase migration repair --linked --status applied 20260929134500
+          fi
+
+      - name: Verify Accounts policy reconciliation RPC
+        shell: bash
+        run: |
+          set -euo pipefail
+          definition=$(supabase db query --linked --output-format json "select pg_get_functiondef('public.post_accounts_policy_reconciliation_entry(uuid,uuid,text,jsonb)'::regprocedure) as definition;")
+          privileges=$(supabase db query --linked --output-format json "select has_function_privilege('service_role','public.post_accounts_policy_reconciliation_entry(uuid,uuid,text,jsonb)','EXECUTE') as service_role_execute, has_function_privilege('anon','public.post_accounts_policy_reconciliation_entry(uuid,uuid,text,jsonb)','EXECUTE') as anon_execute;")
+          echo "$definition" | grep -q 'accounts_policy_reconciliation'
+          echo "$definition" | grep -q 'FOR UPDATE'
+          echo "$definition" | grep -q 'This Pay-In entry is already recorded for the policy'
+          echo "$privileges" | grep -Eq '"service_role_execute"[[:space:]]*:[[:space:]]*true'
+          echo "$privileges" | grep -Eq '"anon_execute"[[:space:]]*:[[:space:]]*false'
