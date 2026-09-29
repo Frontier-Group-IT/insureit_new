@@ -8,7 +8,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 const DOCUMENT_BUCKET = "policy-documents";
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
-const DOCUMENT_TYPES = new Set(["proposal_form", "benefit_illustration", "premium_receipt", "policy_copy"]);
+const DOCUMENT_TYPES = new Set(["proposal_form", "benefit_illustration", "premium_receipt", "policy_copy", "kyc", "other_document"]);
 const PAYMENT_FREQUENCIES = new Set(["Monthly", "Quarterly", "Half Yearly", "Annually", "One Time"]);
 const PAYMENT_MODES = new Set(["Cash", "Cheque", "NEFT/RTGS", "UPI", "Credit/Debit Card", "Net Banking"]);
 
@@ -268,7 +268,10 @@ export async function createLifeHealthCase(formData: FormData): Promise<LifeHeal
     createdCaseId = createdCase.id;
 
     const uploads: Array<[string, FormDataEntryValue | null]> = [
+      ["policy_copy", formData.get("policyCopy")],
       ["proposal_form", formData.get("proposalForm")],
+      ["kyc", formData.get("kyc")],
+      ["other_document", formData.get("otherDocument")],
       ["benefit_illustration", formData.get("benefitIllustration")],
       ["premium_receipt", formData.get("premiumReceipt")],
     ];
