@@ -7,7 +7,7 @@ import { LifeHealthPolicyForm, type LifeHealthCustomerOption, type LifeHealthSou
 const SAOD_BLOCKED_CLASSES = new Set(["GCV", "PCV", "CPM", "MISD"]);
 type InsurerOption = { label: string; value: string; segment?: "general" | "life" | "health" };
 type Props = { insurers: InsurerOption[]; customers: LifeHealthCustomerOption[]; sources: LifeHealthSourceOption[] };
-type LifeHealthMount = { target: HTMLElement; parent: HTMLElement; source: HTMLElement; notice: HTMLElement };
+type LifeHealthMount = { target: HTMLElement; notice: HTMLElement };
 
 function allowedInsurerSegments(policyType: string) {
   if (policyType === "Motor" || policyType === "Non-Motor" || policyType === "Non Motor") return new Set(["general"]);
@@ -47,7 +47,12 @@ function syncSourcingDateProxy() {
   const actualDate = container?.querySelector('input[type="date"]') as HTMLInputElement | null;
   if (!container || !actualDate) return;
   let proxy = container.querySelector('input[data-life-health-source-date="true"]') as HTMLInputElement | null;
-  if (!proxy) { proxy = document.createElement("input"); proxy.type = "hidden"; proxy.dataset.lifeHealthSourceDate = "true"; container.appendChild(proxy); }
+  if (!proxy) {
+    proxy = document.createElement("input");
+    proxy.type = "hidden";
+    proxy.dataset.lifeHealthSourceDate = "true";
+    container.appendChild(proxy);
+  }
   proxy.value = actualDate.value;
 }
 
@@ -61,45 +66,41 @@ function ensureLifeHealthMount(policyType: "Life" | "Health"): LifeHealthMount |
   const existingTarget = document.querySelector<HTMLElement>("[data-life-health-native-portal='true']");
   if (existingTarget) {
     const parent = existingTarget.parentElement;
-    const source = parent?.querySelector<HTMLElement>("[data-life-health-native-source='true']") ?? null;
     const notice = parent?.querySelector<HTMLElement>("[data-life-health-native-notice='true']") ?? null;
-    if (parent && source && notice) return { target: existingTarget, parent, source, notice };
+    if (notice) {
+      notice.style.display = "none";
+      return { target: existingTarget, notice };
+    }
   }
 
   const heading = Array.from(document.querySelectorAll("h2")).find((item) => item.textContent?.trim() === `${policyType} onboarding`);
   const notice = heading?.closest("section") as HTMLElement | null;
   const parent = notice?.parentElement;
-  const source = notice?.previousElementSibling as HTMLElement | null;
-  if (!notice || !parent || !source) return null;
+  if (!notice || !parent) return null;
 
+  // Keep the React-owned fallback wrapper and source section completely untouched.
+  // Only suppress the development notice and insert a full-width mount point in
+  // normal block flow. LifeHealthPolicyForm owns its own responsive two-column grid.
   notice.dataset.lifeHealthNativeNotice = "true";
-  notice.hidden = true;
-  source.dataset.lifeHealthNativeSource = "true";
-  source.classList.add("min-w-0", "w-full", "xl:col-start-1", "xl:row-start-2");
-  parent.classList.add("grid", "w-full", "min-w-0", "gap-4", "xl:grid-cols-[minmax(0,1fr)_336px]");
+  notice.style.display = "none";
 
   const target = document.createElement("div");
   target.dataset.lifeHealthNativePortal = "true";
-  target.className = "xl:col-span-2 xl:col-start-1 xl:row-start-3 w-full min-w-0";
+  target.className = "w-full min-w-0";
+  target.style.width = "100%";
   parent.insertBefore(target, notice);
-  return { target, parent, source, notice };
+  return { target, notice };
 }
 
 function restoreLifeHealthMount() {
   const target = document.querySelector<HTMLElement>("[data-life-health-native-portal='true']");
   const parent = target?.parentElement ?? null;
-  const source = parent?.querySelector<HTMLElement>("[data-life-health-native-source='true']") ?? null;
   const notice = parent?.querySelector<HTMLElement>("[data-life-health-native-notice='true']") ?? null;
   target?.remove();
-  if (source) {
-    delete source.dataset.lifeHealthNativeSource;
-    source.classList.remove("min-w-0", "w-full", "xl:col-start-1", "xl:row-start-2");
-  }
   if (notice) {
-    notice.hidden = false;
+    notice.style.removeProperty("display");
     delete notice.dataset.lifeHealthNativeNotice;
   }
-  parent?.classList.remove("grid", "w-full", "min-w-0", "gap-4", "xl:grid-cols-[minmax(0,1fr)_336px]");
 }
 
 export function PolicyOnboardingProductGuard({ insurers, customers, sources }: Props) {
@@ -135,13 +136,28 @@ export function PolicyOnboardingProductGuard({ insurers, customers, sources }: P
       if (!classSelect || !productSelect || !idvInput || !odInput) return;
       const vehicleClass = classSelect.value.trim().toUpperCase(), product = productSelect.value.trim().toUpperCase();
       const saodOption = Array.from(productSelect.options).find((option) => option.value.trim().toUpperCase() === "SAOD");
-      if (saodOption) { const blocked = SAOD_BLOCKED_CLASSES.has(vehicleClass); saodOption.disabled = blocked; saodOption.hidden = blocked; if (blocked && product === "SAOD") { productSelect.value = ""; productSelect.dispatchEvent(new Event("change", { bubbles: true })); } }
+      if (saodOption) {
+        const blocked = SAOD_BLOCKED_CLASSES.has(vehicleClass);
+        saodOption.disabled = blocked;
+        saodOption.hidden = blocked;
+        if (blocked && product === "SAOD") {
+          productSelect.value = "";
+          productSelect.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      }
       const thirdParty = product === "THIRD PARTY";
-      idvInput.disabled = thirdParty; idvInput.setAttribute("aria-disabled", String(thirdParty));
-      odInput.disabled = thirdParty; odInput.setAttribute("aria-disabled", String(thirdParty));
+      idvInput.disabled = thirdParty;
+      idvInput.setAttribute("aria-disabled", String(thirdParty));
+      odInput.disabled = thirdParty;
+      odInput.setAttribute("aria-disabled", String(thirdParty));
       if (thirdParty && idvInput.value !== "0") setReactValue(idvInput, "0");
       if (thirdParty && odInput.value !== "0") setReactValue(odInput, "0");
-      if (tpInput) { const saod = product === "SAOD" && !SAOD_BLOCKED_CLASSES.has(vehicleClass); tpInput.disabled = saod; tpInput.setAttribute("aria-disabled", String(saod)); if (saod && tpInput.value !== "0") setReactValue(tpInput, "0"); }
+      if (tpInput) {
+        const saod = product === "SAOD" && !SAOD_BLOCKED_CLASSES.has(vehicleClass);
+        tpInput.disabled = saod;
+        tpInput.setAttribute("aria-disabled", String(saod));
+        if (saod && tpInput.value !== "0") setReactValue(tpInput, "0");
+      }
       lastClass = vehicleClass;
       lastProduct = product;
     };
@@ -155,7 +171,11 @@ export function PolicyOnboardingProductGuard({ insurers, customers, sources }: P
       const policyType = (fieldControl("Policy type") as HTMLSelectElement | null)?.value.trim() ?? "";
       const vehicleClass = (fieldControl("Class") as HTMLSelectElement | null)?.value.trim().toUpperCase() ?? "";
       const product = (fieldControl("Policy product") as HTMLSelectElement | null)?.value.trim().toUpperCase() ?? "";
-      if (policyType !== lastPolicyType || vehicleClass !== lastClass || product !== lastProduct) sync(); else { syncSourcingDateProxy(); syncInsurerOptions(policyType, insurers); }
+      if (policyType !== lastPolicyType || vehicleClass !== lastClass || product !== lastProduct) sync();
+      else {
+        syncSourcingDateProxy();
+        syncInsurerOptions(policyType, insurers);
+      }
     }, 250);
     return () => {
       document.removeEventListener("change", onChange, true);
