@@ -199,7 +199,7 @@ export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
                 <tr key={customer.id} className={`h-9 ${selectedIds.has(customer.id) ? "bg-[#F5F3FF]" : "hover:bg-[#FAFCFF]"}`}>
                   <td className="px-2.5"><input aria-label={`Select ${customer.contact_name}`} type="checkbox" checked={selectedIds.has(customer.id)} onChange={() => toggleRow(customer.id)} className="h-4 w-4" /></td>
                   <td className="px-2.5">
-                    <Link prefetch={false} href={`/customers/${customer.id}/edit`} className="block truncate text-[12px] font-normal text-[#0F172A] hover:text-[#17365D]">{customer.contact_name}</Link>
+                    <Link prefetch={false} href={`/customers/${customer.id}/edit`} className="block truncate text-[12px] font-normal text-[#0F172A] hover:text-[#17365D]">{properCase(customer.contact_name)}</Link>
                   </td>
                   <td className="px-2.5"><p className="truncate text-[#334155]">{customer.partner_type ? partnerLabels[customer.partner_type] ?? customer.partner_type : "Not classified"}</p></td>
                   <td className="px-2.5 tabular-nums">{customer.phone}</td>
@@ -228,7 +228,7 @@ function CustomerMobileCard({ customer, selected, onToggle }: { customer: Custom
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <Link prefetch={false} href={`/customers/${customer.id}/edit`} className="block truncate text-[15px] font-normal text-[#12203B]">{customer.contact_name}</Link>
+              <Link prefetch={false} href={`/customers/${customer.id}/edit`} className="block truncate text-[15px] font-normal text-[#12203B]">{properCase(customer.contact_name)}</Link>
               <p className="mt-0.5 truncate text-[12px] text-[#66748A]">{customer.company_name ?? customer.customer_code}</p>
             </div>
             <CustomerStatus status={customer.onboarding_status} />
@@ -282,6 +282,9 @@ function CustomerStatus({ status }: { status: string }) {
   return status === "active" ? <RegisterStatusPill tone="green">Active</RegisterStatusPill> : <RegisterStatusPill tone="amber">KYC incomplete</RegisterStatusPill>;
 }
 
+function properCase(value: string) {
+  return value.toLocaleLowerCase("en-IN").replace(/(^|[\s.'’\-/])([a-z])/g, (_match, separator: string, letter: string) => `${separator}${letter.toLocaleUpperCase("en-IN")}`);
+}
 function vehicleCount(row: CustomerRow) { return row.vehicles?.[0]?.count ?? 0; }
 function policyCount(row: CustomerRow) { return row.policies?.[0]?.count ?? 0; }
 function claimCount(row: CustomerRow) { return row.claims?.[0]?.count ?? 0; }
