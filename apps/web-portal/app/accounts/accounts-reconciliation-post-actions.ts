@@ -27,6 +27,10 @@ export type DirectPayoutInput = {
   remarks?: string;
 };
 
+export type DirectPayoutResult =
+  | { ok: true; detail: AccountsPolicyReconciliationDetail }
+  | { ok: false; error: string };
+
 export async function postAccountsDirectPayinAction(input: DirectPayinInput): Promise<AccountsPolicyReconciliationDetail> {
   const profile = await requireAccountsPostingAccess();
   const resolved = await loadAccountsPolicyReconciliationDetailForRowAction(input.lookup);
@@ -58,16 +62,16 @@ export async function postAccountsDirectPayinAction(input: DirectPayinInput): Pr
   return loadAccountsPolicyReconciliationDetailAction(resolved.policyId);
 }
 
-export async function postAccountsDirectPayoutAction(input: DirectPayoutInput): Promise<AccountsPolicyReconciliationDetail> {
+export async function postAccountsDirectPayoutAction(input: DirectPayoutInput): Promise<DirectPayoutResult> {
   const profile = await requireAccountsPostingAccess();
   const resolved = await loadAccountsPolicyReconciliationDetailForRowAction(input.lookup);
   const paidDate = isoDate(input.paidDate);
   const reference = text(input.reference);
   const paidAmount = money(input.paidAmount);
 
-  if (!paidDate) throw new Error("Choose a valid Paid Date.");
-  if (!reference) throw new Error("UTR / reference is required.");
-  if (paidAmount <= 0) throw new Error("Paid Amount must be greater than zero.");
+  if (!paidDate) return { ok: false, error: "Choose a valid Paid Date." };
+  if (!reference) return { ok: false, error: "UTR / reference is required." };
+  if (paidAmount <= 0) return { ok: false, error: "Paid Amount must be greater than zero." };
 
   const db = createSupabaseAdminClient();
   const { error } = await db.rpc("post_accounts_policy_reconciliation_entry", {
@@ -81,9 +85,9 @@ export async function postAccountsDirectPayoutAction(input: DirectPayoutInput): 
       remarks: optionalText(input.remarks),
     },
   });
-  if (error) throw new Error(publicPostingError(error.message, "Payout"));
+  if (error) return { ok: false, error: publicPostingError(error.message, "Payout") };
 
-  return loadAccountsPolicyReconciliationDetailAction(resolved.policyId);
+  return { ok: true, detail: await loadAccountsPolicyReconciliationDetailAction(resolved.policyId) };
 }
 
 async function requireAccountsPostingAccess() {
@@ -94,19 +98,37 @@ async function requireAccountsPostingAccess() {
 
 function publicPostingError(message: string | null | undefined, kind: "Pay-In" | "Payout") {
   const value = String(message ?? "");
+
+  if (
+    value.includes("No partner payout is configured for this policy") ||
+    value.includes("Payout is not available for payment") ||
+    value.includes("Zero agreed payout does not create a payable")
+  ) {
+    return "No payout amount is currently payable for this policy.";
+  }
+
+  if (value.includes("Partner commercial must be entered/reviewed before payment")) {
+    return "Partner commercial must be entered/reviewed before payment.";
+  }
+
+  if (value.includes("This UTR/reference is already recorded for the intermediary")) {
+    return "This UTR / reference has already been used for this intermediary.";
+  }
+
+  if (value.includes("Paid Amount exceeds the remaining payable balance")) {
+    return "Paid Amount exceeds the remaining payable balance.";
+  }
+
+  if (value.includes("Historical/non-pending payout cannot be converted automatically")) {
+    return "This payout is not available for direct payment posting.";
+  }
+
   const known = [
     "This Pay-In entry is already recorded for the policy",
     "TDS must be between zero and the Bill Amount",
     "Policy insurer is required for Pay-In reconciliation",
-    "No partner payout is configured for this policy",
     "This policy has multiple payout records",
     "Intermediary code is required before posting payout",
-    "Partner commercial must be entered/reviewed before payment",
-    "This UTR/reference is already recorded for the intermediary",
-    "Payout is not available for payment",
-    "Paid Amount exceeds the remaining payable balance",
-    "Historical/non-pending payout cannot be converted automatically",
-    "Zero agreed payout does not create a payable",
   ];
   const matched = known.find((candidate) => value.includes(candidate));
   if (matched) return matched.endsWith(".") ? matched : `${matched}.`;
