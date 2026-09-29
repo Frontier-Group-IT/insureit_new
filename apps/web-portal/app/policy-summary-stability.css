@@ -8,3 +8,47 @@
     background: #fff;
   }
 }
+
+/* Life/Health onboarding is rendered through a dedicated mount inside the
+   unified policy workspace. Keep that mount and the actual form grid stretched
+   to the full available width so the left form column consumes everything that
+   remains after the fixed summary rail. */
+[data-life-health-native-portal="true"] {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  justify-self: stretch !important;
+}
+
+[data-life-health-native-portal="true"] > nav[aria-label="Life and Health policy sections"],
+[data-life-health-native-portal="true"] > div {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+
+[data-life-health-native-portal="true"] > div.grid {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  justify-content: stretch !important;
+  justify-items: stretch !important;
+}
+
+[data-life-health-native-portal="true"] > div.grid > div:first-child {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+
+@media (min-width: 1280px) {
+  [data-life-health-native-portal="true"] > div.grid {
+    grid-template-columns: minmax(0, 1fr) 336px !important;
+  }
+
+  [data-life-health-native-portal="true"] > div.grid > div:nth-child(2) {
+    width: 336px !important;
+    min-width: 336px !important;
+    max-width: 336px !important;
+  }
+}
