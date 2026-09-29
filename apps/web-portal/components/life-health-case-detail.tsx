@@ -62,7 +62,7 @@ export function LifeHealthCaseDetail({ caseData, documents }: Props) {
     startConvert(async () => {
       const result = await convertLifeHealthCaseToPolicy(data);
       if (!result.ok) { setError(result.error); return; }
-      router.push(`/policies/${result.policyId}?success=life_health_case_converted`);
+      router.push("/policies");
       router.refresh();
     });
   }
