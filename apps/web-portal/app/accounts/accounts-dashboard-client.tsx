@@ -356,7 +356,7 @@ function ReconciliationOverviewPanel({ overview, policyCount }: { overview: Reco
   </section>;
 }
 
-function ReconciliationProgress({ title, projectedLabel, actualLabel, projected, actual, pending, progress, reconciled }: { title: string; projectedLabel: string; actualLabel: string; projected: number; actualLabel: string; actual: number; pending: number; progress: number; reconciled: number }) {
+function ReconciliationProgress({ title, projectedLabel, actualLabel, projected, actual, pending, progress, reconciled }: { title: string; projectedLabel: string; actualLabel: string; projected: number; actual: number; pending: number; progress: number; reconciled: number }) {
   return <article className="rounded-xl border border-[#e1e7ef] bg-[#fbfcfe] px-3 py-2.5">
     <div className="flex items-center justify-between gap-3">
       <div>
