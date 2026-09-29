@@ -175,7 +175,7 @@ function CardHeader({ icon, title, actionLabel }: { icon: keyof typeof Ionicons.
 }
 
 function QuickAction({ icon, label, tone, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; tone: 'blue' | 'green' | 'orange' | 'purple'; onPress?: () => void }) {
-  return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.quickAction, styles[`quick${tone[0].toUpperCase()}${tone.slice(1)}` as keyof typeof styles], pressed && styles.pressed]}><Ionicons name={icon} size={25} color={quickToneColor(tone)} /><Text numberOfLines={2} style={styles.quickLabel}>{label}</Text></Pressable>;
+  return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.quickAction, quickToneStyle(tone), pressed && styles.pressed]}><Ionicons name={icon} size={25} color={quickToneColor(tone)} /><Text numberOfLines={2} style={styles.quickLabel}>{label}</Text></Pressable>;
 }
 
 function OverviewItem({ icon, label, value, valueTone }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string; valueTone?: 'success' }) {
@@ -188,6 +188,7 @@ function EntityRow({ image, title, subtitle, onPress }: { image: ImageSourceProp
 
 function MiniInfo({ label, value }: { label: string; value: string }) { return <View style={styles.miniInfo}><Text style={styles.miniLabel}>{label}</Text><Text style={styles.miniValue}>{value}</Text></View>; }
 function quickToneColor(tone: 'blue' | 'green' | 'orange' | 'purple') { if (tone === 'green') return '#19A477'; if (tone === 'orange') return '#E7802F'; if (tone === 'purple') return '#6A43D6'; return '#187FD6'; }
+function quickToneStyle(tone: 'blue' | 'green' | 'orange' | 'purple') { if (tone === 'green') return styles.quickGreen; if (tone === 'orange') return styles.quickOrange; if (tone === 'purple') return styles.quickPurple; return styles.quickBlue; }
 function policyArtwork(category: string): ImageSourcePropType { if (category === 'Motor') return PartnerAssets.products.motorInsurance; if (category === 'Health') return PartnerAssets.products.healthInsurance; if (category === 'Life') return PartnerAssets.products.familyInsurance; return PartnerAssets.products.commercialInsurance; }
 function displayParts(...values: Array<string | number | null | undefined>) { return values.map((value) => value == null ? '' : String(value).trim()).filter((value) => value && value.toLowerCase() !== 'null' && value.toLowerCase() !== 'undefined').join(' · '); }
 function policyCategory(data: PartnerPolicyDetail) { const value = [data.policy.policy_type, data.policy.policy_product, data.policy.business_line].filter(Boolean).join(' ').toLowerCase(); if (value.includes('health')) return 'Health'; if (value.includes('life')) return 'Life'; if (value.includes('motor') || data.vehicle) return 'Motor'; return 'Non-Motor'; }
