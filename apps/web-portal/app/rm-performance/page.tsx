@@ -90,7 +90,7 @@ function PerformancePanel({ eyebrow, title, policies, motor, nonMotor, life, hea
           <InlineMetric label="Proj. Pay-in" value={payin} />
           <InlineMetric label="Proj. Payout" value={payout} />
           <InlineMetric label="Retention" value={retention} />
-          <p className="pt-0.5 text-[8px] font-semibold text-[#7B8798]">* Pay-in is less TDS</p>
+          <p className="pt-0.5 text-[8px] font-semibold"><span className="text-[#D14343]">*</span><span className="text-[#17365D]"> Pay-in is less TDS</span></p>
         </div>
       </div>
     </div>
