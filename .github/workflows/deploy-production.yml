@@ -391,10 +391,19 @@ jobs:
 
           supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
 
-          local_versions=$(find supabase/migrations -maxdepth 1 -type f -name '*.sql' -printf '%f\n' \
-            | sed -nE 's/^([0-9]+)_.*/\1/p' \
+          # Compare production only against migration files committed to this release.
+          # Supabase CLI commands may create workspace-local files under supabase/migrations;
+          # those must not be treated as migrations already present on main.
+          local_versions=$(git ls-files 'supabase/migrations/*.sql' \
+            | sed -nE 's#^supabase/migrations/([0-9]+)_.*#\1#p' \
             | awk -v baseline="$BASELINE_VERSION" '$1 >= baseline' \
             | sort -u)
+
+          untracked_migrations=$(git ls-files --others --exclude-standard 'supabase/migrations/*.sql' || true)
+          if [[ -n "$untracked_migrations" ]]; then
+            echo "::warning::Ignoring workspace-only migration file(s) because they are not committed to this release:"
+            echo "$untracked_migrations"
+          fi
 
           remote_json=$(supabase db query --linked --output-format json "
             select version
