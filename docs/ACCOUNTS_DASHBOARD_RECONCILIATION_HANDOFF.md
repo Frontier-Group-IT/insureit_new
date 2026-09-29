@@ -5,7 +5,7 @@
 > Read this file before changing the Accounts Dashboard, Business MIS reconciliation, Pay-In posting, Payout posting, Accounts Excel import/export, reconciliation status logic, or Accounts work queues. Update this file in the same PR whenever the working principle, data model, UX, calculation, rollout status, or release state changes.
 
 Last updated: 2026-09-29
-Status: Phases 0–4 production-deployed; Phase 5 implementation in progress
+Status: Phases 0–4 production-deployed; Phase 5 merged; Phase 6 stale-import hardening in progress
 
 ## 1. Product goal
 
@@ -243,15 +243,30 @@ Migration `20260929153000_accounts_reconciliation_transaction_batch.sql` provide
 The batch path:
 
 - revalidates hidden IDs against current scoped Accounts data;
-- treats workbook context values as informational, not authoritative;
-- reuses Phase 2 posting protections;
 - is atomic: a failed row prevents partial posting of the batch;
+- reuses Phase 2 duplicate/reference, balance and policy-locking protections;
 - supports repeated policies as separate new transactions;
 - caps a batch at 500 transaction rows;
 - warns on Pay-In above projected remaining as a variance condition;
 - blocks Payout above remaining because the payable ledger does not allow it.
 
-The batch RPC is executable by `service_role` only; `anon` and `authenticated` direct EXECUTE are revoked.
+From Phase 6 onward, the template's downloaded projected/current values also act as an **optimistic concurrency snapshot** rather than being treated as purely informational. At preview and again immediately before import, the server compares the template snapshot with current canonical Accounts values using the existing ₹0.01 tolerance.
+
+Pay-In snapshot fields:
+- Projected Pay-In
+- Already Received
+- Current Difference
+
+Payout snapshot fields:
+- Projected Payout
+- Already Paid
+- Remaining
+
+If any of those values changed, the row is rejected as stale and Accounts must download a fresh transaction template. This protects against replay of an already imported workbook, concurrent Accounts activity after download, and projection changes after download.
+
+`Current Difference` / `Remaining` use the same non-negative `max(projection - actual, 0)` convention as the generated template so existing variance rows are not falsely marked stale merely because their raw mathematical difference is negative.
+
+The batch RPC remains executable by `service_role` only; `anon` and `authenticated` direct EXECUTE are revoked.
 
 ## 10. Reconciliation work queue
 
@@ -282,7 +297,7 @@ The queue follows the same status rules as the reconciliation overview and stays
 
 Phase 5 makes the work queue an action surface rather than a read-only list.
 
-Planned/current behavior:
+Implemented behavior:
 
 - Policy Number in the work queue opens the same canonical policy reconciliation drawer already used from Business MIS.
 - Accounts can move directly from `Pending`, `Partial`, or `Variance` → policy → history → Add Pay-In/Add Payout without locating the row again in Business MIS.
@@ -293,7 +308,25 @@ Planned/current behavior:
 
 Future refinement may replace the full-page refresh with a shared client refresh coordinator, but correctness takes priority over avoiding a reload.
 
-## 12. Known future hardening needs
+## 12. Phase 6 — stale import / replay hardening
+
+Phase 6 begins the audit/idempotency hardening backlog without adding a new schema object.
+
+Implemented on branch `feature/accounts-phase6-import-idempotency`:
+
+- Pay-In transaction templates are rejected if Projected Pay-In, Already Received or Current Difference changed since download.
+- Payout transaction templates are rejected if Projected Payout, Already Paid or Remaining changed since download.
+- the same checks run during preview and again immediately before the atomic import;
+- a successfully imported workbook therefore becomes stale automatically because cumulative actual changes, preventing accidental replay;
+- concurrent direct/bulk activity after template download also makes the old workbook stale;
+- projection changes after template download make the old workbook stale rather than allowing it to post against obsolete commercials;
+- repeated policy rows inside one workbook remain supported because the batch is validated against one starting snapshot and then posted atomically.
+
+No database migration, RLS change, new privileged RPC or Business MIS change is required for this step.
+
+Detailed design: `docs/ACCOUNTS_RECONCILIATION_PHASE6_STALE_IMPORT_GUARD_2026_09_29.md`.
+
+## 13. Remaining future hardening needs
 
 ### Corrections / reversals
 
@@ -306,9 +339,9 @@ Posted history must not silently disappear. Future correction UX must preserve:
 - timestamp;
 - relationship between original and corrective entry.
 
-### Import-batch history and idempotency
+### Durable import-batch history
 
-The transaction batch already reuses duplicate protections, but a durable import-batch history/receipt should eventually show who uploaded which workbook, when, how many rows succeeded, and a stable batch identity for operational audit.
+Phase 6 protects against stale/replayed transaction templates through the downloaded reconciliation snapshot. A later schema-backed audit phase should still add a durable import receipt/history showing who uploaded which workbook, when, how many rows succeeded, and a stable batch identity.
 
 ### Cross-period transactions
 
@@ -316,11 +349,11 @@ A policy issued in one month can receive Pay-In/Payout later. Reporting must con
 
 ### Projection changes
 
-Endorsement/cancellation/commercial correction may change projected Pay-In/Payout after transactions exist. Preserve transactions and recalculate status against the latest approved projection.
+Endorsement/cancellation/commercial correction may change projected Pay-In/Payout after transactions exist. Preserve transactions and recalculate status against the latest approved projection. Phase 6 additionally blocks an old downloaded transaction template if that projection changes before import.
 
 ### Concurrent users
 
-Direct writes serialize on policy rows. Batch posting is atomic. Keep adding regression coverage for simultaneous portal/batch operations rather than weakening these controls.
+Direct writes serialize on policy rows. Batch posting is atomic. Phase 6 adds stale-snapshot rejection before batch posting. Keep adding regression coverage for simultaneous portal/batch operations rather than weakening these controls.
 
 ### Performance
 
@@ -342,7 +375,7 @@ Every transaction should ultimately expose:
 - created at
 - correction/reversal relationship where applicable.
 
-## 13. Explicitly out of current scope
+## 14. Explicitly out of current scope
 
 Do not make these prerequisites unless direction changes:
 
@@ -354,7 +387,7 @@ Do not make these prerequisites unless direction changes:
 - replacing Bill Amount's received-Pay-In meaning;
 - APK/AAB/mobile/native work.
 
-## 14. Delivery status
+## 15. Delivery status
 
 ### Phase 0 — semantics and architecture
 **COMPLETE**
@@ -408,25 +441,31 @@ Do not make these prerequisites unless direction changes:
 - filter synchronization;
 - no schema change.
 
-### Production deployment verification
+### Production deployment verification through Phase 4
 **CONFIRMED 2026-09-29**
 
 - production schema-parity false-positive was fixed by PR #2576;
-- latest verified Vercel production deployment is READY on main commit `a9650a07d5ece2bf5541397412faeaa05eaf7b31`;
-- GitHub comparison confirms Phase 4 merge commit `09e3a71...` is an ancestor of that production commit, therefore Phases 1–4 application code are included in the deployed release;
+- verified Vercel production deployment was READY on main commit `a9650a07d5ece2bf5541397412faeaa05eaf7b31`;
+- GitHub comparison confirmed Phase 4 merge commit `09e3a71...` is an ancestor of that production commit;
 - Supabase production migration history contains both Accounts V2 migrations (`20260929134500`, `20260929153000`);
-- production RPC privilege checks confirm both direct and batch posting RPCs are service-role-only.
+- production RPC privilege checks confirmed both direct and batch posting RPCs are service-role-only.
 
 ### Phase 5 — actionable work queue
-**IN PROGRESS**
+**COMPLETE / MERGED; PRODUCTION DEPLOYMENT NOT YET RE-VERIFIED IN THIS HANDOFF**
 
-- branch: `feature/accounts-phase5-actionable-work-queue`;
+- PR #2580 merged as `d6982aa0c1c5c7cbd8a113f02f7e35040b48f384` after Verify web portal #4964 passed on exact head `58f4a1742141a5d49f9f6e2280ba7d91ebb72047`;
 - work-queue Policy Number opens the canonical reconciliation drawer;
 - reuses existing direct posting controls; no new schema/write primitive;
-- full page refresh after queue-initiated posting keeps every Accounts surface consistent;
-- canonical Verify web portal must pass before merge.
+- full page refresh after queue-initiated posting keeps every Accounts surface consistent.
 
-## 15. Safety boundaries
+### Phase 6 — stale import / replay guard
+**IMPLEMENTED ON FEATURE BRANCH; CI/PR/MERGE/DEPLOYMENT PENDING**
+
+- branch `feature/accounts-phase6-import-idempotency`;
+- optimistic reconciliation snapshot checks protect transaction templates from stale replay, concurrent posting and projection drift;
+- no schema migration or permission change.
+
+## 16. Safety boundaries
 
 - Do not change the visible Business MIS structure without explicit approval.
 - Do not reinterpret Bill Amount semantics without explicit approval.
@@ -438,7 +477,7 @@ Do not make these prerequisites unless direction changes:
 - Use service-role-only server paths for privileged accounting RPCs.
 - No APK/AAB/mobile/native-runtime work belongs to this Accounts redesign.
 
-## 16. Continuity rule
+## 17. Continuity rule
 
 Every future Accounts PR must update this file with:
 

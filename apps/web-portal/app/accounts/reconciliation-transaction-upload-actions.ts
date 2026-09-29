@@ -104,9 +104,12 @@ export async function confirmAccountsTransactionUpload(formData: FormData): Prom
   const parsed = await parseWorkbook(file);
   if (!parsed.recognized || !parsed.type) throw new Error("This is not an INSUREIT reconciliation transaction template.");
 
+  // Revalidate the live summary immediately before the atomic write. The workbook's
+  // downloaded projected/current values act as an optimistic concurrency snapshot,
+  // so a replay or a stale workbook cannot silently append on top of newer activity.
   const validation = await validateWorkbook(profile, parsed.type, parsed.rows, true);
   if (!validation.totalRows) throw new Error("No new reconciliation transactions were found in this workbook.");
-  if (validation.errorRows) throw new Error("Resolve the transaction-template validation errors before importing.");
+  if (validation.errorRows) throw new Error("The workbook is stale or contains validation errors. Download a fresh transaction template before importing.");
 
   const entries = validation.rows.map((row) => ({
     policyId: row.policyId,
@@ -187,8 +190,8 @@ async function validateWorkbook(
     errorRows,
     rows: rowsForPreview,
     message: errorRows
-      ? "Some transaction rows need correction before import."
-      : "Transaction rows validated. Duplicate, balance and concurrency controls are checked again atomically during import.",
+      ? "Some rows are stale or need correction. Download a fresh transaction template for any row whose reconciliation state changed."
+      : "Transaction rows match the current Accounts state. Duplicate, balance and concurrency controls are checked again atomically during import.",
   };
 }
 
@@ -215,6 +218,9 @@ function validateRow(
   }
 
   if (type === "payin") {
+    const workbookProjected = money(row[5]);
+    const workbookReceived = money(row[6]);
+    const workbookDifference = money(row[7]);
     const reference = text(row[8]);
     const amount = money(row[9]);
     const date = isoDate(row[10]);
@@ -232,7 +238,18 @@ function validateRow(
     if (record) {
       const projected = money(record.row[19]);
       const received = money(record.row[21]);
-      const remaining = Math.max(projected - received, 0);
+      const rawDifference = roundMoney(projected - received);
+      const templateDifference = Math.max(rawDifference, 0);
+      if (
+        changed(workbookProjected, projected)
+        || changed(workbookReceived, received)
+        || changed(workbookDifference, templateDifference)
+      ) {
+        status = "Error";
+        messages.push("Pay-In reconciliation changed after this template was downloaded. This also blocks replay of an already imported workbook; download a fresh Pay-In template.");
+      }
+
+      const remaining = templateDifference;
       if (remaining > TOLERANCE && amount - remaining > TOLERANCE && status !== "Error") {
         status = "Warning";
         messages.push("This Pay-In exceeds the current projected remaining amount and will create a variance.");
@@ -251,6 +268,9 @@ function validateRow(
   }
 
   const payoutId = text(row[1]);
+  const workbookProjected = money(row[6]);
+  const workbookPaid = money(row[7]);
+  const workbookRemaining = money(row[8]);
   const reference = text(row[11]);
   const amount = money(row[9]);
   const date = isoDate(row[10]);
@@ -267,8 +287,17 @@ function validateRow(
   if (record) {
     const projected = money(record.row[27]);
     const paid = money(record.row[29]);
-    const remaining = Math.max(projected - paid, 0);
-    if (amount - remaining > TOLERANCE) { status = "Error"; messages.push("New Paid Amount exceeds the current projected remaining payout."); }
+    const rawRemaining = roundMoney(projected - paid);
+    const templateRemaining = Math.max(rawRemaining, 0);
+    if (
+      changed(workbookProjected, projected)
+      || changed(workbookPaid, paid)
+      || changed(workbookRemaining, templateRemaining)
+    ) {
+      status = "Error";
+      messages.push("Payout reconciliation changed after this template was downloaded. This also blocks replay of an already imported workbook; download a fresh Payout template.");
+    }
+    if (amount - templateRemaining > TOLERANCE) { status = "Error"; messages.push("New Paid Amount exceeds the current projected remaining payout."); }
   }
 
   return {
@@ -337,6 +366,8 @@ function publicImportError(message: string | null | undefined) {
   return matched ? `${matched}. No transaction from this workbook was posted.` : "The transaction workbook could not be posted. No transaction from this workbook was saved.";
 }
 
+function changed(workbookValue: number, liveValue: number) { return Math.abs(workbookValue - liveValue) > TOLERANCE; }
+function roundMoney(value: number) { return Math.round(value * 100) / 100; }
 function normalize(value: unknown) { return text(value).replace(/\s+/g, "").toUpperCase(); }
 function text(value: unknown) { return String(value ?? "").trim(); }
 function money(value: unknown) { const parsed = Number(String(value ?? "0").replace(/,/g, "")); return Number.isFinite(parsed) ? Math.round(parsed * 100) / 100 : 0; }
