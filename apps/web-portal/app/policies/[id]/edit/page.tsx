@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { LifeHealthIssuedPolicyEditForm, type LifeHealthIssuedEditSource } from "@/components/life-health-issued-policy-edit-form";
+import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getActiveInsuranceCompanyOptions } from "@/lib/reference-data-cache";
 import StandardPolicyEditPage from "./policy-edit-standard";
@@ -16,6 +17,8 @@ type EmployeeRow = { id: string; full_name: string | null; employee_code: string
 
 export default async function EditPolicyPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
+  // Issued-policy edit routes must require edit access before any service-role read.
+  await requirePolicyEditor();
   const admin = createSupabaseAdminClient();
   const { data: policy, error } = await admin.from("policies").select("id,business_line,customer_id,insurance_company_id,issuance_date,premium_amount,remarks").eq("id", resolvedParams.id).maybeSingle<PolicyRouteRow>();
 
@@ -37,7 +40,17 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     const employeeById = new Map((employees ?? []).map((employee) => [employee.id, employee]));
     const sources: LifeHealthIssuedEditSource[] = (intermediaryRows ?? []).map((row) => {
       const employee = row.associate_employee_id ? employeeById.get(row.associate_employee_id) : null;
-      return { id: row.id, type: row.intermediary_type === "posp" ? "POSP" : row.intermediary_type === "misp" ? "MISP" : "SIBL / Partner", label: row.display_name, code: row.intermediary_code?.trim() || "", mobile: row.mobile?.replace(/\D/g, "").slice(-10) || "", rmName: employee?.full_name?.trim() || "", rmCode: employee?.employee_code?.trim() || "" };
+      const isSavedSource = row.id === lifeHealthCase.intermediary_id;
+      return {
+        id: row.id,
+        type: row.intermediary_type === "posp" ? "POSP" : row.intermediary_type === "misp" ? "MISP" : "SIBL / Partner",
+        label: row.display_name,
+        code: row.intermediary_code?.trim() || "",
+        mobile: row.mobile?.replace(/\D/g, "").slice(-10) || "",
+        // Preserve the saved RM for Partner/fallback assignments when the direct intermediary link is empty.
+        rmName: employee?.full_name?.trim() || (isSavedSource ? lifeHealthCase.rm_name?.trim() || "" : ""),
+        rmCode: employee?.employee_code?.trim() || (isSavedSource ? lifeHealthCase.rm_code?.trim() || "" : ""),
+      };
     });
     if (lifeHealthCase.intermediary_id && !sources.some((source) => source.id === lifeHealthCase.intermediary_id)) {
       sources.unshift({ id: lifeHealthCase.intermediary_id, type: lifeHealthCase.intermediary_type === "POSP" ? "POSP" : lifeHealthCase.intermediary_type === "MISP" ? "MISP" : "SIBL / Partner", label: lifeHealthCase.lead_source || "Saved source", code: lifeHealthCase.intermediary_code || "", mobile: "", rmName: lifeHealthCase.rm_name || "", rmCode: lifeHealthCase.rm_code || "" });
@@ -45,7 +58,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     const insurers = insurerOptions.filter((option) => option.segment === "life" || option.segment === "health" || option.value === lifeHealthCase.insurance_company_id).map(({ value, label }) => ({ value, label }));
 
     return <AppShell title="Edit Policy"><LifeHealthIssuedPolicyEditForm initial={{
-      policyId: policy.id, caseId: lifeHealthCase.id, businessLine: lifeHealthCase.business_line, sourcingDate: lifeHealthCase.sourcing_date || policy.issuance_date || "", sourceId: lifeHealthCase.intermediary_id || sources[0]?.id || "", customerName: customer.company_name?.trim() || customer.contact_name, customerPhone: customer.phone, customerEmail: customer.email || "", insurerId: lifeHealthCase.insurance_company_id || policy.insurance_company_id || "", productName: lifeHealthCase.product_name, proposalNumber: lifeHealthCase.proposal_number, ppt: lifeHealthCase.premium_paying_term || "", pd: lifeHealthCase.policy_duration || "", paymentFrequency: lifeHealthCase.payment_frequency, premiumAmount: String(policy.premium_amount ?? lifeHealthCase.premium_amount ?? ""), paymentMode: lifeHealthCase.payment_mode, remarks: policy.remarks || lifeHealthCase.remarks || "",
+      policyId: policy.id, caseId: lifeHealthCase.id, businessLine: lifeHealthCase.business_line, sourcingDate: policy.issuance_date || lifeHealthCase.sourcing_date || "", sourceId: lifeHealthCase.intermediary_id || sources[0]?.id || "", customerName: customer.company_name?.trim() || customer.contact_name, customerPhone: customer.phone, customerEmail: customer.email || "", insurerId: lifeHealthCase.insurance_company_id || policy.insurance_company_id || "", productName: lifeHealthCase.product_name, proposalNumber: lifeHealthCase.proposal_number, ppt: lifeHealthCase.premium_paying_term || "", pd: lifeHealthCase.policy_duration || "", paymentFrequency: lifeHealthCase.payment_frequency, premiumAmount: String(policy.premium_amount ?? lifeHealthCase.premium_amount ?? ""), paymentMode: lifeHealthCase.payment_mode, remarks: policy.remarks || lifeHealthCase.remarks || "",
     }} insurers={insurers} sources={sources} /></AppShell>;
   }
 
