@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Image, type ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, Image, type ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -36,6 +36,14 @@ export default function PolicyDetailScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      router.back();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [router]);
 
   const category = data ? policyCategory(data) : 'Policy';
 
@@ -87,7 +95,7 @@ export default function PolicyDetailScreen() {
               <QuickAction icon="document-text-outline" label="Policy Document" tone="blue" onPress={() => router.push('/policies' as never)} />
               <QuickAction icon="sync-outline" label="Renew Policy" tone="green" onPress={() => router.push('/renewals' as never)} />
               <QuickAction icon="shield-checkmark-outline" label="Raise Claim" tone="orange" onPress={() => router.push('/claims' as never)} />
-              <QuickAction icon="person-outline" label="Customer Details" tone="purple" onPress={() => data.customer.id ? router.push(`/customer/${data.customer.id}` as never) : undefined} />
+              <QuickAction icon="people-outline" label="Customer Details" tone="purple" onPress={() => data.customer.id ? router.push(`/customer/${data.customer.id}` as never) : undefined} />
             </View>
           </Card>
 
@@ -141,7 +149,7 @@ export default function PolicyDetailScreen() {
           <Card>
             <CardHeader icon="stats-chart-outline" title="Commercial Attribution" actionLabel="View Details" />
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }} onPress={() => setShowCommercialDetails((value) => !value)} style={({ pressed }) => [styles.commercialRow, pressed && styles.pressed]}>
-              <View style={styles.roundIcon}><Ionicons name="person-outline" size={20} color="#1889EE" /></View>
+              <View style={styles.roundIcon}><Ionicons name="briefcase-outline" size={20} color="#1889EE" /></View>
               <View style={styles.disclosureText}><Text style={styles.disclosureTitle}>Sales ownership</Text><Text numberOfLines={1} style={styles.disclosureSummary}>{[data.commercial.rm_name, data.commercial.intermediary_code].filter(Boolean).join(' · ') || 'View details'}</Text></View>
               <Ionicons name={showCommercialDetails ? 'chevron-up' : 'chevron-forward'} size={17} color="#2468D7" />
             </Pressable>
