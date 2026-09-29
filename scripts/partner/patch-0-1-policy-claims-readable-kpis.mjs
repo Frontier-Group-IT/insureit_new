@@ -78,6 +78,13 @@ function patchClaims(file) {
     'claim MetricCard component',
   );
 
+  source = replaceOnce(
+    source,
+    "  safeArea: { flex: 1, backgroundColor: '#0752A2' },",
+    "  safeArea: { flex: 1, backgroundColor: '#F7FAFE' },",
+    'claims root light background',
+  );
+
   const replacements = [
     ["  searchInput: { flex: 1, minWidth: 0, paddingVertical: 7, color: '#18304F', fontSize: 9.5, lineHeight: 13 },", "  searchInput: { flex: 1, minWidth: 0, paddingVertical: 7, color: '#18304F', fontSize: 10.5, lineHeight: 14 },"],
     ["  filterText: { color: '#1738D5', fontSize: 9.5, lineHeight: 13, fontWeight: '700' },", "  filterText: { color: '#1738D5', fontSize: 10.5, lineHeight: 14, fontWeight: '700' },"],
