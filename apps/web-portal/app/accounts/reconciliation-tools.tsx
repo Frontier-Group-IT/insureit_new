@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { CheckCircle2, Loader2, UploadCloud, X } from "lucide-react";
 import { previewAccountsReconciliationUpload, type ReconciliationUploadPreview, type PreviewStatus } from "./reconciliation-upload-actions";
 import { confirmAccountsReconciliationUpload, type AccountsImportResult } from "./reconciliation-import-actions";
+import { ReconciliationTransactionTools } from "./reconciliation-transaction-tools";
 
 const inr = (value: number | null) => value === null ? "—" : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(value);
 const empty = (message: string): ReconciliationUploadPreview => ({ totalRows: 0, readyRows: 0, warningRows: 0, errorRows: 0, skippedRows: 0, payinRows: [], payoutRows: [], message, messageKind: "error" });
@@ -74,7 +75,8 @@ export function ReconciliationTools({ onImported }: { onImported?: () => void | 
   const showPopover = isPreviewing || preview || importResult || importError;
 
   return <div className="relative flex items-center gap-1.5">
-    <label title="Upload reconciliation figures" aria-label="Upload reconciliation figures" className="grid h-8 w-8 cursor-pointer place-items-center rounded-lg border border-[#3156b8] bg-[#eef4ff] text-[#3156b8] shadow-sm transition hover:bg-[#e3edff]">
+    <ReconciliationTransactionTools onImported={onImported} />
+    <label title="Upload full Business MIS reconciliation workbook" aria-label="Upload full Business MIS reconciliation workbook" className="grid h-8 w-8 cursor-pointer place-items-center rounded-lg border border-[#3156b8] bg-[#eef4ff] text-[#3156b8] shadow-sm transition hover:bg-[#e3edff]">
       <input type="file" accept=".xlsx" className="hidden" disabled={isPreviewing} onChange={(event) => { const nextFile = event.target.files?.[0]; if (nextFile) void previewFile(nextFile); event.currentTarget.value = ""; }} />
       {isPreviewing ? <span className="text-[7px] font-black tabular-nums">{validationProgress}%</span> : <UploadCloud className="h-3.5 w-3.5" />}
     </label>
