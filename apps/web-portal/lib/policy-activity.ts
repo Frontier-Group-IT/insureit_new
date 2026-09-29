@@ -12,6 +12,8 @@ export const POLICY_ACTIVITY_ACTIONS = {
   POLICY_REPLACEMENT_CREATED: "policy_replacement_created",
   POLICY_DATA_CORRECTED: "policy_data_corrected",
   VEHICLE_DATA_CORRECTED: "vehicle_data_corrected",
+  LIFE_HEALTH_CASE_CREATED: "life_health_case_created",
+  LIFE_HEALTH_CASE_CLOSED: "life_health_case_closed",
 } as const;
 
 export type PolicyActivityAction = (typeof POLICY_ACTIVITY_ACTIONS)[keyof typeof POLICY_ACTIVITY_ACTIONS];
@@ -28,9 +30,13 @@ const ACTION_LABELS: Record<PolicyActivityAction, string> = {
   policy_replacement_created: "Replacement Policy Created",
   policy_data_corrected: "Policy Data Corrected",
   vehicle_data_corrected: "Vehicle Data Corrected",
+  life_health_case_created: "Case Created",
+  life_health_case_closed: "Policy Created & Case Closed",
 };
 
-const TRACKED_ACTIONS = Object.values(POLICY_ACTIVITY_ACTIONS);
+const TRACKED_ACTIONS = Object.values(POLICY_ACTIVITY_ACTIONS).filter(
+  (action) => action !== POLICY_ACTIVITY_ACTIONS.LIFE_HEALTH_CASE_CREATED && action !== POLICY_ACTIVITY_ACTIONS.LIFE_HEALTH_CASE_CLOSED,
+);
 const ACTIVITY_TABLE_NAME = "policies";
 const RECONCILIATION_ACTOR_NAME = "System Reconciliation";
 
@@ -38,6 +44,7 @@ type AdminClient = ReturnType<typeof createSupabaseAdminClient>;
 type AuditRow = { id: string; actor_id: string | null; action: string; created_at: string };
 type DocumentRow = { uploaded_by: string | null; created_at: string; updated_at: string };
 type ProfileRow = { id: string; full_name: string | null };
+type LifeHealthCaseActivityRow = { id: string; created_at: string | null; converted_at: string | null };
 
 type ActivityCandidate = {
   id: string;
@@ -105,7 +112,7 @@ export async function loadPolicyActivityHistory({
 }): Promise<PolicyActivityDisplay[]> {
   const admin = createSupabaseAdminClient();
 
-  const [auditResult, documentResult] = await Promise.all([
+  const [auditResult, documentResult, lifeHealthCaseResult] = await Promise.all([
     admin
       .from("audit_logs")
       .select("id,actor_id,action,created_at")
@@ -122,6 +129,13 @@ export async function loadPolicyActivityHistory({
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle<DocumentRow>(),
+    admin
+      .from("life_health_cases")
+      .select("id,created_at,converted_at")
+      .eq("final_policy_id", policyId)
+      .order("converted_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<LifeHealthCaseActivityRow>(),
   ]);
 
   const auditRows = auditResult.data ?? [];
@@ -141,7 +155,25 @@ export async function loadPolicyActivityHistory({
     });
   }
 
-  if (createdAt && !auditActions.has(POLICY_ACTIVITY_ACTIONS.POLICY_CREATED)) {
+  const lifeHealthCase = lifeHealthCaseResult.data;
+  if (lifeHealthCase?.created_at) {
+    candidates.push({
+      id: `life-health-case:${lifeHealthCase.id}:created`,
+      action: POLICY_ACTIVITY_ACTIONS.LIFE_HEALTH_CASE_CREATED,
+      actorId: null,
+      at: lifeHealthCase.created_at,
+    });
+  }
+  if (lifeHealthCase?.converted_at) {
+    candidates.push({
+      id: `life-health-case:${lifeHealthCase.id}:closed`,
+      action: POLICY_ACTIVITY_ACTIONS.LIFE_HEALTH_CASE_CLOSED,
+      actorId: createdBy,
+      at: lifeHealthCase.converted_at,
+    });
+  }
+
+  if (createdAt && !lifeHealthCase && !auditActions.has(POLICY_ACTIVITY_ACTIONS.POLICY_CREATED)) {
     candidates.push({
       id: "derived:policy-created",
       action: POLICY_ACTIVITY_ACTIONS.POLICY_CREATED,
