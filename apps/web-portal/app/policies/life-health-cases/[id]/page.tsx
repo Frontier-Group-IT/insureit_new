@@ -8,18 +8,19 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type CaseRow = { id:string; case_number:string; business_line:"Life"|"Health"; status:string; sourcing_date:string; customer_id:string; insurance_company_id:string; product_name:string; proposal_number:string; premium_paying_term:string|null; policy_duration:string|null; payment_frequency:string; payment_mode:string; premium_amount:number; intermediary_type:string|null; intermediary_code:string|null; lead_source:string|null; intermediary_mobile:string|null; rm_name:string|null; rm_code:string|null; remarks:string|null; final_policy_id:string|null; converted_at:string|null };
+type CaseRow = { id:string; case_number:string; business_line:"Life"|"Health"; status:string; sourcing_date:string; customer_id:string; insurance_company_id:string; product_name:string; proposal_number:string; premium_paying_term:string|null; policy_duration:string|null; payment_frequency:string; payment_mode:string; premium_amount:number; intermediary_type:string|null; intermediary_code:string|null; lead_source:string|null; intermediary_mobile:string|null; rm_name:string|null; rm_code:string|null; remarks:string|null; final_policy_id:string|null; converted_at:string|null; created_at:string; created_by:string|null; updated_at:string|null };
 type CustomerRow = { id:string; contact_name:string; company_name:string|null; phone:string; email:string|null };
 type InsurerRow = { id:string; name:string };
-type DocumentRow = { id:string; document_type:string; file_name:string; created_at:string };
+type DocumentRow = { id:string; document_type:string; file_name:string; created_at:string; updated_at:string|null; uploaded_by:string|null };
 type PolicyRow = { id:string; policy_no:string; policy_code:string|null };
+type ProfileRow = { id:string; full_name:string|null };
 
 export default async function LifeHealthCasePage({ params }: { params: Promise<{ id: string }> }) {
   await requirePolicyCreator();
   const admin = createSupabaseAdminClient();
   const { id } = await params;
   const { data: caseRow, error } = await admin.from("life_health_cases")
-    .select("id,case_number,business_line,status,sourcing_date,customer_id,insurance_company_id,product_name,proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode,premium_amount,intermediary_type,intermediary_code,lead_source,intermediary_mobile,rm_name,rm_code,remarks,final_policy_id,converted_at")
+    .select("id,case_number,business_line,status,sourcing_date,customer_id,insurance_company_id,product_name,proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode,premium_amount,intermediary_type,intermediary_code,lead_source,intermediary_mobile,rm_name,rm_code,remarks,final_policy_id,converted_at,created_at,created_by,updated_at")
     .eq("id", id).maybeSingle<CaseRow>();
   if (error || !caseRow) notFound();
 
@@ -27,9 +28,21 @@ export default async function LifeHealthCasePage({ params }: { params: Promise<{
     admin.from("customers").select("id,contact_name,company_name,phone,email").eq("id", caseRow.customer_id).maybeSingle<CustomerRow>(),
     admin.from("insurance_companies").select("id,name").eq("id", caseRow.insurance_company_id).maybeSingle<InsurerRow>(),
     admin.from("insurance_companies").select("id,name").eq("is_active", true).order("name").returns<InsurerRow[]>(),
-    admin.from("life_health_case_documents").select("id,document_type,file_name,created_at").eq("case_id", id).order("created_at", { ascending: true }).returns<DocumentRow[]>(),
+    admin.from("life_health_case_documents").select("id,document_type,file_name,created_at,updated_at,uploaded_by").eq("case_id", id).order("created_at", { ascending: true }).returns<DocumentRow[]>(),
     caseRow.final_policy_id ? admin.from("policies").select("id,policy_no,policy_code").eq("id", caseRow.final_policy_id).maybeSingle<PolicyRow>() : Promise.resolve({ data: null, error: null }),
   ]);
+
+  const documents = documentsResult.data ?? [];
+  const actorIds = Array.from(new Set([caseRow.created_by, ...documents.map((d) => d.uploaded_by)].filter((value): value is string => Boolean(value))));
+  const actorNames = new Map<string,string>();
+  if (actorIds.length) {
+    const { data: profiles } = await admin.from("profiles").select("id,full_name").in("id", actorIds).returns<ProfileRow[]>();
+    for (const profile of profiles ?? []) if (profile.full_name?.trim()) actorNames.set(profile.id, profile.full_name.trim());
+  }
+  const activities = [
+    { id:`case:${caseRow.id}:created`, action:"Case Created", actorName:caseRow.created_by ? actorNames.get(caseRow.created_by) || "Not recorded" : "Not recorded", at:caseRow.created_at },
+    ...documents.map((document) => ({ id:`document:${document.id}`, action:`${document.document_type.replaceAll("_"," ").replace(/\b\w/g,(c)=>c.toUpperCase())} Uploaded`, actorName:document.uploaded_by ? actorNames.get(document.uploaded_by) || "Not recorded" : "Not recorded", at:document.updated_at || document.created_at })),
+  ].sort((a,b)=>new Date(b.at).getTime()-new Date(a.at).getTime());
 
   const customer = customerResult.data;
   const insurer = insurerResult.data;
@@ -45,7 +58,8 @@ export default async function LifeHealthCasePage({ params }: { params: Promise<{
         finalPolicyId:caseRow.final_policy_id, finalPolicyNo:policyResult.data?.policy_no||null, finalPolicyCode:policyResult.data?.policy_code||null, convertedAt:caseRow.converted_at,
       }}
       insurers={insurersResult.data ?? []}
-      documents={documentsResult.data ?? []}
+      documents={documents}
+      activities={activities}
     />
   </AppShell>;
 }
