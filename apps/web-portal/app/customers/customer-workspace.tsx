@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Building2, Download, FileCheck2, MapPin, MoreVertical, Phone, Plus, ShieldCheck, Truck, X } from "lucide-react";
+import { Building2, Download, MapPin, MoreVertical, Phone, Plus, Truck, X } from "lucide-react";
 import {
   BrokerRegisterShell,
   BrokerRegisterToolbar,
   RegisterEmpty,
   RegisterPagination,
-  RegisterSelect,
   RegisterStatusPill,
   RegisterViewTabs
 } from "@/components/broker-register";
@@ -53,7 +52,6 @@ export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewKey>("all");
-  const [partner, setPartner] = useState("all");
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState(false);
@@ -70,7 +68,6 @@ export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
   const filteredRows = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return rows.filter((row) => {
-      const matchesPartner = partner === "all" || row.partner_type === partner;
       const matchesView =
         view === "all" ||
         (view === "active" && row.onboarding_status === "active") ||
@@ -78,9 +75,9 @@ export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
         (view === "fleet" && vehicleCount(row) >= 5) ||
         (view === "claims" && claimCount(row) > 0);
       const haystack = [row.customer_code, row.contact_name, row.company_name, row.phone, row.city, row.partner_type].filter(Boolean).join(" ").toLowerCase();
-      return matchesPartner && matchesView && (!normalized || haystack.includes(normalized));
+      return matchesView && (!normalized || haystack.includes(normalized));
     });
-  }, [partner, query, rows, view]);
+  }, [query, rows, view]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -166,11 +163,6 @@ export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
               { value: "claims", label: "Claims", count: rows.filter((row) => claimCount(row) > 0).length }
             ]}
           />
-          <RegisterSelect value={partner} onChange={(value) => { setPartner(value); setPage(1); }} label="Partner type">
-            <option value="all">All customer types</option>
-            {Object.entries(partnerLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </RegisterSelect>
-          <Link prefetch={false} href="/customers/applications" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10.5px] font-semibold text-[#334155]"><FileCheck2 className="h-4 w-4" />KYC Applications</Link>
         </BrokerRegisterToolbar>
 
         {selectedRows.length ? (
@@ -185,41 +177,41 @@ export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
 
         <div className="mobile-card-list p-3 md:hidden">
           {pageRows.map((customer) => <CustomerMobileCard key={customer.id} customer={customer} selected={selectedIds.has(customer.id)} onToggle={() => toggleRow(customer.id)} />)}
-          {!pageRows.length ? <RegisterEmpty title="No matching customers" description="Adjust the search, partner type or saved view." /> : null}
+          {!pageRows.length ? <RegisterEmpty title="No matching customers" description="Adjust the search or saved view." /> : null}
         </div>
 
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[820px] table-fixed text-left text-[11px] text-[#1E293B]">
             <thead className="sticky top-0 z-10 border-b border-[#E2E8F0] bg-[#F8FAFC] text-[9px] font-bold uppercase tracking-[0.06em] text-[#64748B]">
               <tr>
-                <th className="w-9 px-2.5 py-2.5"><input aria-label="Select all customers on this page" type="checkbox" checked={allPageSelected} ref={(element) => { if (element) element.indeterminate = somePageSelected && !allPageSelected; }} onChange={toggleCurrentPage} className="h-4 w-4" /></th>
-                <th className="w-[240px] px-2.5 py-2.5">Customer</th>
-                <th className="w-[190px] px-2.5 py-2.5">Customer Type</th>
-                <th className="w-[145px] px-2.5 py-2.5">Mobile</th>
-                <th className="w-[126px] px-2.5 py-2.5">Status</th>
-                <th className="w-[160px] px-2.5 py-2.5">Next action</th>
-                <th className="w-[60px] px-2.5 py-2.5 text-center">More</th>
+                <th className="w-9 px-2.5 py-2"><input aria-label="Select all customers on this page" type="checkbox" checked={allPageSelected} ref={(element) => { if (element) element.indeterminate = somePageSelected && !allPageSelected; }} onChange={toggleCurrentPage} className="h-4 w-4" /></th>
+                <th className="w-[230px] px-2.5 py-2">Customer</th>
+                <th className="w-[180px] px-2.5 py-2">Customer Type</th>
+                <th className="w-[130px] px-2.5 py-2">Mobile</th>
+                <th className="w-[90px] px-2.5 py-2 text-center">Fleet Size</th>
+                <th className="w-[100px] px-2.5 py-2 text-center">Total Policies</th>
+                <th className="w-[120px] px-2.5 py-2">Status</th>
+                <th className="w-[60px] px-2.5 py-2 text-center">More</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EEF2F6]">
               {pageRows.map((customer) => (
-                <tr key={customer.id} className={`h-11 ${selectedIds.has(customer.id) ? "bg-[#F5F3FF]" : "hover:bg-[#FAFCFF]"}`}>
+                <tr key={customer.id} className={`h-9 ${selectedIds.has(customer.id) ? "bg-[#F5F3FF]" : "hover:bg-[#FAFCFF]"}`}>
                   <td className="px-2.5"><input aria-label={`Select ${customer.contact_name}`} type="checkbox" checked={selectedIds.has(customer.id)} onChange={() => toggleRow(customer.id)} className="h-4 w-4" /></td>
                   <td className="px-2.5">
-                    <Link prefetch={false} href={`/customers/${customer.id}/edit`} className="block truncate text-[12.5px] font-bold text-[#0F172A] hover:text-[#17365D]">{customer.contact_name}</Link>
+                    <Link prefetch={false} href={`/customers/${customer.id}/edit`} className="block truncate text-[12px] font-normal text-[#0F172A] hover:text-[#17365D]">{customer.contact_name}</Link>
                   </td>
-                  <td className="px-2.5">
-                    <p className="truncate font-semibold text-[#334155]">{customer.partner_type ? partnerLabels[customer.partner_type] ?? customer.partner_type : "Not classified"}</p>
-                  </td>
+                  <td className="px-2.5"><p className="truncate text-[#334155]">{customer.partner_type ? partnerLabels[customer.partner_type] ?? customer.partner_type : "Not classified"}</p></td>
                   <td className="px-2.5 tabular-nums">{customer.phone}</td>
+                  <td className="px-2.5 text-center font-medium tabular-nums">{vehicleCount(customer)}</td>
+                  <td className="px-2.5 text-center font-medium tabular-nums">{policyCount(customer)}</td>
                   <td className="px-2.5"><CustomerStatus status={customer.onboarding_status} /></td>
-                  <td className="px-2.5"><NextAction customer={customer} /></td>
                   <td className="px-2.5 text-center"><RowActions customer={customer} /></td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {!pageRows.length ? <RegisterEmpty title="No matching customers" description="Adjust the search, partner type or saved view." /> : null}
+          {!pageRows.length ? <RegisterEmpty title="No matching customers" description="Adjust the search or saved view." /> : null}
         </div>
 
         <RegisterPagination pageRows={pageRows.length} filteredRows={filteredRows.length} safePage={safePage} totalPages={totalPages} pageSize={PAGE_SIZE} onPrevious={() => setPage((current) => Math.max(1, current - 1))} onNext={() => setPage((current) => Math.min(totalPages, current + 1))} />
@@ -236,7 +228,7 @@ function CustomerMobileCard({ customer, selected, onToggle }: { customer: Custom
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <Link prefetch={false} href={`/customers/${customer.id}/edit`} className="block truncate text-[15px] font-extrabold text-[#12203B]">{customer.contact_name}</Link>
+              <Link prefetch={false} href={`/customers/${customer.id}/edit`} className="block truncate text-[15px] font-normal text-[#12203B]">{customer.contact_name}</Link>
               <p className="mt-0.5 truncate text-[12px] text-[#66748A]">{customer.company_name ?? customer.customer_code}</p>
             </div>
             <CustomerStatus status={customer.onboarding_status} />
@@ -276,7 +268,7 @@ function PartnerTypeModal({ onClose }: { onClose: () => void }) {
 function RowActions({ customer }: { customer: CustomerRow }) {
   return (
     <details className="relative inline-block">
-      <summary aria-label={`Actions for ${customer.contact_name}`} className="grid h-9 w-9 cursor-pointer list-none place-items-center rounded-lg hover:bg-[#EEF2F7] [&::-webkit-details-marker]:hidden"><MoreVertical className="h-4 w-4" /></summary>
+      <summary aria-label={`Actions for ${customer.contact_name}`} className="grid h-8 w-8 cursor-pointer list-none place-items-center rounded-lg hover:bg-[#EEF2F7] [&::-webkit-details-marker]:hidden"><MoreVertical className="h-4 w-4" /></summary>
       <div className="absolute right-0 z-30 mt-1 w-44 rounded-xl border border-[#E2E8F0] bg-white p-1 shadow-xl">
         <Link prefetch={false} href={`/customers/${customer.id}/edit`} className="block rounded-lg px-2 py-2 hover:bg-[#F8FAFC]">View / Edit</Link>
         {customer.onboarding_status !== "active" ? <Link prefetch={false} href={`/customers/${customer.id}/edit#documents`} className="block rounded-lg px-2 py-2 font-medium text-amber-700 hover:bg-amber-50">Upload Documents</Link> : null}
@@ -290,16 +282,6 @@ function CustomerStatus({ status }: { status: string }) {
   return status === "active" ? <RegisterStatusPill tone="green">Active</RegisterStatusPill> : <RegisterStatusPill tone="amber">KYC incomplete</RegisterStatusPill>;
 }
 
-function NextAction({ customer }: { customer: CustomerRow }) {
-  if (customer.onboarding_status !== "active") return <Link prefetch={false} href={`/customers/${customer.id}/edit#documents`} className="font-bold text-amber-700 hover:underline">Complete KYC</Link>;
-  if (vehicleCount(customer) === 0) return <Link prefetch={false} href={`/vehicles/new?customer_id=${customer.id}`} className="font-bold text-[#174EA6] hover:underline">Add vehicle</Link>;
-  if (policyCount(customer) === 0) return <Link prefetch={false} href="/policies/new" className="font-bold text-[#174EA6] hover:underline">Add policy</Link>;
-  return <span className="inline-flex items-center gap-1 font-semibold text-emerald-700"><ShieldCheck className="h-3.5 w-3.5" />Portfolio active</span>;
-}
-
-function CountCell({ value, hint, warn = false }: { value: number; hint: string; warn?: boolean }) {
-  return <div><p className={`text-[13px] font-bold tabular-nums ${warn ? "text-rose-700" : "text-[#0F172A]"}`}>{value}</p><p className="mt-0.5 text-[8.5px] text-[#94A3B8]">{hint}</p></div>;
-}
 function vehicleCount(row: CustomerRow) { return row.vehicles?.[0]?.count ?? 0; }
 function policyCount(row: CustomerRow) { return row.policies?.[0]?.count ?? 0; }
 function claimCount(row: CustomerRow) { return row.claims?.[0]?.count ?? 0; }
