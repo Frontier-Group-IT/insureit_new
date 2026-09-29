@@ -1,0 +1,49 @@
+/* Life / Health case document cards: compact four-up layout matching the upload-card pattern. */
+@media (min-width: 1024px) {
+  div:has(> label input[id^="case-doc-"]) {
+    grid-column: span 1 / span 1 !important;
+  }
+}
+
+div:has(> label input[id^="case-doc-"]) {
+  min-height: 132px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px !important;
+  padding: 16px 12px !important;
+  text-align: center;
+}
+
+div:has(> label input[id^="case-doc-"]) > span {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 12px !important;
+}
+
+div:has(> label input[id^="case-doc-"]) > div {
+  width: 100%;
+  flex: none !important;
+}
+
+div:has(> label input[id^="case-doc-"]) > div p:first-child {
+  font-size: 10px !important;
+}
+
+div:has(> label input[id^="case-doc-"]) > div p:last-child {
+  margin-top: 3px;
+  font-size: 8.5px !important;
+}
+
+div:has(> label input[id^="case-doc-"]) > label {
+  width: 100%;
+  border: 0 !important;
+  padding: 3px 0 !important;
+  background: transparent !important;
+  font-size: 8.5px !important;
+}
+
+@media (max-width: 1023px) {
+  div:has(> label input[id^="case-doc-"]) {
+    min-height: 116px;
+  }
+}
