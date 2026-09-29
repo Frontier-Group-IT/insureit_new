@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Building2, CalendarRange, Check, Download, HandCoins, Loader2, ReceiptIndianRupee, TrendingUp, WalletCards } from "lucide-react";
+import { Building2, CalendarDays, CalendarRange, Check, ChevronDown, Download, HandCoins, Loader2, ReceiptIndianRupee, TrendingUp, WalletCards } from "lucide-react";
 import {
   BUSINESS_MIS_AMOUNT_COLUMNS,
   BUSINESS_MIS_DATE_COLUMNS,
@@ -44,10 +44,9 @@ type ReconciliationOverview = {
   variance: number;
 };
 
-const PERIODS: Array<{ value: Period; label: string }> = [
+const PRESET_PERIODS: Array<{ value: Exclude<Period, "custom">; label: string }> = [
   { value: "last_month", label: "Last month" },
   { value: "mtd", label: "MTD" },
-  { value: "custom", label: "Custom" },
 ];
 
 export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Props) {
@@ -58,6 +57,11 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
   const [insurer, setInsurer] = useState(initialFilters.insurerId ?? "");
   const [isPending, setIsPending] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customFrom, setCustomFrom] = useState(initialFilters.fromDate);
+  const [customTo, setCustomTo] = useState(initialFilters.toDate);
+  const [customError, setCustomError] = useState("");
+  const customRef = useRef<HTMLDivElement>(null);
   const cache = useRef(new Map<string, Result>([
     [cacheKey(initialFilters.period, initialFilters.fromDate, initialFilters.toDate, initialFilters.insurerId ?? ""), {
       filters: initialFilters,
@@ -162,6 +166,47 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
     void requestResult(period, nextFrom, nextTo, nextInsurer).catch(() => undefined);
   };
 
+  const openCustomRange = () => {
+    if (customOpen) {
+      setCustomOpen(false);
+      return;
+    }
+    setCustomFrom(filters.fromDate);
+    setCustomTo(filters.toDate);
+    setCustomError("");
+    setCustomOpen(true);
+  };
+
+  const applyCustomRange = async () => {
+    if (!customFrom || !customTo) {
+      setCustomError("Choose both From and To dates.");
+      return;
+    }
+    if (customFrom > customTo) {
+      setCustomError("From date cannot be after To date.");
+      return;
+    }
+    setCustomError("");
+    await fetchResult("custom", customFrom, customTo, insurer);
+    setCustomOpen(false);
+  };
+
+  useEffect(() => {
+    if (!customOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!customRef.current?.contains(event.target as Node)) setCustomOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setCustomOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [customOpen]);
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
       for (const standardPeriod of ["last_month", "mtd"] as const) {
@@ -198,27 +243,51 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
           <p className="text-[8px] font-medium text-[#7c899b]">{displayRange(filters.fromDate, filters.toDate)}</p>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
           <ReconciliationTools onImported={refreshAfterImport} />
           <span className="h-5 w-px bg-[#dce4ee]" aria-hidden="true" />
           <a href={exportHref} title="Export / download Business MIS" aria-label="Export / download Business MIS" className="grid h-8 w-8 place-items-center rounded-lg border border-[#17365D] bg-white text-[#17365D] shadow-sm transition hover:bg-[#f3f7fb]">
             <Download className="h-3.5 w-3.5" />
           </a>
           <div className="flex rounded-lg border border-[#dce4ee] bg-[#f8fafc] p-0.5">
-            {PERIODS.map((item) => <button key={item.value} type="button" disabled={isPending} onMouseEnter={() => prefetchResult(item.value)} onFocus={() => prefetchResult(item.value)} onClick={() => void fetchResult(item.value, from, to, insurer)} className={`rounded-md px-2.5 py-1.5 text-[8px] font-bold transition ${filters.period === item.value ? "bg-[#17365D] text-white shadow-sm" : "text-[#667085] hover:bg-white hover:text-[#17365D]"} disabled:cursor-wait disabled:opacity-70`}>
+            {PRESET_PERIODS.map((item) => <button key={item.value} type="button" disabled={isPending} onMouseEnter={() => prefetchResult(item.value)} onFocus={() => prefetchResult(item.value)} onClick={() => { setCustomOpen(false); void fetchResult(item.value, from, to, insurer); }} className={`rounded-md px-2.5 py-1.5 text-[8px] font-bold transition ${filters.period === item.value ? "bg-[#17365D] text-white shadow-sm" : "text-[#667085] hover:bg-white hover:text-[#17365D]"} disabled:cursor-wait disabled:opacity-70`}>
               {item.label}
             </button>)}
+            <div ref={customRef} className="relative">
+              <button type="button" disabled={isPending} onClick={openCustomRange} aria-expanded={customOpen} aria-haspopup="dialog" className={`flex h-full items-center gap-1 rounded-md px-2.5 py-1.5 text-[8px] font-bold transition ${filters.period === "custom" ? "bg-[#17365D] text-white shadow-sm" : "text-[#667085] hover:bg-white hover:text-[#17365D]"} disabled:cursor-wait disabled:opacity-70`}>
+                <CalendarDays className="h-3 w-3" />
+                <span>{filters.period === "custom" ? compactRange(filters.fromDate, filters.toDate) : "Custom"}</span>
+                <ChevronDown className={`h-3 w-3 transition-transform ${customOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {customOpen ? <div role="dialog" aria-label="Choose custom date range" className="absolute right-0 top-[calc(100%+8px)] z-50 w-[min(340px,calc(100vw-28px))] rounded-xl border border-[#dbe3ee] bg-white p-3 shadow-xl">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-semibold text-[#17365D]">Custom date range</p>
+                    <p className="mt-0.5 text-[7.5px] text-[#7c899b]">Choose the exact accounting period to display.</p>
+                  </div>
+                  <CalendarRange className="mt-0.5 h-4 w-4 text-[#667085]" />
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <FilterField label="From"><input type="date" value={customFrom} onChange={(event) => { setCustomFrom(event.target.value); setCustomError(""); }} disabled={isPending} className="h-9 w-full rounded-lg border border-[#dce4ee] bg-white px-2 text-[9px] font-semibold text-[#344054] outline-none focus:border-[#17365D]" /></FilterField>
+                  <FilterField label="To"><input type="date" value={customTo} onChange={(event) => { setCustomTo(event.target.value); setCustomError(""); }} disabled={isPending} className="h-9 w-full rounded-lg border border-[#dce4ee] bg-white px-2 text-[9px] font-semibold text-[#344054] outline-none focus:border-[#17365D]" /></FilterField>
+                </div>
+                {customError ? <p className="mt-2 text-[8px] font-semibold text-[#b42318]">{customError}</p> : null}
+                <div className="mt-3 flex items-center justify-end gap-1.5 border-t border-[#edf1f5] pt-2.5">
+                  <button type="button" disabled={isPending} onClick={() => setCustomOpen(false)} className="h-8 rounded-lg border border-[#dce4ee] bg-white px-3 text-[8px] font-bold text-[#667085] hover:bg-[#f8fafc] disabled:opacity-60">Cancel</button>
+                  <button type="button" disabled={isPending} onClick={() => void applyCustomRange()} className="inline-flex h-8 items-center gap-1 rounded-lg bg-[#17365D] px-3 text-[8px] font-bold text-white shadow-sm hover:bg-[#234b7a] disabled:cursor-wait disabled:opacity-60">{isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />} Apply</button>
+                </div>
+              </div> : null}
+            </div>
           </div>
           {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin text-[#667085]" aria-label="Updating dashboard" /> : null}
         </div>
       </div>
 
-      <form onSubmit={(event) => { event.preventDefault(); void fetchResult(filters.period, from, to, insurer); }} className="mt-2 basis-full grid gap-1.5 border-t border-[#edf1f5] pt-2 md:grid-cols-2 xl:grid-cols-[135px_135px_minmax(200px,1fr)_minmax(200px,1fr)_32px]">
-        <FilterField label="From"><input name="from" type="date" value={from} onChange={(event) => setFrom(event.target.value)} disabled={filters.period !== "custom" || isPending} className="h-8 w-full rounded-lg border border-[#dce4ee] bg-white px-2 text-[8.5px] font-semibold text-[#344054] disabled:bg-[#f6f8fb] disabled:text-[#98a2b3]" /></FilterField>
-        <FilterField label="To"><input name="to" type="date" value={to} onChange={(event) => setTo(event.target.value)} disabled={filters.period !== "custom" || isPending} className="h-8 w-full rounded-lg border border-[#dce4ee] bg-white px-2 text-[8.5px] font-semibold text-[#344054] disabled:bg-[#f6f8fb] disabled:text-[#98a2b3]" /></FilterField>
+      <form onSubmit={(event) => { event.preventDefault(); void fetchResult(filters.period, filters.fromDate, filters.toDate, insurer); }} className="mt-2 basis-full grid gap-1.5 border-t border-[#edf1f5] pt-2 md:grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)_32px]">
         <FilterField label="Insurer"><select name="insurer" value={insurer} onChange={(event) => setInsurer(event.target.value)} disabled={isPending} className="h-8 w-full rounded-lg border border-[#dce4ee] bg-white px-2 text-[8.5px] font-semibold text-[#344054] disabled:bg-[#f6f8fb] disabled:text-[#98a2b3]"><option value="">All insurers</option>{snapshot.insurers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></FilterField>
         <FilterField label="Branch"><select disabled className="h-8 w-full rounded-lg border border-dashed border-[#d8e1eb] bg-[#f7f9fc] px-2 text-[8.5px] font-semibold text-[#98a2b3]"><option>All branches · Coming soon</option></select></FilterField>
-        <button type="submit" disabled={isPending} title="Apply filters" aria-label="Apply filters" className="mt-auto grid h-8 w-8 place-items-center rounded-lg bg-[#17365D] text-white shadow-sm hover:bg-[#234b7a] disabled:cursor-wait disabled:opacity-60">{isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}</button>
+        <button type="submit" disabled={isPending} title="Apply business filters" aria-label="Apply business filters" className="mt-auto grid h-8 w-8 place-items-center rounded-lg bg-[#17365D] text-white shadow-sm hover:bg-[#234b7a] disabled:cursor-wait disabled:opacity-60">{isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}</button>
       </form>
     </section>
 
@@ -453,5 +522,9 @@ function currency(value: number) { return new Intl.NumberFormat("en-IN", { style
 function integer(value: number) { return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value || 0); }
 function displayRange(from: string, to: string) {
   const format = (value: string) => new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }).format(new Date(`${value}T00:00:00+05:30`));
+  return from === to ? format(from) : `${format(from)} – ${format(to)}`;
+}
+function compactRange(from: string, to: string) {
+  const format = (value: string) => new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", timeZone: "Asia/Kolkata" }).format(new Date(`${value}T00:00:00+05:30`));
   return from === to ? format(from) : `${format(from)} – ${format(to)}`;
 }
