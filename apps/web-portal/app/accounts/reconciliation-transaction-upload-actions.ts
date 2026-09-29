@@ -238,17 +238,18 @@ function validateRow(
     if (record) {
       const projected = money(record.row[19]);
       const received = money(record.row[21]);
-      const difference = roundMoney(projected - received);
+      const rawDifference = roundMoney(projected - received);
+      const templateDifference = Math.max(rawDifference, 0);
       if (
         changed(workbookProjected, projected)
         || changed(workbookReceived, received)
-        || changed(workbookDifference, difference)
+        || changed(workbookDifference, templateDifference)
       ) {
         status = "Error";
         messages.push("Pay-In reconciliation changed after this template was downloaded. This also blocks replay of an already imported workbook; download a fresh Pay-In template.");
       }
 
-      const remaining = Math.max(difference, 0);
+      const remaining = templateDifference;
       if (remaining > TOLERANCE && amount - remaining > TOLERANCE && status !== "Error") {
         status = "Warning";
         messages.push("This Pay-In exceeds the current projected remaining amount and will create a variance.");
@@ -286,16 +287,17 @@ function validateRow(
   if (record) {
     const projected = money(record.row[27]);
     const paid = money(record.row[29]);
-    const remaining = roundMoney(projected - paid);
+    const rawRemaining = roundMoney(projected - paid);
+    const templateRemaining = Math.max(rawRemaining, 0);
     if (
       changed(workbookProjected, projected)
       || changed(workbookPaid, paid)
-      || changed(workbookRemaining, remaining)
+      || changed(workbookRemaining, templateRemaining)
     ) {
       status = "Error";
       messages.push("Payout reconciliation changed after this template was downloaded. This also blocks replay of an already imported workbook; download a fresh Payout template.");
     }
-    if (amount - Math.max(remaining, 0) > TOLERANCE) { status = "Error"; messages.push("New Paid Amount exceeds the current projected remaining payout."); }
+    if (amount - templateRemaining > TOLERANCE) { status = "Error"; messages.push("New Paid Amount exceeds the current projected remaining payout."); }
   }
 
   return {
