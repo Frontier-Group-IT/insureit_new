@@ -9,7 +9,7 @@ const inr = (value: number | null) => value === null ? "—" : new Intl.NumberFo
 const empty = (message: string): ReconciliationUploadPreview => ({ totalRows: 0, readyRows: 0, warningRows: 0, errorRows: 0, skippedRows: 0, payinRows: [], payoutRows: [], message, messageKind: "error" });
 const VALIDATION_TIMEOUT_MS = 45_000;
 
-export function ReconciliationTools() {
+export function ReconciliationTools({ onImported }: { onImported?: () => void | Promise<void> }) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ReconciliationUploadPreview | null>(null);
   const [importResult, setImportResult] = useState<AccountsImportResult | null>(null);
@@ -64,6 +64,7 @@ export function ReconciliationTools() {
         const result = await confirmAccountsReconciliationUpload(formData);
         setImportResult(result);
         setPreview(null);
+        await onImported?.();
       } catch (error) {
         setImportError(error instanceof Error ? error.message : "Unable to import this workbook.");
       }
