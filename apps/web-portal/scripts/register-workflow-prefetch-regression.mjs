@@ -21,10 +21,8 @@ for (const file of files) {
   }
 }
 
-
 const customerSource = await readFile(new URL("../app/customers/customer-workspace.tsx", import.meta.url), "utf8");
 const kycApplicationsLink = (customerSource.match(/<Link\b[^>]*href="\/customers\/applications"[^>]*>/s) ?? [])[0];
-assert.ok(kycApplicationsLink, "Customer register should expose the KYC Applications link.");
-assert.match(kycApplicationsLink, /prefetch=\{false\}/, "Customer KYC Applications link must not auto-prefetch.");
+assert.equal(kycApplicationsLink, undefined, "Customer register should not expose the removed KYC Applications link.");
 
 console.log("Register workflow prefetch regression passed.");
