@@ -5,12 +5,114 @@ import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export type LifeHealthIssuedPolicyEditResult = { ok: true } | { ok: false; error: string };
+export type LifeHealthPolicyCopyResult =
+  | { ok: true; document: { id: string; fileName: string; viewUrl: string } | null }
+  | { ok: false; error: string };
 
+const DOCUMENT_BUCKET = "policy-documents";
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
+const ALLOWED_MIME_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
 const clean = (value: unknown) => String(value ?? "").trim();
 const amount = (value: unknown) => {
   const parsed = Number(clean(value).replace(/,/g, ""));
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 };
+const safeFileName = (name: string) => name.trim().replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-") || "policy-copy";
+
+async function validatePolicyCase(policyId: string, caseId: string) {
+  const admin = createSupabaseAdminClient();
+  const { data } = await admin.from("life_health_cases")
+    .select("id")
+    .eq("id", caseId)
+    .eq("final_policy_id", policyId)
+    .maybeSingle<{ id: string }>();
+  return { admin, valid: Boolean(data) };
+}
+
+function revalidateIssuedPolicy(policyId: string, caseId: string) {
+  revalidatePath("/policies");
+  revalidatePath(`/policies/${policyId}`);
+  revalidatePath(`/policies/${policyId}/edit`);
+  revalidatePath(`/policies/life-health-cases/${caseId}`);
+}
+
+export async function replaceIssuedLifeHealthPolicyCopy(formData: FormData): Promise<LifeHealthPolicyCopyResult> {
+  const profile = await requirePolicyEditor();
+  const policyId = clean(formData.get("policyId"));
+  const caseId = clean(formData.get("caseId"));
+  const file = formData.get("file");
+  if (!policyId || !caseId) return { ok: false, error: "Policy edit reference is missing." };
+  if (!(file instanceof File) || file.size <= 0) return { ok: false, error: "Choose a policy copy to upload." };
+  if (file.size > MAX_FILE_SIZE) return { ok: false, error: "Policy copy must be 50 MB or smaller." };
+  if (!ALLOWED_MIME_TYPES.has(file.type)) return { ok: false, error: "Upload a PDF, JPG, PNG or WebP policy copy." };
+
+  const { admin, valid } = await validatePolicyCase(policyId, caseId);
+  if (!valid) return { ok: false, error: "The linked Life/Health policy case is no longer available." };
+
+  const { data: existing } = await admin.from("life_health_case_documents")
+    .select("id,storage_bucket,storage_path")
+    .eq("case_id", caseId)
+    .eq("document_type", "policy_copy")
+    .maybeSingle<{ id: string; storage_bucket: string; storage_path: string }>();
+
+  const fileName = file.name || "policy-copy";
+  const storagePath = `life-health-cases/${caseId}/policy_copy/${crypto.randomUUID()}-${safeFileName(fileName)}`;
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const { error: uploadError } = await admin.storage.from(DOCUMENT_BUCKET).upload(storagePath, bytes, { contentType: file.type, upsert: false });
+  if (uploadError) return { ok: false, error: "The policy copy could not be uploaded." };
+
+  const values = {
+    file_name: fileName,
+    storage_bucket: DOCUMENT_BUCKET,
+    storage_path: storagePath,
+    mime_type: file.type,
+    file_size: file.size,
+    uploaded_by: profile.id,
+    updated_at: new Date().toISOString(),
+  };
+  let documentId = existing?.id || "";
+  if (existing) {
+    const { error } = await admin.from("life_health_case_documents").update(values).eq("id", existing.id);
+    if (error) {
+      await admin.storage.from(DOCUMENT_BUCKET).remove([storagePath]);
+      return { ok: false, error: "The policy copy record could not be updated." };
+    }
+    if (existing.storage_path && existing.storage_path !== storagePath) await admin.storage.from(existing.storage_bucket || DOCUMENT_BUCKET).remove([existing.storage_path]);
+  } else {
+    const { data, error } = await admin.from("life_health_case_documents").insert({ case_id: caseId, document_type: "policy_copy", ...values }).select("id").single<{ id: string }>();
+    if (error || !data) {
+      await admin.storage.from(DOCUMENT_BUCKET).remove([storagePath]);
+      return { ok: false, error: "The policy copy record could not be saved." };
+    }
+    documentId = data.id;
+  }
+
+  const { data: signed } = await admin.storage.from(DOCUMENT_BUCKET).createSignedUrl(storagePath, 60 * 60);
+  revalidateIssuedPolicy(policyId, caseId);
+  return { ok: true, document: { id: documentId, fileName, viewUrl: signed?.signedUrl || "" } };
+}
+
+export async function deleteIssuedLifeHealthPolicyCopy(formData: FormData): Promise<LifeHealthPolicyCopyResult> {
+  await requirePolicyEditor();
+  const policyId = clean(formData.get("policyId"));
+  const caseId = clean(formData.get("caseId"));
+  if (!policyId || !caseId) return { ok: false, error: "Policy edit reference is missing." };
+
+  const { admin, valid } = await validatePolicyCase(policyId, caseId);
+  if (!valid) return { ok: false, error: "The linked Life/Health policy case is no longer available." };
+  const { data: existing } = await admin.from("life_health_case_documents")
+    .select("id,storage_bucket,storage_path")
+    .eq("case_id", caseId)
+    .eq("document_type", "policy_copy")
+    .maybeSingle<{ id: string; storage_bucket: string; storage_path: string }>();
+  if (!existing) return { ok: true, document: null };
+
+  const { error } = await admin.from("life_health_case_documents").delete().eq("id", existing.id);
+  if (error) return { ok: false, error: "The policy copy could not be removed." };
+  if (existing.storage_path) await admin.storage.from(existing.storage_bucket || DOCUMENT_BUCKET).remove([existing.storage_path]);
+  revalidateIssuedPolicy(policyId, caseId);
+  return { ok: true, document: null };
+}
 
 export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<LifeHealthIssuedPolicyEditResult> {
   await requirePolicyEditor();
@@ -53,8 +155,6 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
     rmName = employee?.full_name?.trim() || null;
     rmCode = employee?.employee_code?.trim() || null;
   } else if (caseRow.intermediary_id === sourceId) {
-    // A Partner source can inherit RM ownership through onboarding rather than the direct intermediary column.
-    // When the source is unchanged, retain that established ownership instead of clearing it on an unrelated edit.
     rmEmployeeId = caseRow.rm_employee_id || policy.rm_employee_id || null;
     rmName = caseRow.rm_name?.trim() || policy.rm_name?.trim() || null;
     rmCode = caseRow.rm_code?.trim() || null;
@@ -111,9 +211,6 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
   }).eq("policy_id", policyId);
   await admin.from("policy_premium_details").update({ net_premium: premiumAmount, gross_premium: premiumAmount }).eq("policy_id", policyId);
 
-  revalidatePath("/policies");
-  revalidatePath(`/policies/${policyId}`);
-  revalidatePath(`/policies/${policyId}/edit`);
-  revalidatePath(`/policies/life-health-cases/${caseId}`);
+  revalidateIssuedPolicy(policyId, caseId);
   return { ok: true };
 }
