@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { LifeHealthCaseDetail } from "@/components/life-health-case-detail";
+import { LifeHealthCaseErrorPopupGuard } from "@/components/life-health-case-error-popup-guard";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -40,6 +41,7 @@ export default async function LifeHealthCasePage({ params }: { params: Promise<{
   const insurer = insurerResult.data;
   return (
     <AppShell title="Life / Health Case">
+      <LifeHealthCaseErrorPopupGuard />
       <LifeHealthCaseDetail
         caseData={{
           id: caseRow.id,
