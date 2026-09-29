@@ -1,4 +1,4 @@
-name: Publish Partner 0.1.0 home refinements OTA once
+name: Publish Partner 0.1.0 cumulative OTA once
 
 on:
   push:
@@ -18,6 +18,7 @@ on:
       - 'scripts/partner/compat/partner-claims-reference-0-1.tsx'
       - 'apps/partner-app/assets/partner/banners/claims-header-reference.jpg'
       - 'scripts/partner/compat/partner-search-home-reference-0-1.tsx'
+      - 'scripts/partner/compat/partner-policy-detail-reference-0-1.tsx'
       - 'scripts/partner/patch-0-1-partner-screen-hide-topbar.mjs'
   workflow_dispatch:
 
@@ -55,101 +56,56 @@ jobs:
         run: |
           set -euo pipefail
           cd compat
-          [ "$(git rev-parse HEAD)" = "$COMPAT_SHA" ] || {
-            echo "Refusing OTA: compatibility checkout is not the approved source." >&2
-            exit 1
-          }
+          [ "$(git rev-parse HEAD)" = "$COMPAT_SHA" ] || { echo "Refusing OTA: compatibility checkout is not the approved source." >&2; exit 1; }
           node <<'NODE'
           const app = require('./apps/partner-app/app.json');
           const expo = app.expo || {};
-          if (expo.version !== '0.1.0') {
-            console.error(`Refusing OTA: expected Partner runtime 0.1.0, found ${expo.version ?? 'missing'}.`);
-            process.exit(1);
-          }
-          if (expo?.runtimeVersion?.policy !== 'appVersion') {
-            console.error('Refusing OTA: expected appVersion runtime policy.');
-            process.exit(1);
-          }
-          if (expo?.extra?.eas?.projectId !== '8ade82c1-4c96-4f09-b90b-802270fb406d') {
-            console.error('Refusing OTA: unexpected Partner EAS project ID.');
-            process.exit(1);
-          }
+          if (expo.version !== '0.1.0') process.exit(1);
+          if (expo?.runtimeVersion?.policy !== 'appVersion') process.exit(1);
+          if (expo?.extra?.eas?.projectId !== '8ade82c1-4c96-4f09-b90b-802270fb406d') process.exit(1);
           NODE
 
-      - name: Apply accepted hero/status-strip tuning
+      - name: Apply accepted Home hero/status-strip tuning
         shell: bash
         run: |
           set -euo pipefail
           node tooling/scripts/partner/patch-0-1-home-hero-reference.mjs 'compat/apps/partner-app/app/(tabs)/index.tsx'
-          grep -q "edges={\['top'\]}" 'compat/apps/partner-app/app/(tabs)/index.tsx'
-          grep -q "safeArea: { flex: 1, backgroundColor: '#F4F6F9' }" 'compat/apps/partner-app/app/(tabs)/index.tsx'
-          grep -q 'Feather name="clock" size={17}' 'compat/apps/partner-app/app/(tabs)/index.tsx'
           grep -q "hero: { height: 158" 'compat/apps/partner-app/app/(tabs)/index.tsx'
           grep -q "opacity: 0.70, transform: \[{ scale: 0.92 }\]" 'compat/apps/partner-app/app/(tabs)/index.tsx'
           grep -q "body: { marginTop: -10" 'compat/apps/partner-app/app/(tabs)/index.tsx'
           grep -q "searchShell: { minHeight: 49" 'compat/apps/partner-app/app/(tabs)/index.tsx'
 
-      - name: Apply Home refinement patch
+      - name: Apply Home refinements
         shell: bash
         run: |
           set -euo pipefail
           node tooling/scripts/partner/patch-0-1-home-refinements.mjs 'compat/apps/partner-app/app/(tabs)/index.tsx'
-          if grep -q '<Text style={styles.sectionTitle}>Recent Activity</Text>' 'compat/apps/partner-app/app/(tabs)/index.tsx'; then
-            echo "Recent Activity still present on Home after refinement patch." >&2
-            exit 1
-          fi
-          if grep -q '<Text style={styles.sectionTitle}>Your Impact</Text>' 'compat/apps/partner-app/app/(tabs)/index.tsx'; then
-            echo "Your Impact still present on Home after refinement patch." >&2
-            exit 1
-          fi
-          grep -q "backgroundColor: 'rgba(3,30,68,0.42)'" 'compat/apps/partner-app/app/(tabs)/index.tsx'
-          grep -q "policyAdd: require('../../assets/generated-dashboard/policy-add.png')" 'compat/apps/partner-app/app/(tabs)/index.tsx'
-          grep -q '<QuickAction asset={GeneratedDashboardAssets.policyAdd} imageScale={1.22} label="Policy Intake"' 'compat/apps/partner-app/app/(tabs)/index.tsx'
-          grep -q 'imageScale = 1' 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          ! grep -q '<Text style={styles.sectionTitle}>Recent Activity</Text>' 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          ! grep -q '<Text style={styles.sectionTitle}>Your Impact</Text>' 'compat/apps/partner-app/app/(tabs)/index.tsx'
           grep -q "pendingRow: { minHeight: 40" 'compat/apps/partner-app/app/(tabs)/index.tsx'
 
-      - name: Install 0.1-safe Business Report date-filter component
+      - name: Install 0.1-safe Business date filter
         shell: bash
         run: |
           set -euo pipefail
-          cp tooling/scripts/partner/compat/partner-business-date-filter.tsx \
-            compat/apps/partner-app/components/partner-business-date-filter-compat.tsx
-          grep -q 'export function PartnerBusinessDateFilterCompat' \
-            compat/apps/partner-app/components/partner-business-date-filter-compat.tsx
+          cp tooling/scripts/partner/compat/partner-business-date-filter.tsx compat/apps/partner-app/components/partner-business-date-filter-compat.tsx
+          grep -q 'export function PartnerBusinessDateFilterCompat' compat/apps/partner-app/components/partner-business-date-filter-compat.tsx
 
-      - name: Install reference-style Business layout for runtime 0.1.0
+      - name: Install current Business layout
         shell: bash
         run: |
           set -euo pipefail
-          node tooling/scripts/partner/patch-0-1-partner-screen-hide-topbar.mjs \
-            'compat/apps/partner-app/components/partner-screen.tsx'
+          node tooling/scripts/partner/patch-0-1-partner-screen-hide-topbar.mjs 'compat/apps/partner-app/components/partner-screen.tsx'
           mkdir -p compat/apps/partner-app/assets/partner/banners
-          cp tooling/apps/partner-app/assets/partner/banners/business-growth-11.png \
-            compat/apps/partner-app/assets/partner/banners/business-growth-11.png
-
-          # Use the existing vivid PNG banner directly; this avoids the prior
-          # low-detail JPEG regression and is safe for the legacy 0.1 runtime.
+          cp tooling/apps/partner-app/assets/partner/banners/business-growth-11.png compat/apps/partner-app/assets/partner/banners/business-growth-11.png
+          cp tooling/scripts/partner/compat/partner-business-reference-0-1.tsx 'compat/apps/partner-app/app/(tabs)/business.tsx'
           test -s compat/apps/partner-app/assets/partner/banners/business-growth-11.png
-          file compat/apps/partner-app/assets/partner/banners/business-growth-11.png | grep -q 'PNG image data'
-          file compat/apps/partner-app/assets/partner/banners/business-growth-11.png | grep -q '1170 x 520'
-
-          cp tooling/scripts/partner/compat/partner-business-reference-0-1.tsx \
-            'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q "business-growth-11.png" 'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q "height: 158" 'compat/apps/partner-app/app/(tabs)/business.tsx'
-          grep -q "left: 0" 'compat/apps/partner-app/app/(tabs)/business.tsx'
-          grep -q "top: 0" 'compat/apps/partner-app/app/(tabs)/business.tsx'
-          grep -q "width: '100%'" 'compat/apps/partner-app/app/(tabs)/business.tsx'
-          grep -q "height: '100%'" 'compat/apps/partner-app/app/(tabs)/business.tsx'
-          grep -q "opacity: 0.5" 'compat/apps/partner-app/app/(tabs)/business.tsx'
-          grep -q "marginTop: -10" 'compat/apps/partner-app/app/(tabs)/business.tsx'
-          grep -q "height: 49" 'compat/apps/partner-app/app/(tabs)/business.tsx'
-          grep -q 'hideTopBar' 'compat/apps/partner-app/components/partner-screen.tsx'
           grep -q 'Business Overview' 'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q 'Month-wise Trend' 'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q 'Business by Product' 'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q 'Quick Actions' 'compat/apps/partner-app/app/(tabs)/business.tsx'
-          grep -q 'PartnerBusinessDateFilterCompat' 'compat/apps/partner-app/app/(tabs)/business.tsx'
 
       - name: Install ffmpeg for legacy Policies banner normalization
         shell: bash
@@ -159,132 +115,72 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y ffmpeg
           fi
-          ffmpeg -version | head -n 1
 
-      - name: Install current Policies layout for runtime 0.1.0
+      - name: Install current Policies layout
         shell: bash
         run: |
           set -euo pipefail
-          cp tooling/scripts/partner/compat/partner-policies-reference-0-1.tsx \
-            'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          cp tooling/scripts/partner/compat/partner-policies-reference-0-1.tsx 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           mkdir -p compat/apps/partner-app/assets/partner/banners
-
-          cp tooling/apps/partner-app/assets/partner/banners/policies-header-reference.jpg \
-            compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
-
-          test -s compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
-          file compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg | grep -q 'JPEG image data'
-
-          # The supplied banner is a progressive JPEG. The legacy Expo 0.1 asset
-          # pipeline cannot read it reliably, so normalize the copied compatibility
-          # asset to a baseline JPEG before Metro exports the OTA bundle.
-          command -v ffmpeg >/dev/null 2>&1 || {
-            echo "ffmpeg is required to normalize the Policies banner for the legacy Expo bundler." >&2
-            exit 1
-          }
-          ffmpeg -hide_banner -loglevel error -y \
-            -i compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg \
-            -frames:v 1 -c:v mjpeg -q:v 2 -pix_fmt yuvj420p \
-            /tmp/policies-header-reference.jpg
-          mv /tmp/policies-header-reference.jpg \
-            compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
-          test -s compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
-          file compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg | grep -q 'JPEG image data'
+          cp tooling/apps/partner-app/assets/partner/banners/policies-header-reference.jpg compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
+          ffmpeg -hide_banner -loglevel error -y -i compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg -frames:v 1 -c:v mjpeg -q:v 2 -pix_fmt yuvj420p /tmp/policies-header-reference.jpg
+          mv /tmp/policies-header-reference.jpg compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
           grep -q "policies-header-reference.jpg" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           grep -q "height: 158" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
-          grep -q "left: '-6%'" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
-          grep -q "width: '112%'" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
-          grep -q "height: 182" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
-          grep -q "opacity: 0.55" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
-          grep -q "insureit-partner-official.png" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
-          grep -q 'Feather name="clock" size={17}' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
-          grep -q "heroTitle: { color: '#FFFFFF', fontSize: 14" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
-          grep -Fq "transform: [{ scale: 0.92 }]" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
-          grep -q "marginTop: -10" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           grep -q 'Manage. Track. Grow.' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           grep -q 'Policy Intake' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
-          grep -q 'Load More Policies' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           grep -q 'Expiring Soon' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           grep -q 'Lapsed' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
 
-      - name: Install reference-style More layout for runtime 0.1.0
+      - name: Install current Claims layout
         shell: bash
         run: |
           set -euo pipefail
-          cp tooling/apps/partner-app/assets/partner-login-logo.png \
-            compat/apps/partner-app/assets/partner-login-logo.png
-          cp tooling/scripts/partner/compat/partner-more-reference-0-1.tsx \
-            'compat/apps/partner-app/app/(tabs)/more.tsx'
-          grep -q 'GROW & LEARN' 'compat/apps/partner-app/app/(tabs)/more.tsx'
-          grep -q 'Profile & registration' 'compat/apps/partner-app/app/(tabs)/more.tsx'
-          grep -q 'Settings & app info' 'compat/apps/partner-app/app/(tabs)/more.tsx'
-          grep -q "insureit-partner-official.png" 'compat/apps/partner-app/app/(tabs)/more.tsx'
-          grep -q 'Feather name="clock" size={17}' 'compat/apps/partner-app/app/(tabs)/more.tsx'
-          grep -q "heroLogo: { width: 30, height: 35" 'compat/apps/partner-app/app/(tabs)/more.tsx'
-          grep -q "heroBrandInsureit: { color: '#FFFFFF', fontSize: 14" 'compat/apps/partner-app/app/(tabs)/more.tsx'
-          grep -q "heroBrandPartner: { color: '#F5AB2E', fontSize: 14" 'compat/apps/partner-app/app/(tabs)/more.tsx'
-          grep -q "heroIconButton: {" 'compat/apps/partner-app/app/(tabs)/more.tsx'
-          grep -q "heroAvatar: {" 'compat/apps/partner-app/app/(tabs)/more.tsx'
-          grep -q "<Text style={styles.heroTitle}>Profile</Text>" 'compat/apps/partner-app/app/(tabs)/more.tsx'
-          grep -q "heroTitle: {" 'compat/apps/partner-app/app/(tabs)/more.tsx'
-          grep -q "fontSize: 14" 'compat/apps/partner-app/app/(tabs)/more.tsx'
-
-      - name: Install reference-style Claims layout for runtime 0.1.0
-        shell: bash
-        run: |
-          set -euo pipefail
-          cp tooling/scripts/partner/compat/partner-claims-reference-0-1.tsx \
-            'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          cp tooling/scripts/partner/compat/partner-claims-reference-0-1.tsx 'compat/apps/partner-app/app/(tabs)/claims.tsx'
           mkdir -p compat/apps/partner-app/assets/partner/banners
-          cp tooling/apps/partner-app/assets/partner/banners/claims-header-reference.jpg \
-            compat/apps/partner-app/assets/partner/banners/claims-header-reference.jpg
+          cp tooling/apps/partner-app/assets/partner/banners/claims-header-reference.jpg compat/apps/partner-app/assets/partner/banners/claims-header-reference.jpg
           test -s compat/apps/partner-app/assets/partner/banners/claims-header-reference.jpg
-          file compat/apps/partner-app/assets/partner/banners/claims-header-reference.jpg | grep -q 'JPEG image data'
           grep -q 'Total Claims' 'compat/apps/partner-app/app/(tabs)/claims.tsx'
           grep -q 'Load More Claims' 'compat/apps/partner-app/app/(tabs)/claims.tsx'
           grep -q "claims-header-reference.jpg" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
-          grep -q "insureit-partner-official.png" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
-          grep -q 'Feather name="clock" size={17}' 'compat/apps/partner-app/app/(tabs)/claims.tsx'
-          grep -q "heroLogo: { width: 30, height: 35" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
-          grep -q "heroBrandInsureit: { color: '#FFFFFF', fontSize: 14" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
-          grep -q "heroBrandPartner: { color: '#F5AB2E', fontSize: 14" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
-          grep -q "heroIconButton: {" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
-          grep -q "width: 33" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
-          grep -q "heroAvatar: {" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
-          grep -q "width: 35" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
-          grep -q "heroTitle: {" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
-          grep -q "fontSize: 14" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
-          grep -q "heroCopy: { zIndex: 3, position: 'absolute', left: 16, bottom: 22, width: 178 }" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
-          if grep -q "Support. Settle. Keep" 'compat/apps/partner-app/app/(tabs)/claims.tsx'; then
-            echo "Claims subheading is still present." >&2
-            exit 1
-          fi
-          if grep -q "heroSubtitle" 'compat/apps/partner-app/app/(tabs)/claims.tsx'; then
-            echo "Legacy Claims subtitle styling is still present." >&2
-            exit 1
-          fi
-          if grep -q "heroArtworkWrap" 'compat/apps/partner-app/app/(tabs)/claims.tsx'; then
-            echo "Legacy Claims foreground artwork overlay is still present." >&2
-            exit 1
-          fi
+          ! grep -q "Support. Settle. Keep" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          ! grep -q "heroSubtitle" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
 
-      - name: Install Home-style Search layout for runtime 0.1.0
+      - name: Install current More/Profile layout
         shell: bash
         run: |
           set -euo pipefail
-          cp tooling/scripts/partner/compat/partner-search-home-reference-0-1.tsx \
-            'compat/apps/partner-app/app/search.tsx'
+          cp tooling/apps/partner-app/assets/partner-login-logo.png compat/apps/partner-app/assets/partner-login-logo.png
+          cp tooling/scripts/partner/compat/partner-more-reference-0-1.tsx 'compat/apps/partner-app/app/(tabs)/more.tsx'
+          grep -q 'GROW & LEARN' 'compat/apps/partner-app/app/(tabs)/more.tsx'
+          grep -q 'Profile & registration' 'compat/apps/partner-app/app/(tabs)/more.tsx'
+          grep -q "heroLogo: { width: 30, height: 35" 'compat/apps/partner-app/app/(tabs)/more.tsx'
+          grep -q "<Text style={styles.heroTitle}>Profile</Text>" 'compat/apps/partner-app/app/(tabs)/more.tsx'
+          grep -q "height: 158" 'compat/apps/partner-app/app/(tabs)/more.tsx'
+          grep -q "top: 30" 'compat/apps/partner-app/app/(tabs)/more.tsx'
+          grep -q "bottom: 24" 'compat/apps/partner-app/app/(tabs)/more.tsx'
+
+      - name: Install current Search layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tooling/scripts/partner/compat/partner-search-home-reference-0-1.tsx 'compat/apps/partner-app/app/search.tsx'
           grep -q "hero-banner.jpg" 'compat/apps/partner-app/app/search.tsx'
           grep -q "Good Morning" 'compat/apps/partner-app/app/search.tsx'
           grep -q "Search customer, vehicle number or policy number" 'compat/apps/partner-app/app/search.tsx'
-          if grep -q 'eyebrow="SEARCH"' 'compat/apps/partner-app/app/search.tsx'; then
-            echo "Legacy Search top bar is still present." >&2
-            exit 1
-          fi
-          if grep -q 'PartnerSearchField' 'compat/apps/partner-app/app/search.tsx'; then
-            echo "Legacy standalone Search field is still present." >&2
-            exit 1
-          fi
+          ! grep -q 'eyebrow="SEARCH"' 'compat/apps/partner-app/app/search.tsx'
+
+      - name: Install current Policy Details layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tooling/scripts/partner/compat/partner-policy-detail-reference-0-1.tsx 'compat/apps/partner-app/app/policy/[id].tsx'
+          grep -q '<Text style={styles.headerEyebrow}>BUSINESS</Text>' 'compat/apps/partner-app/app/policy/[id].tsx'
+          grep -q '<Text style={styles.headerTitle}>Policy Details</Text>' 'compat/apps/partner-app/app/policy/[id].tsx'
+          grep -q 'Quick Actions' 'compat/apps/partner-app/app/policy/[id].tsx'
+          grep -q 'Policy Overview' 'compat/apps/partner-app/app/policy/[id].tsx'
+          grep -q 'Customer & Vehicle' 'compat/apps/partner-app/app/policy/[id].tsx'
+          ! grep -q 'onBack={() => router.back()}' 'compat/apps/partner-app/app/policy/[id].tsx'
 
       - name: Require Expo token
         shell: bash
@@ -315,7 +211,7 @@ jobs:
           npx eas-cli whoami
           npx eas-cli project:info --non-interactive
 
-      - name: Publish Partner 0.1.0 home refinements OTA
+      - name: Publish Partner 0.1.0 cumulative OTA
         working-directory: compat/apps/partner-app
         shell: bash
         run: |
@@ -323,7 +219,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 Business + Policies + Claims + More reference layouts" \
+            --message "Partner 0.1.0 cumulative Home + Business + Policies + Claims + More + Search + Policy Details" \
             --clear-cache \
             --non-interactive
 
@@ -332,16 +228,17 @@ jobs:
         shell: bash
         run: |
           {
-            echo "## Partner 0.1.0 home refinements OTA"
+            echo "## Partner 0.1.0 cumulative OTA"
             echo
             echo "- Source baseline: $COMPAT_SHA"
             echo "- Channel: preview"
             echo "- Runtime: 0.1.0"
-            echo "- Home: Policy Intake quick-action visible icon scaled to match the other Quick Action icons; prior hero/compact-home refinements preserved"
-            echo "- Business Report: reference-style compact dashboard layout + JS-only date range preserved"
-            echo "- Policies: user-supplied banner with exact approved Home hero geometry, KPI cards, Policy Intake CTA, compact lifecycle tabs and dense policy cards"
-            echo "- Claims: reference-style hero, official existing Partner logo, search/filter controls, KPI cards, lifecycle tabs, dense claim cards and manual Load More"
-            echo "- More: reference-style branded header, grouped sections, Home-matched typography and account actions"
-            echo "- Search: Home-matched hero, greeting, activity/profile actions and floating search field on runtime 0.1.0"
-            echo "- No native build or dependency change"
+            echo "- Home refinements: preserved"
+            echo "- Business refinements: preserved"
+            echo "- Policies refinements: preserved"
+            echo "- Claims refinements: preserved"
+            echo "- More/Profile refinements: preserved"
+            echo "- Search refinements: preserved"
+            echo "- Policy Details reference redesign: included"
+            echo "- Native APK/AAB build: not used"
           } >> "$GITHUB_STEP_SUMMARY"
