@@ -27,6 +27,23 @@ type Props = {
   initialSnapshot: AccountsDashboardClientSnapshot;
 };
 
+type ReconciliationOverview = {
+  projectedPayin: number;
+  postedPayin: number;
+  pendingPayin: number;
+  projectedPayout: number;
+  paidPayout: number;
+  pendingPayout: number;
+  payinProgress: number;
+  payoutProgress: number;
+  payinReconciled: number;
+  payoutReconciled: number;
+  fullyReconciled: number;
+  partial: number;
+  pending: number;
+  variance: number;
+};
+
 const PERIODS: Array<{ value: Period; label: string }> = [
   { value: "last_month", label: "Last month" },
   { value: "mtd", label: "MTD" },
@@ -59,6 +76,8 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
     if (filters.insurerId) params.set("insurer", filters.insurerId);
     return `/accounts/business-mis-export?${params.toString()}`;
   }, [filters]);
+
+  const reconciliation = useMemo(() => buildReconciliationOverview(snapshot.rows), [snapshot.rows]);
 
   const normalizeResult = (result: Result): Result => {
     const nextInsurers = result.snapshot.insurers.length ? result.snapshot.insurers : insurersRef.current;
@@ -115,6 +134,28 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
     }
   };
 
+  const refreshAfterImport = async () => {
+    const href = accountsHref(filters.period, filters.fromDate, filters.toDate, filters.insurerId ?? "");
+    setIsPending(true);
+    setLoadError("");
+    try {
+      const raw = await loadAccountsSnapshotAction({
+        period: filters.period,
+        from: filters.period === "custom" ? filters.fromDate : undefined,
+        to: filters.period === "custom" ? filters.toDate : undefined,
+        insurer: filters.insurerId ?? undefined,
+      });
+      const result = normalizeResult(raw as Result);
+      cache.current.clear();
+      cache.current.set(cacheKey(result.filters.period, result.filters.fromDate, result.filters.toDate, result.filters.insurerId ?? ""), result);
+      applyResult(result, href);
+    } catch {
+      setLoadError("Reconciliation was imported, but the dashboard could not refresh automatically. Apply the filters again to reload the latest figures.");
+    } finally {
+      setIsPending(false);
+    }
+  };
+
   const prefetchResult = (period: Period, nextFrom = from, nextTo = to, nextInsurer = insurer) => {
     const key = cacheKey(period, nextFrom, nextTo, nextInsurer);
     if (cache.current.has(key) || inflight.current.has(key)) return;
@@ -158,7 +199,7 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
         </div>
 
         <div className="flex items-center gap-1.5">
-          <ReconciliationTools />
+          <ReconciliationTools onImported={refreshAfterImport} />
           <span className="h-5 w-px bg-[#dce4ee]" aria-hidden="true" />
           <a href={exportHref} title="Export / download Business MIS" aria-label="Export / download Business MIS" className="grid h-8 w-8 place-items-center rounded-lg border border-[#17365D] bg-white text-[#17365D] shadow-sm transition hover:bg-[#f3f7fb]">
             <Download className="h-3.5 w-3.5" />
@@ -192,8 +233,78 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
       <KpiCard icon={TrendingUp} label="Projected retention" value={currency(snapshot.projectedRetention)} />
     </section>
 
+    <ReconciliationOverviewPanel overview={reconciliation} policyCount={snapshot.rows.length} />
+
     <BusinessMisTable rows={snapshot.rows} loadFailed={misLoadFailed} />
   </div>;
+}
+
+function ReconciliationOverviewPanel({ overview, policyCount }: { overview: ReconciliationOverview; policyCount: number }) {
+  return <section className="rounded-2xl border border-[#dbe3ee] bg-white px-3 py-2.5 shadow-sm">
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <h2 className="text-[11.5px] font-semibold text-[#17365D]">Reconciliation overview</h2>
+        <p className="mt-0.5 text-[7.5px] text-[#7c899b]">Live status from the same Pay-In / Pay-Out fields used in the Business MIS template.</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-1">
+        <StatusChip label="All" value={policyCount} />
+        <StatusChip label="Fully reconciled" value={overview.fullyReconciled} tone="success" />
+        <StatusChip label="Partial" value={overview.partial} tone="warning" />
+        <StatusChip label="Pending" value={overview.pending} />
+        <StatusChip label="Variance" value={overview.variance} tone={overview.variance ? "danger" : "neutral"} />
+      </div>
+    </div>
+
+    <div className="mt-2 grid gap-2 xl:grid-cols-2">
+      <ReconciliationProgress
+        title="Pay-In reconciliation"
+        projectedLabel="Projected Pay-In"
+        actualLabel="Posted Pay-In"
+        projected={overview.projectedPayin}
+        actual={overview.postedPayin}
+        pending={overview.pendingPayin}
+        progress={overview.payinProgress}
+        reconciled={overview.payinReconciled}
+      />
+      <ReconciliationProgress
+        title="Payout reconciliation"
+        projectedLabel="Projected Payout"
+        actualLabel="Paid Payout"
+        projected={overview.projectedPayout}
+        actual={overview.paidPayout}
+        pending={overview.pendingPayout}
+        progress={overview.payoutProgress}
+        reconciled={overview.payoutReconciled}
+      />
+    </div>
+  </section>;
+}
+
+function ReconciliationProgress({ title, projectedLabel, actualLabel, projected, actual, pending, progress, reconciled }: { title: string; projectedLabel: string; actualLabel: string; projected: number; actual: number; pending: number; progress: number; reconciled: number }) {
+  return <article className="rounded-xl border border-[#e1e7ef] bg-[#fbfcfe] px-3 py-2.5">
+    <div className="flex items-center justify-between gap-3">
+      <div>
+        <p className="text-[9px] font-bold text-[#17365D]">{title}</p>
+        <p className="mt-0.5 text-[7.5px] text-[#7c899b]">{integer(reconciled)} policy rows reconciled</p>
+      </div>
+      <span className="text-[13px] font-bold tabular-nums text-[#17365D]">{percentage(progress)}</span>
+    </div>
+    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e7edf4]"><div className="h-full rounded-full bg-[#0f766e] transition-[width]" style={{ width: `${progress}%` }} /></div>
+    <div className="mt-2 grid grid-cols-3 gap-2">
+      <MiniAmount label={projectedLabel} value={projected} />
+      <MiniAmount label={actualLabel} value={actual} />
+      <MiniAmount label="Pending" value={pending} emphasized={pending > 0} />
+    </div>
+  </article>;
+}
+
+function MiniAmount({ label, value, emphasized = false }: { label: string; value: number; emphasized?: boolean }) {
+  return <div className="min-w-0"><p className="truncate text-[6.8px] font-black uppercase tracking-[.05em] text-[#98a2b3]">{label}</p><p className={`mt-0.5 truncate text-[11px] font-semibold tabular-nums ${emphasized ? "text-[#9a6700]" : "text-[#344054]"}`} title={currency(value)}>{currency(value)}</p></div>;
+}
+
+function StatusChip({ label, value, tone = "neutral" }: { label: string; value: number; tone?: "neutral" | "success" | "warning" | "danger" }) {
+  const cls = tone === "success" ? "border-[#bfe3d5] bg-[#f0faf6] text-[#0f766e]" : tone === "warning" ? "border-[#f1d7a7] bg-[#fffaf0] text-[#8a5a13]" : tone === "danger" ? "border-[#f3c7c3] bg-[#fff5f4] text-[#b42318]" : "border-[#dce4ee] bg-[#f8fafc] text-[#667085]";
+  return <span className={`rounded-full border px-2 py-1 text-[7.5px] font-bold tabular-nums ${cls}`}>{label} {integer(value)}</span>;
 }
 
 function BusinessMisTable({ rows, loadFailed }: { rows: BusinessMisClientCell[][]; loadFailed: boolean }) {
@@ -244,6 +355,76 @@ function formatMisCell(value: BusinessMisClientCell, index: number) {
   }
   return String(value);
 }
+
+function buildReconciliationOverview(rows: BusinessMisClientCell[][]): ReconciliationOverview {
+  let projectedPayin = 0;
+  let postedPayin = 0;
+  let projectedPayout = 0;
+  let paidPayout = 0;
+  let payinReconciled = 0;
+  let payoutReconciled = 0;
+  let fullyReconciled = 0;
+  let partial = 0;
+  let pending = 0;
+  let variance = 0;
+
+  for (const row of rows) {
+    const payinProjection = amount(row[19]);
+    const payinActual = amount(row[21]);
+    const payoutProjection = amount(row[27]);
+    const payoutActual = amount(row[29]);
+    projectedPayin += payinProjection;
+    postedPayin += payinActual;
+    projectedPayout += payoutProjection;
+    paidPayout += payoutActual;
+
+    const payinState = reconcileState(payinProjection, payinActual);
+    const payoutState = reconcileState(payoutProjection, payoutActual);
+    if (payinState === "reconciled") payinReconciled += 1;
+    if (payoutState === "reconciled") payoutReconciled += 1;
+    if (payinState === "variance" || payoutState === "variance") variance += 1;
+    if (payinState === "reconciled" && payoutState === "reconciled") fullyReconciled += 1;
+    else if (payinState === "partial" || payoutState === "partial" || payinState === "reconciled" || payoutState === "reconciled") partial += 1;
+    else pending += 1;
+  }
+
+  return {
+    projectedPayin,
+    postedPayin,
+    pendingPayin: Math.max(0, projectedPayin - postedPayin),
+    projectedPayout,
+    paidPayout,
+    pendingPayout: Math.max(0, projectedPayout - paidPayout),
+    payinProgress: progress(projectedPayin, postedPayin),
+    payoutProgress: progress(projectedPayout, paidPayout),
+    payinReconciled,
+    payoutReconciled,
+    fullyReconciled,
+    partial,
+    pending,
+    variance,
+  };
+}
+
+function reconcileState(projected: number, actual: number): "reconciled" | "partial" | "pending" | "variance" {
+  if (projected <= 0) return actual > 0.01 ? "variance" : "reconciled";
+  if (actual > projected + 0.01) return "variance";
+  if (Math.abs(actual - projected) <= 0.01) return "reconciled";
+  if (actual > 0.01) return "partial";
+  return "pending";
+}
+
+function amount(value: BusinessMisClientCell | undefined) {
+  const parsed = typeof value === "number" ? value : Number(String(value ?? "").replace(/,/g, ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function progress(projected: number, actual: number) {
+  if (projected <= 0) return 100;
+  return Math.max(0, Math.min(100, Math.round((actual / projected) * 1000) / 10));
+}
+
+function percentage(value: number) { return `${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 1 }).format(value)}%`; }
 
 function cacheKey(period: Period, from: string, to: string, insurer: string) {
   return [period, period === "custom" ? from : "", period === "custom" ? to : "", insurer].join("|");
