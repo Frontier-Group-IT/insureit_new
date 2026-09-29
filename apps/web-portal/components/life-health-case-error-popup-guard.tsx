@@ -1,17 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 const INLINE_ERROR_SELECTOR = ".border-red-200.bg-red-50";
 
 export function LifeHealthCaseErrorPopupGuard() {
   const [message, setMessage] = useState<string | null>(null);
+  const dismissedErrorRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const sync = () => {
       const inlineError = document.querySelector<HTMLElement>(INLINE_ERROR_SELECTOR);
-      if (!inlineError) return;
+      if (!inlineError) {
+        dismissedErrorRef.current = null;
+        return;
+      }
+      if (inlineError === dismissedErrorRef.current) return;
       const text = inlineError.textContent?.trim();
       if (!text) return;
       inlineError.style.display = "none";
@@ -24,6 +29,11 @@ export function LifeHealthCaseErrorPopupGuard() {
     return () => observer.disconnect();
   }, []);
 
+  const dismiss = () => {
+    dismissedErrorRef.current = document.querySelector<HTMLElement>(INLINE_ERROR_SELECTOR);
+    setMessage(null);
+  };
+
   if (!message || typeof document === "undefined") return null;
 
   return createPortal(
@@ -35,7 +45,7 @@ export function LifeHealthCaseErrorPopupGuard() {
           <p className="mx-auto mt-2 max-w-sm text-[11px] leading-5 text-[#667085]">{message}</p>
         </div>
         <div className="border-t border-[#E6EBF2] bg-[#F8FAFC] px-5 py-3.5">
-          <button type="button" onClick={() => setMessage(null)} className="h-10 w-full rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white">OK</button>
+          <button type="button" onClick={dismiss} className="h-10 w-full rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white">OK</button>
         </div>
       </div>
     </div>,
