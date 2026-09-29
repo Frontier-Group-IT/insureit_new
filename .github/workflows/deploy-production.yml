@@ -129,7 +129,7 @@ jobs:
             echo "External renewal opportunity migration detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260906210000_external_renewal_interaction_tracking.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-external-renewal-interactions.yml"
-            echo "External renewal interaction migration detected. Waiting for its schema workflow..."
+            echo "External renewal interaction tracking migration detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260906223000_external_renewal_followup_worklist.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-external-renewal-followup-worklist.yml"
             echo "External renewal follow-up worklist migration detected. Waiting for its schema workflow..."
@@ -334,6 +334,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260929134500_accounts_policy_reconciliation_entry.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-accounts-policy-reconciliation-entry.yml"
             echo "Accounts policy reconciliation entry migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260929153000_accounts_reconciliation_transaction_batch.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-accounts-reconciliation-transaction-batch.yml"
+            echo "Accounts reconciliation transaction batch migration detected. Waiting for its schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"
