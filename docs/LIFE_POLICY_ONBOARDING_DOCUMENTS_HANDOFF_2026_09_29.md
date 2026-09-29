@@ -28,11 +28,12 @@ No table shape, RLS, storage bucket or uniqueness rule changes.
 
 ## Evidence state
 
-- UI/document wiring: IMPLEMENTED on PR #2534.
-- Production constraint before migration: VERIFIED to allow only proposal_form / benefit_illustration / premium_receipt / policy_copy.
-- Migration: committed on the feature branch; production application and verification are required before deployment is considered safe.
-- Merge/deployment: pending canonical `Verify web portal` success and explicit release workflow completion.
+- UI/document wiring: **IMPLEMENTED** on PR #2534.
+- Production constraint before migration: **VERIFIED** to allow only proposal_form / benefit_illustration / premium_receipt / policy_copy.
+- Migration `extend_life_health_case_document_types`: **APPLIED** to production Supabase project `ilzhsfqqjyppzzvfscmh` on 2026-09-29.
+- Post-apply verification: **VERIFIED**; `life_health_case_documents_document_type_check` is validated and allows all six document types including `kyc` and `other_document`.
+- Merge/deployment: pending canonical `Verify web portal` success and production release workflow completion.
 
 ## Continuation
 
-Do not deploy the Life compact-upload UI unless the widened production constraint is APPLIED and VERIFIED. A committed migration alone is not proof of runtime schema state.
+The production schema prerequisite for the Life compact-upload UI is now APPLIED + VERIFIED. Merge only after the canonical PR verification succeeds, then deploy through the protected production GitHub Actions workflow and verify the exact Vercel production deployment before marking the feature DEPLOYED.
