@@ -59,7 +59,6 @@ export async function listPartnerClaims({
   return (data ?? []) as PartnerClaimRow[];
 }
 
-
 export type PartnerClaimDetail = {
   claim: {
     id: string;
@@ -110,4 +109,5 @@ export async function getPartnerClaimDetail(claimId: string) {
   });
   if (error) throw error;
   if (!data) throw new Error('Claim detail is unavailable.');
+  return data as PartnerClaimDetail;
 }
