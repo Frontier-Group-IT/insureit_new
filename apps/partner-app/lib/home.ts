@@ -57,6 +57,8 @@ export type PartnerBusinessRangeSummary = {
   from_date: string;
   to_date: string;
   premium: number | string;
+  gross_premium: number | string;
+  net_premium: number | string;
   premium_previous_period: number | string;
   premium_change_percent: number | string;
   policies: number;
@@ -68,7 +70,7 @@ export type PartnerBusinessRangeSummary = {
 };
 
 export async function getPartnerBusinessRange(fromDate: string, toDate: string) {
-  const { data, error } = await supabase.rpc('partner_app_business_range', {
+  const { data, error } = await supabase.rpc('partner_app_business_range_v2', {
     p_from_date: fromDate,
     p_to_date: toDate,
   });
