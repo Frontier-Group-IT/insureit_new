@@ -1,0 +1,74 @@
+name: Apply Customer Life Health policy detail read access
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/release-sql/20260930_customer_life_health_policy_details_read.sql'
+      - '.github/workflows/apply-customer-life-health-policy-details-read.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    name: Apply Customer Life Health policy detail read access
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify schema configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/release-sql/20260930_customer_life_health_policy_details_read.sql
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply Customer Life Health detail read policy
+        run: supabase db query --linked --file supabase/release-sql/20260930_customer_life_health_policy_details_read.sql
+
+      - name: Verify scoped Life Health detail read policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              exists (
+                select 1
+                from pg_policies
+                where schemaname = 'public'
+                  and tablename = 'life_health_policy_details'
+                  and policyname = 'life health policy details parent policy read'
+                  and cmd = 'SELECT'
+                  and 'authenticated' = any(roles)
+              ) as detail_policy_ready,
+              not exists (
+                select 1
+                from pg_policies
+                where schemaname = 'public'
+                  and tablename = 'life_health_cases'
+                  and cmd = 'SELECT'
+                  and 'authenticated' = any(roles)
+              ) as case_table_stays_private
+          ")
+          echo "$result"
+          echo "$result" | grep -Eq '"detail_policy_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"case_table_stays_private"[[:space:]]*:[[:space:]]*true'
