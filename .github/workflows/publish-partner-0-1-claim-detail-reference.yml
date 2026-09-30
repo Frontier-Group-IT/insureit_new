@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - '.github/workflows/publish-partner-0-1-claim-detail-reference.yml'
+      - 'apps/partner-app/app/renewals.tsx'
+      - 'scripts/partner/compat/partner-renewals-reference-0-1.tsx'
       - 'apps/partner-app/app/claim/[id].tsx'
       - 'scripts/partner/compat/partner-claim-detail-reference-0-1.tsx'
       - 'apps/partner-app/app/policy-intakes.tsx'
@@ -195,6 +197,17 @@ jobs:
           grep -q 'Your business, in moments' compat/apps/partner-app/app/stories.tsx
           ! grep -q 'openLink' compat/apps/partner-app/app/stories.tsx
 
+      - name: Install current Renewals reference layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tooling/scripts/partner/compat/partner-renewals-reference-0-1.tsx compat/apps/partner-app/app/renewals.tsx
+          grep -q 'Renewal Work Queue' compat/apps/partner-app/app/renewals.tsx
+          grep -q 'RENEWAL OPPORTUNITIES' compat/apps/partner-app/app/renewals.tsx
+          grep -q 'Gross Premium' compat/apps/partner-app/app/renewals.tsx
+          grep -q 'Sort by' compat/apps/partner-app/app/renewals.tsx
+          ! grep -q 'PartnerFilterChip' compat/apps/partner-app/app/renewals.tsx
+
       - name: Install current Claim Details reference layout
         shell: bash
         run: |
@@ -244,7 +257,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 cumulative OTA with Policy Intake submissions reference layout" \
+            --message "Partner 0.1.0 cumulative OTA with Renewals reference redesign" \
             --clear-cache \
             --non-interactive
 
@@ -259,6 +272,7 @@ jobs:
             echo "- Channel: preview"
             echo "- Runtime: 0.1.0"
             echo "- Installed APK target: 0.1.0 (5)"
+            echo "- Renewals reference redesign: included"
             echo "- Claim Details reference redesign: included"
             echo "- Policy Intake submissions reference redesign: included"
             echo "- Policy Intake filters: enlarged and horizontally scrollable"
