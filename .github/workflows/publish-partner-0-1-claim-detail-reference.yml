@@ -16,6 +16,10 @@ on:
       - 'scripts/partner/compat/partner-claims-reference-0-1.tsx'
       - 'apps/partner-app/app/customers.tsx'
       - 'scripts/partner/compat/partner-customers-reference-0-1.tsx'
+      - 'apps/partner-app/app/customer/[id].tsx'
+      - 'apps/partner-app/lib/catalog-logos.ts'
+      - 'apps/partner-app/assets/catalog/insurers/**'
+      - 'apps/partner-app/assets/catalog/vehicle-brands/**'
   workflow_dispatch:
 
 permissions:
@@ -203,6 +207,25 @@ jobs:
           grep -q 'logo-whatsapp' compat/apps/partner-app/app/customers.tsx
           ! grep -q 'Customer book' compat/apps/partner-app/app/customers.tsx
 
+      - name: Install current Customer Detail reference layout and logos
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p compat/apps/partner-app/app/customer compat/apps/partner-app/lib compat/apps/partner-app/assets/catalog
+          cp 'tooling/apps/partner-app/app/customer/[id].tsx' 'compat/apps/partner-app/app/customer/[id].tsx'
+          cp tooling/apps/partner-app/lib/catalog-logos.ts compat/apps/partner-app/lib/catalog-logos.ts
+          rm -rf compat/apps/partner-app/assets/catalog/insurers compat/apps/partner-app/assets/catalog/vehicle-brands
+          cp -R tooling/apps/partner-app/assets/catalog/insurers compat/apps/partner-app/assets/catalog/insurers
+          cp -R tooling/apps/partner-app/assets/catalog/vehicle-brands compat/apps/partner-app/assets/catalog/vehicle-brands
+          grep -q 'PartnerContactActions phone={data.customer.phone} email={data.customer.email}' 'compat/apps/partner-app/app/customer/[id].tsx'
+          grep -q 'getPartnerInsurerLogoSource(policy.insurer_name)' 'compat/apps/partner-app/app/customer/[id].tsx'
+          grep -q 'getPartnerManufacturerLogoSource(vehicle.make)' 'compat/apps/partner-app/app/customer/[id].tsx'
+          grep -q 'getPartnerInsurerLogoSource(claim.insurer_name)' 'compat/apps/partner-app/app/customer/[id].tsx'
+          grep -q 'return resolve(value, insurers)' compat/apps/partner-app/lib/catalog-logos.ts
+          grep -q 'return resolve(value, manufacturers)' compat/apps/partner-app/lib/catalog-logos.ts
+          test -s compat/apps/partner-app/assets/catalog/vehicle-brands/jcb.png
+          test -s compat/apps/partner-app/assets/catalog/insurers/icici-lombard.png
+
       - name: Install current Stories reference layout
         shell: bash
         run: |
@@ -271,7 +294,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 cumulative OTA with Customer reference redesign" \
+            --message "Partner 0.1.0 cumulative OTA with Customer Detail reference redesign" \
             --clear-cache \
             --non-interactive
 
@@ -288,6 +311,7 @@ jobs:
             echo "- Installed APK target: 0.1.0 (5)"
             echo "- Renewals reference redesign: included"
             echo "- Customer reference redesign: included"
+            echo "- Customer Detail reference redesign + live insurer/manufacturer logos: included"
             echo "- Claim Details reference redesign: included"
             echo "- Policy Intake submissions reference redesign: included"
             echo "- Policy Intake filters: enlarged and horizontally scrollable"
