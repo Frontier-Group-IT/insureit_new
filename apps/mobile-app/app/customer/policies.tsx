@@ -15,14 +15,25 @@ import type { InsuranceCompany, Vehicle } from '@/lib/types';
 
 type PolicyFilter = 'All' | 'Active' | 'Renewal Due' | 'Expired';
 type PolicyTone = 'active' | 'due' | 'expired';
+type LifeHealthKind = 'Life' | 'Health';
+
+type LifeHealthPolicyDetails = {
+  premium_paying_term?: string | null;
+  policy_duration?: string | null;
+  payment_frequency?: string | null;
+};
 
 type PolicyRow = {
   id: string;
   customer_id: string;
-  vehicle_id: string;
+  vehicle_id: string | null;
   insurance_company_id: string;
   policy_no: string;
   policy_type: string;
+  business_line?: string | null;
+  policy_product?: string | null;
+  policy_term?: string | null;
+  life_health_policy_details?: LifeHealthPolicyDetails | LifeHealthPolicyDetails[] | null;
   start_date: string;
   end_date: string;
   source: 'sibl' | 'external';
@@ -48,7 +59,11 @@ export default function PoliciesScreen() {
       const ids = contexts.map((context) => context.customer_id);
       if (ids.length) {
         const [policyResult, externalPolicyResult, vehicleResult, companyResult] = await Promise.all([
-          supabase.from('policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date,status,superseded_by_policy_id').in('customer_id', ids).order('end_date', { ascending: true }),
+          (supabase as any)
+            .from('policies')
+            .select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,business_line,policy_product,policy_term,start_date,end_date,status,superseded_by_policy_id,life_health_policy_details!life_health_policy_details_policy_id_fkey(premium_paying_term,policy_duration,payment_frequency)')
+            .in('customer_id', ids)
+            .order('end_date', { ascending: true }),
           (supabase as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').in('customer_id', ids).order('end_date', { ascending: true }),
           supabase.from('vehicles').select('*').in('customer_id', ids),
           supabase.from('insurance_companies').select('*'),
@@ -56,11 +71,15 @@ export default function PoliciesScreen() {
         if (!active) return;
         const combinedPolicies: PolicyRow[] = [
           ...((policyResult.data ?? []) as Omit<PolicyRow, 'source'>[]).map((policy) => ({ ...policy, source: 'sibl' as const })),
-          ...((externalPolicyResult.data ?? []) as Omit<PolicyRow, 'source' | 'status' | 'superseded_by_policy_id'>[]).map((policy) => ({
+          ...((externalPolicyResult.data ?? []) as Omit<PolicyRow, 'source' | 'status' | 'superseded_by_policy_id' | 'business_line' | 'policy_product' | 'policy_term' | 'life_health_policy_details'>[]).map((policy) => ({
             ...policy,
             source: 'external' as const,
             status: null,
             superseded_by_policy_id: null,
+            business_line: null,
+            policy_product: null,
+            policy_term: null,
+            life_health_policy_details: null,
           })),
         ];
         setPolicies(currentPoliciesByVehicle(combinedPolicies));
@@ -79,7 +98,21 @@ export default function PoliciesScreen() {
     const vehicle = vehicles.find((item) => item.id === policy.vehicle_id);
     const company = companies.find((item) => item.id === policy.insurance_company_id);
     const tone = policyTone(policy.end_date);
-    const text = [policy.policy_no, policy.policy_type, vehicle?.vehicle_no, vehicle?.make, vehicle?.model, company?.name].filter(Boolean).join(' ').toLowerCase();
+    const details = getLifeHealthDetails(policy);
+    const text = [
+      policy.policy_no,
+      policy.policy_type,
+      policy.business_line,
+      policy.policy_product,
+      policy.policy_term,
+      details?.premium_paying_term,
+      details?.policy_duration,
+      details?.payment_frequency,
+      vehicle?.vehicle_no,
+      vehicle?.make,
+      vehicle?.model,
+      company?.name,
+    ].filter(Boolean).join(' ').toLowerCase();
     const matchesSearch = !query.trim() || text.includes(query.trim().toLowerCase());
     const matchesFilter = filter === 'All' || (filter === 'Renewal Due' ? tone === 'due' : filter.toLowerCase() === tone);
     return matchesSearch && matchesFilter;
@@ -119,49 +152,179 @@ export default function PoliciesScreen() {
         const colors = policyToneColors(tone);
         const manufacturerLogo = getVehicleBrandLogoSource(vehicle?.make);
         const insurerLogo = getInsurerLogoSource(company?.name);
+        const lifeHealthKind = getLifeHealthKind(policy);
 
         return (
           <Pressable
             key={`${policy.source}-${policy.id}`}
             accessibilityRole="button"
             onPress={() => router.push({ pathname: '/customer/policy-detail', params: { id: policy.id, source: policy.source } } as any)}
-            style={({ pressed }) => [styles.policyCard, pressed && styles.policyCardPressed]}
+            style={({ pressed }) => [styles.policyCard, lifeHealthKind && styles.lifeHealthPolicyCard, pressed && styles.policyCardPressed]}
           >
             <View style={styles.accentBar} />
 
-            <View style={styles.policyHeader}>
-              <Text style={[styles.stageLabel, policy.source === 'external' && styles.externalStageLabel]}>{policyStageLabel(policy, tone)}</Text>
-              <View style={[styles.sourcePill, { backgroundColor: colors.soft }]}>
-                <Text style={[styles.sourceText, { color: colors.accent }]}>{compactPolicyStatusLabel(tone, days)}</Text>
+            {lifeHealthKind ? (
+              <View style={styles.policyHeader}>
+                <View style={styles.policyHeaderLeft}>
+                  <Text style={[styles.stageLabel, policy.source === 'external' && styles.externalStageLabel]}>{policyStageLabel(policy, tone)}</Text>
+                  <View style={[styles.sourcePill, { backgroundColor: colors.soft }]}>
+                    <Text style={[styles.sourceText, { color: colors.accent }]}>{compactPolicyStatusLabel(tone, days)}</Text>
+                  </View>
+                </View>
+                <View style={styles.lifeHealthTypePill}>
+                  <Text style={styles.lifeHealthTypeText}>{lifeHealthKind.toUpperCase()}</Text>
+                </View>
               </View>
-            </View>
+            ) : (
+              <View style={styles.policyHeader}>
+                <Text style={[styles.stageLabel, policy.source === 'external' && styles.externalStageLabel]}>{policyStageLabel(policy, tone)}</Text>
+                <View style={[styles.sourcePill, { backgroundColor: colors.soft }]}>
+                  <Text style={[styles.sourceText, { color: colors.accent }]}>{compactPolicyStatusLabel(tone, days)}</Text>
+                </View>
+              </View>
+            )}
 
-            <View style={styles.policyContentRow}>
-              <PolicySummaryColumn
-                icon={insurerLogo}
-                fallbackIcon="shield-outline"
-                primaryValue={policy.source === 'external' ? formatExternalPolicyNumber(policy.policy_no) : policy.policy_no}
-                secondaryValue={company?.name ?? '-'}
-                tertiaryValue={formatDate(policy.end_date)}
-                tertiaryDotColor={colors.accent}
+            {lifeHealthKind ? (
+              <LifeHealthPolicyBody
+                policy={policy}
+                kind={lifeHealthKind}
+                insurerLogo={insurerLogo}
+                companyName={company?.name ?? '-'}
+                toneColor={colors.accent}
               />
-              <View style={styles.contentDivider} />
-              <PolicySummaryColumn
-                icon={manufacturerLogo}
-                fallbackIcon="car-side"
-                primaryValue={vehicle?.vehicle_no ?? 'Vehicle unavailable'}
-                secondaryValue={vehicle?.make ?? '-'}
-                tertiaryValue={vehicle?.model ?? '-'}
-                tertiaryMuted
-              />
-            </View>
-
+            ) : (
+              <View style={styles.policyContentRow}>
+                <PolicySummaryColumn
+                  icon={insurerLogo}
+                  fallbackIcon="shield-outline"
+                  primaryValue={policy.source === 'external' ? formatExternalPolicyNumber(policy.policy_no) : policy.policy_no}
+                  secondaryValue={company?.name ?? '-'}
+                  tertiaryValue={formatDate(policy.end_date)}
+                  tertiaryDotColor={colors.accent}
+                />
+                <View style={styles.contentDivider} />
+                <PolicySummaryColumn
+                  icon={manufacturerLogo}
+                  fallbackIcon="car-side"
+                  primaryValue={vehicle?.vehicle_no ?? 'Vehicle unavailable'}
+                  secondaryValue={vehicle?.make ?? '-'}
+                  tertiaryValue={vehicle?.model ?? '-'}
+                  tertiaryMuted
+                />
+              </View>
+            )}
           </Pressable>
         );
       })}
 
       {policies.length > 0 && filteredPolicies.length === 0 ? <EmptyState title="No matching policy" body="Try another search or filter." actionLabel="Clear Filters" onAction={() => { setQuery(''); setFilter('All'); }} icon="filter-remove-outline" /> : null}
     </Screen>
+  );
+}
+
+function LifeHealthPolicyBody({
+  policy,
+  kind,
+  insurerLogo,
+  companyName,
+  toneColor,
+}: {
+  policy: PolicyRow;
+  kind: LifeHealthKind;
+  insurerLogo: ImageSourcePropType | null;
+  companyName: string;
+  toneColor: string;
+}) {
+  const details = getLifeHealthDetails(policy);
+  const displayedPolicyNo = policy.source === 'external' ? formatExternalPolicyNumber(policy.policy_no) : policy.policy_no;
+  const ppt = cleanDisplayValue(details?.premium_paying_term);
+  const productName = cleanDisplayValue(policy.policy_product);
+  const paymentFrequency = cleanDisplayValue(details?.payment_frequency);
+  const policyDuration = cleanDisplayValue(details?.policy_duration ?? policy.policy_term);
+
+  return (
+    <>
+      <View style={styles.policyContentRow}>
+        <PolicySummaryColumn
+          icon={insurerLogo}
+          fallbackIcon="shield-outline"
+          primaryValue={displayedPolicyNo}
+          secondaryValue={companyName}
+          tertiaryValue={formatDate(policy.end_date)}
+          tertiaryDotColor={toneColor}
+        />
+        <View style={styles.contentDivider} />
+        <View style={styles.lifeHealthRightSummary}>
+          <View style={styles.lifeHealthDefaultIcon}>
+            <MaterialCommunityIcons name={kind === 'Health' ? 'heart-pulse' : 'shield-heart-outline'} size={24} color={palette.navy} />
+          </View>
+          <View style={styles.lifeHealthRightCopy}>
+            <CompactLabelValue icon="shield-outline" label="Policy No." value={displayedPolicyNo} />
+            <CompactLabelValue icon="calendar-range" label="PPT" value={ppt} />
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.lifeHealthMetricsRow}>
+        <LifeHealthMetric icon="file-document-outline" label="Product Name" value={productName} />
+        <View style={styles.lifeHealthMetricDivider} />
+        <LifeHealthMetric icon="credit-card-outline" label="Payment Frequency" value={paymentFrequency} />
+        <View style={styles.lifeHealthMetricDivider} />
+        <LifeHealthMetric icon="calendar-clock-outline" label="PD" value={policyDuration} />
+      </View>
+
+      <View style={styles.lifeHealthProtectionStrip}>
+        <MaterialCommunityIcons name="shield-check" size={20} color={palette.navy} />
+        <Text style={styles.lifeHealthProtectionText} numberOfLines={1}>
+          {kind === 'Health' ? 'Stay protected. Stay healthy.' : 'Protecting what matters most.'}
+        </Text>
+        <View style={styles.lifeHealthProtectionArt}>
+          <MaterialCommunityIcons name={kind === 'Health' ? 'heart-pulse' : 'heart-outline'} size={25} color={palette.navy} />
+        </View>
+      </View>
+    </>
+  );
+}
+
+function CompactLabelValue({
+  icon,
+  label,
+  value,
+}: {
+  icon: 'shield-outline' | 'calendar-range';
+  label: string;
+  value: string;
+}) {
+  return (
+    <View style={styles.compactLabelValueRow}>
+      <MaterialCommunityIcons name={icon} size={15} color={palette.navy} />
+      <View style={styles.compactLabelValueCopy}>
+        <Text style={styles.compactLabel}>{label}</Text>
+        <Text style={styles.compactValue} numberOfLines={1}>{value}</Text>
+      </View>
+    </View>
+  );
+}
+
+function LifeHealthMetric({
+  icon,
+  label,
+  value,
+}: {
+  icon: 'file-document-outline' | 'credit-card-outline' | 'calendar-clock-outline';
+  label: string;
+  value: string;
+}) {
+  return (
+    <View style={styles.lifeHealthMetric}>
+      <View style={styles.lifeHealthMetricIcon}>
+        <MaterialCommunityIcons name={icon} size={17} color={palette.navy} />
+      </View>
+      <View style={styles.lifeHealthMetricCopy}>
+        <Text style={styles.lifeHealthMetricLabel} numberOfLines={1}>{label}</Text>
+        <Text style={styles.lifeHealthMetricValue} numberOfLines={1}>{value}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -203,6 +366,23 @@ function PolicySummaryColumn({
   );
 }
 
+function getLifeHealthKind(policy: PolicyRow): LifeHealthKind | null {
+  const businessLine = (policy.business_line ?? '').trim().toLowerCase();
+  const policyType = (policy.policy_type ?? '').trim().toLowerCase();
+  if (businessLine === 'life' || policyType === 'life') return 'Life';
+  if (businessLine === 'health' || policyType === 'health') return 'Health';
+  return null;
+}
+
+function getLifeHealthDetails(policy: PolicyRow) {
+  const details = policy.life_health_policy_details;
+  return Array.isArray(details) ? details[0] ?? null : details ?? null;
+}
+
+function cleanDisplayValue(value?: string | null) {
+  const cleaned = value?.trim();
+  return cleaned || '-';
+}
 
 function currentPoliciesByVehicle(policies: PolicyRow[]) {
   const candidates = policies.filter((policy) => {
@@ -212,9 +392,10 @@ function currentPoliciesByVehicle(policies: PolicyRow[]) {
 
   const latestByVehicle = new Map<string, PolicyRow>();
   for (const policy of candidates) {
-    const existing = latestByVehicle.get(policy.vehicle_id);
+    const groupingKey = policy.vehicle_id ? `vehicle:${policy.vehicle_id}` : `policy:${policy.source}:${policy.id}`;
+    const existing = latestByVehicle.get(groupingKey);
     if (!existing || comparePolicyRecency(policy, existing) > 0) {
-      latestByVehicle.set(policy.vehicle_id, policy);
+      latestByVehicle.set(groupingKey, policy);
     }
   }
 
@@ -240,7 +421,6 @@ function countForFilter(filter: PolicyFilter, policies: PolicyRow[]) {
     return filter === 'All' || (filter === 'Renewal Due' ? tone === 'due' : filter.toLowerCase() === tone);
   }).length;
 }
-
 
 function formatDate(value?: string | null) {
   if (!value) return '-';
@@ -290,13 +470,17 @@ const styles = StyleSheet.create({
   filterText: { color: palette.slate, fontSize: 11.5, fontWeight: '900' },
   filterTextActive: { color: '#FFFFFF' },
   policyCard: { backgroundColor: '#FBFCFE', borderWidth: 1, borderColor: '#D8E3EE', borderRadius: 18, padding: 12, paddingLeft: 17, marginBottom: 10, overflow: 'hidden', shadowColor: palette.ink, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 },
+  lifeHealthPolicyCard: { paddingBottom: 11 },
   policyCardPressed: { opacity: 0.9, transform: [{ scale: 0.985 }] },
   accentBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: palette.navy },
   policyHeader: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 22 },
+  policyHeaderLeft: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 7 },
   stageLabel: { color: palette.navy, fontSize: 9.8, fontWeight: '900', letterSpacing: 0.6 },
   externalStageLabel: { color: '#0A43A3' },
   sourcePill: { borderRadius: 999, paddingHorizontal: 6, paddingVertical: 3 },
   sourceText: { fontSize: 7.8, fontWeight: '900' },
+  lifeHealthTypePill: { borderRadius: 999, backgroundColor: '#EAF2FB', paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: '#D7E5F4' },
+  lifeHealthTypeText: { color: palette.navy, fontSize: 7.8, fontWeight: '900', letterSpacing: 0.45 },
   policyContentRow: { marginTop: 10, flexDirection: 'row', alignItems: 'stretch' },
   summaryColumn: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 2, paddingVertical: 4 },
   contentDivider: { width: 1, backgroundColor: '#E1E8F0', marginHorizontal: 10, marginVertical: 2 },
@@ -309,6 +493,23 @@ const styles = StyleSheet.create({
   summaryTertiary: { color: '#64748B', fontSize: 10.4, lineHeight: 13, fontWeight: '700', flexShrink: 1 },
   summaryTertiaryMuted: { color: '#97A2B2', fontWeight: '700' },
   expiryDot: { width: 6, height: 6, borderRadius: 999, flexShrink: 0 },
+  lifeHealthRightSummary: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 2, paddingVertical: 2 },
+  lifeHealthDefaultIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#EEF5FC', alignItems: 'center', justifyContent: 'center' },
+  lifeHealthRightCopy: { flex: 1, minWidth: 0, gap: 5 },
+  compactLabelValueRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
+  compactLabelValueCopy: { flex: 1, minWidth: 0 },
+  compactLabel: { color: '#7B8798', fontSize: 7.8, lineHeight: 10, fontWeight: '800' },
+  compactValue: { color: palette.ink, fontSize: 10.5, lineHeight: 13, fontWeight: '900', marginTop: 1 },
+  lifeHealthMetricsRow: { marginTop: 10, borderRadius: 12, backgroundColor: '#EFF6FD', paddingVertical: 8, paddingHorizontal: 7, flexDirection: 'row', alignItems: 'stretch' },
+  lifeHealthMetric: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 4 },
+  lifeHealthMetricIcon: { width: 28, height: 28, borderRadius: 999, backgroundColor: '#E3F0FC', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  lifeHealthMetricCopy: { flex: 1, minWidth: 0 },
+  lifeHealthMetricLabel: { color: '#6F7E90', fontSize: 7.4, lineHeight: 9.5, fontWeight: '800' },
+  lifeHealthMetricValue: { color: palette.ink, fontSize: 9.8, lineHeight: 12, fontWeight: '900', marginTop: 2 },
+  lifeHealthMetricDivider: { width: 1, backgroundColor: '#D7E4F1', marginHorizontal: 2 },
+  lifeHealthProtectionStrip: { marginTop: 8, minHeight: 38, borderRadius: 11, backgroundColor: '#EFF6FD', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 8, overflow: 'hidden' },
+  lifeHealthProtectionText: { flex: 1, minWidth: 0, color: '#5F7082', fontSize: 9.5, lineHeight: 12, fontWeight: '800' },
+  lifeHealthProtectionArt: { width: 38, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', backgroundColor: '#E4F0FB', borderTopLeftRadius: 22, borderBottomLeftRadius: 22 },
   cardFooter: { marginTop: 10, paddingTop: 9, borderTopWidth: 1, borderTopColor: '#E5ECF5', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   footerHint: { color: palette.slate, fontSize: 11.5, fontWeight: '900' },
 });
