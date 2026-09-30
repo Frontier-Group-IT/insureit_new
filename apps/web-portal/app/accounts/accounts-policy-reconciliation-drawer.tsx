@@ -17,6 +17,8 @@ type Props = {
 
 type EntryMode = "payin" | "payout" | null;
 
+const NO_PAYABLE_MESSAGE = "No payout amount is currently payable for this policy.";
+
 export function AccountsPolicyReconciliationDrawer({ lookup, onClose, onPosted }: Props) {
   const [detail, setDetail] = useState<AccountsPolicyReconciliationDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -84,6 +86,11 @@ export function AccountsPolicyReconciliationDrawer({ lookup, onClose, onPosted }
   }, [lookup, mode, onClose, saving]);
 
   const openMode = (nextMode: Exclude<EntryMode, null>) => {
+    if (nextMode === "payout" && detail && detail.payoutDifference <= 0.01) {
+      setEntryError(NO_PAYABLE_MESSAGE);
+      return;
+    }
+
     setEntryError("");
     setMode(nextMode);
     if (nextMode === "payin") {
@@ -133,22 +140,27 @@ export function AccountsPolicyReconciliationDrawer({ lookup, onClose, onPosted }
   const submitPayout = async () => {
     if (!lookup || !detail || saving) return;
     const amount = numeric(paidAmount);
+    if (detail.payoutDifference <= 0.01) return setEntryError(NO_PAYABLE_MESSAGE);
     if (!paidDate) return setEntryError("Choose a Paid Date.");
     if (!reference.trim()) return setEntryError("UTR / reference is required.");
     if (amount <= 0) return setEntryError("Paid Amount must be greater than zero.");
-    if (detail.payoutDifference > 0.01 && amount > detail.payoutDifference + 0.01) return setEntryError("Paid Amount exceeds the remaining payable balance.");
+    if (amount > detail.payoutDifference + 0.01) return setEntryError("Paid Amount exceeds the remaining payable balance.");
 
     setSaving(true);
     setEntryError("");
     try {
-      const updated = await postAccountsDirectPayoutAction({
+      const result = await postAccountsDirectPayoutAction({
         lookup,
         paidAmount: amount,
         paidDate,
         reference: reference.trim(),
         remarks: payoutRemarks.trim(),
       });
-      setDetail(updated);
+      if (!result.ok) {
+        setEntryError(result.error);
+        return;
+      }
+      setDetail(result.detail);
       setMode(null);
       await onPosted?.();
     } catch (reason: unknown) {
@@ -203,8 +215,8 @@ export function AccountsPolicyReconciliationDrawer({ lookup, onClose, onPosted }
             actionLabel="Add Payout"
             onAction={() => openMode("payout")}
             active={mode === "payout"}
-            disabled={!detail.payoutId}
-            disabledTitle={!detail.payoutId ? "A single eligible payout record is required for direct posting." : undefined}
+            disabled={!detail.payoutId || detail.payoutDifference <= 0.01}
+            disabledTitle={!detail.payoutId || detail.payoutDifference <= 0.01 ? NO_PAYABLE_MESSAGE : undefined}
           />
         </section>
 
