@@ -2,7 +2,7 @@
 
 ## State
 
-**IMPLEMENTED on branch `ui/customer-life-health-policy-cards`; PR/CI/merge/OTA/device verification pending.**
+**MERGED in PR #2618 as `802ac93a5935c4fe83257800a9ec9f415d5fc523`; canonical mobile and web verification passed on feature head `84aae184241844faa0de099d374f40ba68bd3bd9`. Production web deployment is pending.**
 
 ## User-approved layout
 
@@ -39,4 +39,5 @@ Life/Health policies legitimately have no vehicle. The visible-policy dedupe now
 - No native dependency/config/runtime change.
 - No APK/AAB created or authorized.
 - Added a focused Customer Life/Health policy-card regression to the canonical mobile verification workflow.
+- Production schema application is not required because PR #2618 contains no Supabase migration.
 - OTA must only be published from exact current `main` after merge and explicit release instruction, followed by installed-device verification.
