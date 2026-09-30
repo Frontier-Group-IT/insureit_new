@@ -11,12 +11,12 @@ export const revalidate = 0;
 type CaseRow = { id:string; case_number:string; business_line:"Life"|"Health"; status:string; sourcing_date:string; customer_id:string; insurance_company_id:string; product_name:string; proposal_number:string; premium_paying_term:string|null; policy_duration:string|null; payment_frequency:string; payment_mode:string; premium_amount:number; intermediary_type:string|null; intermediary_code:string|null; lead_source:string|null; intermediary_mobile:string|null; rm_name:string|null; rm_code:string|null; remarks:string|null; final_policy_id:string|null; converted_at:string|null; created_at:string; created_by:string|null; converted_by:string|null };
 type CustomerRow = { id:string; contact_name:string; company_name:string|null; phone:string; email:string|null };
 type InsurerRow = { id:string; name:string };
-type DocumentRow = { id:string; document_type:string; file_name:string; created_at:string; uploaded_by:string|null };
+type DocumentRow = { id:string; document_type:string; file_name:string; storage_bucket:string; storage_path:string; created_at:string; uploaded_by:string|null };
 type PolicyRow = { id:string; policy_no:string; policy_code:string|null };
 type ProfileRow = { id:string; full_name:string|null };
 type ActivityRow = { id:string; action:string; createdAt:string; createdBy:string };
 
-const documentAction=(type:string)=>type==="policy_copy"?"Policy Doc. Uploaded":type==="proposal_form"?"Proposal Form Uploaded":type==="kyc"?"KYC Uploaded":"Document Uploaded";
+const documentAction=(type:string)=>type==="policy_copy"?"Policy Doc. Uploaded":type==="proposal_form"?"Proposal Form Uploaded":type==="benefit_illustration"?"Benefit Illustration Uploaded":type==="premium_receipt"?"Premium Receipt Uploaded":"Document Uploaded";
 
 export default async function LifeHealthCasePage({ params }: { params: Promise<{ id: string }> }) {
   await requirePolicyCreator();
@@ -31,17 +31,18 @@ export default async function LifeHealthCasePage({ params }: { params: Promise<{
     admin.from("customers").select("id,contact_name,company_name,phone,email").eq("id", caseRow.customer_id).maybeSingle<CustomerRow>(),
     admin.from("insurance_companies").select("id,name").eq("id", caseRow.insurance_company_id).maybeSingle<InsurerRow>(),
     admin.from("insurance_companies").select("id,name").eq("is_active", true).order("name").returns<InsurerRow[]>(),
-    admin.from("life_health_case_documents").select("id,document_type,file_name,created_at,uploaded_by").eq("case_id", id).order("created_at", { ascending: true }).returns<DocumentRow[]>(),
+    admin.from("life_health_case_documents").select("id,document_type,file_name,storage_bucket,storage_path,created_at,uploaded_by").eq("case_id", id).order("created_at", { ascending: true }).returns<DocumentRow[]>(),
     caseRow.final_policy_id ? admin.from("policies").select("id,policy_no,policy_code").eq("id", caseRow.final_policy_id).maybeSingle<PolicyRow>() : Promise.resolve({ data: null, error: null }),
   ]);
 
-  const documents=documentsResult.data??[];
-  const actorIds=Array.from(new Set([caseRow.created_by,caseRow.converted_by,...documents.map(document=>document.uploaded_by)].filter((value):value is string=>Boolean(value))));
+  const documentRows=documentsResult.data??[];
+  const documents=await Promise.all(documentRows.map(async(document)=>{const{data:signed}=await admin.storage.from(document.storage_bucket).createSignedUrl(document.storage_path,60*60);return{id:document.id,document_type:document.document_type,file_name:document.file_name,created_at:document.created_at,view_url:signed?.signedUrl||""}}));
+  const actorIds=Array.from(new Set([caseRow.created_by,caseRow.converted_by,...documentRows.map(document=>document.uploaded_by)].filter((value):value is string=>Boolean(value))));
   const profilesResult=actorIds.length?await admin.from("profiles").select("id,full_name").in("id",actorIds).returns<ProfileRow[]>():{data:[] as ProfileRow[],error:null};
   const actorNames=new Map((profilesResult.data??[]).map(profile=>[profile.id,profile.full_name?.trim()||"User"]));
   const activities:ActivityRow[]=[
     {id:`case-${caseRow.id}`,action:"Case Created",createdAt:caseRow.created_at,createdBy:caseRow.created_by?actorNames.get(caseRow.created_by)||"User":"User"},
-    ...documents.map(document=>({id:`document-${document.id}`,action:documentAction(document.document_type),createdAt:document.created_at,createdBy:document.uploaded_by?actorNames.get(document.uploaded_by)||"User":"User"})),
+    ...documentRows.map(document=>({id:`document-${document.id}`,action:documentAction(document.document_type),createdAt:document.created_at,createdBy:document.uploaded_by?actorNames.get(document.uploaded_by)||"User":"User"})),
     ...(caseRow.converted_at?[{id:`converted-${caseRow.id}`,action:"Policy Created & Case Closed",createdAt:caseRow.converted_at,createdBy:caseRow.converted_by?actorNames.get(caseRow.converted_by)||"User":"User"}]:[]),
   ].sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime());
 
