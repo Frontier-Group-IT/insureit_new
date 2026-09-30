@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { CheckCircle2, Phone, Upload } from "lucide-react";
+import { CheckCircle2, Eye, Phone, Upload } from "lucide-react";
 import { updateIssuedLifeHealthPolicy } from "@/app/policies/life-health-issued-policy-edit-actions";
 import { updateIssuedLifeHealthCustomer } from "@/app/policies/life-health-issued-customer-edit-actions";
 import { replaceIssuedLifeHealthDocument, type LifeHealthIssuedDocument, type LifeHealthIssuedDocumentType } from "@/app/policies/life-health-issued-policy-document-actions";
@@ -17,7 +17,7 @@ const labelClass = "mb-1.5 flex items-center gap-1.5 text-[9px] font-bold upperc
 const frequencies = ["Monthly","Quarterly","Half Yearly","Annually","One Time"];
 const modes = ["Cash","Cheque","NEFT/RTGS","UPI","Credit/Debit Card","Net Banking"];
 const years = Array.from({length:50},(_,i)=>`${i+1} Year${i?"s":""}`);
-const documentLabels: Array<[LifeHealthIssuedDocumentType,string]> = [["policy_copy","Policy Copy"],["proposal_form","Proposal Form"],["kyc","KYC"],["other_document","Other Document"]];
+const documentLabels: Array<[LifeHealthIssuedDocumentType,string]> = [["policy_copy","Policy Copy"],["proposal_form","Proposal Form"],["benefit_illustration","Benefit Illustration"],["premium_receipt","Premium Receipt"],["other_document","Other Document"]];
 
 export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, activityItems, documents }: Props) {
   const router = useRouter();
@@ -85,7 +85,7 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
     {error?<div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">{error}</div>:null}
     <div className="mt-4"><StandardActivityStatusCard items={activityItems} emptyText="Activity not recorded"/></div>
     <div className="mt-3 flex flex-col gap-3 border border-[#DDE4EE] bg-white px-4 py-3 shadow-[0_6px_18px_rgba(15,23,42,0.035)] lg:flex-row lg:items-center lg:justify-between">
-      <div className="flex min-w-0 flex-wrap items-center gap-2">{documentLabels.map(([type,label])=>{const doc=documentState.find((item)=>item.type===type);return <div key={type} className="relative">{doc?<a href={doc.viewUrl||undefined} target="_blank" rel="noreferrer" title={doc.fileName} className={`inline-flex h-10 items-center gap-2 rounded-xl border border-[#A9DCC2] bg-[#F0FBF5] px-3 text-[10px] font-semibold text-[#168653] ${doc.viewUrl?"hover:bg-[#E7F8EF]":"pointer-events-none"}`}><CheckCircle2 className="h-4 w-4"/>{label} Uploaded</a>:<label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-[#BFD3F5] px-3 text-[10px] font-semibold text-[#1859B7] hover:bg-[#F5F9FF]"><Upload className="h-4 w-4"/>{documentPending?"Uploading…":`Add ${label}`}<input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" disabled={documentPending} onChange={(e)=>uploadDocument(type,e.target.files?.[0])}/></label>}</div>})}</div>
+      <div className="flex min-w-0 flex-wrap items-start gap-2">{documentLabels.map(([type,label])=>{const doc=documentState.find((item)=>item.type===type);return <div key={type} className="min-w-[142px] max-w-[190px]">{doc?<><div className="flex items-center gap-1"><label title={`Replace ${label}`} className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-[#A9DCC2] bg-[#F0FBF5] px-3 text-[10px] font-semibold text-[#168653] hover:bg-[#E7F8EF]"><CheckCircle2 className="h-4 w-4"/>{label}<input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" disabled={documentPending} onChange={(e)=>uploadDocument(type,e.target.files?.[0])}/></label><a href={doc.viewUrl||undefined} target="_blank" rel="noreferrer" aria-label={`View ${label}`} title={`View ${doc.fileName}`} className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#BFD3F5] text-[#1859B7] ${doc.viewUrl?"hover:bg-[#F5F9FF]":"pointer-events-none opacity-50"}`}><Eye className="h-4 w-4"/></a></div><p className="mt-1 truncate px-1 text-[8px] text-[#667085]" title={doc.fileName}>{doc.fileName}</p></>:<label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-[#BFD3F5] px-3 text-[10px] font-semibold text-[#1859B7] hover:bg-[#F5F9FF]"><Upload className="h-4 w-4"/>{documentPending?"Uploading…":`Add ${label}`}<input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" disabled={documentPending} onChange={(e)=>uploadDocument(type,e.target.files?.[0])}/></label>}</div>})}</div>
       <div className="flex shrink-0 justify-end gap-2"><Link href="/policies" className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Cancel</Link><button type="button" onClick={save} disabled={pending||documentPending} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-60">{pending?"Saving changes…":"Save Policy Changes"}</button></div>
     </div>
   </div>;
