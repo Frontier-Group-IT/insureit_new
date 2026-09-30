@@ -178,6 +178,15 @@ export default function PoliciesScreen() {
 
   return (
     <Screen title="My Policies" showLogout showTitleHeader={false}>
+      {categoryMenuOpen ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close policy category menu"
+          onPress={() => setCategoryMenuOpen(false)}
+          style={styles.categoryDropdownDismissLayer}
+        />
+      ) : null}
+
       <View style={styles.searchSection}>
         <View style={styles.searchHeadingRow}>
           <View>
@@ -282,7 +291,7 @@ export default function PoliciesScreen() {
               <View style={styles.policyHeader}>
                 <View style={styles.policyHeaderLeft}>
                   <Text style={[styles.stageLabel, policy.source === 'external' && styles.externalStageLabel]}>{policyStageLabel(policy, tone)}</Text>
-                  <View style={[styles.sourcePill, { backgroundColor: colors.soft }]}>
+                  <View style={[styles.sourcePill, { backgroundColor: colors.soft }]}> 
                     <Text style={[styles.sourceText, { color: colors.accent }]}>{compactPolicyStatusLabel(tone, days)}</Text>
                   </View>
                 </View>
@@ -293,7 +302,7 @@ export default function PoliciesScreen() {
             ) : (
               <View style={styles.policyHeader}>
                 <Text style={[styles.stageLabel, policy.source === 'external' && styles.externalStageLabel]}>{policyStageLabel(policy, tone)}</Text>
-                <View style={[styles.sourcePill, { backgroundColor: colors.soft }]}>
+                <View style={[styles.sourcePill, { backgroundColor: colors.soft }]}> 
                   <Text style={[styles.sourceText, { color: colors.accent }]}>{compactPolicyStatusLabel(tone, days)}</Text>
                 </View>
               </View>
@@ -595,6 +604,7 @@ const styles = StyleSheet.create({
   addButton: { minHeight: 34, borderRadius: 12, backgroundColor: palette.navy, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 4 },
   addButtonPressed: { opacity: 0.84, transform: [{ scale: 0.96 }] },
   addButtonText: { color: '#FFFFFF', fontSize: 11.5, fontWeight: '900' },
+  categoryDropdownDismissLayer: { ...StyleSheet.absoluteFillObject, zIndex: 10 },
   filterRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12, zIndex: 20 },
   categoryDropdownWrap: { position: 'relative', zIndex: 30, marginRight: 8 },
   categoryDropdownChip: { flexDirection: 'row', gap: 3, paddingHorizontal: 10 },
