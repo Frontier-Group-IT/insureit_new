@@ -16,7 +16,6 @@ const insurers: Array<[string[], ImageSourcePropType]> = [
   [['icici lombard'], require('../assets/catalog/insurers/icici-lombard.png')],
   [['hdfc ergo'], require('../assets/catalog/insurers/hdfc-ergo.png')],
   [['tata aig'], require('../assets/catalog/insurers/tata-aig.png')],
-  [['bajaj allianz', 'bajaj general'], require('../assets/catalog/insurers/bajaj-allianz.png')],
   [['iffco tokio'], require('../assets/catalog/insurers/iffco-tokio.png')],
   [['sbi general'], require('../assets/catalog/insurers/sbi-general.png')],
   [['shriram general'], require('../assets/catalog/insurers/shriram-general.png')],
@@ -37,6 +36,7 @@ const insurers: Array<[string[], ImageSourcePropType]> = [
   [['axis max life', 'max life'], require('../assets/catalog/insurers/axis-max-life.png')],
   [['pnb metlife'], require('../assets/catalog/insurers/pnb-metlife.png')],
   [['aditya birla sun life'], require('../assets/catalog/insurers/aditya-birla-sun-life.png')],
+  [['bajaj life'], require('../assets/catalog/insurers/bajaj-life.png')],
 ];
 
 const manufacturers: Array<[string[], ImageSourcePropType]> = [
