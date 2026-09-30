@@ -26,6 +26,8 @@ Read `../../docs/PARTNER_APP_HANDOFF_2026_09_13.md`, `../../docs/PARTNER_APP_HOM
 
 Use separate states: IMPLEMENTED, MERGED, DEPLOYED, VERIFIED. OTA publish success is not installed-device verification. After Partner OTA publication, require a cold launch (often twice) and device verification.
 
+- **2026-09-30 — Partner Profile & registration reference redesign:** branch `ui/partner-profile-reference-redesign`; Profile now follows the supplied blue reference with a custom Account header, deep-blue identity hero, role pill, icon-led Registration rows and a blue-only Commercial Access card. Existing live identity/scope data and server authorization are preserved. No green/teal is used in Commercial Access. **IMPLEMENTED; PR/CI/merge/runtime 0.1.0 OTA pending. NO APK/AAB CREATED.**
+
 - **2026-09-30 — Partner Activity reference redesign:** branch `ui/partner-activity-reference-redesign`; Activity now follows the supplied blue-header/card reference, uses insurer logos when resolvable with existing safe fallbacks, keeps live activity/attention data and routes, renames the list heading to `Recent activity · Today`, and removes the left timeline dots/vertical connector completely. **IMPLEMENTED; PR/CI/merge/runtime 0.1.0 OTA pending. NO APK/AAB CREATED.**
 
 - **2026-09-30 — Partner Customer Detail reference redesign:** branch `ui/partner-customer-detail-reference`; Customer Detail now follows the approved blue-header/card reference, keeps live customer/policy/vehicle/claim values, shows Call + WhatsApp + Email, uses insurer logos for Policies/Claims and manufacturer logos for Vehicles with safe fallbacks. **IMPLEMENTED; PR/CI/merge/runtime 0.1.0 OTA pending. NO APK/AAB CREATED.**
