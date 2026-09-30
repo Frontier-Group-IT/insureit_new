@@ -4,14 +4,14 @@ import { revalidatePath } from "next/cache";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-export type LifeHealthIssuedDocumentType = "policy_copy" | "proposal_form" | "benefit_illustration" | "premium_receipt";
+export type LifeHealthIssuedDocumentType = "policy_copy" | "proposal_form" | "kyc" | "other_document";
 export type LifeHealthIssuedDocument = { id: string; type: LifeHealthIssuedDocumentType; fileName: string; viewUrl: string };
 export type LifeHealthIssuedDocumentResult = { ok: true; document: LifeHealthIssuedDocument | null } | { ok: false; error: string };
 
 const DOCUMENT_BUCKET = "policy-documents";
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
-const DOCUMENT_TYPES = new Set<LifeHealthIssuedDocumentType>(["policy_copy", "proposal_form", "benefit_illustration", "premium_receipt"]);
+const DOCUMENT_TYPES = new Set<LifeHealthIssuedDocumentType>(["policy_copy", "proposal_form", "kyc", "other_document"]);
 const clean = (value: unknown) => String(value ?? "").trim();
 const safeFileName = (name: string) => name.trim().replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-") || "document";
 
