@@ -64,19 +64,6 @@ jobs:
               if text == original:
                   raise SystemExit(f'No changes made to {path}')
               path.write_text(text)
-
-          workflow = Path('.github/workflows/publish-partner-0-1-claim-detail-reference.yml')
-          text = workflow.read_text()
-          marker = "      - 'scripts/partner/compat/partner-policy-intakes-reference-0-1.tsx'\n"
-          addition = marker + "      - 'apps/partner-app/app/(tabs)/claims.tsx'\n      - 'scripts/partner/compat/partner-claims-reference-0-1.tsx'\n"
-          if "apps/partner-app/app/(tabs)/claims.tsx" not in text.split('workflow_dispatch:')[0]:
-              if marker not in text:
-                  raise SystemExit('Could not find OTA path marker')
-              text = text.replace(marker, addition, 1)
-          workflow.write_text(text)
-
-          temp = Path('.github/workflows/_temp_patch_partner_claims_new_status.yml')
-          temp.unlink()
           PY
 
       - name: Verify patch
@@ -87,14 +74,13 @@ jobs:
           grep -q "statusNew: { backgroundColor: '#0B2E63' }" 'apps/partner-app/app/(tabs)/claims.tsx'
           grep -q "statusTextNew: { color: '#FFFFFF' }" 'apps/partner-app/app/(tabs)/claims.tsx'
           grep -q "const isNew = /\^new\$/i" 'scripts/partner/compat/partner-claims-reference-0-1.tsx'
-          grep -q "apps/partner-app/app/(tabs)/claims.tsx" '.github/workflows/publish-partner-0-1-claim-detail-reference.yml'
 
-      - name: Commit patched files
+      - name: Commit patched source files
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
+          git add 'apps/partner-app/app/(tabs)/claims.tsx' 'scripts/partner/compat/partner-claims-reference-0-1.tsx'
           git commit -m 'Update Partner Claims New status to dark blue'
           git push origin HEAD:partner-claims-new-status-dark-blue
