@@ -8,6 +8,8 @@ on:
       - '.github/workflows/publish-partner-0-1-claim-detail-reference.yml'
       - 'apps/partner-app/app/claim/[id].tsx'
       - 'scripts/partner/compat/partner-claim-detail-reference-0-1.tsx'
+      - 'apps/partner-app/app/policy-intakes.tsx'
+      - 'scripts/partner/compat/partner-policy-intakes-reference-0-1.tsx'
   workflow_dispatch:
 
 permissions:
@@ -172,6 +174,17 @@ jobs:
           grep -q '<Text style={styles.headerTitle}>Send Policy to Operations</Text>' 'compat/apps/partner-app/app/policy-intake-new.tsx'
           grep -q '<Text style={styles.sectionTitle}>Lead Source</Text>' 'compat/apps/partner-app/app/policy-intake-new.tsx'
 
+      - name: Install current Policy Intake submissions layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tooling/scripts/partner/compat/partner-policy-intakes-reference-0-1.tsx 'compat/apps/partner-app/app/policy-intakes.tsx'
+          grep -q 'Search by PIR number, customer, insurer or source' 'compat/apps/partner-app/app/policy-intakes.tsx'
+          grep -q "label: 'Action Required'" 'compat/apps/partner-app/app/policy-intakes.tsx'
+          grep -q '<ScrollView horizontal' 'compat/apps/partner-app/app/policy-intakes.tsx'
+          grep -q "\['Uploaded', 'RTO', 'Review', 'Done'\]" 'compat/apps/partner-app/app/policy-intakes.tsx'
+          grep -q 'Policies" active' 'compat/apps/partner-app/app/policy-intakes.tsx'
+
       - name: Install current Stories reference layout
         shell: bash
         run: |
@@ -229,7 +242,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 cumulative OTA with reference Claim Details and horizontal Journey" \
+            --message "Partner 0.1.0 cumulative OTA with Policy Intake submissions reference layout" \
             --clear-cache \
             --non-interactive
 
@@ -238,14 +251,15 @@ jobs:
         shell: bash
         run: |
           {
-            echo "## Partner 0.1.0 cumulative OTA with Claim Detail"
+            echo "## Partner 0.1.0 cumulative OTA"
             echo
             echo "- Source baseline: $COMPAT_SHA"
             echo "- Channel: preview"
             echo "- Runtime: 0.1.0"
             echo "- Installed APK target: 0.1.0 (5)"
             echo "- Claim Details reference redesign: included"
-            echo "- Claim Journey: horizontal"
+            echo "- Policy Intake submissions reference redesign: included"
+            echo "- Policy Intake filters: enlarged and horizontally scrollable"
             echo "- Existing cumulative Partner refinements: preserved"
             echo "- Native APK/AAB build: not used"
           } >> "$GITHUB_STEP_SUMMARY"
