@@ -357,24 +357,42 @@ Reason:
 
 ---
 
+## Milestone — Destination Production Deployment Opens Correctly
+
+**Achieved on 2026-09-30.**
+
+The destination Vercel project `insureit_new` reached a successful READY Production deployment after two migration blockers were resolved:
+
+1. **Supabase build blocker resolved** — the real Production values for `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` were restored.
+2. **Monorepo output-path blocker resolved** — Vercel Root Directory was set to `apps/web-portal`, allowing Vercel to find the correct `.next` output.
+3. **Canonical-host redirect understood and migration testing unblocked** — `apps/web-portal/middleware.ts` intentionally redirects Production `*.vercel.app` requests to `portal.insureit.in`. During migration this caused every new Vercel alias to land on the old paused custom-domain deployment. The new destination deployment is now opening correctly for direct testing, so this is the current migration milestone.
+
+At this checkpoint, the application **builds and opens correctly on the destination Vercel project**. The remaining work is primarily restoration/validation of runtime integration environment variables and the final custom-domain handoff.
+
+Do not treat successful page load alone as completion: email, OCR/Document AI, voice/Sarvam, iCall, PAN verification, captcha, and assistant/OpenAI integrations still need their real values restored and tested.
+
+---
+
 ## 10. Current State at Handover
 
 Completed:
-- destination Vercel project exists
-- GitHub repo imported
-- monorepo builds correctly
-- 39 environment-variable names/scopes have been recreated
-- all old sensitive values were confirmed non-retrievable from Vercel
-- the three critical Supabase Production variables have now been manually restored with real values:
+- destination Vercel project exists and is linked to the GitHub repo
+- Vercel Root Directory is correctly set to `apps/web-portal`
+- Next.js Production build succeeds end-to-end
+- destination Production deployment is READY and the direct Vercel deployment URL opens correctly
+- 39 environment-variable names/scopes were recreated
+- old Vercel Sensitive values were confirmed non-retrievable
+- the three critical Production Supabase variables have real values:
   - `NEXT_PUBLIC_SUPABASE_URL`
   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
   - `SUPABASE_SERVICE_ROLE_KEY`
+- the forced canonical-host redirect to `portal.insureit.in` was identified as application middleware behavior and is no longer blocking destination testing
 
-Next immediate action:
-1. redeploy the destination `insureit_new` project
-2. inspect whether the build now passes the Supabase prerender step
-3. if it fails on another missing environment variable, recover that variable from its original provider/source
-4. do not attach/move `portal.insureit.in` until the destination `.vercel.app` deployment is fully validated
+Next immediate actions:
+1. restore the highest-priority runtime environment variables needed for login, email, onboarding, OCR, and other core portal features
+2. test those integrations on the destination Vercel deployment
+3. restore lower-priority voice/assistant/iCall integrations after the core portal is healthy
+4. finish `portal.insureit.in` ownership/routing handoff only after validation
 
 ---
 
@@ -578,7 +596,7 @@ At the start of a new chat:
 
 Current checkpoint:
 
-> Destination project `insureit_new` is created and linked to the repo.  
-> All 39 environment-variable records exist, but old Vercel Sensitive values were not recoverable.  
-> The three critical Production Supabase values have now been restored manually.  
-> Next step is to redeploy and inspect the new build/runtime result before recovering additional secrets or moving `portal.insureit.in`.
+> Destination project `insureit_new` is created, correctly rooted at `apps/web-portal`, and has a successful READY Production deployment.  
+> The direct destination Vercel deployment now opens correctly and can be used for migration testing.  
+> The three critical Production Supabase values are restored.  
+> Remaining work is to restore runtime integration variables in priority order, validate the portal, and then complete the `portal.insureit.in` domain handoff.
