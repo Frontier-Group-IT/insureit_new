@@ -30,7 +30,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     const [{ data: customer }, { data: intermediaryRows }, { data: documentRows }, insurerOptions, activityHistory] = await Promise.all([
       admin.from("customers").select("contact_name,company_name,phone,email").eq("id", lifeHealthCase.customer_id).maybeSingle<CustomerRow>(),
       admin.from("intermediaries").select("id,intermediary_type,display_name,intermediary_code,mobile,associate_employee_id").in("intermediary_type", ["posp","misp","partner"]).eq("account_status","active").order("display_name", { ascending:true }).returns<IntermediaryRow[]>(),
-      admin.from("life_health_case_documents").select("id,document_type,file_name,storage_bucket,storage_path").eq("case_id", lifeHealthCase.id).in("document_type", ["policy_copy","proposal_form","benefit_illustration","premium_receipt"]).returns<DocumentRow[]>(),
+      admin.from("life_health_case_documents").select("id,document_type,file_name,storage_bucket,storage_path").eq("case_id", lifeHealthCase.id).in("document_type", ["policy_copy","proposal_form","kyc","other_document"]).returns<DocumentRow[]>(),
       getActiveInsuranceCompanyOptions(),
       loadPolicyActivityHistory({ policyId:policy.id, createdBy:policy.created_by, createdAt:policy.created_at, updatedAt:policy.updated_at }),
     ]);
@@ -53,7 +53,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
 
     const documents = await Promise.all((documentRows ?? []).map(async (row) => {
       const { data:signed } = await admin.storage.from(row.storage_bucket).createSignedUrl(row.storage_path, 60 * 60);
-      return { id:row.id, type:row.document_type as "policy_copy"|"proposal_form"|"benefit_illustration"|"premium_receipt", fileName:row.file_name, viewUrl:signed?.signedUrl || "" };
+      return { id:row.id, type:row.document_type as "policy_copy"|"proposal_form"|"kyc"|"other_document", fileName:row.file_name, viewUrl:signed?.signedUrl || "" };
     }));
     const activityItems = activityHistory.map((activity)=>({ id:activity.id, title:activity.action, meta:activity.actorName ? `Created By: ${activity.actorName}` : null, at:activity.at }));
 
