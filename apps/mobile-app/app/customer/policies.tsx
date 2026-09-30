@@ -14,6 +14,7 @@ import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
 
 type PolicyFilter = 'All' | 'Active' | 'Renewal Due' | 'Expired';
+type PolicyCategoryFilter = 'All' | 'Motor' | 'Non-Motor' | 'Health' | 'Life';
 type PolicyTone = 'active' | 'due' | 'expired';
 type LifeHealthKind = 'Life' | 'Health';
 
@@ -47,6 +48,7 @@ export default function PoliciesScreen() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [companies, setCompanies] = useState<InsuranceCompany[]>([]);
   const [query, setQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<PolicyCategoryFilter>('All');
   const [filter, setFilter] = useState<PolicyFilter>('All');
   const [loading, setLoading] = useState(true);
 
@@ -114,12 +116,27 @@ export default function PoliciesScreen() {
       company?.name,
     ].filter(Boolean).join(' ').toLowerCase();
     const matchesSearch = !query.trim() || text.includes(query.trim().toLowerCase());
+    const matchesCategory = categoryFilter === 'All' || getPolicyCategory(policy) === categoryFilter;
     const matchesFilter = filter === 'All' || (filter === 'Renewal Due' ? tone === 'due' : filter.toLowerCase() === tone);
-    return matchesSearch && matchesFilter;
+    return matchesSearch && matchesCategory && matchesFilter;
   });
 
   return (
     <Screen title="My Policies" showLogout showTitleHeader={false}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroller} contentContainerStyle={styles.categoryWrap}>
+        {(['All', 'Motor', 'Non-Motor', 'Health', 'Life'] as PolicyCategoryFilter[]).map((item) => (
+          <Pressable
+            key={item}
+            accessibilityRole="button"
+            onPress={() => setCategoryFilter(item)}
+            style={[styles.categoryCard, categoryFilter === item && styles.categoryCardActive]}
+          >
+            <Text style={[styles.categoryLabel, categoryFilter === item && styles.categoryLabelActive]}>{item}</Text>
+            <Text style={[styles.categoryCount, categoryFilter === item && styles.categoryCountActive]}>{countForCategory(item, policies)}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+
       <View style={styles.searchSection}>
         <View style={styles.searchHeadingRow}>
           <View>
@@ -137,7 +154,7 @@ export default function PoliciesScreen() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroller} contentContainerStyle={styles.filterWrap}>
         {(['All', 'Active', 'Renewal Due', 'Expired'] as PolicyFilter[]).map((item) => (
           <Pressable key={item} accessibilityRole="button" onPress={() => setFilter(item)} style={[styles.filterChip, filter === item && styles.filterChipActive]}>
-            <Text style={[styles.filterText, filter === item && styles.filterTextActive]}>{item} ({countForFilter(item, policies)})</Text>
+            <Text style={[styles.filterText, filter === item && styles.filterTextActive]}>{item} ({countForFilter(item, policies.filter((policy) => categoryFilter === 'All' || getPolicyCategory(policy) === categoryFilter))})</Text>
           </Pressable>
         ))}
       </ScrollView>
@@ -217,7 +234,7 @@ export default function PoliciesScreen() {
         );
       })}
 
-      {policies.length > 0 && filteredPolicies.length === 0 ? <EmptyState title="No matching policy" body="Try another search or filter." actionLabel="Clear Filters" onAction={() => { setQuery(''); setFilter('All'); }} icon="filter-remove-outline" /> : null}
+      {policies.length > 0 && filteredPolicies.length === 0 ? <EmptyState title="No matching policy" body="Try another search or filter." actionLabel="Clear Filters" onAction={() => { setQuery(''); setCategoryFilter('All'); setFilter('All'); }} icon="filter-remove-outline" /> : null}
     </Screen>
   );
 }
@@ -255,12 +272,9 @@ function LifeHealthPolicyBody({
         />
         <View style={styles.contentDivider} />
         <View style={styles.lifeHealthRightSummary}>
-          <View style={styles.lifeHealthDefaultIcon}>
-            <MaterialCommunityIcons name={kind === 'Health' ? 'heart-pulse' : 'shield-outline'} size={24} color={palette.navy} />
-          </View>
           <View style={styles.lifeHealthRightCopy}>
             <CompactLabelValue icon="shield-outline" label="Policy No." value={displayedPolicyNo} />
-            <CompactLabelValue icon="calendar-range" label="PPT" value={ppt} />
+            <CompactLabelValue icon="calendar-range" label="PPT - Premium Payment Term" value={ppt} />
           </View>
         </View>
       </View>
@@ -270,7 +284,7 @@ function LifeHealthPolicyBody({
         <View style={styles.lifeHealthMetricDivider} />
         <LifeHealthMetric icon="credit-card-outline" label="Payment Frequency" value={paymentFrequency} />
         <View style={styles.lifeHealthMetricDivider} />
-        <LifeHealthMetric icon="calendar-clock-outline" label="PD" value={policyDuration} />
+        <LifeHealthMetric icon="calendar-clock-outline" label="PD - Policy Duration" value={policyDuration} />
       </View>
 
       <View style={styles.lifeHealthProtectionStrip}>
@@ -279,7 +293,7 @@ function LifeHealthPolicyBody({
           {kind === 'Health' ? 'Stay protected. Stay healthy.' : 'Protecting what matters most.'}
         </Text>
         <View style={styles.lifeHealthProtectionArt}>
-          <MaterialCommunityIcons name={kind === 'Health' ? 'heart-pulse' : 'heart-outline'} size={25} color={palette.navy} />
+          <MaterialCommunityIcons name={kind === 'Health' ? 'heart-pulse' : 'heart-outline'} size={25} color="#D7262E" />
         </View>
       </View>
     </>
@@ -299,7 +313,7 @@ function CompactLabelValue({
     <View style={styles.compactLabelValueRow}>
       <MaterialCommunityIcons name={icon} size={15} color={palette.navy} />
       <View style={styles.compactLabelValueCopy}>
-        <Text style={styles.compactLabel}>{label}</Text>
+        <Text style={styles.compactLabel} numberOfLines={2}>{label}</Text>
         <Text style={styles.compactValue} numberOfLines={1}>{value}</Text>
       </View>
     </View>
@@ -321,7 +335,7 @@ function LifeHealthMetric({
         <MaterialCommunityIcons name={icon} size={17} color={palette.navy} />
       </View>
       <View style={styles.lifeHealthMetricCopy}>
-        <Text style={styles.lifeHealthMetricLabel} numberOfLines={1}>{label}</Text>
+        <Text style={styles.lifeHealthMetricLabel} numberOfLines={2}>{label}</Text>
         <Text style={styles.lifeHealthMetricValue} numberOfLines={1}>{value}</Text>
       </View>
     </View>
@@ -374,6 +388,16 @@ function getLifeHealthKind(policy: PolicyRow): LifeHealthKind | null {
   return null;
 }
 
+function getPolicyCategory(policy: PolicyRow): Exclude<PolicyCategoryFilter, 'All'> {
+  const lifeHealthKind = getLifeHealthKind(policy);
+  if (lifeHealthKind) return lifeHealthKind;
+
+  const normalized = `${policy.business_line ?? ''} ${policy.policy_type ?? ''}`.toLowerCase().replace(/[^a-z]/g, '');
+  if (normalized.includes('nonmotor')) return 'Non-Motor';
+  if (normalized.includes('motor')) return 'Motor';
+  return policy.vehicle_id ? 'Motor' : 'Non-Motor';
+}
+
 function getLifeHealthDetails(policy: PolicyRow) {
   const details = policy.life_health_policy_details;
   return Array.isArray(details) ? details[0] ?? null : details ?? null;
@@ -413,6 +437,10 @@ function comparePolicyRecency(a: PolicyRow, b: PolicyRow) {
 
   if (a.source !== b.source) return a.source === 'sibl' ? 1 : -1;
   return a.id.localeCompare(b.id);
+}
+
+function countForCategory(filter: PolicyCategoryFilter, policies: PolicyRow[]) {
+  return policies.filter((policy) => filter === 'All' || getPolicyCategory(policy) === filter).length;
 }
 
 function countForFilter(filter: PolicyFilter, policies: PolicyRow[]) {
@@ -456,6 +484,14 @@ function policyStageLabel(policy: PolicyRow, tone: PolicyTone) {
 }
 
 const styles = StyleSheet.create({
+  categoryScroller: { maxHeight: 58, marginTop: 0, marginBottom: 10 },
+  categoryWrap: { flexDirection: 'row', alignItems: 'stretch', gap: 7, paddingRight: 14 },
+  categoryCard: { minWidth: 72, height: 52, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 7, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', justifyContent: 'space-between' },
+  categoryCardActive: { backgroundColor: palette.navy, borderColor: palette.navy },
+  categoryLabel: { color: palette.slate, fontSize: 9.5, lineHeight: 12, fontWeight: '900' },
+  categoryLabelActive: { color: '#FFFFFF' },
+  categoryCount: { color: palette.ink, fontSize: 15, lineHeight: 18, fontWeight: '900' },
+  categoryCountActive: { color: '#FFFFFF' },
   searchSection: { marginTop: 0, marginBottom: 10 },
   searchHeadingRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 8 },
   searchHeading: { color: palette.navy, fontSize: 13, fontWeight: '900' },
@@ -479,8 +515,8 @@ const styles = StyleSheet.create({
   externalStageLabel: { color: '#0A43A3' },
   sourcePill: { borderRadius: 999, paddingHorizontal: 6, paddingVertical: 3 },
   sourceText: { fontSize: 7.8, fontWeight: '900' },
-  lifeHealthTypePill: { borderRadius: 999, backgroundColor: '#EAF2FB', paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: '#D7E5F4' },
-  lifeHealthTypeText: { color: palette.navy, fontSize: 7.8, fontWeight: '900', letterSpacing: 0.45 },
+  lifeHealthTypePill: { borderRadius: 999, backgroundColor: palette.navy, paddingHorizontal: 9, paddingVertical: 4 },
+  lifeHealthTypeText: { color: '#FFFFFF', fontSize: 7.8, fontWeight: '900', letterSpacing: 0.45 },
   policyContentRow: { marginTop: 10, flexDirection: 'row', alignItems: 'stretch' },
   summaryColumn: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 2, paddingVertical: 4 },
   contentDivider: { width: 1, backgroundColor: '#E1E8F0', marginHorizontal: 10, marginVertical: 2 },
@@ -493,18 +529,17 @@ const styles = StyleSheet.create({
   summaryTertiary: { color: '#64748B', fontSize: 10.4, lineHeight: 13, fontWeight: '700', flexShrink: 1 },
   summaryTertiaryMuted: { color: '#97A2B2', fontWeight: '700' },
   expiryDot: { width: 6, height: 6, borderRadius: 999, flexShrink: 0 },
-  lifeHealthRightSummary: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 2, paddingVertical: 2 },
-  lifeHealthDefaultIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#EEF5FC', alignItems: 'center', justifyContent: 'center' },
-  lifeHealthRightCopy: { flex: 1, minWidth: 0, gap: 5 },
-  compactLabelValueRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
+  lifeHealthRightSummary: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 2, paddingVertical: 2 },
+  lifeHealthRightCopy: { flex: 1, minWidth: 0, gap: 6 },
+  compactLabelValueRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, minWidth: 0 },
   compactLabelValueCopy: { flex: 1, minWidth: 0 },
-  compactLabel: { color: '#7B8798', fontSize: 7.8, lineHeight: 10, fontWeight: '800' },
+  compactLabel: { color: '#7B8798', fontSize: 7.6, lineHeight: 9.5, fontWeight: '800' },
   compactValue: { color: palette.ink, fontSize: 10.5, lineHeight: 13, fontWeight: '900', marginTop: 1 },
   lifeHealthMetricsRow: { marginTop: 10, borderRadius: 12, backgroundColor: '#EFF6FD', paddingVertical: 8, paddingHorizontal: 7, flexDirection: 'row', alignItems: 'stretch' },
   lifeHealthMetric: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 4 },
   lifeHealthMetricIcon: { width: 28, height: 28, borderRadius: 999, backgroundColor: '#E3F0FC', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   lifeHealthMetricCopy: { flex: 1, minWidth: 0 },
-  lifeHealthMetricLabel: { color: '#6F7E90', fontSize: 7.4, lineHeight: 9.5, fontWeight: '800' },
+  lifeHealthMetricLabel: { color: '#6F7E90', fontSize: 7.1, lineHeight: 9, fontWeight: '800' },
   lifeHealthMetricValue: { color: palette.ink, fontSize: 9.8, lineHeight: 12, fontWeight: '900', marginTop: 2 },
   lifeHealthMetricDivider: { width: 1, backgroundColor: '#D7E4F1', marginHorizontal: 2 },
   lifeHealthProtectionStrip: { marginTop: 8, minHeight: 38, borderRadius: 11, backgroundColor: '#EFF6FD', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 8, overflow: 'hidden' },
