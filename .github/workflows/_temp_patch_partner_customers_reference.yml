@@ -1,0 +1,90 @@
+name: Temporary patch Partner Customer reference OTA
+
+on:
+  push:
+    branches:
+      - partner-customer-reference-redesign
+    paths:
+      - '.github/workflows/_temp_patch_partner_customers_reference.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: partner-customer-reference-redesign
+          fetch-depth: 0
+
+      - name: Extend cumulative Partner 0.1 OTA for Customers
+        shell: bash
+        run: |
+          set -euo pipefail
+          python <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/publish-partner-0-1-claim-detail-reference.yml')
+          text = path.read_text()
+
+          path_marker = "      - 'scripts/partner/compat/partner-claims-reference-0-1.tsx'\n"
+          path_addition = path_marker + "      - 'apps/partner-app/app/customers.tsx'\n      - 'scripts/partner/compat/partner-customers-reference-0-1.tsx'\n"
+          if "scripts/partner/compat/partner-customers-reference-0-1.tsx" not in text.split('workflow_dispatch:')[0]:
+              if path_marker not in text:
+                  raise SystemExit('Could not find workflow path marker')
+              text = text.replace(path_marker, path_addition, 1)
+
+          step_marker = "      - name: Install current Stories reference layout\n"
+          customer_step = """      - name: Install current Customers reference layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tooling/scripts/partner/compat/partner-customers-reference-0-1.tsx compat/apps/partner-app/app/customers.tsx
+          grep -q 'label=\"Customers\" value={totals.customers}' compat/apps/partner-app/app/customers.tsx
+          grep -q 'label=\"Active\" value={totals.active}' compat/apps/partner-app/app/customers.tsx
+          grep -q 'label=\"Inactive\" value={totals.inactive}' compat/apps/partner-app/app/customers.tsx
+          grep -q 'statusDotInactive' compat/apps/partner-app/app/customers.tsx
+          grep -q 'logo-whatsapp' compat/apps/partner-app/app/customers.tsx
+          ! grep -q 'Customer book' compat/apps/partner-app/app/customers.tsx
+
+"""
+          if 'Install current Customers reference layout' not in text:
+              if step_marker not in text:
+                  raise SystemExit('Could not find insertion marker')
+              text = text.replace(step_marker, customer_step + step_marker, 1)
+
+          text = text.replace(
+              '--message "Partner 0.1.0 cumulative OTA with Renewals reference redesign"',
+              '--message "Partner 0.1.0 cumulative OTA with Customer reference redesign"',
+              1,
+          )
+          summary_marker = '            echo "- Renewals reference redesign: included"\n'
+          if 'Customer reference redesign: included' not in text:
+              if summary_marker not in text:
+                  raise SystemExit('Could not find summary marker')
+              text = text.replace(summary_marker, summary_marker + '            echo "- Customer reference redesign: included"\n', 1)
+
+          path.write_text(text)
+          Path('.github/workflows/_temp_patch_partner_customers_reference.yml').unlink()
+          PY
+
+      - name: Verify workflow patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "apps/partner-app/app/customers.tsx" '.github/workflows/publish-partner-0-1-claim-detail-reference.yml'
+          grep -q "scripts/partner/compat/partner-customers-reference-0-1.tsx" '.github/workflows/publish-partner-0-1-claim-detail-reference.yml'
+          grep -q "Install current Customers reference layout" '.github/workflows/publish-partner-0-1-claim-detail-reference.yml'
+          grep -q "Customer reference redesign: included" '.github/workflows/publish-partner-0-1-claim-detail-reference.yml'
+
+      - name: Commit workflow patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Add Partner customer redesign to runtime 0.1 OTA'
+          git push origin HEAD:partner-customer-reference-redesign
