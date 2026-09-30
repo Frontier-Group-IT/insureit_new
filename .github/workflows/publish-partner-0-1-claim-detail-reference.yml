@@ -10,6 +10,8 @@ on:
       - 'scripts/partner/compat/partner-claim-detail-reference-0-1.tsx'
       - 'apps/partner-app/app/policy-intakes.tsx'
       - 'scripts/partner/compat/partner-policy-intakes-reference-0-1.tsx'
+      - 'apps/partner-app/app/(tabs)/claims.tsx'
+      - 'scripts/partner/compat/partner-claims-reference-0-1.tsx'
   workflow_dispatch:
 
 permissions:
