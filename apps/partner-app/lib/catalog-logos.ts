@@ -41,10 +41,8 @@ const insurers: Array<[string[], ImageSourcePropType]> = [
 
 const manufacturers: Array<[string[], ImageSourcePropType]> = [
   [['tata', 'tata motors'], require('../assets/catalog/vehicle-brands/tata.png')],
-  [['ashok leyland'], require('../assets/catalog/vehicle-brands/ashok-leyland.png')],
   [['bharatbenz', 'bharat benz', 'daimler'], require('../assets/catalog/vehicle-brands/bharatbenz.png')],
   [['eicher', 've commercial'], require('../assets/catalog/vehicle-brands/eicher.png')],
-  [['mahindra'], require('../assets/catalog/vehicle-brands/mahindra.png')],
   [['jcb'], require('../assets/catalog/vehicle-brands/jcb.png')],
   [['volvo'], require('../assets/catalog/vehicle-brands/volvo.png')],
   [['sany'], require('../assets/catalog/vehicle-brands/sany.png')],
