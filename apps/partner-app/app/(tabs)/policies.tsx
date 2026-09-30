@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -89,40 +89,6 @@ export default function PoliciesScreen() {
     await Promise.all([summary.refresh(), collection.refresh()]);
   }, [collection, summary]);
 
-  const summaryItems = useMemo(() => [
-    {
-      key: 'total',
-      label: 'Total Policies',
-      value: summary.data?.total_policies ?? 0,
-      icon: 'document-text-outline' as const,
-      accent: '#2A64C7',
-      helper: 'Portfolio',
-    },
-    {
-      key: 'active',
-      label: 'Active Policies',
-      value: summary.data?.in_force_policies ?? 0,
-      icon: 'shield-checkmark-outline' as const,
-      accent: '#1D9A68',
-      helper: 'In force',
-    },
-    {
-      key: 'expiring',
-      label: 'Expiring Soon',
-      value: summary.data?.expiring_30_days ?? 0,
-      icon: 'hourglass-outline' as const,
-      accent: '#C47B12',
-      helper: 'Next 30 days',
-    },
-    {
-      key: 'lapsed',
-      label: 'Lapsed Policies',
-      value: summary.data?.expired_policies ?? 0,
-      icon: 'close-circle-outline' as const,
-      accent: '#D04C4C',
-      helper: 'Expired',
-    },
-  ], [summary.data]);
 
   const header = (
     <View>
@@ -214,18 +180,6 @@ export default function PoliciesScreen() {
         </View>
       ) : null}
 
-      {summary.loading && !summary.data ? (
-        <View style={styles.summaryLoading}>
-          <PartnerStateView state="loading" title="Loading policy summary" />
-        </View>
-      ) : (
-        <View style={styles.summaryGrid}>
-          {summaryItems.map(({ key, ...item }) => (
-            <SummaryCard key={key} {...item} />
-          ))}
-        </View>
-      )}
-
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Open Policy Intake"
@@ -262,10 +216,6 @@ export default function PoliciesScreen() {
                 </Pressable>
               );
             })}
-          </View>
-          <View style={styles.sortAffordance}>
-            <Text style={styles.sortText}>Sort by</Text>
-            <Ionicons name="chevron-down" size={10} color="#3156B8" />
           </View>
         </View>
       ) : null}
@@ -358,31 +308,6 @@ export default function PoliciesScreen() {
         windowSize={7}
       />
     </SafeAreaView>
-  );
-}
-
-function SummaryCard({
-  icon,
-  value,
-  label,
-  helper,
-  accent,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  value: number;
-  label: string;
-  helper: string;
-  accent: string;
-}) {
-  return (
-    <View style={styles.summaryCard}>
-      <View style={[styles.summaryIcon, { backgroundColor: `${accent}12` }]}>
-        <Ionicons name={icon} size={17} color={accent} />
-      </View>
-      <Text style={[styles.summaryValue, { color: accent }]}>{value}</Text>
-      <Text numberOfLines={2} style={styles.summaryLabel}>{label}</Text>
-      <Text numberOfLines={1} style={styles.summaryHelper}>{helper}</Text>
-    </View>
   );
 }
 
@@ -653,27 +578,31 @@ const styles = StyleSheet.create({
   intakeTitle: { color: '#FFFFFF', fontSize: 10.5, lineHeight: 13, fontWeight: '800' },
   intakeSubtitle: { marginTop: 1, color: '#C9DAF7', fontSize: 6.7, lineHeight: 9, fontWeight: '500' },
   tabsRow: {
-    minHeight: 37,
+    minHeight: 46,
     marginHorizontal: 12,
-    marginTop: 4,
+    marginTop: 8,
     flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#DCE5F0',
+    alignItems: 'stretch',
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#DCE5F0',
   },
   tabsScroller: { flex: 1, flexDirection: 'row', alignItems: 'stretch' },
   tabButton: {
-    minHeight: 37,
+    flex: 1,
+    minWidth: 0,
+    minHeight: 44,
+    alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
-    borderBottomWidth: 2,
+    paddingHorizontal: 3,
+    borderBottomWidth: 3,
     borderBottomColor: 'transparent',
   },
-  tabButtonActive: { borderBottomColor: '#3156B8' },
-  tabText: { color: '#708099', fontSize: 7, lineHeight: 10, fontWeight: '700' },
-  tabTextActive: { color: '#183E87' },
-  sortAffordance: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingLeft: 6 },
-  sortText: { color: '#3156B8', fontSize: 7, lineHeight: 10, fontWeight: '700' },
+  tabButtonActive: { backgroundColor: '#EEF4FF', borderBottomColor: '#3156B8' },
+  tabText: { color: '#708099', textAlign: 'center', fontSize: 8.2, lineHeight: 11, fontWeight: '700' },
+  tabTextActive: { color: '#183E87', fontWeight: '800' },
   bookHeader: { marginHorizontal: 12, paddingTop: 9, paddingBottom: 6 },
   bookTitle: { color: '#708099', fontSize: 7.2, lineHeight: 10, letterSpacing: 1.2, fontWeight: '800' },
   bookMeta: { marginTop: 2, color: '#9AA6B7', fontSize: 6.4, lineHeight: 9, fontWeight: '600' },
