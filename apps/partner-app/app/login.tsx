@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -66,12 +65,10 @@ export default function LoginScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.brandBlock}>
-          <Image
-            accessibilityLabel="INSUREIT Partner"
-            resizeMode="contain"
-            source={require('../assets/partner-login-logo.png')}
-            style={styles.logo}
-          />
+          <View accessibilityLabel="INSUREIT Partner" style={styles.brandMark}>
+            <Text style={styles.brandName}>insureit</Text>
+            <Text style={styles.brandPartner}>Partner</Text>
+          </View>
           <Text style={styles.tagline}>YOUR SAFETY, OUR PROMISE</Text>
         </View>
 
@@ -157,9 +154,25 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   brandBlock: { alignItems: 'center', marginBottom: 20 },
-  logo: {
-    width: 190,
-    height: 190,
+  brandMark: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 118,
+  },
+  brandName: {
+    color: partnerTheme.colors.ink,
+    fontSize: 48,
+    fontWeight: '800',
+    letterSpacing: -2,
+    lineHeight: 52,
+  },
+  brandPartner: {
+    marginTop: -2,
+    color: partnerTheme.colors.inkMuted,
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 3.2,
+    textTransform: 'uppercase',
   },
   tagline: {
     marginTop: 4,
