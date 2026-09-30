@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
   },
   activityList: { gap: 5 },
   itemCard: {
-    minHeight: 59,
+    minHeight: 63,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 12,
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
   },
   logoTile: {
     width: 68,
-    height: 49,
+    height: 53,
     marginRight: 10,
     borderRadius: 10,
     alignItems: 'center',
@@ -346,8 +346,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0EFFF',
   },
   kind: {
-    fontSize: 7.5,
-    lineHeight: 9,
+    fontSize: 9.5,
+    lineHeight: 11,
     fontWeight: '800',
     letterSpacing: 0.25,
   },
@@ -358,8 +358,8 @@ const styles = StyleSheet.create({
   textOps: { color: '#667085' },
   date: {
     color: '#71809C',
-    fontSize: 7.5,
-    lineHeight: 10,
+    fontSize: 9.5,
+    lineHeight: 11,
   },
   title: {
     marginTop: 2,
@@ -371,13 +371,13 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: 1,
     color: '#68758E',
-    fontSize: 8.5,
-    lineHeight: 11,
+    fontSize: 9.5,
+    lineHeight: 12,
   },
   meta: {
     marginTop: 1,
     color: '#8692A8',
-    fontSize: 8,
-    lineHeight: 10,
+    fontSize: 9.5,
+    lineHeight: 12,
   },
 });
