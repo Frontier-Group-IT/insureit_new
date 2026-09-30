@@ -6,6 +6,7 @@
 - Dropdown options: `All`, `Motor`, `Non-Motor`, `Health`, `Life`.
 - Keep `Active | Renewal Due | Expired` as separate status pills immediately beside the category dropdown.
 - Selecting a category resets the status view to `All` while preserving the existing search/category/status filtering logic.
+- Clicking anywhere else outside the open category dropdown must close it.
 - Previous Life/Health card refinements remain unchanged: Premium Amount, PPT - Premium Paying Term, Product Name, Payment Frequency, PD - Policy Duration, navy LIFE/HEALTH badge, and the protection strip.
 
 ## Prior root cause confirmed
@@ -16,9 +17,10 @@ Production inspection confirmed the reported issued Health policy already has th
 - The lower `All` control is now a compact category dropdown trigger and displays the selected category plus its count, for example `All (6) ▾` or `Health (1) ▾`.
 - The dropdown exposes exactly `All`, `Motor`, `Non-Motor`, `Health`, and `Life`, including category counts.
 - Choosing a category updates `categoryFilter`, resets status filtering to `All`, and closes the menu.
+- While the menu is open, a page-level dismiss layer sits behind the dropdown; tapping anywhere outside the dropdown closes it without changing the selected category.
 - `Active`, `Renewal Due`, and `Expired` remain separate pills and their counts continue to respect the selected category.
 - Search, policy cards, policy navigation, and Life/Health data rendering are unchanged.
-- The Customer Life/Health regression now enforces the dropdown contract and prevents the old category KPI strip from returning.
+- The Customer Life/Health regression now enforces the dropdown contract, outside-tap dismissal, and prevents the old category KPI strip from returning.
 
 ## Existing Life/Health data contract
 - Customer Policies reads `policies.premium_amount` for the Life/Health Premium Amount display.
@@ -35,6 +37,7 @@ Production inspection confirmed the reported issued Health policy already has th
 - Production Customer app publication must only use the established GitHub Actions OTA workflow after merge.
 
 ## Release state
-- Branch: `ui/customer-policy-category-dropdown`
-- **IMPLEMENTED; PR/CI/merge/OTA pending.**
+- Original category dropdown: PR #2632 merged to `main` on 2026-09-30.
+- Follow-up outside-tap dismissal branch: `fix/customer-policy-dropdown-outside-close`.
+- **FOLLOW-UP IMPLEMENTED; PR/CI/merge/OTA pending.**
 - Merge only after mandatory Verify mobile app and Verify web portal workflows pass.

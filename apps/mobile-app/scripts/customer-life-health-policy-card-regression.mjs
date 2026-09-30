@@ -27,6 +27,13 @@ assert(
   'Customer Policies must manage the compact category dropdown state.',
 );
 assert(
+  policiesScreen.includes('style={styles.categoryDropdownDismissLayer}') &&
+    policiesScreen.includes('accessibilityLabel="Close policy category menu"') &&
+    policiesScreen.includes('onPress={() => setCategoryMenuOpen(false)}') &&
+    policiesScreen.includes('categoryDropdownDismissLayer: { ...StyleSheet.absoluteFillObject, zIndex: 10 }'),
+  'Tapping anywhere outside the open policy category dropdown must close it.',
+);
+assert(
   !policiesScreen.includes('categorySegmentedControl') && !policiesScreen.includes('categorySegmentDivider'),
   'Customer Policies must not render the old separate/joined category KPI strip above search.',
 );
