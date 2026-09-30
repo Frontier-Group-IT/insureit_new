@@ -39,8 +39,9 @@ const insurers: Array<[string[], ImageSourcePropType]> = [
   [['bajaj life'], require('../assets/catalog/insurers/bajaj-life.png')],
 ];
 
+// Keep only catalog files that are actually bundled. Unknown/unavailable brands resolve to
+// null so the Customer Detail screen can render its existing default fallback artwork/icon.
 const manufacturers: Array<[string[], ImageSourcePropType]> = [
-  [['tata', 'tata motors'], require('../assets/catalog/vehicle-brands/tata.png')],
   [['bharatbenz', 'bharat benz', 'daimler'], require('../assets/catalog/vehicle-brands/bharatbenz.png')],
   [['eicher', 've commercial'], require('../assets/catalog/vehicle-brands/eicher.png')],
   [['jcb'], require('../assets/catalog/vehicle-brands/jcb.png')],
@@ -51,9 +52,6 @@ const manufacturers: Array<[string[], ImageSourcePropType]> = [
   [['case'], require('../assets/catalog/vehicle-brands/case.png')],
   [['kobelco'], require('../assets/catalog/vehicle-brands/kobelco.png')],
   [['hitachi'], require('../assets/catalog/vehicle-brands/hitachi.png')],
-  [['toyota'], require('../assets/catalog/vehicle-brands/toyota.png')],
-  [['hyundai'], require('../assets/catalog/vehicle-brands/hyundai.png')],
-  [['honda'], require('../assets/catalog/vehicle-brands/honda.png')],
   [['suzuki', 'maruti'], require('../assets/catalog/vehicle-brands/suzuki.png')],
   [['isuzu'], require('../assets/catalog/vehicle-brands/isuzu.png')],
   [['force motors', 'force'], require('../assets/catalog/vehicle-brands/force-motors.png')],
