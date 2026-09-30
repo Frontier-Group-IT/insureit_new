@@ -1,0 +1,100 @@
+name: Temporary patch Partner Claims New status
+
+on:
+  push:
+    branches:
+      - partner-claims-new-status-dark-blue
+    paths:
+      - '.github/workflows/_temp_patch_partner_claims_new_status.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: partner-claims-new-status-dark-blue
+          fetch-depth: 0
+
+      - name: Apply surgical New-status dark-blue patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python <<'PY'
+          from pathlib import Path
+
+          claim_files = [
+              Path('apps/partner-app/app/(tabs)/claims.tsx'),
+              Path('scripts/partner/compat/partner-claims-reference-0-1.tsx'),
+          ]
+
+          for path in claim_files:
+              text = path.read_text()
+              original = text
+
+              old = "  const rejected = /reject/i.test(row.current_status || '');\n"
+              new = old + "  const isNew = /^new$/i.test((row.current_status || '').trim());\n"
+              if old not in text:
+                  raise SystemExit(f'Missing rejected marker in {path}')
+              text = text.replace(old, new, 1)
+
+              replacements = {
+                  "rejected ? styles.statusRejected : completed ? styles.statusSuccess : styles.statusWarning":
+                      "rejected ? styles.statusRejected : completed ? styles.statusSuccess : isNew ? styles.statusNew : styles.statusWarning",
+                  "rejected ? styles.statusDotRejected : completed ? styles.statusDotSuccess : styles.statusDotWarning":
+                      "rejected ? styles.statusDotRejected : completed ? styles.statusDotSuccess : isNew ? styles.statusDotNew : styles.statusDotWarning",
+                  "rejected ? styles.statusTextRejected : completed ? styles.statusTextSuccess : styles.statusTextWarning":
+                      "rejected ? styles.statusTextRejected : completed ? styles.statusTextSuccess : isNew ? styles.statusTextNew : styles.statusTextWarning",
+                  "  statusRejected: { backgroundColor: '#FDEBEC' },\n":
+                      "  statusRejected: { backgroundColor: '#FDEBEC' },\n  statusNew: { backgroundColor: '#0B2E63' },\n",
+                  "  statusDotRejected: { backgroundColor: '#E04F5F' },\n":
+                      "  statusDotRejected: { backgroundColor: '#E04F5F' },\n  statusDotNew: { backgroundColor: '#FFFFFF' },\n",
+                  "  statusTextRejected: { color: '#C43F50' },\n":
+                      "  statusTextRejected: { color: '#C43F50' },\n  statusTextNew: { color: '#FFFFFF' },\n",
+              }
+
+              for before, after in replacements.items():
+                  if before not in text:
+                      raise SystemExit(f'Missing expected pattern in {path}: {before}')
+                  text = text.replace(before, after, 1)
+
+              if text == original:
+                  raise SystemExit(f'No changes made to {path}')
+              path.write_text(text)
+
+          workflow = Path('.github/workflows/publish-partner-0-1-claim-detail-reference.yml')
+          text = workflow.read_text()
+          marker = "      - 'scripts/partner/compat/partner-policy-intakes-reference-0-1.tsx'\n"
+          addition = marker + "      - 'apps/partner-app/app/(tabs)/claims.tsx'\n      - 'scripts/partner/compat/partner-claims-reference-0-1.tsx'\n"
+          if "apps/partner-app/app/(tabs)/claims.tsx" not in text.split('workflow_dispatch:')[0]:
+              if marker not in text:
+                  raise SystemExit('Could not find OTA path marker')
+              text = text.replace(marker, addition, 1)
+          workflow.write_text(text)
+
+          temp = Path('.github/workflows/_temp_patch_partner_claims_new_status.yml')
+          temp.unlink()
+          PY
+
+      - name: Verify patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "const isNew = /\^new\$/i" 'apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q "statusNew: { backgroundColor: '#0B2E63' }" 'apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q "statusTextNew: { color: '#FFFFFF' }" 'apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q "const isNew = /\^new\$/i" 'scripts/partner/compat/partner-claims-reference-0-1.tsx'
+          grep -q "apps/partner-app/app/(tabs)/claims.tsx" '.github/workflows/publish-partner-0-1-claim-detail-reference.yml'
+
+      - name: Commit patched files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Update Partner Claims New status to dark blue'
+          git push origin HEAD:partner-claims-new-status-dark-blue
