@@ -256,7 +256,7 @@ function LifeHealthPolicyBody({
         <View style={styles.contentDivider} />
         <View style={styles.lifeHealthRightSummary}>
           <View style={styles.lifeHealthDefaultIcon}>
-            <MaterialCommunityIcons name={kind === 'Health' ? 'heart-pulse' : 'shield-heart-outline'} size={24} color={palette.navy} />
+            <MaterialCommunityIcons name={kind === 'Health' ? 'heart-pulse' : 'shield-outline'} size={24} color={palette.navy} />
           </View>
           <View style={styles.lifeHealthRightCopy}>
             <CompactLabelValue icon="shield-outline" label="Policy No." value={displayedPolicyNo} />
