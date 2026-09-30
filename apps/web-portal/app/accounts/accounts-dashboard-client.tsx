@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Building2, CalendarDays, CalendarRange, Check, ChevronDown, Download, HandCoins, Loader2, ReceiptIndianRupee, TrendingUp, WalletCards } from "lucide-react";
+import { Building2, CalendarDays, CalendarRange, Check, ChevronDown, Download, HandCoins, Loader2, ReceiptIndianRupee, Search, TrendingUp, WalletCards, X } from "lucide-react";
 import {
   BUSINESS_MIS_AMOUNT_COLUMNS,
   BUSINESS_MIS_DATE_COLUMNS,
@@ -30,6 +30,7 @@ type Props = {
 };
 
 type ReconciliationState = "reconciled" | "partial" | "pending" | "variance" | "not_applicable";
+type ReconciliationQueue = "all" | ReconciliationState;
 
 type ReconciliationOverview = {
   projectedPayin: number;
@@ -52,6 +53,15 @@ type ReconciliationOverview = {
 const PRESET_PERIODS: Array<{ value: Exclude<Period, "custom">; label: string }> = [
   { value: "last_month", label: "Last month" },
   { value: "mtd", label: "MTD" },
+];
+
+const RECONCILIATION_QUEUES: Array<{ value: ReconciliationQueue; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "pending", label: "Pending" },
+  { value: "partial", label: "Partial" },
+  { value: "variance", label: "Variance" },
+  { value: "reconciled", label: "Reconciled" },
+  { value: "not_applicable", label: "N/A" },
 ];
 
 export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Props) {
@@ -384,25 +394,71 @@ function StatusChip({ label, value, tone = "neutral" }: { label: string; value: 
 }
 
 function BusinessMisTable({ rows, loadFailed, onOpenReconciliation }: { rows: BusinessMisClientCell[][]; loadFailed: boolean; onOpenReconciliation: (lookup: AccountsPolicyReconciliationLookup) => void }) {
+  const [queue, setQueue] = useState<ReconciliationQueue>("all");
+  const [query, setQuery] = useState("");
+  const indexed = useMemo(() => rows.map((row, index) => ({ row, index, state: rowReconciliationState(row) })), [rows]);
+  const counts = useMemo(() => {
+    const next: Record<ReconciliationQueue, number> = { all: indexed.length, pending: 0, partial: 0, variance: 0, reconciled: 0, not_applicable: 0 };
+    for (const item of indexed) next[item.state] += 1;
+    return next;
+  }, [indexed]);
+  const normalizedQuery = normalizeSearch(query);
+  const matches = useMemo(() => indexed.filter((item) => {
+    if (queue !== "all" && item.state !== queue) return false;
+    if (!normalizedQuery) return true;
+    return normalizeSearch(item.row.map((cell) => String(cell ?? "")).join(" ")).includes(normalizedQuery);
+  }), [indexed, normalizedQuery, queue]);
+
   return <section className="min-w-0 overflow-hidden rounded-2xl border border-[#dbe3ee] bg-white shadow-sm">
-    <div className="flex items-center justify-between gap-3 border-b border-[#e8edf4] px-3 py-2">
-      <h2 className="text-[11.5px] font-semibold text-[#17365D]">Business MIS</h2>
-      <span className="shrink-0 rounded-full border border-[#dce4ee] bg-[#f8fafc] px-2 py-0.5 text-[7.5px] font-bold tabular-nums text-[#667085]">{integer(rows.length)} rows</span>
+    <div className="border-b border-[#e8edf4] px-3 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-[11.5px] font-semibold text-[#17365D]">Business MIS</h2>
+          <p className="mt-0.5 text-[7.5px] text-[#7c899b]">Use the same register for review, search and inline reconciliation. Export remains based on the selected accounting period and insurer.</p>
+        </div>
+        <div className="relative w-full sm:w-[380px]">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#98a2b3]" />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Policy / RC / customer / insurer / bill / UTR / date" className="h-8 w-full rounded-lg border border-[#dce4ee] bg-white pl-8 pr-8 text-[8.5px] font-semibold text-[#344054] outline-none transition placeholder:font-medium placeholder:text-[#98a2b3] focus:border-[#17365D]" />
+          {query ? <button type="button" title="Clear search" aria-label="Clear search" onClick={() => setQuery("")} className="absolute right-1.5 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded-md text-[#7c899b] hover:bg-[#f2f5f9] hover:text-[#17365D]"><X className="h-3 w-3" /></button> : null}
+        </div>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-1 border-t border-[#edf1f5] pt-2">
+        {RECONCILIATION_QUEUES.map((item) => <button key={item.value} type="button" onClick={() => setQueue(item.value)} className={`rounded-full border px-2.5 py-1 text-[7.5px] font-bold tabular-nums transition ${queue === item.value ? "border-[#17365D] bg-[#17365D] text-white" : queueTone(item.value)}`}>{item.label} {integer(counts[item.value])}</button>)}
+        <span className="ml-auto text-[7.5px] font-semibold tabular-nums text-[#7c899b]">Showing {integer(matches.length)} of {integer(rows.length)}</span>
+      </div>
     </div>
     {loadFailed ? <div className="px-4 py-10 text-center text-[9px] font-semibold text-[#b42318]">Business MIS data could not be refreshed.</div> :
       <div className="max-h-[calc(100vh-255px)] min-h-[420px] overflow-auto">
         <table className="w-max min-w-full border-separate border-spacing-0 text-left">
           <thead className="sticky top-0 z-20">
-            <tr>{BUSINESS_MIS_HEADERS.map((header, index) => <th key={header} className={headerClass(index)}>{header}</th>)}</tr>
+            <tr><th className="sticky left-0 z-30 whitespace-nowrap border-b border-r border-[#dfe6ef] bg-[#eef2f7] px-3 py-2 text-left text-[7.25px] font-black uppercase tracking-[.04em] text-[#526174]">Recon status</th>{BUSINESS_MIS_HEADERS.map((header, index) => <th key={header} className={headerClass(index)}>{header}</th>)}</tr>
           </thead>
           <tbody>
-            {rows.length ? rows.map((row, rowIndex) => <tr key={`${rowIndex}-${String(row[12] ?? "")}`} className="group hover:bg-[#f8fbff]">
-              {row.map((cell, columnIndex) => <td key={columnIndex} className={cellClass(columnIndex)}>{columnIndex === 12 && String(cell ?? "").trim() ? <button type="button" title="Open reconciliation history" onClick={() => onOpenReconciliation({ policyNumber: String(row[12] ?? ""), registrationNumber: String(row[6] ?? ""), insuredName: String(row[7] ?? ""), insurerName: String(row[13] ?? "") })} className="group/policy inline-flex items-center gap-1.5 text-left font-semibold text-[#17365D] underline decoration-[#b8c8d9] decoration-dotted underline-offset-2 transition hover:text-[#0f766e] hover:decoration-[#0f766e]"><span>{formatMisCell(cell, columnIndex)}</span><span className="rounded border border-[#dce4ee] bg-white px-1 py-0 text-[6px] font-bold uppercase tracking-[.04em] text-[#7c899b] opacity-0 transition group-hover/policy:opacity-100 group-focus/policy:opacity-100">History</span></button> : formatMisCell(cell, columnIndex)}</td>)}
-            </tr>) : <tr><td colSpan={BUSINESS_MIS_HEADERS.length} className="px-4 py-12 text-center text-[9px] font-medium text-[#98a2b3]">No Business MIS records are available for the selected filters.</td></tr>}
+            {matches.length ? matches.map(({ row, index: rowIndex, state }) => <tr key={`${rowIndex}-${String(row[12] ?? "")}`} className="group hover:bg-[#f8fbff]">
+              <td className="sticky left-0 z-10 min-w-[110px] border-b border-r border-[#edf1f5] bg-white px-3 py-2 group-hover:bg-[#f8fbff]"><ReconciliationStatePill state={state} /></td>
+              {row.map((cell, columnIndex) => <td key={columnIndex} className={cellClass(columnIndex)}>{columnIndex === 12 && String(cell ?? "").trim() ? <button type="button" title="Open reconciliation" onClick={() => onOpenReconciliation({ policyNumber: String(row[12] ?? ""), registrationNumber: String(row[6] ?? ""), insuredName: String(row[7] ?? ""), insurerName: String(row[13] ?? "") })} className="group/policy inline-flex items-center gap-1.5 text-left font-semibold text-[#17365D] underline decoration-[#b8c8d9] decoration-dotted underline-offset-2 transition hover:text-[#0f766e] hover:decoration-[#0f766e]"><span>{formatMisCell(cell, columnIndex)}</span><span className="rounded border border-[#dce4ee] bg-white px-1 py-0 text-[6px] font-bold uppercase tracking-[.04em] text-[#7c899b] opacity-0 transition group-hover/policy:opacity-100 group-focus/policy:opacity-100">Reconcile</span></button> : formatMisCell(cell, columnIndex)}</td>)}
+            </tr>) : <tr><td colSpan={BUSINESS_MIS_HEADERS.length + 1} className="px-4 py-12 text-center text-[9px] font-medium text-[#98a2b3]">No Business MIS records match the selected reconciliation status and search.</td></tr>}
           </tbody>
         </table>
       </div>}
   </section>;
+}
+
+function ReconciliationStatePill({ state }: { state: ReconciliationState }) {
+  const label = state === "reconciled" ? "Reconciled" : state === "not_applicable" ? "N/A" : state[0].toUpperCase() + state.slice(1);
+  const cls = state === "reconciled" ? "bg-[#e8f5f3] text-[#0f766e]" : state === "partial" ? "bg-[#fff7e6] text-[#9a6700]" : state === "variance" ? "bg-[#fff0f0] text-[#b42318]" : "bg-[#f2f4f7] text-[#667085]";
+  return <span className={`inline-flex rounded-full px-2 py-0.5 text-[7px] font-bold ${cls}`}>{label}</span>;
+}
+
+function queueTone(queue: ReconciliationQueue) {
+  if (queue === "reconciled") return "border-[#bfe3d5] bg-[#f0faf6] text-[#0f766e] hover:bg-[#e7f6f0]";
+  if (queue === "partial") return "border-[#f1d7a7] bg-[#fffaf0] text-[#8a5a13] hover:bg-[#fff5df]";
+  if (queue === "variance") return "border-[#f3c7c3] bg-[#fff5f4] text-[#b42318] hover:bg-[#ffedeb]";
+  return "border-[#dce4ee] bg-[#f8fafc] text-[#667085] hover:bg-[#f2f5f9]";
+}
+
+function normalizeSearch(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 function headerClass(index: number) {
@@ -460,22 +516,12 @@ function buildReconciliationOverview(rows: BusinessMisClientCell[][]): Reconcili
     if (payinState === "reconciled") payinReconciled += 1;
     if (payoutState === "reconciled") payoutReconciled += 1;
 
-    const states = [payinState, payoutState];
-    if (states.includes("variance")) {
-      variance += 1;
-      continue;
-    }
-
-    const applicableStates = states.filter((state): state is Exclude<ReconciliationState, "not_applicable"> => state !== "not_applicable");
-    if (!applicableStates.length) {
-      notApplicable += 1;
-    } else if (applicableStates.every((state) => state === "reconciled")) {
-      fullyReconciled += 1;
-    } else if (applicableStates.every((state) => state === "pending")) {
-      pending += 1;
-    } else {
-      partial += 1;
-    }
+    const state = rowReconciliationState(row);
+    if (state === "variance") variance += 1;
+    else if (state === "not_applicable") notApplicable += 1;
+    else if (state === "reconciled") fullyReconciled += 1;
+    else if (state === "pending") pending += 1;
+    else partial += 1;
   }
 
   return {
@@ -495,6 +541,16 @@ function buildReconciliationOverview(rows: BusinessMisClientCell[][]): Reconcili
     variance,
     notApplicable,
   };
+}
+
+function rowReconciliationState(row: BusinessMisClientCell[]): ReconciliationState {
+  const states = [reconcileState(amount(row[19]), amount(row[21])), reconcileState(amount(row[27]), amount(row[29]))];
+  if (states.includes("variance")) return "variance";
+  const applicable = states.filter((state): state is Exclude<ReconciliationState, "not_applicable"> => state !== "not_applicable");
+  if (!applicable.length) return "not_applicable";
+  if (applicable.every((state) => state === "reconciled")) return "reconciled";
+  if (applicable.every((state) => state === "pending")) return "pending";
+  return "partial";
 }
 
 function reconcileState(projected: number, actual: number): ReconciliationState {
