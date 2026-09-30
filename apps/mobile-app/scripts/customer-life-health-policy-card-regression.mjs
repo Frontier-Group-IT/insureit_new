@@ -20,7 +20,13 @@ assert(
 );
 assert(
   policiesScreen.includes("(['All', 'Motor', 'Non-Motor', 'Health', 'Life'] as PolicyCategoryFilter[]).map"),
-  'Customer Policies must render the five compact policy category KPI cards.',
+  'Customer Policies must render the five policy category segments.',
+);
+assert(
+  policiesScreen.includes('style={styles.categorySegmentedControl}') &&
+    policiesScreen.includes('styles.categorySegment') &&
+    policiesScreen.includes('styles.categorySegmentDivider'),
+  'Customer Policies must render All, Motor, Non-Motor, Health, and Life as one joined segmented KPI control.',
 );
 assert(
   policiesScreen.includes("const matchesCategory = categoryFilter === 'All' || getPolicyCategory(policy) === categoryFilter;"),
@@ -28,7 +34,7 @@ assert(
 );
 assert(
   policiesScreen.includes('life_health_policy_details!life_health_policy_details_policy_id_fkey(premium_paying_term,policy_duration,payment_frequency)'),
-  'Life/Health cards must load PPT, policy duration, and payment frequency from canonical policy details.',
+  'Life/Health cards must load PPT, policy duration, and payment frequency from customer-readable policy details.',
 );
 assert(
   policiesScreen.includes('<Text style={styles.lifeHealthTypeText}>{lifeHealthKind.toUpperCase()}</Text>') &&
@@ -36,8 +42,12 @@ assert(
   'Life/Health cards must show the compact LIFE / HEALTH badge in navy.',
 );
 assert(
-  policiesScreen.includes('label="Policy No."') && policiesScreen.includes('label="PPT - Premium Payment Term"'),
-  'Life/Health upper-right summary must show Policy No. and expanded PPT label.',
+  policiesScreen.includes('label="Premium Amount"') && policiesScreen.includes('label="PPT - Premium Paying Term"'),
+  'Life/Health upper-right summary must show Premium Amount and PPT - Premium Paying Term.',
+);
+assert(
+  !policiesScreen.includes('label="PPT - Premium Payment Term"'),
+  'Life/Health card must not retain the old Premium Payment Term label.',
 );
 assert(
   policiesScreen.includes('label="Product Name"') &&
@@ -47,7 +57,7 @@ assert(
 );
 assert(
   !policiesScreen.includes('styles.lifeHealthDefaultIcon'),
-  'Life/Health upper-right summary must not render the old default heart/shield icon beside Policy No. and PPT.',
+  'Life/Health upper-right summary must not render the old default heart/shield icon.',
 );
 assert(
   policiesScreen.includes("kind === 'Health' ? 'Stay protected. Stay healthy.' : 'Protecting what matters most.'"),

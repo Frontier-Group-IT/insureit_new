@@ -24,6 +24,14 @@ type LifeHealthPolicyDetails = {
   payment_frequency?: string | null;
 };
 
+type LifeHealthCaseSnapshot = {
+  final_policy_id: string | null;
+  premium_paying_term?: string | null;
+  policy_duration?: string | null;
+  payment_frequency?: string | null;
+  premium_amount?: number | null;
+};
+
 type PolicyRow = {
   id: string;
   customer_id: string;
@@ -34,6 +42,7 @@ type PolicyRow = {
   business_line?: string | null;
   policy_product?: string | null;
   policy_term?: string | null;
+  premium_amount?: number | null;
   life_health_policy_details?: LifeHealthPolicyDetails | LifeHealthPolicyDetails[] | null;
   start_date: string;
   end_date: string;
@@ -54,42 +63,83 @@ export default function PoliciesScreen() {
 
   useEffect(() => {
     let active = true;
+
     async function load() {
       const session = await getCurrentSession();
       if (!session?.user) return router.replace('/login');
+
       const contexts = await getOperationalCustomerContexts();
       const ids = contexts.map((context) => context.customer_id);
       if (ids.length) {
-        const [policyResult, externalPolicyResult, vehicleResult, companyResult] = await Promise.all([
+        const [policyResult, externalPolicyResult, lifeHealthCaseResult, vehicleResult, companyResult] = await Promise.all([
           (supabase as any)
             .from('policies')
-            .select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,business_line,policy_product,policy_term,start_date,end_date,status,superseded_by_policy_id,life_health_policy_details!life_health_policy_details_policy_id_fkey(premium_paying_term,policy_duration,payment_frequency)')
+            .select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,business_line,policy_product,policy_term,premium_amount,start_date,end_date,status,superseded_by_policy_id,life_health_policy_details!life_health_policy_details_policy_id_fkey(premium_paying_term,policy_duration,payment_frequency)')
             .in('customer_id', ids)
             .order('end_date', { ascending: true }),
-          (supabase as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').in('customer_id', ids).order('end_date', { ascending: true }),
+          (supabase as any)
+            .from('external_policies')
+            .select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date')
+            .in('customer_id', ids)
+            .order('end_date', { ascending: true }),
+          (supabase as any)
+            .from('life_health_cases')
+            .select('final_policy_id,premium_paying_term,policy_duration,payment_frequency,premium_amount,converted_at')
+            .in('customer_id', ids)
+            .not('final_policy_id', 'is', null)
+            .order('converted_at', { ascending: false }),
           supabase.from('vehicles').select('*').in('customer_id', ids),
           supabase.from('insurance_companies').select('*'),
         ]);
+
         if (!active) return;
-        const combinedPolicies: PolicyRow[] = [
-          ...((policyResult.data ?? []) as Omit<PolicyRow, 'source'>[]).map((policy) => ({ ...policy, source: 'sibl' as const })),
-          ...((externalPolicyResult.data ?? []) as Omit<PolicyRow, 'source' | 'status' | 'superseded_by_policy_id' | 'business_line' | 'policy_product' | 'policy_term' | 'life_health_policy_details'>[]).map((policy) => ({
+
+        const latestCaseByPolicy = new Map<string, LifeHealthCaseSnapshot>();
+        for (const row of (lifeHealthCaseResult.data ?? []) as (LifeHealthCaseSnapshot & { converted_at?: string | null })[]) {
+          if (row.final_policy_id && !latestCaseByPolicy.has(row.final_policy_id)) {
+            latestCaseByPolicy.set(row.final_policy_id, row);
+          }
+        }
+
+        const internalPolicies = ((policyResult.data ?? []) as Omit<PolicyRow, 'source'>[]).map((policy) => {
+          const caseSnapshot = latestCaseByPolicy.get(policy.id);
+          const currentDetails = getLifeHealthDetails({ ...policy, source: 'sibl' as const });
+          const mergedDetails = caseSnapshot
+            ? {
+                premium_paying_term: caseSnapshot.premium_paying_term ?? currentDetails?.premium_paying_term ?? null,
+                policy_duration: caseSnapshot.policy_duration ?? currentDetails?.policy_duration ?? policy.policy_term ?? null,
+                payment_frequency: caseSnapshot.payment_frequency ?? currentDetails?.payment_frequency ?? null,
+              }
+            : policy.life_health_policy_details;
+
+          return {
             ...policy,
-            source: 'external' as const,
-            status: null,
-            superseded_by_policy_id: null,
-            business_line: null,
-            policy_product: null,
-            policy_term: null,
-            life_health_policy_details: null,
-          })),
-        ];
-        setPolicies(currentPoliciesByVehicle(combinedPolicies));
+            premium_amount: policy.premium_amount ?? caseSnapshot?.premium_amount ?? null,
+            life_health_policy_details: mergedDetails,
+            source: 'sibl' as const,
+          };
+        });
+
+        const externalPolicies = ((externalPolicyResult.data ?? []) as Omit<PolicyRow, 'source' | 'status' | 'superseded_by_policy_id' | 'business_line' | 'policy_product' | 'policy_term' | 'premium_amount' | 'life_health_policy_details'>[]).map((policy) => ({
+          ...policy,
+          source: 'external' as const,
+          status: null,
+          superseded_by_policy_id: null,
+          business_line: null,
+          policy_product: null,
+          policy_term: null,
+          premium_amount: null,
+          life_health_policy_details: null,
+        }));
+
+        setPolicies(currentPoliciesByVehicle([...internalPolicies, ...externalPolicies]));
         setVehicles(vehicleResult.data ?? []);
         setCompanies(companyResult.data ?? []);
       }
+
       if (active) setLoading(false);
     }
+
     void load();
     return () => { active = false; };
   }, [router]);
@@ -107,6 +157,7 @@ export default function PoliciesScreen() {
       policy.business_line,
       policy.policy_product,
       policy.policy_term,
+      policy.premium_amount,
       details?.premium_paying_term,
       details?.policy_duration,
       details?.payment_frequency,
@@ -123,20 +174,6 @@ export default function PoliciesScreen() {
 
   return (
     <Screen title="My Policies" showLogout showTitleHeader={false}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroller} contentContainerStyle={styles.categoryWrap}>
-        {(['All', 'Motor', 'Non-Motor', 'Health', 'Life'] as PolicyCategoryFilter[]).map((item) => (
-          <Pressable
-            key={item}
-            accessibilityRole="button"
-            onPress={() => setCategoryFilter(item)}
-            style={[styles.categoryCard, categoryFilter === item && styles.categoryCardActive]}
-          >
-            <Text style={[styles.categoryLabel, categoryFilter === item && styles.categoryLabelActive]}>{item}</Text>
-            <Text style={[styles.categoryCount, categoryFilter === item && styles.categoryCountActive]}>{countForCategory(item, policies)}</Text>
-          </Pressable>
-        ))}
-      </ScrollView>
-
       <View style={styles.searchSection}>
         <View style={styles.searchHeadingRow}>
           <View>
@@ -148,6 +185,25 @@ export default function PoliciesScreen() {
             <Text style={styles.addButtonText}>Add policy</Text>
           </Pressable>
         </View>
+
+        <View style={styles.categorySegmentedControl}>
+          {(['All', 'Motor', 'Non-Motor', 'Health', 'Life'] as PolicyCategoryFilter[]).map((item, index, items) => (
+            <Pressable
+              key={item}
+              accessibilityRole="button"
+              onPress={() => setCategoryFilter(item)}
+              style={[
+                styles.categorySegment,
+                index < items.length - 1 && styles.categorySegmentDivider,
+                categoryFilter === item && styles.categorySegmentActive,
+              ]}
+            >
+              <Text numberOfLines={1} style={[styles.categoryLabel, categoryFilter === item && styles.categoryLabelActive]}>{item}</Text>
+              <Text style={[styles.categoryCount, categoryFilter === item && styles.categoryCountActive]}>{countForCategory(item, policies)}</Text>
+            </Pressable>
+          ))}
+        </View>
+
         <AppSearchBar value={query} onChangeText={setQuery} placeholder="Search vehicle, insurer or policy no." />
       </View>
 
@@ -255,6 +311,7 @@ function LifeHealthPolicyBody({
   const details = getLifeHealthDetails(policy);
   const displayedPolicyNo = policy.source === 'external' ? formatExternalPolicyNumber(policy.policy_no) : policy.policy_no;
   const ppt = cleanDisplayValue(details?.premium_paying_term);
+  const premiumAmount = formatPremiumAmount(policy.premium_amount);
   const productName = cleanDisplayValue(policy.policy_product);
   const paymentFrequency = cleanDisplayValue(details?.payment_frequency);
   const policyDuration = cleanDisplayValue(details?.policy_duration ?? policy.policy_term);
@@ -273,8 +330,8 @@ function LifeHealthPolicyBody({
         <View style={styles.contentDivider} />
         <View style={styles.lifeHealthRightSummary}>
           <View style={styles.lifeHealthRightCopy}>
-            <CompactLabelValue icon="shield-outline" label="Policy No." value={displayedPolicyNo} />
-            <CompactLabelValue icon="calendar-range" label="PPT - Premium Payment Term" value={ppt} />
+            <CompactLabelValue icon="cash" label="Premium Amount" value={premiumAmount} />
+            <CompactLabelValue icon="calendar-range" label="PPT - Premium Paying Term" value={ppt} />
           </View>
         </View>
       </View>
@@ -305,7 +362,7 @@ function CompactLabelValue({
   label,
   value,
 }: {
-  icon: 'shield-outline' | 'calendar-range';
+  icon: 'cash' | 'calendar-range';
   label: string;
   value: string;
 }) {
@@ -408,6 +465,11 @@ function cleanDisplayValue(value?: string | null) {
   return cleaned || '-';
 }
 
+function formatPremiumAmount(value?: number | null) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '-';
+  return `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+}
+
 function currentPoliciesByVehicle(policies: PolicyRow[]) {
   const candidates = policies.filter((policy) => {
     if (policy.superseded_by_policy_id) return false;
@@ -484,14 +546,6 @@ function policyStageLabel(policy: PolicyRow, tone: PolicyTone) {
 }
 
 const styles = StyleSheet.create({
-  categoryScroller: { maxHeight: 58, marginTop: 0, marginBottom: 10 },
-  categoryWrap: { flexDirection: 'row', alignItems: 'stretch', gap: 7, paddingRight: 14 },
-  categoryCard: { minWidth: 72, height: 52, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 7, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', justifyContent: 'space-between' },
-  categoryCardActive: { backgroundColor: palette.navy, borderColor: palette.navy },
-  categoryLabel: { color: palette.slate, fontSize: 9.5, lineHeight: 12, fontWeight: '900' },
-  categoryLabelActive: { color: '#FFFFFF' },
-  categoryCount: { color: palette.ink, fontSize: 15, lineHeight: 18, fontWeight: '900' },
-  categoryCountActive: { color: '#FFFFFF' },
   searchSection: { marginTop: 0, marginBottom: 10 },
   searchHeadingRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 8 },
   searchHeading: { color: palette.navy, fontSize: 13, fontWeight: '900' },
@@ -499,6 +553,14 @@ const styles = StyleSheet.create({
   addButton: { minHeight: 34, borderRadius: 12, backgroundColor: palette.navy, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 4 },
   addButtonPressed: { opacity: 0.84, transform: [{ scale: 0.96 }] },
   addButtonText: { color: '#FFFFFF', fontSize: 11.5, fontWeight: '900' },
+  categorySegmentedControl: { width: '100%', height: 50, marginBottom: 8, flexDirection: 'row', borderWidth: 1, borderColor: '#DCE8F4', borderRadius: 14, overflow: 'hidden', backgroundColor: '#FFFFFF' },
+  categorySegment: { flex: 1, minWidth: 0, paddingHorizontal: 3, paddingVertical: 6, backgroundColor: '#FFFFFF', justifyContent: 'space-between', alignItems: 'flex-start' },
+  categorySegmentDivider: { borderRightWidth: 1, borderRightColor: '#DCE8F4' },
+  categorySegmentActive: { backgroundColor: palette.navy },
+  categoryLabel: { color: palette.slate, fontSize: 8.4, lineHeight: 11, fontWeight: '900' },
+  categoryLabelActive: { color: '#FFFFFF' },
+  categoryCount: { color: palette.ink, fontSize: 14, lineHeight: 17, fontWeight: '900' },
+  categoryCountActive: { color: '#FFFFFF' },
   filterScroller: { maxHeight: 42, marginBottom: 12 },
   filterWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 14 },
   filterChip: { height: 34, borderRadius: 999, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center' },
@@ -545,6 +607,4 @@ const styles = StyleSheet.create({
   lifeHealthProtectionStrip: { marginTop: 8, minHeight: 38, borderRadius: 11, backgroundColor: '#EFF6FD', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 8, overflow: 'hidden' },
   lifeHealthProtectionText: { flex: 1, minWidth: 0, color: '#5F7082', fontSize: 9.5, lineHeight: 12, fontWeight: '800' },
   lifeHealthProtectionArt: { width: 38, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', backgroundColor: '#E4F0FB', borderTopLeftRadius: 22, borderBottomLeftRadius: 22 },
-  cardFooter: { marginTop: 10, paddingTop: 9, borderTopWidth: 1, borderTopColor: '#E5ECF5', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  footerHint: { color: palette.slate, fontSize: 11.5, fontWeight: '900' },
 });
