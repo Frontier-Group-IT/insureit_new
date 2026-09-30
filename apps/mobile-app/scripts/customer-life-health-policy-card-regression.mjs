@@ -11,26 +11,51 @@ assert(
   'Customer Policies must distinguish Life and Health card variants.',
 );
 assert(
+  policiesScreen.includes("type PolicyCategoryFilter = 'All' | 'Motor' | 'Non-Motor' | 'Health' | 'Life';"),
+  'Customer Policies must expose All, Motor, Non-Motor, Health, and Life category filters.',
+);
+assert(
+  policiesScreen.includes("const [categoryFilter, setCategoryFilter] = useState<PolicyCategoryFilter>('All');"),
+  'Customer policy category filtering must default to All.',
+);
+assert(
+  policiesScreen.includes("(['All', 'Motor', 'Non-Motor', 'Health', 'Life'] as PolicyCategoryFilter[]).map"),
+  'Customer Policies must render the five compact policy category KPI cards.',
+);
+assert(
+  policiesScreen.includes("const matchesCategory = categoryFilter === 'All' || getPolicyCategory(policy) === categoryFilter;"),
+  'Customer policy category KPI selection must filter the visible policy list.',
+);
+assert(
   policiesScreen.includes('life_health_policy_details!life_health_policy_details_policy_id_fkey(premium_paying_term,policy_duration,payment_frequency)'),
   'Life/Health cards must load PPT, policy duration, and payment frequency from canonical policy details.',
 );
 assert(
-  policiesScreen.includes('<Text style={styles.lifeHealthTypeText}>{lifeHealthKind.toUpperCase()}</Text>'),
-  'Life/Health cards must show the compact LIFE / HEALTH badge in the header.',
+  policiesScreen.includes('<Text style={styles.lifeHealthTypeText}>{lifeHealthKind.toUpperCase()}</Text>') &&
+    policiesScreen.includes('lifeHealthTypePill: { borderRadius: 999, backgroundColor: palette.navy'),
+  'Life/Health cards must show the compact LIFE / HEALTH badge in navy.',
 );
 assert(
-  policiesScreen.includes('label="Policy No."') && policiesScreen.includes('label="PPT"'),
-  'Life/Health upper-right summary must show Policy No. and PPT.',
+  policiesScreen.includes('label="Policy No."') && policiesScreen.includes('label="PPT - Premium Payment Term"'),
+  'Life/Health upper-right summary must show Policy No. and expanded PPT label.',
 );
 assert(
   policiesScreen.includes('label="Product Name"') &&
     policiesScreen.includes('label="Payment Frequency"') &&
-    policiesScreen.includes('label="PD"'),
-  'Life/Health compact metric row must show Product Name, Payment Frequency, and PD.',
+    policiesScreen.includes('label="PD - Policy Duration"'),
+  'Life/Health compact metric row must show Product Name, Payment Frequency, and expanded PD label.',
+);
+assert(
+  !policiesScreen.includes('styles.lifeHealthDefaultIcon'),
+  'Life/Health upper-right summary must not render the old default heart/shield icon beside Policy No. and PPT.',
 );
 assert(
   policiesScreen.includes("kind === 'Health' ? 'Stay protected. Stay healthy.' : 'Protecting what matters most.'"),
   'Life/Health cards must retain the compact protection strip copy.',
+);
+assert(
+  policiesScreen.includes('size={25} color="#D7262E"'),
+  'Life/Health protection strip heart must render in red.',
 );
 assert(
   policiesScreen.includes("const groupingKey = policy.vehicle_id ? `vehicle:${policy.vehicle_id}` : `policy:${policy.source}:${policy.id}`;"),
