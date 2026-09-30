@@ -1,0 +1,213 @@
+name: Publish Partner 0.1.0 cumulative latest OTA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/partner-app/.trigger-preview-ota-0-1'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN_PARTNER }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ilzhsfqqjyppzzvfscmh.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
+      EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
+      COMPAT_SHA: 74039199991888777911deb30cf248e8f36cf8a8
+      LOGIN_COMPAT_SHA: a12d16af444ad937280611ac3f6480ca1eb7f830
+
+    steps:
+      - name: Check out current main tooling
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: tooling
+          fetch-depth: 0
+
+      - name: Check out approved Partner 0.1.0 compatibility source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.COMPAT_SHA }}
+          path: compat
+          fetch-depth: 0
+
+      - name: Check out approved Partner 0.1.0 login compatibility source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.LOGIN_COMPAT_SHA }}
+          path: logincompat
+          fetch-depth: 0
+
+      - name: Verify exact Partner 0.1.0 runtime target
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd compat
+          [ "$(git rev-parse HEAD)" = "$COMPAT_SHA" ] || { echo "Refusing OTA: compatibility checkout is not the approved source." >&2; exit 1; }
+          node <<'NODE'
+          const app = require('./apps/partner-app/app.json');
+          const expo = app.expo || {};
+          if (expo.version !== '0.1.0') throw new Error(`Expected 0.1.0, found ${expo.version}`);
+          if (expo?.runtimeVersion?.policy !== 'appVersion') throw new Error('Expected appVersion runtime policy');
+          if (expo?.extra?.eas?.projectId !== '8ade82c1-4c96-4f09-b90b-802270fb406d') throw new Error('Unexpected Partner EAS project');
+          NODE
+
+      - name: Apply accepted Home refinements
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tooling/scripts/partner/patch-0-1-home-hero-reference.mjs 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          node tooling/scripts/partner/patch-0-1-home-refinements.mjs 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q "hero: { height: 158" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q "opacity: 0.70, transform: \[{ scale: 0.92 }\]" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q 'Net Premium' 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          ! grep -q '<Text style={styles.sectionTitle}>Recent Activity</Text>' 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          ! grep -q '<Text style={styles.sectionTitle}>Your Impact</Text>' 'compat/apps/partner-app/app/(tabs)/index.tsx'
+
+      - name: Install current accepted Business layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tooling/scripts/partner/patch-0-1-partner-screen-hide-topbar.mjs 'compat/apps/partner-app/components/partner-screen.tsx'
+          cp tooling/scripts/partner/compat/partner-business-date-filter.tsx compat/apps/partner-app/components/partner-business-date-filter-compat.tsx
+          mkdir -p compat/apps/partner-app/assets/partner/banners
+          cp tooling/apps/partner-app/assets/partner/banners/business-growth-11.png compat/apps/partner-app/assets/partner/banners/business-growth-11.png
+          cp tooling/scripts/partner/compat/partner-business-reference-0-1.tsx 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q 'Business Overview' 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q 'Month-wise Trend' 'compat/apps/partner-app/app/(tabs)/business.tsx'
+
+      - name: Install ffmpeg for legacy Policies banner normalization
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+
+      - name: Install current accepted Policies and Claims layouts
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tooling/scripts/partner/compat/partner-policies-reference-0-1.tsx 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          cp tooling/apps/partner-app/assets/partner/banners/policies-header-reference.jpg compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
+          ffmpeg -hide_banner -loglevel error -y -i compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg -frames:v 1 -c:v mjpeg -q:v 2 -pix_fmt yuvj420p /tmp/policies-header-reference.jpg
+          mv /tmp/policies-header-reference.jpg compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
+          cp tooling/scripts/partner/compat/partner-claims-reference-0-1.tsx 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          cp tooling/apps/partner-app/assets/partner/banners/claims-header-reference.jpg compat/apps/partner-app/assets/partner/banners/claims-header-reference.jpg
+          node tooling/scripts/partner/patch-0-1-policy-claims-readable-kpis.mjs compat/apps/partner-app
+          grep -q 'Policy Intake' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q 'Total Claims' 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q 'summaryCardActive' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q 'kpiCardActive' 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+
+      - name: Install current accepted More Search and detail layouts
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tooling/apps/partner-app/assets/partner-login-logo.png compat/apps/partner-app/assets/partner-login-logo.png
+          cp tooling/scripts/partner/compat/partner-more-reference-0-1.tsx 'compat/apps/partner-app/app/(tabs)/more.tsx'
+          cp tooling/scripts/partner/compat/partner-search-home-reference-0-1.tsx 'compat/apps/partner-app/app/search.tsx'
+          cp tooling/scripts/partner/compat/partner-policy-detail-reference-0-1.tsx 'compat/apps/partner-app/app/policy/[id].tsx'
+          cp tooling/scripts/partner/compat/partner-claim-detail-reference-0-1.tsx 'compat/apps/partner-app/app/claim/[id].tsx'
+          grep -q 'Profile & registration' 'compat/apps/partner-app/app/(tabs)/more.tsx'
+          grep -q 'Search customer, vehicle number or policy number' 'compat/apps/partner-app/app/search.tsx'
+          grep -q 'Policy Overview' 'compat/apps/partner-app/app/policy/[id].tsx'
+          grep -q 'Claim Overview' 'compat/apps/partner-app/app/claim/[id].tsx'
+
+      - name: Install current accepted Policy Intake layouts
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tooling/scripts/partner/compat/partner-policy-intake-reference-0-1.tsx 'compat/apps/partner-app/app/policy-intake-new.tsx'
+          node tooling/scripts/partner/patch-0-1-policy-intake-network.mjs 'compat/apps/partner-app/app/policy-intake-new.tsx'
+          cp tooling/scripts/partner/compat/partner-policy-intakes-reference-0-1.tsx 'compat/apps/partner-app/app/policy-intakes.tsx'
+          grep -q '<Text style={styles.headerTitle}>Send Policy to Operations</Text>' 'compat/apps/partner-app/app/policy-intake-new.tsx'
+          grep -q 'Search by PIR number, customer, insurer or source' 'compat/apps/partner-app/app/policy-intakes.tsx'
+
+      - name: Install current Stories and Renewal layouts
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tooling/apps/partner-app/app/stories.tsx compat/apps/partner-app/app/stories.tsx
+          cp tooling/apps/partner-app/app/renewals.tsx compat/apps/partner-app/app/renewals.tsx
+          grep -q 'Your business, in moments' compat/apps/partner-app/app/stories.tsx
+          grep -q 'RENEWAL OPPORTUNITIES' compat/apps/partner-app/app/renewals.tsx
+          grep -q 'Renewal filters' compat/apps/partner-app/app/renewals.tsx
+          ! grep -q "label=\"All 30d\"" compat/apps/partner-app/app/renewals.tsx
+
+      - name: Restore approved 0.1.0 login compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp logincompat/apps/partner-app/app/login.tsx compat/apps/partner-app/app/login.tsx
+          cp logincompat/apps/partner-app/assets/partner-login-logo.png compat/apps/partner-app/assets/partner-login-logo.png
+          grep -q 'YOUR SAFETY, OUR PROMISE' compat/apps/partner-app/app/login.tsx
+          grep -q 'partner-login-logo.png' compat/apps/partner-app/app/login.tsx
+
+      - name: Require Expo token
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "${EXPO_TOKEN:-}" ] || { echo "EXPO_TOKEN_PARTNER is missing." >&2; exit 1; }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: compat/package-lock.json
+
+      - name: Install compatibility dependencies
+        working-directory: compat
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify complete Partner 0.1.0 cumulative bundle
+        working-directory: compat/apps/partner-app
+        run: npx tsc --noEmit
+
+      - name: Verify Expo token and linked Partner project
+        working-directory: compat/apps/partner-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx eas-cli whoami
+          npx eas-cli project:info --non-interactive
+
+      - name: Publish Partner 0.1.0 cumulative latest OTA
+        working-directory: compat/apps/partner-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx eas-cli update \
+            --channel preview \
+            --environment preview \
+            --message "Partner 0.1.0 cumulative latest UI from main ${GITHUB_SHA}" \
+            --clear-cache \
+            --non-interactive
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Partner 0.1.0 cumulative latest OTA"
+            echo
+            echo "- Installed APK target: 0.1.0 (5)"
+            echo "- Runtime: 0.1.0"
+            echo "- Channel: preview"
+            echo "- Approved compatibility baseline: $COMPAT_SHA"
+            echo "- Home/Business/Policies/Claims/More/Search: cumulative accepted layouts included"
+            echo "- Policy Detail/Claim Detail/Policy Intake/Submissions: cumulative accepted layouts included"
+            echo "- Stories: latest accepted layout included"
+            echo "- Renewals: latest main redesign included"
+            echo "- Login: approved 0.1.0 compatibility layout included"
+            echo "- Native APK/AAB build: not used"
+          } >> "$GITHUB_STEP_SUMMARY"
