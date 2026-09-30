@@ -4,9 +4,6 @@
     "autoJobCancelation": false
   },
   "git": {
-    "deploymentEnabled": {
-      "main": false,
-      "work-*": false
-    }
+    "deploymentEnabled": false
   }
 }
