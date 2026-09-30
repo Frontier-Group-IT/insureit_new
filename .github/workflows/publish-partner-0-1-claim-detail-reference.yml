@@ -14,6 +14,8 @@ on:
       - 'scripts/partner/compat/partner-policy-intakes-reference-0-1.tsx'
       - 'apps/partner-app/app/(tabs)/claims.tsx'
       - 'scripts/partner/compat/partner-claims-reference-0-1.tsx'
+      - 'apps/partner-app/app/customers.tsx'
+      - 'scripts/partner/compat/partner-customers-reference-0-1.tsx'
   workflow_dispatch:
 
 permissions:
@@ -189,6 +191,18 @@ jobs:
           grep -q "\['Uploaded', 'RTO', 'Review', 'Done'\]" 'compat/apps/partner-app/app/policy-intakes.tsx'
           grep -q 'Policies" active' 'compat/apps/partner-app/app/policy-intakes.tsx'
 
+      - name: Install current Customers reference layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tooling/scripts/partner/compat/partner-customers-reference-0-1.tsx compat/apps/partner-app/app/customers.tsx
+          grep -q 'label="Customers" value={totals.customers}' compat/apps/partner-app/app/customers.tsx
+          grep -q 'label="Active" value={totals.active}' compat/apps/partner-app/app/customers.tsx
+          grep -q 'label="Inactive" value={totals.inactive}' compat/apps/partner-app/app/customers.tsx
+          grep -q 'statusDotInactive' compat/apps/partner-app/app/customers.tsx
+          grep -q 'logo-whatsapp' compat/apps/partner-app/app/customers.tsx
+          ! grep -q 'Customer book' compat/apps/partner-app/app/customers.tsx
+
       - name: Install current Stories reference layout
         shell: bash
         run: |
@@ -257,7 +271,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 cumulative OTA with Renewals reference redesign" \
+            --message "Partner 0.1.0 cumulative OTA with Customer reference redesign" \
             --clear-cache \
             --non-interactive
 
@@ -273,6 +287,7 @@ jobs:
             echo "- Runtime: 0.1.0"
             echo "- Installed APK target: 0.1.0 (5)"
             echo "- Renewals reference redesign: included"
+            echo "- Customer reference redesign: included"
             echo "- Claim Details reference redesign: included"
             echo "- Policy Intake submissions reference redesign: included"
             echo "- Policy Intake filters: enlarged and horizontally scrollable"
