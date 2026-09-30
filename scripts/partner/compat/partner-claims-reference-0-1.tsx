@@ -364,6 +364,7 @@ function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void
   const status = humanize(row.current_status || row.claim_state);
   const completed = row.claim_state === 'completed';
   const rejected = /reject/i.test(row.current_status || '');
+  const isNew = /^new$/i.test((row.current_status || '').trim());
   const vehiclePolicy = [row.vehicle_no || 'Vehicle not linked', row.policy_no || 'External policy'].join('  |  ');
   return (
     <Pressable
@@ -390,17 +391,17 @@ function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void
       <View style={styles.claimRight}>
         <View style={[
           styles.statusPill,
-          rejected ? styles.statusRejected : completed ? styles.statusSuccess : styles.statusWarning,
+          rejected ? styles.statusRejected : completed ? styles.statusSuccess : isNew ? styles.statusNew : styles.statusWarning,
         ]}>
           <View style={[
             styles.statusDot,
-            rejected ? styles.statusDotRejected : completed ? styles.statusDotSuccess : styles.statusDotWarning,
+            rejected ? styles.statusDotRejected : completed ? styles.statusDotSuccess : isNew ? styles.statusDotNew : styles.statusDotWarning,
           ]} />
           <Text
             numberOfLines={1}
             style={[
               styles.statusText,
-              rejected ? styles.statusTextRejected : completed ? styles.statusTextSuccess : styles.statusTextWarning,
+              rejected ? styles.statusTextRejected : completed ? styles.statusTextSuccess : isNew ? styles.statusTextNew : styles.statusTextWarning,
             ]}
           >
             {status}
@@ -691,14 +692,17 @@ const styles = StyleSheet.create({
   statusWarning: { backgroundColor: '#FFF2DD' },
   statusSuccess: { backgroundColor: '#E4F6EE' },
   statusRejected: { backgroundColor: '#FDEBEC' },
+  statusNew: { backgroundColor: '#0B2E63' },
   statusDot: { width: 5, height: 5, borderRadius: 3 },
   statusDotWarning: { backgroundColor: '#F39A1E' },
   statusDotSuccess: { backgroundColor: '#19A56F' },
   statusDotRejected: { backgroundColor: '#E04F5F' },
+  statusDotNew: { backgroundColor: '#FFFFFF' },
   statusText: { flexShrink: 1, fontSize: 6.6, lineHeight: 9, fontWeight: '700' },
   statusTextWarning: { color: '#B66A14' },
   statusTextSuccess: { color: '#178157' },
   statusTextRejected: { color: '#C43F50' },
+  statusTextNew: { color: '#FFFFFF' },
   claimDate: { color: '#66789B', fontSize: 6.4, lineHeight: 8.5, fontWeight: '600', textAlign: 'right' },
 
   listFooter: { paddingHorizontal: 10, paddingTop: 6, paddingBottom: 12, alignItems: 'center' },
