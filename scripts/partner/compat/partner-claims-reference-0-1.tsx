@@ -1,5 +1,4 @@
-import type { ComponentProps } from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -38,7 +37,6 @@ const filters: Array<{ value: PartnerClaimState; label: string }> = [
   { value: 'active', label: 'In Progress' },
   { value: 'completed', label: 'Settled' },
 ];
-type SortOrder = 'newest' | 'oldest';
 
 let savedClaimQuery = '';
 let savedClaimState: PartnerClaimState = 'all';
@@ -48,9 +46,7 @@ export default function ClaimsScreen() {
   const { cacheScopeKey, context } = usePartnerSession();
   const [state, setState] = useState<PartnerClaimState>(savedClaimState);
   const [query, setQuery] = useState(savedClaimQuery);
-  const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
   const [filterOpen, setFilterOpen] = useState(false);
-  const [sortOpen, setSortOpen] = useState(false);
   const debouncedSearch = useDebouncedValue(query.trim(), 350);
 
   useEffect(() => {
@@ -87,13 +83,7 @@ export default function ClaimsScreen() {
     staleTimeMs: 60_000,
   });
 
-  const rows = useMemo(() => {
-    return [...collection.rows].sort((left, right) => {
-      const leftTime = new Date(left.accident_at || left.created_at).getTime() || 0;
-      const rightTime = new Date(right.accident_at || right.created_at).getTime() || 0;
-      return sortOrder === 'newest' ? rightTime - leftTime : leftTime - rightTime;
-    });
-  }, [collection.rows, sortOrder]);
+  const rows = collection.rows;
 
   const refreshAll = useCallback(async () => {
     await Promise.all([summary.refresh(), collection.refresh()]);
@@ -188,19 +178,6 @@ export default function ClaimsScreen() {
           </View>
         ) : null}
 
-        {summary.loading && !summary.data ? (
-          <View style={styles.summaryLoading}>
-            <ActivityIndicator color={partnerTheme.colors.brand} />
-          </View>
-        ) : (
-          <View style={styles.kpiGrid}>
-            <MetricCard icon="document-text-outline" value={summary.data?.total_claims ?? 0} label="Total Claims" />
-            <MetricCard icon="shield-checkmark-outline" value={summary.data?.completed_claims ?? 0} label="Settled Claims" />
-            <MetricCard icon="hourglass-outline" value={summary.data?.active_claims ?? 0} label="In Progress" />
-            <MetricCard icon="headset-outline" value={summary.data?.assistance_requested ?? 0} label="Assistance" />
-          </View>
-        )}
-
         <View style={styles.controls}>
           <View style={styles.tabs}>
             {filters.map((filter) => {
@@ -218,15 +195,6 @@ export default function ClaimsScreen() {
               );
             })}
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Sort claims"
-            onPress={() => setSortOpen(true)}
-            style={({ pressed }) => [styles.sortButton, pressed && styles.pressed]}
-          >
-            <Text style={styles.sortText}>Sort By</Text>
-            <Ionicons name="chevron-down" size={11} color="#1E31D3" />
-          </Pressable>
         </View>
 
         {collection.error && collection.rows.length && !collection.stale ? (
@@ -315,48 +283,7 @@ export default function ClaimsScreen() {
         onClose={() => setFilterOpen(false)}
       />
 
-      <ChoiceModal
-        visible={sortOpen}
-        title="Sort claims"
-        options={[
-          {
-            key: 'newest',
-            label: 'Newest first',
-            selected: sortOrder === 'newest',
-            onPress: () => {
-              setSortOrder('newest');
-              setSortOpen(false);
-            },
-          },
-          {
-            key: 'oldest',
-            label: 'Oldest first',
-            selected: sortOrder === 'oldest',
-            onPress: () => {
-              setSortOrder('oldest');
-              setSortOpen(false);
-            },
-          },
-        ]}
-        onClose={() => setSortOpen(false)}
-      />
     </SafeAreaView>
-  );
-}
-
-function MetricCard({ icon, value, label }: { icon: ComponentProps<typeof Ionicons>['name']; value: number; label: string }) {
-  return (
-    <View style={styles.kpiCard}>
-      <View style={styles.kpiIconWrap}>
-        <Ionicons name={icon} size={16} color="#0D4185" />
-      </View>
-      <Text style={styles.kpiValue}>{value}</Text>
-      <Text numberOfLines={2} style={styles.kpiLabel}>{label}</Text>
-      <View style={styles.scopeLine}>
-        <Ionicons name="analytics-outline" size={8} color="#19A56F" />
-        <Text style={styles.scopeText}>Current scope</Text>
-      </View>
-    </View>
   );
 }
 
@@ -618,32 +545,30 @@ const styles = StyleSheet.create({
   scopeText: { color: '#19A56F', fontSize: 6.5, lineHeight: 8, fontWeight: '700' },
 
   controls: {
-    marginTop: 6,
-    minHeight: 33,
+    marginTop: 8,
+    minHeight: 46,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: 9,
+    alignItems: 'stretch',
+    borderRadius: 10,
+    overflow: 'hidden',
     backgroundColor: '#FFFFFF',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E1E9F5',
-    paddingHorizontal: 2,
+    borderWidth: 1,
+    borderColor: '#DCE5F0',
   },
   tabs: { flex: 1, flexDirection: 'row', alignItems: 'stretch' },
   tab: {
-    minWidth: 50,
-    minHeight: 31,
-    paddingHorizontal: 5,
+    flex: 1,
+    minWidth: 0,
+    minHeight: 44,
+    paddingHorizontal: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    borderBottomWidth: 2,
+    borderBottomWidth: 3,
     borderBottomColor: 'transparent',
   },
-  tabActive: { backgroundColor: '#F0F5FF', borderBottomColor: '#1738D5', borderTopLeftRadius: 7, borderTopRightRadius: 7 },
-  tabText: { color: '#5E6C8C', fontSize: 7.5, lineHeight: 10, fontWeight: '600' },
+  tabActive: { backgroundColor: '#EEF4FF', borderBottomColor: '#1738D5' },
+  tabText: { color: '#5E6C8C', textAlign: 'center', fontSize: 9, lineHeight: 12, fontWeight: '700' },
   tabTextActive: { color: '#1738D5', fontWeight: '800' },
-  sortButton: { minHeight: 31, flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 5 },
-  sortText: { color: '#1E31D3', fontSize: 8, lineHeight: 10, fontWeight: '700' },
   inlineBanner: { marginTop: 6 },
 
   rowWrap: { paddingHorizontal: 10, marginTop: 5 },
