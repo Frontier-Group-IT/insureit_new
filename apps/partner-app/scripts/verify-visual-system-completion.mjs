@@ -102,7 +102,12 @@ for (const detailAsset of ['products.motorInsurance', 'products.healthInsurance'
 requireText(policyDetail, 'getPartnerPolicyDetail(id)', 'Policy detail must preserve the existing scoped data service.');
 if (policyDetail.includes('name="person-outline"') || policyDetail.includes('name="car-outline"') || policyDetail.includes("category === 'Motor' ? 'car-outline'")) throw new Error('Policy detail feature/entity identity must not regress to generic person/car glyphs.');
 
-for (const detailAsset of ['products.motorInsurance', 'products.healthInsurance', 'products.familyInsurance', 'products.commercialInsurance', 'navigation.claims', 'status.claimAttention', 'status.verified']) requireText(customerDetail, `PartnerAssets.${detailAsset}`, `Customer detail is missing ${detailAsset} artwork.`);
+requireText(customerDetail, 'getPartnerInsurerLogoSource', 'Customer detail must resolve insurer logos for policy and claim rows.');
+requireText(customerDetail, 'getPartnerManufacturerLogoSource', 'Customer detail must resolve manufacturer logos for vehicle rows.');
+requireText(customerDetail, 'policy.insurer_name', 'Customer detail policy rows must bind insurer identity from real policy data.');
+requireText(customerDetail, 'claim.insurer_name', 'Customer detail claim rows must bind insurer identity from real claim data.');
+requireText(customerDetail, 'vehicle.make', 'Customer detail vehicle rows must bind manufacturer identity from real vehicle data.');
+requireText(customerDetail, 'PartnerContactActions phone={data.customer.phone} email={data.customer.email}', 'Customer detail must preserve Call, WhatsApp and Email actions from real customer contact data.');
 requireText(customerDetail, 'getPartnerCustomerDetail(id)', 'Customer detail must preserve the existing scoped data service.');
 requireText(customerDetail, 'initials(data.customer.customer_name)', 'Customer detail must retain real-customer initials for identity.');
 for (const oldGlyph of ['document-text-outline', 'car-outline', 'shield-outline']) if (customerDetail.includes(`name="${oldGlyph}"`)) throw new Error(`Customer detail feature rows must not regress to ${oldGlyph}.`);
