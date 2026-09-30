@@ -51,6 +51,8 @@ type PolicyRow = {
   superseded_by_policy_id?: string | null;
 };
 
+const POLICY_CATEGORY_OPTIONS: PolicyCategoryFilter[] = ['All', 'Motor', 'Non-Motor', 'Health', 'Life'];
+
 export default function PoliciesScreen() {
   const router = useRouter();
   const [policies, setPolicies] = useState<PolicyRow[]>([]);
@@ -58,6 +60,7 @@ export default function PoliciesScreen() {
   const [companies, setCompanies] = useState<InsuranceCompany[]>([]);
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<PolicyCategoryFilter>('All');
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const [filter, setFilter] = useState<PolicyFilter>('All');
   const [loading, setLoading] = useState(true);
 
@@ -146,6 +149,7 @@ export default function PoliciesScreen() {
 
   if (loading) return <Screen title="My Policies"><LoadingState /></Screen>;
 
+  const categoryPolicies = policies.filter((policy) => categoryFilter === 'All' || getPolicyCategory(policy) === categoryFilter);
   const filteredPolicies = policies.filter((policy) => {
     const vehicle = vehicles.find((item) => item.id === policy.vehicle_id);
     const company = companies.find((item) => item.id === policy.insurance_company_id);
@@ -186,34 +190,72 @@ export default function PoliciesScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.categorySegmentedControl}>
-          {(['All', 'Motor', 'Non-Motor', 'Health', 'Life'] as PolicyCategoryFilter[]).map((item, index, items) => (
-            <Pressable
-              key={item}
-              accessibilityRole="button"
-              onPress={() => setCategoryFilter(item)}
-              style={[
-                styles.categorySegment,
-                index < items.length - 1 && styles.categorySegmentDivider,
-                categoryFilter === item && styles.categorySegmentActive,
-              ]}
-            >
-              <Text numberOfLines={1} style={[styles.categoryLabel, categoryFilter === item && styles.categoryLabelActive]}>{item}</Text>
-              <Text style={[styles.categoryCount, categoryFilter === item && styles.categoryCountActive]}>{countForCategory(item, policies)}</Text>
-            </Pressable>
-          ))}
-        </View>
-
         <AppSearchBar value={query} onChangeText={setQuery} placeholder="Search vehicle, insurer or policy no." />
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroller} contentContainerStyle={styles.filterWrap}>
-        {(['All', 'Active', 'Renewal Due', 'Expired'] as PolicyFilter[]).map((item) => (
-          <Pressable key={item} accessibilityRole="button" onPress={() => setFilter(item)} style={[styles.filterChip, filter === item && styles.filterChipActive]}>
-            <Text style={[styles.filterText, filter === item && styles.filterTextActive]}>{item} ({countForFilter(item, policies.filter((policy) => categoryFilter === 'All' || getPolicyCategory(policy) === categoryFilter))})</Text>
+      <View style={styles.filterRow}>
+        <View style={styles.categoryDropdownWrap}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: categoryMenuOpen, selected: filter === 'All' }}
+            onPress={() => setCategoryMenuOpen((open) => !open)}
+            style={[
+              styles.filterChip,
+              styles.categoryDropdownChip,
+              filter === 'All' && styles.filterChipActive,
+            ]}
+          >
+            <Text style={[styles.filterText, filter === 'All' && styles.filterTextActive]}>
+              {categoryFilter} ({countForCategory(categoryFilter, policies)})
+            </Text>
+            <MaterialCommunityIcons
+              name={categoryMenuOpen ? 'chevron-up' : 'chevron-down'}
+              size={14}
+              color={filter === 'All' ? '#FFFFFF' : palette.slate}
+            />
           </Pressable>
-        ))}
-      </ScrollView>
+
+          {categoryMenuOpen ? (
+            <View style={styles.categoryDropdownMenu}>
+              {POLICY_CATEGORY_OPTIONS.map((item) => (
+                <Pressable
+                  key={item}
+                  accessibilityRole="button"
+                  onPress={() => {
+                    setCategoryFilter(item);
+                    setFilter('All');
+                    setCategoryMenuOpen(false);
+                  }}
+                  style={[styles.categoryDropdownOption, categoryFilter === item && styles.categoryDropdownOptionActive]}
+                >
+                  <Text style={[styles.categoryDropdownOptionText, categoryFilter === item && styles.categoryDropdownOptionTextActive]}>
+                    {item}
+                  </Text>
+                  <Text style={[styles.categoryDropdownOptionCount, categoryFilter === item && styles.categoryDropdownOptionTextActive]}>
+                    {countForCategory(item, policies)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+        </View>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statusFilterScroller} contentContainerStyle={styles.statusFilterWrap}>
+          {(['Active', 'Renewal Due', 'Expired'] as PolicyFilter[]).map((item) => (
+            <Pressable
+              key={item}
+              accessibilityRole="button"
+              onPress={() => {
+                setFilter(item);
+                setCategoryMenuOpen(false);
+              }}
+              style={[styles.filterChip, filter === item && styles.filterChipActive]}
+            >
+              <Text style={[styles.filterText, filter === item && styles.filterTextActive]}>{item} ({countForFilter(item, categoryPolicies)})</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
 
       {policies.length === 0 ? <EmptyState title="No policies yet" body="Add your current policy once and we will keep the vehicle cover visible here." actionLabel="Add Policy" onAction={() => router.push('/customer/add-policy')} icon="shield-plus-outline" /> : null}
 
@@ -290,7 +332,7 @@ export default function PoliciesScreen() {
         );
       })}
 
-      {policies.length > 0 && filteredPolicies.length === 0 ? <EmptyState title="No matching policy" body="Try another search or filter." actionLabel="Clear Filters" onAction={() => { setQuery(''); setCategoryFilter('All'); setFilter('All'); }} icon="filter-remove-outline" /> : null}
+      {policies.length > 0 && filteredPolicies.length === 0 ? <EmptyState title="No matching policy" body="Try another search or filter." actionLabel="Clear Filters" onAction={() => { setQuery(''); setCategoryFilter('All'); setFilter('All'); setCategoryMenuOpen(false); }} icon="filter-remove-outline" /> : null}
     </Screen>
   );
 }
@@ -553,16 +595,17 @@ const styles = StyleSheet.create({
   addButton: { minHeight: 34, borderRadius: 12, backgroundColor: palette.navy, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 4 },
   addButtonPressed: { opacity: 0.84, transform: [{ scale: 0.96 }] },
   addButtonText: { color: '#FFFFFF', fontSize: 11.5, fontWeight: '900' },
-  categorySegmentedControl: { width: '100%', height: 50, marginBottom: 8, flexDirection: 'row', borderWidth: 1, borderColor: '#DCE8F4', borderRadius: 14, overflow: 'hidden', backgroundColor: '#FFFFFF' },
-  categorySegment: { flex: 1, minWidth: 0, paddingHorizontal: 3, paddingVertical: 6, backgroundColor: '#FFFFFF', justifyContent: 'space-between', alignItems: 'flex-start' },
-  categorySegmentDivider: { borderRightWidth: 1, borderRightColor: '#DCE8F4' },
-  categorySegmentActive: { backgroundColor: palette.navy },
-  categoryLabel: { color: palette.slate, fontSize: 8.4, lineHeight: 11, fontWeight: '900' },
-  categoryLabelActive: { color: '#FFFFFF' },
-  categoryCount: { color: palette.ink, fontSize: 14, lineHeight: 17, fontWeight: '900' },
-  categoryCountActive: { color: '#FFFFFF' },
-  filterScroller: { maxHeight: 42, marginBottom: 12 },
-  filterWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 14 },
+  filterRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12, zIndex: 20 },
+  categoryDropdownWrap: { position: 'relative', zIndex: 30, marginRight: 8 },
+  categoryDropdownChip: { flexDirection: 'row', gap: 3, paddingHorizontal: 10 },
+  categoryDropdownMenu: { position: 'absolute', top: 38, left: 0, width: 138, zIndex: 40, elevation: 10, borderRadius: 12, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', paddingVertical: 4, shadowColor: palette.ink, shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 5 } },
+  categoryDropdownOption: { minHeight: 34, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  categoryDropdownOptionActive: { backgroundColor: '#EEF4FB' },
+  categoryDropdownOptionText: { color: palette.slate, fontSize: 11, fontWeight: '900' },
+  categoryDropdownOptionCount: { color: '#7B8798', fontSize: 10.5, fontWeight: '900' },
+  categoryDropdownOptionTextActive: { color: palette.navy },
+  statusFilterScroller: { flex: 1, maxHeight: 42 },
+  statusFilterWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 14 },
   filterChip: { height: 34, borderRadius: 999, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center' },
   filterChipActive: { backgroundColor: palette.navy, borderColor: palette.navy },
   filterText: { color: palette.slate, fontSize: 11.5, fontWeight: '900' },

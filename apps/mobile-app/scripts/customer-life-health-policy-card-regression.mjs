@@ -15,22 +15,44 @@ assert(
   'Customer Policies must expose All, Motor, Non-Motor, Health, and Life category filters.',
 );
 assert(
+  policiesScreen.includes("const POLICY_CATEGORY_OPTIONS: PolicyCategoryFilter[] = ['All', 'Motor', 'Non-Motor', 'Health', 'Life'];"),
+  'Customer Policies must retain exactly the five requested policy category choices.',
+);
+assert(
   policiesScreen.includes("const [categoryFilter, setCategoryFilter] = useState<PolicyCategoryFilter>('All');"),
   'Customer policy category filtering must default to All.',
 );
 assert(
-  policiesScreen.includes("(['All', 'Motor', 'Non-Motor', 'Health', 'Life'] as PolicyCategoryFilter[]).map"),
-  'Customer Policies must render the five policy category segments.',
+  policiesScreen.includes('const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);'),
+  'Customer Policies must manage the compact category dropdown state.',
 );
 assert(
-  policiesScreen.includes('style={styles.categorySegmentedControl}') &&
-    policiesScreen.includes('styles.categorySegment') &&
-    policiesScreen.includes('styles.categorySegmentDivider'),
-  'Customer Policies must render All, Motor, Non-Motor, Health, and Life as one joined segmented KPI control.',
+  !policiesScreen.includes('categorySegmentedControl') && !policiesScreen.includes('categorySegmentDivider'),
+  'Customer Policies must not render the old separate/joined category KPI strip above search.',
+);
+assert(
+  policiesScreen.includes('{categoryFilter} ({countForCategory(categoryFilter, policies)})') &&
+    policiesScreen.includes("name={categoryMenuOpen ? 'chevron-up' : 'chevron-down'}"),
+  'The former All status control must show the selected category, its count, and dropdown chevron.',
+);
+assert(
+  policiesScreen.includes('POLICY_CATEGORY_OPTIONS.map((item) => (') &&
+    policiesScreen.includes('setCategoryFilter(item);') &&
+    policiesScreen.includes("setFilter('All');") &&
+    policiesScreen.includes('setCategoryMenuOpen(false);'),
+  'Choosing a category must filter policies, restore the all-status view, and close the dropdown.',
+);
+assert(
+  policiesScreen.includes("(['Active', 'Renewal Due', 'Expired'] as PolicyFilter[]).map"),
+  'Active, Renewal Due, and Expired must remain as the separate status chips beside the category dropdown.',
+);
+assert(
+  !policiesScreen.includes("(['All', 'Active', 'Renewal Due', 'Expired'] as PolicyFilter[]).map"),
+  'The old standalone All status chip must not remain after All becomes the category dropdown trigger.',
 );
 assert(
   policiesScreen.includes("const matchesCategory = categoryFilter === 'All' || getPolicyCategory(policy) === categoryFilter;"),
-  'Customer policy category KPI selection must filter the visible policy list.',
+  'Customer policy category dropdown selection must filter the visible policy list.',
 );
 assert(
   policiesScreen.includes('life_health_policy_details!life_health_policy_details_policy_id_fkey(premium_paying_term,policy_duration,payment_frequency)'),
