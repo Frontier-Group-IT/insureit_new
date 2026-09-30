@@ -120,7 +120,7 @@ export default function StoriesScreen() {
               {story.metric !== undefined ? <Text style={styles.metric}>{formatMetric(story)}</Text> : null}
               <View style={styles.titleRow}>
                 <Text style={styles.title}>{story.title}</Text>
-                {story.route ? <Ionicons name="arrow-forward" size={16} color="#DCE7FF" style={styles.titleArrow} /> : null}
+                {story.route ? <Ionicons name="arrow-forward" size={18} color="#DCE7FF" style={styles.titleArrow} /> : null}
               </View>
               <Text style={styles.body}>{story.body}</Text>
             </Pressable>
@@ -197,13 +197,13 @@ const styles = StyleSheet.create({
   brand: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   brandMark: { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#5B4CE3' },
   brandMarkText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' },
-  brandTitle: { color: '#FFFFFF', fontSize: 8, fontWeight: '900', letterSpacing: 0.8 },
-  brandMeta: { marginTop: 1, color: '#B8C5DB', fontSize: 6.8 },
+  brandTitle: { color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
+  brandMeta: { marginTop: 1, color: '#B8C5DB', fontSize: 7.5 },
   close: { width: 31, height: 31, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(24,42,74,0.88)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', zIndex: 5 },
-  errorText: { color: '#CDD4E0', fontSize: 10, textAlign: 'center' },
+  errorText: { color: '#CDD4E0', fontSize: 13, textAlign: 'center' },
   retry: { marginTop: 12, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: '#4F46C8' },
-  retryText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800' },
+  retryText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
   content: { zIndex: 5, position: 'absolute', left: 11, right: 11, top: '16%' },
   storyIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)' },
   toneAttention: { backgroundColor: '#D88916' },
@@ -212,23 +212,23 @@ const styles = StyleSheet.create({
   toneBusiness: { backgroundColor: '#1464EA' },
   toneLearn: { backgroundColor: '#A66B17' },
   toneCalm: { backgroundColor: '#49627A' },
-  eyebrow: { marginTop: 12, color: '#B8B3FF', fontSize: 8, fontWeight: '900', letterSpacing: 1.4 },
+  eyebrow: { marginTop: 12, color: '#B8B3FF', fontSize: 9.5, lineHeight: 13, fontWeight: '900', letterSpacing: 1.4 },
   storyTextLink: { alignSelf: 'flex-start', maxWidth: '94%', paddingRight: 2 },
   storyTextPressed: { opacity: 0.74 },
-  metric: { marginTop: 7, color: '#FFFFFF', fontSize: 30, lineHeight: 35, fontWeight: '900', letterSpacing: -0.8, textShadowColor: 'rgba(0,0,0,0.24)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 5 },
+  metric: { marginTop: 7, color: '#FFFFFF', fontSize: 34, lineHeight: 40, fontWeight: '900', letterSpacing: -0.8, textShadowColor: 'rgba(0,0,0,0.24)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 5 },
   titleRow: { marginTop: 3, flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start' },
-  title: { maxWidth: 310, color: '#FFFFFF', fontSize: 20, lineHeight: 25, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.22)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
+  title: { maxWidth: 310, color: '#FFFFFF', fontSize: 24, lineHeight: 30, fontWeight: '900', textShadowColor: 'rgba(0,0,0,0.22)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
   titleArrow: { marginLeft: 7, marginTop: 2 },
-  body: { marginTop: 5, maxWidth: 330, color: '#D1DBEA', fontSize: 10, lineHeight: 15, textShadowColor: 'rgba(0,0,0,0.28)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
+  body: { marginTop: 6, maxWidth: 330, color: '#D1DBEA', fontSize: 13, lineHeight: 19, textShadowColor: 'rgba(0,0,0,0.28)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
   storyProgressWrap: { marginTop: 14, maxWidth: 330 },
   storyProgressTrack: { height: 7, overflow: 'hidden', borderRadius: 999, backgroundColor: 'rgba(48,74,112,0.80)' },
   storyProgressFill: { height: '100%', borderRadius: 999, backgroundColor: '#7B73FF' },
   storyProgressMeta: { marginTop: 6, flexDirection: 'row', justifyContent: 'space-between' },
-  storyProgressText: { color: '#CBD5E4', fontSize: 8 },
+  storyProgressText: { color: '#CBD5E4', fontSize: 9 },
   completedPill: { alignSelf: 'flex-start', marginTop: 13, minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 11, backgroundColor: 'rgba(24,56,45,0.90)' },
-  completedText: { color: '#BDE8CD', fontSize: 8.5, fontWeight: '800' },
+  completedText: { color: '#BDE8CD', fontSize: 10, fontWeight: '800' },
   footer: { position: 'absolute', zIndex: 6, right: 13, bottom: 16, alignItems: 'flex-end' },
-  footerHint: { color: '#D2DBE9', fontSize: 8 },
+  footerHint: { color: '#D2DBE9', fontSize: 9 },
   leftZone: { position: 'absolute', zIndex: 2, left: 0, top: 75, bottom: 54, width: '22%' },
   rightZone: { position: 'absolute', zIndex: 2, right: 0, top: 75, bottom: 54, width: '22%' },
 });
