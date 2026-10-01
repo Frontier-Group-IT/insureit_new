@@ -1,8 +1,9 @@
 "use client";
 
 import { CalendarDays } from "lucide-react";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { ReportDateRangePicker } from "@/components/reports/report-date-range-picker";
 
 export type ReportShortcut = { value: string; label: string };
 
@@ -25,6 +26,10 @@ export function ReportQueryShortcuts({
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentQuery = searchParams.toString();
+  const [customOpen, setCustomOpen] = useState(false);
+  const customFrom = searchParams.get("from") ?? "";
+  const customTo = searchParams.get("to") ?? "";
+  const customActive = param === "period" && activeValue === "custom";
   const displayedOptions = param === "period" && !options.some((option) => option.value === "custom")
     ? [...options, { value: "custom", label: "Custom" }]
     : options;
@@ -35,8 +40,35 @@ export function ReportQueryShortcuts({
     return true;
   }).length;
 
+  useEffect(() => {
+    if (customActive && (!customFrom || !customTo)) setCustomOpen(true);
+    if (!customActive) setCustomOpen(false);
+  }, [customActive, customFrom, customTo]);
+
+  function applyShortcut(value: string) {
+    if (param === "period") setCustomOpen(value === "custom");
+    router.push(buildHref(pathname, currentQuery, param, value));
+  }
+
+  function applyCustomRange(from: string, to: string) {
+    const next = new URLSearchParams(searchParams.toString());
+    next.set("period", "custom");
+    next.set("from", from);
+    next.set("to", to);
+    clearPages(next);
+    setCustomOpen(false);
+    router.push(`${pathname}?${next.toString()}`);
+  }
+
   return (
     <div className="report-shortcuts flex min-w-0 flex-wrap items-center justify-end gap-2">
+      <style>{`
+        form[action="/reports/business"]:has(input[type="date"][name="from"]):has(input[type="date"][name="to"]) { display: none !important; }
+        form[action^="/reports/"] input[type="date"][name="from"],
+        form[action^="/reports/"] input[type="date"][name="to"] { display: none !important; }
+        form[action^="/reports/"] label:has(input[type="date"][name="from"]),
+        form[action^="/reports/"] label:has(input[type="date"][name="to"]) { display: none !important; }
+      `}</style>
       <label className="report-shortcut-select">
         <span className="sr-only">{label}</span>
         <CalendarDays className="h-3.5 w-3.5 shrink-0" />
@@ -44,13 +76,23 @@ export function ReportQueryShortcuts({
           className="report-header-select"
           value={activeValue}
           aria-label={label}
-          onChange={(event) => router.push(buildHref(pathname, currentQuery, param, event.target.value))}
+          onChange={(event) => applyShortcut(event.target.value)}
         >
           {displayedOptions.map((option) => (
             <option key={option.value} value={option.value}>{compactLabel(option.label)}</option>
           ))}
         </select>
       </label>
+      {customActive ? (
+        <ReportDateRangePicker
+          from={customFrom}
+          to={customTo}
+          open={customOpen}
+          onOpenChange={setCustomOpen}
+          onRangeComplete={applyCustomRange}
+          buttonClassName="inline-flex h-9 min-w-[190px] items-center justify-between gap-3 rounded-xl border border-[#CBD5E1] bg-white px-3 text-left text-[11px] font-semibold text-[#22314A] outline-none transition hover:border-[#AAB8C8]"
+        />
+      ) : null}
       {showActiveFilterCount && activeFilterCount > 0 ? (
         <span className="rounded-full border border-[#dfe5ee] bg-[#f8fafc] px-2.5 py-1 text-[8.5px] font-bold text-[#607087]">
           {activeFilterCount} active {activeFilterCount === 1 ? "filter" : "filters"}
@@ -108,12 +150,16 @@ function buildHref(pathname: string, currentQuery: string, param: "period" | "ho
     next.delete("to");
   }
 
-  for (const [key] of Array.from(next.entries())) {
-    if (key.toLowerCase().includes("page")) next.delete(key);
-  }
+  clearPages(next);
 
   const query = next.toString();
   return query ? `${pathname}?${query}` : pathname;
+}
+
+function clearPages(params: URLSearchParams) {
+  for (const [key] of Array.from(params.entries())) {
+    if (key.toLowerCase().includes("page")) params.delete(key);
+  }
 }
 
 function defaultPeriod(pathname: string) {
