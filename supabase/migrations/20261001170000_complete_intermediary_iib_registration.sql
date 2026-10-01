@@ -19,11 +19,18 @@ declare
   v_registration_id uuid;
   v_registered_at timestamptz;
   v_registered_date date;
+  v_today date := (now() at time zone 'Asia/Kolkata')::date;
   v_reference text;
   v_updated integer;
 begin
   if p_application_id is null or p_actor_id is null then
     raise exception 'Application and actor are required';
+  end if;
+  if p_registered_on is not null and p_registered_on > v_today then
+    raise exception 'IIB registration date cannot be in the future';
+  end if;
+  if length(btrim(coalesce(p_iib_reference, ''))) > 120 then
+    raise exception 'IIB registration reference is too long';
   end if;
 
   select *
@@ -102,12 +109,17 @@ begin
     raise exception 'Intermediary registration record not found';
   end if;
 
-  v_registered_date := coalesce(p_registered_on, current_date);
-  v_registered_at := case
-    when p_registered_on is null or p_registered_on = current_date then now()
-    else (v_registered_date::timestamp + time '12:00') at time zone 'Asia/Kolkata'
-  end;
   v_reference := nullif(btrim(coalesce(p_iib_reference, '')), '');
+  if v_assignment.iib_registration_status = 'registered' and v_assignment.iib_registered_at is not null then
+    v_registered_at := v_assignment.iib_registered_at;
+    v_registered_date := (v_registered_at at time zone 'Asia/Kolkata')::date;
+  else
+    v_registered_date := coalesce(p_registered_on, v_today);
+    v_registered_at := case
+      when v_registered_date = v_today then now()
+      else (v_registered_date::timestamp + time '12:00') at time zone 'Asia/Kolkata'
+    end;
+  end if;
 
   update public.intermediary_iib_submission_packets
   set status = 'registered',
@@ -154,7 +166,7 @@ begin
       agreement_status = 'signed',
       iib_status = 'registered',
       iib_reference = coalesce(v_reference, iib_reference),
-      activated_at = coalesce(activated_at, v_registered_at),
+      activated_at = v_registered_at,
       updated_at = now()
   where id = v_registration_id;
 
@@ -174,7 +186,7 @@ begin
       iib_status = 'cleared',
       compliance_status = 'approved',
       registration_status = 'iib_registered',
-      activated_at = coalesce(activated_at, v_registered_at),
+      activated_at = v_registered_at,
       updated_by = p_actor_id,
       updated_at = now()
   where application_id = p_application_id
