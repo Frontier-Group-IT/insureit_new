@@ -13,6 +13,7 @@ type InsuranceCompany = {
   portal_url: string | null;
   portal_status: string | null;
   is_active: boolean;
+  logo_path: string | null;
 };
 
 export const dynamic = "force-dynamic";
@@ -25,7 +26,7 @@ export default async function EditInsuranceCompanyPage({ params, searchParams }:
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from("insurance_companies")
-    .select("id,name,segment,sibpl_code,portal_url,portal_status,is_active")
+    .select("id,name,segment,sibpl_code,portal_url,portal_status,is_active,logo_path")
     .eq("id", id)
     .maybeSingle<InsuranceCompany>();
 
