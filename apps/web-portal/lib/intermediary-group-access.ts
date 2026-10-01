@@ -15,6 +15,7 @@ const groupManagerRoles = new Set<AppRole>([
   "asm",
   "sales_manager",
   "relationship_manager",
+  "backoffice_executive",
 ]);
 
 const groupTransferRoles = new Set<AppRole>([
