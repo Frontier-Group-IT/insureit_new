@@ -182,6 +182,11 @@ export default function CustomerMotorPolicyDetailScreen() {
   }, [id, router, source]);
 
   const status = useMemo(() => policyStatus(policy?.end_date), [policy?.end_date]);
+  const showRenewedPolicyAction = useMemo(() => {
+    if (!policy?.end_date) return false;
+    const days = Math.ceil((new Date(policy.end_date).getTime() - Date.now()) / 86400000);
+    return days <= 30;
+  }, [policy?.end_date]);
 
   async function openPolicyCopy() {
     if (!policyCopy || openingCopy) return;
@@ -276,6 +281,23 @@ export default function CustomerMotorPolicyDetailScreen() {
     <Screen title="Policy details" subtitle={policy.policy_no} showLogout showTitleHeader={false}>
       <View style={styles.pageHeaderRow}>
         <Text style={styles.pageTitle}>Policy details</Text>
+        {showRenewedPolicyAction ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Add renewed policy"
+            onPress={() =>
+              router.push(
+                policy.vehicle_id
+                  ? { pathname: '/customer/add-policy', params: { vehicleId: policy.vehicle_id } }
+                  : '/customer/add-policy',
+              )
+            }
+            style={({ pressed }) => [styles.pageRenewAction, pressed && styles.pressed]}
+          >
+            <MaterialCommunityIcons name="plus" size={17} color="#FFFFFF" />
+            <Text style={styles.pageRenewActionText}>Add renewed policy</Text>
+          </Pressable>
+        ) : null}
       </View>
 
       <Card style={styles.detailSection}>
@@ -427,8 +449,10 @@ function formatFileSize(value?: number | null) {
 }
 
 const styles = StyleSheet.create({
-  pageHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  pageHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 },
   pageTitle: { color: palette.navy, fontSize: 21, fontWeight: '900' },
+  pageRenewAction: { minHeight: 36, borderRadius: 10, backgroundColor: palette.navy, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  pageRenewActionText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
   detailSection: { borderRadius: 22, borderWidth: 1, borderColor: '#DCE6F1', padding: 16, backgroundColor: '#FFFFFF' },
   sectionRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
   detailIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#EEF4FB', alignItems: 'center', justifyContent: 'center' },
