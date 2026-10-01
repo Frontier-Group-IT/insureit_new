@@ -76,7 +76,7 @@ export function LifeHealthPolicyForm({ policyType, insurers, customers, source }
     <nav aria-label="Life and Health policy sections" className="sticky top-[72px] z-50 mb-3 flex min-h-[36px] items-stretch gap-4 overflow-x-auto rounded-b-xl border border-t-0 border-[#D9E2F0] bg-white/96 px-4 shadow-[0_5px_14px_rgba(15,23,42,.06)] backdrop-blur">
       {LIFE_HEALTH_SECTIONS.map((section, index) => <button key={section} type="button" onClick={() => goToSection(index)} aria-current={activeSection === index ? "step" : undefined} className={`group relative flex min-w-fit items-center gap-1.5 border-b-2 px-0.5 py-2 text-[9px] font-semibold transition ${activeSection === index ? "border-[#4F46E5] text-[#3346B8]" : "border-transparent text-[#667085] hover:border-[#CBD5E1] hover:text-[#344054]"}`}><span className={`text-[8px] font-bold tabular-nums ${activeSection === index ? "text-[#4F46E5]" : "text-[#98A2B3]"}`}>{String(index + 1).padStart(2, "0")}</span><span>{section}</span></button>)}
     </nav>
-    <div className="grid w-full min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_336px]">
+    <div id="life-health-form-grid" className="grid w-full min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_336px]">
       <div className="min-w-0 space-y-3">
         <Section number="02" title="Customer / proposer" contentClassName="md:grid-cols-2 xl:grid-cols-4"><Segmented value={form.customerMode} onChange={(value) => setForm((current) => ({ ...current, customerMode: value, customerId: value === "new" ? "" : current.customerId }))} />{form.customerMode === "existing" ? <div className="md:col-span-1 xl:col-span-3"><CustomerSearchField label="Customer / proposer" name="life_health_customer_id" options={customerOptions} defaultValue={form.customerId} required portalResults onSelectionChange={chooseCustomer} /></div> : <><Field label="Client / proposer name" value={form.insuredName} onChange={(e) => update("insuredName", e.target.value)} placeholder="Name on proposal" required /><Field label="Client mobile number" value={form.phone} onChange={(e) => update("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" placeholder="10 digit mobile" required /><Field label="Email" value={form.email} onChange={(e) => update("email", e.target.value)} type="email" placeholder="Optional" /></>}</Section>
         <Section number="03" title="Policy product & case details" contentClassName="md:grid-cols-2 xl:grid-cols-3"><Select label="Insurance company" value={form.insurerId} onChange={(e) => update("insurerId", e.target.value)} required><option value="">Select insurer</option>{insurers.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</Select><Field label="Product name" value={form.productName} onChange={(e) => update("productName", e.target.value)} placeholder="Product / plan name" required /><Field label="Case / proposal number" value={form.proposalNumber} onChange={(e) => update("proposalNumber", e.target.value.toUpperCase())} placeholder="Proposal number" required /><Select label="PPT · Premium Paying Term" value={form.ppt} onChange={(e) => update("ppt", e.target.value)}><option value="">Select term</option><option value="Single Pay">Single Pay</option>{YEAR_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}</Select><Select label="PD · Policy Duration / Term" value={form.pd} onChange={(e) => update("pd", e.target.value)}><option value="">Select term</option>{YEAR_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}</Select><Select label="Payment frequency" value={form.paymentFrequency} onChange={(e) => update("paymentFrequency", e.target.value)} required><option value="">Select frequency</option>{PAYMENT_FREQUENCIES.map((item) => <option key={item}>{item}</option>)}</Select></Section>
@@ -95,8 +95,8 @@ function LifeHealthSummaryRail({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let frame = 0;
-    const actionElement = document.getElementById("life-health-onboarding-actions");
-    if (!actionElement) {
+    const formGridElement = document.getElementById("life-health-form-grid");
+    if (!formGridElement) {
       setPosition(null);
       return;
     }
@@ -107,14 +107,13 @@ function LifeHealthSummaryRail({ children }: { children: ReactNode }) {
         return;
       }
       const anchorRect = anchorRef.current.getBoundingClientRect();
-      const actionRect = actionElement.getBoundingClientRect();
+      const formGridRect = formGridElement.getBoundingClientRect();
       const fixedCard = document.getElementById("life-health-policy-summary-fixed-card");
       const cardHeight = fixedCard?.getBoundingClientRect().height ?? 0;
       const safeTop = 124;
-      const bottomGap = 24;
       const preferredTop = Math.max(anchorRect.top, safeTop);
-      const actionLimitedTop = cardHeight > 0 ? actionRect.top - cardHeight - bottomGap : preferredTop;
-      const boundedTop = Math.min(preferredTop, actionLimitedTop);
+      const premiumBottomAlignedTop = cardHeight > 0 ? formGridRect.bottom - cardHeight : preferredTop;
+      const boundedTop = Math.min(preferredTop, premiumBottomAlignedTop);
       setPosition({ left: anchorRect.left, width: anchorRect.width, top: Math.max(safeTop, boundedTop) });
     };
 
@@ -128,7 +127,7 @@ function LifeHealthSummaryRail({ children }: { children: ReactNode }) {
     window.addEventListener("resize", scheduleUpdate);
     window.addEventListener("scroll", scheduleUpdate, true);
     const observer = new ResizeObserver(scheduleUpdate);
-    observer.observe(actionElement);
+    observer.observe(formGridElement);
     observer.observe(document.documentElement);
     return () => {
       cancelAnimationFrame(frame);
