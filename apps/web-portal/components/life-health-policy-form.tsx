@@ -3,16 +3,20 @@
 import { useEffect, useMemo, useRef, useState, useTransition, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, IndianRupee, Upload } from "lucide-react";
+import { CheckCircle2, HandCoins, IndianRupee, Upload } from "lucide-react";
 import { createLifeHealthCase } from "@/app/policies/life-health-policy-actions";
 import { CustomerSearchField } from "@/components/customer-search-field";
+import { usePolicyCommercialAccess } from "@/components/policy-commercial-access-context";
 
 export type LifeHealthSourceOption = { type: "POSP" | "MISP" | "SIBL / Partner"; value: string; label: string; code: string; rmName: string; rmCode: string; mobile?: string };
 export type LifeHealthCustomerOption = { id: string; name: string; contactName: string; phone: string; email: string };
 export type LifeHealthSourceSnapshot = { sourcingDate: string; intermediaryType: string; sourceId: string; leadSource: string; intermediaryCode: string; rmName: string; rmCode: string };
 type Props = { policyType: "Life" | "Health"; insurers: Array<{ label: string; value: string }>; customers: LifeHealthCustomerOption[]; source: LifeHealthSourceSnapshot };
 type CustomerMode = "new" | "existing";
-type State = { customerMode: CustomerMode; customerId: string; insuredName: string; phone: string; email: string; insurerId: string; productName: string; proposalNumber: string; ppt: string; pd: string; paymentFrequency: string; premiumAmount: string; paymentMode: string; remarks: string };
+type CommercialBasis = "NET_PREMIUM_PERCENT" | "FIXED_AMOUNT";
+type CommercialModal = "payin" | "payout" | null;
+type State = { customerMode: CustomerMode; customerId: string; insuredName: string; phone: string; email: string; insurerId: string; productName: string; proposalNumber: string; ppt: string; pd: string; paymentFrequency: string; premiumAmount: string; paymentMode: string; remarks: string; payinBasis: CommercialBasis; payinPercent: string; payinFixedAmount: string; insurerSchemeAmount: string; payoutBasis: CommercialBasis; payoutPercent: string; payoutFixedAmount: string };
+type CommercialCalculations = { payinBase: number; totalPayin: number; tds: number; payinAfterTds: number; totalPayout: number; retention: number };
 
 const inputClass = "h-10 w-full rounded-xl border border-[#D8DEE9] bg-white px-3 text-[11px] font-medium text-[#17203A] outline-none transition placeholder:text-[#98A2B3] hover:border-[#B8C2D1] focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA] disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]";
 const labelClass = "mb-1.5 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.055em] text-[#475467]";
@@ -20,22 +24,26 @@ const PAYMENT_FREQUENCIES = ["Monthly", "Quarterly", "Half Yearly", "Annually", 
 const PAYMENT_MODES = ["Cash", "Cheque", "NEFT/RTGS", "UPI", "Credit/Debit Card", "Net Banking"];
 const YEAR_OPTIONS = Array.from({ length: 50 }, (_, index) => `${index + 1} Year${index === 0 ? "" : "s"}`);
 const LIFE_HEALTH_SECTIONS = ["Source", "Customer / Proposer", "Policy Product & Case", "Premium & Payment"];
-const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
+const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
 
-function firstValidationError(source: LifeHealthSourceSnapshot, form: State) {
+function firstValidationError(source: LifeHealthSourceSnapshot, form: State, commercialAccess: boolean) {
   const requiredFields: Array<[string, string]> = [["Policy Issuance Date", source.sourcingDate], ["Intermediary Type", source.intermediaryType], ["Lead Source", source.sourceId], [form.customerMode === "existing" ? "Customer / Proposer" : "Client / Proposer Name", form.customerMode === "existing" ? form.customerId : form.insuredName], ...(form.customerMode === "new" ? [["Client Mobile Number", form.phone] as [string, string]] : []), ["Insurance Company", form.insurerId], ["Product Name", form.productName], ["Case / Proposal Number", form.proposalNumber], ["Payment Frequency", form.paymentFrequency], ["Premium Amount", form.premiumAmount], ["Payment Mode", form.paymentMode]];
   const missing = requiredFields.find(([, value]) => !String(value).trim());
   if (missing) return `${missing[0]} is required.`;
   if (form.customerMode === "new" && !/^\d{10}$/.test(form.phone)) return "Client Mobile Number must be 10 digits.";
+  if (commercialAccess && form.payinBasis === "NET_PREMIUM_PERCENT" && Number(form.payinPercent || 0) > 100) return "Projected insurer Pay-in percentage cannot exceed 100%.";
+  if (commercialAccess && form.payoutBasis === "NET_PREMIUM_PERCENT" && Number(form.payoutPercent || 0) > 100) return "Partner Payout percentage cannot exceed 100%.";
   return null;
 }
 
 export function LifeHealthPolicyForm({ policyType, insurers, customers, source }: Props) {
   const router = useRouter();
-  const [form, setForm] = useState<State>({ customerMode: "new", customerId: "", insuredName: "", phone: "", email: "", insurerId: "", productName: "", proposalNumber: "", ppt: "", pd: "", paymentFrequency: "", premiumAmount: "", paymentMode: "", remarks: "" });
+  const commercialAccess = usePolicyCommercialAccess();
+  const [form, setForm] = useState<State>({ customerMode: "new", customerId: "", insuredName: "", phone: "", email: "", insurerId: "", productName: "", proposalNumber: "", ppt: "", pd: "", paymentFrequency: "", premiumAmount: "", paymentMode: "", remarks: "", payinBasis: "NET_PREMIUM_PERCENT", payinPercent: "", payinFixedAmount: "", insurerSchemeAmount: "", payoutBasis: "NET_PREMIUM_PERCENT", payoutPercent: "", payoutFixedAmount: "" });
   const [files, setFiles] = useState<Record<string, File | null>>({ proposalForm: null, benefitIllustration: null, premiumReceipt: null, policyCopy: null, kyc: null, otherDocument: null });
   const [error, setError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState(0);
+  const [commercialModal, setCommercialModal] = useState<CommercialModal>(null);
   const [isPending, startTransition] = useTransition();
   const update = <K extends keyof State>(key: K, value: State[K]) => setForm((current) => ({ ...current, [key]: value }));
   const customerOptions = useMemo(() => customers.map((item) => ({ value: item.id, label: `${item.name}${item.phone ? ` · ${item.phone}` : ""}` })), [customers]);
@@ -45,12 +53,37 @@ export function LifeHealthPolicyForm({ policyType, insurers, customers, source }
   const documentTarget = documentKeys.length;
   const required = [form.customerMode === "existing" ? form.customerId : form.insuredName, form.customerMode === "existing" ? "existing" : form.phone, form.insurerId, form.productName, form.proposalNumber, form.paymentFrequency, form.premiumAmount, form.paymentMode];
   const completion = Math.round((required.filter((value) => String(value).trim()).length / required.length) * 80 + (documentCount / documentTarget) * 20);
+  const payinEntered = form.payinPercent.trim() !== "" || form.payinFixedAmount.trim() !== "" || form.insurerSchemeAmount.trim() !== "";
+  const payoutEntered = form.payoutPercent.trim() !== "" || form.payoutFixedAmount.trim() !== "";
+  const commercialCalculations = useMemo<CommercialCalculations>(() => {
+    const premium = Number(form.premiumAmount || 0);
+    const payinBase = form.payinBasis === "FIXED_AMOUNT" ? Number(form.payinFixedAmount || 0) : premium * Number(form.payinPercent || 0) / 100;
+    const totalPayin = payinBase + Number(form.insurerSchemeAmount || 0);
+    const tds = totalPayin * 0.10;
+    const payinAfterTds = totalPayin - tds;
+    const totalPayout = form.payoutBasis === "FIXED_AMOUNT" ? Number(form.payoutFixedAmount || 0) : premium * Number(form.payoutPercent || 0) / 100;
+    return { payinBase, totalPayin, tds, payinAfterTds, totalPayout, retention: payinAfterTds - totalPayout };
+  }, [form]);
+
+  useEffect(() => {
+    if (!commercialModal) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setCommercialModal(null); };
+    window.addEventListener("keydown", close);
+    return () => { document.body.style.overflow = previous; window.removeEventListener("keydown", close); };
+  }, [commercialModal]);
 
   function chooseCustomer(id: string) { const selected = customers.find((item) => item.id === id); setForm((current) => ({ ...current, customerId: id, insuredName: selected?.name ?? "", phone: selected?.phone ?? "", email: selected?.email ?? "" })) }
   function goToSection(index: number) { setActiveSection(index); document.getElementById(`policy-section-${index + 1}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }
+  function changeCommercialBasis(side: "payin" | "payout", basis: CommercialBasis) {
+    if (!commercialAccess) return;
+    if (side === "payin") setForm((current) => ({ ...current, payinBasis: basis, payinPercent: basis === "FIXED_AMOUNT" ? "" : current.payinPercent, payinFixedAmount: basis === "NET_PREMIUM_PERCENT" ? "" : current.payinFixedAmount }));
+    else setForm((current) => ({ ...current, payoutBasis: basis, payoutPercent: basis === "FIXED_AMOUNT" ? "" : current.payoutPercent, payoutFixedAmount: basis === "NET_PREMIUM_PERCENT" ? "" : current.payoutFixedAmount }));
+  }
   function submit() {
     setError(null);
-    const validationError = firstValidationError(source, form);
+    const validationError = firstValidationError(source, form, commercialAccess);
     if (validationError) { setError(validationError); return; }
     const data = new FormData();
     data.set("businessLine", policyType);
@@ -67,9 +100,9 @@ export function LifeHealthPolicyForm({ policyType, insurers, customers, source }
     });
   }
 
-  const summary = <FollowSummary completion={completion} proposal={form.proposalNumber} insurer={selectedInsurer} product={form.productName} customer={form.insuredName} mobile={form.phone} premium={form.premiumAmount} frequency={form.paymentFrequency} paymentMode={form.paymentMode} documentCount={documentCount} documentTarget={documentTarget} />;
+  const summary = <FollowSummary completion={completion} proposal={form.proposalNumber} insurer={selectedInsurer} product={form.productName} customer={form.insuredName} mobile={form.phone} premium={form.premiumAmount} frequency={form.paymentFrequency} paymentMode={form.paymentMode} documentCount={documentCount} documentTarget={documentTarget} commercialAccess={commercialAccess} payinEntered={payinEntered} payoutEntered={payoutEntered} calculations={commercialCalculations} payinBasis={form.payinBasis} payinPercent={form.payinPercent} payoutBasis={form.payoutBasis} payoutPercent={form.payoutPercent} onOpen={setCommercialModal} />;
   const documents = <div className="flex flex-1 flex-wrap items-center gap-2"><CompactDocumentUpload label="Proposal Form" file={files.proposalForm} onChange={(file) => setFiles((c) => ({ ...c, proposalForm: file }))} /><CompactDocumentUpload label="Illustration Form" file={files.benefitIllustration} onChange={(file) => setFiles((c) => ({ ...c, benefitIllustration: file }))} /><CompactDocumentUpload label="Payment Receipt" file={files.premiumReceipt} onChange={(file) => setFiles((c) => ({ ...c, premiumReceipt: file }))} /><CompactDocumentUpload label="Other Form" file={files.otherDocument} onChange={(file) => setFiles((c) => ({ ...c, otherDocument: file }))} /></div>;
-  const bottomSection = <section id="life-health-onboarding-actions" className="w-full rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="flex flex-col gap-3 p-3 xl:flex-row xl:items-center xl:justify-between">{documents}<div className="flex shrink-0 justify-end"><button type="button" onClick={submit} disabled={isPending} className="inline-flex h-10 items-center justify-center rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white disabled:opacity-60">{isPending ? "Creating case…" : "Create Case"}</button></div></div></section>;
+  const bottomSection = <section id="life-health-onboarding-actions" className="w-full rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="flex flex-col gap-3 p-3 xl:flex-row xl:items-center xl:justify-between">{documents}<div className="flex shrink-0 justify-end gap-2"><button type="button" onClick={() => router.push("/policies")} disabled={isPending} className="inline-flex h-10 items-center justify-center rounded-xl border border-[#CBD5E1] bg-white px-5 text-[10px] font-semibold text-[#344054] disabled:opacity-60">Cancel</button><button type="button" onClick={submit} disabled={isPending} className="inline-flex h-10 items-center justify-center rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white disabled:opacity-60">{isPending ? "Creating case…" : "Create Case"}</button></div></div></section>;
 
   return <>
     <nav id="life-health-section-nav" aria-label="Life and Health policy sections" className="sticky top-[72px] z-50 mb-3 flex min-h-[36px] items-stretch gap-4 overflow-x-auto rounded-b-xl border border-t-0 border-[#D9E2F0] bg-white/96 px-4 shadow-[0_5px_14px_rgba(15,23,42,.06)] backdrop-blur">
@@ -85,29 +118,23 @@ export function LifeHealthPolicyForm({ policyType, insurers, customers, source }
     </div>
     <div className="mt-3 w-full">{bottomSection}</div>
     {error ? <ErrorModal message={error} onClose={() => setError(null)} /> : null}
+    {commercialModal === "payin" ? <ProjectedPayinModal form={form} update={update} calculations={commercialCalculations} onBasisChange={(basis) => changeCommercialBasis("payin", basis)} onClose={() => setCommercialModal(null)} /> : null}
+    {commercialModal === "payout" ? <PartnerPayoutModal form={form} update={update} calculations={commercialCalculations} onBasisChange={(basis) => changeCommercialBasis("payout", basis)} onClose={() => setCommercialModal(null)} /> : null}
   </>;
 }
 
 function LifeHealthSummaryRail({ children }: { children: ReactNode }) {
   const anchorRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ left: number; width: number; top: number; maxHeight: number } | null>(null);
-
   useEffect(() => {
     let frame = 0;
     const formGridElement = document.getElementById("life-health-form-grid");
     const sourceSectionElement = document.getElementById("policy-section-1");
     const premiumSectionElement = document.getElementById("policy-section-4");
     const sectionNavElement = document.getElementById("life-health-section-nav");
-    if (!formGridElement || !sourceSectionElement || !premiumSectionElement || !sectionNavElement) {
-      setPosition(null);
-      return;
-    }
-
+    if (!formGridElement || !sourceSectionElement || !premiumSectionElement || !sectionNavElement) { setPosition(null); return; }
     const updatePosition = () => {
-      if (window.innerWidth < 1280 || !anchorRef.current) {
-        setPosition(null);
-        return;
-      }
+      if (window.innerWidth < 1280 || !anchorRef.current) { setPosition(null); return; }
       const anchorRect = anchorRef.current.getBoundingClientRect();
       const sourceRect = sourceSectionElement.getBoundingClientRect();
       const premiumRect = premiumSectionElement.getBoundingClientRect();
@@ -121,35 +148,28 @@ function LifeHealthSummaryRail({ children }: { children: ReactNode }) {
       const maxHeight = Math.max(0, Math.min(window.innerHeight - top - 12, premiumRect.bottom - top));
       setPosition({ left: anchorRect.left, width: anchorRect.width, top, maxHeight });
     };
-
-    const scheduleUpdate = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(updatePosition);
-    };
-
-    updatePosition();
-    frame = requestAnimationFrame(updatePosition);
-    window.addEventListener("resize", scheduleUpdate);
-    window.addEventListener("scroll", scheduleUpdate, true);
+    const scheduleUpdate = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(updatePosition); };
+    updatePosition(); frame = requestAnimationFrame(updatePosition);
+    window.addEventListener("resize", scheduleUpdate); window.addEventListener("scroll", scheduleUpdate, true);
     const observer = new ResizeObserver(scheduleUpdate);
-    observer.observe(formGridElement);
-    observer.observe(sourceSectionElement);
-    observer.observe(premiumSectionElement);
-    observer.observe(sectionNavElement);
-    observer.observe(document.documentElement);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener("resize", scheduleUpdate);
-      window.removeEventListener("scroll", scheduleUpdate, true);
-      observer.disconnect();
-    };
+    observer.observe(formGridElement); observer.observe(sourceSectionElement); observer.observe(premiumSectionElement); observer.observe(sectionNavElement); observer.observe(document.documentElement);
+    return () => { cancelAnimationFrame(frame); window.removeEventListener("resize", scheduleUpdate); window.removeEventListener("scroll", scheduleUpdate, true); observer.disconnect(); };
   }, []);
-
   return <div className="min-w-0 self-stretch"><div className="xl:hidden">{children}</div><div ref={anchorRef} className="hidden h-px w-full xl:block" aria-hidden="true"/>{position && typeof document !== "undefined" ? createPortal(<div id="life-health-policy-summary-fixed-card" className="fixed z-30 overflow-y-auto overscroll-contain" style={{ left: position.left, width: position.width, top: position.top, maxHeight: position.maxHeight }}>{children}</div>, document.body) : null}</div>;
 }
 
 function ErrorModal({ message, onClose }: { message: string; onClose: () => void }) { return <div className="fixed inset-0 z-[1000] grid place-items-center bg-[#17365D]/55 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-labelledby="policy-error-title"><div className="w-full max-w-[505px] overflow-hidden rounded-[20px] bg-white shadow-2xl"><div className="flex flex-col items-center px-7 pb-7 pt-7 text-center"><span className="grid h-14 w-14 place-items-center rounded-full bg-[#FFF3E8] text-[25px] font-semibold leading-none text-[#E66A19]">!</span><h3 id="policy-error-title" className="mt-5 text-[18px] font-bold text-[#102A4C]">Check details</h3><p className="mt-3 text-[13px] leading-5 text-[#7A869A]">{message}</p></div><div className="border-t border-[#DDE4EC] p-4"><button type="button" onClick={onClose} className="h-12 w-full rounded-xl bg-[#173F6D] text-[13px] font-bold text-white transition hover:bg-[#12355E]">OK</button></div></div></div> }
-function FollowSummary({ completion, proposal, insurer, product, customer, mobile, premium, frequency, paymentMode, documentCount, documentTarget }: { completion: number; proposal: string; insurer: string; product: string; customer: string; mobile: string; premium: string; frequency: string; paymentMode: string; documentCount: number; documentTarget: number }) { return <aside className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-[0_10px_30px_rgba(15,23,42,.10)]"><div className="flex items-center gap-3 border-b bg-[#F8FAFC] px-4 py-3"><div className="min-w-0 flex-1"><p className="text-[8px] font-bold uppercase tracking-[.11em] text-[#64748B]">Policy status</p><h3 className="mt-0.5 truncate text-[13px] font-semibold text-[#17365D]">Onboarding summary</h3></div><CompletionRing value={completion}/><span className={`shrink-0 rounded-full px-2.5 py-1 text-[8px] font-bold ${completion >= 100 ? "bg-[#E8F7EF] text-[#14845B]" : "bg-[#FFF3CD] text-[#A96A00]"}`}>{completion >= 100 ? "Complete" : "In progress"}</span></div><div className="space-y-3 px-4 py-3"><SummaryBlock title="Case" rows={[["Proposal", proposal || "Not entered"], ["Insurer", insurer], ["Product", product || "Not entered"]]} /><SummaryBlock title="Customer" rows={[["Name", customer || "Not selected"], ["Mobile", mobile || "—"]]} /><div><div className="mb-1.5 flex items-center gap-2"><span className="grid h-6 w-6 place-items-center rounded-lg bg-[#EEF4FB] text-[#315B9A]"><IndianRupee className="h-3.5 w-3.5" /></span><p className="text-[8px] font-bold uppercase tracking-[.1em] text-[#64748B]">Premium</p></div><p className="text-[17px] font-bold text-[#17365D]">{money.format(Number(premium || 0))}</p><p className="mt-1 text-[9px] text-[#667085]">{frequency || "Frequency pending"} · {paymentMode || "Mode pending"}</p></div><div className="rounded-xl border border-[#DCE6F1] bg-[#F8FBFE] px-3 py-2.5"><div className="flex items-center justify-between"><span className="text-[9px] font-bold text-[#17365D]">Documents</span><span className={`rounded-full px-2 py-1 text-[8px] font-bold ${documentCount === documentTarget ? "bg-[#EAF7F2] text-[#18794E]" : "bg-[#F1F4F8] text-[#667085]"}`}>{documentCount} / {documentTarget} uploaded</span></div></div></div></aside> }
+function FollowSummary({ completion, proposal, insurer, product, customer, mobile, premium, frequency, paymentMode, documentCount, documentTarget, commercialAccess, payinEntered, payoutEntered, calculations, payinBasis, payinPercent, payoutBasis, payoutPercent, onOpen }: { completion: number; proposal: string; insurer: string; product: string; customer: string; mobile: string; premium: string; frequency: string; paymentMode: string; documentCount: number; documentTarget: number; commercialAccess: boolean; payinEntered: boolean; payoutEntered: boolean; calculations: CommercialCalculations; payinBasis: CommercialBasis; payinPercent: string; payoutBasis: CommercialBasis; payoutPercent: string; onOpen: (modal: CommercialModal) => void }) {
+  const payinDetail = payinBasis === "FIXED_AMOUNT" ? "Fixed amount" : `${payinPercent || "0"}% of Net Premium`;
+  const payoutDetail = payoutBasis === "FIXED_AMOUNT" ? "Fixed amount" : `${payoutPercent || "0"}% of Net Premium`;
+  const commercialBlock = commercialAccess ? <div className="mt-3 overflow-hidden rounded-xl border border-[#DCE6F2] bg-[#F8FAFD]"><div className="flex items-center gap-2 border-b border-[#E3EAF2] px-3 py-2"><HandCoins className="h-3.5 w-3.5 text-[#315B9A]"/><p className="text-[8px] font-bold uppercase tracking-[0.09em] text-[#667085]">Payin–Payout</p></div><CommercialSummaryButton label="Insurer Pay-in" entered={payinEntered} value={calculations.totalPayin} detail={payinDetail} onClick={() => onOpen("payin")}/><CommercialSummaryButton label="Partner Payout" entered={payoutEntered} value={calculations.totalPayout} detail={payoutDetail} onClick={() => onOpen("payout")}/><div className="flex items-center justify-between gap-3 border-t border-[#E3EAF2] px-3 py-2.5"><div><p className="text-[7.5px] font-bold uppercase tracking-[0.07em] text-[#98A2B3]">Projected retention</p><p className={`mt-0.5 text-[10.5px] font-bold ${calculations.retention < 0 ? "text-red-600" : "text-[#344054]"}`}>{money.format(calculations.retention)}</p></div><span className="text-[7.5px] text-[#98A2B3]">After 10% TDS</span></div></div> : null;
+  return <aside className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-[0_10px_30px_rgba(15,23,42,.10)]"><div className="flex items-center gap-3 border-b bg-[#F8FAFC] px-4 py-3"><div className="min-w-0 flex-1"><p className="text-[8px] font-bold uppercase tracking-[.11em] text-[#64748B]">Policy status</p><h3 className="mt-0.5 truncate text-[13px] font-semibold text-[#17365D]">Onboarding summary</h3></div><CompletionRing value={completion}/><span className={`shrink-0 rounded-full px-2.5 py-1 text-[8px] font-bold ${completion >= 100 ? "bg-[#E8F7EF] text-[#14845B]" : "bg-[#FFF3CD] text-[#A96A00]"}`}>{completion >= 100 ? "Complete" : "In progress"}</span></div><div className="space-y-3 px-4 py-3"><SummaryBlock title="Case" rows={[["Proposal", proposal || "Not entered"], ["Insurer", insurer], ["Product", product || "Not entered"]]} /><SummaryBlock title="Customer" rows={[["Name", customer || "Not selected"], ["Mobile", mobile || "—"]]} /><div><div className="mb-1.5 flex items-center gap-2"><span className="grid h-6 w-6 place-items-center rounded-lg bg-[#EEF4FB] text-[#315B9A]"><IndianRupee className="h-3.5 w-3.5" /></span><p className="text-[8px] font-bold uppercase tracking-[.1em] text-[#64748B]">Premium</p></div><p className="text-[17px] font-bold text-[#17365D]">{money.format(Number(premium || 0))}</p><p className="mt-1 text-[9px] text-[#667085]">{frequency || "Frequency pending"} · {paymentMode || "Mode pending"}</p></div>{commercialBlock}<div className="rounded-xl border border-[#DCE6F1] bg-[#F8FBFE] px-3 py-2.5"><div className="flex items-center justify-between"><span className="text-[9px] font-bold text-[#17365D]">Documents</span><span className={`rounded-full px-2 py-1 text-[8px] font-bold ${documentCount === documentTarget ? "bg-[#EAF7F2] text-[#18794E]" : "bg-[#F1F4F8] text-[#667085]"}`}>{documentCount} / {documentTarget} uploaded</span></div></div></div></aside>;
+}
+function CommercialSummaryButton({ label, entered, value, detail, onClick }: { label: string; entered: boolean; value: number; detail: string; onClick: () => void }) { return <button type="button" onClick={onClick} className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition hover:bg-white"><div className="min-w-0"><p className="text-[8px] font-bold uppercase tracking-[0.07em] text-[#667085]">{label}</p><p className="mt-0.5 text-[10.5px] font-bold text-[#17365D]">{entered ? money.format(value) : "Not entered"}</p>{entered ? <p className="mt-0.5 truncate text-[7.5px] text-[#98A2B3]">{detail}</p> : null}</div><span className="shrink-0 text-[8px] font-bold text-[#315B9A]">{entered ? "Edit" : "Add"}</span></button> }
+function ProjectedPayinModal({ form, update, calculations, onBasisChange, onClose }: { form: State; update: <K extends keyof State>(key: K, value: State[K]) => void; calculations: CommercialCalculations; onBasisChange: (basis: CommercialBasis) => void; onClose: () => void }) { return <CommercialModalShell title="Projected Insurer Pay-in" subtitle="Expected insurer income for this policy. This does not create billing or confirm the insurer's actual recognized pay-in." onClose={onClose}><div className="grid gap-3 sm:grid-cols-2"><Select label="Pay-in basis" value={form.payinBasis} onChange={(e) => onBasisChange(e.target.value as CommercialBasis)}><option value="NET_PREMIUM_PERCENT">Net Premium %</option><option value="FIXED_AMOUNT">Fixed Amount</option></Select>{form.payinBasis === "NET_PREMIUM_PERCENT" ? <Field label="Pay-in %" type="number" min="0" max="100" step="0.01" value={form.payinPercent} onChange={(e) => update("payinPercent", numeric(e.target.value))} placeholder="0.00"/> : <Field label="Projected pay-in amount" value={form.payinFixedAmount} onChange={(e) => update("payinFixedAmount", numeric(e.target.value))} inputMode="decimal" placeholder="₹ 0.00"/>}<Field label="Insurer scheme / incentive" value={form.insurerSchemeAmount} onChange={(e) => update("insurerSchemeAmount", numeric(e.target.value))} inputMode="decimal" placeholder="₹ 0.00"/><CalculatedField label="Base projected pay-in" value={money.format(calculations.payinBase)}/><CalculatedField label="Projected total pay-in" value={money.format(calculations.totalPayin)}/><CalculatedField label="TDS @ 10%" value={money.format(calculations.tds)}/><CalculatedField label="Pay-in after TDS" value={money.format(calculations.payinAfterTds)}/></div><p className="mt-4 rounded-xl border border-[#DCE6F2] bg-[#F8FAFD] px-3 py-2.5 text-[9px] leading-4 text-[#667085]">Blank means projected pay-in has not been entered. Entering 0 explicitly is valid and is preserved as an entered commercial value.</p></CommercialModalShell> }
+function PartnerPayoutModal({ form, update, calculations, onBasisChange, onClose }: { form: State; update: <K extends keyof State>(key: K, value: State[K]) => void; calculations: CommercialCalculations; onBasisChange: (basis: CommercialBasis) => void; onClose: () => void }) { return <CommercialModalShell title="Partner Payout" subtitle="Agreed payout for the Lead Source selected in Section 01. Payment approval, voucher and settlement remain in the partner-payment workflow." onClose={onClose}><div className="grid gap-3 sm:grid-cols-2"><Select label="Payout basis" value={form.payoutBasis} onChange={(e) => onBasisChange(e.target.value as CommercialBasis)}><option value="NET_PREMIUM_PERCENT">Net Premium %</option><option value="FIXED_AMOUNT">Fixed Amount</option></Select>{form.payoutBasis === "NET_PREMIUM_PERCENT" ? <Field label="Payout %" type="number" min="0" max="100" step="0.01" value={form.payoutPercent} onChange={(e) => update("payoutPercent", numeric(e.target.value))} placeholder="0.00"/> : <Field label="Agreed payout amount" value={form.payoutFixedAmount} onChange={(e) => update("payoutFixedAmount", numeric(e.target.value))} inputMode="decimal" placeholder="₹ 0.00"/>}<CalculatedField label="Total agreed payout" value={money.format(calculations.totalPayout)}/><CalculatedField label="Projected retention" value={money.format(calculations.retention)} negative={calculations.retention < 0}/></div><p className="mt-4 rounded-xl border border-[#E4DFF2] bg-[#FAF8FF] px-3 py-2.5 text-[9px] leading-4 text-[#667085]">The payout is tagged automatically to the intermediary type and code selected in Section 01. Negative retention is allowed as a commercial exception and is highlighted for finance review.</p></CommercialModalShell> }
+function CalculatedField({ label, value, negative = false }: { label: string; value: string; negative?: boolean }) { return <div><span className={labelClass}>{label}</span><div className={`flex h-10 items-center rounded-xl border bg-[#F8FAFC] px-3 text-[11px] font-bold ${negative ? "border-red-200 text-red-600" : "border-[#D8DEE9] text-[#344054]"}`}>{value}</div></div> }
+function CommercialModalShell({ title, subtitle, onClose, children }: { title: string; subtitle: string; onClose: () => void; children: ReactNode }) { if (typeof document === "undefined") return null; return createPortal(<div className="fixed inset-0 z-[9999] grid h-[100dvh] w-screen place-items-center overflow-hidden bg-[#071D49]/60 p-3 backdrop-blur-sm sm:p-5" role="dialog" aria-modal="true" aria-label={title}><div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-[560px] flex-col overflow-hidden rounded-2xl border border-white/60 bg-white shadow-[0_24px_80px_rgba(7,29,73,.4)]"><div className="flex shrink-0 items-start justify-between border-b border-[#E6EBF2] bg-[linear-gradient(135deg,#F8FAFD,#EEF4FB)] px-4 py-3.5 sm:px-5"><div className="min-w-0 pr-3"><p className="text-[14px] font-bold text-[#102A4C]">{title}</p><p className="mt-1 text-[9.5px] leading-4 text-[#667085]">{subtitle}</p></div><button type="button" onClick={onClose} aria-label="Close" className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[#D8DEE9] bg-white text-[17px] text-[#475467] transition hover:bg-[#F8FAFC]">×</button></div><div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">{children}</div><div className="shrink-0 border-t border-[#E6EBF2] bg-[#F8FAFC] px-4 py-3 sm:px-5"><div className="flex justify-end"><button type="button" onClick={onClose} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white">Save & Close</button></div></div></div></div>, document.body) }
 function CompletionRing({ value }: { value: number }) { const clamped = Math.max(0, Math.min(100, value)); const radius = 19, circumference = 2 * Math.PI * radius, offset = circumference - (clamped / 100) * circumference; return <div className="relative h-12 w-12 shrink-0"><svg viewBox="0 0 48 48" className="h-12 w-12 -rotate-90"><circle cx="24" cy="24" r={radius} fill="none" stroke="#E3EAF2" strokeWidth="5"/><circle cx="24" cy="24" r={radius} fill="none" stroke="#315B9A" strokeWidth="5" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset}/></svg><span className="absolute inset-0 grid place-items-center text-[9px] font-bold text-[#17365D]">{clamped}%</span></div> }
 function Section({ number, title, children, contentClassName = "md:grid-cols-2 xl:grid-cols-4" }: { number: string; title: string; children: ReactNode; contentClassName?: string }) { return <section id={`policy-section-${Number(number)}`} data-section-index={Math.max(0, Number(number) - 1)} className="scroll-mt-[148px] overflow-visible rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="flex min-h-11 items-center border-b bg-[#FBFCFE] px-4 py-2"><div className="flex items-center gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#17365D] text-[9px] font-bold text-white">{number}</span><h2 className="text-[12px] font-semibold leading-tight">{title}</h2></div></div><div className={`grid gap-3 p-3 ${contentClassName}`}>{children}</div></section> }
 function Required() { return <span className="text-red-500">*</span> }
