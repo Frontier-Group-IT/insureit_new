@@ -2,7 +2,7 @@
 
 import { ReportDateRangePicker } from "@/components/reports/report-date-range-picker";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 
 type RmPerformancePeriodKey = "mtd" | "last_month" | "custom";
 type RmOption = { id: string; name: string };
@@ -23,6 +23,7 @@ export function RmPerformanceFilters({ rms, selectedRmId, period, hideRm = false
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const currentParams = useMemo(() => new URLSearchParams(searchParams.toString()), [searchParams]);
 
   function navigate(mutator: (params: URLSearchParams) => void) {
@@ -42,6 +43,7 @@ export function RmPerformanceFilters({ rms, selectedRmId, period, hideRm = false
   }
 
   function onPeriodChange(value: RmPerformancePeriodKey) {
+    setCalendarOpen(value === "custom");
     navigate((params) => {
       params.set("period", value);
       if (value !== "custom") {
@@ -87,6 +89,8 @@ export function RmPerformanceFilters({ rms, selectedRmId, period, hideRm = false
         <ReportDateRangePicker
           from={period.from}
           to={period.to}
+          open={calendarOpen}
+          onOpenChange={setCalendarOpen}
           disabled={isPending}
           buttonClassName={`${controlClass} inline-flex items-center justify-between gap-3 text-left`}
           onRangeComplete={(from, to) => {
