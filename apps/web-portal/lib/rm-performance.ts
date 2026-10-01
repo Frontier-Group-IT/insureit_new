@@ -102,13 +102,19 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
   const todayByRm = new Map(
     todayPayload.report.rms.map((row) => [
       row.employee_id ?? row.name,
-      { policies: row.policy_count, premium: row.net_premium },
+      row,
+    ]),
+  );
+  const periodByRm = new Map(
+    mtdPayload.report.rms.map((row) => [
+      row.employee_id ?? row.name,
+      row,
     ]),
   );
   const totalMtdPremium = mtdPayload.report.rms.reduce((sum, row) => sum + row.net_premium, 0);
 
   const intermediaryNames = new Map(
-    mtdPayload.report.filters.intermediaries.map((item) => [
+    [...mtdPayload.report.filters.intermediaries, ...todayPayload.report.filters.intermediaries].map((item) => [
       item.code,
       { name: item.name || item.code, type: item.type },
     ]),
@@ -116,24 +122,29 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
 
   const todaySources = aggregateSources(todayRegisterRows, intermediaryNames);
   const mtdSources = aggregateSources(mtdRegisterRows, intermediaryNames);
+  const rowKeys = new Set([...periodByRm.keys(), ...todayByRm.keys()]);
 
-  const rows = mtdPayload.report.rms
-    .map((row) => {
-      const todayRow = todayByRm.get(row.employee_id ?? row.name);
-      const rmName = row.name || "Unassigned";
+  const rows = [...rowKeys]
+    .map((key) => {
+      const periodRow = periodByRm.get(key);
+      const todayRow = todayByRm.get(key);
+      const sourceRow = periodRow ?? todayRow;
+      const rmName = sourceRow?.name || "Unassigned";
+      const mtdPolicies = periodRow?.policy_count ?? 0;
+      const mtdNetPremium = periodRow?.net_premium ?? 0;
       return {
-        employeeId: row.employee_id ?? null,
+        employeeId: sourceRow?.employee_id ?? null,
         name: rmName,
-        todayPolicies: todayRow?.policies ?? 0,
-        todayNetPremium: todayRow?.premium ?? 0,
-        mtdPolicies: row.policy_count,
-        mtdNetPremium: row.net_premium,
-        averageNetPremium: row.average_net_premium,
-        contributionPercent: totalMtdPremium > 0 ? (row.net_premium / totalMtdPremium) * 100 : 0,
+        todayPolicies: todayRow?.policy_count ?? 0,
+        todayNetPremium: todayRow?.net_premium ?? 0,
+        mtdPolicies,
+        mtdNetPremium,
+        averageNetPremium: periodRow?.average_net_premium ?? 0,
+        contributionPercent: totalMtdPremium > 0 ? (mtdNetPremium / totalMtdPremium) * 100 : 0,
         sources: mergeSources(todaySources.get(rmName) ?? [], mtdSources.get(rmName) ?? []),
       };
     })
-    .sort((a, b) => b.mtdNetPremium - a.mtdNetPremium || b.mtdPolicies - a.mtdPolicies || a.name.localeCompare(b.name));
+    .sort((a, b) => b.mtdNetPremium - a.mtdNetPremium || b.mtdPolicies - a.mtdPolicies || b.todayNetPremium - a.todayNetPremium || a.name.localeCompare(b.name));
 
   const selectedRmName =
     selectedRmId
@@ -147,7 +158,7 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
     generatedAt: new Date().toISOString(),
     selectedRmId,
     selectedRmName,
-    filters: { rms: mtdPayload.report.filters.rms },
+    filters: { rms: mtdPayload.report.filters.rms.length ? mtdPayload.report.filters.rms : todayPayload.report.filters.rms },
     period: selectedPeriod,
     today: todayPayload.report.summary,
     mtd: mtdPayload.report.summary,
@@ -241,7 +252,7 @@ function mergeSources(today: SourceAggregate[], mtd: SourceAggregate[]): RmSourc
     if (current) { current.todayPolicies = source.policies; current.todayNetPremium = source.netPremium; }
     else merged.set(source.key, { key: source.key, label: source.label, type: source.type, todayPolicies: source.policies, todayNetPremium: source.netPremium, mtdPolicies: 0, mtdNetPremium: 0 });
   }
-  return [...merged.values()].sort((a, b) => b.mtdNetPremium - a.mtdNetPremium || b.mtdPolicies - a.mtdPolicies || a.label.localeCompare(b.label));
+  return [...merged.values()].sort((a, b) => b.mtdNetPremium - a.mtdNetPremium || b.mtdPolicies - a.mtdPolicies || b.todayNetPremium - a.todayNetPremium || a.label.localeCompare(b.label));
 }
 
 function resolvePeriod(query: RmPerformanceQuery, today: string, monthStart: string): RmPerformanceData["period"] {
