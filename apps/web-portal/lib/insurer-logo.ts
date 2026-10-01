@@ -1,3 +1,5 @@
+export const INSURER_LOGO_BUCKET = "insurer-assets";
+
 const INSURER_LOGOS: Record<string, string> = {
   adityabirlasunlife: "/assets/insurers/aditya-birla-sun-life.png",
   axismaxlife: "/assets/insurers/axis-max-life.png",
@@ -66,13 +68,18 @@ export function normalizeInsurerLogoKey(value: string | null | undefined) {
     .replace(/[^a-z0-9]+/g, "");
 }
 
-export function getInsurerLogo(insurerName: string | null | undefined) {
+export function getStaticInsurerLogo(insurerName: string | null | undefined) {
   const key = normalizeInsurerLogoKey(insurerName);
   if (!key) return null;
   if (INSURER_LOGOS[key]) return INSURER_LOGOS[key];
   const alias = INSURER_ALIASES[key];
   if (alias) return INSURER_LOGOS[alias];
-  const ordered = Object.keys(INSURER_LOGOS).sort((a,b)=>b.length-a.length);
-  const contained = ordered.find((candidate)=>key.includes(candidate));
+  const ordered = Object.keys(INSURER_LOGOS).sort((a, b) => b.length - a.length);
+  const contained = ordered.find((candidate) => key.includes(candidate));
   return contained ? INSURER_LOGOS[contained] : null;
+}
+
+export function getInsurerLogo(insurerName: string | null | undefined) {
+  const name = String(insurerName || "").trim();
+  return name ? `/api/insurer-logo?name=${encodeURIComponent(name)}` : null;
 }
