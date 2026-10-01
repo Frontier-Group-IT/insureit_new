@@ -1,0 +1,124 @@
+name: Apply Life Health document refinement v4
+
+on:
+  push:
+    branches:
+      - feature/life-health-document-actions-2026-10-01
+    paths:
+      - '.github/workflows/apply-life-health-document-actions-v4.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/life-health-document-actions-2026-10-01
+          fetch-depth: 0
+
+      - name: Apply scoped Life Health changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          def update(path, transforms, required=()):
+              p = Path(path)
+              text = p.read_text()
+              for old, new in transforms:
+                  if old in text:
+                      text = text.replace(old, new, 1)
+              for needle in required:
+                  if needle not in text:
+                      raise SystemExit(f"Required contract missing in {path}: {needle}")
+              p.write_text(text)
+
+          update(
+              "apps/web-portal/components/life-health-policy-form.tsx",
+              [
+                  ('const documentKeys = ["proposalForm", "kyc", "otherDocument"];', 'const documentKeys = ["proposalForm", "benefitIllustration", "premiumReceipt", "otherDocument"];'),
+                  ('const documents = <div className="flex flex-1 flex-wrap items-center gap-2"><CompactDocumentUpload label="Add Policy Copy" file={files.policyCopy} onChange={(file) => setFiles((c) => ({ ...c, policyCopy: file }))} /><CompactDocumentUpload label="Add Proposal Form" file={files.proposalForm} onChange={(file) => setFiles((c) => ({ ...c, proposalForm: file }))} /><CompactDocumentUpload label="Add KYC" file={files.kyc} onChange={(file) => setFiles((c) => ({ ...c, kyc: file }))} /><CompactDocumentUpload label="Add Other Document" file={files.otherDocument} onChange={(file) => setFiles((c) => ({ ...c, otherDocument: file }))} /></div>;', 'const documents = <div className="flex flex-1 flex-wrap items-center gap-2"><CompactDocumentUpload label="Proposal Form" file={files.proposalForm} onChange={(file) => setFiles((c) => ({ ...c, proposalForm: file }))} /><CompactDocumentUpload label="Illustration Form" file={files.benefitIllustration} onChange={(file) => setFiles((c) => ({ ...c, benefitIllustration: file }))} /><CompactDocumentUpload label="Payment Receipt" file={files.premiumReceipt} onChange={(file) => setFiles((c) => ({ ...c, premiumReceipt: file }))} /><CompactDocumentUpload label="Other Form" file={files.otherDocument} onChange={(file) => setFiles((c) => ({ ...c, otherDocument: file }))} /></div>;')
+              ],
+              required=('label="Illustration Form"', 'label="Payment Receipt"', 'label="Other Form"')
+          )
+
+          update(
+              "apps/web-portal/components/life-health-case-detail.tsx",
+              [
+                  ('<Section title="Mark Policy Issued">', '<Section title="Mark Policy Issued" highlight>'),
+                  ('<UploadAction label="Add Policy Copy" type="policy_copy" existing={docMap.get("policy_copy")} disabled={uploading} loading={uploadingType==="policy_copy"} onUpload={(type,file)=>{setCopy(file);upload(type,file)}}/><UploadAction label="Add Proposal Form" type="proposal_form" existing={docMap.get("proposal_form")} disabled={uploading} loading={uploadingType==="proposal_form"} onUpload={upload}/><UploadAction label="Add KYC" type="kyc" existing={docMap.get("kyc")} disabled={uploading} loading={uploadingType==="kyc"} onUpload={upload}/><UploadAction label="Add Other Document" type="other_document" existing={docMap.get("other_document")} disabled={uploading} loading={uploadingType==="other_document"} onUpload={upload}/>', '<UploadAction label="Add Policy Copy" type="policy_copy" existing={docMap.get("policy_copy")} disabled={uploading} loading={uploadingType==="policy_copy"} onUpload={(type,file)=>{setCopy(file);upload(type,file)}}/><UploadAction label="Add Proposal Form" type="proposal_form" existing={docMap.get("proposal_form")} disabled={uploading} loading={uploadingType==="proposal_form"} onUpload={upload}/><UploadAction label="Add Illustration Form" type="benefit_illustration" existing={docMap.get("benefit_illustration")} disabled={uploading} loading={uploadingType==="benefit_illustration"} onUpload={upload}/><UploadAction label="Add Payment Receipt" type="premium_receipt" existing={docMap.get("premium_receipt")} disabled={uploading} loading={uploadingType==="premium_receipt"} onUpload={upload}/><UploadAction label="Add Other Form" type="other_document" existing={docMap.get("other_document")} disabled={uploading} loading={uploadingType==="other_document"} onUpload={upload}/>'),
+                  ('function Section({title,children}:{title:string;children:ReactNode}){return <section className="overflow-hidden rounded-xl border border-[#D9E2F0] bg-white"><div className="border-b px-4 py-3 text-[11px] font-semibold text-[#17365D]">{title}</div><div className="p-4">{children}</div></section>}', 'function Section({title,children,highlight=false}:{title:string;children:ReactNode;highlight?:boolean}){return <section className={`overflow-hidden rounded-xl border ${highlight ? "border-[#DDD6FE] bg-[#F5F3FF]" : "border-[#D9E2F0] bg-white"}`}><div className={`border-b px-4 py-3 text-[11px] font-semibold text-[#17365D] ${highlight ? "border-[#DDD6FE] bg-[#F5F3FF]" : ""}`}>{title}</div><div className="p-4">{children}</div></section>}')
+              ],
+              required=('title="Mark Policy Issued" highlight', 'type="benefit_illustration"', 'type="premium_receipt"', 'bg-[#F5F3FF]')
+          )
+
+          update(
+              "apps/web-portal/app/policies/[id]/edit/page.tsx",
+              [
+                  ('.in("document_type", ["policy_copy","proposal_form","kyc","other_document"]).returns<DocumentRow[]>()', '.in("document_type", ["policy_copy","proposal_form","benefit_illustration","premium_receipt","other_document"]).returns<DocumentRow[]>()'),
+                  ('row.document_type as "policy_copy"|"proposal_form"|"kyc"|"other_document"', 'row.document_type as "policy_copy"|"proposal_form"|"benefit_illustration"|"premium_receipt"|"other_document"')
+              ],
+              required=('"benefit_illustration","premium_receipt"',)
+          )
+
+          update(
+              "apps/web-portal/components/life-health-issued-policy-edit-form.tsx",
+              [
+                  ('const documentLabels: Array<[LifeHealthIssuedDocumentType,string]> = [["policy_copy","Policy Copy"],["proposal_form","Proposal Form"],["kyc","KYC"],["other_document","Other Document"]];', 'const documentLabels: Array<[LifeHealthIssuedDocumentType,string]> = [["policy_copy","Policy Copy"],["proposal_form","Proposal Form"],["benefit_illustration","Illustration Form"],["premium_receipt","Payment Receipt"],["other_document","Other Form"]];')
+              ],
+              required=('["benefit_illustration","Illustration Form"]', '["premium_receipt","Payment Receipt"]', '["other_document","Other Form"]')
+          )
+
+          update(
+              "apps/web-portal/app/policies/life-health-issued-policy-document-actions.ts",
+              [
+                  ('export type LifeHealthIssuedDocumentType = "policy_copy" | "proposal_form" | "kyc" | "other_document";', 'export type LifeHealthIssuedDocumentType = "policy_copy" | "proposal_form" | "benefit_illustration" | "premium_receipt" | "kyc" | "other_document";'),
+                  ('const DOCUMENT_TYPES = new Set<LifeHealthIssuedDocumentType>(["policy_copy", "proposal_form", "kyc", "other_document"]);', 'const DOCUMENT_TYPES = new Set<LifeHealthIssuedDocumentType>(["policy_copy", "proposal_form", "benefit_illustration", "premium_receipt", "kyc", "other_document"]);')
+              ],
+              required=('"benefit_illustration"', '"premium_receipt"')
+          )
+
+          agents = Path("AGENTS.md")
+          a = agents.read_text()
+          entry = "- **2026-10-01 — Life/Health document actions + issued-section highlight:** branch `feature/life-health-document-actions-2026-10-01`. Add Policy uses Proposal Form, Illustration Form, Payment Receipt and Other Form; case detail and issued-policy edit use Policy Copy plus those four documents. `Mark Policy Issued` uses the approved light-purple treatment. Existing KYC server compatibility is retained for historical records. No schema/RLS/mobile/native change. **IMPLEMENTED; PR #2634 CI pending.**\n"
+          marker = "### Latest implementation ledger\n\n"
+          if entry not in a:
+              if marker in a:
+                  a = a.replace(marker, marker + entry, 1)
+              else:
+                  a = entry + "\n" + a
+              agents.write_text(a)
+
+          handoff = Path("docs/CURRENT_CHAT_HANDOFF.md")
+          h = handoff.read_text()
+          h_entry = "## 2026-10-01 — Life/Health document-set refinement\n\n- Branch: `feature/life-health-document-actions-2026-10-01`; PR #2634.\n- Add Policy: Proposal Form, Illustration Form, Payment Receipt, Other Form.\n- Case detail + issued-policy edit: Policy Copy, Proposal Form, Illustration Form, Payment Receipt, Other Form.\n- `Mark Policy Issued` highlighted light purple/lavender.\n- No database/schema/RLS/mobile/native change.\n- **IMPLEMENTED; CI/merge/deployment pending.**\n\n---\n\n"
+          if h_entry not in h:
+              handoff.write_text(h_entry + h)
+
+          for helper in [
+              ".github/workflows/apply-life-health-document-actions.yml",
+              ".github/workflows/apply-life-health-document-actions-v2.yml",
+              ".github/workflows/apply-life-health-document-actions-v3.yml",
+              ".github/workflows/apply-life-health-document-actions-v4.yml",
+          ]:
+              p = Path(helper)
+              if p.exists():
+                  p.unlink()
+          PY
+
+          git diff --check
+
+      - name: Commit scoped changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Refine Life Health policy document actions"
+          git push origin HEAD:feature/life-health-document-actions-2026-10-01
