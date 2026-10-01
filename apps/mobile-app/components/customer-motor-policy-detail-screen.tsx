@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Card, EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
@@ -67,9 +67,8 @@ export default function CustomerMotorPolicyDetailScreen() {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [premiumDetails, setPremiumDetails] = useState<PremiumDetails | null>(null);
   const [policyCopy, setPolicyCopy] = useState<PolicyCopyDocument | null>(null);
-  const [policyCopyExpanded, setPolicyCopyExpanded] = useState(false);
-  const [policyCopyUrl, setPolicyCopyUrl] = useState<string | null>(null);
   const [uploadingCopy, setUploadingCopy] = useState(false);
+  const [openingCopy, setOpeningCopy] = useState(false);
   const [uploadMessage, setUploadMessage] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -184,16 +183,20 @@ export default function CustomerMotorPolicyDetailScreen() {
 
   const status = useMemo(() => policyStatus(policy?.end_date), [policy?.end_date]);
 
-  async function togglePolicyCopy() {
-    if (!policyCopy) return;
-    if (policyCopyExpanded) {
-      setPolicyCopyExpanded(false);
-      setPolicyCopyUrl(null);
-      return;
+  async function openPolicyCopy() {
+    if (!policyCopy || openingCopy) return;
+    setUploadMessage('');
+    setOpeningCopy(true);
+    try {
+      const signed = await supabase.storage.from(policyCopy.storage_bucket).createSignedUrl(policyCopy.storage_path, 10 * 60);
+      if (signed.error || !signed.data?.signedUrl) throw signed.error ?? new Error('Policy copy URL unavailable');
+      await Linking.openURL(signed.data.signedUrl);
+    } catch (error) {
+      console.warn('Customer Motor policy copy open failed', error);
+      setUploadMessage('Policy copy could not be opened. Please try again.');
+    } finally {
+      setOpeningCopy(false);
     }
-    const signed = await supabase.storage.from(policyCopy.storage_bucket).createSignedUrl(policyCopy.storage_path, 10 * 60);
-    setPolicyCopyUrl(signed.data?.signedUrl ?? null);
-    setPolicyCopyExpanded(true);
   }
 
   async function pickAndUploadPolicyCopy() {
@@ -324,38 +327,24 @@ export default function CustomerMotorPolicyDetailScreen() {
           <MaterialCommunityIcons name="note-text-outline" size={16} color={palette.navy} />
           <Text style={styles.noteText}>{policy.remarks?.trim() || '-'}</Text>
         </View>
-      </Card>
 
-      <Card style={styles.documentsCard}>
         <Text style={styles.detailGroupLabel}>Documents</Text>
         {policyCopy ? (
-          <>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={policyCopyExpanded ? 'Collapse policy copy' : 'Expand policy copy'}
-              accessibilityState={{ expanded: policyCopyExpanded }}
-              onPress={() => void togglePolicyCopy()}
-              style={({ pressed }) => [styles.documentRow, pressed && styles.pressed]}
-            >
-              <View style={styles.documentIcon}><MaterialCommunityIcons name="file-document-check-outline" size={22} color="#0A43A3" /></View>
-              <View style={styles.documentCopy}>
-                <Text style={styles.documentTitle}>Policy copy</Text>
-                <Text style={styles.documentName} numberOfLines={1}>{policyCopy.file_name || 'Policy document'}</Text>
-                <Text style={styles.documentMeta}>{formatFileSize(policyCopy.file_size)}</Text>
-              </View>
-              <MaterialCommunityIcons name={policyCopyExpanded ? 'chevron-up' : 'chevron-down'} size={22} color="#38506C" />
-            </Pressable>
-            {policyCopyExpanded ? (
-              policyCopyUrl && isImagePolicyCopy(policyCopy) ? (
-                <Image source={{ uri: policyCopyUrl }} resizeMode="contain" style={styles.policyCopyPreview} accessibilityLabel="Policy copy preview" />
-              ) : (
-                <View style={styles.previewUnavailable}>
-                  <MaterialCommunityIcons name="file-document-outline" size={27} color="#78879A" />
-                  <Text style={styles.previewText}>{policyCopyUrl ? 'Inline preview is not available for this file format.' : 'Policy copy preview unavailable'}</Text>
-                </View>
-              )
-            ) : null}
-          </>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open policy copy"
+            disabled={openingCopy}
+            onPress={() => void openPolicyCopy()}
+            style={({ pressed }) => [styles.documentRow, pressed && styles.pressed]}
+          >
+            <View style={styles.documentIcon}><MaterialCommunityIcons name="file-document-check-outline" size={22} color="#0A43A3" /></View>
+            <View style={styles.documentCopy}>
+              <Text style={styles.documentTitle}>Policy copy</Text>
+              <Text style={styles.documentName} numberOfLines={1}>{policyCopy.file_name || 'Policy document'}</Text>
+              <Text style={styles.documentMeta}>{formatFileSize(policyCopy.file_size)}</Text>
+            </View>
+            {openingCopy ? <ActivityIndicator size="small" color="#0A43A3" /> : <MaterialCommunityIcons name="open-in-new" size={20} color="#38506C" />}
+          </Pressable>
         ) : (
           <Pressable disabled={uploadingCopy} onPress={() => void pickAndUploadPolicyCopy()} style={({ pressed }) => [styles.documentRow, pressed && styles.pressed]}>
             <View style={styles.documentIcon}><MaterialCommunityIcons name="file-upload-outline" size={22} color="#0A43A3" /></View>
@@ -437,12 +426,6 @@ function formatFileSize(value?: number | null) {
   return `${(value / 1048576).toFixed(1)} MB`;
 }
 
-function isImagePolicyCopy(document: PolicyCopyDocument) {
-  const mimeType = document.mime_type?.toLowerCase() ?? '';
-  const fileName = document.file_name?.toLowerCase() ?? '';
-  return mimeType.startsWith('image/') || /\.(jpe?g|png|webp|gif|heic|heif)$/.test(fileName);
-}
-
 const styles = StyleSheet.create({
   pageHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   pageTitle: { color: palette.navy, fontSize: 21, fontWeight: '900' },
@@ -464,17 +447,13 @@ const styles = StyleSheet.create({
   detailLogo: { width: 18, height: 18 },
   noteBox: { minHeight: 54, flexDirection: 'row', alignItems: 'flex-start', gap: 9, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#E4EAF1' },
   noteText: { flex: 1, color: '#102445', fontSize: 13.5, fontWeight: '700', lineHeight: 19 },
-  documentsCard: { marginTop: 14, borderRadius: 22, borderWidth: 1, borderColor: '#DCE6F1', padding: 14, backgroundColor: '#FFFFFF' },
-  documentRow: { minHeight: 70, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  documentRow: { minHeight: 70, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#E4EAF1' },
   pressed: { opacity: 0.72 },
   documentIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#EEF4FB', alignItems: 'center', justifyContent: 'center' },
   documentCopy: { flex: 1 },
   documentTitle: { color: palette.navy, fontSize: 14, fontWeight: '900' },
   documentName: { color: '#43536B', fontSize: 12, fontWeight: '700', marginTop: 3 },
   documentMeta: { color: '#8793A4', fontSize: 10.5, marginTop: 2 },
-  policyCopyPreview: { width: '100%', height: 320, borderRadius: 14, backgroundColor: '#F7F9FC', marginTop: 8 },
-  previewUnavailable: { minHeight: 110, alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: '#F7F9FC', borderRadius: 14, marginTop: 8, padding: 14 },
-  previewText: { color: '#78879A', fontSize: 12, textAlign: 'center' },
   uploadMessage: { color: '#C43838', fontSize: 12, marginTop: 6 },
   vehicleCard: { marginTop: 14, borderRadius: 18, borderWidth: 1, borderColor: '#DCE6F1', backgroundColor: '#FFFFFF', padding: 13, flexDirection: 'row', alignItems: 'center', gap: 10 },
   vehicleLogoShell: { width: 42, height: 42, borderRadius: 12, backgroundColor: '#F2F6FB', alignItems: 'center', justifyContent: 'center' },
