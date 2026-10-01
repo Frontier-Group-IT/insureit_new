@@ -69,8 +69,8 @@ export async function updateIntermediaryApplication(data:FormData){
  if(!value(data,"city"))redirectField(applicationId,"city",true);
  if(!value(data,"state"))redirectField(applicationId,"state",true);
  if(!/^[0-9]{6}$/.test(value(data,"postal_code")??""))redirectField(applicationId,"postal_code");
- if(type==="posp"&&(!validName(posFirst)||!validName(posLast)||(posMiddle&&!validName(posMiddle))))redirectFresh(`${path(applicationId)}?error=posp_misp_edit_invalid&stage=primary`);
- if(type==="misp"&&(!mispName||!validName(dpFirst)||!validName(dpLast)||(dpMiddle&&!validName(dpMiddle))))redirectFresh(`${path(applicationId)}?error=posp_misp_edit_invalid&stage=primary`);
+ if(type==="posp"&&(!validName(posFirst)||(posLast&&!validName(posLast))||(posMiddle&&!validName(posMiddle))))redirectFresh(`${path(applicationId)}?error=posp_misp_edit_invalid&stage=primary`);
+ if(type==="misp"&&(!mispName||!validName(dpFirst)||(dpLast&&!validName(dpLast))||(dpMiddle&&!validName(dpMiddle))))redirectFresh(`${path(applicationId)}?error=posp_misp_edit_invalid&stage=primary`);
  if(type==="misp"&&(!dpPan||!PAN.test(dpPan)))redirectField(applicationId,"dp_pan_number");
  const account=value(data,"bank_account_number")?.replace(/\D/g,"")??"";const ifsc=compact(value(data,"bank_ifsc_code"));const gst=compact(value(data,"gst_number"));
  if(!/^[0-9]{6,20}$/.test(account))redirectField(applicationId,"bank_account_number");

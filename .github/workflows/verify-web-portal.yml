@@ -51,6 +51,8 @@ jobs:
         run: npm run access-control:release-blockers-regression
       - name: Backoffice data-entry security regression
         run: npm run access-control:backoffice-data-entry-regression
+      - name: Intermediary optional surname and IIB live-name regression
+        run: node scripts/intermediary-optional-surname-iib-regression.mjs
       - name: Policy intake workflow regression
         run: npm run policy-intake:workflow-regression
       - name: Life Health native onboarding architecture regression
@@ -198,6 +200,7 @@ jobs:
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Data safety: high-volume PostgREST reads are bounded/paged before client aggregation"
             echo "- Access control: V2 catalogue, scope, legacy compatibility, portal lifecycle, employee portal governance, release-blocker, Backoffice data-entry, policy-intake workflow, Policy Intake Policy Register quick-link, Partner web core, external renewal intake visibility, external renewal Administration import, Partner push-device registration and Partner push-template regressions"
+            echo "- Intermediary onboarding: POSP/MISP surnames are optional, supplied surnames remain format-validated, and IIB review/handoff refreshes live canonical names instead of being blocked by stale surname packets"
             echo "- Policy onboarding: Life/Health is rendered natively from React state without DOM portal mounting or width-rescue observers"
             echo "- Vehicle regressions: canonical NEW prefix and standard/BH-series registration validation"
             echo "- Claim regressions: spot multi-upload/intimation, External Claim read-only legacy protection, and External Claim canonical Operations workflow"

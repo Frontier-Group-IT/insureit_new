@@ -125,7 +125,6 @@ export async function prepareIntermediaryIibPayload(formData: FormData) {
   const required: Array<[string, string, boolean]> = [
     ["PAN", portalPayload.PAN, PAN.test(portalPayload.PAN)],
     ["First name", portalPayload.PoSPFName, Boolean(portalPayload.PoSPFName && NAME.test(portalPayload.PoSPFName))],
-    ["Last name", portalPayload.PoSPLName, Boolean(portalPayload.PoSPLName && NAME.test(portalPayload.PoSPLName))],
     ["Date of birth", portalPayload.DoB, Boolean(portalPayload.DoB)],
     ["City", portalPayload.City, Boolean(portalPayload.City)],
     ["PIN", portalPayload.Pin, /^[0-9]{6}$/.test(portalPayload.Pin)],
@@ -135,6 +134,7 @@ export async function prepareIntermediaryIibPayload(formData: FormData) {
   ];
   const missingFields = required.filter(([, , valid]) => !valid).map(([label]) => label);
   if (portalPayload.PoSPMName && !NAME.test(portalPayload.PoSPMName)) missingFields.push("Middle name");
+  if (portalPayload.PoSPLName && !NAME.test(portalPayload.PoSPLName)) missingFields.push("Last name");
   if (assignment?.training_status !== "completed") missingFields.push("Training completion");
   if (assignment?.exam_status !== "passed") missingFields.push("Passed examination");
   if (!(documents ?? []).length) missingFields.push("Documents");
@@ -195,10 +195,11 @@ export async function startIntermediaryIibHandoff(formData: FormData) {
   if (!reviewer?.id) redirect("/customers/posp-misp");
 
   const admin = createSupabaseAdminClient();
-  const [{ data: packet }, { data: application }, { data: assignment }] = await Promise.all([
+  const [{ data: packet }, { data: application }, { data: assignment }, { data: profile }] = await Promise.all([
     admin.from("intermediary_iib_submission_packets").select("status,missing_fields,payload,prepared_at,handoff_started_at").eq("application_id", applicationId).maybeSingle<StoredPacket>(),
     admin.from("intermediary_onboarding_applications").select("registration_status,draft_data").eq("id", applicationId).maybeSingle<{ registration_status: string; draft_data: Record<string, unknown> | null }>(),
     admin.from("intermediary_training_exam_assignments").select("iib_registration_status").eq("application_id", applicationId).maybeSingle<{ iib_registration_status: string }>(),
+    admin.from("posp_misp_onboarding_profiles").select("partner_type,pos_name,pos_first_name,pos_middle_name,pos_last_name,dp_first_name,dp_middle_name,dp_last_name").eq("application_id", applicationId).maybeSingle<Pick<ProfileRow, "partner_type" | "pos_name" | "pos_first_name" | "pos_middle_name" | "pos_last_name" | "dp_first_name" | "dp_middle_name" | "dp_last_name">>(),
   ]);
 
   const alreadyRegistered = application?.registration_status === "iib_registered" || assignment?.iib_registration_status === "registered";
@@ -207,12 +208,32 @@ export async function startIntermediaryIibHandoff(formData: FormData) {
   }
 
   const effectivePacket = packet ?? packetFromDraft(application?.draft_data);
-  if (!effectivePacket || effectivePacket.status !== "ready" || effectivePacket.missing_fields.length) {
+  const remainingMissingFields = effectivePacket?.missing_fields.filter((field) => field !== "Last name") ?? [];
+  if (!effectivePacket || !["ready", "handoff_started", "draft"].includes(effectivePacket.status) || remainingMissingFields.length) {
     redirectFresh(`${applicationPath(applicationId)}?stage=review&error=iib_payload_not_ready#iib-submission`);
   }
 
+  const payload = asObject(effectivePacket.payload);
+  const portalFields = asObject(payload.portal_fields);
+  const liveNames = liveIibNames(profile);
+  const refreshedPayload = {
+    ...payload,
+    portal_fields: {
+      ...portalFields,
+      PoSPFName: liveNames.first || portalFields.PoSPFName || "",
+      PoSPMName: liveNames.middle,
+      PoSPLName: liveNames.last,
+    },
+  };
+
   const now = new Date().toISOString();
-  const updatedPacket: StoredPacket = { ...effectivePacket, status: "handoff_started", handoff_started_at: now };
+  const updatedPacket: StoredPacket = {
+    ...effectivePacket,
+    status: "handoff_started",
+    missing_fields: remainingMissingFields,
+    payload: refreshedPayload,
+    handoff_started_at: now,
+  };
   const draftData = asObject(application?.draft_data);
   const { error: applicationError } = await admin.from("intermediary_onboarding_applications").update({
     draft_data: { ...draftData, iib_submission_packet: updatedPacket },
@@ -223,6 +244,8 @@ export async function startIntermediaryIibHandoff(formData: FormData) {
   if (packet) {
     const result = await admin.from("intermediary_iib_submission_packets").update({
       status: "handoff_started",
+      payload: refreshedPayload,
+      missing_fields: remainingMissingFields,
       handoff_started_at: now,
       handoff_started_by: reviewer.id,
       updated_at: now,
@@ -248,6 +271,23 @@ function packetFromDraft(draftData: Record<string, unknown> | null | undefined):
     payload: asObject(packet.payload),
     prepared_at: typeof packet.prepared_at === "string" ? packet.prepared_at : null,
     handoff_started_at: typeof packet.handoff_started_at === "string" ? packet.handoff_started_at : null,
+  };
+}
+
+function liveIibNames(profile: Pick<ProfileRow, "partner_type" | "pos_name" | "pos_first_name" | "pos_middle_name" | "pos_last_name" | "dp_first_name" | "dp_middle_name" | "dp_last_name"> | null) {
+  if (!profile) return { first: "", middle: "", last: "" };
+  if (profile.partner_type === "misp") {
+    return {
+      first: cleanName(profile.dp_first_name),
+      middle: cleanName(profile.dp_middle_name),
+      last: cleanName(profile.dp_last_name),
+    };
+  }
+  const fallback = splitName(profile.pos_name);
+  return {
+    first: cleanName(profile.pos_first_name ?? fallback.first),
+    middle: cleanName(profile.pos_middle_name ?? fallback.middle),
+    last: cleanName(profile.pos_last_name ?? fallback.last),
   };
 }
 
