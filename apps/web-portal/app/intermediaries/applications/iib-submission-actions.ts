@@ -238,7 +238,6 @@ export async function startIntermediaryIibHandoff(formData: FormData) {
   const draftData = asObject(application?.draft_data);
   const { error: applicationError } = await admin.from("intermediary_onboarding_applications").update({
     draft_data: { ...draftData, iib_submission_packet: updatedPacket },
-    registration_status: "iib_submitted",
     updated_at: now,
   }).eq("id", applicationId);
 
@@ -273,7 +272,7 @@ export async function completeIntermediaryIibRegistration(formData: FormData) {
   }
 
   const registeredOn = text(formData, "registered_on");
-  if (registeredOn && (!ISO_DATE.test(registeredOn) || !isValidIsoDate(registeredOn) || registeredOn > indiaToday())) {
+  if (!registeredOn || !ISO_DATE.test(registeredOn) || !isValidIsoDate(registeredOn) || registeredOn > indiaToday()) {
     redirectFresh(`${applicationPath(applicationId)}?stage=review&error=iib_registration_date_invalid#iib-submission`);
   }
 
@@ -360,7 +359,9 @@ function formatPortalDate(value: string | null | undefined) {
   return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Asia/Kolkata" }).format(date);
 }
 function indiaToday() {
-  return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Kolkata" }).format(new Date());
+  const parts = new Intl.DateTimeFormat("en-GB", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Kolkata" }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 function isValidIsoDate(value: string) {
   const date = new Date(`${value}T00:00:00Z`);
