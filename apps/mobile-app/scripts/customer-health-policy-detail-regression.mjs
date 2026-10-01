@@ -49,13 +49,17 @@ assert(lifeHealthDetail.includes("['proposal_form', 'Proposal form'"), 'Document
 assert(lifeHealthDetail.includes("['illustration_form', 'Illustration form'"), 'Documents must include Illustration form.');
 assert(lifeHealthDetail.includes("['payment_receipt', 'Payment receipt'"), 'Documents must include Payment receipt.');
 assert(lifeHealthDetail.includes("['other_form', 'Other form'"), 'Documents must include Other form.');
-assert(lifeHealthDetail.includes('const [policyCopyExpanded, setPolicyCopyExpanded] = useState(false);'), 'Policy copy must remain collapsed by default.');
-assert(lifeHealthDetail.includes('createSignedUrl(document.storage_path, 10 * 60)'), 'Policy copy expansion must create a fresh short-lived signed URL.');
+assert(lifeHealthDetail.includes('createSignedUrl(document.storage_path, 10 * 60)'), 'Opening a Life/Health document must create a fresh short-lived signed URL.');
+assert(lifeHealthDetail.includes('Linking.openURL(signed.data.signedUrl)'), 'Life/Health documents must open in the browser/system viewer.');
+assert(lifeHealthDetail.includes('`Open ${label.toLowerCase()}`'), 'Uploaded Life/Health documents must expose an open action.');
+assert(!lifeHealthDetail.includes('policyCopyExpanded'), 'Life/Health documents must not use inline accordion previews.');
+assert(!lifeHealthDetail.includes('chevron-up') && !lifeHealthDetail.includes('chevron-down'), 'Life/Health document rows must not show chevrons.');
+assert(!lifeHealthDetail.includes('Policy copy preview'), 'Life/Health policy documents must not render inline previews.');
 assert(lifeHealthDetail.includes("width: '50%'"), 'Life/Health details must preserve the two-column Vehicle Details grid layout.');
 
-assert(motorDetail.includes('label="OD Premium"'), 'Motor policy detail must retain OD Premium.');
-assert(motorDetail.includes('label="TP Premium"'), 'Motor policy detail must retain TP Premium.');
-assert(motorDetail.includes('label="CPA Amount"'), 'Motor policy detail must retain CPA Amount.');
-assert(motorDetail.includes('financialLabel="IDV"'), 'Motor policy detail must retain IDV.');
+assert(motorDetail.includes('label="OD Premium"'), 'Legacy Motor policy detail must retain OD Premium.');
+assert(motorDetail.includes('label="TP Premium"'), 'Legacy Motor policy detail must retain TP Premium.');
+assert(motorDetail.includes('label="CPA Amount"'), 'Legacy Motor policy detail must retain CPA Amount.');
+assert(motorDetail.includes('financialLabel="IDV"'), 'Legacy Motor policy detail must retain IDV.');
 
 console.log('Customer Life/Health policy detail regression checks passed.');

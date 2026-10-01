@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Card, EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
@@ -63,9 +63,8 @@ export default function CustomerLifeHealthPolicyDetailScreen() {
   const [company, setCompany] = useState<InsuranceCompany | null>(null);
   const [details, setDetails] = useState<LifeHealthDetails | null>(null);
   const [documents, setDocuments] = useState<PolicyDocument[]>([]);
-  const [policyCopyExpanded, setPolicyCopyExpanded] = useState(false);
-  const [policyCopyUrl, setPolicyCopyUrl] = useState<string | null>(null);
   const [uploadingCopy, setUploadingCopy] = useState(false);
+  const [openingDocumentId, setOpeningDocumentId] = useState<string | null>(null);
   const [uploadMessage, setUploadMessage] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -166,15 +165,20 @@ export default function CustomerLifeHealthPolicyDetailScreen() {
     return map;
   }, [documents]);
 
-  async function togglePolicyCopy(document: PolicyDocument) {
-    if (policyCopyExpanded) {
-      setPolicyCopyExpanded(false);
-      setPolicyCopyUrl(null);
-      return;
+  async function openDocument(document: PolicyDocument) {
+    if (openingDocumentId) return;
+    setUploadMessage('');
+    setOpeningDocumentId(document.id);
+    try {
+      const signed = await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 10 * 60);
+      if (signed.error || !signed.data?.signedUrl) throw signed.error ?? new Error('Document URL unavailable');
+      await Linking.openURL(signed.data.signedUrl);
+    } catch (error) {
+      console.warn('Customer Life/Health policy document open failed', error);
+      setUploadMessage('Document could not be opened. Please try again.');
+    } finally {
+      setOpeningDocumentId(null);
     }
-    const signed = await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 10 * 60);
-    setPolicyCopyUrl(signed.data?.signedUrl ?? null);
-    setPolicyCopyExpanded(true);
   }
 
   async function pickAndUploadPolicyCopy() {
@@ -248,7 +252,6 @@ export default function CustomerLifeHealthPolicyDetailScreen() {
 
   const displayPolicyNumber = policy.source === 'external' ? formatExternalPolicyNumber(policy.policy_no) : policy.policy_no;
   const product = policy.policy_product?.trim() || formatPolicyType(policy.policy_type);
-  const policyCopy = documentByType.get('policy_copy') ?? null;
 
   return (
     <Screen title="Policy details" subtitle={policy.policy_no} showLogout showTitleHeader={false}>
@@ -303,46 +306,35 @@ export default function CustomerLifeHealthPolicyDetailScreen() {
           {DOCUMENT_TYPES.map(([type, label, icon]) => {
             const document = documentByType.get(type) ?? null;
             const isPolicyCopy = type === 'policy_copy';
+            const isOpening = document ? openingDocumentId === document.id : false;
+            const canPress = Boolean(document) || (isPolicyCopy && !uploadingCopy);
             return (
-              <View key={type}>
-                <Pressable
-                  accessibilityRole={isPolicyCopy ? 'button' : undefined}
-                  accessibilityLabel={isPolicyCopy ? (document ? `${policyCopyExpanded ? 'Collapse' : 'Expand'} policy copy` : 'Upload policy copy') : undefined}
-                  accessibilityState={isPolicyCopy && document ? { expanded: policyCopyExpanded } : undefined}
-                  disabled={!isPolicyCopy || uploadingCopy}
-                  onPress={() => {
-                    if (!isPolicyCopy) return;
-                    if (document) void togglePolicyCopy(document);
-                    else void pickAndUploadPolicyCopy();
-                  }}
-                  style={({ pressed }) => [styles.documentRow, pressed && isPolicyCopy && styles.documentRowPressed]}
-                >
-                  <MaterialCommunityIcons name={icon} size={18} color={document ? palette.navy : '#7C8998'} />
-                  <View style={styles.documentCopy}>
-                    <Text style={styles.documentLabel}>{label}</Text>
-                    <Text style={[styles.documentValue, !document && styles.documentValueMuted]} numberOfLines={1}>
-                      {document?.file_name || 'Not uploaded'}
-                    </Text>
-                  </View>
-                  {isPolicyCopy ? (
-                    uploadingCopy ? <ActivityIndicator size="small" color={palette.navy} /> : (
-                      <MaterialCommunityIcons name={document ? (policyCopyExpanded ? 'chevron-up' : 'chevron-down') : 'upload-outline'} size={21} color={palette.navy} />
-                    )
-                  ) : null}
-                </Pressable>
-                {isPolicyCopy && document && policyCopyExpanded ? (
-                  <View style={styles.policyCopyPreviewShell}>
-                    {policyCopyUrl && isImageDocument(document) ? (
-                      <Image source={{ uri: policyCopyUrl }} resizeMode="contain" style={styles.policyCopyPreview} accessibilityLabel="Policy copy preview" />
-                    ) : (
-                      <View style={styles.previewUnavailable}>
-                        <MaterialCommunityIcons name="file-document-outline" size={27} color="#7C8998" />
-                        <Text style={styles.previewUnavailableText}>{policyCopyUrl ? 'Inline preview is not available for this file format.' : 'Policy copy preview unavailable'}</Text>
-                      </View>
-                    )}
-                  </View>
+              <Pressable
+                key={type}
+                accessibilityRole={canPress ? 'button' : undefined}
+                accessibilityLabel={document ? `Open ${label.toLowerCase()}` : isPolicyCopy ? 'Upload policy copy' : undefined}
+                disabled={!canPress || isOpening}
+                onPress={() => {
+                  if (document) void openDocument(document);
+                  else if (isPolicyCopy) void pickAndUploadPolicyCopy();
+                }}
+                style={({ pressed }) => [styles.documentRow, pressed && canPress && styles.documentRowPressed]}
+              >
+                <MaterialCommunityIcons name={icon} size={18} color={document ? palette.navy : '#7C8998'} />
+                <View style={styles.documentCopy}>
+                  <Text style={styles.documentLabel}>{label}</Text>
+                  <Text style={[styles.documentValue, !document && styles.documentValueMuted]} numberOfLines={1}>
+                    {document?.file_name || 'Not uploaded'}
+                  </Text>
+                </View>
+                {isOpening || (isPolicyCopy && uploadingCopy) ? (
+                  <ActivityIndicator size="small" color={palette.navy} />
+                ) : document ? (
+                  <MaterialCommunityIcons name="open-in-new" size={19} color={palette.navy} />
+                ) : isPolicyCopy ? (
+                  <MaterialCommunityIcons name="upload-outline" size={21} color={palette.navy} />
                 ) : null}
-              </View>
+              </Pressable>
             );
           })}
         </View>
@@ -405,12 +397,6 @@ function policyStatusTone(value: string): 'green' | 'orange' | 'red' {
   return days < 0 ? 'red' : days <= 30 ? 'orange' : 'green';
 }
 
-function isImageDocument(document: PolicyDocument) {
-  const mimeType = document.mime_type?.toLowerCase() ?? '';
-  const fileName = document.file_name?.toLowerCase() ?? '';
-  return mimeType.startsWith('image/') || /\.(jpe?g|png|webp|gif|heic|heif)$/.test(fileName);
-}
-
 const styles = StyleSheet.create({
   pageHeaderRow: { marginBottom: 8 },
   pageTitle: { color: palette.navy, fontSize: 21, fontWeight: '900' },
@@ -438,9 +424,5 @@ const styles = StyleSheet.create({
   documentLabel: { color: '#6B7889', fontSize: 10.5, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.25 },
   documentValue: { marginTop: 3, color: palette.navy, fontSize: 12.5, fontWeight: '800' },
   documentValueMuted: { color: '#8B97A6', fontWeight: '700' },
-  policyCopyPreviewShell: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#E4EAF1' },
-  policyCopyPreview: { width: '100%', height: 320, borderRadius: 12, backgroundColor: '#F6F8FB' },
-  previewUnavailable: { minHeight: 92, borderRadius: 12, backgroundColor: '#F6F8FB', alignItems: 'center', justifyContent: 'center', gap: 7, padding: 12 },
-  previewUnavailableText: { color: '#708095', fontSize: 12, textAlign: 'center', fontWeight: '700' },
   uploadMessage: { marginTop: 8, color: '#C43838', fontSize: 12, fontWeight: '700' },
 });
