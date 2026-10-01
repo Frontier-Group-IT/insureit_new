@@ -8,6 +8,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 const applicationPath = (id: string) => `/intermediaries/applications/${id}`;
 const NAME = /^[A-Za-z ]+$/;
 const PAN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 type ApplicationRow = {
   id: string;
@@ -180,7 +181,7 @@ export async function prepareIntermediaryIibPayload(formData: FormData) {
     }).eq("id", applicationId),
   ]);
 
-  if (applicationError && packetError) {
+  if (applicationError || packetError) {
     redirectFresh(`${applicationPath(applicationId)}?stage=review&error=iib_prepare_failed`);
   }
 
@@ -209,7 +210,7 @@ export async function startIntermediaryIibHandoff(formData: FormData) {
 
   const effectivePacket = packet ?? packetFromDraft(application?.draft_data);
   const remainingMissingFields = effectivePacket?.missing_fields.filter((field) => field !== "Last name") ?? [];
-  if (!effectivePacket || !["ready", "handoff_started", "draft"].includes(effectivePacket.status) || remainingMissingFields.length) {
+  if (!effectivePacket || !["ready", "handoff_started", "draft"].includes(effectivePacket.status) || remainingMissingFields.length || !profile) {
     redirectFresh(`${applicationPath(applicationId)}?stage=review&error=iib_payload_not_ready#iib-submission`);
   }
 
@@ -235,29 +236,71 @@ export async function startIntermediaryIibHandoff(formData: FormData) {
     handoff_started_at: now,
   };
   const draftData = asObject(application?.draft_data);
-  const { error: applicationError } = await admin.from("intermediary_onboarding_applications").update({
-    draft_data: { ...draftData, iib_submission_packet: updatedPacket },
-    updated_at: now,
-  }).eq("id", applicationId);
-
-  let packetError: unknown = null;
-  if (packet) {
-    const result = await admin.from("intermediary_iib_submission_packets").update({
+  const [{ error: packetError }, { error: applicationError }] = await Promise.all([
+    admin.from("intermediary_iib_submission_packets").upsert({
+      application_id: applicationId,
+      intermediary_type: profile.partner_type,
       status: "handoff_started",
       payload: refreshedPayload,
       missing_fields: remainingMissingFields,
+      prepared_at: effectivePacket.prepared_at ?? now,
+      prepared_by: reviewer.id,
       handoff_started_at: now,
       handoff_started_by: reviewer.id,
       updated_at: now,
-    }).eq("application_id", applicationId);
-    packetError = result.error;
-  }
-  if (applicationError && (!packet || packetError)) {
+    }, { onConflict: "application_id" }),
+    admin.from("intermediary_onboarding_applications").update({
+      draft_data: { ...draftData, iib_submission_packet: updatedPacket },
+      updated_at: now,
+    }).eq("id", applicationId),
+  ]);
+
+  if (applicationError || packetError) {
     redirectFresh(`${applicationPath(applicationId)}?stage=review&error=iib_handoff_failed#iib-submission`);
   }
 
   revalidatePath(applicationPath(applicationId));
   redirectFresh(`${applicationPath(applicationId)}?stage=review&success=iib_handoff_started#iib-submission`);
+}
+
+export async function completeIntermediaryIibRegistration(formData: FormData) {
+  const applicationId = text(formData, "application_id");
+  if (!applicationId) redirect("/customers/posp-misp");
+  const reviewer = await requireScopedPospMispManager(applicationId);
+  if (!reviewer?.id) redirect("/customers/posp-misp");
+
+  if (text(formData, "confirm_iib_registration") !== "yes") {
+    redirectFresh(`${applicationPath(applicationId)}?stage=review&error=iib_registration_confirmation_required#iib-submission`);
+  }
+
+  const registeredOn = text(formData, "registered_on");
+  if (!registeredOn || !ISO_DATE.test(registeredOn) || !isValidIsoDate(registeredOn) || registeredOn > indiaToday()) {
+    redirectFresh(`${applicationPath(applicationId)}?stage=review&error=iib_registration_date_invalid#iib-submission`);
+  }
+
+  const reference = text(formData, "iib_reference");
+  if (reference && reference.length > 120) {
+    redirectFresh(`${applicationPath(applicationId)}?stage=review&error=iib_registration_reference_invalid#iib-submission`);
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.rpc("complete_intermediary_iib_registration", {
+    p_application_id: applicationId,
+    p_actor_id: reviewer.id,
+    p_iib_reference: reference,
+    p_registered_on: registeredOn,
+  });
+
+  if (error) {
+    console.error("IIB registration finalization failed", { applicationId, code: error.code });
+    redirectFresh(`${applicationPath(applicationId)}?stage=review&error=iib_registration_failed#iib-submission`);
+  }
+
+  revalidatePath(applicationPath(applicationId));
+  revalidatePath(`${applicationPath(applicationId)}/workflow`);
+  revalidatePath("/intermediaries/posp");
+  revalidatePath("/intermediaries/misp");
+  redirectFresh(`${applicationPath(applicationId)}?stage=review&success=iib_registration_completed#iib-submission`);
 }
 
 function packetFromDraft(draftData: Record<string, unknown> | null | undefined): StoredPacket | null {
@@ -316,4 +359,13 @@ function formatPortalDate(value: string | null | undefined) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Asia/Kolkata" }).format(date);
+}
+function indiaToday() {
+  const parts = new Intl.DateTimeFormat("en-GB", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Kolkata" }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+function isValidIsoDate(value: string) {
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }

@@ -337,6 +337,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260929153000_accounts_reconciliation_transaction_batch.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-accounts-reconciliation-transaction-batch.yml"
             echo "Accounts reconciliation transaction batch migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20261001170000_complete_intermediary_iib_registration.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-intermediary-iib-registration-finalizer.yml"
+            echo "Intermediary IIB registration finalizer migration detected. Waiting for its schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"
@@ -517,7 +520,6 @@ jobs:
         run: |
           {
             echo "## Automatic Vercel production deployment requested"
-            echo
             echo "- Branch: `main`"
             echo "- Main commit: `${GITHUB_SHA}`"
             echo "- Merged PR: `#${PR_NUMBER}`"
