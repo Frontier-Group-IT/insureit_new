@@ -43,7 +43,7 @@ begin
     raise exception 'Intermediary onboarding application not found';
   end if;
 
-  if v_application.final_type not in ('posp', 'misp') then
+  if coalesce(v_application.final_type, '') not in ('posp', 'misp') then
     raise exception 'IIB registration is available only for POSP/MISP applications';
   end if;
 
@@ -95,11 +95,22 @@ begin
   end if;
 
   v_registration_id := coalesce(v_application.registration_record_id, v_profile.registration_record_id);
+  if v_registration_id is not null then
+    select id
+    into v_registration_id
+    from public.intermediary_registrations
+    where id = v_registration_id
+      and application_id = p_application_id
+      and registration_type = v_application.final_type
+    for update;
+  end if;
+
   if v_registration_id is null then
     select id
     into v_registration_id
     from public.intermediary_registrations
     where application_id = p_application_id
+      and registration_type = v_application.final_type
     order by created_at desc, id desc
     limit 1
     for update;
@@ -190,7 +201,7 @@ begin
       updated_by = p_actor_id,
       updated_at = now()
   where application_id = p_application_id
-    and intermediary_type in ('posp', 'misp');
+    and intermediary_type = v_application.final_type;
 
   get diagnostics v_updated = row_count;
   if v_updated = 0 then
