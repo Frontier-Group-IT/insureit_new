@@ -45,5 +45,10 @@ assert(!detail.includes('chevron-up') && !detail.includes('chevron-down'), 'Moto
 assert(!detail.includes('documentsCard'), 'Motor Documents must not render in a separate card.');
 assert(!detail.includes('Policy copy preview'), 'Motor policy copies must not render inline previews.');
 assert(detail.includes("Linked vehicle"), 'Internal and external Motor policies must share the linked vehicle card.');
+assert(detail.includes('const showRenewedPolicyAction = useMemo'), 'Motor detail must calculate renewal action visibility.');
+assert(detail.includes('return days <= 30;'), 'Motor renewal action must show for due and expired policies.');
+assert(detail.includes('accessibilityLabel="Add renewed policy"'), 'Motor detail must expose the Add renewed policy action.');
+assert(detail.includes("pathname: '/customer/add-policy'"), 'Renewed Motor policy action must open the Add Policy flow.');
+assert(detail.includes("params: { vehicleId: policy.vehicle_id }"), 'Renewed Motor policy action must carry the linked vehicle when available.');
 
 console.log('Customer Motor policy detail regression checks passed.');
