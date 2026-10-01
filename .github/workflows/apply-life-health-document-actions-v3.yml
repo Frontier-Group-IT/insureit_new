@@ -1,0 +1,121 @@
+name: Apply Life Health document refinement v3
+
+on:
+  push:
+    branches:
+      - feature/life-health-document-actions-2026-10-01
+    paths:
+      - '.github/workflows/apply-life-health-document-actions-v3.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/life-health-document-actions-2026-10-01
+          fetch-depth: 0
+
+      - name: Apply scoped Life Health changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f"Expected source fragment not found in {path}: {old[:140]!r}")
+              p.write_text(text.replace(old, new, 1))
+
+          form = Path("apps/web-portal/components/life-health-policy-form.tsx")
+          text = form.read_text()
+          text, n = re.subn(r'const documentKeys = \[[^\n]+\];', 'const documentKeys = ["proposalForm", "benefitIllustration", "premiumReceipt", "otherDocument"];', text, count=1)
+          if n != 1:
+              raise SystemExit("Life/Health documentKeys contract not found")
+          new_docs = 'const documents = <div className="flex flex-1 flex-wrap items-center gap-2"><CompactDocumentUpload label="Proposal Form" file={files.proposalForm} onChange={(file) => setFiles((c) => ({ ...c, proposalForm: file }))} /><CompactDocumentUpload label="Illustration Form" file={files.benefitIllustration} onChange={(file) => setFiles((c) => ({ ...c, benefitIllustration: file }))} /><CompactDocumentUpload label="Payment Receipt" file={files.premiumReceipt} onChange={(file) => setFiles((c) => ({ ...c, premiumReceipt: file }))} /><CompactDocumentUpload label="Other Form" file={files.otherDocument} onChange={(file) => setFiles((c) => ({ ...c, otherDocument: file }))} /></div>;'
+          text, n = re.subn(r'const documents = <div className="flex flex-1 flex-wrap items-center gap-2">.*?</div>;', new_docs, text, count=1)
+          if n != 1:
+              raise SystemExit("Life/Health Add Policy document action block not found")
+          form.write_text(text)
+
+          detail = Path("apps/web-portal/components/life-health-case-detail.tsx")
+          text = detail.read_text()
+          if '<Section title="Mark Policy Issued">' not in text:
+              raise SystemExit("Mark Policy Issued section not found")
+          text = text.replace('<Section title="Mark Policy Issued">', '<Section title="Mark Policy Issued" highlight>', 1)
+          text, n = re.subn(r'<UploadAction label="Add KYC" type="kyc"[^>]*/>', '<UploadAction label="Add Illustration Form" type="benefit_illustration" existing={docMap.get("benefit_illustration")} disabled={uploading} loading={uploadingType==="benefit_illustration"} onUpload={upload}/><UploadAction label="Add Payment Receipt" type="premium_receipt" existing={docMap.get("premium_receipt")} disabled={uploading} loading={uploadingType==="premium_receipt"} onUpload={upload}/>', text, count=1)
+          if n != 1:
+              raise SystemExit("Life/Health case KYC action not found")
+          if 'label="Add Other Document" type="other_document"' not in text:
+              raise SystemExit("Life/Health case Other Document action not found")
+          text = text.replace('label="Add Other Document" type="other_document"', 'label="Add Other Form" type="other_document"', 1)
+          old_section = 'function Section({title,children}:{title:string;children:ReactNode}){return <section className="overflow-hidden rounded-xl border border-[#D9E2F0] bg-white"><div className="border-b px-4 py-3 text-[11px] font-semibold text-[#17365D]">{title}</div><div className="p-4">{children}</div></section>}'
+          new_section = 'function Section({title,children,highlight=false}:{title:string;children:ReactNode;highlight?:boolean}){return <section className={`overflow-hidden rounded-xl border ${highlight ? "border-[#DDD6FE] bg-[#F5F3FF]" : "border-[#D9E2F0] bg-white"}`}><div className={`border-b px-4 py-3 text-[11px] font-semibold text-[#17365D] ${highlight ? "border-[#DDD6FE] bg-[#F5F3FF]" : ""}`}>{title}</div><div className="p-4">{children}</div></section>}'
+          if old_section not in text:
+              raise SystemExit("Life/Health Section helper not found")
+          detail.write_text(text.replace(old_section, new_section, 1))
+
+          edit_page = "apps/web-portal/app/policies/[id]/edit/page.tsx"
+          replace_once(edit_page, '.in("document_type", ["policy_copy","proposal_form","kyc","other_document"]).returns<DocumentRow[]>()', '.in("document_type", ["policy_copy","proposal_form","benefit_illustration","premium_receipt","other_document"]).returns<DocumentRow[]>()')
+          replace_once(edit_page, 'row.document_type as "policy_copy"|"proposal_form"|"kyc"|"other_document"', 'row.document_type as "policy_copy"|"proposal_form"|"benefit_illustration"|"premium_receipt"|"other_document"')
+
+          edit_form = "apps/web-portal/components/life-health-issued-policy-edit-form.tsx"
+          replace_once(edit_form, 'const documentLabels: Array<[LifeHealthIssuedDocumentType,string]> = [["policy_copy","Policy Copy"],["proposal_form","Proposal Form"],["kyc","KYC"],["other_document","Other Document"]];', 'const documentLabels: Array<[LifeHealthIssuedDocumentType,string]> = [["policy_copy","Policy Copy"],["proposal_form","Proposal Form"],["benefit_illustration","Illustration Form"],["premium_receipt","Payment Receipt"],["other_document","Other Form"]];')
+
+          issued_actions = "apps/web-portal/app/policies/life-health-issued-policy-document-actions.ts"
+          replace_once(issued_actions, 'export type LifeHealthIssuedDocumentType = "policy_copy" | "proposal_form" | "kyc" | "other_document";', 'export type LifeHealthIssuedDocumentType = "policy_copy" | "proposal_form" | "benefit_illustration" | "premium_receipt" | "kyc" | "other_document";')
+          replace_once(issued_actions, 'const ALLOWED_TYPES = new Set<LifeHealthIssuedDocumentType>(["policy_copy", "proposal_form", "kyc", "other_document"]);', 'const ALLOWED_TYPES = new Set<LifeHealthIssuedDocumentType>(["policy_copy", "proposal_form", "benefit_illustration", "premium_receipt", "kyc", "other_document"]);')
+
+          regression = Path("apps/web-portal/scripts/life-health-native-onboarding-regression.mjs")
+          r = regression.read_text()
+          anchor = 'const lifeHealth = read("components/life-health-policy-form.tsx");'
+          if anchor not in r:
+              raise SystemExit("Life/Health regression anchor missing")
+          additions = '\nconst caseDetail = read("components/life-health-case-detail.tsx");\nconst issuedEdit = read("components/life-health-issued-policy-edit-form.tsx");\nconst issuedDocumentActions = read("app/policies/life-health-issued-policy-document-actions.ts");\nconst issuedEditPage = read("app/policies/[id]/edit/page.tsx");'
+          if 'const caseDetail = read("components/life-health-case-detail.tsx");' not in r:
+              r = r.replace(anchor, anchor + additions, 1)
+          checks = '\n\n// Life/Health document contract.\nassert(lifeHealth.includes(\'label="Illustration Form"\') && lifeHealth.includes(\'label="Payment Receipt"\'), "Life/Health Add Policy must expose Illustration Form and Payment Receipt");\nassert(!lifeHealth.includes(\'label="Add KYC"\') && !lifeHealth.includes(\'label="Add Policy Copy"\'), "Life/Health Add Policy must not expose KYC or Policy Copy");\nassert(caseDetail.includes(\'type="benefit_illustration"\') && caseDetail.includes(\'type="premium_receipt"\') && caseDetail.includes(\'label="Add Other Form"\'), "Life/Health case detail must expose five requested document actions");\nassert(caseDetail.includes(\'title="Mark Policy Issued" highlight\') && caseDetail.includes(\'bg-[#F5F3FF]\'), "Mark Policy Issued must use light-purple highlight");\nassert(issuedEdit.includes(\'["benefit_illustration","Illustration Form"]\') && issuedEdit.includes(\'["premium_receipt","Payment Receipt"]\') && issuedEdit.includes(\'["other_document","Other Form"]\'), "Issued Life/Health edit must expose requested documents");\nassert(!issuedEdit.includes(\'["kyc","KYC"]\'), "Issued Life/Health edit must not show KYC");\nassert(issuedDocumentActions.includes(\'"benefit_illustration"\') && issuedDocumentActions.includes(\'"premium_receipt"\'), "Issued Life/Health action must accept new document types");\nassert(issuedEditPage.includes(\'["policy_copy","proposal_form","benefit_illustration","premium_receipt","other_document"]\'), "Issued Life/Health loader must query requested five document types");\n'
+          if checks.strip() not in r:
+              r += checks
+          regression.write_text(r)
+
+          agents = Path("AGENTS.md")
+          a = agents.read_text()
+          marker = "### Latest implementation ledger\n\n"
+          entry = "- **2026-10-01 — Life/Health document actions + issued-section highlight:** branch `feature/life-health-document-actions-2026-10-01`. Add Policy now uses Proposal Form, Illustration Form, Payment Receipt and Other Form; Life/Health case detail and issued-policy edit use Policy Copy plus those four documents. `Mark Policy Issued` uses the approved light-purple treatment. Existing KYC server support is retained only for backward compatibility; no schema/RLS/mobile/native change. **IMPLEMENTED; PR/CI/merge/deployment pending.**\n"
+          if marker not in a:
+              raise SystemExit("AGENTS latest implementation ledger marker missing")
+          if entry not in a:
+              a = a.replace(marker, marker + entry, 1)
+          agents.write_text(a)
+
+          handoff = Path("docs/CURRENT_CHAT_HANDOFF.md")
+          h = handoff.read_text()
+          h_entry = "## 2026-10-01 — Life/Health document-set refinement\n\n- Branch: `feature/life-health-document-actions-2026-10-01`.\n- Life/Health Add Policy visible documents: Proposal Form, Illustration Form, Payment Receipt, Other Form.\n- Life/Health case detail + issued-policy edit visible documents: Policy Copy, Proposal Form, Illustration Form, Payment Receipt, Other Form.\n- `Mark Policy Issued` uses a light-purple/lavender section background while keeping existing white inputs.\n- Existing KYC upload handling remains server-compatible for historical records, but KYC is removed from the requested visible Life/Health document sets.\n- No database/schema/RLS/mobile/native change.\n- **IMPLEMENTED; PR/CI/merge/deployment pending.**\n\n---\n\n"
+          if not h.startswith(h_entry):
+              handoff.write_text(h_entry + h)
+
+          for helper in [".github/workflows/apply-life-health-document-actions.yml", ".github/workflows/apply-life-health-document-actions-v2.yml", ".github/workflows/apply-life-health-document-actions-v3.yml"]:
+              p = Path(helper)
+              if p.exists():
+                  p.unlink()
+          PY
+          git diff --check
+
+      - name: Commit scoped changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Refine Life Health policy document actions"
+          git push origin HEAD:feature/life-health-document-actions-2026-10-01
