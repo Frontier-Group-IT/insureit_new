@@ -37,7 +37,7 @@ const BUSINESS_OPTIONS: Array<{ value: OverviewBusiness; label: string }> = [
   { value: "health", label: "Health" },
 ];
 
-export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTrend, activeMix, fromDate, toDate, today, exportHref }: Props) {
+export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTrend, activeMix, fromDate, toDate, exportHref }: Props) {
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const businessRef = useRef<HTMLDivElement>(null);
@@ -52,9 +52,8 @@ export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTre
 
   useEffect(() => {
     function onPointerDown(event: MouseEvent) {
-      if ((periodOpen || customOpen) && dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (periodOpen && dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setPeriodOpen(false);
-        setCustomOpen(false);
       }
       if (businessOpen && businessRef.current && !businessRef.current.contains(event.target as Node)) {
         setBusinessOpen(false);
@@ -64,7 +63,6 @@ export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTre
       if (event.key === "Escape") {
         setPeriodOpen(false);
         setBusinessOpen(false);
-        setCustomOpen(false);
       }
     }
     document.addEventListener("mousedown", onPointerDown);
@@ -73,7 +71,7 @@ export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTre
       document.removeEventListener("mousedown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [periodOpen, businessOpen, customOpen]);
+  }, [periodOpen, businessOpen]);
 
   function baseParams() {
     const params = new URLSearchParams();
@@ -85,13 +83,15 @@ export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTre
 
   function applyPeriod(period: OverviewPeriod) {
     setPeriodOpen(false);
-    if (period === "custom") {
-      setCustomOpen(true);
-      return;
-    }
-    setCustomOpen(false);
     const params = baseParams();
     params.set("period", period);
+    if (period === "custom") {
+      setCustomOpen(true);
+      params.set("from", fromDate);
+      params.set("to", toDate);
+    } else {
+      setCustomOpen(false);
+    }
     router.push(`/reports?${params.toString()}`);
   }
 
@@ -118,15 +118,8 @@ export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTre
             type="button"
             className="ov-control"
             aria-haspopup="menu"
-            aria-expanded={periodOpen || customOpen}
-            onClick={() => {
-              if (customOpen) {
-                setCustomOpen(false);
-                setPeriodOpen(true);
-                return;
-              }
-              setPeriodOpen((open) => !open);
-            }}
+            aria-expanded={periodOpen}
+            onClick={() => setPeriodOpen((open) => !open)}
           >
             <CalendarDays className="h-3.5 w-3.5" />
             <span>{activeLabel}</span>
@@ -150,14 +143,15 @@ export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTre
               ))}
             </div>
           ) : null}
+        </div>
 
+        {activePeriod === "custom" || customOpen ? (
           <ReportDateRangePicker
             from={fromDate}
             to={toDate}
-            maxDate={today}
             open={customOpen}
             onOpenChange={setCustomOpen}
-            hideTrigger
+            buttonClassName="ov-control min-w-[190px] justify-between text-left"
             onRangeComplete={(customFrom, customTo) => {
               const params = baseParams();
               params.set("period", "custom");
@@ -167,7 +161,7 @@ export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTre
               router.push(`/reports?${params.toString()}`);
             }}
           />
-        </div>
+        ) : null}
 
         <div ref={businessRef} className="relative">
           <button
