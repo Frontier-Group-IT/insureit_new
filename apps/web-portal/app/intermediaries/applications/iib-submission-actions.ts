@@ -210,7 +210,7 @@ export async function startIntermediaryIibHandoff(formData: FormData) {
 
   const effectivePacket = packet ?? packetFromDraft(application?.draft_data);
   const remainingMissingFields = effectivePacket?.missing_fields.filter((field) => field !== "Last name") ?? [];
-  if (!effectivePacket || !["ready", "handoff_started", "draft"].includes(effectivePacket.status) || remainingMissingFields.length) {
+  if (!effectivePacket || !["ready", "handoff_started", "draft"].includes(effectivePacket.status) || remainingMissingFields.length || !profile) {
     redirectFresh(`${applicationPath(applicationId)}?stage=review&error=iib_payload_not_ready#iib-submission`);
   }
 
@@ -236,23 +236,25 @@ export async function startIntermediaryIibHandoff(formData: FormData) {
     handoff_started_at: now,
   };
   const draftData = asObject(application?.draft_data);
-  const { error: applicationError } = await admin.from("intermediary_onboarding_applications").update({
-    draft_data: { ...draftData, iib_submission_packet: updatedPacket },
-    updated_at: now,
-  }).eq("id", applicationId);
-
-  let packetError: unknown = null;
-  if (packet) {
-    const result = await admin.from("intermediary_iib_submission_packets").update({
+  const [{ error: packetError }, { error: applicationError }] = await Promise.all([
+    admin.from("intermediary_iib_submission_packets").upsert({
+      application_id: applicationId,
+      intermediary_type: profile.partner_type,
       status: "handoff_started",
       payload: refreshedPayload,
       missing_fields: remainingMissingFields,
+      prepared_at: effectivePacket.prepared_at ?? now,
+      prepared_by: reviewer.id,
       handoff_started_at: now,
       handoff_started_by: reviewer.id,
       updated_at: now,
-    }).eq("application_id", applicationId);
-    packetError = result.error;
-  }
+    }, { onConflict: "application_id" }),
+    admin.from("intermediary_onboarding_applications").update({
+      draft_data: { ...draftData, iib_submission_packet: updatedPacket },
+      updated_at: now,
+    }).eq("id", applicationId),
+  ]);
+
   if (applicationError || packetError) {
     redirectFresh(`${applicationPath(applicationId)}?stage=review&error=iib_handoff_failed#iib-submission`);
   }
