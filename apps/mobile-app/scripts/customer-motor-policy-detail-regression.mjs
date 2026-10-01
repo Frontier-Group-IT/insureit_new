@@ -16,6 +16,7 @@ assert(detail.includes("Premium breakup"), 'Motor detail must include the Premiu
 assert(detail.includes("Policy validity"), 'Motor detail must include the Policy validity section.');
 assert(detail.includes("Insured details"), 'Motor detail must include the Insured details section.');
 assert(detail.includes("Remarks / activity note"), 'Motor detail must include Remarks / activity note.');
+assert(detail.includes("Documents"), 'Motor detail must include Documents inside the main detail card.');
 assert(detail.includes("label=\"Policy product\""), 'Motor detail must show Policy product.');
 assert(detail.includes("label=\"Insurance company\""), 'Motor detail must show Insurance company.');
 assert(detail.includes("label=\"Policy number\""), 'Motor detail must show Policy number.');
@@ -36,8 +37,13 @@ assert(detail.includes(".select('od_premium,tp_premium,cpa_amount,net_premium,gs
 assert(detail.includes(".select('company_name,contact_name,phone')"), 'Motor detail must fetch customer insured identity fields.');
 assert(detail.includes("policy.source === 'external' ? 'customer_documents' : 'policy_documents'"), 'Internal and external Motor policies must share the same document UI while using their customer-safe storage tables.');
 assert(detail.includes(".eq('external_policy_id', next.id)"), 'External Motor policy documents must resolve by external_policy_id.');
-assert(detail.includes("accessibilityState={{ expanded: policyCopyExpanded }}"), 'Policy copy must retain explicit collapsed/expanded accessibility state.');
-assert(detail.includes("createSignedUrl(policyCopy.storage_path, 10 * 60)"), 'Policy copy must refresh its short-lived signed URL on expansion.');
+assert(detail.includes("createSignedUrl(policyCopy.storage_path, 10 * 60)"), 'Motor policy copy must create a fresh short-lived URL when opened.');
+assert(detail.includes('Linking.openURL(signed.data.signedUrl)'), 'Motor policy documents must open in the browser/system viewer.');
+assert(detail.includes('accessibilityLabel="Open policy copy"'), 'Uploaded Motor policy copy must expose an open action.');
+assert(!detail.includes('policyCopyExpanded'), 'Motor policy copy must not use an inline accordion preview.');
+assert(!detail.includes('chevron-up') && !detail.includes('chevron-down'), 'Motor document rows must not show chevrons.');
+assert(!detail.includes('documentsCard'), 'Motor Documents must not render in a separate card.');
+assert(!detail.includes('Policy copy preview'), 'Motor policy copies must not render inline previews.');
 assert(detail.includes("Linked vehicle"), 'Internal and external Motor policies must share the linked vehicle card.');
 
 console.log('Customer Motor policy detail regression checks passed.');
