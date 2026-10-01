@@ -1,7 +1,7 @@
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { darkActionClassName, primaryActionClassName, secondaryActionClassName } from "@/components/action-styles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { prepareIntermediaryIibPayload, startIntermediaryIibHandoff } from "./iib-submission-actions";
+import { completeIntermediaryIibRegistration, prepareIntermediaryIibPayload, startIntermediaryIibHandoff } from "./iib-submission-actions";
 
 type Props = { applicationId: string; agreementSigned: boolean; finalType: string | null };
 type PortalFields = {
@@ -19,7 +19,7 @@ type PortalFields = {
   InternalPOSCode?: string;
 };
 type PacketPayload = { portal_fields?: PortalFields; documents?: Array<{ type: string; file_name: string }> };
-type Packet = { status: string; missing_fields: string[]; payload: PacketPayload; prepared_at: string | null; handoff_started_at: string | null };
+type Packet = { status: string; missing_fields: string[]; payload: PacketPayload; prepared_at: string | null; handoff_started_at: string | null; submission_reference?: string | null };
 type ApplicationRow = { registration_status: string; draft_data: Record<string, unknown> | null };
 type AssignmentRow = { iib_registration_status: string; iib_registered_at: string | null };
 type NameProfileRow = {
@@ -38,7 +38,7 @@ export async function IibSubmissionStage({ applicationId, agreementSigned, final
 
   const admin = createSupabaseAdminClient();
   const [{ data: databasePacket }, { data: application }, { data: assignment }, { data: profile }] = await Promise.all([
-    admin.from("intermediary_iib_submission_packets").select("status,missing_fields,payload,prepared_at,handoff_started_at").eq("application_id", applicationId).maybeSingle<Packet>(),
+    admin.from("intermediary_iib_submission_packets").select("status,missing_fields,payload,prepared_at,handoff_started_at,submission_reference").eq("application_id", applicationId).maybeSingle<Packet>(),
     admin.from("intermediary_onboarding_applications").select("registration_status,draft_data").eq("id", applicationId).maybeSingle<ApplicationRow>(),
     admin.from("intermediary_training_exam_assignments").select("iib_registration_status,iib_registered_at").eq("application_id", applicationId).maybeSingle<AssignmentRow>(),
     admin.from("posp_misp_onboarding_profiles").select("partner_type,pos_name,pos_first_name,pos_middle_name,pos_last_name,dp_first_name,dp_middle_name,dp_last_name").eq("application_id", applicationId).maybeSingle<NameProfileRow>(),
@@ -57,6 +57,7 @@ export async function IibSubmissionStage({ applicationId, agreementSigned, final
   const missingFields = (packet?.missing_fields ?? []).filter((field) => field !== "Last name");
   if (liveNames.last && !/^[A-Za-z ]+$/.test(liveNames.last)) missingFields.push("Last name");
   const ready = Boolean(packet) && missingFields.length === 0 && ["ready", "handoff_started", "draft"].includes(packet?.status ?? "");
+  const handoffStarted = ready && packet?.status === "handoff_started";
   const portalUrl = process.env.NEXT_PUBLIC_IIB_POS_PORTAL_URL;
 
   if (registered) {
@@ -65,16 +66,19 @@ export async function IibSubmissionStage({ applicationId, agreementSigned, final
         <div>
           <p className="text-[9px] font-semibold uppercase tracking-[.1em] text-emerald-700">Step 6</p>
           <h2 className="mt-1 text-[14px] font-semibold text-[#0F172A]">IIB Registration</h2>
-          <p className="mt-1 text-[9px] text-[#64748B]">The IIB process for this account is already complete.</p>
+          <p className="mt-1 text-[9px] text-[#64748B]">The IIB process is complete and this POSP/MISP account is active.</p>
         </div>
-        <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-[8.5px] font-semibold text-emerald-800">Registered</span>
+        <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-[8.5px] font-semibold text-emerald-800">Registered · Active</span>
       </header>
       <div className="flex flex-wrap items-center justify-between gap-4 p-5">
         <div>
-          <p className="text-[10px] font-semibold text-emerald-900">No new IIB preparation is required.</p>
-          <p className="mt-1 text-[9.5px] text-[#64748B]">Preparing another payload could incorrectly move this account back to submission pending, so the preparation and handoff controls are disabled.</p>
+          <p className="text-[10px] font-semibold text-emerald-900">IIB registration completed.</p>
+          <p className="mt-1 text-[9.5px] text-[#64748B]">Preparation and handoff controls are locked so the completed account cannot be moved backward.</p>
         </div>
-        <p className="text-[9px] font-medium text-emerald-800">Registered {formatDateTime(assignment?.iib_registered_at)}</p>
+        <div className="text-right text-[9px] font-medium text-emerald-800">
+          <p>Registered {formatDateTime(assignment?.iib_registered_at)}</p>
+          {packet?.submission_reference ? <p className="mt-1">Reference {packet.submission_reference}</p> : null}
+        </div>
       </div>
     </section>;
   }
@@ -87,7 +91,7 @@ export async function IibSubmissionStage({ applicationId, agreementSigned, final
         <p className="mt-1 text-[9px] text-[#64748B]">Check the portal values before submission.</p>
       </div>
       <span className={`rounded-full px-3 py-1.5 text-[8.5px] font-semibold ${ready ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
-        {ready ? "Data ready" : packet ? "Details incomplete" : "Not prepared"}
+        {handoffStarted ? "Portal handoff ready" : ready ? "Data ready" : packet ? "Details incomplete" : "Not prepared"}
       </span>
     </header>
     <div className="p-5">
@@ -124,7 +128,7 @@ export async function IibSubmissionStage({ applicationId, agreementSigned, final
               <input type="hidden" name="application_id" value={applicationId} />
               <FormSubmitButton label="Refresh data" pendingLabel="Refreshing" className={secondaryActionClassName} />
             </form>
-            {ready ? <form action={startIntermediaryIibHandoff}>
+            {ready && !handoffStarted ? <form action={startIntermediaryIibHandoff}>
               <input type="hidden" name="application_id" value={applicationId} />
               <FormSubmitButton label="Prepare portal handoff" pendingLabel="Preparing" className={darkActionClassName} />
             </form> : null}
@@ -132,6 +136,28 @@ export async function IibSubmissionStage({ applicationId, agreementSigned, final
           </div>
         </div>
         {!portalUrl && ready ? <p className="text-[8.5px] text-[#64748B]">Set NEXT_PUBLIC_IIB_POS_PORTAL_URL to enable the portal button.</p> : null}
+        {handoffStarted ? <form action={completeIntermediaryIibRegistration} className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
+          <input type="hidden" name="application_id" value={applicationId} />
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10.5px] font-semibold text-emerald-950">IIB registration confirmation</p>
+              <p className="mt-1 max-w-3xl text-[9.5px] leading-5 text-emerald-900/80">Use this only after the POSP/MISP has been successfully registered in the IIB portal. Completing this step will mark onboarding complete and activate the account.</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <label className="text-[9px] font-semibold text-[#334155]">Registration date
+                  <input type="date" name="registered_on" required defaultValue={indiaToday()} max={indiaToday()} className="mt-1 block h-9 w-full rounded-lg border border-[#CBD5E1] bg-white px-3 text-[10px] text-[#0F172A] outline-none focus:border-[#315FEA]" />
+                </label>
+                <label className="text-[9px] font-semibold text-[#334155]">IIB reference <span className="font-normal text-[#64748B]">(optional)</span>
+                  <input type="text" name="iib_reference" maxLength={120} placeholder="Enter registration/reference no." className="mt-1 block h-9 w-full rounded-lg border border-[#CBD5E1] bg-white px-3 text-[10px] text-[#0F172A] outline-none placeholder:text-[#94A3B8] focus:border-[#315FEA]" />
+                </label>
+              </div>
+              <label className="mt-3 flex items-start gap-2 text-[9.5px] font-medium text-[#334155]">
+                <input type="checkbox" name="confirm_iib_registration" value="yes" required className="mt-0.5 h-4 w-4 rounded border-[#94A3B8]" />
+                <span>I confirm that IIB registration has been completed successfully for this POSP/MISP.</span>
+              </label>
+            </div>
+            <FormSubmitButton label="Complete IIB Registration" pendingLabel="Completing registration" className={`${primaryActionClassName} shrink-0`} />
+          </div>
+        </form> : null}
       </div>}
     </div>
   </section>;
@@ -148,6 +174,7 @@ function packetFromDraft(draftData: Record<string, unknown> | null | undefined):
     payload: asObject(packet.payload) as PacketPayload,
     prepared_at: typeof packet.prepared_at === "string" ? packet.prepared_at : null,
     handoff_started_at: typeof packet.handoff_started_at === "string" ? packet.handoff_started_at : null,
+    submission_reference: typeof packet.registration_reference === "string" ? packet.registration_reference : null,
   };
 }
 
@@ -194,4 +221,7 @@ function formatDateTime(value: string | null | undefined) {
   if (!value) return "-";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
+function indiaToday() {
+  return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Kolkata" }).format(new Date());
 }
