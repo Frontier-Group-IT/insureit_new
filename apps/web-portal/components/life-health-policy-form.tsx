@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, IndianRupee, Upload } from "lucide-react";
 import { createLifeHealthCase } from "@/app/policies/life-health-policy-actions";
@@ -81,11 +82,61 @@ export function LifeHealthPolicyForm({ policyType, insurers, customers, source }
         <Section number="03" title="Policy product & case details" contentClassName="md:grid-cols-2 xl:grid-cols-3"><Select label="Insurance company" value={form.insurerId} onChange={(e) => update("insurerId", e.target.value)} required><option value="">Select insurer</option>{insurers.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</Select><Field label="Product name" value={form.productName} onChange={(e) => update("productName", e.target.value)} placeholder="Product / plan name" required /><Field label="Case / proposal number" value={form.proposalNumber} onChange={(e) => update("proposalNumber", e.target.value.toUpperCase())} placeholder="Proposal number" required /><Select label="PPT · Premium Paying Term" value={form.ppt} onChange={(e) => update("ppt", e.target.value)}><option value="">Select term</option><option value="Single Pay">Single Pay</option>{YEAR_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}</Select><Select label="PD · Policy Duration / Term" value={form.pd} onChange={(e) => update("pd", e.target.value)}><option value="">Select term</option>{YEAR_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}</Select><Select label="Payment frequency" value={form.paymentFrequency} onChange={(e) => update("paymentFrequency", e.target.value)} required><option value="">Select frequency</option>{PAYMENT_FREQUENCIES.map((item) => <option key={item}>{item}</option>)}</Select></Section>
         <Section number="04" title="Premium & payment" contentClassName="md:grid-cols-2 xl:grid-cols-3"><Field label="Premium amount" value={form.premiumAmount} onChange={(e) => update("premiumAmount", numeric(e.target.value))} inputMode="decimal" placeholder="₹ 0.00" required /><Select label="Payment mode" value={form.paymentMode} onChange={(e) => update("paymentMode", e.target.value)} required><option value="">Select payment mode</option>{PAYMENT_MODES.map((item) => <option key={item}>{item}</option>)}</Select><div><label className={labelClass}>Remarks</label><textarea value={form.remarks} onChange={(e) => update("remarks", e.target.value)} rows={1} placeholder="Optional servicing / underwriting note" className="h-10 w-full resize-none rounded-xl border border-[#D8DEE9] bg-white px-3 py-2.5 text-[11px] font-medium text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]" /></div></Section>
       </div>
-      <div className="min-w-0 self-start xl:sticky xl:top-[124px] xl:max-h-[calc(100vh-148px)] xl:overflow-y-auto xl:overscroll-contain">{summary}</div>
+      <LifeHealthSummaryRail>{summary}</LifeHealthSummaryRail>
     </div>
     <div className="mt-3 w-full">{bottomSection}</div>
     {error ? <ErrorModal message={error} onClose={() => setError(null)} /> : null}
   </>;
+}
+
+function LifeHealthSummaryRail({ children }: { children: ReactNode }) {
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const boundaryRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ left: number; width: number; top: number } | null>(null);
+
+  useEffect(() => {
+    let frame = 0;
+    const boundaryElement = boundaryRef.current;
+    if (!boundaryElement) {
+      setPosition(null);
+      return;
+    }
+
+    const updatePosition = () => {
+      if (window.innerWidth < 1280 || !anchorRef.current) {
+        setPosition(null);
+        return;
+      }
+      const anchorRect = anchorRef.current.getBoundingClientRect();
+      const boundaryRect = boundaryElement.getBoundingClientRect();
+      const fixedCard = document.getElementById("life-health-policy-summary-fixed-card");
+      const cardHeight = fixedCard?.getBoundingClientRect().height ?? 0;
+      const preferredTop = Math.max(anchorRect.top, 124);
+      const boundaryTop = cardHeight > 0 ? boundaryRect.bottom - cardHeight : preferredTop;
+      setPosition({ left: anchorRect.left, width: anchorRect.width, top: Math.min(preferredTop, boundaryTop) });
+    };
+
+    const scheduleUpdate = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(updatePosition);
+    };
+
+    updatePosition();
+    frame = requestAnimationFrame(updatePosition);
+    window.addEventListener("resize", scheduleUpdate);
+    window.addEventListener("scroll", scheduleUpdate, true);
+    const observer = new ResizeObserver(scheduleUpdate);
+    observer.observe(boundaryElement);
+    observer.observe(document.documentElement);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", scheduleUpdate);
+      window.removeEventListener("scroll", scheduleUpdate, true);
+      observer.disconnect();
+    };
+  }, []);
+
+  return <div ref={boundaryRef} className="min-w-0 self-stretch"><div className="xl:hidden">{children}</div><div ref={anchorRef} className="hidden h-px w-full xl:block" aria-hidden="true"/>{position && typeof document !== "undefined" ? createPortal(<div id="life-health-policy-summary-fixed-card" className="fixed z-30 max-h-[calc(100vh-148px)] overflow-y-auto overscroll-contain" style={{ left: position.left, width: position.width, top: position.top }}>{children}</div>, document.body) : null}</div>;
 }
 
 function ErrorModal({ message, onClose }: { message: string; onClose: () => void }) { return <div className="fixed inset-0 z-[1000] grid place-items-center bg-[#17365D]/55 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-labelledby="policy-error-title"><div className="w-full max-w-[505px] overflow-hidden rounded-[20px] bg-white shadow-2xl"><div className="flex flex-col items-center px-7 pb-7 pt-7 text-center"><span className="grid h-14 w-14 place-items-center rounded-full bg-[#FFF3E8] text-[25px] font-semibold leading-none text-[#E66A19]">!</span><h3 id="policy-error-title" className="mt-5 text-[18px] font-bold text-[#102A4C]">Check details</h3><p className="mt-3 text-[13px] leading-5 text-[#7A869A]">{message}</p></div><div className="border-t border-[#DDE4EC] p-4"><button type="button" onClick={onClose} className="h-12 w-full rounded-xl bg-[#173F6D] text-[13px] font-bold text-white transition hover:bg-[#12355E]">OK</button></div></div></div> }
