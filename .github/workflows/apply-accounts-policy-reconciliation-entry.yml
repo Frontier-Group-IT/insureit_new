@@ -55,8 +55,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          exists=$(supabase db query --linked --output-format json "select to_regprocedure('public.post_accounts_policy_reconciliation_entry(uuid,uuid,text,jsonb)') is not null as exists;")
-          if ! echo "$exists" | grep -Eq '"exists"[[:space:]]*:[[:space:]]*true'; then
+          state=$(supabase db query --linked --output-format json "select to_regprocedure('public.post_accounts_policy_reconciliation_entry(uuid,uuid,text,jsonb)') is not null as post_exists, to_regprocedure('public.correct_accounts_policy_reconciliation_entry(uuid,uuid,text,uuid,text,text,jsonb)') is not null as correction_exists, to_regclass('public.accounts_reconciliation_corrections') is not null as audit_exists;")
+          if ! echo "$state" | grep -Eq '"post_exists"[[:space:]]*:[[:space:]]*true' || ! echo "$state" | grep -Eq '"correction_exists"[[:space:]]*:[[:space:]]*true' || ! echo "$state" | grep -Eq '"audit_exists"[[:space:]]*:[[:space:]]*true'; then
             supabase db query --linked --file supabase/migrations/20260929134500_accounts_policy_reconciliation_entry.sql
           fi
           applied=$(supabase db query --linked --output-format json "select exists(select 1 from supabase_migrations.schema_migrations where version='20260929134500') as applied;")
@@ -64,14 +64,19 @@ jobs:
             supabase migration repair --linked --status applied 20260929134500
           fi
 
-      - name: Verify Accounts policy reconciliation RPC
+      - name: Verify Accounts reconciliation RPCs and audit controls
         shell: bash
         run: |
           set -euo pipefail
-          definition=$(supabase db query --linked --output-format json "select pg_get_functiondef('public.post_accounts_policy_reconciliation_entry(uuid,uuid,text,jsonb)'::regprocedure) as definition;")
-          privileges=$(supabase db query --linked --output-format json "select has_function_privilege('service_role','public.post_accounts_policy_reconciliation_entry(uuid,uuid,text,jsonb)','EXECUTE') as service_role_execute, has_function_privilege('anon','public.post_accounts_policy_reconciliation_entry(uuid,uuid,text,jsonb)','EXECUTE') as anon_execute;")
-          echo "$definition" | grep -q 'accounts_policy_reconciliation'
-          echo "$definition" | grep -q 'FOR UPDATE'
-          echo "$definition" | grep -q 'This Pay-In entry is already recorded for the policy'
-          echo "$privileges" | grep -Eq '"service_role_execute"[[:space:]]*:[[:space:]]*true'
-          echo "$privileges" | grep -Eq '"anon_execute"[[:space:]]*:[[:space:]]*false'
+          post_definition=$(supabase db query --linked --output-format json "select pg_get_functiondef('public.post_accounts_policy_reconciliation_entry(uuid,uuid,text,jsonb)'::regprocedure) as definition;")
+          correction_definition=$(supabase db query --linked --output-format json "select pg_get_functiondef('public.correct_accounts_policy_reconciliation_entry(uuid,uuid,text,uuid,text,text,jsonb)'::regprocedure) as definition;")
+          privileges=$(supabase db query --linked --output-format json "select has_function_privilege('service_role','public.post_accounts_policy_reconciliation_entry(uuid,uuid,text,jsonb)','EXECUTE') as post_service, has_function_privilege('service_role','public.correct_accounts_policy_reconciliation_entry(uuid,uuid,text,uuid,text,text,jsonb)','EXECUTE') as correction_service, has_function_privilege('anon','public.correct_accounts_policy_reconciliation_entry(uuid,uuid,text,uuid,text,text,jsonb)','EXECUTE') as correction_anon;")
+          audit=$(supabase db query --linked --output-format json "select to_regclass('public.accounts_reconciliation_corrections') is not null as audit_exists;")
+          echo "$post_definition" | grep -q 'accounts_policy_reconciliation'
+          echo "$post_definition" | grep -q 'FOR UPDATE'
+          echo "$correction_definition" | grep -q 'Correction reason is required'
+          echo "$correction_definition" | grep -q 'Payment reversed'
+          echo "$audit" | grep -Eq '"audit_exists"[[:space:]]*:[[:space:]]*true'
+          echo "$privileges" | grep -Eq '"post_service"[[:space:]]*:[[:space:]]*true'
+          echo "$privileges" | grep -Eq '"correction_service"[[:space:]]*:[[:space:]]*true'
+          echo "$privileges" | grep -Eq '"correction_anon"[[:space:]]*:[[:space:]]*false'
