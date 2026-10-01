@@ -2,7 +2,7 @@
 
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type RangePickerProps = {
   from: string;
@@ -39,6 +39,8 @@ export function ReportDateRangePicker({
   const [rangeStart, setRangeStart] = useState(from);
   const [rangeEnd, setRangeEnd] = useState(to);
   const [calendarMonth, setCalendarMonth] = useState((to || from || maxDate || todayUtc()).slice(0, 7));
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const open = controlledOpen ?? internalOpen;
   const days = useMemo(() => buildCalendarDays(calendarMonth), [calendarMonth]);
 
@@ -48,6 +50,24 @@ export function ReportDateRangePicker({
     setRangeEnd(to);
     setCalendarMonth((to || from || maxDate || todayUtc()).slice(0, 7));
   }, [from, to, maxDate, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(event: MouseEvent) {
+      const target = event.target as Node;
+      if (triggerRef.current?.contains(target) || popoverRef.current?.contains(target)) return;
+      setOpen(false);
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
 
   function setOpen(next: boolean) {
     if (controlledOpen === undefined) setInternalOpen(next);
@@ -75,9 +95,10 @@ export function ReportDateRangePicker({
 
   const popover = open ? (
     <div
+      ref={popoverRef}
       role="dialog"
       aria-label="Select custom date range"
-      className={`${hideTrigger ? "absolute" : "absolute"} ${align === "right" ? "right-0" : "left-0"} top-[calc(100%+6px)] z-50 w-[308px] rounded-2xl border border-[#D7E0EA] bg-white p-3 shadow-[0_18px_45px_rgba(25,46,75,.18)] ${popoverClassName}`}
+      className={`absolute ${align === "right" ? "right-0" : "left-0"} top-[calc(100%+6px)] z-50 w-[308px] rounded-2xl border border-[#D7E0EA] bg-white p-3 shadow-[0_18px_45px_rgba(25,46,75,.18)] ${popoverClassName}`}
     >
       <div className="flex items-center justify-between px-1">
         <button type="button" onClick={() => setCalendarMonth(shiftMonth(calendarMonth, -1))} className="grid h-8 w-8 place-items-center rounded-lg border border-[#E2E8F0] text-[#4B5F78] hover:bg-[#F7F9FC]" aria-label="Previous month"><ChevronLeft className="h-4 w-4" /></button>
@@ -120,7 +141,7 @@ export function ReportDateRangePicker({
   if (hideTrigger) return popover;
 
   return (
-    <div className="relative">
+    <div ref={triggerRef} className="relative">
       <button
         type="button"
         onClick={() => setOpen(!open)}
