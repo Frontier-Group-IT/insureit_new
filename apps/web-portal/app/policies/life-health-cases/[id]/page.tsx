@@ -11,8 +11,7 @@ export const revalidate = 0;
 type CaseRow = { id:string; case_number:string; business_line:"Life"|"Health"; status:string; sourcing_date:string; customer_id:string; insurance_company_id:string; product_name:string; proposal_number:string; premium_paying_term:string|null; policy_duration:string|null; payment_frequency:string; payment_mode:string; premium_amount:number; intermediary_type:string|null; intermediary_code:string|null; lead_source:string|null; intermediary_mobile:string|null; rm_name:string|null; rm_code:string|null; remarks:string|null; final_policy_id:string|null; converted_at:string|null; created_at:string; created_by:string|null; converted_by:string|null };
 type CustomerRow = { id:string; contact_name:string; company_name:string|null; phone:string; email:string|null };
 type InsurerRow = { id:string; name:string };
-type DocumentRow = { id:string; document_type:string; file_name:string; created_at:string; uploaded_by:string|null; storage_bucket:string; storage_path:string };
-type ViewDocumentRow = DocumentRow & { view_url:string };
+type DocumentRow = { id:string; document_type:string; file_name:string; created_at:string; uploaded_by:string|null };
 type PolicyRow = { id:string; policy_no:string; policy_code:string|null };
 type ProfileRow = { id:string; full_name:string|null };
 type ActivityRow = { id:string; action:string; createdAt:string; createdBy:string };
@@ -32,15 +31,11 @@ export default async function LifeHealthCasePage({ params }: { params: Promise<{
     admin.from("customers").select("id,contact_name,company_name,phone,email").eq("id", caseRow.customer_id).maybeSingle<CustomerRow>(),
     admin.from("insurance_companies").select("id,name").eq("id", caseRow.insurance_company_id).maybeSingle<InsurerRow>(),
     admin.from("insurance_companies").select("id,name").eq("is_active", true).order("name").returns<InsurerRow[]>(),
-    admin.from("life_health_case_documents").select("id,document_type,file_name,created_at,uploaded_by,storage_bucket,storage_path").eq("case_id", id).order("created_at", { ascending: true }).returns<DocumentRow[]>(),
+    admin.from("life_health_case_documents").select("id,document_type,file_name,created_at,uploaded_by").eq("case_id", id).order("created_at", { ascending: true }).returns<DocumentRow[]>(),
     caseRow.final_policy_id ? admin.from("policies").select("id,policy_no,policy_code").eq("id", caseRow.final_policy_id).maybeSingle<PolicyRow>() : Promise.resolve({ data: null, error: null }),
   ]);
 
-  const rawDocuments=documentsResult.data??[];
-  const documents:ViewDocumentRow[]=await Promise.all(rawDocuments.map(async(document)=>{
-    const { data:signed }=await admin.storage.from(document.storage_bucket).createSignedUrl(document.storage_path,60*60);
-    return {...document,view_url:signed?.signedUrl||""};
-  }));
+  const documents=documentsResult.data??[];
   const actorIds=Array.from(new Set([caseRow.created_by,caseRow.converted_by,...documents.map(document=>document.uploaded_by)].filter((value):value is string=>Boolean(value))));
   const profilesResult=actorIds.length?await admin.from("profiles").select("id,full_name").in("id",actorIds).returns<ProfileRow[]>():{data:[] as ProfileRow[],error:null};
   const actorNames=new Map((profilesResult.data??[]).map(profile=>[profile.id,profile.full_name?.trim()||"User"]));
