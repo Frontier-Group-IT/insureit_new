@@ -70,7 +70,7 @@ export function LifeHealthPolicyForm({ policyType, insurers, customers, source }
 
   const summary = <FollowSummary completion={completion} proposal={form.proposalNumber} insurer={selectedInsurer} product={form.productName} customer={form.insuredName} mobile={form.phone} premium={form.premiumAmount} frequency={form.paymentFrequency} paymentMode={form.paymentMode} documentCount={documentCount} documentTarget={documentTarget} />;
   const documents = <div className="flex flex-1 flex-wrap items-center gap-2"><CompactDocumentUpload label="Proposal Form" file={files.proposalForm} onChange={(file) => setFiles((c) => ({ ...c, proposalForm: file }))} /><CompactDocumentUpload label="Illustration Form" file={files.benefitIllustration} onChange={(file) => setFiles((c) => ({ ...c, benefitIllustration: file }))} /><CompactDocumentUpload label="Payment Receipt" file={files.premiumReceipt} onChange={(file) => setFiles((c) => ({ ...c, premiumReceipt: file }))} /><CompactDocumentUpload label="Other Form" file={files.otherDocument} onChange={(file) => setFiles((c) => ({ ...c, otherDocument: file }))} /></div>;
-  const bottomSection = <section className="w-full rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="flex flex-col gap-3 p-3 xl:flex-row xl:items-center xl:justify-between">{documents}<div className="flex shrink-0 justify-end gap-2"><Link href="/policies/life-health-cases" className="inline-flex h-10 items-center justify-center rounded-xl border border-[#CBD5E1] px-4 text-[10px] font-semibold text-[#344054]">View Cases</Link><button type="button" onClick={submit} disabled={isPending} className="inline-flex h-10 items-center justify-center rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white disabled:opacity-60">{isPending ? "Creating case…" : "Create Case"}</button></div></div></section>;
+  const bottomSection = <section id="life-health-onboarding-actions" className="w-full rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="flex flex-col gap-3 p-3 xl:flex-row xl:items-center xl:justify-between">{documents}<div className="flex shrink-0 justify-end gap-2"><Link href="/policies/life-health-cases" className="inline-flex h-10 items-center justify-center rounded-xl border border-[#CBD5E1] px-4 text-[10px] font-semibold text-[#344054]">View Cases</Link><button type="button" onClick={submit} disabled={isPending} className="inline-flex h-10 items-center justify-center rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white disabled:opacity-60">{isPending ? "Creating case…" : "Create Case"}</button></div></div></section>;
 
   return <>
     <nav aria-label="Life and Health policy sections" className="sticky top-[72px] z-50 mb-3 flex min-h-[36px] items-stretch gap-4 overflow-x-auto rounded-b-xl border border-t-0 border-[#D9E2F0] bg-white/96 px-4 shadow-[0_5px_14px_rgba(15,23,42,.06)] backdrop-blur">
@@ -91,13 +91,12 @@ export function LifeHealthPolicyForm({ policyType, insurers, customers, source }
 
 function LifeHealthSummaryRail({ children }: { children: ReactNode }) {
   const anchorRef = useRef<HTMLDivElement>(null);
-  const boundaryRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ left: number; width: number; top: number } | null>(null);
 
   useEffect(() => {
     let frame = 0;
-    const boundaryElement = boundaryRef.current;
-    if (!boundaryElement) {
+    const actionElement = document.getElementById("life-health-onboarding-actions");
+    if (!actionElement) {
       setPosition(null);
       return;
     }
@@ -108,13 +107,14 @@ function LifeHealthSummaryRail({ children }: { children: ReactNode }) {
         return;
       }
       const anchorRect = anchorRef.current.getBoundingClientRect();
-      const boundaryRect = boundaryElement.getBoundingClientRect();
+      const actionRect = actionElement.getBoundingClientRect();
       const fixedCard = document.getElementById("life-health-policy-summary-fixed-card");
       const cardHeight = fixedCard?.getBoundingClientRect().height ?? 0;
       const safeTop = 124;
+      const bottomGap = 24;
       const preferredTop = Math.max(anchorRect.top, safeTop);
-      const boundaryTop = cardHeight > 0 ? boundaryRect.bottom - cardHeight : preferredTop;
-      const boundedTop = Math.min(preferredTop, boundaryTop);
+      const actionLimitedTop = cardHeight > 0 ? actionRect.top - cardHeight - bottomGap : preferredTop;
+      const boundedTop = Math.min(preferredTop, actionLimitedTop);
       setPosition({ left: anchorRect.left, width: anchorRect.width, top: Math.max(safeTop, boundedTop) });
     };
 
@@ -128,7 +128,7 @@ function LifeHealthSummaryRail({ children }: { children: ReactNode }) {
     window.addEventListener("resize", scheduleUpdate);
     window.addEventListener("scroll", scheduleUpdate, true);
     const observer = new ResizeObserver(scheduleUpdate);
-    observer.observe(boundaryElement);
+    observer.observe(actionElement);
     observer.observe(document.documentElement);
     return () => {
       cancelAnimationFrame(frame);
@@ -138,7 +138,7 @@ function LifeHealthSummaryRail({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  return <div ref={boundaryRef} className="min-w-0 self-stretch"><div className="xl:hidden">{children}</div><div ref={anchorRef} className="hidden h-px w-full xl:block" aria-hidden="true"/>{position && typeof document !== "undefined" ? createPortal(<div id="life-health-policy-summary-fixed-card" className="fixed z-30 max-h-[calc(100vh-148px)] overflow-y-auto overscroll-contain" style={{ left: position.left, width: position.width, top: position.top }}>{children}</div>, document.body) : null}</div>;
+  return <div className="min-w-0 self-stretch"><div className="xl:hidden">{children}</div><div ref={anchorRef} className="hidden h-px w-full xl:block" aria-hidden="true"/>{position && typeof document !== "undefined" ? createPortal(<div id="life-health-policy-summary-fixed-card" className="fixed z-30 max-h-[calc(100vh-148px)] overflow-y-auto overscroll-contain" style={{ left: position.left, width: position.width, top: position.top }}>{children}</div>, document.body) : null}</div>;
 }
 
 function ErrorModal({ message, onClose }: { message: string; onClose: () => void }) { return <div className="fixed inset-0 z-[1000] grid place-items-center bg-[#17365D]/55 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-labelledby="policy-error-title"><div className="w-full max-w-[505px] overflow-hidden rounded-[20px] bg-white shadow-2xl"><div className="flex flex-col items-center px-7 pb-7 pt-7 text-center"><span className="grid h-14 w-14 place-items-center rounded-full bg-[#FFF3E8] text-[25px] font-semibold leading-none text-[#E66A19]">!</span><h3 id="policy-error-title" className="mt-5 text-[18px] font-bold text-[#102A4C]">Check details</h3><p className="mt-3 text-[13px] leading-5 text-[#7A869A]">{message}</p></div><div className="border-t border-[#DDE4EC] p-4"><button type="button" onClick={onClose} className="h-12 w-full rounded-xl bg-[#173F6D] text-[13px] font-bold text-white transition hover:bg-[#12355E]">OK</button></div></div></div> }
