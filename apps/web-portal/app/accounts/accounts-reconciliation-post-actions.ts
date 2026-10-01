@@ -27,6 +27,20 @@ export type DirectPayoutInput = {
   remarks?: string;
 };
 
+export type ReconciliationCorrectionInput = {
+  lookup: AccountsPolicyReconciliationLookup;
+  entryType: "payin" | "payout";
+  targetId: string;
+  action: "edit" | "reverse";
+  reason: string;
+  billNumber?: string;
+  billAmount?: number;
+  billDate?: string;
+  paidAmount?: number;
+  paidDate?: string;
+  reference?: string;
+};
+
 export type DirectPayoutResult =
   | { ok: true; detail: AccountsPolicyReconciliationDetail }
   | { ok: false; error: string };
@@ -90,10 +104,76 @@ export async function postAccountsDirectPayoutAction(input: DirectPayoutInput): 
   return { ok: true, detail: await loadAccountsPolicyReconciliationDetailAction(resolved.policyId) };
 }
 
+export async function correctAccountsReconciliationEntryAction(
+  input: ReconciliationCorrectionInput,
+): Promise<AccountsPolicyReconciliationDetail> {
+  const profile = await requireAccountsPostingAccess();
+  const resolved = await loadAccountsPolicyReconciliationDetailForRowAction(input.lookup);
+  const targetId = text(input.targetId);
+  const reason = text(input.reason);
+
+  if (!targetId) throw new Error("Reconciliation entry is required.");
+  if (!reason) throw new Error("Correction reason is required.");
+
+  const payload: Record<string, unknown> = {};
+  if (input.action === "edit" && input.entryType === "payin") {
+    const billNumber = text(input.billNumber);
+    const billDate = isoDate(input.billDate);
+    const billAmount = money(input.billAmount);
+    if (!billNumber) throw new Error("Bill Number is required.");
+    if (!billDate) throw new Error("Choose a valid Bill Date.");
+    if (billAmount <= 0) throw new Error("Bill Amount must be greater than zero.");
+    payload.billNumber = billNumber;
+    payload.billDate = billDate;
+    payload.billAmount = billAmount;
+  }
+  if (input.action === "edit" && input.entryType === "payout") {
+    const paidDate = isoDate(input.paidDate);
+    const reference = text(input.reference);
+    const paidAmount = money(input.paidAmount);
+    if (!paidDate) throw new Error("Choose a valid Paid Date.");
+    if (!reference) throw new Error("UTR / reference is required.");
+    if (paidAmount <= 0) throw new Error("Paid Amount must be greater than zero.");
+    payload.paidDate = paidDate;
+    payload.reference = reference;
+    payload.paidAmount = paidAmount;
+  }
+
+  const db = createSupabaseAdminClient();
+  const { error } = await db.rpc("correct_accounts_policy_reconciliation_entry", {
+    p_actor: profile.id,
+    p_policy_id: resolved.policyId,
+    p_entry_type: input.entryType,
+    p_target_id: targetId,
+    p_action: input.action,
+    p_reason: reason,
+    p_payload: payload,
+  });
+  if (error) throw new Error(publicCorrectionError(error.message, input.entryType));
+
+  return loadAccountsPolicyReconciliationDetailAction(resolved.policyId);
+}
+
 async function requireAccountsPostingAccess() {
   const profile = await requireCapability("view_accounts");
   if (!canAccessPolicyCommercials(profile)) throw new Error("Commercial details restricted");
   return profile;
+}
+
+function publicCorrectionError(message: string | null | undefined, kind: "payin" | "payout") {
+  const value = String(message ?? "");
+  const known = [
+    "Correction reason is required",
+    "This Pay-In entry is already reversed",
+    "This Payout entry is already reversed",
+    "Closed payout entries cannot be corrected",
+    "This Pay-In entry is already recorded for the policy",
+    "This UTR/reference is already recorded for the intermediary",
+    "Paid Amount exceeds the remaining payable balance",
+  ];
+  const matched = known.find((candidate) => value.includes(candidate));
+  if (matched) return matched.endsWith(".") ? matched : `${matched}.`;
+  return `${kind === "payin" ? "Pay-In" : "Payout"} correction could not be saved. No partial correction was applied.`;
 }
 
 function publicPostingError(message: string | null | undefined, kind: "Pay-In" | "Payout") {
