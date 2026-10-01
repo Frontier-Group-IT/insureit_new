@@ -7,7 +7,8 @@ import {
 } from "@/lib/reports/policy-business";
 
 type ViewerProfile = { id: string; role: string | null };
-export type RmPerformanceQuery = { rm?: string; from?: string; to?: string };
+export type RmPerformanceQuery = { rm?: string; period?: string; from?: string; to?: string };
+export type RmPerformancePeriodKey = "mtd" | "this_month" | "custom";
 
 export type RmSourcePerformance = {
   key: string;
@@ -38,6 +39,14 @@ export type RmPerformanceData = {
   filters: {
     rms: Array<{ id: string; name: string }>;
   };
+  period: {
+    key: RmPerformancePeriodKey;
+    label: string;
+    shortLabel: string;
+    from: string;
+    to: string;
+    highlightMonth: string;
+  };
   today: PolicyBusinessNetReport["summary"];
   mtd: PolicyBusinessNetReport["summary"];
   todayCategoryMix: PolicyBusinessNetReport["category_mix"];
@@ -54,6 +63,7 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
   const selectedRmId = validUuid(query.rm);
   const today = indiaDate(new Date());
   const monthStart = `${today.slice(0, 8)}01`;
+  const selectedPeriod = resolvePeriod(query, today, monthStart);
   const todayQuery = {
     period: "custom",
     from: today,
@@ -64,8 +74,8 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
   } as const;
   const mtdQuery = {
     period: "custom",
-    from: monthStart,
-    to: today,
+    from: selectedPeriod.from,
+    to: selectedPeriod.to,
     rm: selectedRmId ?? undefined,
     page: "1",
     pageSize: String(REPORT_PAGE_SIZE),
@@ -82,8 +92,8 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
   ]);
 
   // The report RPC caps register pages at 200 rows even if a larger pageSize is requested.
-  // Summary/RM totals cover the full date range, so source breakdowns must explicitly read
-  // every register page or they silently become a recent-rows sample instead of true MTD.
+  // Summary/RM totals cover the full selected date range, so source breakdowns must explicitly
+  // read every register page or they silently become a recent-rows sample instead of true totals.
   const [todayRegisterRows, mtdRegisterRows] = await Promise.all([
     loadCompleteRegisterRows(profile, todayQuery, todayPayload.report),
     loadCompleteRegisterRows(profile, mtdQuery, mtdPayload.report),
@@ -138,6 +148,7 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
     selectedRmId,
     selectedRmName,
     filters: { rms: mtdPayload.report.filters.rms },
+    period: selectedPeriod,
     today: todayPayload.report.summary,
     mtd: mtdPayload.report.summary,
     todayCategoryMix: todayPayload.report.category_mix,
@@ -231,6 +242,55 @@ function mergeSources(today: SourceAggregate[], mtd: SourceAggregate[]): RmSourc
     else merged.set(source.key, { key: source.key, label: source.label, type: source.type, todayPolicies: source.policies, todayNetPremium: source.netPremium, mtdPolicies: 0, mtdNetPremium: 0 });
   }
   return [...merged.values()].sort((a, b) => b.mtdNetPremium - a.mtdNetPremium || b.mtdPolicies - a.mtdPolicies || a.label.localeCompare(b.label));
+}
+
+function resolvePeriod(query: RmPerformanceQuery, today: string, monthStart: string): RmPerformanceData["period"] {
+  const key: RmPerformancePeriodKey = query.period === "this_month" || query.period === "custom" ? query.period : "mtd";
+  if (key === "this_month") {
+    return {
+      key,
+      label: "THIS MONTH",
+      shortLabel: "This Month",
+      from: monthStart,
+      to: monthEnd(today),
+      highlightMonth: today.slice(0, 7),
+    };
+  }
+
+  if (key === "custom") {
+    const from = validDate(query.from) ?? monthStart;
+    const requestedTo = validDate(query.to) ?? today;
+    const to = requestedTo >= from ? requestedTo : from;
+    return {
+      key,
+      label: "CUSTOM PERIOD",
+      shortLabel: "Custom",
+      from,
+      to,
+      highlightMonth: to.slice(0, 7),
+    };
+  }
+
+  return {
+    key: "mtd",
+    label: "MONTH TO DATE",
+    shortLabel: "MTD",
+    from: monthStart,
+    to: today,
+    highlightMonth: today.slice(0, 7),
+  };
+}
+
+function monthEnd(isoDate: string) {
+  const [year, month] = isoDate.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+}
+
+function validDate(value: string | undefined) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}T00:00:00Z`);
+  return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value ? null : value;
 }
 
 function validUuid(value: string | undefined) { return value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value) ? value : null; }
