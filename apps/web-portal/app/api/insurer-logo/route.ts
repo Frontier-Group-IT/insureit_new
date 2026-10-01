@@ -15,13 +15,14 @@ const loadManagedLogoMap = unstable_cache(
 
     if (error) {
       console.error("Unable to load insurer master logos", { error: error.message });
-      return new Map<string, string>();
+      return {} as Record<string, string>;
     }
 
-    const entries = (data ?? [])
-      .map((row) => [normalizeInsurerLogoKey(row.name), row.logo_path] as const)
-      .filter(([key, path]) => Boolean(key && path));
-    return new Map(entries);
+    return Object.fromEntries(
+      (data ?? [])
+        .map((row) => [normalizeInsurerLogoKey(row.name), row.logo_path] as const)
+        .filter(([key, path]) => Boolean(key && path)),
+    ) as Record<string, string>;
   },
   ["insurer-master-logo-map"],
   { revalidate: 300, tags: ["reference:insurance-companies"] },
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
   }
 
   const managedLogos = await loadManagedLogoMap();
-  const managedPath = managedLogos.get(normalizeInsurerLogoKey(insurerName));
+  const managedPath = managedLogos[normalizeInsurerLogoKey(insurerName)];
   if (managedPath) {
     const admin = createSupabaseAdminClient();
     const { data } = admin.storage.from(INSURER_LOGO_BUCKET).getPublicUrl(managedPath);
