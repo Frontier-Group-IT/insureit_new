@@ -2,8 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, FileUp, Loader2, ShieldCheck } from "lucide-react";
-import { PartnerPageHeader } from "@/components/partner-portal/partner-page-primitives";
+import {
+  ChevronDown,
+  CircleCheck,
+  CloudUpload,
+  FileText,
+  Loader2,
+  Search,
+  ShieldCheck,
+} from "lucide-react";
 import {
   getPartnerPolicyIntakeSourcesWeb,
   linkExternalRenewalPolicyIntakeWeb,
@@ -49,7 +56,9 @@ export function PartnerPolicyIntakeNewClient({ externalRenewal }: { externalRene
       }
     }
     void load();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   const selectedSource = useMemo(() => sources.find((source) => source.id === sourceId) ?? null, [sourceId, sources]);
@@ -95,87 +104,73 @@ export function PartnerPolicyIntakeNewClient({ externalRenewal }: { externalRene
   }
 
   return (
-    <div className="space-y-7">
-      <button
-        type="button"
-        onClick={() => router.back()}
-        disabled={submitting}
-        className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 disabled:opacity-50"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" /> Back
-      </button>
-
-      <PartnerPageHeader
-        eyebrow="New Policy Intake"
-        title="Send policy to Operations"
-        description="Add the customer mobile and policy copy, then submit the intake."
-      />
-
-      {externalRenewal ? (
-        <div className="border-y border-[#DCE4ED] bg-[#F8FAFD] px-3 py-3.5 sm:px-4">
-          <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#3156B8]">External renewal opportunity</p>
-          <p className="mt-1 text-[11px] font-extrabold text-[#1B2F4E]">{externalRenewal.customerLabel}</p>
-          <p className="mt-1 break-words text-[9.5px] leading-5 text-[#667993]">{externalRenewal.vehicleLabel} · {externalRenewal.policyLabel}</p>
-          <p className="mt-1 text-[9px] font-semibold text-[#7B899C]">The normal Policy Intake workflow remains unchanged. This opportunity is only linked after a successful intake submission.</p>
-        </div>
-      ) : null}
-
-      <section className="py-1">
-        {error ? <div className="mt-4 rounded-2xl border border-[#F0D0D0] bg-[#FFF7F7] px-4 py-3 text-[10.5px] font-semibold text-[#9E3939]">{error}</div> : null}
-
-        {loading ? (
-          <div className="mt-6 flex items-center gap-3 border-y border-[#DCE4ED] py-5 text-[10.5px] font-semibold text-[#526680]">
-            <Loader2 className="h-4 w-4 animate-spin" /> Preparing lead sources…
-          </div>
-        ) : (
-          <div className="mt-6 grid gap-5 xl:grid-cols-[.9fr_1.1fr]">
-            <div className="space-y-7">
-              <div>
-                <label className="text-[9px] font-black uppercase tracking-[0.1em] text-[#72809A]">Lead Source</label>
-                {sources.length > 1 ? (
-                  <div className="mt-2 space-y-2">
-                    {sources.map((source) => {
-                      const active = source.id === sourceId;
-                      return (
-                        <button
-                          key={source.id}
-                          type="button"
-                          onClick={() => setSourceId(source.id)}
-                          className={"flex w-full items-center justify-between border-b px-1 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 " + (active ? "border-[#3156B8] bg-[#F3F6FF]" : "border-[#E0E7EF] bg-transparent")}
-                        >
-                          <span>
-                            <span className="block text-[11px] font-extrabold text-[#1B2F4E]">{source.display_name}</span>
-                            <span className="mt-0.5 block text-[9.5px] text-[#74839A]">{source.intermediary_type.toUpperCase()}{source.intermediary_code ? " · " + source.intermediary_code : ""}</span>
-                          </span>
-                          {active ? <ShieldCheck className="h-4 w-4 text-[#3156B8]" /> : null}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="mt-2 border-y border-[#DCE4ED] py-3">
-                    <p className="text-[11px] font-extrabold text-[#1B2F4E]">{selectedSource?.display_name || "No active lead source available"}</p>
-                    {selectedSource ? <p className="mt-0.5 text-[9.5px] text-[#74839A]">{selectedSource.intermediary_type.toUpperCase()}{selectedSource.intermediary_code ? " · " + selectedSource.intermediary_code : ""}</p> : null}
-                  </div>
-                )}
-              </div>
-
-              <label className="grid gap-1.5">
-                <span className="text-[9px] font-black uppercase tracking-[0.1em] text-[#72809A]">Customer Mobile</span>
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  value={mobile}
-                  onChange={(event) => setMobile(event.target.value.replace(/\D/g, "").slice(0, 10))}
-                  placeholder="10 digit mobile number"
-                  className="h-11 rounded-lg border border-[#D2DCE9] bg-white px-3 text-[11px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10"
-                />
-                {mobile && !validMobile ? <span className="text-[9px] font-semibold text-[#B54A4A]">Enter a valid Indian mobile number.</span> : null}
-              </label>
+    <div className="flex min-h-[calc(100vh-175px)] items-start justify-center px-2 pb-10 pt-3 sm:px-4 sm:pt-5">
+      <section className="w-full max-w-[650px] overflow-hidden rounded-[28px] border border-[#D8E2EE] bg-white shadow-[0_26px_70px_rgba(28,45,82,0.13)]">
+        <div className="bg-gradient-to-r from-[#0D2A60] via-[#143B73] to-[#235B8B] px-6 py-5 text-white sm:px-7 sm:py-6">
+          <div className="flex items-center gap-4">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-[16px] bg-white/10 ring-1 ring-inset ring-white/10">
+              <ShieldCheck className="h-5 w-5" strokeWidth={2.1} />
             </div>
+            <div className="min-w-0">
+              <h1 className="text-[18px] font-extrabold tracking-[-0.02em] text-white sm:text-[19px]">New Policy Intake</h1>
+              <p className="mt-1 text-[10.5px] font-medium text-white/86 sm:text-[11px]">Three details. Operations completes the onboarding.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-6 sm:px-7 sm:py-7">
+          {externalRenewal ? (
+            <div className="mb-5 rounded-[16px] border border-[#DCE5F0] bg-[#F7FAFD] px-4 py-3.5">
+              <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#2C5B8D]">External renewal opportunity</p>
+              <p className="mt-1 text-[11px] font-extrabold text-[#183354]">{externalRenewal.customerLabel}</p>
+              <p className="mt-1 break-words text-[9.5px] leading-5 text-[#6C7F96]">{externalRenewal.vehicleLabel} · {externalRenewal.policyLabel}</p>
+            </div>
+          ) : null}
+
+          {error ? (
+            <div className="mb-5 rounded-[14px] border border-[#F0D0D0] bg-[#FFF7F7] px-4 py-3 text-[10.5px] font-semibold text-[#9E3939]">{error}</div>
+          ) : null}
+
+          <div className="space-y-5">
+            <label className="block">
+              <span className="mb-2 flex items-center gap-2 text-[9.5px] font-black uppercase tracking-[0.1em] text-[#526883]">
+                <Search className="h-3.5 w-3.5" /> Lead Source
+              </span>
+              <span className="relative block">
+                <select
+                  value={sourceId}
+                  onChange={(event) => setSourceId(event.target.value)}
+                  disabled={loading || submitting || sources.length === 0}
+                  className="h-[54px] w-full appearance-none rounded-[17px] border border-[#D3DDEA] bg-white px-4 pr-11 text-[11.5px] font-semibold text-[#1D3B61] outline-none transition focus:border-[#5A7AC7] focus:ring-2 focus:ring-[#5A7AC7]/10 disabled:cursor-not-allowed disabled:bg-[#FAFBFD] disabled:text-[#94A1B2]"
+                >
+                  <option value="">{loading ? "Loading assigned sources…" : "Select assigned Partner / POSP / MISP"}</option>
+                  {sources.map((source) => (
+                    <option key={source.id} value={source.id}>{source.display_name}</option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#173B68]" />
+              </span>
+              {selectedSource?.intermediary_code ? (
+                <span className="mt-1.5 block px-1 text-[9px] font-semibold text-[#8290A3]">{selectedSource.intermediary_type.toUpperCase()} · {selectedSource.intermediary_code}</span>
+              ) : null}
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-[9.5px] font-black uppercase tracking-[0.1em] text-[#526883]">Customer Mobile</span>
+              <input
+                type="tel"
+                inputMode="numeric"
+                value={mobile}
+                onChange={(event) => setMobile(event.target.value.replace(/\D/g, "").slice(0, 10))}
+                placeholder="10 digit mobile number"
+                disabled={submitting}
+                className="h-[54px] w-full rounded-[17px] border border-[#D3DDEA] bg-white px-4 text-[12px] font-semibold text-[#1D3B61] outline-none transition placeholder:text-[#A4AFBF] focus:border-[#5A7AC7] focus:ring-2 focus:ring-[#5A7AC7]/10 disabled:opacity-60"
+              />
+              {mobile && !validMobile ? <span className="mt-1.5 block px-1 text-[9px] font-semibold text-[#B54A4A]">Enter a valid Indian mobile number.</span> : null}
+            </label>
 
             <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#72809A]">Policy Copy</p>
+              <p className="mb-2 text-[9.5px] font-black uppercase tracking-[0.1em] text-[#526883]">Policy Copy</p>
               <input
                 ref={fileRef}
                 type="file"
@@ -187,29 +182,36 @@ export function PartnerPolicyIntakeNewClient({ externalRenewal }: { externalRene
                 type="button"
                 onClick={() => fileRef.current?.click()}
                 disabled={submitting}
-                className="mt-2 flex min-h-[180px] w-full flex-col items-center justify-center rounded-[16px] border border-dashed border-[#BFCBDD] bg-[#F8FAFD] px-5 text-center transition hover:border-[#3156B8] hover:bg-[#F4F7FF] disabled:opacity-50"
+                className="flex min-h-[144px] w-full flex-col items-center justify-center rounded-[18px] border border-dashed border-[#AFC2D9] bg-[#F8FBFD] px-5 text-center transition hover:border-[#3E6D9F] hover:bg-[#F5F9FC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A7AC7]/15 disabled:opacity-60"
               >
-                <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-[#3156B8] shadow-sm"><FileUp className="h-5 w-5" /></span>
-                <span className="mt-3 text-[11px] font-extrabold text-[#1B2F4E]">{file ? file.name : "Choose policy PDF or image"}</span>
-                <span className="mt-1 text-[9.5px] font-medium text-[#74839A]">{file ? Math.max(1, Math.round(file.size / 1024)) + " KB selected" : "PDF, JPG, PNG or WebP · maximum 15 MB"}</span>
+                <span className="grid h-12 w-12 place-items-center rounded-[16px] bg-[#E9F7F5] text-[#13958B]">
+                  <CloudUpload className="h-5 w-5" strokeWidth={2} />
+                </span>
+                <span className="mt-3 max-w-full truncate text-[11.5px] font-extrabold text-[#1B3C64]">{file ? file.name : "Upload policy PDF or image"}</span>
+                <span className="mt-1.5 flex items-center gap-1.5 text-[9.5px] font-medium text-[#7E8CA0]">
+                  <FileText className="h-3.5 w-3.5" />
+                  {file ? Math.max(1, Math.round(file.size / 1024)) + " KB selected" : "Camera or file · max 15 MB"}
+                </span>
               </button>
 
               {progress ? <UploadProgress progress={progress} /> : null}
             </div>
           </div>
-        )}
 
-        <div className="mt-6 flex flex-wrap justify-end gap-2 border-t border-[#E6ECF3] pt-4">
-          <button type="button" onClick={() => router.back()} disabled={submitting} className="h-10 rounded-lg border border-[#D2DCE9] bg-white px-4 text-[10.5px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 disabled:opacity-50">Cancel</button>
           <button
             type="button"
             onClick={() => void submit()}
             disabled={!canSubmit}
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#111A35] px-5 text-[10.5px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25 disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-5 inline-flex h-[54px] w-full items-center justify-center gap-2.5 rounded-[17px] bg-[#173B68] px-5 text-[11.5px] font-extrabold text-white transition hover:bg-[#12335D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
-            {submitting ? "Submitting…" : "Submit to Operations"}
+            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+            {submitting ? "Submitting…" : "Submit Policy Intake"}
           </button>
+
+          <div className="mt-4 flex gap-3 rounded-[16px] bg-[#F5F8FC] px-4 py-3.5 text-[#7A8799]">
+            <CircleCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#0AA47F]" />
+            <p className="text-[9.5px] font-medium leading-5">Your policy copy and sales details are saved first. The request is accepted immediately while policy and vehicle details are fetched in the background.</p>
+          </div>
         </div>
       </section>
     </div>
@@ -220,7 +222,7 @@ function UploadProgress({ progress }: { progress: IntakeProgress }) {
   const percent = progress.stage === "preparing" ? 8 : progress.stage === "submitting" ? 96 : Math.max(12, Math.min(92, progress.percent ?? 12));
   const label = progress.stage === "preparing" ? "Preparing secure upload" : progress.stage === "submitting" ? "Sending to Operations" : "Uploading policy copy";
   return (
-    <div className="mt-3 border-y border-[#DCE4ED] py-3">
+    <div className="mt-3 rounded-[14px] border border-[#E0E7EF] bg-white px-3.5 py-3">
       <div className="flex items-center justify-between text-[9.5px] font-semibold text-[#526680]"><span>{label}</span><span>{Math.round(percent)}%</span></div>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#EDF1F6]"><div className="h-full rounded-full bg-[#3156B8]" style={{ width: String(percent) + "%" }} /></div>
     </div>
