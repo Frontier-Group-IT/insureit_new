@@ -18,7 +18,9 @@ export type AccountsPayinHistoryItem = {
   billNumber: string;
   billAmount: number;
   billDate: string;
-  status: string;
+  status: "Posted" | "Edited" | "Reversed";
+  correctionReason: string;
+  isActive: boolean;
   createdAt: string;
   createdBy: string | null;
 };
@@ -30,6 +32,9 @@ export type AccountsPayoutHistoryItem = {
   paidAmount: number;
   paidDate: string;
   reference: string;
+  status: "Posted" | "Edited" | "Reversed";
+  correctionReason: string;
+  isActive: boolean;
   createdAt: string;
   createdBy: string | null;
 };
@@ -85,8 +90,19 @@ type PaymentRow = {
   id: string;
   payment_date: string | null;
   payment_reference: string | null;
+  payment_amount: number | string | null;
   created_at: string;
   created_by: string | null;
+};
+
+type CorrectionRow = {
+  entry_type: "payin" | "payout";
+  target_id: string;
+  action: "edit" | "reverse";
+  reason: string;
+  before_payload: Record<string, unknown> | null;
+  after_payload: Record<string, unknown> | null;
+  created_at: string;
 };
 
 export async function loadAccountsPolicyReconciliationDetailForRowAction(
@@ -138,7 +154,6 @@ export async function loadAccountsPolicyReconciliationDetailAction(
   const profile = await requireCapability("view_accounts");
   if (!canAccessPolicyCommercials(profile)) throw new Error("Commercial details restricted");
 
-  // Reuse the canonical Accounts scope check instead of trusting a client-supplied policy ID.
   const scopedRecords = await loadBusinessMisRecordsByPolicyIds(profile, [normalizedPolicyId]);
   const record = scopedRecords[0];
   if (!record || record.policyId !== normalizedPolicyId) throw new Error("Policy is not available in your Accounts scope.");
@@ -146,7 +161,7 @@ export async function loadAccountsPolicyReconciliationDetailAction(
   const row = record.row;
   const db = createSupabaseAdminClient();
 
-  const [invoiceLinesResult, payablesResult] = await Promise.all([
+  const [invoiceLinesResult, payablesResult, correctionsResult] = await Promise.all([
     db
       .from("accounts_invoice_lines")
       .select("id,invoice_id,invoice_line_amount,created_at")
@@ -156,10 +171,20 @@ export async function loadAccountsPolicyReconciliationDetailAction(
       .from("partner_payables")
       .select("id,policy_payout_id")
       .eq("policy_id", normalizedPolicyId),
+    db
+      .from("accounts_reconciliation_corrections")
+      .select("entry_type,target_id,action,reason,before_payload,after_payload,created_at")
+      .eq("policy_id", normalizedPolicyId)
+      .order("created_at", { ascending: true }),
   ]);
 
   if (invoiceLinesResult.error) throw new Error("Unable to load Pay-In reconciliation history.");
   if (payablesResult.error) throw new Error("Unable to load Payout reconciliation history.");
+  if (correctionsResult.error && correctionsResult.error.code !== "42P01") throw new Error("Unable to load reconciliation audit history.");
+
+  const corrections = ((correctionsResult.data ?? []) as CorrectionRow[]);
+  const latestCorrection = new Map<string, CorrectionRow>();
+  for (const correction of corrections) latestCorrection.set(`${correction.entry_type}:${correction.target_id}`, correction);
 
   const invoiceLines = (invoiceLinesResult.data ?? []) as InvoiceLineRow[];
   const invoiceIds = [...new Set(invoiceLines.map((item) => item.invoice_id).filter(Boolean))];
@@ -179,14 +204,18 @@ export async function loadAccountsPolicyReconciliationDetailAction(
   const payinHistory = invoiceLines
     .map((line): AccountsPayinHistoryItem | null => {
       const invoice = invoices.get(line.invoice_id);
-      if (!invoice || invoice.status === "Cancelled") return null;
+      if (!invoice) return null;
+      const correction = latestCorrection.get(`payin:${invoice.id}`);
+      const reversed = correction?.action === "reverse" || invoice.status === "Cancelled";
       return {
         id: line.id,
         invoiceId: line.invoice_id,
         billNumber: invoice.invoice_no ?? "",
         billAmount: amount(line.invoice_line_amount),
         billDate: invoice.invoice_date ?? "",
-        status: invoice.status ?? "",
+        status: correction?.action === "reverse" ? "Reversed" : correction?.action === "edit" ? "Edited" : "Posted",
+        correctionReason: correction?.reason ?? "",
+        isActive: !reversed,
         createdAt: line.created_at || invoice.created_at,
         createdBy: invoice.created_by,
       };
@@ -213,7 +242,7 @@ export async function loadAccountsPolicyReconciliationDetailAction(
   const paymentsResult = paymentIds.length
     ? await db
         .from("partner_payments")
-        .select("id,payment_date,payment_reference,created_at,created_by")
+        .select("id,payment_date,payment_reference,payment_amount,created_at,created_by")
         .in("id", paymentIds)
     : { data: [], error: null };
 
@@ -228,13 +257,19 @@ export async function loadAccountsPolicyReconciliationDetailAction(
       const payment = payments.get(allocation.payment_id);
       const payoutId = payoutIdByPayable.get(allocation.payable_id);
       if (!payment || !payoutId) return null;
+      const correction = latestCorrection.get(`payout:${payment.id}`);
+      const reversed = correction?.action === "reverse" || amount(allocation.allocated_amount) <= 0;
+      const originalAmount = amount(correction?.before_payload?.paidAmount);
       return {
         id: allocation.id,
         paymentId: allocation.payment_id,
         payoutId,
-        paidAmount: amount(allocation.allocated_amount),
+        paidAmount: reversed && originalAmount > 0 ? originalAmount : amount(allocation.allocated_amount),
         paidDate: payment.payment_date ?? "",
         reference: payment.payment_reference ?? "",
+        status: correction?.action === "reverse" ? "Reversed" : correction?.action === "edit" ? "Edited" : "Posted",
+        correctionReason: correction?.reason ?? "",
+        isActive: !reversed,
         createdAt: allocation.created_at || payment.created_at,
         createdBy: payment.created_by,
       };
@@ -243,9 +278,9 @@ export async function loadAccountsPolicyReconciliationDetailAction(
     .sort((a, b) => `${a.paidDate}|${a.createdAt}`.localeCompare(`${b.paidDate}|${b.createdAt}`));
 
   const projectedPayin = amount(row[19]);
-  const cumulativeBillAmount = payinHistory.reduce((sum, item) => sum + item.billAmount, 0);
+  const cumulativeBillAmount = payinHistory.filter((item) => item.isActive).reduce((sum, item) => sum + item.billAmount, 0);
   const projectedPayout = amount(row[27]);
-  const cumulativePaidAmount = payoutHistory.reduce((sum, item) => sum + item.paidAmount, 0);
+  const cumulativePaidAmount = payoutHistory.filter((item) => item.isActive).reduce((sum, item) => sum + item.paidAmount, 0);
 
   return {
     policyId: record.policyId,
