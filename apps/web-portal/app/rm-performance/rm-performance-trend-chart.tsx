@@ -4,10 +4,10 @@ import { useMemo, useState } from "react";
 
 type TrendRow = { month: string; policy_count: number; net_premium: number };
 
-export function RmPerformanceTrendChart({ rows }: { rows: TrendRow[] }) {
+export function RmPerformanceTrendChart({ rows, highlightMonth }: { rows: TrendRow[]; highlightMonth?: string }) {
   const values = useMemo(() => rows.slice(-6), [rows]);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const currentMonth = indiaMonthKey(new Date());
+  const currentMonth = highlightMonth || indiaMonthKey(new Date());
   if (!values.length) return <div className="grid h-[98px] place-items-center rounded-xl bg-[#F7F9FC] text-[10px] font-medium text-[#687589]">No trend data</div>;
 
   const max = Math.max(...values.map((row) => row.net_premium), 1);
