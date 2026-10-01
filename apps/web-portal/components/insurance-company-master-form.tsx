@@ -1,4 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
+import { getInsurerLogo } from "@/lib/insurer-logo";
 
 type InsurerFormValues = {
   name?: string | null;
@@ -7,6 +9,7 @@ type InsurerFormValues = {
   portal_url?: string | null;
   portal_status?: string | null;
   is_active?: boolean | null;
+  logo_path?: string | null;
 };
 
 type Props = {
@@ -21,6 +24,8 @@ const inputClass = "h-11 w-full rounded-xl border border-[#D6DFEB] bg-white px-3
 const labelClass = "mb-1.5 block text-[9px] font-bold uppercase tracking-[0.07em] text-[#52647D]";
 
 export function InsuranceCompanyMasterForm({ action, values, submitLabel, cancelHref, error }: Props) {
+  const logoSrc = getInsurerLogo(values?.name);
+
   return (
     <form action={action} className="space-y-5">
       {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[11px] font-medium text-red-700">{error}</div> : null}
@@ -30,6 +35,29 @@ export function InsuranceCompanyMasterForm({ action, values, submitLabel, cancel
           <label className={labelClass} htmlFor="name">Full registered company name <span className="text-red-500">*</span></label>
           <input id="name" name="name" className={inputClass} defaultValue={values?.name ?? ""} placeholder="Example: Star Health and Allied Insurance Company Limited" required maxLength={180} autoComplete="off" />
           <p className="mt-1.5 text-[9px] leading-4 text-[#7B8799]">Use the legal/current registered insurer name. Short labels and former names belong in aliases, not this field.</p>
+        </div>
+
+        <div className="lg:col-span-2">
+          <label className={labelClass} htmlFor="logo">Company logo / icon</label>
+          <div className="flex flex-col gap-3 rounded-xl border border-[#DCE5F0] bg-[#F8FAFD] p-3 sm:flex-row sm:items-center">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#D6DFEB] bg-white">
+              {logoSrc ? (
+                <Image src={logoSrc} alt={`${values?.name ?? "Insurance company"} logo`} width={48} height={48} unoptimized className="max-h-12 max-w-12 object-contain" />
+              ) : (
+                <span className="text-[9px] font-bold uppercase tracking-[.08em] text-[#98A2B3]">Logo</span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp" className="block w-full rounded-lg border border-[#D6DFEB] bg-white px-3 py-2 text-[11px] text-[#334155] file:mr-3 file:rounded-md file:border-0 file:bg-[#EEF4FC] file:px-3 file:py-1.5 file:text-[10px] file:font-bold file:text-[#17365D]" />
+              <p className="mt-1.5 text-[9px] leading-4 text-[#7B8799]">PNG, JPG or WebP, maximum 2 MB. Uploaded logos override the built-in GitHub logo everywhere the shared insurer logo is used.</p>
+              {values?.logo_path ? (
+                <label className="mt-2 flex items-center gap-2 text-[9px] font-semibold text-[#52647D]">
+                  <input name="remove_logo" type="checkbox" className="h-3.5 w-3.5 accent-[#17365D]" />
+                  Remove uploaded logo and return to the built-in fallback
+                </label>
+              ) : null}
+            </div>
+          </div>
         </div>
 
         <div>
