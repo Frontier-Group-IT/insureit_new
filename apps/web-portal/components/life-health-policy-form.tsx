@@ -111,9 +111,11 @@ function LifeHealthSummaryRail({ children }: { children: ReactNode }) {
       const boundaryRect = boundaryElement.getBoundingClientRect();
       const fixedCard = document.getElementById("life-health-policy-summary-fixed-card");
       const cardHeight = fixedCard?.getBoundingClientRect().height ?? 0;
-      const preferredTop = Math.max(anchorRect.top, 124);
+      const safeTop = 124;
+      const preferredTop = Math.max(anchorRect.top, safeTop);
       const boundaryTop = cardHeight > 0 ? boundaryRect.bottom - cardHeight : preferredTop;
-      setPosition({ left: anchorRect.left, width: anchorRect.width, top: Math.min(preferredTop, boundaryTop) });
+      const boundedTop = Math.min(preferredTop, boundaryTop);
+      setPosition({ left: anchorRect.left, width: anchorRect.width, top: Math.max(safeTop, boundedTop) });
     };
 
     const scheduleUpdate = () => {
