@@ -5,6 +5,7 @@ import { AppShell } from "@/components/shell";
 import { requireCapability } from "@/lib/master-data-server";
 import { loadRmPerformance, type RmPerformanceQuery } from "@/lib/rm-performance";
 import { loadFinanceReport } from "@/lib/reports/finance";
+import { RmPerformanceFilters } from "@/app/rm-performance/rm-performance-filters";
 import { RmPerformanceTrendChart } from "@/app/rm-performance/rm-performance-trend-chart";
 import { RmSummaryCard } from "@/app/rm-performance/rm-summary-card";
 
@@ -19,13 +20,12 @@ export default async function RmPerformancePage({ searchParams }: { searchParams
   const data = await loadRmPerformance(profile, query);
   const isRm = profile.role === "relationship_manager";
   const today = indiaDate(new Date());
-  const monthStart = `${today.slice(0, 8)}01`;
   const financeRm = data.selectedRmId ?? undefined;
-  const [todayFinance, mtdFinance] = profile.role === "backoffice_executive"
+  const [todayFinance, periodFinance] = profile.role === "backoffice_executive"
     ? [null, null]
     : await Promise.all([
         loadFinanceReport(profile, { period: "custom", from: today, to: today, rm: financeRm, page: "1", pageSize: "5000" }),
-        loadFinanceReport(profile, { period: "custom", from: monthStart, to: today, rm: financeRm, page: "1", pageSize: "5000" }),
+        loadFinanceReport(profile, { period: "custom", from: data.period.from, to: data.period.to, rm: financeRm, page: "1", pageSize: "5000" }),
       ]);
 
   return (
@@ -39,31 +39,24 @@ export default async function RmPerformancePage({ searchParams }: { searchParams
             <h1 className="portal-display mt-1.5 text-[29px] font-semibold tracking-[-.03em] text-[#10213D]">{isRm ? "My Performance" : "RM Performance"}</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {!isRm ? (
-              <form action="/rm-performance" method="get" className="flex items-center gap-2">
-                <select name="rm" defaultValue={data.selectedRmId ?? ""} className="h-9 min-w-[220px] rounded-xl border border-[#CBD5E1] bg-white px-3 text-[11px] font-semibold text-[#22314A] outline-none">
-                  <option value="">All RMs</option>{data.filters.rms.map((rm) => <option key={rm.id} value={rm.id}>{rm.name}</option>)}
-                </select>
-                <button type="submit" className="h-9 rounded-xl bg-[#17365D] px-3.5 text-[10px] font-bold text-white">Apply</button>
-              </form>
-            ) : null}
+            <RmPerformanceFilters rms={data.filters.rms} selectedRmId={data.selectedRmId} period={data.period} hideRm={isRm} />
             <button type="button" disabled title="Email Report will be enabled after transactional no-reply email is connected." className="inline-flex h-9 cursor-not-allowed items-center gap-1.5 rounded-xl border border-[#D7DFEA] bg-[#F7F9FC] px-3 text-[10px] font-bold text-[#7D8999]"><Mail className="h-3.5 w-3.5" />Email Report</button>
           </div>
         </header>
 
-        {data.selectedRmName ? <div className="mt-3 flex items-center justify-between rounded-xl border border-[#D9E4F2] bg-[#F7FAFE] px-4 py-2.5 text-[11px] text-[#51647F]"><span>Showing <strong className="text-[#24364F]">{data.selectedRmName}</strong></span><Link href="/rm-performance" className="font-black text-[#315B9A]">View all RMs</Link></div> : null}
+        {data.selectedRmName ? <div className="mt-3 flex items-center justify-between rounded-xl border border-[#D9E4F2] bg-[#F7FAFE] px-4 py-2.5 text-[11px] text-[#51647F]"><span>Showing <strong className="text-[#24364F]">{data.selectedRmName}</strong></span><Link href={viewAllHref(data.period)} className="font-black text-[#315B9A]">View all RMs</Link></div> : null}
 
         <section className="mt-3 overflow-hidden rounded-[18px] border border-[#DCE4EE] bg-white shadow-[0_10px_28px_rgba(30,49,80,.04)]">
           <div className="grid xl:grid-cols-[1fr_1fr_1.05fr]">
             <PerformancePanel eyebrow="TODAY" title={money(data.today.net_premium)} policies={data.today.policy_count} motor={data.today.motor_net_premium} nonMotor={data.today.non_motor_net_premium} life={mixAmount(data.todayCategoryMix, "life")} health={mixAmount(data.todayCategoryMix, "health")} payin={todayFinance?.report.summary.payin_after_tds ?? 0} payout={todayFinance?.report.summary.gross_payout ?? 0} />
-            <PerformancePanel eyebrow="MONTH TO DATE" title={money(data.mtd.net_premium)} policies={data.mtd.policy_count} motor={data.mtd.motor_net_premium} nonMotor={data.mtd.non_motor_net_premium} life={mixAmount(data.mtdCategoryMix, "life")} health={mixAmount(data.mtdCategoryMix, "health")} payin={mtdFinance?.report.summary.payin_after_tds ?? 0} payout={mtdFinance?.report.summary.gross_payout ?? 0} bordered />
-            <MtdContextPanel rows={data.ytdTrend} />
+            <PerformancePanel eyebrow={data.period.label} title={money(data.mtd.net_premium)} policies={data.mtd.policy_count} motor={data.mtd.motor_net_premium} nonMotor={data.mtd.non_motor_net_premium} life={mixAmount(data.mtdCategoryMix, "life")} health={mixAmount(data.mtdCategoryMix, "health")} payin={periodFinance?.report.summary.payin_after_tds ?? 0} payout={periodFinance?.report.summary.gross_payout ?? 0} bordered />
+            <MtdContextPanel rows={data.ytdTrend} periodLabel={data.period.shortLabel} highlightMonth={data.period.highlightMonth} />
           </div>
         </section>
 
         <section className="mt-3 overflow-hidden rounded-[18px] border border-[#DCE4EE] bg-white shadow-[0_10px_28px_rgba(30,49,80,.04)]">
           <div className="flex items-center justify-between border-b border-[#E9EDF3] px-5 py-3.5"><h2 className="text-[14px] font-bold text-[#172744]">RM Daily Summary</h2><span className="text-[10.5px] font-semibold text-[#647286]">{data.rows.length} RM{data.rows.length === 1 ? "" : "s"}</span></div>
-          <div className="space-y-2 bg-[#F7F9FC] p-2">{data.rows.length ? data.rows.map((row) => <RmSummaryCard key={row.employeeId ?? row.name} row={row} />) : <div className="rounded-xl border border-[#E4E9F1] bg-white"><Empty label="No RM production is available for the current scope." /></div>}</div>
+          <div className="space-y-2 bg-[#F7F9FC] p-2">{data.rows.length ? data.rows.map((row) => <RmSummaryCard key={row.employeeId ?? row.name} row={row} periodLabel={data.period.label} periodShortLabel={data.period.shortLabel} />) : <div className="rounded-xl border border-[#E4E9F1] bg-white"><Empty label="No RM production is available for the current scope." /></div>}</div>
         </section>
       </div>
     </AppShell>
@@ -99,9 +92,18 @@ function PerformancePanel({ eyebrow, title, policies, motor, nonMotor, life, hea
 
 function InlineMetric({ label, value }: { label: string; value: number }) { return <div className="flex min-w-0 items-center gap-2"><span className="min-w-0 whitespace-nowrap font-medium text-[#667386]">{label}</span><span className="ml-auto shrink-0 whitespace-nowrap text-right font-black text-[#34445B]">{money(value)}</span></div>; }
 
-function MtdContextPanel({ rows }: { rows: Awaited<ReturnType<typeof loadRmPerformance>>["ytdTrend"] }) {
+function MtdContextPanel({ rows, periodLabel, highlightMonth }: { rows: Awaited<ReturnType<typeof loadRmPerformance>>["ytdTrend"]; periodLabel: string; highlightMonth: string }) {
   const latest = rows.at(-1); const previous = rows.at(-2); const movement = latest && previous && previous.net_premium > 0 ? ((latest.net_premium - previous.net_premium) / previous.net_premium) * 100 : null;
-  return <div className="border-t border-[#E9EDF3] px-5 py-3.5 xl:border-l xl:border-t-0"><div className="flex items-start justify-between gap-3"><div className="flex items-center gap-2"><div className="grid h-7 w-7 place-items-center rounded-lg bg-[#EEF4FF] text-[#315B9A]"><TrendingUp className="h-3.5 w-3.5" /></div><div><p className="text-[10px] font-black tracking-[.15em] text-[#566477]">MTD CONTEXT</p><p className="mt-0.5 text-[10px] font-medium text-[#69778A]">Recent monthly production</p></div></div>{movement !== null ? <span className={"rounded-full px-2 py-1 text-[9px] font-black " + (movement >= 0 ? "bg-[#EAF7F2] text-[#14745D]" : "bg-[#FDEEEE] text-[#B54747]")}>{movement >= 0 ? "+" : ""}{movement.toFixed(1)}%</span> : null}</div><div className="mt-2 min-w-0"><RmPerformanceTrendChart rows={rows} /></div></div>;
+  return <div className="border-t border-[#E9EDF3] px-5 py-3.5 xl:border-l xl:border-t-0"><div className="flex items-start justify-between gap-3"><div className="flex items-center gap-2"><div className="grid h-7 w-7 place-items-center rounded-lg bg-[#EEF4FF] text-[#315B9A]"><TrendingUp className="h-3.5 w-3.5" /></div><div><p className="text-[10px] font-black tracking-[.15em] text-[#566477]">{periodLabel.toUpperCase()} CONTEXT</p><p className="mt-0.5 text-[10px] font-medium text-[#69778A]">Recent monthly production</p></div></div>{movement !== null ? <span className={"rounded-full px-2 py-1 text-[9px] font-black " + (movement >= 0 ? "bg-[#EAF7F2] text-[#14745D]" : "bg-[#FDEEEE] text-[#B54747]")}>{movement >= 0 ? "+" : ""}{movement.toFixed(1)}%</span> : null}</div><div className="mt-2 min-w-0"><RmPerformanceTrendChart rows={rows} highlightMonth={highlightMonth} /></div></div>;
+}
+
+function viewAllHref(period: Awaited<ReturnType<typeof loadRmPerformance>>["period"]) {
+  const params = new URLSearchParams({ period: period.key });
+  if (period.key === "custom") {
+    params.set("from", period.from);
+    params.set("to", period.to);
+  }
+  return `/rm-performance?${params.toString()}`;
 }
 
 function mixAmount(rows: Array<{ category: string; net_premium: number }>, key: string) { return rows.filter((row) => row.category.trim().toLowerCase() === key).reduce((sum, row) => sum + row.net_premium, 0); }
