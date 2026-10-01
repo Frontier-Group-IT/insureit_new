@@ -81,8 +81,8 @@ export default function ProfileScreen() {
             />
             <Detail
               icon="people-outline"
-              iconBackground="#EEF5FF"
-              iconColor="#0C6FE8"
+              iconBackground="#EAF9F0"
+              iconColor="#11A86B"
               label="Role"
               value={humanize(identity.role)}
               isLast
@@ -99,8 +99,8 @@ export default function ProfileScreen() {
             />
             <Detail
               icon="people-outline"
-              iconBackground="#F4EEFF"
-              iconColor="#7C46E8"
+              iconBackground="#EAF9F0"
+              iconColor="#11A86B"
               label="Intermediary type"
               value={humanize(identity.intermediary_type)}
             />
@@ -120,8 +120,8 @@ export default function ProfileScreen() {
             />
             <Detail
               icon="checkmark-circle-outline"
-              iconBackground="#EEF5FF"
-              iconColor="#0C6FE8"
+              iconBackground="#EAF9F0"
+              iconColor="#11A86B"
               label="Portal status"
               value="Active"
               isLast
@@ -176,7 +176,7 @@ function ProfileScopeCard({ scope }: { scope: PartnerCommercialScope }) {
     <View style={styles.scopeCard}>
       <View style={styles.scopeHalo}>
         <View style={styles.scopeIconWrap}>
-          <Ionicons name="shield-checkmark-outline" size={27} color="#0C6FE8" />
+          <Ionicons name="shield-checkmark-outline" size={27} color="#12A86B" />
         </View>
       </View>
 
@@ -403,8 +403,8 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 15,
     borderWidth: 1,
-    borderColor: '#D6E5FB',
-    backgroundColor: '#F2F7FF',
+    borderColor: '#CDECDD',
+    backgroundColor: '#EFFAF5',
   },
   scopeHalo: {
     width: 62,
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
     borderRadius: 31,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E5EFFF',
+    backgroundColor: '#E2F7EC',
   },
   scopeIconWrap: {
     width: 46,
@@ -422,11 +422,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#D5E4FB',
+    borderColor: '#C7EBD8',
   },
   scopeBody: { flex: 1, minWidth: 0 },
   scopeEyebrow: {
-    color: '#3A6FAF',
+    color: '#27886A',
     fontSize: 8.5,
     lineHeight: 11,
     fontWeight: '800',
