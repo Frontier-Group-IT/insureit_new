@@ -278,7 +278,7 @@ export default function CustomerMotorPolicyDetailScreen() {
       <Card style={styles.detailSection}>
         <View style={styles.sectionRow}>
           <View style={styles.detailIcon}>
-            <MaterialCommunityIcons name="shield-car-outline" size={20} color={palette.navy} />
+            <MaterialCommunityIcons name="shield-check-outline" size={20} color={palette.navy} />
           </View>
           <View style={styles.sectionCopy}>
             <Text style={styles.sectionTitle}>Motor policy details</Text>
@@ -299,7 +299,7 @@ export default function CustomerMotorPolicyDetailScreen() {
         <View style={styles.detailGrid}>
           <DetailCell icon="cash" label="OD premium" value={formatCurrency(premiumDetails?.od_premium)} />
           <DetailCell icon="cash" label="TP premium" value={formatCurrency(premiumDetails?.tp_premium)} />
-          <DetailCell icon="account-protect-outline" label="CPA amount" value={formatCurrency(premiumDetails?.cpa_amount)} />
+          <DetailCell icon="shield-outline" label="CPA amount" value={formatCurrency(premiumDetails?.cpa_amount)} />
           <DetailCell icon="calculator-variant-outline" label="Net premium" value={formatCurrency(premiumDetails?.net_premium)} />
           <DetailCell icon="percent-outline" label="GST" value={formatCurrency(premiumDetails?.gst_amount)} />
           <DetailCell icon="cash-check" label="Gross premium" value={formatCurrency(premiumDetails?.gross_premium ?? policy.premium_amount)} emphasis />
