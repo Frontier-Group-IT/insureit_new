@@ -13,6 +13,7 @@ import {
   Gauge,
   Headphones,
   Network,
+  Plus,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -90,6 +91,8 @@ const intentPrefetchRoutes = new Set([
   "/partner/renewals",
   "/partner/renewals/external",
   "/partner/claims",
+  "/partner/policy-intakes",
+  "/partner/policy-intakes/new",
   "/partner/payout",
   "/partner/network",
   "/partner/activity",
@@ -158,8 +161,58 @@ function RenewalsNav({ item }: { item: PartnerNavItem }) {
   );
 }
 
+function PolicyIntakeNav({ item }: { item: PartnerNavItem }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const policyIntakeActive = pathname === "/partner/policy-intakes" || pathname.startsWith("/partner/policy-intakes/");
+  const [open, setOpen] = useState(policyIntakeActive);
+  useEffect(() => { if (policyIntakeActive) setOpen(true); }, [policyIntakeActive]);
+  const registerActive = pathname === "/partner/policy-intakes" || (pathname.startsWith("/partner/policy-intakes/") && pathname !== "/partner/policy-intakes/new");
+  const newIntakeActive = pathname === "/partner/policy-intakes/new";
+
+  const childClass = (active: boolean) => `group flex min-h-9 items-center gap-2.5 rounded-lg px-2.5 py-2 text-[11px] font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/35 ${active ? "bg-white text-[#141d3b] shadow-[0_2px_10px_rgba(5,18,45,0.16)]" : "text-white/72 hover:bg-white/8 hover:text-white"}`;
+  const childIconClass = (active: boolean) => `grid h-6 w-6 shrink-0 place-items-center rounded-md transition-colors ${active ? "bg-[#EAF1FF] text-[#2F70E5]" : "text-white/60 group-hover:bg-white/8 group-hover:text-white"}`;
+
+  const warm = (href: string) => () => router.prefetch(href);
+
+  return (
+    <div>
+      <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} className={`group flex min-h-11 w-full items-center gap-3 rounded-xl px-3.5 text-left text-[12px] font-bold transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 ${policyIntakeActive ? "bg-white/8 text-white" : "text-white/88 hover:bg-white/8 hover:text-white"}`}>
+        <SidebarIcon name={item.icon} />
+        <span className="flex-1">Policy Intake</span>
+        <ChevronDown className={`h-4 w-4 shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open ? (
+        <div className="ml-[29px] mt-1.5 border-l border-white/35 pl-3.5">
+          <div className="space-y-1">
+            <Link href="/partner/policy-intakes" prefetch={false} onMouseEnter={warm("/partner/policy-intakes")} onFocus={warm("/partner/policy-intakes")} onPointerDown={warm("/partner/policy-intakes")} aria-current={registerActive ? "page" : undefined} className={childClass(registerActive)}>
+              <span className={childIconClass(registerActive)}><ClipboardCheck className="h-3.5 w-3.5" /></span>
+              <span>Policy Intakes</span>
+            </Link>
+            <Link href="/partner/policy-intakes/new" prefetch={false} onMouseEnter={warm("/partner/policy-intakes/new")} onFocus={warm("/partner/policy-intakes/new")} onPointerDown={warm("/partner/policy-intakes/new")} aria-current={newIntakeActive ? "page" : undefined} className={childClass(newIntakeActive)}>
+              <span className={childIconClass(newIntakeActive)}><Plus className="h-3.5 w-3.5" /></span>
+              <span>New Policy Intake</span>
+            </Link>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function NavGroup({ label, items }: { label: string; items: PartnerNavItem[] }) {
-  return <div className="mt-5"><p className="mb-2 px-3 text-[9px] font-black uppercase tracking-[0.18em] text-white/55">{label}</p><div className="space-y-1.5">{items.map((item) => item.href === "/partner/renewals" ? <RenewalsNav key={item.href} item={item} /> : <NavLink key={item.href} item={item} />)}</div></div>;
+  return (
+    <div className="mt-5">
+      <p className="mb-2 px-3 text-[9px] font-black uppercase tracking-[0.18em] text-white/55">{label}</p>
+      <div className="space-y-1.5">
+        {items.map((item) => {
+          if (item.href === "/partner/renewals") return <RenewalsNav key={item.href} item={item} />;
+          if (item.href === "/partner/policy-intakes") return <PolicyIntakeNav key={item.href} item={item} />;
+          return <NavLink key={item.href} item={item} />;
+        })}
+      </div>
+    </div>
+  );
 }
 
 export function PartnerNavigation({ hideAccount = false }: { hideAccount?: boolean }) {
