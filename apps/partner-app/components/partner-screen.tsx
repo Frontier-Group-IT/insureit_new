@@ -111,12 +111,12 @@ export function PartnerScreen({
             </View>
 
             <View style={styles.homeSearchCard}>
-              <Ionicons name="search-outline" size={21} color={partnerTheme.colors.brandStrong} />
+              <Ionicons name="search-outline" size={20} color={partnerTheme.colors.brandStrong} />
               <TextInput
                 value={heroSearchValue}
                 onChangeText={setHeroSearchValue}
                 onSubmitEditing={submitHomeSearch}
-                placeholder={heroSearch?.placeholder ?? "Search customer, vehicle number or policy no."}
+                placeholder={heroSearch?.placeholder ?? 'Search customer, vehicle number or policy no.'}
                 placeholderTextColor="#8B95A8"
                 returnKeyType="search"
                 autoCapitalize="none"
@@ -143,7 +143,7 @@ export function PartnerScreen({
                 style={({ pressed }) => [styles.homeSearchAction, pressed && styles.homeSearchPressed]}
               >
                 <Text style={styles.homeSearchActionText}>Search</Text>
-                <Ionicons name="chevron-forward" size={15} color="#A3ABBA" />
+                <Ionicons name="chevron-forward" size={14} color="#A3ABBA" />
               </Pressable>
             </View>
           </View>
@@ -186,10 +186,10 @@ const styles = StyleSheet.create({
   homeHeroWrap: {
     position: 'relative',
     marginHorizontal: -partnerTheme.spacing.lg,
-    marginBottom: 42,
+    marginBottom: 36,
   },
   homeHero: {
-    height: 204,
+    height: 166,
     overflow: 'hidden',
     backgroundColor: '#0755A8',
   },
@@ -200,88 +200,88 @@ const styles = StyleSheet.create({
   },
   homeHeroShade: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(3, 45, 96, 0.08)',
+    backgroundColor: 'rgba(3, 45, 96, 0.06)',
   },
   homeHeroTopRow: {
     position: 'absolute',
-    top: 10,
-    left: 18,
-    right: 16,
-    minHeight: 58,
+    top: 8,
+    left: 14,
+    right: 14,
+    minHeight: 46,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   homeHeroLogo: {
-    width: 142,
-    height: 54,
+    width: 112,
+    height: 42,
   },
   homeHeroActions: {
-    minHeight: 48,
+    minHeight: 42,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
   },
   homeHeroGreeting: {
     position: 'absolute',
-    left: 18,
-    right: 18,
-    bottom: 22,
+    left: 14,
+    right: 14,
+    bottom: 17,
     color: '#FFFFFF',
-    fontSize: 20,
-    lineHeight: 25,
-    fontWeight: '500',
-    letterSpacing: -0.2,
-    textShadowColor: 'rgba(0,0,0,0.18)',
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: '700',
+    letterSpacing: -0.1,
+    textShadowColor: 'rgba(0,0,0,0.22)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
   homeSearchCard: {
     position: 'absolute',
-    left: 16,
-    right: 16,
-    bottom: -31,
-    height: 64,
-    paddingHorizontal: 16,
-    borderRadius: 18,
+    left: 12,
+    right: 12,
+    bottom: -25,
+    height: 52,
+    paddingHorizontal: 13,
+    borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#D9DFEA',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 11,
+    gap: 9,
     backgroundColor: '#FFFFFF',
     shadowColor: '#102449',
     shadowOpacity: 0.08,
-    shadowRadius: 10,
+    shadowRadius: 9,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
   },
   homeSearchInput: {
     flex: 1,
     minWidth: 0,
-    height: 52,
+    height: 44,
     paddingVertical: 0,
     color: partnerTheme.colors.ink,
-    fontSize: 14,
+    fontSize: 12,
   },
   homeSearchClear: {
-    width: 30,
-    minHeight: 44,
+    width: 28,
+    minHeight: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
   homeSearchAction: {
-    minHeight: 44,
+    minHeight: 40,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 1,
-    paddingLeft: 4,
+    paddingLeft: 2,
   },
   homeSearchPressed: { opacity: 0.65 },
   homeSearchActionText: {
     color: '#A1A9B8',
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '600',
   },
 });
