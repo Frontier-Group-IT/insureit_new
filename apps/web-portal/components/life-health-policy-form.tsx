@@ -73,7 +73,7 @@ export function LifeHealthPolicyForm({ policyType, insurers, customers, source }
   const bottomSection = <section id="life-health-onboarding-actions" className="w-full rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="flex flex-col gap-3 p-3 xl:flex-row xl:items-center xl:justify-between">{documents}<div className="flex shrink-0 justify-end gap-2"><Link href="/policies/life-health-cases" className="inline-flex h-10 items-center justify-center rounded-xl border border-[#CBD5E1] px-4 text-[10px] font-semibold text-[#344054]">View Cases</Link><button type="button" onClick={submit} disabled={isPending} className="inline-flex h-10 items-center justify-center rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white disabled:opacity-60">{isPending ? "Creating case…" : "Create Case"}</button></div></div></section>;
 
   return <>
-    <nav aria-label="Life and Health policy sections" className="sticky top-[72px] z-50 mb-3 flex min-h-[36px] items-stretch gap-4 overflow-x-auto rounded-b-xl border border-t-0 border-[#D9E2F0] bg-white/96 px-4 shadow-[0_5px_14px_rgba(15,23,42,.06)] backdrop-blur">
+    <nav id="life-health-section-nav" aria-label="Life and Health policy sections" className="sticky top-[72px] z-50 mb-3 flex min-h-[36px] items-stretch gap-4 overflow-x-auto rounded-b-xl border border-t-0 border-[#D9E2F0] bg-white/96 px-4 shadow-[0_5px_14px_rgba(15,23,42,.06)] backdrop-blur">
       {LIFE_HEALTH_SECTIONS.map((section, index) => <button key={section} type="button" onClick={() => goToSection(index)} aria-current={activeSection === index ? "step" : undefined} className={`group relative flex min-w-fit items-center gap-1.5 border-b-2 px-0.5 py-2 text-[9px] font-semibold transition ${activeSection === index ? "border-[#4F46E5] text-[#3346B8]" : "border-transparent text-[#667085] hover:border-[#CBD5E1] hover:text-[#344054]"}`}><span className={`text-[8px] font-bold tabular-nums ${activeSection === index ? "text-[#4F46E5]" : "text-[#98A2B3]"}`}>{String(index + 1).padStart(2, "0")}</span><span>{section}</span></button>)}
     </nav>
     <div id="life-health-form-grid" className="grid w-full min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_336px]">
@@ -96,7 +96,10 @@ function LifeHealthSummaryRail({ children }: { children: ReactNode }) {
   useEffect(() => {
     let frame = 0;
     const formGridElement = document.getElementById("life-health-form-grid");
-    if (!formGridElement) {
+    const sourceSectionElement = document.getElementById("policy-section-1");
+    const premiumSectionElement = document.getElementById("policy-section-4");
+    const sectionNavElement = document.getElementById("life-health-section-nav");
+    if (!formGridElement || !sourceSectionElement || !premiumSectionElement || !sectionNavElement) {
       setPosition(null);
       return;
     }
@@ -107,14 +110,16 @@ function LifeHealthSummaryRail({ children }: { children: ReactNode }) {
         return;
       }
       const anchorRect = anchorRef.current.getBoundingClientRect();
-      const formGridRect = formGridElement.getBoundingClientRect();
+      const sourceRect = sourceSectionElement.getBoundingClientRect();
+      const premiumRect = premiumSectionElement.getBoundingClientRect();
+      const sectionNavRect = sectionNavElement.getBoundingClientRect();
       const fixedCard = document.getElementById("life-health-policy-summary-fixed-card");
       const cardHeight = fixedCard?.getBoundingClientRect().height ?? 0;
-      const safeTop = 124;
-      const preferredTop = Math.max(anchorRect.top, safeTop);
-      const premiumBottomAlignedTop = cardHeight > 0 ? formGridRect.bottom - cardHeight : preferredTop;
+      const safeTop = sectionNavRect.bottom + 12;
+      const preferredTop = Math.max(sourceRect.top, safeTop);
+      const premiumBottomAlignedTop = cardHeight > 0 ? premiumRect.bottom - cardHeight : preferredTop;
       const boundedTop = Math.min(preferredTop, premiumBottomAlignedTop);
-      setPosition({ left: anchorRect.left, width: anchorRect.width, top: Math.max(safeTop, boundedTop) });
+      setPosition({ left: anchorRect.left, width: anchorRect.width, top: boundedTop });
     };
 
     const scheduleUpdate = () => {
@@ -128,6 +133,9 @@ function LifeHealthSummaryRail({ children }: { children: ReactNode }) {
     window.addEventListener("scroll", scheduleUpdate, true);
     const observer = new ResizeObserver(scheduleUpdate);
     observer.observe(formGridElement);
+    observer.observe(sourceSectionElement);
+    observer.observe(premiumSectionElement);
+    observer.observe(sectionNavElement);
     observer.observe(document.documentElement);
     return () => {
       cancelAnimationFrame(frame);
