@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, LoaderCircle, Upload, UserRound } from "lucide-react";
+import { ChevronDown, Eye, LoaderCircle, Upload, UserRound } from "lucide-react";
 import { convertLifeHealthCaseToPolicy, uploadLifeHealthCaseDocument } from "@/app/policies/life-health-policy-actions";
 import { updateLifeHealthCaseDetails } from "@/app/policies/life-health-case-edit-actions";
 
 type CaseData={id:string;caseNumber:string;businessLine:"Life"|"Health";status:string;sourcingDate:string;customerId:string;customerName:string;customerPhone:string;customerEmail:string;insurerId:string;insurerName:string;productName:string;proposalNumber:string;ppt:string;pd:string;paymentFrequency:string;paymentMode:string;premiumAmount:number;intermediaryType:string;intermediaryCode:string;leadSource:string;intermediaryMobile:string;rmName:string;rmCode:string;remarks:string;finalPolicyId:string|null;finalPolicyNo:string|null;finalPolicyCode:string|null;convertedAt:string|null};
-type DocumentRow={id:string;document_type:string;file_name:string;created_at:string};
+type DocumentRow={id:string;document_type:string;file_name:string;created_at:string;view_url:string};
 type ActivityRow={id:string;action:string;createdAt:string;createdBy:string};
 type Props={caseData:CaseData;insurers:Array<{id:string;name:string}>;documents:DocumentRow[];activities:ActivityRow[]};
 type IssueState={policyNumber:string;issuanceDate:string;startDate:string;endDate:string;finalPremium:string;sumInsured:string};
@@ -50,4 +50,8 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
 function Section({title,children,highlight=false}:{title:string;children:ReactNode;highlight?:boolean}){return <section className={`overflow-hidden rounded-xl border ${highlight ? "border-[#DDD6FE] bg-[#F5F3FF]" : "border-[#D9E2F0] bg-white"}`}><div className={`border-b px-4 py-3 text-[11px] font-semibold text-[#17365D] ${highlight ? "border-[#DDD6FE] bg-[#F5F3FF]" : ""}`}>{title}</div><div className="p-4">{children}</div></section>}
 function Grid({children}:{children:ReactNode}){return <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">{children}</div>}
 function F({t,children,required=false}:{t:string;children:ReactNode;required?:boolean}){return <label><span className={label}>{t}{required?<span className="ml-0.5 text-red-600">*</span>:null}</span>{children}</label>}
-function UploadAction({label:buttonLabel,type,existing,disabled,loading,onUpload}:{label:string;type:string;existing?:DocumentRow;disabled:boolean;loading:boolean;onUpload:(type:string,file:File|null)=>void}){return <label title={existing?.file_name||buttonLabel} className={`flex h-10 items-center gap-2 rounded-xl border px-4 text-[9px] font-semibold ${disabled?"cursor-wait opacity-70":"cursor-pointer"} ${existing?"border-emerald-300 bg-emerald-50 text-emerald-800":"border-[#CAD7E7] bg-white text-[#24569A]"}`}>{loading?<LoaderCircle className="h-3.5 w-3.5 animate-spin"/>:<Upload className="h-3.5 w-3.5"/>}<span>{loading?"Uploading…":existing?buttonLabel.replace("Add ","Replace "):buttonLabel}</span><input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" disabled={disabled} className="hidden" onChange={e=>onUpload(type,e.target.files?.[0]??null)}/></label>}
+function UploadAction({label:buttonLabel,type,existing,disabled,loading,onUpload}:{label:string;type:string;existing?:DocumentRow;disabled:boolean;loading:boolean;onUpload:(type:string,file:File|null)=>void}){
+  const uploadButton=<label title={existing?.file_name||buttonLabel} className={`flex h-10 items-center gap-2 rounded-xl border px-4 text-[9px] font-semibold ${disabled?"cursor-wait opacity-70":"cursor-pointer"} ${existing?"border-emerald-300 bg-emerald-50 text-emerald-800":"border-[#CAD7E7] bg-white text-[#24569A]"}`}>{loading?<LoaderCircle className="h-3.5 w-3.5 animate-spin"/>:<Upload className="h-3.5 w-3.5"/>}<span>{loading?"Uploading…":existing?buttonLabel.replace("Add ","Replace "):buttonLabel}</span><input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" disabled={disabled} className="hidden" onChange={e=>onUpload(type,e.target.files?.[0]??null)}/></label>;
+  if(!existing)return uploadButton;
+  return <div className="flex items-center gap-1.5"><a href={existing.view_url||undefined} target="_blank" rel="noreferrer" aria-label={`View ${buttonLabel.replace("Add ","")}`} title={`View ${existing.file_name}`} className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#CAD7E7] bg-white text-[#24569A] transition hover:bg-[#F5F8FD] ${existing.view_url?"":"pointer-events-none opacity-45"}`}><Eye className="h-4 w-4" aria-hidden="true"/></a>{uploadButton}</div>;
+}
