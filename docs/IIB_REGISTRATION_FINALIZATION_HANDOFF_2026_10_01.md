@@ -42,9 +42,11 @@ Before any activation write, the function rechecks:
 - IIB packet exists;
 - packet is `handoff_started`, `submitted`, or already `registered` for idempotent convergence;
 - packet has no missing fields;
-- the resolved registration record has the same registration type and is relinked to the current application before activation if its `application_id` is missing/stale;
+- the resolved registration record belongs to the same application and registration type;
 - registration date is not in the future;
 - optional IIB reference is within the supported length.
+
+If both stored registration links are absent but the registration record is recovered by `application_id`, the finalizer persists that recovered ID back to `intermediary_onboarding_applications.registration_record_id`. This keeps the active account canonically linked for register/display resolution without broadly rewriting the registration row itself.
 
 In one database transaction it converges the IIB packet, training/exam assignment, onboarding application, registration record, POSP/MISP onboarding profile, and intermediary register. The final intermediary state is `account_status=active`, `iib_status=cleared`, `compliance_status=approved`, `registration_status=iib_registered`.
 
@@ -68,23 +70,23 @@ The workflow applies migration `20261001170000` only when it is not already reco
 
 Focused regression: `apps/web-portal/scripts/intermediary-iib-registration-finalization-regression.mjs`
 
-The regression now covers finalization, draft-backed canonical handoff recovery, registration back-link repair, the dedicated migration workflow, and the production deployment mapping.
+The regression now covers finalization, draft-backed canonical handoff recovery, recovered application registration-link persistence, the dedicated migration workflow, and the production deployment mapping.
 
 The canonical `.github/workflows/verify-web-portal.yml` runs this regression before typecheck, lint and the production build.
 
-The earlier canonical run **#5087** passed on the pre-review head, but is superseded by the review-fix commits. Fresh **Verify web portal #5100** is the required evidence for the current head.
+The earlier canonical run **#5087** passed on the pre-review head, but is superseded by the review-fix commits. A fresh **Verify web portal** run on the latest PR head is required before merge.
 
 Do not merge until the full **Verify web portal** workflow is green and the user explicitly authorizes merge.
 
 ## Review follow-up before merge
 
-Review found four issues after #5087: the production migration gate was missing, continuity files were not updated, a draft-only handoff could remain non-canonical, and a resolved registration record could retain a missing/stale application link.
+Review found four issues after #5087: the production migration gate was missing, continuity files were not updated, a draft-only handoff could remain non-canonical, and a registration recovered by `application_id` was not written back to the onboarding application's `registration_record_id`.
 
 The three code/deployment issues are now implemented on the branch:
 
 - dedicated schema apply workflow + production deployment mapping;
 - canonical packet upsert during handoff, including draft-only recovery;
-- registration-record `application_id` repair inside the atomic finalizer.
+- recovered registration ID persistence on `intermediary_onboarding_applications.registration_record_id` inside the atomic finalizer.
 
 Repository continuity still requires the compact entry in root `AGENTS.md` and the current-state entry in `docs/CURRENT_CHAT_HANDOFF.md` before the review-continuity thread should be considered resolved.
 
