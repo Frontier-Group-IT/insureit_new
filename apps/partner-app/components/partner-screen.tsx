@@ -97,11 +97,15 @@ export function PartnerScreen({
               <View style={styles.homeHeroShade} />
 
               <View style={styles.homeHeroTopRow}>
-                <Image
-                  source={require('../assets/insureit-partner-official.png')}
-                  style={styles.homeHeroLogo}
-                  resizeMode="contain"
-                />
+                <View style={styles.homeBrand} accessibilityLabel="INSUREIT Partner">
+                  <View style={styles.homeBrandMark}>
+                    <Ionicons name="shield-checkmark-outline" size={24} color="#FFFFFF" />
+                  </View>
+                  <View style={styles.homeBrandCopy}>
+                    <Text style={styles.homeBrandName}>insureit</Text>
+                    <Text style={styles.homeBrandPartner}>Partner</Text>
+                  </View>
+                </View>
                 <View style={styles.homeHeroActions}>{action}</View>
               </View>
 
@@ -186,53 +190,83 @@ const styles = StyleSheet.create({
   homeHeroWrap: {
     position: 'relative',
     marginHorizontal: -partnerTheme.spacing.lg,
-    marginBottom: 36,
+    marginBottom: 34,
   },
   homeHero: {
-    height: 166,
+    height: 158,
     overflow: 'hidden',
     backgroundColor: '#0755A8',
   },
   homeHeroImage: {
-    ...StyleSheet.absoluteFillObject,
-    width: '100%',
-    height: '100%',
+    position: 'absolute',
+    left: '-6%',
+    top: -8,
+    width: '112%',
+    height: 182,
+    opacity: 0.92,
+    transform: [{ scale: 0.92 }],
   },
   homeHeroShade: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(3, 45, 96, 0.06)',
+    backgroundColor: 'rgba(3, 45, 96, 0.03)',
   },
   homeHeroTopRow: {
     position: 'absolute',
-    top: 8,
-    left: 14,
-    right: 14,
-    minHeight: 46,
+    top: 7,
+    left: 12,
+    right: 12,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  homeHeroLogo: {
-    width: 112,
-    height: 42,
+  homeBrand: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  homeBrandMark: {
+    width: 28,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  homeBrandCopy: {
+    justifyContent: 'center',
+    marginTop: -1,
+  },
+  homeBrandName: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    lineHeight: 16,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+  },
+  homeBrandPartner: {
+    marginTop: 1,
+    color: '#FFC84A',
+    fontSize: 11,
+    lineHeight: 13,
+    fontWeight: '800',
   },
   homeHeroActions: {
-    minHeight: 42,
+    minHeight: 40,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
   },
   homeHeroGreeting: {
     position: 'absolute',
-    left: 14,
-    right: 14,
-    bottom: 17,
+    left: 13,
+    right: 13,
+    bottom: 34,
     color: '#FFFFFF',
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 17,
     fontWeight: '700',
     letterSpacing: -0.1,
-    textShadowColor: 'rgba(0,0,0,0.22)',
+    textShadowColor: 'rgba(0,0,0,0.24)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
@@ -240,8 +274,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 12,
     right: 12,
-    bottom: -25,
-    height: 52,
+    bottom: -24,
+    height: 49,
     paddingHorizontal: 13,
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
@@ -259,7 +293,7 @@ const styles = StyleSheet.create({
   homeSearchInput: {
     flex: 1,
     minWidth: 0,
-    height: 44,
+    height: 42,
     paddingVertical: 0,
     color: partnerTheme.colors.ink,
     fontSize: 12,
