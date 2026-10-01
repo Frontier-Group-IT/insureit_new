@@ -90,7 +90,7 @@ export function LifeHealthPolicyForm({ policyType, insurers, customers, source }
 
 function LifeHealthSummaryRail({ children }: { children: ReactNode }) {
   const anchorRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<{ left: number; width: number; top: number } | null>(null);
+  const [position, setPosition] = useState<{ left: number; width: number; top: number; maxHeight: number } | null>(null);
 
   useEffect(() => {
     let frame = 0;
@@ -113,12 +113,13 @@ function LifeHealthSummaryRail({ children }: { children: ReactNode }) {
       const premiumRect = premiumSectionElement.getBoundingClientRect();
       const sectionNavRect = sectionNavElement.getBoundingClientRect();
       const fixedCard = document.getElementById("life-health-policy-summary-fixed-card");
-      const cardHeight = fixedCard?.getBoundingClientRect().height ?? 0;
+      const cardHeight = fixedCard?.scrollHeight ?? 0;
       const safeTop = sectionNavRect.bottom + 12;
       const preferredTop = Math.max(sourceRect.top, safeTop);
       const premiumBottomAlignedTop = cardHeight > 0 ? premiumRect.bottom - cardHeight : preferredTop;
-      const boundedTop = Math.min(preferredTop, premiumBottomAlignedTop);
-      setPosition({ left: anchorRect.left, width: anchorRect.width, top: boundedTop });
+      const top = Math.max(safeTop, Math.min(preferredTop, premiumBottomAlignedTop));
+      const maxHeight = Math.max(0, Math.min(window.innerHeight - top - 12, premiumRect.bottom - top));
+      setPosition({ left: anchorRect.left, width: anchorRect.width, top, maxHeight });
     };
 
     const scheduleUpdate = () => {
@@ -144,7 +145,7 @@ function LifeHealthSummaryRail({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  return <div className="min-w-0 self-stretch"><div className="xl:hidden">{children}</div><div ref={anchorRef} className="hidden h-px w-full xl:block" aria-hidden="true"/>{position && typeof document !== "undefined" ? createPortal(<div id="life-health-policy-summary-fixed-card" className="fixed z-30 max-h-[calc(100vh-148px)] overflow-y-auto overscroll-contain" style={{ left: position.left, width: position.width, top: position.top }}>{children}</div>, document.body) : null}</div>;
+  return <div className="min-w-0 self-stretch"><div className="xl:hidden">{children}</div><div ref={anchorRef} className="hidden h-px w-full xl:block" aria-hidden="true"/>{position && typeof document !== "undefined" ? createPortal(<div id="life-health-policy-summary-fixed-card" className="fixed z-30 overflow-y-auto overscroll-contain" style={{ left: position.left, width: position.width, top: position.top, maxHeight: position.maxHeight }}>{children}</div>, document.body) : null}</div>;
 }
 
 function ErrorModal({ message, onClose }: { message: string; onClose: () => void }) { return <div className="fixed inset-0 z-[1000] grid place-items-center bg-[#17365D]/55 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-labelledby="policy-error-title"><div className="w-full max-w-[505px] overflow-hidden rounded-[20px] bg-white shadow-2xl"><div className="flex flex-col items-center px-7 pb-7 pt-7 text-center"><span className="grid h-14 w-14 place-items-center rounded-full bg-[#FFF3E8] text-[25px] font-semibold leading-none text-[#E66A19]">!</span><h3 id="policy-error-title" className="mt-5 text-[18px] font-bold text-[#102A4C]">Check details</h3><p className="mt-3 text-[13px] leading-5 text-[#7A869A]">{message}</p></div><div className="border-t border-[#DDE4EC] p-4"><button type="button" onClick={onClose} className="h-12 w-full rounded-xl bg-[#173F6D] text-[13px] font-bold text-white transition hover:bg-[#12355E]">OK</button></div></div></div> }
