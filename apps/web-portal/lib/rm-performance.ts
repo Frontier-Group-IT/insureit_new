@@ -8,7 +8,7 @@ import {
 
 type ViewerProfile = { id: string; role: string | null };
 export type RmPerformanceQuery = { rm?: string; period?: string; from?: string; to?: string };
-export type RmPerformancePeriodKey = "mtd" | "this_month" | "custom";
+export type RmPerformancePeriodKey = "mtd" | "last_month" | "custom";
 
 export type RmSourcePerformance = {
   key: string;
@@ -85,7 +85,9 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
     loadPolicyBusinessNetReport(profile, todayQuery),
     loadPolicyBusinessNetReport(profile, mtdQuery),
     loadPolicyBusinessNetReport(profile, {
-      period: "ytd",
+      period: "custom",
+      from: sixMonthTrendStart(selectedPeriod.to),
+      to: selectedPeriod.to,
       rm: selectedRmId ?? undefined,
       page: "1",
     }),
@@ -256,15 +258,16 @@ function mergeSources(today: SourceAggregate[], mtd: SourceAggregate[]): RmSourc
 }
 
 function resolvePeriod(query: RmPerformanceQuery, today: string, monthStart: string): RmPerformanceData["period"] {
-  const key: RmPerformancePeriodKey = query.period === "this_month" || query.period === "custom" ? query.period : "mtd";
-  if (key === "this_month") {
+  const key: RmPerformancePeriodKey = query.period === "last_month" || query.period === "custom" ? query.period : "mtd";
+  if (key === "last_month") {
+    const previous = previousMonthRange(today);
     return {
       key,
-      label: "THIS MONTH",
-      shortLabel: "This Month",
-      from: monthStart,
-      to: monthEnd(today),
-      highlightMonth: today.slice(0, 7),
+      label: "LAST MONTH",
+      shortLabel: "Last Month",
+      from: previous.from,
+      to: previous.to,
+      highlightMonth: previous.from.slice(0, 7),
     };
   }
 
@@ -292,10 +295,20 @@ function resolvePeriod(query: RmPerformanceQuery, today: string, monthStart: str
   };
 }
 
-function monthEnd(isoDate: string) {
+function previousMonthRange(isoDate: string) {
   const [year, month] = isoDate.split("-").map(Number);
-  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  return `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  const previousMonthDate = new Date(Date.UTC(year, month - 2, 1));
+  const previousYear = previousMonthDate.getUTCFullYear();
+  const previousMonth = previousMonthDate.getUTCMonth() + 1;
+  const lastDay = new Date(Date.UTC(previousYear, previousMonth, 0)).getUTCDate();
+  const prefix = `${previousYear}-${String(previousMonth).padStart(2, "0")}`;
+  return { from: `${prefix}-01`, to: `${prefix}-${String(lastDay).padStart(2, "0")}` };
+}
+
+function sixMonthTrendStart(isoDate: string) {
+  const [year, month] = isoDate.split("-").map(Number);
+  const start = new Date(Date.UTC(year, month - 6, 1));
+  return `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, "0")}-01`;
 }
 
 function validDate(value: string | undefined) {
