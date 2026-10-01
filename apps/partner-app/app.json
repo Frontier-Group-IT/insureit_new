@@ -10,6 +10,10 @@
       "package": "com.insureit.partner",
       "softwareKeyboardLayoutMode": "pan",
       "versionCode": 2,
+      "blockedPermissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO"
+      ],
       "icon": "./assets/partner-app-icon.jpg"
     },
     "ios": {
