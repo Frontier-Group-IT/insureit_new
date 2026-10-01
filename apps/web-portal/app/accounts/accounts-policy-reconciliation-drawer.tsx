@@ -1,13 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { HandCoins, Loader2, Plus, ReceiptIndianRupee, X } from "lucide-react";
+import { HandCoins, Loader2, Pencil, Plus, ReceiptIndianRupee, RotateCcw, X } from "lucide-react";
 import {
   loadAccountsPolicyReconciliationDetailForRowAction,
+  type AccountsPayinHistoryItem,
   type AccountsPolicyReconciliationDetail,
   type AccountsPolicyReconciliationLookup,
+  type AccountsPayoutHistoryItem,
 } from "./accounts-reconciliation-detail-actions";
-import { postAccountsDirectPayinAction, postAccountsDirectPayoutAction } from "./accounts-reconciliation-post-actions";
+import {
+  correctAccountsReconciliationEntryAction,
+  postAccountsDirectPayinAction,
+  postAccountsDirectPayoutAction,
+} from "./accounts-reconciliation-post-actions";
 
 type Props = {
   lookup: AccountsPolicyReconciliationLookup | null;
@@ -16,6 +22,11 @@ type Props = {
 };
 
 type EntryMode = "payin" | "payout" | null;
+type CorrectionState = {
+  entryType: "payin" | "payout";
+  action: "edit" | "reverse";
+  targetId: string;
+} | null;
 
 const NO_PAYABLE_MESSAGE = "No payout amount is currently payable for this policy.";
 
@@ -24,6 +35,7 @@ export function AccountsPolicyReconciliationDrawer({ lookup, onClose, onPosted }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [mode, setMode] = useState<EntryMode>(null);
+  const [correction, setCorrection] = useState<CorrectionState>(null);
   const [saving, setSaving] = useState(false);
   const [entryError, setEntryError] = useState("");
   const [billNumber, setBillNumber] = useState("");
@@ -35,12 +47,20 @@ export function AccountsPolicyReconciliationDrawer({ lookup, onClose, onPosted }
   const [paidDate, setPaidDate] = useState(todayIndia());
   const [reference, setReference] = useState("");
   const [payoutRemarks, setPayoutRemarks] = useState("");
+  const [correctionReason, setCorrectionReason] = useState("");
+  const [editBillNumber, setEditBillNumber] = useState("");
+  const [editBillAmount, setEditBillAmount] = useState("");
+  const [editBillDate, setEditBillDate] = useState(todayIndia());
+  const [editPaidAmount, setEditPaidAmount] = useState("");
+  const [editPaidDate, setEditPaidDate] = useState(todayIndia());
+  const [editReference, setEditReference] = useState("");
 
   useEffect(() => {
     if (!lookup) {
       setDetail(null);
       setError("");
       setMode(null);
+      setCorrection(null);
       return;
     }
 
@@ -49,6 +69,7 @@ export function AccountsPolicyReconciliationDrawer({ lookup, onClose, onPosted }
     setDetail(null);
     setError("");
     setMode(null);
+    setCorrection(null);
     setEntryError("");
 
     void loadAccountsPolicyReconciliationDetailForRowAction(lookup)
@@ -74,7 +95,8 @@ export function AccountsPolicyReconciliationDrawer({ lookup, onClose, onPosted }
     document.body.style.overflow = "hidden";
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !saving) {
-        if (mode) setMode(null);
+        if (correction) setCorrection(null);
+        else if (mode) setMode(null);
         else onClose();
       }
     };
@@ -83,14 +105,14 @@ export function AccountsPolicyReconciliationDrawer({ lookup, onClose, onPosted }
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [lookup, mode, onClose, saving]);
+  }, [lookup, mode, correction, onClose, saving]);
 
   const openMode = (nextMode: Exclude<EntryMode, null>) => {
     if (nextMode === "payout" && detail && detail.payoutDifference <= 0.01) {
       setEntryError(NO_PAYABLE_MESSAGE);
       return;
     }
-
+    setCorrection(null);
     setEntryError("");
     setMode(nextMode);
     if (nextMode === "payin") {
@@ -105,6 +127,28 @@ export function AccountsPolicyReconciliationDrawer({ lookup, onClose, onPosted }
       setReference("");
       setPayoutRemarks("");
     }
+  };
+
+  const openPayinCorrection = (item: AccountsPayinHistoryItem, action: "edit" | "reverse") => {
+    if (!item.isActive) return;
+    setMode(null);
+    setEntryError("");
+    setCorrectionReason("");
+    setEditBillNumber(item.billNumber);
+    setEditBillAmount(String(item.billAmount));
+    setEditBillDate(item.billDate || todayIndia());
+    setCorrection({ entryType: "payin", action, targetId: item.invoiceId });
+  };
+
+  const openPayoutCorrection = (item: AccountsPayoutHistoryItem, action: "edit" | "reverse") => {
+    if (!item.isActive) return;
+    setMode(null);
+    setEntryError("");
+    setCorrectionReason("");
+    setEditPaidAmount(String(item.paidAmount));
+    setEditPaidDate(item.paidDate || todayIndia());
+    setEditReference(item.reference);
+    setCorrection({ entryType: "payout", action, targetId: item.paymentId });
   };
 
   const submitPayin = async () => {
@@ -170,10 +214,40 @@ export function AccountsPolicyReconciliationDrawer({ lookup, onClose, onPosted }
     }
   };
 
+  const submitCorrection = async () => {
+    if (!lookup || !detail || !correction || saving) return;
+    if (!correctionReason.trim()) return setEntryError("Correction reason is required.");
+    setSaving(true);
+    setEntryError("");
+    try {
+      const updated = await correctAccountsReconciliationEntryAction({
+        lookup,
+        entryType: correction.entryType,
+        targetId: correction.targetId,
+        action: correction.action,
+        reason: correctionReason.trim(),
+        billNumber: correction.entryType === "payin" && correction.action === "edit" ? editBillNumber.trim() : undefined,
+        billAmount: correction.entryType === "payin" && correction.action === "edit" ? numeric(editBillAmount) : undefined,
+        billDate: correction.entryType === "payin" && correction.action === "edit" ? editBillDate : undefined,
+        paidAmount: correction.entryType === "payout" && correction.action === "edit" ? numeric(editPaidAmount) : undefined,
+        paidDate: correction.entryType === "payout" && correction.action === "edit" ? editPaidDate : undefined,
+        reference: correction.entryType === "payout" && correction.action === "edit" ? editReference.trim() : undefined,
+      });
+      setDetail(updated);
+      setCorrection(null);
+      setCorrectionReason("");
+      await onPosted?.();
+    } catch (reason: unknown) {
+      setEntryError(reason instanceof Error && reason.message ? reason.message : "Correction could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (!lookup) return null;
 
   return <div className="fixed inset-0 z-[80] flex justify-end bg-[#14213c]/30 backdrop-blur-[1px]" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
-    <aside role="dialog" aria-modal="true" aria-label="Policy reconciliation" className="h-full w-full max-w-[660px] overflow-y-auto border-l border-[#dbe3ee] bg-white shadow-2xl">
+    <aside role="dialog" aria-modal="true" aria-label="Policy reconciliation" className="h-full w-full max-w-[720px] overflow-y-auto border-l border-[#dbe3ee] bg-white shadow-2xl">
       <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-[#e7edf4] bg-white/95 px-4 py-3 backdrop-blur">
         <div className="min-w-0">
           <p className="text-[8px] font-black uppercase tracking-[.08em] text-[#7c899b]">Policy reconciliation</p>
@@ -185,53 +259,27 @@ export function AccountsPolicyReconciliationDrawer({ lookup, onClose, onPosted }
         </button>
       </div>
 
-      {loading ? <div className="grid min-h-[360px] place-items-center px-6 py-14 text-center">
-        <div><Loader2 className="mx-auto h-5 w-5 animate-spin text-[#17365D]" /><p className="mt-2 text-[9px] font-semibold text-[#667085]">Loading reconciliation history…</p></div>
-      </div> : null}
-
+      {loading ? <div className="grid min-h-[360px] place-items-center px-6 py-14 text-center"><div><Loader2 className="mx-auto h-5 w-5 animate-spin text-[#17365D]" /><p className="mt-2 text-[9px] font-semibold text-[#667085]">Loading reconciliation history…</p></div></div> : null}
       {!loading && error ? <div className="m-4 rounded-xl border border-[#f3c7c3] bg-[#fff5f4] px-4 py-3 text-[9px] font-semibold text-[#b42318]">{error}</div> : null}
 
       {!loading && !error && detail ? <div className="space-y-3 p-4">
         <section className="grid gap-2 sm:grid-cols-2">
-          <ReconciliationSummaryCard
-            icon={ReceiptIndianRupee}
-            title="Pay-In"
-            projected={detail.projectedPayin}
-            actualLabel="Received"
-            actual={detail.cumulativeBillAmount}
-            remaining={detail.payinDifference}
-            footnote={detail.tds ? `Projected TDS ${money(detail.tds)}` : undefined}
-            actionLabel="Add Pay-In"
-            onAction={() => openMode("payin")}
-            active={mode === "payin"}
-          />
-          <ReconciliationSummaryCard
-            icon={HandCoins}
-            title="Payout"
-            projected={detail.projectedPayout}
-            actualLabel="Paid"
-            actual={detail.cumulativePaidAmount}
-            remaining={detail.payoutDifference}
-            actionLabel="Add Payout"
-            onAction={() => openMode("payout")}
-            active={mode === "payout"}
-            disabled={!detail.payoutId || detail.payoutDifference <= 0.01}
-            disabledTitle={!detail.payoutId || detail.payoutDifference <= 0.01 ? NO_PAYABLE_MESSAGE : undefined}
-          />
+          <ReconciliationSummaryCard icon={ReceiptIndianRupee} title="Pay-In" projected={detail.projectedPayin} actualLabel="Received" actual={detail.cumulativeBillAmount} remaining={detail.payinDifference} footnote={detail.tds ? `Projected TDS ${money(detail.tds)}` : undefined} actionLabel="Add Pay-In" onAction={() => openMode("payin")} active={mode === "payin"} />
+          <ReconciliationSummaryCard icon={HandCoins} title="Payout" projected={detail.projectedPayout} actualLabel="Paid" actual={detail.cumulativePaidAmount} remaining={detail.payoutDifference} actionLabel="Add Payout" onAction={() => openMode("payout")} active={mode === "payout"} disabled={!detail.payoutId || detail.payoutDifference <= 0.01} disabledTitle={!detail.payoutId || detail.payoutDifference <= 0.01 ? NO_PAYABLE_MESSAGE : undefined} />
         </section>
 
-        {mode === "payin" ? <EntryPanel title="Add Pay-In" onCancel={() => { setMode(null); setEntryError(""); }} onSave={() => void submitPayin()} saving={saving} error={entryError}>
+        {mode === "payin" ? <EntryPanel title="Add Pay-In" eyebrow="New transaction" onCancel={() => { setMode(null); setEntryError(""); }} onSave={() => void submitPayin()} saving={saving} error={entryError}>
           <div className="grid gap-2 sm:grid-cols-2">
             <EntryField label="Bill Number"><input value={billNumber} onChange={(event) => { setBillNumber(event.target.value); setEntryError(""); }} disabled={saving} autoFocus className={inputClass} placeholder="Enter bill number" /></EntryField>
             <EntryField label="Bill Date"><input type="date" value={billDate} onChange={(event) => { setBillDate(event.target.value); setEntryError(""); }} disabled={saving} className={inputClass} /></EntryField>
-            <EntryField label="Bill Amount"><input inputMode="decimal" value={billAmount} onChange={(event) => { setBillAmount(event.target.value); setEntryError(""); }} disabled={saving} className={inputClass} placeholder="0.00" /></EntryField>
+            <EntryField label="Bill / Received Amount"><input inputMode="decimal" value={billAmount} onChange={(event) => { setBillAmount(event.target.value); setEntryError(""); }} disabled={saving} className={inputClass} placeholder="0.00" /></EntryField>
             <EntryField label="Actual TDS"><input inputMode="decimal" value={actualTds} onChange={(event) => { setActualTds(event.target.value); setEntryError(""); }} disabled={saving} className={inputClass} placeholder="0.00" /></EntryField>
           </div>
           <EntryField label="Remarks · optional"><input value={payinRemarks} onChange={(event) => setPayinRemarks(event.target.value)} disabled={saving} className={inputClass} placeholder="Optional reconciliation note" /></EntryField>
           <PreviewStrip projected={detail.projectedPayin} current={detail.cumulativeBillAmount} next={numeric(billAmount)} actualLabel="Already received" />
         </EntryPanel> : null}
 
-        {mode === "payout" ? <EntryPanel title="Add Payout" onCancel={() => { setMode(null); setEntryError(""); }} onSave={() => void submitPayout()} saving={saving} error={entryError}>
+        {mode === "payout" ? <EntryPanel title="Add Payout" eyebrow="New transaction" onCancel={() => { setMode(null); setEntryError(""); }} onSave={() => void submitPayout()} saving={saving} error={entryError}>
           <div className="grid gap-2 sm:grid-cols-3">
             <EntryField label="Paid Amount"><input inputMode="decimal" value={paidAmount} onChange={(event) => { setPaidAmount(event.target.value); setEntryError(""); }} disabled={saving} autoFocus className={inputClass} placeholder="0.00" /></EntryField>
             <EntryField label="Paid Date"><input type="date" value={paidDate} onChange={(event) => { setPaidDate(event.target.value); setEntryError(""); }} disabled={saving} className={inputClass} /></EntryField>
@@ -241,15 +289,31 @@ export function AccountsPolicyReconciliationDrawer({ lookup, onClose, onPosted }
           <PreviewStrip projected={detail.projectedPayout} current={detail.cumulativePaidAmount} next={numeric(paidAmount)} actualLabel="Already paid" />
         </EntryPanel> : null}
 
+        {correction ? <EntryPanel title={`${correction.action === "edit" ? "Audited edit" : "Reverse"} ${correction.entryType === "payin" ? "Pay-In" : "Payout"}`} eyebrow="Audit required" onCancel={() => { setCorrection(null); setEntryError(""); }} onSave={() => void submitCorrection()} saving={saving} error={entryError} saveLabel={correction.action === "reverse" ? "Reverse entry" : "Save audited edit"} danger={correction.action === "reverse"}>
+          {correction.action === "edit" && correction.entryType === "payin" ? <div className="grid gap-2 sm:grid-cols-3">
+            <EntryField label="Bill Number"><input value={editBillNumber} onChange={(event) => setEditBillNumber(event.target.value)} disabled={saving} className={inputClass} /></EntryField>
+            <EntryField label="Bill Date"><input type="date" value={editBillDate} onChange={(event) => setEditBillDate(event.target.value)} disabled={saving} className={inputClass} /></EntryField>
+            <EntryField label="Bill / Received Amount"><input inputMode="decimal" value={editBillAmount} onChange={(event) => setEditBillAmount(event.target.value)} disabled={saving} className={inputClass} /></EntryField>
+          </div> : null}
+          {correction.action === "edit" && correction.entryType === "payout" ? <div className="grid gap-2 sm:grid-cols-3">
+            <EntryField label="Paid Amount"><input inputMode="decimal" value={editPaidAmount} onChange={(event) => setEditPaidAmount(event.target.value)} disabled={saving} className={inputClass} /></EntryField>
+            <EntryField label="Paid Date"><input type="date" value={editPaidDate} onChange={(event) => setEditPaidDate(event.target.value)} disabled={saving} className={inputClass} /></EntryField>
+            <EntryField label="UTR / Reference"><input value={editReference} onChange={(event) => setEditReference(event.target.value)} disabled={saving} className={inputClass} /></EntryField>
+          </div> : null}
+          {correction.action === "reverse" ? <p className="rounded-lg border border-[#f1d0cc] bg-[#fff7f6] px-3 py-2 text-[8px] font-semibold leading-4 text-[#9f2d20]">This does not delete the transaction. It removes the entry from active reconciliation totals and preserves the original values in the audit trail.</p> : null}
+          <EntryField label="Correction reason · required"><input value={correctionReason} onChange={(event) => { setCorrectionReason(event.target.value); setEntryError(""); }} disabled={saving} autoFocus className={inputClass} placeholder="Why is this entry being corrected?" /></EntryField>
+        </EntryPanel> : null}
+
         <HistorySection title="Pay-In history" count={detail.payinHistory.length}>
           {detail.payinHistory.length ? <div className="overflow-hidden rounded-xl border border-[#e2e8f0]">
             <table className="w-full text-left">
-              <thead className="bg-[#f8fafc]"><tr><HistoryHead>Date</HistoryHead><HistoryHead>Bill no.</HistoryHead><HistoryHead right>Amount</HistoryHead><HistoryHead>Status</HistoryHead></tr></thead>
-              <tbody>{detail.payinHistory.map((item) => <tr key={item.id} className="border-t border-[#edf1f5]">
+              <thead className="bg-[#f8fafc]"><tr><HistoryHead>Date</HistoryHead><HistoryHead>Bill no.</HistoryHead><HistoryHead right>Amount</HistoryHead><HistoryHead>Status</HistoryHead><HistoryHead right>Action</HistoryHead></tr></thead>
+              <tbody>{detail.payinHistory.map((item) => <tr key={item.id} className={`border-t border-[#edf1f5] ${!item.isActive ? "bg-[#fafafa] opacity-75" : ""}`}>
                 <HistoryCell>{date(item.billDate)}</HistoryCell>
                 <HistoryCell strong>{item.billNumber || "—"}</HistoryCell>
                 <HistoryCell right strong>{money(item.billAmount)}</HistoryCell>
-                <HistoryCell><StatusPill label={item.status || "Posted"} /></HistoryCell>
+                <HistoryCell><StatusPill label={item.status} title={item.correctionReason || undefined} /></HistoryCell>
+                <HistoryCell right>{item.isActive ? <HistoryActions onEdit={() => openPayinCorrection(item, "edit")} onReverse={() => openPayinCorrection(item, "reverse")} /> : <span className="text-[7px] font-semibold text-[#98a2b3]">Audit retained</span>}</HistoryCell>
               </tr>)}</tbody>
             </table>
           </div> : <EmptyHistory label="No Pay-In entries have been posted for this policy." />}
@@ -258,11 +322,13 @@ export function AccountsPolicyReconciliationDrawer({ lookup, onClose, onPosted }
         <HistorySection title="Payout history" count={detail.payoutHistory.length}>
           {detail.payoutHistory.length ? <div className="overflow-hidden rounded-xl border border-[#e2e8f0]">
             <table className="w-full text-left">
-              <thead className="bg-[#f8fafc]"><tr><HistoryHead>Date</HistoryHead><HistoryHead>UTR / reference</HistoryHead><HistoryHead right>Amount</HistoryHead></tr></thead>
-              <tbody>{detail.payoutHistory.map((item) => <tr key={item.id} className="border-t border-[#edf1f5]">
+              <thead className="bg-[#f8fafc]"><tr><HistoryHead>Date</HistoryHead><HistoryHead>UTR / reference</HistoryHead><HistoryHead right>Amount</HistoryHead><HistoryHead>Status</HistoryHead><HistoryHead right>Action</HistoryHead></tr></thead>
+              <tbody>{detail.payoutHistory.map((item) => <tr key={item.id} className={`border-t border-[#edf1f5] ${!item.isActive ? "bg-[#fafafa] opacity-75" : ""}`}>
                 <HistoryCell>{date(item.paidDate)}</HistoryCell>
                 <HistoryCell strong>{item.reference || "—"}</HistoryCell>
                 <HistoryCell right strong>{money(item.paidAmount)}</HistoryCell>
+                <HistoryCell><StatusPill label={item.status} title={item.correctionReason || undefined} /></HistoryCell>
+                <HistoryCell right>{item.isActive ? <HistoryActions onEdit={() => openPayoutCorrection(item, "edit")} onReverse={() => openPayoutCorrection(item, "reverse")} /> : <span className="text-[7px] font-semibold text-[#98a2b3]">Audit retained</span>}</HistoryCell>
               </tr>)}</tbody>
             </table>
           </div> : <EmptyHistory label="No Payout entries have been posted for this policy." />}
@@ -279,22 +345,29 @@ function ReconciliationSummaryCard({ icon: Icon, title, projected, actualLabel, 
     <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2"><span className="grid h-7 w-7 place-items-center rounded-lg bg-[#edf6f5] text-[#0f766e]"><Icon className="h-3.5 w-3.5" /></span><div><p className="text-[9px] font-bold text-[#17365D]">{title}</p><p className="text-[7px] font-semibold text-[#7c899b]">{status}</p></div></div><span className={`text-[10px] font-bold tabular-nums ${remainingTone}`}>{money(remaining)} remaining</span></div>
     <div className="mt-3 grid grid-cols-2 gap-2 border-t border-[#e7edf4] pt-2.5"><Metric label="Projected" value={money(projected)} /><Metric label={actualLabel} value={money(actual)} /></div>
     <div className="mt-2 flex items-center justify-between gap-2">
-      <p className="min-w-0 truncate text-[7px] font-semibold text-[#7c899b]">{footnote || "Append-only transaction history"}</p>
+      <p className="min-w-0 truncate text-[7px] font-semibold text-[#7c899b]">{footnote || "Audited transaction history"}</p>
       <button type="button" disabled={disabled} title={disabledTitle || actionLabel} onClick={onAction} className="inline-flex h-7 shrink-0 items-center gap-1 rounded-lg border border-[#c9d6e4] bg-white px-2 text-[7.5px] font-bold text-[#17365D] transition hover:bg-[#f3f7fb] disabled:cursor-not-allowed disabled:opacity-45"><Plus className="h-3 w-3" />{actionLabel}</button>
     </div>
   </article>;
 }
 
-function EntryPanel({ title, children, onCancel, onSave, saving, error }: { title: string; children: React.ReactNode; onCancel: () => void; onSave: () => void; saving: boolean; error: string }) {
-  return <section className="rounded-xl border border-[#b9cadc] bg-[#f8fbff] p-3 shadow-sm">
-    <div className="flex items-center justify-between gap-2"><h3 className="text-[10px] font-semibold text-[#17365D]">{title}</h3><span className="text-[7px] font-semibold uppercase tracking-[.06em] text-[#7c899b]">New transaction</span></div>
+function EntryPanel({ title, eyebrow, children, onCancel, onSave, saving, error, saveLabel = "Save transaction", danger = false }: { title: string; eyebrow: string; children: React.ReactNode; onCancel: () => void; onSave: () => void; saving: boolean; error: string; saveLabel?: string; danger?: boolean }) {
+  return <section className={`rounded-xl border p-3 shadow-sm ${danger ? "border-[#efc7c2] bg-[#fff9f8]" : "border-[#b9cadc] bg-[#f8fbff]"}`}>
+    <div className="flex items-center justify-between gap-2"><h3 className="text-[10px] font-semibold text-[#17365D]">{title}</h3><span className="text-[7px] font-semibold uppercase tracking-[.06em] text-[#7c899b]">{eyebrow}</span></div>
     <div className="mt-2.5 space-y-2">{children}</div>
     {error ? <p className="mt-2 rounded-lg border border-[#f3c7c3] bg-[#fff5f4] px-2.5 py-2 text-[8px] font-semibold text-[#b42318]">{error}</p> : null}
     <div className="mt-3 flex justify-end gap-1.5 border-t border-[#e3eaf2] pt-2.5">
       <button type="button" disabled={saving} onClick={onCancel} className="h-8 rounded-lg border border-[#dce4ee] bg-white px-3 text-[8px] font-bold text-[#667085] hover:bg-[#f8fafc] disabled:opacity-50">Cancel</button>
-      <button type="button" disabled={saving} onClick={onSave} className="inline-flex h-8 items-center gap-1 rounded-lg bg-[#17365D] px-3 text-[8px] font-bold text-white shadow-sm hover:bg-[#234b7a] disabled:cursor-wait disabled:opacity-60">{saving ? <Loader2 className="h-3 w-3 animate-spin" /> : null}{saving ? "Posting…" : "Save transaction"}</button>
+      <button type="button" disabled={saving} onClick={onSave} className={`inline-flex h-8 items-center gap-1 rounded-lg px-3 text-[8px] font-bold text-white shadow-sm disabled:cursor-wait disabled:opacity-60 ${danger ? "bg-[#b42318] hover:bg-[#912018]" : "bg-[#17365D] hover:bg-[#234b7a]"}`}>{saving ? <Loader2 className="h-3 w-3 animate-spin" /> : null}{saving ? "Saving…" : saveLabel}</button>
     </div>
   </section>;
+}
+
+function HistoryActions({ onEdit, onReverse }: { onEdit: () => void; onReverse: () => void }) {
+  return <span className="inline-flex items-center gap-1">
+    <button type="button" onClick={onEdit} title="Audited edit" className="inline-flex h-6 items-center gap-1 rounded-md border border-[#d8e1eb] bg-white px-1.5 text-[6.8px] font-bold text-[#17365D] hover:bg-[#f5f8fb]"><Pencil className="h-2.5 w-2.5" />Edit</button>
+    <button type="button" onClick={onReverse} title="Reverse entry" className="inline-flex h-6 items-center gap-1 rounded-md border border-[#efd0cc] bg-white px-1.5 text-[6.8px] font-bold text-[#a33a2c] hover:bg-[#fff7f6]"><RotateCcw className="h-2.5 w-2.5" />Reverse</button>
+  </span>;
 }
 
 function PreviewStrip({ projected, current, next, actualLabel }: { projected: number; current: number; next: number; actualLabel: string }) {
@@ -340,8 +413,9 @@ function EmptyHistory({ label }: { label: string }) {
   return <div className="rounded-xl border border-dashed border-[#d8e1eb] bg-[#fafbfd] px-4 py-6 text-center text-[8px] font-medium text-[#98a2b3]">{label}</div>;
 }
 
-function StatusPill({ label }: { label: string }) {
-  return <span className="inline-flex rounded-full border border-[#cfe5dc] bg-[#f0faf6] px-1.5 py-0.5 text-[6.8px] font-bold text-[#0f766e]">{label}</span>;
+function StatusPill({ label, title }: { label: "Posted" | "Edited" | "Reversed"; title?: string }) {
+  const cls = label === "Reversed" ? "border-[#efc7c2] bg-[#fff5f4] text-[#b42318]" : label === "Edited" ? "border-[#ead9a7] bg-[#fffaf0] text-[#8a6116]" : "border-[#cfe5dc] bg-[#f0faf6] text-[#0f766e]";
+  return <span title={title} className={`inline-flex rounded-full border px-1.5 py-0.5 text-[6.8px] font-bold ${cls}`}>{label}</span>;
 }
 
 function reconciliationStatus(projected: number, actual: number) {
