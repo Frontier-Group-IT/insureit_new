@@ -100,7 +100,6 @@ begin
     into v_registration_id
     from public.intermediary_registrations
     where id = v_registration_id
-      and application_id = p_application_id
       and registration_type = v_application.final_type
     for update;
   end if;
@@ -119,6 +118,12 @@ begin
   if v_registration_id is null then
     raise exception 'Intermediary registration record not found';
   end if;
+
+  update public.intermediary_registrations
+  set application_id = p_application_id,
+      updated_at = now()
+  where id = v_registration_id
+    and application_id is distinct from p_application_id;
 
   v_reference := nullif(btrim(coalesce(p_iib_reference, '')), '');
   if v_assignment.iib_registration_status = 'registered' and v_assignment.iib_registered_at is not null then
