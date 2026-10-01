@@ -17,7 +17,7 @@ const labelClass = "mb-1.5 flex items-center gap-1.5 text-[9px] font-bold upperc
 const frequencies = ["Monthly","Quarterly","Half Yearly","Annually","One Time"];
 const modes = ["Cash","Cheque","NEFT/RTGS","UPI","Credit/Debit Card","Net Banking"];
 const years = Array.from({length:50},(_,i)=>`${i+1} Year${i?"s":""}`);
-const documentLabels: Array<[LifeHealthIssuedDocumentType,string]> = [["policy_copy","Policy Copy"],["proposal_form","Proposal Form"],["kyc","KYC"],["other_document","Other Document"]];
+const documentLabels: Array<[LifeHealthIssuedDocumentType,string]> = [["policy_copy","Policy Copy"],["proposal_form","Proposal Form"],["benefit_illustration","Illustration Form"],["premium_receipt","Payment Receipt"],["other_document","Other Form"]];
 
 export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, activityItems, documents }: Props) {
   const router = useRouter();

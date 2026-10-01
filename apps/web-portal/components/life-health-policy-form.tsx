@@ -40,7 +40,7 @@ export function LifeHealthPolicyForm({ policyType, insurers, customers, source }
   const update = <K extends keyof State>(key: K, value: State[K]) => setForm((current) => ({ ...current, [key]: value }));
   const customerOptions = useMemo(() => customers.map((item) => ({ value: item.id, label: `${item.name}${item.phone ? ` · ${item.phone}` : ""}` })), [customers]);
   const selectedInsurer = insurers.find((item) => item.value === form.insurerId)?.label ?? "Not selected";
-  const documentKeys = ["proposalForm", "kyc", "otherDocument"];
+  const documentKeys = ["proposalForm", "benefitIllustration", "premiumReceipt", "otherDocument"];
   const documentCount = documentKeys.filter((key) => Boolean(files[key])).length;
   const documentTarget = documentKeys.length;
   const required = [form.customerMode === "existing" ? form.customerId : form.insuredName, form.customerMode === "existing" ? "existing" : form.phone, form.insurerId, form.productName, form.proposalNumber, form.paymentFrequency, form.premiumAmount, form.paymentMode];
@@ -68,7 +68,7 @@ export function LifeHealthPolicyForm({ policyType, insurers, customers, source }
   }
 
   const summary = <FollowSummary completion={completion} proposal={form.proposalNumber} insurer={selectedInsurer} product={form.productName} customer={form.insuredName} mobile={form.phone} premium={form.premiumAmount} frequency={form.paymentFrequency} paymentMode={form.paymentMode} documentCount={documentCount} documentTarget={documentTarget} />;
-  const documents = <div className="flex flex-1 flex-wrap items-center gap-2"><CompactDocumentUpload label="Add Policy Copy" file={files.policyCopy} onChange={(file) => setFiles((c) => ({ ...c, policyCopy: file }))} /><CompactDocumentUpload label="Add Proposal Form" file={files.proposalForm} onChange={(file) => setFiles((c) => ({ ...c, proposalForm: file }))} /><CompactDocumentUpload label="Add KYC" file={files.kyc} onChange={(file) => setFiles((c) => ({ ...c, kyc: file }))} /><CompactDocumentUpload label="Add Other Document" file={files.otherDocument} onChange={(file) => setFiles((c) => ({ ...c, otherDocument: file }))} /></div>;
+  const documents = <div className="flex flex-1 flex-wrap items-center gap-2"><CompactDocumentUpload label="Proposal Form" file={files.proposalForm} onChange={(file) => setFiles((c) => ({ ...c, proposalForm: file }))} /><CompactDocumentUpload label="Illustration Form" file={files.benefitIllustration} onChange={(file) => setFiles((c) => ({ ...c, benefitIllustration: file }))} /><CompactDocumentUpload label="Payment Receipt" file={files.premiumReceipt} onChange={(file) => setFiles((c) => ({ ...c, premiumReceipt: file }))} /><CompactDocumentUpload label="Other Form" file={files.otherDocument} onChange={(file) => setFiles((c) => ({ ...c, otherDocument: file }))} /></div>;
   const bottomSection = <section className="w-full rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="flex flex-col gap-3 p-3 xl:flex-row xl:items-center xl:justify-between">{documents}<div className="flex shrink-0 justify-end gap-2"><Link href="/policies/life-health-cases" className="inline-flex h-10 items-center justify-center rounded-xl border border-[#CBD5E1] px-4 text-[10px] font-semibold text-[#344054]">View Cases</Link><button type="button" onClick={submit} disabled={isPending} className="inline-flex h-10 items-center justify-center rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white disabled:opacity-60">{isPending ? "Creating case…" : "Create Case"}</button></div></div></section>;
 
   return <>

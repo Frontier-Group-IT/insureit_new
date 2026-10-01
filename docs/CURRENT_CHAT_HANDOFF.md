@@ -1,3 +1,14 @@
+## 2026-10-01 — Life/Health document-set refinement
+
+- Branch: `feature/life-health-document-actions-2026-10-01`; PR #2634.
+- Add Policy: Proposal Form, Illustration Form, Payment Receipt, Other Form.
+- Case detail + issued-policy edit: Policy Copy, Proposal Form, Illustration Form, Payment Receipt, Other Form.
+- `Mark Policy Issued` highlighted light purple/lavender.
+- No database/schema/RLS/mobile/native change.
+- **IMPLEMENTED; CI/merge/deployment pending.**
+
+---
+
 ## 2026-09-25 — Large voice campaign XLSX export fix
 
 - Branch: `fix/voice-campaign-large-export`.
