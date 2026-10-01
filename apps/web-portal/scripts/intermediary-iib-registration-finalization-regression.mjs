@@ -34,7 +34,11 @@ assert.match(migration, /exam_status <> 'passed'/, "Finalizer must recheck exam 
 assert.match(migration, /agreement_status <> 'signed'/, "Finalizer must recheck signed agreement.");
 assert.match(migration, /v_packet\.status not in \('handoff_started', 'submitted', 'registered'\)/, "Finalizer must require an actual portal handoff or later state.");
 assert.match(migration, /cardinality\(coalesce\(v_packet\.missing_fields/, "Finalizer must reject incomplete IIB packets.");
-assert.match(migration, /set application_id = p_application_id,[\s\S]*application_id is distinct from p_application_id/, "Finalizer must repair the resolved registration record back-link.");
+assert.match(
+  migration,
+  /update public\.intermediary_onboarding_applications[\s\S]*registration_record_id = coalesce\(registration_record_id, v_registration_id\)/,
+  "Finalizer must restore a recovered registration ID on the onboarding application.",
+);
 assert.match(migration, /status = 'registered'/, "Finalizer must mark the packet registered.");
 assert.match(migration, /iib_registration_status = 'registered'/, "Finalizer must mark assignment IIB registration registered.");
 assert.match(migration, /registration_status = 'iib_registered'/, "Finalizer must move the application/registration to IIB registered.");
