@@ -42,7 +42,7 @@ Before any activation write, the function rechecks:
 - IIB packet exists;
 - packet is `handoff_started`, `submitted`, or already `registered` for idempotent convergence;
 - packet has no missing fields;
-- the registration record belongs to the same application and registration type;
+- the resolved registration record has the same registration type and is relinked to the current application before activation if its `application_id` is missing/stale;
 - registration date is not in the future;
 - optional IIB reference is within the supported length.
 
@@ -54,13 +54,39 @@ The assignment's first `iib_registered_at` timestamp is reused on later calls so
 
 The existing Prepare IIB data and Prepare portal handoff actions previously reported failure only when multiple coordinated writes failed together. They now report failure if either coordinated write reports an error, preventing a one-sided failure from being presented as success.
 
+The portal handoff action also always upserts the canonical `intermediary_iib_submission_packets` row. This repairs historical/draft-only recovery cases before finalization instead of allowing the draft snapshot to advance while the canonical row remains absent.
+
+## Production schema gate
+
+Dedicated workflow: `.github/workflows/apply-intermediary-iib-registration-finalizer.yml`
+
+The workflow applies migration `20261001170000` only when it is not already recorded, records it in the migration ledger, then verifies the exact finalizer signature and its service-role-only execution contract.
+
+`.github/workflows/deploy-production.yml` explicitly maps this migration to that workflow, so the Vercel production deployment waits for the schema apply/verification run before deploying the web release.
+
 ## Verification gate
 
 Focused regression: `apps/web-portal/scripts/intermediary-iib-registration-finalization-regression.mjs`
 
+The regression now covers finalization, draft-backed canonical handoff recovery, registration back-link repair, the dedicated migration workflow, and the production deployment mapping.
+
 The canonical `.github/workflows/verify-web-portal.yml` runs this regression before typecheck, lint and the production build.
 
+The earlier canonical run **#5087** passed on the pre-review head, but is superseded by the review-fix commits. Fresh **Verify web portal #5100** is the required evidence for the current head.
+
 Do not merge until the full **Verify web portal** workflow is green and the user explicitly authorizes merge.
+
+## Review follow-up before merge
+
+Review found four issues after #5087: the production migration gate was missing, continuity files were not updated, a draft-only handoff could remain non-canonical, and a resolved registration record could retain a missing/stale application link.
+
+The three code/deployment issues are now implemented on the branch:
+
+- dedicated schema apply workflow + production deployment mapping;
+- canonical packet upsert during handoff, including draft-only recovery;
+- registration-record `application_id` repair inside the atomic finalizer.
+
+Repository continuity still requires the compact entry in root `AGENTS.md` and the current-state entry in `docs/CURRENT_CHAT_HANDOFF.md` before the review-continuity thread should be considered resolved.
 
 ## Production continuation
 
@@ -68,7 +94,7 @@ The migration has **not** been applied to production and PR #2664 has **not** be
 
 After explicit merge/deployment authorization:
 
-1. ensure the migration is applied by the normal production migration/deployment path;
+1. ensure the dedicated schema workflow applies/verifies migration `20261001170000` before the Vercel release proceeds;
 2. verify the exact Step 6 application shows the completion panel after handoff;
 3. complete a controlled registration only after confirming the corresponding IIB registration actually succeeded externally;
 4. verify application, assignment, registration, profile and intermediary states agree on registered/active;
