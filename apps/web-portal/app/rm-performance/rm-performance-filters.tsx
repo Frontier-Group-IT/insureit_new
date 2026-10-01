@@ -3,8 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
-import type { RmPerformancePeriodKey } from "@/lib/rm-performance";
-
+type RmPerformancePeriodKey = "mtd" | "this_month" | "custom";
 type RmOption = { id: string; name: string };
 
 type Props = {
@@ -31,8 +30,9 @@ export function RmPerformanceFilters({ rms, selectedRmId, period, hideRm = false
   function navigate(mutator: (params: URLSearchParams) => void) {
     const next = new URLSearchParams(currentParams.toString());
     mutator(next);
+    const query = next.toString();
     startTransition(() => {
-      router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
     });
   }
 
