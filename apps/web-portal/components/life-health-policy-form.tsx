@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -62,7 +61,7 @@ export function LifeHealthPolicyForm({ policyType, insurers, customers, source }
       try {
         const result = await createLifeHealthCase(data);
         if (!result.ok) { setError(result.error || "The policy could not be saved. Please review the details and try again."); return; }
-        router.push(`/policies/life-health-cases/${result.caseId}?created=1`);
+        router.push("/policies/life-health-cases");
         router.refresh();
       } catch (cause) { setError(cause instanceof Error ? cause.message : "The policy could not be saved. Please review the details and try again."); }
     });
@@ -70,7 +69,7 @@ export function LifeHealthPolicyForm({ policyType, insurers, customers, source }
 
   const summary = <FollowSummary completion={completion} proposal={form.proposalNumber} insurer={selectedInsurer} product={form.productName} customer={form.insuredName} mobile={form.phone} premium={form.premiumAmount} frequency={form.paymentFrequency} paymentMode={form.paymentMode} documentCount={documentCount} documentTarget={documentTarget} />;
   const documents = <div className="flex flex-1 flex-wrap items-center gap-2"><CompactDocumentUpload label="Proposal Form" file={files.proposalForm} onChange={(file) => setFiles((c) => ({ ...c, proposalForm: file }))} /><CompactDocumentUpload label="Illustration Form" file={files.benefitIllustration} onChange={(file) => setFiles((c) => ({ ...c, benefitIllustration: file }))} /><CompactDocumentUpload label="Payment Receipt" file={files.premiumReceipt} onChange={(file) => setFiles((c) => ({ ...c, premiumReceipt: file }))} /><CompactDocumentUpload label="Other Form" file={files.otherDocument} onChange={(file) => setFiles((c) => ({ ...c, otherDocument: file }))} /></div>;
-  const bottomSection = <section id="life-health-onboarding-actions" className="w-full rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="flex flex-col gap-3 p-3 xl:flex-row xl:items-center xl:justify-between">{documents}<div className="flex shrink-0 justify-end gap-2"><Link href="/policies/life-health-cases" className="inline-flex h-10 items-center justify-center rounded-xl border border-[#CBD5E1] px-4 text-[10px] font-semibold text-[#344054]">View Cases</Link><button type="button" onClick={submit} disabled={isPending} className="inline-flex h-10 items-center justify-center rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white disabled:opacity-60">{isPending ? "Creating case…" : "Create Case"}</button></div></div></section>;
+  const bottomSection = <section id="life-health-onboarding-actions" className="w-full rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="flex flex-col gap-3 p-3 xl:flex-row xl:items-center xl:justify-between">{documents}<div className="flex shrink-0 justify-end"><button type="button" onClick={submit} disabled={isPending} className="inline-flex h-10 items-center justify-center rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white disabled:opacity-60">{isPending ? "Creating case…" : "Create Case"}</button></div></div></section>;
 
   return <>
     <nav aria-label="Life and Health policy sections" className="sticky top-[72px] z-50 mb-3 flex min-h-[36px] items-stretch gap-4 overflow-x-auto rounded-b-xl border border-t-0 border-[#D9E2F0] bg-white/96 px-4 shadow-[0_5px_14px_rgba(15,23,42,.06)] backdrop-blur">
