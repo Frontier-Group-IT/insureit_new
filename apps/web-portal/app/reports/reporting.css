@@ -58,6 +58,11 @@
   background: #fcfdff;
 }
 
+/* Business Custom now uses the shared compact calendar rendered by ReportCompactFilters. */
+.report-page-shell form[action="/reports/business"][method="get"] {
+  display: none;
+}
+
 .report-page-shell .report-filter-label,
 .report-page-shell label > span:first-child {
   font-size: 0.61rem !important;
