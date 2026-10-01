@@ -9,6 +9,9 @@ function assert(condition, message) {
 
 assert(route.includes("CustomerMotorPolicyDetailScreen"), 'Policy detail route must include the dedicated Motor detail screen.');
 assert(route.includes("setDetailKind('motor')"), 'Policy detail route must classify Motor policies explicitly.');
+assert(route.includes(".from('external_policies')"), 'Policy detail route must classify external policies.');
+assert(route.includes(".select('policy_type')"), 'External policy classification must only request columns present on external_policies.');
+assert(!route.includes(".from('external_policies')\n            .select('policy_type,policy_product')"), 'External policy classification must not request missing policy_product.');
 assert(detail.includes("Premium breakup"), 'Motor detail must include the Premium breakup section.');
 assert(detail.includes("Policy validity"), 'Motor detail must include the Policy validity section.');
 assert(detail.includes("Insured details"), 'Motor detail must include the Insured details section.');
@@ -31,7 +34,10 @@ assert(detail.includes("label=\"Insured name\""), 'Motor detail must show Insure
 assert(detail.includes("label=\"Phone number\""), 'Motor detail must show Phone number.');
 assert(detail.includes(".select('od_premium,tp_premium,cpa_amount,net_premium,gst_amount,gross_premium')"), 'Motor detail must fetch the complete premium breakup.');
 assert(detail.includes(".select('company_name,contact_name,phone')"), 'Motor detail must fetch customer insured identity fields.');
+assert(detail.includes("policy.source === 'external' ? 'customer_documents' : 'policy_documents'"), 'Internal and external Motor policies must share the same document UI while using their customer-safe storage tables.');
+assert(detail.includes(".eq('external_policy_id', next.id)"), 'External Motor policy documents must resolve by external_policy_id.');
 assert(detail.includes("accessibilityState={{ expanded: policyCopyExpanded }}"), 'Policy copy must retain explicit collapsed/expanded accessibility state.');
 assert(detail.includes("createSignedUrl(policyCopy.storage_path, 10 * 60)"), 'Policy copy must refresh its short-lived signed URL on expansion.');
+assert(detail.includes("Linked vehicle"), 'Internal and external Motor policies must share the linked vehicle card.');
 
 console.log('Customer Motor policy detail regression checks passed.');

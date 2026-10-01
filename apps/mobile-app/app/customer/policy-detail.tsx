@@ -35,13 +35,12 @@ export default function CustomerPolicyDetailRoute() {
         const row = (
           await (supabase as any)
             .from('external_policies')
-            .select('policy_type,policy_product')
+            .select('policy_type')
             .eq('id', id)
             .in('customer_id', customerIds)
             .maybeSingle()
         ).data;
         policyType = row?.policy_type ?? null;
-        policyProduct = row?.policy_product ?? null;
       } else {
         const row = (
           await supabase
@@ -57,13 +56,12 @@ export default function CustomerPolicyDetailRoute() {
           const externalRow = (
             await (supabase as any)
               .from('external_policies')
-              .select('policy_type,policy_product')
+              .select('policy_type')
               .eq('id', id)
               .in('customer_id', customerIds)
               .maybeSingle()
           ).data;
           policyType = externalRow?.policy_type ?? null;
-          policyProduct = externalRow?.policy_product ?? null;
         }
       }
 
