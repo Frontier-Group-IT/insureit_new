@@ -1,0 +1,88 @@
+name: Apply insurance company logo upload schema
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20261001131500_insurance_company_logo_upload.sql'
+      - '.github/workflows/apply-insurance-company-logo-upload.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    name: Apply insurance company logo upload schema
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify schema configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/20261001131500_insurance_company_logo_upload.sql
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply insurer logo migration
+        run: supabase db query --linked --file supabase/migrations/20261001131500_insurance_company_logo_upload.sql
+
+      - name: Record migration version
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db query --linked "
+            insert into supabase_migrations.schema_migrations(version, statements, name)
+            values ('20261001131500', array['insurance company logo upload'], 'insurance_company_logo_upload')
+            on conflict (version) do nothing;
+          "
+
+      - name: Verify insurer logo schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              exists (
+                select 1
+                from information_schema.columns
+                where table_schema = 'public'
+                  and table_name = 'insurance_companies'
+                  and column_name = 'logo_path'
+              ) as logo_column_ready,
+              exists (
+                select 1
+                from storage.buckets
+                where id = 'insurer-assets'
+                  and public = true
+                  and file_size_limit = 2097152
+                  and allowed_mime_types @> array['image/png', 'image/jpeg', 'image/webp']::text[]
+              ) as logo_bucket_ready,
+              exists (
+                select 1
+                from supabase_migrations.schema_migrations
+                where version = '20261001131500'
+              ) as migration_recorded;
+          ")
+          echo "$result"
+          echo "$result" | grep -Eq '"logo_column_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"logo_bucket_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"migration_recorded"[[:space:]]*:[[:space:]]*true'
