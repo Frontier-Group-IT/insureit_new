@@ -97,12 +97,17 @@ export function PartnerScreen({
               <View style={styles.homeHeroShade} />
 
               <View style={styles.homeHeroTopRow}>
-                <Image
-                  source={require('../assets/insureit-partner-official.png')}
-                  style={styles.homeBrandLogo}
-                  resizeMode="contain"
-                  accessibilityLabel="INSUREIT Partner"
-                />
+                <View style={styles.homeBrand} accessibilityLabel="INSUREIT Partner">
+                  <Image
+                    source={require('../assets/insureit-partner-official.png')}
+                    style={styles.homeBrandLogo}
+                    resizeMode="contain"
+                  />
+                  <View style={styles.homeBrandCopy}>
+                    <Text style={styles.homeBrandName}>insureit</Text>
+                    <Text style={styles.homeBrandPartner}>Partner</Text>
+                  </View>
+                </View>
                 <View style={styles.homeHeroActions}>{action}</View>
               </View>
 
@@ -218,9 +223,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  homeBrand: {
+    minHeight: 45,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
   homeBrandLogo: {
-    width: 112,
-    height: 52,
+    width: 30,
+    height: 36,
+  },
+  homeBrandCopy: {
+    justifyContent: 'center',
+    marginTop: -1,
+  },
+  homeBrandName: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    lineHeight: 17,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+  },
+  homeBrandPartner: {
+    marginTop: 1,
+    color: '#FFC84A',
+    fontSize: 11,
+    lineHeight: 13,
+    fontWeight: '800',
   },
   homeHeroActions: {
     minHeight: 42,
