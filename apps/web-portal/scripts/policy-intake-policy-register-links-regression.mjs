@@ -26,7 +26,7 @@ assert(quickLinks.includes('.ui-page-stage a[href="/policies/new"]'), "Policy In
 assert(quickLinks.includes("summary.actionRequired !== null"), "RM summaries must not render the reviewer-only Action Required shortcut");
 assert(quickLinks.includes('href="/policy-intakes?view=action"'), "Action Required must deep-link to the Policy Intake Action Required view");
 assert(quickLinks.includes('href="/policy-intakes?view=in_review"'), "In Review must deep-link to the Policy Intake In Review view");
-assert(quickLinks.includes('href="/policy-intakes"'), "The Proposal Pending shortcut must open the Policy Intake workspace");
+assert(quickLinks.includes('href="/policies/life-health-cases"'), "Proposal Pending must open the Case Register");
 assert(quickLinks.includes('label="Proposal"'), "The left divider heading must be Proposal");
 assert(quickLinks.includes('label="Policy Intake"'), "Action Required and In Review must remain under one Policy Intake divider heading");
 assert(quickLinks.includes(">Pending</span>"), "The Proposal section must communicate its pending count");
@@ -40,20 +40,17 @@ assert(quickLinks.includes("h-px min-w-0 flex-1 bg-[#D7E2F2]"), "Divider heading
 assert(quickLinks.includes("const totalPending = (summary.actionRequired ?? 0) + summary.inReview"), "Proposal Pending must be driven by actual pending Policy Intake work");
 assert(quickLinks.includes("const pendingActive = totalPending > 0"), "Proposal Pending urgency must be driven by whether pending work exists");
 assert(quickLinks.includes('"text-[#C62828]"'), "Proposal Pending and positive Action Required work must use the same red urgency tone");
-assert(quickLinks.includes('"bg-[#FFF0F0] text-[#C62828] ring-[#F4CACA]"'), "Proposal Pending and Action Required counts must share the same pale-red badge treatment");
 assert(quickLinks.includes('"text-[#B54708]"'), "Positive In Review work must use a distinct review tone");
 assert(quickLinks.includes('"text-[#66758B]"'), "Zero Policy Intake counts must remain visually neutral");
-assert(quickLinks.includes("motion-reduce:transform-none"), "Queue micro-motion must respect reduced-motion preferences");
-assert(quickLinks.includes("rounded-2xl border border-[#D7E2F2] bg-[#F6F9FF]"), "Policy Intake counts must render inside one subtle grouped queue surface");
-assert(quickLinks.includes("motion-safe:hover:-translate-y-px"), "The grouped queue may use only a one-pixel restrained hover lift");
-assert(quickLinks.includes("hover:shadow-[0_7px_18px_rgba(49,86,184,0.10)]"), "The grouped queue hover state must remain subtle rather than heavy");
+assert(!quickLinks.includes("rounded-2xl border border-[#D7E2F2] bg-[#F6F9FF]"), "Policy Register summary must not render an outer card background");
+assert(!quickLinks.includes("bg-[#FFF0F0]"), "Action Required and Proposal counts must not render badge backgrounds");
+assert(!quickLinks.includes("bg-[#FFF7E8]"), "In Review counts must not render badge backgrounds");
+assert(!quickLinks.includes("ring-inset"), "Policy Register counts must not render inset badge rings");
 assert(quickLinks.includes("const active = count > 0"), "Quick-link urgency must be derived from whether the count is positive");
 assert(quickLinks.includes('variant === "action"'), "Action Required must keep its dedicated urgency treatment");
-assert(quickLinks.includes("motion-safe:group-hover/item:scale-105"), "Status counts may use only a restrained hover scale micro-interaction");
 assert(!quickLinks.includes("AlertTriangle"), "Action Required must not render a separate status icon");
 assert(!quickLinks.includes("Clock3"), "In Review must not render a separate status icon");
 assert(!quickLinks.includes("ChevronRight"), "Policy Intake status links must not add chevrons that waste header space");
-assert(!quickLinks.includes("hover:-translate-y-0.5"), "Policy Intake queue must not use the older larger raised-card motion");
 
 const intakePage = read("app/policy-intakes/page.tsx");
 assert(intakePage.includes("type PolicyIntakeSearchParams = { view?: string }"), "Policy Intake route must accept the view query parameter");
@@ -62,13 +59,14 @@ assert(intakePage.includes('return reviewer ? "action" : "all"'), "Non-reviewers
 assert(intakePage.includes('if (!reviewer) query = query.eq("submitted_by_profile_id", profile.id)'), "Non-reviewer Policy Intake lists must remain restricted to records submitted by the logged-in user");
 assert(intakePage.includes("initialView={initialView}"), "Policy Intake route must pass the deep-linked initial view into the workspace");
 
+const caseRegister = read("app/policies/life-health-cases/page.tsx");
+assert(caseRegister.includes('Case register'), "Proposal Pending destination must remain the Case Register");
+assert(caseRegister.includes('type CaseFilter = "pending" | "issued" | "all"'), "Case Register must retain its pending default view");
+
 const workspace = read("components/policy-intake-workspace.tsx");
 assert(workspace.includes("export type PolicyIntakeViewKey"), "Policy Intake view keys must remain explicit and typed");
 assert(workspace.includes('useState<ViewKey>(initialView ?? (reviewer ? "action" : "all"))'), "Policy Intake workspace must honor the validated owner In Review deep link without granting reviewer defaults");
 assert(workspace.includes('action: baseFiltered.filter((row) => row.status === "ready_for_review" || row.status === "needs_attention" || (row.status === "processing" && row.ocr_status === "failed")).length'), "Policy Intake workspace Action Required semantics must include ready-for-review, needs-attention, and failed OCR rows");
 assert(workspace.includes('inReview: baseFiltered.filter((row) => row.status === "in_review").length'), "Policy Intake workspace In Review semantics must remain unchanged");
-assert(workspace.includes("min-w-0 flex-1 [&>div]:w-full xl:[&>div]:!w-full"), "Policy Intake desktop status controls must expand into the remaining filter-row space");
-assert(workspace.includes("xl:[&>div>button]:!min-w-0 xl:[&>div>button]:!flex-1"), "Policy Intake desktop status options must distribute across the available status-tab width");
-assert(workspace.includes("items-center justify-between gap-1"), "Policy Intake reviewer controls must keep My Active Work pinned to the far right of the available filter row");
 
 console.log("policy intake policy register links regression: ok");
