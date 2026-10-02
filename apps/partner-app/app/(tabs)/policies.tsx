@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -24,6 +24,7 @@ import {
   type PartnerPolicySummary,
 } from '@/lib/policies';
 import { PartnerAssets } from '@/lib/partner-assets';
+import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { usePartnerPagedQuery } from '@/lib/use-partner-paged-query';
 import { usePartnerQuery } from '@/lib/use-partner-query';
@@ -44,7 +45,7 @@ let savedPolicyLifecycle: PartnerPolicyLifecycle = 'all';
 
 export default function PoliciesScreen() {
   const router = useRouter();
-  const { cacheScopeKey } = usePartnerSession();
+  const { cacheScopeKey, context } = usePartnerSession();
   const { isOffline } = usePartnerNetwork();
   const [lifecycle, setLifecycle] = useState<PartnerPolicyLifecycle>(savedPolicyLifecycle);
   const [query, setQuery] = useState(savedPolicyQuery);
@@ -89,61 +90,53 @@ export default function PoliciesScreen() {
     await Promise.all([summary.refresh(), collection.refresh()]);
   }, [collection, summary]);
 
+  const name = context?.identity.display_name || 'Partner';
 
   const header = (
     <View>
       <View style={styles.hero}>
-        <View style={styles.heroGlowOne} />
-        <View style={styles.heroGlowTwo} />
+        <Image
+          source={require('../../assets/partner/banners/claims-header-reference.jpg')}
+          resizeMode="cover"
+          style={styles.heroBackdrop}
+        />
+        <View style={styles.heroShade} />
+
         <View style={styles.heroTopRow}>
-          <View style={styles.brandRow}>
-            <View style={styles.brandMark}>
-              <Ionicons name="shield-checkmark-outline" size={18} color="#FFFFFF" />
-            </View>
-            <View>
-              <Text style={styles.brandName}>Insureit</Text>
-              <Text style={styles.brandSub}>PARTNER</Text>
+          <View style={styles.heroBrand}>
+            <Image
+              source={require('../../assets/insureit-partner-official.png')}
+              resizeMode="contain"
+              style={styles.heroLogo}
+              accessibilityLabel="InsureIT Partner"
+            />
+            <View style={styles.heroBrandCopy} accessibilityLabel="insureit Partner">
+              <Text style={styles.heroBrandInsureit}>insureit</Text>
+              <Text style={styles.heroBrandPartner}>Partner</Text>
             </View>
           </View>
           <View style={styles.heroActions}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Open activity"
+              accessibilityLabel="View recent activity"
               onPress={() => router.push('/activity')}
               style={({ pressed }) => [styles.heroIconButton, pressed && styles.pressed]}
             >
-              <Ionicons name="notifications-outline" size={17} color="#FFFFFF" />
-              <View style={styles.notificationDot} />
+              <Feather name="clock" size={17} color="#FFFFFF" />
             </Pressable>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Open profile"
               onPress={() => router.push('/profile')}
-              style={({ pressed }) => [styles.heroIconButton, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.heroAvatar, pressed && styles.pressed]}
             >
-              <Ionicons name="person-circle-outline" size={19} color="#FFFFFF" />
+              <Text style={styles.heroAvatarText}>{initials(name)}</Text>
             </Pressable>
           </View>
         </View>
 
         <View style={styles.heroCopy}>
           <Text style={styles.heroTitle}>Policies</Text>
-          <Text style={styles.heroSubtitle}>Manage. Track. Grow.</Text>
-        </View>
-
-        <View style={styles.heroArtworkWrap}>
-          <Image source={PartnerAssets.navigation.policies} style={styles.heroArtwork} resizeMode="contain" />
-          <View style={styles.heroShield}>
-            <Ionicons name="shield-checkmark" size={26} color="#FFFFFF" />
-          </View>
-        </View>
-
-        <View style={styles.heroWords}>
-          <Text style={styles.heroWord}>MOTOR</Text>
-          <Text style={styles.heroWord}>COMMERCIAL</Text>
-          <Text style={styles.heroWord}>HEALTH</Text>
-          <Text style={styles.heroWord}>LIFE</Text>
-          <Text style={styles.heroWord}>PROTECTION</Text>
         </View>
       </View>
 
@@ -400,97 +393,87 @@ function formatUpdatedAt(value: number | null) {
   return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
 }
 
+function initials(value: string) {
+  return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'IP';
+}
+
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F7F9FC' },
+  safeArea: { flex: 1, backgroundColor: '#0752A2' },
   content: { paddingBottom: 108 },
   contentEmpty: { flexGrow: 1 },
   hero: {
-    minHeight: 148,
+    height: 162,
     overflow: 'hidden',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    backgroundColor: '#063E8C',
+    backgroundColor: '#0752A2',
   },
-  heroGlowOne: {
+  heroBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+    opacity: 0.92,
+  },
+  heroShade: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(1,42,95,0.10)',
+  },
+  heroTopRow: {
+    zIndex: 3,
     position: 'absolute',
-    width: 170,
-    height: 170,
-    borderRadius: 85,
-    right: 78,
-    top: -90,
-    backgroundColor: 'rgba(21,111,220,0.38)',
-  },
-  heroGlowTwo: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    right: -78,
-    bottom: -100,
-    backgroundColor: 'rgba(0,181,226,0.18)',
-  },
-  heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', zIndex: 3 },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  brandMark: {
-    width: 26,
-    height: 26,
-    borderRadius: 7,
+    top: 30,
+    left: 15,
+    right: 15,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.55)',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    justifyContent: 'space-between',
   },
-  brandName: { color: '#FFFFFF', fontSize: 12, lineHeight: 14, fontWeight: '800' },
-  brandSub: { marginTop: 1, color: '#BFD8FF', fontSize: 5.8, lineHeight: 8, letterSpacing: 1.3, fontWeight: '800' },
-  heroActions: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  heroBrand: { flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: '60%' },
+  heroLogo: { width: 30, height: 35, tintColor: '#FFFFFF' },
+  heroBrandCopy: { justifyContent: 'center' },
+  heroBrandInsureit: { color: '#FFFFFF', fontSize: 14, lineHeight: 16, fontWeight: '800', letterSpacing: -0.08 },
+  heroBrandPartner: { color: '#F5AB2E', fontSize: 14, lineHeight: 16, fontWeight: '800', letterSpacing: -0.08 },
+  heroActions: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   heroIconButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 33,
+    height: 33,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(4,33,78,0.72)',
+    borderWidth: 1.25,
+    borderColor: 'rgba(255,255,255,0.96)',
+    shadowColor: '#001B42',
+    shadowOpacity: 0.24,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
-  notificationDot: {
-    position: 'absolute',
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    right: 5,
-    top: 5,
-    backgroundColor: '#F04E55',
-    borderWidth: 1,
-    borderColor: '#FFFFFF',
-  },
-  heroCopy: { position: 'absolute', left: 16, bottom: 28, zIndex: 3 },
-  heroTitle: { color: '#FFFFFF', fontSize: 22, lineHeight: 25, fontWeight: '800' },
-  heroSubtitle: { marginTop: 2, color: '#D8E8FF', fontSize: 8.5, lineHeight: 11, fontWeight: '500' },
-  heroArtworkWrap: {
-    position: 'absolute',
-    right: 64,
-    bottom: 4,
-    width: 112,
-    height: 94,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  heroArtwork: { width: 88, height: 88, opacity: 0.96 },
-  heroShield: {
-    position: 'absolute',
-    left: 8,
-    bottom: 7,
-    width: 38,
-    height: 38,
-    borderRadius: 11,
+  heroAvatar: {
+    width: 35,
+    height: 35,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0B65C7',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.72)',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.98)',
+    shadowColor: '#001B42',
+    shadowOpacity: 0.22,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
-  heroWords: { position: 'absolute', zIndex: 3, right: 9, bottom: 14, width: 52 },
-  heroWord: { color: '#D9E9FF', fontSize: 5.6, lineHeight: 8, fontWeight: '800' },
+  heroAvatarText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.label },
+  heroCopy: { zIndex: 3, position: 'absolute', left: 16, bottom: 22, width: 178 },
+  heroTitle: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: '700',
+    letterSpacing: -0.04,
+    textShadowColor: 'rgba(0,0,0,0.20)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
   searchRow: {
     marginTop: -14,
     marginHorizontal: 12,
