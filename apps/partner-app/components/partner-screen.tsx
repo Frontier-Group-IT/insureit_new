@@ -98,9 +98,11 @@ export function PartnerScreen({
 
               <View style={styles.homeHeroTopRow}>
                 <View style={styles.homeBrand} accessibilityLabel="INSUREIT Partner">
-                  <View style={styles.homeBrandMark}>
-                    <Ionicons name="shield-checkmark-outline" size={24} color="#FFFFFF" />
-                  </View>
+                  <Image
+                    source={require('../assets/insureit-partner-official.png')}
+                    style={styles.homeBrandLogo}
+                    resizeMode="contain"
+                  />
                   <View style={styles.homeBrandCopy}>
                     <Text style={styles.homeBrandName}>insureit</Text>
                     <Text style={styles.homeBrandPartner}>Partner</Text>
@@ -115,7 +117,7 @@ export function PartnerScreen({
             </View>
 
             <View style={styles.homeSearchCard}>
-              <Ionicons name="search-outline" size={20} color={partnerTheme.colors.brandStrong} />
+              <Ionicons name="search-outline" size={24} color="#3E269B" />
               <TextInput
                 value={heroSearchValue}
                 onChangeText={setHeroSearchValue}
@@ -139,6 +141,7 @@ export function PartnerScreen({
                   <Ionicons name="close-circle-outline" size={18} color="#A3ABBA" />
                 </Pressable>
               ) : null}
+              <View style={styles.homeSearchDivider} />
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Search"
@@ -147,7 +150,7 @@ export function PartnerScreen({
                 style={({ pressed }) => [styles.homeSearchAction, pressed && styles.homeSearchPressed]}
               >
                 <Text style={styles.homeSearchActionText}>Search</Text>
-                <Ionicons name="chevron-forward" size={14} color="#A3ABBA" />
+                <Ionicons name="chevron-forward" size={17} color="#A3ABBA" />
               </Pressable>
             </View>
           </View>
@@ -179,7 +182,7 @@ export function PartnerScreen({
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: partnerTheme.colors.canvas },
+  safeArea: { flex: 1, backgroundColor: '#F5F7FB' },
   content: {
     flexGrow: 1,
     paddingHorizontal: partnerTheme.spacing.lg,
@@ -190,47 +193,45 @@ const styles = StyleSheet.create({
   homeHeroWrap: {
     position: 'relative',
     marginHorizontal: -partnerTheme.spacing.lg,
-    marginBottom: 34,
+    marginBottom: 40,
   },
   homeHero: {
-    height: 158,
+    height: 174,
     overflow: 'hidden',
     backgroundColor: '#0755A8',
   },
   homeHeroImage: {
     position: 'absolute',
-    left: '-6%',
-    top: -8,
-    width: '112%',
-    height: 182,
-    opacity: 0.92,
-    transform: [{ scale: 0.92 }],
+    left: '-5%',
+    top: -6,
+    width: '110%',
+    height: 194,
+    opacity: 0.7,
+    transform: [{ scale: 1 }],
   },
   homeHeroShade: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(3, 45, 96, 0.03)',
+    backgroundColor: 'rgba(1, 49, 105, 0.02)',
   },
   homeHeroTopRow: {
     position: 'absolute',
-    top: 7,
-    left: 12,
-    right: 12,
-    minHeight: 44,
+    top: 19,
+    left: 17,
+    right: 17,
+    minHeight: 45,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   homeBrand: {
-    minHeight: 40,
+    minHeight: 45,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
   },
-  homeBrandMark: {
-    width: 28,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+  homeBrandLogo: {
+    width: 30,
+    height: 36,
   },
   homeBrandCopy: {
     justifyContent: 'center',
@@ -238,8 +239,8 @@ const styles = StyleSheet.create({
   },
   homeBrandName: {
     color: '#FFFFFF',
-    fontSize: 14,
-    lineHeight: 16,
+    fontSize: 15,
+    lineHeight: 17,
     fontWeight: '800',
     letterSpacing: -0.2,
   },
@@ -251,71 +252,77 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   homeHeroActions: {
-    minHeight: 40,
+    minHeight: 42,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
   },
   homeHeroGreeting: {
     position: 'absolute',
-    left: 13,
-    right: 13,
-    bottom: 34,
+    left: 19,
+    right: 18,
+    bottom: 27,
     color: '#FFFFFF',
-    fontSize: 13,
-    lineHeight: 17,
-    fontWeight: '700',
-    letterSpacing: -0.1,
-    textShadowColor: 'rgba(0,0,0,0.24)',
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+    textShadowColor: 'rgba(0,0,0,0.34)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
   homeSearchCard: {
     position: 'absolute',
-    left: 12,
-    right: 12,
-    bottom: -24,
-    height: 49,
-    paddingHorizontal: 13,
-    borderRadius: 16,
+    left: 14,
+    right: 14,
+    bottom: -31,
+    height: 58,
+    paddingLeft: 16,
+    paddingRight: 12,
+    borderRadius: 18,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#D9DFEA',
+    borderColor: '#D7DFEA',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 9,
+    gap: 10,
     backgroundColor: '#FFFFFF',
     shadowColor: '#102449',
-    shadowOpacity: 0.08,
-    shadowRadius: 9,
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    elevation: 4,
   },
   homeSearchInput: {
     flex: 1,
     minWidth: 0,
-    height: 42,
+    height: 48,
     paddingVertical: 0,
     color: partnerTheme.colors.ink,
-    fontSize: 12,
+    fontSize: 12.5,
   },
   homeSearchClear: {
-    width: 28,
-    minHeight: 40,
+    width: 26,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  homeSearchDivider: {
+    width: StyleSheet.hairlineWidth,
+    height: 30,
+    backgroundColor: '#E4E8EF',
+  },
   homeSearchAction: {
-    minHeight: 40,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 1,
-    paddingLeft: 2,
+    gap: 2,
+    paddingLeft: 1,
   },
   homeSearchPressed: { opacity: 0.65 },
   homeSearchActionText: {
-    color: '#A1A9B8',
-    fontSize: 11,
+    color: '#9DA6B6',
+    fontSize: 11.5,
     fontWeight: '600',
   },
 });
