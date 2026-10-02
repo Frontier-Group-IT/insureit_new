@@ -10,7 +10,7 @@ import {
   type ScrollViewProps,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -108,7 +108,24 @@ export function PartnerScreen({
                     <Text style={styles.homeBrandPartner}>Partner</Text>
                   </View>
                 </View>
-                <View style={styles.homeHeroActions}>{action}</View>
+                <View style={styles.homeHeroActions}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="View recent activity"
+                    onPress={() => router.push('/activity')}
+                    style={({ pressed }) => [styles.homeHeroIconButton, pressed && styles.homeSearchPressed]}
+                  >
+                    <Feather name="clock" size={17} color="#FFFFFF" />
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Open profile"
+                    onPress={() => router.push('/profile')}
+                    style={({ pressed }) => [styles.homeHeroAvatar, pressed && styles.homeSearchPressed]}
+                  >
+                    <Text style={styles.homeHeroAvatarText}>{homeInitials(title)}</Text>
+                  </Pressable>
+                </View>
               </View>
 
               <Text numberOfLines={1} style={styles.homeHeroGreeting}>
@@ -117,7 +134,7 @@ export function PartnerScreen({
             </View>
 
             <View style={styles.homeSearchCard}>
-              <Ionicons name="search-outline" size={24} color="#3E269B" />
+              <Ionicons name="search-outline" size={22} color="#3E269B" />
               <TextInput
                 value={heroSearchValue}
                 onChangeText={setHeroSearchValue}
@@ -181,6 +198,16 @@ export function PartnerScreen({
   );
 }
 
+function homeInitials(title: string) {
+  const name = title.replace(/^Good\s+(Morning|Afternoon|Evening)\s+/i, '').trim();
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('') || 'IP';
+}
+
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F5F7FB' },
   content: {
@@ -193,7 +220,7 @@ const styles = StyleSheet.create({
   homeHeroWrap: {
     position: 'relative',
     marginHorizontal: -partnerTheme.spacing.lg,
-    marginBottom: 40,
+    marginBottom: 35,
   },
   homeHero: {
     height: 174,
@@ -214,115 +241,149 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(1, 49, 105, 0.02)',
   },
   homeHeroTopRow: {
+    zIndex: 3,
     position: 'absolute',
-    top: 19,
-    left: 17,
-    right: 17,
-    minHeight: 45,
+    top: 30,
+    left: 15,
+    right: 15,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   homeBrand: {
-    minHeight: 45,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    maxWidth: '60%',
+  },
+  homeBrandLogo: {
+    width: 30,
+    height: 35,
+    tintColor: '#FFFFFF',
+  },
+  homeBrandCopy: {
+    justifyContent: 'center',
+  },
+  homeBrandName: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    lineHeight: 16,
+    fontWeight: '800',
+    letterSpacing: -0.08,
+  },
+  homeBrandPartner: {
+    color: '#F5AB2E',
+    fontSize: 14,
+    lineHeight: 16,
+    fontWeight: '800',
+    letterSpacing: -0.08,
+  },
+  homeHeroActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
   },
-  homeBrandLogo: {
-    width: 30,
-    height: 36,
-  },
-  homeBrandCopy: {
-    justifyContent: 'center',
-    marginTop: -1,
-  },
-  homeBrandName: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    lineHeight: 17,
-    fontWeight: '800',
-    letterSpacing: -0.2,
-  },
-  homeBrandPartner: {
-    marginTop: 1,
-    color: '#FFC84A',
-    fontSize: 11,
-    lineHeight: 13,
-    fontWeight: '800',
-  },
-  homeHeroActions: {
-    minHeight: 42,
-    flexDirection: 'row',
+  homeHeroIconButton: {
+    width: 33,
+    height: 33,
+    borderRadius: 17,
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(4,33,78,0.72)',
+    borderWidth: 1.25,
+    borderColor: 'rgba(255,255,255,0.96)',
+    shadowColor: '#001B42',
+    shadowOpacity: 0.24,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  homeHeroAvatar: {
+    width: 35,
+    height: 35,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.98)',
+    shadowColor: '#001B42',
+    shadowOpacity: 0.22,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  homeHeroAvatarText: {
+    color: partnerTheme.colors.brandStrong,
+    ...partnerTheme.typography.label,
   },
   homeHeroGreeting: {
+    zIndex: 3,
     position: 'absolute',
-    left: 19,
-    right: 18,
-    bottom: 27,
+    left: 16,
+    right: 16,
+    bottom: 45,
     color: '#FFFFFF',
-    fontSize: 15,
-    lineHeight: 20,
-    fontWeight: '800',
-    letterSpacing: -0.2,
-    textShadowColor: 'rgba(0,0,0,0.34)',
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: '700',
+    letterSpacing: -0.04,
+    textShadowColor: 'rgba(0,0,0,0.20)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: 2,
   },
   homeSearchCard: {
     position: 'absolute',
-    left: 14,
-    right: 14,
-    bottom: -31,
-    height: 58,
-    paddingLeft: 16,
-    paddingRight: 12,
-    borderRadius: 18,
+    left: 10,
+    right: 10,
+    bottom: -26,
+    height: 52,
+    paddingLeft: 13,
+    paddingRight: 10,
+    borderRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#D7DFEA',
+    borderColor: '#DCE6F4',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
     backgroundColor: '#FFFFFF',
-    shadowColor: '#102449',
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    shadowColor: '#173B6C',
+    shadowOpacity: 0.09,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
   homeSearchInput: {
     flex: 1,
     minWidth: 0,
-    height: 48,
+    height: 44,
     paddingVertical: 0,
     color: partnerTheme.colors.ink,
-    fontSize: 12.5,
+    fontSize: 11.5,
   },
   homeSearchClear: {
-    width: 26,
-    minHeight: 44,
+    width: 24,
+    minHeight: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
   homeSearchDivider: {
     width: StyleSheet.hairlineWidth,
-    height: 30,
-    backgroundColor: '#E4E8EF',
+    height: 26,
+    backgroundColor: '#CFD9E8',
   },
   homeSearchAction: {
-    minHeight: 44,
+    minHeight: 40,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
     paddingLeft: 1,
   },
-  homeSearchPressed: { opacity: 0.65 },
+  homeSearchPressed: { opacity: 0.76 },
   homeSearchActionText: {
     color: '#9DA6B6',
-    fontSize: 11.5,
+    fontSize: 10.5,
     fontWeight: '600',
   },
 });
