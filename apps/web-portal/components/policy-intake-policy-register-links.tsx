@@ -51,8 +51,8 @@ export function PolicyIntakePolicyRegisterLinksPortal({ summary }: { summary: Po
       </div>
 
       <div className="grid min-w-0 grid-rows-[18px_30px]">
-        <DividerHeading label="Policy Intake" />
-        <div className="grid min-w-0 grid-cols-[112px_96px]">
+        <DividerHeading label="Policy Intake" centered />
+        <div className="grid min-w-0 grid-cols-2">
           {showActionRequired ? <PolicyIntakeQuickLink
             href="/policy-intakes?view=action"
             label="Action Required"
@@ -72,9 +72,9 @@ export function PolicyIntakePolicyRegisterLinksPortal({ summary }: { summary: Po
   );
 }
 
-function DividerHeading({ label }: { label: string }) {
+function DividerHeading({ label, centered = false }: { label: string; centered?: boolean }) {
   return <div className="flex items-center gap-1.5 px-2.5 pt-0.5">
-    <span className="h-px w-3 shrink-0 bg-[#D7E2F2]" aria-hidden="true" />
+    <span className={`h-px bg-[#D7E2F2] ${centered ? "min-w-0 flex-1" : "w-3 shrink-0"}`} aria-hidden="true" />
     <span className="whitespace-nowrap text-[8px] font-black uppercase tracking-[0.08em] text-[#66758B]">{label}</span>
     <span className="h-px min-w-0 flex-1 bg-[#D7E2F2]" aria-hidden="true" />
   </div>;
@@ -90,7 +90,7 @@ function PolicyIntakeQuickLink({ href, label, count, variant }: { href: string; 
     prefetch={false}
     href={href}
     aria-label={`${label}: ${count}. Open filtered Policy Intakes.`}
-    className="group/item flex min-w-0 items-center justify-between gap-1.5 border-r border-[#E1E8F2] px-2.5 last:border-r-0 transition-colors duration-150 hover:bg-[#F8FAFC] focus:outline-none focus-visible:bg-[#F8FAFC] motion-reduce:transition-none"
+    className="group/item flex min-w-0 items-center justify-center gap-2 border-r border-[#E1E8F2] px-2 last:border-r-0 transition-colors duration-150 hover:bg-[#F8FAFC] focus:outline-none focus-visible:bg-[#F8FAFC] motion-reduce:transition-none"
   >
     <span className={`min-w-0 whitespace-nowrap text-[8.5px] font-extrabold leading-3 ${active ? activeTone : "text-[#66758B]"}`}>{label}</span>
     <span className={`text-[14px] font-black leading-4 tabular-nums ${active ? activeTone : "text-[#64748B]"}`}>{count}</span>
