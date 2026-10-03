@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/shell";
 import { LifeHealthSuperUserDeletePanel } from "@/components/life-health-superuser-delete-panel";
 import { LifeHealthIssuedPolicyButton } from "@/components/life-health-issued-policy-button";
+import { loadLifeHealthCaseSummary } from "@/lib/life-health-case-summary";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -18,11 +19,15 @@ export default async function LifeHealthCasesPage({ searchParams }: { searchPara
   const params = searchParams ? await searchParams : undefined;
   const filter: CaseFilter = params?.status === "issued" || params?.status === "all" ? params.status : "pending";
   const admin = createSupabaseAdminClient();
-  const { data: rows, error } = await admin.from("life_health_cases").select("id,case_number,business_line,status,sourcing_date,product_name,proposal_number,premium_amount,customer_id,insurance_company_id,rm_name,lead_source,final_policy_id,created_at").order("created_at", { ascending: false }).limit(500).returns<CaseRow[]>();
+  const [{ data: rows, error }, caseSummary] = await Promise.all([
+    admin.from("life_health_cases").select("id,case_number,business_line,status,sourcing_date,product_name,proposal_number,premium_amount,customer_id,insurance_company_id,rm_name,lead_source,final_policy_id,created_at").order("created_at", { ascending: false }).limit(500).returns<CaseRow[]>(),
+    loadLifeHealthCaseSummary(admin),
+  ]);
   if (error) return <AppShell title="Life / Health Cases"><div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-[10px] text-red-700">Life / Health cases could not be loaded.</div></AppShell>;
   const allRows = rows ?? [];
-  const pendingCount = allRows.filter((row) => !row.final_policy_id).length;
-  const issuedCount = allRows.filter((row) => Boolean(row.final_policy_id)).length;
+  const pendingCount = caseSummary?.pending ?? allRows.filter((row) => !row.final_policy_id).length;
+  const issuedCount = caseSummary?.issued ?? allRows.filter((row) => Boolean(row.final_policy_id)).length;
+  const allCount = caseSummary?.all ?? allRows.length;
   const visibleRows = filter === "all" ? allRows : allRows.filter((row) => filter === "issued" ? Boolean(row.final_policy_id) : !row.final_policy_id);
   const customerIds = Array.from(new Set(allRows.map((row) => row.customer_id)));
   const insurerIds = Array.from(new Set(allRows.map((row) => row.insurance_company_id)));
@@ -35,7 +40,7 @@ export default async function LifeHealthCasesPage({ searchParams }: { searchPara
   const filters: Array<{ key: CaseFilter; label: string; count: number }> = [
     { key: "pending", label: "Pending", count: pendingCount },
     { key: "issued", label: "Issued", count: issuedCount },
-    { key: "all", label: "All", count: allRows.length },
+    { key: "all", label: "All", count: allCount },
   ];
   return <AppShell title="Life / Health Cases"><div className="mx-auto max-w-[1480px] space-y-4 pb-8">
     {profile.role === "it_super_user" ? <LifeHealthSuperUserDeletePanel records={allRows.map((row) => { const customer = customerMap.get(row.customer_id); return { id: row.id, label: row.case_number, detail: [row.business_line, customer?.company_name?.trim() || customer?.contact_name, insurerMap.get(row.insurance_company_id), row.proposal_number].filter(Boolean).join(" • "), issued: Boolean(row.final_policy_id) }; })} /> : null}
