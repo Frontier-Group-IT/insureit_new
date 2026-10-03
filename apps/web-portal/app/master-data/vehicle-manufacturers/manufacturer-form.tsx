@@ -113,11 +113,25 @@ export function ManufacturerForm({
         <div className="mb-4">
           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#F59E0B]">Verification & branding</p>
           <h2 className="mt-1 text-lg font-semibold tracking-[-0.02em] text-[#161936]">Source and logo provenance</h2>
-          <p className="mt-1 text-[11px] leading-5 text-[#6C738A]">Only repository assets that have been manually verified are selectable as local logos. Missing logos use a safe initials fallback in the register.</p>
+          <p className="mt-1 text-[11px] leading-5 text-[#6C738A]">Uploaded Master Data logos are authoritative. Repository logos remain fallback-only when no uploaded logo is configured.</p>
+        </div>
+
+        <div className="mb-4">
+          <span className={labelClass}>Company logo / icon</span>
+          <div className="flex flex-col gap-3 rounded-2xl border border-[#D8DEEA] bg-white p-3 sm:flex-row sm:items-center">
+            <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-[#E1E6F0] bg-[#FBFCFE] p-2">
+              {values.logo_path ? <Image src={values.logo_path} alt="Current manufacturer logo" width={48} height={48} className="max-h-12 max-w-12 object-contain" /> : <span className="text-[9px] font-bold uppercase tracking-wide text-[#98A2B3]">Logo</span>}
+            </div>
+            <div className="min-w-0 flex-1">
+              <input className="block w-full rounded-xl border border-[#D8DEEA] bg-[#FBFCFE] px-3 py-2 text-[11px] text-[#34405A] file:mr-3 file:rounded-lg file:border-0 file:bg-[#EEF3FF] file:px-3 file:py-2 file:text-[10px] file:font-bold file:text-[#3446A8]" type="file" name="logo" accept="image/png,image/jpeg,image/webp" />
+              <p className="mt-1.5 text-[9px] leading-4 text-[#8A94A8]">PNG, JPG or WebP, maximum 2 MB. A new upload replaces the current managed logo everywhere this manufacturer logo is used.</p>
+              {values.logo_path ? <label className="mt-2 inline-flex items-center gap-2 text-[10px] font-semibold text-[#667085]"><input type="checkbox" name="remove_logo" /> Remove current uploaded logo and use fallback</label> : null}
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <Field label="Verified local logo"><select className={inputClass} name="logo_path" defaultValue={values.logo_path ?? ""}>{VERIFIED_VEHICLE_BRAND_LOGOS.map(([value, label]) => <option key={value || "none"} value={value}>{label}</option>)}</select></Field>
+          <Field label="Repository fallback"><select className={inputClass} name="fallback_logo_path" defaultValue={values.logo_path?.startsWith("/assets/") ? values.logo_path : ""}>{VERIFIED_VEHICLE_BRAND_LOGOS.map(([value, label]) => <option key={value || "none"} value={value}>{label}</option>)}</select></Field>
           <Field label="Logo status"><select className={inputClass} name="logo_status" defaultValue={values.logo_status ?? "missing"}>{VEHICLE_MANUFACTURER_LOGO_STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
           <Field label="Logo source URL"><input className={inputClass} type="url" name="logo_source_url" defaultValue={values.logo_source_url ?? ""} /></Field>
           <Field label="Source name"><input className={inputClass} name="source_name" defaultValue={values.source_name ?? ""} placeholder="SIAM / TMA / ICEMA / OEM" /></Field>
