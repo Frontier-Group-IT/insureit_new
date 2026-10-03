@@ -31,6 +31,7 @@ export async function loadManagementPack(profile: ViewerProfile, query: Manageme
   }
   const filters = resolveManagementPackFilters(query);
   const monthQuery = { period: "custom", from: filters.fromDate, to: filters.toDate, business: query.business, category: query.category, page: "1" };
+  const businessScope = { business: query.business, category: query.category };
   const canViewGovernance = await hasEffectiveCapability(profile, "manage_users");
 
   const [businessPayload, distributionPayload, financePayload, claimsPayload, renewalsPayload, operationsPayload, governancePayload] = await Promise.all([
@@ -38,8 +39,8 @@ export async function loadManagementPack(profile: ViewerProfile, query: Manageme
     loadDistributionReport(profile, { ...monthQuery, onboardingPage: "1" }),
     loadFinanceReport(profile, monthQuery),
     loadClaimsReport(profile, monthQuery),
-    loadRenewalReport(profile, { horizon: "90", page: "1" }),
-    loadOperationsReport(profile, { horizon: "90", page: "1" }),
+    loadRenewalReport(profile, { horizon: "90", page: "1", ...businessScope }),
+    loadOperationsReport(profile, { horizon: "90", page: "1", ...businessScope }),
     canViewGovernance ? loadGovernanceReport({ period: "custom", from: filters.fromDate, to: filters.toDate, page: "1" }) : Promise.resolve(null),
   ]);
 

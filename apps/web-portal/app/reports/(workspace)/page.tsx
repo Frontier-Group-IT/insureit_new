@@ -463,15 +463,15 @@ function indiaDateValue(date: Date) {
 type OverviewBusinessState = {
   key: OverviewBusiness;
   label: string;
-  businessLine: "Motor" | "Non Motor" | null;
+  businessLine: "Motor" | "Non Motor" | "Life" | "Health" | null;
   category: string | null;
 };
 
 function resolveOverviewBusiness(value: string | undefined): OverviewBusinessState {
   if (value === "motor") return { key: "motor", label: "Motor", businessLine: "Motor", category: null };
   if (value === "non_motor") return { key: "non_motor", label: "Non Motor", businessLine: "Non Motor", category: null };
-  if (value === "life") return { key: "life", label: "Life", businessLine: "Non Motor", category: "Life" };
-  if (value === "health") return { key: "health", label: "Health", businessLine: "Non Motor", category: "Health" };
+  if (value === "life") return { key: "life", label: "Life", businessLine: "Life", category: null };
+  if (value === "health") return { key: "health", label: "Health", businessLine: "Health", category: null };
   return { key: "all", label: "All Business", businessLine: null, category: null };
 }
 

@@ -3,8 +3,8 @@ import { getAccessibleCustomerIds, getEmployeeAccessScope } from "@/lib/employee
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type ViewerProfile={id:string;role:string|null};
-export type ClaimsQuery={period?:string;from?:string;to?:string;insurer?:string;status?:string;mode?:string;page?:string};
-export type ClaimsFilters={period:"90d"|"mtd"|"ytd"|"all"|"custom";fromDate:string|null;toDate:string|null;insurerId:string|null;status:string|null;serviceMode:"broker_managed"|"self_managed"|null;page:number};
+export type ClaimsQuery={period?:string;from?:string;to?:string;insurer?:string;status?:string;mode?:string;business?:string;category?:string;page?:string};
+export type ClaimsFilters={period:"90d"|"mtd"|"ytd"|"all"|"custom";fromDate:string|null;toDate:string|null;insurerId:string|null;status:string|null;serviceMode:"broker_managed"|"self_managed"|null;businessLine:"Motor"|"Non Motor"|"Life"|"Health"|null;category:string|null;page:number};
 export type ClaimsReport={
   summary:{claim_count:number;open_claim_count:number;settled_claim_count:number;rejected_claim_count:number;average_open_age_days:number;estimated_loss:number;approved_amount:number;settlement_amount:number;claims_with_pending_documents:number;claims_with_rejected_documents:number};
   aging:Array<{key:string;label:string;sort_order:number;claim_count:number}>;
@@ -24,8 +24,8 @@ export async function loadClaimsReport(profile:ViewerProfile,query:ClaimsQuery,p
   ]);
   if(customerIds!==null&&customerIds.length===0)return{report:emptyClaimsReport(filters.page),filters,scopeMode:scope.mode};
   const admin=createSupabaseAdminClient();
-  const {data,error}=await admin.rpc("get_claims_report",{
-    p_customer_ids:customerIds,p_from_date:filters.fromDate,p_to_date:filters.toDate,p_insurer_id:filters.insurerId,p_status:filters.status,p_service_mode:filters.serviceMode,p_page:filters.page,p_page_size:pageSize
+  const {data,error}=await admin.rpc("get_claims_report_v2",{
+    p_customer_ids:customerIds,p_from_date:filters.fromDate,p_to_date:filters.toDate,p_insurer_id:filters.insurerId,p_status:filters.status,p_service_mode:filters.serviceMode,p_business_line:filters.businessLine,p_category:filters.category,p_page:filters.page,p_page_size:pageSize
   });
   if(error)throw new Error(`Claims report query failed: ${error.message}`);
   return{report:normalizeClaimsReport(data,filters.page,pageSize),filters,scopeMode:scope.mode};
@@ -41,7 +41,7 @@ export function resolveClaimsFilters(query:ClaimsQuery):ClaimsFilters{
   if(period==="all")toDate=null;
   if(period==="custom"){fromDate=validDate(query.from);toDate=validDate(query.to)}
   if(fromDate&&toDate&&fromDate>toDate)[fromDate,toDate]=[toDate,fromDate];
-  return{period,fromDate,toDate,insurerId:validUuid(query.insurer),status:cleanText(query.status,80),serviceMode:isMode(query.mode)?query.mode:null,page:positiveInteger(query.page)};
+  return{period,fromDate,toDate,insurerId:validUuid(query.insurer),status:cleanText(query.status,80),serviceMode:isMode(query.mode)?query.mode:null,businessLine:businessLine(query.business),category:cleanText(query.category,120),page:positiveInteger(query.page)};
 }
 
 function normalizeClaimsReport(value:unknown,page:number,pageSize=25):ClaimsReport{
@@ -60,6 +60,7 @@ function normalizeRow(row:unknown):ClaimsRow{const x=objectValue(row);return{id:
 export function emptyClaimsReport(page=1):ClaimsReport{return{summary:{claim_count:0,open_claim_count:0,settled_claim_count:0,rejected_claim_count:0,average_open_age_days:0,estimated_loss:0,approved_amount:0,settlement_amount:0,claims_with_pending_documents:0,claims_with_rejected_documents:0},aging:[],statuses:[],insurers:[],documents:{pending_documents:0,rejected_documents:0,claims_with_pending_documents:0,claims_with_rejected_documents:0},filters:{insurers:[],statuses:[],service_modes:[]},register:{rows:[],total_count:0,page,page_size:25}}}
 function isPeriod(v:string|undefined):v is ClaimsFilters["period"]{return v==="90d"||v==="mtd"||v==="ytd"||v==="all"||v==="custom"}
 function isMode(v:string|undefined):v is NonNullable<ClaimsFilters["serviceMode"]>{return v==="broker_managed"||v==="self_managed"}
+function businessLine(v:string|undefined):ClaimsFilters["businessLine"]{return v==="Motor"||v==="Non Motor"||v==="Life"||v==="Health"?v:null}
 function validDate(v:string|undefined){return v&&/^\d{4}-\d{2}-\d{2}$/.test(v)?v:null}
 function validUuid(v:string|undefined){return v&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v)?v:null}
 function cleanText(v:string|undefined,max:number){const x=v?.trim();return x?x.slice(0,max):null}
