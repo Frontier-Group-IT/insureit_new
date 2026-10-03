@@ -4,15 +4,18 @@
 Ensure any insurer logo uploaded through Master Data becomes the primary logo source immediately across the web portal. Built-in repository logos remain fallback-only when no managed logo is configured.
 
 ## Implementation
-- Insurance Company register rows now include `logo_path` from `insurance_companies`.
-- Register rendering prefers the managed Supabase public URL when `logo_path` is present.
-- The existing `/api/insurer-logo?name=...` resolver remains the fallback for insurers without a managed logo, preserving static catalog and generic fallback behavior.
-- The managed asset URL carries the row `updated_at` as a version query parameter so replacement uploads are cache-busted immediately without disabling caching globally.
+- The shared `/api/insurer-logo?name=...` resolver checks managed Master Data logos before any built-in/static asset.
+- Managed logos are also resolved across known legacy/current insurer aliases when both names map to the same built-in catalog identity. This prevents a historical alias such as an older Bajaj name from bypassing the Master Data upload.
+- Managed redirects are `no-store`; immutable uploaded storage objects keep their long-lived cache because every replacement upload receives a new object path.
+- `getInsurerLogo()` now accepts an optional version token. The Insurance Company register passes `updated_at`, so an upload/replacement changes the image URL immediately and cannot remain pinned in the browser/Next image cache.
+- Static repository logos remain fallback-only when there is no managed logo, and the generic insurer icon remains the final fallback.
 
 ## Expected behavior
 1. Upload or replace an insurer logo in Master Data.
-2. The same insurer row immediately renders the uploaded asset after the page refresh/navigation.
-3. Other portal locations that use the shared insurer-logo API continue to prioritize managed logos and fall back to static assets where no managed asset exists.
+2. The Insurance Company register immediately requests a new versioned logo URL after the record update.
+3. The shared resolver returns the uploaded Master Data logo before any static logo.
+4. Historical aliases that map to the same known insurer identity also receive the Master Data logo.
+5. Insurers with no managed logo continue to use the existing built-in/static fallback without extra storage/database changes.
 
 ## Scope / risk
-No schema, RLS, storage policy, policy/customer data, mobile app, APK/AAB, or insurer-name matching changes.
+No schema, RLS, storage policy, policy/customer data, mobile app, APK/AAB, or insurer business-rule changes.
