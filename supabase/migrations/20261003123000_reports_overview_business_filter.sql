@@ -64,16 +64,19 @@ begin
       and (p_insurer_id is null or cl.insurance_company_id=p_insurer_id)
       and (p_status is null or cl.current_status::text=p_status)
       and (p_service_mode is null or cl.claim_service_mode::text=p_service_mode)
-      and (p_business_line is null or lower(coalesce(nullif(trim(p.business_line),''),'Motor'))=lower(p_business_line))
+      and (p_business_line is null or (p.id is not null and lower(coalesce(nullif(trim(p.business_line),''),'Motor'))=lower(p_business_line)))
       and (
         p_category is null
-        or lower(
-          case
-            when coalesce(nullif(trim(p.business_line),''),'Motor')='Non Motor'
-              then coalesce(nullif(trim(nm.category),''),nullif(trim(p.policy_type),''),'Other')
-            else coalesce(nullif(trim(p.policy_type),''),'Other')
-          end
-        )=lower(p_category)
+        or (
+          p.id is not null
+          and lower(
+            case
+              when coalesce(nullif(trim(p.business_line),''),'Motor')='Non Motor'
+                then coalesce(nullif(trim(nm.category),''),nullif(trim(p.policy_type),''),'Other')
+              else coalesce(nullif(trim(p.policy_type),''),'Other')
+            end
+          )=lower(p_category)
+        )
       )
   ), summary as (
     select count(*)::integer claim_count,
