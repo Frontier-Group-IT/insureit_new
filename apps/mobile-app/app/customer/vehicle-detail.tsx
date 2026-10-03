@@ -91,11 +91,19 @@ export default function VehicleDetailScreen() {
             <Image source={vehicleImage} style={styles.vehicleImage} resizeMode="contain" />
           </View>
           <View style={styles.heroCopy}>
-            <Text style={styles.eyebrow}>VEHICLE DETAIL</Text>
-            <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle.vehicle_no}</Text>
-            <Text style={styles.vehicleMeta} numberOfLines={2}>{[vehicle.make, vehicle.model].filter(Boolean).join(' ') || vehicle.vehicle_type || 'Vehicle'}</Text>
+            <View style={styles.heroVehicleLine}>
+              <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle.vehicle_no}</Text>
+              {policyState.tone === 'red' ? <PulseDot tone="red" /> : null}
+            </View>
           </View>
-          <StatusPill tone={policyState.tone} label={policyState.label} showDot={policyState.tone !== 'green'} />
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push({ pathname: '/customer/add-policy', params: { vehicleId: vehicle.id } } as any)}
+            style={({ pressed }) => [styles.compactPolicyAction, pressed && styles.actionPressed]}
+          >
+            <MaterialCommunityIcons name="shield-plus-outline" size={14} color={palette.navy} />
+            <Text style={styles.compactPolicyActionText}>Add policy</Text>
+          </Pressable>
         </View>
         <View style={styles.policySummary}>
           <MiniStat label="Insurer" value={latestPolicyCompany?.name ?? 'Pending'} />
@@ -176,11 +184,6 @@ export default function VehicleDetailScreen() {
       </Card>
     </Screen>
   );
-}
-
-function StatusPill({ tone, label, showDot = false }: { tone: 'green' | 'orange' | 'red'; label: string; showDot?: boolean }) {
-  const config = tone === 'green' ? { bg: '#E8F8F0', text: '#12805C' } : tone === 'orange' ? { bg: '#FFF4E2', text: '#B7791F' } : { bg: '#FDECEC', text: '#C43838' };
-  return <View style={[styles.statusPill, { backgroundColor: config.bg }]}>{showDot ? <PulseDot tone={tone === 'red' ? 'red' : 'yellow'} /> : null}<Text style={[styles.statusText, { color: config.text }]}>{label}</Text></View>;
 }
 
 function MiniStat({ label, value, badge }: { label: string; value: string; badge?: string }) {
@@ -344,9 +347,8 @@ const styles = StyleSheet.create({
   heroCard: { marginTop: 0, padding: 15, overflow: 'hidden', borderWidth: 1, borderColor: '#173B7A', borderRadius: 21, marginBottom: 10, backgroundColor: '#082F7E' },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   heroCopy: { flex: 1, minWidth: 0 },
-  eyebrow: { color: '#FFFFFF', fontSize: 9.5, fontWeight: '900', letterSpacing: 1 },
-  vehicleNo: { color: '#FFFFFF', fontSize: 23, lineHeight: 28, fontWeight: '900', marginTop: 1 },
-  vehicleMeta: { color: '#FFFFFF', fontSize: 12, fontWeight: '800', marginTop: 2 },
+  heroVehicleLine: { flexDirection: 'row', alignItems: 'center', gap: 7, minWidth: 0 },
+  vehicleNo: { flexShrink: 1, color: '#FFFFFF', fontSize: 18, lineHeight: 22, fontWeight: '900' },
   companyName: { color: '#334155', fontSize: 10.5, lineHeight: 13, fontWeight: '800', marginTop: 2 },
   vehicleImageShell: { width: 50, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F7FF' },
   vehicleImage: { width: 44, height: 32 },
@@ -403,6 +405,4 @@ const styles = StyleSheet.create({
   detailValueExpired: { color: '#B42318', fontWeight: '800' },
   detailValueDue: { color: '#946200', fontWeight: '800' },
   emptyText: { color: palette.slate, fontSize: 12.5, lineHeight: 18, fontWeight: '500', marginTop: 6 },
-  statusPill: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  statusText: { fontSize: 9, fontWeight: '800' },
 });
