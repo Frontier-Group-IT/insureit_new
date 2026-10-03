@@ -74,11 +74,14 @@ export default function VehicleDetailScreen() {
   const latestPolicy = useMemo(() => selectVehiclePolicy(policies), [policies]);
   const latestPolicyCompany = latestPolicy ? companyById.get(latestPolicy.insurance_company_id) : null;
   const policyState = latestPolicy ? policyStatus(latestPolicy.end_date) : { label: 'No policy', tone: 'red' as const, helper: 'Add a policy to complete protection' };
-  const policyAction = policyState.tone === 'red' ? { label: 'Add policy', icon: 'shield-plus-outline' as const } : policyState.tone === 'orange' ? { label: 'Add renewed policy', icon: 'refresh' as const } : null;
-  const statusTone = policyTone(policyState.tone);
   const complianceItems = useMemo(() => vehicleComplianceItems(vehicle, latestPolicy), [latestPolicy, vehicle]);
   const alertItems = complianceItems.filter((item) => item.status !== 'ok');
   const vehicleImage = vehicle ? vehicleSketchFor(vehicle) : truckSketch;
+  const displayedPolicyNo = latestPolicy?.policy_no
+    ? latestPolicy.source === 'external'
+      ? formatExternalPolicyNumber(latestPolicy.policy_no)
+      : latestPolicy.policy_no
+    : 'Not added';
 
   if (loading) return <Screen title="Vehicle Detail"><LoadingState /></Screen>;
   if (!vehicle) return <Screen title="Vehicle Detail"><EmptyState title="Vehicle not found" body="Please choose another vehicle from your list." /></Screen>;
@@ -95,6 +98,9 @@ export default function VehicleDetailScreen() {
               <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle.vehicle_no}</Text>
               {policyState.tone === 'red' ? <PulseDot tone="red" /> : null}
             </View>
+            <Text style={[styles.vehiclePolicyHelper, policyState.tone === 'red' && styles.vehiclePolicyHelperExpired]} numberOfLines={1}>
+              {policyState.helper}
+            </Text>
           </View>
           <Pressable
             accessibilityRole="button"
@@ -105,26 +111,22 @@ export default function VehicleDetailScreen() {
             <Text style={styles.compactPolicyActionText}>Add policy</Text>
           </Pressable>
         </View>
-        <View style={styles.policySummary}>
-          <MiniStat label="Insurer" value={latestPolicyCompany?.name ?? 'Pending'} />
-          <MiniStat label="Policy" value={latestPolicy?.policy_no ? (latestPolicy.source === 'external' ? formatExternalPolicyNumber(latestPolicy.policy_no) : latestPolicy.policy_no) : 'Not added'} badge={latestPolicy?.source === 'external' ? 'External' : undefined} />
-          <MiniStat label="Expiry" value={latestPolicy ? formatDate(latestPolicy.end_date) : '-'} />
-        </View>
-        <View style={styles.protectionRow}>
-          <View style={[styles.protectionIcon, { backgroundColor: statusTone.soft }]}> 
-            <MaterialCommunityIcons name={latestPolicy ? 'shield-check-outline' : 'shield-plus-outline'} size={20} color={statusTone.accent} />
+
+        <View style={styles.policyCard}>
+          <View style={styles.policyIconShell}>
+            <MaterialCommunityIcons name="shield-check-outline" size={28} color="#4154A6" />
           </View>
-          <View style={styles.protectionCopy}>
-            <Text style={[styles.nextLabel, { color: statusTone.accent }]}>PROTECTION STATUS</Text>
-            <Text style={styles.nextTitle}>{policyState.label}</Text>
+          <View style={styles.policyCardCopy}>
+            <View style={styles.policyNumberRow}>
+              <Text style={styles.policyNumber} numberOfLines={1}>{displayedPolicyNo}</Text>
+              {latestPolicy?.source === 'external' ? <View style={styles.externalBadge}><Text style={styles.externalBadgeText}>External</Text></View> : null}
+            </View>
+            <Text style={styles.policyInsurer} numberOfLines={1}>{latestPolicyCompany?.name ?? 'Insurer pending'}</Text>
+            <View style={styles.policyExpiryRow}>
+              <Text style={styles.policyExpiry}>{latestPolicy ? formatDate(latestPolicy.end_date) : '-'}</Text>
+              {policyState.tone === 'red' ? <PulseDot tone="red" /> : policyState.tone === 'orange' ? <PulseDot tone="yellow" /> : null}
+            </View>
           </View>
-          {policyAction ? <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/add-policy', params: { vehicleId: vehicle.id } } as any)} style={({ pressed }) => [styles.compactPolicyAction, pressed && styles.actionPressed]}>
-            <MaterialCommunityIcons name={policyAction.icon} size={14} color={palette.navy} />
-            <Text style={styles.compactPolicyActionText}>{policyAction.label}</Text>
-          </Pressable> : null}
-        </View>
-        <View style={styles.protectionHelperRow}>
-          <Text style={styles.nextBody}>{policyState.helper}</Text>
         </View>
       </View>
 
@@ -186,10 +188,6 @@ export default function VehicleDetailScreen() {
   );
 }
 
-function MiniStat({ label, value, badge }: { label: string; value: string; badge?: string }) {
-  return <View style={styles.miniStat}><View style={styles.miniLabelRow}><Text style={styles.miniLabel}>{label}</Text>{badge ? <View style={styles.externalBadge}><Text style={styles.externalBadgeText}>{badge}</Text></View> : null}</View><Text style={styles.miniValue} numberOfLines={1}>{value}</Text></View>;
-}
-
 function DetailCell({ icon, label, value, status = 'ok' }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value?: string | null; status?: 'expired' | 'due' | 'ok' }) {
   const showDateDot = status === 'expired' || status === 'due';
   return <View style={styles.detailCell}><MaterialCommunityIcons name={icon} size={15} color={showDateDot ? status === 'expired' ? '#C43D2D' : '#B7791F' : palette.navy} /><View style={styles.detailCopy}><Text style={styles.detailLabel}>{label}</Text><View style={styles.detailValueRow}>{showDateDot ? <PulseDot tone={status === 'expired' ? 'red' : 'yellow'} /> : null}<Text style={[styles.detailValue, status === 'expired' && styles.detailValueExpired, status === 'due' && styles.detailValueDue]} numberOfLines={2}>{value || '-'}</Text></View></View></View>;
@@ -219,12 +217,6 @@ function policyStatus(endDate: string) {
   if (days < 0) return { label: 'Expired', tone: 'red' as const, helper: `Expired ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} ago` };
   if (days <= 30) return { label: 'Renewal due', tone: 'orange' as const, helper: `${days} day${days === 1 ? '' : 's'} left for renewal` };
   return { label: 'Protected', tone: 'green' as const, helper: `${days} day${days === 1 ? '' : 's'} of cover remaining` };
-}
-
-function policyTone(tone: 'green' | 'orange' | 'red') {
-  if (tone === 'green') return { accent: '#12805C', soft: '#E8F8F0', background: '#F7FCF9', border: '#BFE6D5' };
-  if (tone === 'orange') return { accent: '#B7791F', soft: '#FFF4E2', background: '#FFFBF3', border: '#F0D9AC' };
-  return { accent: '#C43838', soft: '#FDECEC', background: '#FFF8F8', border: '#F2C6C6' };
 }
 
 type ComplianceItem = { key: string; label: string; date: string | null; status: 'expired' | 'due' | 'ok'; helper: string };
@@ -349,26 +341,23 @@ const styles = StyleSheet.create({
   heroCopy: { flex: 1, minWidth: 0 },
   heroVehicleLine: { flexDirection: 'row', alignItems: 'center', gap: 7, minWidth: 0 },
   vehicleNo: { flexShrink: 1, color: '#FFFFFF', fontSize: 18, lineHeight: 22, fontWeight: '900' },
-  companyName: { color: '#334155', fontSize: 10.5, lineHeight: 13, fontWeight: '800', marginTop: 2 },
+  vehiclePolicyHelper: { color: 'rgba(255,255,255,0.78)', fontSize: 10.5, lineHeight: 14, fontWeight: '700', marginTop: 3 },
+  vehiclePolicyHelperExpired: { color: '#FFD8D5' },
   vehicleImageShell: { width: 50, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F7FF' },
   vehicleImage: { width: 44, height: 32 },
-  policySummary: { flexDirection: 'row', gap: 7, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.22)' },
-  protectionRow: { marginTop: 12, paddingTop: 11, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.22)', flexDirection: 'row', alignItems: 'center', gap: 9 },
-  protectionIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  protectionCopy: { flex: 1, minWidth: 0 },
-  protectionHelperRow: { marginLeft: 45, marginTop: 3 },
-  nextLabel: { fontSize: 8.5, fontWeight: '900', letterSpacing: .4 },
-  nextTitle: { color: '#FFFFFF', fontSize: 13, fontWeight: '900', marginTop: 2 },
-  nextBody: { color: '#FFFFFF', fontSize: 10.3, lineHeight: 14, fontWeight: '600', marginTop: 3 },
   compactPolicyAction: { minHeight: 30, borderRadius: 10, paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#FFFFFF', marginLeft: 'auto' },
   compactPolicyActionText: { color: palette.navy, fontSize: 9.5, fontWeight: '900' },
   actionPressed: { opacity: 0.86, transform: [{ scale: 0.97 }] },
-  miniStat: { flex: 1, minHeight: 53, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE5F0', padding: 8, justifyContent: 'center' },
-  miniLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  policyCard: { marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.22)', flexDirection: 'row', alignItems: 'center', gap: 10 },
+  policyIconShell: { width: 58, height: 58, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE5F0' },
+  policyCardCopy: { flex: 1, minWidth: 0 },
+  policyNumberRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
+  policyNumber: { flexShrink: 1, color: '#FFFFFF', fontSize: 15.5, lineHeight: 19, fontWeight: '900' },
+  policyInsurer: { color: '#FFFFFF', fontSize: 12, lineHeight: 16, fontWeight: '800', marginTop: 2 },
+  policyExpiryRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 4 },
+  policyExpiry: { color: '#D7E4FF', fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
   externalBadge: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 999, backgroundColor: '#EEF5FF', borderWidth: 1, borderColor: '#CFE0F8' },
   externalBadgeText: { color: '#315C99', fontSize: 7.5, lineHeight: 9, fontWeight: '800' },
-  miniLabel: { color: '#174EA6', fontSize: 9.5, fontWeight: '800', textTransform: 'uppercase' },
-  miniValue: { color: palette.navy, fontSize: 11.5, fontWeight: '900', marginTop: 4 },
   alertSection: { padding: 10, backgroundColor: '#FFFBF3', borderColor: '#E8D7B5', borderWidth: 1 },
   detailSection: { backgroundColor: '#F8FBFF', borderColor: '#D7E6FA' },
   sectionRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 6 },
