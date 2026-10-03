@@ -123,9 +123,8 @@ export function getVehicleBrandLogo(make: string | null | undefined) {
   const value = String(make || "").trim();
   if (!value) return null;
 
-  // Resolve through vehicle manufacturer master data first so operational brand names
-  // such as Sonalika/Solis and New Holland/CASE IH inherit the verified logo from
-  // their parent manufacturer. The API route falls back to the legacy local asset
-  // resolver when no verified managed logo exists, preserving existing behaviour.
-  return `/api/manufacturer-logo?make=${encodeURIComponent(value)}`;
+  // Keep manufacturer resolution central, but use an SVG-marked route so Next/Image
+  // skips optimization for responses that can legitimately resolve to verified local
+  // SVG assets. The route still applies the same master-data and upload validation.
+  return `/api/manufacturer-logo.svg?make=${encodeURIComponent(value)}`;
 }
