@@ -58,4 +58,4 @@ function currency(v:number){return new Intl.NumberFormat("en-IN",{style:"currenc
 function integer(v:number){return new Intl.NumberFormat("en-IN",{maximumFractionDigits:0}).format(v||0)}
 function dateTime(v:string){if(!v)return"—";return new Intl.DateTimeFormat("en-IN",{day:"2-digit",month:"short",year:"numeric",timeZone:"Asia/Kolkata"}).format(new Date(v))}
 function labelMode(v:string|null){return v==="self_managed"?"Self managed":v==="broker_managed"?"Broker managed":"—"}
-function fallbackFilters():ClaimsFilters{return{period:"90d",fromDate:null,toDate:null,insurerId:null,status:null,serviceMode:null,page:1}}
+function fallbackFilters():ClaimsFilters{return{period:"90d",fromDate:null,toDate:null,insurerId:null,status:null,serviceMode:null,businessLine:null,category:null,page:1}}
