@@ -13,6 +13,9 @@ assert(policiesPage.includes("PolicyIntakePolicyRegisterLinksPortal"), "Policy R
 
 const summary = read("lib/policy-intake-review-summary.ts");
 assert(summary.includes("actionRequired: number | null"), "Policy Register summary must support hiding reviewer-only Action Required");
+assert(summary.includes("proposalPending: number | null"), "Policy Register summary must expose the Life / Health Case Register pending count");
+assert(summary.includes("loadLifeHealthCaseSummary(admin)"), "Proposal Pending must be loaded from the shared Life / Health case summary");
+assert(summary.includes("proposalPending: proposalSummary?.pending ?? null"), "Policy Register Proposal Pending must use the shared case pending count");
 assert(summary.includes('query = query.eq("submitted_by_profile_id", options.submittedByProfileId)'), "Owner Policy Intake summaries must be filtered by the submitting profile before counts are calculated");
 assert(summary.includes("options.includeActionRequired ?? true"), "Reviewer summaries must retain Action Required by default");
 assert(summary.includes("loadPolicyIntakeDuplicateMatches(admin, rows)"), "Policy Register counts must use the same duplicate detector as the Policy Intake queue");
@@ -20,6 +23,12 @@ assert(summary.includes('status: "Duplicate"'), "Duplicate intakes must be exclu
 assert(summary.includes('row.status === "ready_for_review" || (row.status === "processing" && row.ocr_status === "failed")'), "Action Required count must match the Policy Intake queue definition");
 assert(summary.includes('row.status === "in_review"'), "In Review count must match the Policy Intake queue definition");
 assert(summary.includes(".limit(500)"), "Policy Register summary must use the same visible queue limit as Policy Intakes");
+
+const caseSummary = read("lib/life-health-case-summary.ts");
+assert(caseSummary.includes('from("life_health_cases")'), "Shared Proposal counts must come from life_health_cases");
+assert(caseSummary.includes('{ count: "exact", head: true }'), "Life / Health case counts must use exact database counts rather than the visible row limit");
+assert(caseSummary.includes('.is("final_policy_id", null)'), "Pending proposals must be cases without a final policy");
+assert(caseSummary.includes('.not("final_policy_id", "is", null)'), "Issued proposals must be cases with a final policy");
 
 const quickLinks = read("components/policy-intake-policy-register-links.tsx");
 assert(quickLinks.includes('.ui-page-stage a[href="/policies/new"]'), "Policy Intake queue must mount beside the Policy Register Add Policy action");
@@ -38,8 +47,10 @@ assert(quickLinks.includes("function DividerHeading"), "Section headings must be
 assert(quickLinks.includes('centered ? "min-w-0 flex-1" : "w-3 shrink-0"'), "Centered divider headings must use equal flexible rules on both sides");
 assert(quickLinks.includes("h-px min-w-0 flex-1 bg-[#D7E2F2]"), "Divider headings must continue the horizontal rule after the label");
 assert(quickLinks.includes("items-center justify-center gap-2"), "Policy Intake metrics must be centered inside their equal sub-columns");
-assert(quickLinks.includes("const totalPending = (summary.actionRequired ?? 0) + summary.inReview"), "Proposal Pending must be driven by actual pending Policy Intake work");
-assert(quickLinks.includes("const pendingActive = totalPending > 0"), "Proposal Pending urgency must be driven by whether pending work exists");
+assert(quickLinks.includes("const policyIntakePending = (summary.actionRequired ?? 0) + summary.inReview"), "Policy Intake work may remain as a defensive fallback only");
+assert(quickLinks.includes("const proposalPending = summary.proposalPending ?? policyIntakePending"), "Proposal Pending must prefer the shared Case Register pending count");
+assert(quickLinks.includes("const pendingActive = proposalPending > 0"), "Proposal Pending urgency must be driven by the synchronized proposal count");
+assert(!quickLinks.includes("const totalPending = (summary.actionRequired ?? 0) + summary.inReview"), "Proposal Pending must not directly use Policy Intake Action Required plus In Review");
 assert(quickLinks.includes('"text-[#C62828]"'), "Proposal Pending and positive Action Required work must use the same red urgency tone");
 assert(quickLinks.includes('"text-[#B54708]"'), "Positive In Review work must use a distinct review tone");
 assert(quickLinks.includes('"text-[#66758B]"'), "Zero Policy Intake counts must remain visually neutral");
@@ -63,6 +74,8 @@ assert(intakePage.includes("initialView={initialView}"), "Policy Intake route mu
 const caseRegister = read("app/policies/life-health-cases/page.tsx");
 assert(caseRegister.includes('Case register'), "Proposal Pending destination must remain the Case Register");
 assert(caseRegister.includes('type CaseFilter = "pending" | "issued" | "all"'), "Case Register must retain its pending default view");
+assert(caseRegister.includes("loadLifeHealthCaseSummary(admin)"), "Case Register tabs must use the same shared exact-count loader as Policy Register Proposal Pending");
+assert(caseRegister.includes("const pendingCount = caseSummary?.pending"), "Case Register Pending must prefer the exact shared database count");
 
 const workspace = read("components/policy-intake-workspace.tsx");
 assert(workspace.includes("export type PolicyIntakeViewKey"), "Policy Intake view keys must remain explicit and typed");
