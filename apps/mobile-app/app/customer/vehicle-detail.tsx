@@ -5,6 +5,7 @@ import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native
 
 import { Card, EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
+import { getInsurerLogoSource } from '@/lib/catalog-logos';
 import { getOperationalCustomerContexts } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
@@ -18,6 +19,7 @@ const bikeSketch = require('../../assets/vehicles/twp-bike.png');
 const jcbSketch = require('../../assets/vehicles/misd-cpm-jcb.png');
 
 type VehiclePolicyDisplay = {
+  id: string;
   vehicle_id: string;
   insurance_company_id: string;
   policy_no: string;
@@ -51,8 +53,8 @@ export default function VehicleDetailScreen() {
       setVehicle(vehicleResult.data);
       if (vehicleResult.data) {
         const [policyResult, externalPolicyResult] = await Promise.all([
-          supabase.from('policies').select('vehicle_id,insurance_company_id,policy_no,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', ids),
-          (supabase as any).from('external_policies').select('vehicle_id,insurance_company_id,policy_no,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', ids),
+          supabase.from('policies').select('id,vehicle_id,insurance_company_id,policy_no,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', ids),
+          (supabase as any).from('external_policies').select('id,vehicle_id,insurance_company_id,policy_no,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', ids),
         ]);
         const nextPolicies: VehiclePolicyDisplay[] = [
           ...((policyResult.data ?? []).map((policy) => ({ ...policy, source: 'sibl' as const }))),
@@ -73,6 +75,8 @@ export default function VehicleDetailScreen() {
   const companyById = useMemo(() => new Map(companies.map((company) => [company.id, company])), [companies]);
   const latestPolicy = useMemo(() => selectVehiclePolicy(policies), [policies]);
   const latestPolicyCompany = latestPolicy ? companyById.get(latestPolicy.insurance_company_id) : null;
+  const latestPolicyLogo = getInsurerLogoSource(latestPolicyCompany?.name);
+  const latestPolicyActive = latestPolicy ? isPolicyActive(latestPolicy) : false;
   const policyState = latestPolicy ? policyStatus(latestPolicy.end_date) : { label: 'No policy', tone: 'red' as const, helper: 'Add a policy to complete protection' };
   const complianceItems = useMemo(() => vehicleComplianceItems(vehicle, latestPolicy), [latestPolicy, vehicle]);
   const alertItems = complianceItems.filter((item) => item.status !== 'ok');
@@ -104,17 +108,27 @@ export default function VehicleDetailScreen() {
           </View>
           <Pressable
             accessibilityRole="button"
-            onPress={() => router.push({ pathname: '/customer/add-policy', params: { vehicleId: vehicle.id } } as any)}
+            onPress={() => {
+              if (latestPolicyActive && latestPolicy) {
+                router.push({ pathname: '/customer/policy-detail', params: { id: latestPolicy.id, source: latestPolicy.source } } as any);
+                return;
+              }
+              router.push({ pathname: '/customer/add-policy', params: { vehicleId: vehicle.id } } as any);
+            }}
             style={({ pressed }) => [styles.compactPolicyAction, pressed && styles.actionPressed]}
           >
-            <MaterialCommunityIcons name="shield-plus-outline" size={14} color={palette.navy} />
-            <Text style={styles.compactPolicyActionText}>Add policy</Text>
+            <MaterialCommunityIcons name={latestPolicyActive ? 'eye-outline' : 'shield-plus-outline'} size={14} color={palette.navy} />
+            <Text style={styles.compactPolicyActionText}>{latestPolicyActive ? 'View policy' : 'Add policy'}</Text>
           </Pressable>
         </View>
 
         <View style={styles.policyCard}>
           <View style={styles.policyIconShell}>
-            <MaterialCommunityIcons name="shield-check-outline" size={28} color="#4154A6" />
+            {latestPolicyLogo ? (
+              <Image source={latestPolicyLogo} style={styles.policyInsurerLogo} resizeMode="contain" />
+            ) : (
+              <MaterialCommunityIcons name={latestPolicy ? 'shield-check-outline' : 'shield-plus-outline'} size={28} color="#4154A6" />
+            )}
           </View>
           <View style={styles.policyCardCopy}>
             <View style={styles.policyNumberRow}>
@@ -350,6 +364,7 @@ const styles = StyleSheet.create({
   actionPressed: { opacity: 0.86, transform: [{ scale: 0.97 }] },
   policyCard: { marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.22)', flexDirection: 'row', alignItems: 'center', gap: 10 },
   policyIconShell: { width: 58, height: 58, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE5F0' },
+  policyInsurerLogo: { width: 46, height: 46 },
   policyCardCopy: { flex: 1, minWidth: 0 },
   policyNumberRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
   policyNumber: { flexShrink: 1, color: '#FFFFFF', fontSize: 15.5, lineHeight: 19, fontWeight: '900' },
