@@ -104,7 +104,7 @@ export function normalizeVehicleBrandKey(value: string | null | undefined) {
     .replace(/[^a-z0-9]+/g, "");
 }
 
-export function getVehicleBrandLogo(make: string | null | undefined) {
+export function getStaticVehicleBrandLogo(make: string | null | undefined) {
   const key = normalizeVehicleBrandKey(make);
   if (!key) return null;
 
@@ -117,4 +117,15 @@ export function getVehicleBrandLogo(make: string | null | undefined) {
   const orderedKeys = Object.keys(VEHICLE_BRAND_LOGOS).sort((a, b) => b.length - a.length);
   const contained = orderedKeys.find((brandKey) => key.includes(brandKey));
   return contained ? VEHICLE_BRAND_LOGOS[contained] : null;
+}
+
+export function getVehicleBrandLogo(make: string | null | undefined) {
+  const value = String(make || "").trim();
+  if (!value) return null;
+
+  // Resolve through vehicle manufacturer master data first so operational brand names
+  // such as Sonalika/Solis and New Holland/CASE IH inherit the verified logo from
+  // their parent manufacturer. The API route falls back to the legacy local asset
+  // resolver when no verified managed logo exists, preserving existing behaviour.
+  return `/api/manufacturer-logo?make=${encodeURIComponent(value)}`;
 }
