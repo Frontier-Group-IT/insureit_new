@@ -21,6 +21,7 @@ type VehiclePolicyDisplay = {
   vehicle_id: string;
   insurance_company_id: string;
   policy_no: string;
+  policy_type?: string | null;
   start_date: string;
   end_date: string;
   source: 'sibl' | 'external';
@@ -64,8 +65,8 @@ export default function VehicleDetailScreen() {
 
       if (vehicleResult.data) {
         const [policyResult, externalPolicyResult] = await Promise.all([
-          supabase.from('policies').select('vehicle_id,insurance_company_id,policy_no,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', customerIds),
-          (supabase as any).from('external_policies').select('vehicle_id,insurance_company_id,policy_no,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', customerIds),
+          supabase.from('policies').select('vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', customerIds),
+          (supabase as any).from('external_policies').select('vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', customerIds),
         ]);
         const nextPolicies: VehiclePolicyDisplay[] = [
           ...((policyResult.data ?? []).map((policy) => ({ ...policy, source: 'sibl' as const }))),
@@ -97,7 +98,7 @@ export default function VehicleDetailScreen() {
 
   const v = vehicle as any;
   const modelText = [v.make, v.model].filter(Boolean).join(' ') || v.vehicle_type || 'Vehicle';
-  const policyType = latestPolicy?.source === 'external' ? 'External' : latestPolicy ? 'Insureit' : '-';
+  const policyType = latestPolicy?.policy_type?.trim() || (latestPolicy?.source === 'external' ? 'External' : latestPolicy ? 'Motor' : '-');
 
   return (
     <Screen title="Vehicle Detail" subtitle={v.vehicle_no} showLogout showTitleHeader={false}>
@@ -264,7 +265,7 @@ function isPolicyActive(policy: Pick<VehiclePolicyDisplay, 'start_date' | 'end_d
 function policyStatus(endDate: string) {
   const days = Math.ceil((new Date(endDate).getTime() - Date.now()) / 86400000);
   if (days < 0) return { label: 'Expired', tone: 'red' as const, helper: `Expired ${Math.abs(days)} days ago` };
-  if (days <= 30) return { label: 'Renewal due', tone: 'orange' as const, helper: `${days} days left` };
+  if (days <= 45) return { label: 'Renewal due', tone: 'orange' as const, helper: `${days} days left` };
   return { label: 'Protected', tone: 'green' as const, helper: `${days} days of cover remaining` };
 }
 
@@ -279,13 +280,17 @@ function buildAlerts(vehicle: Vehicle | null, policy: VehiclePolicyDisplay | nul
     { key: 'national-permit', label: 'National permit', date: v.national_permit_expiry_date, icon: 'map-marker-path' },
     { key: 'local-permit', label: 'Local permit', date: v.local_permit_expiry_date, icon: 'map-marker-radius-outline' },
   ];
-  return values.flatMap((item) => {
-    if (!item.date) return [];
+  const alerts: AlertItem[] = [];
+  for (const item of values) {
+    if (!item.date) continue;
     const diff = Math.ceil((new Date(item.date).getTime() - Date.now()) / 86400000);
-    if (diff < 0) return [{ ...item, date: item.date, status: 'expired' as const, days: Math.abs(diff) }];
-    if (diff <= 30) return [{ ...item, date: item.date, status: 'due' as const, days: diff }];
-    return [];
-  });
+    if (diff < 0) {
+      alerts.push({ ...item, date: item.date, status: 'expired', days: Math.abs(diff) });
+    } else if (diff <= 45) {
+      alerts.push({ ...item, date: item.date, status: 'due', days: diff });
+    }
+  }
+  return alerts;
 }
 
 function buildDocumentRows(vehicle: Vehicle, policy: VehiclePolicyDisplay | null) {
@@ -302,7 +307,7 @@ function dateStatus(value?: string | null): 'expired' | 'due' | 'ok' {
   if (!value) return 'ok';
   const days = Math.ceil((new Date(value).getTime() - Date.now()) / 86400000);
   if (days < 0) return 'expired';
-  if (days <= 30) return 'due';
+  if (days <= 45) return 'due';
   return 'ok';
 }
 
