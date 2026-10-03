@@ -299,8 +299,7 @@ function PendingTasksCard({ data, onOpenClaims }: { data: PartnerHomeData; onOpe
           <Text style={styles.pendingHint}>Keep up with important actions.</Text>
         </View>
         <View style={styles.pendingDecor}>
-          <Ionicons name="clipboard-outline" size={40} color="#8CC8F7" />
-          <Ionicons name="checkmark-circle-outline" size={19} color="#8CC8F7" style={styles.pendingDecorCheck} />
+          <Image source={PartnerAssets.status.pendingReview} style={styles.pendingDecorImage} resizeMode="contain" />
         </View>
       </View>
 
@@ -744,18 +743,16 @@ const styles = StyleSheet.create({
   },
   pendingDecor: {
     position: 'absolute',
-    right: -5,
-    top: -2,
-    width: 58,
-    height: 50,
-    opacity: 0.55,
+    right: -4,
+    top: -4,
+    width: 64,
+    height: 58,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pendingDecorCheck: {
-    position: 'absolute',
-    right: 4,
-    bottom: 0,
+  pendingDecorImage: {
+    width: 62,
+    height: 62,
   },
   pendingRow: {
     minHeight: 47,
