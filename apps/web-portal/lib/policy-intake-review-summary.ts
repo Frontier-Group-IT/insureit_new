@@ -1,4 +1,5 @@
 import type { PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
+import { loadLifeHealthCaseSummary } from "@/lib/life-health-case-summary";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import type { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -16,6 +17,7 @@ type PolicyIntakeSummaryRow = {
 export type PolicyIntakeReviewSummary = {
   actionRequired: number | null;
   inReview: number;
+  proposalPending: number | null;
 };
 
 type PolicyIntakeReviewSummaryOptions = {
@@ -38,7 +40,10 @@ export async function loadPolicyIntakeReviewSummary(
       query = query.eq("submitted_by_profile_id", options.submittedByProfileId);
     }
 
-    const { data, error } = await query.returns<PolicyIntakeSummaryRow[]>();
+    const [{ data, error }, proposalSummary] = await Promise.all([
+      query.returns<PolicyIntakeSummaryRow[]>(),
+      loadLifeHealthCaseSummary(admin),
+    ]);
     if (error) return null;
     const rows = data ?? [];
     const duplicateCheck = await loadPolicyIntakeDuplicateMatches(admin, rows);
@@ -51,6 +56,7 @@ export async function loadPolicyIntakeReviewSummary(
         ? queueRows.filter((row) => row.status === "ready_for_review" || (row.status === "processing" && row.ocr_status === "failed")).length
         : null,
       inReview: queueRows.filter((row) => row.status === "in_review").length,
+      proposalPending: proposalSummary?.pending ?? null,
     };
   } catch {
     return null;
