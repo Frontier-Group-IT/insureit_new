@@ -87,14 +87,16 @@ export function InsuranceCompanyRegister({ rows }: { rows: InsuranceCompanyRegis
           <table className="w-full min-w-[900px] border-collapse text-left">
             <thead className="bg-[#F8FAFD] text-[8px] font-black uppercase tracking-[.08em] text-[#6F7F93]"><tr><th className="px-4 py-3">Insurance company</th><th className="px-4 py-3">Segment</th><th className="px-4 py-3">SIBPL code</th><th className="px-4 py-3">Portal</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Action</th></tr></thead>
             <tbody className="divide-y divide-[#EDF1F6]">
-              {visible.map((row) => (
+              {visible.map((row) => {
+                const logoUrl = getInsurerLogo(row.name, row.updated_at);
+                return (
                 <tr key={row.id} className="bg-white text-[10.5px] text-[#334155] hover:bg-[#FBFCFE]">
                   <td className="max-w-[360px] px-4 py-3">
                     <div className="flex items-center gap-2.5">
-                      {getInsurerLogo(row.name) ? (
+                      {logoUrl ? (
                         <span className="grid h-7 w-7 shrink-0 place-items-center">
                           <Image
-                            src={getInsurerLogo(row.name)!}
+                            src={logoUrl}
                             alt={`${row.name} logo`}
                             width={28}
                             height={28}
@@ -118,7 +120,7 @@ export function InsuranceCompanyRegister({ rows }: { rows: InsuranceCompanyRegis
                   <td className="px-4 py-3"><span className={`rounded-full px-2.5 py-1 text-[8.5px] font-bold ${row.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{row.is_active ? "Active" : "Inactive"}</span></td>
                   <td className="px-4 py-3 text-right"><Link href={`/master-data/insurance-companies/${row.id}`} className="rounded-lg border border-[#D6DFEB] bg-white px-3 py-2 text-[9px] font-bold text-[#17365D] hover:bg-[#F8FAFD]">Review</Link></td>
                 </tr>
-              ))}
+              )})}
               {!visible.length ? <tr><td colSpan={6} className="px-4 py-12 text-center"><p className="text-[11px] font-semibold text-[#475467]">No insurance companies match these filters.</p><p className="mt-1 text-[9px] text-[#98A2B3]">Clear the search or change segment/status.</p></td></tr> : null}
             </tbody>
           </table>
