@@ -31,10 +31,11 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     const { data: lifeHealthCase } = await admin.from("life_health_cases").select("id,business_line,sourcing_date,intermediary_id,intermediary_type,intermediary_code,lead_source,rm_employee_id,rm_name,rm_code,customer_id,insurance_company_id,product_name,proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode,premium_amount,remarks").eq("final_policy_id", resolvedParams.id).order("converted_at", { ascending:false }).limit(1).maybeSingle<CaseEditRow>();
     if (!lifeHealthCase) notFound();
 
-    const [{ data: customer }, { data: intermediaryRows }, { data: documentRows }, insurerOptions, activityHistory, payinResult, payoutResult] = await Promise.all([
+    const [{ data: customer }, { data: intermediaryRows }, { data: caseDocumentRows }, { data: policyCopyRows }, insurerOptions, activityHistory, payinResult, payoutResult] = await Promise.all([
       admin.from("customers").select("contact_name,company_name,phone,email").eq("id", lifeHealthCase.customer_id).maybeSingle<CustomerRow>(),
       admin.from("intermediaries").select("id,intermediary_type,display_name,intermediary_code,mobile,associate_employee_id").in("intermediary_type", ["posp","misp","partner"]).eq("account_status","active").order("display_name", { ascending:true }).returns<IntermediaryRow[]>(),
-      admin.from("life_health_case_documents").select("id,document_type,file_name,storage_bucket,storage_path").eq("case_id", lifeHealthCase.id).in("document_type", ["policy_copy","proposal_form","benefit_illustration","premium_receipt","other_document"]).returns<DocumentRow[]>(),
+      admin.from("life_health_case_documents").select("id,document_type,file_name,storage_bucket,storage_path").eq("case_id", lifeHealthCase.id).in("document_type", ["proposal_form","benefit_illustration","premium_receipt","other_document"]).returns<DocumentRow[]>(),
+      admin.from("policy_documents").select("id,document_type,file_name,storage_bucket,storage_path").eq("policy_id", policy.id).eq("document_type", "policy_copy").order("created_at", { ascending:false }).limit(1).returns<DocumentRow[]>(),
       getActiveInsuranceCompanyOptions(),
       loadPolicyActivityHistory({ policyId:policy.id, createdBy:policy.created_by, createdAt:policy.created_at, updatedAt:policy.updated_at }),
       commercialAccess ? admin.from("policy_payin_details").select("commercial_status,projected_commission_amount,insurer_scheme_amount").eq("policy_id", policy.id).maybeSingle<PayinRow>() : Promise.resolve({ data:null as PayinRow|null, error:null }),
@@ -59,7 +60,8 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     if (lifeHealthCase.intermediary_id && !sources.some((source)=>source.id === lifeHealthCase.intermediary_id)) sources.unshift({ id:lifeHealthCase.intermediary_id, type:lifeHealthCase.intermediary_type === "POSP" ? "POSP" : lifeHealthCase.intermediary_type === "MISP" ? "MISP" : "SIBL / Partner", label:lifeHealthCase.lead_source || "Saved source", code:lifeHealthCase.intermediary_code || "", mobile:"", rmName:savedRmName, rmCode:savedRmCode });
     const insurers = insurerOptions.filter((option)=>option.segment === "life" || option.segment === "health" || option.value === lifeHealthCase.insurance_company_id).map(({ value,label })=>({ value,label }));
 
-    const documents = await Promise.all((documentRows ?? []).map(async (row) => {
+    const documentRows = [...(caseDocumentRows ?? []), ...(policyCopyRows ?? [])];
+    const documents = await Promise.all(documentRows.map(async (row) => {
       const { data:signed } = await admin.storage.from(row.storage_bucket).createSignedUrl(row.storage_path, 60 * 60);
       return { id:row.id, type:row.document_type as "policy_copy"|"proposal_form"|"benefit_illustration"|"premium_receipt"|"other_document", fileName:row.file_name, viewUrl:signed?.signedUrl || "" };
     }));

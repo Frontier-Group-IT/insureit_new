@@ -5,6 +5,8 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
 
+type ManagedLogoMap = Record<string, string>;
+
 const loadManagedLogoMap = unstable_cache(
   async () => {
     const admin = createSupabaseAdminClient();
@@ -15,18 +17,36 @@ const loadManagedLogoMap = unstable_cache(
 
     if (error) {
       console.error("Unable to load insurer master logos", { error: error.message });
-      return {} as Record<string, string>;
+      return {} as ManagedLogoMap;
     }
 
     return Object.fromEntries(
       (data ?? [])
         .map((row) => [normalizeInsurerLogoKey(row.name), row.logo_path] as const)
         .filter(([key, path]) => Boolean(key && path)),
-    ) as Record<string, string>;
+    ) as ManagedLogoMap;
   },
   ["insurer-master-logo-map"],
   { revalidate: 300, tags: ["reference:insurance-companies"] },
 );
+
+function findManagedLogo(insurerName: string, managedLogos: ManagedLogoMap) {
+  const normalizedName = normalizeInsurerLogoKey(insurerName);
+  const exactManagedPath = managedLogos[normalizedName];
+  if (exactManagedPath) return exactManagedPath;
+
+  // Historical policy data can contain an alias/former insurer name while Master Data
+  // stores the current registered name. When both names resolve to the same built-in
+  // catalog logo, treat them as the same insurer so the Master Data upload still wins.
+  const requestedStaticLogo = getStaticInsurerLogo(insurerName);
+  if (!requestedStaticLogo) return null;
+
+  for (const [managedName, managedPath] of Object.entries(managedLogos)) {
+    if (getStaticInsurerLogo(managedName) === requestedStaticLogo) return managedPath;
+  }
+
+  return null;
+}
 
 function genericInsurerSvg() {
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -59,18 +79,19 @@ export async function GET(request: NextRequest) {
   }
 
   const managedLogos = await loadManagedLogoMap();
-  const managedPath = managedLogos[normalizeInsurerLogoKey(insurerName)];
+  const managedPath = findManagedLogo(insurerName, managedLogos);
   if (managedPath) {
     const admin = createSupabaseAdminClient();
     const { data } = admin.storage.from(INSURER_LOGO_BUCKET).getPublicUrl(managedPath);
     if (data.publicUrl) {
-      // Managed logos can be replaced from Master Data. Do not cache this name-based
-      // redirect, otherwise a previous logo URL can remain pinned at the CDN/browser
-      // after revalidateTag() has already refreshed the managed logo lookup.
+      // Master Data is authoritative. Managed logos can be replaced at any time, so do
+      // not cache this name-based redirect. The storage object itself is immutable and
+      // safely cached because each replacement upload gets a new path.
       return withoutCache(NextResponse.redirect(data.publicUrl, 307));
     }
   }
 
+  // Built-in logos are fallback-only when Master Data has no managed logo.
   const staticLogo = getStaticInsurerLogo(insurerName);
   if (staticLogo) return withCache(NextResponse.redirect(new URL(staticLogo, request.nextUrl.origin), 307));
 
