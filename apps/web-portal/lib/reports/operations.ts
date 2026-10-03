@@ -3,8 +3,8 @@ import { getAccessibleCustomerIds, getEmployeeAccessScope } from "@/lib/employee
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type ViewerProfile={id:string;role:string|null};
-export type OperationsQuery={horizon?:string;exception?:string;page?:string};
-export type OperationsFilters={horizonDays:number;exception:string|null;page:number};
+export type OperationsQuery={horizon?:string;exception?:string;business?:string;category?:string;page?:string};
+export type OperationsFilters={horizonDays:number;exception:string|null;businessLine:"Motor"|"Non Motor"|"Life"|"Health"|null;category:string|null;page:number};
 export type OperationsReport={
  summary:{vehicle_count:number;commercial_vehicle_count:number;authbridge_verified_count:number;authbridge_unverified_count:number;vehicles_missing_compliance_data:number;missing_compliance_fields:number;expired_document_count:number;due_document_count:number};
  compliance:Array<{label:string;vehicle_count:number;missing_count:number;expired_count:number;due_count:number;nearest_expiry_date:string|null}>;
@@ -21,7 +21,7 @@ export async function loadOperationsReport(profile:ViewerProfile,query:Operation
  ]);
  if(customerIds!==null&&customerIds.length===0)return{report:emptyOperationsReport(filters.page),filters,scopeMode:scope.mode};
  const admin=createSupabaseAdminClient();
- const {data,error}=await admin.rpc("get_operations_compliance_report",{p_customer_ids:customerIds,p_horizon_days:filters.horizonDays,p_exception:filters.exception,p_page:filters.page,p_page_size:pageSize});
+ const {data,error}=await admin.rpc("get_operations_compliance_report_v2",{p_customer_ids:customerIds,p_horizon_days:filters.horizonDays,p_exception:filters.exception,p_business_line:filters.businessLine,p_category:filters.category,p_page:filters.page,p_page_size:pageSize});
  if(error)throw new Error(`Operations report query failed: ${error.message}`);
  return{report:normalizeOperationsReport(data,filters.page,pageSize),filters,scopeMode:scope.mode};
 }
@@ -30,7 +30,7 @@ export function resolveOperationsFilters(query:OperationsQuery):OperationsFilter
  const parsed=Number.parseInt(query.horizon??"90",10);
  const horizonDays=[30,60,90,180,365].includes(parsed)?parsed:90;
  const exception=isException(query.exception)?query.exception:null;
- return{horizonDays,exception,page:positiveInteger(query.page)};
+ return{horizonDays,exception,businessLine:businessLine(query.business),category:cleanText(query.category,120),page:positiveInteger(query.page)};
 }
 
 function normalizeOperationsReport(value:unknown,page:number,pageSize=25):OperationsReport{
@@ -45,6 +45,8 @@ function normalizeOperationsReport(value:unknown,page:number,pageSize=25):Operat
 function normalizeRow(row:unknown):OperationsRow{const x=objectValue(row);return{id:stringValue(x.id),customer_id:stringValue(x.customer_id),customer_name:stringValue(x.customer_name),customer_code:stringValue(x.customer_code),vehicle_no:stringValue(x.vehicle_no),vehicle_type:nullableString(x.vehicle_type),make:nullableString(x.make),model:nullableString(x.model),registration_status:nullableString(x.registration_status),is_commercial:typeof x.is_commercial==="boolean"?x.is_commercial:null,authbridge_verified:Boolean(x.authbridge_verified),authbridge_last_verified_at:nullableString(x.authbridge_last_verified_at),fitness_expiry_date:nullableString(x.fitness_expiry_date),puc_expiry_date:nullableString(x.puc_expiry_date),road_tax_expiry_date:nullableString(x.road_tax_expiry_date),national_permit_expiry_date:nullableString(x.national_permit_expiry_date),local_permit_expiry_date:nullableString(x.local_permit_expiry_date),missing_compliance_count:numberValue(x.missing_compliance_count),expired_compliance_count:numberValue(x.expired_compliance_count),due_compliance_count:numberValue(x.due_compliance_count),nearest_expiry_date:nullableString(x.nearest_expiry_date)}}
 export function emptyOperationsReport(page=1):OperationsReport{return{summary:{vehicle_count:0,commercial_vehicle_count:0,authbridge_verified_count:0,authbridge_unverified_count:0,vehicles_missing_compliance_data:0,missing_compliance_fields:0,expired_document_count:0,due_document_count:0},compliance:[],customer_documents:{document_count:0,pending_count:0,rejected_count:0,verified_count:0,customers_with_exceptions:0},register:{rows:[],total_count:0,page,page_size:25}}}
 function isException(v:string|undefined){return v==="all"||v==="missing"||v==="expired"||v==="due"||v==="unverified"}
+function businessLine(v:string|undefined):OperationsFilters["businessLine"]{return v==="Motor"||v==="Non Motor"||v==="Life"||v==="Health"?v:null}
+function cleanText(v:string|undefined,max:number){const x=v?.trim();return x?x.slice(0,max):null}
 function positiveInteger(v:string|undefined){const x=Number.parseInt(v??"1",10);return Number.isFinite(x)&&x>0?x:1}
 function arrayValue(v:unknown):unknown[]{return Array.isArray(v)?v:[]}
 function objectValue(v:unknown):Record<string,unknown>{return v&&typeof v==="object"&&!Array.isArray(v)?v as Record<string,unknown>:{} }
