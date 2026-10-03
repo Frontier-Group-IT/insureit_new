@@ -1,10 +1,20 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { splitManufacturerTokens, vehicleManufacturerSlug } from "@/lib/vehicle-manufacturer-master";
+import { splitManufacturerTokens, vehicleManufacturerSlug, VEHICLE_MANUFACTURER_LOGO_BUCKET } from "@/lib/vehicle-manufacturer-master";
+
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+const LOGO_MIME_EXTENSIONS: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+};
+
+type AdminClient = ReturnType<typeof createSupabaseAdminClient>;
 
 function text(formData: FormData, name: string) {
   const value = formData.get(name);
@@ -20,6 +30,43 @@ function errorUrl(path: string, message: string) {
   return `${path}${separator}error=${encodeURIComponent(message)}`;
 }
 
+function logoFile(formData: FormData) {
+  const value = formData.get("logo");
+  if (!value || typeof value === "string" || value.size === 0) return null;
+  if (!LOGO_MIME_EXTENSIONS[value.type]) throw new Error("Logo must be a PNG, JPG or WebP image.");
+  if (value.size > MAX_LOGO_BYTES) throw new Error("Logo must be 2 MB or smaller.");
+  return value;
+}
+
+async function uploadManufacturerLogo(admin: AdminClient, file: File) {
+  const extension = LOGO_MIME_EXTENSIONS[file.type];
+  const objectPath = `${randomUUID()}/${randomUUID()}.${extension}`;
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const { error } = await admin.storage.from(VEHICLE_MANUFACTURER_LOGO_BUCKET).upload(objectPath, bytes, {
+    contentType: file.type,
+    cacheControl: "31536000",
+    upsert: false,
+  });
+  if (error) throw new Error(`Logo upload failed: ${error.message}`);
+  const { data } = admin.storage.from(VEHICLE_MANUFACTURER_LOGO_BUCKET).getPublicUrl(objectPath);
+  if (!data.publicUrl) throw new Error("Logo upload completed but no public URL was returned.");
+  return { objectPath, publicUrl: data.publicUrl };
+}
+
+function managedObjectPath(publicUrl: string | null | undefined) {
+  if (!publicUrl) return null;
+  const marker = `/storage/v1/object/public/${VEHICLE_MANUFACTURER_LOGO_BUCKET}/`;
+  const index = publicUrl.indexOf(marker);
+  return index >= 0 ? decodeURIComponent(publicUrl.slice(index + marker.length).split("?")[0]) : null;
+}
+
+async function removeManagedLogo(admin: AdminClient, publicUrl: string | null | undefined) {
+  const path = managedObjectPath(publicUrl);
+  if (!path) return;
+  const { error } = await admin.storage.from(VEHICLE_MANUFACTURER_LOGO_BUCKET).remove([path]);
+  if (error) console.error("Vehicle manufacturer logo cleanup failed", { path, error: error.message });
+}
+
 export async function saveVehicleManufacturer(id: string | null, formData: FormData) {
   const profile = await requireCapability("manage_master_data", "edit");
   if (!profile?.id) redirect("/access-denied");
@@ -32,6 +79,34 @@ export async function saveVehicleManufacturer(id: string | null, formData: FormD
   if (!name || !displayName || !manufacturerCode || !slug) {
     redirect(errorUrl(basePath, "Legal name, display name, manufacturer code and slug are required."));
   }
+
+  let logo: File | null;
+  try {
+    logo = logoFile(formData);
+  } catch (error) {
+    redirect(errorUrl(basePath, error instanceof Error ? error.message : "Review the manufacturer logo."));
+  }
+
+  const admin = createSupabaseAdminClient();
+  let oldLogoPath: string | null = null;
+  if (id) {
+    const { data: existing, error: existingError } = await admin.from("vehicle_manufacturers").select("logo_path").eq("id", id).maybeSingle<{ logo_path: string | null }>();
+    if (existingError) redirect(errorUrl(basePath, `Unable to load existing manufacturer: ${existingError.message}`));
+    oldLogoPath = existing?.logo_path ?? null;
+  }
+
+  let uploaded: { objectPath: string; publicUrl: string } | null = null;
+  if (logo) {
+    try {
+      uploaded = await uploadManufacturerLogo(admin, logo);
+    } catch (error) {
+      redirect(errorUrl(basePath, error instanceof Error ? error.message : "Logo could not be uploaded."));
+    }
+  }
+
+  const removeLogo = formData.get("remove_logo") === "on";
+  const fallbackLocalLogo = text(formData, "fallback_logo_path");
+  const nextLogoPath = uploaded?.publicUrl ?? (removeLogo ? fallbackLocalLogo : oldLogoPath ?? fallbackLocalLogo);
 
   const sortOrderInput = text(formData, "sort_order");
   const sortOrder = sortOrderInput && Number.isFinite(Number(sortOrderInput)) ? Number(sortOrderInput) : 1000;
@@ -51,9 +126,9 @@ export async function saveVehicleManufacturer(id: string | null, formData: FormD
     india_presence_type: text(formData, "india_presence_type"),
     website_url: text(formData, "website_url"),
     market_status: text(formData, "market_status") ?? "pending_review",
-    logo_path: text(formData, "logo_path"),
+    logo_path: nextLogoPath,
     logo_source_url: text(formData, "logo_source_url"),
-    logo_status: text(formData, "logo_status") ?? "missing",
+    logo_status: nextLogoPath ? "verified" : (text(formData, "logo_status") ?? "missing"),
     source_name: text(formData, "source_name"),
     source_url: text(formData, "source_url"),
     source_verified_at: text(formData, "source_verified_at"),
@@ -61,7 +136,6 @@ export async function saveVehicleManufacturer(id: string | null, formData: FormD
     sort_order: sortOrder,
   };
 
-  const admin = createSupabaseAdminClient();
   const { data, error } = await admin.rpc("save_vehicle_manufacturer_master", {
     p_id: id,
     p_payload: payload,
@@ -72,7 +146,12 @@ export async function saveVehicleManufacturer(id: string | null, formData: FormD
   });
 
   const savedId = typeof data === "string" ? data : null;
-  if (error || !savedId) redirect(errorUrl(basePath, error?.message ?? "Unable to save vehicle manufacturer."));
+  if (error || !savedId) {
+    if (uploaded) await admin.storage.from(VEHICLE_MANUFACTURER_LOGO_BUCKET).remove([uploaded.objectPath]);
+    redirect(errorUrl(basePath, error?.message ?? "Unable to save vehicle manufacturer."));
+  }
+
+  if ((uploaded || removeLogo) && oldLogoPath && oldLogoPath !== nextLogoPath) await removeManagedLogo(admin, oldLogoPath);
 
   revalidateTag("reference:vehicle-manufacturers");
   revalidatePath("/master-data/vehicle-manufacturers");
