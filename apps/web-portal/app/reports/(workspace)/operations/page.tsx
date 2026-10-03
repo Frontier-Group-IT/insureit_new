@@ -270,4 +270,4 @@ function daysFrom(today:Date,value:string){const d=new Date(`${value}T00:00:00+0
 function href(path:string,f:OperationsFilters){const s=new URLSearchParams();s.set("horizon",String(f.horizonDays));if(f.exception)s.set("exception",f.exception);return `${path}?${s}`}
 function date(v:string|null){if(!v)return"—";const d=new Date(`${v}T00:00:00+05:30`);return Number.isNaN(d.getTime())?v:new Intl.DateTimeFormat("en-IN",{day:"2-digit",month:"short",year:"numeric",timeZone:"Asia/Kolkata"}).format(d)}
 function integer(v:number){return new Intl.NumberFormat("en-IN",{maximumFractionDigits:0}).format(v||0)}
-function fallbackFilters():OperationsFilters{return{horizonDays:90,exception:null,page:1}}
+function fallbackFilters():OperationsFilters{return{horizonDays:90,exception:null,businessLine:null,category:null,page:1}}
