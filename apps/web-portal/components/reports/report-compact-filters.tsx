@@ -16,6 +16,7 @@ export type ReportCompactFilterField = {
 };
 
 type BusinessLine = "Motor" | "Non Motor" | "Life" | "Health";
+const businessLineOptions = [{value:"",label:"All Business"},{value:"Motor",label:"Motor"},{value:"Non Motor",label:"Non Motor"},{value:"Life",label:"Life"},{value:"Health",label:"Health"}] as const;
 
 export function ReportCompactFilters({
   path,
@@ -168,13 +169,7 @@ export function ReportCompactFilters({
           </button>
           {businessOpen ? (
             <div role="menu" aria-label="Business line" className="absolute right-0 top-[calc(100%+6px)] z-50 min-w-[165px] overflow-hidden rounded-lg border border-[#d8e0eb] bg-white p-1.5 shadow-[0_14px_35px_rgba(25,45,78,0.16)]">
-              {[
-                { value: "", label: "All Business" },
-                { value: "Motor", label: "Motor" },
-                { value: "Non Motor", label: "Non Motor" },
-                { value: "Life", label: "Life" },
-                { value: "Health", label: "Health" },
-              ].map((option) => {
+              {businessLineOptions.map((option) => {
                 const selected = (businessLine ?? "") === option.value;
                 return (
                   <button
