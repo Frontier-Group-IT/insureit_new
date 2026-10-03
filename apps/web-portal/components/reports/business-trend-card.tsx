@@ -132,7 +132,6 @@ function BusinessTrendChart({
           </g>
         ))}
 
-        <text x="8" y="16" className="ov-axis-label">{compactMoney(premiumMax)}</text>
         <text x={width - 5} y="16" textAnchor="end" className="ov-axis-label">{number(policyMax)}</text>
 
         {hovered && hoveredIndex != null ? <Tooltip x={x(hoveredIndex)} width={width} point={hovered} /> : null}
