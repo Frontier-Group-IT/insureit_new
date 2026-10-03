@@ -1,3 +1,5 @@
+export const VEHICLE_MANUFACTURER_LOGO_BUCKET = "manufacturer-assets";
+
 export const VEHICLE_MANUFACTURER_SEGMENTS = [
   ["PASSENGER_VEHICLE", "Passenger vehicle"],
   ["COMMERCIAL_VEHICLE", "Commercial vehicle"],
