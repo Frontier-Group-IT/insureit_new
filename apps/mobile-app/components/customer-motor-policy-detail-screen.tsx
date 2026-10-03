@@ -294,7 +294,7 @@ export default function CustomerMotorPolicyDetailScreen() {
             }
             style={({ pressed }) => [styles.pageRenewAction, pressed && styles.pressed]}
           >
-            <MaterialCommunityIcons name="plus" size={17} color="#FFFFFF" />
+            <MaterialCommunityIcons name="plus" size={16} color="#FFFFFF" />
             <Text style={styles.pageRenewActionText}>Add renewed policy</Text>
           </Pressable>
         ) : null}
@@ -303,21 +303,23 @@ export default function CustomerMotorPolicyDetailScreen() {
       <Card style={styles.detailSection}>
         <View style={styles.sectionRow}>
           <View style={styles.detailIcon}>
-            <MaterialCommunityIcons name="shield-check-outline" size={20} color={palette.navy} />
+            <MaterialCommunityIcons name="shield-check-outline" size={19} color={palette.navy} />
           </View>
           <View style={styles.sectionCopy}>
             <Text style={styles.sectionTitle}>Motor policy details</Text>
-            <Text style={styles.sectionHint}>Details stored for this motor policy</Text>
+            <Text style={styles.sectionHint}>Policy overview</Text>
           </View>
           <StatusPill label={status.label} tone={status.tone} />
         </View>
 
-        <Text style={styles.detailGroupLabel}>Policy information</Text>
+        <Text style={styles.detailGroupLabel}>Insurer details</Text>
         <View style={styles.detailGrid}>
-          <DetailCell icon="shield-outline" label="Policy product" value={product} />
           <DetailCell icon="office-building-outline" label="Insurance company" value={company?.name ?? '-'} logo={getInsurerLogoSource(company?.name)} />
           <DetailCell icon="file-document-outline" label="Policy number" value={displayPolicyNumber} />
+          <DetailCell icon="shield-outline" label="Policy product" value={product} />
           <DetailCell icon="cash-lock" label="IDV" value={formatCurrency(policy.insured_declared_value)} />
+          <DetailCell icon="account-outline" label="Insured name" value={insuredName} />
+          <DetailCell icon="phone-outline" label="Phone number" value={customer?.phone || '-'} />
         </View>
 
         <Text style={styles.detailGroupLabel}>Premium breakup</Text>
@@ -338,15 +340,9 @@ export default function CustomerMotorPolicyDetailScreen() {
           <DetailCell icon="calendar-range-outline" label="Policy term" value={policy.policy_term || '-'} />
         </View>
 
-        <Text style={styles.detailGroupLabel}>Insured details</Text>
-        <View style={styles.detailGrid}>
-          <DetailCell icon="account-outline" label="Insured name" value={insuredName} />
-          <DetailCell icon="phone-outline" label="Phone number" value={customer?.phone || '-'} />
-        </View>
-
         <Text style={styles.detailGroupLabel}>Remarks / activity note</Text>
         <View style={styles.noteBox}>
-          <MaterialCommunityIcons name="note-text-outline" size={16} color={palette.navy} />
+          <MaterialCommunityIcons name="note-text-outline" size={15} color={palette.navy} />
           <Text style={styles.noteText}>{policy.remarks?.trim() || '-'}</Text>
         </View>
 
@@ -359,22 +355,22 @@ export default function CustomerMotorPolicyDetailScreen() {
             onPress={() => void openPolicyCopy()}
             style={({ pressed }) => [styles.documentRow, pressed && styles.pressed]}
           >
-            <View style={styles.documentIcon}><MaterialCommunityIcons name="file-document-check-outline" size={22} color="#0A43A3" /></View>
+            <View style={styles.documentIcon}><MaterialCommunityIcons name="file-document-check-outline" size={20} color="#0A43A3" /></View>
             <View style={styles.documentCopy}>
               <Text style={styles.documentTitle}>Policy copy</Text>
               <Text style={styles.documentName} numberOfLines={1}>{policyCopy.file_name || 'Policy document'}</Text>
               <Text style={styles.documentMeta}>{formatFileSize(policyCopy.file_size)}</Text>
             </View>
-            {openingCopy ? <ActivityIndicator size="small" color="#0A43A3" /> : <MaterialCommunityIcons name="open-in-new" size={20} color="#38506C" />}
+            {openingCopy ? <ActivityIndicator size="small" color="#0A43A3" /> : <MaterialCommunityIcons name="open-in-new" size={19} color="#38506C" />}
           </Pressable>
         ) : (
           <Pressable disabled={uploadingCopy} onPress={() => void pickAndUploadPolicyCopy()} style={({ pressed }) => [styles.documentRow, pressed && styles.pressed]}>
-            <View style={styles.documentIcon}><MaterialCommunityIcons name="file-upload-outline" size={22} color="#0A43A3" /></View>
+            <View style={styles.documentIcon}><MaterialCommunityIcons name="file-upload-outline" size={20} color="#0A43A3" /></View>
             <View style={styles.documentCopy}>
               <Text style={styles.documentTitle}>Policy copy</Text>
               <Text style={styles.documentName}>{uploadingCopy ? 'Uploading policy copy...' : 'Policy copy not uploaded'}</Text>
             </View>
-            {uploadingCopy ? <ActivityIndicator size="small" color="#0A43A3" /> : <MaterialCommunityIcons name="upload-outline" size={22} color="#0A43A3" />}
+            {uploadingCopy ? <ActivityIndicator size="small" color="#0A43A3" /> : <MaterialCommunityIcons name="upload-outline" size={20} color="#0A43A3" />}
           </Pressable>
         )}
         {uploadMessage ? <Text style={styles.uploadMessage}>{uploadMessage}</Text> : null}
@@ -389,7 +385,7 @@ export default function CustomerMotorPolicyDetailScreen() {
             <Text style={styles.vehicleLabel}>Linked vehicle</Text>
             <Text style={styles.vehicleValue}>{vehicle.vehicle_no || '-'}</Text>
           </View>
-          <MaterialCommunityIcons name="arrow-right" size={21} color={palette.navy} />
+          <MaterialCommunityIcons name="arrow-right" size={20} color={palette.navy} />
         </Pressable>
       ) : null}
     </Screen>
@@ -399,10 +395,10 @@ export default function CustomerMotorPolicyDetailScreen() {
 function DetailCell({ icon, label, value, logo, emphasis = false }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value?: string | null; logo?: any; emphasis?: boolean }) {
   return (
     <View style={styles.detailCell}>
-      {logo ? <Image source={logo} resizeMode="contain" style={styles.detailLogo} /> : <MaterialCommunityIcons name={icon} size={16} color={palette.navy} />}
+      {logo ? <Image source={logo} resizeMode="contain" style={styles.detailLogo} /> : <MaterialCommunityIcons name={icon} size={15} color={palette.navy} />}
       <View style={styles.detailCopy}>
         <Text style={styles.detailLabel}>{label}</Text>
-        <Text style={[styles.detailValue, emphasis && styles.detailValueEmphasis]} numberOfLines={3}>{value || '-'}</Text>
+        <Text style={[styles.detailValue, emphasis && styles.detailValueEmphasis]} numberOfLines={2}>{value || '-'}</Text>
       </View>
     </View>
   );
@@ -449,40 +445,40 @@ function formatFileSize(value?: number | null) {
 }
 
 const styles = StyleSheet.create({
-  pageHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 },
-  pageTitle: { color: palette.navy, fontSize: 21, fontWeight: '900' },
-  pageRenewAction: { minHeight: 36, borderRadius: 10, backgroundColor: palette.navy, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  pageRenewActionText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
-  detailSection: { borderRadius: 22, borderWidth: 1, borderColor: '#DCE6F1', padding: 16, backgroundColor: '#FFFFFF' },
-  sectionRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
-  detailIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#EEF4FB', alignItems: 'center', justifyContent: 'center' },
+  pageHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 },
+  pageTitle: { color: palette.navy, fontSize: 20, fontWeight: '900' },
+  pageRenewAction: { minHeight: 34, borderRadius: 10, backgroundColor: palette.navy, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  pageRenewActionText: { color: '#FFFFFF', fontSize: 11.5, fontWeight: '800' },
+  detailSection: { borderRadius: 18, borderWidth: 1, borderColor: '#DCE6F1', padding: 12, backgroundColor: '#FFFFFF' },
+  sectionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  detailIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: '#EEF4FB', alignItems: 'center', justifyContent: 'center' },
   sectionCopy: { flex: 1 },
-  sectionTitle: { color: palette.navy, fontSize: 17, fontWeight: '900' },
-  sectionHint: { color: '#6D7B8F', fontSize: 12, marginTop: 2 },
-  statusPill: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
-  statusText: { fontSize: 10, fontWeight: '900' },
-  detailGroupLabel: { color: '#0A4A92', fontSize: 12, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.55, marginTop: 6, marginBottom: 4 },
+  sectionTitle: { color: palette.navy, fontSize: 16, fontWeight: '900' },
+  sectionHint: { color: '#6D7B8F', fontSize: 10.5, marginTop: 1 },
+  statusPill: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 5 },
+  statusText: { fontSize: 9.5, fontWeight: '900' },
+  detailGroupLabel: { color: '#0A4A92', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.45, marginTop: 5, marginBottom: 1 },
   detailGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  detailCell: { width: '50%', minHeight: 76, flexDirection: 'row', gap: 9, paddingVertical: 13, paddingRight: 8, borderBottomWidth: 1, borderBottomColor: '#E4EAF1' },
+  detailCell: { width: '50%', minHeight: 58, flexDirection: 'row', gap: 7, paddingVertical: 8, paddingRight: 7, borderBottomWidth: 1, borderBottomColor: '#E8EDF3' },
   detailCopy: { flex: 1 },
-  detailLabel: { color: '#718096', fontSize: 10.5, fontWeight: '700', textTransform: 'uppercase' },
-  detailValue: { color: '#102445', fontSize: 13.5, fontWeight: '800', marginTop: 4 },
+  detailLabel: { color: '#718096', fontSize: 9.5, fontWeight: '700', textTransform: 'uppercase' },
+  detailValue: { color: '#102445', fontSize: 12.5, fontWeight: '800', marginTop: 2, lineHeight: 16 },
   detailValueEmphasis: { color: '#254DDB' },
-  detailLogo: { width: 18, height: 18 },
-  noteBox: { minHeight: 54, flexDirection: 'row', alignItems: 'flex-start', gap: 9, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#E4EAF1' },
-  noteText: { flex: 1, color: '#102445', fontSize: 13.5, fontWeight: '700', lineHeight: 19 },
-  documentRow: { minHeight: 70, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#E4EAF1' },
+  detailLogo: { width: 16, height: 16 },
+  noteBox: { minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: '#E8EDF3' },
+  noteText: { flex: 1, color: '#102445', fontSize: 12.5, fontWeight: '700', lineHeight: 17 },
+  documentRow: { minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#E8EDF3' },
   pressed: { opacity: 0.72 },
-  documentIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#EEF4FB', alignItems: 'center', justifyContent: 'center' },
+  documentIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: '#EEF4FB', alignItems: 'center', justifyContent: 'center' },
   documentCopy: { flex: 1 },
-  documentTitle: { color: palette.navy, fontSize: 14, fontWeight: '900' },
-  documentName: { color: '#43536B', fontSize: 12, fontWeight: '700', marginTop: 3 },
-  documentMeta: { color: '#8793A4', fontSize: 10.5, marginTop: 2 },
-  uploadMessage: { color: '#C43838', fontSize: 12, marginTop: 6 },
-  vehicleCard: { marginTop: 14, borderRadius: 18, borderWidth: 1, borderColor: '#DCE6F1', backgroundColor: '#FFFFFF', padding: 13, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  vehicleLogoShell: { width: 42, height: 42, borderRadius: 12, backgroundColor: '#F2F6FB', alignItems: 'center', justifyContent: 'center' },
-  vehicleLogo: { width: 30, height: 30 },
+  documentTitle: { color: palette.navy, fontSize: 13, fontWeight: '900' },
+  documentName: { color: '#43536B', fontSize: 11, fontWeight: '700', marginTop: 1 },
+  documentMeta: { color: '#8793A4', fontSize: 9.5, marginTop: 1 },
+  uploadMessage: { color: '#C43838', fontSize: 11, marginTop: 4 },
+  vehicleCard: { marginTop: 10, borderRadius: 16, borderWidth: 1, borderColor: '#DCE6F1', backgroundColor: '#FFFFFF', padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  vehicleLogoShell: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F2F6FB', alignItems: 'center', justifyContent: 'center' },
+  vehicleLogo: { width: 26, height: 26 },
   vehicleCopy: { flex: 1 },
-  vehicleLabel: { color: '#718096', fontSize: 10.5, fontWeight: '700', textTransform: 'uppercase' },
-  vehicleValue: { color: palette.navy, fontSize: 14, fontWeight: '900', marginTop: 3 },
+  vehicleLabel: { color: '#718096', fontSize: 9.5, fontWeight: '700', textTransform: 'uppercase' },
+  vehicleValue: { color: palette.navy, fontSize: 13.5, fontWeight: '900', marginTop: 1 },
 });
