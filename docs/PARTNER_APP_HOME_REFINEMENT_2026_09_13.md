@@ -2,7 +2,18 @@
 
 This note is the fast operational continuation record for the current Partner Home work. Read it together with `docs/PARTNER_APP_HANDOFF_2026_09_13.md` and `apps/partner-app/AGENTS.md`.
 
+## 2026-10-03 — Quick Actions reference icon alignment
+
+- Branch: `ui/partner-home-quick-action-reference-icons-2026-10-03`.
+- User supplied a reference showing one coordinated bright-blue icon family for the Home Quick Actions: Policy Intake, Renewals, Claims and Customers.
+- Current Home source already used `PartnerAssets.navigation.policyIntake`, `PartnerAssets.navigation.claims` and `PartnerAssets.navigation.customers`; only Renewals still pointed at the older `PartnerAssets.actions.renewals` artwork.
+- `PartnerAssets.actions.renewals` now aliases `assets/partner/navigation/renewals.png`, so the four Home Quick Actions render from the same coordinated navigation icon family without changing card dimensions, labels, routes, animation, business data, authorization, native dependencies or runtime configuration.
+- This is an OTA-safe JS/asset-registry refinement for the current production runtime `0.2.0`; no APK/AAB/native build is authorized or created by this change.
+- Evidence state: **IMPLEMENTED on branch; PR/CI pending; NOT MERGED; NOT DEPLOYED; NOT DEVICE-VERIFIED.**
+
 ## Installed build / release boundary
+
+> Historical 0.1.0 compatibility information below is retained for audit/continuity. As recorded in `apps/partner-app/AGENTS.md`, the current Partner delivery target since 2026-10-01 is production runtime/version `0.2.0 (18)` and new OTA-safe Partner changes must target that production runtime unless the user explicitly requests the legacy path.
 
 - User is testing the Android internal-distribution **preview** APK.
 - App/runtime: **0.1.0**.
