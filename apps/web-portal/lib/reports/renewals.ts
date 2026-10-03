@@ -5,7 +5,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 type ViewerProfile = { id: string; role: string | null };
 export type RenewalBucket = "expired" | "due_30" | "due_31_60" | "due_61_90" | "due_91_180" | "due_181_365";
 export type RenewalQuery = { horizon?: string; insurer?: string; rm?: string; intermediary?: string; business?: string; category?: string; bucket?: string; page?: string };
-export type RenewalFilters = { horizonDays: 30 | 60 | 90 | 180 | 365; insurerId: string | null; rmEmployeeId: string | null; intermediaryCode: string | null; businessLine: "Motor" | "Non Motor" | null; category: string | null; bucket: RenewalBucket | null; page: number };
+export type RenewalFilters = { horizonDays: 30 | 60 | 90 | 180 | 365; insurerId: string | null; rmEmployeeId: string | null; intermediaryCode: string | null; businessLine: "Motor" | "Non Motor" | "Life" | "Health" | null; category: string | null; bucket: RenewalBucket | null; page: number };
 export type RenewalRow = { id:string; policy_no:string; policy_type:string; policy_product:string; business_line:string; category:string; start_date:string; end_date:string; status:string; customer_name:string; customer_code:string; vehicle_no:string; risk_reference:string; insurer_name:string; rm_name:string; intermediary_type:string|null; intermediary_code:string|null; gross_premium:number; net_premium:number; days_to_expiry:number; renewal_bucket:RenewalBucket };
 export type RenewalReport = {summary:{upcoming_policy_count:number;expired_policy_count:number;due_30_count:number;due_90_count:number;customer_count:number;premium_at_risk:number;premium_due_30:number;nearest_expiry:string|null};buckets:Array<{key:RenewalBucket;label:string;policy_count:number;gross_premium:number;net_premium:number}>;insurers:Array<{id:string|null;insurer_name:string;upcoming_policy_count:number;due_30_count:number;expired_count:number;premium_at_risk:number;nearest_expiry:string|null}>;rms:Array<{rm_name:string;upcoming_policy_count:number;customer_count:number;due_30_count:number;expired_count:number;premium_at_risk:number;nearest_expiry:string|null}>;filters:{insurers:Array<{id:string;name:string}>;rms:Array<{id:string;name:string}>;intermediaries:Array<{code:string;type:string|null;name:string}>;categories:string[]};register:{rows:RenewalRow[];total_count:number;page:number;page_size:number}};
 
@@ -20,13 +20,12 @@ export async function loadRenewalReport(profile: ViewerProfile, query: RenewalQu
   ]);
   if (reportResult.error) throw new Error(`Renewal report query failed: ${reportResult.error.message}`);
   if (rmResult.error) throw new Error(`Reporting RM options query failed: ${rmResult.error.message}`);
-  const report = normalizeReport(reportResult.data, filters.page, pageSize);
+  const report=normalizeReport(reportResult.data, filters.page, pageSize);
   report.filters.rms = normalizeRmOptions(rmResult.data);
   return { report, filters, scopeMode: scope.mode };
 }
 
 export async function loadRenewalExport(profile: ViewerProfile, query: RenewalQuery) { const payload = await loadRenewalReport(profile, { ...query, page: "1" }, 10001); return { rows: payload.report.register.rows.slice(0, 10000), truncated: payload.report.register.total_count > 10000 }; }
-
 
 export async function loadRenewalOpportunityBuckets(profile: ViewerProfile, query: RenewalQuery) {
   const pageSize = 200;
@@ -63,7 +62,7 @@ function normalizeRmOptions(value:unknown):Array<{id:string;name:string}>{return
 function emptyRenewalReport(page:number,pageSize:number):RenewalReport{return{summary:{upcoming_policy_count:0,expired_policy_count:0,due_30_count:0,due_90_count:0,customer_count:0,premium_at_risk:0,premium_due_30:0,nearest_expiry:null},buckets:[],insurers:[],rms:[],filters:{insurers:[],rms:[],intermediaries:[],categories:[]},register:{rows:[],total_count:0,page,page_size:pageSize}}}
 function horizon(v:string|undefined):RenewalFilters["horizonDays"]{const n=Number(v);return n===30||n===60||n===90||n===180||n===365?n:365}
 function bucket(v:string|undefined):RenewalBucket|null{return v==="expired"||v==="due_30"||v==="due_31_60"||v==="due_61_90"||v==="due_91_180"||v==="due_181_365"?v:null}
-function businessLine(v:string|undefined):RenewalFilters["businessLine"]{return v==="Motor"||v==="Non Motor"?v:null}
+function businessLine(v:string|undefined):RenewalFilters["businessLine"]{return v==="Motor"||v==="Non Motor"||v==="Life"||v==="Health"?v:null}
 function uuid(v:string|undefined){return v&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v)?v:null}
 function text(v:string|undefined,max:number){const x=v?.trim();return x?x.slice(0,max):null}
 function positiveInt(v:string|undefined){const n=Number.parseInt(v??"1",10);return Number.isFinite(n)&&n>0?n:1}
