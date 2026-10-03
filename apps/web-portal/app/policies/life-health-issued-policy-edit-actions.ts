@@ -130,12 +130,20 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
   const paymentFrequency = clean(formData.get("paymentFrequency"));
   const paymentMode = clean(formData.get("paymentMode"));
   const premiumAmount = amount(formData.get("premiumAmount"));
+  const startDate = clean(formData.get("startDate"));
+  const endDate = clean(formData.get("endDate"));
+  const finalPremium = amount(formData.get("finalPremium"));
+  const sumInsuredRaw = clean(formData.get("sumInsured"));
+  const sumInsured = sumInsuredRaw ? amount(sumInsuredRaw) : null;
   const remarks = clean(formData.get("remarks"));
 
   if (!policyId || !caseId) return { ok: false, error: "Policy edit reference is missing." };
   if (businessLine !== "Life" && businessLine !== "Health") return { ok: false, error: "Only Life and Health policies can use this editor." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(sourcingDate)) return { ok: false, error: "Enter a valid policy issuance date." };
-  if (!sourceId || !insurerId || !productName || !proposalNumber || !paymentFrequency || !paymentMode || premiumAmount === null) return { ok: false, error: "Complete all required policy onboarding fields." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) return { ok: false, error: "Enter valid policy start and end dates." };
+  if (endDate < startDate) return { ok: false, error: "Policy end date cannot be before the start date." };
+  if (!sourceId || !insurerId || !productName || !proposalNumber || !paymentFrequency || !paymentMode || premiumAmount === null || finalPremium === null) return { ok: false, error: "Complete all required policy onboarding fields." };
+  if (sumInsuredRaw && sumInsured === null) return { ok: false, error: "Enter a valid sum assured / insured amount." };
 
   const [{ data: policy }, { data: caseRow }, { data: source }] = await Promise.all([
     admin.from("policies").select("id,business_line,rm_employee_id,rm_name").eq("id", policyId).maybeSingle<{ id: string; business_line: string | null; rm_employee_id: string | null; rm_name: string | null }>(),
@@ -190,8 +198,11 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
     policy_product: productName,
     business_line: businessLine,
     issuance_date: sourcingDate,
+    start_date: startDate,
+    end_date: endDate,
     policy_term: pd || null,
-    premium_amount: premiumAmount,
+    premium_amount: finalPremium,
+    insured_declared_value: sumInsured,
     intermediary_type: intermediaryType,
     intermediary_code: intermediaryCode || null,
     lead_source: leadSource,
@@ -209,7 +220,7 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
     payment_frequency: paymentFrequency,
     payment_mode: paymentMode,
   }).eq("policy_id", policyId);
-  await admin.from("policy_premium_details").update({ net_premium: premiumAmount, gross_premium: premiumAmount }).eq("policy_id", policyId);
+  await admin.from("policy_premium_details").update({ net_premium: finalPremium, gross_premium: finalPremium }).eq("policy_id", policyId);
 
   revalidateIssuedPolicy(policyId, caseId);
   return { ok: true };
