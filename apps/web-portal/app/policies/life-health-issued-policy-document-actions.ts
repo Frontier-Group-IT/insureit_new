@@ -15,6 +15,8 @@ const DOCUMENT_TYPES = new Set<LifeHealthIssuedDocumentType>(["policy_copy", "pr
 const clean = (value: unknown) => String(value ?? "").trim();
 const safeFileName = (name: string) => name.trim().replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-") || "document";
 
+type StoredDocumentRow = { id: string; storage_bucket: string; storage_path: string };
+
 function revalidateIssuedPolicy(policyId: string, caseId: string) {
   revalidatePath("/policies");
   revalidatePath(`/policies/${policyId}`);
@@ -33,6 +35,28 @@ async function context(formData: FormData) {
   return { profile, policyId, caseId, type, admin, valid: Boolean(data) };
 }
 
+async function loadExistingDocument(ctx: Awaited<ReturnType<typeof context>>) {
+  if (!ctx.admin) return null;
+  if (ctx.type === "policy_copy") {
+    const { data } = await ctx.admin.from("policy_documents")
+      .select("id,storage_bucket,storage_path")
+      .eq("policy_id", ctx.policyId)
+      .eq("document_type", "policy_copy")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .returns<StoredDocumentRow[]>();
+    return data?.[0] ?? null;
+  }
+  const { data } = await ctx.admin.from("life_health_case_documents")
+    .select("id,storage_bucket,storage_path")
+    .eq("case_id", ctx.caseId)
+    .eq("document_type", ctx.type)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .returns<StoredDocumentRow[]>();
+  return data?.[0] ?? null;
+}
+
 export async function replaceIssuedLifeHealthDocument(formData: FormData): Promise<LifeHealthIssuedDocumentResult> {
   const ctx = await context(formData);
   if (!ctx.valid || !ctx.admin) return { ok: false, error: "The linked Life/Health policy case or document type is invalid." };
@@ -41,18 +65,28 @@ export async function replaceIssuedLifeHealthDocument(formData: FormData): Promi
   if (file.size > MAX_FILE_SIZE) return { ok: false, error: "Document must be 50 MB or smaller." };
   if (!ALLOWED_MIME_TYPES.has(file.type)) return { ok: false, error: "Upload a PDF, JPG, PNG or WebP document." };
 
-  const { data: existing } = await ctx.admin.from("life_health_case_documents")
-    .select("id,storage_bucket,storage_path").eq("case_id", ctx.caseId).eq("document_type", ctx.type)
-    .maybeSingle<{ id: string; storage_bucket: string; storage_path: string }>();
+  const existing = await loadExistingDocument(ctx);
   const fileName = file.name || "document";
-  const storagePath = `life-health-cases/${ctx.caseId}/${ctx.type}/${crypto.randomUUID()}-${safeFileName(fileName)}`;
+  const storagePath = ctx.type === "policy_copy"
+    ? `${ctx.policyId}/policy_copy/${crypto.randomUUID()}-${safeFileName(fileName)}`
+    : `life-health-cases/${ctx.caseId}/${ctx.type}/${crypto.randomUUID()}-${safeFileName(fileName)}`;
   const bytes = Buffer.from(await file.arrayBuffer());
   const { error: uploadError } = await ctx.admin.storage.from(DOCUMENT_BUCKET).upload(storagePath, bytes, { contentType: file.type, upsert: false });
   if (uploadError) return { ok: false, error: "The document could not be uploaded." };
 
   const values = { file_name: fileName, storage_bucket: DOCUMENT_BUCKET, storage_path: storagePath, mime_type: file.type, file_size: file.size, uploaded_by: ctx.profile.id, updated_at: new Date().toISOString() };
   let documentId = existing?.id || "";
-  if (existing) {
+  if (ctx.type === "policy_copy") {
+    if (existing) {
+      const { error } = await ctx.admin.from("policy_documents").update(values).eq("id", existing.id);
+      if (error) { await ctx.admin.storage.from(DOCUMENT_BUCKET).remove([storagePath]); return { ok: false, error: "The policy copy record could not be updated." }; }
+      if (existing.storage_path && existing.storage_path !== storagePath) await ctx.admin.storage.from(existing.storage_bucket || DOCUMENT_BUCKET).remove([existing.storage_path]);
+    } else {
+      const { data, error } = await ctx.admin.from("policy_documents").insert({ policy_id: ctx.policyId, document_type: "policy_copy", ...values }).select("id").single<{ id: string }>();
+      if (error || !data) { await ctx.admin.storage.from(DOCUMENT_BUCKET).remove([storagePath]); return { ok: false, error: "The policy copy record could not be saved." }; }
+      documentId = data.id;
+    }
+  } else if (existing) {
     const { error } = await ctx.admin.from("life_health_case_documents").update(values).eq("id", existing.id);
     if (error) { await ctx.admin.storage.from(DOCUMENT_BUCKET).remove([storagePath]); return { ok: false, error: "The document record could not be updated." }; }
     if (existing.storage_path && existing.storage_path !== storagePath) await ctx.admin.storage.from(existing.storage_bucket || DOCUMENT_BUCKET).remove([existing.storage_path]);
@@ -69,11 +103,11 @@ export async function replaceIssuedLifeHealthDocument(formData: FormData): Promi
 export async function deleteIssuedLifeHealthDocument(formData: FormData): Promise<LifeHealthIssuedDocumentResult> {
   const ctx = await context(formData);
   if (!ctx.valid || !ctx.admin) return { ok: false, error: "The linked Life/Health policy case or document type is invalid." };
-  const { data: existing } = await ctx.admin.from("life_health_case_documents")
-    .select("id,storage_bucket,storage_path").eq("case_id", ctx.caseId).eq("document_type", ctx.type)
-    .maybeSingle<{ id: string; storage_bucket: string; storage_path: string }>();
+  const existing = await loadExistingDocument(ctx);
   if (!existing) return { ok: true, document: null };
-  const { error } = await ctx.admin.from("life_health_case_documents").delete().eq("id", existing.id);
+  const { error } = ctx.type === "policy_copy"
+    ? await ctx.admin.from("policy_documents").delete().eq("id", existing.id)
+    : await ctx.admin.from("life_health_case_documents").delete().eq("id", existing.id);
   if (error) return { ok: false, error: "The document could not be removed." };
   if (existing.storage_path) await ctx.admin.storage.from(existing.storage_bucket || DOCUMENT_BUCKET).remove([existing.storage_path]);
   revalidateIssuedPolicy(ctx.policyId, ctx.caseId);
