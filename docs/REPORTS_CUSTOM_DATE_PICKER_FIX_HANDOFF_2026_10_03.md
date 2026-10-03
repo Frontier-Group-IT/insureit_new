@@ -13,6 +13,7 @@ User-visible Reports fix covering every page that uses the shared custom date-ra
 ## Implementation
 
 Branch: `fix/reports-custom-date-picker`
+PR: `#2698`
 
 - `ReportQueryShortcuts` remains the single owner of the toolbar custom date-range control.
 - Removed the second inline custom-range trigger from `ReportCompactFilters`; its advanced filter drawer still keeps its custom date-range picker.
@@ -37,6 +38,12 @@ Branch: `fix/reports-custom-date-picker`
 6. Advanced Filters custom-date control inherits the same no-future rule.
 7. Mandatory `Verify web portal` workflow must pass before merge.
 
+## Verification history
+
+- Verify web portal `#5159` failed before Typecheck because the existing Reports business-type static regression expected compact option literals; no product regression was found.
+- The selector literals were kept compatible without restoring the duplicate date picker.
+- Verify web portal `#5160` then passed all regressions, Typecheck, Lint and Production build for head `92a4da4f4d1123c108ad4087268065d3cae17de4`.
+
 ## Evidence state
 
-**IMPLEMENTED on branch; PR/CI/merge/deployment pending.**
+**IMPLEMENTED; PR #2698 OPEN; Verify web portal #5160 VERIFIED; merge/deployment pending.**
