@@ -79,7 +79,10 @@ export function getStaticInsurerLogo(insurerName: string | null | undefined) {
   return contained ? INSURER_LOGOS[contained] : null;
 }
 
-export function getInsurerLogo(insurerName: string | null | undefined) {
+export function getInsurerLogo(insurerName: string | null | undefined, version?: string | null) {
   const name = String(insurerName || "").trim();
-  return name ? `/api/insurer-logo?name=${encodeURIComponent(name)}` : null;
+  if (!name) return null;
+  const params = new URLSearchParams({ name });
+  if (version) params.set("v", version);
+  return `/api/insurer-logo?${params.toString()}`;
 }
