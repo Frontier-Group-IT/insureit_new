@@ -43,6 +43,12 @@ function withCache(response: NextResponse) {
   return response;
 }
 
+function withoutCache(response: NextResponse) {
+  response.headers.set("Cache-Control", "no-store, max-age=0");
+  response.headers.set("Pragma", "no-cache");
+  return response;
+}
+
 export async function GET(request: NextRequest) {
   const insurerName = request.nextUrl.searchParams.get("name")?.trim() ?? "";
   if (!insurerName) {
@@ -57,7 +63,12 @@ export async function GET(request: NextRequest) {
   if (managedPath) {
     const admin = createSupabaseAdminClient();
     const { data } = admin.storage.from(INSURER_LOGO_BUCKET).getPublicUrl(managedPath);
-    if (data.publicUrl) return withCache(NextResponse.redirect(data.publicUrl, 307));
+    if (data.publicUrl) {
+      // Managed logos can be replaced from Master Data. Do not cache this name-based
+      // redirect, otherwise a previous logo URL can remain pinned at the CDN/browser
+      // after revalidateTag() has already refreshed the managed logo lookup.
+      return withoutCache(NextResponse.redirect(data.publicUrl, 307));
+    }
   }
 
   const staticLogo = getStaticInsurerLogo(insurerName);
