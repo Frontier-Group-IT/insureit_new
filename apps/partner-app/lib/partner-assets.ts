@@ -30,7 +30,7 @@ export const PartnerAssets = {
     customerRegister: require('../assets/partner/actions/customer-register.png'),
     policyChecklist: require('../assets/partner/actions/policy-checklist.png'),
     policyRegister: require('../assets/partner/actions/policy-register.png'),
-    renewals: require('../assets/partner/actions/renewals.png'),
+    renewals: require('../assets/partner/navigation/renewals.png'),
     documentSearch: require('../assets/partner/actions/document-search.png'),
   },
   products: {
