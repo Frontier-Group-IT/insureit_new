@@ -28,9 +28,10 @@ export function PolicyIntakePolicyRegisterLinksPortal({ summary }: { summary: Po
 
   if (!summary || !host) return null;
 
-  const totalPending = (summary.actionRequired ?? 0) + summary.inReview;
+  const policyIntakePending = (summary.actionRequired ?? 0) + summary.inReview;
+  const proposalPending = summary.proposalPending ?? policyIntakePending;
   const showActionRequired = summary.actionRequired !== null;
-  const pendingActive = totalPending > 0;
+  const pendingActive = proposalPending > 0;
   const pendingTone = pendingActive
     ? "text-[#C62828]"
     : "text-[#66758B]";
@@ -42,11 +43,11 @@ export function PolicyIntakePolicyRegisterLinksPortal({ summary }: { summary: Po
         <Link
           href="/policies/life-health-cases"
           prefetch={false}
-          aria-label={`Proposal pending: ${totalPending}. Open Case Register.`}
+          aria-label={`Proposal pending: ${proposalPending}. Open Case Register.`}
           className="group/item flex items-center gap-2 px-3 focus:outline-none hover:bg-[#F8FAFC] focus-visible:bg-[#F8FAFC]"
         >
           <span className={`whitespace-nowrap text-[8.5px] font-extrabold leading-3 ${pendingTone}`}>Pending</span>
-          <span className={`text-[14px] font-black leading-4 tabular-nums ${pendingTone}`}>{totalPending}</span>
+          <span className={`text-[14px] font-black leading-4 tabular-nums ${pendingTone}`}>{proposalPending}</span>
         </Link>
       </div>
 
