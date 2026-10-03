@@ -1,13 +1,13 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Card, EmptyState, LoadingState, Screen } from '@/components/ui';
+import { EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { getOperationalCustomerContexts } from '@/lib/customer-context';
-import { supabase } from '@/lib/supabase';
 import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
+import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
 
@@ -21,10 +21,22 @@ type VehiclePolicyDisplay = {
   vehicle_id: string;
   insurance_company_id: string;
   policy_no: string;
+  policy_type?: string | null;
   start_date: string;
   end_date: string;
   source: 'sibl' | 'external';
 };
+
+type AlertItem = {
+  key: string;
+  label: string;
+  date: string;
+  status: 'expired' | 'due';
+  days: number;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+};
+
+type TabKey = 'details' | 'documents' | 'history';
 
 export default function VehicleDetailScreen() {
   const router = useRouter();
@@ -33,7 +45,8 @@ export default function VehicleDetailScreen() {
   const [policies, setPolicies] = useState<VehiclePolicyDisplay[]>([]);
   const [companies, setCompanies] = useState<InsuranceCompany[]>([]);
   const [loading, setLoading] = useState(true);
-  const [alertsExpanded, setAlertsExpanded] = useState(false);
+  const [alertsExpanded, setAlertsExpanded] = useState(true);
+  const [activeTab, setActiveTab] = useState<TabKey>('details');
 
   useEffect(() => {
     async function load() {
@@ -41,18 +54,19 @@ export default function VehicleDetailScreen() {
       const session = await getCurrentSession();
       if (!session?.user) return router.replace('/login');
       const contexts = await getOperationalCustomerContexts();
-      const ids = contexts.map((context) => context.customer_id);
-      if (!ids.length) {
+      const customerIds = contexts.map((context) => context.customer_id);
+      if (!customerIds.length) {
         setLoading(false);
         return;
       }
 
-      const vehicleResult = await supabase.from('vehicles').select('*').eq('id', id).in('customer_id', ids).maybeSingle();
+      const vehicleResult = await supabase.from('vehicles').select('*').eq('id', id).in('customer_id', customerIds).maybeSingle();
       setVehicle(vehicleResult.data);
+
       if (vehicleResult.data) {
         const [policyResult, externalPolicyResult] = await Promise.all([
-          supabase.from('policies').select('vehicle_id,insurance_company_id,policy_no,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', ids),
-          (supabase as any).from('external_policies').select('vehicle_id,insurance_company_id,policy_no,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', ids),
+          supabase.from('policies').select('vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', customerIds),
+          (supabase as any).from('external_policies').select('vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', customerIds),
         ]);
         const nextPolicies: VehiclePolicyDisplay[] = [
           ...((policyResult.data ?? []).map((policy) => ({ ...policy, source: 'sibl' as const }))),
@@ -74,128 +88,165 @@ export default function VehicleDetailScreen() {
   const latestPolicy = useMemo(() => selectVehiclePolicy(policies), [policies]);
   const latestPolicyCompany = latestPolicy ? companyById.get(latestPolicy.insurance_company_id) : null;
   const policyState = latestPolicy ? policyStatus(latestPolicy.end_date) : { label: 'No policy', tone: 'red' as const, helper: 'Add a policy to complete protection' };
-  const policyAction = policyState.tone === 'red' ? { label: 'Add policy', icon: 'shield-plus-outline' as const } : policyState.tone === 'orange' ? { label: 'Add renewed policy', icon: 'refresh' as const } : null;
-  const statusTone = policyTone(policyState.tone);
-  const complianceItems = useMemo(() => vehicleComplianceItems(vehicle, latestPolicy), [latestPolicy, vehicle]);
-  const alertItems = complianceItems.filter((item) => item.status !== 'ok');
+  const alerts = useMemo(() => buildAlerts(vehicle, latestPolicy), [latestPolicy, vehicle]);
+  const expiredCount = alerts.filter((item) => item.status === 'expired').length;
+  const dueCount = alerts.filter((item) => item.status === 'due').length;
   const vehicleImage = vehicle ? vehicleSketchFor(vehicle) : truckSketch;
 
   if (loading) return <Screen title="Vehicle Detail"><LoadingState /></Screen>;
   if (!vehicle) return <Screen title="Vehicle Detail"><EmptyState title="Vehicle not found" body="Please choose another vehicle from your list." /></Screen>;
 
+  const v = vehicle as any;
+  const modelText = [v.make, v.model].filter(Boolean).join(' ') || v.vehicle_type || 'Vehicle';
+  const policyType = latestPolicy?.policy_type?.trim() || (latestPolicy?.source === 'external' ? 'External' : latestPolicy ? 'Motor' : '-');
+
   return (
-    <Screen title="Vehicle Detail" subtitle={vehicle.vehicle_no} showLogout showTitleHeader={false}>
+    <Screen title="Vehicle Detail" subtitle={v.vehicle_no} showLogout showTitleHeader={false}>
       <View style={styles.heroCard}>
-        <View style={styles.heroTop}>
-          <View style={styles.vehicleImageShell}>
-            <Image source={vehicleImage} style={styles.vehicleImage} resizeMode="contain" />
-          </View>
-          <View style={styles.heroCopy}>
+        <View style={styles.heroTopRow}>
+          <View style={styles.heroIdentity}>
             <Text style={styles.eyebrow}>VEHICLE DETAIL</Text>
-            <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle.vehicle_no}</Text>
-            <Text style={styles.vehicleMeta} numberOfLines={2}>{[vehicle.make, vehicle.model].filter(Boolean).join(' ') || vehicle.vehicle_type || 'Vehicle'}</Text>
+            <View style={styles.vehicleNoRow}>
+              <Text style={styles.vehicleNo} numberOfLines={1}>{v.vehicle_no || '-'}</Text>
+              <MaterialCommunityIcons name="content-copy" size={17} color="#6B7E9E" />
+            </View>
+            <Text style={styles.vehicleMeta} numberOfLines={2}>{modelText}</Text>
           </View>
-          <StatusPill tone={policyState.tone} label={policyState.label} showDot={policyState.tone !== 'green'} />
-        </View>
-        <View style={styles.policySummary}>
-          <MiniStat label="Insurer" value={latestPolicyCompany?.name ?? 'Pending'} />
-          <MiniStat label="Policy" value={latestPolicy?.policy_no ? (latestPolicy.source === 'external' ? formatExternalPolicyNumber(latestPolicy.policy_no) : latestPolicy.policy_no) : 'Not added'} badge={latestPolicy?.source === 'external' ? 'External' : undefined} />
-          <MiniStat label="Expiry" value={latestPolicy ? formatDate(latestPolicy.end_date) : '-'} />
-        </View>
-        <View style={styles.protectionRow}>
-          <View style={[styles.protectionIcon, { backgroundColor: statusTone.soft }]}> 
-            <MaterialCommunityIcons name={latestPolicy ? 'shield-check-outline' : 'shield-plus-outline'} size={20} color={statusTone.accent} />
+          <View style={styles.vehicleArtWrap}>
+            <Image source={vehicleImage} style={styles.vehicleArt} resizeMode="contain" />
           </View>
-          <View style={styles.protectionCopy}>
-            <Text style={[styles.nextLabel, { color: statusTone.accent }]}>PROTECTION STATUS</Text>
-            <Text style={styles.nextTitle}>{policyState.label}</Text>
+          <View style={[styles.statusBadge, policyState.tone === 'green' ? styles.statusBadgeGreen : policyState.tone === 'orange' ? styles.statusBadgeOrange : styles.statusBadgeRed]}>
+            <MaterialCommunityIcons name={policyState.tone === 'green' ? 'shield-check' : 'shield-alert'} size={14} color={policyState.tone === 'green' ? '#12805C' : policyState.tone === 'orange' ? '#B7791F' : '#D62F2F'} />
+            <Text style={[styles.statusBadgeText, policyState.tone === 'green' ? styles.statusGreenText : policyState.tone === 'orange' ? styles.statusOrangeText : styles.statusRedText]}>{policyState.label}</Text>
           </View>
-          {policyAction ? <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/add-policy', params: { vehicleId: vehicle.id } } as any)} style={({ pressed }) => [styles.compactPolicyAction, pressed && styles.actionPressed]}>
-            <MaterialCommunityIcons name={policyAction.icon} size={14} color={palette.navy} />
-            <Text style={styles.compactPolicyActionText}>{policyAction.label}</Text>
-          </Pressable> : null}
         </View>
-        <View style={styles.protectionHelperRow}>
-          <Text style={styles.nextBody}>{policyState.helper}</Text>
+
+        <View style={styles.heroStatsRow}>
+          <SummaryItem icon="file-document-outline" label="Insurer" value={latestPolicyCompany?.name ?? 'Pending'} />
+          <View style={styles.statDivider} />
+          <SummaryItem icon="shield-check-outline" label="Policy Type" value={policyType} accent="#0B9A83" />
+          <View style={styles.statDivider} />
+          <SummaryItem icon="calendar-month-outline" label="Expiry Date" value={latestPolicy ? formatDate(latestPolicy.end_date) : '-'} />
         </View>
       </View>
 
-      <Card accessibilityRole="button" onPress={() => setAlertsExpanded((value) => !value)} style={styles.alertSection}>
-          <View style={styles.compactSectionRow}>
-            <View style={styles.alertIcon}>
-              <MaterialCommunityIcons name="calendar-alert-outline" size={18} color="#B7791F" />
-            </View>
-            <View style={styles.sectionCopy}>
-              <Text style={styles.sectionTitle}>Alerts and dues</Text>
-              <Text style={styles.sectionHint}>Expired and renewal-due documents</Text>
-            </View>
-            <View style={[styles.alertCountBox, alertItems.length > 0 && styles.alertCountBoxWarning]}>
-              <Text style={styles.alertCount}>{alertItems.length}</Text>
-              <MaterialCommunityIcons name={alertsExpanded ? 'chevron-up' : 'chevron-down'} size={17} color={palette.navy} />
-            </View>
+      <View style={[styles.protectionCard, policyState.tone === 'green' ? styles.protectionGreen : policyState.tone === 'orange' ? styles.protectionOrange : styles.protectionRed]}>
+        <View style={styles.protectionIconWrap}>
+          <MaterialCommunityIcons name={policyState.tone === 'green' ? 'shield-check' : 'shield-remove'} size={22} color={policyState.tone === 'green' ? '#12805C' : policyState.tone === 'orange' ? '#B7791F' : '#D93030'} />
+        </View>
+        <View style={styles.protectionCopy}>
+          <Text style={[styles.protectionLabel, policyState.tone === 'red' && styles.statusRedText]}>PROTECTION STATUS</Text>
+          <View style={styles.protectionLine}>
+            <Text style={[styles.protectionTitle, policyState.tone === 'red' && styles.statusRedText]}>{policyState.label}</Text>
+            <Text style={styles.protectionDot}>•</Text>
+            <Text style={styles.protectionHelper}>{policyState.helper}</Text>
           </View>
-          {alertsExpanded ? <>
-            <View style={styles.alertLegend}>
-              <Dot tone="red" /><Text style={styles.legendText}>Expired</Text>
-              <Dot tone="yellow" /><Text style={styles.legendText}>Renewal due</Text>
-            </View>
-            {alertItems.length ? alertItems.map((item) => <ComplianceRow key={item.key} item={item} />) : <Text style={styles.emptyText}>No expired or renewal-due documents found.</Text>}
-          </> : null}
-      </Card>
+        </View>
+        {policyState.tone !== 'green' ? (
+          <Pressable onPress={() => router.push({ pathname: '/customer/add-policy', params: { vehicleId: v.id } } as any)} style={({ pressed }) => [styles.renewButton, pressed && styles.pressed]}>
+            <MaterialCommunityIcons name="refresh" size={17} color="#D93030" />
+            <Text style={styles.renewButtonText}>{latestPolicy ? 'Renew Now' : 'Add policy'}</Text>
+          </Pressable>
+        ) : null}
+      </View>
 
-      <Card style={styles.detailSection}>
-        <View style={styles.sectionRow}>
-          <View style={styles.detailIcon}>
-            <MaterialCommunityIcons name="card-account-details-outline" size={19} color={palette.navy} />
+      <View style={styles.alertCard}>
+        <Pressable onPress={() => setAlertsExpanded((value) => !value)} style={styles.alertHeader}>
+          <View style={styles.alertBellWrap}><MaterialCommunityIcons name="bell-alert" size={24} color="#E4A521" /></View>
+          <View style={styles.flexOne}>
+            <Text style={styles.sectionTitle}>Alerts and dues</Text>
+            <Text style={styles.sectionHint}>Expired and renewal-due documents</Text>
           </View>
-          <View style={styles.sectionCopy}>
-            <Text style={styles.sectionTitle}>Vehicle details</Text>
-            <Text style={styles.sectionHint}>Details stored for this vehicle</Text>
+          <View style={styles.itemCount}><Text style={styles.itemCountText}>{alerts.length} {alerts.length === 1 ? 'Item' : 'Items'}</Text><MaterialCommunityIcons name={alertsExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={palette.navy} /></View>
+        </Pressable>
+        {alertsExpanded ? (
+          <>
+            <View style={styles.alertLegend}>
+              <View style={styles.legendPair}><View style={[styles.legendDot, styles.redDot]} /><Text style={styles.legendText}>Expired ({expiredCount})</Text></View>
+              <View style={styles.legendPair}><View style={[styles.legendDot, styles.yellowDot]} /><Text style={styles.legendText}>Renewal due ({dueCount})</Text></View>
+            </View>
+            <View style={styles.alertList}>
+              {alerts.length ? alerts.map((item) => <AlertRow key={item.key} item={item} />) : <Text style={styles.emptyText}>No expired or renewal-due documents found.</Text>}
+            </View>
+          </>
+        ) : null}
+      </View>
+
+      <View style={styles.tabsRow}>
+        <TabButton active={activeTab === 'details'} label="Vehicle Details" onPress={() => setActiveTab('details')} />
+        <TabButton active={activeTab === 'documents'} label="Documents" onPress={() => setActiveTab('documents')} />
+        <TabButton active={activeTab === 'history'} label="History" onPress={() => setActiveTab('history')} />
+      </View>
+
+      {activeTab === 'details' ? (
+        <View style={styles.detailCard}>
+          <View style={styles.detailHeader}>
+            <View style={styles.detailTitleIcon}><MaterialCommunityIcons name="car" size={24} color="#1475F6" /></View>
+            <View style={styles.flexOne}><Text style={styles.detailTitle}>Vehicle details</Text><Text style={styles.sectionHint}>Details stored for this vehicle</Text></View>
+            <View style={styles.editButton}><MaterialCommunityIcons name="pencil" size={16} color="#1475F6" /><Text style={styles.editText}>Edit</Text></View>
+          </View>
+
+          <Text style={styles.groupLabel}>IDENTITY AND REGISTRATION</Text>
+          <View style={styles.detailGrid}>
+            <DetailCell icon="car" label="Vehicle type" value={v.vehicle_type} />
+            <DetailCell icon="factory" label="Make" value={v.make} />
+            <DetailCell icon="cube-outline" label="Model" value={v.model} />
+            <DetailCell icon="calendar-month-outline" label="Manufacturing year" value={v.year ? String(v.year) : null} />
+            <DetailCell icon="card-account-details-outline" label="Registration number" value={v.vehicle_no} />
+            <DetailCell icon="gas-station-outline" label="Fuel type" value={v.fuel_type} />
+            <DetailCell icon="weight-kilogram" label="GVW" value={v.gvw_kg ? `${Number(v.gvw_kg).toLocaleString('en-IN')} kg` : null} />
+            <DetailCell icon="calendar-check-outline" label="Registration date" value={formatDate(v.registration_date)} />
+            <DetailCell icon="barcode" label="Chassis no." value={maskAlternateCharacters(v.chassis_no)} />
+            <DetailCell icon="engine-outline" label="Engine no." value={maskAlternateCharacters(v.engine_no)} />
+          </View>
+
+          <Text style={[styles.groupLabel, styles.secondGroup]}>COMPLIANCE AND PERMITS</Text>
+          <View style={styles.detailGrid}>
+            <DetailCell icon="file-certificate-outline" label="Permit no." value={v.permit_no} />
+            <DetailCell icon="calendar-alert" label="Fitness expiry" value={formatDate(v.fitness_expiry_date)} status={dateStatus(v.fitness_expiry_date)} />
+            <DetailCell icon="smog" label="PUC expiry" value={formatDate(v.puc_expiry_date)} status={dateStatus(v.puc_expiry_date)} />
+            <DetailCell icon="road-variant" label="Road tax expiry" value={formatDate(v.road_tax_expiry_date)} status={dateStatus(v.road_tax_expiry_date)} />
+            <DetailCell icon="map-marker-path" label="National permit expiry" value={formatDate(v.national_permit_expiry_date)} status={dateStatus(v.national_permit_expiry_date)} />
+            <DetailCell icon="map-marker-radius-outline" label="Local permit expiry" value={formatDate(v.local_permit_expiry_date)} status={dateStatus(v.local_permit_expiry_date)} />
           </View>
         </View>
-        <Text style={styles.detailGroupLabel}>Identity and registration</Text>
-        <View style={styles.detailGrid}>
-          <DetailCell icon="truck-outline" label="Vehicle type" value={vehicle.vehicle_type} />
-          <DetailCell icon="factory" label="Make" value={vehicle.make} />
-          <DetailCell icon="car-info" label="Model" value={vehicle.model} />
-          <DetailCell icon="calendar-blank-outline" label="Manufacturing year" value={vehicle.year ? String(vehicle.year) : null} />
-          <DetailCell icon="weight-kilogram" label="GVW" value={vehicle.gvw_kg ? `${vehicle.gvw_kg.toLocaleString('en-IN')} kg` : isPrivateVehicle(vehicle) ? 'N/A' : null} />
-          <DetailCell icon="calendar-check-outline" label="Registration date" value={formatDate(vehicle.registration_date)} />
-          <DetailCell icon="barcode" label="Chassis no." value={maskAlternateCharacters(vehicle.chassis_no)} />
-          <DetailCell icon="engine-outline" label="Engine no." value={maskAlternateCharacters(vehicle.engine_no)} />
+      ) : activeTab === 'documents' ? (
+        <View style={styles.detailCard}>
+          <Text style={styles.detailTitle}>Documents</Text>
+          <Text style={styles.sectionHint}>Vehicle compliance and insurance dates available for this vehicle.</Text>
+          <View style={styles.simpleList}>{buildDocumentRows(vehicle, latestPolicy).map((row) => <SimpleRow key={row.label} icon={row.icon} label={row.label} value={row.value} />)}</View>
         </View>
-        <Text style={styles.detailGroupLabel}>Compliance and permits</Text>
-        <View style={styles.detailGrid}>
-          <DetailCell icon="file-certificate-outline" label="Permit no." value={storedValueOrClassFallback(vehicle, vehicle.permit_no)} />
-          <DetailCell icon="calendar-alert" label="Fitness expiry" value={storedDateOrClassFallback(vehicle, vehicle.fitness_expiry_date)} status={complianceStatus(vehicle.fitness_expiry_date).status} />
-          <DetailCell icon="smog" label="PUC expiry" value={formatDate(vehicle.puc_expiry_date)} status={complianceStatus(vehicle.puc_expiry_date).status} />
-          <DetailCell icon="road-variant" label="Road tax expiry" value={storedDateOrClassFallback(vehicle, vehicle.road_tax_expiry_date)} status={complianceStatus(vehicle.road_tax_expiry_date).status} />
-          <DetailCell icon="map-marker-path" label="National permit expiry" value={storedDateOrClassFallback(vehicle, vehicle.national_permit_expiry_date)} status={complianceStatus(vehicle.national_permit_expiry_date).status} />
-          <DetailCell icon="map-marker-radius-outline" label="Local permit expiry" value={storedDateOrClassFallback(vehicle, vehicle.local_permit_expiry_date)} status={complianceStatus(vehicle.local_permit_expiry_date).status} />
+      ) : (
+        <View style={styles.detailCard}>
+          <Text style={styles.detailTitle}>History</Text>
+          <Text style={styles.sectionHint}>Insurance policies recorded for this vehicle.</Text>
+          <View style={styles.simpleList}>{policies.length ? [...policies].sort((a, b) => b.end_date.localeCompare(a.end_date)).map((policy) => <SimpleRow key={`${policy.source}-${policy.policy_no}-${policy.end_date}`} icon="shield-check-outline" label={policy.source === 'external' ? 'External policy' : 'Insureit policy'} value={`${policy.source === 'external' ? formatExternalPolicyNumber(policy.policy_no) : policy.policy_no} · ${formatDate(policy.end_date)}`} />) : <Text style={styles.emptyText}>No policy history found.</Text>}</View>
         </View>
-      </Card>
+      )}
     </Screen>
   );
 }
 
-function StatusPill({ tone, label, showDot = false }: { tone: 'green' | 'orange' | 'red'; label: string; showDot?: boolean }) {
-  const config = tone === 'green' ? { bg: '#E8F8F0', text: '#12805C' } : tone === 'orange' ? { bg: '#FFF4E2', text: '#B7791F' } : { bg: '#FDECEC', text: '#C43838' };
-  return <View style={[styles.statusPill, { backgroundColor: config.bg }]}>{showDot ? <PulseDot tone={tone === 'red' ? 'red' : 'yellow'} /> : null}<Text style={[styles.statusText, { color: config.text }]}>{label}</Text></View>;
+function SummaryItem({ icon, label, value, accent = '#1475F6' }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value: string; accent?: string }) {
+  return <View style={styles.summaryItem}><MaterialCommunityIcons name={icon} size={22} color={accent} /><View style={styles.summaryCopy}><Text style={styles.summaryLabel}>{label}</Text><Text style={styles.summaryValue} numberOfLines={1}>{value}</Text></View></View>;
 }
 
-function MiniStat({ label, value, badge }: { label: string; value: string; badge?: string }) {
-  return <View style={styles.miniStat}><View style={styles.miniLabelRow}><Text style={styles.miniLabel}>{label}</Text>{badge ? <View style={styles.externalBadge}><Text style={styles.externalBadgeText}>{badge}</Text></View> : null}</View><Text style={styles.miniValue} numberOfLines={1}>{value}</Text></View>;
+function TabButton({ active, label, onPress }: { active: boolean; label: string; onPress: () => void }) {
+  return <Pressable onPress={onPress} style={({ pressed }) => [styles.tabButton, active && styles.tabButtonActive, pressed && styles.pressed]}><Text style={[styles.tabText, active && styles.tabTextActive]}>{label}</Text></Pressable>;
+}
+
+function AlertRow({ item }: { item: AlertItem }) {
+  return <View style={styles.alertRow}><View style={[styles.alertRowIcon, item.status === 'expired' ? styles.alertRowIconRed : styles.alertRowIconYellow]}><MaterialCommunityIcons name={item.icon} size={23} color={item.status === 'expired' ? '#D93030' : '#B7791F'} /></View><View style={styles.flexOne}><Text style={styles.alertRowTitle}>{item.label}</Text><View style={styles.alertDateRow}><MaterialCommunityIcons name="calendar-month-outline" size={14} color="#63738F" /><Text style={styles.alertDate}>{formatDate(item.date)}</Text></View></View><Text style={[styles.overdueText, item.status === 'due' && styles.dueText]}>{item.status === 'expired' ? `${item.days}d overdue` : `${item.days}d left`}</Text><MaterialCommunityIcons name="chevron-right" size={20} color={palette.navy} /></View>;
 }
 
 function DetailCell({ icon, label, value, status = 'ok' }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value?: string | null; status?: 'expired' | 'due' | 'ok' }) {
-  const showDateDot = status === 'expired' || status === 'due';
-  return <View style={styles.detailCell}><MaterialCommunityIcons name={icon} size={15} color={showDateDot ? status === 'expired' ? '#C43D2D' : '#B7791F' : palette.navy} /><View style={styles.detailCopy}><Text style={styles.detailLabel}>{label}</Text><View style={styles.detailValueRow}>{showDateDot ? <PulseDot tone={status === 'expired' ? 'red' : 'yellow'} /> : null}<Text style={[styles.detailValue, status === 'expired' && styles.detailValueExpired, status === 'due' && styles.detailValueDue]} numberOfLines={2}>{value || '-'}</Text></View></View></View>;
+  const danger = status === 'expired';
+  const due = status === 'due';
+  return <View style={styles.detailCell}><MaterialCommunityIcons name={icon} size={20} color={danger ? '#D93030' : due ? '#B7791F' : '#1475F6'} /><View style={styles.detailCellCopy}><Text style={styles.detailLabel}>{label}</Text><Text style={[styles.detailValue, danger && styles.detailValueDanger, due && styles.detailValueDue]} numberOfLines={2}>{value || '-'}</Text></View></View>;
 }
 
-function maskAlternateCharacters(value?: string | null) {
-  const normalized = String(value ?? '').trim();
-  if (!normalized) return null;
-  return normalized.split('').map((char, index) => index % 2 === 1 ? '•' : char).join('');
+function SimpleRow({ icon, label, value }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value: string }) {
+  return <View style={styles.simpleRow}><MaterialCommunityIcons name={icon} size={20} color="#1475F6" /><View style={styles.flexOne}><Text style={styles.alertRowTitle}>{label}</Text><Text style={styles.sectionHint}>{value}</Text></View></View>;
 }
 
 function selectVehiclePolicy(policies: VehiclePolicyDisplay[]) {
@@ -206,203 +257,165 @@ function selectVehiclePolicy(policies: VehiclePolicyDisplay[]) {
 }
 
 function isPolicyActive(policy: Pick<VehiclePolicyDisplay, 'start_date' | 'end_date'>) {
-  const now = new Date();
-  const currentDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const today = new Date();
+  const currentDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   return policy.start_date <= currentDate && policy.end_date >= currentDate;
 }
 
 function policyStatus(endDate: string) {
   const days = Math.ceil((new Date(endDate).getTime() - Date.now()) / 86400000);
-  if (days < 0) return { label: 'Expired', tone: 'red' as const, helper: `Expired ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} ago` };
-  if (days <= 30) return { label: 'Renewal due', tone: 'orange' as const, helper: `${days} day${days === 1 ? '' : 's'} left for renewal` };
-  return { label: 'Protected', tone: 'green' as const, helper: `${days} day${days === 1 ? '' : 's'} of cover remaining` };
+  if (days < 0) return { label: 'Expired', tone: 'red' as const, helper: `Expired ${Math.abs(days)} days ago` };
+  if (days <= 45) return { label: 'Renewal due', tone: 'orange' as const, helper: `${days} days left` };
+  return { label: 'Protected', tone: 'green' as const, helper: `${days} days of cover remaining` };
 }
 
-function policyTone(tone: 'green' | 'orange' | 'red') {
-  if (tone === 'green') return { accent: '#12805C', soft: '#E8F8F0', background: '#F7FCF9', border: '#BFE6D5' };
-  if (tone === 'orange') return { accent: '#B7791F', soft: '#FFF4E2', background: '#FFFBF3', border: '#F0D9AC' };
-  return { accent: '#C43838', soft: '#FDECEC', background: '#FFF8F8', border: '#F2C6C6' };
-}
-
-type ComplianceItem = { key: string; label: string; date: string | null; status: 'expired' | 'due' | 'ok'; helper: string };
-
-function ComplianceRow({ item }: { item: ComplianceItem }) {
-  return (
-    <View style={styles.complianceRow}>
-      <View style={styles.complianceCopy}>
-        <Text style={styles.complianceTitle}>{item.label}</Text>
-        <View style={styles.complianceDateRow}>
-          <PulseDot tone={item.status === 'expired' ? 'red' : 'yellow'} />
-          <Text style={styles.complianceDate}>{formatDate(item.date)}</Text>
-        </View>
-      </View>
-      <Text style={[styles.complianceStatus, item.status === 'expired' ? styles.complianceExpired : styles.complianceDue]}>{item.helper}</Text>
-    </View>
-  );
-}
-
-function Dot({ tone }: { tone: 'red' | 'yellow' }) {
-  return <View style={[styles.statusDot, tone === 'red' ? styles.redDot : styles.yellowDot]} />;
-}
-
-function PulseDot({ tone }: { tone: 'red' | 'yellow' }) {
-  const opacity = useRef(new Animated.Value(1)).current;
-  const scale = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    const loop = Animated.loop(Animated.sequence([
-      Animated.parallel([
-        Animated.timing(opacity, { toValue: 0.35, duration: 650, useNativeDriver: true }),
-        Animated.timing(scale, { toValue: 1.35, duration: 650, useNativeDriver: true }),
-      ]),
-      Animated.parallel([
-        Animated.timing(opacity, { toValue: 1, duration: 650, useNativeDriver: true }),
-        Animated.timing(scale, { toValue: 1, duration: 650, useNativeDriver: true }),
-      ]),
-    ]));
-    loop.start();
-    return () => loop.stop();
-  }, [opacity, scale]);
-
-  return <Animated.View style={[styles.animatedDot, tone === 'red' ? styles.redDot : styles.yellowDot, { opacity, transform: [{ scale }] }]} />;
-}
-
-function vehicleComplianceItems(vehicle: Vehicle | null, policy: VehiclePolicyDisplay | null): ComplianceItem[] {
+function buildAlerts(vehicle: Vehicle | null, policy: VehiclePolicyDisplay | null): AlertItem[] {
   if (!vehicle) return [];
-  return [
-    { key: 'policy', label: 'Insurance policy', date: policy?.end_date ?? null },
-    { key: 'fitness', label: 'Fitness certificate', date: vehicle.fitness_expiry_date },
-    { key: 'puc', label: 'PUC certificate', date: vehicle.puc_expiry_date },
-    { key: 'road_tax', label: 'Road tax', date: vehicle.road_tax_expiry_date },
-    { key: 'national_permit', label: 'National permit', date: vehicle.national_permit_expiry_date },
-    { key: 'local_permit', label: 'Local permit', date: vehicle.local_permit_expiry_date },
-  ].map((item) => ({ ...item, ...complianceStatus(item.date) }));
-}
-
-function complianceStatus(date: string | null) {
-  if (!date) return { status: 'ok' as const, helper: 'Not available' };
-  const days = Math.ceil((new Date(date).getTime() - Date.now()) / 86400000);
-  if (days < 0) return { status: 'expired' as const, helper: `${Math.abs(days)}d overdue` };
-  if (days <= 45) return { status: 'due' as const, helper: `${days}d left` };
-  return { status: 'ok' as const, helper: `${days}d left` };
-}
-
-function vehicleClassCode(vehicle: Vehicle) {
-  const normalized = (vehicle.vehicle_type ?? '').trim().toUpperCase();
-  if (normalized === 'PCP' || normalized.startsWith('PCP ')) return 'PCP';
-  if (
-    normalized === 'TWP'
-    || normalized.startsWith('TWP ')
-    || normalized.includes('TWO WHEEL')
-    || normalized.includes('TWO-WHEEL')
-    || normalized.includes('2 WHEEL')
-    || normalized.includes('MOTORCYCLE')
-    || normalized.includes('MOTOR CYCLE')
-    || normalized.includes('BIKE')
-    || normalized.includes('SCOOTER')
-  ) return 'TWP';
-  if (normalized === 'PCV' || normalized.startsWith('PCV ') || normalized.includes('PASSENGER') || normalized.includes('BUS')) return 'PCV';
-  if (normalized === 'MISD' || normalized.startsWith('MISD ') || normalized.includes('MISCELLANEOUS')) return 'MISD';
-  if (normalized === 'CPM' || normalized.startsWith('CPM ') || normalized.includes('PLANT') || normalized.includes('MACHINERY')) return 'CPM';
-  if (normalized === 'GCV' || normalized.startsWith('GCV ') || normalized.includes('GOODS')) return 'GCV';
-  if (normalized.includes('PRIVATE') || normalized.includes('CAR')) return 'PCP';
-  return normalized || 'GCV';
-}
-
-function vehicleSketchFor(vehicle: Vehicle) {
-  switch (vehicleClassCode(vehicle)) {
-    case 'PCP': return carSketch;
-    case 'PCV': return busSketch;
-    case 'TWP': return bikeSketch;
-    case 'MISD':
-    case 'CPM': return jcbSketch;
-    default: return truckSketch;
+  const v = vehicle as any;
+  const values: Array<{ key: string; label: string; date?: string | null; icon: keyof typeof MaterialCommunityIcons.glyphMap }> = [
+    { key: 'policy', label: 'Insurance policy', date: policy?.end_date, icon: 'file-document-outline' },
+    { key: 'fitness', label: 'Fitness certificate', date: v.fitness_expiry_date, icon: 'certificate-outline' },
+    { key: 'road-tax', label: 'Road tax', date: v.road_tax_expiry_date, icon: 'road-variant' },
+    { key: 'puc', label: 'PUC certificate', date: v.puc_expiry_date, icon: 'smog' },
+    { key: 'national-permit', label: 'National permit', date: v.national_permit_expiry_date, icon: 'map-marker-path' },
+    { key: 'local-permit', label: 'Local permit', date: v.local_permit_expiry_date, icon: 'map-marker-radius-outline' },
+  ];
+  const alerts: AlertItem[] = [];
+  for (const item of values) {
+    if (!item.date) continue;
+    const diff = Math.ceil((new Date(item.date).getTime() - Date.now()) / 86400000);
+    if (diff < 0) {
+      alerts.push({ ...item, date: item.date, status: 'expired', days: Math.abs(diff) });
+    } else if (diff <= 45) {
+      alerts.push({ ...item, date: item.date, status: 'due', days: diff });
+    }
   }
+  return alerts;
 }
 
-function isPrivateVehicle(vehicle: Vehicle) {
-  return vehicleClassCode(vehicle) === 'PCP';
+function buildDocumentRows(vehicle: Vehicle, policy: VehiclePolicyDisplay | null) {
+  const v = vehicle as any;
+  return [
+    { icon: 'file-document-outline' as const, label: 'Insurance policy', value: policy ? `Expires ${formatDate(policy.end_date)}` : 'Not added' },
+    { icon: 'certificate-outline' as const, label: 'Fitness certificate', value: formatDate(v.fitness_expiry_date) },
+    { icon: 'smog' as const, label: 'PUC certificate', value: formatDate(v.puc_expiry_date) },
+    { icon: 'road-variant' as const, label: 'Road tax', value: formatDate(v.road_tax_expiry_date) },
+  ];
 }
 
-function storedValueOrClassFallback(vehicle: Vehicle, value?: string | null) {
-  const normalized = String(value ?? '').trim();
-  if (normalized) return normalized;
-  return isPrivateVehicle(vehicle) ? 'N/A' : null;
-}
-
-function storedDateOrClassFallback(vehicle: Vehicle, value?: string | null) {
-  if (value) return formatDate(value);
-  return isPrivateVehicle(vehicle) ? 'N/A' : '-';
+function dateStatus(value?: string | null): 'expired' | 'due' | 'ok' {
+  if (!value) return 'ok';
+  const days = Math.ceil((new Date(value).getTime() - Date.now()) / 86400000);
+  if (days < 0) return 'expired';
+  if (days <= 45) return 'due';
+  return 'ok';
 }
 
 function formatDate(value?: string | null) {
   if (!value) return '-';
-  return new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function maskAlternateCharacters(value?: string | null) {
+  const normalized = String(value ?? '').trim();
+  if (!normalized) return null;
+  return normalized.split('').map((char, index) => index % 2 === 1 ? '•' : char).join('');
+}
+
+function vehicleSketchFor(vehicle: Vehicle) {
+  const raw = `${(vehicle as any).vehicle_type ?? ''} ${(vehicle as any).make ?? ''} ${(vehicle as any).model ?? ''}`.toLowerCase();
+  if (/twp|two.?wheeler|bike|motorcycle|scooter|honda|bajaj|hero|yamaha|tvs/.test(raw)) return bikeSketch;
+  if (/pcv|bus|coach/.test(raw)) return busSketch;
+  if (/jcb|excavator|loader|backhoe|construction/.test(raw)) return jcbSketch;
+  if (/pcp|car|suv|sedan|hatchback/.test(raw)) return carSketch;
+  return truckSketch;
 }
 
 const styles = StyleSheet.create({
-  heroCard: { marginTop: 0, padding: 15, overflow: 'hidden', borderWidth: 1, borderColor: '#173B7A', borderRadius: 21, marginBottom: 10, backgroundColor: '#082F7E' },
-  heroTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  heroCopy: { flex: 1, minWidth: 0 },
-  eyebrow: { color: '#FFFFFF', fontSize: 9.5, fontWeight: '900', letterSpacing: 1 },
-  vehicleNo: { color: '#FFFFFF', fontSize: 23, lineHeight: 28, fontWeight: '900', marginTop: 1 },
-  vehicleMeta: { color: '#FFFFFF', fontSize: 12, fontWeight: '800', marginTop: 2 },
-  companyName: { color: '#334155', fontSize: 10.5, lineHeight: 13, fontWeight: '800', marginTop: 2 },
-  vehicleImageShell: { width: 50, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F7FF' },
-  vehicleImage: { width: 44, height: 32 },
-  policySummary: { flexDirection: 'row', gap: 7, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.22)' },
-  protectionRow: { marginTop: 12, paddingTop: 11, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.22)', flexDirection: 'row', alignItems: 'center', gap: 9 },
-  protectionIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  heroCard: { backgroundColor: '#F8FBFF', borderRadius: 24, padding: 20, marginBottom: 14, borderWidth: 1, borderColor: '#E3ECF7', overflow: 'hidden' },
+  heroTopRow: { minHeight: 174, flexDirection: 'row', position: 'relative', alignItems: 'flex-start' },
+  heroIdentity: { flex: 1, paddingTop: 15, paddingRight: 8, zIndex: 2 },
+  eyebrow: { color: '#63738F', fontSize: 12, fontWeight: '800', letterSpacing: 1.1, marginBottom: 12 },
+  vehicleNoRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  vehicleNo: { color: palette.navy, fontSize: 24, lineHeight: 29, fontWeight: '900', maxWidth: '88%' },
+  vehicleMeta: { color: '#667995', fontSize: 16, lineHeight: 22, marginTop: 6, fontWeight: '600' },
+  vehicleArtWrap: { width: '44%', height: 155, alignSelf: 'center', justifyContent: 'center', alignItems: 'center', backgroundColor: '#EEF7FF', borderRadius: 90 },
+  vehicleArt: { width: '118%', height: '92%' },
+  statusBadge: { position: 'absolute', right: 0, top: 0, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 18, paddingHorizontal: 12, paddingVertical: 8 },
+  statusBadgeRed: { backgroundColor: '#FFF0F0' },
+  statusBadgeOrange: { backgroundColor: '#FFF5E5' },
+  statusBadgeGreen: { backgroundColor: '#EAF8F1' },
+  statusBadgeText: { fontSize: 12, fontWeight: '800' },
+  statusRedText: { color: '#D93030' },
+  statusOrangeText: { color: '#B7791F' },
+  statusGreenText: { color: '#12805C' },
+  heroStatsRow: { flexDirection: 'row', alignItems: 'center', paddingTop: 12 },
+  summaryItem: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9, minWidth: 0 },
+  summaryCopy: { flex: 1, minWidth: 0 },
+  summaryLabel: { color: '#72829B', fontSize: 11, marginBottom: 3 },
+  summaryValue: { color: palette.navy, fontSize: 12.5, fontWeight: '800' },
+  statDivider: { width: 1, height: 44, backgroundColor: '#D7E0EC', marginHorizontal: 8 },
+  protectionCard: { borderRadius: 18, padding: 16, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1 },
+  protectionRed: { backgroundColor: '#FFF4F4', borderColor: '#FFDADA' },
+  protectionOrange: { backgroundColor: '#FFFAF0', borderColor: '#F3DFB7' },
+  protectionGreen: { backgroundColor: '#F2FBF7', borderColor: '#CBEADA' },
+  protectionIconWrap: { width: 45, height: 45, borderRadius: 14, backgroundColor: '#FFFFFFAA', alignItems: 'center', justifyContent: 'center' },
   protectionCopy: { flex: 1, minWidth: 0 },
-  protectionHelperRow: { marginLeft: 45, marginTop: 3 },
-  nextLabel: { fontSize: 8.5, fontWeight: '900', letterSpacing: .4 },
-  nextTitle: { color: '#FFFFFF', fontSize: 13, fontWeight: '900', marginTop: 2 },
-  nextBody: { color: '#FFFFFF', fontSize: 10.3, lineHeight: 14, fontWeight: '600', marginTop: 3 },
-  compactPolicyAction: { minHeight: 30, borderRadius: 10, paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#FFFFFF', marginLeft: 'auto' },
-  compactPolicyActionText: { color: palette.navy, fontSize: 9.5, fontWeight: '900' },
-  actionPressed: { opacity: 0.86, transform: [{ scale: 0.97 }] },
-  miniStat: { flex: 1, minHeight: 53, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE5F0', padding: 8, justifyContent: 'center' },
-  miniLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  externalBadge: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 999, backgroundColor: '#EEF5FF', borderWidth: 1, borderColor: '#CFE0F8' },
-  externalBadgeText: { color: '#315C99', fontSize: 7.5, lineHeight: 9, fontWeight: '800' },
-  miniLabel: { color: '#174EA6', fontSize: 9.5, fontWeight: '800', textTransform: 'uppercase' },
-  miniValue: { color: palette.navy, fontSize: 11.5, fontWeight: '900', marginTop: 4 },
-  alertSection: { padding: 10, backgroundColor: '#FFFBF3', borderColor: '#E8D7B5', borderWidth: 1 },
-  detailSection: { backgroundColor: '#F8FBFF', borderColor: '#D7E6FA' },
-  sectionRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 6 },
-  compactSectionRow: { minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: 9 },
-  alertIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: '#FFF1D8', alignItems: 'center', justifyContent: 'center' },
-  alertCountBox: { minWidth: 44, height: 30, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E8D7B5', paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 },
-  alertCountBoxWarning: { backgroundColor: '#FFF4E2', borderColor: '#D8B978' },
-  alertCount: { color: '#8A641E', fontSize: 14, fontWeight: '900' },
-  detailIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' },
-  sectionCopy: { flex: 1, minWidth: 0 },
-  sectionTitle: { color: palette.navy, fontSize: 14.5, lineHeight: 18, fontWeight: '700' },
-  sectionHint: { color: palette.slate, fontSize: 11, fontWeight: '500', lineHeight: 15, marginTop: 1, marginBottom: 2 },
-  alertLegend: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, marginBottom: 8 },
-  legendText: { color: '#5F6B7A', fontSize: 10.5, fontWeight: '600', marginRight: 8 },
-  complianceRow: { minHeight: 48, borderRadius: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E8D7B5', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 7 },
-  complianceCopy: { flex: 1, minWidth: 0 },
-  complianceTitle: { color: palette.navy, fontSize: 12.5, lineHeight: 16, fontWeight: '700' },
-  complianceDateRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1 },
-  complianceDate: { color: '#667085', fontSize: 11, lineHeight: 14, fontWeight: '500', marginTop: 1 },
-  complianceStatus: { fontSize: 11, fontWeight: '700' },
-  complianceExpired: { color: '#C43D2D' },
-  complianceDue: { color: '#B7791F' },
-  statusDot: { width: 8, height: 8, borderRadius: 4 },
-  animatedDot: { width: 8, height: 8, borderRadius: 4 },
-  redDot: { backgroundColor: '#C43D2D' },
-  yellowDot: { backgroundColor: '#F6C33B' },
-  detailGroupLabel: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900', letterSpacing: .55, textTransform: 'uppercase', marginTop: 8, marginBottom: 2 },
-  detailGrid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 10, rowGap: 0, marginTop: 4 },
-  detailCell: { width: '48%', minHeight: 50, paddingVertical: 8, flexDirection: 'row', gap: 7, borderBottomWidth: 1, borderBottomColor: '#E5ECF5' },
-  detailCopy: { flex: 1, minWidth: 0 },
-  detailLabel: { color: '#64748B', fontSize: 9.5, fontWeight: '500', textTransform: 'uppercase' },
-  detailValueRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
-  detailValue: { flex: 1, color: palette.ink, fontSize: 12, lineHeight: 15, fontWeight: '500' },
-  detailValueExpired: { color: '#B42318', fontWeight: '800' },
-  detailValueDue: { color: '#946200', fontWeight: '800' },
-  emptyText: { color: palette.slate, fontSize: 12.5, lineHeight: 18, fontWeight: '500', marginTop: 6 },
-  statusPill: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  statusText: { fontSize: 9, fontWeight: '800' },
+  protectionLabel: { color: '#A53A3A', fontSize: 10.5, fontWeight: '900', letterSpacing: .6 },
+  protectionLine: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 4 },
+  protectionTitle: { color: palette.navy, fontWeight: '900', fontSize: 15 },
+  protectionDot: { color: '#C8A3A3' },
+  protectionHelper: { color: '#75839A', fontSize: 12 },
+  renewButton: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#FFE8E8', paddingHorizontal: 14, paddingVertical: 12, borderRadius: 16 },
+  renewButtonText: { color: '#D93030', fontWeight: '800', fontSize: 12 },
+  alertCard: { backgroundColor: '#FFFCF2', borderRadius: 22, borderWidth: 1, borderColor: '#F2E6BD', padding: 16, marginBottom: 14 },
+  alertHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  alertBellWrap: { width: 50, height: 50, borderRadius: 16, backgroundColor: '#FFF1C9', alignItems: 'center', justifyContent: 'center' },
+  sectionTitle: { color: palette.navy, fontSize: 18, fontWeight: '900' },
+  sectionHint: { color: '#6C7A91', fontSize: 12.5, marginTop: 2 },
+  itemCount: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#EAD7A1', borderRadius: 18, paddingHorizontal: 13, paddingVertical: 9 },
+  itemCountText: { color: '#82621D', fontWeight: '800', fontSize: 12 },
+  alertLegend: { flexDirection: 'row', gap: 24, marginTop: 14, marginBottom: 8 },
+  legendPair: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  legendDot: { width: 11, height: 11, borderRadius: 6 },
+  redDot: { backgroundColor: '#EE4040' },
+  yellowDot: { backgroundColor: '#F4C94A' },
+  legendText: { color: '#60718E', fontSize: 12 },
+  alertList: { gap: 9 },
+  alertRow: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E8E2D3', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 11 },
+  alertRowIcon: { width: 43, height: 43, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  alertRowIconRed: { backgroundColor: '#FFF0F0' },
+  alertRowIconYellow: { backgroundColor: '#FFF7E3' },
+  alertRowTitle: { color: palette.navy, fontSize: 13.5, fontWeight: '800' },
+  alertDateRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
+  alertDate: { color: '#63738F', fontSize: 11.5 },
+  overdueText: { color: '#D93030', fontSize: 12, fontWeight: '800' },
+  dueText: { color: '#B7791F' },
+  tabsRow: { flexDirection: 'row', gap: 9, marginBottom: 14 },
+  tabButton: { flex: 1, minHeight: 48, borderRadius: 22, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E8EEF7' },
+  tabButtonActive: { backgroundColor: '#2F63F5', borderColor: '#2F63F5' },
+  tabText: { color: '#60718E', fontWeight: '700', fontSize: 13 },
+  tabTextActive: { color: '#FFFFFF' },
+  detailCard: { backgroundColor: '#FFFFFF', borderRadius: 22, borderWidth: 1, borderColor: '#E5EDF7', padding: 18, marginBottom: 18 },
+  detailHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 19 },
+  detailTitleIcon: { width: 50, height: 50, borderRadius: 16, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center' },
+  detailTitle: { color: palette.navy, fontSize: 19, fontWeight: '900' },
+  editButton: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#EFF6FF', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10 },
+  editText: { color: '#1475F6', fontWeight: '800', fontSize: 12 },
+  groupLabel: { color: '#2F4E86', fontSize: 10.5, fontWeight: '900', letterSpacing: 1.4, marginBottom: 6 },
+  secondGroup: { marginTop: 18 },
+  detailGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  detailCell: { width: '50%', minHeight: 78, flexDirection: 'row', gap: 10, alignItems: 'center', borderTopWidth: 1, borderTopColor: '#EEF2F7', paddingVertical: 13, paddingRight: 8 },
+  detailCellCopy: { flex: 1, minWidth: 0 },
+  detailLabel: { color: '#76859D', fontSize: 10.5, marginBottom: 4 },
+  detailValue: { color: palette.navy, fontSize: 13.5, fontWeight: '700' },
+  detailValueDanger: { color: '#D93030' },
+  detailValueDue: { color: '#B7791F' },
+  simpleList: { marginTop: 14, gap: 10 },
+  simpleRow: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#EEF2F7' },
+  emptyText: { color: '#6C7A91', textAlign: 'center', paddingVertical: 16, fontSize: 12.5 },
+  flexOne: { flex: 1, minWidth: 0 },
+  pressed: { opacity: .78 },
 });
