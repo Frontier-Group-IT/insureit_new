@@ -69,8 +69,10 @@ assert.match(operations, /p_business_line:filters\.businessLine,p_category:filte
 
 assert.match(migration, /create or replace function public\.get_claims_report_v2\(/i, "Migration must create the business-aware Claims RPC.");
 assert.match(migration, /create or replace function public\.get_operations_compliance_report_v2\(/i, "Migration must create the business-aware Operations RPC.");
-assert.match(migration, /p_business_line is null or lower\(coalesce\(nullif\(trim\(p\.business_line\)/i, "Claims/Operations SQL must enforce the selected policy business line.");
+assert.match(migration, /p_business_line is null or \(p\.id is not null and lower\(coalesce\(nullif\(trim\(p\.business_line\)/i, "Claims SQL must require a linked policy whenever a specific business is selected.");
+assert.match(migration, /p_category is null\s+or \(\s+p\.id is not null/i, "Claims SQL must not classify unlinked claims into a selected category.");
 assert.match(migration, /where p\.vehicle_id=v\.id/i, "Operations business scoping must require a vehicle linked to a matching policy.");
+assert.match(migration, /and \(p_business_line is null or lower\(coalesce\(nullif\(trim\(p\.business_line\)/i, "Operations SQL must enforce the selected policy business line.");
 assert.match(migration, /grant execute on function public\.get_claims_report_v2[^;]+to service_role;/i, "Claims v2 RPC must remain service-role only.");
 assert.match(migration, /grant execute on function public\.get_operations_compliance_report_v2[^;]+to service_role;/i, "Operations v2 RPC must remain service-role only.");
 
