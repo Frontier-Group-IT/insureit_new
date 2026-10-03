@@ -35,21 +35,25 @@ export function ReportDateRangePicker({
   hideTrigger = false,
   popoverClassName = "",
 }: RangePickerProps) {
+  const today = todayUtc();
+  const effectiveMaxDate = maxDate && maxDate < today ? maxDate : today;
+  const initialCalendarDate = clampToMaxDate(to || from || effectiveMaxDate, effectiveMaxDate);
   const [internalOpen, setInternalOpen] = useState(false);
   const [rangeStart, setRangeStart] = useState(from);
   const [rangeEnd, setRangeEnd] = useState(to);
-  const [calendarMonth, setCalendarMonth] = useState((to || from || maxDate || todayUtc()).slice(0, 7));
+  const [calendarMonth, setCalendarMonth] = useState(initialCalendarDate.slice(0, 7));
   const triggerRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const open = controlledOpen ?? internalOpen;
   const days = useMemo(() => buildCalendarDays(calendarMonth), [calendarMonth]);
+  const nextMonthDisabled = shiftMonth(calendarMonth, 1) > effectiveMaxDate.slice(0, 7);
 
   useEffect(() => {
     if (open) return;
     setRangeStart(from);
     setRangeEnd(to);
-    setCalendarMonth((to || from || maxDate || todayUtc()).slice(0, 7));
-  }, [from, to, maxDate, open]);
+    setCalendarMonth(clampToMaxDate(to || from || effectiveMaxDate, effectiveMaxDate).slice(0, 7));
+  }, [from, to, effectiveMaxDate, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -75,7 +79,7 @@ export function ReportDateRangePicker({
   }
 
   function selectDate(date: string) {
-    if (isDisabledDate(date, minDate, maxDate)) return;
+    if (isDisabledDate(date, minDate, effectiveMaxDate)) return;
 
     if (rangeStart && !rangeEnd) {
       const nextStart = date < rangeStart ? date : rangeStart;
@@ -103,7 +107,7 @@ export function ReportDateRangePicker({
       <div className="flex items-center justify-between px-1">
         <button type="button" onClick={() => setCalendarMonth(shiftMonth(calendarMonth, -1))} className="grid h-8 w-8 place-items-center rounded-lg border border-[#E2E8F0] text-[#4B5F78] hover:bg-[#F7F9FC]" aria-label="Previous month"><ChevronLeft className="h-4 w-4" /></button>
         <div className="text-center"><p className="text-[12px] font-black text-[#21344F]">{monthTitle(calendarMonth)}</p><p className="mt-0.5 text-[8.5px] font-semibold text-[#778396]">Select start and end date</p></div>
-        <button type="button" onClick={() => setCalendarMonth(shiftMonth(calendarMonth, 1))} className="grid h-8 w-8 place-items-center rounded-lg border border-[#E2E8F0] text-[#4B5F78] hover:bg-[#F7F9FC]" aria-label="Next month"><ChevronRight className="h-4 w-4" /></button>
+        <button type="button" onClick={() => setCalendarMonth(shiftMonth(calendarMonth, 1))} disabled={nextMonthDisabled} className="grid h-8 w-8 place-items-center rounded-lg border border-[#E2E8F0] text-[#4B5F78] hover:bg-[#F7F9FC] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-white" aria-label="Next month"><ChevronRight className="h-4 w-4" /></button>
       </div>
 
       <div className="mt-3 grid grid-cols-7 text-center text-[8.5px] font-black uppercase tracking-[.05em] text-[#7A8799]">
@@ -115,7 +119,7 @@ export function ReportDateRangePicker({
           if (!date) return <span key={`blank-${index}`} className="h-9" />;
           const selectedEdge = date === rangeStart || date === rangeEnd;
           const inRange = Boolean(rangeEnd && date > rangeStart && date < rangeEnd);
-          const dateDisabled = isDisabledDate(date, minDate, maxDate);
+          const dateDisabled = isDisabledDate(date, minDate, effectiveMaxDate);
           return (
             <button
               key={date}
@@ -193,6 +197,10 @@ export function ReportDateRangeNavigator({ path, from, to, preserveParams = {}, 
 
 function isDisabledDate(date: string, minDate?: string, maxDate?: string) {
   return Boolean((minDate && date < minDate) || (maxDate && date > maxDate));
+}
+
+function clampToMaxDate(date: string, maxDate: string) {
+  return date > maxDate ? maxDate : date;
 }
 
 function buildCalendarDays(monthKey: string) {
