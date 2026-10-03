@@ -87,6 +87,8 @@ jobs:
         run: npm run register-prefetch:regression
       - name: Commercial and reports prefetch regression
         run: npm run commercial-reports-prefetch:regression
+      - name: Reports business type global filter regression
+        run: node scripts/reports-business-type-filter-regression.mjs
       - name: Register performance observability regression
         run: npm run register-performance-observability:regression
       - name: Policy register payload regression
