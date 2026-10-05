@@ -283,7 +283,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
   const availableSources=useMemo(()=>sources.filter(item=>item.type===form.intermediaryType),[sources,form.intermediaryType]);
   const selectedSource=availableSources.find(item=>item.code===form.intermediaryCode&&item.label.trim().toLowerCase()===form.leadSource.trim().toLowerCase());
   const selectedSourceId=useMemo(()=>availableSources.find(item=>item.code===form.intermediaryCode&&item.label.trim().toLowerCase()===form.leadSource.trim().toLowerCase())?.value??"",[availableSources,form.intermediaryCode,form.leadSource]);
-  const lifeHealthInsurers=useMemo(()=>insurers.filter(item=>item.segment==="life"||item.segment==="health").map(({label,value})=>({label,value})),[insurers]);
+  const lifeHealthInsurers=useMemo(()=>form.businessLine==="Health"?insurers.map(({label,value})=>({label,value})):insurers.filter(item=>item.segment==="life"||item.segment==="health").map(({label,value})=>({label,value})),[form.businessLine,insurers]);
   useEffect(()=>{if(form.rmName||!selectedSourceId)return;const selected=availableSources.find(item=>item.value===selectedSourceId);if(selected?.rmName)setForm(current=>current.rmName?current:{...current,rmName:selected.rmName});},[availableSources,form.rmName,selectedSourceId]);
   function changeIntermediaryType(value:string){ setForm(current=>({...current,intermediaryType:value,leadSource:"",intermediaryCode:"",rmName:""})); }
   function changeLeadSource(value:string){ const selected=availableSources.find(item=>item.value===value); setForm(current=>({...current,leadSource:selected?.label??"",intermediaryCode:selected?.code??"",rmName:selected?.rmName??""})); }
