@@ -152,7 +152,7 @@ export default function PartnerHomeScreen() {
                     <Text style={styles.periodButtonText}>{periodLabel}</Text>
                     <Ionicons
                       name={periodOpen ? 'chevron-up' : 'chevron-down'}
-                      size={13}
+                      size={12}
                       color="#17366C"
                     />
                   </Pressable>
@@ -196,7 +196,7 @@ export default function PartnerHomeScreen() {
                   style={({ pressed }) => [styles.viewReport, pressed && styles.pressed]}
                 >
                   <Text style={styles.viewReportText}>View Report</Text>
-                  <Ionicons name="chevron-forward" size={14} color="#5F38CF" />
+                  <Ionicons name="chevron-forward" size={12} color="#5F38CF" />
                 </Pressable>
               </View>
 
@@ -218,21 +218,25 @@ export default function PartnerHomeScreen() {
                 </View>
 
                 <View style={styles.chartTile}>
-                  <Ionicons name="stats-chart" size={42} color="#0B82E6" />
-                  <Ionicons name="arrow-up" size={20} color="#0B82E6" style={styles.chartArrow} />
+                  <Image
+                    source={PartnerAssets.actions.businessPerformance}
+                    style={styles.chartImage}
+                    resizeMode="contain"
+                    accessibilityLabel="Business performance"
+                  />
                 </View>
               </View>
 
               <View style={styles.businessDivider} />
               <View style={styles.businessBottomRow}>
                 <MetricCell
-                  icon="documents-outline"
+                  asset={PartnerAssets.actions.policyRegister}
                   value={String(rangeData?.policies ?? data.business.policies_this_month)}
                   label="Policies Sold"
                 />
                 <View style={styles.metricDivider} />
                 <MetricCell
-                  icon="cash-outline"
+                  asset={PartnerAssets.actions.payoutGrowth}
                   value={rangeData?.commission_available ? formatIndianCurrency(rangeData.commission_earned ?? 0) : '—'}
                   label="Commission Earned"
                 />
@@ -246,11 +250,12 @@ export default function PartnerHomeScreen() {
               <View style={styles.quickGrid}>
                 <QuickAction
                   asset={PartnerAssets.navigation.policyIntake}
+                  imageScale={1.22}
                   label="Policy Intake"
                   onPress={() => router.push('/policy-intake-new')}
                 />
                 <QuickAction
-                  asset={PartnerAssets.actions.renewals}
+                  asset={PartnerAssets.navigation.renewals}
                   label="Renewals"
                   onPress={() => router.push('/renewals')}
                 />
@@ -294,7 +299,7 @@ function PendingTasksCard({ data, onOpenClaims }: { data: PartnerHomeData; onOpe
   return (
     <View style={styles.pendingCard}>
       <View style={styles.pendingHeadingRow}>
-        <View>
+        <View style={styles.pendingHeadingCopy}>
           <Text style={styles.pendingTitle}>Pending Tasks</Text>
           <Text style={styles.pendingHint}>Keep up with important actions.</Text>
         </View>
@@ -319,17 +324,17 @@ function PendingTasksCard({ data, onOpenClaims }: { data: PartnerHomeData; onOpe
           <Text style={styles.pendingRowTitle}>{title}</Text>
           <Text style={styles.pendingRowSubtitle}>{subtitle}</Text>
         </View>
-        <Ionicons name="chevron-forward" size={18} color="#17366C" />
+        <Ionicons name="chevron-forward" size={16} color="#2C56A2" />
       </Pressable>
     </View>
   );
 }
 
-function MetricCell({ icon, value, label }: { icon: keyof typeof Ionicons.glyphMap; value: string; label: string }) {
+function MetricCell({ asset, value, label }: { asset: number; value: string; label: string }) {
   return (
     <View style={styles.metricCell}>
       <View style={styles.metricIconBox}>
-        <Ionicons name={icon} size={19} color="#1979CB" />
+        <Image source={asset} style={styles.metricImage} resizeMode="contain" />
       </View>
       <View style={styles.metricCopy}>
         <Text numberOfLines={1} style={styles.metricValue}>{value}</Text>
@@ -339,7 +344,17 @@ function MetricCell({ icon, value, label }: { icon: keyof typeof Ionicons.glyphM
   );
 }
 
-function QuickAction({ asset, label, onPress }: { asset: number; label: string; onPress: () => void }) {
+function QuickAction({
+  asset,
+  label,
+  onPress,
+  imageScale = 1,
+}: {
+  asset: number;
+  label: string;
+  onPress: () => void;
+  imageScale?: number;
+}) {
   const scale = useState(() => new Animated.Value(1))[0];
   const animate = (pressed: boolean) => {
     Animated.spring(scale, {
@@ -361,7 +376,11 @@ function QuickAction({ asset, label, onPress }: { asset: number; label: string; 
     >
       <Animated.View style={[styles.quickAction, { transform: [{ scale }] }]}>
         <View style={styles.quickIcon}>
-          <Image source={asset} style={styles.quickImage} resizeMode="contain" />
+          <Image
+            source={asset}
+            style={[styles.quickImage, { transform: [{ scale: imageScale }] }]}
+            resizeMode="contain"
+          />
         </View>
         <Text numberOfLines={2} style={styles.quickLabel}>{label}</Text>
       </Animated.View>
@@ -376,7 +395,7 @@ function Trend({ value, hasPrevious, isMonth }: { value: number; hasPrevious: bo
     <View style={styles.trend}>
       <Ionicons
         name={positive ? 'trending-up' : 'trending-down'}
-        size={13}
+        size={11}
         color={positive ? '#1D9C60' : '#C27A11'}
       />
       <Text style={[styles.trendText, { color: positive ? '#1D9C60' : '#C27A11' }]}>
@@ -429,23 +448,17 @@ function formatCacheTime(value: number | null) {
 function HomeSkeleton() {
   return (
     <View style={styles.skeletonWrap}>
-      <PartnerSkeleton height={176} radius={18} />
-      <PartnerSkeleton height={116} radius={18} />
-      <PartnerSkeleton height={96} radius={18} />
-      <PartnerSkeleton height={82} radius={18} />
+      <PartnerSkeleton height={164} radius={16} />
+      <PartnerSkeleton height={104} radius={16} />
+      <PartnerSkeleton height={88} radius={16} />
+      <PartnerSkeleton height={82} radius={16} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  avatarTouch: {
-    borderRadius: 18,
-  },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  avatarTouch: { borderRadius: 18 },
   avatar: {
     width: 38,
     height: 38,
@@ -456,66 +469,44 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#D5DEEB',
   },
-  avatarText: {
-    color: '#40359E',
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  refreshWarning: {
-    marginBottom: 10,
-  },
-  skeletonWrap: {
-    gap: 12,
-  },
+  avatarText: { color: '#40359E', fontSize: 11, fontWeight: '800' },
+  pressed: { opacity: 0.7 },
+  refreshWarning: { marginBottom: 9 },
+  skeletonWrap: { gap: 10 },
 
   businessCard: {
     position: 'relative',
     zIndex: 4,
-    marginBottom: 10,
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 10,
-    borderRadius: 18,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 8,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#DCE4EF',
+    borderWidth: 1,
+    borderColor: '#DDE5EE',
     shadowColor: '#16345E',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
     elevation: 2,
   },
   businessTopRow: {
-    minHeight: 28,
+    minHeight: 24,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  periodWrap: {
-    position: 'relative',
-    zIndex: 10,
-  },
-  periodButton: {
-    minHeight: 28,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  periodButtonText: {
-    color: '#17366C',
-    fontSize: 13,
-    fontWeight: '800',
-  },
+  periodWrap: { position: 'relative', zIndex: 10 },
+  periodButton: { minHeight: 24, flexDirection: 'row', alignItems: 'center', gap: 2 },
+  periodButtonText: { color: '#17366C', fontSize: 11.5, fontWeight: '800' },
   periodMenu: {
     position: 'absolute',
-    top: 31,
+    top: 27,
     left: 0,
     width: 150,
     overflow: 'hidden',
-    borderRadius: 12,
+    borderRadius: 11,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#DCE4EF',
     backgroundColor: '#FFFFFF',
@@ -532,182 +523,92 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  periodOptionActive: {
-    backgroundColor: '#F0F6FF',
-  },
-  periodOptionText: {
-    color: partnerTheme.colors.inkMuted,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  periodOptionTextActive: {
-    color: partnerTheme.colors.brand,
-    fontWeight: '800',
-  },
-  viewReport: {
-    minHeight: 30,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 1,
-  },
-  viewReportText: {
-    color: '#5F38CF',
-    fontSize: 11,
-    fontWeight: '800',
-  },
+  periodOptionActive: { backgroundColor: '#F0F6FF' },
+  periodOptionText: { color: partnerTheme.colors.inkMuted, fontSize: 12, fontWeight: '600' },
+  periodOptionTextActive: { color: partnerTheme.colors.brand, fontWeight: '800' },
+  viewReport: { minHeight: 26, flexDirection: 'row', alignItems: 'center', gap: 1 },
+  viewReportText: { color: '#5F38CF', fontSize: 9.2, fontWeight: '800' },
   businessMainRow: {
-    marginTop: 4,
+    marginTop: 2,
+    minHeight: 77,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
   },
-  businessMainCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
+  businessMainCopy: { flex: 1, minWidth: 0 },
   businessPremium: {
-    color: '#182338',
-    fontSize: 29,
-    lineHeight: 34,
+    color: '#172239',
+    fontSize: 27,
+    lineHeight: 31,
     fontWeight: '800',
-    letterSpacing: -0.7,
+    letterSpacing: -0.65,
   },
-  businessCaption: {
-    marginTop: 1,
-    color: '#4F5D71',
-    fontSize: 10.5,
-    fontWeight: '600',
-  },
+  businessCaption: { marginTop: 0, color: '#4F5D71', fontSize: 9.3, fontWeight: '600' },
   chartTile: {
-    width: 64,
-    height: 64,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EAF6FF',
-  },
-  chartArrow: {
-    position: 'absolute',
-    right: 5,
-    top: 5,
-  },
-  trend: {
-    marginTop: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  trendText: {
-    fontSize: 9.5,
-    fontWeight: '700',
-  },
-  trendNeutral: {
-    marginTop: 8,
-    color: '#8691A2',
-    fontSize: 9.5,
-    fontWeight: '600',
-  },
-  rangeError: {
-    marginTop: 8,
-    color: partnerTheme.colors.danger,
-    fontSize: 9.5,
-    fontWeight: '600',
-  },
-  businessDivider: {
-    height: StyleSheet.hairlineWidth,
-    marginTop: 12,
-    backgroundColor: '#DCE4EF',
-  },
-  businessBottomRow: {
-    minHeight: 54,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  metricCell: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 9,
-  },
-  metricDivider: {
-    width: StyleSheet.hairlineWidth,
-    height: 35,
-    marginHorizontal: 12,
-    backgroundColor: '#C9D4E2',
-  },
-  metricIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EBF6FF',
-  },
-  metricCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  metricValue: {
-    color: '#17366C',
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  metricLabel: {
-    marginTop: 1,
-    color: '#7B8799',
-    fontSize: 8.5,
-    fontWeight: '600',
-  },
-
-  quickCard: {
-    marginBottom: 10,
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    paddingBottom: 10,
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E4EAF2',
-  },
-  sectionTitle: {
-    marginBottom: 9,
-    color: '#17233A',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  quickGrid: {
-    flexDirection: 'row',
-    gap: 7,
-  },
-  quickActionTouch: {
-    flex: 1,
-    minWidth: 0,
-  },
-  quickAction: {
-    height: 72,
+    width: 58,
+    height: 58,
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFD',
+    backgroundColor: '#EDF7FF',
+  },
+  chartImage: { width: 47, height: 47 },
+  trend: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 3 },
+  trendText: { fontSize: 8.2, fontWeight: '700' },
+  trendNeutral: { marginTop: 6, color: '#8691A2', fontSize: 8.2, fontWeight: '600' },
+  rangeError: { marginTop: 6, color: partnerTheme.colors.danger, fontSize: 8.2, fontWeight: '600' },
+  businessDivider: { height: StyleSheet.hairlineWidth, marginTop: 5, backgroundColor: '#C8D7E9' },
+  businessBottomRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center' },
+  metricCell: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  metricDivider: { width: 1, height: 31, marginHorizontal: 9, backgroundColor: '#C5D1E0' },
+  metricIconBox: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EEF7FF',
+  },
+  metricImage: { width: 23, height: 23 },
+  metricCopy: { flex: 1, minWidth: 0 },
+  metricValue: { color: '#17366C', fontSize: 13.5, lineHeight: 16, fontWeight: '800' },
+  metricLabel: { marginTop: 1, color: '#78859A', fontSize: 7.5, lineHeight: 9, fontWeight: '600' },
+
+  quickCard: {
+    marginBottom: 8,
+    paddingHorizontal: 10,
+    paddingTop: 10,
+    paddingBottom: 9,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E3E9F0',
+  },
+  sectionTitle: { marginBottom: 7, color: '#17233A', fontSize: 11.5, lineHeight: 14, fontWeight: '800' },
+  quickGrid: { flexDirection: 'row', gap: 6 },
+  quickActionTouch: { flex: 1, minWidth: 0 },
+  quickAction: {
+    height: 61,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F7FAFE',
   },
   quickIcon: {
-    width: 35,
-    height: 35,
+    width: 34,
+    height: 34,
     borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EAF5FF',
+    backgroundColor: '#EEF7FF',
   },
-  quickImage: {
-    width: 27,
-    height: 27,
-  },
+  quickImage: { width: 28, height: 28 },
   quickLabel: {
-    marginTop: 4,
-    color: '#24324A',
-    fontSize: 8.5,
-    lineHeight: 10.5,
+    marginTop: 2,
+    color: '#21304A',
+    fontSize: 7.6,
+    lineHeight: 9.2,
     fontWeight: '700',
     textAlign: 'center',
   },
@@ -715,97 +616,65 @@ const styles = StyleSheet.create({
   pendingCard: {
     position: 'relative',
     marginBottom: 6,
-    paddingHorizontal: 13,
-    paddingTop: 11,
-    paddingBottom: 10,
+    paddingHorizontal: 11,
+    paddingTop: 9,
+    paddingBottom: 8,
     overflow: 'hidden',
-    borderRadius: 16,
-    backgroundColor: '#E7F4FF',
+    borderRadius: 15,
+    backgroundColor: '#E8F4FF',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#D3EAFB',
+    borderColor: '#D5EAFB',
   },
   pendingHeadingRow: {
-    minHeight: 34,
+    minHeight: 31,
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
   },
-  pendingTitle: {
-    color: '#17366C',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  pendingHint: {
-    marginTop: 1,
-    color: '#68809B',
-    fontSize: 9.5,
-    fontWeight: '500',
-  },
+  pendingHeadingCopy: { paddingRight: 74 },
+  pendingTitle: { color: '#17366C', fontSize: 11.5, lineHeight: 14, fontWeight: '800' },
+  pendingHint: { marginTop: 1, color: '#68809B', fontSize: 8.1, lineHeight: 10, fontWeight: '500' },
   pendingDecor: {
     position: 'absolute',
-    right: -4,
-    top: -4,
-    width: 64,
-    height: 58,
+    right: -2,
+    top: -8,
+    width: 67,
+    height: 62,
     alignItems: 'center',
     justifyContent: 'center',
+    opacity: 0.78,
   },
-  pendingDecorImage: {
-    width: 62,
-    height: 62,
-  },
+  pendingDecorImage: { width: 62, height: 62 },
   pendingRow: {
-    minHeight: 47,
-    marginTop: 4,
-    paddingRight: 34,
+    minHeight: 42,
+    marginTop: 1,
+    paddingRight: 22,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 7,
   },
   pendingIconBox: {
-    width: 30,
-    height: 30,
-    borderRadius: 9,
+    width: 27,
+    height: 27,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F6FBFF',
   },
-  pendingIcon: {
-    width: 23,
-    height: 23,
-  },
+  pendingIcon: { width: 21, height: 21 },
   pendingCountBadge: {
-    minWidth: 24,
-    height: 24,
+    minWidth: 22,
+    height: 22,
     paddingHorizontal: 6,
-    borderRadius: 12,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
   },
-  pendingCountText: {
-    color: '#E05050',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  pendingCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  pendingRowTitle: {
-    color: '#25344C',
-    fontSize: 10.5,
-    fontWeight: '800',
-  },
-  pendingRowSubtitle: {
-    marginTop: 2,
-    color: '#728198',
-    fontSize: 8.8,
-    fontWeight: '500',
-  },
+  pendingCountText: { color: '#E05050', fontSize: 10.2, fontWeight: '800' },
+  pendingCopy: { flex: 1, minWidth: 0 },
+  pendingRowTitle: { color: '#25344C', fontSize: 9.4, lineHeight: 12, fontWeight: '800' },
+  pendingRowSubtitle: { marginTop: 1, color: '#728198', fontSize: 7.4, lineHeight: 9.2, fontWeight: '500' },
 
-  storiesWrap: {
-    marginTop: 5,
-    marginBottom: 4,
-  },
+  storiesWrap: { marginTop: 5, marginBottom: 4 },
 });
