@@ -174,25 +174,25 @@ export default function PoliciesScreen() {
         <View style={styles.tabsScroller}>
           {filters.map((filter) => {
             const active = lifecycle === filter.value;
+            const count = policyFilterCount(summary.data, filter.value);
             return (
               <Pressable
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
+                accessibilityLabel={`${filter.label}${count === null ? '' : ` ${count}`}`}
                 key={filter.value}
                 onPress={() => setLifecycle(filter.value)}
                 style={({ pressed }) => [styles.tabButton, active && styles.tabButtonActive, pressed && styles.pressed]}
               >
-                <Text style={[styles.tabText, active && styles.tabTextActive]}>{filter.label}</Text>
+                <View style={styles.tabLabelRow}>
+                  <Text style={[styles.tabText, active && styles.tabTextActive]}>{filter.label}</Text>
+                  {count === null ? null : (
+                    <Text style={[styles.tabCount, active && styles.tabCountActive]}>{count}</Text>
+                  )}
+                </View>
               </Pressable>
             );
           })}
-        </View>
-      </View>
-
-      <View style={styles.bookHeader}>
-        <View>
-          <Text style={styles.bookTitle}>POLICY BOOK</Text>
-          <Text style={styles.bookMeta}>{collection.loading ? 'Searching…' : `${collection.total} records`}</Text>
         </View>
       </View>
 
@@ -323,10 +323,17 @@ function PolicyCard({ row, onPress }: { row: PartnerPolicyRow; onPress: () => vo
         </View>
         <Text style={styles.policyPeriod}>{formatDate(row.start_date)} - {formatDate(row.end_date)}</Text>
       </View>
-
-      <Ionicons name="chevron-forward" size={15} color="#3156B8" />
     </Pressable>
   );
+}
+
+function policyFilterCount(summary: PartnerPolicySummary | null, lifecycle: PartnerPolicyLifecycle) {
+  if (!summary) return null;
+  if (lifecycle === 'in_force') return summary.in_force_policies;
+  if (lifecycle === 'expiring') return summary.expiring_30_days;
+  if (lifecycle === 'expired') return summary.expired_policies;
+  if (lifecycle === 'upcoming') return summary.upcoming_policies;
+  return summary.total_policies;
 }
 
 function policyStatus(value: PartnerPolicyRow['lifecycle_status']) {
@@ -475,9 +482,10 @@ const styles = StyleSheet.create({
   },
   feedback: { marginHorizontal: 12, marginTop: 7 },
   tabsRow: {
-    minHeight: 46,
+    minHeight: 48,
     marginHorizontal: 12,
     marginTop: 8,
+    marginBottom: 7,
     flexDirection: 'row',
     alignItems: 'stretch',
     borderRadius: 10,
@@ -490,19 +498,19 @@ const styles = StyleSheet.create({
   tabButton: {
     flex: 1,
     minWidth: 0,
-    minHeight: 44,
+    minHeight: 46,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 3,
+    paddingHorizontal: 2,
     borderBottomWidth: 3,
     borderBottomColor: 'transparent',
   },
   tabButtonActive: { backgroundColor: '#EEF4FF', borderBottomColor: '#3156B8' },
-  tabText: { color: '#708099', textAlign: 'center', fontSize: 8.2, lineHeight: 11, fontWeight: '700' },
+  tabLabelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2.5 },
+  tabText: { color: '#708099', textAlign: 'center', fontSize: 9.2, lineHeight: 12, fontWeight: '700' },
   tabTextActive: { color: '#183E87', fontWeight: '800' },
-  bookHeader: { marginHorizontal: 12, paddingTop: 9, paddingBottom: 6 },
-  bookTitle: { color: '#708099', fontSize: 7.2, lineHeight: 10, letterSpacing: 1.2, fontWeight: '800' },
-  bookMeta: { marginTop: 2, color: '#9AA6B7', fontSize: 6.4, lineHeight: 9, fontWeight: '600' },
+  tabCount: { color: '#8B98AA', fontSize: 8.2, lineHeight: 11, fontWeight: '800' },
+  tabCountActive: { color: '#3156B8' },
   cardGap: { height: 5 },
   policyCard: {
     minHeight: 66,
