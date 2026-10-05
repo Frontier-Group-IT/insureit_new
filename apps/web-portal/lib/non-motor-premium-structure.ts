@@ -1,22 +1,17 @@
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import {
+  normalizeNonMotorProductKey,
+  type NonMotorPremiumStructure,
+  type NonMotorProductConfiguration,
+} from "@/lib/non-motor-premium-structure-shared";
 
-export type NonMotorPremiumStructure = "standard" | "od_tp";
-
-export type NonMotorProductConfiguration = {
-  productName: string;
-  productKey: string;
-  premiumStructure: NonMotorPremiumStructure;
-};
+export type { NonMotorPremiumStructure, NonMotorProductConfiguration } from "@/lib/non-motor-premium-structure-shared";
 
 type ConfigurationRow = {
   product_name: string;
   product_key: string;
   premium_structure: string;
 };
-
-export function normalizeNonMotorProductKey(value: string) {
-  return value.trim().replace(/\s+/g, " ").toLowerCase();
-}
 
 export async function loadNonMotorProductConfigurations(): Promise<NonMotorProductConfiguration[]> {
   const admin = createSupabaseAdminClient();
@@ -73,7 +68,6 @@ export async function resolveNonMotorPremiumStructure(
   });
 
   if (insertError) {
-    // A concurrent request may have created the product configuration first.
     const { data: concurrent, error: concurrentError } = await admin
       .from("non_motor_product_configurations")
       .select("product_name,product_key,premium_structure")
