@@ -98,7 +98,7 @@ export default function CustomerDetailScreen() {
 
           <View style={styles.vehiclesSection}>
             <View style={styles.vehiclesHeader}>
-              <View style={styles.sectionTitleRow}><Ionicons name="car-outline" size={19} color="#1767E8" /><Text style={styles.sectionTitle}>Vehicles</Text></View>
+              <View style={styles.sectionTitleRow}><Ionicons name="car-sport-outline" size={19} color="#1767E8" /><Text style={styles.sectionTitle}>Vehicles</Text></View>
               <Text style={styles.vehiclesCount}>{data.summary.vehicles} total</Text>
             </View>
             {data.vehicles.length ? (
@@ -165,13 +165,13 @@ export default function CustomerDetailScreen() {
                   </View>
                 );
               })}</View>
-            ) : <EmptyCard icon="car-outline" title="No vehicles recorded." subtitle="Vehicles linked to this customer will appear here." />}
+            ) : <EmptyCard icon="car-sport-outline" title="No vehicles recorded." subtitle="Vehicles linked to this customer will appear here." />}
             {data.vehicles.length > 2 ? <ExpandToggle expanded={showAllVehicles} total={data.vehicles.length} label="vehicles" onPress={() => setShowAllVehicles((value) => !value)} /> : null}
           </View>
 
           {unlinkedPolicies.length ? (
             <>
-              <SectionHeader icon="document-text-outline" title="Other Policies" meta={`${unlinkedPolicies.length} without a linked vehicle`} />
+              <SectionHeader icon="albums-outline" title="Other Policies" meta={`${unlinkedPolicies.length} without a linked vehicle`} />
               <View style={styles.stack}>{unlinkedPolicies.map((policy) => {
                 const logo = getPartnerInsurerLogoSource(policy.insurer_name);
                 return (
