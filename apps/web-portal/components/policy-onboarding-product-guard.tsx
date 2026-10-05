@@ -8,7 +8,8 @@ type Props = { insurers: InsurerOption[] };
 
 function allowedInsurerSegments(policyType: string) {
   if (policyType === "Motor" || policyType === "Non-Motor" || policyType === "Non Motor") return new Set(["general"]);
-  if (policyType === "Life" || policyType === "Health") return new Set(["life", "health"]);
+  if (policyType === "Life") return new Set(["life", "health"]);
+  if (policyType === "Health") return new Set(["general", "life", "health"]);
   return null;
 }
 
