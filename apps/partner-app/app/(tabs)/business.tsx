@@ -344,7 +344,20 @@ export default function BusinessScreen() {
           {trendError ? <View style={styles.feedback}><PartnerBanner tone="warning" message={trendError} /></View> : null}
           <TrendChart data={trendData} emptyMessage={trendRange === 'custom' ? 'Apply a custom range to view its premium total.' : undefined} />
 
-          <SectionHeader title="Business by Product" action={<Text style={styles.viewAll}>View All ›</Text>} />
+          <SectionHeader
+            title="Business by Product"
+            action={(
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="View all business products"
+                onPress={() => router.push('/business-report')}
+                style={({ pressed }) => [styles.reportButton, pressed && styles.pressed]}
+              >
+                <Text style={styles.viewAll}>View All</Text>
+                <Ionicons name="chevron-forward" size={10} color="#3156B8" />
+              </Pressable>
+            )}
+          />
           <View style={styles.productGrid}>
             {productMix.length ? productMix.map((item) => (
               <ProductTile key={item.label} asset={item.asset} label={humanize(item.label)} share={item.share} />
