@@ -46,7 +46,7 @@ export async function getPolicyIntakeOcrRetryState(id: string) {
 
   return {
     ok: true as const,
-    retryable: !isProposalType(data.policy_type) && canReview && isPolicyIntakeOcrRetryable({ status: data.status, ocrStatus: data.ocr_status, createdAt: data.created_at }),
+    retryable: canReview && isPolicyIntakeOcrRetryable({ status: data.status, ocrStatus: data.ocr_status, createdAt: data.created_at }) && !isProposalType(data.policy_type),
     ocrStatus: data.ocr_status,
   };
 }
