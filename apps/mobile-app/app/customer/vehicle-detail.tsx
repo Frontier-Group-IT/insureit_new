@@ -103,7 +103,8 @@ export default function VehicleDetailScreen() {
         </View>
       </View>
 
-      <Card accessibilityRole="button" onPress={() => setAlertsExpanded((value) => !value)} style={styles.alertSection}>
+      {!latestPolicyActive ? (
+        <Card accessibilityRole="button" onPress={() => setAlertsExpanded((value) => !value)} style={styles.alertSection}>
           <View style={styles.compactSectionRow}>
             <View style={styles.alertIcon}>
               <MaterialCommunityIcons name="calendar-alert-outline" size={18} color="#B7791F" />
@@ -124,7 +125,8 @@ export default function VehicleDetailScreen() {
             </View>
             {alertItems.length ? alertItems.map((item) => <ComplianceRow key={item.key} item={item} />) : <Text style={styles.emptyText}>No expired or renewal-due documents found.</Text>}
           </> : null}
-      </Card>
+        </Card>
+      ) : null}
 
       <Card style={styles.detailSection}>
         <View style={styles.sectionRow}>
