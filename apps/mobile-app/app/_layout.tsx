@@ -9,8 +9,11 @@ import { AppLoadingProvider } from '@/components/app-loading';
 import { SplashIntro } from '@/components/first-look';
 import { RealtimeNotificationProvider } from '@/components/realtime-notifications';
 import { syncRememberedCustomerSession } from '@/lib/customer-account-vault';
+import { installLocalDocumentFetchSupport } from '@/lib/local-document-fetch';
 import { supabase } from '@/lib/supabase';
 import { CustomerBiometricLockProvider } from '@/providers/customer-biometric-lock-provider';
+
+installLocalDocumentFetchSupport();
 
 export const unstable_settings = { initialRouteName: 'index' };
 
