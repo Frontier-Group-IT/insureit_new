@@ -18,6 +18,7 @@ import {
 } from "@/components/non-motor-document-picker";
 import type { PolicySourceOption } from "@/components/policy-unified-form";
 import type { NonMotorCustomerOption } from "@/components/non-motor-policy-form";
+import type { NonMotorPremiumStructure } from "@/lib/non-motor-premium-structure";
 
 export type NonMotorProgress = { filled: number; total: number; complete: boolean; empty: boolean; remaining: number };
 
@@ -58,6 +59,7 @@ type FormState = {
   policyNumber: string;
   insurerId: string;
   productName: string;
+  premiumStructure: NonMotorPremiumStructure;
   category: string;
   status: string;
   riskTitle: string;
@@ -118,9 +120,9 @@ const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR
 
 const emptyForm: FormState = {
   customerMode: "existing", customerId: "", customerType: "Organisation", insuredName: "", contactName: "", phone: "", email: "", address: "",
-  policyNumber: "", insurerId: "", productName: "", category: "", status: "Active",
+  policyNumber: "", insurerId: "", productName: "", premiumStructure: "standard", category: "", status: "Active",
   riskTitle: "", riskLocation: "", occupancyType: "", cargoDescription: "", transitFrom: "", transitTo: "", transitMode: "", projectName: "", projectValue: "", natureOfBusiness: "", liabilityType: "", employeeCount: "", annualWages: "", businessName: "", annualTurnover: "",
-  sumInsured: "", deductible: "", odPremium: "", tpPremium: "0", netPremium: "", gstAmount: "", grossPremium: "", startDate: "", endDate: "",
+  sumInsured: "", deductible: "", odPremium: "", tpPremium: "", netPremium: "", gstAmount: "", grossPremium: "", startDate: "", endDate: "",
   payinBasis: "NET_PREMIUM_PERCENT", payinPercent: "", payinFixedAmount: "", insurerSchemeAmount: "",
   payoutBasis: "NET_PREMIUM_PERCENT", payoutPercent: "", payoutFixedAmount: "",
   proposalNumber: "", previousInsurer: "", previousPolicyNumber: "", previousClaims: "", addOns: "", warranties: "", specialConditions: "", endorsements: "", remarks: "",
@@ -159,7 +161,7 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
     const groups = [
       [form.customerMode === "existing" ? form.customerId : form.insuredName, form.policyNumber, form.insurerId, form.productName, form.category],
       riskCoreValues(form),
-      [form.sumInsured, form.grossPremium, form.startDate, form.endDate],
+      [form.sumInsured, form.grossPremium, form.startDate, form.endDate, ...(form.premiumStructure === "od_tp" ? [form.odPremium, form.tpPremium] : [])],
       [],
       [],
     ];
@@ -187,12 +189,17 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
     form.customerMode === "existing" ? form.customerId : form.insuredName,
     form.policyNumber, form.insurerId, form.productName, form.category,
     ...riskCoreValues(form), form.sumInsured, form.grossPremium, form.startDate, form.endDate,
+    ...(form.premiumStructure === "od_tp" ? [form.odPremium, form.tpPremium] : []),
   ], [source, form]);
   const completion = completionValues.length ? Math.round((completionValues.filter((value) => String(value ?? "").trim()).length / completionValues.length) * 100) : 0;
 
   function changeCustomer(value: string) {
     const customer = customers.find((item) => item.id === value);
     setForm((current) => ({ ...current, customerId: value, insuredName: customer?.name ?? "", contactName: customer?.contactName ?? "", phone: customer?.phone ?? "", email: customer?.email ?? "" }));
+  }
+
+  function changePremiumStructure(value: NonMotorPremiumStructure) {
+    setForm((current) => ({ ...current, premiumStructure: value, ...(value === "standard" ? { odPremium: "", tpPremium: "" } : {}) }));
   }
 
   function changeCommercialBasis(side: "payin" | "payout", basis: NonMotorCommercialBasis) {
@@ -243,6 +250,7 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
     if (!form.policyNumber || !form.insurerId || !form.productName || !form.category) { setError("Complete the required Customer & policy fields in Section 02."); return; }
     if (riskCoreValues(form).some((value) => !String(value ?? "").trim())) { setError("Complete the required Risk details in Section 03."); return; }
     if (!form.sumInsured || !form.grossPremium || !form.startDate || !form.endDate) { setError("Complete the required Cover, premium & validity fields in Section 04."); return; }
+    if (form.premiumStructure === "od_tp" && (!form.odPremium.trim() || !form.tpPremium.trim())) { setError("Enter both OD Premium and TP Premium for this OD + TP product."); return; }
     if (commercialAccess && form.payinBasis === "NET_PREMIUM_PERCENT" && Number(form.payinPercent || 0) > 100) { setError("Projected insurer Pay-in percentage cannot exceed 100%."); return; }
     if (commercialAccess && form.payoutBasis === "NET_PREMIUM_PERCENT" && Number(form.payoutPercent || 0) > 100) { setError("Partner Payout percentage cannot exceed 100%."); return; }
 
@@ -250,7 +258,7 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
       source: { issuanceDate: source.issuanceDate, intermediaryType: source.intermediaryType, intermediaryCode: selectedSource.code, leadSource: selectedSource.label, rmName: selectedSource.rmName },
       customerId: form.customerMode === "existing" ? form.customerId : undefined,
       customer: { customerType: form.customerType, insuredName: form.insuredName, contactName: form.contactName, phone: form.phone, email: form.email, address: form.address },
-      policy: { policyNumber: form.policyNumber, insurerId: form.insurerId, productName: form.productName, category: form.category, status: form.status, startDate: form.startDate, endDate: form.endDate, sumInsured: form.sumInsured, odPremium: "0", tpPremium: "0", netPremium: form.netPremium, gstAmount: form.gstAmount, grossPremium: form.grossPremium, deductible: form.deductible },
+      policy: { policyNumber: form.policyNumber, insurerId: form.insurerId, productName: form.productName, premiumStructure: form.premiumStructure, category: form.category, status: form.status, startDate: form.startDate, endDate: form.endDate, sumInsured: form.sumInsured, odPremium: form.premiumStructure === "od_tp" ? form.odPremium : "0", tpPremium: form.premiumStructure === "od_tp" ? form.tpPremium : "0", netPremium: form.netPremium, gstAmount: form.gstAmount, grossPremium: form.grossPremium, deductible: form.deductible },
       commercial: commercialAccess ? { payinBasis: form.payinBasis, payinPercent: form.payinPercent, payinFixedAmount: form.payinFixedAmount, insurerSchemeAmount: form.insurerSchemeAmount, payoutBasis: form.payoutBasis, payoutPercent: form.payoutPercent, payoutFixedAmount: form.payoutFixedAmount } : undefined,
       risk: buildRiskPayload(form),
       additional: { proposalNumber: form.proposalNumber, previousInsurer: form.previousInsurer, previousPolicyNumber: form.previousPolicyNumber, previousClaims: form.previousClaims, addOns: form.addOns, warranties: form.warranties, specialConditions: form.specialConditions, endorsements: form.endorsements, remarks: form.remarks },
@@ -293,6 +301,7 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
     <Field label="Policy number" value={form.policyNumber} onChange={(e) => update("policyNumber", e.target.value.toUpperCase())} placeholder="Policy number" required />
     <Select label="Insurance company" value={form.insurerId} onChange={(e) => update("insurerId", e.target.value)} required><option value="">Select insurer</option>{insurers.map((insurer) => <option key={insurer.value} value={insurer.value}>{insurer.label}</option>)}</Select>
     <Field label="Product / policy name" value={form.productName} onChange={(e) => update("productName", e.target.value)} placeholder="Policy / product" required />
+    <Select label="Premium structure" value={form.premiumStructure} onChange={(e) => changePremiumStructure(e.target.value as NonMotorPremiumStructure)}><option value="standard">Standard</option><option value="od_tp">OD + TP</option></Select>
     <Select label="Policy status" value={form.status} onChange={(e) => update("status", e.target.value)}><option>Active</option><option>Pending</option><option>Expired</option><option>Cancelled</option></Select>
   </>;
 
@@ -327,7 +336,11 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
         <Section number="04" title="Cover, premium & validity">
           <Field label={form.category === "Liability" ? "Liability limit" : "Sum insured / limit"} value={form.sumInsured} onChange={(e) => update("sumInsured", numeric(e.target.value))} placeholder="₹ 0.00" inputMode="decimal" required />
           <Field label="Deductible / excess" value={form.deductible} onChange={(e) => update("deductible", numeric(e.target.value))} placeholder="Optional" inputMode="decimal" />
-          <Field label="Net premium" value={form.netPremium} onChange={(e) => { const net = numeric(e.target.value); setForm((current) => ({ ...current, netPremium: net, odPremium: "0", tpPremium: "0", grossPremium: String(Number(net || 0) + Number(current.gstAmount || 0)) })); }} placeholder="₹ 0.00" inputMode="decimal" />
+          {form.premiumStructure === "od_tp" ? <>
+            <Field label="OD Premium" value={form.odPremium} onChange={(e) => update("odPremium", numeric(e.target.value))} placeholder="₹ 0.00" inputMode="decimal" required />
+            <Field label="TP Premium" value={form.tpPremium} onChange={(e) => update("tpPremium", numeric(e.target.value))} placeholder="₹ 0.00" inputMode="decimal" required />
+          </> : null}
+          <Field label="Net premium" value={form.netPremium} onChange={(e) => { const net = numeric(e.target.value); setForm((current) => ({ ...current, netPremium: net, grossPremium: String(Number(net || 0) + Number(current.gstAmount || 0)) })); }} placeholder="₹ 0.00" inputMode="decimal" />
           <Field label="GST" value={form.gstAmount} onChange={(e) => { const gst = numeric(e.target.value); setForm((current) => ({ ...current, gstAmount: gst, grossPremium: String(Number(current.netPremium || 0) + Number(gst || 0)) })); }} placeholder="₹ 0.00" inputMode="decimal" />
           <Field label="Gross premium" value={form.grossPremium} disabled readOnly placeholder="₹ 0.00" inputMode="decimal" />
           <Field label="Policy start" type="date" value={form.startDate} onChange={(e) => update("startDate", e.target.value)} required />
