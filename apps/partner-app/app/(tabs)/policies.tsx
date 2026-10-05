@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
+import { getPartnerInsurerLogoSource } from '@/lib/catalog-logos';
 import {
   getPartnerPolicySummary,
   listPartnerPolicies,
@@ -49,7 +50,6 @@ export default function PoliciesScreen() {
   const { isOffline } = usePartnerNetwork();
   const [lifecycle, setLifecycle] = useState<PartnerPolicyLifecycle>(savedPolicyLifecycle);
   const [query, setQuery] = useState(savedPolicyQuery);
-  const [filtersVisible, setFiltersVisible] = useState(true);
   const debouncedSearch = useDebouncedValue(query.trim(), 350);
 
   useEffect(() => {
@@ -135,30 +135,27 @@ export default function PoliciesScreen() {
           </View>
         </View>
 
-        <View style={styles.heroCopy}>
+        <View style={styles.heroHeadingRow}>
           <Text style={styles.heroTitle}>Policies</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open Policy Intake"
+            onPress={() => router.push('/policy-intakes')}
+            style={({ pressed }) => [styles.intakeHeaderButton, pressed && styles.pressed]}
+          >
+            <Ionicons name="document-text-outline" size={15} color="#174A92" />
+            <Text style={styles.intakeHeaderText}>Policy Intake</Text>
+          </Pressable>
         </View>
       </View>
 
       <View style={styles.searchRow}>
-        <View style={styles.searchBox}>
-          <PartnerSearchField
-            value={query}
-            onChangeText={setQuery}
-            onClear={() => setQuery('')}
-            placeholder="Search customer, vehicle number or policy number..."
-          />
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Toggle policy filters"
-          accessibilityState={{ expanded: filtersVisible }}
-          onPress={() => setFiltersVisible((value) => !value)}
-          style={({ pressed }) => [styles.filterButton, filtersVisible && styles.filterButtonActive, pressed && styles.pressed]}
-        >
-          <Ionicons name="filter-outline" size={15} color="#3156B8" />
-          <Text style={styles.filterButtonText}>Filter</Text>
-        </Pressable>
+        <PartnerSearchField
+          value={query}
+          onChangeText={setQuery}
+          onClear={() => setQuery('')}
+          placeholder="Search customer, vehicle number or policy number..."
+        />
       </View>
 
       {isOffline || collection.stale || summary.stale ? (
@@ -173,45 +170,24 @@ export default function PoliciesScreen() {
         </View>
       ) : null}
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Open Policy Intake"
-        onPress={() => router.push('/policy-intakes')}
-        style={({ pressed }) => [styles.intakeCard, pressed && styles.intakePressed]}
-      >
-        <View style={styles.intakeIcon}>
-          <Ionicons name="document-text-outline" size={20} color="#FFFFFF" />
-          <View style={styles.intakePlus}>
-            <Ionicons name="add" size={9} color="#123979" />
-          </View>
+      <View style={styles.tabsRow}>
+        <View style={styles.tabsScroller}>
+          {filters.map((filter) => {
+            const active = lifecycle === filter.value;
+            return (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                key={filter.value}
+                onPress={() => setLifecycle(filter.value)}
+                style={({ pressed }) => [styles.tabButton, active && styles.tabButtonActive, pressed && styles.pressed]}
+              >
+                <Text style={[styles.tabText, active && styles.tabTextActive]}>{filter.label}</Text>
+              </Pressable>
+            );
+          })}
         </View>
-        <View style={styles.intakeBody}>
-          <Text style={styles.intakeTitle}>Policy Intake</Text>
-          <Text style={styles.intakeSubtitle}>Create new policy for your customer</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
-      </Pressable>
-
-      {filtersVisible ? (
-        <View style={styles.tabsRow}>
-          <View style={styles.tabsScroller}>
-            {filters.map((filter) => {
-              const active = lifecycle === filter.value;
-              return (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  key={filter.value}
-                  onPress={() => setLifecycle(filter.value)}
-                  style={({ pressed }) => [styles.tabButton, active && styles.tabButtonActive, pressed && styles.pressed]}
-                >
-                  <Text style={[styles.tabText, active && styles.tabTextActive]}>{filter.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-      ) : null}
+      </View>
 
       <View style={styles.bookHeader}>
         <View>
@@ -307,6 +283,7 @@ export default function PoliciesScreen() {
 function PolicyCard({ row, onPress }: { row: PartnerPolicyRow; onPress: () => void }) {
   const category = policyCategory(row);
   const status = policyStatus(row.lifecycle_status);
+  const insurerLogo = getPartnerInsurerLogoSource(row.insurer_name);
 
   return (
     <Pressable
@@ -316,24 +293,27 @@ function PolicyCard({ row, onPress }: { row: PartnerPolicyRow; onPress: () => vo
       style={({ pressed }) => [styles.policyCard, pressed && styles.policyCardPressed]}
     >
       <View style={styles.policyIconShell}>
-        <Ionicons name="document-text-outline" size={20} color="#2459B7" />
-        <View style={styles.policyIconMini}>
-          <Ionicons name="shield-checkmark" size={8} color="#FFFFFF" />
-        </View>
+        {insurerLogo ? (
+          <Image
+            source={insurerLogo}
+            resizeMode="contain"
+            style={styles.insurerLogo}
+            accessibilityLabel={row.insurer_name || 'Insurer'}
+          />
+        ) : (
+          <>
+            <Ionicons name="document-text-outline" size={20} color="#2459B7" />
+            <View style={styles.policyIconMini}>
+              <Ionicons name="shield-checkmark" size={8} color="#FFFFFF" />
+            </View>
+          </>
+        )}
       </View>
 
       <View style={styles.policyMain}>
         <Text numberOfLines={1} style={styles.customerName}>{row.customer_name}</Text>
         <Text numberOfLines={1} style={styles.policyNumber}>{row.policy_no || row.policy_code || 'Policy'}</Text>
-        <View style={styles.policyMetaRow}>
-          <Text numberOfLines={1} style={styles.vehicleText}>{row.vehicle_no || category}</Text>
-          {row.insurer_name ? (
-            <>
-              <Text style={styles.metaDot}>•</Text>
-              <Text numberOfLines={1} style={styles.insurerText}>{shortInsurer(row.insurer_name)}</Text>
-            </>
-          ) : null}
-        </View>
+        <Text numberOfLines={1} style={styles.vehicleText}>{row.vehicle_no || category}</Text>
       </View>
 
       <View style={styles.policyRight}>
@@ -368,17 +348,6 @@ function policyCategory(row: PartnerPolicyRow) {
   if (value.includes('life')) return 'Life';
   if (value.includes('motor') || row.vehicle_id || row.vehicle_no) return 'Motor';
   return 'Non-Motor';
-}
-
-function shortInsurer(value: string) {
-  const compact = value
-    .replace(/general insurance company/gi, '')
-    .replace(/insurance company/gi, '')
-    .replace(/limited/gi, '')
-    .replace(/ltd\.?/gi, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  return compact || value;
 }
 
 function formatDate(value: string | null) {
@@ -463,103 +432,48 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   heroAvatarText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.label },
-  heroCopy: { zIndex: 3, position: 'absolute', left: 16, bottom: 22, width: 178 },
+  heroHeadingRow: {
+    zIndex: 3,
+    position: 'absolute',
+    left: 18,
+    right: 15,
+    bottom: 22,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   heroTitle: {
     color: '#FFFFFF',
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: '700',
-    letterSpacing: -0.04,
-    textShadowColor: 'rgba(0,0,0,0.20)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    fontSize: 20,
+    lineHeight: 23,
+    fontWeight: '800',
+    letterSpacing: -0.2,
   },
+  intakeHeaderButton: {
+    minHeight: 34,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    borderRadius: 10,
+    paddingHorizontal: 11,
+    backgroundColor: '#FFFFFF',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.95)',
+    shadowColor: '#001B42',
+    shadowOpacity: 0.14,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  intakeHeaderText: { color: '#174A92', fontSize: 9.5, lineHeight: 12, fontWeight: '800' },
   searchRow: {
     marginTop: -14,
     marginHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
     zIndex: 4,
   },
-  searchBox: { flex: 1 },
-  filterButton: {
-    minHeight: 42,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#DCE5F0',
-  },
-  filterButtonActive: { borderColor: '#B8C9ED' },
-  filterButtonText: { color: '#3156B8', fontSize: 9.5, lineHeight: 12, fontWeight: '700' },
   feedback: { marginHorizontal: 12, marginTop: 7 },
-  summaryLoading: { marginHorizontal: 12, marginTop: 10 },
-  summaryGrid: {
-    marginHorizontal: 12,
-    marginTop: 10,
-    flexDirection: 'row',
-    gap: 5,
-  },
-  summaryCard: {
-    flex: 1,
-    minWidth: 0,
-    minHeight: 96,
-    alignItems: 'center',
-    borderRadius: 11,
-    paddingHorizontal: 3,
-    paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E3EAF3',
-  },
-  summaryIcon: {
-    width: 27,
-    height: 27,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  summaryValue: { marginTop: 4, fontSize: 14, lineHeight: 16, fontWeight: '800' },
-  summaryLabel: { minHeight: 20, marginTop: 2, color: '#506079', textAlign: 'center', fontSize: 7, lineHeight: 9, fontWeight: '700' },
-  summaryHelper: { marginTop: 2, color: '#9AA6B7', fontSize: 5.8, lineHeight: 8, fontWeight: '600' },
-  intakeCard: {
-    minHeight: 48,
-    marginHorizontal: 12,
-    marginTop: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 9,
-    borderRadius: 10,
-    paddingHorizontal: 11,
-    backgroundColor: '#073B86',
-  },
-  intakePressed: { opacity: 0.86 },
-  intakeIcon: {
-    width: 31,
-    height: 31,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0E58B4',
-  },
-  intakePlus: {
-    position: 'absolute',
-    right: -2,
-    bottom: -2,
-    width: 13,
-    height: 13,
-    borderRadius: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  intakeBody: { flex: 1 },
-  intakeTitle: { color: '#FFFFFF', fontSize: 10.5, lineHeight: 13, fontWeight: '800' },
-  intakeSubtitle: { marginTop: 1, color: '#C9DAF7', fontSize: 6.7, lineHeight: 9, fontWeight: '500' },
   tabsRow: {
     minHeight: 46,
     marginHorizontal: 12,
@@ -605,13 +519,17 @@ const styles = StyleSheet.create({
   },
   policyCardPressed: { backgroundColor: '#F6F9FF' },
   policyIconShell: {
-    width: 34,
-    height: 34,
-    borderRadius: 9,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EDF4FF',
+    backgroundColor: '#F5F8FC',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#E2E9F3',
+    overflow: 'hidden',
   },
+  insurerLogo: { width: 31, height: 31 },
   policyIconMini: {
     position: 'absolute',
     right: 3,
@@ -624,12 +542,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#3156B8',
   },
   policyMain: { flex: 1, minWidth: 0 },
-  customerName: { color: '#173A7D', fontSize: 8.8, lineHeight: 11, fontWeight: '800' },
+  customerName: { color: '#173A7D', fontSize: 10.5, lineHeight: 13, fontWeight: '800' },
   policyNumber: { marginTop: 2, color: '#5C6C84', fontSize: 6.7, lineHeight: 9, fontWeight: '600' },
-  policyMetaRow: { marginTop: 2, flexDirection: 'row', alignItems: 'center', minWidth: 0 },
-  vehicleText: { maxWidth: '48%', color: '#7D8CA1', fontSize: 6.1, lineHeight: 8, fontWeight: '600' },
-  insurerText: { flex: 1, color: '#7D8CA1', fontSize: 6.1, lineHeight: 8, fontWeight: '600' },
-  metaDot: { paddingHorizontal: 3, color: '#A3AFBF', fontSize: 6, lineHeight: 8 },
+  vehicleText: { marginTop: 2, color: '#7D8CA1', fontSize: 6.1, lineHeight: 8, fontWeight: '600' },
   policyRight: { width: 104, alignItems: 'flex-end' },
   statusPill: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 999, paddingHorizontal: 7, paddingVertical: 4 },
   statusDot: { width: 4, height: 4, borderRadius: 2 },
