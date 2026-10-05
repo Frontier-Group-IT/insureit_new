@@ -5,12 +5,10 @@ import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native
 
 import { Card, EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
-import { getInsurerLogoSource } from '@/lib/catalog-logos';
 import { getOperationalCustomerContexts } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
-import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
 import { palette } from '@/lib/theme';
-import type { InsuranceCompany, Vehicle } from '@/lib/types';
+import type { Vehicle } from '@/lib/types';
 
 const truckSketch = require('../../assets/vehicles/gcv-truck.webp');
 const carSketch = require('../../assets/vehicles/pcp-car.webp');
@@ -33,7 +31,6 @@ export default function VehicleDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [policies, setPolicies] = useState<VehiclePolicyDisplay[]>([]);
-  const [companies, setCompanies] = useState<InsuranceCompany[]>([]);
   const [loading, setLoading] = useState(true);
   const [alertsExpanded, setAlertsExpanded] = useState(false);
 
@@ -61,31 +58,18 @@ export default function VehicleDetailScreen() {
           ...(((externalPolicyResult.data ?? []) as Omit<VehiclePolicyDisplay, 'source'>[]).map((policy) => ({ ...policy, source: 'external' as const }))),
         ];
         setPolicies(nextPolicies);
-        const companyIds = Array.from(new Set(nextPolicies.map((policy) => policy.insurance_company_id).filter(Boolean)));
-        if (companyIds.length) {
-          const companyResult = await supabase.from('insurance_companies').select('*').in('id', companyIds);
-          setCompanies(companyResult.data ?? []);
-        }
       }
       setLoading(false);
     }
     void load();
   }, [id, router]);
 
-  const companyById = useMemo(() => new Map(companies.map((company) => [company.id, company])), [companies]);
   const latestPolicy = useMemo(() => selectVehiclePolicy(policies), [policies]);
-  const latestPolicyCompany = latestPolicy ? companyById.get(latestPolicy.insurance_company_id) : null;
-  const latestPolicyLogo = getInsurerLogoSource(latestPolicyCompany?.name);
   const latestPolicyActive = latestPolicy ? isPolicyActive(latestPolicy) : false;
   const policyState = latestPolicy ? policyStatus(latestPolicy.end_date) : { label: 'No policy', tone: 'red' as const, helper: 'Add a policy to complete protection' };
   const complianceItems = useMemo(() => vehicleComplianceItems(vehicle, latestPolicy), [latestPolicy, vehicle]);
   const alertItems = complianceItems.filter((item) => item.status !== 'ok');
   const vehicleImage = vehicle ? vehicleSketchFor(vehicle) : truckSketch;
-  const displayedPolicyNo = latestPolicy?.policy_no
-    ? latestPolicy.source === 'external'
-      ? formatExternalPolicyNumber(latestPolicy.policy_no)
-      : latestPolicy.policy_no
-    : 'Not added';
 
   if (loading) return <Screen title="Vehicle Detail"><LoadingState /></Screen>;
   if (!vehicle) return <Screen title="Vehicle Detail"><EmptyState title="Vehicle not found" body="Please choose another vehicle from your list." /></Screen>;
@@ -106,41 +90,16 @@ export default function VehicleDetailScreen() {
               {policyState.helper}
             </Text>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => {
-              if (latestPolicyActive && latestPolicy) {
-                router.push({ pathname: '/customer/policy-detail', params: { id: latestPolicy.id, source: latestPolicy.source } } as any);
-                return;
-              }
-              router.push({ pathname: '/customer/add-policy', params: { vehicleId: vehicle.id } } as any);
-            }}
-            style={({ pressed }) => [styles.compactPolicyAction, pressed && styles.actionPressed]}
-          >
-            <MaterialCommunityIcons name={latestPolicyActive ? 'eye-outline' : 'shield-plus-outline'} size={14} color={palette.navy} />
-            <Text style={styles.compactPolicyActionText}>{latestPolicyActive ? 'View policy' : 'Add policy'}</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.policyCard}>
-          <View style={styles.policyIconShell}>
-            {latestPolicyLogo ? (
-              <Image source={latestPolicyLogo} style={styles.policyInsurerLogo} resizeMode="contain" />
-            ) : (
-              <MaterialCommunityIcons name={latestPolicy ? 'shield-check-outline' : 'shield-plus-outline'} size={28} color="#4154A6" />
-            )}
-          </View>
-          <View style={styles.policyCardCopy}>
-            <View style={styles.policyNumberRow}>
-              <Text style={styles.policyNumber} numberOfLines={1}>{displayedPolicyNo}</Text>
-              {latestPolicy?.source === 'external' ? <View style={styles.externalBadge}><Text style={styles.externalBadgeText}>External</Text></View> : null}
-            </View>
-            <Text style={styles.policyInsurer} numberOfLines={1}>{latestPolicyCompany?.name ?? 'Insurer pending'}</Text>
-            <View style={styles.policyExpiryRow}>
-              <Text style={styles.policyExpiry}>{latestPolicy ? formatDate(latestPolicy.end_date) : '-'}</Text>
-              {policyState.tone === 'red' ? <PulseDot tone="red" /> : policyState.tone === 'orange' ? <PulseDot tone="yellow" /> : null}
-            </View>
-          </View>
+          {!latestPolicyActive ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push({ pathname: '/customer/add-policy', params: { vehicleId: vehicle.id } } as any)}
+              style={({ pressed }) => [styles.compactPolicyAction, pressed && styles.actionPressed]}
+            >
+              <MaterialCommunityIcons name="shield-plus-outline" size={14} color={palette.navy} />
+              <Text style={styles.compactPolicyActionText}>Add policy</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
 
@@ -362,17 +321,6 @@ const styles = StyleSheet.create({
   compactPolicyAction: { minHeight: 30, borderRadius: 10, paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#FFFFFF', marginLeft: 'auto' },
   compactPolicyActionText: { color: palette.navy, fontSize: 9.5, fontWeight: '900' },
   actionPressed: { opacity: 0.86, transform: [{ scale: 0.97 }] },
-  policyCard: { marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.22)', flexDirection: 'row', alignItems: 'center', gap: 10 },
-  policyIconShell: { width: 58, height: 58, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE5F0' },
-  policyInsurerLogo: { width: 46, height: 46 },
-  policyCardCopy: { flex: 1, minWidth: 0 },
-  policyNumberRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
-  policyNumber: { flexShrink: 1, color: '#FFFFFF', fontSize: 15.5, lineHeight: 19, fontWeight: '900' },
-  policyInsurer: { color: '#FFFFFF', fontSize: 12, lineHeight: 16, fontWeight: '800', marginTop: 2 },
-  policyExpiryRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 4 },
-  policyExpiry: { color: '#D7E4FF', fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
-  externalBadge: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 999, backgroundColor: '#EEF5FF', borderWidth: 1, borderColor: '#CFE0F8' },
-  externalBadgeText: { color: '#315C99', fontSize: 7.5, lineHeight: 9, fontWeight: '800' },
   alertSection: { padding: 10, backgroundColor: '#FFFBF3', borderColor: '#E8D7B5', borderWidth: 1 },
   detailSection: { backgroundColor: '#F8FBFF', borderColor: '#D7E6FA' },
   sectionRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 6 },
