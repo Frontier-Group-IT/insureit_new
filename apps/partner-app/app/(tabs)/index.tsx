@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import { Animated, Image, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState, type ComponentProps } from 'react';
+import { Animated, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -14,11 +14,11 @@ import { getPartnerBusinessRange, getPartnerHome, type PartnerHomeData } from '@
 import { getPartnerStories, type PartnerStory } from '@/lib/stories';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { formatIndianCurrency } from '@/lib/format';
-import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 type BusinessPeriod = 'all' | 'last6' | 'mtd' | 'month';
+type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
 const BUSINESS_PERIODS: { key: BusinessPeriod; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -217,26 +217,24 @@ export default function PartnerHomeScreen() {
                   )}
                 </View>
 
-                <View style={styles.chartTile}>
-                  <Image
-                    source={PartnerAssets.actions.businessPerformance}
-                    style={styles.chartImage}
-                    resizeMode="contain"
-                    accessibilityLabel="Business performance"
-                  />
+                <View style={styles.chartTile} accessibilityLabel="Business performance">
+                  <Ionicons name="stats-chart" size={38} color="#0B82E6" />
+                  <View style={styles.chartArrowBadge}>
+                    <Ionicons name="arrow-up" size={14} color="#0B82E6" />
+                  </View>
                 </View>
               </View>
 
               <View style={styles.businessDivider} />
               <View style={styles.businessBottomRow}>
                 <MetricCell
-                  asset={PartnerAssets.actions.policyRegister}
+                  icon="documents"
                   value={String(rangeData?.policies ?? data.business.policies_this_month)}
                   label="Policies Sold"
                 />
                 <View style={styles.metricDivider} />
                 <MetricCell
-                  asset={PartnerAssets.actions.payoutGrowth}
+                  icon="cash"
                   value={rangeData?.commission_available ? formatIndianCurrency(rangeData.commission_earned ?? 0) : '—'}
                   label="Commission Earned"
                 />
@@ -249,23 +247,26 @@ export default function PartnerHomeScreen() {
               <Text style={styles.sectionTitle}>Quick Actions</Text>
               <View style={styles.quickGrid}>
                 <QuickAction
-                  asset={PartnerAssets.navigation.policyIntake}
-                  imageScale={1.22}
+                  icon="document-text"
+                  badgeIcon="add-circle"
                   label="Policy Intake"
                   onPress={() => router.push('/policy-intake-new')}
                 />
                 <QuickAction
-                  asset={PartnerAssets.navigation.renewals}
+                  icon="document-text"
+                  badgeIcon="refresh-circle"
                   label="Renewals"
                   onPress={() => router.push('/renewals')}
                 />
                 <QuickAction
-                  asset={PartnerAssets.navigation.claims}
+                  icon="document-text"
+                  badgeIcon="checkmark-circle"
                   label="Claims"
                   onPress={() => router.push('/(tabs)/claims')}
                 />
                 <QuickAction
-                  asset={PartnerAssets.navigation.customers}
+                  icon="people"
+                  badgeIcon="person-add"
                   label="Customers"
                   onPress={() => router.push('/customers')}
                 />
@@ -303,8 +304,11 @@ function PendingTasksCard({ data, onOpenClaims }: { data: PartnerHomeData; onOpe
           <Text style={styles.pendingTitle}>Pending Tasks</Text>
           <Text style={styles.pendingHint}>Keep up with important actions.</Text>
         </View>
-        <View style={styles.pendingDecor}>
-          <Image source={PartnerAssets.status.pendingReview} style={styles.pendingDecorImage} resizeMode="contain" />
+        <View style={styles.pendingDecor} pointerEvents="none">
+          <Ionicons name="clipboard-outline" size={55} color="#92CAE9" />
+          <View style={styles.pendingDecorCheck}>
+            <Ionicons name="checkmark-circle" size={22} color="#B4DCF2" />
+          </View>
         </View>
       </View>
 
@@ -315,7 +319,7 @@ function PendingTasksCard({ data, onOpenClaims }: { data: PartnerHomeData; onOpe
         style={({ pressed }) => [styles.pendingRow, pressed && styles.pressed]}
       >
         <View style={styles.pendingIconBox}>
-          <Image source={PartnerAssets.navigation.claims} style={styles.pendingIcon} resizeMode="contain" />
+          <Ionicons name="clipboard" size={20} color="#147DD8" />
         </View>
         <View style={styles.pendingCountBadge}>
           <Text style={styles.pendingCountText}>{count}</Text>
@@ -330,11 +334,11 @@ function PendingTasksCard({ data, onOpenClaims }: { data: PartnerHomeData; onOpe
   );
 }
 
-function MetricCell({ asset, value, label }: { asset: number; value: string; label: string }) {
+function MetricCell({ icon, value, label }: { icon: IoniconName; value: string; label: string }) {
   return (
     <View style={styles.metricCell}>
       <View style={styles.metricIconBox}>
-        <Image source={asset} style={styles.metricImage} resizeMode="contain" />
+        <Ionicons name={icon} size={20} color="#147DD8" />
       </View>
       <View style={styles.metricCopy}>
         <Text numberOfLines={1} style={styles.metricValue}>{value}</Text>
@@ -345,15 +349,15 @@ function MetricCell({ asset, value, label }: { asset: number; value: string; lab
 }
 
 function QuickAction({
-  asset,
+  icon,
+  badgeIcon,
   label,
   onPress,
-  imageScale = 1,
 }: {
-  asset: number;
+  icon: IoniconName;
+  badgeIcon: IoniconName;
   label: string;
   onPress: () => void;
-  imageScale?: number;
 }) {
   const scale = useState(() => new Animated.Value(1))[0];
   const animate = (pressed: boolean) => {
@@ -376,11 +380,11 @@ function QuickAction({
     >
       <Animated.View style={[styles.quickAction, { transform: [{ scale }] }]}>
         <View style={styles.quickIcon}>
-          <Image
-            source={asset}
-            style={[styles.quickImage, { transform: [{ scale: imageScale }] }]}
-            resizeMode="contain"
-          />
+          <View style={styles.quickIconGlow} />
+          <Ionicons name={icon} size={26} color="#087DD9" />
+          <View style={styles.quickBadge}>
+            <Ionicons name={badgeIcon} size={13} color="#0A77CE" />
+          </View>
         </View>
         <Text numberOfLines={2} style={styles.quickLabel}>{label}</Text>
       </Animated.View>
@@ -486,7 +490,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#DDE5EE',
     shadowColor: '#16345E',
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.055,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
     elevation: 2,
@@ -546,19 +550,30 @@ const styles = StyleSheet.create({
   },
   businessCaption: { marginTop: 0, color: '#4F5D71', fontSize: 9.3, fontWeight: '600' },
   chartTile: {
+    position: 'relative',
     width: 58,
     height: 58,
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EDF7FF',
+    backgroundColor: '#EAF7FF',
   },
-  chartImage: { width: 47, height: 47 },
+  chartArrowBadge: {
+    position: 'absolute',
+    right: 7,
+    top: 5,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EAF7FF',
+  },
   trend: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 3 },
   trendText: { fontSize: 8.2, fontWeight: '700' },
   trendNeutral: { marginTop: 6, color: '#8691A2', fontSize: 8.2, fontWeight: '600' },
   rangeError: { marginTop: 6, color: partnerTheme.colors.danger, fontSize: 8.2, fontWeight: '600' },
-  businessDivider: { height: StyleSheet.hairlineWidth, marginTop: 5, backgroundColor: '#C8D7E9' },
+  businessDivider: { height: StyleSheet.hairlineWidth, marginTop: 5, backgroundColor: '#BFD3E9' },
   businessBottomRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center' },
   metricCell: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 7 },
   metricDivider: { width: 1, height: 31, marginHorizontal: 9, backgroundColor: '#C5D1E0' },
@@ -568,9 +583,8 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EEF7FF',
+    backgroundColor: '#EAF7FF',
   },
-  metricImage: { width: 23, height: 23 },
   metricCopy: { flex: 1, minWidth: 0 },
   metricValue: { color: '#17366C', fontSize: 13.5, lineHeight: 16, fontWeight: '800' },
   metricLabel: { marginTop: 1, color: '#78859A', fontSize: 7.5, lineHeight: 9, fontWeight: '600' },
@@ -596,16 +610,38 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7FAFE',
   },
   quickIcon: {
-    width: 34,
-    height: 34,
+    position: 'relative',
+    width: 35,
+    height: 35,
     borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EEF7FF',
   },
-  quickImage: { width: 28, height: 28 },
+  quickIconGlow: {
+    position: 'absolute',
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: '#EAF7FF',
+    shadowColor: '#2A9BE8',
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  quickBadge: {
+    position: 'absolute',
+    right: -1,
+    bottom: -1,
+    width: 15,
+    height: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EAF7FF',
+  },
   quickLabel: {
-    marginTop: 2,
+    marginTop: 3,
     color: '#21304A',
     fontSize: 7.6,
     lineHeight: 9.2,
@@ -621,7 +657,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     overflow: 'hidden',
     borderRadius: 15,
-    backgroundColor: '#E8F4FF',
+    backgroundColor: '#E3F3FF',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#D5EAFB',
   },
@@ -636,15 +672,15 @@ const styles = StyleSheet.create({
   pendingHint: { marginTop: 1, color: '#68809B', fontSize: 8.1, lineHeight: 10, fontWeight: '500' },
   pendingDecor: {
     position: 'absolute',
-    right: -2,
-    top: -8,
-    width: 67,
+    right: 1,
+    top: -6,
+    width: 64,
     height: 62,
     alignItems: 'center',
     justifyContent: 'center',
-    opacity: 0.78,
+    opacity: 0.72,
   },
-  pendingDecorImage: { width: 62, height: 62 },
+  pendingDecorCheck: { position: 'absolute', right: 2, bottom: 5 },
   pendingRow: {
     minHeight: 42,
     marginTop: 1,
@@ -661,7 +697,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#F6FBFF',
   },
-  pendingIcon: { width: 21, height: 21 },
   pendingCountBadge: {
     minWidth: 22,
     height: 22,
