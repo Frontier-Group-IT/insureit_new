@@ -21,7 +21,10 @@ const startup = read('app/index.tsx');
 expect(adapter.includes("pathname.startsWith('/customer')"), 'customer route detection is missing from the shared UI adapter');
 expect(adapter.includes('<CustomerPageSkeleton pathname={pathname} label={label} />'), 'customer LoadingState is not routed to the skeleton component');
 expect(adapter.includes('<BaseLoadingState label={label} />'), 'non-customer LoadingState fallback must remain unchanged');
-expect(adapter.includes('showTitleHeader={false}'), 'customer loading-only Screen must suppress the normal title card while the skeleton is visible');
+expect(
+  adapter.includes('showTitleHeader={false}') || adapter.includes('showTitleHeader && !loadingOnly'),
+  'customer loading-only Screen must suppress the normal title card while the skeleton is visible',
+);
 expect(adapter.includes('<BaseLoadingState label={loadingProps.label} />'), 'non-customer loading-only Screen must preserve the legacy centered loader behavior');
 
 expect(!skeleton.includes('ActivityIndicator'), 'customer page skeleton must not fall back to the spinner loader');
