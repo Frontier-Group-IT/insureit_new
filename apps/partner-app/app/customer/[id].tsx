@@ -80,7 +80,6 @@ export default function CustomerDetailScreen() {
                   <PartnerStatusBadge label={humanize(data.customer.status || 'active')} tone={customerTone(data.customer.status)} />
                 </View>
                 <Text style={styles.identityMeta}>{[data.customer.city, data.customer.state].filter(Boolean).join(', ') || 'Location not recorded'}{data.customer.customer_code ? ` · ${data.customer.customer_code}` : ''}</Text>
-                <View style={styles.sinceRow}><Ionicons name="calendar-outline" size={12} color="#77839A" /><Text style={styles.sinceText}>Customer record since {formatMonthYear(data.customer.created_at)}</Text></View>
               </View>
             </View>
             <View style={styles.contactActions}><PartnerContactActions phone={data.customer.phone} email={data.customer.email} /></View>
@@ -93,7 +92,7 @@ export default function CustomerDetailScreen() {
             <Info label="Customer Type" value={humanize(data.customer.customer_type || 'not recorded')} />
             <Info label="Fleet" value={humanize(data.customer.fleet_size_band || 'not recorded')} />
             <Info label="Intermediary" value={data.customer.intermediary_code || 'Organization / unassigned'} />
-            <Info label="Status" value={humanize(data.customer.status || 'not recorded')} status={data.customer.status} />
+            <Info label="Customer Record Since" value={formatMonthYear(data.customer.created_at)} />
           </View>
 
           <View style={styles.vehiclesSection}>
@@ -250,7 +249,6 @@ const styles = StyleSheet.create({
   identityMainRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 10 },
   avatar: { width: 46, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1EDFF' }, avatarText: { color: '#4E25E8', fontSize: 18, fontWeight: '800' },
   identityBody: { flex: 1 }, identityTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 }, identityName: { flex: 1, color: '#10192D', fontSize: 14, lineHeight: 18, fontWeight: '800' }, identityMeta: { marginTop: 3, color: '#68758B', fontSize: 9.5, lineHeight: 13 },
-  sinceRow: { marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 4 }, sinceText: { color: '#7B8799', fontSize: 8.5, lineHeight: 12 },
   contactActions: { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#EEF1F5' }, attention: { marginTop: 8 },
   sectionHeader: { marginTop: 13, marginBottom: 6 }, sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 7 }, sectionTitle: { color: '#131D33', fontSize: 13, lineHeight: 17, fontWeight: '800' }, sectionMeta: { marginTop: 1, marginLeft: 26, color: '#7A8799', fontSize: 8.5, lineHeight: 11 },
   relationshipCard: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#E4E9F2', backgroundColor: '#FFFFFF' },
