@@ -17,23 +17,10 @@ comment on table public.non_motor_product_configurations is
 comment on column public.non_motor_product_configurations.product_key is
   'Lower-case whitespace-normalized product name used as the stable lookup key.';
 
-with existing_products as (
-  select
-    min(btrim(policy_product)) as product_name,
-    lower(regexp_replace(btrim(policy_product), '\s+', ' ', 'g')) as product_key
-  from public.policies
-  where business_line = 'Non Motor'
-    and nullif(btrim(policy_product), '') is not null
-  group by lower(regexp_replace(btrim(policy_product), '\s+', ' ', 'g'))
-)
-insert into public.non_motor_product_configurations (product_name, product_key, premium_structure, is_active)
-select product_name, product_key, 'standard', true
-from existing_products
-on conflict (product_key) do nothing;
-
 alter table public.non_motor_product_configurations enable row level security;
 
 -- This configuration is intentionally server-managed through the web portal's
 -- privileged Supabase client. No authenticated direct-table policy is added.
--- Existing Non-Motor products are seeded as Standard; new products default to
--- Standard unless OD + TP is selected when the product is first configured.
+-- A product with no configuration row is treated by the application as Standard,
+-- so all existing Non-Motor policies keep today's behavior without being locked.
+-- The first explicit save for a product records either Standard or OD + TP.
