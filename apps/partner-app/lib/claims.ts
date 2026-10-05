@@ -27,6 +27,7 @@ export type PartnerClaimRow = {
   estimated_loss: number | string | null;
   approved_amount: number | string | null;
   settlement_amount: number | string | null;
+  surveyor_name: string | null;
   created_at: string;
   total_count: number;
 };

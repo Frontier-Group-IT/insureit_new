@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -46,7 +45,6 @@ export default function ClaimsScreen() {
   const { cacheScopeKey, context } = usePartnerSession();
   const [state, setState] = useState<PartnerClaimState>(savedClaimState);
   const [query, setQuery] = useState(savedClaimQuery);
-  const [filterOpen, setFilterOpen] = useState(false);
   const debouncedSearch = useDebouncedValue(query.trim(), 350);
 
   useEffect(() => {
@@ -143,16 +141,6 @@ export default function ClaimsScreen() {
               <Ionicons name="close-circle" size={14} color="#A5B2C8" />
             </Pressable>
           ) : null}
-          <View style={styles.searchDivider} />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Filter claims"
-            onPress={() => setFilterOpen(true)}
-            style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}
-          >
-            <Ionicons name="filter-outline" size={14} color="#1738D5" />
-            <Text style={styles.filterText}>Filter</Text>
-          </Pressable>
         </View>
 
         {(collection.stale || summary.stale) ? (
@@ -254,21 +242,6 @@ export default function ClaimsScreen() {
         refreshing={collection.refreshing || summary.refreshing}
         onRefresh={() => void refreshAll()}
       />
-
-      <ChoiceModal
-        visible={filterOpen}
-        title="Filter claims"
-        options={filters.map((filter) => ({
-          key: filter.value,
-          label: filter.label,
-          selected: state === filter.value,
-          onPress: () => {
-            setState(filter.value);
-            setFilterOpen(false);
-          },
-        }))}
-        onClose={() => setFilterOpen(false)}
-      />
     </SafeAreaView>
   );
 }
@@ -332,50 +305,11 @@ function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void
         </View>
       </View>
 
-      <View style={styles.claimDateWrap}>
-        <Text style={styles.claimDate}>Claimed on</Text>
-        <Text style={styles.claimDateStrong}>{formatDate(row.accident_at || row.created_at)}</Text>
+      <View style={styles.claimSurveyorWrap}>
+        <Text style={styles.claimSurveyorLabel}>Surveyor</Text>
+        <Text numberOfLines={1} style={styles.claimSurveyorName}>{row.surveyor_name || '—'}</Text>
       </View>
     </Pressable>
-  );
-}
-
-function ChoiceModal({
-  visible,
-  title,
-  options,
-  onClose,
-}: {
-  visible: boolean;
-  title: string;
-  options: Array<{ key: string; label: string; selected: boolean; onPress: () => void }>;
-  onClose: () => void;
-}) {
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.modalBackdrop} onPress={onClose}>
-        <Pressable style={styles.modalCard} onPress={() => undefined}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{title}</Text>
-            <Pressable accessibilityLabel="Close" hitSlop={8} onPress={onClose}>
-              <Ionicons name="close" size={21} color="#263B5F" />
-            </Pressable>
-          </View>
-          {options.map((option) => (
-            <Pressable
-              key={option.key}
-              accessibilityRole="button"
-              accessibilityState={{ selected: option.selected }}
-              onPress={option.onPress}
-              style={({ pressed }) => [styles.modalOption, pressed && styles.pressed]}
-            >
-              <Text style={[styles.modalOptionText, option.selected && styles.modalOptionTextSelected]}>{option.label}</Text>
-              {option.selected ? <Ionicons name="checkmark-circle" size={20} color="#1738D5" /> : null}
-            </Pressable>
-          ))}
-        </Pressable>
-      </Pressable>
-    </Modal>
   );
 }
 
@@ -384,12 +318,6 @@ function claimModeLabel(value: string | null) {
   if (normalized.includes('external')) return 'External';
   if (normalized.includes('internal')) return 'Internal';
   return null;
-}
-
-function formatDate(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }).format(date);
 }
 
 function humanize(value: string) {
@@ -469,9 +397,6 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   searchInput: { flex: 1, minWidth: 0, paddingVertical: 7, color: '#18304F', fontSize: 9.5, lineHeight: 13 },
-  searchDivider: { width: StyleSheet.hairlineWidth, height: 22, backgroundColor: '#CFD9E8' },
-  filterButton: { minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 1 },
-  filterText: { color: '#1738D5', fontSize: 9.5, lineHeight: 13, fontWeight: '700' },
   banner: { marginTop: 8 },
   controls: {
     marginTop: 8,
@@ -502,7 +427,7 @@ const styles = StyleSheet.create({
 
   rowWrap: { paddingHorizontal: 10, marginTop: 5 },
   claimCard: {
-    minHeight: 70,
+    minHeight: 72,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -532,17 +457,17 @@ const styles = StyleSheet.create({
   claimIcon: { width: 32, height: 32 },
   claimCopy: { flex: 1, minWidth: 0 },
   claimHeadingRow: { minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  claimNo: { flexShrink: 1, color: '#071D49', fontSize: 12, lineHeight: 15, fontWeight: '800' },
-  modeBadge: { paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 6, backgroundColor: '#E8F1FF' },
+  claimNo: { flexShrink: 1, color: '#071D49', fontSize: 13, lineHeight: 16, fontWeight: '800' },
+  modeBadge: { paddingHorizontal: 5, paddingVertical: 2, borderRadius: 6, backgroundColor: '#E8F1FF' },
   modeBadgeExternal: { backgroundColor: '#F0EAFE' },
-  modeBadgeText: { color: '#2355A7', fontSize: 6.5, lineHeight: 9, fontWeight: '800' },
+  modeBadgeText: { color: '#2355A7', fontSize: 7.2, lineHeight: 9.5, fontWeight: '800' },
   modeBadgeTextExternal: { color: '#6842B8' },
-  claimCustomer: { marginTop: 2, color: '#405A82', fontSize: 8.2, lineHeight: 11, fontWeight: '700' },
-  claimDetail: { marginTop: 2, color: '#7788A5', fontSize: 6.8, lineHeight: 9 },
-  claimStatusCenter: { width: 86, alignItems: 'center', justifyContent: 'center' },
+  claimCustomer: { marginTop: 2, color: '#405A82', fontSize: 9.4, lineHeight: 12, fontWeight: '700' },
+  claimDetail: { marginTop: 2, color: '#7788A5', fontSize: 8.2, lineHeight: 10.5 },
+  claimStatusCenter: { width: 82, alignItems: 'center', justifyContent: 'center' },
   statusPill: {
-    maxWidth: 86,
-    minHeight: 20,
+    maxWidth: 82,
+    minHeight: 21,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -559,14 +484,14 @@ const styles = StyleSheet.create({
   statusDotSuccess: { backgroundColor: '#19A56F' },
   statusDotRejected: { backgroundColor: '#E04F5F' },
   statusDotNew: { backgroundColor: '#FFFFFF' },
-  statusText: { flexShrink: 1, fontSize: 6.7, lineHeight: 9, fontWeight: '700', textAlign: 'center' },
+  statusText: { flexShrink: 1, fontSize: 7.4, lineHeight: 9.5, fontWeight: '700', textAlign: 'center' },
   statusTextWarning: { color: '#B66A14' },
   statusTextSuccess: { color: '#178157' },
   statusTextRejected: { color: '#C43F50' },
   statusTextNew: { color: '#FFFFFF' },
-  claimDateWrap: { width: 54, alignItems: 'flex-end', justifyContent: 'center' },
-  claimDate: { color: '#8491A7', fontSize: 5.8, lineHeight: 8, fontWeight: '600', textAlign: 'right' },
-  claimDateStrong: { marginTop: 1, color: '#66789B', fontSize: 6.3, lineHeight: 8.5, fontWeight: '700', textAlign: 'right' },
+  claimSurveyorWrap: { width: 62, alignItems: 'flex-end', justifyContent: 'center' },
+  claimSurveyorLabel: { color: '#8491A7', fontSize: 6.8, lineHeight: 9, fontWeight: '600', textAlign: 'right' },
+  claimSurveyorName: { marginTop: 1, maxWidth: 62, color: '#536987', fontSize: 7.6, lineHeight: 10, fontWeight: '800', textAlign: 'right' },
 
   listFooter: { paddingHorizontal: 10, paddingTop: 6, paddingBottom: 12, alignItems: 'center' },
   loadMoreButton: {
@@ -586,33 +511,4 @@ const styles = StyleSheet.create({
   loadingMoreText: { color: '#66789B', fontSize: 7.5, lineHeight: 10 },
   endText: { minHeight: 26, paddingTop: 6, color: '#7D8BA1', textAlign: 'center', fontSize: 7, lineHeight: 9 },
   emptyWrap: { flex: 1, paddingHorizontal: 10, paddingTop: 14, backgroundColor: '#FFFFFF' },
-
-  modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(8,28,55,0.38)' },
-  modalCard: {
-    paddingHorizontal: 18,
-    paddingTop: 14,
-    paddingBottom: 28,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    backgroundColor: '#FFFFFF',
-  },
-  modalHeader: {
-    minHeight: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E4EAF3',
-  },
-  modalTitle: { color: '#102B58', fontSize: 15, lineHeight: 20, fontWeight: '800' },
-  modalOption: {
-    minHeight: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#EDF1F6',
-  },
-  modalOptionText: { color: '#40516F', fontSize: 12.5, lineHeight: 17, fontWeight: '600' },
-  modalOptionTextSelected: { color: '#1738D5', fontWeight: '800' },
 });
