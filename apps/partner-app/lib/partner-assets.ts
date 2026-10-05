@@ -30,10 +30,10 @@ export const PartnerAssets = {
     customerRegister: require('../assets/partner/actions/customer-register.png'),
     policyChecklist: require('../assets/partner/actions/policy-checklist.png'),
     policyRegister: require('../assets/partner/actions/policy-register.png'),
-    // Home Quick Actions intentionally use the coordinated blue navigation icon family.
-    // Keep this alias pointed at navigation/renewals.png so Policy Intake, Renewals,
-    // Claims and Customers match the approved reference as one visual set.
+    // Keep the historical alias for existing callers that expect the navigation-family renewals icon.
     renewals: require('../assets/partner/navigation/renewals.png'),
+    // Home exact-reference work uses the brighter action artwork without changing the historical alias above.
+    renewalsReference: require('../assets/partner/actions/renewals.png'),
     documentSearch: require('../assets/partner/actions/document-search.png'),
   },
   products: {
