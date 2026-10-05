@@ -9,6 +9,7 @@ import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
 import { getPartnerPolicyDetail, type PartnerPolicyDetail } from '@/lib/policies';
 import { formatIndianCurrency } from '@/lib/format';
 import { PartnerAssets } from '@/lib/partner-assets';
+import { getPartnerInsurerLogoSource } from '@/lib/catalog-logos';
 import { partnerTheme } from '@/lib/theme';
 
 export default function PolicyDetailScreen() {
@@ -17,6 +18,7 @@ export default function PolicyDetailScreen() {
   const [data, setData] = useState<PartnerPolicyDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showOverviewDetails, setShowOverviewDetails] = useState(false);
   const [showPremiumDetails, setShowPremiumDetails] = useState(false);
   const [showCommercialDetails, setShowCommercialDetails] = useState(false);
 
@@ -46,6 +48,7 @@ export default function PolicyDetailScreen() {
   }, [router]);
 
   const category = data ? policyCategory(data) : 'Policy';
+  const insurerLogo = data ? getPartnerInsurerLogoSource(data.insurer.name) : null;
 
   return (
     <PartnerScreen title="Policy Details" eyebrow="BUSINESS" hideTopBar>
@@ -64,21 +67,21 @@ export default function PolicyDetailScreen() {
         <View style={styles.contentWrap}>
           <View style={styles.summaryCard}>
             <View style={styles.summaryTop}>
-              <View style={styles.summaryArtworkWrap}><Image source={policyArtwork(category)} style={styles.summaryArtwork} resizeMode="contain" /></View>
+              <View style={styles.summaryArtworkWrap}>
+                <Image source={insurerLogo || policyArtwork(category)} style={styles.summaryArtwork} resizeMode="contain" />
+              </View>
               <View style={styles.summaryBody}>
                 <Text numberOfLines={1} style={styles.summaryPolicyNo}>{data.policy.policy_no || data.policy.policy_code || 'Policy'}</Text>
-                <Text numberOfLines={1} style={styles.summaryInsurer}>{data.insurer.name || 'Insurer not recorded'}</Text>
               </View>
               <View style={styles.summaryBadges}>
                 <PartnerStatusBadge label={category} tone="brand" />
-                <PartnerStatusBadge label={humanize(data.policy.lifecycle_status)} tone={lifecycleTone(data.policy.lifecycle_status)} />
               </View>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.premiumRow}>
               <View style={styles.premiumBlock}>
-                <Text style={styles.premiumLabel}>Gross Premium</Text>
-                <Text style={styles.premiumValue}>{formatIndianCurrency(data.premium.gross_premium)}</Text>
+                <Text style={styles.premiumLabel}>Net Premium</Text>
+                <Text style={styles.premiumValue}>{nullableMoney(data.premium.net_premium)}</Text>
               </View>
               <View style={styles.periodDivider} />
               <View style={styles.periodBlock}>
@@ -90,7 +93,7 @@ export default function PolicyDetailScreen() {
           </View>
 
           <Card>
-            <CardHeader icon="document-text-outline" title="Quick Actions" actionLabel="View More" />
+            <CardHeader icon="document-text-outline" title="Quick Actions" actionLabel="View More" onAction={() => router.push('/policies' as never)} />
             <View style={styles.quickGrid}>
               <QuickAction icon="document-text-outline" label="Policy Document" tone="blue" onPress={() => router.push('/policies' as never)} />
               <QuickAction icon="sync-outline" label="Renew Policy" tone="green" onPress={() => router.push('/renewals' as never)} />
@@ -100,15 +103,23 @@ export default function PolicyDetailScreen() {
           </Card>
 
           <Card>
-            <CardHeader icon="document-text-outline" title="Policy Overview" actionLabel="View All" />
+            <CardHeader icon="document-text-outline" title="Policy Overview" actionLabel="View All" onAction={() => setShowOverviewDetails((value) => !value)} />
             <View style={styles.overviewGrid}>
               <OverviewItem icon="grid-outline" label="Category" value={category} />
               <OverviewItem icon="cube-outline" label="Product" value={data.policy.policy_product || data.policy.policy_type || data.policy.business_line || 'Not recorded'} />
               <OverviewItem icon="briefcase-outline" label="Business Type" value={data.policy.business_type || 'Not recorded'} />
               <OverviewItem icon="calendar-outline" label="Issuance Date" value={formatDate(data.policy.issuance_date)} />
-              <OverviewItem icon="shield-checkmark-outline" label="Status" value={humanize(data.policy.status || data.policy.lifecycle_status)} valueTone="success" />
+              <OverviewItem icon="business-outline" label="Insurer" value={data.insurer.name || 'Not recorded'} />
               <OverviewItem icon="cash-outline" label="IDV" value={data.policy.insured_declared_value != null ? formatIndianCurrency(data.policy.insured_declared_value) : 'Not recorded'} />
             </View>
+            {showOverviewDetails ? (
+              <View style={styles.detailGrid}>
+                <MiniInfo label="Policy number" value={data.policy.policy_no || data.policy.policy_code || 'Not recorded'} />
+                <MiniInfo label="Policy status" value={humanize(data.policy.status || data.policy.lifecycle_status)} />
+                <MiniInfo label="Start date" value={formatDate(data.policy.start_date)} />
+                <MiniInfo label="End date" value={formatDate(data.policy.end_date)} />
+              </View>
+            ) : null}
           </Card>
 
           <Card>
@@ -130,7 +141,12 @@ export default function PolicyDetailScreen() {
           </Card>
 
           <Card>
-            <CardHeader icon="people-outline" title={data.vehicle ? 'Customer & Vehicle' : 'Customer & Insured Risk'} actionLabel="View Details" />
+            <CardHeader
+              icon="people-outline"
+              title={data.vehicle ? 'Customer & Vehicle' : 'Customer & Insured Risk'}
+              actionLabel="View Details"
+              onAction={data.customer.id ? () => router.push(`/customer/${data.customer.id}` as never) : undefined}
+            />
             <View style={styles.entityStack}>
               <EntityRow
                 image={PartnerAssets.navigation.customers}
@@ -147,7 +163,7 @@ export default function PolicyDetailScreen() {
           </Card>
 
           <Card>
-            <CardHeader icon="stats-chart-outline" title="Commercial Attribution" actionLabel="View Details" />
+            <CardHeader icon="stats-chart-outline" title="Commercial Attribution" actionLabel="View Details" onAction={() => setShowCommercialDetails((value) => !value)} />
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }} onPress={() => setShowCommercialDetails((value) => !value)} style={({ pressed }) => [styles.commercialRow, pressed && styles.pressed]}>
               <View style={styles.roundIcon}><Ionicons name="briefcase-outline" size={20} color="#1889EE" /></View>
               <View style={styles.disclosureText}><Text style={styles.disclosureTitle}>Sales ownership</Text><Text numberOfLines={1} style={styles.disclosureSummary}>{[data.commercial.rm_name, data.commercial.intermediary_code].filter(Boolean).join(' · ') || 'View details'}</Text></View>
@@ -170,16 +186,25 @@ export default function PolicyDetailScreen() {
 
 function Card({ children }: { children: ReactNode }) { return <View style={styles.card}>{children}</View>; }
 
-function CardHeader({ icon, title, actionLabel }: { icon: keyof typeof Ionicons.glyphMap; title: string; actionLabel?: string }) {
-  return <View style={styles.cardHeader}><View style={styles.cardHeaderLeft}><Ionicons name={icon} size={17} color="#1686E8" /><Text style={styles.cardTitle}>{title}</Text></View>{actionLabel ? <View style={styles.cardHeaderAction}><Text style={styles.cardHeaderActionText}>{actionLabel}</Text><Ionicons name="chevron-forward" size={13} color="#6D46CE" /></View> : null}</View>;
+function CardHeader({ icon, title, actionLabel, onAction }: { icon: keyof typeof Ionicons.glyphMap; title: string; actionLabel?: string; onAction?: () => void }) {
+  return (
+    <View style={styles.cardHeader}>
+      <View style={styles.cardHeaderLeft}><Ionicons name={icon} size={17} color="#1686E8" /><Text style={styles.cardTitle}>{title}</Text></View>
+      {actionLabel ? (
+        <Pressable accessibilityRole="button" disabled={!onAction} onPress={onAction} hitSlop={8} style={({ pressed }) => [styles.cardHeaderAction, pressed && onAction ? styles.pressed : null]}>
+          <Text style={styles.cardHeaderActionText}>{actionLabel}</Text><Ionicons name="chevron-forward" size={13} color="#6D46CE" />
+        </Pressable>
+      ) : null}
+    </View>
+  );
 }
 
 function QuickAction({ icon, label, tone, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; tone: 'blue' | 'green' | 'orange' | 'purple'; onPress?: () => void }) {
   return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.quickAction, quickToneStyle(tone), pressed && styles.pressed]}><Ionicons name={icon} size={25} color={quickToneColor(tone)} /><Text numberOfLines={2} style={styles.quickLabel}>{label}</Text></Pressable>;
 }
 
-function OverviewItem({ icon, label, value, valueTone }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string; valueTone?: 'success' }) {
-  return <View style={styles.overviewItem}><View style={styles.overviewIcon}><Ionicons name={icon} size={17} color="#4F6D9D" /></View><View style={styles.overviewCopy}><Text style={styles.overviewLabel}>{label}</Text><Text numberOfLines={2} style={[styles.overviewValue, valueTone === 'success' && styles.overviewSuccess]}>{value}</Text></View></View>;
+function OverviewItem({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
+  return <View style={styles.overviewItem}><View style={styles.overviewIcon}><Ionicons name={icon} size={17} color="#4F6D9D" /></View><View style={styles.overviewCopy}><Text style={styles.overviewLabel}>{label}</Text><Text numberOfLines={2} style={styles.overviewValue}>{value}</Text></View></View>;
 }
 
 function EntityRow({ image, title, subtitle, onPress }: { image: ImageSourcePropType; title: string; subtitle: string; onPress?: () => void }) {
@@ -192,7 +217,6 @@ function quickToneStyle(tone: 'blue' | 'green' | 'orange' | 'purple') { if (tone
 function policyArtwork(category: string): ImageSourcePropType { if (category === 'Motor') return PartnerAssets.products.motorInsurance; if (category === 'Health') return PartnerAssets.products.healthInsurance; if (category === 'Life') return PartnerAssets.products.familyInsurance; return PartnerAssets.products.commercialInsurance; }
 function displayParts(...values: Array<string | number | null | undefined>) { return values.map((value) => value == null ? '' : String(value).trim()).filter((value) => value && value.toLowerCase() !== 'null' && value.toLowerCase() !== 'undefined').join(' · '); }
 function policyCategory(data: PartnerPolicyDetail) { const value = [data.policy.policy_type, data.policy.policy_product, data.policy.business_line].filter(Boolean).join(' ').toLowerCase(); if (value.includes('health')) return 'Health'; if (value.includes('life')) return 'Life'; if (value.includes('motor') || data.vehicle) return 'Motor'; return 'Non-Motor'; }
-function lifecycleTone(value: PartnerPolicyDetail['policy']['lifecycle_status']): 'success' | 'warning' | 'danger' | 'info' { if (value === 'expired') return 'danger'; if (value === 'expiring') return 'warning'; if (value === 'upcoming') return 'info'; return 'success'; }
 function humanize(value: string) { return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 function formatDate(value: string | null) { if (!value) return '—'; const d = new Date(`${value}T00:00:00`); return Number.isNaN(d.getTime()) ? value : new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }).format(d); }
 function nullableMoney(value: number | string | null) { return value == null ? 'Not recorded' : formatIndianCurrency(value); }
@@ -211,7 +235,6 @@ const styles = StyleSheet.create({
   summaryArtwork: { width: 40, height: 40 },
   summaryBody: { flex: 1, minWidth: 0 },
   summaryPolicyNo: { color: '#0F213F', fontSize: 15, lineHeight: 19, fontWeight: '800' },
-  summaryInsurer: { marginTop: 2, color: '#758298', fontSize: 10, lineHeight: 13, fontWeight: '500' },
   summaryBadges: { alignItems: 'flex-end', gap: 5 },
   summaryDivider: { height: StyleSheet.hairlineWidth, marginTop: 11, backgroundColor: '#E7ECF4' },
   premiumRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', paddingTop: 9 },
@@ -221,14 +244,14 @@ const styles = StyleSheet.create({
   card: { overflow: 'hidden', borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F1', backgroundColor: '#FFFFFF', shadowColor: '#17365F', shadowOpacity: 0.035, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
   cardHeader: { minHeight: 42, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 }, cardTitle: { color: '#102A51', fontSize: 12.5, lineHeight: 16, fontWeight: '800' },
-  cardHeaderAction: { flexDirection: 'row', alignItems: 'center', gap: 1 }, cardHeaderActionText: { color: '#6C46CC', fontSize: 9, lineHeight: 12, fontWeight: '700' },
+  cardHeaderAction: { flexDirection: 'row', alignItems: 'center', gap: 1, minHeight: 32, paddingLeft: 8 }, cardHeaderActionText: { color: '#6C46CC', fontSize: 9, lineHeight: 12, fontWeight: '700' },
   quickGrid: { flexDirection: 'row', gap: 7, paddingHorizontal: 10, paddingBottom: 10 },
   quickAction: { flex: 1, minHeight: 71, borderRadius: 10, alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 4 },
   quickBlue: { backgroundColor: '#EAF5FF' }, quickGreen: { backgroundColor: '#E9F8F2' }, quickOrange: { backgroundColor: '#FFF1E6' }, quickPurple: { backgroundColor: '#F0EBFF' },
   quickLabel: { color: '#17304F', textAlign: 'center', fontSize: 8.5, lineHeight: 11, fontWeight: '700' },
   overviewGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 10, paddingBottom: 8 },
   overviewItem: { width: '50%', minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 7, paddingHorizontal: 4, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDF1F6' },
-  overviewIcon: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F4F8FC' }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { color: '#8A95A6', fontSize: 8.5, lineHeight: 10 }, overviewValue: { marginTop: 2, color: '#192B46', fontSize: 10, lineHeight: 13, fontWeight: '700' }, overviewSuccess: { color: '#189065' },
+  overviewIcon: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F4F8FC' }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { color: '#8A95A6', fontSize: 8.5, lineHeight: 10 }, overviewValue: { marginTop: 2, color: '#192B46', fontSize: 10, lineHeight: 13, fontWeight: '700' },
   premiumDisclosure: { minHeight: 58, marginHorizontal: 10, marginBottom: 9, paddingHorizontal: 9, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#F2F7FF' },
   commercialRow: { minHeight: 58, marginHorizontal: 10, marginBottom: 9, paddingHorizontal: 9, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#FAFCFF' },
   roundIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E4F2FF' }, disclosureText: { flex: 1, minWidth: 0 }, disclosureTitle: { color: '#152945', fontSize: 10.5, lineHeight: 13, fontWeight: '700' }, disclosureSummary: { marginTop: 2, color: '#6F7F94', fontSize: 8.5, lineHeight: 11 },
