@@ -30,11 +30,17 @@ export const PartnerAssets = {
     customerRegister: require('../assets/partner/actions/customer-register.png'),
     policyChecklist: require('../assets/partner/actions/policy-checklist.png'),
     policyRegister: require('../assets/partner/actions/policy-register.png'),
-    // Home Quick Actions intentionally use the coordinated blue navigation icon family.
-    // Keep this alias pointed at navigation/renewals.png so Policy Intake, Renewals,
-    // Claims and Customers match the approved reference as one visual set.
+    // Historical alias retained for screens that still use the navigation artwork.
     renewals: require('../assets/partner/navigation/renewals.png'),
     documentSearch: require('../assets/partner/actions/document-search.png'),
+  },
+  homeReference: {
+    // Exact icon crops from the user-supplied approved Home reference.
+    // Keep these static for Metro and use only for the Home Quick Action tiles.
+    policyIntake: require('../assets/partner/home-reference/policy-intake-reference.png'),
+    renewals: require('../assets/partner/home-reference/renewals-reference.png'),
+    claims: require('../assets/partner/home-reference/claims-reference.png'),
+    customers: require('../assets/partner/home-reference/customers-reference.png'),
   },
   products: {
     commercialInsurance: require('../assets/partner/products/commercial-insurance.png'),
