@@ -5,10 +5,12 @@ import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native
 
 import { Card, EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
+import { getInsurerLogoSource } from '@/lib/catalog-logos';
 import { getOperationalCustomerContexts } from '@/lib/customer-context';
+import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
-import type { Vehicle } from '@/lib/types';
+import type { InsuranceCompany, Vehicle } from '@/lib/types';
 
 const truckSketch = require('../../assets/vehicles/gcv-truck.webp');
 const carSketch = require('../../assets/vehicles/pcp-car.webp');
@@ -31,6 +33,7 @@ export default function VehicleDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [policies, setPolicies] = useState<VehiclePolicyDisplay[]>([]);
+  const [companies, setCompanies] = useState<InsuranceCompany[]>([]);
   const [loading, setLoading] = useState(true);
   const [alertsExpanded, setAlertsExpanded] = useState(false);
 
@@ -49,15 +52,17 @@ export default function VehicleDetailScreen() {
       const vehicleResult = await supabase.from('vehicles').select('*').eq('id', id).in('customer_id', ids).maybeSingle();
       setVehicle(vehicleResult.data);
       if (vehicleResult.data) {
-        const [policyResult, externalPolicyResult] = await Promise.all([
+        const [policyResult, externalPolicyResult, companyResult] = await Promise.all([
           supabase.from('policies').select('id,vehicle_id,insurance_company_id,policy_no,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', ids),
           (supabase as any).from('external_policies').select('id,vehicle_id,insurance_company_id,policy_no,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', ids),
+          supabase.from('insurance_companies').select('*'),
         ]);
         const nextPolicies: VehiclePolicyDisplay[] = [
           ...((policyResult.data ?? []).map((policy) => ({ ...policy, source: 'sibl' as const }))),
           ...(((externalPolicyResult.data ?? []) as Omit<VehiclePolicyDisplay, 'source'>[]).map((policy) => ({ ...policy, source: 'external' as const }))),
         ];
         setPolicies(nextPolicies);
+        setCompanies(companyResult.data ?? []);
       }
       setLoading(false);
     }
@@ -66,6 +71,13 @@ export default function VehicleDetailScreen() {
 
   const latestPolicy = useMemo(() => selectVehiclePolicy(policies), [policies]);
   const latestPolicyActive = latestPolicy ? isPolicyActive(latestPolicy) : false;
+  const latestPolicyCompany = latestPolicy ? companies.find((company) => company.id === latestPolicy.insurance_company_id) : null;
+  const latestPolicyLogo = getInsurerLogoSource(latestPolicyCompany?.name);
+  const latestPolicyNumber = latestPolicy
+    ? latestPolicy.source === 'external'
+      ? formatExternalPolicyNumber(latestPolicy.policy_no)
+      : latestPolicy.policy_no
+    : '';
   const policyState = latestPolicy ? policyStatus(latestPolicy.end_date) : { label: 'No policy', tone: 'red' as const, helper: 'Add a policy to complete protection' };
   const complianceItems = useMemo(() => vehicleComplianceItems(vehicle, latestPolicy), [latestPolicy, vehicle]);
   const alertItems = complianceItems.filter((item) => item.status !== 'ok');
@@ -90,7 +102,11 @@ export default function VehicleDetailScreen() {
               {policyState.helper}
             </Text>
           </View>
-          {!latestPolicyActive ? (
+          {latestPolicyActive ? (
+            <View style={styles.activeBadge}>
+              <Text style={styles.activeBadgeText}>Active</Text>
+            </View>
+          ) : (
             <Pressable
               accessibilityRole="button"
               onPress={() => router.push({ pathname: '/customer/add-policy', params: { vehicleId: vehicle.id } } as any)}
@@ -99,9 +115,31 @@ export default function VehicleDetailScreen() {
               <MaterialCommunityIcons name="shield-plus-outline" size={14} color={palette.navy} />
               <Text style={styles.compactPolicyActionText}>Add policy</Text>
             </Pressable>
-          ) : null}
+          )}
         </View>
       </View>
+
+      {latestPolicyActive && latestPolicy ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open active policy details"
+          onPress={() => router.push({ pathname: '/customer/policy-detail', params: { id: latestPolicy.id, source: latestPolicy.source } } as any)}
+          style={({ pressed }) => [styles.activePolicyCard, pressed && styles.activePolicyCardPressed]}
+        >
+          <View style={styles.activePolicyLogoWrap}>
+            {latestPolicyLogo ? (
+              <Image source={latestPolicyLogo} resizeMode="contain" style={styles.activePolicyLogo} />
+            ) : (
+              <MaterialCommunityIcons name="shield-outline" size={28} color={palette.navy} />
+            )}
+          </View>
+          <View style={styles.activePolicyCopy}>
+            <Text style={styles.activePolicyInsurer} numberOfLines={1}>{latestPolicyCompany?.name ?? 'Insurance policy'}</Text>
+            <Text style={styles.activePolicyNumber} numberOfLines={1}>{latestPolicyNumber}</Text>
+          </View>
+          <MaterialCommunityIcons name="arrow-right" size={30} color={palette.navy} />
+        </Pressable>
+      ) : null}
 
       {!latestPolicyActive ? (
         <Card accessibilityRole="button" onPress={() => setAlertsExpanded((value) => !value)} style={styles.alertSection}>
@@ -245,7 +283,7 @@ function vehicleComplianceItems(vehicle: Vehicle | null, policy: VehiclePolicyDi
     { key: 'puc', label: 'PUC certificate', date: vehicle.puc_expiry_date },
     { key: 'road_tax', label: 'Road tax', date: vehicle.road_tax_expiry_date },
     { key: 'national_permit', label: 'National permit', date: vehicle.national_permit_expiry_date },
-    { key: 'local_permit', label: 'Local permit', date: vehicle.local_permit_expiry_date },
+    { key: 'local_permit', label: 'Local permit expiry', date: vehicle.local_permit_expiry_date },
   ].map((item) => ({ ...item, ...complianceStatus(item.date) }));
 }
 
@@ -322,7 +360,16 @@ const styles = StyleSheet.create({
   vehicleImage: { width: 44, height: 32 },
   compactPolicyAction: { minHeight: 30, borderRadius: 10, paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#FFFFFF', marginLeft: 'auto' },
   compactPolicyActionText: { color: palette.navy, fontSize: 9.5, fontWeight: '900' },
+  activeBadge: { minHeight: 28, borderRadius: 999, paddingHorizontal: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F8EE', marginLeft: 'auto' },
+  activeBadgeText: { color: '#18794E', fontSize: 10.5, fontWeight: '900' },
   actionPressed: { opacity: 0.86, transform: [{ scale: 0.97 }] },
+  activePolicyCard: { minHeight: 82, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D9E3F0' },
+  activePolicyCardPressed: { opacity: 0.88, transform: [{ scale: 0.99 }] },
+  activePolicyLogoWrap: { width: 56, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFD', overflow: 'hidden' },
+  activePolicyLogo: { width: 48, height: 48 },
+  activePolicyCopy: { flex: 1, minWidth: 0 },
+  activePolicyInsurer: { color: '#64748B', fontSize: 13, lineHeight: 17, fontWeight: '800', textTransform: 'uppercase' },
+  activePolicyNumber: { color: palette.navy, fontSize: 17.5, lineHeight: 22, fontWeight: '900', marginTop: 5 },
   alertSection: { padding: 10, backgroundColor: '#FFFBF3', borderColor: '#E8D7B5', borderWidth: 1 },
   detailSection: { backgroundColor: '#F8FBFF', borderColor: '#D7E6FA' },
   sectionRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 6 },
