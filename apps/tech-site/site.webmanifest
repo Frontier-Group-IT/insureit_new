@@ -1,0 +1,17 @@
+{
+  "name": "InsureIT Tech",
+  "short_name": "InsureIT",
+  "description": "Engineering identity behind InsureIT's insurance operations platform.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F4F8FC",
+  "theme_color": "#08172F",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/Frontier-Group-IT/insureit_new/main/apps/mobile-app/assets/brand/insureit-app-icon-ice.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
