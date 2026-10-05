@@ -2,6 +2,7 @@ import { NonMotorPolicyForm, type NonMotorCustomerOption, type NonMotorInsurerOp
 import { type PolicyRmOption, type PolicySourceOption } from "@/components/policy-unified-form";
 import { AppShell } from "@/components/shell";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
+import { loadNonMotorProductConfigurations } from "@/lib/non-motor-premium-structure";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -30,10 +31,11 @@ export default async function NewNonMotorPolicyPage() {
     return <SetupError />;
   }
 
-  const [insurersResult, customersResult, intermediariesResult] = await Promise.all([
+  const [insurersResult, customersResult, intermediariesResult, productConfigurations] = await Promise.all([
     admin.from("insurance_companies").select("id,name").eq("is_active", true).order("name", { ascending: true }).returns<InsurerRow[]>(),
     admin.from("customers").select("id,contact_name,company_name,phone,email").order("contact_name", { ascending: true }).limit(750).returns<CustomerRow[]>(),
     admin.from("intermediaries").select("id,intermediary_type,display_name,intermediary_code,associate_employee_id,mobile").in("intermediary_type", ["posp", "misp", "partner"]).eq("account_status", "active").order("display_name", { ascending: true }).returns<IntermediaryRow[]>(),
+    loadNonMotorProductConfigurations().catch(() => []),
   ]);
 
   if (insurersResult.error || customersResult.error || intermediariesResult.error) return <SetupError />;
@@ -62,7 +64,7 @@ export default async function NewNonMotorPolicyPage() {
 
   return (
     <AppShell title="Add Policy">
-      <NonMotorPolicyForm insurers={insurers} customers={customers} rms={rms} sources={sources} />
+      <NonMotorPolicyForm insurers={insurers} customers={customers} rms={rms} sources={sources} productConfigurations={productConfigurations} />
     </AppShell>
   );
 }
