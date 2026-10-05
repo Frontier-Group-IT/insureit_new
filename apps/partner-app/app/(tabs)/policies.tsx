@@ -398,8 +398,8 @@ function initials(value: string) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#0752A2' },
-  content: { paddingBottom: 108 },
+  safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
+  content: { paddingBottom: 108, backgroundColor: '#FFFFFF' },
   contentEmpty: { flexGrow: 1 },
   hero: {
     height: 162,
