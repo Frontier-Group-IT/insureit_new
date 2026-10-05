@@ -2,6 +2,7 @@
 
 import { CalendarDays, SlidersHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useReportsNavigationPending } from "@/components/reports/reports-navigation-pending";
 
 const HORIZONS=[30,60,90,180,365] as const;
 
@@ -13,6 +14,7 @@ export function OperationsReportFilters({
   exception:string|null;
 }){
   const router=useRouter();
+  const {beginReportNavigation}=useReportsNavigationPending();
 
   function update(name:"horizon"|"exception",value:string){
     const params=new URLSearchParams(window.location.search);
@@ -24,7 +26,9 @@ export function OperationsReportFilters({
     }
     params.delete("page");
     const query=params.toString();
-    router.push(query?"/reports/operations?"+query:"/reports/operations");
+    const href=query?"/reports/operations?"+query:"/reports/operations";
+    if(!beginReportNavigation(href)) return;
+    router.push(href);
   }
 
   return (
