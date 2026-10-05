@@ -23,8 +23,10 @@ const actions=read("app/policy-intakes/actions.ts");
 assert(actions.includes('canAccessIntermediary(profile.id,profile.role,leadSourceId,"create_policy_intakes")'),"Submission must re-check lead-source scope server-side using Policy Intake creation scope");
 assert(actions.includes('createSignedUploadUrl(storagePath,{upsert:false})'),"Large policy files must use direct signed storage upload instead of a Server Action request body");
 assert(actions.includes('.from("policy_intake_requests").insert('),"Submission must persist the intake before automatic extraction");
-assert(actions.includes('ocr_status:"pending"'),"New intake must be stored before OCR starts");
-assert(actions.includes('after(async()=>{await processStoredOcr(input.id);})'),"OCR must be scheduled after the submission response instead of blocking Sales");
+assert(actions.includes('ocrStatus=proposal?"completed":"pending"'),"Motor/Non-Motor intake must still be stored with pending OCR while Life/Health proposal forms bypass OCR");
+assert(actions.includes('if(!proposal)after(async()=>{await processStoredOcr(input.id);})'),"OCR must only be scheduled after submission for Motor/Non-Motor intakes");
+assert(actions.includes('if(isProposalType(intake.policy_type))'),"Background OCR must refuse Life/Health proposal forms server-side");
+assert(actions.includes('policy_type:input.policyType'),"New intake must persist the selected policy type");
 assert(!/from\(["']policies["']\)\s*\.insert\(/.test(actions),"Sales intake submission must never insert a real policy");
 assert(actions.includes('input.storagePath.startsWith(`intakes/${input.id}/original/`)'),"Original upload must use the isolated intake source-document prefix");
 assert(actions.includes('createSignedUrl(data.storage_path,300)'),"Policy-copy access must use a short-lived signed URL");
@@ -33,6 +35,7 @@ assert(actions.includes('preparePolicyIntakeResponseUpload'),"Initiators must be
 assert(actions.includes('.from("policy_intake_documents")'),"Original and replacement copies must retain document lineage");
 assert(!actions.includes('remove([intake.storage_path])'),"Replacement uploads must not delete the previous policy copy");
 assert(actions.includes('.from("policy_documents")'),"Finalization must attach the accepted intake copy to the final policy");
+assert(actions.includes('if(!isProposalType(intake.policy_type))'),"Life/Health proposal forms must never be promoted as an official final policy copy");
 assert(actions.includes("loadPolicyIntakeDuplicateMatches(admin,[intake])"),"Claiming an intake for review must re-check duplicate status server-side");
 assert(actions.includes("duplicate and cannot be claimed for review"),"Duplicate intakes must be blocked from entering Operations review");
 assert(actions.includes("matched_customer_id:null"),"Policy Intake submission must not preselect a customer from mobile alone");
@@ -48,16 +51,20 @@ assert.equal(selectPolicyIntakeCustomerMatch([
 const intakeForm=read("components/policy-intake-form.tsx");
 assert(intakeForm.includes('fetch(signedUrl,{method:"PUT"'),"Browser must upload policy bytes directly to signed private storage");
 assert(intakeForm.includes("Saving policy intake"),"Sales submission must communicate immediate save instead of blocking on OCR");
-assert(intakeForm.includes("fetched in the background"),"Sales must be told policy and vehicle details are fetched in the background");
+assert(intakeForm.includes("fetched in the background"),"Sales must be told policy and vehicle details are fetched in the background for Motor/Non-Motor");
+assert(intakeForm.includes("Proposal form"),"Life/Health intake must present the upload as a Proposal Form");
+assert(intakeForm.includes("without OCR or detail extraction"),"Life/Health helper messaging must state that proposal forms are stored without OCR/detail extraction");
 assert(intakeForm.includes("Upload couldn't be completed"),"Upload failures must stay on the form with a recoverable error");
 const queue=read("app/policy-intakes/page.tsx");
 assert(queue.includes("loadPolicyIntakeDuplicateMatches(admin, rows)"),"Policy Intake queue must use the shared duplicate detector");
 assert(queue.includes('status: "Duplicate"'),"Detected duplicates must be removed from Ready for review and shown in the Duplicate bucket");
+assert(queue.includes("policy_type"),"Policy Intake queue payload must include the stored policy type");
 const retryActions=read("app/policy-intakes/retry-actions.ts");
 assert(retryActions.includes("requirePolicyIntakeViewer()"),"Retry-state lookup must be safe for normal Policy Intake viewers such as RM submitters");
 assert(retryActions.includes('hasEffectiveCapability(profile, "review_policy_intakes", "edit")'),"Retry-state lookup must only expose retryability to actual reviewers");
 assert(retryActions.includes("retryable: canReview && isPolicyIntakeOcrRetryable"),"Non-reviewers must never receive a retryable OCR action");
 assert(retryActions.includes("await requirePolicyIntakeReviewer();"),"Actual OCR retry execution must remain reviewer-only");
+assert(retryActions.includes("proposal forms do not use policy OCR")||retryActions.includes("Proposal forms do not use policy OCR"),"OCR retry execution must reject Life/Health proposal forms server-side");
 
 const detail=read("app/policy-intakes/[id]/page.tsx");
 assert(detail.includes("PolicyIntakeResponseUpload"),"Needs-attention intake must expose the response uploader to its initiator");
@@ -76,6 +83,8 @@ assert(workspace.includes('inReview: baseFiltered.filter((row) => row.status ===
 assert(workspace.includes('myActiveWork: baseFiltered.filter((row) => row.status === "in_review" && row.assigned_to_profile_id === currentProfileId).length'),"Personal active-work count must remain a separate reviewer subset");
 assert(workspace.includes('{ value: "in_review", label: "In Review", count: stats.inReview }'),"Reviewer queue must expose global In Review as a primary status bucket");
 assert(workspace.includes('My Active Work <span className="ml-1.5 opacity-80">{stats.myActiveWork}</span>'),"Reviewer queue must keep My Active Work as a separate personal shortcut");
+assert(workspace.includes("Policy Type"),"Policy Intake Queue must show Policy Type beside Lead Source");
+assert(workspace.includes('return "Stored"'),"Life/Health proposal-form detail status must render as Stored instead of Fetched");
 
 const contextCard=read("components/policy-intake-onboarding-context.tsx");
 assert(contextCard.includes("View Policy Copy"),"Policy Onboarding footer must keep the intake policy copy available to Operations");
@@ -107,16 +116,9 @@ assert(policyDocumentActions.includes("Policy copy must be 15 MB or smaller."),"
 assert(policyOnboardingActions.includes("customers!vehicles_customer_id_fkey(contact_name, phone)"),"Policy Onboarding vehicle-owner lookup must explicitly use vehicles_customer_id_fkey.");
 assert(policyOnboardingActions.includes("customers!vehicles_customer_id_fkey(contact_name,phone,address,city,district,state,pincode,country,source)"),"Existing vehicle selection must explicitly use vehicles_customer_id_fkey.");
 assert(!/\.from\("vehicles"\)[\s\S]{0,260}customers\(/.test(policyOnboardingActions),"Policy Onboarding must not use an ambiguous bare vehicles -> customers embed.");
-const copyState=read("app/policy-intakes/policy-copy-state-actions.ts");
-assert(copyState.includes('requirePolicyIntakeFinalizer()'),"Policy-copy reuse must require Finalize authority server-side");
-assert(copyState.includes('.from("policy_intake_documents")')&&copyState.includes('.eq("is_current", true)'),"Policy-copy reuse must verify the current Intake document, including replacements");
-assert(copyState.includes('document.storage_bucket !== intake.storage_bucket || document.storage_path !== intake.storage_path'),"Policy-copy reuse must reject stale Intake document references");
-const copyBridge=read("components/policy-intake-copy-reuse-bridge.tsx");
-assert(copyBridge.includes('searchParams.get("intake_id")'),"Policy-copy reuse must recover Intake context from the authoritative onboarding URL rather than relying only on origin-scoped session state");
-assert(copyBridge.includes("verifyPolicyIntakeCurrentPolicyCopy(intakeId)"),"Policy-copy reuse must be server-verified before bypassing the upload modal");
-assert(copyBridge.includes('sessionStorage.setItem(KEY'),"Verified Intake context must restore the existing Policy Save confirmation contract");
-const routeEnhancements=read("components/policy-route-enhancements.tsx");
-assert(routeEnhancements.includes("PolicyIntakeCopyReuseBridge"),"Policy routes must mount the Intake copy reuse bridge before save confirmation");
+const copyState=read("app/policy-intakes/policy-copy-state-actions.ts");assert(copyState.includes('requirePolicyIntakeFinalizer()'),"Policy-copy reuse must require Finalize authority server-side");assert(copyState.includes('.from("policy_intake_documents")')&&copyState.includes('.eq("is_current", true)'),"Policy-copy reuse must verify the current Intake document, including replacements");assert(copyState.includes('document.storage_bucket !== intake.storage_bucket || document.storage_path !== intake.storage_path'),"Policy-copy reuse must reject stale Intake document references");
+const copyBridge=read("components/policy-intake-copy-reuse-bridge.tsx");assert(copyBridge.includes('searchParams.get("intake_id")'),"Policy-copy reuse must recover Intake context from the authoritative onboarding URL rather than relying only on origin-scoped session state");assert(copyBridge.includes("verifyPolicyIntakeCurrentPolicyCopy(intakeId)"),"Policy-copy reuse must be server-verified before bypassing the upload modal");assert(copyBridge.includes('sessionStorage.setItem(KEY'),"Verified Intake context must restore the existing Policy Save confirmation contract");
+const routeEnhancements=read("components/policy-route-enhancements.tsx");assert(routeEnhancements.includes("PolicyIntakeCopyReuseBridge"),"Policy routes must mount the Intake copy reuse bridge before save confirmation");
 
 const handoff=read("app/policy-intakes/handoff-actions.ts");
 assert(handoff.includes("buildPolicyOcrOnboardingUpdate"),"Operations handoff must reuse the governed OCR onboarding mapper");
