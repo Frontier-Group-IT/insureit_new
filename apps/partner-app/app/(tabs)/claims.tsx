@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
+import { getPartnerInsurerLogoSource } from '@/lib/catalog-logos';
 import {
   getPartnerClaimSummary,
   listPartnerClaims,
@@ -23,7 +24,6 @@ import {
   type PartnerClaimState,
   type PartnerClaimSummary,
 } from '@/lib/claims';
-import { formatIndianCurrency } from '@/lib/format';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
@@ -63,16 +63,8 @@ export default function ClaimsScreen() {
   });
 
   const fetchPage = useCallback(async ({ limit, offset }: { limit: number; offset: number }) => {
-    const nextRows = await listPartnerClaims({
-      state,
-      search: debouncedSearch,
-      limit,
-      offset,
-    });
-    return {
-      rows: nextRows,
-      total: nextRows[0]?.total_count ?? 0,
-    };
+    const nextRows = await listPartnerClaims({ state, search: debouncedSearch, limit, offset });
+    return { rows: nextRows, total: nextRows[0]?.total_count ?? 0 };
   }, [debouncedSearch, state]);
 
   const collection = usePartnerPagedQuery<PartnerClaimRow>({
@@ -84,11 +76,9 @@ export default function ClaimsScreen() {
   });
 
   const rows = collection.rows;
-
   const refreshAll = useCallback(async () => {
     await Promise.all([summary.refresh(), collection.refresh()]);
   }, [collection, summary]);
-
   const name = context?.identity.display_name || 'Partner';
 
   const header = (
@@ -100,7 +90,6 @@ export default function ClaimsScreen() {
           style={styles.heroBackdrop}
         />
         <View style={styles.heroShade} />
-
         <View style={styles.heroTopRow}>
           <View style={styles.heroBrand}>
             <Image
@@ -133,11 +122,9 @@ export default function ClaimsScreen() {
             </Pressable>
           </View>
         </View>
-
         <View style={styles.heroCopy}>
           <Text style={styles.heroTitle}>Claims</Text>
         </View>
-
       </View>
 
       <View style={styles.body}>
@@ -282,7 +269,6 @@ export default function ClaimsScreen() {
         }))}
         onClose={() => setFilterOpen(false)}
       />
-
     </SafeAreaView>
   );
 }
@@ -293,6 +279,9 @@ function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void
   const rejected = /reject/i.test(row.current_status || '');
   const isNew = /^new$/i.test((row.current_status || '').trim());
   const vehiclePolicy = [row.vehicle_no || 'Vehicle not linked', row.policy_no || 'External policy'].join('  |  ');
+  const insurerLogo = getPartnerInsurerLogoSource(row.insurer_name);
+  const mode = claimModeLabel(row.claim_service_mode);
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -302,20 +291,27 @@ function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void
     >
       <View style={styles.claimIconWrap}>
         <Image
-          source={completed ? PartnerAssets.status.verified : PartnerAssets.navigation.claims}
+          source={insurerLogo ?? PartnerAssets.navigation.claims}
           resizeMode="contain"
           style={styles.claimIcon}
+          accessibilityLabel={row.insurer_name ? `${row.insurer_name} logo` : 'Claim'}
         />
       </View>
 
       <View style={styles.claimCopy}>
-        <Text numberOfLines={1} style={styles.claimNo}>{row.claim_no || 'Claim'}</Text>
-        <Text numberOfLines={1} style={styles.claimCustomer}>{row.customer_name} · {row.insurer_name || 'Insurer not recorded'}</Text>
+        <View style={styles.claimHeadingRow}>
+          <Text numberOfLines={1} style={styles.claimNo}>{row.claim_no || 'Claim'}</Text>
+          {mode ? (
+            <View style={[styles.modeBadge, mode === 'External' && styles.modeBadgeExternal]}>
+              <Text style={[styles.modeBadgeText, mode === 'External' && styles.modeBadgeTextExternal]}>{mode}</Text>
+            </View>
+          ) : null}
+        </View>
+        <Text numberOfLines={1} style={styles.claimCustomer}>{row.customer_name}</Text>
         <Text numberOfLines={1} style={styles.claimDetail}>{vehiclePolicy}</Text>
-        <Text numberOfLines={1} style={styles.claimAmount}>{claimAmount(row)}</Text>
       </View>
 
-      <View style={styles.claimRight}>
+      <View style={styles.claimStatusCenter}>
         <View style={[
           styles.statusPill,
           rejected ? styles.statusRejected : completed ? styles.statusSuccess : isNew ? styles.statusNew : styles.statusWarning,
@@ -334,10 +330,12 @@ function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void
             {status}
           </Text>
         </View>
-        <Text style={styles.claimDate}>Claimed on {formatDate(row.accident_at || row.created_at)}</Text>
       </View>
 
-      <Ionicons name="chevron-forward" size={14} color="#1738D5" />
+      <View style={styles.claimDateWrap}>
+        <Text style={styles.claimDate}>Claimed on</Text>
+        <Text style={styles.claimDateStrong}>{formatDate(row.accident_at || row.created_at)}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -381,9 +379,11 @@ function ChoiceModal({
   );
 }
 
-function claimAmount(row: PartnerClaimRow) {
-  const value = row.settlement_amount ?? row.approved_amount ?? row.estimated_loss;
-  return value == null ? 'Amount not recorded' : formatIndianCurrency(value);
+function claimModeLabel(value: string | null) {
+  const normalized = (value || '').toLowerCase();
+  if (normalized.includes('external')) return 'External';
+  if (normalized.includes('internal')) return 'Internal';
+  return null;
 }
 
 function formatDate(value: string) {
@@ -406,25 +406,13 @@ function initials(value: string) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#0752A2' },
-  content: { paddingBottom: 104, backgroundColor: '#F7FAFE' },
+  safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
+  content: { flexGrow: 1, paddingBottom: 104, backgroundColor: '#FFFFFF' },
   pressed: { opacity: 0.76 },
 
-  hero: {
-    height: 162,
-    overflow: 'hidden',
-    backgroundColor: '#0752A2',
-  },
-  heroBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    width: '100%',
-    height: '100%',
-    opacity: 0.92,
-  },
-  heroShade: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(1,42,95,0.10)',
-  },
+  hero: { height: 162, overflow: 'hidden', backgroundColor: '#0752A2' },
+  heroBackdrop: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%', opacity: 0.92 },
+  heroShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(1,42,95,0.10)' },
   heroTopRow: {
     zIndex: 3,
     position: 'absolute',
@@ -438,8 +426,8 @@ const styles = StyleSheet.create({
   heroBrand: { flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: '60%' },
   heroLogo: { width: 30, height: 35, tintColor: '#FFFFFF' },
   heroBrandCopy: { justifyContent: 'center' },
-  heroBrandInsureit: { color: '#FFFFFF', fontSize: 14, lineHeight: 16, fontWeight: '800', letterSpacing: -0.08 },
-  heroBrandPartner: { color: '#F5AB2E', fontSize: 14, lineHeight: 16, fontWeight: '800', letterSpacing: -0.08 },
+  heroBrandInsureit: { color: '#FFFFFF', fontSize: 14, lineHeight: 16, fontWeight: '800' },
+  heroBrandPartner: { color: '#F5AB2E', fontSize: 14, lineHeight: 16, fontWeight: '800' },
   heroActions: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   heroIconButton: {
     width: 33,
@@ -449,12 +437,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(4,33,78,0.72)',
     borderWidth: 1.25,
-    borderColor: 'rgba(255,255,255,0.96)',
-    shadowColor: '#001B42',
-    shadowOpacity: 0.24,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    borderColor: '#FFFFFF',
   },
   heroAvatar: {
     width: 35,
@@ -463,27 +446,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.98)',
-    shadowColor: '#001B42',
-    shadowOpacity: 0.22,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
   },
-  heroAvatarText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.label },
-  heroCopy: { zIndex: 3, position: 'absolute', left: 16, bottom: 22, width: 178 },
-  heroTitle: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: '700',
-    letterSpacing: -0.04,
-    textShadowColor: 'rgba(0,0,0,0.20)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  body: { marginTop: -13, paddingHorizontal: 10, zIndex: 5 },
+  heroAvatarText: { color: partnerTheme.colors.brandStrong, fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
+  heroCopy: { zIndex: 3, position: 'absolute', left: 18, bottom: 24 },
+  heroTitle: { color: '#FFFFFF', fontSize: 20, lineHeight: 23, fontWeight: '800', letterSpacing: -0.2 },
+
+  body: { marginTop: -13, paddingHorizontal: 10, zIndex: 5, backgroundColor: '#FFFFFF' },
   searchShell: {
     height: 40,
     flexDirection: 'row',
@@ -505,45 +473,6 @@ const styles = StyleSheet.create({
   filterButton: { minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 1 },
   filterText: { color: '#1738D5', fontSize: 9.5, lineHeight: 13, fontWeight: '700' },
   banner: { marginTop: 8 },
-
-  summaryLoading: {
-    marginTop: 7,
-    minHeight: 86,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  kpiGrid: { marginTop: 7, flexDirection: 'row', gap: 4 },
-  kpiCard: {
-    flex: 1,
-    minHeight: 84,
-    alignItems: 'center',
-    paddingHorizontal: 2,
-    paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E1EAF5',
-    shadowColor: '#12355E',
-    shadowOpacity: 0.035,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
-  },
-  kpiIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ECF5FF',
-  },
-  kpiValue: { marginTop: 1, color: '#1738D5', fontSize: 15, lineHeight: 18, fontWeight: '800' },
-  kpiLabel: { minHeight: 20, color: '#3F55A1', textAlign: 'center', fontSize: 7.5, lineHeight: 10, fontWeight: '600' },
-  scopeLine: { marginTop: 1, flexDirection: 'row', alignItems: 'center', gap: 2 },
-  scopeText: { color: '#19A56F', fontSize: 6.5, lineHeight: 8, fontWeight: '700' },
-
   controls: {
     marginTop: 8,
     minHeight: 46,
@@ -573,12 +502,12 @@ const styles = StyleSheet.create({
 
   rowWrap: { paddingHorizontal: 10, marginTop: 5 },
   claimCard: {
-    minHeight: 65,
+    minHeight: 70,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
+    gap: 6,
     paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 11,
     backgroundColor: '#FFFFFF',
     borderWidth: StyleSheet.hairlineWidth,
@@ -591,28 +520,35 @@ const styles = StyleSheet.create({
   },
   claimCardPressed: { backgroundColor: '#F4F8FF' },
   claimIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EDF6FF',
+    backgroundColor: '#FFFFFF',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#E6ECF4',
   },
-  claimIcon: { width: 29, height: 29 },
+  claimIcon: { width: 32, height: 32 },
   claimCopy: { flex: 1, minWidth: 0 },
-  claimNo: { color: '#071D49', fontSize: 9.5, lineHeight: 12, fontWeight: '800' },
-  claimCustomer: { marginTop: 0, color: '#51678E', fontSize: 7.5, lineHeight: 10, fontWeight: '600' },
-  claimDetail: { marginTop: 1, color: '#7788A5', fontSize: 6.8, lineHeight: 9 },
-  claimAmount: { marginTop: 2, color: '#152238', fontSize: 7.2, lineHeight: 9.5, fontWeight: '700' },
-  claimRight: { width: 84, alignItems: 'flex-end', alignSelf: 'stretch', justifyContent: 'space-between', paddingVertical: 0 },
+  claimHeadingRow: { minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  claimNo: { flexShrink: 1, color: '#071D49', fontSize: 12, lineHeight: 15, fontWeight: '800' },
+  modeBadge: { paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 6, backgroundColor: '#E8F1FF' },
+  modeBadgeExternal: { backgroundColor: '#F0EAFE' },
+  modeBadgeText: { color: '#2355A7', fontSize: 6.5, lineHeight: 9, fontWeight: '800' },
+  modeBadgeTextExternal: { color: '#6842B8' },
+  claimCustomer: { marginTop: 2, color: '#405A82', fontSize: 8.2, lineHeight: 11, fontWeight: '700' },
+  claimDetail: { marginTop: 2, color: '#7788A5', fontSize: 6.8, lineHeight: 9 },
+  claimStatusCenter: { width: 86, alignItems: 'center', justifyContent: 'center' },
   statusPill: {
-    maxWidth: 84,
-    minHeight: 18,
+    maxWidth: 86,
+    minHeight: 20,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 3,
     paddingHorizontal: 6,
-    borderRadius: 9,
+    borderRadius: 10,
   },
   statusWarning: { backgroundColor: '#FFF2DD' },
   statusSuccess: { backgroundColor: '#E4F6EE' },
@@ -623,12 +559,14 @@ const styles = StyleSheet.create({
   statusDotSuccess: { backgroundColor: '#19A56F' },
   statusDotRejected: { backgroundColor: '#E04F5F' },
   statusDotNew: { backgroundColor: '#FFFFFF' },
-  statusText: { flexShrink: 1, fontSize: 6.6, lineHeight: 9, fontWeight: '700' },
+  statusText: { flexShrink: 1, fontSize: 6.7, lineHeight: 9, fontWeight: '700', textAlign: 'center' },
   statusTextWarning: { color: '#B66A14' },
   statusTextSuccess: { color: '#178157' },
   statusTextRejected: { color: '#C43F50' },
   statusTextNew: { color: '#FFFFFF' },
-  claimDate: { color: '#66789B', fontSize: 6.4, lineHeight: 8.5, fontWeight: '600', textAlign: 'right' },
+  claimDateWrap: { width: 54, alignItems: 'flex-end', justifyContent: 'center' },
+  claimDate: { color: '#8491A7', fontSize: 5.8, lineHeight: 8, fontWeight: '600', textAlign: 'right' },
+  claimDateStrong: { marginTop: 1, color: '#66789B', fontSize: 6.3, lineHeight: 8.5, fontWeight: '700', textAlign: 'right' },
 
   listFooter: { paddingHorizontal: 10, paddingTop: 6, paddingBottom: 12, alignItems: 'center' },
   loadMoreButton: {
@@ -647,13 +585,9 @@ const styles = StyleSheet.create({
   loadingMore: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: 5 },
   loadingMoreText: { color: '#66789B', fontSize: 7.5, lineHeight: 10 },
   endText: { minHeight: 26, paddingTop: 6, color: '#7D8BA1', textAlign: 'center', fontSize: 7, lineHeight: 9 },
-  emptyWrap: { paddingHorizontal: 10, paddingTop: 14 },
+  emptyWrap: { flex: 1, paddingHorizontal: 10, paddingTop: 14, backgroundColor: '#FFFFFF' },
 
-  modalBackdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(8,28,55,0.38)',
-  },
+  modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(8,28,55,0.38)' },
   modalCard: {
     paddingHorizontal: 18,
     paddingTop: 14,
