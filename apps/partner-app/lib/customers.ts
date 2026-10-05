@@ -51,7 +51,6 @@ export async function listPartnerCustomers({
   return (data ?? []) as PartnerCustomerRow[];
 }
 
-
 export type PartnerCustomerDetail = {
   customer: {
     id: string;
@@ -78,6 +77,7 @@ export type PartnerCustomerDetail = {
   };
   policies: {
     policy_id: string;
+    vehicle_id: string | null;
     policy_no: string | null;
     policy_code: string | null;
     policy_type: string | null;
@@ -102,6 +102,8 @@ export type PartnerCustomerDetail = {
   }[];
   claims: {
     claim_id: string;
+    vehicle_id: string | null;
+    policy_id: string | null;
     claim_no: string | null;
     current_status: string | null;
     created_at: string;
