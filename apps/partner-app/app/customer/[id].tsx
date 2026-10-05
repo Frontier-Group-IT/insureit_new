@@ -20,9 +20,9 @@ export default function CustomerDetailScreen() {
   const [data, setData] = useState<PartnerCustomerDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showAllPolicies, setShowAllPolicies] = useState(false);
   const [showAllVehicles, setShowAllVehicles] = useState(false);
-  const [showAllClaims, setShowAllClaims] = useState(false);
+  const [expandedVehicles, setExpandedVehicles] = useState<Record<string, boolean>>({});
+  const [expandedClaims, setExpandedClaims] = useState<Record<string, boolean>>({});
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -39,9 +39,17 @@ export default function CustomerDetailScreen() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const visiblePolicies = data ? (showAllPolicies ? data.policies : data.policies.slice(0, 2)) : [];
   const visibleVehicles = data ? (showAllVehicles ? data.vehicles : data.vehicles.slice(0, 2)) : [];
-  const visibleClaims = data ? (showAllClaims ? data.claims : data.claims.slice(0, 2)) : [];
+  const unlinkedPolicies = data ? data.policies.filter((policy) => !policy.vehicle_id) : [];
+  const unlinkedClaims = data ? data.claims.filter((claim) => !claim.policy_id) : [];
+
+  const toggleVehicle = (vehicleId: string) => {
+    setExpandedVehicles((current) => ({ ...current, [vehicleId]: !current[vehicleId] }));
+  };
+
+  const toggleClaims = (policyId: string) => {
+    setExpandedClaims((current) => ({ ...current, [policyId]: !current[policyId] }));
+  };
 
   return (
     <PartnerScreen title="Customer" hideTopBar>
@@ -97,68 +105,117 @@ export default function CustomerDetailScreen() {
             <Info label="Status" value={humanize(data.customer.status || 'not recorded')} status={data.customer.status} />
           </View>
 
-          <SectionHeader icon="document-text-outline" title="Policies" meta={`${data.summary.policies} total`} />
-          {data.policies.length ? (
-            <View style={styles.stack}>{visiblePolicies.map((policy) => {
-              const logo = getPartnerInsurerLogoSource(policy.insurer_name);
-              return (
-                <Pressable accessibilityRole="button" accessibilityLabel={`Open policy ${policy.policy_no || policy.policy_code || ''}`} key={policy.policy_id} onPress={() => router.push(`/policy/${policy.policy_id}` as never)} style={({ pressed }) => [styles.itemCard, pressed && styles.pressed]}>
-                  <Logo source={logo} fallback={PartnerAssets.products.motorInsurance} />
-                  <View style={styles.itemBody}>
-                    <View style={styles.itemHeading}><Text style={styles.itemTitle}>{policy.policy_no || policy.policy_code || 'Policy'}</Text><PartnerStatusBadge label={policyCategory(policy)} tone="brand" /></View>
-                    <Text numberOfLines={1} style={styles.itemText}>{policy.insurer_name || 'Insurer not recorded'}</Text>
-                    <Text style={styles.itemMeta}>Ends {formatDate(policy.end_date)} · {formatIndianCurrency(policy.premium_amount)}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color="#5A35EE" />
-                </Pressable>
-              );
-            })}</View>
-          ) : <EmptyCard icon="document-text-outline" title="No policies recorded." subtitle="Policies linked to this customer will appear here." />}
-          {data.policies.length > 2 ? <ExpandToggle expanded={showAllPolicies} total={data.policies.length} label="policies" onPress={() => setShowAllPolicies((value) => !value)} /> : null}
-
           <SectionHeader icon="car-outline" title="Vehicles" meta={`${data.summary.vehicles} total`} />
           {data.vehicles.length ? (
             <View style={styles.stack}>{visibleVehicles.map((vehicle) => {
               const logo = getPartnerManufacturerLogoSource(vehicle.make);
+              const policies = data.policies.filter((policy) => policy.vehicle_id === vehicle.vehicle_id);
+              const expanded = Boolean(expandedVehicles[vehicle.vehicle_id]);
               return (
-                <View key={vehicle.vehicle_id} style={styles.itemCard}>
-                  <Logo source={logo} fallback={PartnerAssets.products.motorInsurance} />
-                  <View style={styles.itemBody}>
-                    <Text style={styles.itemTitle}>{vehicle.vehicle_no || 'Vehicle'}</Text>
-                    <Text style={styles.itemText}>{displayParts(vehicle.make, vehicle.model, vehicle.year) || humanize(vehicle.vehicle_type || 'vehicle')}</Text>
-                    <View style={styles.expiryRow}><Expiry label="PUC" date={vehicle.puc_expiry_date} /><Expiry label="Fitness" date={vehicle.fitness_expiry_date} /><Expiry label="Road tax" date={vehicle.road_tax_expiry_date} /><Expiry label="National permit" date={vehicle.national_permit_expiry_date} /><Expiry label="Local permit" date={vehicle.local_permit_expiry_date} /></View>
+                <View key={vehicle.vehicle_id} style={styles.vehicleCard}>
+                  <View style={styles.vehicleTopRow}>
+                    <Logo source={logo} fallback={PartnerAssets.products.motorInsurance} />
+                    <View style={styles.itemBody}>
+                      <Text style={styles.itemTitle}>{vehicle.vehicle_no || 'Vehicle'}</Text>
+                      <Text style={styles.itemText}>{displayParts(vehicle.make, vehicle.model, vehicle.year) || humanize(vehicle.vehicle_type || 'vehicle')}</Text>
+                      <View style={styles.expiryRow}><Expiry label="PUC" date={vehicle.puc_expiry_date} /><Expiry label="Fitness" date={vehicle.fitness_expiry_date} /><Expiry label="Road tax" date={vehicle.road_tax_expiry_date} /><Expiry label="National permit" date={vehicle.national_permit_expiry_date} /><Expiry label="Local permit" date={vehicle.local_permit_expiry_date} /></View>
+                    </View>
+                    {policies.length ? (
+                      <Pressable accessibilityRole="button" accessibilityLabel={expanded ? 'Hide policy details' : 'View policy details'} onPress={() => toggleVehicle(vehicle.vehicle_id)} style={({ pressed }) => [styles.viewPolicyButton, pressed && styles.pressed]}>
+                        <Text style={styles.viewPolicyText}>{expanded ? 'Hide Policy' : 'View Policy'}</Text>
+                        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color="#FFFFFF" />
+                      </Pressable>
+                    ) : null}
                   </View>
+
+                  {expanded ? (
+                    <View style={styles.policyStack}>{policies.map((policy) => {
+                      const policyClaims = data.claims.filter((claim) => claim.policy_id === policy.policy_id);
+                      const claimsExpanded = Boolean(expandedClaims[policy.policy_id]);
+                      const insurerLogo = getPartnerInsurerLogoSource(policy.insurer_name);
+                      return (
+                        <View key={policy.policy_id} style={styles.policyCard}>
+                          <View style={styles.policyRow}>
+                            <Logo source={insurerLogo} fallback={PartnerAssets.products.motorInsurance} compact />
+                            <Pressable accessibilityRole="button" accessibilityLabel={`Open policy ${policy.policy_no || policy.policy_code || ''}`} onPress={() => router.push(`/policy/${policy.policy_id}` as never)} style={({ pressed }) => [styles.policyBody, pressed && styles.pressed]}>
+                              <View style={styles.itemHeading}><Text style={styles.itemTitle}>{policy.policy_no || policy.policy_code || 'Policy'}</Text><PartnerStatusBadge label={policyCategory(policy)} tone="brand" /></View>
+                              <Text numberOfLines={1} style={styles.itemText}>{policy.insurer_name || 'Insurer not recorded'}</Text>
+                              <Text style={styles.itemMeta}>Ends {formatDate(policy.end_date)} · {formatIndianCurrency(policy.premium_amount)}</Text>
+                              <Text style={styles.policyDetailsText}>Policy Details</Text>
+                            </Pressable>
+                            {policyClaims.length ? (
+                              <Pressable accessibilityRole="button" accessibilityLabel={claimsExpanded ? `Collapse ${policyClaims.length} claims` : `Expand ${policyClaims.length} claims`} onPress={() => toggleClaims(policy.policy_id)} style={({ pressed }) => [styles.claimToggle, pressed && styles.pressed]}>
+                                <Text style={styles.claimToggleText}>Claims {policyClaims.length}</Text>
+                                <Ionicons name={claimsExpanded ? 'chevron-up' : 'chevron-down'} size={13} color="#163F79" />
+                              </Pressable>
+                            ) : null}
+                          </View>
+
+                          {claimsExpanded ? (
+                            <View style={styles.claimStack}>{policyClaims.map((claim) => (
+                              <Pressable accessibilityRole="button" accessibilityLabel={`Open claim ${claim.claim_no || ''}`} key={claim.claim_id} onPress={() => router.push(`/claim/${claim.claim_id}` as never)} style={({ pressed }) => [styles.claimCard, pressed && styles.pressed]}>
+                                <View style={styles.claimIcon}><Ionicons name="shield-checkmark-outline" size={17} color="#F59E0B" /></View>
+                                <View style={styles.itemBody}>
+                                  <View style={styles.itemHeading}><Text style={styles.itemTitle}>{claim.claim_no || 'Claim'}</Text><PartnerStatusBadge label={humanize(claim.current_status || 'active')} tone={claimTone(claim.current_status)} /></View>
+                                  <Text numberOfLines={1} style={styles.itemText}>{claim.insurer_name || 'Claim details'}</Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={17} color="#5A35EE" />
+                              </Pressable>
+                            ))}</View>
+                          ) : null}
+                        </View>
+                      );
+                    })}</View>
+                  ) : null}
                 </View>
               );
             })}</View>
           ) : <EmptyCard icon="car-outline" title="No vehicles recorded." subtitle="Vehicles linked to this customer will appear here." />}
           {data.vehicles.length > 2 ? <ExpandToggle expanded={showAllVehicles} total={data.vehicles.length} label="vehicles" onPress={() => setShowAllVehicles((value) => !value)} /> : null}
 
-          <SectionHeader icon="shield-checkmark-outline" title="Claims" meta={`${data.summary.claims} total`} />
-          {data.claims.length ? (
-            <View style={styles.stack}>{visibleClaims.map((claim) => {
-              const logo = getPartnerInsurerLogoSource(claim.insurer_name);
-              return (
+          {unlinkedPolicies.length ? (
+            <>
+              <SectionHeader icon="document-text-outline" title="Other Policies" meta={`${unlinkedPolicies.length} without a linked vehicle`} />
+              <View style={styles.stack}>{unlinkedPolicies.map((policy) => {
+                const logo = getPartnerInsurerLogoSource(policy.insurer_name);
+                return (
+                  <Pressable accessibilityRole="button" accessibilityLabel={`Open policy ${policy.policy_no || policy.policy_code || ''}`} key={policy.policy_id} onPress={() => router.push(`/policy/${policy.policy_id}` as never)} style={({ pressed }) => [styles.itemCard, pressed && styles.pressed]}>
+                    <Logo source={logo} fallback={PartnerAssets.products.motorInsurance} />
+                    <View style={styles.itemBody}>
+                      <View style={styles.itemHeading}><Text style={styles.itemTitle}>{policy.policy_no || policy.policy_code || 'Policy'}</Text><PartnerStatusBadge label={policyCategory(policy)} tone="brand" /></View>
+                      <Text numberOfLines={1} style={styles.itemText}>{policy.insurer_name || 'Insurer not recorded'}</Text>
+                      <Text style={styles.itemMeta}>Ends {formatDate(policy.end_date)} · {formatIndianCurrency(policy.premium_amount)}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color="#5A35EE" />
+                  </Pressable>
+                );
+              })}</View>
+            </>
+          ) : null}
+
+          {unlinkedClaims.length ? (
+            <>
+              <SectionHeader icon="shield-checkmark-outline" title="Other Claims" meta={`${unlinkedClaims.length} without a linked policy`} />
+              <View style={styles.stack}>{unlinkedClaims.map((claim) => (
                 <Pressable accessibilityRole="button" accessibilityLabel={`Open claim ${claim.claim_no || ''}`} key={claim.claim_id} onPress={() => router.push(`/claim/${claim.claim_id}` as never)} style={({ pressed }) => [styles.itemCard, pressed && styles.pressed]}>
-                  <Logo source={logo} fallback={PartnerAssets.navigation.claims} />
+                  <Logo source={getPartnerInsurerLogoSource(claim.insurer_name)} fallback={PartnerAssets.navigation.claims} />
                   <View style={styles.itemBody}>
                     <View style={styles.itemHeading}><Text style={styles.itemTitle}>{claim.claim_no || 'Claim'}</Text><PartnerStatusBadge label={humanize(claim.current_status || 'active')} tone={claimTone(claim.current_status)} /></View>
                     <Text numberOfLines={1} style={styles.itemText}>{[claim.vehicle_no, claim.insurer_name].filter(Boolean).join(' · ') || 'Claim details'}</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color="#5A35EE" />
                 </Pressable>
-              );
-            })}</View>
-          ) : <EmptyCard icon="shield-checkmark-outline" title="No claims recorded." subtitle="Claims linked to this customer will appear here." />}
-          {data.claims.length > 2 ? <ExpandToggle expanded={showAllClaims} total={data.claims.length} label="claims" onPress={() => setShowAllClaims((value) => !value)} /> : null}
+              ))}</View>
+            </>
+          ) : null}
         </>
       )}
     </PartnerScreen>
   );
 }
 
-function Logo({ source, fallback }: { source: ReturnType<typeof getPartnerInsurerLogoSource>; fallback: number }) {
-  return <View style={styles.logoShell}><Image source={source || fallback} style={styles.logoImage} resizeMode="contain" /></View>;
+function Logo({ source, fallback, compact = false }: { source: ReturnType<typeof getPartnerInsurerLogoSource>; fallback: number; compact?: boolean }) {
+  return <View style={[styles.logoShell, compact && styles.logoShellCompact]}><Image source={source || fallback} style={[styles.logoImage, compact && styles.logoImageCompact]} resizeMode="contain" /></View>;
 }
 
 function Summary({ icon, iconBg, iconColor, value, label, last = false }: { icon: keyof typeof Ionicons.glyphMap; iconBg: string; iconColor: string; value: number; label: string; last?: boolean }) {
@@ -210,7 +267,12 @@ const styles = StyleSheet.create({
   relationshipCard: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#E4E9F2', backgroundColor: '#FFFFFF' },
   info: { width: '50%', paddingRight: 8 }, infoLabel: { color: '#768297', fontSize: 8, lineHeight: 10, textTransform: 'uppercase', letterSpacing: 0.35 }, infoValue: { marginTop: 3, color: '#111B30', fontSize: 10.5, lineHeight: 14, fontWeight: '700' }, inlineStatus: { alignSelf: 'flex-start', marginTop: 3, paddingHorizontal: 9, paddingVertical: 3, borderRadius: 10, backgroundColor: '#E6F8EF' }, inlineStatusText: { color: '#109E65', fontSize: 9, fontWeight: '800' },
   stack: { gap: 7 }, itemCard: { minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderRadius: 12, borderWidth: 1, borderColor: '#E4E9F2', backgroundColor: '#FFFFFF' },
-  logoShell: { width: 48, height: 48, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F9FC' }, logoImage: { width: 43, height: 43 },
+  vehicleCard: { borderRadius: 12, borderWidth: 1, borderColor: '#E4E9F2', backgroundColor: '#FFFFFF', overflow: 'hidden' }, vehicleTopRow: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 9, padding: 10 },
+  viewPolicyButton: { minHeight: 34, paddingHorizontal: 10, borderRadius: 9, backgroundColor: '#163F79', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }, viewPolicyText: { color: '#FFFFFF', fontSize: 8.5, fontWeight: '800' },
+  policyStack: { borderTopWidth: 1, borderTopColor: '#E8EDF5', backgroundColor: '#F8FAFD', padding: 8, gap: 7 }, policyCard: { borderRadius: 10, borderWidth: 1, borderColor: '#DDE5F0', backgroundColor: '#FFFFFF', overflow: 'hidden' }, policyRow: { minHeight: 66, flexDirection: 'row', alignItems: 'center', gap: 8, padding: 9 }, policyBody: { flex: 1, minWidth: 0 }, policyDetailsText: { marginTop: 4, color: '#163F79', fontSize: 8.5, fontWeight: '800' },
+  claimToggle: { alignSelf: 'center', minHeight: 32, paddingHorizontal: 8, borderRadius: 9, borderWidth: 1, borderColor: '#C9D7E9', backgroundColor: '#F1F6FC', flexDirection: 'row', alignItems: 'center', gap: 3 }, claimToggleText: { color: '#163F79', fontSize: 8.5, fontWeight: '800' },
+  claimStack: { borderTopWidth: 1, borderTopColor: '#E8EDF5', padding: 7, gap: 6, backgroundColor: '#FBFCFE' }, claimCard: { minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 8, padding: 8, borderRadius: 9, borderWidth: 1, borderColor: '#E4E9F2', backgroundColor: '#FFFFFF' }, claimIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF1DC' },
+  logoShell: { width: 48, height: 48, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F9FC' }, logoImage: { width: 43, height: 43 }, logoShellCompact: { width: 40, height: 40, borderRadius: 9 }, logoImageCompact: { width: 35, height: 35 },
   itemBody: { flex: 1, minWidth: 0 }, itemHeading: { flexDirection: 'row', alignItems: 'center', gap: 7 }, itemTitle: { flex: 1, color: '#10192D', fontSize: 11.5, lineHeight: 15, fontWeight: '800' }, itemText: { marginTop: 2, color: '#67758A', fontSize: 9.5, lineHeight: 13 }, itemMeta: { marginTop: 3, color: '#4B2CE7', fontSize: 9, lineHeight: 12, fontWeight: '700' },
   expiryRow: { marginTop: 5, flexDirection: 'row', flexWrap: 'wrap', gap: 5 }, expiry: { borderRadius: partnerTheme.radius.pill, paddingHorizontal: 7, paddingVertical: 3 }, expiryGood: { backgroundColor: partnerTheme.colors.successSoft }, expiryWarn: { backgroundColor: partnerTheme.colors.warningSoft }, expiryBad: { backgroundColor: partnerTheme.colors.dangerSoft }, expiryText: { color: partnerTheme.colors.inkMuted, fontSize: 8 },
   emptyCard: { minHeight: 66, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#E4E9F2', backgroundColor: '#FFFFFF' }, emptyIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F4F8' }, emptyBody: { flex: 1 }, emptyTitle: { color: '#172039', fontSize: 10.5, lineHeight: 14, fontWeight: '800' }, emptySubtitle: { marginTop: 2, color: '#7A8799', fontSize: 8.5, lineHeight: 12 },
