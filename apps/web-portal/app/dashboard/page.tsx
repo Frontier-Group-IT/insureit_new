@@ -1,10 +1,13 @@
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { accessRank, getEffectivePermissionAccessMap } from "@/lib/effective-permissions";
+import { loadLifeHealthCaseSummary } from "@/lib/life-health-case-summary";
 import { getOperationsDashboardData } from "@/lib/operations-dashboard";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getDashboardCurrentData, type DashboardAccess } from "../dashboard-v2/dashboard-data";
 import { getDashboardBusinessData, type DashboardBusinessQuery } from "../dashboard-v2/dashboard-business";
+import { DashboardRegisterSync } from "../dashboard-v2/dashboard-register-sync";
 import { DashboardFullyLoaded } from "../dashboard-v2/dashboard-view";
 
 export const dynamic = "force-dynamic";
@@ -58,9 +61,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     commercial,
   };
 
-  const [data, business] = await Promise.all([
+  const proposalSummaryRequest = viewPolicies
+    ? loadLifeHealthCaseSummary(createSupabaseAdminClient())
+    : Promise.resolve(null);
+
+  const [data, business, proposalSummary] = await Promise.all([
     getDashboardCurrentData(profile, access, base),
     getDashboardBusinessData(profile, query, dashboardCommercialAccess, dashboardCommercialOperationsAccess),
+    proposalSummaryRequest,
   ]);
 
   return (
@@ -72,6 +80,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         canCreatePolicy={createPolicies || editPolicies}
         canCreatePolicyIntake={createPolicyIntakes}
       />
+      <DashboardRegisterSync proposalPending={proposalSummary?.pending ?? 0} />
     </ClaimManagerShell>
   );
 }
