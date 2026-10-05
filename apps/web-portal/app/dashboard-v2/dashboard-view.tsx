@@ -211,6 +211,21 @@ function buildAttention(data: DashboardCurrentData, access: DashboardAccess, bus
       tone: "violet",
     });
   }
+
+  const pendingProposal = data.policyIntakes
+    ? data.policyIntakes.actionRequired + data.policyIntakes.inReview
+    : 0;
+  if (pendingProposal) {
+    rows.push({
+      label: "Pending proposal",
+      value: pendingProposal,
+      detail: `${data.policyIntakes!.actionRequired} action · ${data.policyIntakes!.inReview} review`,
+      href: "/policy-intakes",
+      icon: DASHBOARD_ICON_ASSETS.policy,
+      tone: "red",
+    });
+  }
+
   if (data.intermediaries?.pendingApplications) {
     rows.push({
       label: "Intermediary onboarding",
@@ -264,16 +279,6 @@ function buildAttention(data: DashboardCurrentData, access: DashboardAccess, bus
     });
   }
 
-  if (access.viewKyc && data.base.attention.onboarding) {
-    rows.push({
-      label: "KYC applications",
-      value: data.base.attention.onboarding,
-      href: "/customers/applications",
-      icon: DASHBOARD_ICON_ASSETS.kycCorrection,
-      tone: "violet",
-    });
-  }
-
   return rows.slice(0, 6);
 }
 
@@ -299,17 +304,23 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
   const commercial = business.grossPremium !== null;
   const motorPolicies = business.businessLineMix.find((row) => row.label === "Motor")?.policies ?? 0;
   const nonMotorPolicies = business.businessLineMix.find((row) => row.label === "Non Motor")?.policies ?? 0;
-  const policyMixLabel = `${motorPolicies.toLocaleString("en-IN")} Motor · ${nonMotorPolicies.toLocaleString("en-IN")} Non-Motor`;
+  const lifePolicies = business.businessLineMix.find((row) => row.label === "Life")?.policies ?? 0;
+  const healthPolicies = business.businessLineMix.find((row) => row.label === "Health")?.policies ?? 0;
+  const policyBreakdown = [
+    { label: "Motor", value: motorPolicies },
+    { label: "Non-Motor", value: nonMotorPolicies },
+    { label: "Life", value: lifePolicies },
+    { label: "Health", value: healthPolicies },
+  ];
   const averageNetPremium = business.netPremium !== null && business.policyCount > 0
     ? business.netPremium / business.policyCount
     : 0;
   const headline = [
-    { label: `Policies · ${business.periodShortLabel} · ${policyMixLabel}`, value: business.policyCount.toLocaleString("en-IN") },
     ...(commercial ? [
       { label: `Net premium · ${business.periodShortLabel}`, value: formatMoney(business.netPremium ?? 0) },
       { label: "Avg. net / policy", value: formatMoney(averageNetPremium) },
     ] : []),
-    { label: "Active producers", value: business.activeProducerCount.toLocaleString("en-IN") },
+    { label: "Producing intermediary", value: business.activeProducerCount.toLocaleString("en-IN") },
   ];
   const totalAmount = business.grossPremium ?? 0;
 
@@ -348,9 +359,29 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
         </div>
       </div>
 
-      <div className={`grid border-t border-[#E7ECF2] bg-[linear-gradient(90deg,#FBFCFF,#F8FAFD,#FAFFFE)] ${headlineGrid(headline.length)}`}>
-        {headline.map((item, index) => (
-          <div key={item.label} className={`${index ? "border-t sm:border-l sm:border-t-0" : ""} border-[#E5EAF1] px-4 py-4 sm:px-5`}>
+      <div className={`grid border-t border-[#E7ECF2] bg-[linear-gradient(90deg,#FBFCFF,#F8FAFD,#FAFFFE)] ${headlineGrid(headline.length + 1)}`}>
+        <div className="px-4 py-4 sm:px-5">
+          <div className="grid grid-cols-[1fr_2fr] items-center gap-4">
+            <div className="min-w-0">
+              <p className="portal-display whitespace-normal break-words text-[25px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">
+                {business.policyCount.toLocaleString("en-IN")}
+              </p>
+              <p className="mt-2 whitespace-normal break-words text-[9px] font-black uppercase leading-relaxed tracking-[.08em] text-[#52657F]">
+                Policies · {business.periodShortLabel}
+              </p>
+            </div>
+            <div className="min-w-0 space-y-1.5">
+              {policyBreakdown.map((item) => (
+                <div key={item.label} className="flex items-center justify-between gap-3 text-[8px] leading-tight">
+                  <span className="font-bold uppercase tracking-[.05em] text-[#6D7B90]">{item.label}</span>
+                  <span className="portal-display text-[13px] font-semibold text-[#20314D]">{item.value.toLocaleString("en-IN")}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        {headline.map((item) => (
+          <div key={item.label} className="border-t border-[#E5EAF1] px-4 py-4 sm:border-l sm:border-t-0 sm:px-5">
             <p className="portal-display whitespace-normal break-words text-[25px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">{item.value}</p>
             <p className="mt-2 whitespace-normal break-words text-[9px] font-black uppercase leading-relaxed tracking-[.08em] text-[#52657F]">{item.label}</p>
           </div>
