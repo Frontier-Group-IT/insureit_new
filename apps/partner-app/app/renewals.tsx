@@ -9,6 +9,7 @@ import { PartnerOperationalRow } from '@/components/ui/partner-operational-row';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
+import { getPartnerInsurerLogoSource } from '@/lib/catalog-logos';
 import {
   getPartnerRenewalSummary,
   listPartnerPolicies,
@@ -24,6 +25,7 @@ import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 type RenewalMode = 'expiring' | 'expired';
+type DueDateSort = 'asc' | 'desc';
 
 const PAGE_SIZE = 25;
 let savedRenewalMode: RenewalMode = 'expiring';
@@ -34,6 +36,8 @@ export default function RenewalsScreen() {
   const { cacheScopeKey } = usePartnerSession();
   const [mode, setMode] = useState<RenewalMode>(savedRenewalMode);
   const [query, setQuery] = useState(savedRenewalQuery);
+  const [sortDirection, setSortDirection] = useState<DueDateSort>('asc');
+  const [sortOpen, setSortOpen] = useState(false);
   const debouncedSearch = useDebouncedValue(query.trim(), 350);
 
   useEffect(() => {
@@ -62,9 +66,20 @@ export default function RenewalsScreen() {
     staleTimeMs: 60_000,
   });
 
+  const sortedRows = useMemo(() => [...collection.rows].sort((a, b) => {
+    const aTime = expirySortValue(a.end_date, sortDirection);
+    const bTime = expirySortValue(b.end_date, sortDirection);
+    return sortDirection === 'asc' ? aTime - bTime : bTime - aTime;
+  }), [collection.rows, sortDirection]);
+
   const refreshAll = useCallback(async () => {
     await Promise.all([summary.refresh(), collection.refresh()]);
   }, [collection, summary]);
+
+  const selectSort = (direction: DueDateSort) => {
+    setSortDirection(direction);
+    setSortOpen(false);
+  };
 
   const header = (
     <View>
@@ -107,9 +122,6 @@ export default function RenewalsScreen() {
         <View style={styles.searchGrow}>
           <PartnerSearchField value={query} onChangeText={setQuery} onClear={() => setQuery('')} placeholder="Search policy, customer, vehicle or insurer..." />
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Renewal filters" style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}>
-          <Ionicons name="options-outline" size={20} color="#4F46E5" />
-        </Pressable>
       </View>
 
       <View style={styles.opportunitiesHeader}>
@@ -122,12 +134,25 @@ export default function RenewalsScreen() {
         </View>
         <View style={styles.sortArea}>
           <Text style={styles.sortLabel}>Sort by</Text>
-          <Pressable style={({ pressed }) => [styles.sortButton, pressed && styles.pressed]}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Sort renewals by due date" onPress={() => setSortOpen((open) => !open)} style={({ pressed }) => [styles.sortButton, pressed && styles.pressed]}>
             <Text style={styles.sortText}>Due Date</Text>
-            <Ionicons name="chevron-down" size={14} color="#42516A" />
+            <Ionicons name={sortOpen ? 'chevron-up' : 'chevron-down'} size={14} color="#42516A" />
           </Pressable>
         </View>
       </View>
+
+      {sortOpen ? (
+        <View style={styles.sortMenu}>
+          <Pressable accessibilityRole="button" onPress={() => selectSort('asc')} style={({ pressed }) => [styles.sortOption, pressed && styles.sortOptionPressed]}>
+            <Text style={[styles.sortOptionText, sortDirection === 'asc' && styles.sortOptionTextActive]}>Earliest first</Text>
+            {sortDirection === 'asc' ? <Ionicons name="checkmark" size={15} color={partnerTheme.colors.brand} /> : null}
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={() => selectSort('desc')} style={({ pressed }) => [styles.sortOption, pressed && styles.sortOptionPressed]}>
+            <Text style={[styles.sortOptionText, sortDirection === 'desc' && styles.sortOptionTextActive]}>Latest first</Text>
+            {sortDirection === 'desc' ? <Ionicons name="checkmark" size={15} color={partnerTheme.colors.brand} /> : null}
+          </Pressable>
+        </View>
+      ) : null}
 
       {collection.error && collection.rows.length && !collection.stale ? <View style={styles.inlineBanner}><PartnerBanner tone="warning" message={collection.error} /></View> : null}
     </View>
@@ -156,9 +181,9 @@ export default function RenewalsScreen() {
       eyebrow="RENEWALS"
       title="Renewal Work Queue"
       onBack={() => router.back()}
-      data={collection.rows}
+      data={sortedRows}
       keyExtractor={(row) => row.policy_id}
-      renderItem={({ item }) => <RenewalCard row={item} mode={mode} onOpenPolicy={() => router.push(`/policy/${item.policy_id}` as never)} onOpenCustomer={() => item.customer_id ? router.push(`/customer/${item.customer_id}` as never) : undefined} />}
+      renderItem={({ item }) => <RenewalCard row={item} mode={mode} onOpenPolicy={() => router.push(`/policy/${item.policy_id}` as never)} />}
       header={header}
       empty={empty}
       footer={footer}
@@ -180,10 +205,29 @@ function ModeTab({ label, count, active, danger = false, onPress }: { label: str
 
 function toneColor(tone: 'amber' | 'blue' | 'purple' | 'red') { return tone === 'amber' ? '#F59E0B' : tone === 'blue' ? '#1687F8' : tone === 'purple' ? '#7048F5' : '#F04444'; }
 
-function RenewalCard({ row, mode, onOpenPolicy, onOpenCustomer }: { row: PartnerPolicyRow; mode: RenewalMode; onOpenPolicy: () => void; onOpenCustomer?: () => void }) {
-  return <PartnerOperationalRow title={row.customer_name} subtitle={`${row.policy_no || row.policy_code || 'Policy'} · ${row.insurer_name || 'Insurer not recorded'}`} detail={row.vehicle_no || row.policy_product || 'Non-motor / risk not linked'} value={formatIndianCurrency(row.premium_amount)} meta={`Ends ${formatDate(row.end_date)}`} status={<PartnerStatusBadge label={renewalLabel(row.end_date)} tone={mode === 'expired' ? 'danger' : renewalTone(row.end_date)} />} leading={<View style={styles.renewalArtwork}><Image source={mode === 'expired' ? PartnerAssets.status.warning : PartnerAssets.actions.renewals} style={styles.renewalArtworkImage} resizeMode="contain" /></View>} trailing={onOpenCustomer ? <Pressable accessibilityRole="button" accessibilityLabel={`Open customer ${row.customer_name}`} onPress={(event) => { event.stopPropagation(); onOpenCustomer(); }} style={({ pressed }) => [styles.customerAction, pressed && styles.pressed]}><Ionicons name="person-outline" size={16} color={partnerTheme.colors.brand} /></Pressable> : undefined} onPress={onOpenPolicy} accessibilityLabel={`Open renewal policy ${row.policy_no || row.policy_code || ''} for ${row.customer_name}`} divider={false} />;
+function RenewalCard({ row, mode, onOpenPolicy }: { row: PartnerPolicyRow; mode: RenewalMode; onOpenPolicy: () => void }) {
+  const insurerLogo = getPartnerInsurerLogoSource(row.insurer_name);
+  return (
+    <PartnerOperationalRow
+      title={row.customer_name}
+      subtitle={row.policy_no || row.policy_code || 'Policy'}
+      value={formatIndianCurrency(row.premium_amount)}
+      meta={`Ends ${formatDate(row.end_date)}`}
+      leading={<View style={styles.renewalArtwork}><Image source={insurerLogo ?? PartnerAssets.actions.renewals} style={styles.renewalArtworkImage} resizeMode="contain" /></View>}
+      trailing={<PartnerStatusBadge label={renewalLabel(row.end_date)} tone={mode === 'expired' ? 'danger' : renewalTone(row.end_date)} />}
+      onPress={onOpenPolicy}
+      accessibilityLabel={`Open renewal policy ${row.policy_no || row.policy_code || ''} for ${row.customer_name}`}
+      divider={false}
+      showChevron={false}
+    />
+  );
 }
 
+function expirySortValue(value: string | null, direction: DueDateSort) {
+  if (!value) return direction === 'asc' ? Number.MAX_SAFE_INTEGER : Number.MIN_SAFE_INTEGER;
+  const parsed = new Date(`${value}T00:00:00`).getTime();
+  return Number.isNaN(parsed) ? (direction === 'asc' ? Number.MAX_SAFE_INTEGER : Number.MIN_SAFE_INTEGER) : parsed;
+}
 function daysUntil(value: string | null) { if (!value) return 9999; const end = new Date(`${value}T00:00:00`); const today = new Date(); today.setHours(0, 0, 0, 0); return Math.ceil((end.getTime() - today.getTime()) / 86400000); }
 function renewalLabel(value: string | null) { const days = daysUntil(value); if (days === 9999) return 'No expiry'; if (days < 0) return `${Math.abs(days)}d overdue`; if (days === 0) return 'Due today'; return `${days}d left`; }
 function renewalTone(value: string | null): 'warning' | 'info' { return daysUntil(value) <= 7 ? 'warning' : 'info'; }
@@ -212,14 +256,15 @@ const styles = StyleSheet.create({
   modeTabActive: { borderBottomColor: '#3E28F5' }, modeLabel: { color: '#29344B', fontSize: 12, fontWeight: '700' }, modeLabelActive: { color: '#111B31' },
   tabBadge: { minWidth: 23, height: 23, paddingHorizontal: 6, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }, tabBadgeBlue: { backgroundColor: '#EAF0FF' }, tabBadgeDanger: { backgroundColor: '#FFE9E9' },
   tabBadgeText: { fontSize: 10, fontWeight: '800' }, tabBadgeBlueText: { color: '#4434F4' }, tabBadgeDangerText: { color: '#EF4444' },
-  searchRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 9 }, searchGrow: { flex: 1 },
-  filterButton: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5EAF2', shadowColor: '#0C2856', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
+  searchRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center' }, searchGrow: { flex: 1 },
   opportunitiesHeader: { marginTop: 14, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, opportunitiesLeft: { flexDirection: 'row', alignItems: 'center', gap: 9, flexShrink: 1 },
   opportunitiesTitle: { color: '#17233B', fontSize: 11, lineHeight: 15, fontWeight: '900', letterSpacing: 0.25 }, opportunitiesMeta: { marginTop: 1, color: '#7A8598', fontSize: 9 },
   sortArea: { flexDirection: 'row', alignItems: 'center', gap: 6 }, sortLabel: { color: '#6C778B', fontSize: 9 }, sortButton: { minHeight: 35, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 11, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F1' }, sortText: { color: '#263249', fontSize: 10, fontWeight: '700' },
+  sortMenu: { alignSelf: 'flex-end', minWidth: 148, marginTop: -2, marginBottom: 8, paddingVertical: 4, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F1', shadowColor: '#0C2856', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
+  sortOption: { minHeight: 36, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, sortOptionPressed: { backgroundColor: '#F6F8FC' }, sortOptionText: { color: '#42516A', fontSize: 10.5, fontWeight: '600' }, sortOptionTextActive: { color: partnerTheme.colors.brand, fontWeight: '800' },
   emptyCard: { minHeight: 205, marginTop: 2, borderRadius: 15, borderWidth: 1, borderStyle: 'dashed', borderColor: '#DCE4EF', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 20 },
   emptyArtwork: { width: 122, height: 82, marginBottom: 8 }, emptyTitle: { color: '#101A31', fontSize: 13, lineHeight: 18, fontWeight: '800', textAlign: 'center' }, emptyMessage: { marginTop: 7, color: '#69758A', fontSize: 10, lineHeight: 17, textAlign: 'center' },
   separator: { height: StyleSheet.hairlineWidth, backgroundColor: partnerTheme.colors.line }, renewalArtwork: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' }, renewalArtworkImage: { width: 36, height: 36 },
-  customerAction: { width: partnerTheme.control.minTouchTarget, height: partnerTheme.control.minTouchTarget, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.pill }, pressed: { opacity: 0.65 },
+  pressed: { opacity: 0.65 },
   listFooter: { minHeight: 58, alignItems: 'center', justifyContent: 'center' }, loadingMore: { flexDirection: 'row', alignItems: 'center', gap: 8 }, loadingMoreText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption }, endText: { color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.meta },
 });
