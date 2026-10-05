@@ -157,15 +157,22 @@ export default function ClaimsScreen() {
           <View style={styles.tabs}>
             {filters.map((filter) => {
               const active = filter.value === state;
+              const count = claimFilterCount(summary.data, filter.value);
               return (
                 <Pressable
                   key={filter.value}
                   accessibilityRole="tab"
+                  accessibilityLabel={count === null ? filter.label : `${filter.label} ${count}`}
                   accessibilityState={{ selected: active }}
                   onPress={() => setState(filter.value)}
                   style={[styles.tab, active && styles.tabActive]}
                 >
-                  <Text style={[styles.tabText, active && styles.tabTextActive]}>{filter.label}</Text>
+                  <View style={styles.tabLabelRow}>
+                    <Text style={[styles.tabText, active && styles.tabTextActive]}>{filter.label}</Text>
+                    {count !== null ? (
+                      <Text style={[styles.tabCount, active && styles.tabCountActive]}>{count}</Text>
+                    ) : null}
+                  </View>
                 </Pressable>
               );
             })}
@@ -284,7 +291,7 @@ function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void
         <Text numberOfLines={1} style={styles.claimDetail}>{vehiclePolicy}</Text>
       </View>
 
-      <View style={styles.claimStatusCenter}>
+      <View style={styles.claimStatusRight}>
         <View style={[
           styles.statusPill,
           rejected ? styles.statusRejected : completed ? styles.statusSuccess : isNew ? styles.statusNew : styles.statusWarning,
@@ -304,13 +311,16 @@ function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void
           </Text>
         </View>
       </View>
-
-      <View style={styles.claimSurveyorWrap}>
-        <Text style={styles.claimSurveyorLabel}>Surveyor</Text>
-        <Text numberOfLines={1} style={styles.claimSurveyorName}>{row.surveyor_name || '—'}</Text>
-      </View>
     </Pressable>
   );
+}
+
+function claimFilterCount(summary: PartnerClaimSummary | null, state: PartnerClaimState) {
+  if (!summary) return null;
+  if (state === 'active') return summary.active_claims;
+  if (state === 'completed') return summary.completed_claims;
+  if (state === 'assistance') return summary.assistance_requested;
+  return summary.total_claims;
 }
 
 function claimModeLabel(value: string | null) {
@@ -421,8 +431,11 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   tabActive: { backgroundColor: '#EEF4FF', borderBottomColor: '#1738D5' },
+  tabLabelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
   tabText: { color: '#5E6C8C', textAlign: 'center', fontSize: 9, lineHeight: 12, fontWeight: '700' },
   tabTextActive: { color: '#1738D5', fontWeight: '800' },
+  tabCount: { color: '#7A88A3', fontSize: 8.2, lineHeight: 11, fontWeight: '800' },
+  tabCountActive: { color: '#1738D5' },
   inlineBanner: { marginTop: 6 },
 
   rowWrap: { paddingHorizontal: 10, marginTop: 5 },
@@ -464,9 +477,9 @@ const styles = StyleSheet.create({
   modeBadgeTextExternal: { color: '#6842B8' },
   claimCustomer: { marginTop: 2, color: '#405A82', fontSize: 9.4, lineHeight: 12, fontWeight: '700' },
   claimDetail: { marginTop: 2, color: '#7788A5', fontSize: 8.2, lineHeight: 10.5 },
-  claimStatusCenter: { width: 82, alignItems: 'center', justifyContent: 'center' },
+  claimStatusRight: { width: 92, alignItems: 'flex-end', justifyContent: 'center' },
   statusPill: {
-    maxWidth: 82,
+    maxWidth: 92,
     minHeight: 21,
     flexDirection: 'row',
     alignItems: 'center',
@@ -489,9 +502,6 @@ const styles = StyleSheet.create({
   statusTextSuccess: { color: '#178157' },
   statusTextRejected: { color: '#C43F50' },
   statusTextNew: { color: '#FFFFFF' },
-  claimSurveyorWrap: { width: 62, alignItems: 'flex-end', justifyContent: 'center' },
-  claimSurveyorLabel: { color: '#8491A7', fontSize: 6.8, lineHeight: 9, fontWeight: '600', textAlign: 'right' },
-  claimSurveyorName: { marginTop: 1, maxWidth: 62, color: '#536987', fontSize: 7.6, lineHeight: 10, fontWeight: '800', textAlign: 'right' },
 
   listFooter: { paddingHorizontal: 10, paddingTop: 6, paddingBottom: 12, alignItems: 'center' },
   loadMoreButton: {
