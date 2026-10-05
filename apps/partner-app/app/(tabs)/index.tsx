@@ -1,5 +1,5 @@
 import { useCallback, useState, type ComponentProps } from 'react';
-import { Animated, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -14,6 +14,7 @@ import { getPartnerBusinessRange, getPartnerHome, type PartnerHomeData } from '@
 import { getPartnerStories, type PartnerStory } from '@/lib/stories';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { formatIndianCurrency } from '@/lib/format';
+import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
@@ -247,26 +248,22 @@ export default function PartnerHomeScreen() {
               <Text style={styles.sectionTitle}>Quick Actions</Text>
               <View style={styles.quickGrid}>
                 <QuickAction
-                  icon="document-text"
-                  badgeIcon="add-circle"
+                  asset={PartnerAssets.homeReference.policyIntake}
                   label="Policy Intake"
                   onPress={() => router.push('/policy-intake-new')}
                 />
                 <QuickAction
-                  icon="document-text"
-                  badgeIcon="refresh-circle"
+                  asset={PartnerAssets.homeReference.renewals}
                   label="Renewals"
                   onPress={() => router.push('/renewals')}
                 />
                 <QuickAction
-                  icon="document-text"
-                  badgeIcon="checkmark-circle"
+                  asset={PartnerAssets.homeReference.claims}
                   label="Claims"
                   onPress={() => router.push('/(tabs)/claims')}
                 />
                 <QuickAction
-                  icon="people"
-                  badgeIcon="person-add"
+                  asset={PartnerAssets.homeReference.customers}
                   label="Customers"
                   onPress={() => router.push('/customers')}
                 />
@@ -349,13 +346,11 @@ function MetricCell({ icon, value, label }: { icon: IoniconName; value: string; 
 }
 
 function QuickAction({
-  icon,
-  badgeIcon,
+  asset,
   label,
   onPress,
 }: {
-  icon: IoniconName;
-  badgeIcon: IoniconName;
+  asset: number;
   label: string;
   onPress: () => void;
 }) {
@@ -380,11 +375,7 @@ function QuickAction({
     >
       <Animated.View style={[styles.quickAction, { transform: [{ scale }] }]}>
         <View style={styles.quickIcon}>
-          <View style={styles.quickIconGlow} />
-          <Ionicons name={icon} size={26} color="#087DD9" />
-          <View style={styles.quickBadge}>
-            <Ionicons name={badgeIcon} size={13} color="#0A77CE" />
-          </View>
+          <Image source={asset} style={styles.quickReferenceImage} resizeMode="contain" />
         </View>
         <Text numberOfLines={2} style={styles.quickLabel}>{label}</Text>
       </Animated.View>
@@ -610,36 +601,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7FAFE',
   },
   quickIcon: {
-    position: 'relative',
     width: 35,
     height: 35,
-    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  quickIconGlow: {
-    position: 'absolute',
-    width: 34,
-    height: 34,
-    borderRadius: 12,
-    backgroundColor: '#EAF7FF',
-    shadowColor: '#2A9BE8',
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  quickBadge: {
-    position: 'absolute',
-    right: -1,
-    bottom: -1,
-    width: 15,
-    height: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EAF7FF',
-  },
+  quickReferenceImage: { width: 34, height: 34 },
   quickLabel: {
     marginTop: 3,
     color: '#21304A',
