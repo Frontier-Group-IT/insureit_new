@@ -67,7 +67,6 @@ export async function listPartnerPolicies({
   return (data ?? []) as PartnerPolicyRow[];
 }
 
-
 export type PartnerRenewalSummary = {
   overdue_count: number;
   overdue_premium: number | string;
@@ -80,6 +79,44 @@ export type PartnerRenewalSummary = {
   due_30_count: number;
   due_30_premium: number | string;
 };
+
+export type PartnerRenewalMode = 'expiring' | 'expired';
+export type PartnerRenewalBucket = 'all' | '0_7' | '8_15' | '16_30' | 'overdue';
+
+export type PartnerRenewalRow = {
+  policy_id: string;
+  policy_code: string | null;
+  policy_no: string | null;
+  end_date: string | null;
+  net_premium: number | string | null;
+  customer_name: string;
+  insurer_name: string | null;
+  total_count: number;
+};
+
+export async function listPartnerRenewals({
+  limit = 25,
+  offset = 0,
+  search,
+  mode = 'expiring',
+  bucket = 'all',
+}: {
+  limit?: number;
+  offset?: number;
+  search?: string;
+  mode?: PartnerRenewalMode;
+  bucket?: PartnerRenewalBucket;
+} = {}) {
+  const { data, error } = await supabase.rpc('partner_app_list_renewals', {
+    p_limit: limit,
+    p_offset: offset,
+    p_search: search?.trim() || null,
+    p_mode: mode,
+    p_bucket: bucket,
+  });
+  if (error) throw error;
+  return (data ?? []) as PartnerRenewalRow[];
+}
 
 export type PartnerPolicyDetail = {
   policy: {

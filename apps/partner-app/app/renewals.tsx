@@ -12,8 +12,10 @@ import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
 import { getPartnerInsurerLogoSource } from '@/lib/catalog-logos';
 import {
   getPartnerRenewalSummary,
-  listPartnerPolicies,
-  type PartnerPolicyRow,
+  listPartnerRenewals,
+  type PartnerRenewalBucket,
+  type PartnerRenewalMode,
+  type PartnerRenewalRow,
   type PartnerRenewalSummary,
 } from '@/lib/policies';
 import { formatIndianCurrency } from '@/lib/format';
@@ -24,17 +26,23 @@ import { usePartnerPagedQuery } from '@/lib/use-partner-paged-query';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
-type RenewalMode = 'expiring' | 'expired';
 type DueDateSort = 'asc' | 'desc';
 
+type SummarySelection = {
+  eyebrow: string;
+  premium: number | string;
+  count: number;
+};
+
 const PAGE_SIZE = 25;
-let savedRenewalMode: RenewalMode = 'expiring';
+let savedRenewalMode: PartnerRenewalMode = 'expiring';
 let savedRenewalQuery = '';
 
 export default function RenewalsScreen() {
   const router = useRouter();
   const { cacheScopeKey } = usePartnerSession();
-  const [mode, setMode] = useState<RenewalMode>(savedRenewalMode);
+  const [mode, setMode] = useState<PartnerRenewalMode>(savedRenewalMode);
+  const [bucket, setBucket] = useState<PartnerRenewalBucket>(savedRenewalMode === 'expired' ? 'overdue' : 'all');
   const [query, setQuery] = useState(savedRenewalQuery);
   const [sortDirection, setSortDirection] = useState<DueDateSort>('asc');
   const [sortOpen, setSortOpen] = useState(false);
@@ -54,13 +62,13 @@ export default function RenewalsScreen() {
   });
 
   const fetchPage = useCallback(async ({ limit, offset }: { limit: number; offset: number }) => {
-    const nextRows = await listPartnerPolicies({ lifecycle: mode, search: debouncedSearch, limit, offset });
+    const nextRows = await listPartnerRenewals({ mode, bucket, search: debouncedSearch, limit, offset });
     return { rows: nextRows, total: nextRows[0]?.total_count ?? 0 };
-  }, [debouncedSearch, mode]);
+  }, [bucket, debouncedSearch, mode]);
 
-  const collection = usePartnerPagedQuery<PartnerPolicyRow>({
+  const collection = usePartnerPagedQuery<PartnerRenewalRow>({
     scopeKey: cacheScopeKey,
-    key: `renewals:list:${mode}:${debouncedSearch || 'all'}`,
+    key: `renewals:list:${mode}:${bucket}:${debouncedSearch || 'all'}`,
     pageSize: PAGE_SIZE,
     fetchPage,
     staleTimeMs: 60_000,
@@ -72,9 +80,26 @@ export default function RenewalsScreen() {
     return sortDirection === 'asc' ? aTime - bTime : bTime - aTime;
   }), [collection.rows, sortDirection]);
 
+  const selectedSummary = useMemo(
+    () => resolveSummarySelection(summary.data, mode, bucket),
+    [bucket, mode, summary.data],
+  );
+
   const refreshAll = useCallback(async () => {
     await Promise.all([summary.refresh(), collection.refresh()]);
   }, [collection, summary]);
+
+  const selectMode = (nextMode: PartnerRenewalMode) => {
+    setMode(nextMode);
+    setBucket(nextMode === 'expired' ? 'overdue' : 'all');
+    setSortOpen(false);
+  };
+
+  const selectBucket = (nextBucket: PartnerRenewalBucket) => {
+    setMode(nextBucket === 'overdue' ? 'expired' : 'expiring');
+    setBucket(nextBucket);
+    setSortOpen(false);
+  };
 
   const selectSort = (direction: DueDateSort) => {
     setSortDirection(direction);
@@ -87,22 +112,27 @@ export default function RenewalsScreen() {
         <PartnerStateView state="loading" title="Loading renewal summary" />
       ) : (
         <View style={styles.summaryPanel}>
-          <View style={styles.summaryLead}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Show ${mode === 'expired' ? 'all overdue' : 'all next 30 day'} renewal policies`}
+            onPress={() => selectBucket(mode === 'expired' ? 'overdue' : 'all')}
+            style={({ pressed }) => [styles.summaryLead, pressed && styles.summaryPressed]}
+          >
             <View>
-              <Text style={styles.summaryEyebrow}>NEXT 30 DAYS</Text>
-              <Text style={styles.summaryPremium}>{formatIndianCurrency(summary.data?.due_30_premium ?? 0)}</Text>
-              <Text style={styles.summaryLabel}>Gross Premium</Text>
+              <Text style={styles.summaryEyebrow}>{selectedSummary.eyebrow}</Text>
+              <Text style={styles.summaryPremium}>{formatIndianCurrency(selectedSummary.premium)}</Text>
+              <Text style={styles.summaryLabel}>Net Premium</Text>
             </View>
             <View style={styles.summaryCount}>
-              <Text style={styles.summaryCountValue}>{summary.data?.due_30_count ?? 0}</Text>
+              <Text style={styles.summaryCountValue}>{selectedSummary.count}</Text>
               <Text style={styles.summaryCountLabel}>Policies</Text>
             </View>
-          </View>
+          </Pressable>
           <View style={styles.metricRow}>
-            <Metric icon="time-outline" value={summary.data?.due_0_7_count ?? 0} label="0 – 7d" tone="amber" />
-            <Metric icon="time-outline" value={summary.data?.due_8_15_count ?? 0} label="8 – 15d" tone="blue" />
-            <Metric icon="time-outline" value={summary.data?.due_16_30_count ?? 0} label="16 – 30d" tone="purple" />
-            <Metric icon="alert-circle-outline" value={summary.data?.overdue_count ?? 0} label="Overdue" tone="red" last />
+            <Metric icon="time-outline" value={summary.data?.due_0_7_count ?? 0} label="0 – 7d" tone="amber" active={bucket === '0_7'} onPress={() => selectBucket('0_7')} />
+            <Metric icon="time-outline" value={summary.data?.due_8_15_count ?? 0} label="8 – 15d" tone="blue" active={bucket === '8_15'} onPress={() => selectBucket('8_15')} />
+            <Metric icon="time-outline" value={summary.data?.due_16_30_count ?? 0} label="16 – 30d" tone="purple" active={bucket === '16_30'} onPress={() => selectBucket('16_30')} />
+            <Metric icon="alert-circle-outline" value={summary.data?.overdue_count ?? 0} label="Overdue" tone="red" active={bucket === 'overdue'} onPress={() => selectBucket('overdue')} last />
           </View>
         </View>
       )}
@@ -114,13 +144,13 @@ export default function RenewalsScreen() {
       ) : null}
 
       <View style={styles.modeTabs}>
-        <ModeTab label="Upcoming" count={summary.data?.due_30_count ?? 0} active={mode === 'expiring'} onPress={() => setMode('expiring')} />
-        <ModeTab label="Overdue" count={summary.data?.overdue_count ?? 0} active={mode === 'expired'} danger onPress={() => setMode('expired')} />
+        <ModeTab label="Upcoming" count={summary.data?.due_30_count ?? 0} active={mode === 'expiring'} onPress={() => selectMode('expiring')} />
+        <ModeTab label="Overdue" count={summary.data?.overdue_count ?? 0} active={mode === 'expired'} danger onPress={() => selectMode('expired')} />
       </View>
 
       <View style={styles.searchRow}>
         <View style={styles.searchGrow}>
-          <PartnerSearchField value={query} onChangeText={setQuery} onClear={() => setQuery('')} placeholder="Search policy, customer, vehicle or insurer..." />
+          <PartnerSearchField value={query} onChangeText={setQuery} onClear={() => setQuery('')} placeholder="Search policy, customer or insurer..." />
         </View>
       </View>
 
@@ -133,7 +163,6 @@ export default function RenewalsScreen() {
           </View>
         </View>
         <View style={styles.sortArea}>
-          <Text style={styles.sortLabel}>Sort by</Text>
           <Pressable accessibilityRole="button" accessibilityLabel="Sort renewals by due date" onPress={() => setSortOpen((open) => !open)} style={({ pressed }) => [styles.sortButton, pressed && styles.pressed]}>
             <Text style={styles.sortText}>Due Date</Text>
             <Ionicons name={sortOpen ? 'chevron-up' : 'chevron-down'} size={14} color="#42516A" />
@@ -195,24 +224,36 @@ export default function RenewalsScreen() {
   );
 }
 
-function Metric({ icon, value, label, tone, last = false }: { icon: keyof typeof Ionicons.glyphMap; value: number; label: string; tone: 'amber' | 'blue' | 'purple' | 'red'; last?: boolean }) {
-  return <View style={[styles.metric, !last && styles.metricDivider]}><View style={[styles.metricIcon, styles[`${tone}Bg`]]}><Ionicons name={icon} size={18} color={toneColor(tone)} /></View><View><Text style={[styles.metricValue, tone === 'red' && styles.redValue]}>{value}</Text><Text style={styles.metricLabel}>{label}</Text></View></View>;
+function Metric({ icon, value, label, tone, active, onPress, last = false }: { icon: keyof typeof Ionicons.glyphMap; value: number; label: string; tone: 'amber' | 'blue' | 'purple' | 'red'; active: boolean; onPress: () => void; last?: boolean }) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={`Show ${label} renewal policies`} onPress={onPress} style={({ pressed }) => [styles.metric, !last && styles.metricDivider, active && styles.metricActive, pressed && styles.summaryPressed]}>
+      <View style={[styles.metricIcon, styles[`${tone}Bg`]]}><Ionicons name={icon} size={18} color={toneColor(tone)} /></View>
+      <View><Text style={[styles.metricValue, tone === 'red' && styles.redValue]}>{value}</Text><Text style={styles.metricLabel}>{label}</Text></View>
+    </Pressable>
+  );
 }
 
 function ModeTab({ label, count, active, danger = false, onPress }: { label: string; count: number; active: boolean; danger?: boolean; onPress: () => void }) {
   return <Pressable onPress={onPress} style={[styles.modeTab, active && styles.modeTabActive]}><Text style={[styles.modeLabel, active && styles.modeLabelActive]}>{label}</Text><View style={[styles.tabBadge, danger ? styles.tabBadgeDanger : styles.tabBadgeBlue]}><Text style={[styles.tabBadgeText, danger ? styles.tabBadgeDangerText : styles.tabBadgeBlueText]}>{count}</Text></View></Pressable>;
 }
 
+function resolveSummarySelection(data: PartnerRenewalSummary | null | undefined, mode: PartnerRenewalMode, bucket: PartnerRenewalBucket): SummarySelection {
+  if (bucket === '0_7') return { eyebrow: 'DUE IN 0 – 7 DAYS', premium: data?.due_0_7_premium ?? 0, count: data?.due_0_7_count ?? 0 };
+  if (bucket === '8_15') return { eyebrow: 'DUE IN 8 – 15 DAYS', premium: data?.due_8_15_premium ?? 0, count: data?.due_8_15_count ?? 0 };
+  if (bucket === '16_30') return { eyebrow: 'DUE IN 16 – 30 DAYS', premium: data?.due_16_30_premium ?? 0, count: data?.due_16_30_count ?? 0 };
+  if (bucket === 'overdue' || mode === 'expired') return { eyebrow: 'OVERDUE', premium: data?.overdue_premium ?? 0, count: data?.overdue_count ?? 0 };
+  return { eyebrow: 'NEXT 30 DAYS', premium: data?.due_30_premium ?? 0, count: data?.due_30_count ?? 0 };
+}
+
 function toneColor(tone: 'amber' | 'blue' | 'purple' | 'red') { return tone === 'amber' ? '#F59E0B' : tone === 'blue' ? '#1687F8' : tone === 'purple' ? '#7048F5' : '#F04444'; }
 
-function RenewalCard({ row, mode, onOpenPolicy }: { row: PartnerPolicyRow; mode: RenewalMode; onOpenPolicy: () => void }) {
+function RenewalCard({ row, mode, onOpenPolicy }: { row: PartnerRenewalRow; mode: PartnerRenewalMode; onOpenPolicy: () => void }) {
   const insurerLogo = getPartnerInsurerLogoSource(row.insurer_name);
   return (
     <PartnerOperationalRow
       title={row.customer_name}
       subtitle={row.policy_no || row.policy_code || 'Policy'}
-      value={formatIndianCurrency(row.premium_amount)}
-      meta={`Ends ${formatDate(row.end_date)}`}
+      value={formatIndianCurrency(row.net_premium)}
       leading={<View style={styles.renewalArtwork}><Image source={insurerLogo ?? PartnerAssets.actions.renewals} style={styles.renewalArtworkImage} resizeMode="contain" /></View>}
       trailing={<PartnerStatusBadge label={renewalLabel(row.end_date)} tone={mode === 'expired' ? 'danger' : renewalTone(row.end_date)} />}
       onPress={onOpenPolicy}
@@ -231,12 +272,12 @@ function expirySortValue(value: string | null, direction: DueDateSort) {
 function daysUntil(value: string | null) { if (!value) return 9999; const end = new Date(`${value}T00:00:00`); const today = new Date(); today.setHours(0, 0, 0, 0); return Math.ceil((end.getTime() - today.getTime()) / 86400000); }
 function renewalLabel(value: string | null) { const days = daysUntil(value); if (days === 9999) return 'No expiry'; if (days < 0) return `${Math.abs(days)}d overdue`; if (days === 0) return 'Due today'; return `${days}d left`; }
 function renewalTone(value: string | null): 'warning' | 'info' { return daysUntil(value) <= 7 ? 'warning' : 'info'; }
-function formatDate(value: string | null) { if (!value) return '—'; const date = new Date(`${value}T00:00:00`); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(date); }
 function formatUpdatedAt(value: number | null) { if (!value) return 'earlier'; return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value)); }
 
 const styles = StyleSheet.create({
   summaryPanel: { marginTop: -4, padding: 16, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E7ECF4', shadowColor: '#0A285F', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 },
   summaryLead: { paddingBottom: 12, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#EDF0F5' },
+  summaryPressed: { opacity: 0.72 },
   summaryEyebrow: { color: '#68758A', fontSize: 9, lineHeight: 12, fontWeight: '800', letterSpacing: 1.4 },
   summaryPremium: { marginTop: 2, color: '#0C1830', fontSize: 22, lineHeight: 27, fontWeight: '800' },
   summaryLabel: { marginTop: 1, color: '#657086', fontSize: 10 },
@@ -244,7 +285,8 @@ const styles = StyleSheet.create({
   summaryCountValue: { color: '#0C1830', fontSize: 23, lineHeight: 27, fontWeight: '800' },
   summaryCountLabel: { marginTop: 3, color: '#657086', fontSize: 10 },
   metricRow: { paddingTop: 10, flexDirection: 'row' },
-  metric: { flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'flex-start', gap: 7, paddingHorizontal: 6 },
+  metric: { flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'flex-start', gap: 7, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 10 },
+  metricActive: { backgroundColor: '#F4F6FF' },
   metricDivider: { borderRightWidth: 1, borderRightColor: '#EDF0F5' },
   metricIcon: { width: 29, height: 29, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   amberBg: { backgroundColor: '#FFF4DA' }, blueBg: { backgroundColor: '#E8F4FF' }, purpleBg: { backgroundColor: '#F0EAFE' }, redBg: { backgroundColor: '#FFE8E8' },
@@ -259,7 +301,7 @@ const styles = StyleSheet.create({
   searchRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center' }, searchGrow: { flex: 1 },
   opportunitiesHeader: { marginTop: 14, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, opportunitiesLeft: { flexDirection: 'row', alignItems: 'center', gap: 9, flexShrink: 1 },
   opportunitiesTitle: { color: '#17233B', fontSize: 11, lineHeight: 15, fontWeight: '900', letterSpacing: 0.25 }, opportunitiesMeta: { marginTop: 1, color: '#7A8598', fontSize: 9 },
-  sortArea: { flexDirection: 'row', alignItems: 'center', gap: 6 }, sortLabel: { color: '#6C778B', fontSize: 9 }, sortButton: { minHeight: 35, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 11, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F1' }, sortText: { color: '#263249', fontSize: 10, fontWeight: '700' },
+  sortArea: { flexDirection: 'row', alignItems: 'center' }, sortButton: { minHeight: 35, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 11, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F1' }, sortText: { color: '#263249', fontSize: 10, fontWeight: '700' },
   sortMenu: { alignSelf: 'flex-end', minWidth: 148, marginTop: -2, marginBottom: 8, paddingVertical: 4, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F1', shadowColor: '#0C2856', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
   sortOption: { minHeight: 36, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, sortOptionPressed: { backgroundColor: '#F6F8FC' }, sortOptionText: { color: '#42516A', fontSize: 10.5, fontWeight: '600' }, sortOptionTextActive: { color: partnerTheme.colors.brand, fontWeight: '800' },
   emptyCard: { minHeight: 205, marginTop: 2, borderRadius: 15, borderWidth: 1, borderStyle: 'dashed', borderColor: '#DCE4EF', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 20 },
