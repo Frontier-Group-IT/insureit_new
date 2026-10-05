@@ -79,6 +79,7 @@ export default function VehicleDetailScreen() {
       : latestPolicy.policy_no
     : '';
   const policyState = latestPolicy ? policyStatus(latestPolicy.end_date) : { label: 'No policy', tone: 'red' as const, helper: 'Add a policy to complete protection' };
+  const vehicleSummary = [vehicle?.make, vehicle?.model].filter(Boolean).join(' · ') || '-';
   const complianceItems = useMemo(() => vehicleComplianceItems(vehicle, latestPolicy), [latestPolicy, vehicle]);
   const alertItems = complianceItems.filter((item) => item.status !== 'ok');
   const vehicleImage = vehicle ? vehicleSketchFor(vehicle) : truckSketch;
@@ -98,8 +99,8 @@ export default function VehicleDetailScreen() {
               <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle.vehicle_no}</Text>
               {policyState.tone === 'red' ? <PulseDot tone="red" /> : null}
             </View>
-            <Text style={[styles.vehiclePolicyHelper, policyState.tone === 'red' && styles.vehiclePolicyHelperExpired]} numberOfLines={1}>
-              {policyState.helper}
+            <Text style={styles.vehiclePolicyHelper} numberOfLines={1}>
+              {vehicleSummary}
             </Text>
           </View>
           {latestPolicyActive ? (
@@ -118,28 +119,6 @@ export default function VehicleDetailScreen() {
           )}
         </View>
       </View>
-
-      {latestPolicyActive && latestPolicy ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Open active policy details"
-          onPress={() => router.push({ pathname: '/customer/policy-detail', params: { id: latestPolicy.id, source: latestPolicy.source } } as any)}
-          style={({ pressed }) => [styles.activePolicyCard, pressed && styles.activePolicyCardPressed]}
-        >
-          <View style={styles.activePolicyLogoWrap}>
-            {latestPolicyLogo ? (
-              <Image source={latestPolicyLogo} resizeMode="contain" style={styles.activePolicyLogo} />
-            ) : (
-              <MaterialCommunityIcons name="shield-outline" size={28} color={palette.navy} />
-            )}
-          </View>
-          <View style={styles.activePolicyCopy}>
-            <Text style={styles.activePolicyInsurer} numberOfLines={1}>{latestPolicyCompany?.name ?? 'Insurance policy'}</Text>
-            <Text style={styles.activePolicyNumber} numberOfLines={1}>{latestPolicyNumber}</Text>
-          </View>
-          <MaterialCommunityIcons name="arrow-right" size={30} color={palette.navy} />
-        </Pressable>
-      ) : null}
 
       {!latestPolicyActive ? (
         <Card accessibilityRole="button" onPress={() => setAlertsExpanded((value) => !value)} style={styles.alertSection}>
@@ -197,6 +176,38 @@ export default function VehicleDetailScreen() {
           <DetailCell icon="map-marker-radius-outline" label="Local permit expiry" value={storedDateOrClassFallback(vehicle, vehicle.local_permit_expiry_date)} status={complianceStatus(vehicle.local_permit_expiry_date).status} />
         </View>
       </Card>
+
+      {latestPolicy ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open policy details"
+          onPress={() => router.push({ pathname: '/customer/policy-detail', params: { id: latestPolicy.id, source: latestPolicy.source } } as any)}
+          style={({ pressed }) => [styles.activePolicyCard, pressed && styles.activePolicyCardPressed]}
+        >
+          <View style={styles.activePolicyLogoWrap}>
+            {latestPolicyLogo ? (
+              <Image source={latestPolicyLogo} resizeMode="contain" style={styles.activePolicyLogo} />
+            ) : (
+              <MaterialCommunityIcons name="shield-outline" size={28} color={palette.navy} />
+            )}
+          </View>
+          <View style={styles.activePolicyCopy}>
+            <Text style={styles.activePolicyInsurer} numberOfLines={1}>{latestPolicyCompany?.name ?? 'Insurance policy'}</Text>
+            <Text style={styles.activePolicyNumber} numberOfLines={1}>{latestPolicyNumber}</Text>
+            <Text
+              style={[
+                styles.policyStatusHelper,
+                policyState.tone === 'red' && styles.policyStatusHelperExpired,
+                policyState.tone === 'orange' && styles.policyStatusHelperDue,
+              ]}
+              numberOfLines={1}
+            >
+              {policyState.helper}
+            </Text>
+          </View>
+          <MaterialCommunityIcons name="arrow-right" size={30} color={palette.navy} />
+        </Pressable>
+      ) : null}
     </Screen>
   );
 }
@@ -370,6 +381,9 @@ const styles = StyleSheet.create({
   activePolicyCopy: { flex: 1, minWidth: 0 },
   activePolicyInsurer: { color: '#64748B', fontSize: 13, lineHeight: 17, fontWeight: '800', textTransform: 'uppercase' },
   activePolicyNumber: { color: palette.navy, fontSize: 17.5, lineHeight: 22, fontWeight: '900', marginTop: 5 },
+  policyStatusHelper: { color: '#18794E', fontSize: 10.5, lineHeight: 14, fontWeight: '700', marginTop: 3 },
+  policyStatusHelperExpired: { color: '#B42318' },
+  policyStatusHelperDue: { color: '#946200' },
   alertSection: { padding: 10, backgroundColor: '#FFFBF3', borderColor: '#E8D7B5', borderWidth: 1 },
   detailSection: { backgroundColor: '#F8FBFF', borderColor: '#D7E6FA' },
   sectionRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 6 },
