@@ -61,7 +61,7 @@ export async function retryPolicyIntakeOcr(id: string): Promise<RetryPolicyIntak
     .maybeSingle<RetryableIntake>();
 
   if (error || !intake) return { ok: false, error: "This policy intake is unavailable. Refresh and try again." };
-  if (isProposalType(intake.policy_type)) return { ok: false, error: "Life and Health proposal forms are stored for review and are not sent through policy OCR." };
+  if (isProposalType(intake.policy_type)) return { ok: false, error: "Life and Health proposal forms do not use policy OCR and are stored for review only." };
   if (!isPolicyIntakeOcrRetryable({ status: intake.status, ocrStatus: intake.ocr_status, createdAt: intake.created_at })) {
     return { ok: false, error: "This detail fetch is already running or no longer needs a retry." };
   }
