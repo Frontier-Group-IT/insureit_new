@@ -10,7 +10,17 @@ import { partnerTheme } from '@/lib/theme';
 
 const MAX_RANGE_DAYS = 366;
 
-export function PartnerBusinessRangeSummaryCard() {
+type PartnerBusinessRangeSummaryCardProps = {
+  title?: string;
+  meta?: string;
+  onApplied?: (summary: PartnerBusinessRangeSummary) => void;
+};
+
+export function PartnerBusinessRangeSummaryCard({
+  title = 'Custom range',
+  meta = 'Premium, policies, customers and claims',
+  onApplied,
+}: PartnerBusinessRangeSummaryCardProps = {}) {
   const today = useMemo(() => startOfDay(new Date()), []);
   const [fromDate, setFromDate] = useState<Date | null>(null);
   const [toDate, setToDate] = useState<Date | null>(null);
@@ -40,7 +50,9 @@ export function PartnerBusinessRangeSummaryCard() {
     setLoading(true);
     setError(null);
     try {
-      setSummary(await getPartnerBusinessRange(toIsoDate(fromDate), toIsoDate(toDate)));
+      const nextSummary = await getPartnerBusinessRange(toIsoDate(fromDate), toIsoDate(toDate));
+      setSummary(nextSummary);
+      onApplied?.(nextSummary);
     } catch (reason) {
       setSummary(null);
       setError(reason instanceof Error ? reason.message : 'Business summary could not be loaded for this range.');
@@ -53,8 +65,8 @@ export function PartnerBusinessRangeSummaryCard() {
     <View style={styles.wrap}>
       <View style={styles.headingRow}>
         <View style={styles.headingCopy}>
-          <Text style={styles.title}>Custom range</Text>
-          <Text style={styles.meta}>Premium, policies, customers and claims</Text>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.meta}>{meta}</Text>
         </View>
         {summary ? <Text style={styles.appliedRange}>{formatRange(summary.from_date, summary.to_date)}</Text> : null}
       </View>
