@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { HandCoins, Loader2, Pencil, Plus, ReceiptIndianRupee, RotateCcw, X } from "lucide-react";
 import {
   loadAccountsPolicyReconciliationDetailForRowAction,
@@ -31,6 +31,7 @@ type CorrectionState = {
 const NO_PAYABLE_MESSAGE = "No payout amount is currently payable for this policy.";
 
 export function AccountsPolicyReconciliationDrawer({ lookup, onClose, onPosted }: Props) {
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [detail, setDetail] = useState<AccountsPolicyReconciliationDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -54,6 +55,11 @@ export function AccountsPolicyReconciliationDrawer({ lookup, onClose, onPosted }
   const [editPaidAmount, setEditPaidAmount] = useState("");
   const [editPaidDate, setEditPaidDate] = useState(todayIndia());
   const [editReference, setEditReference] = useState("");
+
+  useLayoutEffect(() => {
+    if (!lookup) return;
+    scrollRef.current?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [lookup]);
 
   useEffect(() => {
     if (!lookup) {
@@ -246,9 +252,9 @@ export function AccountsPolicyReconciliationDrawer({ lookup, onClose, onPosted }
 
   if (!lookup) return null;
 
-  return <div className="fixed inset-0 z-[80] flex justify-end bg-[#14213c]/30 backdrop-blur-[1px]" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
-    <aside role="dialog" aria-modal="true" aria-label="Policy reconciliation" className="h-full w-full max-w-[720px] overflow-y-auto border-l border-[#dbe3ee] bg-white shadow-2xl">
-      <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-[#e7edf4] bg-white/95 px-4 py-3 backdrop-blur">
+  return <div className="fixed inset-0 z-[80] flex justify-end overflow-hidden bg-[#14213c]/30 backdrop-blur-[1px]" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
+    <aside role="dialog" aria-modal="true" aria-label="Policy reconciliation" className="flex h-[100dvh] max-h-[100dvh] w-full max-w-[720px] flex-col overflow-hidden border-l border-[#dbe3ee] bg-white shadow-2xl">
+      <div className="z-10 flex shrink-0 items-start justify-between gap-3 border-b border-[#e7edf4] bg-white px-4 py-3">
         <div className="min-w-0">
           <p className="text-[8px] font-black uppercase tracking-[.08em] text-[#7c899b]">Policy reconciliation</p>
           <h2 className="mt-0.5 truncate text-[14px] font-semibold text-[#17365D]">{detail?.policyNumber || lookup.policyNumber}</h2>
@@ -259,81 +265,83 @@ export function AccountsPolicyReconciliationDrawer({ lookup, onClose, onPosted }
         </button>
       </div>
 
-      {loading ? <div className="grid min-h-[360px] place-items-center px-6 py-14 text-center"><div><Loader2 className="mx-auto h-5 w-5 animate-spin text-[#17365D]" /><p className="mt-2 text-[9px] font-semibold text-[#667085]">Loading reconciliation history…</p></div></div> : null}
-      {!loading && error ? <div className="m-4 rounded-xl border border-[#f3c7c3] bg-[#fff5f4] px-4 py-3 text-[9px] font-semibold text-[#b42318]">{error}</div> : null}
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        {loading ? <div className="grid min-h-[360px] place-items-center px-6 py-14 text-center"><div><Loader2 className="mx-auto h-5 w-5 animate-spin text-[#17365D]" /><p className="mt-2 text-[9px] font-semibold text-[#667085]">Loading reconciliation history…</p></div></div> : null}
+        {!loading && error ? <div className="m-4 rounded-xl border border-[#f3c7c3] bg-[#fff5f4] px-4 py-3 text-[9px] font-semibold text-[#b42318]">{error}</div> : null}
 
-      {!loading && !error && detail ? <div className="space-y-3 p-4">
-        <section className="grid gap-2 sm:grid-cols-2">
-          <ReconciliationSummaryCard icon={ReceiptIndianRupee} title="Pay-In" projected={detail.projectedPayin} actualLabel="Received" actual={detail.cumulativeBillAmount} remaining={detail.payinDifference} footnote={detail.tds ? `Projected TDS ${money(detail.tds)}` : undefined} actionLabel="Add Pay-In" onAction={() => openMode("payin")} active={mode === "payin"} />
-          <ReconciliationSummaryCard icon={HandCoins} title="Payout" projected={detail.projectedPayout} actualLabel="Paid" actual={detail.cumulativePaidAmount} remaining={detail.payoutDifference} actionLabel="Add Payout" onAction={() => openMode("payout")} active={mode === "payout"} disabled={!detail.payoutId || detail.payoutDifference <= 0.01} disabledTitle={!detail.payoutId || detail.payoutDifference <= 0.01 ? NO_PAYABLE_MESSAGE : undefined} />
-        </section>
+        {!loading && !error && detail ? <div className="space-y-3 p-4">
+          <section className="grid gap-2 sm:grid-cols-2">
+            <ReconciliationSummaryCard icon={ReceiptIndianRupee} title="Pay-In" projected={detail.projectedPayin} actualLabel="Received" actual={detail.cumulativeBillAmount} remaining={detail.payinDifference} footnote={detail.tds ? `Projected TDS ${money(detail.tds)}` : undefined} actionLabel="Add Pay-In" onAction={() => openMode("payin")} active={mode === "payin"} />
+            <ReconciliationSummaryCard icon={HandCoins} title="Payout" projected={detail.projectedPayout} actualLabel="Paid" actual={detail.cumulativePaidAmount} remaining={detail.payoutDifference} actionLabel="Add Payout" onAction={() => openMode("payout")} active={mode === "payout"} disabled={!detail.payoutId || detail.payoutDifference <= 0.01} disabledTitle={!detail.payoutId || detail.payoutDifference <= 0.01 ? NO_PAYABLE_MESSAGE : undefined} />
+          </section>
 
-        {mode === "payin" ? <EntryPanel title="Add Pay-In" eyebrow="New transaction" onCancel={() => { setMode(null); setEntryError(""); }} onSave={() => void submitPayin()} saving={saving} error={entryError}>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <EntryField label="Bill Number"><input value={billNumber} onChange={(event) => { setBillNumber(event.target.value); setEntryError(""); }} disabled={saving} autoFocus className={inputClass} placeholder="Enter bill number" /></EntryField>
-            <EntryField label="Bill Date"><input type="date" value={billDate} onChange={(event) => { setBillDate(event.target.value); setEntryError(""); }} disabled={saving} className={inputClass} /></EntryField>
-            <EntryField label="Bill / Received Amount"><input inputMode="decimal" value={billAmount} onChange={(event) => { setBillAmount(event.target.value); setEntryError(""); }} disabled={saving} className={inputClass} placeholder="0.00" /></EntryField>
-            <EntryField label="Actual TDS"><input inputMode="decimal" value={actualTds} onChange={(event) => { setActualTds(event.target.value); setEntryError(""); }} disabled={saving} className={inputClass} placeholder="0.00" /></EntryField>
-          </div>
-          <EntryField label="Remarks · optional"><input value={payinRemarks} onChange={(event) => setPayinRemarks(event.target.value)} disabled={saving} className={inputClass} placeholder="Optional reconciliation note" /></EntryField>
-          <PreviewStrip projected={detail.projectedPayin} current={detail.cumulativeBillAmount} next={numeric(billAmount)} actualLabel="Already received" />
-        </EntryPanel> : null}
+          {mode === "payin" ? <EntryPanel title="Add Pay-In" eyebrow="New transaction" onCancel={() => { setMode(null); setEntryError(""); }} onSave={() => void submitPayin()} saving={saving} error={entryError}>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <EntryField label="Bill Number"><input value={billNumber} onChange={(event) => { setBillNumber(event.target.value); setEntryError(""); }} disabled={saving} autoFocus className={inputClass} placeholder="Enter bill number" /></EntryField>
+              <EntryField label="Bill Date"><input type="date" value={billDate} onChange={(event) => { setBillDate(event.target.value); setEntryError(""); }} disabled={saving} className={inputClass} /></EntryField>
+              <EntryField label="Bill / Received Amount"><input inputMode="decimal" value={billAmount} onChange={(event) => { setBillAmount(event.target.value); setEntryError(""); }} disabled={saving} className={inputClass} placeholder="0.00" /></EntryField>
+              <EntryField label="Actual TDS"><input inputMode="decimal" value={actualTds} onChange={(event) => { setActualTds(event.target.value); setEntryError(""); }} disabled={saving} className={inputClass} placeholder="0.00" /></EntryField>
+            </div>
+            <EntryField label="Remarks · optional"><input value={payinRemarks} onChange={(event) => setPayinRemarks(event.target.value)} disabled={saving} className={inputClass} placeholder="Optional reconciliation note" /></EntryField>
+            <PreviewStrip projected={detail.projectedPayin} current={detail.cumulativeBillAmount} next={numeric(billAmount)} actualLabel="Already received" />
+          </EntryPanel> : null}
 
-        {mode === "payout" ? <EntryPanel title="Add Payout" eyebrow="New transaction" onCancel={() => { setMode(null); setEntryError(""); }} onSave={() => void submitPayout()} saving={saving} error={entryError}>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <EntryField label="Paid Amount"><input inputMode="decimal" value={paidAmount} onChange={(event) => { setPaidAmount(event.target.value); setEntryError(""); }} disabled={saving} autoFocus className={inputClass} placeholder="0.00" /></EntryField>
-            <EntryField label="Paid Date"><input type="date" value={paidDate} onChange={(event) => { setPaidDate(event.target.value); setEntryError(""); }} disabled={saving} className={inputClass} /></EntryField>
-            <EntryField label="UTR / Reference"><input value={reference} onChange={(event) => { setReference(event.target.value); setEntryError(""); }} disabled={saving} className={inputClass} placeholder="Enter UTR / reference" /></EntryField>
-          </div>
-          <EntryField label="Remarks · optional"><input value={payoutRemarks} onChange={(event) => setPayoutRemarks(event.target.value)} disabled={saving} className={inputClass} placeholder="Optional reconciliation note" /></EntryField>
-          <PreviewStrip projected={detail.projectedPayout} current={detail.cumulativePaidAmount} next={numeric(paidAmount)} actualLabel="Already paid" />
-        </EntryPanel> : null}
+          {mode === "payout" ? <EntryPanel title="Add Payout" eyebrow="New transaction" onCancel={() => { setMode(null); setEntryError(""); }} onSave={() => void submitPayout()} saving={saving} error={entryError}>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <EntryField label="Paid Amount"><input inputMode="decimal" value={paidAmount} onChange={(event) => { setPaidAmount(event.target.value); setEntryError(""); }} disabled={saving} autoFocus className={inputClass} placeholder="0.00" /></EntryField>
+              <EntryField label="Paid Date"><input type="date" value={paidDate} onChange={(event) => { setPaidDate(event.target.value); setEntryError(""); }} disabled={saving} className={inputClass} /></EntryField>
+              <EntryField label="UTR / Reference"><input value={reference} onChange={(event) => { setReference(event.target.value); setEntryError(""); }} disabled={saving} className={inputClass} placeholder="Enter UTR / reference" /></EntryField>
+            </div>
+            <EntryField label="Remarks · optional"><input value={payoutRemarks} onChange={(event) => setPayoutRemarks(event.target.value)} disabled={saving} className={inputClass} placeholder="Optional reconciliation note" /></EntryField>
+            <PreviewStrip projected={detail.projectedPayout} current={detail.cumulativePaidAmount} next={numeric(paidAmount)} actualLabel="Already paid" />
+          </EntryPanel> : null}
 
-        {correction ? <EntryPanel title={`${correction.action === "edit" ? "Audited edit" : "Reverse"} ${correction.entryType === "payin" ? "Pay-In" : "Payout"}`} eyebrow="Audit required" onCancel={() => { setCorrection(null); setEntryError(""); }} onSave={() => void submitCorrection()} saving={saving} error={entryError} saveLabel={correction.action === "reverse" ? "Reverse entry" : "Save audited edit"} danger={correction.action === "reverse"}>
-          {correction.action === "edit" && correction.entryType === "payin" ? <div className="grid gap-2 sm:grid-cols-3">
-            <EntryField label="Bill Number"><input value={editBillNumber} onChange={(event) => setEditBillNumber(event.target.value)} disabled={saving} className={inputClass} /></EntryField>
-            <EntryField label="Bill Date"><input type="date" value={editBillDate} onChange={(event) => setEditBillDate(event.target.value)} disabled={saving} className={inputClass} /></EntryField>
-            <EntryField label="Bill / Received Amount"><input inputMode="decimal" value={editBillAmount} onChange={(event) => setEditBillAmount(event.target.value)} disabled={saving} className={inputClass} /></EntryField>
-          </div> : null}
-          {correction.action === "edit" && correction.entryType === "payout" ? <div className="grid gap-2 sm:grid-cols-3">
-            <EntryField label="Paid Amount"><input inputMode="decimal" value={editPaidAmount} onChange={(event) => setEditPaidAmount(event.target.value)} disabled={saving} className={inputClass} /></EntryField>
-            <EntryField label="Paid Date"><input type="date" value={editPaidDate} onChange={(event) => setEditPaidDate(event.target.value)} disabled={saving} className={inputClass} /></EntryField>
-            <EntryField label="UTR / Reference"><input value={editReference} onChange={(event) => setEditReference(event.target.value)} disabled={saving} className={inputClass} /></EntryField>
-          </div> : null}
-          {correction.action === "reverse" ? <p className="rounded-lg border border-[#f1d0cc] bg-[#fff7f6] px-3 py-2 text-[8px] font-semibold leading-4 text-[#9f2d20]">This does not delete the transaction. It removes the entry from active reconciliation totals and preserves the original values in the audit trail.</p> : null}
-          <EntryField label="Correction reason · required"><input value={correctionReason} onChange={(event) => { setCorrectionReason(event.target.value); setEntryError(""); }} disabled={saving} autoFocus className={inputClass} placeholder="Why is this entry being corrected?" /></EntryField>
-        </EntryPanel> : null}
+          {correction ? <EntryPanel title={`${correction.action === "edit" ? "Audited edit" : "Reverse"} ${correction.entryType === "payin" ? "Pay-In" : "Payout"}`} eyebrow="Audit required" onCancel={() => { setCorrection(null); setEntryError(""); }} onSave={() => void submitCorrection()} saving={saving} error={entryError} saveLabel={correction.action === "reverse" ? "Reverse entry" : "Save audited edit"} danger={correction.action === "reverse"}>
+            {correction.action === "edit" && correction.entryType === "payin" ? <div className="grid gap-2 sm:grid-cols-3">
+              <EntryField label="Bill Number"><input value={editBillNumber} onChange={(event) => setEditBillNumber(event.target.value)} disabled={saving} className={inputClass} /></EntryField>
+              <EntryField label="Bill Date"><input type="date" value={editBillDate} onChange={(event) => setEditBillDate(event.target.value)} disabled={saving} className={inputClass} /></EntryField>
+              <EntryField label="Bill / Received Amount"><input inputMode="decimal" value={editBillAmount} onChange={(event) => setEditBillAmount(event.target.value)} disabled={saving} className={inputClass} /></EntryField>
+            </div> : null}
+            {correction.action === "edit" && correction.entryType === "payout" ? <div className="grid gap-2 sm:grid-cols-3">
+              <EntryField label="Paid Amount"><input inputMode="decimal" value={editPaidAmount} onChange={(event) => setEditPaidAmount(event.target.value)} disabled={saving} className={inputClass} /></EntryField>
+              <EntryField label="Paid Date"><input type="date" value={editPaidDate} onChange={(event) => setEditPaidDate(event.target.value)} disabled={saving} className={inputClass} /></EntryField>
+              <EntryField label="UTR / Reference"><input value={editReference} onChange={(event) => setEditReference(event.target.value)} disabled={saving} className={inputClass} /></EntryField>
+            </div> : null}
+            {correction.action === "reverse" ? <p className="rounded-lg border border-[#f1d0cc] bg-[#fff7f6] px-3 py-2 text-[8px] font-semibold leading-4 text-[#9f2d20]">This does not delete the transaction. It removes the entry from active reconciliation totals and preserves the original values in the audit trail.</p> : null}
+            <EntryField label="Correction reason · required"><input value={correctionReason} onChange={(event) => { setCorrectionReason(event.target.value); setEntryError(""); }} disabled={saving} autoFocus className={inputClass} placeholder="Why is this entry being corrected?" /></EntryField>
+          </EntryPanel> : null}
 
-        <HistorySection title="Pay-In history" count={detail.payinHistory.length}>
-          {detail.payinHistory.length ? <div className="overflow-hidden rounded-xl border border-[#e2e8f0]">
-            <table className="w-full text-left">
-              <thead className="bg-[#f8fafc]"><tr><HistoryHead>Date</HistoryHead><HistoryHead>Bill no.</HistoryHead><HistoryHead right>Amount</HistoryHead><HistoryHead>Status</HistoryHead><HistoryHead right>Action</HistoryHead></tr></thead>
-              <tbody>{detail.payinHistory.map((item) => <tr key={item.id} className={`border-t border-[#edf1f5] ${!item.isActive ? "bg-[#fafafa] opacity-75" : ""}`}>
-                <HistoryCell>{date(item.billDate)}</HistoryCell>
-                <HistoryCell strong>{item.billNumber || "—"}</HistoryCell>
-                <HistoryCell right strong>{money(item.billAmount)}</HistoryCell>
-                <HistoryCell><StatusPill label={item.status} title={item.correctionReason || undefined} /></HistoryCell>
-                <HistoryCell right>{item.isActive ? <HistoryActions onEdit={() => openPayinCorrection(item, "edit")} onReverse={() => openPayinCorrection(item, "reverse")} /> : <span className="text-[7px] font-semibold text-[#98a2b3]">Audit retained</span>}</HistoryCell>
-              </tr>)}</tbody>
-            </table>
-          </div> : <EmptyHistory label="No Pay-In entries have been posted for this policy." />}
-        </HistorySection>
+          <HistorySection title="Pay-In history" count={detail.payinHistory.length}>
+            {detail.payinHistory.length ? <div className="overflow-x-auto rounded-xl border border-[#e2e8f0]">
+              <table className="w-full min-w-[620px] text-left">
+                <thead className="bg-[#f8fafc]"><tr><HistoryHead>Date</HistoryHead><HistoryHead>Bill no.</HistoryHead><HistoryHead right>Amount</HistoryHead><HistoryHead>Status</HistoryHead><HistoryHead right>Action</HistoryHead></tr></thead>
+                <tbody>{detail.payinHistory.map((item) => <tr key={item.id} className={`border-t border-[#edf1f5] ${!item.isActive ? "bg-[#fafafa] opacity-75" : ""}`}>
+                  <HistoryCell>{date(item.billDate)}</HistoryCell>
+                  <HistoryCell strong>{item.billNumber || "—"}</HistoryCell>
+                  <HistoryCell right strong>{money(item.billAmount)}</HistoryCell>
+                  <HistoryCell><StatusPill label={item.status} title={item.correctionReason || undefined} /></HistoryCell>
+                  <HistoryCell right>{item.isActive ? <HistoryActions onEdit={() => openPayinCorrection(item, "edit")} onReverse={() => openPayinCorrection(item, "reverse")} /> : <span className="text-[7px] font-semibold text-[#98a2b3]">Audit retained</span>}</HistoryCell>
+                </tr>)}</tbody>
+              </table>
+            </div> : <EmptyHistory label="No Pay-In entries have been posted for this policy." />}
+          </HistorySection>
 
-        <HistorySection title="Payout history" count={detail.payoutHistory.length}>
-          {detail.payoutHistory.length ? <div className="overflow-hidden rounded-xl border border-[#e2e8f0]">
-            <table className="w-full text-left">
-              <thead className="bg-[#f8fafc]"><tr><HistoryHead>Date</HistoryHead><HistoryHead>UTR / reference</HistoryHead><HistoryHead right>Amount</HistoryHead><HistoryHead>Status</HistoryHead><HistoryHead right>Action</HistoryHead></tr></thead>
-              <tbody>{detail.payoutHistory.map((item) => <tr key={item.id} className={`border-t border-[#edf1f5] ${!item.isActive ? "bg-[#fafafa] opacity-75" : ""}`}>
-                <HistoryCell>{date(item.paidDate)}</HistoryCell>
-                <HistoryCell strong>{item.reference || "—"}</HistoryCell>
-                <HistoryCell right strong>{money(item.paidAmount)}</HistoryCell>
-                <HistoryCell><StatusPill label={item.status} title={item.correctionReason || undefined} /></HistoryCell>
-                <HistoryCell right>{item.isActive ? <HistoryActions onEdit={() => openPayoutCorrection(item, "edit")} onReverse={() => openPayoutCorrection(item, "reverse")} /> : <span className="text-[7px] font-semibold text-[#98a2b3]">Audit retained</span>}</HistoryCell>
-              </tr>)}</tbody>
-            </table>
-          </div> : <EmptyHistory label="No Payout entries have been posted for this policy." />}
-        </HistorySection>
-      </div> : null}
+          <HistorySection title="Payout history" count={detail.payoutHistory.length}>
+            {detail.payoutHistory.length ? <div className="overflow-x-auto rounded-xl border border-[#e2e8f0]">
+              <table className="w-full min-w-[620px] text-left">
+                <thead className="bg-[#f8fafc]"><tr><HistoryHead>Date</HistoryHead><HistoryHead>UTR / reference</HistoryHead><HistoryHead right>Amount</HistoryHead><HistoryHead>Status</HistoryHead><HistoryHead right>Action</HistoryHead></tr></thead>
+                <tbody>{detail.payoutHistory.map((item) => <tr key={item.id} className={`border-t border-[#edf1f5] ${!item.isActive ? "bg-[#fafafa] opacity-75" : ""}`}>
+                  <HistoryCell>{date(item.paidDate)}</HistoryCell>
+                  <HistoryCell strong>{item.reference || "—"}</HistoryCell>
+                  <HistoryCell right strong>{money(item.paidAmount)}</HistoryCell>
+                  <HistoryCell><StatusPill label={item.status} title={item.correctionReason || undefined} /></HistoryCell>
+                  <HistoryCell right>{item.isActive ? <HistoryActions onEdit={() => openPayoutCorrection(item, "edit")} onReverse={() => openPayoutCorrection(item, "reverse")} /> : <span className="text-[7px] font-semibold text-[#98a2b3]">Audit retained</span>}</HistoryCell>
+                </tr>)}</tbody>
+              </table>
+            </div> : <EmptyHistory label="No Payout entries have been posted for this policy." />}
+          </HistorySection>
+        </div> : null}
+      </div>
     </aside>
   </div>;
 }
