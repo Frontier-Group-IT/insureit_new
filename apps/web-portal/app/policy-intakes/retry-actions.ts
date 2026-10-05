@@ -11,6 +11,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 type RetryableIntake = {
   id: string;
   status: string;
+  policy_type: string | null;
   ocr_status: string;
   created_at: string;
   storage_bucket: string;
@@ -23,14 +24,18 @@ export type RetryPolicyIntakeOcrResult =
   | { ok: true; status: "processing" }
   | { ok: false; error: string };
 
+function isProposalPolicyType(policyType: string | null) {
+  return policyType === "life" || policyType === "health";
+}
+
 export async function getPolicyIntakeOcrRetryState(id: string) {
   const profile = await requirePolicyIntakeViewer();
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from("policy_intake_requests")
-    .select("status,ocr_status,created_at,submitted_by_profile_id")
+    .select("status,policy_type,ocr_status,created_at,submitted_by_profile_id")
     .eq("id", id)
-    .maybeSingle<{ status: string; ocr_status: string; created_at: string; submitted_by_profile_id: string | null }>();
+    .maybeSingle<{ status: string; policy_type: string | null; ocr_status: string; created_at: string; submitted_by_profile_id: string | null }>();
   if (error || !data) return { ok: false as const, retryable: false, error: "Retry status is unavailable." };
 
   const canReview = await hasEffectiveCapability(profile, "review_policy_intakes", "edit");
@@ -41,7 +46,7 @@ export async function getPolicyIntakeOcrRetryState(id: string) {
 
   return {
     ok: true as const,
-    retryable: canReview && isPolicyIntakeOcrRetryable({ status: data.status, ocrStatus: data.ocr_status, createdAt: data.created_at }),
+    retryable: canReview && !isProposalPolicyType(data.policy_type) && data.ocr_status !== "not_applicable" && isPolicyIntakeOcrRetryable({ status: data.status, ocrStatus: data.ocr_status, createdAt: data.created_at }),
     ocrStatus: data.ocr_status,
   };
 }
@@ -51,11 +56,14 @@ export async function retryPolicyIntakeOcr(id: string): Promise<RetryPolicyIntak
   const admin = createSupabaseAdminClient();
   const { data: intake, error } = await admin
     .from("policy_intake_requests")
-    .select("id,status,ocr_status,created_at,storage_bucket,storage_path,file_name,mime_type")
+    .select("id,status,policy_type,ocr_status,created_at,storage_bucket,storage_path,file_name,mime_type")
     .eq("id", id)
     .maybeSingle<RetryableIntake>();
 
   if (error || !intake) return { ok: false, error: "This policy intake is unavailable. Refresh and try again." };
+  if (isProposalPolicyType(intake.policy_type) || intake.ocr_status === "not_applicable") {
+    return { ok: false, error: "Proposal forms are not eligible for policy OCR." };
+  }
   if (!isPolicyIntakeOcrRetryable({ status: intake.status, ocrStatus: intake.ocr_status, createdAt: intake.created_at })) {
     return { ok: false, error: "This detail fetch is already running or no longer needs a retry." };
   }
@@ -64,7 +72,8 @@ export async function retryPolicyIntakeOcr(id: string): Promise<RetryPolicyIntak
     .from("policy_intake_requests")
     .update({ ocr_status: "pending", ocr_warnings: [] })
     .eq("id", id)
-    .eq("status", intake.status);
+    .eq("status", intake.status)
+    .or("policy_type.is.null,policy_type.not.in.(life,health)");
 
   if (intake.ocr_status === "failed") {
     claim = claim.eq("ocr_status", "failed");
@@ -90,11 +99,11 @@ async function processRetry(id: string, expectedStoragePath: string, expectedWor
   const admin = createSupabaseAdminClient();
   const { data: intake } = await admin
     .from("policy_intake_requests")
-    .select("id,status,ocr_status,storage_bucket,storage_path,file_name,mime_type")
+    .select("id,status,policy_type,ocr_status,storage_bucket,storage_path,file_name,mime_type")
     .eq("id", id)
     .maybeSingle<Omit<RetryableIntake, "created_at">>();
 
-  if (!intake || intake.status !== expectedWorkflowStatus || intake.ocr_status !== "pending" || intake.storage_path !== expectedStoragePath) return;
+  if (!intake || isProposalPolicyType(intake.policy_type) || intake.ocr_status === "not_applicable" || intake.status !== expectedWorkflowStatus || intake.ocr_status !== "pending" || intake.storage_path !== expectedStoragePath) return;
 
   const { data: started } = await admin
     .from("policy_intake_requests")
@@ -102,6 +111,7 @@ async function processRetry(id: string, expectedStoragePath: string, expectedWor
     .eq("id", id)
     .eq("status", expectedWorkflowStatus)
     .eq("ocr_status", "pending")
+    .or("policy_type.is.null,policy_type.not.in.(life,health)")
     .eq("storage_path", expectedStoragePath)
     .select("id")
     .maybeSingle<{ id: string }>();
@@ -136,6 +146,7 @@ async function processRetry(id: string, expectedStoragePath: string, expectedWor
       })
       .eq("id", id)
       .eq("status", expectedWorkflowStatus)
+      .or("policy_type.is.null,policy_type.not.in.(life,health)")
       .eq("storage_path", expectedStoragePath);
   } catch {
     await markRetryFailure(id, expectedStoragePath, expectedWorkflowStatus, "Automatic detail fetch failed again. You can retry or continue with manual review.");
@@ -152,5 +163,6 @@ async function markRetryFailure(id: string, storagePath: string, expectedWorkflo
     .update({ ocr_status: "failed", ocr_warnings: [message] })
     .eq("id", id)
     .eq("status", expectedWorkflowStatus)
+    .or("policy_type.is.null,policy_type.not.in.(life,health)")
     .eq("storage_path", storagePath);
 }
