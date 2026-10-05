@@ -293,8 +293,8 @@ function vehicleComplianceItems(vehicle: Vehicle | null, policy: VehiclePolicyDi
     { key: 'fitness', label: 'Fitness certificate', date: vehicle.fitness_expiry_date },
     { key: 'puc', label: 'PUC certificate', date: vehicle.puc_expiry_date },
     { key: 'road_tax', label: 'Road tax', date: vehicle.road_tax_expiry_date },
-    { key: 'national_permit', label: 'National permit expiry', date: vehicle.national_permit_expiry_date },
-    { key: 'local_permit', label: 'Local permit expiry', date: vehicle.local_permit_expiry_date },
+    { key: 'national_permit', label: 'National permit', date: vehicle.national_permit_expiry_date },
+    { key: 'local_permit', label: 'Local permit', date: vehicle.local_permit_expiry_date },
   ].map((item) => ({ ...item, ...complianceStatus(item.date) }));
 }
 
