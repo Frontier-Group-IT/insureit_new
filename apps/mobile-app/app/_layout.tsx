@@ -10,6 +10,7 @@ import { SplashIntro } from '@/components/first-look';
 import { RealtimeNotificationProvider } from '@/components/realtime-notifications';
 import { syncRememberedCustomerSession } from '@/lib/customer-account-vault';
 import { supabase } from '@/lib/supabase';
+import { CustomerBiometricLockProvider } from '@/providers/customer-biometric-lock-provider';
 
 export const unstable_settings = { initialRouteName: 'index' };
 
@@ -41,7 +42,6 @@ function RootApplication() {
     });
     return () => data.subscription.unsubscribe();
   }, []);
-
 
   useEffect(() => {
     if (__DEV__ || !Updates.isEnabled || !isUpdatePending || updateReloadRequested.current) return;
@@ -78,12 +78,14 @@ function RootApplication() {
       {customerStatusBarVisible ? (
         <View pointerEvents="none" style={[styles.customerStatusBarFill, { height: insets.top }]} />
       ) : null}
-      <RealtimeNotificationProvider>
-        <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="customer/add-vehicle" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
-        </Stack>
-      </RealtimeNotificationProvider>
+      <CustomerBiometricLockProvider>
+        <RealtimeNotificationProvider>
+          <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="customer/add-vehicle" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+          </Stack>
+        </RealtimeNotificationProvider>
+      </CustomerBiometricLockProvider>
       {introVisible ? <View style={styles.introOverlay}><SplashIntro /></View> : null}
     </>
   );
