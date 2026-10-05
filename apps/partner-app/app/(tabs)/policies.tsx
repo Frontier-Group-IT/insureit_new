@@ -143,7 +143,7 @@ export default function PoliciesScreen() {
             onPress={() => router.push('/policy-intakes')}
             style={({ pressed }) => [styles.intakeHeaderButton, pressed && styles.pressed]}
           >
-            <Ionicons name="document-text-outline" size={15} color="#174A92" />
+            <Ionicons name="add-circle-outline" size={16} color="#174A92" />
             <Text style={styles.intakeHeaderText}>Policy Intake</Text>
           </Pressable>
         </View>
@@ -542,14 +542,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#3156B8',
   },
   policyMain: { flex: 1, minWidth: 0 },
-  customerName: { color: '#173A7D', fontSize: 10.5, lineHeight: 13, fontWeight: '800' },
-  policyNumber: { marginTop: 2, color: '#5C6C84', fontSize: 6.7, lineHeight: 9, fontWeight: '600' },
-  vehicleText: { marginTop: 2, color: '#7D8CA1', fontSize: 6.1, lineHeight: 8, fontWeight: '600' },
+  customerName: { color: '#173A7D', fontSize: 12, lineHeight: 15, fontWeight: '800' },
+  policyNumber: { marginTop: 2, color: '#5C6C84', fontSize: 8.2, lineHeight: 11, fontWeight: '600' },
+  vehicleText: { marginTop: 2, color: '#7D8CA1', fontSize: 7.6, lineHeight: 10, fontWeight: '600' },
   policyRight: { width: 104, alignItems: 'flex-end' },
   statusPill: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 999, paddingHorizontal: 7, paddingVertical: 4 },
   statusDot: { width: 4, height: 4, borderRadius: 2 },
-  statusText: { fontSize: 6.3, lineHeight: 8, fontWeight: '800' },
-  policyPeriod: { marginTop: 4, color: '#72829A', fontSize: 5.6, lineHeight: 8, fontWeight: '600', textAlign: 'right' },
+  statusText: { fontSize: 7.4, lineHeight: 10, fontWeight: '800' },
+  policyPeriod: { marginTop: 4, color: '#72829A', fontSize: 7.1, lineHeight: 9.5, fontWeight: '600', textAlign: 'right' },
   listFooter: { minHeight: 58, marginHorizontal: 12, alignItems: 'center', justifyContent: 'center' },
   loadingMore: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   loadingMoreText: { color: '#708099', fontSize: 8, lineHeight: 11, fontWeight: '600' },
