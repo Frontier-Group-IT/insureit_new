@@ -7,6 +7,7 @@ import { ChevronDown, ChevronUp, FileText, IndianRupee, MapPin, ShieldCheck, Pho
 import { createNonMotorPolicy, type NonMotorPolicyPayload } from "@/app/policies/non-motor-policy-actions";
 import { CustomerSearchField } from "@/components/customer-search-field";
 import type { PolicyRmOption, PolicySourceOption } from "@/components/policy-unified-form";
+import { normalizeNonMotorProductKey, type NonMotorPremiumStructure, type NonMotorProductConfiguration } from "@/lib/non-motor-premium-structure";
 
 export type NonMotorInsurerOption = { value: string; label: string };
 export type NonMotorCustomerOption = { id: string; name: string; contactName: string; phone: string; email: string };
@@ -16,6 +17,7 @@ type Props = {
   customers: NonMotorCustomerOption[];
   rms: PolicyRmOption[];
   sources: PolicySourceOption[];
+  productConfigurations: NonMotorProductConfiguration[];
 };
 
 type CustomerMode = "existing" | "new";
@@ -37,6 +39,7 @@ type FormState = {
   policyNumber: string;
   insurerId: string;
   productName: string;
+  premiumStructure: NonMotorPremiumStructure;
   category: string;
   status: string;
   riskTitle: string;
@@ -83,13 +86,13 @@ const today = () => new Date().toISOString().slice(0, 10);
 const emptyForm: FormState = {
   issuanceDate: today(), intermediaryType: "", sourceId: "", leadSource: "", intermediaryCode: "", rmName: "",
   customerMode: "existing", customerId: "", customerType: "Organisation", insuredName: "", contactName: "", phone: "", email: "", address: "",
-  policyNumber: "", insurerId: "", productName: "", category: "", status: "Active",
+  policyNumber: "", insurerId: "", productName: "", premiumStructure: "standard", category: "", status: "Active",
   riskTitle: "", riskLocation: "", occupancyType: "", cargoDescription: "", transitFrom: "", transitTo: "", transitMode: "", projectName: "", projectValue: "", natureOfBusiness: "", liabilityType: "", employeeCount: "", annualWages: "", businessName: "", annualTurnover: "",
-  sumInsured: "", deductible: "", odPremium: "", tpPremium: "0", netPremium: "", gstAmount: "", grossPremium: "", startDate: "", endDate: "",
+  sumInsured: "", deductible: "", odPremium: "", tpPremium: "", netPremium: "", gstAmount: "", grossPremium: "", startDate: "", endDate: "",
   proposalNumber: "", previousInsurer: "", previousPolicyNumber: "", previousClaims: "", addOns: "", warranties: "", specialConditions: "", endorsements: "", remarks: "",
 };
 
-export function NonMotorPolicyForm({ insurers, customers, rms, sources }: Props) {
+export function NonMotorPolicyForm({ insurers, customers, rms, sources, productConfigurations }: Props) {
   const router = useRouter();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [additionalOpen, setAdditionalOpen] = useState(false);
@@ -101,12 +104,14 @@ export function NonMotorPolicyForm({ insurers, customers, rms, sources }: Props)
   const selectedSourceMobile = availableSources.find((item) => item.value === form.sourceId)?.mobile;
   const selectedInsurer = insurers.find((item) => item.value === form.insurerId)?.label ?? "Not selected";
   const selectedRmLabel = rms.find((rm) => rm.value === form.rmName)?.label ?? form.rmName;
+  const selectedProductConfiguration = useMemo(() => productConfigurations.find((item) => item.productKey === normalizeNonMotorProductKey(form.productName)), [form.productName, productConfigurations]);
   const riskLocation = form.riskLocation || form.transitFrom || form.projectName || "Not entered";
   const requiredValues = useMemo(() => [
     form.issuanceDate, form.intermediaryType, form.intermediaryCode, form.rmName,
     form.customerMode === "existing" ? form.customerId : form.insuredName,
     form.policyNumber, form.insurerId, form.productName, form.category,
     ...riskCoreValues(form), form.sumInsured, form.grossPremium, form.startDate, form.endDate,
+    ...(form.premiumStructure === "od_tp" ? [form.odPremium, form.tpPremium] : []),
   ], [form]);
   const completed = requiredValues.filter((value) => String(value ?? "").trim()).length;
   const completion = requiredValues.length ? Math.round((completed / requiredValues.length) * 100) : 0;
@@ -120,6 +125,21 @@ export function NonMotorPolicyForm({ insurers, customers, rms, sources }: Props)
     setForm((current) => ({ ...current, sourceId: value, leadSource: source?.label ?? "", intermediaryCode: source?.code ?? "", rmName: source?.rmName ?? "" }));
   }
 
+  function changeProductName(value: string) {
+    const configured = productConfigurations.find((item) => item.productKey === normalizeNonMotorProductKey(value));
+    setForm((current) => ({
+      ...current,
+      productName: value,
+      premiumStructure: configured?.premiumStructure ?? "standard",
+      ...(configured?.premiumStructure === "od_tp" ? {} : { odPremium: "", tpPremium: "" }),
+    }));
+  }
+
+  function changePremiumStructure(value: NonMotorPremiumStructure) {
+    if (selectedProductConfiguration) return;
+    setForm((current) => ({ ...current, premiumStructure: value, ...(value === "standard" ? { odPremium: "", tpPremium: "" } : {}) }));
+  }
+
   const customerSearchOptions = useMemo(() => customers.map((customer) => ({ value: customer.id, label: `${customer.name}${customer.phone ? ` · ${customer.phone}` : ""}` })), [customers]);
 
   function changeCustomer(value: string) {
@@ -129,11 +149,15 @@ export function NonMotorPolicyForm({ insurers, customers, rms, sources }: Props)
 
   function submit() {
     setError(null);
+    if (form.premiumStructure === "od_tp" && (!form.odPremium.trim() || !form.tpPremium.trim())) {
+      setError("Enter both OD Premium and TP Premium for this OD + TP product.");
+      return;
+    }
     const payload: NonMotorPolicyPayload = {
       source: { issuanceDate: form.issuanceDate, intermediaryType: form.intermediaryType, intermediaryCode: form.intermediaryCode, leadSource: form.leadSource, rmName: form.rmName },
       customerId: form.customerMode === "existing" ? form.customerId : undefined,
       customer: { customerType: form.customerType, insuredName: form.insuredName, contactName: form.contactName, phone: form.phone, email: form.email, address: form.address },
-      policy: { policyNumber: form.policyNumber, insurerId: form.insurerId, productName: form.productName, category: form.category, status: form.status, startDate: form.startDate, endDate: form.endDate, sumInsured: form.sumInsured, odPremium: "0", tpPremium: "0", netPremium: form.netPremium, gstAmount: form.gstAmount, grossPremium: form.grossPremium, deductible: form.deductible },
+      policy: { policyNumber: form.policyNumber, insurerId: form.insurerId, productName: form.productName, premiumStructure: form.premiumStructure, category: form.category, status: form.status, startDate: form.startDate, endDate: form.endDate, sumInsured: form.sumInsured, odPremium: form.premiumStructure === "od_tp" ? form.odPremium : "0", tpPremium: form.premiumStructure === "od_tp" ? form.tpPremium : "0", netPremium: form.netPremium, gstAmount: form.gstAmount, grossPremium: form.grossPremium, deductible: form.deductible },
       risk: buildRiskPayload(form),
       additional: { proposalNumber: form.proposalNumber, previousInsurer: form.previousInsurer, previousPolicyNumber: form.previousPolicyNumber, previousClaims: form.previousClaims, addOns: form.addOns, warranties: form.warranties, specialConditions: form.specialConditions, endorsements: form.endorsements, remarks: form.remarks },
     };
@@ -181,7 +205,12 @@ export function NonMotorPolicyForm({ insurers, customers, rms, sources }: Props)
             </>}
             <Field label="Policy number" value={form.policyNumber} onChange={(e) => update("policyNumber", e.target.value.toUpperCase())} placeholder="Policy number" required />
             <Select label="Insurance company" value={form.insurerId} onChange={(e) => update("insurerId", e.target.value)} required><option value="">Select insurer</option>{insurers.map((insurer) => <option key={insurer.value} value={insurer.value}>{insurer.label}</option>)}</Select>
-            <Field label="Product / policy name" value={form.productName} onChange={(e) => update("productName", e.target.value)} placeholder="Policy / product" required />
+            <Field label="Product / policy name" value={form.productName} onChange={(e) => changeProductName(e.target.value)} placeholder="Policy / product" required list="non-motor-products" />
+            <datalist id="non-motor-products">{productConfigurations.map((item) => <option key={item.productKey} value={item.productName} />)}</datalist>
+            <div>
+              <Select label="Premium structure" value={form.premiumStructure} onChange={(e) => changePremiumStructure(e.target.value as NonMotorPremiumStructure)} disabled={Boolean(selectedProductConfiguration)}><option value="standard">Standard</option><option value="od_tp">OD + TP</option></Select>
+              <CompactSourceMeta label="Rule" value={selectedProductConfiguration ? "Saved for this product" : "New product · choose once"} />
+            </div>
             <Select label="Non-Motor category" value={form.category} onChange={(e) => update("category", e.target.value)} required><option value="">Select category</option>{CATEGORIES.map((category) => <option key={category}>{category}</option>)}</Select>
             <Select label="Policy status" value={form.status} onChange={(e) => update("status", e.target.value)}><option>Active</option><option>Pending</option><option>Expired</option><option>Cancelled</option></Select>
           </Section>
@@ -190,9 +219,13 @@ export function NonMotorPolicyForm({ insurers, customers, rms, sources }: Props)
             <RiskFields form={form} update={update} />
           </Section>
 
-          <Section number="04" title="Cover, premium & validity">
+          <Section number="04" title="Cover, premium & validity" subtitle={form.premiumStructure === "od_tp" ? "OD and TP breakup is enabled only because this product uses OD + TP." : "Standard Non-Motor products keep OD and TP hidden."}>
             <Field label={form.category === "Liability" ? "Liability limit" : "Sum insured / limit"} value={form.sumInsured} onChange={(e) => update("sumInsured", numeric(e.target.value))} placeholder="₹ 0.00" inputMode="decimal" required />
             <Field label="Deductible / excess" value={form.deductible} onChange={(e) => update("deductible", numeric(e.target.value))} placeholder="Optional" inputMode="decimal" />
+            {form.premiumStructure === "od_tp" ? <>
+              <Field label="OD Premium" value={form.odPremium} onChange={(e) => update("odPremium", numeric(e.target.value))} placeholder="₹ 0.00" inputMode="decimal" required />
+              <Field label="TP Premium" value={form.tpPremium} onChange={(e) => update("tpPremium", numeric(e.target.value))} placeholder="₹ 0.00" inputMode="decimal" required />
+            </> : null}
             <Field label="Net premium" value={form.netPremium} onChange={(e) => { const net = numeric(e.target.value); setForm((current) => ({ ...current, netPremium: net, ...(current.gstAmount && net ? { grossPremium: String(Number(net) + Number(current.gstAmount)) } : {}) })); }} placeholder="₹ 0.00" inputMode="decimal" />
             <Field label="GST" value={form.gstAmount} onChange={(e) => { const gst = numeric(e.target.value); update("gstAmount", gst); if (form.netPremium) update("grossPremium", String(Number(form.netPremium) + Number(gst || 0))); }} placeholder="₹ 0.00" inputMode="decimal" />
             <Field label="Gross premium" value={form.grossPremium} onChange={(e) => update("grossPremium", numeric(e.target.value))} placeholder="₹ 0.00" inputMode="decimal" required />
@@ -228,6 +261,8 @@ export function NonMotorPolicyForm({ insurers, customers, rms, sources }: Props)
             <div className="border-b border-[#E8EDF4] px-4 py-3.5"><div className="flex items-center justify-between"><div><p className="text-[8px] font-bold uppercase tracking-[0.12em] text-[#98A2B3]">Policy status</p><h3 className="mt-1 text-[12px] font-semibold text-[#25324B]">Onboarding summary</h3></div><div className="flex h-11 w-11 items-center justify-center rounded-full border-[5px] border-[#E8EEF7] text-[10px] font-bold text-[#315B9A]">{completion}%</div></div><p className="mt-2 text-[8.5px] text-[#98A2B3]">Core fields only · optional details are excluded</p></div>
             <div className="space-y-3 px-4 py-4">
               <SummaryRow icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Category" value={form.category || "Non Motor"} />
+              <SummaryRow icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Premium structure" value={form.premiumStructure === "od_tp" ? "OD + TP" : "Standard"} />
+              {form.premiumStructure === "od_tp" ? <SummaryRow icon={<IndianRupee className="h-3.5 w-3.5" />} label="OD / TP" value={`${Number(form.odPremium || 0) ? money.format(Number(form.odPremium)) : "₹0"} · ${Number(form.tpPremium || 0) ? money.format(Number(form.tpPremium)) : "₹0"}`} /> : null}
               <SummaryRow icon={<IndianRupee className="h-3.5 w-3.5" />} label="Sum insured / limit" value={Number(form.sumInsured || 0) ? money.format(Number(form.sumInsured)) : "₹0"} />
               <SummaryRow icon={<IndianRupee className="h-3.5 w-3.5" />} label="Gross premium" value={Number(form.grossPremium || 0) ? money.format(Number(form.grossPremium)) : "₹0"} />
               <SummaryRow icon={<MapPin className="h-3.5 w-3.5" />} label="Risk reference" value={riskLocation} />
