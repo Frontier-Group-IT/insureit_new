@@ -72,9 +72,10 @@ export function ReportsNavigationPendingProvider({ children }: { children: React
     const onClick = (event: MouseEvent) => {
       if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       const target = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[href]") : null;
-      if (!target || target.target === "_blank" || target.hasAttribute("download")) return;
+      if (!target || target.target === "_blank" || target.hasAttribute("download") || target.hasAttribute("data-no-report-pending")) return;
       const url = new URL(target.href, window.location.href);
       if (url.origin !== window.location.origin || !url.pathname.startsWith("/reports")) return;
+      if (url.pathname.startsWith("/reports/export")) return;
       if (`${url.pathname}${url.search}` === currentLocationKey()) return;
       beginReportNavigation(`${url.pathname}${url.search}`);
     };
@@ -83,7 +84,7 @@ export function ReportsNavigationPendingProvider({ children }: { children: React
       const form = event.target instanceof HTMLFormElement ? event.target : null;
       if (!form || !form.closest(".report-page-shell")) return;
       const action = new URL(form.action || window.location.href, window.location.href);
-      if (action.origin !== window.location.origin || !action.pathname.startsWith("/reports")) return;
+      if (action.origin !== window.location.origin || !action.pathname.startsWith("/reports") || action.pathname.startsWith("/reports/export")) return;
       beginReportNavigation();
     };
 
