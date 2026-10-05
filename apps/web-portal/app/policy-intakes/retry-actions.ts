@@ -73,7 +73,7 @@ export async function retryPolicyIntakeOcr(id: string): Promise<RetryPolicyIntak
     .update({ ocr_status: "pending", ocr_warnings: [] })
     .eq("id", id)
     .eq("status", intake.status)
-    .not("policy_type", "in", "(life,health)");
+    .or("policy_type.is.null,policy_type.not.in.(life,health)");
 
   if (intake.ocr_status === "failed") {
     claim = claim.eq("ocr_status", "failed");
@@ -111,7 +111,7 @@ async function processRetry(id: string, expectedStoragePath: string, expectedWor
     .eq("id", id)
     .eq("status", expectedWorkflowStatus)
     .eq("ocr_status", "pending")
-    .not("policy_type", "in", "(life,health)")
+    .or("policy_type.is.null,policy_type.not.in.(life,health)")
     .eq("storage_path", expectedStoragePath)
     .select("id")
     .maybeSingle<{ id: string }>();
@@ -146,7 +146,7 @@ async function processRetry(id: string, expectedStoragePath: string, expectedWor
       })
       .eq("id", id)
       .eq("status", expectedWorkflowStatus)
-      .not("policy_type", "in", "(life,health)")
+      .or("policy_type.is.null,policy_type.not.in.(life,health)")
       .eq("storage_path", expectedStoragePath);
   } catch {
     await markRetryFailure(id, expectedStoragePath, expectedWorkflowStatus, "Automatic detail fetch failed again. You can retry or continue with manual review.");
@@ -163,6 +163,6 @@ async function markRetryFailure(id: string, storagePath: string, expectedWorkflo
     .update({ ocr_status: "failed", ocr_warnings: [message] })
     .eq("id", id)
     .eq("status", expectedWorkflowStatus)
-    .not("policy_type", "in", "(life,health)")
+    .or("policy_type.is.null,policy_type.not.in.(life,health)")
     .eq("storage_path", storagePath);
 }
