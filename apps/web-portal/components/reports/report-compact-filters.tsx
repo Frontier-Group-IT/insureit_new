@@ -1,6 +1,7 @@
 "use client";
 
 import { ReportDateRangePicker } from "@/components/reports/report-date-range-picker";
+import { useReportsNavigationPending } from "@/components/reports/reports-navigation-pending";
 import { Building2, ChevronDown, SlidersHorizontal, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -43,6 +44,7 @@ export function ReportCompactFilters({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { beginReportNavigation } = useReportsNavigationPending();
   const [open, setOpen] = useState(false);
   const [businessOpen, setBusinessOpen] = useState(false);
   const businessRef = useRef<HTMLDivElement>(null);
@@ -86,6 +88,11 @@ export function ReportCompactFilters({
 
   const dateFields = fields.filter((field) => field.type === "date");
 
+  function pushReport(href: string) {
+    if (!beginReportNavigation(href)) return;
+    router.push(href);
+  }
+
   function applyBusiness(value: string) {
     setBusinessOpen(false);
     const next = new URLSearchParams(searchParams.toString());
@@ -93,7 +100,7 @@ export function ReportCompactFilters({
     else next.delete("business");
     if (value !== "Non Motor") next.delete("category");
     clearPages(next);
-    router.push(next.size ? `${path}?${next.toString()}` : path);
+    pushReport(next.size ? `${path}?${next.toString()}` : path);
   }
 
   function applyAdvanced() {
@@ -123,7 +130,7 @@ export function ReportCompactFilters({
 
     clearPages(next);
     setOpen(false);
-    router.push(next.size ? `${path}?${next.toString()}` : path);
+    pushReport(next.size ? `${path}?${next.toString()}` : path);
   }
 
   function clearAdvanced() {
@@ -136,7 +143,7 @@ export function ReportCompactFilters({
       setDraft(Object.fromEntries(fields.map((field) => [field.name, ""])));
       setDraftCategory("");
       setOpen(false);
-      router.push(next.size ? `${path}?${next.toString()}` : path);
+      pushReport(next.size ? `${path}?${next.toString()}` : path);
       return;
     }
 
