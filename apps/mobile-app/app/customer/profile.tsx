@@ -452,6 +452,7 @@ export default function ProfileScreen() {
 
       <Section title="Account & Privacy" icon="shield-account-outline" iconSource={accountPrivacyIcon}>
         <ActionRow icon="file-document-outline" label="Privacy & Legal Center" onPress={() => router.push('/customer/legal')} />
+        <ActionRow icon="cog-outline" label="Settings & App Info" onPress={() => router.push('/customer/settings-app-info')} />
         <ActionRow icon="account-remove-outline" label="Request account deletion" onPress={() => router.push('/customer/account-deletion')} />
       </Section>
 
