@@ -8,7 +8,7 @@ type Props = { insurers: InsurerOption[] };
 
 function allowedInsurerSegments(policyType: string) {
   if (policyType === "Motor" || policyType === "Non-Motor" || policyType === "Non Motor") return new Set(["general"]);
-  if (policyType === "Life" || policyType === "Health") return new Set(["life", "health"]);
+  if (policyType === "Life") return new Set(["life", "health"]);
   return null;
 }
 
@@ -21,9 +21,25 @@ function fieldControl(labelText: string) {
 
 function syncInsurerOptions(policyType: string, insurers: InsurerOption[]) {
   const allowed = allowedInsurerSegments(policyType);
-  if (!allowed) return;
   const insurerSelect = fieldControl("Insurance company") as HTMLSelectElement | null;
   if (!insurerSelect) return;
+
+  if (policyType === "Health") {
+    const existingIds = new Set(Array.from(insurerSelect.options).map((option) => option.value));
+    for (const insurer of insurers) {
+      if (existingIds.has(insurer.value)) continue;
+      insurerSelect.add(new Option(insurer.label, insurer.value));
+    }
+    for (const option of Array.from(insurerSelect.options)) {
+      if (!option.value) continue;
+      option.hidden = false;
+      option.disabled = false;
+    }
+    return;
+  }
+
+  if (!allowed) return;
+
   const segmentById = new Map(insurers.map((item) => [item.value, item.segment]));
   for (const option of Array.from(insurerSelect.options)) {
     if (!option.value) continue;
