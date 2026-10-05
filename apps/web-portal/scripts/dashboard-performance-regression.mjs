@@ -102,5 +102,12 @@ const dashboardView = await readFile(new URL("../app/dashboard-v2/dashboard-view
 const dashboardLinks = dashboardView.match(/<Link\b[^>]*>/gs) ?? [];
 assert.ok(dashboardLinks.length > 0, "Dashboard should contain navigational links.");
 for (const link of dashboardLinks) assert.match(link, /prefetch=\{false\}/, "Dashboard links must not auto-prefetch heavy authenticated routes.");
+assert.match(dashboardView, /const pendingProposal = data\.policyIntakes[\s\S]*data\.policyIntakes\.actionRequired \+ data\.policyIntakes\.inReview/, "Dashboard Pending proposal must match Policy Register pending proposal semantics: Action Required plus In Review.");
+assert.match(dashboardView, /label: "Pending proposal"/, "Needs attention must show Pending proposal beside Policy Intakes pending.");
+assert.doesNotMatch(dashboardView, /label: "KYC applications"/, "Needs attention must not render the KYC applications card.");
+assert.match(dashboardView, /row\.label === "Life"/, "Business performance policy mix must include Life.");
+assert.match(dashboardView, /row\.label === "Health"/, "Business performance policy mix must include Health.");
+assert.match(dashboardView, /grid-cols-\[1fr_2fr\]/, "Business performance Policies card must reserve one-third for total policies and two-thirds for the vertical business-line mix without an internal divider.");
+assert.match(dashboardView, /label: "Producing intermediary"/, "Business performance must rename Active producers to Producing intermediary.");
 
 console.log("Dashboard performance regression passed.");
