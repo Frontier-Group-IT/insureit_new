@@ -18,6 +18,7 @@ export type PolicyIntakeWorkspaceRow = {
   id: string;
   intake_number: string;
   status: string;
+  policy_type: string | null;
   lead_source_name: string;
   lead_source_type: string;
   lead_source_code: string | null;
@@ -47,11 +48,21 @@ const rowTones: Record<string, string> = {
 function field(row: PolicyIntakeWorkspaceRow, key: string) {
   return row.ocr_fields?.find((item) => item.key === key)?.value?.trim() ?? "";
 }
+function isProposal(row: PolicyIntakeWorkspaceRow) {
+  return row.policy_type === "life" || row.policy_type === "health";
+}
+function policyTypeLabel(value: string | null) {
+  if (value === "motor") return "Motor";
+  if (value === "non_motor") return "Non-Motor";
+  if (value === "life") return "Life";
+  if (value === "health") return "Health";
+  return "—";
+}
 function isDuplicate(row: PolicyIntakeWorkspaceRow) {
   return row.status.toLowerCase() === "duplicate";
 }
 function canRetryOcr(row: PolicyIntakeWorkspaceRow) {
-  if (row.status !== "processing") return false;
+  if (isProposal(row) || row.status !== "processing") return false;
   if (row.ocr_status === "failed") return true;
   if (!new Set(["pending", "processing"]).has(row.ocr_status)) return false;
   const created = new Date(row.created_at).getTime();
@@ -77,16 +88,17 @@ function statusTone(row: PolicyIntakeWorkspaceRow): "navy" | "green" | "amber" |
   if (row.status === "ready_for_review" || row.status === "in_review") return "navy";
   return "slate";
 }
-function ocrLabel(status: string) {
-  if (status === "completed") return "Fetched";
-  if (status === "failed") return "Manual review";
-  if (status === "processing") return "Fetching";
+function detailLabel(row: PolicyIntakeWorkspaceRow) {
+  if (isProposal(row)) return "Stored";
+  if (row.ocr_status === "completed") return "Fetched";
+  if (row.ocr_status === "failed") return "Manual review";
+  if (row.ocr_status === "processing") return "Fetching";
   return "Queued";
 }
-function ocrTone(status: string): "navy" | "green" | "amber" | "red" | "blue" | "slate" {
-  if (status === "completed") return "green";
-  if (status === "failed") return "amber";
-  if (status === "processing") return "blue";
+function detailTone(row: PolicyIntakeWorkspaceRow): "navy" | "green" | "amber" | "red" | "blue" | "slate" {
+  if (isProposal(row) || row.ocr_status === "completed") return "green";
+  if (row.ocr_status === "failed") return "amber";
+  if (row.ocr_status === "processing") return "blue";
   return "slate";
 }
 function formatDateTime(value: string) {
@@ -145,10 +157,11 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
   const sources = useMemo(() => Array.from(new Map(rows.map((row) => [`${row.lead_source_type}:${row.lead_source_name}`, { value: `${row.lead_source_type}:${row.lead_source_name}`, label: `${row.lead_source_name} · ${row.lead_source_type.toUpperCase()}` }])).values()).sort((a, b) => a.label.localeCompare(b.label)), [rows]);
 
   const baseFiltered = useMemo(() => rows.filter((row) => {
-    const haystack = [row.intake_number, row.customer_mobile, row.lead_source_name, row.lead_source_type, row.lead_source_code, row.file_name, row.submitted_by_name, field(row, "vehicle_registration_number"), field(row, "vehicle_make"), field(row, "vehicle_model"), field(row, "policy_number"), field(row, "insurer_name")].filter(Boolean).join(" ").toLowerCase();
+    const haystack = [row.intake_number, row.customer_mobile, row.policy_type, row.lead_source_name, row.lead_source_type, row.lead_source_code, row.file_name, row.submitted_by_name, field(row, "vehicle_registration_number"), field(row, "vehicle_make"), field(row, "vehicle_model"), field(row, "policy_number"), field(row, "insurer_name")].filter(Boolean).join(" ").toLowerCase();
     const sourceKey = `${row.lead_source_type}:${row.lead_source_name}`;
     const created = dateValue(row.created_at);
-    return (!query.trim() || haystack.includes(query.trim().toLowerCase())) && (source === "all" || sourceKey === source) && (ocr === "all" || row.ocr_status === ocr) && (!fromDate || created >= fromDate) && (!toDate || created <= toDate);
+    const detailStatus = isProposal(row) ? "stored" : row.ocr_status;
+    return (!query.trim() || haystack.includes(query.trim().toLowerCase())) && (source === "all" || sourceKey === source) && (ocr === "all" || detailStatus === ocr) && (!fromDate || created >= fromDate) && (!toDate || created <= toDate);
   }), [rows, query, source, ocr, fromDate, toDate]);
 
   const stats = useMemo(() => ({
@@ -200,52 +213,31 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
           <RegisterSelect value={source} onChange={(value) => { setSource(value); setPage(1); }} label="Lead source"><option value="all">All Lead Source</option>{sources.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</RegisterSelect>
         </div>
         <div className="[&>label]:block [&>label]:w-full [&_select]:w-full xl:[&_select]:!h-9 xl:[&_select]:!min-w-0 xl:[&_select]:!pl-8 xl:[&_select]:!pr-6 xl:[&_select]:!text-[10px]">
-          <RegisterSelect value={ocr} onChange={(value) => { setOcr(value); setPage(1); }} label="OCR status"><option value="all">All Detail Status</option><option value="queued">Queued</option><option value="processing">Fetching</option><option value="completed">Fetched</option><option value="failed">Manual review</option></RegisterSelect>
+          <RegisterSelect value={ocr} onChange={(value) => { setOcr(value); setPage(1); }} label="Detail status"><option value="all">All Detail Status</option><option value="stored">Stored / no OCR</option><option value="queued">Queued</option><option value="pending">Queued</option><option value="processing">Fetching</option><option value="completed">Fetched</option><option value="failed">Manual review</option></RegisterSelect>
         </div>
         <PolicyIntakeDateRangeFilter fromDate={fromDate} toDate={toDate} onFromDateChange={(value) => { setFromDate(value); setPage(1); }} onToDateChange={(value) => { setToDate(value); setPage(1); }} onClear={() => { setFromDate(""); setToDate(""); setPage(1); }} />
-        <div className="min-w-0">
-          <div className="flex min-w-0 items-center justify-between gap-1">
-            <div className="min-w-0 flex-1 [&>div]:w-full xl:[&>div]:!w-full xl:[&>div]:!gap-0.5 xl:[&>div]:!overflow-visible xl:[&>div]:!p-0.5 xl:[&>div>button]:!h-7 xl:[&>div>button]:!min-w-0 xl:[&>div>button]:!flex-1 xl:[&>div>button]:!px-1.5 xl:[&>div>button]:!text-[9px]">
-              <RegisterViewTabs value={view === "mine" ? "" : view} onChange={changeView} options={reviewer ? [
-                { value: "action", label: "Action Required", count: stats.action },
-                { value: "in_review", label: "In Review", count: stats.inReview },
-                { value: "processing", label: "Processing", count: stats.processing },
-                { value: "completed", label: "Completed", count: stats.completed },
-                { value: "duplicate", label: "Duplicate", count: stats.duplicate },
-                { value: "rejected", label: "Rejected", count: stats.rejected },
-                { value: "all", label: "All", count: stats.all },
-              ] : [
-                { value: "all", label: "All", count: stats.all },
-                { value: "processing", label: "Processing", count: stats.processing },
-                { value: "in_review", label: "In Review", count: stats.inReview },
-                { value: "completed", label: "Completed", count: stats.completed },
-                { value: "duplicate", label: "Duplicate", count: stats.duplicate },
-                { value: "rejected", label: "Rejected", count: stats.rejected },
-              ]} />
-            </div>
-            {reviewer ? <button type="button" onClick={() => changeView("mine")} aria-pressed={view === "mine"} className={`inline-flex h-8 shrink-0 items-center justify-center rounded-lg border px-3 text-[10px] font-bold transition xl:h-7 xl:px-2 xl:text-[9px] ${view === "mine" ? "border-[#17365D] bg-[#17365D] text-white shadow-sm" : "border-[#C9D5E3] bg-white text-[#526178] hover:border-[#9FB4CD] hover:bg-[#F8FAFC]"}`} title="Show only policy intakes currently assigned to you">My Active Work <span className="ml-1.5 opacity-80">{stats.myActiveWork}</span></button> : null}
-          </div>
-        </div>
+        <div className="min-w-0"><div className="flex min-w-0 items-center justify-between gap-1"><div className="min-w-0 flex-1 [&>div]:w-full xl:[&>div]:!w-full xl:[&>div]:!gap-0.5 xl:[&>div]:!overflow-visible xl:[&>div]:!p-0.5 xl:[&>div>button]:!h-7 xl:[&>div>button]:!min-w-0 xl:[&>div>button]:!flex-1 xl:[&>div>button]:!px-1.5 xl:[&>div>button]:!text-[9px]"><RegisterViewTabs value={view === "mine" ? "" : view} onChange={changeView} options={reviewer ? [{ value: "action", label: "Action Required", count: stats.action },{ value: "in_review", label: "In Review", count: stats.inReview },{ value: "processing", label: "Processing", count: stats.processing },{ value: "completed", label: "Completed", count: stats.completed },{ value: "duplicate", label: "Duplicate", count: stats.duplicate },{ value: "rejected", label: "Rejected", count: stats.rejected },{ value: "all", label: "All", count: stats.all }] : [{ value: "all", label: "All", count: stats.all },{ value: "processing", label: "Processing", count: stats.processing },{ value: "in_review", label: "In Review", count: stats.inReview },{ value: "completed", label: "Completed", count: stats.completed },{ value: "duplicate", label: "Duplicate", count: stats.duplicate },{ value: "rejected", label: "Rejected", count: stats.rejected }]} /></div>{reviewer ? <button type="button" onClick={() => changeView("mine")} aria-pressed={view === "mine"} className={`inline-flex h-8 shrink-0 items-center justify-center rounded-lg border px-3 text-[10px] font-bold transition xl:h-7 xl:px-2 xl:text-[9px] ${view === "mine" ? "border-[#17365D] bg-[#17365D] text-white shadow-sm" : "border-[#C9D5E3] bg-white text-[#526178] hover:border-[#9FB4CD] hover:bg-[#F8FAFC]"}`} title="Show only policy intakes currently assigned to you">My Active Work <span className="ml-1.5 opacity-80">{stats.myActiveWork}</span></button> : null}</div></div>
       </div>
     </div>
 
-    <div className="p-3 md:hidden">{pageRows.map((row) => <div key={row.id} className={`mb-2 rounded-xl border border-[#E2E8F0] p-3 ${rowTones[row.status] ?? "bg-white"}`}><Link href={`/policy-intakes/${row.id}`} className="block"><div className="flex items-start justify-between gap-2"><div><div className="flex items-center gap-1.5">{getInsurerLogo(field(row, "insurer_name")) ? <img src={getInsurerLogo(field(row, "insurer_name"))!} alt="" aria-hidden="true" className="h-4 w-4 shrink-0 object-contain" /> : null}<p className="text-[10px] font-bold text-[#17365D]">{row.intake_number}</p></div><p className="mt-1 text-[9px] text-[#475569]">{field(row, "vehicle_registration_number") || row.customer_mobile}</p></div><RegisterStatusPill tone={statusTone(row)}>{statusLabel(row)}</RegisterStatusPill></div><div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[8.5px] text-[#64748B]"><p><span className="font-semibold text-[#334155]">Source:</span> {row.lead_source_name}</p><p><span className="font-semibold text-[#334155]">OCR:</span> {ocrLabel(row.ocr_status)}</p><p className="col-span-2"><span className="font-semibold text-[#334155]">Submitted by:</span> <span className="font-semibold text-[#334155]">{row.submitted_by_name}</span> · {formatDateTime(row.created_at)}</p></div></Link>{reviewer && canRetryOcr(row) ? <PolicyIntakeOcrRetryButton id={row.id} compact className="mt-2" /> : null}</div>)}{!pageRows.length ? <RegisterEmpty title="No matching policy intakes" description="Adjust the filters or status view." /> : null}</div>
+    <div className="p-3 md:hidden">{pageRows.map((row) => <div key={row.id} className={`mb-2 rounded-xl border border-[#E2E8F0] p-3 ${rowTones[row.status] ?? "bg-white"}`}><Link href={`/policy-intakes/${row.id}`} className="block"><div className="flex items-start justify-between gap-2"><div><div className="flex items-center gap-1.5">{getInsurerLogo(field(row, "insurer_name")) ? <img src={getInsurerLogo(field(row, "insurer_name"))!} alt="" aria-hidden="true" className="h-4 w-4 shrink-0 object-contain" /> : null}<p className="text-[10px] font-bold text-[#17365D]">{row.intake_number}</p></div><p className="mt-1 text-[9px] text-[#475569]">{field(row, "vehicle_registration_number") || row.customer_mobile}</p></div><RegisterStatusPill tone={statusTone(row)}>{statusLabel(row)}</RegisterStatusPill></div><div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[8.5px] text-[#64748B]"><p><span className="font-semibold text-[#334155]">Source:</span> {row.lead_source_name}</p><p><span className="font-semibold text-[#334155]">Policy type:</span> {policyTypeLabel(row.policy_type)}</p><p><span className="font-semibold text-[#334155]">Details:</span> {detailLabel(row)}</p><p><span className="font-semibold text-[#334155]">Document:</span> {isProposal(row)?"Proposal form":"Policy copy"}</p><p className="col-span-2"><span className="font-semibold text-[#334155]">Submitted by:</span> <span className="font-semibold text-[#334155]">{row.submitted_by_name}</span> · {formatDateTime(row.created_at)}</p></div></Link>{reviewer && canRetryOcr(row) ? <PolicyIntakeOcrRetryButton id={row.id} compact className="mt-2" /> : null}</div>)}{!pageRows.length ? <RegisterEmpty title="No matching policy intakes" description="Adjust the filters or status view." /> : null}</div>
 
     <div className="hidden overflow-x-auto md:block">
-      <table className="w-full min-w-[1280px] table-fixed text-left text-[10px] text-[#334155]">
-        <thead className="sticky top-0 z-10 border-b border-[#E2E8F0] bg-[#F8FAFC] text-[8.5px] font-bold uppercase tracking-[.06em] text-[#64748B]"><tr><th className="w-[142px] px-3 py-2">Intake</th><th className="w-[160px] px-2.5 py-2">Customer</th><th className="w-[190px] px-2.5 py-2">Lead Source</th><th className="w-[170px] px-2.5 py-2">Vehicle</th><th className="w-[220px] px-2.5 py-2">Policy / Insurer</th><th className="w-[170px] px-2.5 py-2">Submitted</th><th className="w-[168px] px-2.5 py-2">OCR</th><th className="w-[150px] px-2.5 py-2">Status</th></tr></thead>
+      <table className="w-full min-w-[1400px] table-fixed text-left text-[10px] text-[#334155]">
+        <thead className="sticky top-0 z-10 border-b border-[#E2E8F0] bg-[#F8FAFC] text-[8.5px] font-bold uppercase tracking-[.06em] text-[#64748B]"><tr><th className="w-[142px] px-3 py-2">Intake</th><th className="w-[160px] px-2.5 py-2">Customer</th><th className="w-[190px] px-2.5 py-2">Lead Source</th><th className="w-[120px] px-2.5 py-2">Policy Type</th><th className="w-[170px] px-2.5 py-2">Vehicle</th><th className="w-[220px] px-2.5 py-2">Policy / Insurer</th><th className="w-[170px] px-2.5 py-2">Submitted</th><th className="w-[168px] px-2.5 py-2">Detail Status</th><th className="w-[150px] px-2.5 py-2">Status</th></tr></thead>
         <tbody className="divide-y divide-[#E8EDF4]">{pageRows.map((row) => <tr key={row.id} className={`h-[58px] transition ${rowTones[row.status] ?? "hover:bg-[#FAFCFF]"}`} onClick={() => { window.location.href = `/policy-intakes/${row.id}`; }} style={{ cursor: "pointer" }}>
           <td className="px-3"><p className="truncate font-bold text-[#17365D]">{row.intake_number}</p><p className="mt-0.5 truncate text-[8px] text-[#7A8798]">{row.file_name}</p></td>
           <td className="px-2.5"><p className="font-semibold text-[#334155]">{field(row, "insured_name") || row.customer_mobile}</p>{field(row, "insured_name") ? <p className="mt-0.5 text-[8px] text-[#7A8798]">{row.customer_mobile}</p> : null}</td>
           <td className="px-2.5"><p className="truncate font-semibold">{row.lead_source_name}</p><p className="mt-0.5 text-[8px] text-[#7A8798]">{row.lead_source_type.toUpperCase()}{row.lead_source_code ? ` · ${row.lead_source_code}` : ""}</p></td>
-          <td className="px-2.5"><p className="font-mono font-semibold">{field(row, "vehicle_registration_number") || (row.ocr_status === "completed" ? "—" : "Fetching…")}</p><p className="mt-0.5 truncate text-[8px] text-[#7A8798]">{[field(row, "vehicle_make"), field(row, "vehicle_model")].filter(Boolean).join(" · ") || field(row, "vehicle_class") || ""}</p></td>
-          <td className="px-2.5"><div className="flex min-w-0 items-center gap-1.5">{getInsurerLogo(field(row, "insurer_name")) ? <img src={getInsurerLogo(field(row, "insurer_name"))!} alt="" aria-hidden="true" className="h-4 w-4 shrink-0 object-contain" /> : null}<p className="truncate font-semibold">{field(row, "policy_number") || (row.ocr_status === "completed" ? "—" : "Fetching…")}</p></div></td>
+          <td className="px-2.5"><p className="font-semibold text-[#17365D]">{policyTypeLabel(row.policy_type)}</p><p className="mt-0.5 text-[8px] text-[#7A8798]">{isProposal(row)?"Proposal form":row.policy_type?"Policy copy":"Historical"}</p></td>
+          <td className="px-2.5"><p className="font-mono font-semibold">{isProposal(row)?"—":field(row, "vehicle_registration_number") || (row.ocr_status === "completed" ? "—" : "Fetching…")}</p><p className="mt-0.5 truncate text-[8px] text-[#7A8798]">{isProposal(row)?"No vehicle OCR":[field(row, "vehicle_make"), field(row, "vehicle_model")].filter(Boolean).join(" · ") || field(row, "vehicle_class") || ""}</p></td>
+          <td className="px-2.5"><div className="flex min-w-0 items-center gap-1.5">{!isProposal(row)&&getInsurerLogo(field(row, "insurer_name")) ? <img src={getInsurerLogo(field(row, "insurer_name"))!} alt="" aria-hidden="true" className="h-4 w-4 shrink-0 object-contain" /> : null}<p className="truncate font-semibold">{isProposal(row)?"—":field(row, "policy_number") || (row.ocr_status === "completed" ? "—" : "Fetching…")}</p></div></td>
           <td className="px-2.5"><p className="font-semibold leading-4 text-[#334155]">{row.submitted_by_name}</p><p className="mt-0.5 text-[8px] text-[#7A8798]">{formatDateTime(row.created_at)}</p></td>
-          <td className="px-2.5"><div className="flex items-center gap-1.5"><RegisterStatusPill tone={ocrTone(row.ocr_status)}>{ocrLabel(row.ocr_status)}</RegisterStatusPill>{reviewer && canRetryOcr(row) ? <PolicyIntakeOcrRetryButton id={row.id} compact /> : null}</div></td>
+          <td className="px-2.5"><div className="flex items-center gap-1.5"><RegisterStatusPill tone={detailTone(row)}>{detailLabel(row)}</RegisterStatusPill>{reviewer && canRetryOcr(row) ? <PolicyIntakeOcrRetryButton id={row.id} compact /> : null}</div></td>
           <td className="px-2.5"><RegisterStatusPill tone={statusTone(row)}>{statusLabel(row)}</RegisterStatusPill></td>
         </tr>)}</tbody>
       </table>
-      {!pageRows.length ? <RegisterEmpty title="No matching policy intakes" description="Adjust the search, lead source, OCR state, date range or status view." /> : null}
+      {!pageRows.length ? <RegisterEmpty title="No matching policy intakes" description="Adjust the search, lead source, detail state, date range or status view." /> : null}
     </div>
     <RegisterPagination pageRows={pageRows.length} filteredRows={filtered.length} safePage={safePage} totalPages={totalPages} pageSize={PAGE_SIZE} onPrevious={() => setPage(Math.max(1, safePage - 1))} onNext={() => setPage(Math.min(totalPages, safePage + 1))} />
   </section>;

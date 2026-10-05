@@ -34,7 +34,7 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
   const admin = createSupabaseAdminClient();
   let query = admin
     .from("policy_intake_requests")
-    .select("id,intake_number,status,lead_source_name,lead_source_type,lead_source_code,customer_mobile,created_at,ocr_status,ocr_fields,file_name,assigned_to_profile_id,submitted_by_profile_id,submitted_by_portal_account_id")
+    .select("id,intake_number,status,policy_type,lead_source_name,lead_source_type,lead_source_code,customer_mobile,created_at,ocr_status,ocr_fields,file_name,assigned_to_profile_id,submitted_by_profile_id,submitted_by_portal_account_id")
     .order("created_at", { ascending: false })
     .limit(500);
   if (!reviewer) query = query.eq("submitted_by_profile_id", profile.id);
