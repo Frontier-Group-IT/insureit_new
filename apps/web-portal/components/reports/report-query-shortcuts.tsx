@@ -4,6 +4,7 @@ import { CalendarDays } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ReportDateRangePicker } from "@/components/reports/report-date-range-picker";
+import { useReportsNavigationPending } from "@/components/reports/reports-navigation-pending";
 
 export type ReportShortcut = { value: string; label: string };
 
@@ -25,6 +26,7 @@ export function ReportQueryShortcuts({
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { beginReportNavigation } = useReportsNavigationPending();
   const currentQuery = searchParams.toString();
   const [customOpen, setCustomOpen] = useState(false);
   const customFrom = searchParams.get("from") ?? "";
@@ -45,9 +47,14 @@ export function ReportQueryShortcuts({
     if (!customActive) setCustomOpen(false);
   }, [customActive, customFrom, customTo]);
 
+  function pushReport(href: string) {
+    if (!beginReportNavigation(href)) return;
+    router.push(href);
+  }
+
   function applyShortcut(value: string) {
     if (param === "period") setCustomOpen(value === "custom");
-    router.push(buildHref(pathname, currentQuery, param, value));
+    pushReport(buildHref(pathname, currentQuery, param, value));
   }
 
   function applyCustomRange(from: string, to: string) {
@@ -57,7 +64,7 @@ export function ReportQueryShortcuts({
     next.set("to", to);
     clearPages(next);
     setCustomOpen(false);
-    router.push(`${pathname}?${next.toString()}`);
+    pushReport(`${pathname}?${next.toString()}`);
   }
 
   return (
