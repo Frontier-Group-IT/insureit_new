@@ -17,6 +17,7 @@ export function PartnerOperationalRow({
   accessibilityLabel,
   divider = true,
   dense = false,
+  showChevron = true,
 }: {
   title: string;
   subtitle?: string;
@@ -30,6 +31,7 @@ export function PartnerOperationalRow({
   accessibilityLabel?: string;
   divider?: boolean;
   dense?: boolean;
+  showChevron?: boolean;
 }) {
   return (
     <Pressable
@@ -63,7 +65,7 @@ export function PartnerOperationalRow({
       </View>
 
       {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
-      <Ionicons name="chevron-forward" size={15} color={partnerTheme.colors.inkSubtle} />
+      {showChevron ? <Ionicons name="chevron-forward" size={15} color={partnerTheme.colors.inkSubtle} /> : null}
     </Pressable>
   );
 }
