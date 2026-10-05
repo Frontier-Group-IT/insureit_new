@@ -2,6 +2,17 @@
 
 This note is the fast operational continuation record for the current Partner Home work. Read it together with `docs/PARTNER_APP_HANDOFF_2026_09_13.md` and `apps/partner-app/AGENTS.md`.
 
+## 2026-10-05 — Exact-reference Home cards and bright-blue Quick Action icons
+
+- Branch: `ui/partner-home-reference-exact-v2-2026-10-05`.
+- User supplied the current Home screenshot plus a second reference and requested the Home cards to match the second reference, including the Quick Action icon family.
+- `apps/partner-app/app/(tabs)/index.tsx` now uses a bright-blue reference-style vector treatment for the This Month chart, Policies Sold, Commission Earned, Policy Intake, Renewals, Claims, Customers and Pending Tasks artwork. The four Quick Actions use one coordinated blue glyph + semantic badge + soft-cyan glow treatment rather than the darker mixed image assets visible in the prior device screenshot.
+- Pending Tasks now uses the pale-blue clipboard/check decorative treatment from the reference direction while retaining the live active-claim count and Claims route.
+- Card geometry, dividers and light-blue surfaces were tuned without changing the accepted hero/search/Stories/bottom-navigation composition, live business semantics, routes, authorization or backend data.
+- This change supersedes the old Home-specific Policy Intake `imageScale={1.22}` exception for the current 0.2.0 Home screen because the four Quick Actions are now rendered through the same vector icon path rather than differently padded PNG assets. Historical 0.1.0 compatibility notes below remain audit history only.
+- Detailed note: `docs/PARTNER_HOME_REFERENCE_EXACT_V2_2026_10_05.md`.
+- Evidence state: **IMPLEMENTED on branch; PR/CI/merge/production OTA/device verification pending. NO APK/AAB CREATED.**
+
 ## 2026-10-03 — Quick Actions reference icon alignment
 
 - Branch: `ui/partner-home-quick-action-reference-icons-2026-10-03`.
@@ -50,18 +61,18 @@ Preserve these unless the user explicitly requests another change:
 - Recent Activity removed from Home, but `/activity` and top clock shortcut retained;
 - Your Impact removed from Home, but `/impact` retained;
 - Business Report pure-JS date-range filter for runtime 0.1.0;
-- image-based Quick Actions;
-- Policy Intake asset `assets/generated-dashboard/policy-add.png` with local `imageScale={1.22}`;
-- shared Quick Action image style remains unchanged for Renewals / Claims / Customers.
+- image-based Quick Actions in the historical 0.1.0 compatibility line;
+- Policy Intake asset `assets/generated-dashboard/policy-add.png` with local `imageScale={1.22}` in that historical line;
+- current 0.2.0 Home may use the coordinated vector reference treatment recorded in the 2026-10-05 section above.
 
 ## Policy Intake icon rule
 
-Do **not** solve Policy Intake sizing by globally increasing `quickImageAsset`. The generated Policy Intake PNG contains more transparent padding than the surrounding Figma Quick Action images. The approved solution is a per-item visual scale:
+For the historical image-based 0.1.0 compatibility source, do **not** solve Policy Intake sizing by globally increasing `quickImageAsset`. The generated Policy Intake PNG contains more transparent padding than the surrounding Figma Quick Action images. The approved historical solution is a per-item visual scale:
 
 - Policy Intake: `imageScale={1.22}`
 - other Quick Action images: default `imageScale={1}`
 
-The Quick Action card dimensions, label, route and tap behavior must remain unchanged.
+For the current 0.2.0 Home source after the 2026-10-05 exact-reference refinement, all four Quick Actions use the same vector path and this per-PNG scaling exception no longer applies to that screen.
 
 ## Files controlling the 0.1.0 OTA refinement
 
@@ -85,7 +96,7 @@ Preserve:
 - Activity and Impact dedicated routes;
 - runtime/channel/source compatibility rules.
 
-Do not add a native module to the current 0.1.0 OTA unless it is proven to exist in the installed APK.
+Do not add a native module to the current app merely for Home icon matching; the 2026-10-05 refinement is JS/vector-only.
 
 ## Release evidence discipline
 
@@ -96,4 +107,4 @@ Always record these separately:
 - **DEPLOYED**: Expo OTA publish succeeded to the correct runtime/channel.
 - **VERIFIED**: user/device screenshot or behavior confirms the update actually runs correctly.
 
-PR #1777 is currently **MERGED + DEPLOYED, NOT YET DEVICE-VERIFIED**. Ask the user to fully close and reopen the Partner app (often twice) and visually confirm the Policy Intake icon before marking this milestone VERIFIED.
+The 2026-10-05 exact-reference refinement is currently **IMPLEMENTED ONLY**; PR/CI/merge/production OTA and device verification remain pending.
