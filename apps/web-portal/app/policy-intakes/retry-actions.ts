@@ -11,6 +11,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 type RetryableIntake = {
   id: string;
   status: string;
+  policy_type: string | null;
   ocr_status: string;
   created_at: string;
   storage_bucket: string;
@@ -18,6 +19,10 @@ type RetryableIntake = {
   file_name: string;
   mime_type: string | null;
 };
+
+function isProposalType(value: string | null | undefined) {
+  return value === "life" || value === "health";
+}
 
 export type RetryPolicyIntakeOcrResult =
   | { ok: true; status: "processing" }
@@ -28,9 +33,9 @@ export async function getPolicyIntakeOcrRetryState(id: string) {
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from("policy_intake_requests")
-    .select("status,ocr_status,created_at,submitted_by_profile_id")
+    .select("status,policy_type,ocr_status,created_at,submitted_by_profile_id")
     .eq("id", id)
-    .maybeSingle<{ status: string; ocr_status: string; created_at: string; submitted_by_profile_id: string | null }>();
+    .maybeSingle<{ status: string; policy_type: string | null; ocr_status: string; created_at: string; submitted_by_profile_id: string | null }>();
   if (error || !data) return { ok: false as const, retryable: false, error: "Retry status is unavailable." };
 
   const canReview = await hasEffectiveCapability(profile, "review_policy_intakes", "edit");
@@ -41,7 +46,7 @@ export async function getPolicyIntakeOcrRetryState(id: string) {
 
   return {
     ok: true as const,
-    retryable: canReview && isPolicyIntakeOcrRetryable({ status: data.status, ocrStatus: data.ocr_status, createdAt: data.created_at }),
+    retryable: !isProposalType(data.policy_type) && canReview && isPolicyIntakeOcrRetryable({ status: data.status, ocrStatus: data.ocr_status, createdAt: data.created_at }),
     ocrStatus: data.ocr_status,
   };
 }
@@ -51,11 +56,12 @@ export async function retryPolicyIntakeOcr(id: string): Promise<RetryPolicyIntak
   const admin = createSupabaseAdminClient();
   const { data: intake, error } = await admin
     .from("policy_intake_requests")
-    .select("id,status,ocr_status,created_at,storage_bucket,storage_path,file_name,mime_type")
+    .select("id,status,policy_type,ocr_status,created_at,storage_bucket,storage_path,file_name,mime_type")
     .eq("id", id)
     .maybeSingle<RetryableIntake>();
 
   if (error || !intake) return { ok: false, error: "This policy intake is unavailable. Refresh and try again." };
+  if (isProposalType(intake.policy_type)) return { ok: false, error: "Life and Health proposal forms are stored for review and are not sent through policy OCR." };
   if (!isPolicyIntakeOcrRetryable({ status: intake.status, ocrStatus: intake.ocr_status, createdAt: intake.created_at })) {
     return { ok: false, error: "This detail fetch is already running or no longer needs a retry." };
   }
@@ -90,11 +96,11 @@ async function processRetry(id: string, expectedStoragePath: string, expectedWor
   const admin = createSupabaseAdminClient();
   const { data: intake } = await admin
     .from("policy_intake_requests")
-    .select("id,status,ocr_status,storage_bucket,storage_path,file_name,mime_type")
+    .select("id,status,policy_type,ocr_status,storage_bucket,storage_path,file_name,mime_type")
     .eq("id", id)
     .maybeSingle<Omit<RetryableIntake, "created_at">>();
 
-  if (!intake || intake.status !== expectedWorkflowStatus || intake.ocr_status !== "pending" || intake.storage_path !== expectedStoragePath) return;
+  if (!intake || isProposalType(intake.policy_type) || intake.status !== expectedWorkflowStatus || intake.ocr_status !== "pending" || intake.storage_path !== expectedStoragePath) return;
 
   const { data: started } = await admin
     .from("policy_intake_requests")
