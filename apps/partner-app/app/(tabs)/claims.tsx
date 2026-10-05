@@ -258,7 +258,7 @@ function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void
   const completed = row.claim_state === 'completed';
   const rejected = /reject/i.test(row.current_status || '');
   const isNew = /^new$/i.test((row.current_status || '').trim());
-  const vehiclePolicy = [row.vehicle_no || 'Vehicle not linked', row.policy_no || 'External policy'].join('  |  ');
+  const vehicleLabel = row.vehicle_no || 'Vehicle not linked';
   const insurerLogo = getPartnerInsurerLogoSource(row.insurer_name);
   const mode = claimModeLabel(row.claim_service_mode);
 
@@ -288,7 +288,7 @@ function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void
           ) : null}
         </View>
         <Text numberOfLines={1} style={styles.claimCustomer}>{row.customer_name}</Text>
-        <Text numberOfLines={1} style={styles.claimDetail}>{vehiclePolicy}</Text>
+        <Text numberOfLines={1} style={styles.claimDetail}>{vehicleLabel}</Text>
       </View>
 
       <View style={styles.claimStatusRight}>
