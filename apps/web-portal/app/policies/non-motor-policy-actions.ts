@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requirePolicyCreator, requirePolicyEditor } from "@/lib/policy-access-server";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";
+import { resolveNonMotorPremiumStructure, type NonMotorPremiumStructure } from "@/lib/non-motor-premium-structure";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export type NonMotorCommercialBasis = "NET_PREMIUM_PERCENT" | "FIXED_AMOUNT";
@@ -22,7 +23,7 @@ export type NonMotorPolicyPayload = {
   source: { issuanceDate: string; intermediaryType: string; intermediaryCode: string; leadSource: string; rmName: string };
   customerId?: string;
   customer: { customerType: "Individual" | "Organisation"; insuredName: string; contactName?: string; phone: string; email?: string; address?: string };
-  policy: { policyNumber: string; insurerId: string; productName: string; category: string; status: string; startDate: string; endDate: string; sumInsured: string; odPremium: string; tpPremium: string; netPremium: string; gstAmount: string; grossPremium: string; deductible?: string };
+  policy: { policyNumber: string; insurerId: string; productName: string; premiumStructure: NonMotorPremiumStructure; category: string; status: string; startDate: string; endDate: string; sumInsured: string; odPremium: string; tpPremium: string; netPremium: string; gstAmount: string; grossPremium: string; deductible?: string };
   commercial?: NonMotorCommercialPayload;
   risk: Record<string, string>;
   additional: Record<string, string>;
@@ -48,6 +49,25 @@ function policyCode() { const now = new Date(); return `POL-${[now.getUTCFullYea
 const customerCode = () => `CUS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2,6).toUpperCase()}`;
 function customerIdentityName(row: CustomerIdentityRow) { return cleanCustomerName(row.company_name || row.contact_name).toLowerCase(); }
 
+async function resolvePremiumBreakup(payload: NonMotorPolicyPayload, productName: string) {
+  const requestedStructure: NonMotorPremiumStructure = payload.policy.premiumStructure === "od_tp" ? "od_tp" : "standard";
+  const structureResult = await resolveNonMotorPremiumStructure(productName, requestedStructure);
+  if (!structureResult.ok) return structureResult;
+
+  if (structureResult.premiumStructure === "standard") {
+    return { ok:true as const, premiumStructure:structureResult.premiumStructure, odPremium:0, tpPremium:0 };
+  }
+
+  if (!clean(payload.policy.odPremium) || !clean(payload.policy.tpPremium)) {
+    return { ok:false as const, error:"Enter both OD Premium and TP Premium for this OD + TP product." };
+  }
+  const odPremium = numberOrNull(payload.policy.odPremium);
+  const tpPremium = numberOrNull(payload.policy.tpPremium);
+  if (odPremium === null || tpPremium === null || odPremium < 0 || tpPremium < 0) {
+    return { ok:false as const, error:"OD Premium and TP Premium must be valid non-negative amounts." };
+  }
+  return { ok:true as const, premiumStructure:structureResult.premiumStructure, odPremium, tpPremium };
+}
 
 export async function updateNonMotorPolicy(policyId: string, payload: NonMotorPolicyPayload): Promise<NonMotorPolicyResult> {
   const profile = await requirePolicyEditor();
@@ -73,8 +93,6 @@ export async function updateNonMotorPolicy(policyId: string, payload: NonMotorPo
   const issuanceDate = clean(payload.source.issuanceDate);
   const sumInsured = numberOrNull(payload.policy.sumInsured);
   const grossPremium = numberOrNull(payload.policy.grossPremium);
-  const odPremium = 0;
-  const tpPremium = 0;
   const netPremium = moneyOrZero(payload.policy.netPremium);
   const enteredGst = numberOrNull(payload.policy.gstAmount);
   const gstAmount = enteredGst ?? Math.max(0, (grossPremium ?? 0) - netPremium);
@@ -104,6 +122,10 @@ export async function updateNonMotorPolicy(policyId: string, payload: NonMotorPo
   if (payinPercent < 0 || payinPercent > 100 || payoutPercent < 0 || payoutPercent > 100) return { ok:false, error:"Pay-in and payout percentages must be between 0 and 100." };
   if (payinFixedAmount < 0 || schemeAmount < 0 || payoutFixedAmount < 0) return { ok:false, error:"Commercial amounts cannot be negative." };
 
+  const premiumBreakup = await resolvePremiumBreakup(payload, productName);
+  if (!premiumBreakup.ok) return { ok:false, error:premiumBreakup.error };
+  const { premiumStructure, odPremium, tpPremium } = premiumBreakup;
+
   const selectedCustomerId = clean(payload.customerId);
   if (selectedCustomerId && selectedCustomerId !== existing.customer_id) {
     return { ok:false, error:"The linked customer cannot be changed from Policy Edit. Update the customer master separately if required." };
@@ -129,7 +151,7 @@ export async function updateNonMotorPolicy(policyId: string, payload: NonMotorPo
   const partnerPayoutAmount = commercial.payoutBasis === "FIXED_AMOUNT" ? payoutFixedAmount : netPremium * payoutPercent / 100;
   const retentionAmount = payinAfterTds - partnerPayoutAmount;
   const risk = payload.risk ?? {};
-  const additional = payload.additional ?? {};
+  const additional = { ...(payload.additional ?? {}), premiumStructure };
 
   const { error: policyError } = await admin.from("policies").update({
     insurance_company_id:insurerId,
@@ -269,8 +291,6 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
   const issuanceDate = clean(payload.source.issuanceDate);
   const sumInsured = numberOrNull(payload.policy.sumInsured);
   const grossPremium = numberOrNull(payload.policy.grossPremium);
-  const odPremium = 0;
-  const tpPremium = 0;
   const netPremium = moneyOrZero(payload.policy.netPremium);
   const enteredGst = numberOrNull(payload.policy.gstAmount);
   const gstAmount = enteredGst ?? Math.max(0, (grossPremium ?? 0) - netPremium);
@@ -299,6 +319,10 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
   if (netPremium < 0 || gstAmount < 0) return { ok:false, error:"Premium values cannot be negative." };
   if (payinPercent < 0 || payinPercent > 100 || payoutPercent < 0 || payoutPercent > 100) return { ok:false, error:"Pay-in and payout percentages must be between 0 and 100." };
   if (payinFixedAmount < 0 || schemeAmount < 0 || payoutFixedAmount < 0) return { ok:false, error:"Commercial amounts cannot be negative." };
+
+  const premiumBreakup = await resolvePremiumBreakup(payload, productName);
+  if (!premiumBreakup.ok) return { ok:false, error:premiumBreakup.error };
+  const { premiumStructure, odPremium, tpPremium } = premiumBreakup;
 
   const payinBaseAmount = commercial.payinBasis === "FIXED_AMOUNT" ? payinFixedAmount : netPremium * payinPercent / 100;
   const totalProjectedPayin = payinBaseAmount + schemeAmount;
@@ -370,7 +394,7 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
     if (policyError || !policy) { if (createdCustomerId) await admin.from("customers").delete().eq("id",createdCustomerId); return { ok:false, error:"We couldn't create the Non-Motor policy. Your form is still intact; review the details and try again." }; }
     createdPolicyId = policy.id;
 
-    const risk = payload.risk ?? {}, additional = payload.additional ?? {};
+    const risk = payload.risk ?? {}, additional = { ...(payload.additional ?? {}), premiumStructure };
     const { error: detailsError } = await admin.from("non_motor_policy_details").insert({
       policy_id:policy.id, category,
       risk_title:clean(risk.riskTitle)||clean(risk.cargoDescription)||clean(risk.projectName)||clean(risk.businessName)||null,
