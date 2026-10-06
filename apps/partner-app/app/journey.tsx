@@ -58,7 +58,9 @@ export default function JourneyScreen() {
 
           <View style={styles.summary}>
             <Summary value={data.policy_count} label="Policies" onPress={() => router.push('/(tabs)/policies')} />
+            <View style={styles.summaryDivider} />
             <Summary value={data.customer_count} label="Customers" onPress={() => router.push('/customers')} />
+            <View style={styles.summaryDivider} />
             <Summary value={data.claim_count} label="Claims" onPress={() => router.push('/(tabs)/claims')} />
           </View>
 
@@ -100,7 +102,6 @@ function Summary({ value, label, onPress }: { value: number; label: string; onPr
     >
       <Text style={styles.summaryValue}>{value}</Text>
       <Text style={styles.summaryLabel}>{label}</Text>
-      <Ionicons name="chevron-forward" size={12} color="#7A8AA4" />
     </Pressable>
   );
 }
@@ -132,6 +133,7 @@ const styles = StyleSheet.create({
   summary: { marginTop: 9, flexDirection: 'row', borderRadius: partnerTheme.radius.lg, paddingVertical: 11, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   summaryItem: { flex: 1, minHeight: 58, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, borderRadius: 12 },
   summaryItemPressed: { backgroundColor: '#F1F5FB' },
+  summaryDivider: { width: 1.5, alignSelf: 'stretch', marginVertical: 7, backgroundColor: '#D5DEEA', borderRadius: 999 },
   summaryValue: { color: partnerTheme.colors.ink, fontSize: 17, lineHeight: 22, fontWeight: '800' },
   summaryLabel: { marginTop: 4, color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.meta },
   sectionHeader: { marginTop: 15, marginBottom: 8 },
