@@ -23,6 +23,8 @@ Read `../../docs/PARTNER_APP_HANDOFF_2026_09_13.md`, `../../docs/PARTNER_APP_HOM
 
 ## Release evidence
 
+- **2026-10-06 — Partner login password UX and recovery:** branch `ui/partner-login-password-recovery-branding-2026-10-06`; login adds a far-right password visibility eye control, a `Forgot password?` action below the password field, and the INSUREIT app logo above the existing `insureit Partner` wordmark. Native Partner forgot/reset password routes use Supabase recovery with the existing `insureit-partner` scheme. No native dependency/runtime/schema/RLS change. **IMPLEMENTED; PR/CI/merge/production runtime 0.2.0 OTA pending. NO APK/AAB CREATED.**
+
 - **2026-10-06 — Home Policies Sold / Commission Earned metric icons:** PR #2814 merged as `dcb5dfe1112da042a1e6281525f7f00a0edab47b`; replaced the heavier Home metric artwork with compact professional existing Partner assets (`policyChecklist` and `payoutRefresh`) to match the supplied reference. Partner Verify #498 and Web Verify #5309 passed. Production runtime `0.2.0` OTA **DEPLOYED** via run #54 / update group `f8d78ae9-ed27-4b7c-9201-4530cbf6ad57`; installed-device verification pending. No metric data/calculation, API, schema, RLS, native dependency or runtime change. **NO APK/AAB CREATED.**
 
 
