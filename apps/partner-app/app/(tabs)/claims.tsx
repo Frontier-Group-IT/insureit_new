@@ -223,6 +223,7 @@ export default function ClaimsScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <FlatList
+        key={`claims-page-${collection.page}`}
         data={rows}
         keyExtractor={(row) => row.claim_id}
         renderItem={({ item }) => (
