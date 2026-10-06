@@ -80,20 +80,38 @@ async function githubSnapshot() {
   const token = process.env.GITHUB_READ_TOKEN;
   const headers: HeadersInit = {
     Accept: "application/vnd.github+json",
-    "User-Agent": "insureit-developer-workspace"
+    "User-Agent": "insureit-developer-workspace",
+    "X-GitHub-Api-Version": "2022-11-28",
+    "Cache-Control": "no-cache",
+    Pragma: "no-cache"
   };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const [runsResponse, repoResponse, prsResponse] = await Promise.all([
-    safeFetch(`https://api.github.com/repos/${GITHUB_REPO}/actions/runs?branch=main&per_page=8`, { headers }),
-    safeFetch(`https://api.github.com/repos/${GITHUB_REPO}/commits/main`, { headers }),
-    safeFetch(`https://api.github.com/search/issues?q=repo:${GITHUB_REPO}+is:pr+is:open&per_page=1`, { headers })
+  const cacheBust = Date.now();
+  const commitResponse = await safeFetch(
+    `https://api.github.com/repos/${GITHUB_REPO}/commits/main?observed_at=${cacheBust}`,
+    { headers }
+  );
+  if (!commitResponse.ok) throw new Error("GitHub main read failed");
+
+  const commitJson = await commitResponse.json() as { sha?: string };
+  const mainSha = commitJson.sha;
+  if (!mainSha) throw new Error("GitHub main SHA missing");
+
+  const [runsResponse, prsResponse] = await Promise.all([
+    safeFetch(
+      `https://api.github.com/repos/${GITHUB_REPO}/actions/runs?head_sha=${encodeURIComponent(mainSha)}&per_page=8&observed_at=${cacheBust}`,
+      { headers }
+    ),
+    safeFetch(
+      `https://api.github.com/search/issues?q=repo:${GITHUB_REPO}+is:pr+is:open&per_page=1&observed_at=${cacheBust}`,
+      { headers }
+    )
   ]);
 
-  if (!runsResponse.ok || !repoResponse.ok) throw new Error("GitHub read failed");
+  if (!runsResponse.ok) throw new Error("GitHub Actions read failed");
 
   const runsJson = await runsResponse.json() as { workflow_runs?: Array<Record<string, unknown>> };
-  const commitJson = await repoResponse.json() as { sha?: string };
   const prsJson = prsResponse.ok ? await prsResponse.json() as { total_count?: number } : null;
 
   const workflows: WorkflowRun[] = (runsJson.workflow_runs ?? []).map((run) => ({
@@ -108,7 +126,7 @@ async function githubSnapshot() {
   }));
 
   return {
-    sha: commitJson.sha ?? null,
+    sha: mainSha,
     workflows,
     openPullRequests: typeof prsJson?.total_count === "number" ? prsJson.total_count : null,
     authenticated: Boolean(token)

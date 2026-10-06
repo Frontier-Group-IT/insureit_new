@@ -416,3 +416,13 @@ Never collapse merge, publish and device verification into one status.
 - The migration is corrected to `DROP FUNCTION IF EXISTS public.partner_app_list_renewals(integer, integer, text, text, text)` before recreating the same five-argument RPC with the intended app-compatible return shape and existing authenticated/service-role grants.
 - Partner commercial scope logic and authorization predicates remain unchanged.
 - Evidence state: **IMPLEMENTED; PR/CI/merge/production migration application/runtime verification pending. NO APK/AAB CREATED.**
+
+## 2026-10-06 — Renewal Work Queue header/search/sort overlay refinement
+
+- Branch: `ui/partner-renewals-header-search-dropdown-clean-2026-10-06`.
+- Removes the small `RENEWALS` eyebrow and automatic header artwork so `Renewal Work Queue` sits directly beside Back.
+- Adds a visible light border to the renewal search field.
+- Due Date sort now opens as an anchored absolute overlay with z-index/elevation, so the renewal record list does not shift downward.
+- Shared top-bar/list/search components gain optional controls with existing defaults preserved for other screens.
+- No renewal query, pagination, summary, RPC, schema, RLS, authorization, native dependency, runtime or permission change.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/production runtime 0.2.0 OTA/device verification pending. NO APK/AAB CREATED.**
