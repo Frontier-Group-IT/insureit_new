@@ -35,6 +35,10 @@ export const PartnerAssets = {
     // Home exact-reference work uses the brighter action artwork without changing the historical alias above.
     renewalsReference: require('../assets/partner/actions/renewals.png'),
     documentSearch: require('../assets/partner/actions/document-search.png'),
+    quickPolicyIntake: require('../assets/partner/actions/quick-policy-intake.png'),
+    quickRenewals: require('../assets/partner/actions/quick-renewals.png'),
+    quickClaims: require('../assets/partner/actions/quick-claims.png'),
+    quickCustomers: require('../assets/partner/actions/quick-customers.png'),
   },
   products: {
     commercialInsurance: require('../assets/partner/products/commercial-insurance.png'),
