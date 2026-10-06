@@ -5,11 +5,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
+import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
 import { getPartnerPolicyDetail, type PartnerPolicyDetail } from '@/lib/policies';
 import { formatIndianCurrency } from '@/lib/format';
 import { PartnerAssets } from '@/lib/partner-assets';
-import { getPartnerInsurerLogoSource, getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
+import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import { partnerTheme } from '@/lib/theme';
 
 export default function PolicyDetailScreen() {
@@ -48,7 +49,6 @@ export default function PolicyDetailScreen() {
   }, [router]);
 
   const category = data ? policyCategory(data) : 'Policy';
-  const insurerLogo = data ? getPartnerInsurerLogoSource(data.insurer.name) : null;
   const manufacturerLogo = data?.vehicle ? getPartnerManufacturerLogoSource(data.vehicle.make) : null;
 
   return (
@@ -69,7 +69,7 @@ export default function PolicyDetailScreen() {
           <View style={styles.summaryCard}>
             <View style={styles.summaryTop}>
               <View style={styles.summaryArtworkWrap}>
-                <Image source={insurerLogo || policyArtwork(category)} style={styles.summaryArtwork} resizeMode="contain" />
+                <PartnerInsurerLogo name={data.insurer.name} fallback={policyArtwork(category)} style={styles.summaryArtwork} />
               </View>
               <View style={styles.summaryBody}>
                 <Text numberOfLines={1} style={styles.summaryPolicyNo}>{data.policy.policy_no || data.policy.policy_code || 'Policy'}</Text>

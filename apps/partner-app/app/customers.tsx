@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
+import { PartnerPagination } from '@/components/ui/partner-pagination';
 import {
   getPartnerCustomerSummary,
   listPartnerCustomers,
@@ -15,7 +16,7 @@ import {
 import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
-import { usePartnerPagedQuery } from '@/lib/use-partner-paged-query';
+import { usePartnerPageQuery } from '@/lib/use-partner-page-query';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
@@ -48,7 +49,7 @@ export default function CustomersScreen() {
     };
   }, [debouncedSearch]);
 
-  const collection = usePartnerPagedQuery<PartnerCustomerRow>({
+  const collection = usePartnerPageQuery<PartnerCustomerRow>({
     scopeKey: cacheScopeKey,
     key: `customers:list:${debouncedSearch || 'all'}`,
     pageSize: PAGE_SIZE,
@@ -147,19 +148,22 @@ export default function CustomersScreen() {
   );
 
   const footer = collection.rows.length ? (
-    <View style={styles.listFooter}>
-      {collection.loadingMore ? (
-        <View style={styles.loadingMore}>
-          <ActivityIndicator color={partnerTheme.colors.brand} />
-          <Text style={styles.loadingMoreText}>Loading more customers…</Text>
-        </View>
-      ) : null}
-    </View>
+    <PartnerPagination
+      page={collection.page}
+      totalPages={collection.totalPages}
+      total={collection.total}
+      pageSize={PAGE_SIZE}
+      rowCount={collection.rows.length}
+      onPrevious={collection.previousPage}
+      onNext={collection.nextPage}
+      disabled={collection.changingPage}
+    />
   ) : null;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <FlatList
+        key={`customers-page-${collection.page}`}
         data={collection.rows}
         keyExtractor={(row) => row.customer_id}
         renderItem={({ item }) => <CustomerCard row={item} onOpen={() => router.push(`/customer/${item.customer_id}` as never)} />}
@@ -171,8 +175,6 @@ export default function CustomersScreen() {
         keyboardShouldPersistTaps="handled"
         refreshing={collection.refreshing || summary.refreshing}
         onRefresh={() => void refreshAll()}
-        onEndReached={() => void collection.loadMore()}
-        onEndReachedThreshold={0.35}
       />
 
       <View style={styles.bottomNav}>

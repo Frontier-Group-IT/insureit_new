@@ -79,7 +79,7 @@ requireText(policies, 'PartnerAssets.emptyStates.noPolicies', 'Policies empty st
 requireText(policies, 'name="document-text-outline"', 'Policies reference cards must use the compact document-style policy icon.');
 requireText(policies, 'function policyStatus(', 'Policies reference cards must preserve lifecycle status styling.');
 requireText(claims, 'PartnerAssets.navigation.claims', 'Claims empty state/fallback must retain Partner claim artwork.');
-requireText(claims, 'getPartnerInsurerLogoSource', 'Claims rows must resolve insurer logos from the Partner catalog.');
+requireText(claims, 'PartnerInsurerLogo', 'Claims rows must render insurer logos through the live-master-data PartnerInsurerLogo component.');
 requireText(claims, "row.claim_state === 'completed'", 'Claims rows must preserve completed-state detection.');
 requireText(claims, 'styles.statusSuccess', 'Completed claims must preserve success-state styling.');
 requireText(renewals, 'PartnerAssets.emptyStates.noRenewals', 'Renewal empty states must use the prepared no-renewals artwork.');
