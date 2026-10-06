@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PartnerBanner } from '@/components/ui/partner-banner';
+import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerPagination } from '@/components/ui/partner-pagination';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
@@ -42,7 +43,7 @@ let savedClaimState: PartnerClaimState = 'all';
 
 export default function ClaimsScreen() {
   const router = useRouter();
-  const { cacheScopeKey, context } = usePartnerSession();
+  const { cacheScopeKey, context, avatarUri } = usePartnerSession();
   const [state, setState] = useState<PartnerClaimState>(savedClaimState);
   const [query, setQuery] = useState(savedClaimQuery);
   const debouncedSearch = useDebouncedValue(query.trim(), 350);
@@ -114,9 +115,16 @@ export default function ClaimsScreen() {
               accessibilityRole="button"
               accessibilityLabel="Open profile"
               onPress={() => router.push('/profile')}
-              style={({ pressed }) => [styles.heroAvatar, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.heroAvatarTouch, pressed && styles.pressed]}
             >
-              <Text style={styles.heroAvatarText}>{initials(name)}</Text>
+              <PartnerProfileAvatar
+                name={name}
+                uri={avatarUri}
+                size={35}
+                backgroundColor="#FFFFFF"
+                textColor={partnerTheme.colors.brandStrong}
+                style={styles.heroAvatar}
+              />
             </Pressable>
           </View>
         </View>
