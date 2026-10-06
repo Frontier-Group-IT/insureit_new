@@ -107,12 +107,17 @@ expectAll('app/claim/[id].tsx', [
   [/getPartnerManufacturerLogoSource\(data\.vehicle\.make\)/, 'claim summary must resolve the linked vehicle manufacturer logo'],
   [/<Text numberOfLines=\{1\} style=\{styles\.statusTitle\}>\{data\.customer\.name\}<\/Text>/, 'claim summary heading must show customer name'],
   [/activeChipText\}>\{humanize\(data\.claim\.current_status/, 'claim status badge must show the current workflow status'],
-  [/statusFooterRightText[\s\S]*data\.vehicle\.vehicle_no/, 'vehicle number must sit beside service mode in the summary footer'],
+  [/statusServiceMode[\s\S]*footerDivider[\s\S]*statusVehicleNo[\s\S]*data\.vehicle\.vehicle_no/, 'service mode, divider and vehicle number must remain ordered in the summary footer'],
   [/PartnerAssets\.navigation\.customers/, 'insured-person row must use the approved customer artwork'],
   [/accessibilityLabel=\{overviewExpanded \? 'Show fewer claim overview details' : 'View all claim overview details'\}/, 'Claim Overview View All must be an accessible interactive control'],
   [/setOverviewExpanded\(\(value\) => !value\)/, 'Claim Overview View All must expand and collapse additional details'],
 ]);
 expect('app/claim/[id].tsx', /^(?![\s\S]*CURRENT STATUS)[\s\S]*$/, 'claim summary must not restore the CURRENT STATUS eyebrow');
+expect('app/claim/[id].tsx', /^(?![\s\S]*>SERVICE<)[\s\S]*$/, 'claim detail header must not restore the SERVICE eyebrow');
+expectAll('app/claim/[id].tsx', [
+  [/Control No\. \{data\.claim\.claim_no/, 'claim control number must render directly below the customer heading'],
+  [/isCompletedClaimStatus\(data\.claim\.current_status\)[\s\S]*completeChip/, 'completed claim status badge must use the green success treatment'],
+]);
 expectAll('lib/claims.ts', [
   [/partner_app_customer_detail/, 'claim detail must enrich vehicle make through the existing scoped customer-detail RPC'],
   [/matchedVehicle[\s\S]*make:/, 'claim detail must carry the matched manufacturer into the vehicle payload'],
