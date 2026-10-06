@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -8,8 +8,9 @@ import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerOperationalRow } from '@/components/ui/partner-operational-row';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
+import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
+import { PartnerPagination } from '@/components/ui/partner-pagination';
 import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
-import { getPartnerInsurerLogoSource } from '@/lib/catalog-logos';
 import {
   getPartnerRenewalSummary,
   listPartnerRenewals,
@@ -22,7 +23,7 @@ import { formatIndianCurrency } from '@/lib/format';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
-import { usePartnerPagedQuery } from '@/lib/use-partner-paged-query';
+import { usePartnerPageQuery } from '@/lib/use-partner-page-query';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
@@ -66,7 +67,7 @@ export default function RenewalsScreen() {
     return { rows: nextRows, total: nextRows[0]?.total_count ?? 0 };
   }, [bucket, debouncedSearch, mode]);
 
-  const collection = usePartnerPagedQuery<PartnerRenewalRow>({
+  const collection = usePartnerPageQuery<PartnerRenewalRow>({
     scopeKey: cacheScopeKey,
     key: `renewals:list:${mode}:${bucket}:${debouncedSearch || 'all'}`,
     pageSize: PAGE_SIZE,
@@ -200,9 +201,16 @@ export default function RenewalsScreen() {
   );
 
   const footer = collection.rows.length ? (
-    <View style={styles.listFooter}>
-      {collection.loadingMore ? <View style={styles.loadingMore}><ActivityIndicator color={partnerTheme.colors.brand} /><Text style={styles.loadingMoreText}>Loading more renewal records…</Text></View> : collection.rows.length >= collection.total ? <Text style={styles.endText}>End of renewal queue</Text> : null}
-    </View>
+    <PartnerPagination
+      page={collection.page}
+      totalPages={collection.totalPages}
+      total={collection.total}
+      pageSize={PAGE_SIZE}
+      rowCount={collection.rows.length}
+      onPrevious={collection.previousPage}
+      onNext={collection.nextPage}
+      disabled={collection.changingPage}
+    />
   ) : null;
 
   return (
@@ -218,7 +226,6 @@ export default function RenewalsScreen() {
       footer={footer}
       refreshing={collection.refreshing || summary.refreshing}
       onRefresh={() => void refreshAll()}
-      onEndReached={() => void collection.loadMore()}
       ItemSeparatorComponent={() => <View style={styles.separator} />}
     />
   );
@@ -248,13 +255,12 @@ function resolveSummarySelection(data: PartnerRenewalSummary | null | undefined,
 function toneColor(tone: 'amber' | 'blue' | 'purple' | 'red') { return tone === 'amber' ? '#F59E0B' : tone === 'blue' ? '#1687F8' : tone === 'purple' ? '#7048F5' : '#F04444'; }
 
 function RenewalCard({ row, mode, onOpenPolicy }: { row: PartnerRenewalRow; mode: PartnerRenewalMode; onOpenPolicy: () => void }) {
-  const insurerLogo = getPartnerInsurerLogoSource(row.insurer_name);
   return (
     <PartnerOperationalRow
       title={row.customer_name}
       subtitle={row.policy_no || row.policy_code || 'Policy'}
       value={formatIndianCurrency(row.net_premium)}
-      leading={<View style={styles.renewalArtwork}><Image source={insurerLogo ?? PartnerAssets.actions.renewals} style={styles.renewalArtworkImage} resizeMode="contain" /></View>}
+      leading={<View style={styles.renewalArtwork}><PartnerInsurerLogo name={row.insurer_name} fallback={PartnerAssets.actions.renewals} style={styles.renewalArtworkImage} /></View>}
       trailing={<PartnerStatusBadge label={renewalLabel(row.end_date)} tone={mode === 'expired' ? 'danger' : renewalTone(row.end_date)} />}
       onPress={onOpenPolicy}
       accessibilityLabel={`Open renewal policy ${row.policy_no || row.policy_code || ''} for ${row.customer_name}`}
