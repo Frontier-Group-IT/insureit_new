@@ -4,7 +4,6 @@ import { useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
-  Linking,
   Platform,
   Pressable,
   ScrollView,
