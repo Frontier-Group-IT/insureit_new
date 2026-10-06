@@ -242,9 +242,6 @@ function greeting(name: string) {
   return `${prefix}, ${firstName}`;
 }
 
-function initials(value: string) {
-  return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'IP';
-}
 
 function policyTone(value: PartnerPolicyRow['lifecycle_status']): 'success' | 'warning' | 'danger' | 'info' {
   if (value === 'expired') return 'danger';
@@ -273,7 +270,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: partnerTheme.colors.brandSoft,
   },
-  avatarText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.label },
   pressed: { opacity: 0.76 },
   feedback: { marginTop: 8 },
   artwork: {
