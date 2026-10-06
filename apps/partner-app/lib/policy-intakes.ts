@@ -55,6 +55,8 @@ type PreparedUpload = {
   signed_url: string;
 };
 
+export type PartnerPolicyType = 'motor' | 'non_motor' | 'life' | 'health';
+
 export type PartnerPolicyIntakeUploadProgress = {
   stage: 'preparing' | 'uploading' | 'submitting';
   percent?: number;
@@ -75,10 +77,27 @@ export async function listPartnerPolicyIntakeSources(): Promise<PartnerPolicyInt
 
 export async function submitPartnerPolicyIntake(input: {
   leadSourceId?: string;
+  policyType: PartnerPolicyType;
   customerMobile: string;
-  file: DocumentPickerAsset;
+  file?: DocumentPickerAsset | null;
   onProgress?: (progress: PartnerPolicyIntakeUploadProgress) => void;
 }) {
+  const proposalForm = input.policyType === 'life' || input.policyType === 'health';
+
+  if (!input.file) {
+    if (!proposalForm) throw new Error('Upload the policy PDF or image.');
+    input.onProgress?.({ stage: 'submitting' });
+    return apiRequest<{ ok: true; id: string; number: string; status: 'ready_for_review' }>('/api/partner/policy-intakes', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'submit_without_proposal',
+        lead_source_id: input.leadSourceId,
+        policy_type: input.policyType,
+        customer_mobile: input.customerMobile,
+      }),
+    });
+  }
+
   const meta = fileMeta(input.file);
   input.onProgress?.({ stage: 'preparing' });
 
@@ -87,6 +106,7 @@ export async function submitPartnerPolicyIntake(input: {
     body: JSON.stringify({
       action: 'prepare',
       lead_source_id: input.leadSourceId,
+      policy_type: input.policyType,
       customer_mobile: input.customerMobile,
       file: meta,
     }),
@@ -98,13 +118,14 @@ export async function submitPartnerPolicyIntake(input: {
   });
 
   input.onProgress?.({ stage: 'submitting' });
-  return apiRequest<{ ok: true; id: string; number: string; status: 'processing' }>('/api/partner/policy-intakes', {
+  return apiRequest<{ ok: true; id: string; number: string; status: 'processing' | 'ready_for_review' }>('/api/partner/policy-intakes', {
     method: 'POST',
     body: JSON.stringify({
       action: 'complete',
       id: prepared.id,
       number: prepared.number,
       lead_source_id: input.leadSourceId,
+      policy_type: input.policyType,
       customer_mobile: input.customerMobile,
       storage_path: prepared.storage_path,
       file: meta,
