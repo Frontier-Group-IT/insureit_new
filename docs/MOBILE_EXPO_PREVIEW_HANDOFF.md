@@ -763,3 +763,19 @@ Safety:
 - no runtime-version change
 - no native dependency/config change
 - no database/schema/RPC/RLS change
+
+
+---
+
+## 2026-10-06 — Customer Exchange marketplace first visual draft
+
+- Branch: `feature/customer-exchange-marketplace-draft-2026-10-06`.
+- Customer App runtime remains **0.3.0**; no native package/config/runtime-version change.
+- Replaced `apps/mobile-app/app/customer/exchange.tsx` Coming Soon placeholder with an isolated first-draft marketplace screen for visual approval.
+- Buy tab: local sample commercial-vehicle inventory, search, category filtering, favorites, verification states, vehicle detail, controlled seller-contact messaging and interactive demo bid increments.
+- Sell tab: first-draft listing form, vehicle type selection, guided-photo placeholders, expected price, Open Bidding presentation, seller privacy explanation and listing preview.
+- My Activity: locally reflects saved vehicles, demo bids and the current-session draft listing.
+- **Safety boundary:** sample vehicles are presentation data only. Demo bids and sell drafts live only in React screen state; nothing is persisted to Supabase and no seller/buyer personal data is exposed.
+- Existing Customer Home quick action route remains unchanged; only the Exchange destination implementation is replaced.
+- No schema, migration, RLS, API/RPC, payment, call-masking, APK/AAB or native-runtime change.
+- **IMPLEMENTED; PR/CI/merge/production OTA/installed-device verification pending.**
