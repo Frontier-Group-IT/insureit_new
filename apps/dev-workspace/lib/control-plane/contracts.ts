@@ -3,10 +3,13 @@
  * All proposed mutations require an authenticated Action Gateway in a later phase.
  */
 export const WRITE_ACTIONS_ENABLED = false as const;
+export const DRAFT_REGISTRY_WRITES_ENABLED = true as const;
 export const NATIVE_BUILDS_ENABLED = false as const;
 
 export type RiskLevel = "green" | "blue" | "amber" | "red" | "black";
 export type ActionKind =
+  | "config.draft"
+  | "config.rollback_preview"
   | "config.publish"
   | "config.rollback"
   | "assets.replace"
@@ -29,6 +32,8 @@ export type ActionContract = Readonly<{
 }>;
 
 export const ACTION_CONTRACTS: readonly ActionContract[] = [
+  { kind: "config.draft", risk: "green", capability: "config:draft", requiresReauthentication: true, requiresSecondApproval: false, requiresVerifiedChecks: false, auditRequired: true, rollbackPlanRequired: true },
+  { kind: "config.rollback_preview", risk: "green", capability: "config:rollback-preview", requiresReauthentication: true, requiresSecondApproval: false, requiresVerifiedChecks: false, auditRequired: true, rollbackPlanRequired: true },
   { kind: "config.publish", risk: "green", capability: "config:publish", requiresReauthentication: false, requiresSecondApproval: false, requiresVerifiedChecks: false, auditRequired: true, rollbackPlanRequired: true },
   { kind: "config.rollback", risk: "green", capability: "config:rollback", requiresReauthentication: false, requiresSecondApproval: false, requiresVerifiedChecks: false, auditRequired: true, rollbackPlanRequired: true },
   { kind: "assets.replace", risk: "green", capability: "assets:publish", requiresReauthentication: false, requiresSecondApproval: false, requiresVerifiedChecks: false, auditRequired: true, rollbackPlanRequired: true },
@@ -47,6 +52,36 @@ export function evaluateActionContract(kind: ActionKind): { allowed: false; reas
   return {
     allowed: false,
     reason: "The authenticated Action Gateway, audit ledger, approval checks and rollback engine are not enabled.",
+    contract
+  };
+}
+
+
+export function evaluateDraftAction(input: {
+  kind: "config.draft" | "config.rollback_preview";
+  authorized: boolean;
+  assuranceLevel: "aal1" | "aal2" | "unknown";
+  capabilities: readonly string[];
+}) {
+  const contract = ACTION_CONTRACTS.find(item => item.kind === input.kind);
+  if (!contract) throw new Error("Unknown draft action kind");
+
+  if (!DRAFT_REGISTRY_WRITES_ENABLED) {
+    return { allowed: false as const, reason: "Draft registry writes are disabled.", contract };
+  }
+  if (!input.authorized) {
+    return { allowed: false as const, reason: "An active protected IT Super User identity is required.", contract };
+  }
+  if (input.assuranceLevel !== "aal2") {
+    return { allowed: false as const, reason: "MFA/AAL2 is required before saving a configuration draft.", contract };
+  }
+  if (!input.capabilities.includes(contract.capability)) {
+    return { allowed: false as const, reason: "The current session does not have the required draft capability.", contract };
+  }
+
+  return {
+    allowed: true as const,
+    reason: "Allowed for append-only preview registry only. This cannot publish to a production consumer.",
     contract
   };
 }
