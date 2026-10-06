@@ -38,7 +38,7 @@ export const PartnerField = forwardRef<TextInput, PartnerFieldProps>(function Pa
           accessibilityState={accessibilityState}
           style={[
             styles.input,
-            rightAccessory && styles.inputWithAccessory,
+            Boolean(rightAccessory) && styles.inputWithAccessory,
             inputProps.editable === false && styles.disabled,
             error && styles.inputError,
             inputProps.style,
