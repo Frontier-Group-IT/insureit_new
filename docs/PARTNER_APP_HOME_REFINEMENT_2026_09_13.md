@@ -1,3 +1,13 @@
+## 2026-10-06 — Quick Actions exact transparent reference icons
+
+- Branch: `fix/partner-home-transparent-reference-icons-2026-10-06`.
+- Device verification after PR #2756 showed the coordinated navigation icon family was not visually acceptable on Home: Claims rendered blank, while Policy Intake, Renewals and Customers looked soft/boxed compared with the approved reference.
+- Home Quick Actions now use the existing crisp action artwork that matches the supplied reference: Policy Intake → `actions.policyRegister`, Renewals → `actions.renewalsReference`, Claims → `actions.policyChecklist`, Customers → `actions.customerRegister`.
+- The extra light-blue `quickIcon` wrapper background is removed by making it transparent, so only the blue icon artwork remains over the Quick Action tile.
+- Card dimensions, labels, routes, animations, business data, permissions, runtime and native configuration are unchanged.
+- OTA-safe for Partner production runtime `0.2.0`; no APK/AAB/native build is authorized or created.
+- Evidence state: **IMPLEMENTED on branch; PR/CI/merge/OTA/device verification pending.**
+
 # INSUREIT Partner Home Refinement Handoff — 2026-09-13
 
 This note is the fast operational continuation record for the current Partner Home work. Read it together with `docs/PARTNER_APP_HANDOFF_2026_09_13.md` and `apps/partner-app/AGENTS.md`.
