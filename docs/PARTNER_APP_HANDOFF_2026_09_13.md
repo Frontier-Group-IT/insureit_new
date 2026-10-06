@@ -499,3 +499,16 @@ Never collapse merge, publish and device verification into one status.
 - Visual-system assertions prevent the removed metadata/chevron and wide logo spacing from returning.
 - No activity query, data semantics, route, API/RPC, schema, RLS, permission, native dependency or runtime change; OTA-safe for Partner production runtime 0.2.0.
 - Evidence state: **IMPLEMENTED; PR/CI/merge/production OTA/device verification pending. NO APK/AAB CREATED.**
+
+## 2026-10-06 — Claim Details professional icon refinement
+
+- Branch: `ui/partner-claim-detail-professional-icons-2026-10-06`.
+- Claim Details keeps the existing screen/card layout, manufacturer-logo resolver, customer/policy/claim data, current-status chip, financial values, journey chronology and all navigation.
+- The header now uses the prepared Partner Claims artwork instead of a generic document glyph.
+- Section identities use prepared Partner artwork: Customers for Insured Person, Claims for Claim Overview, payout artwork for Financial Snapshot and Journey artwork for Journey.
+- Service mode and vehicle summary metadata use clearer blue icon containers.
+- Overview tiles retain their existing fields but use clearer filled semantic icons for claim number, policy, date, location, assistance, last update, service mode, vehicle and insurer.
+- Journey events now use semantic Partner artwork rather than generic vector-only icons: claim created, surveyor/assignment, document activity, approval/verification, settlement/closure, payment/amount, inspection/survey and generic journey stages.
+- No claim query, API/RPC, schema, RLS, permission, financial calculation, native dependency, runtime or package change.
+- OTA-safe for Partner production runtime 0.2.0.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/production OTA/device verification pending. NO APK/AAB CREATED.**
