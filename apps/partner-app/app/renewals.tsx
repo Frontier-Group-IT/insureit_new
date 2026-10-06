@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Image, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -41,6 +41,9 @@ let savedRenewalQuery = '';
 
 export default function RenewalsScreen() {
   const router = useRouter();
+  const { width: windowWidth } = useWindowDimensions();
+  const sortAnchorRef = useRef<View>(null);
+  const [sortMenuPosition, setSortMenuPosition] = useState({ top: 0, left: 0 });
   const { cacheScopeKey } = usePartnerSession();
   const [mode, setMode] = useState<PartnerRenewalMode>(savedRenewalMode);
   const [bucket, setBucket] = useState<PartnerRenewalBucket>(savedRenewalMode === 'expired' ? 'overdue' : 'all');
@@ -102,6 +105,17 @@ export default function RenewalsScreen() {
     setSortOpen(false);
   };
 
+  const toggleSort = () => {
+    if (sortOpen) {
+      setSortOpen(false);
+      return;
+    }
+    sortAnchorRef.current?.measureInWindow((x, y, width, height) => {
+      setSortMenuPosition({ top: y + height + 4, left: Math.max(12, Math.min(x + width - 148, windowWidth - 160)) });
+      setSortOpen(true);
+    });
+  };
+
   const selectSort = (direction: DueDateSort) => {
     setSortDirection(direction);
     setSortOpen(false);
@@ -129,12 +143,7 @@ export default function RenewalsScreen() {
               <Text style={styles.summaryCountLabel}>Policies</Text>
             </View>
           </Pressable>
-          <View style={styles.metricRow}>
-            <Metric icon="time-outline" value={summary.data?.due_0_7_count ?? 0} label="0 – 7d" tone="amber" active={bucket === '0_7'} onPress={() => selectBucket('0_7')} />
-            <Metric icon="time-outline" value={summary.data?.due_8_15_count ?? 0} label="8 – 15d" tone="blue" active={bucket === '8_15'} onPress={() => selectBucket('8_15')} />
-            <Metric icon="time-outline" value={summary.data?.due_16_30_count ?? 0} label="16 – 30d" tone="purple" active={bucket === '16_30'} onPress={() => selectBucket('16_30')} />
-            <Metric icon="alert-circle-outline" value={summary.data?.overdue_count ?? 0} label="Overdue" tone="red" active={bucket === 'overdue'} onPress={() => selectBucket('overdue')} last />
-          </View>
+
         </View>
       )}
 
@@ -169,23 +178,11 @@ export default function RenewalsScreen() {
             <Text style={styles.opportunitiesMeta}>{collection.loading ? 'Loading…' : `${collection.rows.length} policies · ${collection.total} total`}</Text>
           </View>
         </View>
-        <View style={styles.sortArea}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Sort renewals by due date" accessibilityHint="Opens sorting options without moving renewal records" accessibilityState={{ expanded: sortOpen }} onPress={() => setSortOpen((open) => !open)} style={({ pressed }) => [styles.sortButton, pressed && styles.pressed]}>
+        <View ref={sortAnchorRef} collapsable={false} style={styles.sortArea}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Sort renewals by due date" accessibilityHint="Opens sorting options above renewal records" accessibilityState={{ expanded: sortOpen }} onPress={toggleSort} style={({ pressed }) => [styles.sortButton, pressed && styles.pressed]}>
             <Text style={styles.sortText}>Due Date</Text>
             <Ionicons name={sortOpen ? 'chevron-up' : 'chevron-down'} size={14} color="#42516A" />
           </Pressable>
-          {sortOpen ? (
-            <View style={styles.sortMenu}>
-              <Pressable accessibilityRole="button" onPress={() => selectSort('asc')} style={({ pressed }) => [styles.sortOption, pressed && styles.sortOptionPressed]}>
-                <Text style={[styles.sortOptionText, sortDirection === 'asc' && styles.sortOptionTextActive]}>Earliest first</Text>
-                {sortDirection === 'asc' ? <Ionicons name="checkmark" size={15} color={partnerTheme.colors.brand} /> : null}
-              </Pressable>
-              <Pressable accessibilityRole="button" onPress={() => selectSort('desc')} style={({ pressed }) => [styles.sortOption, pressed && styles.sortOptionPressed]}>
-                <Text style={[styles.sortOptionText, sortDirection === 'desc' && styles.sortOptionTextActive]}>Latest first</Text>
-                {sortDirection === 'desc' ? <Ionicons name="checkmark" size={15} color={partnerTheme.colors.brand} /> : null}
-              </Pressable>
-            </View>
-          ) : null}
         </View>
       </View>
 
@@ -219,30 +216,42 @@ export default function RenewalsScreen() {
   ) : null;
 
   return (
-    <PartnerListScreen
+    <>
+      <PartnerListScreen
       key={`renewals-page-${collection.page}`}
       title="Renewal Work Queue"
       onBack={() => router.back()}
       showArtwork={false}
       data={sortedRows}
       keyExtractor={(row) => row.policy_id}
-      renderItem={({ item }) => <RenewalCard row={item} mode={mode} onOpenPolicy={() => router.push(`/policy/${item.policy_id}` as never)} />}
+      renderItem={({ item, index }) => (
+        <View style={[styles.recordCard, index === sortedRows.length - 1 && styles.recordCardLast]}>
+          <RenewalCard row={item} mode={mode} onOpenPolicy={() => router.push(`/policy/${item.policy_id}` as never)} />
+        </View>
+      )}
       header={header}
       empty={empty}
       footer={footer}
       refreshing={collection.refreshing || summary.refreshing}
       onRefresh={() => void refreshAll()}
-      ItemSeparatorComponent={() => <View style={styles.separator} />}
-    />
-  );
-}
-
-function Metric({ icon, value, label, tone, active, onPress, last = false }: { icon: keyof typeof Ionicons.glyphMap; value: number; label: string; tone: 'amber' | 'blue' | 'purple' | 'red'; active: boolean; onPress: () => void; last?: boolean }) {
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`Show ${label} renewal policies`} onPress={onPress} style={({ pressed }) => [styles.metric, !last && styles.metricDivider, active && styles.metricActive, pressed && styles.summaryPressed]}>
-      <View style={[styles.metricIcon, styles[`${tone}Bg`]]}><Ionicons name={icon} size={18} color={toneColor(tone)} /></View>
-      <View><Text style={[styles.metricValue, tone === 'red' && styles.redValue]}>{value}</Text><Text style={styles.metricLabel}>{label}</Text></View>
-    </Pressable>
+      ItemSeparatorComponent={() => <View style={styles.recordDivider} />}
+      />
+      <Modal visible={sortOpen} transparent animationType="none" statusBarTranslucent onRequestClose={() => setSortOpen(false)}>
+        <View style={styles.sortOverlay}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close sort options" onPress={() => setSortOpen(false)} style={StyleSheet.absoluteFill} />
+          <View style={[styles.sortMenu, { top: sortMenuPosition.top, left: sortMenuPosition.left }]}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Earliest due date first" onPress={() => selectSort('asc')} style={({ pressed }) => [styles.sortOption, pressed && styles.sortOptionPressed]}>
+              <Text style={[styles.sortOptionText, sortDirection === 'asc' && styles.sortOptionTextActive]}>Earliest first</Text>
+              {sortDirection === 'asc' ? <Ionicons name="checkmark" size={15} color={partnerTheme.colors.brand} /> : null}
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Latest due date first" onPress={() => selectSort('desc')} style={({ pressed }) => [styles.sortOption, pressed && styles.sortOptionPressed]}>
+              <Text style={[styles.sortOptionText, sortDirection === 'desc' && styles.sortOptionTextActive]}>Latest first</Text>
+              {sortDirection === 'desc' ? <Ionicons name="checkmark" size={15} color={partnerTheme.colors.brand} /> : null}
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -257,8 +266,6 @@ function resolveSummarySelection(data: PartnerRenewalSummary | null | undefined,
   if (bucket === 'overdue' || mode === 'expired') return { eyebrow: 'OVERDUE', premium: data?.overdue_premium ?? 0, count: data?.overdue_count ?? 0 };
   return { eyebrow: 'NEXT 30 DAYS', premium: data?.due_30_premium ?? 0, count: data?.due_30_count ?? 0 };
 }
-
-function toneColor(tone: 'amber' | 'blue' | 'purple' | 'red') { return tone === 'amber' ? '#F59E0B' : tone === 'blue' ? '#1687F8' : tone === 'purple' ? '#7048F5' : '#F04444'; }
 
 function RenewalCard({ row, mode, onOpenPolicy }: { row: PartnerRenewalRow; mode: PartnerRenewalMode; onOpenPolicy: () => void }) {
   return (
@@ -288,7 +295,7 @@ function formatUpdatedAt(value: number | null) { if (!value) return 'earlier'; r
 
 const styles = StyleSheet.create({
   summaryPanel: { marginTop: -4, padding: 16, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E7ECF4', shadowColor: '#0A285F', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 },
-  summaryLead: { paddingBottom: 12, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#EDF0F5' },
+  summaryLead: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   summaryPressed: { opacity: 0.72 },
   summaryEyebrow: { color: '#68758A', fontSize: 9, lineHeight: 12, fontWeight: '800', letterSpacing: 1.4 },
   summaryPremium: { marginTop: 2, color: '#0C1830', fontSize: 22, lineHeight: 27, fontWeight: '800' },
@@ -312,13 +319,17 @@ const styles = StyleSheet.create({
   tabBadgeText: { fontSize: 10, fontWeight: '800' }, tabBadgeBlueText: { color: '#4434F4' }, tabBadgeDangerText: { color: '#EF4444' },
   searchRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center' }, searchGrow: { flex: 1 },
   searchField: { borderColor: '#D8E0EB', backgroundColor: '#FFFFFF' },
-  opportunitiesHeader: { position: 'relative', zIndex: 20, marginTop: 14, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, opportunitiesLeft: { flexDirection: 'row', alignItems: 'center', gap: 9, flexShrink: 1 },
+  opportunitiesHeader: { marginTop: 14, paddingHorizontal: 10, paddingVertical: 10, backgroundColor: '#FFFFFF', borderColor: '#E4E9F1', borderWidth: 1, borderBottomWidth: 0, borderTopLeftRadius: 14, borderTopRightRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, opportunitiesLeft: { flexDirection: 'row', alignItems: 'center', gap: 9, flexShrink: 1 },
   opportunitiesTitle: { color: '#17233B', fontSize: 11, lineHeight: 15, fontWeight: '900', letterSpacing: 0.25 }, opportunitiesMeta: { marginTop: 1, color: '#7A8598', fontSize: 9 },
-  sortArea: { position: 'relative', zIndex: 30, flexDirection: 'row', alignItems: 'center' }, sortButton: { minHeight: 35, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 11, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F1' }, sortText: { color: '#263249', fontSize: 10, fontWeight: '700' },
-  sortMenu: { position: 'absolute', top: 39, right: 0, zIndex: 40, width: 148, paddingVertical: 4, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F1', shadowColor: '#0C2856', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.14, shadowRadius: 10, elevation: 10 },
+  sortArea: { flexDirection: 'row', alignItems: 'center' }, sortButton: { minHeight: 35, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 11, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F1' }, sortText: { color: '#263249', fontSize: 10, fontWeight: '700' },
+  sortOverlay: { flex: 1, justifyContent: 'flex-start' },
+  sortMenu: { position: 'absolute', width: 148, paddingVertical: 4, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F1', shadowColor: '#0C2856', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.16, shadowRadius: 10, elevation: 15 },
   sortOption: { minHeight: 36, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, sortOptionPressed: { backgroundColor: '#F6F8FC' }, sortOptionText: { color: '#42516A', fontSize: 10.5, fontWeight: '600' }, sortOptionTextActive: { color: partnerTheme.colors.brand, fontWeight: '800' },
-  emptyCard: { minHeight: 205, marginTop: 2, borderRadius: 15, borderWidth: 1, borderStyle: 'dashed', borderColor: '#DCE4EF', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 20 },
+  emptyCard: { minHeight: 205, borderBottomLeftRadius: 14, borderBottomRightRadius: 14, borderWidth: 1, borderTopWidth: 0, borderColor: '#E4E9F1', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 20 },
   emptyArtwork: { width: 122, height: 82, marginBottom: 8 }, emptyTitle: { color: '#101A31', fontSize: 13, lineHeight: 18, fontWeight: '800', textAlign: 'center' }, emptyMessage: { marginTop: 7, color: '#69758A', fontSize: 10, lineHeight: 17, textAlign: 'center' },
+  recordCard: { backgroundColor: '#FFFFFF', borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#E4E9F1' },
+  recordCardLast: { borderBottomWidth: 1, borderBottomLeftRadius: 14, borderBottomRightRadius: 14, overflow: 'hidden' },
+  recordDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#E4E9F1' },
   separator: { height: StyleSheet.hairlineWidth, backgroundColor: partnerTheme.colors.line }, renewalArtwork: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' }, renewalArtworkImage: { width: 36, height: 36 },
   pressed: { opacity: 0.65 },
   listFooter: { minHeight: 58, alignItems: 'center', justifyContent: 'center' }, loadingMore: { flexDirection: 'row', alignItems: 'center', gap: 8 }, loadingMoreText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption }, endText: { color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.meta },
