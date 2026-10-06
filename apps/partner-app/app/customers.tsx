@@ -163,6 +163,7 @@ export default function CustomersScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <FlatList
+        key={`customers-page-${collection.page}`}
         data={collection.rows}
         keyExtractor={(row) => row.customer_id}
         renderItem={({ item }) => <CustomerCard row={item} onOpen={() => router.push(`/customer/${item.customer_id}` as never)} />}
