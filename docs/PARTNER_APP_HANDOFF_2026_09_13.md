@@ -59,6 +59,16 @@
 ---
 
 # INSUREIT Partner App — Operational Handoff (2026-09-13)
+## 2026-10-06 — My Impact professional icons and clickable cards
+
+- Branch: `ui/partner-impact-professional-icons-clickable-cards-2026-10-06`.
+- Replaced the mixed My Impact card artwork with a single professional blue icon treatment based on Ionicons already bundled in the Partner app; no new dependency is introduced.
+- Added navigation to every visible card/metric: Active Motor Protection→Business, Vehicles covered→Customers, Customers served→Customers, Policies in your book→Policies, Claims assisted→Claims, Gross premium→Business Report, This Month Policies→Policies, Customers added→Customers, Claim Outcomes→Claims, See your journey→Journey.
+- Added subtle pressed states, chevrons where appropriate, and accessibility labels while preserving the existing layout hierarchy and all live values.
+- Updated the Partner visual regression contract so CI validates the new icon markers and clickable destinations instead of the superseded image-asset list.
+- No impact query/RPC, business calculation, permissions, schema/RLS, runtime/native dependency or build configuration change.
+- Evidence state: **IMPLEMENTED; PR/CI pending; NOT MERGED; NOT DEPLOYED; NO APK/AAB CREATED.**
+
 ## 2026-10-06 — Business page icon styling unification
 
 - PR #2824 merged as `d5d299fdbb93bd0dc0b74c81575c599af059ce80` after Partner Verify #512 and Web Verify #5327 passed.
