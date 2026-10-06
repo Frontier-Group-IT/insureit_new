@@ -145,6 +145,7 @@ requireText(journey, 'PartnerAssets.status.journey', 'Journey timeline and empty
 for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (journey.includes(tinySize)) throw new Error(`Journey must not regress to tiny typography: ${tinySize}`);
 requireText(weeklyStory, 'PartnerAssets.actions.renewals', 'Your Week must keep renewal artwork for upcoming work.');
 requireText(weeklyStory, "backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DCE9FA'", 'Your Week This Week pill must use the white treatment.');
+requireText(weeklyStory, 'minWidth: 92, flexShrink: 0', 'Your Week This Week pill must not clip the Week label on compact widths.');
 requireText(weeklyStory, "backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E7F0'", 'Your Week reflection card must use a white surface.');
 requireText(weeklyStory, 'accessibilityState={{ expanded: comparisonOpen }}', 'Your Week comparison range control must expose expanded state.');
 requireText(weeklyStory, '[7, 14, 30].map((days)', 'Your Week comparison range control must offer 7, 14 and 30 day options.');
