@@ -59,6 +59,15 @@
 ---
 
 # INSUREIT Partner App — Operational Handoff (2026-09-13)
+## 2026-10-06 — Search full-name greeting
+
+- Branch: `ui/partner-search-full-name-greeting-2026-10-06`.
+- The universal Search page greeting now displays the complete resolved Partner user name, e.g. `Good evening, Nishant Mishra`, instead of using only the first name.
+- The same session-backed display name continues to drive the profile avatar initials; no identity source or hardcoded user name was introduced.
+- Search behavior, authorized record scope, queries, result rows, navigation, permissions and APIs are unchanged.
+- No backend/schema/RLS/native/runtime change and no APK/AAB created.
+- Evidence state: **IMPLEMENTED; PR/CI pending; NOT MERGED; NOT DEPLOYED.**
+
 ## 2026-10-06 — My Impact professional icons and clickable cards
 
 - Branch: `ui/partner-impact-professional-icons-clickable-cards-2026-10-06`.
