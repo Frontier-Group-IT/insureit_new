@@ -145,6 +145,11 @@ for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (i
 requireText(journey, 'PartnerAssets.status.journey', 'Journey timeline and empty state must use journey artwork.');
 for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (journey.includes(tinySize)) throw new Error(`Journey must not regress to tiny typography: ${tinySize}`);
 requireText(weeklyStory, 'PartnerAssets.actions.renewals', 'Your Week must keep renewal artwork for upcoming work.');
+requireText(weeklyStory, "backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DCE9FA'", 'Your Week This Week pill must use the white treatment.');
+requireText(weeklyStory, "backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E7F0'", 'Your Week reflection card must use a white surface.');
+requireText(weeklyStory, 'accessibilityState={{ expanded: comparisonOpen }}', 'Your Week comparison range control must expose expanded state.');
+requireText(weeklyStory, '[7, 14, 30].map((days)', 'Your Week comparison range control must offer 7, 14 and 30 day options.');
+requireText(weeklyStory, 'getPartnerBusinessRange(range.from, range.to)', 'Your Week non-default comparison ranges must load scoped business-range data.');
 for (const tinySize of ['fontSize:7.5', 'fontSize:8.5', 'fontSize:8,', 'fontSize:9,']) if (weeklyStory.includes(tinySize)) throw new Error(`Your Week must not regress to tiny typography: ${tinySize}`);
 for (const recognitionAsset of ['status.achievement', 'actions.policyChecklist', 'actions.renewals', 'status.journey']) requireText(recognition, `PartnerAssets.${recognitionAsset}`, `Recognition is missing ${recognitionAsset} artwork.`);
 for (const tinySize of ['fontSize:7.5', 'fontSize:8.5']) if (recognition.includes(tinySize)) throw new Error(`Recognition must not regress to tiny typography: ${tinySize}`);
