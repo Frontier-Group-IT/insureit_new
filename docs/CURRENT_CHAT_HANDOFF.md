@@ -1,3 +1,15 @@
+## 2026-10-06 — Partner Home All-period caption + business metric icons
+
+- Branch: `ui/partner-home-all-period-metric-icons-2026-10-06`.
+- Partner Home business card now suppresses the `First recorded comparison period` helper when the selected business-period dropdown is `All` and no previous comparison period exists.
+- Policies Sold keeps its existing document/shield `policyChecklist` artwork because it already matches the supplied reference.
+- Commission Earned now uses the dedicated `payoutGrowth` artwork to match the supplied stacked-commission visual more closely.
+- No other Quick Action, Pending Task, navigation, story, or business-card icons were changed.
+- No database/schema/RLS/native dependency change. No APK/AAB created.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA NOT YET DONE.**
+
+---
+
 ## 2026-10-06 — Partner Claim Details compact summary cards + icon cleanup
 
 - Branch: `ui/partner-claim-detail-icons-summary-2026-10-06`.
