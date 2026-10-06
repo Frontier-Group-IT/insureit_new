@@ -778,4 +778,6 @@ Safety:
 - **Safety boundary:** sample vehicles are presentation data only. Demo bids and sell drafts live only in React screen state; nothing is persisted to Supabase and no seller/buyer personal data is exposed.
 - Existing Customer Home quick action route remains unchanged; only the Exchange destination implementation is replaced.
 - No schema, migration, RLS, API/RPC, payment, call-masking, APK/AAB or native-runtime change.
-- **IMPLEMENTED; PR/CI/merge/production OTA/installed-device verification pending.**
+- PR #2846 merged as `926cc07465b5313b25f323c0a9433017fdabbb92` after **Verify mobile app #952** and **Verify web portal #5352** passed.
+- Production runtime **0.3.0 OTA DEPLOYED** successfully via `Publish customer 0.3.0 production OTA` run **#156** from merge commit `926cc07465b5313b25f323c0a9433017fdabbb92`.
+- Installed-device verification remains pending. **NO APK/AAB CREATED.**
