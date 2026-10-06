@@ -153,3 +153,26 @@ Credential policy:
 - when deeper Supabase Management API telemetry is enabled, use a scoped token limited to the required project and read permissions only;
 - when deeper Vercel telemetry is enabled, use a project/team-scoped read credential where supported;
 - absence of a credential must surface as `not configured`, never as a fake healthy state.
+
+
+## 2026-10-06 — Observability surfaced production migration-ledger drift
+
+The live Developer Workspace observability endpoint surfaced a failed repository-wide `Deploy production to Vercel` run after the observability release. The failing step was the production schema parity gate, not the Developer Workspace build.
+
+The gate reported local migration versions missing from production:
+- `20261005102500_partner_customer_vehicle_policy_claim_links.sql`
+- `20261005130000_partner_renewals_net_premium_and_buckets.sql`
+- `20261006113500_partner_profile_photo_storage.sql`
+
+Read-only production verification established that the same migration names are already recorded in Supabase under alternate generated timestamps:
+- local `20261005102500` -> production `20261005103717` (`partner_customer_vehicle_policy_claim_links`)
+- local `20261005130000` -> production `20261006060854` (`partner_renewals_net_premium_and_buckets`)
+- local `20261006113500` -> production `20261006063406` (`partner_profile_photo_storage`)
+
+Production object verification also confirmed:
+- `partner_app_customer_detail(uuid)` matches the repository implementation;
+- `partner_app_renewal_summary()` and the five-argument `partner_app_list_renewals(...)` match the repository implementation;
+- private bucket `partner-profile-photos` exists with 5 MB limit and JPEG/PNG/WebP MIME allow-list;
+- the four authenticated own-path storage policies for read/insert/update/delete exist with the intended ownership predicates.
+
+No migration was reapplied. Branch `fix/production-migration-alias-reconciliation` changes only the deployment parity gate so these three exact, evidence-backed production version+name aliases satisfy their canonical local versions. The mapping is intentionally explicit; generic migration-name equivalence is not allowed.
