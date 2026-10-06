@@ -23,6 +23,8 @@ Read `../../docs/PARTNER_APP_HANDOFF_2026_09_13.md`, `../../docs/PARTNER_APP_HOM
 
 ## Release evidence
 
+- **2026-10-06 — Partner period selector de-duplication:** branch `fix/partner-period-selector-last-month-2026-10-06`; Home period options are standardized to `All / Last 6 Months / Last Month / MTD`, with MTD as the default and Last Month mapped to the full previous calendar month. Business Overview now uses MTD instead of the redundant This Month label; its existing Last Month / Last 6 Months / Custom options are preserved. No schema/RLS/API/native/runtime change. **IMPLEMENTED; PR #2781 CI passed on prior head; rebased verification/merge/production runtime 0.2.0 OTA pending. NO APK/AAB CREATED.**
+
 - **2026-10-06 — More/Profile icons, larger Profile title and Customer-style photo control:** PR #2779 merged as `fa6d7ec0cfe06663c5f754fe897b69fb415d2aa5`; More uses the existing professional Partner asset families, the hero `Profile` title is increased, and Profile uses a circular image with a bottom-right camera badge matching the Customer app interaction pattern. Image selection reuses existing `expo-document-picker`; no new native dependency. Private storage bucket `partner-profile-photos` with auth-user-folder RLS is **APPLIED + VERIFIED**. Partner production runtime `0.2.0` OTA is **DEPLOYED** via run #41 / update group `a988db57-6cb3-4e0f-b647-e38e8a62150f`; installed-device verification pending. **NO APK/AAB CREATED.**
 
 
