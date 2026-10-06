@@ -239,6 +239,7 @@ export default function PoliciesScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <FlatList
+        key={`policies-page-${collection.page}`}
         data={collection.rows}
         keyExtractor={(row) => row.policy_id}
         renderItem={({ item }) => (
