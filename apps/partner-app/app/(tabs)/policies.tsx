@@ -2,7 +2,6 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Image,
   Pressable,
@@ -14,9 +13,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PartnerBanner } from '@/components/ui/partner-banner';
+import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
+import { PartnerPagination } from '@/components/ui/partner-pagination';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
-import { getPartnerInsurerLogoSource } from '@/lib/catalog-logos';
 import {
   getPartnerPolicySummary,
   listPartnerPolicies,
@@ -27,7 +27,7 @@ import {
 import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
-import { usePartnerPagedQuery } from '@/lib/use-partner-paged-query';
+import { usePartnerPageQuery } from '@/lib/use-partner-page-query';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerNetwork } from '@/providers/partner-network-provider';
 import { usePartnerSession } from '@/providers/partner-session-provider';
@@ -78,7 +78,7 @@ export default function PoliciesScreen() {
     };
   }, [debouncedSearch, lifecycle]);
 
-  const collection = usePartnerPagedQuery<PartnerPolicyRow>({
+  const collection = usePartnerPageQuery<PartnerPolicyRow>({
     scopeKey: cacheScopeKey,
     key: `policies:list:${lifecycle}:${debouncedSearch || 'all'}`,
     pageSize: PAGE_SIZE,
@@ -143,7 +143,7 @@ export default function PoliciesScreen() {
             onPress={() => router.push('/policy-intakes')}
             style={({ pressed }) => [styles.intakeHeaderButton, pressed && styles.pressed]}
           >
-            <Ionicons name="add-circle-outline" size={16} color="#FFFFFF" />
+            <Ionicons name="add-circle-outline" size={16} color="#0B2E63" />
             <Text style={styles.intakeHeaderText}>Policy Intake</Text>
           </Pressable>
         </View>
@@ -224,26 +224,16 @@ export default function PoliciesScreen() {
   );
 
   const footer = collection.rows.length ? (
-    <View style={styles.listFooter}>
-      {collection.loadingMore ? (
-        <View style={styles.loadingMore}>
-          <ActivityIndicator color="#3156B8" />
-          <Text style={styles.loadingMoreText}>Loading more policies…</Text>
-        </View>
-      ) : collection.rows.length < collection.total ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Load more policies"
-          onPress={() => void collection.loadMore()}
-          style={({ pressed }) => [styles.loadMoreButton, pressed && styles.pressed]}
-        >
-          <Text style={styles.loadMoreText}>Load More Policies</Text>
-          <Ionicons name="chevron-down" size={13} color="#3156B8" />
-        </Pressable>
-      ) : (
-        <Text style={styles.endText}>End of policy book</Text>
-      )}
-    </View>
+    <PartnerPagination
+      page={collection.page}
+      totalPages={collection.totalPages}
+      total={collection.total}
+      pageSize={PAGE_SIZE}
+      rowCount={collection.rows.length}
+      onPrevious={collection.previousPage}
+      onNext={collection.nextPage}
+      disabled={collection.changingPage}
+    />
   ) : null;
 
   return (
@@ -283,8 +273,6 @@ export default function PoliciesScreen() {
 function PolicyCard({ row, onPress }: { row: PartnerPolicyRow; onPress: () => void }) {
   const category = policyCategory(row);
   const status = policyStatus(row.lifecycle_status);
-  const insurerLogo = getPartnerInsurerLogoSource(row.insurer_name);
-
   return (
     <Pressable
       accessibilityRole="button"
@@ -293,12 +281,11 @@ function PolicyCard({ row, onPress }: { row: PartnerPolicyRow; onPress: () => vo
       style={({ pressed }) => [styles.policyCard, pressed && styles.policyCardPressed]}
     >
       <View style={styles.policyIconShell}>
-        {insurerLogo ? (
-          <Image
-            source={insurerLogo}
-            resizeMode="contain"
+        {row.insurer_name ? (
+          <PartnerInsurerLogo
+            name={row.insurer_name}
             style={styles.insurerLogo}
-            accessibilityLabel={row.insurer_name || 'Insurer'}
+            accessibilityLabel={row.insurer_name}
           />
         ) : (
           <>
@@ -465,16 +452,16 @@ const styles = StyleSheet.create({
     gap: 5,
     borderRadius: 10,
     paddingHorizontal: 11,
-    backgroundColor: '#0B2E63',
+    backgroundColor: '#FFFFFF',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.28)',
+    borderColor: 'rgba(255,255,255,0.96)',
     shadowColor: '#001B42',
     shadowOpacity: 0.14,
     shadowRadius: 5,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  intakeHeaderText: { color: '#FFFFFF', fontSize: 9.5, lineHeight: 12, fontWeight: '800' },
+  intakeHeaderText: { color: '#0B2E63', fontSize: 9.5, lineHeight: 12, fontWeight: '800' },
   searchRow: {
     marginTop: -14,
     marginHorizontal: 12,
