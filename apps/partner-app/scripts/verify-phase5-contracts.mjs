@@ -108,7 +108,7 @@ expectAll('app/claim/[id].tsx', [
   [/<Text numberOfLines=\{1\} style=\{styles\.statusTitle\}>\{data\.customer\.name\}<\/Text>/, 'claim summary heading must show customer name'],
   [/activeChipText[\s\S]*\{humanize\(data\.claim\.current_status/, 'claim status badge must show the current workflow status'],
   [/summaryMetaRow[\s\S]*summaryMetaCard[\s\S]*claim_service_mode[\s\S]*summaryMetaCard[\s\S]*data\.vehicle\.vehicle_no/, 'service mode and vehicle number must render as equal summary cards'],
-  [/name="person-outline"[\s\S]*styles\.personAvatar/, 'insured-person row must use the clean profile icon'],
+  [/styles\.personAvatar[\s\S]*name="person-outline"/, 'insured-person row must use the clean profile icon'],
   [/accessibilityLabel=\{overviewExpanded \? 'Show fewer claim overview details' : 'View all claim overview details'\}/, 'Claim Overview View All must be an accessible interactive control'],
   [/setOverviewExpanded\(\(value\) => !value\)/, 'Claim Overview View All must expand and collapse additional details'],
 ]);
