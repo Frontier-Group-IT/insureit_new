@@ -5,7 +5,7 @@
 - Business Overview now labels the current-period preset as `MTD` instead of `This Month`; its existing Last Month, Last 6 Months and Custom presets remain unchanged. Month-wise Trend already used MTD and required no semantic change.
 - Comparison copy on Home now consistently says `previous period`, matching the range RPC's equal-length preceding-range behavior.
 - No database/schema/RLS/API/native/runtime change. OTA-safe for production runtime `0.2.0`; no APK/AAB/native build authorized or created.
-- Evidence state: **IMPLEMENTED on branch; PR/CI/merge/OTA/device verification pending.**
+- Evidence state: **PR #2781 MERGED as `f8636e1cc0cc4db7b60658697d00bf4ff0abbc27`; Partner production runtime `0.2.0` OTA DEPLOYED successfully via workflow run `37426797593`; installed-device verification pending. NO APK/AAB CREATED.**
 
 ## 2026-10-06 — Quick Actions exact transparent reference icons
 
