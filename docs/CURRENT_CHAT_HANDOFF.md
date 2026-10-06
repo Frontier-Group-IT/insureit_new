@@ -1,3 +1,14 @@
+## 2026-10-06 — Partner Claim Details header/status/footer refinement
+
+- Removed the small `SERVICE` eyebrow above `Claim Details` in the Partner App claim-detail header.
+- Completed claim statuses now use a green success badge; non-completed statuses retain the existing blue treatment.
+- The canonical claim control number (`claims.claim_no`) now renders directly below the customer name as `Control No.`.
+- Summary footer ordering is now insurer → service mode → vertical divider → vehicle number, placing Self Managed/Broker Managed to the left of the vehicle number.
+- Updated Partner Phase 5 regression checks for the new header, control-number, green-complete-badge and footer-order contract.
+- **IMPLEMENTED ON main; NOT PUBLISHED IN THIS STEP. NO APK/AAB CREATED.**
+
+---
+
 ## 2026-10-06 — Intake policy-copy registration guard
 
 - Branch: `fix/intake-policy-copy-registration-guard-2026-10-06`.
