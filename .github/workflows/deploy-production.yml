@@ -489,8 +489,25 @@ jobs:
           echo "Production schema parity verified from migration $BASELINE_VERSION onward."
           echo "Partner RPC contract verified for all static Partner web RPC references."
 
-      - name: Verify deploy hook secret
+      - name: Detect web portal deployment scope
         if: env.VERIFIED_COMMIT != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          changed_files=$(git diff --name-only "${GITHUB_SHA}^1" "${GITHUB_SHA}")
+          echo "$changed_files"
+
+          if grep -Eq '^(apps/web-portal/|packages/claim-journey/|package\.json$|package-lock\.json$|vercel\.json$)' <<<"$changed_files"; then
+            echo "WEB_DEPLOY_REQUIRED=true" >> "$GITHUB_ENV"
+            echo "Web portal-impacting changes detected; Vercel deployment is required."
+          else
+            echo "WEB_DEPLOY_REQUIRED=false" >> "$GITHUB_ENV"
+            echo "No web portal-impacting changes detected; skipping Vercel deployment."
+          fi
+
+      - name: Verify deploy hook secret
+        if: env.VERIFIED_COMMIT != '' && env.WEB_DEPLOY_REQUIRED == 'true'
         shell: bash
         env:
           VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
@@ -501,7 +518,7 @@ jobs:
           fi
 
       - name: Trigger Vercel production deploy hook
-        if: env.VERIFIED_COMMIT != ''
+        if: env.VERIFIED_COMMIT != '' && env.WEB_DEPLOY_REQUIRED == 'true'
         id: deploy
         shell: bash
         env:
@@ -539,6 +556,11 @@ jobs:
             echo "- Verify web portal run: `${VERIFICATION_RUN_ID}`"
             echo "- Provenance mode: `${PROVENANCE_MODE}`"
             echo "- Trigger: `${GITHUB_EVENT_NAME}`"
+            echo "- Web deployment required: `${WEB_DEPLOY_REQUIRED:-false}`"
             echo
-            echo "The production deploy hook was invoked automatically only after the merged PR's canonical verification was confirmed."
+            if [[ "${WEB_DEPLOY_REQUIRED:-false}" == "true" ]]; then
+              echo "The production deploy hook was invoked automatically only after the merged PR's canonical verification was confirmed."
+            else
+              echo "This release did not change web-portal deployment inputs, so the Vercel deploy hook was intentionally skipped after schema/provenance verification."
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
