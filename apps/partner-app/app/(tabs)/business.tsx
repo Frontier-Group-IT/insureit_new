@@ -600,6 +600,7 @@ function optionLabel<T extends string>(options: Array<{ value: T; label: string 
 function changeText(value: number, hasPrevious: boolean) { if (!hasPrevious) return 'New baseline'; const sign = value >= 0 ? '+' : '-'; return `${sign}${Math.abs(value).toFixed(0)}%`; }
 function formatCompactCurrency(value: number | string) { const amount = Number(value || 0); if (!Number.isFinite(amount)) return '₹0'; if (Math.abs(amount) >= 10_000_000) return `₹${(amount / 10_000_000).toFixed(amount % 10_000_000 === 0 ? 0 : 1)}Cr`; if (Math.abs(amount) >= 100_000) return `₹${(amount / 100_000).toFixed(amount % 100_000 === 0 ? 0 : 1)}L`; if (Math.abs(amount) >= 1_000) return `₹${(amount / 1_000).toFixed(amount % 1_000 === 0 ? 0 : 1)}k`; return formatIndianCurrency(amount); }
 function shortMonth(value: string) { const [year, month] = value.split('-').map(Number); return new Intl.DateTimeFormat('en-IN', { month: 'short' }).format(new Date(year, month - 1, 1)); }
+function formatCacheTime(value: number | null) { if (!value) return 'earlier'; return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value)); }
 function humanize(value: string) { return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 
 const styles = StyleSheet.create({
