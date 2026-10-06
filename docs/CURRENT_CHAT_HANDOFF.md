@@ -1,3 +1,16 @@
+## 2026-10-06 — Partner Claim Details compact summary cards + icon cleanup
+
+- Branch: `ui/partner-claim-detail-icons-summary-2026-10-06`.
+- Partner App → Claim Details summary footer now keeps insurer text separate and renders service mode plus vehicle number as two equal 1/2-width compact cards.
+- Each summary mini-card uses a small clean contextual icon and preserves the existing service-mode/vehicle values.
+- Insured Person row now uses a clean `person-outline` icon instead of the illustrated customer artwork.
+- Claim Journey event cards now use clear Ionicons selected by event meaning: claim recorded, surveyor/assignment, document upload, approval/verification, settlement/completion, payment, survey/inspection, stage update, and generic status update.
+- Updated Partner Phase 5 regression checks to protect the equal summary cards and event-specific icon mapping.
+- No database/schema/RLS/native dependency change. No APK/AAB created.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA NOT YET DONE.**
+
+---
+
 ## 2026-10-06 — Partner Claim Details header/status/footer refinement
 
 - Removed the small `SERVICE` eyebrow above `Claim Details` in the Partner App claim-detail header.
