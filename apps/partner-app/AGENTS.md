@@ -23,6 +23,8 @@ Read `../../docs/PARTNER_APP_HANDOFF_2026_09_13.md`, `../../docs/PARTNER_APP_HOM
 
 ## Release evidence
 
+- **2026-10-06 — Claim Details professional icons latest-main retry:** branch `ui/partner-claim-detail-professional-icons-rebased2-2026-10-06`; reapplied the same UI-only refinement after PR #2842 developed conflicts. Existing Phase 5 profile/Journey accessibility contracts remain intact. **IMPLEMENTED; PR/CI/merge/production runtime 0.2.0 OTA pending. NO APK/AAB CREATED.**
+
 - **2026-10-06 — Search full-name greeting:** PR #2837 merged as `fa34b0505f3cefb8421f7240baab63acda15aec3`; Search hero greeting renders the full resolved `identity.display_name` rather than only the first token. Partner Verify #524 and Web Verify #5346 passed on the rebased head. Production runtime `0.2.0` OTA **DEPLOYED** via run #71 / update group `13075129-8eec-4c48-9bd7-854043b8a43d`; installed-device verification pending. No search logic, auth, route, API/RPC, schema, native dependency or runtime change. **NO APK/AAB CREATED.**
 
 - **2026-10-06 — Partner profile photo global propagation:** branch `feat/partner-profile-photo-global-2026-10-06`; profile-photo state is centralized in the Partner session provider and reused by a shared avatar component across all current profile-avatar surfaces. Uploading a new photo refreshes it immediately throughout the app; signed URLs refresh on foreground before expiry. Initials remain the fallback. No native dependency/runtime/schema/RLS change. **IMPLEMENTED; PR/CI/merge/production runtime 0.2.0 OTA pending. NO APK/AAB CREATED.**
