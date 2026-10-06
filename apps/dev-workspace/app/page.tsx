@@ -1,17 +1,10 @@
+import LiveOverview from "./components/live-overview";
+
 const products = [
   { name: "Operations Portal", path: "apps/web-portal", detail: "Next.js 15 · React 19 · MUI · Supabase", status: "Production" },
   { name: "Customer App", path: "apps/mobile-app", detail: "Expo 54 · React Native 0.81 · OTA", status: "0.3.0" },
   { name: "Partner App", path: "apps/partner-app", detail: "Expo 54 · React Native 0.81 · OTA", status: "0.2.0" },
   { name: "InsureIT Tech", path: "apps/tech-site", detail: "Public engineering identity", status: "Production" }
-];
-
-const systems = [
-  ["GitHub", "Repository + CI", "Connected"],
-  ["Vercel", "Portal + Tech deployments", "Connected"],
-  ["Supabase", "Database · Auth · Storage", "Healthy"],
-  ["Expo", "Customer + Partner releases", "Controlled"],
-  ["Document AI", "Policy OCR", "Mapped"],
-  ["Voice AI", "Sarvam + private-agent program", "Isolated"]
 ];
 
 const nav = ["Home", "Apps", "Configuration", "Content", "Assets", "Features", "Code", "Releases", "Database", "Infrastructure", "Integrations", "Observability", "AI Developer", "Docs", "Security", "Audit"];
@@ -40,7 +33,7 @@ export default function DeveloperHome() {
             <div>
               <span className="eyebrow">CONTROL PLANE FOUNDATION</span>
               <h1>Run InsureIT from one engineering workspace.</h1>
-              <p>This first release establishes the private home for applications, releases, infrastructure, configuration and future controlled actions. Infrastructure writes are intentionally disabled in this phase.</p>
+              <p>The workspace now reads live engineering state from safe observability adapters while remaining strictly read-only. Infrastructure writes are intentionally disabled until the Action Gateway and capability model are implemented.</p>
             </div>
             <div className="mode-card">
               <span>OPERATING MODE</span>
@@ -49,22 +42,11 @@ export default function DeveloperHome() {
             </div>
           </section>
 
-          <section className="status-grid">
-            <article><span>Applications</span><strong>4</strong><small>Known product surfaces</small></article>
-            <article><span>Production portal</span><strong className="ok">Healthy</strong><small>portal.insureit.in</small></article>
-            <article><span>Database</span><strong className="ok">Healthy</strong><small>Supabase · ap-northeast-2</small></article>
-            <article><span>Release policy</span><strong>Guarded</strong><small>Checks before merge · no auto APK</small></article>
-          </section>
+          <LiveOverview />
 
-          <section className="two-col">
-            <div className="panel">
-              <div className="panel-head"><div><span>APPLICATIONS</span><h2>Product surfaces</h2></div><small>MONOREPO</small></div>
-              <div className="app-list">{products.map((p) => <div className="app-row" key={p.name}><div className="app-icon">{p.name.slice(0, 1)}</div><div><b>{p.name}</b><code>{p.path}</code><small>{p.detail}</small></div><span>{p.status}</span></div>)}</div>
-            </div>
-            <div className="panel">
-              <div className="panel-head"><div><span>INFRASTRUCTURE</span><h2>Connected systems</h2></div><small>READ ONLY</small></div>
-              <div className="system-list">{systems.map(([name,detail,status]) => <div className="system-row" key={name}><i /><div><b>{name}</b><small>{detail}</small></div><span>{status}</span></div>)}</div>
-            </div>
+          <section className="panel product-inventory">
+            <div className="panel-head"><div><span>MONOREPO INVENTORY</span><h2>Known product surfaces</h2></div><small>4 APPS</small></div>
+            <div className="app-list">{products.map((p) => <div className="app-row" key={p.name}><div className="app-icon">{p.name.slice(0, 1)}</div><div><b>{p.name}</b><code>{p.path}</code><small>{p.detail}</small></div><span>{p.status}</span></div>)}</div>
           </section>
 
           <section className="panel architecture">
@@ -91,7 +73,7 @@ export default function DeveloperHome() {
             </div>
           </section>
 
-          <footer><span>InsureIT Engineering Control Plane</span><span>Phase 0 / 1 · foundation</span></footer>
+          <footer><span>InsureIT Engineering Control Plane</span><span>Phase 1 · live read-only observability</span></footer>
         </div>
       </section>
     </main>

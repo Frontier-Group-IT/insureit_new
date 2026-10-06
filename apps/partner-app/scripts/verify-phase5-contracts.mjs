@@ -102,6 +102,22 @@ expectAll('app/policy/[id].tsx', [[/router\.back\(\)/, 'Policy detail must suppo
 expectAll('app/policy-intake-new.tsx', [[/router\.replace\(\{ pathname: '\/policy-intakes\/\[id\]'/, 'new Policy Intake must route to tracked status after submit']]);
 expectAll('app/policy-intakes/[id].tsx', [[/POLICY INTAKE/, 'Policy Intake tracking route must remain available']]);
 
+// Partner claim detail presentation contract.
+expectAll('app/claim/[id].tsx', [
+  [/getPartnerManufacturerLogoSource\(data\.vehicle\.make\)/, 'claim summary must resolve the linked vehicle manufacturer logo'],
+  [/<Text numberOfLines=\{1\} style=\{styles\.statusTitle\}>\{data\.customer\.name\}<\/Text>/, 'claim summary heading must show customer name'],
+  [/activeChipText\}>\{humanize\(data\.claim\.current_status/, 'claim status badge must show the current workflow status'],
+  [/statusFooterRightText[\s\S]*data\.vehicle\.vehicle_no/, 'vehicle number must sit beside service mode in the summary footer'],
+  [/name="person-outline"/, 'insured-person row must use the clear profile icon'],
+  [/accessibilityLabel=\{overviewExpanded \? 'Show fewer claim overview details' : 'View all claim overview details'\}/, 'Claim Overview View All must be an accessible interactive control'],
+  [/setOverviewExpanded\(\(value\) => !value\)/, 'Claim Overview View All must expand and collapse additional details'],
+]);
+expect('app/claim/[id].tsx', /^(?![\s\S]*CURRENT STATUS)[\s\S]*$/, 'claim summary must not restore the CURRENT STATUS eyebrow');
+expectAll('lib/claims.ts', [
+  [/partner_app_customer_detail/, 'claim detail must enrich vehicle make through the existing scoped customer-detail RPC'],
+  [/matchedVehicle[\s\S]*make:/, 'claim detail must carry the matched manufacturer into the vehicle payload'],
+]);
+
 // Final Phase 5 hardening contracts.
 expectAll('lib/partner-observability.ts', [
   [/SENSITIVE_KEY/, 'observability seam must redact known sensitive metadata keys'],

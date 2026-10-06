@@ -84,6 +84,7 @@ export type PartnerClaimDetail = {
   vehicle: {
     id: string | null;
     vehicle_no: string | null;
+    make?: string | null;
   };
   policy: {
     policy_no: string | null;
@@ -110,5 +111,23 @@ export async function getPartnerClaimDetail(claimId: string) {
   });
   if (error) throw error;
   if (!data) throw new Error('Claim detail is unavailable.');
-  return data as PartnerClaimDetail;
+
+  const detail = data as PartnerClaimDetail;
+  if (!detail.vehicle?.id || !detail.customer?.id) return detail;
+
+  const { data: customerDetail } = await supabase.rpc('partner_app_customer_detail', {
+    p_customer_id: detail.customer.id,
+  });
+
+  const matchedVehicle = Array.isArray(customerDetail?.vehicles)
+    ? customerDetail.vehicles.find((vehicle: { vehicle_id?: string | null }) => vehicle.vehicle_id === detail.vehicle.id)
+    : null;
+
+  return {
+    ...detail,
+    vehicle: {
+      ...detail.vehicle,
+      make: typeof matchedVehicle?.make === 'string' ? matchedVehicle.make : null,
+    },
+  };
 }

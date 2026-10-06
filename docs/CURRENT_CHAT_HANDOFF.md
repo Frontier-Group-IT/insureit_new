@@ -1,11 +1,25 @@
 ## 2026-10-06 — Partner Policy Intake Life/Health parity
 
-- Branch: `feature/partner-policy-intake-life-health-2026-10-06`.
+- Branch: `feature/partner-policy-intake-life-health-2026-10-06`; PR #2784.
 - Partner New Policy Intake now matches the web portal policy-type contract: Motor / Non-Motor / Life / Health.
 - Life/Health uses optional Proposal Form instead of Policy Copy and bypasses OCR; no-proposal Life/Health submissions go directly to `ready_for_review`.
 - Partner draft state preserves policy type, and Partner intake detail reflects proposal/manual-review semantics.
 - Existing authorization/scope remains unchanged. No schema/native/runtime/APK/AAB change.
-- **IMPLEMENTED; PR/CI/merge/production runtime 0.2.0 OTA pending.**
+- **IMPLEMENTED; CI/merge/production runtime 0.2.0 OTA pending.**
+
+---
+
+## 2026-10-06 — Partner claim-detail summary refinement
+
+- Partner App → Claim Details top summary now uses the customer name as the heading, removes the `CURRENT STATUS` eyebrow, and shows the live claim status in the right badge.
+- Vehicle number moved out of the heading metadata and now sits beside the service-mode text in the summary footer.
+- Top-left artwork now resolves the linked vehicle manufacturer logo through the existing Partner catalog, with the existing claim artwork retained as fallback.
+- Manufacturer data is enriched through the existing scoped `partner_app_customer_detail` RPC, avoiding a new database migration or schema dependency.
+- Insured Person row now uses a clear profile/person icon.
+- Claim Overview `View All` is now a real accessible press target that expands/collapses additional claim details inline.
+- Partner Phase 5 contract verification now protects these presentation rules.
+- Changes were committed directly to `main` per the current repository working agreement.
+- **IMPLEMENTED IN SOURCE; CI/OTA/runtime verification pending. NO SCHEMA CHANGE. NO APK/AAB CREATED.**
 
 ---
 
