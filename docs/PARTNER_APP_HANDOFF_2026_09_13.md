@@ -54,7 +54,7 @@
 - Policy type is persisted in the Partner SecureStore draft and submitted to the existing `policy_intake_requests.policy_type` field.
 - Partner API scope checks and submitter identity rules are preserved. Detail view now shows Policy type, Proposal form state and a manual Operations-review explanation for Life/Health instead of misleading extracted Motor/vehicle sections.
 - No new migration, RLS policy, native dependency, runtime/version, APK or AAB is introduced by this branch.
-- **MERGED:** PR #2784 as `8f38408afdb76990b7f7f0581522c67b10f3ad5c`; Partner + web CI passed. Production runtime 0.2.0 OTA pending. **NO APK/AAB CREATED.**
+- **MERGED + DEPLOYED:** PR #2784 as `8f38408afdb76990b7f7f0581522c67b10f3ad5c`; Partner + web CI passed. Production runtime `0.2.0` OTA published successfully via run #45 from main `d7f6a99652b095497883be1b91f07f26d4f15c8b`, update group `606e7dbb-0f65-4439-9d1a-02cb9abc2266`. Installed-device verification pending. **NO APK/AAB CREATED.**
 
 ---
 
