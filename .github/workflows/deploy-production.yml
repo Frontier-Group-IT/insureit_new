@@ -416,12 +416,38 @@ jobs:
           fi
 
           remote_json=$(supabase db query --linked --output-format json "
-            select version
+            select version, name
             from supabase_migrations.schema_migrations
             where version >= '$BASELINE_VERSION'
             order by version;
           ")
           remote_versions=$(jq -r '.[].version // empty' <<<"$remote_json" | sort -u)
+
+          # Three Partner migrations were applied to production with the same migration
+          # names but different generated timestamps. Their production objects were
+          # read-only verified against the repository definitions on 2026-10-06.
+          # Treat only these exact version+name pairs as aliases; do not broadly
+          # consider matching names equivalent because migration order still matters.
+          declare -A verified_migration_aliases=(
+            ["20261005102500"]="20261005103717:partner_customer_vehicle_policy_claim_links"
+            ["20261005130000"]="20261006060854:partner_renewals_net_premium_and_buckets"
+            ["20261006113500"]="20261006063406:partner_profile_photo_storage"
+          )
+
+          for canonical_version in "${!verified_migration_aliases[@]}"; do
+            alias_spec="${verified_migration_aliases[$canonical_version]}"
+            alias_version="${alias_spec%%:*}"
+            alias_name="${alias_spec#*:}"
+
+            if jq -e \
+              --arg version "$alias_version" \
+              --arg name "$alias_name" \
+              'any(.[]; .version == $version and .name == $name)' \
+              <<<"$remote_json" >/dev/null; then
+              remote_versions=$(printf '%s\n%s\n' "$remote_versions" "$canonical_version" | sort -u)
+              echo "::notice::Recognized verified production migration alias $canonical_version -> $alias_version ($alias_name)."
+            fi
+          done
 
           missing_versions=$(comm -23 \
             <(printf '%s\n' "$local_versions") \
