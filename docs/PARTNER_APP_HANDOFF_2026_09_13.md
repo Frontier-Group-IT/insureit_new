@@ -59,6 +59,14 @@
 ---
 
 # INSUREIT Partner App — Operational Handoff (2026-09-13)
+## 2026-10-06 — Home metric icon refinement
+
+- Branch: `ui/partner-home-metric-icons-2026-10-06`.
+- In the Home MTD/business summary card, `Policies Sold` now uses the existing compact `policy-checklist` asset and `Commission Earned` uses the compact `payout-refresh` asset exposed through the Partner asset registry.
+- Existing values, labels, two-column metric layout, divider, business range calculations and navigation remain unchanged.
+- No backend/schema/RLS/native/runtime change and no APK/AAB created.
+- Evidence state: **IMPLEMENTED; PR/CI pending; NOT MERGED; NOT DEPLOYED.**
+
 ## 2026-10-06 — Policy Intake heading cleanup
 
 - Branch: `ui/partner-policy-intake-heading-cleanup-2026-10-06`.

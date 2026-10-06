@@ -225,13 +225,13 @@ export default function PartnerHomeScreen() {
               <View style={styles.businessDivider} />
               <View style={styles.businessBottomRow}>
                 <MetricCell
-                  asset={PartnerAssets.actions.policyRegister}
+                  asset={PartnerAssets.actions.policyChecklist}
                   value={String(rangeData?.policies ?? data.business.policies_this_month)}
                   label="Policies Sold"
                 />
                 <View style={styles.metricDivider} />
                 <MetricCell
-                  asset={PartnerAssets.actions.payoutGrowth}
+                  asset={PartnerAssets.actions.payoutRefresh}
                   value={rangeData?.commission_available ? formatIndianCurrency(rangeData.commission_earned ?? 0) : '—'}
                   label="Commission Earned"
                 />

@@ -19,6 +19,7 @@ export const PartnerAssets = {
     supportVerified: require('../assets/partner/actions/support-verified.png'),
     businessInsights: require('../assets/partner/actions/business-insights.png'),
     payoutGrowth: require('../assets/partner/actions/payout-growth.png'),
+    payoutRefresh: require('../assets/partner/status/payout-refresh.png'),
     addCustomer: require('../assets/partner/actions/add-customer.png'),
     addVehicle: require('../assets/partner/actions/add-vehicle.png'),
     healthCover: require('../assets/partner/actions/health-cover.png'),
