@@ -781,3 +781,21 @@ Safety:
 - PR #2846 merged as `926cc07465b5313b25f323c0a9433017fdabbb92` after **Verify mobile app #952** and **Verify web portal #5352** passed.
 - Production runtime **0.3.0 OTA DEPLOYED** successfully via `Publish customer 0.3.0 production OTA` run **#156** from merge commit `926cc07465b5313b25f323c0a9433017fdabbb92`.
 - Installed-device verification remains pending. **NO APK/AAB CREATED.**
+
+
+---
+
+## 2026-10-06 — Customer Exchange premium V2 visual system
+
+- Branch: `redesign/customer-exchange-premium-v2-2026-10-06`.
+- Customer runtime remains **0.3.0** with no native package/config/runtime-version change.
+- Research direction applied from leading used-vehicle/auction marketplace patterns: immersive discovery, high-confidence inventory cards, live bidding emphasis, verification/inspection trust, private managed contact, strong sell funnel and consolidated buyer/seller activity.
+- Reworked Exchange visual language beyond the default Customer App theme with dark graphite/navy surfaces, electric indigo, mint success accents, warm vehicle-specific accents, larger visual hierarchy and stronger use of bundled commercial-vehicle artwork.
+- Buy/Explore: premium discovery hero, live-market signal, integrated search, trust strip, category rail, featured inventory carousel, seller acquisition card, denser all-vehicle list and InsureIT trust promise.
+- Vehicle detail: visual hero, verification/inspection score, live bid vs asking price, confidence grid, commercial-vehicle overview, private connection explanation and bid controls.
+- Sell: premium seller hero, benefit strip, progress pattern, refined vehicle form, guided-photo grid, pricing/bidding strategy and privacy protection.
+- My Exchange: polished buyer/seller activity dashboard for saved vehicles, active bids and listings.
+- Removed visible draft/testing explanatory language from the Exchange UI so the screen reads as production-grade.
+- Existing sample inventory and local-only bid/favourite/draft state remain unchanged internally; no Supabase marketplace persistence has been introduced.
+- No schema, migration, RLS, API/RPC, payment, call-masking, APK/AAB or native-runtime change.
+- **IMPLEMENTED; PR/CI/merge/production OTA/installed-device verification pending.**
