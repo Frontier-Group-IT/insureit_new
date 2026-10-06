@@ -7,6 +7,7 @@ import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerButton } from '@/components/ui/partner-button';
 import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
+import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerSession } from '@/providers/partner-session-provider';
@@ -15,7 +16,7 @@ const moreHeaderArt = require('../../assets/figma-dashboard/hero-banner.jpg');
 
 export default function MoreScreen() {
   const router = useRouter();
-  const { context, signOut } = usePartnerSession();
+  const { context, signOut, avatarUri } = usePartnerSession();
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState('');
@@ -71,9 +72,16 @@ export default function MoreScreen() {
               accessibilityRole="button"
               accessibilityLabel="Open profile"
               onPress={() => router.push('/profile')}
-              style={({ pressed }) => [styles.heroAvatar, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.heroAvatarTouch, pressed && styles.pressed]}
             >
-              <Text style={styles.heroAvatarText}>{initials(context.identity.display_name)}</Text>
+              <PartnerProfileAvatar
+                name={context.identity.display_name}
+                uri={avatarUri}
+                size={35}
+                backgroundColor="#FFFFFF"
+                textColor={partnerTheme.colors.brandStrong}
+                style={styles.heroAvatar}
+              />
             </Pressable>
           </View>
         </View>
@@ -89,9 +97,14 @@ export default function MoreScreen() {
         onPress={() => router.push('/profile')}
         style={({ pressed }) => [styles.profileCard, pressed && styles.pressed]}
       >
-        <View style={styles.avatar}>
-          <Ionicons name="person" size={27} color="#FFFFFF" />
-        </View>
+        <PartnerProfileAvatar
+          name={context.identity.display_name}
+          uri={avatarUri}
+          size={50}
+          backgroundColor={partnerTheme.colors.brand}
+          textColor="#FFFFFF"
+          style={styles.avatar}
+        />
         <View style={styles.profileBody}>
           <Text numberOfLines={1} style={styles.profileName}>{context.identity.display_name}</Text>
           <Text style={styles.profileMeta}>{identityLabel}</Text>
@@ -202,9 +215,6 @@ function MenuRow({
   );
 }
 
-function initials(value: string) {
-  return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'IP';
-}
 
 function humanize(value: string) {
   return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -257,6 +267,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.25,
     borderColor: '#FFFFFF',
   },
+  heroAvatarTouch: { borderRadius: 18 },
   heroAvatar: {
     width: 35,
     height: 35,

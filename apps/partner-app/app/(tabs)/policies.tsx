@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PartnerBanner } from '@/components/ui/partner-banner';
+import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerPagination } from '@/components/ui/partner-pagination';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
@@ -46,7 +47,7 @@ let savedPolicyLifecycle: PartnerPolicyLifecycle = 'all';
 
 export default function PoliciesScreen() {
   const router = useRouter();
-  const { cacheScopeKey, context } = usePartnerSession();
+  const { cacheScopeKey, context, avatarUri } = usePartnerSession();
   const { isOffline } = usePartnerNetwork();
   const [lifecycle, setLifecycle] = useState<PartnerPolicyLifecycle>(savedPolicyLifecycle);
   const [query, setQuery] = useState(savedPolicyQuery);
@@ -128,9 +129,16 @@ export default function PoliciesScreen() {
               accessibilityRole="button"
               accessibilityLabel="Open profile"
               onPress={() => router.push('/profile')}
-              style={({ pressed }) => [styles.heroAvatar, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.heroAvatarTouch, pressed && styles.pressed]}
             >
-              <Text style={styles.heroAvatarText}>{initials(name)}</Text>
+              <PartnerProfileAvatar
+                name={name}
+                uri={avatarUri}
+                size={35}
+                backgroundColor="#FFFFFF"
+                textColor={partnerTheme.colors.brandStrong}
+                style={styles.heroAvatar}
+              />
             </Pressable>
           </View>
         </View>
@@ -357,9 +365,6 @@ function formatUpdatedAt(value: number | null) {
   return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
 }
 
-function initials(value: string) {
-  return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'IP';
-}
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
@@ -406,6 +411,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.25,
     borderColor: '#FFFFFF',
   },
+  heroAvatarTouch: { borderRadius: 18 },
   heroAvatar: {
     width: 35,
     height: 35,

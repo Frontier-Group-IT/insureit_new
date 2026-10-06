@@ -1,44 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
+import { PARTNER_PROFILE_PHOTO_BUCKET, partnerProfilePhotoPath } from '@/lib/partner-profile-photo';
 import type { PartnerCommercialScope } from '@/lib/partner-session';
 import { supabase } from '@/lib/supabase';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
-const PROFILE_PHOTO_BUCKET = 'partner-profile-photos';
-
 export default function ProfileScreen() {
   const router = useRouter();
-  const { context } = usePartnerSession();
-  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const { context, avatarUri, refreshAvatar } = usePartnerSession();
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarMessage, setAvatarMessage] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null);
-  const authUserId = context?.identity.auth_user_id;
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadProfilePhoto() {
-      if (!authUserId) return;
-      const { data } = await supabase.storage
-        .from(PROFILE_PHOTO_BUCKET)
-        .createSignedUrl(profilePhotoPath(authUserId), 3600);
-
-      if (active) setAvatarUri(data?.signedUrl ?? null);
-    }
-
-    void loadProfilePhoto();
-    return () => {
-      active = false;
-    };
-  }, [authUserId]);
-
   if (!context) return null;
 
   const { identity, scope } = context;
@@ -72,18 +50,17 @@ export default function ProfileScreen() {
         return;
       }
 
-      const path = profilePhotoPath(identity.auth_user_id);
-      const upload = await supabase.storage.from(PROFILE_PHOTO_BUCKET).upload(path, body, {
+      const path = partnerProfilePhotoPath(identity.auth_user_id);
+      const upload = await supabase.storage.from(PARTNER_PROFILE_PHOTO_BUCKET).upload(path, body, {
         contentType: asset.mimeType ?? 'image/jpeg',
         upsert: true,
       });
       if (upload.error) throw upload.error;
 
-      const signed = await supabase.storage.from(PROFILE_PHOTO_BUCKET).createSignedUrl(path, 3600);
-      if (!signed.data?.signedUrl) throw new Error('Profile photo signed URL unavailable.');
+      const refreshedAvatar = await refreshAvatar();
+      if (!refreshedAvatar) throw new Error('Profile photo signed URL unavailable.');
 
-      setAvatarUri(signed.data.signedUrl);
-      setAvatarMessage({ tone: 'success', text: 'Profile photo updated.' });
+      setAvatarMessage({ tone: 'success', text: 'Profile photo updated everywhere.' });
     } catch {
       setAvatarMessage({ tone: 'danger', text: 'Profile photo upload failed. Please try again.' });
     } finally {
@@ -295,9 +272,6 @@ function scopeLabel(mode: PartnerCommercialScope['scope_mode']) {
   return 'No commercial scope';
 }
 
-function profilePhotoPath(authUserId: string) {
-  return `${authUserId}/profile-photo`;
-}
 
 function initials(value: string) {
   return value

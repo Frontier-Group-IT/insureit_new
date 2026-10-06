@@ -9,6 +9,7 @@ import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdo
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerEnter } from '@/components/ui/partner-enter';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
+import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerSkeleton } from '@/components/ui/partner-skeleton';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerBusinessRange, getPartnerHome, type PartnerHomeData } from '@/lib/home';
@@ -30,7 +31,7 @@ const BUSINESS_PERIODS: { key: BusinessPeriod; label: string }[] = [
 
 export default function PartnerHomeScreen() {
   const router = useRouter();
-  const { context, cacheScopeKey } = usePartnerSession();
+  const { context, cacheScopeKey, avatarUri } = usePartnerSession();
   const [businessPeriod, setBusinessPeriod] = useState<BusinessPeriod>('mtd');
   const [periodOpen, setPeriodOpen] = useState(false);
 
@@ -94,9 +95,13 @@ export default function PartnerHomeScreen() {
             onPress={() => router.push('/profile')}
             style={({ pressed }) => [styles.avatarTouch, pressed && styles.pressed]}
           >
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initials(identity.display_name)}</Text>
-            </View>
+            <PartnerProfileAvatar
+              name={identity.display_name}
+              uri={avatarUri}
+              size={38}
+              style={styles.avatar}
+              textColor="#40359E"
+            />
           </Pressable>
         </View>
       }
@@ -419,14 +424,6 @@ function greeting(name: string) {
   return `${prefix} ${displayName}`;
 }
 
-function initials(value: string) {
-  return value
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('') || 'IP';
-}
 
 function formatCacheTime(value: number | null) {
   if (!value) return 'earlier';
@@ -457,7 +454,6 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#D5DEEB',
   },
-  avatarText: { color: '#40359E', fontSize: 11, fontWeight: '800' },
   pressed: { opacity: 0.7 },
   refreshWarning: { marginBottom: 10 },
   skeletonWrap: { gap: 12 },
