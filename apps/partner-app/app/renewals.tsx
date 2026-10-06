@@ -151,7 +151,13 @@ export default function RenewalsScreen() {
 
       <View style={styles.searchRow}>
         <View style={styles.searchGrow}>
-          <PartnerSearchField value={query} onChangeText={setQuery} onClear={() => setQuery('')} placeholder="Search policy, customer or insurer..." />
+          <PartnerSearchField
+            value={query}
+            onChangeText={setQuery}
+            onClear={() => setQuery('')}
+            placeholder="Search policy, customer or insurer..."
+            containerStyle={styles.searchField}
+          />
         </View>
       </View>
 
@@ -168,21 +174,20 @@ export default function RenewalsScreen() {
             <Text style={styles.sortText}>Due Date</Text>
             <Ionicons name={sortOpen ? 'chevron-up' : 'chevron-down'} size={14} color="#42516A" />
           </Pressable>
+          {sortOpen ? (
+            <View style={styles.sortMenu}>
+              <Pressable accessibilityRole="button" onPress={() => selectSort('asc')} style={({ pressed }) => [styles.sortOption, pressed && styles.sortOptionPressed]}>
+                <Text style={[styles.sortOptionText, sortDirection === 'asc' && styles.sortOptionTextActive]}>Earliest first</Text>
+                {sortDirection === 'asc' ? <Ionicons name="checkmark" size={15} color={partnerTheme.colors.brand} /> : null}
+              </Pressable>
+              <Pressable accessibilityRole="button" onPress={() => selectSort('desc')} style={({ pressed }) => [styles.sortOption, pressed && styles.sortOptionPressed]}>
+                <Text style={[styles.sortOptionText, sortDirection === 'desc' && styles.sortOptionTextActive]}>Latest first</Text>
+                {sortDirection === 'desc' ? <Ionicons name="checkmark" size={15} color={partnerTheme.colors.brand} /> : null}
+              </Pressable>
+            </View>
+          ) : null}
         </View>
       </View>
-
-      {sortOpen ? (
-        <View style={styles.sortMenu}>
-          <Pressable accessibilityRole="button" onPress={() => selectSort('asc')} style={({ pressed }) => [styles.sortOption, pressed && styles.sortOptionPressed]}>
-            <Text style={[styles.sortOptionText, sortDirection === 'asc' && styles.sortOptionTextActive]}>Earliest first</Text>
-            {sortDirection === 'asc' ? <Ionicons name="checkmark" size={15} color={partnerTheme.colors.brand} /> : null}
-          </Pressable>
-          <Pressable accessibilityRole="button" onPress={() => selectSort('desc')} style={({ pressed }) => [styles.sortOption, pressed && styles.sortOptionPressed]}>
-            <Text style={[styles.sortOptionText, sortDirection === 'desc' && styles.sortOptionTextActive]}>Latest first</Text>
-            {sortDirection === 'desc' ? <Ionicons name="checkmark" size={15} color={partnerTheme.colors.brand} /> : null}
-          </Pressable>
-        </View>
-      ) : null}
 
       {collection.error && collection.rows.length && !collection.stale ? <View style={styles.inlineBanner}><PartnerBanner tone="warning" message={collection.error} /></View> : null}
     </View>
@@ -216,9 +221,9 @@ export default function RenewalsScreen() {
   return (
     <PartnerListScreen
       key={`renewals-page-${collection.page}`}
-      eyebrow="RENEWALS"
       title="Renewal Work Queue"
       onBack={() => router.back()}
+      showArtwork={false}
       data={sortedRows}
       keyExtractor={(row) => row.policy_id}
       renderItem={({ item }) => <RenewalCard row={item} mode={mode} onOpenPolicy={() => router.push(`/policy/${item.policy_id}` as never)} />}
@@ -306,10 +311,11 @@ const styles = StyleSheet.create({
   tabBadge: { minWidth: 23, height: 23, paddingHorizontal: 6, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }, tabBadgeBlue: { backgroundColor: '#EAF0FF' }, tabBadgeDanger: { backgroundColor: '#FFE9E9' },
   tabBadgeText: { fontSize: 10, fontWeight: '800' }, tabBadgeBlueText: { color: '#4434F4' }, tabBadgeDangerText: { color: '#EF4444' },
   searchRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center' }, searchGrow: { flex: 1 },
-  opportunitiesHeader: { marginTop: 14, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, opportunitiesLeft: { flexDirection: 'row', alignItems: 'center', gap: 9, flexShrink: 1 },
+  searchField: { borderColor: '#D8E0EB', backgroundColor: '#FFFFFF' },
+  opportunitiesHeader: { position: 'relative', zIndex: 20, marginTop: 14, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, opportunitiesLeft: { flexDirection: 'row', alignItems: 'center', gap: 9, flexShrink: 1 },
   opportunitiesTitle: { color: '#17233B', fontSize: 11, lineHeight: 15, fontWeight: '900', letterSpacing: 0.25 }, opportunitiesMeta: { marginTop: 1, color: '#7A8598', fontSize: 9 },
-  sortArea: { flexDirection: 'row', alignItems: 'center' }, sortButton: { minHeight: 35, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 11, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F1' }, sortText: { color: '#263249', fontSize: 10, fontWeight: '700' },
-  sortMenu: { alignSelf: 'flex-end', minWidth: 148, marginTop: -2, marginBottom: 8, paddingVertical: 4, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F1', shadowColor: '#0C2856', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
+  sortArea: { position: 'relative', zIndex: 30, flexDirection: 'row', alignItems: 'center' }, sortButton: { minHeight: 35, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 11, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F1' }, sortText: { color: '#263249', fontSize: 10, fontWeight: '700' },
+  sortMenu: { position: 'absolute', top: 39, right: 0, zIndex: 40, width: 148, paddingVertical: 4, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F1', shadowColor: '#0C2856', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.14, shadowRadius: 10, elevation: 10 },
   sortOption: { minHeight: 36, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, sortOptionPressed: { backgroundColor: '#F6F8FC' }, sortOptionText: { color: '#42516A', fontSize: 10.5, fontWeight: '600' }, sortOptionTextActive: { color: partnerTheme.colors.brand, fontWeight: '800' },
   emptyCard: { minHeight: 205, marginTop: 2, borderRadius: 15, borderWidth: 1, borderStyle: 'dashed', borderColor: '#DCE4EF', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 20 },
   emptyArtwork: { width: 122, height: 82, marginBottom: 8 }, emptyTitle: { color: '#101A31', fontSize: 13, lineHeight: 18, fontWeight: '800', textAlign: 'center' }, emptyMessage: { marginTop: 7, color: '#69758A', fontSize: 10, lineHeight: 17, textAlign: 'center' },
