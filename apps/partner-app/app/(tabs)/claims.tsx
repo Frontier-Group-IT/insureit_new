@@ -170,7 +170,7 @@ export default function ClaimsScreen() {
                   <View style={styles.tabLabelRow}>
                     <Text style={[styles.tabText, active && styles.tabTextActive]}>{filter.label}</Text>
                     {count !== null ? (
-                      <Text style={[styles.tabCount, active && styles.tabCountActive]}>{count}</Text>
+                      <Text style={[styles.tabCount, active && styles.tabCountActive]}>({count})</Text>
                     ) : null}
                   </View>
                 </Pressable>

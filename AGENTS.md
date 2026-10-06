@@ -61,6 +61,8 @@ The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` 
 
 ### Latest implementation ledger
 
+- **2026-10-06 — Partner Claims parenthesized summary counts:** branch `ui/partner-claims-parenthesized-counts-2026-10-06`; existing live Claims summary counts now render as `All (N)`, `In Progress (N)`, and `Settled (N)` with no claim data/filter/API/RPC/schema/RLS/native-runtime change. **IMPLEMENTED; PR/CI/merge/production runtime `0.2.0` OTA pending. NO APK/AAB CREATED.** See `docs/PARTNER_APP_HANDOFF_2026_09_13.md`.
+
 - **2026-10-01 — Life/Health document actions + issued-section highlight:** branch `feature/life-health-document-actions-2026-10-01`. Add Policy uses Proposal Form, Illustration Form, Payment Receipt and Other Form; case detail and issued-policy edit use Policy Copy plus those four documents. `Mark Policy Issued` uses the approved light-purple treatment. Existing KYC server compatibility is retained for historical records. No schema/RLS/mobile/native change. **IMPLEMENTED; PR #2634 CI pending.**
 - **2026-09-28 — Production schema reconciliation and external policy copy gate:** five September 26 migration versions were reconciled to verified identical production SQL; missing OCR staging migration applied and verified. The September 28 external policy-copy migration was verified present under an alternate timestamp and its canonical version recorded. Branch `fix/external-policy-copy-schema-gate` adds the dedicated schema verifier and production gate for that merged migration. **SCHEMA APPLIED; gate IMPLEMENTED; PR/CI/merge/Vercel deployment pending.**
 
