@@ -365,9 +365,6 @@ function formatUpdatedAt(value: number | null) {
   return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
 }
 
-function initials(value: string) {
-  return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'IP';
-}
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
@@ -414,6 +411,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.25,
     borderColor: '#FFFFFF',
   },
+  heroAvatarTouch: { borderRadius: 18 },
   heroAvatar: {
     width: 35,
     height: 35,
