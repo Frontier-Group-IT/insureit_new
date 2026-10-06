@@ -3,6 +3,7 @@ import { AppState, type AppStateStatus } from 'react-native';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { unregisterPartnerPushDevice } from '@/lib/partner-notifications';
+import { getPartnerProfilePhotoUrl } from '@/lib/partner-profile-photo';
 import { clearPartnerQueryCache } from '@/lib/partner-query-cache';
 import {
   getCurrentSession,
@@ -19,6 +20,8 @@ type PartnerSessionValue = {
   context: PartnerSessionContext | null;
   error: string | null;
   cacheScopeKey: string;
+  avatarUri: string | null;
+  refreshAvatar: () => Promise<string | null>;
   refresh: () => Promise<PartnerSessionContext | null>;
   clear: () => void;
   signOut: () => Promise<void>;
@@ -31,7 +34,9 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
   const [status, setStatus] = useState<SessionStatus>('loading');
   const [context, setContext] = useState<PartnerSessionContext | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const lastResolvedAt = useRef(0);
+  const lastAvatarResolvedAt = useRef(0);
   const activeScopeKey = useRef('signed-out');
   const contextRef = useRef<PartnerSessionContext | null>(null);
   const appState = useRef<AppStateStatus>(AppState.currentState);
@@ -60,6 +65,9 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
       const nextContext = await resolvePartnerSession();
       contextRef.current = nextContext;
       setContext(nextContext);
+      const nextAvatar = await getPartnerProfilePhotoUrl(nextContext.identity.auth_user_id);
+      setAvatarUri(nextAvatar);
+      lastAvatarResolvedAt.current = Date.now();
       setStatus('ready');
       lastResolvedAt.current = Date.now();
       return nextContext;
@@ -83,11 +91,25 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
 
   const refresh = useCallback(() => resolve({ blocking: true }), [resolve]);
 
+  const refreshAvatar = useCallback(async () => {
+    const authUserId = contextRef.current?.identity.auth_user_id;
+    if (!authUserId) {
+      setAvatarUri(null);
+      return null;
+    }
+
+    const nextAvatar = await getPartnerProfilePhotoUrl(authUserId);
+    setAvatarUri(nextAvatar);
+    lastAvatarResolvedAt.current = Date.now();
+    return nextAvatar;
+  }, []);
+
   const clear = useCallback(() => {
     clearPartnerQueryCache(activeScopeKey.current);
     activeScopeKey.current = 'signed-out';
     contextRef.current = null;
     setContext(null);
+    setAvatarUri(null);
     setError(null);
     setStatus('signed_out');
     lastResolvedAt.current = 0;
@@ -127,8 +149,11 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
 
         const backgrounded = previous === 'background' || previous === 'inactive';
         const staleScope = Date.now() - lastResolvedAt.current >= FOREGROUND_SCOPE_REFRESH_MS;
+        const staleAvatar = Date.now() - lastAvatarResolvedAt.current >= 45 * 60 * 1000;
         if (backgrounded && staleScope) {
           void resolve({ blocking: false });
+        } else if (backgrounded && staleAvatar) {
+          void refreshAvatar();
         }
       } else {
         supabase.auth.stopAutoRefresh();
@@ -142,13 +167,13 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
       appStateSubscription.remove();
       supabase.auth.stopAutoRefresh();
     };
-  }, [clear, resolve]);
+  }, [clear, refreshAvatar, resolve]);
 
   const cacheScopeKey = context?.identity.auth_user_id || activeScopeKey.current;
 
   const value = useMemo(
-    () => ({ status, context, error, cacheScopeKey, refresh, clear, signOut }),
-    [status, context, error, cacheScopeKey, refresh, clear, signOut],
+    () => ({ status, context, error, cacheScopeKey, avatarUri, refreshAvatar, refresh, clear, signOut }),
+    [status, context, error, cacheScopeKey, avatarUri, refreshAvatar, refresh, clear, signOut],
   );
 
   return <PartnerSessionContextValue.Provider value={value}>{children}</PartnerSessionContextValue.Provider>;
