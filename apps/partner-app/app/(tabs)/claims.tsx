@@ -108,7 +108,7 @@ export default function ClaimsScreen() {
               onPress={() => router.push('/activity')}
               style={({ pressed }) => [styles.heroIconButton, pressed && styles.pressed]}
             >
-              <Feather name="clock" size={17} color="#FFFFFF" />
+              <Feather name="bell" size={20} color="#FFFFFF" />
             </Pressable>
             <Pressable
               accessibilityRole="button"
