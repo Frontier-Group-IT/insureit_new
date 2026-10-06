@@ -587,9 +587,49 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       });
     } else if (payload.sourceIntakeId) {
       diagnosticStage = "policy_intake_finalizer_authorization";
-      await requirePolicyIntakeFinalizer();
+      const intakeFinalizer = await requirePolicyIntakeFinalizer();
+      if (!/^[0-9a-f-]{36}$/i.test(payload.sourceIntakeId)) {
+        return { ok:false, kind:"validation", error:"The Policy Intake reference is invalid. Reload the intake and try again." };
+      }
+      if (!Number.isInteger(payload.draftRevision) || (payload.draftRevision ?? 0) < 1) {
+        return { ok:false, kind:"validation", error:"The Policy Intake draft version is missing. Reload the intake and try again." };
+      }
+
+      diagnosticStage = "policy_intake_policy_copy_guard";
+      const { data:intakeGuard, error:intakeGuardError } = await admin
+        .from("policy_intake_requests")
+        .select("id,status,assigned_to_profile_id,storage_bucket,storage_path")
+        .eq("id", payload.sourceIntakeId)
+        .maybeSingle<{ id:string; status:string; assigned_to_profile_id:string|null; storage_bucket:string; storage_path:string }>();
+      if (intakeGuardError || !intakeGuard) {
+        return { ok:false, kind:"validation", error:"Policy Intake is unavailable. Reload the intake before registering the policy." };
+      }
+      if (intakeGuard.status !== "in_review" || intakeGuard.assigned_to_profile_id !== intakeFinalizer.id) {
+        return { ok:false, kind:"validation", error:"This Policy Intake is not assigned to you for final registration." };
+      }
+
+      const { data:intakeCopy, error:intakeCopyError } = await admin
+        .from("policy_intake_documents")
+        .select("id,storage_bucket,storage_path")
+        .eq("intake_id", payload.sourceIntakeId)
+        .eq("is_current", true)
+        .maybeSingle<{ id:string; storage_bucket:string; storage_path:string }>();
+      if (
+        intakeCopyError ||
+        !intakeCopy ||
+        !intakeCopy.storage_bucket?.trim() ||
+        !intakeCopy.storage_path?.trim()
+      ) {
+        return { ok:false, kind:"validation", error:"Policy copy is required to complete registration. Upload or restore the current Policy Intake copy and try again." };
+      }
+      if (
+        intakeCopy.storage_bucket !== intakeGuard.storage_bucket ||
+        intakeCopy.storage_path !== intakeGuard.storage_path
+      ) {
+        return { ok:false, kind:"validation", error:"The Policy Intake copy changed. Reload the intake before completing registration." };
+      }
+
       diagnosticStage = "rpc:finalize_policy_intake_motor_v1";
-      if (!Number.isInteger(payload.draftRevision) || (payload.draftRevision ?? 0) < 1) return { ok:false, kind:"validation", error:"The Policy Intake draft version is missing. Reload the intake and try again." };
       rpcResult = await admin.rpc("finalize_policy_intake_motor_v1", { p_intake_id:payload.sourceIntakeId, p_payload:rpcPayload, p_expected_revision:payload.draftRevision });
     } else {
       diagnosticStage = "rpc:onboard_motor_policy_commercial_status_v2";
