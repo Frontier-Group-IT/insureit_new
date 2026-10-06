@@ -4,6 +4,7 @@ import { getCurrentSession } from '@/lib/partner-session';
 
 export type PartnerPolicyIntakeDraft = {
   leadSourceId: string;
+  policyType?: 'motor' | 'non_motor' | 'life' | 'health';
   customerMobile: string;
   updatedAt: string;
 };
@@ -30,12 +31,14 @@ export async function loadPartnerPolicyIntakeDraft(): Promise<PartnerPolicyIntak
 
 export async function savePartnerPolicyIntakeDraft(input: {
   leadSourceId: string;
+  policyType: 'motor' | 'non_motor' | 'life' | 'health';
   customerMobile: string;
 }) {
   const storageKey = await key();
   if (!storageKey) return;
   const draft: PartnerPolicyIntakeDraft = {
     leadSourceId: input.leadSourceId,
+    policyType: input.policyType,
     customerMobile: input.customerMobile,
     updatedAt: new Date().toISOString(),
   };
