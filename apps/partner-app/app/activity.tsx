@@ -125,10 +125,7 @@ export default function ActivityScreen() {
                       </View>
                       <Text numberOfLines={1} style={styles.title}>{item.title}</Text>
                       <Text numberOfLines={1} style={styles.subtitle}>{item.subtitle}</Text>
-                      <Text numberOfLines={1} style={styles.meta}>{item.meta}</Text>
                     </View>
-
-                    <Ionicons name="chevron-forward" size={20} color="#071C70" />
                   </Pressable>
                 );
               })}
@@ -321,15 +318,15 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   logoTile: {
-    width: 68,
-    height: 53,
-    marginRight: 10,
-    borderRadius: 10,
+    width: 52,
+    height: 50,
+    marginRight: 4,
+    borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FBFCFF',
   },
-  insurerLogo: { width: 54, height: 34 },
+  insurerLogo: { width: 44, height: 30 },
   eventArtworkImage: { width: 32, height: 32 },
   itemBody: { flex: 1, minWidth: 0 },
   itemTop: {
@@ -371,12 +368,6 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: 1,
     color: '#68758E',
-    fontSize: 9.5,
-    lineHeight: 12,
-  },
-  meta: {
-    marginTop: 1,
-    color: '#8692A8',
     fontSize: 9.5,
     lineHeight: 12,
   },

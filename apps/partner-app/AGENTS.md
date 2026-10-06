@@ -23,6 +23,8 @@ Read `../../docs/PARTNER_APP_HANDOFF_2026_09_13.md`, `../../docs/PARTNER_APP_HOM
 
 ## Release evidence
 
+- **2026-10-06 — Activity Recent Activity row cleanup:** branch `ui/partner-activity-row-cleanup-2026-10-06`; Recent Activity rows no longer display insurer/company metadata beneath the customer name or a right-side chevron; row navigation remains on the whole card. Logo tile width/spacing is tightened so details start closer to the logo. Insurer-logo resolution remains intact via hidden `item.meta`; Needs Attention is untouched. Visual guards added. **IMPLEMENTED; PR/CI/merge/production runtime 0.2.0 OTA/device verification pending. NO APK/AAB CREATED.**
+
 - **2026-10-06 — Login horizontal brand lockup:** PR #2819 merged as `dc4e67708d379db70fe209dd7f3615d8d489db45`; existing Partner app icon is on the left with `insureit` and `Partner` stacked on the right, tagline retained below. Partner Verify #505 and Web Verify #5317 passed. Production runtime `0.2.0` OTA **DEPLOYED** via run #58 / update group `4e20938f-771c-4ca4-af05-82e2ae9fc3f3`; installed-device verification pending. No auth, route, API, schema, native dependency or runtime change. **NO APK/AAB CREATED.**
 
 
