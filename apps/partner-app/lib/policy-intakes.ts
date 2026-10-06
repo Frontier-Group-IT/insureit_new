@@ -17,6 +17,7 @@ export type PartnerPolicyIntake = {
   id: string;
   intake_number: string;
   status: string;
+  policy_type: PartnerPolicyType | null;
   lead_source_name: string;
   lead_source_type: string;
   lead_source_code: string | null;
