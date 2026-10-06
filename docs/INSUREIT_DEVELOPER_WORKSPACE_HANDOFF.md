@@ -109,10 +109,16 @@ Implemented:
 - dedicated Vercel project;
 - Vercel Authentication protection.
 
-Pending:
-- preview verification;
-- PR;
-- CI;
-- merge;
-- production deployment;
-- `dev.insureit.tech` custom-domain assignment.
+Verified production state (2026-10-06):
+- PR #2772 merged as `73b65c3d13ae4a9212e2e501e1cb111050a71bd9`;
+- dedicated Developer Workspace typecheck and production build passed;
+- repository-wide Verify web portal workflow passed all regressions, typecheck, lint and production build;
+- Vercel production deployment `dpl_2rfzZHkqgMm8rbsSvoDMwgShpPQr` is READY;
+- `dev.insureit.tech` is assigned to `insureit-developer` and verified;
+- authenticated fetch of the protected deployment returned HTTP 200;
+- `/api/health` returned healthy with `write_actions_enabled=false` and `apk_build_enabled=false`;
+- Vercel Authentication remains enabled for all deployment targets.
+
+Next phase:
+- add read-only provider adapters for GitHub, Vercel and Supabase observability;
+- keep all write operations disabled until the Action Gateway and capability model exist.
