@@ -424,14 +424,6 @@ function greeting(name: string) {
   return `${prefix} ${displayName}`;
 }
 
-function initials(value: string) {
-  return value
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('') || 'IP';
-}
 
 function formatCacheTime(value: number | null) {
   if (!value) return 'earlier';
@@ -462,7 +454,6 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#D5DEEB',
   },
-  avatarText: { color: '#40359E', fontSize: 11, fontWeight: '800' },
   pressed: { opacity: 0.7 },
   refreshWarning: { marginBottom: 10 },
   skeletonWrap: { gap: 12 },
