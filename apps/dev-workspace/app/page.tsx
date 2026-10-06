@@ -18,7 +18,7 @@ export default function DeveloperHome() {
           <span>DEV</span>
         </div>
         <div className="environment"><i /> DEVELOPMENT CONTROL PLANE</div>
-        <nav>{nav.map((item, i) => <a key={item} className={i === 0 ? "active" : ""} href={i === 0 ? "/" : "#roadmap"}><span>{String(i + 1).padStart(2, "0")}</span>{item}</a>)}</nav>
+        <nav>{nav.map((item, i) => <a key={item} className={i === 0 ? "active" : ""} href={item === "Home" ? "/" : item === "Configuration" ? "/configuration" : "#roadmap"}><span>{String(i + 1).padStart(2, "0")}</span>{item}</a>)}</nav>
         <div className="side-foot"><b>Phase 0 / 1</b><span>Read-only foundation</span></div>
       </aside>
 
