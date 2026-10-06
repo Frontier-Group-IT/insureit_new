@@ -236,10 +236,10 @@ function searchParam(value: string | string[] | undefined) {
 }
 
 function greeting(name: string) {
-  const firstName = name.trim().split(/\s+/)[0] || 'Partner';
+  const fullName = name.trim() || 'Partner';
   const hour = new Date().getHours();
   const prefix = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  return `${prefix}, ${firstName}`;
+  return `${prefix}, ${fullName}`;
 }
 
 

@@ -23,6 +23,8 @@ Read `../../docs/PARTNER_APP_HANDOFF_2026_09_13.md`, `../../docs/PARTNER_APP_HOM
 
 ## Release evidence
 
+- **2026-10-06 — Search full-name greeting:** branch `ui/partner-search-full-name-greeting-2026-10-06`; Search hero greeting now renders the full resolved `identity.display_name` rather than only the first token. No search logic, auth, route, API/RPC, schema, native dependency or runtime change. **IMPLEMENTED; PR/CI pending; NOT MERGED/DEPLOYED; NO APK/AAB CREATED.**
+
 - **2026-10-06 — Partner profile photo global propagation:** branch `feat/partner-profile-photo-global-2026-10-06`; profile-photo state is centralized in the Partner session provider and reused by a shared avatar component across all current profile-avatar surfaces. Uploading a new photo refreshes it immediately throughout the app; signed URLs refresh on foreground before expiry. Initials remain the fallback. No native dependency/runtime/schema/RLS change. **IMPLEMENTED; PR/CI/merge/production runtime 0.2.0 OTA pending. NO APK/AAB CREATED.**
 
 - **2026-10-06 — My Impact icons + clickable cards:** PR #2833 merged as `e865c7ae0b2c3bd448ea0c944fc5161e2c2d57b7`; all impact cards now use a consistent blue professional icon treatment and are tappable: Active Motor Protection→Business, Vehicles/Customers→Customers, Policies→Policies, Claims/Claim Outcomes→Claims, Gross Premium→Business Report, Customers Added→Customers, Journey→Journey. Partner Verify #517 and Web Verify #5336 passed. Production runtime `0.2.0` OTA **DEPLOYED** via run #66 / update group `e78b180d-9909-4156-912e-0bb0ad433324`; installed-device verification pending. Existing impact RPC/data/calculations are unchanged. **NO APK/AAB CREATED.**
