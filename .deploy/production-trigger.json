@@ -1,10 +1,10 @@
 {
-  "purpose": "Force a production web deployment so PR #2716 and all newer main changes are published to Vercel.",
-  "deploy_requested_at": "2026-10-05T11:29:00+05:30",
-  "requested_by": "explicit user deploy request",
-  "source": "Re-deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "5bd13af9e613191ece08dfdb266b179fc41faec1",
-  "release_scope": "Deploy current main, including PR #2716 (dashboard proposal source alignment and Business Performance policy card layout), plus all newer merged changes already contained in main.",
-  "verification": "PR #2716 Verify web portal run 37268840572 (#5183) passed successfully on head 0e87db7bec3a1f3a9f02c5dcc4e651b0b44fb917. This trigger intentionally changes a repository-global deployment marker so Vercel cannot skip the web project as unaffected.",
+  "purpose": "Deploy PR #2797 Policy Intake policy-copy registration guard and all current verified main web portal changes to Vercel production.",
+  "deploy_requested_at": "2026-10-06",
+  "requested_by": "explicit user merge and deploy request",
+  "source": "Protected GitHub Actions production deployment workflow.",
+  "source_commit": "7ce6854998719aac50b139cc7770593540062940",
+  "release_scope": "Deploy current main including PR #2797 server-side Policy Intake policy-copy registration guard.",
+  "verification": "PR #2797 Verify web portal run 37430603905 (#5287) passed successfully on head 6bf747f7fa41a4c5073f40674ea74935b74d3086. Deployment trigger PR must pass the canonical Verify web portal gate before merge.",
   "instructions": "Update this file only after explicit deployment approval."
 }
