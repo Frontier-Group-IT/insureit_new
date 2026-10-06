@@ -6,6 +6,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
 const service = fs.readFileSync(path.join(root, 'lib/policy-intakes.ts'), 'utf8');
 const screen = fs.readFileSync(path.join(root, 'app/policy-intake-new.tsx'), 'utf8');
+const api = fs.readFileSync(path.resolve(root, '../web-portal/app/api/partner/policy-intakes/route.ts'), 'utf8');
 
 function requireText(source, needle, message) {
   if (!source.includes(needle)) throw new Error(message);
@@ -42,5 +43,10 @@ for (const required of [
 requireText(service, "export type PartnerPolicyType = 'motor' | 'non_motor' | 'life' | 'health';", 'Partner Policy Intake service must expose the four portal policy types.');
 requireText(service, "action: 'submit_without_proposal'", 'Life/Health Policy Intake must support optional proposal submission.');
 requireText(service, 'policy_type: input.policyType', 'Partner Policy Intake service must send policy_type to the portal API.');
+
+requireText(api, 'policy_type: PolicyType', 'Partner Policy Intake API must accept policy_type on uploaded submissions.');
+requireText(api, 'action: "submit_without_proposal"', 'Partner Policy Intake API must accept no-proposal Life/Health submissions.');
+requireText(api, 'status: proposalForm ? "ready_for_review" : "processing"', 'Life/Health proposal submissions must bypass OCR and enter Operations review.');
+requireText(api, 'if (!proposalForm) {', 'Partner Policy Intake API must gate OCR processing away from Life/Health proposals.');
 
 console.log('Partner Policy Intake source and policy-type contracts verified.');
