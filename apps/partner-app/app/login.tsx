@@ -69,15 +69,17 @@ export default function LoginScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.brandBlock}>
-          <Image
-            accessibilityLabel="INSUREIT logo"
-            source={require('../assets/partner-app-icon.jpg')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <View accessibilityLabel="INSUREIT Partner" style={styles.brandMark}>
-            <Text style={styles.brandName}>insureit</Text>
-            <Text style={styles.brandPartner}>Partner</Text>
+          <View style={styles.brandRow}>
+            <Image
+              accessibilityLabel="INSUREIT logo"
+              source={require('../assets/partner-app-icon.jpg')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <View accessibilityLabel="INSUREIT Partner" style={styles.brandMark}>
+              <Text style={styles.brandName}>insureit</Text>
+              <Text style={styles.brandPartner}>Partner</Text>
+            </View>
           </View>
           <Text style={styles.tagline}>YOUR SAFETY, OUR PROMISE</Text>
         </View>
@@ -189,34 +191,38 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   brandBlock: { alignItems: 'center', marginBottom: 20 },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
   logo: {
     width: 66,
     height: 66,
     borderRadius: 16,
-    marginBottom: 8,
   },
   brandMark: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
-    minHeight: 82,
   },
   brandName: {
     color: partnerTheme.colors.ink,
-    fontSize: 48,
+    fontSize: 40,
     fontWeight: '800',
-    letterSpacing: -2,
-    lineHeight: 52,
+    letterSpacing: -1.6,
+    lineHeight: 43,
   },
   brandPartner: {
-    marginTop: -2,
+    marginTop: -1,
     color: partnerTheme.colors.inkMuted,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
-    letterSpacing: 3.2,
+    letterSpacing: 3,
     textTransform: 'uppercase',
   },
   tagline: {
-    marginTop: 4,
+    marginTop: 9,
     color: '#475569',
     fontSize: 11,
     fontWeight: '700',
