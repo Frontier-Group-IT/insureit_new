@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
+import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerOperationalRow } from '@/components/ui/partner-operational-row';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
@@ -30,7 +31,7 @@ const EMPTY_RESULTS: SearchResults = { customers: [], policies: [], claims: [] }
 export default function SearchScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ q?: string | string[] }>();
-  const { context } = usePartnerSession();
+  const { context, avatarUri } = usePartnerSession();
   const incomingQuery = searchParam(params.q);
   const [query, setQuery] = useState(incomingQuery || savedUniversalQuery);
   const debouncedQuery = useDebouncedValue(query.trim(), 300);
@@ -102,9 +103,13 @@ export default function SearchScreen() {
             onPress={() => router.push('/profile')}
             style={({ pressed }) => [styles.avatarTouch, pressed && styles.pressed]}
           >
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initials(displayName)}</Text>
-            </View>
+            <PartnerProfileAvatar
+              name={displayName}
+              uri={avatarUri}
+              size={38}
+              style={styles.avatar}
+              textColor={partnerTheme.colors.brandStrong}
+            />
           </Pressable>
         </View>
       }
