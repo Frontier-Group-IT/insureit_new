@@ -141,6 +141,9 @@ for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (i
 requireText(journey, 'PartnerAssets.status.journey', 'Journey timeline and empty state must use journey artwork.');
 for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (journey.includes(tinySize)) throw new Error(`Journey must not regress to tiny typography: ${tinySize}`);
 requireText(weeklyStory, 'PartnerAssets.actions.renewals', 'Your Week must keep renewal artwork for upcoming work.');
+requireText(weeklyStory, 'getPartnerBusinessRange', 'Your Week comparison dropdown must load real scoped range data for extended periods.');
+requireText(weeklyStory, "setComparisonDays(item.days)", 'Your Week comparison-period control must remain interactive.');
+requireText(weeklyStory, "backgroundColor: '#FFFFFF'", 'Your Week must retain the requested white period/reflection surfaces.');
 for (const tinySize of ['fontSize:7.5', 'fontSize:8.5', 'fontSize:8,', 'fontSize:9,']) if (weeklyStory.includes(tinySize)) throw new Error(`Your Week must not regress to tiny typography: ${tinySize}`);
 for (const recognitionAsset of ['status.achievement', 'actions.policyChecklist', 'actions.renewals', 'status.journey']) requireText(recognition, `PartnerAssets.${recognitionAsset}`, `Recognition is missing ${recognitionAsset} artwork.`);
 for (const tinySize of ['fontSize:7.5', 'fontSize:8.5']) if (recognition.includes(tinySize)) throw new Error(`Recognition must not regress to tiny typography: ${tinySize}`);
