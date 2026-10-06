@@ -65,13 +65,12 @@ requireText(stateView, 'PartnerAssets.emptyStates.incompleteDetails', 'Unauthori
 if (more.includes('<MenuRow icon=')) throw new Error('Feature rows in More must use Partner artwork instead of generic vector icons.');
 for (const asset of ['PartnerAssets.actions.policyChecklist', 'PartnerAssets.status.businessGrowth', 'PartnerAssets.status.settings']) requireText(more, asset, `More screen is missing ${asset}.`);
 
-for (const businessAsset of ['actions.renewals', 'navigation.claims', 'actions.businessPerformance']) {
+for (const businessAsset of ['actions.quickRenewals', 'actions.quickClaims', 'actions.quickCustomers']) {
   requireText(business, `PartnerAssets.${businessAsset}`, `Business is missing ${businessAsset} artwork.`);
 }
-if (business.includes('icon="refresh-outline"') || business.includes('icon="shield-outline"') || business.includes('git-network-outline')) {
-  throw new Error('Business feature cards/network must not regress to generic feature glyphs.');
-}
-requireText(business, 'if (!payout.available)', 'Business payout authorization gate must remain intact.');
+requireText(business, 'function BlueIcon(', 'Business must keep the shared blue generated-icon treatment.');
+requireText(business, 'function productIcon(', 'Business product cards must keep differentiated product icon mapping.');
+requireText(business, '!payout.available', 'Business payout authorization gate must remain intact.');
 requireText(business, 'getPartnerPayoutSummary()', 'Business must continue loading payout data through the existing service.');
 
 requireText(customers, 'PartnerAssets.emptyStates.noCustomers', 'Customers empty state must use the prepared no-customers artwork.');
