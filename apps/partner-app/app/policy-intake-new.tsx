@@ -483,7 +483,7 @@ export default function NewPolicyIntakeScreen() {
         {error ? (
           <View style={styles.feedback}>
             <PartnerBanner tone="danger" title="Submission not completed" message={error} />
-            {file ? <Text style={styles.retryHint}>Your selected {proposalForm ? 'proposal form' : 'policy copy'} and entered details are still here. Tap Submit to retry.</Text> : null}
+            {file ? <Text style={styles.retryHint}>Your selected document and entered details are still here. Tap Submit to retry.</Text> : null}
           </View>
         ) : null}
 
