@@ -18,19 +18,19 @@ import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
-type BusinessPeriod = 'all' | 'last6' | 'mtd' | 'month';
+type BusinessPeriod = 'all' | 'last6' | 'last_month' | 'mtd';
 
 const BUSINESS_PERIODS: { key: BusinessPeriod; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'last6', label: 'Last 6 Months' },
+  { key: 'last_month', label: 'Last Month' },
   { key: 'mtd', label: 'MTD' },
-  { key: 'month', label: 'This Month' },
 ];
 
 export default function PartnerHomeScreen() {
   const router = useRouter();
   const { context, cacheScopeKey } = usePartnerSession();
-  const [businessPeriod, setBusinessPeriod] = useState<BusinessPeriod>('month');
+  const [businessPeriod, setBusinessPeriod] = useState<BusinessPeriod>('mtd');
   const [periodOpen, setPeriodOpen] = useState(false);
 
   const fetchHomeWorkspace = useCallback(async (): Promise<{ home: PartnerHomeData; stories: PartnerStory[] }> => {
@@ -73,7 +73,7 @@ export default function PartnerHomeScreen() {
   const data = workspace.data?.home ?? null;
   const stories = workspace.data?.stories ?? [];
   const { identity } = context;
-  const periodLabel = BUSINESS_PERIODS.find((item) => item.key === businessPeriod)?.label ?? 'This Month';
+  const periodLabel = BUSINESS_PERIODS.find((item) => item.key === businessPeriod)?.label ?? 'MTD';
   const rangeData = business.data;
 
   return (
@@ -212,7 +212,6 @@ export default function PartnerHomeScreen() {
                     <Trend
                       value={Number(rangeData?.premium_change_percent ?? data.business.premium_change_percent ?? 0)}
                       hasPrevious={Number(rangeData?.premium_previous_period ?? data.business.premium_last_month ?? 0) > 0}
-                      isMonth={businessPeriod === 'month'}
                     />
                   )}
                 </View>
@@ -366,7 +365,7 @@ function QuickAction({ asset, label, onPress }: { asset: number; label: string; 
   );
 }
 
-function Trend({ value, hasPrevious, isMonth }: { value: number; hasPrevious: boolean; isMonth: boolean }) {
+function Trend({ value, hasPrevious }: { value: number; hasPrevious: boolean }) {
   if (!hasPrevious) return <Text style={styles.trendNeutral}>First recorded comparison period</Text>;
   const positive = value >= 0;
   return (
@@ -377,7 +376,7 @@ function Trend({ value, hasPrevious, isMonth }: { value: number; hasPrevious: bo
         color={positive ? '#1D9C60' : '#C27A11'}
       />
       <Text style={[styles.trendText, { color: positive ? '#1D9C60' : '#C27A11' }]}>
-        {Math.abs(value).toFixed(1)}% {positive ? 'above' : 'below'} {isMonth ? 'last month' : 'previous period'}
+        {Math.abs(value).toFixed(1)}% {positive ? 'above' : 'below'} previous period
       </Text>
     </View>
   );
@@ -389,10 +388,13 @@ function businessDateRange(period: BusinessPeriod) {
   if (period === 'all') return { from: '2000-01-01', to: today };
   if (period === 'mtd') return { from: localDate(new Date(now.getFullYear(), now.getMonth(), 1)), to: today };
   if (period === 'last6') return { from: localDate(new Date(now.getFullYear(), now.getMonth() - 5, 1)), to: today };
-  return {
-    from: localDate(new Date(now.getFullYear(), now.getMonth(), 1)),
-    to: localDate(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
-  };
+  if (period === 'last_month') {
+    return {
+      from: localDate(new Date(now.getFullYear(), now.getMonth() - 1, 1)),
+      to: localDate(new Date(now.getFullYear(), now.getMonth(), 0)),
+    };
+  }
+  return { from: localDate(new Date(now.getFullYear(), now.getMonth(), 1)), to: today };
 }
 
 function localDate(value: Date) {
