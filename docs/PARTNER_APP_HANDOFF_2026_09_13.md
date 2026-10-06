@@ -45,6 +45,19 @@
 
 ---
 
+## 2026-10-06 — Partner Policy Intake Life/Health support
+
+- Branch: `feature/partner-policy-intake-life-health-2026-10-06`.
+- New Policy Intake now includes Policy type with Motor, Non-Motor, Life and Health.
+- Motor/Non-Motor continue requiring a Policy Copy and the existing OCR flow.
+- Life/Health dynamically relabel the document to **Proposal form (Optional)**. A supplied proposal is stored securely and sent straight to Operations review without OCR/detail extraction; Life/Health can also be submitted with no proposal, matching the current web portal behavior.
+- Policy type is persisted in the Partner SecureStore draft and submitted to the existing `policy_intake_requests.policy_type` field.
+- Partner API scope checks and submitter identity rules are preserved. Detail view now shows Policy type, Proposal form state and a manual Operations-review explanation for Life/Health instead of misleading extracted Motor/vehicle sections.
+- No new migration, RLS policy, native dependency, runtime/version, APK or AAB is introduced by this branch.
+- **IMPLEMENTED; PR/CI/merge/production runtime 0.2.0 OTA pending. NO APK/AAB CREATED.**
+
+---
+
 # INSUREIT Partner App — Operational Handoff (2026-09-13)
 ## 2026-10-06 — More/Profile icon and profile-photo refinement
 
