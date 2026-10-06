@@ -1,3 +1,13 @@
+## 2026-10-06 — Proposal-date, payment-mode and address refinement
+
+- Branch: `fix/life-health-proposal-date-payment-address-2026-10-06`.
+- For Life and Health, the shared Source section displays **Proposal date** instead of **Policy issuance date**; Motor and Non-Motor wording remains unchanged. The internal `issuanceDate` / `sourcing_date` storage contract is intentionally preserved.
+- Life/Health Payment Mode does not offer **Cash**, and server-side validation rejects Cash submissions.
+- Section 02 **Customer / proposer** includes **Address** alongside proposer name and mobile, and new-customer creation persists the supplied address to the customer record.
+- No database migration, schema, RLS or issued-policy conversion change is required.
+- Regression coverage in `apps/web-portal/scripts/life-health-native-onboarding-regression.mjs` guards these UI rules.
+- Evidence state: **IMPLEMENTED on current main-aligned branch; PR/CI/merge/deployment pending.**
+
 # Life / Health Policy Onboarding architecture handoff — 2026-09-29
 
 ## Scope
