@@ -143,7 +143,6 @@ export default function RenewalsScreen() {
               <Text style={styles.summaryCountLabel}>Policies</Text>
             </View>
           </Pressable>
-
         </View>
       )}
 
@@ -190,15 +189,19 @@ export default function RenewalsScreen() {
     </View>
   );
 
-  const empty = collection.loading ? (
-    <PartnerStateView state="loading" title="Finding renewal opportunities" />
-  ) : collection.error ? (
-    <PartnerStateView state="error" title="Renewals could not be loaded" message={collection.error} actionLabel="Try again" onAction={() => void refreshAll()} />
-  ) : (
+  const empty = (
     <View style={styles.emptyCard}>
-      <Image source={PartnerAssets.emptyStates.noRenewals} style={styles.emptyArtwork} resizeMode="contain" />
-      <Text style={styles.emptyTitle}>{mode === 'expiring' ? 'No policies in this renewal window' : 'No overdue policies found'}</Text>
-      <Text style={styles.emptyMessage}>The queue is derived from your authorized policy book{`\n`}and policy expiry dates.</Text>
+      {collection.loading ? (
+        <PartnerStateView state="loading" title="Finding renewal opportunities" />
+      ) : collection.error ? (
+        <PartnerStateView state="error" title="Renewals could not be loaded" message={collection.error} actionLabel="Try again" onAction={() => void refreshAll()} />
+      ) : (
+        <>
+          <Image source={PartnerAssets.emptyStates.noRenewals} style={styles.emptyArtwork} resizeMode="contain" />
+          <Text style={styles.emptyTitle}>{mode === 'expiring' ? 'No policies in this renewal window' : 'No overdue policies found'}</Text>
+          <Text style={styles.emptyMessage}>The queue is derived from your authorized policy book{`\n`}and policy expiry dates.</Text>
+        </>
+      )}
     </View>
   );
 
@@ -303,14 +306,6 @@ const styles = StyleSheet.create({
   summaryCount: { alignItems: 'flex-end' },
   summaryCountValue: { color: '#0C1830', fontSize: 23, lineHeight: 27, fontWeight: '800' },
   summaryCountLabel: { marginTop: 3, color: '#657086', fontSize: 10 },
-  metricRow: { paddingTop: 10, flexDirection: 'row' },
-  metric: { flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'flex-start', gap: 7, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 10 },
-  metricActive: { backgroundColor: '#F4F6FF' },
-  metricDivider: { borderRightWidth: 1, borderRightColor: '#EDF0F5' },
-  metricIcon: { width: 29, height: 29, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  amberBg: { backgroundColor: '#FFF4DA' }, blueBg: { backgroundColor: '#E8F4FF' }, purpleBg: { backgroundColor: '#F0EAFE' }, redBg: { backgroundColor: '#FFE8E8' },
-  metricValue: { color: '#101A31', fontSize: 16, lineHeight: 20, fontWeight: '800' }, redValue: { color: '#E43C3C' },
-  metricLabel: { marginTop: 3, color: '#657086', fontSize: 9 },
   banner: { marginTop: 9 }, inlineBanner: { marginBottom: 8 },
   modeTabs: { marginTop: 14, flexDirection: 'row', gap: 20, borderBottomWidth: 1, borderBottomColor: '#E3E8F0' },
   modeTab: { minHeight: 43, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 5, borderBottomWidth: 3, borderBottomColor: 'transparent' },
@@ -330,7 +325,6 @@ const styles = StyleSheet.create({
   recordCard: { backgroundColor: '#FFFFFF', borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#E4E9F1' },
   recordCardLast: { borderBottomWidth: 1, borderBottomLeftRadius: 14, borderBottomRightRadius: 14, overflow: 'hidden' },
   recordDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#E4E9F1' },
-  separator: { height: StyleSheet.hairlineWidth, backgroundColor: partnerTheme.colors.line }, renewalArtwork: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' }, renewalArtworkImage: { width: 36, height: 36 },
+renewalArtwork: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' }, renewalArtworkImage: { width: 36, height: 36 },
   pressed: { opacity: 0.65 },
-  listFooter: { minHeight: 58, alignItems: 'center', justifyContent: 'center' }, loadingMore: { flexDirection: 'row', alignItems: 'center', gap: 8 }, loadingMoreText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption }, endText: { color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.meta },
 });
