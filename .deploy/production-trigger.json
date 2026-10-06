@@ -1,10 +1,10 @@
 {
-  "purpose": "Deploy PR #2797 Policy Intake policy-copy registration guard and all current verified main web portal changes to Vercel production.",
+  "purpose": "Deploy the verified Life / Health Add Policy refinements and all current verified main web portal changes to Vercel production.",
   "deploy_requested_at": "2026-10-06",
   "requested_by": "explicit user merge and deploy request",
   "source": "Protected GitHub Actions production deployment workflow.",
-  "source_commit": "7ce6854998719aac50b139cc7770593540062940",
-  "release_scope": "Deploy current main including PR #2797 server-side Policy Intake policy-copy registration guard.",
-  "verification": "PR #2797 Verify web portal run 37430603905 (#5287) passed successfully on head 6bf747f7fa41a4c5073f40674ea74935b74d3086. Deployment trigger PR must pass the canonical Verify web portal gate before merge.",
-  "instructions": "Update this file only after explicit deployment approval."
+  "source_commit": "0341e842bb5b509575a91f50e6b3e10e61dedee0",
+  "release_scope": "Deploy current main including Life / Health Proposal date wording, Cash payment-mode removal, and Customer / proposer Address field.",
+  "verification": "Release trigger PR must pass the canonical Verify web portal gate before merge.",
+  "instructions": "This file was updated only after explicit deployment approval."
 }
