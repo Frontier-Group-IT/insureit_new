@@ -10,6 +10,7 @@ export type DeveloperIdentity = Readonly<{
   isActive: boolean;
   assuranceLevel: "aal1" | "aal2" | "unknown";
   capabilities: readonly string[];
+  draftWriteEligible: boolean;
   writeEligible: false;
   reason: string;
 }>;
@@ -45,6 +46,7 @@ export async function resolveDeveloperIdentity(accessToken: string | null): Prom
       isActive: false,
       assuranceLevel: "unknown",
       capabilities: [],
+      draftWriteEligible: false,
       writeEligible: false,
       reason: "No app-level Supabase Auth session was supplied."
     };
@@ -62,6 +64,7 @@ export async function resolveDeveloperIdentity(accessToken: string | null): Prom
       isActive: false,
       assuranceLevel: "unknown",
       capabilities: [],
+      draftWriteEligible: false,
       writeEligible: false,
       reason: "Developer Workspace Supabase public environment is not configured."
     };
@@ -85,6 +88,7 @@ export async function resolveDeveloperIdentity(accessToken: string | null): Prom
       isActive: false,
       assuranceLevel: "unknown",
       capabilities: [],
+      draftWriteEligible: false,
       writeEligible: false,
       reason: "Supabase Auth could not verify this session."
     };
@@ -107,6 +111,7 @@ export async function resolveDeveloperIdentity(accessToken: string | null): Prom
       isActive: false,
       assuranceLevel: decodeAal(accessToken),
       capabilities: [],
+      draftWriteEligible: false,
       writeEligible: false,
       reason: "A matching governed portal profile could not be loaded."
     };
@@ -117,6 +122,8 @@ export async function resolveDeveloperIdentity(accessToken: string | null): Prom
   const authorized = active && protectedRole;
   const assuranceLevel = decodeAal(accessToken);
 
+  const draftWriteEligible = authorized && assuranceLevel === "aal2";
+
   return {
     authenticated: true,
     authorized,
@@ -126,12 +133,28 @@ export async function resolveDeveloperIdentity(accessToken: string | null): Prom
     role: profile.role,
     isActive: active,
     assuranceLevel,
-    capabilities: authorized ? ["workspace:read"] : [],
+    capabilities: authorized
+      ? draftWriteEligible
+        ? ["workspace:read", "config:draft", "config:rollback-preview"]
+        : ["workspace:read"]
+      : [],
+    draftWriteEligible,
     writeEligible: false,
     reason: authorized
       ? assuranceLevel === "aal2"
-        ? "Active protected IT Super User verified at AAL2. Write actions remain disabled by the global control-plane policy."
+        ? "Active protected IT Super User verified at AAL2. Preview-draft actions are available; production publish actions remain disabled."
         : "Active protected IT Super User verified. MFA/AAL2 is still required before any future write capability."
       : "Developer Workspace access requires an active protected IT Super User profile."
   };
+}
+
+
+export function createDeveloperSupabaseClient(accessToken: string) {
+  const env = getEnvironment();
+  if (!env) throw new Error("Developer Workspace Supabase public environment is not configured.");
+
+  return createClient(env.url, env.publishableKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: { headers: { Authorization: `Bearer ${accessToken}` } }
+  });
 }
