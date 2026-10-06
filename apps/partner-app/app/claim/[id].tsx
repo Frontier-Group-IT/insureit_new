@@ -5,12 +5,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PartnerStateView } from '@/components/ui/partner-state-view';
+import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import { getPartnerClaimDetail, type PartnerClaimDetail } from '@/lib/claims';
 import { formatIndianCurrency } from '@/lib/format';
 import { PartnerAssets } from '@/lib/partner-assets';
 
 type TimelineItem = { key: string; title: string; date: string; kind: 'created' | 'status' | 'stage' };
-type OverviewIcon = 'document-text-outline' | 'reader-outline' | 'calendar-outline' | 'location-outline' | 'headset-outline' | 'time-outline';
+type OverviewIcon = keyof typeof Ionicons.glyphMap;
 
 export default function ClaimDetailScreen() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function ClaimDetailScreen() {
   const [data, setData] = useState<PartnerClaimDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [overviewExpanded, setOverviewExpanded] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -63,18 +65,21 @@ export default function ClaimDetailScreen() {
           <>
             <View style={[styles.card, styles.statusCard]}>
               <View style={styles.statusTopRow}>
-                <View style={styles.statusIconWrap}><Image source={claimHeroArtwork(data.claim.current_status)} style={styles.statusArtwork} resizeMode="contain" /></View>
-                <View style={styles.statusCopy}>
-                  <Text style={styles.microLabel}>CURRENT STATUS</Text>
-                  <Text style={styles.statusTitle}>{humanize(data.claim.current_status || 'Status not recorded')}</Text>
+                <View style={styles.statusIconWrap}>
+                  <Image source={getPartnerManufacturerLogoSource(data.vehicle.make) ?? claimHeroArtwork(data.claim.current_status)} style={styles.statusArtwork} resizeMode="contain" />
                 </View>
-                <View style={styles.activeChip}><Text style={styles.activeChipText}>{claimActivityLabel(data.claim.current_status)}</Text></View>
+                <View style={styles.statusCopy}>
+                  <Text numberOfLines={1} style={styles.statusTitle}>{data.customer.name}</Text>
+                </View>
+                <View style={styles.activeChip}><Text style={styles.activeChipText}>{humanize(data.claim.current_status || 'Status not recorded')}</Text></View>
               </View>
-              <Text style={styles.statusMeta}>{[data.claim.claim_no, data.customer.name, data.vehicle.vehicle_no].filter(Boolean).join(' · ')}</Text>
+              <Text style={styles.statusMeta}>{data.claim.claim_no || 'Claim number not recorded'}</Text>
               <View style={styles.statusFooter}>
                 <Text numberOfLines={1} style={styles.statusFooterText}>{data.insurer.name || 'Insurer not recorded'}</Text>
                 <View style={styles.footerDivider} />
-                <Text numberOfLines={1} style={styles.statusFooterText}>{humanize(data.claim.claim_service_mode || 'service mode not recorded')}</Text>
+                <Text numberOfLines={1} style={styles.statusFooterRightText}>
+                  {[humanize(data.claim.claim_service_mode || 'service mode not recorded'), data.vehicle.vehicle_no].filter(Boolean).join(' · ')}
+                </Text>
               </View>
             </View>
 
@@ -84,7 +89,7 @@ export default function ClaimDetailScreen() {
                 <Text style={styles.sectionTitle}>Insured Person</Text>
               </View>
               <Pressable accessibilityRole="button" accessibilityLabel={`Open customer ${data.customer.name}`} onPress={() => router.push(`/customer/${data.customer.id}` as never)} style={({ pressed }) => [styles.personRow, pressed && styles.pressed]}>
-                <View style={styles.personAvatar}><Image source={PartnerAssets.navigation.customers} style={styles.personArtwork} resizeMode="contain" /></View>
+                <View style={styles.personAvatar}><Ionicons name="person-outline" size={20} color="#2574E8" /></View>
                 <View style={styles.personCopy}>
                   <Text style={styles.personName}>{data.customer.name}</Text>
                   <Text style={styles.personMeta}>{data.vehicle.vehicle_no || data.policy.policy_no || 'Customer record'}</Text>
@@ -98,8 +103,16 @@ export default function ClaimDetailScreen() {
                 <View style={styles.sectionTitleIcon}><Ionicons name="clipboard" size={15} color="#2574E8" /></View>
                 <Text style={styles.sectionTitle}>Claim Overview</Text>
                 <View style={styles.sectionSpacer} />
-                <Text style={styles.viewAll}>View All</Text>
-                <Ionicons name="chevron-forward" size={13} color="#5538ED" />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={overviewExpanded ? 'Show fewer claim overview details' : 'View all claim overview details'}
+                  accessibilityState={{ expanded: overviewExpanded }}
+                  onPress={() => setOverviewExpanded((value) => !value)}
+                  style={({ pressed }) => [styles.viewAllButton, pressed && styles.pressed]}
+                >
+                  <Text style={styles.viewAll}>{overviewExpanded ? 'Show Less' : 'View All'}</Text>
+                  <Ionicons name={overviewExpanded ? 'chevron-up' : 'chevron-forward'} size={13} color="#5538ED" />
+                </Pressable>
               </View>
               <View style={styles.overviewGrid}>
                 <OverviewTile icon="document-text-outline" label="Insurer Claim No." value={data.claim.insurer_claim_no || 'Not recorded'} />
@@ -108,6 +121,14 @@ export default function ClaimDetailScreen() {
                 <OverviewTile icon="location-outline" label="Location" value={data.claim.accident_location || 'Not recorded'} />
                 <OverviewTile icon="headset-outline" label="Assistance" value={humanize(data.claim.assistance_status || 'not requested')} />
                 <OverviewTile icon="time-outline" label="Last Updated" value={formatDateTime(data.claim.updated_at)} />
+                {overviewExpanded ? (
+                  <>
+                    <OverviewTile icon="shield-checkmark-outline" label="Claim No." value={data.claim.claim_no || 'Not recorded'} />
+                    <OverviewTile icon="construct-outline" label="Service Mode" value={humanize(data.claim.claim_service_mode || 'not recorded')} />
+                    <OverviewTile icon="car-outline" label="Vehicle" value={data.vehicle.vehicle_no || 'Not recorded'} />
+                    <OverviewTile icon="business-outline" label="Insurer" value={data.insurer.name || 'Not recorded'} />
+                  </>
+                ) : null}
               </View>
             </View>
 
@@ -173,11 +194,6 @@ function claimHeroArtwork(value: string | null): ImageSourcePropType {
   return PartnerAssets.navigation.claims;
 }
 
-function claimActivityLabel(value: string | null) {
-  const normalized = (value || '').toLowerCase();
-  return normalized.includes('closed') || normalized.includes('settled') || normalized.includes('complete') ? 'Claim Closed' : 'Claim Active';
-}
-
 function humanize(value: string) { return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 function formatDateTime(value: string | null) { if (!value) return 'Not recorded'; const date = new Date(value); if (Number.isNaN(date.getTime())) return value; return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: '2-digit', hour: 'numeric', minute: '2-digit' }).format(date); }
 
@@ -192,11 +208,11 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 }, content: { paddingHorizontal: 10, paddingTop: 8, paddingBottom: 12, gap: 8 }, stateWrap: { paddingTop: 24 },
   card: { borderRadius: 12, padding: 10, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E4E9F2' }, statusCard: { paddingTop: 9, paddingBottom: 8 },
   statusTopRow: { flexDirection: 'row', alignItems: 'center' }, statusIconWrap: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: '#F1F4FF' }, statusArtwork: { width: 31, height: 31 },
-  statusCopy: { flex: 1, minWidth: 0 }, microLabel: { color: '#6546EA', fontSize: 8, lineHeight: 10, letterSpacing: 0.55, fontWeight: '800' }, statusTitle: { marginTop: 1, color: '#1A2B45', fontSize: 15, lineHeight: 19, fontWeight: '800' },
+  statusCopy: { flex: 1, minWidth: 0 }, statusTitle: { color: '#1A2B45', fontSize: 15, lineHeight: 19, fontWeight: '800' },
   activeChip: { alignSelf: 'flex-start', borderRadius: 9, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: '#EEF6FF' }, activeChipText: { color: '#3677BE', fontSize: 8, lineHeight: 10, fontWeight: '700' }, statusMeta: { marginTop: 4, marginLeft: 48, color: '#7A879A', fontSize: 9, lineHeight: 12 },
-  statusFooter: { marginTop: 7, paddingTop: 6, flexDirection: 'row', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDF0F5' }, statusFooterText: { flex: 1, color: '#687A94', fontSize: 9, lineHeight: 12 }, footerDivider: { width: StyleSheet.hairlineWidth, height: 12, marginHorizontal: 10, backgroundColor: '#DDE3EC' },
-  sectionTitleRow: { minHeight: 24, flexDirection: 'row', alignItems: 'center' }, sectionTitleIcon: { width: 24, height: 24, borderRadius: 7, alignItems: 'center', justifyContent: 'center', marginRight: 6, backgroundColor: '#EDF6FF' }, sectionTitle: { color: '#1D2C45', fontSize: 12, lineHeight: 15, fontWeight: '800' }, sectionMeta: { marginTop: 1, color: '#8A97A9', fontSize: 8, lineHeight: 10 }, sectionSpacer: { flex: 1 }, viewAll: { color: '#5538ED', fontSize: 9, lineHeight: 11, fontWeight: '700' },
-  personRow: { minHeight: 52, marginTop: 6, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 4 }, personAvatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: '#EDF5FF' }, personArtwork: { width: 30, height: 30 }, personCopy: { flex: 1 }, personName: { color: '#20324D', fontSize: 11, lineHeight: 14, fontWeight: '800' }, personMeta: { marginTop: 2, color: '#7A8799', fontSize: 9, lineHeight: 12 },
+  statusFooter: { marginTop: 7, paddingTop: 6, flexDirection: 'row', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDF0F5' }, statusFooterText: { flex: 1, color: '#687A94', fontSize: 9, lineHeight: 12 }, statusFooterRightText: { flex: 1, color: '#687A94', fontSize: 9, lineHeight: 12, textAlign: 'right' }, footerDivider: { width: StyleSheet.hairlineWidth, height: 12, marginHorizontal: 10, backgroundColor: '#DDE3EC' },
+  sectionTitleRow: { minHeight: 24, flexDirection: 'row', alignItems: 'center' }, sectionTitleIcon: { width: 24, height: 24, borderRadius: 7, alignItems: 'center', justifyContent: 'center', marginRight: 6, backgroundColor: '#EDF6FF' }, sectionTitle: { color: '#1D2C45', fontSize: 12, lineHeight: 15, fontWeight: '800' }, sectionMeta: { marginTop: 1, color: '#8A97A9', fontSize: 8, lineHeight: 10 }, sectionSpacer: { flex: 1 }, viewAllButton: { minHeight: 28, paddingLeft: 8, flexDirection: 'row', alignItems: 'center', gap: 2 }, viewAll: { color: '#5538ED', fontSize: 9, lineHeight: 11, fontWeight: '700' },
+  personRow: { minHeight: 52, marginTop: 6, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 4 }, personAvatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: '#EDF5FF' }, personCopy: { flex: 1 }, personName: { color: '#20324D', fontSize: 11, lineHeight: 14, fontWeight: '800' }, personMeta: { marginTop: 2, color: '#7A8799', fontSize: 9, lineHeight: 12 },
   overviewGrid: { marginTop: 6, flexDirection: 'row', flexWrap: 'wrap', gap: 5 }, overviewTile: { width: '49%', minHeight: 56, paddingHorizontal: 7, paddingVertical: 8, borderRadius: 9, flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#FAFBFD', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E7EBF2' }, overviewIcon: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginRight: 6, backgroundColor: '#EEF6FF' }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { color: '#8A96A8', fontSize: 8.5, lineHeight: 11 }, overviewValue: { marginTop: 2, color: '#26364F', fontSize: 10, lineHeight: 13, fontWeight: '700' },
   amountRow: { marginTop: 7, flexDirection: 'row', overflow: 'hidden', borderRadius: 9, backgroundColor: '#F5F7FF' }, amount: { flex: 1, minHeight: 50, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: '#DDE4EF' }, amountHighlighted: { backgroundColor: '#F3FBF7' }, amountValue: { color: '#24324B', fontSize: 11, lineHeight: 14, fontWeight: '800' }, amountLabel: { marginTop: 3, color: '#7B8798', fontSize: 8.5, lineHeight: 11, textAlign: 'center' },
   journeyScroll: { paddingTop: 8, paddingBottom: 2, paddingRight: 8 }, journeyStep: { width: 164, marginRight: 4 }, journeyRailRow: { height: 14, flexDirection: 'row', alignItems: 'center' }, journeyDot: { width: 7, height: 7, borderRadius: 4, marginLeft: 17, backgroundColor: '#3D79E6' }, journeyDotLatest: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#6541F4' }, journeyConnector: { flex: 1, height: 1, marginLeft: 4, backgroundColor: '#D4DEEE' },
