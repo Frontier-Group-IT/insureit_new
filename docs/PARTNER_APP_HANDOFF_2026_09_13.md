@@ -59,6 +59,15 @@
 ---
 
 # INSUREIT Partner App — Operational Handoff (2026-09-13)
+## 2026-10-06 — Login horizontal branding
+
+- Branch: `ui/partner-login-horizontal-branding-2026-10-06`.
+- Partner Login branding now uses a horizontal lockup: existing app icon on the left, `insureit` with `Partner` directly beneath it on the right.
+- Existing `YOUR SAFETY, OUR PROMISE` tagline remains centered below the combined logo/wordmark row.
+- Welcome card, Email/Password fields, forgot-password link, sign-in behavior, authentication and navigation remain unchanged.
+- No backend/schema/RLS/native/runtime change and no APK/AAB created.
+- Evidence state: **IMPLEMENTED; PR/CI pending; NOT MERGED; NOT DEPLOYED.**
+
 ## 2026-10-06 — Home metric icon refinement
 
 - Branch: `ui/partner-home-metric-icons-2026-10-06`.
