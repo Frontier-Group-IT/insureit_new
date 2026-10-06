@@ -208,7 +208,7 @@ export default function PartnerHomeScreen() {
                     <Text style={styles.trendNeutral}>Updating business figures…</Text>
                   ) : business.error ? (
                     <Text style={styles.rangeError}>Unable to refresh selected period</Text>
-                  ) : (
+                  ) : businessPeriod === 'all' && Number(rangeData?.premium_previous_period ?? data.business.premium_last_month ?? 0) <= 0 ? null : (
                     <Trend
                       value={Number(rangeData?.premium_change_percent ?? data.business.premium_change_percent ?? 0)}
                       hasPrevious={Number(rangeData?.premium_previous_period ?? data.business.premium_last_month ?? 0) > 0}
@@ -231,7 +231,7 @@ export default function PartnerHomeScreen() {
                 />
                 <View style={styles.metricDivider} />
                 <MetricCell
-                  asset={PartnerAssets.actions.payoutRefresh}
+                  asset={PartnerAssets.actions.payoutGrowth}
                   value={rangeData?.commission_available ? formatIndianCurrency(rangeData.commission_earned ?? 0) : '—'}
                   label="Commission Earned"
                 />
