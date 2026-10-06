@@ -101,3 +101,21 @@
 .draft-login-link{display:inline-flex;margin-top:10px;padding:9px 11px;background:#0b2441;color:#fff;border-radius:7px;font-size:9px}
 @media(max-width:900px){.draft-grid{grid-template-columns:1fr}.draft-security-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.draft-security-strip{grid-template-columns:1fr}.revision-row{grid-template-columns:1fr}.revision-row>div:last-child{justify-content:flex-start}}
+
+.mfa-panel{grid-column:1/-1;border:1px solid #cfe0ef;border-radius:11px;background:#f8fbfe;padding:15px;display:flex;flex-direction:column;gap:12px}
+.mfa-panel-head{display:flex;flex-direction:column;gap:4px}.mfa-panel-head span{font-size:8px;letter-spacing:.11em;color:#3974ad}.mfa-panel-head b{font-size:13px}
+.mfa-panel p{font-size:10px;line-height:1.55;color:#667d92;margin:0}
+.mfa-primary{min-height:38px;border:0;border-radius:8px;padding:0 13px;background:#0b2441;color:#fff;font-size:9px;font-weight:700;cursor:pointer;align-self:flex-start}
+.mfa-primary:disabled{opacity:.5;cursor:not-allowed}
+.mfa-enrollment{display:grid;grid-template-columns:150px 1fr;gap:13px;align-items:start}
+.mfa-qr{width:150px;height:150px;border:1px solid #d9e4ed;border-radius:10px;background:#fff;padding:8px;display:grid;place-items:center}
+.mfa-qr img{display:block;width:100%;height:100%;object-fit:contain}
+.mfa-secret{display:flex;flex-direction:column;gap:6px;min-width:0}.mfa-secret span{font-size:8px;color:#778da1;text-transform:uppercase;letter-spacing:.07em}.mfa-secret code{font-size:9px;word-break:break-all;background:#eef4f9;border-radius:7px;padding:9px;color:#294c6c}.mfa-secret small{font-size:8px;line-height:1.45;color:#8b9bab}
+.mfa-enrollment label,.mfa-challenge label{display:flex;flex-direction:column;gap:6px;font-size:9px;font-weight:700;color:#526a80}
+.mfa-enrollment label,.mfa-enrollment .mfa-primary{grid-column:2}
+.mfa-enrollment input,.mfa-challenge input{height:40px;border:1px solid #d6e1eb;border-radius:8px;padding:0 11px;font:inherit;font-size:15px;letter-spacing:.18em}
+.mfa-enrollment input:focus,.mfa-challenge input:focus{outline:2px solid #dcecff;border-color:#7daee3}
+.mfa-challenge{display:flex;align-items:end;gap:9px}.mfa-challenge label{flex:1}.mfa-challenge .mfa-primary{height:40px}
+.mfa-success{grid-column:1/-1;border:1px solid #cce6d9;background:#f1faf5;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:4px}
+.mfa-success b{font-size:10px;color:#237354}.mfa-success span{font-size:9px;line-height:1.5;color:#5f7e70}
+@media(max-width:600px){.mfa-enrollment{grid-template-columns:1fr}.mfa-qr{width:170px;height:170px;margin:auto}.mfa-enrollment label,.mfa-enrollment .mfa-primary{grid-column:1}.mfa-challenge{align-items:stretch;flex-direction:column}.mfa-challenge .mfa-primary{align-self:stretch}}
