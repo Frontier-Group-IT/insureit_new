@@ -3,12 +3,12 @@
 - Partner App → Claim Details top summary now uses the customer name as the heading, removes the `CURRENT STATUS` eyebrow, and shows the live claim status in the right badge.
 - Vehicle number moved out of the heading metadata and now sits beside the service-mode text in the summary footer.
 - Top-left artwork now resolves the linked vehicle manufacturer logo through the existing Partner catalog, with the existing claim artwork retained as fallback.
-- `partner_app_claim_detail(uuid)` now exposes `vehicle.make` through migration `20261006115000_partner_claim_detail_vehicle_make.sql`; rollback added. **Migration committed, not claimed applied.**
+- Manufacturer data is enriched through the existing scoped `partner_app_customer_detail` RPC, avoiding a new database migration or schema dependency.
 - Insured Person row now uses a clear profile/person icon.
 - Claim Overview `View All` is now a real accessible press target that expands/collapses additional claim details inline.
 - Partner Phase 5 contract verification now protects these presentation rules.
 - Changes were committed directly to `main` per the current repository working agreement.
-- **IMPLEMENTED IN SOURCE; CI/schema apply/OTA/runtime verification pending. NO APK/AAB CREATED.**
+- **IMPLEMENTED IN SOURCE; CI/OTA/runtime verification pending. NO SCHEMA CHANGE. NO APK/AAB CREATED.**
 
 ---
 
