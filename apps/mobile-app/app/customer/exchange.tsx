@@ -385,16 +385,29 @@ export default function ExchangeMarketplaceScreen() {
       Alert.alert('Already listed', 'This vehicle already has an active Exchange listing.');
       return;
     }
+
+    const editableListing = activity.listings.find((row) => {
+      const status = recordString(row, 'status');
+      return recordString(row, 'vehicle_id') === vehicle.vehicle_id
+        && ['draft', 'rejected', 'paused'].includes(status);
+    });
+    const savedCategory = editableListing ? recordString(editableListing, 'category') : '';
+    const category = categories.includes(savedCategory as VehicleCategory) && savedCategory !== 'All'
+      ? savedCategory as Exclude<VehicleCategory, 'All'>
+      : categoryFromSellableVehicle(vehicle);
+
     setSelectedSellVehicleId(vehicle.vehicle_id);
-    setSavedListingId(null);
+    setSavedListingId(editableListing ? recordString(editableListing, 'listing_id') : null);
     setPhotos(photoLabels.map((label) => ({ label, uri: null, uploaded: false })));
     setSellDraft({
       registration: vehicle.vehicle_no,
-      makeModel: [vehicle.make, vehicle.model].filter(Boolean).join(' ') || vehicle.vehicle_type,
+      makeModel: recordString(editableListing ?? {}, 'title')
+        || [vehicle.make, vehicle.model].filter(Boolean).join(' ')
+        || vehicle.vehicle_type,
       year: vehicle.year ? String(vehicle.year) : '',
       km: '',
-      category: categoryFromSellableVehicle(vehicle),
-      askingPrice: '',
+      category,
+      askingPrice: editableListing ? String(recordNumber(editableListing, 'asking_price') || '') : '',
     });
   }
 
