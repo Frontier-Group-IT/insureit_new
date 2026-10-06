@@ -113,6 +113,10 @@ expectAll('app/claim/[id].tsx', [
   [/setOverviewExpanded\(\(value\) => !value\)/, 'Claim Overview View All must expand and collapse additional details'],
 ]);
 expect('app/claim/[id].tsx', /^(?![\s\S]*CURRENT STATUS)[\s\S]*$/, 'claim summary must not restore the CURRENT STATUS eyebrow');
+expectAll('lib/claims.ts', [
+  [/partner_app_customer_detail/, 'claim detail must enrich vehicle make through the existing scoped customer-detail RPC'],
+  [/matchedVehicle[\s\S]*make:/, 'claim detail must carry the matched manufacturer into the vehicle payload'],
+]);
 
 // Final Phase 5 hardening contracts.
 expectAll('lib/partner-observability.ts', [
