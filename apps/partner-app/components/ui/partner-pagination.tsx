@@ -41,7 +41,6 @@ export function PartnerPagination({
           style={({ pressed }) => [styles.button, !canPrevious && styles.buttonDisabled, pressed && canPrevious && styles.pressed]}
         >
           <Ionicons name="chevron-back" size={13} color={canPrevious ? partnerTheme.colors.brand : '#9AA7B8'} />
-          <Text style={[styles.buttonText, !canPrevious && styles.buttonTextDisabled]}>Previous</Text>
         </Pressable>
         <Text style={styles.page}>{page} / {Math.max(totalPages, 1)}</Text>
         <Pressable
@@ -51,7 +50,6 @@ export function PartnerPagination({
           onPress={onNext}
           style={({ pressed }) => [styles.button, !canNext && styles.buttonDisabled, pressed && canNext && styles.pressed]}
         >
-          <Text style={[styles.buttonText, !canNext && styles.buttonTextDisabled]}>Next</Text>
           <Ionicons name="chevron-forward" size={13} color={canNext ? partnerTheme.colors.brand : '#9AA7B8'} />
         </Pressable>
       </View>
@@ -72,8 +70,8 @@ const styles = StyleSheet.create({
   range: { flexShrink: 1, color: '#71819A', fontSize: 9, lineHeight: 12, fontWeight: '600' },
   nav: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   button: {
-    minHeight: 32,
-    paddingHorizontal: 9,
+    width: 32,
+    height: 32,
     borderRadius: 9,
     borderWidth: 1,
     borderColor: '#D8E2F0',
@@ -81,11 +79,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
   },
   buttonDisabled: { backgroundColor: '#F7F9FC', borderColor: '#E5EAF1' },
-  buttonText: { color: partnerTheme.colors.brand, fontSize: 9, lineHeight: 12, fontWeight: '800' },
-  buttonTextDisabled: { color: '#9AA7B8' },
   page: { minWidth: 38, textAlign: 'center', color: '#53657D', fontSize: 9.5, lineHeight: 12, fontWeight: '800' },
   pressed: { opacity: 0.72 },
 });
