@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     paddingLeft: 12,
   },
   forgotPasswordText: {
-    color: partnerTheme.colors.primary,
+    color: partnerTheme.colors.brand,
     fontSize: 12,
     fontWeight: '700',
   },
