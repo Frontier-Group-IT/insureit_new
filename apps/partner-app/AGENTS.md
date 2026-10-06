@@ -23,6 +23,9 @@ Read `../../docs/PARTNER_APP_HANDOFF_2026_09_13.md`, `../../docs/PARTNER_APP_HOM
 
 ## Release evidence
 
+- **2026-10-06 — Policy Intake heading cleanup:** branch `ui/partner-policy-intake-heading-cleanup-2026-10-06`; renamed the top title to `Policy Intake` and removed the restored-draft banner from the details step. Draft persistence/restoration remains active silently; no route, API, schema, RLS, native dependency, runtime or APK/AAB change. **IMPLEMENTED; PR/CI pending; NOT MERGED/DEPLOYED.**
+
+
 - **2026-10-06 — Partner Policy Intake Life/Health support:** branch `feature/partner-policy-intake-life-health-2026-10-06`; New Policy Intake now has a mobile-native Policy type selector for Motor / Non-Motor / Life / Health. Life/Health switches Policy Copy to optional Proposal Form, skips OCR when a proposal is supplied, and can submit without a proposal directly to Operations review, matching the web intake behavior. Drafts preserve policy type, and intake detail shows proposal/manual-review semantics. Existing Partner scope/authorization is preserved; no schema/native/runtime/package change. **MERGED + DEPLOYED:** PR #2784 as `8f38408afdb76990b7f7f0581522c67b10f3ad5c`; Partner + web CI passed. Production runtime `0.2.0` OTA published successfully via run #45 from main `d7f6a99652b095497883be1b91f07f26d4f15c8b`, update group `606e7dbb-0f65-4439-9d1a-02cb9abc2266`. Installed-device verification pending. **NO APK/AAB CREATED.**
 
 

@@ -116,7 +116,7 @@ for (const oldGlyph of ['document-text-outline', 'car-outline', 'shield-outline'
 
 for (const detailAsset of ['navigation.claims', 'status.journey', 'status.claimAttention', 'status.verified']) requireText(claimDetail, `PartnerAssets.${detailAsset}`, `Claim detail is missing ${detailAsset} artwork.`);
 requireText(claimDetail, 'getPartnerManufacturerLogoSource', 'Claim detail summary must resolve manufacturer artwork from the linked vehicle make.');
-requireText(claimDetail, 'name="person-outline"', 'Claim detail insured-person row must keep the approved clear profile icon.');
+requireText(claimDetail, 'PartnerAssets.navigation.customers', 'Claim detail insured-person row must keep the approved customer identity artwork.');
 requireText(claimDetail, 'getPartnerClaimDetail(id)', 'Claim detail must preserve the existing scoped data service.');
 requireText(claimDetail, 'function timelineArtwork(item: TimelineItem)', 'Claim detail must keep semantic journey artwork mapping.');
 if (claimDetail.includes('styles.dotLatest') || claimDetail.includes('styles.innerDot')) throw new Error('Claim detail must not regress to dot-only journey identity.');
