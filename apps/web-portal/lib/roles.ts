@@ -20,7 +20,7 @@ export const roleCapabilities:Record<AppRole,readonly Capability[]>={
   relationship_manager:["view_dashboard","view_claims","view_intermediaries","create_intermediary_application","view_customers","create_customers","manage_customers","view_kyc","view_vehicles","view_policies","view_tasks","view_reports","view_notifications","view_policy_intakes","create_policy_intakes"],
   sales_executive:["view_policies","view_policy_intakes","create_policy_intakes"],
   claims_head:["view_dashboard","view_claims","manage_claims","view_tasks","manage_tasks","view_reports","view_notifications"], claim_processor:["view_dashboard","view_claims","manage_claims","view_tasks","manage_tasks","view_notifications"], field_executive:["view_dashboard","view_claims","view_tasks","view_notifications"],
-  backoffice_executive:["view_dashboard","view_customers","create_customers","view_vehicles","create_vehicles","view_policies","create_policies","create_external_policies","view_policy_intakes","review_policy_intakes","finalize_policy_intakes","view_reports","view_notifications"], accounts:[],
+  backoffice_executive:["view_dashboard","view_customers","create_customers","view_vehicles","create_vehicles","view_policies","create_policies","create_external_policies","view_policy_intakes","review_policy_intakes","finalize_policy_intakes","view_reports","view_notifications"], accounts:["view_accounts","view_reports"],
   agent:["view_dashboard","view_customers","create_customers","manage_customers","view_tasks","view_notifications"], customer:[], intermediary:[]
 };
 export function hasCapability(role:string|null|undefined,capability:Capability){return Boolean(role&&isAppRole(role)&&roleCapabilities[role].includes(capability));}
