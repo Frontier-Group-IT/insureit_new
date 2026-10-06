@@ -16,7 +16,7 @@ export async function updateLifeHealthCaseDetails(formData: FormData) {
   const insurerId = clean(formData.get("insurerId"));
   const customerName = clean(formData.get("customerName"));
   const customerPhone = clean(formData.get("customerPhone")).replace(/\D/g, "").slice(-10);
-  const customerEmail = clean(formData.get("customerEmail"));
+  const customerAddress = clean(formData.get("customerAddress"));
   const premium = numberValue(clean(formData.get("premiumAmount")));
   const sourcingDate = clean(formData.get("sourcingDate"));
   const paymentFrequency = clean(formData.get("paymentFrequency"));
@@ -26,7 +26,7 @@ export async function updateLifeHealthCaseDetails(formData: FormData) {
   if (!customerName) return { ok: false as const, error: "Enter the customer name." };
   if (!/^[6-9][0-9]{9}$/.test(customerPhone)) return { ok: false as const, error: "Enter a valid 10 digit Indian mobile number." };
   if (!insurerId) return { ok: false as const, error: "Select an insurer." };
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(sourcingDate)) return { ok: false as const, error: "Enter a valid sourcing date." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(sourcingDate)) return { ok: false as const, error: "Enter a valid proposal date." };
   if (premium === null || premium < 0) return { ok: false as const, error: "Enter a valid premium." };
   if (!PAYMENT_FREQUENCIES.has(paymentFrequency)) return { ok: false as const, error: "Select a valid payment frequency." };
   if (!PAYMENT_MODES.has(paymentMode)) return { ok: false as const, error: "Select a valid payment mode." };
@@ -36,7 +36,7 @@ export async function updateLifeHealthCaseDetails(formData: FormData) {
   if (row.final_policy_id) return { ok: false as const, error: "Issued cases cannot be edited." };
   if (!row.customer_id) return { ok: false as const, error: "The case customer reference is missing." };
 
-  const { error: customerError } = await admin.from("customers").update({ contact_name: customerName, phone: customerPhone, email: customerEmail || null, updated_at: new Date().toISOString() }).eq("id", row.customer_id);
+  const { error: customerError } = await admin.from("customers").update({ contact_name: customerName, phone: customerPhone, address: customerAddress || null, address_street: customerAddress || null, updated_at: new Date().toISOString() }).eq("id", row.customer_id);
   if (customerError) return { ok: false as const, error: "Customer details could not be updated." };
 
   const { error: caseError } = await admin.from("life_health_cases").update({
