@@ -372,3 +372,11 @@ Use precise state labels:
 - **UNVERIFIED** — expected but not directly observed.
 
 Never collapse merge, publish and device verification into one status.
+
+## 2026-10-06 — Claims summary counts in parentheses
+
+- Branch: `ui/partner-claims-parenthesized-counts-2026-10-06`.
+- The Claims summary/filter tabs keep using the existing live summary source and now display counts as `All (N)`, `In Progress (N)`, and `Settled (N)` instead of a bare trailing number.
+- No claim query, filter semantics, pagination, status mapping, navigation, authorization, API/RPC/schema/RLS, native dependency, runtime, or permission change.
+- OTA-safe for Partner production runtime `0.2.0`; no APK/AAB/native build authorized or created.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/OTA/device verification pending.**
