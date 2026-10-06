@@ -23,6 +23,8 @@ Read `../../docs/PARTNER_APP_HANDOFF_2026_09_13.md`, `../../docs/PARTNER_APP_HOM
 
 ## Release evidence
 
+- **2026-10-06 — Partner global dropdown outside-dismiss behavior:** branch `ux/partner-dropdown-outside-dismiss-2026-10-06`; Home period, Business Overview/Trend periods, Network filter, Policy Intake source/type selectors, and Weekly Story comparison dropdowns now render through a reusable anchored modal layer and close when the user taps anywhere outside. Renewals sort and bottom-sheet menus already used outside/backdrop dismissal. No native dependency/runtime/schema/RLS change. **IMPLEMENTED; PR/CI/merge/production runtime 0.2.0 OTA pending. NO APK/AAB CREATED.**
+
 - **2026-10-06 — Business page icon styling:** PR #2824 merged as `d5d299fdbb93bd0dc0b74c81575c599af059ce80`; unified Quick Actions, payout, product-mix, and network icons into the approved blue visual family while preserving business calculations, API/RPC behavior, permissions, routes and runtime configuration. Partner Verify #512 and Web Verify #5327 passed. Production runtime `0.2.0` OTA **DEPLOYED** via run #63 / update group `a722eb87-b113-4faf-bb9c-d9b54ccd9d15`; installed-device verification pending. **NO APK/AAB CREATED.**
 
 

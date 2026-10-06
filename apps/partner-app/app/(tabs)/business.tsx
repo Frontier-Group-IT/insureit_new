@@ -5,6 +5,7 @@ import { Image, type ImageSourcePropType, Pressable, RefreshControl, StyleSheet,
 
 import { PartnerBusinessRangeSummaryCard } from '@/components/partner-business-range-summary';
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerBusinessPerformance, type PartnerBusinessPerformance } from '@/lib/business';
@@ -257,15 +258,20 @@ export default function BusinessScreen() {
             <SectionHeader
               title="Business Overview"
               action={(
-                <Pressable accessibilityRole="button" accessibilityLabel="Choose business overview period" accessibilityState={{ expanded: overviewMenuOpen }} onPress={() => setOverviewMenuOpen((value) => !value)} style={styles.periodButton}>
-                  <Text style={styles.periodText}>{optionLabel(OVERVIEW_OPTIONS, overviewRange)}</Text>
-                  <Ionicons name={overviewMenuOpen ? 'chevron-up' : 'chevron-down'} size={12} color="#3156B8" />
-                </Pressable>
+                <PartnerAnchoredDropdown
+                  visible={overviewMenuOpen}
+                  onDismiss={() => setOverviewMenuOpen(false)}
+                  align="right"
+                  menuWidth={154}
+                  menu={<DropdownMenu options={OVERVIEW_OPTIONS} selected={overviewRange} onSelect={(value) => void selectOverviewRange(value)} />}
+                >
+                  <Pressable accessibilityRole="button" accessibilityLabel="Choose business overview period" accessibilityState={{ expanded: overviewMenuOpen }} onPress={() => setOverviewMenuOpen((value) => !value)} style={styles.periodButton}>
+                    <Text style={styles.periodText}>{optionLabel(OVERVIEW_OPTIONS, overviewRange)}</Text>
+                    <Ionicons name={overviewMenuOpen ? 'chevron-up' : 'chevron-down'} size={12} color="#3156B8" />
+                  </Pressable>
+                </PartnerAnchoredDropdown>
               )}
             />
-            {overviewMenuOpen ? (
-              <DropdownMenu options={OVERVIEW_OPTIONS} selected={overviewRange} onSelect={(value) => void selectOverviewRange(value)} />
-            ) : null}
           </View>
 
           {overviewRange === 'custom' ? (
@@ -320,10 +326,18 @@ export default function BusinessScreen() {
               title="Month-wise Trend"
               action={(
                 <View style={styles.sectionActions}>
-                  <Pressable accessibilityRole="button" accessibilityLabel="Choose month trend period" accessibilityState={{ expanded: trendMenuOpen }} onPress={() => setTrendMenuOpen((value) => !value)} style={styles.smallSelect}>
-                    <Text style={styles.smallSelectText}>{optionLabel(TREND_OPTIONS, trendRange)}</Text>
-                    <Ionicons name={trendMenuOpen ? 'chevron-up' : 'chevron-down'} size={10} color="#3156B8" />
-                  </Pressable>
+                  <PartnerAnchoredDropdown
+                    visible={trendMenuOpen}
+                    onDismiss={() => setTrendMenuOpen(false)}
+                    align="right"
+                    menuWidth={154}
+                    menu={<DropdownMenu options={TREND_OPTIONS} selected={trendRange} onSelect={(value) => void selectTrendRange(value)} />}
+                  >
+                    <Pressable accessibilityRole="button" accessibilityLabel="Choose month trend period" accessibilityState={{ expanded: trendMenuOpen }} onPress={() => setTrendMenuOpen((value) => !value)} style={styles.smallSelect}>
+                      <Text style={styles.smallSelectText}>{optionLabel(TREND_OPTIONS, trendRange)}</Text>
+                      <Ionicons name={trendMenuOpen ? 'chevron-up' : 'chevron-down'} size={10} color="#3156B8" />
+                    </Pressable>
+                  </PartnerAnchoredDropdown>
                   <Pressable accessibilityRole="button" accessibilityLabel="Open business report" onPress={() => router.push('/business-report')} style={({ pressed }) => [styles.reportButton, pressed && styles.pressed]}>
                     <Text style={styles.viewAll}>View Report</Text>
                     <Ionicons name="chevron-forward" size={10} color="#3156B8" />
@@ -331,9 +345,6 @@ export default function BusinessScreen() {
                 </View>
               )}
             />
-            {trendMenuOpen ? (
-              <DropdownMenu options={TREND_OPTIONS} selected={trendRange} onSelect={(value) => void selectTrendRange(value)} alignRight />
-            ) : null}
           </View>
 
           {trendRange === 'custom' ? (
@@ -418,15 +429,13 @@ function DropdownMenu<T extends string>({
   options,
   selected,
   onSelect,
-  alignRight = false,
 }: {
   options: Array<{ value: T; label: string }>;
   selected: T;
   onSelect: (value: T) => void;
-  alignRight?: boolean;
 }) {
   return (
-    <View style={[styles.dropdownMenu, alignRight && styles.dropdownMenuRight]}>
+    <View style={styles.dropdownMenu}>
       {options.map((option) => {
         const active = option.value === selected;
         return (
@@ -626,8 +635,7 @@ const styles = StyleSheet.create({
   smallSelectText: { color: '#3156B8', ...partnerTheme.typography.meta, fontWeight: '700' },
   reportButton: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingVertical: 5 },
   viewAll: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: '700' },
-  dropdownMenu: { position: 'absolute', right: 0, top: 42, minWidth: 142, zIndex: 50, borderRadius: 12, paddingVertical: 4, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE6F1', shadowColor: '#102449', shadowOpacity: 0.14, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 8 },
-  dropdownMenuRight: { right: 88 },
+  dropdownMenu: { borderRadius: 12, paddingVertical: 4, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE6F1', shadowColor: '#102449', shadowOpacity: 0.14, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 8 },
   dropdownOption: { minHeight: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingHorizontal: 12 },
   dropdownOptionActive: { backgroundColor: '#F0F5FF' },
   dropdownOptionText: { color: '#506079', ...partnerTheme.typography.caption, fontWeight: '600' },

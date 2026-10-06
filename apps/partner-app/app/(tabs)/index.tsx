@@ -5,6 +5,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { StoryRail } from '@/components/story-rail';
+import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerEnter } from '@/components/ui/partner-enter';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
@@ -143,49 +144,56 @@ export default function PartnerHomeScreen() {
             <View style={styles.businessCard}>
               <View style={styles.businessTopRow}>
                 <View style={styles.periodWrap}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Business period: ${periodLabel}`}
-                    onPress={() => setPeriodOpen((value) => !value)}
-                    style={({ pressed }) => [styles.periodButton, pressed && styles.pressed]}
-                  >
-                    <Text style={styles.periodButtonText}>{periodLabel}</Text>
-                    <Ionicons
-                      name={periodOpen ? 'chevron-up' : 'chevron-down'}
-                      size={13}
-                      color="#17366C"
-                    />
-                  </Pressable>
-                  {periodOpen ? (
-                    <View style={styles.periodMenu}>
-                      {BUSINESS_PERIODS.map((item) => (
-                        <Pressable
-                          key={item.key}
-                          onPress={() => {
-                            setBusinessPeriod(item.key);
-                            setPeriodOpen(false);
-                          }}
-                          style={({ pressed }) => [
-                            styles.periodOption,
-                            item.key === businessPeriod && styles.periodOptionActive,
-                            pressed && styles.pressed,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.periodOptionText,
-                              item.key === businessPeriod && styles.periodOptionTextActive,
+                  <PartnerAnchoredDropdown
+                    visible={periodOpen}
+                    onDismiss={() => setPeriodOpen(false)}
+                    menuWidth={150}
+                    menu={(
+                      <View style={styles.periodMenu}>
+                        {BUSINESS_PERIODS.map((item) => (
+                          <Pressable
+                            key={item.key}
+                            onPress={() => {
+                              setBusinessPeriod(item.key);
+                              setPeriodOpen(false);
+                            }}
+                            style={({ pressed }) => [
+                              styles.periodOption,
+                              item.key === businessPeriod && styles.periodOptionActive,
+                              pressed && styles.pressed,
                             ]}
                           >
-                            {item.label}
-                          </Text>
-                          {item.key === businessPeriod ? (
-                            <Ionicons name="checkmark" size={14} color={partnerTheme.colors.brand} />
-                          ) : null}
-                        </Pressable>
-                      ))}
-                    </View>
-                  ) : null}
+                            <Text
+                              style={[
+                                styles.periodOptionText,
+                                item.key === businessPeriod && styles.periodOptionTextActive,
+                              ]}
+                            >
+                              {item.label}
+                            </Text>
+                            {item.key === businessPeriod ? (
+                              <Ionicons name="checkmark" size={14} color={partnerTheme.colors.brand} />
+                            ) : null}
+                          </Pressable>
+                        ))}
+                      </View>
+                    )}
+                  >
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Business period: ${periodLabel}`}
+                      accessibilityState={{ expanded: periodOpen }}
+                      onPress={() => setPeriodOpen((value) => !value)}
+                      style={({ pressed }) => [styles.periodButton, pressed && styles.pressed]}
+                    >
+                      <Text style={styles.periodButtonText}>{periodLabel}</Text>
+                      <Ionicons
+                        name={periodOpen ? 'chevron-up' : 'chevron-down'}
+                        size={13}
+                        color="#17366C"
+                      />
+                    </Pressable>
+                  </PartnerAnchoredDropdown>
                 </View>
 
                 <Pressable
@@ -481,10 +489,6 @@ const styles = StyleSheet.create({
   periodButton: { minHeight: 28, flexDirection: 'row', alignItems: 'center', gap: 3 },
   periodButtonText: { color: '#17366C', fontSize: 13, fontWeight: '800' },
   periodMenu: {
-    position: 'absolute',
-    top: 31,
-    left: 0,
-    width: 150,
     overflow: 'hidden',
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerNetwork, type PartnerNetworkData, type PartnerNetworkRow } from '@/lib/network';
 import { formatIndianCurrency } from '@/lib/format';
@@ -177,26 +178,32 @@ export default function NetworkScreen() {
               ) : null}
             </View>
 
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Filter network"
-              accessibilityState={{ expanded: filterOpen }}
-              onPress={() => setFilterOpen((value) => !value)}
-              style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}
+            <PartnerAnchoredDropdown
+              visible={filterOpen}
+              onDismiss={() => setFilterOpen(false)}
+              align="right"
+              menuWidth={154}
+              menu={(
+                <View style={styles.filterMenu}>
+                  <FilterOption label="All partners" selected={filter === 'all'} onPress={() => { setFilter('all'); setFilterOpen(false); }} />
+                  <FilterOption label="Grouped" selected={filter === 'grouped'} onPress={() => { setFilter('grouped'); setFilterOpen(false); }} />
+                  <FilterOption label="Ungrouped" selected={filter === 'ungrouped'} onPress={() => { setFilter('ungrouped'); setFilterOpen(false); }} />
+                </View>
+              )}
             >
-              <Ionicons name="filter-outline" size={18} color="#17244A" />
-              <Text style={styles.filterText}>Filter</Text>
-              <Ionicons name={filterOpen ? 'chevron-up' : 'chevron-down'} size={15} color="#17244A" />
-            </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Filter network"
+                accessibilityState={{ expanded: filterOpen }}
+                onPress={() => setFilterOpen((value) => !value)}
+                style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}
+              >
+                <Ionicons name="filter-outline" size={18} color="#17244A" />
+                <Text style={styles.filterText}>Filter</Text>
+                <Ionicons name={filterOpen ? 'chevron-up' : 'chevron-down'} size={15} color="#17244A" />
+              </Pressable>
+            </PartnerAnchoredDropdown>
           </View>
-
-          {filterOpen ? (
-            <View style={styles.filterMenu}>
-              <FilterOption label="All partners" selected={filter === 'all'} onPress={() => { setFilter('all'); setFilterOpen(false); }} />
-              <FilterOption label="Grouped" selected={filter === 'grouped'} onPress={() => { setFilter('grouped'); setFilterOpen(false); }} />
-              <FilterOption label="Ungrouped" selected={filter === 'ungrouped'} onPress={() => { setFilter('ungrouped'); setFilterOpen(false); }} />
-            </View>
-          ) : null}
 
           {sections.length ? (
             sections.map((section) => {
@@ -478,11 +485,6 @@ const styles = StyleSheet.create({
   },
   filterText: { color: '#17244A', fontSize: 11, lineHeight: 14, fontWeight: '600' },
   filterMenu: {
-    zIndex: 10,
-    alignSelf: 'flex-end',
-    width: 154,
-    marginTop: -5,
-    marginBottom: 8,
     paddingVertical: 4,
     borderRadius: 9,
     borderWidth: 1,
