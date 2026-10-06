@@ -95,8 +95,10 @@ const accountsRole = roleMatrixV2.find((role) => role.code === "accounts");
 if (!accountsRole || !accountsRole.assignable || accountsRole.status !== "active") {
   fail("Accounts must be an active assignable application role");
 }
-if (accountsRole.grants.length !== 0) {
-  fail("Accounts must not receive default V2 permissions before its permission model is explicitly defined");
+const accountsGrants = new Set(accountsRole.grants.map((grant) => `${grant.permission}|${grant.access}|${grant.scope ?? ""}`));
+if (accountsRole.defaultScope !== "organization") fail("Accounts must remain organization-scoped");
+if (accountsRole.grants.length !== 1 || !accountsGrants.has("reports.view|view|organization")) {
+  fail("Accounts must receive only organization-wide finance/report visibility in the V2 shadow matrix");
 }
 
 const itSuperUser = roleMatrixV2.find((role) => role.code === "it_super_user");
