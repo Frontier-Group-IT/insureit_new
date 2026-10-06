@@ -7,6 +7,7 @@ import { PartnerBusinessRangeSummaryCard } from '@/components/partner-business-r
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
+import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerBusinessPerformance, type PartnerBusinessPerformance } from '@/lib/business';
 import { getPartnerClaimSummary, type PartnerClaimSummary } from '@/lib/claims';
@@ -49,7 +50,7 @@ const TREND_OPTIONS: Array<{ value: TrendRange; label: string }> = [
 
 export default function BusinessScreen() {
   const router = useRouter();
-  const { context, cacheScopeKey } = usePartnerSession();
+  const { context, cacheScopeKey, avatarUri } = usePartnerSession();
   const [overviewRange, setOverviewRange] = useState<OverviewRange>('mtd');
   const [overviewMenuOpen, setOverviewMenuOpen] = useState(false);
   const [overviewPreset, setOverviewPreset] = useState<PartnerBusinessRangeSummary | null>(null);
@@ -223,8 +224,8 @@ export default function BusinessScreen() {
                 <Pressable accessibilityRole="button" accessibilityLabel="Notifications" onPress={() => router.push('/(tabs)/more')} style={({ pressed }) => [styles.heroIconButton, pressed && styles.pressed]}>
                   <Feather name="bell" size={20} color="#FFFFFF" />
                 </Pressable>
-                <Pressable accessibilityRole="button" accessibilityLabel="Profile" onPress={() => router.push('/profile')} style={({ pressed }) => [styles.heroAvatar, pressed && styles.pressed]}>
-                  <Text style={styles.heroAvatarText}>{profileInitials}</Text>
+                <Pressable accessibilityRole="button" accessibilityLabel="Profile" onPress={() => router.push('/profile')} style={({ pressed }) => [styles.heroAvatarTouch, pressed && styles.pressed]}>
+                  <PartnerProfileAvatar name={context?.identity.display_name ?? 'Partner'} uri={avatarUri} size={35} backgroundColor="#FFFFFF" textColor="#144E98" style={styles.heroAvatar} />
                 </Pressable>
               </View>
             </View>
