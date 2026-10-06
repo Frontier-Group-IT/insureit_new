@@ -84,6 +84,12 @@ requireText(claims, "row.claim_state === 'completed'", 'Claims rows must preserv
 requireText(claims, 'styles.statusSuccess', 'Completed claims must preserve success-state styling.');
 requireText(renewals, 'PartnerAssets.emptyStates.noRenewals', 'Renewal empty states must use the prepared no-renewals artwork.');
 requireText(renewals, 'PartnerAssets.actions.renewals', 'Upcoming renewal rows must use Partner renewal artwork.');
+requireText(renewals, 'styles.opportunitiesHeader', 'Renewal opportunity card must keep a section header.');
+requireText(renewals, 'styles.recordCardLast', 'Renewal records must sit inside the joined opportunity card.');
+requireText(renewals, '<Modal visible={sortOpen}', 'Renewal sort menu must use a top-level overlay, not the clipped FlatList header.');
+requireText(renewals, 'sortAnchorRef.current?.measureInWindow', 'Renewal sort popup must anchor to its Due Date button.');
+requireText(renewals, 'styles.emptyCard', 'Renewal empty and loading states must remain within the opportunity card.');
+if (renewals.includes('<Metric ') || renewals.includes('styles.metricRow')) throw new Error('Renewal 0-7/8-15/16-30/overdue mini summary cards must not return.');
 requireText(policyIntakes, 'PartnerAssets.emptyStates.policyUpload', 'Empty Policy Intake history must use the prepared upload artwork.');
 for (const statusAsset of ['verified', 'rejected', 'policyAttention', 'pendingReview', 'documentUpload']) requireText(policyIntakes, `PartnerAssets.status.${statusAsset}`, `Policy Intake status mapping is missing ${statusAsset} artwork.`);
 

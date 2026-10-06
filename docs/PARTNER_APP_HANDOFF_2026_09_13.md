@@ -437,3 +437,12 @@ Never collapse merge, publish and device verification into one status.
 - Shared top-bar/list/search components gain optional controls with existing defaults preserved for other screens.
 - No renewal query, pagination, summary, RPC, schema, RLS, authorization, native dependency, runtime or permission change.
 - Evidence state: **IMPLEMENTED; PR/CI/merge/production runtime 0.2.0 OTA/device verification pending. NO APK/AAB CREATED.**
+
+## 2026-10-06 — Renewal opportunity card + reliable sort popup (rebased)
+
+- Branch `ui/partner-renewals-opportunity-card-overlay-rebased-2026-10-06`, replacing conflicted PR #2801 with identical renewal UI semantics on newer main.
+- Removes four mini bucket summary cards while keeping live net-premium/policy summary and Upcoming/Overdue tabs.
+- Joins heading, sort button, records and loading/empty/error states into one bordered opportunity card.
+- Due Date sort popup uses a top-level positioned React Native Modal to appear above FlatList rows and empty artwork without changing document layout.
+- No business calculation, Partner scope/RPC, database schema/RLS, native dependency or runtime changes.
+- **IMPLEMENTED; CI/merge/production OTA/device verification pending. NO APK/AAB CREATED.**
