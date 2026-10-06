@@ -215,9 +215,6 @@ function MenuRow({
   );
 }
 
-function initials(value: string) {
-  return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'IP';
-}
 
 function humanize(value: string) {
   return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -270,6 +267,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.25,
     borderColor: '#FFFFFF',
   },
+  heroAvatarTouch: { borderRadius: 18 },
   heroAvatar: {
     width: 35,
     height: 35,
