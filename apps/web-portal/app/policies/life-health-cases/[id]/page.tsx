@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 type CaseRow = { id:string; case_number:string; business_line:"Life"|"Health"; status:string; sourcing_date:string; customer_id:string; insurance_company_id:string; product_name:string; proposal_number:string; premium_paying_term:string|null; policy_duration:string|null; payment_frequency:string; payment_mode:string; premium_amount:number; intermediary_type:string|null; intermediary_code:string|null; lead_source:string|null; intermediary_mobile:string|null; rm_name:string|null; rm_code:string|null; remarks:string|null; final_policy_id:string|null; converted_at:string|null; created_at:string; created_by:string|null; converted_by:string|null };
-type CustomerRow = { id:string; contact_name:string; company_name:string|null; phone:string; email:string|null };
+type CustomerRow = { id:string; contact_name:string; company_name:string|null; phone:string; email:string|null; address:string|null; address_street:string|null };
 type InsurerRow = { id:string; name:string };
 type DocumentRow = { id:string; document_type:string; file_name:string; created_at:string; uploaded_by:string|null };
 type PolicyRow = { id:string; policy_no:string; policy_code:string|null };
@@ -28,7 +28,7 @@ export default async function LifeHealthCasePage({ params }: { params: Promise<{
   if (error || !caseRow) notFound();
 
   const [customerResult, insurerResult, insurersResult, documentsResult, policyResult] = await Promise.all([
-    admin.from("customers").select("id,contact_name,company_name,phone,email").eq("id", caseRow.customer_id).maybeSingle<CustomerRow>(),
+    admin.from("customers").select("id,contact_name,company_name,phone,email,address,address_street").eq("id", caseRow.customer_id).maybeSingle<CustomerRow>(),
     admin.from("insurance_companies").select("id,name").eq("id", caseRow.insurance_company_id).maybeSingle<InsurerRow>(),
     admin.from("insurance_companies").select("id,name").eq("is_active", true).order("name").returns<InsurerRow[]>(),
     admin.from("life_health_case_documents").select("id,document_type,file_name,created_at,uploaded_by").eq("case_id", id).order("created_at", { ascending: true }).returns<DocumentRow[]>(),
@@ -52,7 +52,7 @@ export default async function LifeHealthCasePage({ params }: { params: Promise<{
     <LifeHealthCaseDetail
       caseData={{
         id:caseRow.id, caseNumber:caseRow.case_number, businessLine:caseRow.business_line, status:caseRow.status, sourcingDate:caseRow.sourcing_date,
-        customerId:caseRow.customer_id, customerName:customer?.company_name?.trim()||customer?.contact_name||"Customer", customerPhone:customer?.phone||"", customerEmail:customer?.email||"",
+        customerId:caseRow.customer_id, customerName:customer?.company_name?.trim()||customer?.contact_name||"Customer", customerPhone:customer?.phone||"", customerAddress:customer?.address_street?.trim()||customer?.address?.trim()||"",
         insurerId:caseRow.insurance_company_id, insurerName:insurer?.name||"Insurer", productName:caseRow.product_name, proposalNumber:caseRow.proposal_number,
         ppt:caseRow.premium_paying_term||"", pd:caseRow.policy_duration||"", paymentFrequency:caseRow.payment_frequency, paymentMode:caseRow.payment_mode, premiumAmount:Number(caseRow.premium_amount||0),
         intermediaryType:caseRow.intermediary_type||"", intermediaryCode:caseRow.intermediary_code||"", leadSource:caseRow.lead_source||"", intermediaryMobile:caseRow.intermediary_mobile||"", rmName:caseRow.rm_name||"", rmCode:caseRow.rm_code||"", remarks:caseRow.remarks||"",
