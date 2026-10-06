@@ -245,22 +245,22 @@ export default function PartnerHomeScreen() {
               <Text style={styles.sectionTitle}>Quick Actions</Text>
               <View style={styles.quickGrid}>
                 <QuickAction
-                  asset={PartnerAssets.actions.policyRegister}
+                  asset={PartnerAssets.actions.quickPolicyIntake}
                   label="Policy Intake"
                   onPress={() => router.push('/policy-intake-new')}
                 />
                 <QuickAction
-                  asset={PartnerAssets.actions.renewalsReference}
+                  asset={PartnerAssets.actions.quickRenewals}
                   label="Renewals"
                   onPress={() => router.push('/renewals')}
                 />
                 <QuickAction
-                  asset={PartnerAssets.actions.policyChecklist}
+                  asset={PartnerAssets.actions.quickClaims}
                   label="Claims"
                   onPress={() => router.push('/(tabs)/claims')}
                 />
                 <QuickAction
-                  asset={PartnerAssets.actions.customerRegister}
+                  asset={PartnerAssets.actions.quickCustomers}
                   label="Customers"
                   onPress={() => router.push('/customers')}
                 />
