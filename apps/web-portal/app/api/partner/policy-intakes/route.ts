@@ -9,6 +9,9 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 const BUCKET = "policy-documents";
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
+const POLICY_TYPES = new Set(["motor", "non_motor", "life", "health"]);
+const LIFE_HEALTH_TYPES = new Set(["life", "health"]);
+type PolicyType = "motor" | "non_motor" | "life" | "health";
 
 type EmployeeIdentity = { actor_kind: "employee"; profile_id: string };
 type LegacyPartnerIdentity = {
@@ -39,8 +42,9 @@ type UploadMeta = {
 };
 
 type RequestBody =
-  | { action: "prepare"; lead_source_id?: string; customer_mobile: string; file: UploadMeta }
-  | { action: "complete"; id: string; number: string; lead_source_id?: string; customer_mobile: string; storage_path: string; file: UploadMeta }
+  | { action: "prepare"; lead_source_id?: string; policy_type: PolicyType; customer_mobile: string; file: UploadMeta }
+  | { action: "complete"; id: string; number: string; lead_source_id?: string; policy_type: PolicyType; customer_mobile: string; storage_path: string; file: UploadMeta }
+  | { action: "submit_without_proposal"; lead_source_id?: string; policy_type: "life" | "health"; customer_mobile: string }
   | { action: "prepare_response"; id: string; file: UploadMeta }
   | { action: "complete_response"; id: string; storage_path: string; file: UploadMeta };
 
@@ -186,6 +190,9 @@ export async function POST(request: Request) {
   if (body.action === "complete") {
     return completeUpload(auth.identity, auth.scope, body);
   }
+  if (body.action === "submit_without_proposal") {
+    return submitWithoutProposal(auth.identity, auth.scope, body);
+  }
   if (body.action === "prepare_response") {
     return prepareResponse(auth.identity, body);
   }
@@ -228,8 +235,9 @@ async function prepareUpload(
 ) {
   const mobile = cleanMobile(input.customer_mobile);
   if (mobile.length !== 10) return json({ ok: false, error: "Enter a valid 10 digit customer mobile number." }, 400);
+  if (!isPolicyType(input.policy_type)) return json({ ok: false, error: "Select a valid policy type." }, 400);
 
-  const metaError = validateMeta(input.file);
+  const metaError = validateMeta(input.file, input.policy_type);
   if (metaError) return json({ ok: false, error: metaError }, 400);
 
   const source = await resolveSource(identity, scope, input.lead_source_id);
@@ -254,8 +262,9 @@ async function completeUpload(
 ) {
   const mobile = cleanMobile(input.customer_mobile);
   if (mobile.length !== 10) return json({ ok: false, error: "Enter a valid 10 digit customer mobile number." }, 400);
+  if (!isPolicyType(input.policy_type)) return json({ ok: false, error: "Select a valid policy type." }, 400);
 
-  const metaError = validateMeta(input.file);
+  const metaError = validateMeta(input.file, input.policy_type);
   if (metaError) return json({ ok: false, error: metaError }, 400);
   if (!input.id || !input.storage_path.startsWith(`intakes/${input.id}/original/`) || input.storage_path.includes("..")) {
     return json({ ok: false, error: "The upload reference is invalid." }, 400);
@@ -282,10 +291,12 @@ async function completeUpload(
   const source = sourceResult.source;
   const submitter = submitterColumns(identity);
 
+  const proposalForm = LIFE_HEALTH_TYPES.has(input.policy_type);
   const { error: intakeError } = await admin.from("policy_intake_requests").insert({
     id: input.id,
     intake_number: input.number,
-    status: "processing",
+    status: proposalForm ? "ready_for_review" : "processing",
+    policy_type: input.policy_type,
     ...submitter,
     lead_source_id: source.id,
     lead_source_type: source.intermediary_type,
@@ -298,7 +309,9 @@ async function completeUpload(
     file_name: input.file.name,
     mime_type: input.file.type,
     file_size: blob.size,
-    ocr_status: "pending",
+    ocr_status: proposalForm ? "completed" : "pending",
+    ocr_fields: proposalForm ? [] : undefined,
+    ocr_warnings: proposalForm ? [] : undefined,
   });
 
   if (intakeError) {
@@ -326,11 +339,67 @@ async function completeUpload(
     return json({ ok: false, error: "Policy intake could not be created." }, 500);
   }
 
-  after(async () => {
-    await processStoredOcr(input.id);
+  if (!proposalForm) {
+    after(async () => {
+      await processStoredOcr(input.id);
+    });
+  }
+
+  return json({
+    ok: true,
+    id: input.id,
+    number: input.number,
+    status: proposalForm ? "ready_for_review" : "processing",
+  });
+}
+
+async function submitWithoutProposal(
+  identity: PartnerIdentity,
+  scope: PartnerScope,
+  input: Extract<RequestBody, { action: "submit_without_proposal" }>,
+) {
+  const mobile = cleanMobile(input.customer_mobile);
+  if (mobile.length !== 10) return json({ ok: false, error: "Enter a valid 10 digit customer mobile number." }, 400);
+  if (!LIFE_HEALTH_TYPES.has(input.policy_type)) {
+    return json({ ok: false, error: "A proposal form can only be skipped for Life or Health policy intake." }, 400);
+  }
+
+  const sourceResult = await resolveSource(identity, scope, input.lead_source_id);
+  if (!sourceResult.ok) return json({ ok: false, error: sourceResult.error }, 403);
+
+  const admin = createSupabaseAdminClient();
+  const source = sourceResult.source;
+  const submitter = submitterColumns(identity);
+  const id = crypto.randomUUID();
+  const number = intakeNumber();
+
+  const { error: intakeError } = await admin.from("policy_intake_requests").insert({
+    id,
+    intake_number: number,
+    status: "ready_for_review",
+    policy_type: input.policy_type,
+    ...submitter,
+    lead_source_id: source.id,
+    lead_source_type: source.intermediary_type,
+    lead_source_name: source.display_name,
+    lead_source_code: source.intermediary_code,
+    customer_mobile: mobile,
+    matched_customer_id: null,
+    storage_bucket: BUCKET,
+    storage_path: "",
+    file_name: "",
+    mime_type: null,
+    file_size: null,
+    ocr_status: "completed",
+    ocr_fields: [],
+    ocr_warnings: [],
   });
 
-  return json({ ok: true, id: input.id, number: input.number, status: "processing" });
+  if (intakeError) {
+    return json({ ok: false, error: "Policy intake could not be created. Please try again." }, 500);
+  }
+
+  return json({ ok: true, id, number, status: "ready_for_review" });
 }
 
 async function prepareResponse(
@@ -596,11 +665,17 @@ async function markOcrFailure(id: string, storagePath: string, message: string) 
     .eq("status", "processing");
 }
 
-function validateMeta(file: UploadMeta) {
-  if (!file?.name?.trim() || !file.size) return "Upload the policy PDF or image.";
-  if (!ALLOWED_TYPES.has(file.type)) return "Upload a PDF, JPG, PNG or WebP policy copy.";
-  if (file.size > MAX_FILE_SIZE) return "Policy copy must be 15 MB or smaller.";
+function validateMeta(file: UploadMeta, policyType: PolicyType = "motor") {
+  const proposalForm = LIFE_HEALTH_TYPES.has(policyType);
+  const documentName = proposalForm ? "proposal form" : "policy copy";
+  if (!file?.name?.trim() || !file.size) return `Upload the ${documentName} PDF or image.`;
+  if (!ALLOWED_TYPES.has(file.type)) return `Upload a PDF, JPG, PNG or WebP ${documentName}.`;
+  if (file.size > MAX_FILE_SIZE) return `${proposalForm ? "Proposal form" : "Policy copy"} must be 15 MB or smaller.`;
   return null;
+}
+
+function isPolicyType(value: string): value is PolicyType {
+  return POLICY_TYPES.has(value);
 }
 
 function cleanMobile(value: string) {
