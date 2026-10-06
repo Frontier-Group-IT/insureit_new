@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerButton } from '@/components/ui/partner-button';
 import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
@@ -385,47 +386,53 @@ export default function NewPolicyIntakeScreen() {
 
         <View style={styles.formSection}>
           <Text style={styles.formLabel}>Policy type</Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Policy type, ${selectedPolicyType.label}`}
-            accessibilityState={{ expanded: policyTypeOpen }}
-            disabled={submitting}
-            onPress={() => setPolicyTypeOpen((value) => !value)}
-            style={({ pressed }) => [styles.policyTypeSelector, pressed && !submitting && styles.pressed, submitting && styles.disabled]}
+          <PartnerAnchoredDropdown
+            visible={policyTypeOpen}
+            onDismiss={() => setPolicyTypeOpen(false)}
+            matchAnchorWidth
+            menu={(
+              <View style={styles.policyTypeMenu}>
+                {POLICY_TYPE_OPTIONS.map((option) => {
+                  const active = option.value === policyType;
+                  return (
+                    <Pressable
+                      key={option.value}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: active }}
+                      onPress={() => {
+                        if (option.value !== policyType) setFile(null);
+                        setPolicyType(option.value);
+                        setPolicyTypeOpen(false);
+                        setError('');
+                      }}
+                      style={({ pressed }) => [styles.policyTypeOption, active && styles.policyTypeOptionActive, pressed && styles.pressed]}
+                    >
+                      <View style={[styles.policyTypeOptionIcon, active && styles.policyTypeOptionIconActive]}>
+                        <Ionicons name={option.icon} size={18} color={active ? '#4F28E9' : '#65738A'} />
+                      </View>
+                      <Text style={[styles.policyTypeOptionText, active && styles.policyTypeOptionTextActive]}>{option.label}</Text>
+                      {active ? <Ionicons name="checkmark-circle" size={19} color="#4F28E9" /> : null}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
           >
-            <View style={styles.policyTypeIcon}>
-              <Ionicons name={selectedPolicyType.icon} size={21} color="#4F28E9" />
-            </View>
-            <Text style={styles.policyTypeValue}>{selectedPolicyType.label}</Text>
-            <Ionicons name={policyTypeOpen ? 'chevron-up' : 'chevron-down'} size={18} color="#748198" />
-          </Pressable>
-          {policyTypeOpen ? (
-            <View style={styles.policyTypeMenu}>
-              {POLICY_TYPE_OPTIONS.map((option) => {
-                const active = option.value === policyType;
-                return (
-                  <Pressable
-                    key={option.value}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: active }}
-                    onPress={() => {
-                      if (option.value !== policyType) setFile(null);
-                      setPolicyType(option.value);
-                      setPolicyTypeOpen(false);
-                      setError('');
-                    }}
-                    style={({ pressed }) => [styles.policyTypeOption, active && styles.policyTypeOptionActive, pressed && styles.pressed]}
-                  >
-                    <View style={[styles.policyTypeOptionIcon, active && styles.policyTypeOptionIconActive]}>
-                      <Ionicons name={option.icon} size={18} color={active ? '#4F28E9' : '#65738A'} />
-                    </View>
-                    <Text style={[styles.policyTypeOptionText, active && styles.policyTypeOptionTextActive]}>{option.label}</Text>
-                    {active ? <Ionicons name="checkmark-circle" size={19} color="#4F28E9" /> : null}
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : null}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Policy type, ${selectedPolicyType.label}`}
+              accessibilityState={{ expanded: policyTypeOpen }}
+              disabled={submitting}
+              onPress={() => setPolicyTypeOpen((value) => !value)}
+              style={({ pressed }) => [styles.policyTypeSelector, pressed && !submitting && styles.pressed, submitting && styles.disabled]}
+            >
+              <View style={styles.policyTypeIcon}>
+                <Ionicons name={selectedPolicyType.icon} size={21} color="#4F28E9" />
+              </View>
+              <Text style={styles.policyTypeValue}>{selectedPolicyType.label}</Text>
+              <Ionicons name={policyTypeOpen ? 'chevron-up' : 'chevron-down'} size={18} color="#748198" />
+            </Pressable>
+          </PartnerAnchoredDropdown>
         </View>
 
         <View style={styles.formSection}>
@@ -766,7 +773,7 @@ const styles = StyleSheet.create({
   policyTypeSelector: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 10, borderRadius: 12, borderWidth: 1, borderColor: partnerTheme.colors.line, backgroundColor: partnerTheme.colors.surface },
   policyTypeIcon: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F0EDFF' },
   policyTypeValue: { flex: 1, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
-  policyTypeMenu: { marginTop: 7, overflow: 'hidden', borderRadius: 12, borderWidth: 1, borderColor: partnerTheme.colors.line, backgroundColor: partnerTheme.colors.surface },
+  policyTypeMenu: { overflow: 'hidden', borderRadius: 12, borderWidth: 1, borderColor: partnerTheme.colors.line, backgroundColor: partnerTheme.colors.surface },
   policyTypeOption: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   policyTypeOptionActive: { backgroundColor: '#F7F5FF' },
   policyTypeOptionIcon: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F5F8' },
