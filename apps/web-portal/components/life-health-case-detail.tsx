@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Eye, LoaderCircle, Upload } from "lucide-react";
+import { CalendarDays, ChevronDown, Eye, LoaderCircle, Upload } from "lucide-react";
 import { convertLifeHealthCaseToPolicy, uploadLifeHealthCaseDocument } from "@/app/policies/life-health-policy-actions";
 import { updateLifeHealthCaseDetails } from "@/app/policies/life-health-case-edit-actions";
 
@@ -19,7 +19,6 @@ const readOnlyField=`${field} bg-[#F8FAFC] text-[#64748B]`;
 const label="mb-1.5 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.055em] text-[#475467]";
 const frequencies=["Monthly","Quarterly","Half Yearly","Annually","One Time"];
 const modes=["Cheque","NEFT/RTGS","UPI","Credit/Debit Card","Net Banking"];
-const today=()=>new Date().toISOString().slice(0,10);
 const validIso=(value:string)=>/^\d{4}-\d{2}-\d{2}$/.test(value);
 const activityDate=(value:string)=>{const date=new Date(value);return Number.isNaN(date.getTime())?"—":date.toLocaleString("en-IN",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})};
 
@@ -50,11 +49,13 @@ function addMonthsClamped(start:string,months:number){
   return new Date(Date.UTC(targetYear,monthIndex,Math.min(d,lastDay))).toISOString().slice(0,10);
 }
 function nextInstallmentFrom(start:string,frequency:string){
-  if(!validIso(start)||frequency==="One Time")return"";
-  if(frequency==="Monthly")return addMonthsClamped(start,1);
-  if(frequency==="Quarterly")return addMonthsClamped(start,3);
-  if(frequency==="Half Yearly")return addMonthsClamped(start,6);
-  if(frequency==="Annually")return addMonthsClamped(start,12);
+  if(!validIso(start))return"";
+  const normalized=frequency.trim().toLowerCase();
+  if(normalized==="one time")return"";
+  if(normalized==="monthly")return addMonthsClamped(start,1);
+  if(normalized==="quarterly")return addMonthsClamped(start,3);
+  if(normalized==="half yearly")return addMonthsClamped(start,6);
+  if(normalized==="annually")return addMonthsClamped(start,12);
   return"";
 }
 
@@ -63,8 +64,7 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
   const[uploading,startUpload]=useTransition(),[converting,startConvert]=useTransition();
   const[error,setError]=useState<string|null>(null),[copy,setCopy]=useState<File|null>(null),[activityOpen,setActivityOpen]=useState(false),[remarksOpen,setRemarksOpen]=useState(false),[uploadingType,setUploadingType]=useState<string|null>(null);
   const[form,setForm]=useState({customerName:caseData.customerName,customerPhone:caseData.customerPhone,customerAddress:caseData.customerAddress,insurerId:caseData.insurerId,productName:caseData.productName,proposalNumber:caseData.proposalNumber,ppt:caseData.ppt,pd:caseData.pd,paymentFrequency:caseData.paymentFrequency,paymentMode:caseData.paymentMode,premiumAmount:String(caseData.premiumAmount||""),sourcingDate:caseData.sourcingDate,remarks:caseData.remarks});
-  const initialStart=today();
-  const[issue,setIssue]=useState<IssueState>({policyNumber:"",issuanceDate:today(),startDate:initialStart,endDate:addYearsMinusDay(initialStart,caseData.pd),pptEndDate:addYearsMinusDay(initialStart,caseData.ppt),nextInstallmentDate:nextInstallmentFrom(initialStart,caseData.paymentFrequency),finalPremium:String(caseData.premiumAmount||""),sumInsured:""});
+  const[issue,setIssue]=useState<IssueState>({policyNumber:"",issuanceDate:"",startDate:"",endDate:"",pptEndDate:"",nextInstallmentDate:"",finalPremium:String(caseData.premiumAmount||""),sumInsured:""});
   const[overrides,setOverrides]=useState<OverrideState>({endDate:false,pptEndDate:false,nextInstallmentDate:false});
   const set=(k:string,v:string)=>setForm(x=>({...x,[k]:v}));
   const setI=(k:keyof IssueState,v:string)=>setIssue(x=>({...x,[k]:v}));
@@ -93,7 +93,7 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
     </div>
 
     <Section number="01" title="Policy source & ownership" contentClassName="md:grid-cols-2 xl:grid-cols-4">
-      <FieldWrap title="Proposal date"><input type="date" className={field} value={form.sourcingDate} onChange={e=>set("sourcingDate",e.target.value)}/></FieldWrap>
+      <FieldWrap title="Proposal date"><DateInput value={form.sourcingDate} onChange={value=>set("sourcingDate",value)}/></FieldWrap>
       <FieldWrap title="Policy type"><input className={readOnlyField} value={caseData.businessLine} readOnly/></FieldWrap>
       <FieldWrap title="Intermediary type"><input className={readOnlyField} value={caseData.intermediaryType} readOnly/><MetaLine left={`RM · ${caseData.rmName||"—"}`} right={caseData.rmCode?`ID · ${caseData.rmCode}`:""}/></FieldWrap>
       <FieldWrap title="Lead source"><input className={readOnlyField} value={caseData.leadSource} readOnly/><MetaLine left={caseData.intermediaryCode?`ID · ${caseData.intermediaryCode}`:""} right={caseData.intermediaryMobile||""}/></FieldWrap>
@@ -122,8 +122,8 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
 
     <Section number="05" title="Mark Policy Issued" highlight contentClassName="md:grid-cols-2 xl:grid-cols-4">
       <FieldWrap title="Policy number" required><input className={field} value={issue.policyNumber} onChange={e=>setI("policyNumber",e.target.value.toUpperCase())}/></FieldWrap>
-      <FieldWrap title="Issuance date"><input type="date" className={field} value={issue.issuanceDate} onChange={e=>setI("issuanceDate",e.target.value)}/></FieldWrap>
-      <FieldWrap title="Policy start date"><input type="date" className={field} value={issue.startDate} onChange={e=>{setOverrides({endDate:false,pptEndDate:false,nextInstallmentDate:false});setI("startDate",e.target.value)}}/></FieldWrap>
+      <FieldWrap title="Issuance date"><DateInput value={issue.issuanceDate} onChange={value=>setI("issuanceDate",value)}/></FieldWrap>
+      <FieldWrap title="Policy start date"><DateInput value={issue.startDate} onChange={value=>{setOverrides({endDate:false,pptEndDate:false,nextInstallmentDate:false});setI("startDate",value)}}/></FieldWrap>
       <CalculatedDateField title="Policy end / maturity date" value={issue.endDate} expected={expectedEnd} overridden={overrides.endDate} onChange={value=>{setOverrides(x=>({...x,endDate:true}));setI("endDate",value)}} missingHint={!expectedEnd&&Boolean(issue.startDate)?"Enter Policy Duration / Term in years to calculate automatically.":undefined}/>
       {pptSinglePay?<ReadOnlyTextField title="PPT end date" value="Not applicable · Single Pay"/>:<CalculatedDateField title="PPT end date" value={issue.pptEndDate} expected={expectedPptEnd} overridden={overrides.pptEndDate} onChange={value=>{setOverrides(x=>({...x,pptEndDate:true}));setI("pptEndDate",value)}} missingHint={!expectedPptEnd&&Boolean(issue.startDate)?"Enter PPT in years to calculate automatically.":undefined}/>}
       {oneTimePayment?<ReadOnlyTextField title="Next installment date" value="Not applicable · One Time"/>:<CalculatedDateField title="Next installment date" value={issue.nextInstallmentDate} expected={expectedNext} overridden={overrides.nextInstallmentDate} onChange={value=>{setOverrides(x=>({...x,nextInstallmentDate:true}));setI("nextInstallmentDate",value)}}/>}
@@ -143,7 +143,30 @@ function Section({number,title,children,highlight=false,contentClassName="md:gri
 function FieldWrap({title,children,required=false}:{title:string;children:ReactNode;required?:boolean}){return <label><span className={label}>{title}{required?<span className="text-red-500">*</span>:null}</span>{children}</label>}
 function MetaLine({left,right}:{left:string;right:string}){if(!left&&!right)return null;return <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 text-[9px] font-semibold text-[#315B6B]"><span>{left}</span>{right?<span>{right}</span>:null}</div>}
 function ReadOnlyTextField({title,value}:{title:string;value:string}){return <FieldWrap title={title}><div className={`${readOnlyField} flex items-center`}>{value}</div></FieldWrap>}
-function CalculatedDateField({title,value,expected,overridden,onChange,missingHint}:{title:string;value:string;expected:string;overridden:boolean;onChange:(value:string)=>void;missingHint?:string}){const differs=Boolean(overridden&&expected&&value&&value!==expected);return <FieldWrap title={title}><input type="date" className={field} value={value} onChange={e=>onChange(e.target.value)}/>{differs?<p className="mt-1 text-[8px] leading-3 text-[#9A6700]">Manually changed from the calculated date {formatDate(expected)}. Please verify before issuing.</p>:missingHint?<p className="mt-1 text-[8px] leading-3 text-[#7A869A]">{missingHint}</p>:<p className="mt-1 text-[8px] leading-3 text-[#7A869A]">Auto-calculated and editable.</p>}</FieldWrap>}
+function CalculatedDateField({title,value,expected,overridden,onChange,missingHint}:{title:string;value:string;expected:string;overridden:boolean;onChange:(value:string)=>void;missingHint?:string}){const differs=Boolean(overridden&&expected&&value&&value!==expected);return <FieldWrap title={title}><DateInput value={value} onChange={onChange}/>{differs?<p className="mt-1 text-[8px] leading-3 text-[#9A6700]">Manually changed from the calculated date {formatDate(expected)}. Please verify before issuing.</p>:missingHint?<p className="mt-1 text-[8px] leading-3 text-[#7A869A]">{missingHint}</p>:<p className="mt-1 text-[8px] leading-3 text-[#7A869A]">Auto-calculated and editable.</p>}</FieldWrap>}
+function DateInput({value,onChange}:{value:string;onChange:(value:string)=>void}){
+  const[display,setDisplay]=useState(()=>formatDate(value));
+  useEffect(()=>setDisplay(formatDate(value)),[value]);
+  const commit=(raw:string)=>{
+    const trimmed=raw.trim();
+    if(!trimmed){setDisplay("");onChange("");return}
+    const match=trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if(!match)return;
+    const[,dd,mm,yyyy]=match;
+    const iso=`${yyyy}-${mm}-${dd}`;
+    const date=new Date(`${iso}T00:00:00Z`);
+    if(Number.isNaN(date.getTime())||date.getUTCFullYear()!==Number(yyyy)||date.getUTCMonth()+1!==Number(mm)||date.getUTCDate()!==Number(dd))return;
+    onChange(iso);
+    setDisplay(`${dd}/${mm}/${yyyy}`);
+  };
+  const mask=(raw:string)=>{
+    const digits=raw.replace(/\D/g,"").slice(0,8);
+    if(digits.length<=2)return digits;
+    if(digits.length<=4)return `${digits.slice(0,2)}/${digits.slice(2)}`;
+    return `${digits.slice(0,2)}/${digits.slice(2,4)}/${digits.slice(4)}`;
+  };
+  return <div className="relative"><input className={`${field} pr-10`} inputMode="numeric" placeholder="DD/MM/YYYY" value={display} onChange={e=>setDisplay(mask(e.target.value))} onBlur={e=>commit(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")commit((e.target as HTMLInputElement).value)}}/><div className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-[#667085]"><CalendarDays className="h-3.5 w-3.5" aria-hidden="true"/><input type="date" tabIndex={-1} aria-label="Open date picker" className="absolute inset-0 cursor-pointer opacity-0" value={value} onChange={e=>onChange(e.target.value)}/></div></div>
+}
 function formatDate(value:string){if(!validIso(value))return value;const[y,m,d]=value.split("-");return`${d}/${m}/${y}`}
 function UploadAction({label:buttonLabel,type,existing,disabled,loading,onUpload}:{label:string;type:string;existing?:DocumentRow;disabled:boolean;loading:boolean;onUpload:(type:string,file:File|null)=>void}){
   if(!existing)return <label title={buttonLabel} className={`flex h-10 items-center gap-2 rounded-xl border border-[#CAD7E7] bg-white px-4 text-[9px] font-semibold text-[#24569A] ${disabled?"cursor-wait opacity-70":"cursor-pointer"}`}><Upload className="h-3.5 w-3.5"/><span>{loading?"Uploading…":buttonLabel}</span><input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" disabled={disabled} className="hidden" onChange={e=>onUpload(type,e.target.files?.[0]??null)}/></label>;
