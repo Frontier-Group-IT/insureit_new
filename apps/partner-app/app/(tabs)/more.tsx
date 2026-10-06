@@ -109,17 +109,17 @@ export default function MoreScreen() {
       ) : null}
 
       <MenuSection title="WORK">
-        <MenuRow asset={PartnerAssets.navigation.search} title="Search all business" helper="Customers, policies and claims" onPress={() => router.push('/search')} />
-        <MenuRow asset={PartnerAssets.navigation.policyIntake} title="Policy Intake" onPress={() => router.push('/policy-intakes')} />
-        <MenuRow asset={PartnerAssets.navigation.renewals} title="Renewals" onPress={() => router.push('/renewals')} />
-        <MenuRow asset={PartnerAssets.navigation.customers} title="Customers" onPress={() => router.push('/customers')} last />
+        <MenuRow asset={PartnerAssets.actions.documentSearch} title="Search all business" helper="Customers, policies and claims" onPress={() => router.push('/search')} />
+        <MenuRow asset={PartnerAssets.actions.policyRegister} title="Policy Intake" onPress={() => router.push('/policy-intakes')} />
+        <MenuRow asset={PartnerAssets.actions.renewalsReference} title="Renewals" onPress={() => router.push('/renewals')} />
+        <MenuRow asset={PartnerAssets.actions.customerRegister} title="Customers" onPress={() => router.push('/customers')} last />
       </MenuSection>
 
       <MenuSection title="INSIGHTS">
         <MenuRow asset={PartnerAssets.actions.businessPerformance} title="Your Week" onPress={() => router.push('/weekly-story')} />
         <MenuRow asset={PartnerAssets.actions.businessInsights} title="My Impact" onPress={() => router.push('/impact')} />
         <MenuRow asset={PartnerAssets.status.journey} title="My Journey" onPress={() => router.push('/journey')} />
-        <MenuRow asset={PartnerAssets.status.announcement} title="Activity" onPress={() => router.push('/activity')} last />
+        <MenuRow asset={PartnerAssets.navigation.notifications} title="Activity" onPress={() => router.push('/activity')} last />
       </MenuSection>
 
       <MenuSection title="GROW & LEARN">
@@ -269,9 +269,9 @@ const styles = StyleSheet.create({
   heroCopy: { zIndex: 3, position: 'absolute', left: 16, right: 82, bottom: 24 },
   heroTitle: {
     color: '#FFFFFF',
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: '500',
+    fontSize: 19,
+    lineHeight: 23,
+    fontWeight: '800',
     letterSpacing: -0.04,
     textShadowColor: 'rgba(0,0,0,0.20)',
     textShadowOffset: { width: 0, height: 1 },
@@ -356,8 +356,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rowAssetImage: {
-    width: 34,
-    height: 34,
+    width: 30,
+    height: 30,
   },
   rowBody: {
     flex: 1,

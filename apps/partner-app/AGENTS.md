@@ -23,6 +23,9 @@ Read `../../docs/PARTNER_APP_HANDOFF_2026_09_13.md`, `../../docs/PARTNER_APP_HOM
 
 ## Release evidence
 
+- **2026-10-06 — More/Profile icons, larger Profile title and Customer-style photo control:** branch `ui/partner-more-profile-camera-icons-2026-10-06`; More uses the existing professional Partner asset families, the hero `Profile` title is increased, and Profile uses a circular image with a bottom-right camera badge matching the Customer app interaction pattern. Image selection reuses existing `expo-document-picker` so there is no new native dependency. Persistence is isolated to private storage bucket `partner-profile-photos` with auth-user-folder RLS via migration `20261006113500_partner_profile_photo_storage.sql`; migration not applied. **IMPLEMENTED; PR/CI pending; NOT MERGED/DEPLOYED; NO APK/AAB CREATED.**
+
+
 Use separate states: IMPLEMENTED, MERGED, DEPLOYED, VERIFIED. OTA publish success is not installed-device verification. After Partner OTA publication, require a cold launch (often twice) and device verification.
 
 - **2026-10-06 — Partner Renewals RPC contract repair:** branch `fix/partner-renewals-rpc-contract-2026-10-06`; production inspection confirmed `partner_app_renewal_summary()` is returning the visible Overdue count while the installed list client expects `p_bucket`/`net_premium`, but production still has the older `p_window`/`premium_amount` list RPC contract. The already-committed renewal migration now explicitly drops the old five-argument list function before recreating it with the intended app-compatible row contract, which PostgreSQL requires when OUT columns change. No Partner scope/RLS rule is widened. **IMPLEMENTED; PR/CI/merge/production migration application/runtime verification pending. NO APK/AAB CREATED.**
