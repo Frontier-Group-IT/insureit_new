@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import {
   BackHandler,
   FlatList,
@@ -38,7 +38,7 @@ const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
 type SourceFilter = 'all' | 'partner' | 'posp';
 
-const POLICY_TYPE_OPTIONS: Array<{ value: PartnerPolicyType; label: string; icon: keyof typeof Ionicons.glyphMap }> = [
+const POLICY_TYPE_OPTIONS: Array<{ value: PartnerPolicyType; label: string; icon: ComponentProps<typeof Ionicons>['name'] }> = [
   { value: 'motor', label: 'Motor', icon: 'car-sport-outline' },
   { value: 'non_motor', label: 'Non-Motor', icon: 'business-outline' },
   { value: 'life', label: 'Life', icon: 'shield-checkmark-outline' },
