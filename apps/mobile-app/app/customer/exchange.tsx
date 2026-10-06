@@ -89,7 +89,6 @@ type PhotoSlotState = {
 
 const truckBlue = require('../../assets/vehicles/truck-blue.png');
 const truckOrange = require('../../assets/vehicles/truck-orange.png');
-const truckWhite = require('../../assets/vehicles/truck-white.png');
 const busSketch = require('../../assets/vehicles/bus sketch.png');
 const jcbSketch = require('../../assets/vehicles/jcb sketch.png');
 const brandedTruck = require('../../assets/vehicles/insureit-branded-truck.webp');
