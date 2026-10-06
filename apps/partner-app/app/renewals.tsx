@@ -215,6 +215,7 @@ export default function RenewalsScreen() {
 
   return (
     <PartnerListScreen
+      key={`renewals-page-${collection.page}`}
       eyebrow="RENEWALS"
       title="Renewal Work Queue"
       onBack={() => router.back()}
