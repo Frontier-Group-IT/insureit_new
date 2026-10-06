@@ -136,6 +136,10 @@ for (const featureAsset of ['navigation.profile', 'actions.support', 'status.set
 
 for (const activityAsset of ['status.policyActive', 'navigation.claims', 'navigation.policyIntake', 'actions.policyChecklist', 'status.announcement']) requireText(activity, `PartnerAssets.${activityAsset}`, `Activity is missing ${activityAsset} artwork.`);
 for (const tinySize of ['fontSize: 7.2', 'fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (activity.includes(tinySize)) throw new Error(`Activity must not regress to tiny timeline typography: ${tinySize}`);
+if (activity.includes('<Text numberOfLines={1} style={styles.meta}>{item.meta}</Text>')) throw new Error('Recent Activity must not render insurer/company meta below the customer name.');
+if (activity.includes('<Ionicons name="chevron-forward" size={20} color="#071C70" />')) throw new Error('Recent Activity record rows must not show a right-side chevron.');
+requireText(activity, 'width: 52', 'Recent Activity logo tile must stay compact so details sit closer to the logo.');
+requireText(activity, 'marginRight: 4', 'Recent Activity logo-to-detail spacing must stay compact.');
 for (const impactAsset of ['products.motorInsurance', 'navigation.customers', 'navigation.policies', 'navigation.claims', 'status.verified', 'status.journey']) requireText(impact, `PartnerAssets.${impactAsset}`, `Impact is missing ${impactAsset} artwork.`);
 for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (impact.includes(tinySize)) throw new Error(`Impact must not regress to tiny typography: ${tinySize}`);
 requireText(journey, 'PartnerAssets.status.journey', 'Journey timeline and empty state must use journey artwork.');
