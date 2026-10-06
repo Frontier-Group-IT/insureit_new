@@ -108,7 +108,7 @@ expectAll('app/claim/[id].tsx', [
   [/<Text numberOfLines=\{1\} style=\{styles\.statusTitle\}>\{data\.customer\.name\}<\/Text>/, 'claim summary heading must show customer name'],
   [/activeChipText\}>\{humanize\(data\.claim\.current_status/, 'claim status badge must show the current workflow status'],
   [/statusFooterRightText[\s\S]*data\.vehicle\.vehicle_no/, 'vehicle number must sit beside service mode in the summary footer'],
-  [/name="person-outline"/, 'insured-person row must use the clear profile icon'],
+  [/PartnerAssets\.navigation\.customers/, 'insured-person row must use the approved customer artwork'],
   [/accessibilityLabel=\{overviewExpanded \? 'Show fewer claim overview details' : 'View all claim overview details'\}/, 'Claim Overview View All must be an accessible interactive control'],
   [/setOverviewExpanded\(\(value\) => !value\)/, 'Claim Overview View All must expand and collapse additional details'],
 ]);
