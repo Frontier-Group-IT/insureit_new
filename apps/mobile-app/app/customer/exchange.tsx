@@ -97,17 +97,17 @@ const categories: VehicleCategory[] = ['All', 'Truck', 'Tipper', 'Pickup', 'Bus'
 const photoLabels = ['Front', 'Rear', 'Left', 'Right', 'Cabin', 'Odometer'];
 
 function formatCurrency(value: number) {
-  return \`₹\${value.toLocaleString('en-IN')}\`;
+  return `₹${value.toLocaleString('en-IN')}`;
 }
 
 function formatCompactCurrency(value: number) {
-  if (value >= 10000000) return \`₹\${(value / 10000000).toFixed(value % 10000000 ? 2 : 0)} Cr\`;
-  if (value >= 100000) return \`₹\${(value / 100000).toFixed(value % 100000 ? 2 : 0)} L\`;
+  if (value >= 10000000) return `₹${(value / 10000000).toFixed(value % 10000000 ? 2 : 0)} Cr`;
+  if (value >= 100000) return `₹${(value / 100000).toFixed(value % 100000 ? 2 : 0)} L`;
   return formatCurrency(value);
 }
 
 function formatKm(value: number) {
-  return \`\${value.toLocaleString('en-IN')} km\`;
+  return `${value.toLocaleString('en-IN')} km`;
 }
 
 function categoryIcon(category: Exclude<VehicleCategory, 'All'>) {
@@ -142,9 +142,9 @@ function formatTimeRemaining(value: string | null) {
   const days = Math.floor(minutes / 1440);
   const hours = Math.floor((minutes % 1440) / 60);
   const mins = minutes % 60;
-  if (days > 0) return \`\${days}d \${hours}h\`;
-  if (hours > 0) return \`\${hours}h \${mins}m\`;
-  return \`\${Math.max(mins, 1)}m\`;
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${mins}m`;
+  return `${Math.max(mins, 1)}m`;
 }
 
 function mapFeedVehicle(row: ExchangeFeedWithCover): MarketplaceVehicle {
@@ -170,8 +170,8 @@ function mapFeedVehicle(row: ExchangeFeedWithCover): MarketplaceVehicle {
     score: Number(row.inspection_score ?? 0),
     registration: row.masked_registration || 'Registration masked',
     fuel: row.fuel_type || 'Fuel not specified',
-    ownership: row.ownership_count ? \`\${row.ownership_count}\${ordinalSuffix(row.ownership_count)} owner\` : 'Ownership verified',
-    tyres: row.tyre_condition_percent === null ? 'Condition pending' : \`\${row.tyre_condition_percent}% life\`,
+    ownership: row.ownership_count ? `${row.ownership_count}${ordinalSuffix(row.ownership_count)} owner` : 'Ownership verified',
+    tyres: row.tyre_condition_percent === null ? 'Condition pending' : `${row.tyre_condition_percent}% life`,
     permit: row.permit_summary || 'Permit details available',
     finance: row.finance_summary || 'Finance status available',
     image,
@@ -191,7 +191,7 @@ function ordinalSuffix(value: number) {
 }
 
 function categoryFromSellableVehicle(vehicle: ExchangeSellableVehicle): Exclude<VehicleCategory, 'All'> {
-  const haystack = \`\${vehicle.vehicle_type} \${vehicle.vehicle_category ?? ''} \${vehicle.body_type ?? ''}\`.toLowerCase();
+  const haystack = `${vehicle.vehicle_type} ${vehicle.vehicle_category ?? ''} ${vehicle.body_type ?? ''}`.toLowerCase();
   if (haystack.includes('tipper') || haystack.includes('dumper')) return 'Tipper';
   if (haystack.includes('pickup') || haystack.includes('pick-up')) return 'Pickup';
   if (haystack.includes('bus') || haystack.includes('pcv')) return 'Bus';
@@ -336,11 +336,11 @@ export default function ExchangeMarketplaceScreen() {
       : Math.max(vehicle.currentBid, vehicle.minBidIncrement);
 
     if (amount < minimum) {
-      Alert.alert('Increase your bid', \`The next bid starts at \${formatCompactCurrency(minimum)}.\`);
+      Alert.alert('Increase your bid', `The next bid starts at ${formatCompactCurrency(minimum)}.`);
       return;
     }
 
-    Alert.alert('Confirm your bid', \`\${formatCompactCurrency(amount)} for \${vehicle.title}\`, [
+    Alert.alert('Confirm your bid', `${formatCompactCurrency(amount)} for ${vehicle.title}`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Confirm',
@@ -537,7 +537,7 @@ export default function ExchangeMarketplaceScreen() {
       }
       const alias = recordString(leading, 'bidder_alias') || 'Buyer';
       const amount = recordNumber(leading, 'amount');
-      Alert.alert('Leading bid', \`\${alias} • \${formatCompactCurrency(amount)}\`, [
+      Alert.alert('Leading bid', `${alias} • ${formatCompactCurrency(amount)}`, [
         { text: 'Not now', style: 'cancel' },
         {
           text: 'Accept bid',
@@ -896,7 +896,7 @@ function BuyExperience({
         </Pressable>
       </View>
 
-      <SectionHeading title={category === 'All' ? 'All vehicles' : category} action={\`\${vehicles.length} results\`} />
+      <SectionHeading title={category === 'All' ? 'All vehicles' : category} action={`${vehicles.length} results`} />
       <View style={styles.inventoryList}>
         {vehicles.map((vehicle) => (
           <InventoryCard
@@ -1737,7 +1737,7 @@ function VehicleDetailModal({
               <ConfidenceItem icon="account-check-outline" title="Seller" value={vehicle.verified ? 'Verified' : 'Reviewing'} positive={vehicle.verified} />
               <ConfidenceItem icon="file-document-check-outline" title="Documents" value={vehicle.documentsVerified ? 'Verified' : 'In review'} positive={vehicle.documentsVerified} />
               <ConfidenceItem icon="clipboard-check-outline" title="Inspection" value={vehicle.inspected ? 'Completed' : 'Available'} positive={vehicle.inspected} />
-              <ConfidenceItem icon="shield-car" title="Vehicle score" value={vehicle.inspected ? \`\${vehicle.score}/100\` : 'Pending'} positive={vehicle.inspected} />
+              <ConfidenceItem icon="shield-car" title="Vehicle score" value={vehicle.inspected ? `${vehicle.score}/100` : 'Pending'} positive={vehicle.inspected} />
             </View>
           </View>
 
