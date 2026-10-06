@@ -5,7 +5,7 @@ import { getActiveEmployeePermissionOverride } from "@/lib/permission-management
 import { cache } from "react";
 
 const organizationWideRoles: AppRole[] = [
-  "super_admin", "admin", "it_super_user", "manager", "director", "sales_operations_head", "backoffice_executive",
+  "super_admin", "admin", "it_super_user", "manager", "director", "sales_operations_head", "backoffice_executive", "accounts",
 ];
 const hierarchyRoles: AppRole[] = ["sales_head", "zonal_head", "asm", "sales_manager"];
 
