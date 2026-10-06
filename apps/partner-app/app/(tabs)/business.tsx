@@ -27,12 +27,12 @@ type OverviewCardProps = {
   compareLabel?: string;
 };
 
-type OverviewRange = 'this_month' | 'last_month' | 'last_6_months' | 'custom';
+type OverviewRange = 'mtd' | 'last_month' | 'last_6_months' | 'custom';
 type TrendRange = 'mtd' | 'last_month' | 'last_6_months' | 'custom';
 type TrendPoint = { month: string; premium: number | string; policies: number };
 
 const OVERVIEW_OPTIONS: Array<{ value: OverviewRange; label: string }> = [
-  { value: 'this_month', label: 'This Month' },
+  { value: 'mtd', label: 'MTD' },
   { value: 'last_month', label: 'Last Month' },
   { value: 'last_6_months', label: 'Last 6 Months' },
   { value: 'custom', label: 'Custom' },
@@ -48,7 +48,7 @@ const TREND_OPTIONS: Array<{ value: TrendRange; label: string }> = [
 export default function BusinessScreen() {
   const router = useRouter();
   const { context, cacheScopeKey } = usePartnerSession();
-  const [overviewRange, setOverviewRange] = useState<OverviewRange>('this_month');
+  const [overviewRange, setOverviewRange] = useState<OverviewRange>('mtd');
   const [overviewMenuOpen, setOverviewMenuOpen] = useState(false);
   const [overviewPreset, setOverviewPreset] = useState<PartnerBusinessRangeSummary | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(false);
@@ -128,7 +128,7 @@ export default function BusinessScreen() {
     setOverviewMenuOpen(false);
     setOverviewError(null);
     setOverviewPreset(null);
-    if (next === 'this_month' || next === 'custom') return;
+    if (next === 'mtd' || next === 'custom') return;
     const range = presetDateRange(next);
     setOverviewLoading(true);
     try {
@@ -157,7 +157,7 @@ export default function BusinessScreen() {
     }
   }, []);
 
-  const overview = overviewRange === 'this_month' || !overviewPreset
+  const overview = overviewRange === 'mtd' || !overviewPreset
     ? null
     : overviewPreset;
 
@@ -533,7 +533,7 @@ function productAsset(label: string, index: number): ImageSourcePropType {
 
 function presetDateRange(value: OverviewRange | TrendRange) {
   const today = startOfDay(new Date());
-  if (value === 'this_month' || value === 'mtd') return { from: toIsoDate(new Date(today.getFullYear(), today.getMonth(), 1)), to: toIsoDate(today) };
+  if (value === 'mtd') return { from: toIsoDate(new Date(today.getFullYear(), today.getMonth(), 1)), to: toIsoDate(today) };
   if (value === 'last_month') {
     const from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const to = new Date(today.getFullYear(), today.getMonth(), 0);
