@@ -23,7 +23,7 @@ Read `../../docs/PARTNER_APP_HANDOFF_2026_09_13.md`, `../../docs/PARTNER_APP_HOM
 
 ## Release evidence
 
-- **2026-10-06 — Login horizontal brand lockup:** branch `ui/partner-login-horizontal-branding-2026-10-06`; existing Partner app icon moved to the left with `insureit` and `Partner` stacked on the right, tagline retained below. No auth, route, API, schema, native dependency, runtime or APK/AAB change. **IMPLEMENTED; PR/CI pending; NOT MERGED/DEPLOYED.**
+- **2026-10-06 — Login horizontal brand lockup:** PR #2819 merged as `dc4e67708d379db70fe209dd7f3615d8d489db45`; existing Partner app icon is on the left with `insureit` and `Partner` stacked on the right, tagline retained below. Partner Verify #505 and Web Verify #5317 passed. Production runtime `0.2.0` OTA **DEPLOYED** via run #58 / update group `4e20938f-771c-4ca4-af05-82e2ae9fc3f3`; installed-device verification pending. No auth, route, API, schema, native dependency or runtime change. **NO APK/AAB CREATED.**
 
 
 - **2026-10-06 — Partner login password UX and recovery:** branch `ui/partner-login-password-recovery-branding-2026-10-06`; login adds a far-right password visibility eye control, a `Forgot password?` action below the password field, and the INSUREIT app logo above the existing `insureit Partner` wordmark. Native Partner forgot/reset password routes use Supabase recovery with the existing `insureit-partner` scheme. No native dependency/runtime/schema/RLS change. **IMPLEMENTED; PR/CI/merge/production runtime 0.2.0 OTA pending. NO APK/AAB CREATED.**
