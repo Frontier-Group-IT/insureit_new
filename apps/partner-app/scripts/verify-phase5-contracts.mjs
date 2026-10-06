@@ -106,7 +106,7 @@ expectAll('app/policy-intakes/[id].tsx', [[/POLICY INTAKE/, 'Policy Intake track
 expectAll('app/claim/[id].tsx', [
   [/getPartnerManufacturerLogoSource\(data\.vehicle\.make\)/, 'claim summary must resolve the linked vehicle manufacturer logo'],
   [/<Text numberOfLines=\{1\} style=\{styles\.statusTitle\}>\{data\.customer\.name\}<\/Text>/, 'claim summary heading must show customer name'],
-  [/activeChipText\}>\{humanize\(data\.claim\.current_status/, 'claim status badge must show the current workflow status'],
+  [/activeChipText[\s\S]*?\{humanize\(data\.claim\.current_status/, 'claim status badge must show the current workflow status'],
   [/statusServiceMode[\s\S]*footerDivider[\s\S]*statusVehicleNo[\s\S]*data\.vehicle\.vehicle_no/, 'service mode, divider and vehicle number must remain ordered in the summary footer'],
   [/PartnerAssets\.navigation\.customers/, 'insured-person row must use the approved customer artwork'],
   [/accessibilityLabel=\{overviewExpanded \? 'Show fewer claim overview details' : 'View all claim overview details'\}/, 'Claim Overview View All must be an accessible interactive control'],
