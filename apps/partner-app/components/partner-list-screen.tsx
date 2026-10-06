@@ -19,6 +19,7 @@ export function PartnerListScreen<T>({
   eyebrow,
   onBack,
   artwork,
+  showArtwork = true,
   action,
   data,
   renderItem,
@@ -35,6 +36,7 @@ export function PartnerListScreen<T>({
   eyebrow?: string;
   onBack?: () => void;
   artwork?: ImageSourcePropType;
+  showArtwork?: boolean;
   action?: ReactNode;
   data: readonly T[];
   renderItem: ListRenderItem<T>;
@@ -60,7 +62,7 @@ export function PartnerListScreen<T>({
         contentContainerStyle={[styles.content, !data.length && styles.contentEmpty]}
         ListHeaderComponent={
           <View>
-            <PartnerTopBar title={title} eyebrow={eyebrow} onBack={onBack} artwork={artwork} action={action} />
+            <PartnerTopBar title={title} eyebrow={eyebrow} onBack={onBack} artwork={artwork} showArtwork={showArtwork} action={action} />
             {isOffline ? (
               <View style={styles.networkBanner}>
                 <PartnerBanner
