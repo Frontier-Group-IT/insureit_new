@@ -143,7 +143,7 @@ export default function PoliciesScreen() {
             onPress={() => router.push('/policy-intakes')}
             style={({ pressed }) => [styles.intakeHeaderButton, pressed && styles.pressed]}
           >
-            <Ionicons name="add-circle-outline" size={16} color="#174A92" />
+            <Ionicons name="add-circle-outline" size={16} color="#FFFFFF" />
             <Text style={styles.intakeHeaderText}>Policy Intake</Text>
           </Pressable>
         </View>
@@ -187,7 +187,7 @@ export default function PoliciesScreen() {
                 <View style={styles.tabLabelRow}>
                   <Text style={[styles.tabText, active && styles.tabTextActive]}>{filter.label}</Text>
                   {count === null ? null : (
-                    <Text style={[styles.tabCount, active && styles.tabCountActive]}>{count}</Text>
+                    <Text style={[styles.tabCount, active && styles.tabCountActive]}>({count})</Text>
                   )}
                 </View>
               </Pressable>
@@ -465,16 +465,16 @@ const styles = StyleSheet.create({
     gap: 5,
     borderRadius: 10,
     paddingHorizontal: 11,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0B2E63',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.95)',
+    borderColor: 'rgba(255,255,255,0.28)',
     shadowColor: '#001B42',
     shadowOpacity: 0.14,
     shadowRadius: 5,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  intakeHeaderText: { color: '#174A92', fontSize: 9.5, lineHeight: 12, fontWeight: '800' },
+  intakeHeaderText: { color: '#FFFFFF', fontSize: 9.5, lineHeight: 12, fontWeight: '800' },
   searchRow: {
     marginTop: -14,
     marginHorizontal: 12,
