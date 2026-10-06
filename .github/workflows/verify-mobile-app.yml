@@ -140,6 +140,9 @@ jobs:
       - name: Customer External Claim list identity regression
         run: node apps/mobile-app/scripts/customer-external-claim-list-regression.mjs
 
+      - name: Customer Exchange live backend regression
+        run: node apps/mobile-app/scripts/customer-exchange-live-backend-regression.mjs
+
       - name: Build Expo web review export
         run: npm run build:mobile:web
 
@@ -177,6 +180,7 @@ jobs:
             echo "- Managed claim card parity: Sankalp managed and external cards share compact layout and animated status treatment"
             echo "- External Claim identity card regression: stage summary stays compact with manufacturer and insurer catalog logos"
             echo "- External Claim list identity regression: external policy identity survives Operations takeover, uses milestone progress, and cannot inherit Internal Action Required status"
+            echo "- Customer Exchange live backend regression: marketplace feed, fleet listing, favorites, bidding, managed contact, seller bid acceptance, deal confirmation and private media use the Exchange RPC/service layer with no local sample inventory"
             echo "- Review build: Expo web export"
             echo "- Artifact: \`mobile-web-review-${GITHUB_SHA}\` (retained for 14 days after a green run)"
             echo "- Production deployment: not triggered by this workflow"

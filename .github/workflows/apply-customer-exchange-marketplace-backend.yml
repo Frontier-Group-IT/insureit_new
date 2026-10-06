@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - 'supabase/migrations/20261006183000_customer_exchange_marketplace_backend.sql'
+      - 'supabase/migrations/20261006184500_customer_exchange_backend_hardening.sql'
       - '.github/workflows/apply-customer-exchange-marketplace-backend.yml'
 
 permissions:
@@ -46,6 +47,7 @@ jobs:
           test -n "$SUPABASE_DB_PASSWORD"
           test -n "$SUPABASE_PROJECT_REF"
           test -f supabase/migrations/20261006183000_customer_exchange_marketplace_backend.sql
+          test -f supabase/migrations/20261006184500_customer_exchange_backend_hardening.sql
 
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
@@ -72,6 +74,23 @@ jobs:
             supabase migration repair --linked --status applied 20261006183000
           fi
 
+      - name: Ensure Exchange hardening migration is applied
+        shell: bash
+        run: |
+          set -euo pipefail
+          applied=$(supabase db query --linked --output-format json "
+            select exists(
+              select 1 from supabase_migrations.schema_migrations
+              where version='20261006184500'
+            ) as applied;
+          ")
+          if echo "$applied" | grep -Eq '"applied"[[:space:]]*:[[:space:]]*true'; then
+            echo "Hardening migration already recorded as applied; skipping execution."
+          else
+            supabase db query --linked --file supabase/migrations/20261006184500_customer_exchange_backend_hardening.sql
+            supabase migration repair --linked --status applied 20261006184500
+          fi
+
       - name: Verify Exchange security and workflow contract
         shell: bash
         run: |
@@ -93,10 +112,23 @@ jobs:
               (select relrowsecurity from pg_class where oid='public.exchange_listings'::regclass) as listings_rls,
               (select relrowsecurity from pg_class where oid='public.exchange_bids'::regclass) as bids_rls,
               not has_table_privilege('authenticated','public.exchange_listings','SELECT') as no_direct_listing_select,
-              not has_table_privilege('authenticated','public.exchange_bids','SELECT') as no_direct_bid_select;
+              not has_table_privilege('authenticated','public.exchange_bids','SELECT') as no_direct_bid_select,
+              exists(
+                select 1
+                from pg_indexes
+                where schemaname='public'
+                  and indexname='exchange_one_active_listing_per_vehicle_idx'
+                  and indexdef ilike '%draft%'
+              ) as single_draft_guard,
+              position(
+                'v_listing.seller_customer_id is distinct from p_customer_id'
+                in pg_get_functiondef(
+                  'public.exchange_upsert_listing_draft(uuid,uuid,uuid,text,text,bigint,numeric,numeric,numeric,integer,integer,text,text,jsonb,jsonb)'::regprocedure
+                )
+              ) > 0 as owner_scope_guard;
           ")
           echo "$result"
-          for key in listings_ready bids_ready favorites_ready contact_ready deals_ready events_ready feed_rpc_ready draft_rpc_ready bid_rpc_ready contact_rpc_ready deal_rpc_ready private_media_bucket listings_rls bids_rls no_direct_listing_select no_direct_bid_select; do
+          for key in listings_ready bids_ready favorites_ready contact_ready deals_ready events_ready feed_rpc_ready draft_rpc_ready bid_rpc_ready contact_rpc_ready deal_rpc_ready private_media_bucket listings_rls bids_rls no_direct_listing_select no_direct_bid_select single_draft_guard owner_scope_guard; do
             echo "$result" | grep -Eq "\"$key\"[[:space:]]*:[[:space:]]*true" || {
               echo "::error::Exchange verification failed for $key"
               exit 1

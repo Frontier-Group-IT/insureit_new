@@ -820,4 +820,24 @@ Safety:
 - Added mobile service layer `apps/mobile-app/lib/exchange.ts` for feed, listing drafts, bidding, favourites, contact, deals and media.
 - Added controlled migration workflow `.github/workflows/apply-customer-exchange-marketplace-backend.yml`.
 - The complete migration was executed against production inside a transaction and **rolled back successfully** to validate SQL syntax/dependencies; follow-up check confirmed `public.exchange_listings` did not remain.
-- **Implemented on branch; PR/CI/merge/database migration and final UI wiring pending.**
+- Backend PR #2848 merged as `768c69af29c8c1229cfa63a3f1ec595a4e45f6d3`; migration `20261006183000` was **APPLIED + VERIFIED** by the dedicated Exchange migration workflow run #1.
+
+
+---
+
+## 2026-10-06 — Customer Exchange live backend wiring
+
+- Branch: `feature/customer-exchange-live-backend-2026-10-06`.
+- Replaces Customer Exchange local/sample marketplace state with the applied Exchange backend and the existing premium V2 presentation.
+- Startup resolves the current selected customer context, then loads live marketplace feed, owned/sellable fleet vehicles and My Exchange activity through the Exchange service/RPC layer.
+- Explore uses only approved/live backend listings. No hard-coded marketplace seed vehicles remain.
+- Saved vehicles now call `exchange_toggle_favorite`; bids call `exchange_place_bid`; managed callbacks call `exchange_request_contact`.
+- Seller flow now requires an owned fleet vehicle from `exchange_my_sellable_vehicles`, writes drafts through `exchange_upsert_listing_draft`, uploads private photos to `exchange-media`, and submits through `exchange_submit_listing`.
+- My Exchange now uses `exchange_my_activity` and exposes real seller bid review/acceptance, seller contact-request accept/decline, and buyer accepted-deal confirmation.
+- Seller/buyer direct contact information remains hidden; UI continues to route contact through InsureIT.
+- Pull-to-refresh reloads authoritative Exchange state after writes.
+- Added `customer-exchange-live-backend-regression.mjs` and wired it into canonical mobile verification to prevent sample-data regressions or RPC/service bypass.
+- Customer runtime remains **0.3.0**; no native dependency/runtime/APK/AAB change.
+- Added follow-up migration `20261006184500_customer_exchange_backend_hardening.sql`: one editable draft per vehicle is enforced at the database index/RPC layer, cross-customer listing/vehicle swaps are rejected, and draft saves reuse the existing editable listing after app restarts.
+- The hardening migration was executed against production inside `BEGIN … ROLLBACK` successfully; follow-up inspection confirmed migration version `20261006184500` remains unapplied and the live index/function stayed unchanged after rollback.
+- **IMPLEMENTED; PR/CI/merge/production OTA/installed-device verification pending.**
