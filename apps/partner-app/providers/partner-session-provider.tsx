@@ -52,6 +52,8 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
         activeScopeKey.current = 'signed-out';
         contextRef.current = null;
         setContext(null);
+        setAvatarUri(null);
+        lastAvatarResolvedAt.current = 0;
         setStatus('signed_out');
         return null;
       }
@@ -83,6 +85,8 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
       clearPartnerQueryCache(activeScopeKey.current);
       contextRef.current = null;
       setContext(null);
+      setAvatarUri(null);
+      lastAvatarResolvedAt.current = 0;
       setError(message);
       setStatus('denied');
       return null;
@@ -113,6 +117,7 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
     setError(null);
     setStatus('signed_out');
     lastResolvedAt.current = 0;
+    lastAvatarResolvedAt.current = 0;
   }, []);
 
   const signOut = useCallback(async () => {
