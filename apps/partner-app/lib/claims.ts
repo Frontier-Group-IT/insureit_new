@@ -84,7 +84,7 @@ export type PartnerClaimDetail = {
   vehicle: {
     id: string | null;
     vehicle_no: string | null;
-    make: string | null;
+    make?: string | null;
   };
   policy: {
     policy_no: string | null;
