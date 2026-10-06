@@ -263,12 +263,14 @@ export const roleMatrixV2: readonly RoleDefinitionV2[] = [
   {
     code: "accounts",
     label: "Accounts",
-    purpose: "Assignable Accounts role with no default permissions until the Accounts permission model is explicitly defined.",
+    purpose: "Organisation-wide finance operations role for commercial review, reconciliation, brokerage billing, insurer receipts/TDS, partner payables, period close and Accounts reporting.",
     category: "business",
     status: "active",
     assignable: true,
     defaultScope: "organization",
-    grants: [],
+    grants: [
+      grant("reports.view", "view", "organization"),
+    ],
   },
   {
     code: "sales_head",
