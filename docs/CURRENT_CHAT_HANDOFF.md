@@ -5,7 +5,7 @@
 - Life/Health uses optional Proposal Form instead of Policy Copy and bypasses OCR; no-proposal Life/Health submissions go directly to `ready_for_review`.
 - Partner draft state preserves policy type, and Partner intake detail reflects proposal/manual-review semantics.
 - Existing authorization/scope remains unchanged. No schema/native/runtime/APK/AAB change.
-- **MERGED:** PR #2784 as `8f38408afdb76990b7f7f0581522c67b10f3ad5c`; Partner + web CI passed. Production runtime 0.2.0 OTA pending.
+- **MERGED + DEPLOYED:** PR #2784 as `8f38408afdb76990b7f7f0581522c67b10f3ad5c`; Partner + web CI passed. Production runtime `0.2.0` OTA published successfully via run #45 from main `d7f6a99652b095497883be1b91f07f26d4f15c8b`, update group `606e7dbb-0f65-4439-9d1a-02cb9abc2266`. Installed-device verification pending.
 
 ---
 
