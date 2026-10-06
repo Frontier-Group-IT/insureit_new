@@ -248,26 +248,33 @@ export default function NewPolicyIntakeScreen() {
             </Pressable>
           ) : null}
           <View style={styles.searchDivider} />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Filter lead sources"
-            hitSlop={8}
-            onPress={() => setFilterOpen((value) => !value)}
-            style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}
+          <PartnerAnchoredDropdown
+            visible={filterOpen}
+            onDismiss={() => setFilterOpen(false)}
+            align="right"
+            menuWidth={224}
+            menu={(
+              <View style={styles.filterRow}>
+                <FilterChip label="All" active={sourceFilter === 'all'} onPress={() => { setSourceFilter('all'); setFilterOpen(false); }} />
+                <FilterChip label="Partner" active={sourceFilter === 'partner'} onPress={() => { setSourceFilter('partner'); setFilterOpen(false); }} />
+                <FilterChip label="POSP" active={sourceFilter === 'posp'} onPress={() => { setSourceFilter('posp'); setFilterOpen(false); }} />
+              </View>
+            )}
           >
-            <Ionicons name="options-outline" size={20} color="#2C5D91" />
-          </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Filter lead sources"
+              accessibilityState={{ expanded: filterOpen }}
+              hitSlop={8}
+              onPress={() => setFilterOpen((value) => !value)}
+              style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}
+            >
+              <Ionicons name="options-outline" size={20} color="#2C5D91" />
+            </Pressable>
+          </PartnerAnchoredDropdown>
         </View>
 
         <View style={styles.sourceWorkspace}>
-          {filterOpen ? (
-            <View style={styles.filterRow}>
-              <FilterChip label="All" active={sourceFilter === 'all'} onPress={() => setSourceFilter('all')} />
-              <FilterChip label="Partner" active={sourceFilter === 'partner'} onPress={() => setSourceFilter('partner')} />
-              <FilterChip label="POSP" active={sourceFilter === 'posp'} onPress={() => setSourceFilter('posp')} />
-            </View>
-          ) : null}
-
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeaderLeft}>
               <View style={styles.sectionHeaderIcon}>
@@ -704,7 +711,7 @@ const styles = StyleSheet.create({
   searchDivider: { width: StyleSheet.hairlineWidth, height: 28, backgroundColor: '#E1E6EE' },
   filterButton: { width: 30, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
   sourceWorkspace: { flex: 1, paddingHorizontal: 14 },
-  filterRow: { flexDirection: 'row', gap: 7, marginBottom: 8 },
+  filterRow: { flexDirection: 'row', gap: 7, padding: 8, borderRadius: 12, borderWidth: 1, borderColor: '#DFE4ED', backgroundColor: '#FFFFFF', shadowColor: '#17213A', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
   filterChip: { height: 30, minWidth: 62, paddingHorizontal: 12, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DFE4ED' },
   filterChipActive: { borderColor: '#B7A9FF', backgroundColor: '#F0EDFF' },
   filterChipText: { color: '#68758A', fontSize: 11, fontWeight: '600' },
