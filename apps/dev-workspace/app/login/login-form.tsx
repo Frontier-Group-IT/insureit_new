@@ -62,7 +62,7 @@ export default function LoginForm() {
         <div><span>Identity</span><b>{identity.fullName || identity.email || "Authenticated user"}</b></div>
         <div><span>Role</span><b>{identity.role || "No governed role"}</b></div>
         <div><span>MFA assurance</span><b>{identity.assuranceLevel.toUpperCase()}</b></div>
-        <div><span>Workspace authorization</span><b className={identity.authorized ? "good" : "bad"}>{identity.authorized ? "Authorized · read only" : "Denied"}</b></div>
+        <div><span>Workspace authorization</span><b className={identity.authorized ? "good" : "bad"}>{identity.authorized ? (identity.draftWriteEligible ? "Authorized · preview drafts" : "Authorized · read only") : "Denied"}</b></div>
         <p>{message}</p>
         <div className="login-actions">
           {identity.authorized ? <a href="/">Open Developer Workspace</a> : null}
