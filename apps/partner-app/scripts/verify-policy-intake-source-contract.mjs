@@ -30,8 +30,17 @@ for (const required of [
   'loadPartnerPolicyIntakeDraft()',
   'savePartnerPolicyIntakeDraft({',
   'clearPartnerPolicyIntakeDraft()',
+  "const [policyType, setPolicyType] = useState<PartnerPolicyType>('motor');",
+  "value: 'life'",
+  "value: 'health'",
+  "proposalForm ? 'Proposal form (Optional)' : 'Policy copy'",
+  'policyType,',
 ]) {
   requireText(screen, required, `New Policy Intake must preserve ${required}.`);
 }
 
-console.log('Partner Policy Intake source API contract verified.');
+requireText(service, "export type PartnerPolicyType = 'motor' | 'non_motor' | 'life' | 'health';", 'Partner Policy Intake service must expose the four portal policy types.');
+requireText(service, "action: 'submit_without_proposal'", 'Life/Health Policy Intake must support optional proposal submission.');
+requireText(service, 'policy_type: input.policyType', 'Partner Policy Intake service must send policy_type to the portal API.');
+
+console.log('Partner Policy Intake source and policy-type contracts verified.');
