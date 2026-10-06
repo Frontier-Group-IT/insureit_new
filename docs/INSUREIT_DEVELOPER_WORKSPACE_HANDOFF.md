@@ -122,3 +122,34 @@ Verified production state (2026-10-06):
 Next phase:
 - add read-only provider adapters for GitHub, Vercel and Supabase observability;
 - keep all write operations disabled until the Action Gateway and capability model exist.
+
+
+## Phase 1 — live read-only observability (2026-10-06)
+
+Branch: `feature/developer-workspace-live-observability-v2`
+
+Implemented:
+- server-only observability adapter at `apps/dev-workspace/lib/observability.ts`;
+- private `/api/observability` endpoint with no-store caching;
+- live GitHub main-branch commit, recent Actions runs and open-PR count;
+- live reachability checks for `portal.insureit.in` and `insureit.tech`;
+- current Developer Workspace runtime status;
+- live Supabase Auth-service reachability against project `ilzhsfqqjyppzzvfscmh`;
+- optional server-only `VERCEL_READ_TOKEN`, `SUPABASE_READ_TOKEN` and `GITHUB_READ_TOKEN` support for deeper read telemetry;
+- explicit degraded states when management credentials are absent;
+- client auto-refresh every 60 seconds plus manual Refresh;
+- recent GitHub workflow list linked to the actual workflow runs.
+
+Security boundaries:
+- no provider token is required for the default GitHub/public reachability path;
+- optional provider tokens are read only by server code and are never returned to the browser;
+- no service-role/database credential is introduced;
+- no schema/RLS/data change;
+- no infrastructure mutation route exists;
+- `write_actions_enabled=false` remains authoritative;
+- `apk_build_enabled=false` remains authoritative.
+
+Credential policy:
+- when deeper Supabase Management API telemetry is enabled, use a scoped token limited to the required project and read permissions only;
+- when deeper Vercel telemetry is enabled, use a project/team-scoped read credential where supported;
+- absence of a credential must surface as `not configured`, never as a fake healthy state.
