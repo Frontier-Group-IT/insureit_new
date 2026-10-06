@@ -65,7 +65,7 @@ export default function MoreScreen() {
               onPress={() => router.push('/activity')}
               style={({ pressed }) => [styles.heroIconButton, pressed && styles.pressed]}
             >
-              <Feather name="clock" size={17} color="#FFFFFF" />
+              <Feather name="bell" size={20} color="#FFFFFF" />
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -253,9 +253,9 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(7,58,120,0.34)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.90)',
+    backgroundColor: 'rgba(4,33,78,0.72)',
+    borderWidth: 1.25,
+    borderColor: '#FFFFFF',
   },
   heroAvatar: {
     width: 35,

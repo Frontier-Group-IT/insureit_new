@@ -122,7 +122,7 @@ export default function PoliciesScreen() {
               onPress={() => router.push('/activity')}
               style={({ pressed }) => [styles.heroIconButton, pressed && styles.pressed]}
             >
-              <Feather name="clock" size={17} color="#FFFFFF" />
+              <Feather name="bell" size={20} color="#FFFFFF" />
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -416,12 +416,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(4,33,78,0.72)',
     borderWidth: 1.25,
-    borderColor: 'rgba(255,255,255,0.96)',
-    shadowColor: '#001B42',
-    shadowOpacity: 0.24,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    borderColor: '#FFFFFF',
   },
   heroAvatar: {
     width: 35,
