@@ -1,8 +1,11 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -23,6 +26,7 @@ export default function LoginScreen() {
   const passwordRef = useRef<TextInput>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -65,6 +69,12 @@ export default function LoginScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.brandBlock}>
+          <Image
+            accessibilityLabel="INSUREIT logo"
+            source={require('../assets/partner-app-icon.jpg')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <View accessibilityLabel="INSUREIT Partner" style={styles.brandMark}>
             <Text style={styles.brandName}>insureit</Text>
             <Text style={styles.brandPartner}>Partner</Text>
@@ -109,7 +119,7 @@ export default function LoginScreen() {
                 if (message) setMessage('');
               }}
               editable={!busy}
-              secureTextEntry
+              secureTextEntry={!passwordVisible}
               autoComplete="current-password"
               textContentType="password"
               placeholder="Enter password"
@@ -118,8 +128,33 @@ export default function LoginScreen() {
               onSubmitEditing={() => {
                 if (!busy) void submit();
               }}
+              rightAccessory={
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={passwordVisible ? 'Hide password' : 'Show password'}
+                  hitSlop={8}
+                  onPress={() => setPasswordVisible((current) => !current)}
+                  style={styles.eyeButton}
+                >
+                  <MaterialCommunityIcons
+                    name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
+                    size={21}
+                    color={partnerTheme.colors.inkMuted}
+                  />
+                </Pressable>
+              }
             />
           </View>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Forgot password"
+            disabled={busy}
+            onPress={() => router.push('/forgot-password')}
+            style={styles.forgotPassword}
+          >
+            <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+          </Pressable>
 
           {message ? (
             <Text accessibilityLiveRegion="assertive" accessibilityRole="alert" style={styles.error}>
@@ -150,14 +185,20 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: partnerTheme.spacing.xl,
-    paddingTop: 28,
+    paddingTop: 24,
     paddingBottom: 32,
   },
   brandBlock: { alignItems: 'center', marginBottom: 20 },
+  logo: {
+    width: 66,
+    height: 66,
+    borderRadius: 16,
+    marginBottom: 8,
+  },
   brandMark: {
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 118,
+    minHeight: 82,
   },
   brandName: {
     color: partnerTheme.colors.ink,
@@ -196,6 +237,24 @@ const styles = StyleSheet.create({
     ...partnerTheme.typography.body,
   },
   field: { marginTop: partnerTheme.spacing.md },
+  eyeButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+  },
+  forgotPassword: {
+    alignSelf: 'flex-end',
+    marginTop: 10,
+    paddingVertical: 4,
+    paddingLeft: 12,
+  },
+  forgotPasswordText: {
+    color: partnerTheme.colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
   error: {
     marginTop: partnerTheme.spacing.md,
     color: partnerTheme.colors.danger,
