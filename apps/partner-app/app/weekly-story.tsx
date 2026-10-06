@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   heroGlowSmall: { position: 'absolute', width: 188, height: 188, borderRadius: 94, right: 28, top: -120, backgroundColor: 'rgba(43, 137, 245, 0.22)' },
   heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   dates: { flex: 1, color: '#B9D5FF', fontSize: 12, lineHeight: 16, fontWeight: '500' },
-  periodPill: { minHeight: 30, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, borderRadius: 999, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DCE9FA' },
+  periodPill: { minHeight: 30, minWidth: 92, flexShrink: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 10, borderRadius: 999, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DCE9FA' },
   periodPillText: { color: '#1765C1', fontSize: 11, lineHeight: 15, fontWeight: '700' },
   heroMainRow: { minHeight: 78, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10 },
   heroCopy: { flex: 1, minWidth: 0, paddingTop: 7, paddingBottom: 5 },
