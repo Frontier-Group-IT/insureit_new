@@ -16,6 +16,7 @@ Before doing any work in this repository, read all of the following:
 - `docs/PERFORMANCE_OPTIMIZATION_HANDOFF.md`
 - `docs/PERFORMANCE_REMEDIATION_PLAN_2026_08_24.md`
 - `docs/MOBILE_EXPO_PREVIEW_HANDOFF.md`
+- `docs/INSUREIT_DEVELOPER_WORKSPACE_HANDOFF.md`
 
 Do this at the beginning of every new ChatGPT/Codex session connected to the repository. Do not ask the user to repeat information already recorded in those files.
 
@@ -60,6 +61,8 @@ The private-agent rollout is deliberately isolated from the working Sarvam manag
 The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` remains the compact rule/index surface.
 
 ### Latest implementation ledger
+
+- **2026-10-06 — InsureIT Developer Workspace foundation:** branch `feature/developer-workspace-foundation`; added standalone `apps/dev-workspace` Next.js control-plane foundation with read-only Developer Home, application/infrastructure inventory, health endpoint, dedicated Vercel project `insureit-developer`, and Vercel Authentication protection for all deployment targets. Public `insureit.tech` remains isolated. **IMPLEMENTED; preview/PR/CI/merge/domain assignment pending. WRITE ACTIONS DISABLED; NO APK/AAB CREATED.** See `docs/INSUREIT_DEVELOPER_WORKSPACE_HANDOFF.md`.
 
 - **2026-10-06 — Partner Claims parenthesized summary counts:** branch `ui/partner-claims-parenthesized-counts-2026-10-06`; existing live Claims summary counts now render as `All (N)`, `In Progress (N)`, and `Settled (N)` with no claim data/filter/API/RPC/schema/RLS/native-runtime change. **IMPLEMENTED; PR/CI/merge/production runtime `0.2.0` OTA pending. NO APK/AAB CREATED.** See `docs/PARTNER_APP_HANDOFF_2026_09_13.md`.
 

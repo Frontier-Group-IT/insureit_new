@@ -1,0 +1,40 @@
+name: Verify developer workspace
+
+on:
+  pull_request:
+    paths:
+      - "apps/dev-workspace/**"
+      - ".github/workflows/verify-developer-workspace.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/dev-workspace/**"
+      - ".github/workflows/verify-developer-workspace.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/dev-workspace
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pinned dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Production build
+        run: npm run build
