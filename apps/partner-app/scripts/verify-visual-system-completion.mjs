@@ -125,10 +125,11 @@ requireText(claimDetail, '<SectionIcon asset={PartnerAssets.navigation.customers
 requireText(claimDetail, '<SectionIcon asset={PartnerAssets.navigation.claims} />', 'Claim detail Claim Overview section must keep professional claims artwork.');
 requireText(claimDetail, '<SectionIcon asset={PartnerAssets.actions.payoutRefresh} />', 'Claim detail Financial Snapshot must keep professional payout artwork.');
 requireText(claimDetail, '<SectionIcon asset={PartnerAssets.status.journey} />', 'Claim detail Journey must keep professional journey artwork.');
-requireText(claimDetail, 'function timelineArtwork(item: TimelineItem)', 'Claim detail journey events must keep semantic Partner artwork mapping.');
+requireText(claimDetail, 'name="person-outline"', 'Claim detail insured-person row must retain the clean profile icon.');
+requireText(claimDetail, 'function timelineIcon(item: TimelineItem)', 'Claim detail journey events must retain event-specific professional icons.');
+for (const icon of ['document-text-outline', 'person-add-outline', 'shield-checkmark-outline', 'wallet-outline', 'search-outline']) requireText(claimDetail, icon, `Claim detail journey mapping is missing ${icon}.`);
 requireText(claimDetail, 'summaryMetaIcon', 'Claim detail summary metadata must keep clear icon containers.');
 requireText(claimDetail, 'getPartnerClaimDetail(id)', 'Claim detail must preserve the existing scoped data service.');
-if (claimDetail.includes('function timelineIcon(item: TimelineItem)')) throw new Error('Claim detail journey must not regress to generic vector-only event icons.');
 requireText(claimDetail, 'function timelineIcon(item: TimelineItem)', 'Claim detail must keep semantic journey icon mapping.');
 for (const journeyIcon of ['document-text-outline', 'person-add-outline', 'cloud-upload-outline', 'checkmark-circle-outline', 'shield-checkmark-outline']) requireText(claimDetail, journeyIcon, `Claim detail journey is missing ${journeyIcon} semantic icon coverage.`);
 if (claimDetail.includes('styles.dotLatest') || claimDetail.includes('styles.innerDot')) throw new Error('Claim detail must not regress to dot-only journey identity.');
