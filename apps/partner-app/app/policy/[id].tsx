@@ -52,12 +52,22 @@ export default function PolicyDetailScreen() {
   const manufacturerLogo = data?.vehicle ? getPartnerManufacturerLogoSource(data.vehicle.make) : null;
 
   return (
-    <PartnerScreen title="Policy Details" eyebrow="BUSINESS" hideTopBar>
+    <PartnerScreen title="Policy Details" hideTopBar>
       <View style={styles.pageHeader}>
         <View style={styles.headerGlowOne} />
         <View style={styles.headerGlowTwo} />
-        <Text style={styles.headerEyebrow}>BUSINESS</Text>
-        <Text style={styles.headerTitle}>Policy Details</Text>
+        <View style={styles.headerTitleRow}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+            onPress={() => router.back()}
+            hitSlop={8}
+            style={({ pressed }) => [styles.headerBackButton, pressed && styles.pressed]}
+          >
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          </Pressable>
+          <Text style={styles.headerTitle}>Policy Details</Text>
+        </View>
       </View>
 
       {loading ? (
@@ -88,7 +98,6 @@ export default function PolicyDetailScreen() {
               <View style={styles.periodBlock}>
                 <View style={styles.periodTitleRow}><Ionicons name="calendar-outline" size={15} color="#1686E8" /><Text style={styles.periodLabel}>Policy Period</Text></View>
                 <Text style={styles.periodValue}>{formatDate(data.policy.start_date)} – {formatDate(data.policy.end_date)}</Text>
-                <Text numberOfLines={1} style={styles.periodProduct}>{data.policy.policy_product || data.policy.policy_type || data.policy.business_type || 'Policy'}</Text>
               </View>
             </View>
           </View>
@@ -231,8 +240,9 @@ const styles = StyleSheet.create({
   pageHeader: { height: 92, marginHorizontal: -partnerTheme.spacing.lg, overflow: 'hidden', paddingHorizontal: 16, paddingTop: 16, backgroundColor: '#0758B6' },
   headerGlowOne: { position: 'absolute', width: 210, height: 150, borderRadius: 120, right: -42, top: -76, backgroundColor: 'rgba(38,142,238,0.30)' },
   headerGlowTwo: { position: 'absolute', width: 170, height: 120, borderRadius: 100, right: 68, top: 34, backgroundColor: 'rgba(14,99,197,0.28)' },
-  headerEyebrow: { color: 'rgba(255,255,255,0.82)', fontSize: 8, lineHeight: 10, fontWeight: '800', letterSpacing: 1.15 },
-  headerTitle: { marginTop: 3, color: '#FFFFFF', fontSize: 18, lineHeight: 22, fontWeight: '700', letterSpacing: -0.12 },
+  headerTitleRow: { marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerBackButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: '#FFFFFF', fontSize: 18, lineHeight: 22, fontWeight: '700', letterSpacing: -0.12 },
   stateWrap: { marginTop: 14 },
   contentWrap: { marginTop: -31, gap: 10, paddingBottom: 8 },
   summaryCard: { padding: 14, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: '#DEE6F1', backgroundColor: '#FFFFFF', shadowColor: '#14345E', shadowOpacity: 0.07, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
@@ -246,7 +256,7 @@ const styles = StyleSheet.create({
   premiumRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', paddingTop: 9 },
   premiumBlock: { flex: 1 }, premiumLabel: { color: '#79879B', fontSize: 9, lineHeight: 11 }, premiumValue: { marginTop: 1, color: '#092C62', fontSize: 21, lineHeight: 25, fontWeight: '800', letterSpacing: -0.3 },
   periodDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', marginHorizontal: 12, backgroundColor: '#E0E6F0' },
-  periodBlock: { flex: 1.03, minWidth: 0 }, periodTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 }, periodLabel: { color: '#7B8797', fontSize: 9, lineHeight: 11 }, periodValue: { marginTop: 2, color: '#12233E', fontSize: 9.5, lineHeight: 12, fontWeight: '700' }, periodProduct: { marginTop: 2, color: '#8A95A5', fontSize: 8.5, lineHeight: 11 },
+  periodBlock: { flex: 1.03, minWidth: 0 }, periodTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 }, periodLabel: { color: '#7B8797', fontSize: 9, lineHeight: 11 }, periodValue: { marginTop: 2, color: '#12233E', fontSize: 9.5, lineHeight: 12, fontWeight: '700' },
   card: { overflow: 'hidden', borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F1', backgroundColor: '#FFFFFF', shadowColor: '#17365F', shadowOpacity: 0.035, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
   cardHeader: { minHeight: 42, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 }, cardTitle: { color: '#102A51', fontSize: 12.5, lineHeight: 16, fontWeight: '800' },
