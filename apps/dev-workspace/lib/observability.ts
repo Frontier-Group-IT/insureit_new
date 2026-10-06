@@ -87,14 +87,14 @@ async function githubSnapshot() {
   const [runsResponse, repoResponse, prsResponse] = await Promise.all([
     safeFetch(`https://api.github.com/repos/${GITHUB_REPO}/actions/runs?branch=main&per_page=8`, { headers }),
     safeFetch(`https://api.github.com/repos/${GITHUB_REPO}/commits/main`, { headers }),
-    safeFetch(`https://api.github.com/repos/${GITHUB_REPO}/pulls?state=open&per_page=100`, { headers })
+    safeFetch(`https://api.github.com/search/issues?q=repo:${GITHUB_REPO}+is:pr+is:open&per_page=1`, { headers })
   ]);
 
   if (!runsResponse.ok || !repoResponse.ok) throw new Error("GitHub read failed");
 
   const runsJson = await runsResponse.json() as { workflow_runs?: Array<Record<string, unknown>> };
   const commitJson = await repoResponse.json() as { sha?: string };
-  const prsJson = prsResponse.ok ? await prsResponse.json() as unknown[] : null;
+  const prsJson = prsResponse.ok ? await prsResponse.json() as { total_count?: number } : null;
 
   const workflows: WorkflowRun[] = (runsJson.workflow_runs ?? []).map((run) => ({
     id: Number(run.id ?? 0),
@@ -110,7 +110,7 @@ async function githubSnapshot() {
   return {
     sha: commitJson.sha ?? null,
     workflows,
-    openPullRequests: Array.isArray(prsJson) ? prsJson.length : null,
+    openPullRequests: typeof prsJson?.total_count === "number" ? prsJson.total_count : null,
     authenticated: Boolean(token)
   };
 }
@@ -137,9 +137,9 @@ async function supabaseHealth(): Promise<ProviderStatus> {
     const response = await safeFetch(`https://${SUPABASE_REF}.supabase.co/auth/v1/health`);
     return {
       name: "Supabase",
-      detail: "Auth service reachability · management token not configured",
-      status: response.ok ? "Auth reachable" : `Auth HTTP ${response.status}`,
-      tone: response.ok ? "ok" : "warn",
+      detail: "Supabase gateway response · management token not configured",
+      status: response.ok ? "Reachable" : (response.status === 401 || response.status === 403 ? "Reachable · auth required" : `HTTP ${response.status}`),
+      tone: response.ok ? "ok" : (response.status === 401 || response.status === 403 ? "warn" : "error"),
       source: "degraded"
     };
   } catch {
