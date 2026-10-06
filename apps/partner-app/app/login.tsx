@@ -100,8 +100,10 @@ export default function LoginScreen() {
               autoCapitalize="none"
               keyboardType="email-address"
               autoComplete="email"
+              importantForAutofill="no"
               textContentType="username"
               placeholder="name@example.com"
+              style={styles.loginInput}
               returnKeyType="next"
               blurOnSubmit={false}
               onSubmitEditing={() => {
@@ -123,8 +125,10 @@ export default function LoginScreen() {
               editable={!busy}
               secureTextEntry={!passwordVisible}
               autoComplete="current-password"
+              importantForAutofill="no"
               textContentType="password"
               placeholder="Enter password"
+              style={styles.loginInput}
               returnKeyType="done"
               onFocus={revealFormEnd}
               onSubmitEditing={() => {
@@ -243,6 +247,10 @@ const styles = StyleSheet.create({
     ...partnerTheme.typography.body,
   },
   field: { marginTop: partnerTheme.spacing.md },
+  loginInput: {
+    backgroundColor: partnerTheme.colors.surfaceMuted,
+    borderColor: partnerTheme.colors.lineStrong,
+  },
   eyeButton: {
     width: 40,
     height: 40,
