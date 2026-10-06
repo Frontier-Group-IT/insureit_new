@@ -66,7 +66,9 @@
 - The same session-backed display name continues to drive the profile avatar initials; no identity source or hardcoded user name was introduced.
 - Search behavior, authorized record scope, queries, result rows, navigation, permissions and APIs are unchanged.
 - No backend/schema/RLS/native/runtime change and no APK/AAB created.
-- Evidence state: **IMPLEMENTED; PR/CI pending; NOT MERGED; NOT DEPLOYED.**
+- PR #2837 merged as `fa34b0505f3cefb8421f7240baab63acda15aec3` after rebasing onto the current main to resolve a documentation conflict; Partner Verify #524 and Web Verify #5346 passed on the rebased head.
+- Production runtime `0.2.0` OTA was **DEPLOYED** via workflow run #71 from main `8ccbf2d8ad9a15f18d6787a6699cf0df6dd87ed1`, update group `13075129-8eec-4c48-9bd7-854043b8a43d`.
+- Evidence state: **MERGED + DEPLOYED; installed-device verification pending; NO APK/AAB CREATED.**
 
 ## 2026-10-06 — My Impact professional icons and clickable cards
 
