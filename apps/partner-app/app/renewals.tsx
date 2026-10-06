@@ -170,7 +170,7 @@ export default function RenewalsScreen() {
           </View>
         </View>
         <View style={styles.sortArea}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Sort renewals by due date" onPress={() => setSortOpen((open) => !open)} style={({ pressed }) => [styles.sortButton, pressed && styles.pressed]}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Sort renewals by due date" accessibilityState={{ expanded: sortOpen }} onPress={() => setSortOpen((open) => !open)} style={({ pressed }) => [styles.sortButton, pressed && styles.pressed]}>
             <Text style={styles.sortText}>Due Date</Text>
             <Ionicons name={sortOpen ? 'chevron-up' : 'chevron-down'} size={14} color="#42516A" />
           </Pressable>
