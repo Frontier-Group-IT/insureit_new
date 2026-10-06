@@ -15,7 +15,7 @@ export default function LoginPage() {
         <LoginForm />
         <div className="login-security-note">
           <b>Current capability</b>
-          <span>Read-only workspace access. MFA/AAL2 will be mandatory before any future production-changing action.</span>
+          <span>Read-only access is available to an active IT Super User. AAL2 unlocks append-only preview drafts only; production publish, release, database and infrastructure actions remain disabled.</span>
         </div>
       </section>
     </main>
