@@ -58,7 +58,7 @@ export async function GET(request: Request) {
   const identity = auth.identity;
   const scope = auth.scope;
   const admin = createSupabaseAdminClient();
-  const intakeSelect = "id,intake_number,status,lead_source_name,lead_source_type,lead_source_code,customer_mobile,file_name,ocr_status,ocr_fields,attention_reason,created_at,updated_at,final_policy_id";
+  const intakeSelect = "id,intake_number,status,policy_type,lead_source_name,lead_source_type,lead_source_code,customer_mobile,file_name,ocr_status,ocr_fields,attention_reason,created_at,updated_at,final_policy_id";
   const url = new URL(request.url);
   const requestedId = url.searchParams.get("id")?.trim();
   const view = url.searchParams.get("view")?.trim().toLowerCase();
@@ -278,7 +278,7 @@ async function completeUpload(
   if (downloadError || !blob) return json({ ok: false, error: "The policy upload did not complete." }, 400);
   if (blob.size > MAX_FILE_SIZE) {
     await admin.storage.from(BUCKET).remove([input.storage_path]);
-    return json({ ok: false, error: "Policy copy must be 15 MB or smaller." }, 400);
+    return json({ ok: false, error: `${LIFE_HEALTH_TYPES.has(input.policy_type) ? "Proposal form" : "Policy copy"} must be 15 MB or smaller.` }, 400);
   }
 
   const { data: customers } = await admin
@@ -310,8 +310,7 @@ async function completeUpload(
     mime_type: input.file.type,
     file_size: blob.size,
     ocr_status: proposalForm ? "completed" : "pending",
-    ocr_fields: proposalForm ? [] : undefined,
-    ocr_warnings: proposalForm ? [] : undefined,
+    ...(proposalForm ? { ocr_fields: [], ocr_warnings: [] } : {}),
   });
 
   if (intakeError) {
