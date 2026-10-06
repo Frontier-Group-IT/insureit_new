@@ -55,7 +55,6 @@ export default function NewPolicyIntakeScreen() {
   const [mobile, setMobile] = useState('');
   const [file, setFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [loading, setLoading] = useState(true);
-  const [draftRestored, setDraftRestored] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState<PartnerPolicyIntakeUploadProgress | null>(null);
   const [error, setError] = useState('');
@@ -94,9 +93,7 @@ export default function NewPolicyIntakeScreen() {
 
         if (draft?.customerMobile) {
           setMobile(draft.customerMobile.replace(/\D/g, '').slice(0, 10));
-          setDraftRestored(true);
         } else if (draftSourceValid) {
-          setDraftRestored(true);
         }
       } catch (cause) {
         if (!cancelled) setError(cause instanceof Error ? cause.message : 'Lead sources could not be loaded.');
@@ -367,16 +364,6 @@ export default function NewPolicyIntakeScreen() {
           />
         ) : null}
 
-        {draftRestored ? (
-          <View style={styles.draftBanner}>
-            <PartnerBanner
-              tone="info"
-              icon="bookmark-outline"
-              title="Draft restored"
-              message="Lead source, policy type and mobile restored. Re-select the document before submitting if needed."
-            />
-          </View>
-        ) : null}
 
         <View style={styles.detailCard}>
           <View style={styles.detailCardHeader}>
@@ -523,7 +510,7 @@ function ReferenceHeader() {
     <View style={styles.header}>
       <View style={styles.headerGlowOne} />
       <View style={styles.headerGlowTwo} />
-      <Text style={styles.headerTitle}>Send Policy to Operations</Text>
+      <Text style={styles.headerTitle}>Policy Intake</Text>
     </View>
   );
 }
@@ -770,7 +757,6 @@ const styles = StyleSheet.create({
   emptySearchText: { marginTop: 5, color: '#7D899B', fontSize: 11 },
   stateWrap: { flex: 1, justifyContent: 'center' },
   detailsContent: { paddingHorizontal: 14, paddingTop: 2, paddingBottom: 34 },
-  draftBanner: { marginBottom: 12 },
   detailCard: { borderRadius: 12, borderWidth: 1, borderColor: '#E0E5ED', backgroundColor: '#FFFFFF', overflow: 'hidden' },
   detailCardHeader: { minHeight: 40, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E6EAF0' },
   detailCardTitle: { color: '#1C2A40', fontSize: 12, fontWeight: '700' },
