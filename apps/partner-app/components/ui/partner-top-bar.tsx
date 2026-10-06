@@ -18,6 +18,7 @@ export function PartnerTopBar({
   actionIcon,
   actionLabel = 'Action',
   onAction,
+  showArtwork = true,
 }: {
   title: string;
   eyebrow?: string;
@@ -29,8 +30,9 @@ export function PartnerTopBar({
   actionIcon?: IconName;
   actionLabel?: string;
   onAction?: () => void;
+  showArtwork?: boolean;
 }) {
-  const resolvedArtwork = artwork ?? resolvePartnerScreenArtwork({ title, eyebrow });
+  const resolvedArtwork = showArtwork ? (artwork ?? resolvePartnerScreenArtwork({ title, eyebrow })) : undefined;
 
   return (
     <View style={styles.root}>
