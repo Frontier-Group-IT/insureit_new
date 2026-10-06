@@ -23,6 +23,8 @@ Read `../../docs/PARTNER_APP_HANDOFF_2026_09_13.md`, `../../docs/PARTNER_APP_HOM
 
 ## Release evidence
 
+- **2026-10-06 — Claim Details professional icon refinement:** branch `ui/partner-claim-detail-professional-icons-2026-10-06`; Claim Details now uses the existing Partner claims/customers/payout/journey artwork for the header and section identities, clearer blue icon containers for service mode/vehicle and overview fields, and semantic Partner artwork for journey events (claim created, surveyor/assignment, document activity, approval, settlement/payment, inspection/survey). Manufacturer logo, claim/customer/policy data, navigation, financial values, status history/stages, API/RPC behavior, permissions and bottom navigation are unchanged. Added visual regression guards. **IMPLEMENTED; PR/CI/merge/production runtime 0.2.0 OTA/device verification pending. NO APK/AAB CREATED.**
+
 - **2026-10-06 — My Impact icons + clickable cards:** PR #2833 merged as `e865c7ae0b2c3bd448ea0c944fc5161e2c2d57b7`; all impact cards now use a consistent blue professional icon treatment and are tappable: Active Motor Protection→Business, Vehicles/Customers→Customers, Policies→Policies, Claims/Claim Outcomes→Claims, Gross Premium→Business Report, Customers Added→Customers, Journey→Journey. Partner Verify #517 and Web Verify #5336 passed. Production runtime `0.2.0` OTA **DEPLOYED** via run #66 / update group `e78b180d-9909-4156-912e-0bb0ad433324`; installed-device verification pending. Existing impact RPC/data/calculations are unchanged. **NO APK/AAB CREATED.**
 
 
