@@ -153,3 +153,28 @@ Credential policy:
 - when deeper Supabase Management API telemetry is enabled, use a scoped token limited to the required project and read permissions only;
 - when deeper Vercel telemetry is enabled, use a project/team-scoped read credential where supported;
 - absence of a credential must surface as `not configured`, never as a fake healthy state.
+
+## Phase 2A — Action contracts and proposed Configuration Registry (2026-10-06)
+
+Branch: `feature/dev-workspace-config-contracts`.
+
+Implemented **foundation only**:
+- `lib/control-plane/contracts.ts` defines explicit typed action kinds, risk tiers, capabilities, required checks, audits, approvals and rollback plans.
+- `evaluateActionContract()` unconditionally returns `allowed: false`. It cannot authorize execution.
+- `lib/control-plane/configuration.ts` defines 8 proposed low-risk settings for Portal, Partner, Customer and Tech, with validation contracts.
+- Every candidate is marked `proposed`, `effectiveValue: null`, `pending-implementation`. No app consumes it.
+- `/configuration` renders the registry and action-contract overview as a read-only screen.
+- `GET /api/control-plane/catalog` serves non-sensitive design metadata and explicit readiness booleans.
+- `write_actions_enabled: false` and `apk_build_enabled: false` remain intact.
+
+NOT implemented: authentication/RBAC/MFA for editing, durable versioned config storage, RLS or migration, publisher, audit ledger, actual rollback, approval workflow, AI tool execution, provider writes, mobile OTA, native builds. **Do not describe this foundation as an active configuration editor.**
+
+Before enabling the first write:
+1. Developer-specific identity/session and MFA with server-side capability enforcement on each request.
+2. Typed registry storage with revision preconditions, strong validation, RLS and explicit environment/tenant scoping.
+3. Persisted append-only audit and explicit idempotency/concurrency protections.
+4. Preview and functional rollback, with tests of publication and consumption.
+5. Integrate exactly one low-risk key into its actual consuming application.
+6. Test negative authorization paths and credential exposure boundaries before release.
+
+The repository's production portal deploy gate had a Supabase Management API `FGA Authentication Error. Unauthorized` on 2026-10-06. This is external to this phase; do not bypass the schema-parity gate.
