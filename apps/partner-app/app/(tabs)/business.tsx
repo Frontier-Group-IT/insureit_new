@@ -109,7 +109,6 @@ export default function BusinessScreen() {
   const renewals = workspace.data?.renewals ?? null;
   const claims = workspace.data?.claims ?? null;
   const payout = workspace.data?.payout ?? null;
-  const profileInitials = initials(context?.identity.display_name ?? 'Partner');
 
   const policiesChange = useMemo(() => {
     if (!performance || !performance.policies_last_month) return null;
@@ -602,8 +601,6 @@ function changeText(value: number, hasPrevious: boolean) { if (!hasPrevious) ret
 function formatCompactCurrency(value: number | string) { const amount = Number(value || 0); if (!Number.isFinite(amount)) return '₹0'; if (Math.abs(amount) >= 10_000_000) return `₹${(amount / 10_000_000).toFixed(amount % 10_000_000 === 0 ? 0 : 1)}Cr`; if (Math.abs(amount) >= 100_000) return `₹${(amount / 100_000).toFixed(amount % 100_000 === 0 ? 0 : 1)}L`; if (Math.abs(amount) >= 1_000) return `₹${(amount / 1_000).toFixed(amount % 1_000 === 0 ? 0 : 1)}k`; return formatIndianCurrency(amount); }
 function shortMonth(value: string) { const [year, month] = value.split('-').map(Number); return new Intl.DateTimeFormat('en-IN', { month: 'short' }).format(new Date(year, month - 1, 1)); }
 function humanize(value: string) { return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()); }
-function initials(value: string) { return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'IP'; }
-function formatCacheTime(value: number | null) { if (!value) return 'earlier'; return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value)); }
 
 const styles = StyleSheet.create({
   heroBanner: { height: 158, marginHorizontal: -16, marginTop: -14, overflow: 'hidden', backgroundColor: '#0755A8' },
@@ -616,6 +613,7 @@ const styles = StyleSheet.create({
   heroBrandPartner: { color: '#F5AB2E', fontSize: 14, lineHeight: 16, fontWeight: '800' },
   heroActions: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 7 },
   heroIconButton: { width: 33, height: 33, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(4,33,78,0.72)', borderWidth: 1.25, borderColor: '#FFFFFF' },
+  heroAvatarTouch: { borderRadius: 18 },
   heroAvatar: { width: 35, height: 35, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
   heroAvatarText: { color: '#144E98', fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
   heroCopy: { position: 'absolute', zIndex: 3, left: 18, bottom: 24 },
