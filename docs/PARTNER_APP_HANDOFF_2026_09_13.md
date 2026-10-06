@@ -437,3 +437,13 @@ Never collapse merge, publish and device verification into one status.
 - Shared top-bar/list/search components gain optional controls with existing defaults preserved for other screens.
 - No renewal query, pagination, summary, RPC, schema, RLS, authorization, native dependency, runtime or permission change.
 - Evidence state: **IMPLEMENTED; PR/CI/merge/production runtime 0.2.0 OTA/device verification pending. NO APK/AAB CREATED.**
+
+## 2026-10-06 — Renewal opportunity card + reliable sort popup
+
+- Branch: `ui/partner-renewals-opportunity-card-overlay-2026-10-06`.
+- The top summary keeps its live Net Premium and policy count; the 0–7d, 8–15d, 16–30d and Overdue mini-tiles are removed. Existing Upcoming/Overdue tabs remain, and the underlying RPC bucket contract is untouched.
+- The Renewal Opportunities / Overdue Policies heading, row count, Due Date control, paged policy records and empty/loading/error states now share one visually joined white card with consistent edges.
+- The Due Date sort control measures its screen position and opens a transparent top-level React Native `Modal` so the menu is above records/empty artwork, does not shift list content, and closes on outside tap or Android back.
+- A visual-system contract guards against the return of mini-tiles, inline sort dropdown and ungrouped opportunity rows.
+- No changes to renewal totals/filters/search/RPC/schema/RLS/commercial access/native configuration; OTA-safe for production runtime 0.2.0.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/production OTA/device verification pending. NO APK/AAB CREATED.**
