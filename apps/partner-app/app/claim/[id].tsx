@@ -98,7 +98,7 @@ export default function ClaimDetailScreen() {
                 <Text style={styles.sectionTitle}>Insured Person</Text>
               </View>
               <Pressable accessibilityRole="button" accessibilityLabel={`Open customer ${data.customer.name}`} onPress={() => router.push(`/customer/${data.customer.id}` as never)} style={({ pressed }) => [styles.personRow, pressed && styles.pressed]}>
-                <View style={styles.personAvatar}><Image source={PartnerAssets.navigation.customers} style={styles.personAvatarImage} resizeMode="contain" /></View>
+                <View style={styles.personAvatar}><Ionicons name="person-outline" size={22} color="#176FD1" /></View>
                 <View style={styles.personCopy}>
                   <Text style={styles.personName}>{data.customer.name}</Text>
                   <Text style={styles.personMeta}>{data.vehicle.vehicle_no || data.policy.policy_no || 'Customer record'}</Text>
@@ -155,7 +155,7 @@ export default function ClaimDetailScreen() {
                       <View style={styles.journeyRailRow}><View style={[styles.journeyDot, index === timeline.length - 1 && styles.journeyDotLatest]} />{index < timeline.length - 1 ? <View style={styles.journeyConnector} /> : null}</View>
                       <View style={styles.journeyEventCard}>
                         <View style={[styles.journeyIconWrap, index === timeline.length - 1 && styles.journeyIconLatest]}>
-                          <Image source={timelineArtwork(item)} style={styles.journeyIconImage} resizeMode="contain" />
+                          <Ionicons name={timelineIcon(item)} size={18} color={index === timeline.length - 1 ? '#6541F4' : '#176FD1'} />
                         </View>
                         <Text style={styles.journeyDate}>{formatDateTime(item.date)}</Text>
                         <Text style={styles.journeyTitle}>{item.title}</Text>
@@ -197,16 +197,16 @@ function NavItem({ icon, label, active = false, onPress }: { icon: keyof typeof 
   return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [styles.navItem, pressed && styles.pressed]}><View style={[styles.navIconWrap, active && styles.navIconWrapActive]}><Ionicons name={icon} size={19} color={active ? '#633DF1' : '#6C7D97'} /></View><Text style={[styles.navLabel, active && styles.navLabelActive]}>{label}</Text></Pressable>;
 }
 
-function timelineArtwork(item: TimelineItem): ImageSourcePropType {
+function timelineIcon(item: TimelineItem): keyof typeof Ionicons.glyphMap {
   const normalized = item.title.toLowerCase();
-  if (item.kind === 'created') return PartnerAssets.navigation.claims;
-  if (normalized.includes('surveyor') || normalized.includes('appointed') || normalized.includes('assigned')) return PartnerAssets.actions.supportVerified;
-  if (normalized.includes('document') || normalized.includes('upload') || normalized.includes('submitted')) return PartnerAssets.status.documentUpload;
-  if (normalized.includes('approve') || normalized.includes('verified')) return PartnerAssets.status.verified;
-  if (normalized.includes('settled') || normalized.includes('complete') || normalized.includes('closed')) return PartnerAssets.actions.payoutRefresh;
-  if (normalized.includes('payment') || normalized.includes('amount')) return PartnerAssets.actions.payoutGrowth;
-  if (normalized.includes('inspection') || normalized.includes('survey')) return PartnerAssets.status.claimAttention;
-  return PartnerAssets.status.journey;
+  if (item.kind === 'created') return 'document-text-outline';
+  if (normalized.includes('surveyor') || normalized.includes('appointed') || normalized.includes('assigned')) return 'person-add-outline';
+  if (normalized.includes('document') || normalized.includes('upload') || normalized.includes('submitted')) return 'cloud-upload-outline';
+  if (normalized.includes('approve') || normalized.includes('verified')) return 'checkmark-circle-outline';
+  if (normalized.includes('settled') || normalized.includes('complete') || normalized.includes('closed')) return 'shield-checkmark-outline';
+  if (normalized.includes('payment') || normalized.includes('amount')) return 'wallet-outline';
+  if (normalized.includes('inspection') || normalized.includes('survey')) return 'search-outline';
+  return item.kind === 'stage' ? 'git-branch-outline' : 'refresh-circle-outline';
 }
 
 function claimHeroArtwork(value: string | null): ImageSourcePropType {
@@ -239,10 +239,10 @@ const styles = StyleSheet.create({
   activeChip: { alignSelf: 'flex-start', borderRadius: 9, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: '#EEF6FF' }, activeChipText: { color: '#3677BE', fontSize: 8, lineHeight: 10, fontWeight: '700' }, completeChip: { backgroundColor: '#EAF8EF' }, completeChipText: { color: '#238A4A' }, statusMeta: { marginTop: 2, color: '#7A879A', fontSize: 9, lineHeight: 12 },
   statusFooter: { marginTop: 7, paddingTop: 6, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDF0F5' }, statusFooterText: { color: '#687A94', fontSize: 9, lineHeight: 12 }, summaryMetaRow: { marginTop: 6, flexDirection: 'row', gap: 6 }, summaryMetaCard: { flex: 1, minWidth: 0, minHeight: 32, paddingHorizontal: 7, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F8FAFD', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E5EAF2' }, summaryMetaIcon: { width: 24, height: 24, borderRadius: 7, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EDF6FF' }, summaryMetaValue: { flex: 1, color: '#52647F', fontSize: 9, lineHeight: 12, fontWeight: '600' },
   sectionTitleRow: { minHeight: 24, flexDirection: 'row', alignItems: 'center' }, sectionTitleIcon: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginRight: 7, backgroundColor: '#EDF6FF' }, sectionTitleImage: { width: 20, height: 20 }, sectionTitle: { color: '#1D2C45', fontSize: 12, lineHeight: 15, fontWeight: '800' }, sectionMeta: { marginTop: 1, color: '#8A97A9', fontSize: 8, lineHeight: 10 }, sectionSpacer: { flex: 1 }, viewAllButton: { minHeight: 28, paddingLeft: 8, flexDirection: 'row', alignItems: 'center', gap: 2 }, viewAll: { color: '#5538ED', fontSize: 9, lineHeight: 11, fontWeight: '700' },
-  personRow: { minHeight: 52, marginTop: 6, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 4 }, personAvatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: '#EDF5FF' }, personAvatarImage: { width: 27, height: 27 }, personCopy: { flex: 1 }, personName: { color: '#20324D', fontSize: 11, lineHeight: 14, fontWeight: '800' }, personMeta: { marginTop: 2, color: '#7A8799', fontSize: 9, lineHeight: 12 },
+  personRow: { minHeight: 52, marginTop: 6, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 4 }, personAvatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: '#EDF5FF' }, personCopy: { flex: 1 }, personName: { color: '#20324D', fontSize: 11, lineHeight: 14, fontWeight: '800' }, personMeta: { marginTop: 2, color: '#7A8799', fontSize: 9, lineHeight: 12 },
   overviewGrid: { marginTop: 6, flexDirection: 'row', flexWrap: 'wrap', gap: 5 }, overviewTile: { width: '49%', minHeight: 56, paddingHorizontal: 7, paddingVertical: 8, borderRadius: 9, flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#FAFBFD', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E7EBF2' }, overviewIcon: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center', marginRight: 6, backgroundColor: '#EAF4FF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D5E9FF' }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { color: '#8A96A8', fontSize: 8.5, lineHeight: 11 }, overviewValue: { marginTop: 2, color: '#26364F', fontSize: 10, lineHeight: 13, fontWeight: '700' },
   amountRow: { marginTop: 7, flexDirection: 'row', overflow: 'hidden', borderRadius: 9, backgroundColor: '#F5F7FF' }, amount: { flex: 1, minHeight: 50, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: '#DDE4EF' }, amountHighlighted: { backgroundColor: '#F3FBF7' }, amountValue: { color: '#24324B', fontSize: 11, lineHeight: 14, fontWeight: '800' }, amountLabel: { marginTop: 3, color: '#7B8798', fontSize: 8.5, lineHeight: 11, textAlign: 'center' },
   journeyScroll: { paddingTop: 8, paddingBottom: 2, paddingRight: 8 }, journeyStep: { width: 164, marginRight: 4 }, journeyRailRow: { height: 14, flexDirection: 'row', alignItems: 'center' }, journeyDot: { width: 7, height: 7, borderRadius: 4, marginLeft: 17, backgroundColor: '#3D79E6' }, journeyDotLatest: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#6541F4' }, journeyConnector: { flex: 1, height: 1, marginLeft: 4, backgroundColor: '#D4DEEE' },
-  journeyEventCard: { width: 154, minHeight: 104, padding: 9, borderRadius: 10, backgroundColor: '#FBFCFE', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E6EAF1' }, journeyIconWrap: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center', marginBottom: 5, backgroundColor: '#EEF6FF' }, journeyIconImage: { width: 24, height: 24 }, journeyIconLatest: { backgroundColor: '#F2EEFF' }, journeyDate: { color: '#5575C7', fontSize: 8.5, lineHeight: 11, fontWeight: '600' }, journeyTitle: { marginTop: 2, color: '#25344E', fontSize: 10.5, lineHeight: 13, fontWeight: '800' }, journeyKind: { marginTop: 2, color: '#8B96A8', fontSize: 8.5, lineHeight: 11 }, emptyJourney: { marginTop: 8, color: '#7C8A9F', fontSize: 9.5, lineHeight: 13 },
+  journeyEventCard: { width: 154, minHeight: 104, padding: 9, borderRadius: 10, backgroundColor: '#FBFCFE', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E6EAF1' }, journeyIconWrap: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center', marginBottom: 5, backgroundColor: '#EEF6FF' }, journeyIconLatest: { backgroundColor: '#F2EEFF' }, journeyDate: { color: '#5575C7', fontSize: 8.5, lineHeight: 11, fontWeight: '600' }, journeyTitle: { marginTop: 2, color: '#25344E', fontSize: 10.5, lineHeight: 13, fontWeight: '800' }, journeyKind: { marginTop: 2, color: '#8B96A8', fontSize: 8.5, lineHeight: 11 }, emptyJourney: { marginTop: 8, color: '#7C8A9F', fontSize: 9.5, lineHeight: 13 },
   bottomNav: { height: 60, flexDirection: 'row', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DDE3EC', backgroundColor: '#FFFFFF' }, navItem: { flex: 1, alignItems: 'center', justifyContent: 'center' }, navIconWrap: { minWidth: 34, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }, navIconWrapActive: { backgroundColor: '#EEE9FF' }, navLabel: { marginTop: 1, color: '#6C7D97', fontSize: 8, lineHeight: 10, fontWeight: '600' }, navLabelActive: { color: '#633DF1', fontWeight: '800' }, pressed: { opacity: 0.7 },
 });
