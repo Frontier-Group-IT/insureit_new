@@ -343,6 +343,15 @@ jobs:
           elif grep -qx 'supabase/migrations/20261003123000_reports_overview_business_filter.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-reports-overview-business-filter.yml"
             echo "Reports Overview business-filter migration detected. Waiting for its schema workflow..."
+          elif grep -qxE 'supabase/migrations/20261006183000_customer_exchange_marketplace_backend.sql|supabase/migrations/20261006184500_customer_exchange_backend_hardening.sql' <<<"$changed_migrations"; then
+            unexpected_migrations=$(grep -vxE 'supabase/migrations/20261006183000_customer_exchange_marketplace_backend.sql|supabase/migrations/20261006184500_customer_exchange_backend_hardening.sql' <<<"$changed_migrations" || true)
+            if [[ -n "$unexpected_migrations" ]]; then
+              echo "::error::Customer Exchange release contains an unrelated migration:"
+              echo "$unexpected_migrations"
+              exit 1
+            fi
+            schema_workflow="apply-customer-exchange-marketplace-backend.yml"
+            echo "Customer Exchange marketplace migrations detected. Waiting for their schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"
