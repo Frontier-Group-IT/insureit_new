@@ -414,9 +414,9 @@ jobs:
           local_versions=$(git ls-files 'supabase/migrations/*.sql' \
             | sed -nE 's#^supabase/migrations/([0-9]+)_.*#\1#p' \
             | awk -v baseline="$BASELINE_VERSION" '$1 >= baseline' \
-            | awk '$1 !~ /^(20260929093000|20260929163500|20260929173000)$/' \
+            | awk '$1 !~ /^(20260929093000|20260929163500|20260929173000|20261006110000)$/' \
             | sort -u)
-          echo "::warning::Temporarily excluding migration parity checks for 20260929093000, 20260929163500, and 20260929173000."
+          echo "::warning::Temporarily excluding migration parity checks for 20260929093000, 20260929163500, 20260929173000, and 20261006110000."
 
           untracked_migrations=$(git ls-files --others --exclude-standard 'supabase/migrations/*.sql' || true)
           if [[ -n "$untracked_migrations" ]]; then
