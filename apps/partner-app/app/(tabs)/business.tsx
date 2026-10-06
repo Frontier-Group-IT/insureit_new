@@ -120,7 +120,7 @@ export default function BusinessScreen() {
     return performance.business_mix.slice(0, 6).map((item, index) => ({
       ...item,
       share: Math.max(0, Math.round((Number(item.premium || 0) / total) * 100)),
-      asset: productAsset(item.label, index),
+      icon: productIcon(item.label, index),
     }));
   }, [performance]);
 
@@ -365,7 +365,7 @@ export default function BusinessScreen() {
           />
           <View style={styles.productGrid}>
             {productMix.length ? productMix.map((item) => (
-              <ProductTile key={item.label} asset={item.asset} label={humanize(item.label)} share={item.share} />
+              <ProductTile key={item.label} icon={item.icon} label={humanize(item.label)} share={item.share} />
             )) : (
               <View style={styles.emptyCompact}><Text style={styles.emptyCompactText}>No product mix recorded this month.</Text></View>
             )}
@@ -382,16 +382,16 @@ export default function BusinessScreen() {
 
           <SectionHeader title="Quick Actions" />
           <View style={styles.quickGrid}>
-            <QuickAction asset={PartnerAssets.actions.renewals} label="Renewals" meta={`${renewals?.due_30_count ?? 0} due`} onPress={() => router.push('/renewals')} />
-            <QuickAction asset={PartnerAssets.navigation.claims} label="Claims" meta={`${claims?.active_claims ?? 0} active`} onPress={() => router.push('/(tabs)/claims')} />
+            <QuickAction asset={PartnerAssets.actions.quickRenewals} label="Renewals" meta={`${renewals?.due_30_count ?? 0} due`} onPress={() => router.push('/renewals')} />
+            <QuickAction asset={PartnerAssets.actions.quickClaims} label="Claims" meta={`${claims?.active_claims ?? 0} active`} onPress={() => router.push('/(tabs)/claims')} />
             <PayoutQuickAction payout={payout} onPress={() => router.push('/(tabs)/more')} />
-            <QuickAction asset={PartnerAssets.actions.addCustomer} label="Add Customer" meta="Create new" onPress={() => router.push('/customers')} />
+            <QuickAction asset={PartnerAssets.actions.quickCustomers} label="Add Customer" meta="Create new" onPress={() => router.push('/customers')} />
           </View>
 
           <SectionHeader title="My Network" action={<Pressable onPress={() => router.push('/network')}><Text style={styles.viewAll}>View All ›</Text></Pressable>} />
           <View style={styles.networkGrid}>
             <Pressable accessibilityRole="button" onPress={() => router.push('/network')} style={({ pressed }) => [styles.networkTile, pressed && styles.pressed]}>
-              <Image source={PartnerAssets.actions.businessPerformance} style={styles.networkIcon} resizeMode="contain" />
+              <BlueIcon icon="people" badge="+" size={38} />
               <View style={styles.networkBody}>
                 <Text style={styles.networkValue}>{network.total_partners}</Text>
                 <Text style={styles.networkLabel}>Partner Family</Text>
@@ -400,7 +400,7 @@ export default function BusinessScreen() {
               <Ionicons name="chevron-forward" size={14} color="#3156B8" />
             </Pressable>
             <Pressable accessibilityRole="button" onPress={() => router.push('/customers')} style={({ pressed }) => [styles.networkTile, pressed && styles.pressed]}>
-              <Image source={PartnerAssets.navigation.customers} style={styles.networkIcon} resizeMode="contain" />
+              <Image source={PartnerAssets.actions.quickCustomers} style={styles.networkIcon} resizeMode="contain" />
               <View style={styles.networkBody}>
                 <Text style={styles.networkValue}>{performance.total_customers}</Text>
                 <Text style={styles.networkLabel}>Customers</Text>
@@ -507,10 +507,10 @@ function TrendChart({ data, emptyMessage }: { data: TrendPoint[]; emptyMessage?:
   );
 }
 
-function ProductTile({ asset, label, share }: { asset: ImageSourcePropType; label: string; share: number }) {
+function ProductTile({ icon, label, share }: { icon: keyof typeof Ionicons.glyphMap; label: string; share: number }) {
   return (
     <View style={styles.productTile}>
-      <View style={styles.productIconWrap}><Image source={asset} style={styles.productIcon} resizeMode="contain" /></View>
+      <BlueIcon icon={icon} size={40} />
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={styles.productLabel}>{label}</Text>
       <Text style={styles.productShare}>{share}%</Text>
     </View>
@@ -518,28 +518,59 @@ function ProductTile({ asset, label, share }: { asset: ImageSourcePropType; labe
 }
 
 function PayoutQuickAction({ payout, onPress }: { payout: PartnerPayoutSummary | null; onPress: () => void }) {
-  if (!payout) return <QuickAction asset={PartnerAssets.actions.payoutGrowth} label="Payout" meta="Unavailable" onPress={onPress} />;
-  if (!payout.available) return <QuickAction asset={PartnerAssets.actions.payoutGrowth} label="Payout" meta="Restricted" onPress={onPress} />;
-  return <QuickAction asset={PartnerAssets.actions.payoutGrowth} label="Payout" meta={`${payout.pending_count} pending`} onPress={onPress} />;
+  const meta = !payout ? 'Unavailable' : !payout.available ? 'Restricted' : `${payout.pending_count} pending`;
+  return <QuickAction icon="wallet" iconBadge="₹" label="Payout" meta={meta} onPress={onPress} />;
 }
 
-function QuickAction({ asset, label, meta, onPress }: { asset: ImageSourcePropType; label: string; meta: string; onPress: () => void }) {
+function QuickAction({
+  asset,
+  icon,
+  iconBadge,
+  label,
+  meta,
+  onPress,
+}: {
+  asset?: ImageSourcePropType;
+  icon?: keyof typeof Ionicons.glyphMap;
+  iconBadge?: string;
+  label: string;
+  meta: string;
+  onPress: () => void;
+}) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.quickTile, pressed && styles.pressed]}>
-      <View style={styles.quickIconWrap}><Image source={asset} style={styles.quickIcon} resizeMode="contain" /></View>
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [styles.quickTile, pressed && styles.pressed]}>
+      <View style={styles.quickIconWrap}>
+        {asset ? <Image source={asset} style={styles.quickIcon} resizeMode="contain" /> : icon ? <BlueIcon icon={icon} badge={iconBadge} size={40} /> : null}
+      </View>
       <Text numberOfLines={1} style={styles.quickLabel}>{label}</Text>
       <Text numberOfLines={1} style={styles.quickMeta}>{meta}</Text>
     </Pressable>
   );
 }
 
-function productAsset(label: string, index: number): ImageSourcePropType {
+function BlueIcon({ icon, badge, size = 40 }: { icon: keyof typeof Ionicons.glyphMap; badge?: string; size?: number }) {
+  return (
+    <View style={[styles.generatedIcon, { width: size, height: size, borderRadius: Math.round(size * 0.28) }]}>
+      <View style={styles.generatedIconGlow} />
+      <Ionicons name={icon} size={Math.round(size * 0.58)} color="#0878E8" />
+      {badge ? (
+        <View style={styles.generatedIconBadge}>
+          <Text style={styles.generatedIconBadgeText}>{badge}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function productIcon(label: string, index: number): keyof typeof Ionicons.glyphMap {
   const value = label.toLowerCase();
-  if (value.includes('motor') || value.includes('package') || value.includes('third')) return PartnerAssets.products.motorInsurance;
-  if (value.includes('health')) return PartnerAssets.products.healthInsurance;
-  if (value.includes('life') || value.includes('family')) return PartnerAssets.products.familyInsurance;
-  if (value.includes('travel') || value.includes('home') || value.includes('property')) return PartnerAssets.products.propertyTravelInsurance;
-  return [PartnerAssets.products.commercialInsurance, PartnerAssets.products.motorInsurance, PartnerAssets.products.healthInsurance, PartnerAssets.products.familyInsurance, PartnerAssets.products.propertyTravelInsurance][index % 5];
+  if (value.includes('third')) return 'shield-checkmark';
+  if (value.includes('motor') || value.includes('package')) return 'car-sport';
+  if (value.includes('health')) return 'medkit';
+  if (value.includes('life') || value.includes('family')) return 'people';
+  if (value.includes('travel')) return 'airplane';
+  if (value.includes('home') || value.includes('property')) return 'home';
+  return ['document-text', 'shield-checkmark', 'briefcase', 'layers'][index % 4] as keyof typeof Ionicons.glyphMap;
 }
 
 function presetDateRange(value: OverviewRange | TrendRange) {
@@ -624,7 +655,6 @@ const styles = StyleSheet.create({
   productGrid: { flexDirection: 'row', gap: 5, borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
   productTile: { flex: 1, minWidth: 0, minHeight: 88, alignItems: 'center', justifyContent: 'center', borderRadius: 11, paddingVertical: 8, backgroundColor: '#F5F9FF' },
   productIconWrap: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  productIcon: { width: 36, height: 36 },
   productLabel: { width: '94%', marginTop: 3, color: '#14367B', textAlign: 'center', ...partnerTheme.typography.meta, fontWeight: '700' },
   productShare: { marginTop: 1, color: '#3156B8', ...partnerTheme.typography.meta, fontWeight: '800' },
   emptyCompact: { flex: 1, minHeight: 72, alignItems: 'center', justifyContent: 'center' },
@@ -638,6 +668,10 @@ const styles = StyleSheet.create({
   quickTile: { flex: 1, minWidth: 0, minHeight: 88, alignItems: 'center', justifyContent: 'center', borderRadius: 11, paddingVertical: 8, backgroundColor: '#F5F9FF' },
   quickIconWrap: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   quickIcon: { width: 36, height: 36 },
+  generatedIcon: { overflow: 'hidden', position: 'relative', alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8F5FF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D1E9FF', shadowColor: '#0A62B8', shadowOpacity: 0.14, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  generatedIconGlow: { position: 'absolute', width: '72%', height: '72%', right: -5, top: -5, borderRadius: 20, backgroundColor: 'rgba(56,176,255,0.22)' },
+  generatedIconBadge: { position: 'absolute', right: 2, bottom: 2, minWidth: 14, height: 14, paddingHorizontal: 2, borderRadius: 7, alignItems: 'center', justifyContent: 'center', backgroundColor: '#075BC8', borderWidth: 1, borderColor: '#FFFFFF' },
+  generatedIconBadgeText: { color: '#FFFFFF', fontSize: 8, lineHeight: 10, fontWeight: '900' },
   quickLabel: { marginTop: 3, color: '#14367B', textAlign: 'center', ...partnerTheme.typography.meta, fontWeight: '800' },
   quickMeta: { marginTop: 1, color: '#718198', textAlign: 'center', ...partnerTheme.typography.meta, fontWeight: '500' },
   networkGrid: { flexDirection: 'row', gap: 7, marginBottom: 8 },
