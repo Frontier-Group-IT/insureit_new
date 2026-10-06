@@ -9,7 +9,7 @@ import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
 import { getPartnerPolicyDetail, type PartnerPolicyDetail } from '@/lib/policies';
 import { formatIndianCurrency } from '@/lib/format';
 import { PartnerAssets } from '@/lib/partner-assets';
-import { getPartnerInsurerLogoSource } from '@/lib/catalog-logos';
+import { getPartnerInsurerLogoSource, getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import { partnerTheme } from '@/lib/theme';
 
 export default function PolicyDetailScreen() {
@@ -49,6 +49,7 @@ export default function PolicyDetailScreen() {
 
   const category = data ? policyCategory(data) : 'Policy';
   const insurerLogo = data ? getPartnerInsurerLogoSource(data.insurer.name) : null;
+  const manufacturerLogo = data?.vehicle ? getPartnerManufacturerLogoSource(data.vehicle.make) : null;
 
   return (
     <PartnerScreen title="Policy Details" eyebrow="BUSINESS" hideTopBar>
@@ -155,7 +156,12 @@ export default function PolicyDetailScreen() {
                 onPress={data.customer.id ? () => router.push(`/customer/${data.customer.id}` as never) : undefined}
               />
               {data.vehicle ? (
-                <EntityRow image={PartnerAssets.products.motorInsurance} title={data.vehicle.vehicle_no || 'Vehicle'} subtitle={displayParts(data.vehicle.make, data.vehicle.model, data.vehicle.year) || humanize(data.vehicle.vehicle_type || 'vehicle')} />
+                <EntityRow
+                  image={manufacturerLogo || PartnerAssets.products.motorInsurance}
+                  title={data.vehicle.vehicle_no || 'Vehicle'}
+                  subtitle={displayParts(data.vehicle.make, data.vehicle.model, data.vehicle.year) || humanize(data.vehicle.vehicle_type || 'vehicle')}
+                  onPress={data.customer.id ? () => router.push(`/customer/${data.customer.id}` as never) : undefined}
+                />
               ) : (
                 <EntityRow image={PartnerAssets.products.commercialInsurance} title={data.policy.policy_product || data.policy.policy_type || data.policy.business_line || 'Non-motor insured risk'} subtitle="No vehicle is linked to this policy." />
               )}
@@ -163,7 +169,7 @@ export default function PolicyDetailScreen() {
           </Card>
 
           <Card>
-            <CardHeader icon="stats-chart-outline" title="Commercial Attribution" actionLabel="View Details" onAction={() => setShowCommercialDetails((value) => !value)} />
+            <CardHeader icon="stats-chart-outline" title="Commercial Attribution" />
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }} onPress={() => setShowCommercialDetails((value) => !value)} style={({ pressed }) => [styles.commercialRow, pressed && styles.pressed]}>
               <View style={styles.roundIcon}><Ionicons name="briefcase-outline" size={20} color="#1889EE" /></View>
               <View style={styles.disclosureText}><Text style={styles.disclosureTitle}>Sales ownership</Text><Text numberOfLines={1} style={styles.disclosureSummary}>{[data.commercial.rm_name, data.commercial.intermediary_code].filter(Boolean).join(' · ') || 'View details'}</Text></View>
