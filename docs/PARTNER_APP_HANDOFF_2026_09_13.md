@@ -65,7 +65,9 @@
 - In the Home MTD/business summary card, `Policies Sold` now uses the existing compact `policy-checklist` asset and `Commission Earned` uses the compact `payout-refresh` asset exposed through the Partner asset registry.
 - Existing values, labels, two-column metric layout, divider, business range calculations and navigation remain unchanged.
 - No backend/schema/RLS/native/runtime change and no APK/AAB created.
-- Evidence state: **IMPLEMENTED; PR/CI pending; NOT MERGED; NOT DEPLOYED.**
+- PR #2814 merged as `dcb5dfe1112da042a1e6281525f7f00a0edab47b`; Partner Verify #498 and Web Verify #5309 passed.
+- Production runtime `0.2.0` OTA was **DEPLOYED** via workflow run #54 from main `5fd5d8db984e6304a72a4dd5191974e88c1a2516`, update group `f8d78ae9-ed27-4b7c-9201-4530cbf6ad57`.
+- Evidence state: **MERGED + DEPLOYED; installed-device verification pending; NO APK/AAB CREATED.**
 
 ## 2026-10-06 — Policy Intake heading cleanup
 
