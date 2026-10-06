@@ -1,3 +1,14 @@
+## 2026-10-06 — Partner Your Week `This Week` pill clipping fix
+
+- Branch: `fix/partner-week-pill-clipping-2026-10-06`.
+- Root cause confirmed as responsive horizontal compression of the white `This Week` pill on compact widths; the text value itself was correct.
+- Added `minWidth: 92`, `flexShrink: 0`, centered content, and slightly tighter internal spacing so the full `This Week` label remains visible.
+- Added a visual regression contract protecting the non-shrinking pill behavior.
+- No business logic, backend, schema, RLS, native dependency, APK, or AAB change.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA NOT YET DONE.**
+
+---
+
 ## 2026-10-06 — Partner Your Week controls and card surface refinement
 
 - Branch: `ui/partner-weekly-story-controls-2026-10-06`.
