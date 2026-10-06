@@ -1,4 +1,4 @@
-import { forwardRef, type ComponentProps } from 'react';
+import { forwardRef, type ComponentProps, type ReactNode } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { partnerTheme } from '@/lib/theme';
@@ -7,6 +7,7 @@ type PartnerFieldProps = ComponentProps<typeof TextInput> & {
   label: string;
   error?: string;
   helper?: string;
+  rightAccessory?: ReactNode;
 };
 
 export const PartnerField = forwardRef<TextInput, PartnerFieldProps>(function PartnerField(
@@ -14,6 +15,7 @@ export const PartnerField = forwardRef<TextInput, PartnerFieldProps>(function Pa
     label,
     error,
     helper,
+    rightAccessory,
     ...inputProps
   },
   ref,
@@ -27,15 +29,24 @@ export const PartnerField = forwardRef<TextInput, PartnerFieldProps>(function Pa
   return (
     <View>
       <Text style={styles.label}>{label}</Text>
-      <TextInput
-        {...inputProps}
-        ref={ref}
-        accessibilityLabel={inputProps.accessibilityLabel || label}
-        accessibilityHint={accessibilityHint}
-        accessibilityState={accessibilityState}
-        style={[styles.input, inputProps.editable === false && styles.disabled, error && styles.inputError, inputProps.style]}
-        placeholderTextColor={inputProps.placeholderTextColor || '#9AA3B2'}
-      />
+      <View style={styles.inputWrap}>
+        <TextInput
+          {...inputProps}
+          ref={ref}
+          accessibilityLabel={inputProps.accessibilityLabel || label}
+          accessibilityHint={accessibilityHint}
+          accessibilityState={accessibilityState}
+          style={[
+            styles.input,
+            rightAccessory && styles.inputWithAccessory,
+            inputProps.editable === false && styles.disabled,
+            error && styles.inputError,
+            inputProps.style,
+          ]}
+          placeholderTextColor={inputProps.placeholderTextColor || '#9AA3B2'}
+        />
+        {rightAccessory ? <View style={styles.rightAccessory}>{rightAccessory}</View> : null}
+      </View>
       {error ? (
         <Text accessibilityLiveRegion="assertive" accessibilityRole="alert" style={styles.error}>
           {error}
@@ -49,6 +60,7 @@ export const PartnerField = forwardRef<TextInput, PartnerFieldProps>(function Pa
 
 const styles = StyleSheet.create({
   label: { marginBottom: 7, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.label },
+  inputWrap: { position: 'relative' },
   input: {
     minHeight: partnerTheme.control.fieldHeight,
     borderRadius: partnerTheme.radius.md,
@@ -58,6 +70,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: partnerTheme.colors.line,
     ...partnerTheme.typography.body,
+  },
+  inputWithAccessory: { paddingRight: 52 },
+  rightAccessory: {
+    position: 'absolute',
+    right: 4,
+    top: 0,
+    bottom: 0,
+    width: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   disabled: { backgroundColor: partnerTheme.colors.surfaceMuted, color: partnerTheme.colors.inkMuted },
   inputError: { borderColor: '#E6A6A0' },
