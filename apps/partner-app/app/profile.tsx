@@ -1,21 +1,95 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerBanner } from '@/components/ui/partner-banner';
 import type { PartnerCommercialScope } from '@/lib/partner-session';
+import { supabase } from '@/lib/supabase';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerSession } from '@/providers/partner-session-provider';
+
+const PROFILE_PHOTO_BUCKET = 'partner-profile-photos';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { context } = usePartnerSession();
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarMessage, setAvatarMessage] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null);
+  const authUserId = context?.identity.auth_user_id;
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadProfilePhoto() {
+      if (!authUserId) return;
+      const { data } = await supabase.storage
+        .from(PROFILE_PHOTO_BUCKET)
+        .createSignedUrl(profilePhotoPath(authUserId), 3600);
+
+      if (active) setAvatarUri(data?.signedUrl ?? null);
+    }
+
+    void loadProfilePhoto();
+    return () => {
+      active = false;
+    };
+  }, [authUserId]);
+
   if (!context) return null;
 
   const { identity, scope } = context;
   const roleLabel = identity.actor_kind === 'employee'
     ? humanize(identity.role)
     : humanize(identity.intermediary_type);
+
+  async function changeProfilePhoto() {
+    if (avatarUploading) return;
+
+    setAvatarMessage(null);
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['image/jpeg', 'image/png', 'image/webp'],
+      copyToCacheDirectory: true,
+      multiple: false,
+    });
+    if (result.canceled || !result.assets[0]) return;
+
+    const asset = result.assets[0];
+    if (asset.size && asset.size > 5 * 1024 * 1024) {
+      setAvatarMessage({ tone: 'danger', text: 'Please choose a profile photo below 5 MB.' });
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      const response = await fetch(asset.uri);
+      const body = await response.arrayBuffer();
+      if (body.byteLength > 5 * 1024 * 1024) {
+        setAvatarMessage({ tone: 'danger', text: 'Please choose a profile photo below 5 MB.' });
+        return;
+      }
+
+      const path = profilePhotoPath(identity.auth_user_id);
+      const upload = await supabase.storage.from(PROFILE_PHOTO_BUCKET).upload(path, body, {
+        contentType: asset.mimeType ?? 'image/jpeg',
+        upsert: true,
+      });
+      if (upload.error) throw upload.error;
+
+      const signed = await supabase.storage.from(PROFILE_PHOTO_BUCKET).createSignedUrl(path, 3600);
+      if (!signed.data?.signedUrl) throw new Error('Profile photo signed URL unavailable.');
+
+      setAvatarUri(signed.data.signedUrl);
+      setAvatarMessage({ tone: 'success', text: 'Profile photo updated.' });
+    } catch {
+      setAvatarMessage({ tone: 'danger', text: 'Profile photo upload failed. Please try again.' });
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
 
   return (
     <PartnerScreen title="Profile & registration" hideTopBar>
@@ -40,12 +114,36 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      {avatarMessage ? (
+        <View style={styles.avatarFeedback}>
+          <PartnerBanner tone={avatarMessage.tone} message={avatarMessage.text} />
+        </View>
+      ) : null}
+
       <View style={styles.hero}>
         <View pointerEvents="none" style={styles.heroGlowLarge} />
         <View pointerEvents="none" style={styles.heroGlowSmall} />
 
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials(identity.display_name)}</Text>
+        <View style={styles.avatarStage}>
+          <View style={styles.avatarShell}>
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.avatarImage} resizeMode="cover" />
+            ) : (
+              <Text style={styles.avatarText}>{initials(identity.display_name)}</Text>
+            )}
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Change profile photo"
+            disabled={avatarUploading}
+            onPress={() => void changeProfilePhoto()}
+            style={({ pressed }) => [
+              styles.avatarCamera,
+              (pressed || avatarUploading) && styles.avatarCameraDisabled,
+            ]}
+          >
+            <Ionicons name={avatarUploading ? 'cloud-upload-outline' : 'camera'} size={18} color="#FFFFFF" />
+          </Pressable>
         </View>
 
         <View style={styles.heroBody}>
@@ -197,6 +295,10 @@ function scopeLabel(mode: PartnerCommercialScope['scope_mode']) {
   return 'No commercial scope';
 }
 
+function profilePhotoPath(authUserId: string) {
+  return `${authUserId}/profile-photo`;
+}
+
 function initials(value: string) {
   return value
     .split(/\s+/)
@@ -252,9 +354,12 @@ const styles = StyleSheet.create({
     letterSpacing: -0.25,
   },
 
+  avatarFeedback: {
+    marginBottom: 10,
+  },
   hero: {
     position: 'relative',
-    minHeight: 92,
+    minHeight: 126,
     overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',
@@ -282,21 +387,59 @@ const styles = StyleSheet.create({
     backgroundColor: '#1778E8',
     opacity: 0.34,
   },
-  avatar: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+  avatarStage: {
+    width: 94,
+    height: 94,
+    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  avatarShell: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
     backgroundColor: '#8EA6ED',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.24)',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOpacity: 0.24,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   avatarText: {
     color: partnerTheme.colors.white,
-    fontSize: 20,
-    lineHeight: 24,
-    fontWeight: '500',
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '800',
+  },
+  avatarCamera: {
+    position: 'absolute',
+    right: 0,
+    bottom: 2,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0B63CE',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOpacity: 0.24,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 7,
+  },
+  avatarCameraDisabled: {
+    opacity: 0.65,
   },
   heroBody: {
     flex: 1,
