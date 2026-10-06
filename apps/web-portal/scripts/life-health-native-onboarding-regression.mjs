@@ -30,6 +30,9 @@ assert(lifeHealth.includes("source: LifeHealthSourceSnapshot"), "LifeHealthPolic
 assert(!lifeHealth.includes("sourceSnapshot("), "LifeHealthPolicyForm must not reconstruct source state from the DOM");
 assert(!lifeHealth.includes("document.querySelector"), "LifeHealthPolicyForm must not query the document for source controls");
 assert(lifeHealth.includes('id={`policy-section-${Number(number)}`}'), "Life/Health section IDs must align with section navigation targets");
+assert(lifeHealth.includes('const PAYMENT_MODES = ["Cheque", "NEFT/RTGS", "UPI", "Credit/Debit Card", "Net Banking"];'), "Life/Health payment modes must not offer Cash");
+assert(lifeHealth.includes('label="Address"'), "Life/Health customer section must include Address");
+assert(unified.includes('label={isLifeHealthPolicy?"Proposal date":"Policy issuance date"}'), "Life/Health source date must be labeled Proposal date without changing other policy types");
 
 assert(!guard.includes('createPortal'), "product guard must not portal-mount Life/Health onboarding");
 assert(!guard.includes('data-life-health-native-portal'), "product guard must not create a Life/Health DOM mount point");
