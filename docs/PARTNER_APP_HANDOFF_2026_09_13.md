@@ -59,6 +59,15 @@
 ---
 
 # INSUREIT Partner App — Operational Handoff (2026-09-13)
+## 2026-10-06 — Policy Intake heading cleanup
+
+- Branch: `ui/partner-policy-intake-heading-cleanup-2026-10-06`.
+- Changed the Policy Intake creation header from `Send Policy to Operations` to `Policy Intake`.
+- Removed the visible `Draft restored` banner from the details screen completely.
+- Draft persistence/restoration continues silently for lead source, policy type and customer mobile; the existing document re-selection behavior, submit flow, routes and permissions are unchanged.
+- No schema/RLS/backend/native/runtime change and no APK/AAB created.
+- Evidence state: **IMPLEMENTED; PR/CI pending; NOT MERGED; NOT DEPLOYED.**
+
 ## 2026-10-06 — More/Profile icon and profile-photo refinement
 
 - Branch: `ui/partner-more-profile-camera-icons-2026-10-06`.
