@@ -5,53 +5,49 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, HandCoins, IndianRupee, Upload } from "lucide-react";
 import { createLifeHealthCase } from "@/app/policies/life-health-policy-actions";
-import { CustomerSearchField } from "@/components/customer-search-field";
 import { usePolicyCommercialAccess } from "@/components/policy-commercial-access-context";
 
 export type LifeHealthSourceOption = { type: "POSP" | "MISP" | "SIBL / Partner"; value: string; label: string; code: string; rmName: string; rmCode: string; mobile?: string };
-export type LifeHealthCustomerOption = { id: string; name: string; contactName: string; phone: string; email: string };
 export type LifeHealthSourceSnapshot = { sourcingDate: string; intermediaryType: string; sourceId: string; leadSource: string; intermediaryCode: string; rmName: string; rmCode: string };
-type Props = { policyType: "Life" | "Health"; insurers: Array<{ label: string; value: string }>; customers: LifeHealthCustomerOption[]; source: LifeHealthSourceSnapshot };
-type CustomerMode = "new" | "existing";
+type Props = { policyType: "Life" | "Health"; insurers: Array<{ label: string; value: string }>; source: LifeHealthSourceSnapshot };
 type CommercialBasis = "NET_PREMIUM_PERCENT" | "FIXED_AMOUNT";
 type CommercialModal = "payin" | "payout" | null;
-type State = { customerMode: CustomerMode; customerId: string; insuredName: string; phone: string; email: string; insurerId: string; productName: string; proposalNumber: string; ppt: string; pd: string; paymentFrequency: string; premiumAmount: string; paymentMode: string; remarks: string; payinBasis: CommercialBasis; payinPercent: string; payinFixedAmount: string; insurerSchemeAmount: string; payoutBasis: CommercialBasis; payoutPercent: string; payoutFixedAmount: string };
+type State = { insuredName: string; phone: string; address: string; insurerId: string; productName: string; proposalNumber: string; ppt: string; pd: string; paymentFrequency: string; premiumAmount: string; paymentMode: string; remarks: string; payinBasis: CommercialBasis; payinPercent: string; payinFixedAmount: string; insurerSchemeAmount: string; payoutBasis: CommercialBasis; payoutPercent: string; payoutFixedAmount: string };
 type CommercialCalculations = { payinBase: number; totalPayin: number; tds: number; payinAfterTds: number; totalPayout: number; retention: number };
 
 const inputClass = "h-10 w-full rounded-xl border border-[#D8DEE9] bg-white px-3 text-[11px] font-medium text-[#17203A] outline-none transition placeholder:text-[#98A2B3] hover:border-[#B8C2D1] focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA] disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]";
 const labelClass = "mb-1.5 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.055em] text-[#475467]";
 const PAYMENT_FREQUENCIES = ["Monthly", "Quarterly", "Half Yearly", "Annually", "One Time"];
-const PAYMENT_MODES = ["Cash", "Cheque", "NEFT/RTGS", "UPI", "Credit/Debit Card", "Net Banking"];
+const PAYMENT_MODES = ["Cheque", "NEFT/RTGS", "UPI", "Credit/Debit Card", "Net Banking"];
 const YEAR_OPTIONS = Array.from({ length: 50 }, (_, index) => `${index + 1} Year${index === 0 ? "" : "s"}`);
 const LIFE_HEALTH_SECTIONS = ["Source", "Customer / Proposer", "Policy Product & Case", "Premium & Payment"];
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
 
 function firstValidationError(source: LifeHealthSourceSnapshot, form: State, commercialAccess: boolean) {
-  const requiredFields: Array<[string, string]> = [["Policy Issuance Date", source.sourcingDate], ["Intermediary Type", source.intermediaryType], ["Lead Source", source.sourceId], [form.customerMode === "existing" ? "Customer / Proposer" : "Client / Proposer Name", form.customerMode === "existing" ? form.customerId : form.insuredName], ...(form.customerMode === "new" ? [["Client Mobile Number", form.phone] as [string, string]] : []), ["Insurance Company", form.insurerId], ["Product Name", form.productName], ["Case / Proposal Number", form.proposalNumber], ["Payment Frequency", form.paymentFrequency], ["Premium Amount", form.premiumAmount], ["Payment Mode", form.paymentMode]];
+  const requiredFields: Array<[string, string]> = [["Proposal Date", source.sourcingDate], ["Intermediary Type", source.intermediaryType], ["Lead Source", source.sourceId], ["Client / Proposer Name", form.insuredName], ["Client Mobile Number", form.phone], ["Insurance Company", form.insurerId], ["Product Name", form.productName], ["Case / Proposal Number", form.proposalNumber], ["Payment Frequency", form.paymentFrequency], ["Premium Amount", form.premiumAmount], ["Payment Mode", form.paymentMode]];
   const missing = requiredFields.find(([, value]) => !String(value).trim());
   if (missing) return `${missing[0]} is required.`;
-  if (form.customerMode === "new" && !/^\d{10}$/.test(form.phone)) return "Client Mobile Number must be 10 digits.";
+  if (!/^\d{10}$/.test(form.phone)) return "Client Mobile Number must be 10 digits.";
   if (commercialAccess && form.payinBasis === "NET_PREMIUM_PERCENT" && Number(form.payinPercent || 0) > 100) return "Projected insurer Pay-in percentage cannot exceed 100%.";
   if (commercialAccess && form.payoutBasis === "NET_PREMIUM_PERCENT" && Number(form.payoutPercent || 0) > 100) return "Partner Payout percentage cannot exceed 100%.";
   return null;
 }
 
-export function LifeHealthPolicyForm({ policyType, insurers, customers, source }: Props) {
+export function LifeHealthPolicyForm({ policyType, insurers, source }: Props) {
   const router = useRouter();
   const commercialAccess = usePolicyCommercialAccess();
-  const [form, setForm] = useState<State>({ customerMode: "new", customerId: "", insuredName: "", phone: "", email: "", insurerId: "", productName: "", proposalNumber: "", ppt: "", pd: "", paymentFrequency: "", premiumAmount: "", paymentMode: "", remarks: "", payinBasis: "NET_PREMIUM_PERCENT", payinPercent: "", payinFixedAmount: "", insurerSchemeAmount: "", payoutBasis: "NET_PREMIUM_PERCENT", payoutPercent: "", payoutFixedAmount: "" });
+  const [form, setForm] = useState<State>({ insuredName: "", phone: "", address: "", insurerId: "", productName: "", proposalNumber: "", ppt: "", pd: "", paymentFrequency: "", premiumAmount: "", paymentMode: "", remarks: "", payinBasis: "NET_PREMIUM_PERCENT", payinPercent: "", payinFixedAmount: "", insurerSchemeAmount: "", payoutBasis: "NET_PREMIUM_PERCENT", payoutPercent: "", payoutFixedAmount: "" });
   const [files, setFiles] = useState<Record<string, File | null>>({ proposalForm: null, benefitIllustration: null, premiumReceipt: null, policyCopy: null, kyc: null, otherDocument: null });
   const [error, setError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState(0);
   const [commercialModal, setCommercialModal] = useState<CommercialModal>(null);
   const [isPending, startTransition] = useTransition();
   const update = <K extends keyof State>(key: K, value: State[K]) => setForm((current) => ({ ...current, [key]: value }));
-  const customerOptions = useMemo(() => customers.map((item) => ({ value: item.id, label: `${item.name}${item.phone ? ` · ${item.phone}` : ""}` })), [customers]);
   const selectedInsurer = insurers.find((item) => item.value === form.insurerId)?.label ?? "Not selected";
   const documentKeys = ["proposalForm", "benefitIllustration", "premiumReceipt", "otherDocument"];
   const documentCount = documentKeys.filter((key) => Boolean(files[key])).length;
   const documentTarget = documentKeys.length;
-  const required = [form.customerMode === "existing" ? form.customerId : form.insuredName, form.customerMode === "existing" ? "existing" : form.phone, form.insurerId, form.productName, form.proposalNumber, form.paymentFrequency, form.premiumAmount, form.paymentMode];
+  const required = [form.insuredName, form.phone, form.insurerId, form.productName, form.proposalNumber, form.paymentFrequency, form.premiumAmount, form.paymentMode];
   const completion = Math.round((required.filter((value) => String(value).trim()).length / required.length) * 80 + (documentCount / documentTarget) * 20);
   const payinEntered = form.payinPercent.trim() !== "" || form.payinFixedAmount.trim() !== "" || form.insurerSchemeAmount.trim() !== "";
   const payoutEntered = form.payoutPercent.trim() !== "" || form.payoutFixedAmount.trim() !== "";
@@ -74,7 +70,6 @@ export function LifeHealthPolicyForm({ policyType, insurers, customers, source }
     return () => { document.body.style.overflow = previous; window.removeEventListener("keydown", close); };
   }, [commercialModal]);
 
-  function chooseCustomer(id: string) { const selected = customers.find((item) => item.id === id); setForm((current) => ({ ...current, customerId: id, insuredName: selected?.name ?? "", phone: selected?.phone ?? "", email: selected?.email ?? "" })) }
   function goToSection(index: number) { setActiveSection(index); document.getElementById(`policy-section-${index + 1}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }
   function changeCommercialBasis(side: "payin" | "payout", basis: CommercialBasis) {
     if (!commercialAccess) return;
@@ -110,7 +105,7 @@ export function LifeHealthPolicyForm({ policyType, insurers, customers, source }
     </nav>
     <div id="life-health-form-grid" className="grid w-full min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_336px]">
       <div className="min-w-0 space-y-3">
-        <Section number="02" title="Customer / proposer" contentClassName="md:grid-cols-2 xl:grid-cols-4"><Segmented value={form.customerMode} onChange={(value) => setForm((current) => ({ ...current, customerMode: value, customerId: value === "new" ? "" : current.customerId }))} />{form.customerMode === "existing" ? <div className="md:col-span-1 xl:col-span-3"><CustomerSearchField label="Customer / proposer" name="life_health_customer_id" options={customerOptions} defaultValue={form.customerId} required portalResults onSelectionChange={chooseCustomer} /></div> : <><Field label="Client / proposer name" value={form.insuredName} onChange={(e) => update("insuredName", e.target.value)} placeholder="Name on proposal" required /><Field label="Client mobile number" value={form.phone} onChange={(e) => update("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" placeholder="10 digit mobile" required /><Field label="Email" value={form.email} onChange={(e) => update("email", e.target.value)} type="email" placeholder="Optional" /></>}</Section>
+        <Section number="02" title="Customer / proposer" contentClassName="md:grid-cols-2 xl:grid-cols-4"><Field label="Client / proposer name" value={form.insuredName} onChange={(e) => update("insuredName", e.target.value)} placeholder="Name on proposal" required /><Field label="Client mobile number" value={form.phone} onChange={(e) => update("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" placeholder="10 digit mobile" required /><div className="md:col-span-2 xl:col-span-2"><Field label="Address" value={form.address} onChange={(e) => update("address", e.target.value)} placeholder="Customer address" /></div></Section>
         <Section number="03" title="Policy product & case details" contentClassName="md:grid-cols-2 xl:grid-cols-3"><Select label="Insurance company" value={form.insurerId} onChange={(e) => update("insurerId", e.target.value)} required><option value="">Select insurer</option>{insurers.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</Select><Field label="Product name" value={form.productName} onChange={(e) => update("productName", e.target.value)} placeholder="Product / plan name" required /><Field label="Case / proposal number" value={form.proposalNumber} onChange={(e) => update("proposalNumber", e.target.value.toUpperCase())} placeholder="Proposal number" required /><Select label="PPT · Premium Paying Term" value={form.ppt} onChange={(e) => update("ppt", e.target.value)}><option value="">Select term</option><option value="Single Pay">Single Pay</option>{YEAR_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}</Select><Select label="PD · Policy Duration / Term" value={form.pd} onChange={(e) => update("pd", e.target.value)}><option value="">Select term</option>{YEAR_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}</Select><Select label="Payment frequency" value={form.paymentFrequency} onChange={(e) => update("paymentFrequency", e.target.value)} required><option value="">Select frequency</option>{PAYMENT_FREQUENCIES.map((item) => <option key={item}>{item}</option>)}</Select></Section>
         <Section number="04" title="Premium & payment" contentClassName="md:grid-cols-2 xl:grid-cols-3"><Field label="Premium amount" value={form.premiumAmount} onChange={(e) => update("premiumAmount", numeric(e.target.value))} inputMode="decimal" placeholder="₹ 0.00" required /><Select label="Payment mode" value={form.paymentMode} onChange={(e) => update("paymentMode", e.target.value)} required><option value="">Select payment mode</option>{PAYMENT_MODES.map((item) => <option key={item}>{item}</option>)}</Select><div><label className={labelClass}>Remarks</label><textarea value={form.remarks} onChange={(e) => update("remarks", e.target.value)} rows={1} placeholder="Optional servicing / underwriting note" className="h-10 w-full resize-none rounded-xl border border-[#D8DEE9] bg-white px-3 py-2.5 text-[11px] font-medium text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]" /></div></Section>
       </div>
@@ -175,7 +170,6 @@ function Section({ number, title, children, contentClassName = "md:grid-cols-2 x
 function Required() { return <span className="text-red-500">*</span> }
 function Field({ label, required, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string }) { return <div><label className={labelClass}>{label}{required ? <Required/> : null}</label><input {...props} required={required} className={inputClass}/></div> }
 function Select({ label, required, children, ...props }: SelectHTMLAttributes<HTMLSelectElement> & { label: string; children: ReactNode }) { return <div><label className={labelClass}>{label}{required ? <Required/> : null}</label><select {...props} required={required} className={inputClass}>{children}</select></div> }
-function Segmented({ value, onChange }: { value: CustomerMode; onChange: (value: CustomerMode) => void }) { return <div><label className={labelClass}>Customer record</label><div className="inline-flex h-10 w-full rounded-xl border border-[#D8DEE9] bg-[#F7F9FC] p-1"><button type="button" onClick={() => onChange("new")} className={`flex-1 rounded-lg text-[9.5px] font-bold transition ${value === "new" ? "bg-[#17365D] text-white shadow" : "text-[#667085]"}`}>New</button><button type="button" onClick={() => onChange("existing")} className={`flex-1 rounded-lg text-[9.5px] font-bold transition ${value === "existing" ? "bg-[#17365D] text-white shadow" : "text-[#667085]"}`}>Existing</button></div></div> }
 function CompactDocumentUpload({ label, file, onChange }: { label: string; file: File | null; onChange: (file: File | null) => void }) { const id = `lh-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`; const documentName = label.replace(/^Add /, ""); const stateLabel = file ? `${documentName} Uploaded` : label; return <label htmlFor={id} className={`inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border px-4 text-[10px] font-semibold transition ${file ? "border-[#A7DCC3] bg-[#EFFAF4] text-[#18794E] hover:border-[#82C9A7] hover:bg-[#E5F7ED]" : "border-[#8BB8F5] bg-white text-[#0A43A3] hover:border-[#5E9DEB] hover:bg-[#F5F9FF]"}`} aria-label={`${file ? "Replace" : "Upload"} ${documentName}`} title={file?.name || label}>{file ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0"/> : <Upload className="h-3.5 w-3.5 shrink-0"/>}<span className="whitespace-nowrap">{stateLabel}</span><input id={id} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => onChange(event.target.files?.[0] ?? null)}/></label> }
 function SummaryBlock({ title, rows }: { title: string; rows: Array<[string, string]> }) { return <div><p className="mb-1 text-[8px] font-bold uppercase tracking-[.1em] text-[#64748B]">{title}</p><div className="divide-y divide-[#E8EDF3]">{rows.map(([label, value]) => <div key={label} className="flex items-start justify-between gap-3 py-1.5 text-[9.5px]"><span className="text-[#667085]">{label}</span><span className="max-w-[190px] truncate text-right font-semibold text-[#17365D]" title={value}>{value}</span></div>)}</div></div> }
 function numeric(value: string) { const normalized = value.replace(/[^0-9.]/g, ""); const parts = normalized.split("."); return parts.length > 2 ? `${parts.shift()}.${parts.join("")}` : normalized }
