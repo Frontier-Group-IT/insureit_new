@@ -1,3 +1,18 @@
+## 2026-10-06 — Partner Your Week controls and card surface refinement
+
+- Branch: `ui/partner-weekly-story-controls-2026-10-06`.
+- Partner App → Your Week top `This Week` pill now uses a white background with blue icon/text for clearer contrast on the blue hero.
+- Weekly Reflection card now uses a white surface with a restrained mint accent/glow instead of a full mint background.
+- The comparison-period control is now a real accessible dropdown instead of a static view.
+- Comparison options: Last 7 days, Last 14 days, Last 30 days.
+- Last 7 days preserves the existing weekly-story values. Last 14/30 days use the existing scoped `partner_app_business_range_v2` service through `getPartnerBusinessRange`, so no new DB migration is required.
+- Added loading/error states and dynamic comparison copy for the selected range.
+- Updated Partner visual-system regression checks for the white pill, white reflection surface, accessible dropdown, allowed ranges, and scoped range data load.
+- No schema/RLS/native dependency change. No APK/AAB created.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA NOT YET DONE.**
+
+---
+
 ## 2026-10-06 — Partner Home All-period caption + business metric icons
 
 - Branch: `ui/partner-home-all-period-metric-icons-2026-10-06`.
