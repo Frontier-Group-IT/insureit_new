@@ -23,6 +23,8 @@ Read `../../docs/PARTNER_APP_HANDOFF_2026_09_13.md`, `../../docs/PARTNER_APP_HOM
 
 ## Release evidence
 
+- **2026-10-06 — Renewals single opportunity card + topmost Due Date menu:** branch `ui/partner-renewals-opportunity-card-overlay-rebased-2026-10-06`; removes 4 mini time-bucket tiles, retains existing live summary and Upcoming/Overdue filters, presents records/empty states under their own shared rounded opportunity card, and replaces the clipped FlatList-header Due Date dropdown with a positioned top-level transparent RN Modal. Regression guards added. No Partner scope/RPC/schema/native/runtime change. **IMPLEMENTED; PR/CI/merge/OTA/device verification pending. NO APK/AAB CREATED.**
+
 - **2026-10-06 — Policy Intake heading cleanup:** PR #2798 merged as `bd1dfeae41257502a7e962fde55f028908bb4090`; renamed the top title to `Policy Intake` and removed the restored-draft banner from the details step. Draft persistence/restoration remains active silently; no route, API, schema, RLS, native dependency or runtime change. Partner Verify #487 and Web Verify #5286 passed. Production runtime `0.2.0` OTA **DEPLOYED** via run #48 / update group `a484c100-9edd-47db-97f6-17a173412c31`; installed-device verification pending. **NO APK/AAB CREATED.**
 
 
