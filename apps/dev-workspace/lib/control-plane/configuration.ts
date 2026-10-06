@@ -48,8 +48,12 @@ export const CONFIGURATION_READINESS = {
   registryDesign: "ready",
   connectedProductionKeys: 0,
   publishedRevisions: 0,
-  editorEnabled: false,
+  previewEnabledKeys: 1,
+  previewEditorEnabled: true,
+  draftWritesRequireAal2: true,
   publishEnabled: false,
   rollbackEnabled: false,
-  databaseSchemaCreated: false
+  rollbackPreviewEnabled: true,
+  databaseSchemaCreated: true,
+  auditLedgerCreated: true
 } as const;

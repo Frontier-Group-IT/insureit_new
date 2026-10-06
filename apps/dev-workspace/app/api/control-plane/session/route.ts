@@ -16,6 +16,7 @@ export async function GET(request: Request) {
     ...identity,
     infrastructureProtection: boundary.infrastructureProtection,
     globalWriteActionsEnabled: boundary.writeActionsEnabled,
+    canCreatePreviewDraft: identity.draftWriteEligible,
     canMutateConfiguration: false
   }, {
     headers: { "Cache-Control": "private, no-store" }
