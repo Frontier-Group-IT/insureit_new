@@ -23,7 +23,7 @@ Read `../../docs/PARTNER_APP_HANDOFF_2026_09_13.md`, `../../docs/PARTNER_APP_HOM
 
 ## Release evidence
 
-- **2026-10-06 — Home Policies Sold / Commission Earned metric icons:** branch `ui/partner-home-metric-icons-2026-10-06`; replaced the heavier Home metric artwork with compact professional existing Partner assets (`policyChecklist` and newly exposed `payoutRefresh`) to match the supplied reference. No metric data/calculation, layout, API, schema, RLS, native dependency, runtime or APK/AAB change. **IMPLEMENTED; PR/CI pending; NOT MERGED/DEPLOYED.**
+- **2026-10-06 — Home Policies Sold / Commission Earned metric icons:** PR #2814 merged as `dcb5dfe1112da042a1e6281525f7f00a0edab47b`; replaced the heavier Home metric artwork with compact professional existing Partner assets (`policyChecklist` and `payoutRefresh`) to match the supplied reference. Partner Verify #498 and Web Verify #5309 passed. Production runtime `0.2.0` OTA **DEPLOYED** via run #54 / update group `f8d78ae9-ed27-4b7c-9201-4530cbf6ad57`; installed-device verification pending. No metric data/calculation, API, schema, RLS, native dependency or runtime change. **NO APK/AAB CREATED.**
 
 
 - **2026-10-06 — Renewals single opportunity card + topmost Due Date menu:** branch `ui/partner-renewals-opportunity-card-overlay-rebased-2026-10-06`; removes 4 mini time-bucket tiles, retains existing live summary and Upcoming/Overdue filters, presents records/empty states under their own shared rounded opportunity card, and replaces the clipped FlatList-header Due Date dropdown with a positioned top-level transparent RN Modal. Regression guards added. No Partner scope/RPC/schema/native/runtime change. **IMPLEMENTED; PR/CI/merge/OTA/device verification pending. NO APK/AAB CREATED.**
