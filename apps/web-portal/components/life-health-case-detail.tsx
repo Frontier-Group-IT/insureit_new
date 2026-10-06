@@ -48,14 +48,23 @@ function addMonthsClamped(start:string,months:number){
   const lastDay=new Date(Date.UTC(targetYear,monthIndex+1,0)).getUTCDate();
   return new Date(Date.UTC(targetYear,monthIndex,Math.min(d,lastDay))).toISOString().slice(0,10);
 }
+function canonicalPaymentFrequency(value:string){
+  const normalized=value.trim().toLowerCase().replace(/[_-]+/g," ").replace(/\s+/g," ");
+  if(normalized==="monthly"||normalized==="month")return"Monthly";
+  if(normalized==="quarterly"||normalized==="quarter")return"Quarterly";
+  if(normalized==="half yearly"||normalized==="half year"||normalized==="semi annual"||normalized==="semi annually"||normalized==="semiannual")return"Half Yearly";
+  if(normalized==="annual"||normalized==="annually"||normalized==="yearly"||normalized==="year")return"Annually";
+  if(normalized==="one time"||normalized==="single"||normalized==="single pay")return"One Time";
+  return value.trim();
+}
 function nextInstallmentFrom(start:string,frequency:string){
   if(!validIso(start))return"";
-  const normalized=frequency.trim().toLowerCase();
-  if(normalized==="one time")return"";
-  if(normalized==="monthly")return addMonthsClamped(start,1);
-  if(normalized==="quarterly")return addMonthsClamped(start,3);
-  if(normalized==="half yearly")return addMonthsClamped(start,6);
-  if(normalized==="annually")return addMonthsClamped(start,12);
+  const canonical=canonicalPaymentFrequency(frequency);
+  if(canonical==="One Time")return"";
+  if(canonical==="Monthly")return addMonthsClamped(start,1);
+  if(canonical==="Quarterly")return addMonthsClamped(start,3);
+  if(canonical==="Half Yearly")return addMonthsClamped(start,6);
+  if(canonical==="Annually")return addMonthsClamped(start,12);
   return"";
 }
 
@@ -63,7 +72,7 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
   const router=useRouter(),isIssued=Boolean(caseData.finalPolicyId),docMap=useMemo(()=>new Map(documents.map(d=>[d.document_type,d])),[documents]);
   const[uploading,startUpload]=useTransition(),[converting,startConvert]=useTransition();
   const[error,setError]=useState<string|null>(null),[copy,setCopy]=useState<File|null>(null),[activityOpen,setActivityOpen]=useState(false),[remarksOpen,setRemarksOpen]=useState(false),[uploadingType,setUploadingType]=useState<string|null>(null);
-  const[form,setForm]=useState({customerName:caseData.customerName,customerPhone:caseData.customerPhone,customerAddress:caseData.customerAddress,insurerId:caseData.insurerId,productName:caseData.productName,proposalNumber:caseData.proposalNumber,ppt:caseData.ppt,pd:caseData.pd,paymentFrequency:caseData.paymentFrequency,paymentMode:caseData.paymentMode,premiumAmount:String(caseData.premiumAmount||""),sourcingDate:caseData.sourcingDate,remarks:caseData.remarks});
+  const[form,setForm]=useState({customerName:caseData.customerName,customerPhone:caseData.customerPhone,customerAddress:caseData.customerAddress,insurerId:caseData.insurerId,productName:caseData.productName,proposalNumber:caseData.proposalNumber,ppt:caseData.ppt,pd:caseData.pd,paymentFrequency:canonicalPaymentFrequency(caseData.paymentFrequency),paymentMode:caseData.paymentMode,premiumAmount:String(caseData.premiumAmount||""),sourcingDate:caseData.sourcingDate,remarks:caseData.remarks});
   const[issue,setIssue]=useState<IssueState>({policyNumber:"",issuanceDate:"",startDate:"",endDate:"",pptEndDate:"",nextInstallmentDate:"",finalPremium:String(caseData.premiumAmount||""),sumInsured:""});
   const[overrides,setOverrides]=useState<OverrideState>({endDate:false,pptEndDate:false,nextInstallmentDate:false});
   const set=(k:string,v:string)=>setForm(x=>({...x,[k]:v}));
@@ -72,7 +81,7 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
   const expectedPptEnd=useMemo(()=>addYearsMinusDay(issue.startDate,form.ppt),[issue.startDate,form.ppt]);
   const expectedNext=useMemo(()=>nextInstallmentFrom(issue.startDate,form.paymentFrequency),[issue.startDate,form.paymentFrequency]);
   const pptSinglePay=form.ppt.trim().toLowerCase().includes("single");
-  const oneTimePayment=form.paymentFrequency==="One Time";
+  const oneTimePayment=canonicalPaymentFrequency(form.paymentFrequency)==="One Time";
 
   useEffect(()=>{if(!overrides.endDate)setIssue(x=>({...x,endDate:expectedEnd}));},[expectedEnd,overrides.endDate]);
   useEffect(()=>{if(!overrides.pptEndDate)setIssue(x=>({...x,pptEndDate:expectedPptEnd}));},[expectedPptEnd,overrides.pptEndDate]);
