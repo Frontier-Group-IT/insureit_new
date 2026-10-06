@@ -93,7 +93,6 @@ export default function NewPolicyIntakeScreen() {
 
         if (draft?.customerMobile) {
           setMobile(draft.customerMobile.replace(/\D/g, '').slice(0, 10));
-        } else if (draftSourceValid) {
         }
       } catch (cause) {
         if (!cancelled) setError(cause instanceof Error ? cause.message : 'Lead sources could not be loaded.');
