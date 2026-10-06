@@ -114,10 +114,12 @@ requireText(customerDetail, 'getPartnerCustomerDetail(id)', 'Customer detail mus
 requireText(customerDetail, 'initials(data.customer.customer_name)', 'Customer detail must retain real-customer initials for identity.');
 for (const oldGlyph of ['document-text-outline', 'car-outline', 'shield-outline']) if (customerDetail.includes(`name="${oldGlyph}"`)) throw new Error(`Customer detail feature rows must not regress to ${oldGlyph}.`);
 
-for (const detailAsset of ['navigation.customers', 'navigation.claims', 'status.journey', 'status.claimAttention', 'status.verified']) requireText(claimDetail, `PartnerAssets.${detailAsset}`, `Claim detail is missing ${detailAsset} artwork.`);
+for (const detailAsset of ['navigation.claims', 'status.journey', 'status.claimAttention', 'status.verified']) requireText(claimDetail, `PartnerAssets.${detailAsset}`, `Claim detail is missing ${detailAsset} artwork.`);
+requireText(claimDetail, 'getPartnerManufacturerLogoSource', 'Claim detail summary must resolve manufacturer artwork from the linked vehicle make.');
+requireText(claimDetail, 'name="person-outline"', 'Claim detail insured-person row must keep the approved clear profile icon.');
 requireText(claimDetail, 'getPartnerClaimDetail(id)', 'Claim detail must preserve the existing scoped data service.');
 requireText(claimDetail, 'function timelineArtwork(item: TimelineItem)', 'Claim detail must keep semantic journey artwork mapping.');
-if (claimDetail.includes('name="person-outline"') || claimDetail.includes('styles.dotLatest') || claimDetail.includes('styles.innerDot')) throw new Error('Claim detail must not regress to generic customer or dot-only journey identity.');
+if (claimDetail.includes('styles.dotLatest') || claimDetail.includes('styles.innerDot')) throw new Error('Claim detail must not regress to dot-only journey identity.');
 
 requireText(search, 'PartnerAssets.emptyStates.noSearchResults', 'Universal Search must use the prepared no-results artwork.');
 for (const featureAsset of ['navigation.customers', 'navigation.policies', 'navigation.claims']) requireText(search, `PartnerAssets.${featureAsset}`, `Universal Search is missing ${featureAsset} result artwork.`);
