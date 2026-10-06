@@ -245,22 +245,22 @@ export default function PartnerHomeScreen() {
               <Text style={styles.sectionTitle}>Quick Actions</Text>
               <View style={styles.quickGrid}>
                 <QuickAction
-                  asset={PartnerAssets.navigation.policyIntake}
+                  asset={PartnerAssets.actions.policyRegister}
                   label="Policy Intake"
                   onPress={() => router.push('/policy-intake-new')}
                 />
                 <QuickAction
-                  asset={PartnerAssets.navigation.renewals}
+                  asset={PartnerAssets.actions.renewalsReference}
                   label="Renewals"
                   onPress={() => router.push('/renewals')}
                 />
                 <QuickAction
-                  asset={PartnerAssets.navigation.claims}
+                  asset={PartnerAssets.actions.policyChecklist}
                   label="Claims"
                   onPress={() => router.push('/(tabs)/claims')}
                 />
                 <QuickAction
-                  asset={PartnerAssets.navigation.customers}
+                  asset={PartnerAssets.actions.customerRegister}
                   label="Customers"
                   onPress={() => router.push('/customers')}
                 />
@@ -578,7 +578,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EAF5FF',
+    backgroundColor: 'transparent',
   },
   quickImage: { width: 31, height: 31 },
   quickLabel: {
