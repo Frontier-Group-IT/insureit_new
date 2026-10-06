@@ -23,6 +23,8 @@ Read `../../docs/PARTNER_APP_HANDOFF_2026_09_13.md`, `../../docs/PARTNER_APP_HOM
 
 ## Release evidence
 
+- **2026-10-06 — Partner period selector de-duplication:** branch `fix/partner-period-selector-last-month-2026-10-06`; Home period options are standardized to `All / Last 6 Months / Last Month / MTD`, with MTD as the default and Last Month mapped to the full previous calendar month. Business Overview now uses MTD instead of the redundant This Month label; its existing Last Month / Last 6 Months / Custom options are preserved. No schema/RLS/API/native/runtime change. **IMPLEMENTED; PR/CI/merge/production runtime 0.2.0 OTA pending. NO APK/AAB CREATED.**
+
 Use separate states: IMPLEMENTED, MERGED, DEPLOYED, VERIFIED. OTA publish success is not installed-device verification. After Partner OTA publication, require a cold launch (often twice) and device verification.
 
 - **2026-10-06 — Partner Renewals RPC contract repair:** branch `fix/partner-renewals-rpc-contract-2026-10-06`; production inspection confirmed `partner_app_renewal_summary()` is returning the visible Overdue count while the installed list client expects `p_bucket`/`net_premium`, but production still has the older `p_window`/`premium_amount` list RPC contract. The already-committed renewal migration now explicitly drops the old five-argument list function before recreating it with the intended app-compatible row contract, which PostgreSQL requires when OUT columns change. No Partner scope/RLS rule is widened. **IMPLEMENTED; PR/CI/merge/production migration application/runtime verification pending. NO APK/AAB CREATED.**
