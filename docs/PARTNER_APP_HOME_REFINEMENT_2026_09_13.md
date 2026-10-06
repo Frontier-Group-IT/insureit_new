@@ -116,3 +116,12 @@ Always record these separately:
 - **VERIFIED**: user/device screenshot or behavior confirms the update actually runs correctly.
 
 PR #1777 is currently **MERGED + DEPLOYED, NOT YET DEVICE-VERIFIED**. Ask the user to fully close and reopen the Partner app (often twice) and visually confirm the Policy Intake icon before marking this milestone VERIFIED.
+
+## 2026-10-06 — Home reference metric icons
+
+- Branch: `ui/partner-home-metric-reference-icons-2026-10-06`.
+- Home business summary metric icons are aligned more closely to the supplied reference: Policies Sold keeps the approved document/shield artwork and Commission Earned now uses the existing stacked-coins `payoutRefresh` artwork.
+- Both metric icon containers increase from 32x32 to 40x40 and the artwork from 25x25 to 31x31 so the icons are clearly visible without changing the metric row hierarchy.
+- Metric values, labels, divider, MTD/business-period calculations, queries, authorization and navigation remain unchanged.
+- OTA-safe for Partner production runtime 0.2.0; no native dependency/runtime/package change.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/production OTA/device verification pending. NO APK/AAB CREATED.**
