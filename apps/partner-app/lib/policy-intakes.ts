@@ -157,7 +157,7 @@ export async function submitPartnerPolicyIntakeReplacement(input: {
   });
 
   input.onProgress?.({ stage: 'submitting' });
-  return apiRequest<{ ok: true; id: string; number: string; status: 'processing' }>('/api/partner/policy-intakes', {
+  return apiRequest<{ ok: true; id: string; number: string; status: 'processing' | 'ready_for_review' }>('/api/partner/policy-intakes', {
     method: 'POST',
     body: JSON.stringify({
       action: 'complete_response',
