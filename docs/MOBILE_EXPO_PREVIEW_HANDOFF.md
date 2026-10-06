@@ -838,4 +838,6 @@ Safety:
 - Pull-to-refresh reloads authoritative Exchange state after writes.
 - Added `customer-exchange-live-backend-regression.mjs` and wired it into canonical mobile verification to prevent sample-data regressions or RPC/service bypass.
 - Customer runtime remains **0.3.0**; no native dependency/runtime/APK/AAB change.
+- Added follow-up migration `20261006184500_customer_exchange_backend_hardening.sql`: one editable draft per vehicle is enforced at the database index/RPC layer, cross-customer listing/vehicle swaps are rejected, and draft saves reuse the existing editable listing after app restarts.
+- The hardening migration was executed against production inside `BEGIN … ROLLBACK` successfully; follow-up inspection confirmed migration version `20261006184500` remains unapplied and the live index/function stayed unchanged after rollback.
 - **IMPLEMENTED; PR/CI/merge/production OTA/installed-device verification pending.**
