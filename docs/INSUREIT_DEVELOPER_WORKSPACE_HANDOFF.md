@@ -153,3 +153,15 @@ Credential policy:
 - when deeper Supabase Management API telemetry is enabled, use a scoped token limited to the required project and read permissions only;
 - when deeper Vercel telemetry is enabled, use a project/team-scoped read credential where supported;
 - absence of a credential must surface as `not configured`, never as a fake healthy state.
+
+
+## Phase 1 verification correction — current-main GitHub telemetry
+
+Production verification found that the broad unauthenticated GitHub Actions feed could show stale historical runs. The adapter is being corrected to:
+- resolve the current `main` commit SHA first;
+- query Actions runs by that exact `head_sha`;
+- send explicit no-cache headers and a cache-busting query parameter;
+- keep the open-PR count sourced from GitHub Search `total_count`;
+- preserve the optional `GITHUB_READ_TOKEN` path for authenticated read telemetry.
+
+This is an observability-only correction. No write capability, schema/RLS/data change, Expo publish or APK/AAB/native build is introduced.
