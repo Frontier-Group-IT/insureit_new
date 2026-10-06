@@ -70,7 +70,7 @@ for (const businessAsset of ['actions.quickRenewals', 'actions.quickClaims', 'ac
 }
 requireText(business, 'function BlueIcon(', 'Business must keep the shared blue generated-icon treatment.');
 requireText(business, 'function productIcon(', 'Business product cards must keep differentiated product icon mapping.');
-requireText(business, 'if (!payout.available)', 'Business payout authorization gate must remain intact.');
+requireText(business, '!payout.available', 'Business payout authorization gate must remain intact.');
 requireText(business, 'getPartnerPayoutSummary()', 'Business must continue loading payout data through the existing service.');
 
 requireText(customers, 'PartnerAssets.emptyStates.noCustomers', 'Customers empty state must use the prepared no-customers artwork.');
