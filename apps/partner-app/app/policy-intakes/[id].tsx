@@ -51,6 +51,7 @@ export default function PolicyIntakeDetailScreen() {
   }, [load]);
 
   const fields = useMemo(() => new Map((row?.ocr_fields ?? []).map((field) => [field.key, field])), [row?.ocr_fields]);
+  const proposalForm = row?.policy_type === 'life' || row?.policy_type === 'health';
 
   async function replaceDocument() {
     if (!row || replacementLockRef.current) return;
@@ -59,7 +60,7 @@ export default function PolicyIntakeDetailScreen() {
     if (result.canceled || !result.assets[0]) return;
     const file = result.assets[0];
     if (file.size && file.size > MAX_FILE_SIZE) {
-      setError('Policy copy must be 15 MB or smaller.');
+      setError(`${proposalForm ? 'Proposal form' : 'Policy copy'} must be 15 MB or smaller.`);
       return;
     }
 
@@ -155,7 +156,7 @@ export default function PolicyIntakeDetailScreen() {
 
               <View style={styles.replaceButton}>
                 <PartnerButton
-                  label={replacing ? replacementLabel(replacementProgress) : 'Upload replacement policy copy'}
+                  label={replacing ? replacementLabel(replacementProgress) : `Upload replacement ${proposalForm ? 'proposal form' : 'policy copy'}`}
                   icon="cloud-upload-outline"
                   loading={replacing}
                   disabled={replacing}
@@ -170,39 +171,59 @@ export default function PolicyIntakeDetailScreen() {
             <Detail label="Customer mobile" value={row.customer_mobile} />
             <Detail label="Lead source" value={row.lead_source_name} />
             <Detail label="Intermediary" value={`${row.lead_source_type.toUpperCase()}${row.lead_source_code ? ` · ${row.lead_source_code}` : ''}`} />
-            <Detail label="Policy copy" value={row.file_name} />
+            <Detail label="Policy type" value={policyTypeLabel(row.policy_type)} />
+            <Detail
+              label={proposalForm ? 'Proposal form' : 'Policy copy'}
+              value={row.file_name || (proposalForm ? 'Not attached (optional)' : 'Not available')}
+            />
             <Detail label="Submitted" value={formatDate(row.created_at)} last />
           </View>
 
-          <PartnerSectionHeader title="Extracted details" meta={row.ocr_status === 'completed' ? 'OCR complete' : humanize(row.ocr_status)} />
-          <DetailDisclosure
-            title="Policy details"
-            summary={fields.get('policy_number')?.value || fields.get('insurer_name')?.value || pendingLabel(row)}
-            expanded={showPolicyExtraction}
-            onPress={() => setShowPolicyExtraction((value) => !value)}
-          >
-            <View style={styles.details}>
-              <Detail label="Policy number" value={fields.get('policy_number')?.value || pendingLabel(row)} />
-              <Detail label="Insurer" value={fields.get('insurer_name')?.value || pendingLabel(row)} />
-              <Detail label="Product" value={fields.get('policy_product')?.value || pendingLabel(row)} />
-              <Detail label="Valid from" value={fields.get('policy_start_date')?.value || pendingLabel(row)} />
-              <Detail label="Valid upto" value={fields.get('policy_end_date')?.value || pendingLabel(row)} last />
-            </View>
-          </DetailDisclosure>
+          {proposalForm ? (
+            <>
+              <PartnerSectionHeader title="Operations review" meta="No OCR for Life / Health proposal forms" />
+              <View style={styles.proposalNote}>
+                <Ionicons name="shield-checkmark-outline" size={18} color="#4F28E9" />
+                <Text style={styles.proposalNoteText}>
+                  {row.file_name
+                    ? 'Proposal form saved securely for Operations review. Policy and risk details are not extracted automatically.'
+                    : 'Proposal form was skipped. Operations can review and continue this Life / Health intake manually.'}
+                </Text>
+              </View>
+            </>
+          ) : (
+            <>
+              <PartnerSectionHeader title="Extracted details" meta={row.ocr_status === 'completed' ? 'OCR complete' : humanize(row.ocr_status)} />
+              <DetailDisclosure
+                title="Policy details"
+                summary={fields.get('policy_number')?.value || fields.get('insurer_name')?.value || pendingLabel(row)}
+                expanded={showPolicyExtraction}
+                onPress={() => setShowPolicyExtraction((value) => !value)}
+              >
+                <View style={styles.details}>
+                  <Detail label="Policy number" value={fields.get('policy_number')?.value || pendingLabel(row)} />
+                  <Detail label="Insurer" value={fields.get('insurer_name')?.value || pendingLabel(row)} />
+                  <Detail label="Product" value={fields.get('policy_product')?.value || pendingLabel(row)} />
+                  <Detail label="Valid from" value={fields.get('policy_start_date')?.value || pendingLabel(row)} />
+                  <Detail label="Valid upto" value={fields.get('policy_end_date')?.value || pendingLabel(row)} last />
+                </View>
+              </DetailDisclosure>
 
-          <DetailDisclosure
-            title="Vehicle details"
-            summary={fields.get('vehicle_registration_number')?.value || [fields.get('vehicle_make')?.value, fields.get('vehicle_model')?.value].filter(Boolean).join(' · ') || pendingLabel(row)}
-            expanded={showVehicleExtraction}
-            onPress={() => setShowVehicleExtraction((value) => !value)}
-          >
-            <View style={styles.details}>
-              <Detail label="Registration" value={fields.get('vehicle_registration_number')?.value || pendingLabel(row)} />
-              <Detail label="Make" value={fields.get('vehicle_make')?.value || pendingLabel(row)} />
-              <Detail label="Model" value={fields.get('vehicle_model')?.value || pendingLabel(row)} />
-              <Detail label="Chassis" value={fields.get('vehicle_chassis_number')?.value || pendingLabel(row)} last />
-            </View>
-          </DetailDisclosure>
+              <DetailDisclosure
+                title="Vehicle details"
+                summary={fields.get('vehicle_registration_number')?.value || [fields.get('vehicle_make')?.value, fields.get('vehicle_model')?.value].filter(Boolean).join(' · ') || pendingLabel(row)}
+                expanded={showVehicleExtraction}
+                onPress={() => setShowVehicleExtraction((value) => !value)}
+              >
+                <View style={styles.details}>
+                  <Detail label="Registration" value={fields.get('vehicle_registration_number')?.value || pendingLabel(row)} />
+                  <Detail label="Make" value={fields.get('vehicle_make')?.value || pendingLabel(row)} />
+                  <Detail label="Model" value={fields.get('vehicle_model')?.value || pendingLabel(row)} />
+                  <Detail label="Chassis" value={fields.get('vehicle_chassis_number')?.value || pendingLabel(row)} last />
+                </View>
+              </DetailDisclosure>
+            </>
+          )}
         </>
       )}
     </PartnerScreen>
@@ -352,6 +373,15 @@ function statusHelp(row: PartnerPolicyIntake) {
   return 'Track this submission here.';
 }
 
+function policyTypeLabel(value: PartnerPolicyIntake['policy_type']) {
+  return ({
+    motor: 'Motor',
+    non_motor: 'Non-Motor',
+    life: 'Life',
+    health: 'Health',
+  } as const)[value || 'motor'] || 'Motor';
+}
+
 function pendingLabel(row: PartnerPolicyIntake) {
   return row.ocr_status === 'failed' ? 'Manual review' : row.ocr_status === 'completed' ? 'Not found' : 'Fetching…';
 }
@@ -409,6 +439,8 @@ const styles = StyleSheet.create({
   replacementTrack: { height: 7, marginTop: 6, overflow: 'hidden', borderRadius: 999, backgroundColor: '#F0D7AE' },
   replacementFill: { height: '100%', borderRadius: 999, backgroundColor: '#A36A22' },
   replaceButton: { marginTop: 9 },
+  proposalNote: { marginBottom: 7, paddingHorizontal: 12, paddingVertical: 11, flexDirection: 'row', alignItems: 'flex-start', gap: 9, borderRadius: partnerTheme.radius.lg, borderWidth: 1, borderColor: '#DCD6FF', backgroundColor: '#F7F5FF' },
+  proposalNoteText: { flex: 1, color: '#5B5681', ...partnerTheme.typography.caption },
   disclosureWrap: { marginBottom: 7 },
   disclosure: { minHeight: partnerTheme.control.minTouchTarget, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: partnerTheme.radius.lg, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   disclosureBody: { flex: 1 },

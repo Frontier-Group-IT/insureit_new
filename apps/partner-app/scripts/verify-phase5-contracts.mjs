@@ -81,7 +81,7 @@ expectAll('app/policy-intake-new.tsx', [
   [/accessibilityRole="progressbar"/, 'upload progress must expose progressbar semantics'],
   [/accessibilityValue=\{\{ min: 0, max: 100, now:/, 'upload progress must expose a numeric accessibility value'],
   [/Retry submission/, 'failed submissions must expose retry behavior'],
-  [/Your selected policy copy and entered details are still here/, 'failed submissions must preserve entered state'],
+  [/Your selected document and entered details are still here/, 'failed submissions must preserve entered state'],
 ]);
 
 expectAll('app/policy-intakes/[id].tsx', [
@@ -127,7 +127,7 @@ expectAll('lib/partner-observability.ts', [
 
 expectAll('app/policy-intake-new.tsx', [
   [/PartnerConfirmDialog/, 'Policy Intake must protect transient selected-file state on close'],
-  [/selected policy file will need to be chosen again/, 'close warning must explain exactly what would be lost'],
+  [/selected document will need to be chosen again/, 'close warning must explain exactly what would be lost'],
   [/disabled=\{submitting\}/, 'Policy Intake close action must be disabled during submission'],
 ]);
 

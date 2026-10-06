@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import {
   BackHandler,
   FlatList,
@@ -29,6 +29,7 @@ import {
   submitPartnerPolicyIntake,
   type PartnerPolicyIntakeSource,
   type PartnerPolicyIntakeUploadProgress,
+  type PartnerPolicyType,
 } from '@/lib/policy-intakes';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerNetwork } from '@/providers/partner-network-provider';
@@ -37,11 +38,20 @@ const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
 type SourceFilter = 'all' | 'partner' | 'posp';
 
+const POLICY_TYPE_OPTIONS: Array<{ value: PartnerPolicyType; label: string; icon: ComponentProps<typeof Ionicons>['name'] }> = [
+  { value: 'motor', label: 'Motor', icon: 'car-sport-outline' },
+  { value: 'non_motor', label: 'Non-Motor', icon: 'business-outline' },
+  { value: 'life', label: 'Life', icon: 'shield-checkmark-outline' },
+  { value: 'health', label: 'Health', icon: 'medkit-outline' },
+];
+
 export default function NewPolicyIntakeScreen() {
   const router = useRouter();
   const { isOffline } = usePartnerNetwork();
   const [sources, setSources] = useState<PartnerPolicyIntakeSource[]>([]);
   const [sourceId, setSourceId] = useState('');
+  const [policyType, setPolicyType] = useState<PartnerPolicyType>('motor');
+  const [policyTypeOpen, setPolicyTypeOpen] = useState(false);
   const [mobile, setMobile] = useState('');
   const [file, setFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,6 +88,9 @@ export default function NewPolicyIntakeScreen() {
 
         setSourceId(nextSourceId);
         if (nextSources.length === 1) setSourceStepComplete(true);
+        if (draft?.policyType && POLICY_TYPE_OPTIONS.some((option) => option.value === draft.policyType)) {
+          setPolicyType(draft.policyType);
+        }
 
         if (draft?.customerMobile) {
           setMobile(draft.customerMobile.replace(/\D/g, '').slice(0, 10));
@@ -100,14 +113,15 @@ export default function NewPolicyIntakeScreen() {
   useEffect(() => {
     if (loading) return;
     const timer = setTimeout(() => {
-      if (!sourceId && !mobile) return;
+      if (!sourceId && !mobile && policyType === 'motor') return;
       void savePartnerPolicyIntakeDraft({
         leadSourceId: sourceId,
+        policyType,
         customerMobile: mobile,
       });
     }, 250);
     return () => clearTimeout(timer);
-  }, [loading, mobile, sourceId]);
+  }, [loading, mobile, policyType, sourceId]);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -141,7 +155,9 @@ export default function NewPolicyIntakeScreen() {
   }, [query, sourceFilter, sources]);
 
   const validMobile = /^[6-9][0-9]{9}$/.test(mobile.replace(/\D/g, '').slice(-10));
-  const canSubmit = Boolean(file && sourceId && validMobile && !submitting);
+  const proposalForm = policyType === 'life' || policyType === 'health';
+  const selectedPolicyType = POLICY_TYPE_OPTIONS.find((option) => option.value === policyType) ?? POLICY_TYPE_OPTIONS[0];
+  const canSubmit = Boolean(sourceId && validMobile && (proposalForm || file) && !submitting);
 
   async function pickFile() {
     setError('');
@@ -154,7 +170,7 @@ export default function NewPolicyIntakeScreen() {
     const asset = result.assets[0];
     if (asset.size && asset.size > MAX_FILE_SIZE) {
       setFile(null);
-      setError('Policy copy must be 15 MB or smaller.');
+      setError(`${proposalForm ? 'Proposal form' : 'Policy copy'} must be 15 MB or smaller.`);
       return;
     }
     setFile(asset);
@@ -170,7 +186,7 @@ export default function NewPolicyIntakeScreen() {
   }
 
   async function submit() {
-    if (!file || !canSubmit || submitLockRef.current) return;
+    if (!canSubmit || submitLockRef.current) return;
     submitLockRef.current = true;
     setSubmitting(true);
     setProgress({ stage: 'preparing' });
@@ -179,6 +195,7 @@ export default function NewPolicyIntakeScreen() {
     try {
       const result = await submitPartnerPolicyIntake({
         leadSourceId: sourceId,
+        policyType,
         customerMobile: mobile,
         file,
         onProgress: setProgress,
@@ -198,7 +215,7 @@ export default function NewPolicyIntakeScreen() {
     <PartnerConfirmDialog
       visible={closeConfirmVisible}
       title="Leave Policy Intake?"
-      message="Your lead source and mobile number are saved as a draft, but the selected policy file will need to be chosen again."
+      message="Your lead source, policy type and mobile number are saved as a draft, but the selected document will need to be chosen again."
       confirmLabel="Leave"
       cancelLabel="Stay"
       onCancel={() => setCloseConfirmVisible(false)}
@@ -356,7 +373,7 @@ export default function NewPolicyIntakeScreen() {
               tone="info"
               icon="bookmark-outline"
               title="Draft restored"
-              message="Lead source and mobile restored. Re-select the policy file before submitting."
+              message="Lead source, policy type and mobile restored. Re-select the document before submitting if needed."
             />
           </View>
         ) : null}
@@ -381,6 +398,51 @@ export default function NewPolicyIntakeScreen() {
         </View>
 
         <View style={styles.formSection}>
+          <Text style={styles.formLabel}>Policy type</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Policy type, ${selectedPolicyType.label}`}
+            accessibilityState={{ expanded: policyTypeOpen }}
+            disabled={submitting}
+            onPress={() => setPolicyTypeOpen((value) => !value)}
+            style={({ pressed }) => [styles.policyTypeSelector, pressed && !submitting && styles.pressed, submitting && styles.disabled]}
+          >
+            <View style={styles.policyTypeIcon}>
+              <Ionicons name={selectedPolicyType.icon} size={21} color="#4F28E9" />
+            </View>
+            <Text style={styles.policyTypeValue}>{selectedPolicyType.label}</Text>
+            <Ionicons name={policyTypeOpen ? 'chevron-up' : 'chevron-down'} size={18} color="#748198" />
+          </Pressable>
+          {policyTypeOpen ? (
+            <View style={styles.policyTypeMenu}>
+              {POLICY_TYPE_OPTIONS.map((option) => {
+                const active = option.value === policyType;
+                return (
+                  <Pressable
+                    key={option.value}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: active }}
+                    onPress={() => {
+                      if (option.value !== policyType) setFile(null);
+                      setPolicyType(option.value);
+                      setPolicyTypeOpen(false);
+                      setError('');
+                    }}
+                    style={({ pressed }) => [styles.policyTypeOption, active && styles.policyTypeOptionActive, pressed && styles.pressed]}
+                  >
+                    <View style={[styles.policyTypeOptionIcon, active && styles.policyTypeOptionIconActive]}>
+                      <Ionicons name={option.icon} size={18} color={active ? '#4F28E9' : '#65738A'} />
+                    </View>
+                    <Text style={[styles.policyTypeOptionText, active && styles.policyTypeOptionTextActive]}>{option.label}</Text>
+                    {active ? <Ionicons name="checkmark-circle" size={19} color="#4F28E9" /> : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.formSection}>
           <PartnerField
             label="Customer mobile"
             value={mobile}
@@ -393,10 +455,12 @@ export default function NewPolicyIntakeScreen() {
         </View>
 
         <View style={styles.formSection}>
-          <Text style={styles.formLabel}>Policy copy</Text>
+          <Text style={styles.formLabel}>{proposalForm ? 'Proposal form (Optional)' : 'Policy copy'}</Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={file ? `Replace selected policy copy ${file.name}` : 'Choose policy PDF or image'}
+            accessibilityLabel={file
+              ? `Replace selected ${proposalForm ? 'proposal form' : 'policy copy'} ${file.name}`
+              : `Choose ${proposalForm ? 'proposal' : 'policy'} PDF or image`}
             disabled={submitting}
             onPress={pickFile}
             style={({ pressed }) => [styles.upload, file && styles.uploadSelected, pressed && !submitting && styles.pressed, submitting && styles.disabled]}
@@ -405,7 +469,9 @@ export default function NewPolicyIntakeScreen() {
               <Ionicons name={file ? 'checkmark-circle-outline' : 'cloud-upload-outline'} size={24} color={file ? partnerTheme.colors.success : partnerTheme.colors.brand} />
             </View>
             <View style={styles.uploadBody}>
-              <Text numberOfLines={2} style={styles.uploadTitle}>{file ? file.name : 'Choose policy PDF or image'}</Text>
+              <Text numberOfLines={2} style={styles.uploadTitle}>
+                {file ? file.name : `Choose ${proposalForm ? 'proposal' : 'policy'} PDF or image${proposalForm ? ' (optional)' : ''}`}
+              </Text>
               <Text style={styles.uploadMeta}>{file ? formatBytes(file.size || 0) : 'PDF, JPG, PNG or WebP · up to 15 MB'}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#A0A8B6" />
@@ -417,19 +483,24 @@ export default function NewPolicyIntakeScreen() {
         {error ? (
           <View style={styles.feedback}>
             <PartnerBanner tone="danger" title="Submission not completed" message={error} />
-            {file ? <Text style={styles.retryHint}>Your selected policy copy and entered details are still here. Tap Submit to retry.</Text> : null}
+            {file ? <Text style={styles.retryHint}>Your selected document and entered details are still here. Tap Submit to retry.</Text> : null}
           </View>
         ) : null}
 
-        {file && selectedSource && validMobile ? (
+        {(file || proposalForm) && selectedSource && validMobile ? (
           <View style={styles.reviewCard}>
             <View style={styles.reviewTop}>
               <Text style={styles.reviewTitle}>Ready to submit</Text>
               <Ionicons name="checkmark-circle-outline" size={18} color={partnerTheme.colors.success} />
             </View>
             <ReviewRow label="Lead source" value={selectedSource.display_name} />
+            <ReviewRow label="Policy type" value={selectedPolicyType.label} />
             <ReviewRow label="Customer" value={mobile} />
-            <ReviewRow label="Policy copy" value={file.name} last />
+            <ReviewRow
+              label={proposalForm ? 'Proposal form' : 'Policy copy'}
+              value={file?.name || 'Not attached (optional)'}
+              last
+            />
           </View>
         ) : null}
 
@@ -707,6 +778,16 @@ const styles = StyleSheet.create({
   selectedSourceRow: { minHeight: 58, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 9 },
   formSection: { marginTop: partnerTheme.spacing.lg },
   formLabel: { marginBottom: 7, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.label },
+  policyTypeSelector: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 10, borderRadius: 12, borderWidth: 1, borderColor: partnerTheme.colors.line, backgroundColor: partnerTheme.colors.surface },
+  policyTypeIcon: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F0EDFF' },
+  policyTypeValue: { flex: 1, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  policyTypeMenu: { marginTop: 7, overflow: 'hidden', borderRadius: 12, borderWidth: 1, borderColor: partnerTheme.colors.line, backgroundColor: partnerTheme.colors.surface },
+  policyTypeOption: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
+  policyTypeOptionActive: { backgroundColor: '#F7F5FF' },
+  policyTypeOptionIcon: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F5F8' },
+  policyTypeOptionIconActive: { backgroundColor: '#ECE8FF' },
+  policyTypeOptionText: { flex: 1, color: '#526176', ...partnerTheme.typography.bodyStrong },
+  policyTypeOptionTextActive: { color: '#3420A8' },
   upload: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 12, borderWidth: 1, borderColor: partnerTheme.colors.line, backgroundColor: partnerTheme.colors.surface },
   uploadSelected: { backgroundColor: partnerTheme.colors.successSoft, borderColor: '#CBE7D7' },
   uploadIcon: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surfaceMuted },
