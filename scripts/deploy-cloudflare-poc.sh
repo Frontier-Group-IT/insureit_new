@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Cloudflare POC only. This does not modify Vercel or production DNS.
-npm install --no-save --workspace apps/web-portal @opennextjs/cloudflare@latest wrangler@latest
+# Cloudflare POC deploy only. Preserve runtime variables configured in the
+# Cloudflare dashboard and do not touch Vercel or production DNS.
 cd apps/web-portal
-npx opennextjs-cloudflare build
-npx wrangler deploy
+npx wrangler deploy --keep-vars
