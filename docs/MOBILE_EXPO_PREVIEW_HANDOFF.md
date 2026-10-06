@@ -799,3 +799,25 @@ Safety:
 - Existing sample inventory and local-only bid/favourite/draft state remain unchanged internally; no Supabase marketplace persistence has been introduced.
 - No schema, migration, RLS, API/RPC, payment, call-masking, APK/AAB or native-runtime change.
 - **IMPLEMENTED; PR/CI/merge/production OTA/installed-device verification pending.**
+
+
+---
+
+## 2026-10-06 — Customer Exchange backend foundation
+
+- Premium V2 PR #2847 merged as `65d263aa723f25c89f10eed4d4a9c1da693a4e86`.
+- Customer production runtime **0.3.0 OTA #157 completed successfully**; no APK/AAB was created.
+- Backend branch: `feature/customer-exchange-marketplace-backend-2026-10-06`.
+- Added migration `20261006183000_customer_exchange_marketplace_backend.sql`.
+- Core tables: `exchange_listings`, `exchange_listing_media`, `exchange_bids`, `exchange_favorites`, `exchange_contact_requests`, `exchange_deals`, `exchange_events`.
+- Direct authenticated table access is revoked and RLS remains enabled; customer/staff behavior goes through explicit SECURITY DEFINER RPCs with customer-scope validation.
+- Listing lifecycle: draft → pending_review → live → deal_in_progress → sold, with pause/reject/withdraw/expire paths.
+- Buyer workflow: marketplace feed → favourite → bid → managed contact request → buyer deal confirmation.
+- Seller workflow: own fleet → draft listing → submit for review → bid book → accept leading bid → managed deal.
+- Staff workflow: approve/reject listing, resolve controlled contact, progress inspection/payment/handover/RC-transfer/completion.
+- Seller/buyer phone numbers are not exposed by marketplace feed or bid-book RPCs.
+- Added private `exchange-media` bucket and seller/live-listing scoped storage policies.
+- Added mobile service layer `apps/mobile-app/lib/exchange.ts` for feed, listing drafts, bidding, favourites, contact, deals and media.
+- Added controlled migration workflow `.github/workflows/apply-customer-exchange-marketplace-backend.yml`.
+- The complete migration was executed against production inside a transaction and **rolled back successfully** to validate SQL syntax/dependencies; follow-up check confirmed `public.exchange_listings` did not remain.
+- **Implemented on branch; PR/CI/merge/database migration and final UI wiring pending.**
