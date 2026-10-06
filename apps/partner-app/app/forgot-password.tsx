@@ -79,7 +79,7 @@ export default function ForgotPasswordScreen() {
           </View>
 
           <Pressable accessibilityRole="button" onPress={() => router.replace('/login')} style={styles.back}>
-            <MaterialCommunityIcons name="arrow-left" size={18} color={partnerTheme.colors.primary} />
+            <MaterialCommunityIcons name="arrow-left" size={18} color={partnerTheme.colors.brand} />
             <Text style={styles.backText}>Back to sign in</Text>
           </Pressable>
         </View>
@@ -124,5 +124,5 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 10,
   },
-  backText: { color: partnerTheme.colors.primary, fontSize: 12, fontWeight: '700' },
+  backText: { color: partnerTheme.colors.brand, fontSize: 12, fontWeight: '700' },
 });
