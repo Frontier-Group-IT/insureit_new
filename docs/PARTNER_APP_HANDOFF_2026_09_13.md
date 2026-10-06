@@ -380,3 +380,13 @@ Never collapse merge, publish and device verification into one status.
 - No claim query, filter semantics, pagination, status mapping, navigation, authorization, API/RPC/schema/RLS, native dependency, runtime, or permission change.
 - OTA-safe for Partner production runtime `0.2.0`; no APK/AAB/native build authorized or created.
 - Evidence state: **IMPLEMENTED; PR/CI/merge/OTA/device verification pending.**
+
+## 2026-10-06 — Renewal list RPC contract repair
+
+- Branch: `fix/partner-renewals-rpc-contract-2026-10-06`.
+- Production inspection found the renewal summary RPC working while the list RPC remained on the older contract: `p_mode = due|expired`, `p_window`, and `premium_amount`.
+- The current Partner app and the already-committed migration expect the newer contract: `p_mode = expiring|expired`, `p_bucket` including `overdue`, and `net_premium`.
+- The first production migration application attempt was safely rejected by PostgreSQL because `CREATE OR REPLACE FUNCTION` cannot change an existing TABLE/OUT return shape. No production function was changed by that failed transaction.
+- The migration is corrected to `DROP FUNCTION IF EXISTS public.partner_app_list_renewals(integer, integer, text, text, text)` before recreating the same five-argument RPC with the intended app-compatible return shape and existing authenticated/service-role grants.
+- Partner commercial scope logic and authorization predicates remain unchanged.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/production migration application/runtime verification pending. NO APK/AAB CREATED.**

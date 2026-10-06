@@ -80,6 +80,8 @@ begin
 end;
 $$;
 
+drop function if exists public.partner_app_list_renewals(integer, integer, text, text, text);
+
 create or replace function public.partner_app_list_renewals(
   p_limit integer default 25,
   p_offset integer default 0,
