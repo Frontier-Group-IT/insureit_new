@@ -1,3 +1,17 @@
+## 2026-10-06 — Partner Your Week period/dropdown/reflection refinement
+
+- Branch: `ui/partner-weekly-story-dropdown-reflection-2026-10-06`.
+- Your Week hero `This Week` pill now uses a white background with blue icon/text.
+- Weekly Reflection card background is now white with a subtle border/shadow; the mint decorative treatment remains secondary.
+- Compared-with card period control is now an accessible working dropdown with Last 7 / 14 / 30 days.
+- Last 7 days keeps the existing weekly-story values. Last 14/30 days load real scoped gross-premium comparison data through the existing `partner_app_business_range_v2` service, including previous-period premium and percentage change.
+- Comparison heading/previous-premium caption adapt to the selected range, and loading/error states are handled inline.
+- Added visual-system contract checks protecting the live comparison control and white surfaces.
+- No database/schema/RLS/native dependency change. No APK/AAB created.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA NOT YET DONE.**
+
+---
+
 ## 2026-10-06 — Partner Home All-period caption + business metric icons
 
 - Branch: `ui/partner-home-all-period-metric-icons-2026-10-06`.
