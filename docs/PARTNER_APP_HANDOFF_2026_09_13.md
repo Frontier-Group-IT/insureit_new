@@ -467,3 +467,14 @@ Never collapse merge, publish and device verification into one status.
 - Due Date sort popup uses a top-level positioned React Native Modal to appear above FlatList rows and empty artwork without changing document layout.
 - No business calculation, Partner scope/RPC, database schema/RLS, native dependency or runtime changes.
 - **IMPLEMENTED; CI/merge/production OTA/device verification pending. NO APK/AAB CREATED.**
+
+## 2026-10-06 — Activity Recent Activity row cleanup
+
+- Branch: `ui/partner-activity-row-cleanup-2026-10-06`.
+- Recent Activity rows keep the existing insurer-logo resolver, type/date, reference/policy title, customer name and full-card navigation.
+- The visible insurer/company metadata line under the customer name is removed; `item.meta` remains available internally for resolving insurer logos.
+- The right-side chevron is removed only from Recent Activity rows. The Needs Attention card and its chevron remain unchanged.
+- The recent-row logo tile is tightened from 68px wide with 10px right spacing to 52px wide with 4px spacing, bringing record text closer to the logo while retaining the same card width and routing behavior.
+- Visual-system assertions prevent the removed metadata/chevron and wide logo spacing from returning.
+- No activity query, data semantics, route, API/RPC, schema, RLS, permission, native dependency or runtime change; OTA-safe for Partner production runtime 0.2.0.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/production OTA/device verification pending. NO APK/AAB CREATED.**
