@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
@@ -56,9 +57,9 @@ export default function JourneyScreen() {
           </View>
 
           <View style={styles.summary}>
-            <Summary value={data.policy_count} label="Policies" />
-            <Summary value={data.customer_count} label="Customers" />
-            <Summary value={data.claim_count} label="Claims" />
+            <Summary value={data.policy_count} label="Policies" onPress={() => router.push('/(tabs)/policies')} />
+            <Summary value={data.customer_count} label="Customers" onPress={() => router.push('/customers')} />
+            <Summary value={data.claim_count} label="Claims" onPress={() => router.push('/(tabs)/claims')} />
           </View>
 
           <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Your recorded timeline</Text></View>
@@ -67,7 +68,9 @@ export default function JourneyScreen() {
               {data.milestones.map((item, index) => (
                 <View key={`${item.kind}-${item.date}-${index}`} style={styles.timelineRow}>
                   <View style={styles.rail}>
-                    <View style={styles.timelineArtwork}><Image source={PartnerAssets.status.journey} style={styles.timelineArtworkImage} resizeMode="contain" /></View>
+                    <View style={styles.timelineArtwork}>
+                      <Ionicons name={journeyMilestoneIcon(item.kind, item.title)} size={18} color="#1457B8" />
+                    </View>
                     {index < data.milestones.length - 1 ? <View style={styles.line} /> : null}
                   </View>
                   <View style={styles.timelineBody}>
@@ -87,8 +90,29 @@ export default function JourneyScreen() {
   );
 }
 
-function Summary({ value, label }: { value: number; label: string }) {
-  return <View style={styles.summaryItem}><Text style={styles.summaryValue}>{value}</Text><Text style={styles.summaryLabel}>{label}</Text></View>;
+function Summary({ value, label, onPress }: { value: number; label: string; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${label}`}
+      onPress={onPress}
+      style={({ pressed }) => [styles.summaryItem, pressed && styles.summaryItemPressed]}
+    >
+      <Text style={styles.summaryValue}>{value}</Text>
+      <Text style={styles.summaryLabel}>{label}</Text>
+      <Ionicons name="chevron-forward" size={12} color="#7A8AA4" />
+    </Pressable>
+  );
+}
+
+function journeyMilestoneIcon(kind: string, title: string): keyof typeof Ionicons.glyphMap {
+  const value = `${kind} ${title}`.toLowerCase();
+  if (value.includes('first customer') || value.includes('customer')) return 'person-add';
+  if (value.includes('first policy')) return 'document-text';
+  if (value.includes('policy') || value.includes('policies')) return 'documents';
+  if (value.includes('₹') || value.includes('premium') || value.includes('month')) return 'cash';
+  if (value.includes('start') || value.includes('journey')) return 'flag';
+  return 'trophy';
 }
 
 function formatDate(value: string) {
@@ -106,7 +130,8 @@ const styles = StyleSheet.create({
   progressMeta: { marginTop: 6, flexDirection: 'row', justifyContent: 'space-between' },
   progressText: { color: '#AEB7C5', ...partnerTheme.typography.meta },
   summary: { marginTop: 9, flexDirection: 'row', borderRadius: partnerTheme.radius.lg, paddingVertical: 11, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  summaryItem: { flex: 1, alignItems: 'center', paddingHorizontal: 5 },
+  summaryItem: { flex: 1, minHeight: 58, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, borderRadius: 12 },
+  summaryItemPressed: { backgroundColor: '#F1F5FB' },
   summaryValue: { color: partnerTheme.colors.ink, fontSize: 17, lineHeight: 22, fontWeight: '800' },
   summaryLabel: { marginTop: 4, color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.meta },
   sectionHeader: { marginTop: 15, marginBottom: 8 },
@@ -114,8 +139,7 @@ const styles = StyleSheet.create({
   timeline: { paddingLeft: 2 },
   timelineRow: { minHeight: 76, flexDirection: 'row' },
   rail: { width: 44, alignItems: 'center' },
-  timelineArtwork: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  timelineArtworkImage: { width: 34, height: 34 },
+  timelineArtwork: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: '#EDF5FF', borderWidth: 1, borderColor: '#D7E7FA' },
   line: { width: 1, flex: 1, marginTop: 2, backgroundColor: partnerTheme.colors.line },
   timelineBody: { flex: 1, paddingBottom: 18 },
   timelineDate: { color: partnerTheme.colors.brand, letterSpacing: 0.4, ...partnerTheme.typography.meta },
