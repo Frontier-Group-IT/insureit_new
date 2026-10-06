@@ -6,15 +6,29 @@ import { useRouter } from 'expo-router';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerWeeklyStory, type PartnerWeeklyStory } from '@/lib/engagement';
+import { getPartnerBusinessRange, type PartnerBusinessRangeSummary } from '@/lib/home';
 import { formatIndianCurrency } from '@/lib/format';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
+
+type ComparisonDays = 7 | 14 | 30;
+
+const COMPARISON_PERIODS: { days: ComparisonDays; label: string }[] = [
+  { days: 7, label: 'Last 7 days' },
+  { days: 14, label: 'Last 14 days' },
+  { days: 30, label: 'Last 30 days' },
+];
 
 export default function WeeklyStoryScreen() {
   const router = useRouter();
   const [data, setData] = useState<PartnerWeeklyStory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [comparisonDays, setComparisonDays] = useState<ComparisonDays>(7);
+  const [comparisonOpen, setComparisonOpen] = useState(false);
+  const [comparisonData, setComparisonData] = useState<PartnerBusinessRangeSummary | null>(null);
+  const [comparisonLoading, setComparisonLoading] = useState(false);
+  const [comparisonError, setComparisonError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -30,6 +44,44 @@ export default function WeeklyStoryScreen() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    if (!data || comparisonDays === 7) {
+      setComparisonData(null);
+      setComparisonError('');
+      setComparisonLoading(false);
+      return;
+    }
+
+    let active = true;
+    const toDate = data.week_end;
+    const fromDate = shiftDate(toDate, -(comparisonDays - 1));
+
+    setComparisonLoading(true);
+    setComparisonError('');
+    void getPartnerBusinessRange(fromDate, toDate)
+      .then((result) => {
+        if (active) setComparisonData(result);
+      })
+      .catch(() => {
+        if (active) {
+          setComparisonData(null);
+          setComparisonError('Unable to load this comparison period.');
+        }
+      })
+      .finally(() => {
+        if (active) setComparisonLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [comparisonDays, data]);
+
+  const comparisonPremium = comparisonDays === 7 ? data?.premium_last_week ?? 0 : comparisonData?.premium_previous_period ?? 0;
+  const comparisonChange = comparisonDays === 7 ? Number(data?.premium_change_percent ?? 0) : Number(comparisonData?.premium_change_percent ?? 0);
+  const comparisonHeading = comparisonDays === 7 ? 'Compared with last week' : `Compared with previous ${comparisonDays} days`;
+  const comparisonPremiumLabel = comparisonDays === 7 ? 'Last week premium' : `Previous ${comparisonDays} days premium`;
 
   return (
     <PartnerScreen eyebrow="YOUR WEEK" title="A week with INSUREIT" onBack={() => router.back()}>
@@ -52,7 +104,7 @@ export default function WeeklyStoryScreen() {
             <View style={styles.heroTopRow}>
               <Text style={styles.dates}>{formatDate(data.week_start)} – {formatDate(data.week_end)}</Text>
               <View style={styles.periodPill}>
-                <Ionicons name="calendar-outline" size={14} color="#FFFFFF" />
+                <Ionicons name="calendar-outline" size={14} color="#0B63CE" />
                 <Text style={styles.periodPillText}>This Week</Text>
               </View>
             </View>
@@ -79,11 +131,42 @@ export default function WeeklyStoryScreen() {
 
           <View style={styles.compareCard}>
             <View style={styles.compareHeader}>
-              <Text style={styles.sectionTitle}>Compared with last week</Text>
-              <View style={styles.rangePill} accessibilityLabel="Comparison period: last 7 days">
-                <Ionicons name="calendar-outline" size={14} color="#33415F" />
-                <Text style={styles.rangePillText}>Last 7 days</Text>
-                <Ionicons name="chevron-down" size={14} color="#33415F" />
+              <Text style={styles.sectionTitle}>{comparisonHeading}</Text>
+              <View style={styles.rangeWrap}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Comparison period: last ${comparisonDays} days`}
+                  accessibilityState={{ expanded: comparisonOpen }}
+                  onPress={() => setComparisonOpen((value) => !value)}
+                  style={({ pressed }) => [styles.rangePill, pressed && styles.cardPressed]}
+                >
+                  <Ionicons name="calendar-outline" size={14} color="#33415F" />
+                  <Text style={styles.rangePillText}>Last {comparisonDays} days</Text>
+                  <Ionicons name={comparisonOpen ? 'chevron-up' : 'chevron-down'} size={14} color="#33415F" />
+                </Pressable>
+                {comparisonOpen ? (
+                  <View style={styles.rangeMenu}>
+                    {COMPARISON_PERIODS.map((item) => (
+                      <Pressable
+                        key={item.days}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Compare using ${item.label.toLowerCase()}`}
+                        onPress={() => {
+                          setComparisonDays(item.days);
+                          setComparisonOpen(false);
+                        }}
+                        style={({ pressed }) => [
+                          styles.rangeOption,
+                          item.days === comparisonDays && styles.rangeOptionActive,
+                          pressed && styles.cardPressed,
+                        ]}
+                      >
+                        <Text style={[styles.rangeOptionText, item.days === comparisonDays && styles.rangeOptionTextActive]}>{item.label}</Text>
+                        {item.days === comparisonDays ? <Ionicons name="checkmark" size={14} color="#0B63CE" /> : null}
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : null}
               </View>
             </View>
 
@@ -91,12 +174,21 @@ export default function WeeklyStoryScreen() {
               <View style={styles.previousMetric}>
                 <View style={styles.compareIcon}><MiniBars /></View>
                 <View style={styles.previousCopy}>
-                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={styles.compareValue}>{formatIndianCurrency(data.premium_last_week)}</Text>
-                  <Text style={styles.compareLabel}>Last week premium</Text>
+                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={styles.compareValue}>
+                    {comparisonLoading ? 'Updating…' : comparisonError ? '—' : formatIndianCurrency(comparisonPremium)}
+                  </Text>
+                  <Text style={styles.compareLabel}>{comparisonError || comparisonPremiumLabel}</Text>
                 </View>
               </View>
               <View style={styles.compareDivider} />
-              <Trend value={Number(data.premium_change_percent || 0)} />
+              {comparisonLoading || comparisonError ? (
+                <View style={styles.trendPlaceholder}>
+                  <Ionicons name={comparisonError ? 'alert-circle-outline' : 'sync-outline'} size={20} color="#728198" />
+                  <Text style={styles.trendPlaceholderText}>{comparisonError ? 'Try another period' : 'Refreshing comparison'}</Text>
+                </View>
+              ) : (
+                <Trend value={comparisonChange} />
+              )}
             </View>
           </View>
 
@@ -173,6 +265,15 @@ function ReflectionGrowth() {
   );
 }
 
+function shiftDate(value: string, days: number) {
+  const date = new Date(`${value}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function formatDate(value: string) {
   const d = new Date(`${value}T00:00:00`);
   return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short' }).format(d);
@@ -185,8 +286,8 @@ const styles = StyleSheet.create({
   heroGlowSmall: { position: 'absolute', width: 188, height: 188, borderRadius: 94, right: 28, top: -120, backgroundColor: 'rgba(43, 137, 245, 0.22)' },
   heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   dates: { flex: 1, color: '#B9D5FF', fontSize: 12, lineHeight: 16, fontWeight: '500' },
-  periodPill: { minHeight: 30, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, borderRadius: 999, backgroundColor: 'rgba(78, 156, 244, 0.44)' },
-  periodPillText: { color: '#FFFFFF', fontSize: 11, lineHeight: 15, fontWeight: '600' },
+  periodPill: { minHeight: 30, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, borderRadius: 999, backgroundColor: '#FFFFFF' },
+  periodPillText: { color: '#0B63CE', fontSize: 11, lineHeight: 15, fontWeight: '700' },
   heroMainRow: { minHeight: 78, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10 },
   heroCopy: { flex: 1, minWidth: 0, paddingTop: 7, paddingBottom: 5 },
   heroValue: { color: '#FFFFFF', fontSize: 31, lineHeight: 37, fontWeight: '800', letterSpacing: -0.8 },
@@ -205,8 +306,14 @@ const styles = StyleSheet.create({
   compareHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   sectionHeader: { marginTop: 19, marginBottom: 9, paddingHorizontal: 3 },
   sectionTitle: { flexShrink: 1, color: '#07142F', fontSize: 15, lineHeight: 20, fontWeight: '800', letterSpacing: -0.2 },
+  rangeWrap: { position: 'relative', zIndex: 20 },
   rangePill: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, borderColor: '#E1E6EF', backgroundColor: '#FFFFFF' },
   rangePillText: { color: '#1B2944', fontSize: 10.5, lineHeight: 14, fontWeight: '600' },
+  rangeMenu: { position: 'absolute', top: 36, right: 0, width: 140, overflow: 'hidden', borderRadius: 12, borderWidth: 1, borderColor: '#E1E6EF', backgroundColor: '#FFFFFF', shadowColor: '#163565', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 8 },
+  rangeOption: { minHeight: 38, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  rangeOptionActive: { backgroundColor: '#EEF6FF' },
+  rangeOptionText: { color: '#5D6B80', fontSize: 10.5, fontWeight: '600' },
+  rangeOptionTextActive: { color: '#0B63CE', fontWeight: '800' },
   compareBody: { minHeight: 69, marginTop: 12, flexDirection: 'row', alignItems: 'center' },
   previousMetric: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12, paddingRight: 13 },
   compareIcon: { width: 47, height: 47, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F0EAFE' },
@@ -217,6 +324,8 @@ const styles = StyleSheet.create({
   compareLabel: { marginTop: 3, color: '#77839A', fontSize: 10.5, lineHeight: 14, fontWeight: '500' },
   compareDivider: { width: StyleSheet.hairlineWidth, height: 48, marginHorizontal: 12, backgroundColor: '#DCE2EC' },
   trend: { width: 144, minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 12, borderRadius: 12 },
+  trendPlaceholder: { width: 144, minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, borderRadius: 12, backgroundColor: '#F5F7FA' },
+  trendPlaceholderText: { flex: 1, color: '#728198', fontSize: 9.5, lineHeight: 12, fontWeight: '600' },
   trendValue: { fontSize: 15, lineHeight: 19, fontWeight: '800' },
   trendCaption: { marginTop: 2, fontSize: 9.5, lineHeight: 12, fontWeight: '500' },
   nextCard: { minHeight: 79, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 16, paddingHorizontal: 15, paddingVertical: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E7F0', shadowColor: '#163565', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
@@ -227,8 +336,8 @@ const styles = StyleSheet.create({
   nextBody: { flex: 1, minWidth: 0 },
   nextTitle: { color: '#07142F', fontSize: 13.5, lineHeight: 18, fontWeight: '800' },
   nextText: { marginTop: 5, color: '#65728C', fontSize: 10.5, lineHeight: 15, fontWeight: '500' },
-  endCard: { position: 'relative', overflow: 'hidden', minHeight: 104, marginTop: 16, flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderRadius: 16, paddingHorizontal: 15, paddingVertical: 16, backgroundColor: '#EAF9F7', borderWidth: 1, borderColor: '#CEECE8' },
-  reflectionGlow: { position: 'absolute', width: 190, height: 190, borderRadius: 95, right: -62, top: -72, backgroundColor: 'rgba(196, 242, 235, 0.55)' },
+  endCard: { position: 'relative', overflow: 'hidden', minHeight: 104, marginTop: 16, flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderRadius: 16, paddingHorizontal: 15, paddingVertical: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E7F0', shadowColor: '#163565', shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 1 },
+  reflectionGlow: { position: 'absolute', width: 190, height: 190, borderRadius: 95, right: -62, top: -72, backgroundColor: 'rgba(196, 242, 235, 0.20)' },
   reflectionIcon: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', backgroundColor: '#D7F4EF' },
   reflectionCopy: { flex: 1, minWidth: 0, paddingTop: 2, paddingRight: 72 },
   endEyebrow: { color: '#31877E', fontSize: 9, lineHeight: 12, fontWeight: '800', letterSpacing: 0.65 },
