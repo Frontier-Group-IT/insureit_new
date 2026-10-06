@@ -441,9 +441,10 @@ async function completeResponse(
   const admin = createSupabaseAdminClient();
   const { data: blob, error: downloadError } = await admin.storage.from(BUCKET).download(input.storage_path);
   if (downloadError || !blob) return json({ ok: false, error: "The replacement upload did not complete." }, 400);
+  const proposalForm = intake.policy_type === "life" || intake.policy_type === "health";
   if (blob.size > MAX_FILE_SIZE) {
     await admin.storage.from(BUCKET).remove([input.storage_path]);
-    return json({ ok: false, error: "Policy copy must be 15 MB or smaller." }, 400);
+    return json({ ok: false, error: `${proposalForm ? "Proposal form" : "Policy copy"} must be 15 MB or smaller.` }, 400);
   }
 
   const uploader = uploaderColumns(identity);
@@ -476,12 +477,12 @@ async function completeResponse(
   let update = admin
     .from("policy_intake_requests")
     .update({
-      status: "processing",
+      status: proposalForm ? "ready_for_review" : "processing",
       storage_path: input.storage_path,
       file_name: input.file.name,
       mime_type: input.file.type,
       file_size: blob.size,
-      ocr_status: "pending",
+      ocr_status: proposalForm ? "completed" : "pending",
       ocr_fields: [],
       ocr_warnings: [],
       ocr_parser_id: null,
@@ -500,18 +501,25 @@ async function completeResponse(
   const { error: updateError } = await update;
   if (updateError) return json({ ok: false, error: "Could not attach the replacement policy copy." }, 500);
 
-  after(async () => {
-    await processStoredOcr(input.id);
-  });
+  if (!proposalForm) {
+    after(async () => {
+      await processStoredOcr(input.id);
+    });
+  }
 
-  return json({ ok: true, id: input.id, number: intake.intake_number, status: "processing" });
+  return json({
+    ok: true,
+    id: input.id,
+    number: intake.intake_number,
+    status: proposalForm ? "ready_for_review" : "processing",
+  });
 }
 
 async function ownIntake(identity: PartnerIdentity, id: string) {
   const admin = createSupabaseAdminClient();
   let query = admin
     .from("policy_intake_requests")
-    .select("id,intake_number,status,storage_bucket,storage_path")
+    .select("id,intake_number,status,policy_type,storage_bucket,storage_path")
     .eq("id", id);
 
   const profileSubmitterId = submittedByProfileId(identity);
@@ -523,6 +531,7 @@ async function ownIntake(identity: PartnerIdentity, id: string) {
     id: string;
     intake_number: string;
     status: string;
+    policy_type: PolicyType | null;
     storage_bucket: string;
     storage_path: string;
   }>();
