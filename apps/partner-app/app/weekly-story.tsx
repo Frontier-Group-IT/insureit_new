@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerWeeklyStory, type PartnerWeeklyStory } from '@/lib/engagement';
 import { getPartnerBusinessRange, type PartnerBusinessRangeSummary } from '@/lib/home';
@@ -118,40 +119,47 @@ export default function WeeklyStoryScreen() {
             <View style={styles.compareHeader}>
               <Text style={styles.sectionTitle}>{comparisonDays === 7 ? 'Compared with last week' : `Compared with previous ${comparisonDays} days`}</Text>
               <View style={styles.rangeWrap}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Comparison period: last ${comparisonDays} days`}
-                  accessibilityState={{ expanded: comparisonOpen }}
-                  onPress={() => setComparisonOpen((value) => !value)}
-                  style={({ pressed }) => [styles.rangePill, pressed && styles.cardPressed]}
+                <PartnerAnchoredDropdown
+                  visible={comparisonOpen}
+                  onDismiss={() => setComparisonOpen(false)}
+                  align="right"
+                  menuWidth={142}
+                  menu={(
+                    <View style={styles.rangeMenu}>
+                      {[7, 14, 30].map((days) => (
+                        <Pressable
+                          key={days}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Use last ${days} days comparison`}
+                          onPress={() => {
+                            setComparisonDays(days as 7 | 14 | 30);
+                            setComparisonOpen(false);
+                          }}
+                          style={({ pressed }) => [
+                            styles.rangeOption,
+                            comparisonDays === days && styles.rangeOptionActive,
+                            pressed && styles.cardPressed,
+                          ]}
+                        >
+                          <Text style={[styles.rangeOptionText, comparisonDays === days && styles.rangeOptionTextActive]}>{`Last ${days} days`}</Text>
+                          {comparisonDays === days ? <Ionicons name="checkmark" size={14} color="#1765C1" /> : null}
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
                 >
-                  <Ionicons name="calendar-outline" size={14} color="#33415F" />
-                  <Text style={styles.rangePillText}>{`Last ${comparisonDays} days`}</Text>
-                  <Ionicons name={comparisonOpen ? 'chevron-up' : 'chevron-down'} size={14} color="#33415F" />
-                </Pressable>
-                {comparisonOpen ? (
-                  <View style={styles.rangeMenu}>
-                    {[7, 14, 30].map((days) => (
-                      <Pressable
-                        key={days}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Use last ${days} days comparison`}
-                        onPress={() => {
-                          setComparisonDays(days as 7 | 14 | 30);
-                          setComparisonOpen(false);
-                        }}
-                        style={({ pressed }) => [
-                          styles.rangeOption,
-                          comparisonDays === days && styles.rangeOptionActive,
-                          pressed && styles.cardPressed,
-                        ]}
-                      >
-                        <Text style={[styles.rangeOptionText, comparisonDays === days && styles.rangeOptionTextActive]}>{`Last ${days} days`}</Text>
-                        {comparisonDays === days ? <Ionicons name="checkmark" size={14} color="#1765C1" /> : null}
-                      </Pressable>
-                    ))}
-                  </View>
-                ) : null}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Comparison period: last ${comparisonDays} days`}
+                    accessibilityState={{ expanded: comparisonOpen }}
+                    onPress={() => setComparisonOpen((value) => !value)}
+                    style={({ pressed }) => [styles.rangePill, pressed && styles.cardPressed]}
+                  >
+                    <Ionicons name="calendar-outline" size={14} color="#33415F" />
+                    <Text style={styles.rangePillText}>{`Last ${comparisonDays} days`}</Text>
+                    <Ionicons name={comparisonOpen ? 'chevron-up' : 'chevron-down'} size={14} color="#33415F" />
+                  </Pressable>
+                </PartnerAnchoredDropdown>
               </View>
             </View>
 
@@ -298,7 +306,7 @@ const styles = StyleSheet.create({
   rangeWrap: { position: 'relative', zIndex: 10 },
   rangePill: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, borderColor: '#E1E6EF', backgroundColor: '#FFFFFF' },
   rangePillText: { color: '#1B2944', fontSize: 10.5, lineHeight: 14, fontWeight: '600' },
-  rangeMenu: { position: 'absolute', top: 36, right: 0, width: 142, overflow: 'hidden', borderRadius: 12, borderWidth: 1, borderColor: '#E1E6EF', backgroundColor: '#FFFFFF', shadowColor: '#163565', shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 8 },
+  rangeMenu: { overflow: 'hidden', borderRadius: 12, borderWidth: 1, borderColor: '#E1E6EF', backgroundColor: '#FFFFFF', shadowColor: '#163565', shadowOpacity: 0.12, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 8 },
   rangeOption: { minHeight: 38, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   rangeOptionActive: { backgroundColor: '#F0F6FF' },
   rangeOptionText: { color: '#526078', fontSize: 11, fontWeight: '600' },
