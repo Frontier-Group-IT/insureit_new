@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Image,
   Pressable,
@@ -14,8 +13,9 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PartnerBanner } from '@/components/ui/partner-banner';
+import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
+import { PartnerPagination } from '@/components/ui/partner-pagination';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
-import { getPartnerInsurerLogoSource } from '@/lib/catalog-logos';
 import {
   getPartnerClaimSummary,
   listPartnerClaims,
@@ -26,7 +26,7 @@ import {
 import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
-import { usePartnerPagedQuery } from '@/lib/use-partner-paged-query';
+import { usePartnerPageQuery } from '@/lib/use-partner-page-query';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
@@ -65,7 +65,7 @@ export default function ClaimsScreen() {
     return { rows: nextRows, total: nextRows[0]?.total_count ?? 0 };
   }, [debouncedSearch, state]);
 
-  const collection = usePartnerPagedQuery<PartnerClaimRow>({
+  const collection = usePartnerPageQuery<PartnerClaimRow>({
     scopeKey: cacheScopeKey,
     key: `claims:list:${state}:${debouncedSearch || 'all'}`,
     pageSize: PAGE_SIZE,
@@ -208,26 +208,16 @@ export default function ClaimsScreen() {
   );
 
   const footer = rows.length ? (
-    <View style={styles.listFooter}>
-      {collection.loadingMore ? (
-        <View style={styles.loadingMore}>
-          <ActivityIndicator color="#1738D5" />
-          <Text style={styles.loadingMoreText}>Loading more claims…</Text>
-        </View>
-      ) : collection.rows.length < collection.total ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Load more claims"
-          onPress={() => void collection.loadMore()}
-          style={({ pressed }) => [styles.loadMoreButton, pressed && styles.pressed]}
-        >
-          <Text style={styles.loadMoreText}>Load More Claims</Text>
-          <Ionicons name="chevron-down" size={12} color="#1738D5" />
-        </Pressable>
-      ) : (
-        <Text style={styles.endText}>End of claim book</Text>
-      )}
-    </View>
+    <PartnerPagination
+      page={collection.page}
+      totalPages={collection.totalPages}
+      total={collection.total}
+      pageSize={PAGE_SIZE}
+      rowCount={rows.length}
+      onPrevious={collection.previousPage}
+      onNext={collection.nextPage}
+      disabled={collection.changingPage}
+    />
   ) : null;
 
   return (
@@ -259,7 +249,6 @@ function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void
   const rejected = /reject/i.test(row.current_status || '');
   const isNew = /^new$/i.test((row.current_status || '').trim());
   const vehicleLabel = row.vehicle_no || 'Vehicle not linked';
-  const insurerLogo = getPartnerInsurerLogoSource(row.insurer_name);
   const mode = claimModeLabel(row.claim_service_mode);
 
   return (
@@ -270,9 +259,9 @@ function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void
       style={({ pressed }) => [styles.claimCard, pressed && styles.claimCardPressed]}
     >
       <View style={styles.claimIconWrap}>
-        <Image
-          source={insurerLogo ?? PartnerAssets.navigation.claims}
-          resizeMode="contain"
+        <PartnerInsurerLogo
+          name={row.insurer_name}
+          fallback={PartnerAssets.navigation.claims}
           style={styles.claimIcon}
           accessibilityLabel={row.insurer_name ? `${row.insurer_name} logo` : 'Claim'}
         />
