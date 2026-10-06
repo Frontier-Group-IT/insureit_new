@@ -66,7 +66,9 @@
 - Removed the visible `Draft restored` banner from the details screen completely.
 - Draft persistence/restoration continues silently for lead source, policy type and customer mobile; the existing document re-selection behavior, submit flow, routes and permissions are unchanged.
 - No schema/RLS/backend/native/runtime change and no APK/AAB created.
-- Evidence state: **IMPLEMENTED; PR/CI pending; NOT MERGED; NOT DEPLOYED.**
+- PR #2798 merged as `bd1dfeae41257502a7e962fde55f028908bb4090`; Partner Verify #487 and Web Verify #5286 passed.
+- Production runtime `0.2.0` OTA was **DEPLOYED** via workflow run #48 from main `62c6b2c6e230558e3dcc7ed0051df3052344a30e`, update group `a484c100-9edd-47db-97f6-17a173412c31`.
+- Evidence state: **MERGED + DEPLOYED; installed-device verification pending; NO APK/AAB CREATED.**
 
 ## 2026-10-06 — More/Profile icon and profile-photo refinement
 
