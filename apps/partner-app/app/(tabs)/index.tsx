@@ -231,7 +231,7 @@ export default function PartnerHomeScreen() {
                 />
                 <View style={styles.metricDivider} />
                 <MetricCell
-                  asset={PartnerAssets.actions.payoutGrowth}
+                  asset={PartnerAssets.actions.payoutRefresh}
                   value={rangeData?.commission_available ? formatIndianCurrency(rangeData.commission_earned ?? 0) : '—'}
                   label="Commission Earned"
                 />
@@ -542,14 +542,14 @@ const styles = StyleSheet.create({
   metricCell: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9 },
   metricDivider: { width: StyleSheet.hairlineWidth, height: 35, marginHorizontal: 12, backgroundColor: '#C9D4E2' },
   metricIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#EBF6FF',
   },
-  metricImage: { width: 25, height: 25 },
+  metricImage: { width: 31, height: 31 },
   metricCopy: { flex: 1, minWidth: 0 },
   metricValue: { color: '#17366C', fontSize: 15, fontWeight: '800' },
   metricLabel: { marginTop: 1, color: '#7B8799', fontSize: 8.5, fontWeight: '600' },

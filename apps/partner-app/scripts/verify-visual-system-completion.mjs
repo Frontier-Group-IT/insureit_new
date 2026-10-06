@@ -20,6 +20,7 @@ const stateView = read('components/ui/partner-state-view.tsx');
 const screen = read('components/partner-screen.tsx');
 const listScreen = read('components/partner-list-screen.tsx');
 const more = read('app/(tabs)/more.tsx');
+const home = read('app/(tabs)/index.tsx');
 const business = read('app/(tabs)/business.tsx');
 const customers = read('app/customers.tsx');
 const policies = read('app/(tabs)/policies.tsx');
@@ -45,6 +46,12 @@ const pulse = read('app/pulse.tsx');
 for (const asset of ['policyChecklist', 'appsGrid', 'settings', 'supportVerified']) {
   requireText(assets, `${asset}: require(`, `Partner asset registry must expose ${asset}.`);
 }
+
+requireText(home, 'PartnerAssets.actions.policyChecklist', 'Home Policies Sold metric must use the approved document/shield artwork.');
+requireText(home, 'PartnerAssets.actions.payoutRefresh', 'Home Commission Earned metric must use the approved stacked-coins artwork.');
+requireText(home, 'width: 40', 'Home metric icon tile must retain the larger reference-sized treatment.');
+requireText(home, 'metricImage: { width: 31, height: 31 }', 'Home metric artwork must remain visibly prominent inside the metric tile.');
+if (home.includes('asset={PartnerAssets.actions.payoutGrowth}')) throw new Error('Home Commission Earned must not regress to the old payout-growth artwork.');
 
 for (const feature of [
   'policy intake', 'renewal', 'claim', 'customer', 'policies', 'search', 'support', 'settings', 'profile',
