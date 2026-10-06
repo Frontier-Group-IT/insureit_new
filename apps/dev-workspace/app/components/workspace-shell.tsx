@@ -1,3 +1,4 @@
+import DeveloperIdentityBadge from "./developer-identity";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -48,7 +49,7 @@ export default function WorkspaceShell({
       <section className="content">
         <header className="topbar">
           <div><small>INSUREIT / ENGINEERING</small><b>{active === "Home" ? "Developer Workspace" : "Configuration Registry"}</b></div>
-          <div className="top-actions"><span className="secure">● Protected workspace</span><a href="https://insureit.tech">insureit.tech ↗</a></div>
+          <div className="top-actions"><span className="secure">● Protected workspace</span><DeveloperIdentityBadge /><a href="https://insureit.tech">insureit.tech ↗</a></div>
         </header>
         {children}
       </section>
