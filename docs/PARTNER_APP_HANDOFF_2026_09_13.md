@@ -53,9 +53,11 @@
 - Menu rows now favor the existing professional Partner action/navigation asset families for Search all business, Policy Intake, Renewals, Customers and Activity while preserving all labels/routes/permissions.
 - Profile now shows a larger circular avatar/image with a white ring and blue bottom-right camera badge modeled on the Customer app reference.
 - To avoid any new native dependency, image selection uses the already-installed `expo-document-picker` instead of adding `expo-image-picker` to Partner runtime 0.2.0.
-- Profile photos persist in a dedicated private Supabase Storage bucket `partner-profile-photos`; migration `20261006113500_partner_profile_photo_storage.sql` grants authenticated users read/insert/update/delete only within their own auth-user folder. The migration is committed only and has **not** been applied.
+- Profile photos persist in a dedicated private Supabase Storage bucket `partner-profile-photos`; migration `20261006113500_partner_profile_photo_storage.sql` grants authenticated users read/insert/update/delete only within their own auth-user folder. The migration is **APPLIED + VERIFIED** in production.
+- PR #2779 merged as `fa6d7ec0cfe06663c5f754fe897b69fb415d2aa5` after Partner Verify #469 and Web Verify #5258 both passed.
+- Partner production OTA runtime `0.2.0` was **DEPLOYED** by workflow run #41 from main commit `7714bf2d448ac645becc8e58b6d4b6be225e8d0f`, update group `a988db57-6cb3-4e0f-b647-e38e8a62150f`.
 - No Partner business tables, commercial scope, navigation, role permissions, runtime/native config or APK/AAB are changed.
-- Evidence state: **IMPLEMENTED; PR/CI pending; NOT MERGED; NOT DEPLOYED; migration NOT APPLIED; NO APK/AAB CREATED.**
+- Evidence state: **MERGED + APPLIED + DEPLOYED; installed-device verification pending; NO APK/AAB CREATED.**
 
 
 > **Purpose:** durable handoff for any new AI agent continuing INSUREIT Partner work.
