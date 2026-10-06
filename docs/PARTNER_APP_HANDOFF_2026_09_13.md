@@ -59,6 +59,15 @@
 ---
 
 # INSUREIT Partner App — Operational Handoff (2026-09-13)
+## 2026-10-06 — Business page icon styling unification
+
+- PR #2824 merged as `d5d299fdbb93bd0dc0b74c81575c599af059ce80` after Partner Verify #512 and Web Verify #5327 passed.
+- Business Quick Actions use the approved compact blue Renewals, Claims and Customers assets; Payout uses a matching blue wallet + rupee badge treatment.
+- Business by Product now maps categories to differentiated professional blue icons rather than reusing the same Motor artwork, and My Network uses the same blue visual family for Partner Family and Customers.
+- Existing business calculations, payout authorization, data loading, routing, permissions, API/RPC contracts, schema, RLS and native/runtime configuration are unchanged.
+- Production runtime `0.2.0` OTA **DEPLOYED** via workflow run #63 from main `57d33d112a7387ae8b0fd11108137f3f1212f8b0`, update group `a722eb87-b113-4faf-bb9c-d9b54ccd9d15`.
+- Evidence state: **MERGED + DEPLOYED; installed-device verification pending; NO APK/AAB CREATED.**
+
 ## 2026-10-06 — Login horizontal branding
 
 - Branch: `ui/partner-login-horizontal-branding-2026-10-06`.
