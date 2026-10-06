@@ -67,7 +67,9 @@
 - Added subtle pressed states, chevrons where appropriate, and accessibility labels while preserving the existing layout hierarchy and all live values.
 - Updated the Partner visual regression contract so CI validates the new icon markers and clickable destinations instead of the superseded image-asset list.
 - No impact query/RPC, business calculation, permissions, schema/RLS, runtime/native dependency or build configuration change.
-- Evidence state: **IMPLEMENTED; PR/CI pending; NOT MERGED; NOT DEPLOYED; NO APK/AAB CREATED.**
+- PR #2833 merged as `e865c7ae0b2c3bd448ea0c944fc5161e2c2d57b7`; Partner Verify #517 and Web Verify #5336 passed.
+- Production runtime `0.2.0` OTA was **DEPLOYED** via workflow run #66 from main `167a6b86e9b1f0556601a33f812c11e9e7ba2816`, update group `e78b180d-9909-4156-912e-0bb0ad433324`.
+- Evidence state: **MERGED + DEPLOYED; installed-device verification pending; NO APK/AAB CREATED.**
 
 ## 2026-10-06 — Business page icon styling unification
 
