@@ -66,7 +66,9 @@
 - Existing `YOUR SAFETY, OUR PROMISE` tagline remains centered below the combined logo/wordmark row.
 - Welcome card, Email/Password fields, forgot-password link, sign-in behavior, authentication and navigation remain unchanged.
 - No backend/schema/RLS/native/runtime change and no APK/AAB created.
-- Evidence state: **IMPLEMENTED; PR/CI pending; NOT MERGED; NOT DEPLOYED.**
+- PR #2819 merged as `dc4e67708d379db70fe209dd7f3615d8d489db45`; Partner Verify #505 and Web Verify #5317 passed.
+- Production runtime `0.2.0` OTA was **DEPLOYED** via workflow run #58 from main `e61e4803ebce4160cf99bc93b16ea186a2015e23`, update group `4e20938f-771c-4ca4-af05-82e2ae9fc3f3`.
+- Evidence state: **MERGED + DEPLOYED; installed-device verification pending; NO APK/AAB CREATED.**
 
 ## 2026-10-06 — Home metric icon refinement
 
