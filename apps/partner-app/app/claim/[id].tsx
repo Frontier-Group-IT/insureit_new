@@ -79,7 +79,6 @@ export default function ClaimDetailScreen() {
                 </View>
               </View>
               <View style={styles.statusFooter}>
-                <Text numberOfLines={1} style={styles.statusFooterText}>{data.insurer.name || 'Insurer not recorded'}</Text>
                 <View style={styles.summaryMetaRow}>
                   <View style={styles.summaryMetaCard}>
                     <Ionicons name="options-outline" size={13} color="#5E7190" />
