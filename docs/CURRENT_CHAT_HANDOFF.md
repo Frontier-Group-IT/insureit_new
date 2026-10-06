@@ -1,3 +1,15 @@
+## 2026-10-06 — Intake policy-copy registration guard
+
+- Branch: `fix/intake-policy-copy-registration-guard-2026-10-06`.
+- Motor policies finalized from Policy Intake now perform an explicit server-side current-copy check before invoking the transactional intake finalizer. Missing/stale intake policy copy blocks registration with a clear validation error before policy booking is attempted.
+- The legacy post-book Intake completion fallback is also hardened: it requires the current Intake document, verifies its lineage/storage identity, and verifies the resulting `policy_documents.policy_copy` row before marking the Intake completed.
+- Existing transactional RPC `finalize_policy_intake_motor_v1` remains the canonical finalization path and already inserts the policy copy + closes the Intake atomically.
+- No schema/RLS/native/mobile change. Existing policies are not auto-mutated.
+- Production exception investigated: policy `e9cfc6e9-2b65-470c-a16a-154875e16244` is currently active with no `policy_documents` rows and has no `policy_intake_requests.final_policy_id` lineage, so it cannot be safely auto-backfilled from the current Intake linkage. It requires its actual policy copy/source Intake to be identified before data repair.
+- **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
+---
+
 ## 2026-10-06 — Partner Policy Intake Life/Health parity
 
 - Branch: `feature/partner-policy-intake-life-health-2026-10-06`; PR #2784.
