@@ -120,11 +120,12 @@ requireText(customerDetail, 'getPartnerCustomerDetail(id)', 'Customer detail mus
 requireText(customerDetail, 'initials(data.customer.customer_name)', 'Customer detail must retain real-customer initials for identity.');
 for (const oldGlyph of ['document-text-outline', 'car-outline', 'shield-outline']) if (customerDetail.includes(`name="${oldGlyph}"`)) throw new Error(`Customer detail feature rows must not regress to ${oldGlyph}.`);
 
-for (const detailAsset of ['navigation.claims', 'status.journey', 'status.claimAttention', 'status.verified']) requireText(claimDetail, `PartnerAssets.${detailAsset}`, `Claim detail is missing ${detailAsset} artwork.`);
+for (const detailAsset of ['navigation.claims', 'status.claimAttention', 'status.verified']) requireText(claimDetail, `PartnerAssets.${detailAsset}`, `Claim detail is missing ${detailAsset} artwork.`);
 requireText(claimDetail, 'getPartnerManufacturerLogoSource', 'Claim detail summary must resolve manufacturer artwork from the linked vehicle make.');
-requireText(claimDetail, 'PartnerAssets.navigation.customers', 'Claim detail insured-person row must keep the approved customer identity artwork.');
+requireText(claimDetail, 'name="person-outline"', 'Claim detail insured-person row must use the approved clean profile icon.');
 requireText(claimDetail, 'getPartnerClaimDetail(id)', 'Claim detail must preserve the existing scoped data service.');
-requireText(claimDetail, 'function timelineArtwork(item: TimelineItem)', 'Claim detail must keep semantic journey artwork mapping.');
+requireText(claimDetail, 'function timelineIcon(item: TimelineItem)', 'Claim detail must keep semantic journey icon mapping.');
+for (const journeyIcon of ['document-text-outline', 'person-add-outline', 'cloud-upload-outline', 'checkmark-circle-outline', 'shield-checkmark-outline']) requireText(claimDetail, journeyIcon, `Claim detail journey is missing ${journeyIcon} semantic icon coverage.`);
 if (claimDetail.includes('styles.dotLatest') || claimDetail.includes('styles.innerDot')) throw new Error('Claim detail must not regress to dot-only journey identity.');
 
 requireText(search, 'PartnerAssets.emptyStates.noSearchResults', 'Universal Search must use the prepared no-results artwork.');
