@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { partnerTheme } from '@/lib/theme';
@@ -11,6 +11,7 @@ export function PartnerSearchField({
   onClear,
   placeholder = 'Search',
   autoFocus = false,
+  containerStyle,
 }: {
   value: string;
   onChangeText: (value: string) => void;
@@ -18,11 +19,12 @@ export function PartnerSearchField({
   onClear?: () => void;
   placeholder?: string;
   autoFocus?: boolean;
+  containerStyle?: StyleProp<ViewStyle>;
 }) {
   const [focused, setFocused] = useState(false);
 
   return (
-    <View style={[styles.wrap, focused && styles.focused]}>
+    <View style={[styles.wrap, containerStyle, focused && styles.focused]}>
       <Ionicons
         name="search-outline"
         size={17}
