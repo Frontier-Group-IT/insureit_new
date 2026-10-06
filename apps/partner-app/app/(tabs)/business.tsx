@@ -25,6 +25,7 @@ type OverviewCardProps = {
   label: string;
   changeLabel?: string;
   compareLabel?: string;
+  onPress?: () => void;
 };
 
 type OverviewRange = 'mtd' | 'last_month' | 'last_6_months' | 'custom';
@@ -282,6 +283,7 @@ export default function BusinessScreen() {
               label="Premium Generated"
               changeLabel={overviewChangeLabel}
               compareLabel={overview ? 'vs previous period' : 'vs last month'}
+              onPress={() => router.push('/business-report')}
             />
             <OverviewCard
               icon="document-text-outline"
@@ -289,6 +291,7 @@ export default function BusinessScreen() {
               label="Policies Sold"
               changeLabel={overview ? `${overview.policies} in range` : policiesChange === null ? 'Current month' : changeText(policiesChange, true)}
               compareLabel={overview ? optionLabel(OVERVIEW_OPTIONS, overviewRange) : 'vs last month'}
+              onPress={() => router.push('/(tabs)/policies')}
             />
             <OverviewCard
               icon="wallet-outline"
@@ -300,6 +303,7 @@ export default function BusinessScreen() {
               label="Commission Earned"
               changeLabel={overview ? (overview.commission_available ? 'Selected range' : 'Restricted') : payout?.available ? `${payout.paid_count} paid` : 'Restricted'}
               compareLabel={overview ? optionLabel(OVERVIEW_OPTIONS, overviewRange) : 'vs last month'}
+              onPress={() => router.push('/business-report')}
             />
             <OverviewCard
               icon="people-outline"
@@ -307,6 +311,7 @@ export default function BusinessScreen() {
               label="Customers"
               changeLabel={overview ? 'Selected range' : 'Current portfolio'}
               compareLabel={overview ? optionLabel(OVERVIEW_OPTIONS, overviewRange) : 'vs last month'}
+              onPress={() => router.push('/customers')}
             />
           </View>
 
@@ -450,9 +455,15 @@ function SectionHeader({ title, action }: { title: string; action?: ReactNode })
   );
 }
 
-function OverviewCard({ icon, value, label, changeLabel, compareLabel = 'vs last month' }: OverviewCardProps) {
+function OverviewCard({ icon, value, label, changeLabel, compareLabel = 'vs last month', onPress }: OverviewCardProps) {
   return (
-    <View style={styles.overviewCard}>
+    <Pressable
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={onPress ? `Open ${label}` : undefined}
+      disabled={!onPress}
+      onPress={onPress}
+      style={({ pressed }) => [styles.overviewCard, pressed && onPress ? styles.pressed : null]}
+    >
       <View style={styles.overviewIcon}><Ionicons name={icon} size={17} color="#1951AE" /></View>
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={styles.overviewValue}>{value}</Text>
       <Text numberOfLines={2} style={styles.overviewLabel}>{label}</Text>
@@ -461,7 +472,7 @@ function OverviewCard({ icon, value, label, changeLabel, compareLabel = 'vs last
         <Text numberOfLines={1} style={styles.growthText}>{changeLabel}</Text>
       </View>
       <Text numberOfLines={1} style={styles.vsText}>{compareLabel}</Text>
-    </View>
+    </Pressable>
   );
 }
 
