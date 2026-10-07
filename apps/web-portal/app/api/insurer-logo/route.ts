@@ -78,20 +78,29 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const managedLogos = await loadManagedLogoMap();
-  const managedPath = findManagedLogo(insurerName, managedLogos);
-  if (managedPath) {
-    const admin = createSupabaseAdminClient();
-    const { data } = admin.storage.from(INSURER_LOGO_BUCKET).getPublicUrl(managedPath);
-    if (data.publicUrl) {
-      // Master Data is authoritative. Managed logos can be replaced at any time, so do
-      // not cache this name-based redirect. The storage object itself is immutable and
-      // safely cached because each replacement upload gets a new path.
-      return withoutCache(NextResponse.redirect(data.publicUrl, 307));
+  try {
+    const managedLogos = await loadManagedLogoMap();
+    const managedPath = findManagedLogo(insurerName, managedLogos);
+    if (managedPath) {
+      const admin = createSupabaseAdminClient();
+      const { data } = admin.storage.from(INSURER_LOGO_BUCKET).getPublicUrl(managedPath);
+      if (data.publicUrl) {
+        // Master Data is authoritative. Managed logos can be replaced at any time, so do
+        // not cache this name-based redirect. The storage object itself is immutable and
+        // safely cached because each replacement upload gets a new path.
+        return withoutCache(NextResponse.redirect(data.publicUrl, 307));
+      }
     }
+  } catch (error) {
+    // Cloudflare/OpenNext can fail managed-cache resolution independently of the
+    // built-in catalog. Never let that make every insurer logo a broken image.
+    console.error("Managed insurer logo resolution failed; using static fallback", {
+      insurerName,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 
-  // Built-in logos are fallback-only when Master Data has no managed logo.
+  // Built-in logos are fallback-only when Master Data has no usable managed logo.
   const staticLogo = getStaticInsurerLogo(insurerName);
   if (staticLogo) return withCache(NextResponse.redirect(new URL(staticLogo, request.nextUrl.origin), 307));
 
