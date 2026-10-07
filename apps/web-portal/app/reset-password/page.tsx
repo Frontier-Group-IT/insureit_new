@@ -15,6 +15,15 @@ function readAuthRedirectError() {
   return hash.get("error_description") ?? query.get("error_description") ?? hash.get("error") ?? query.get("error");
 }
 
+function strongPasswordError(password: string) {
+  if (password.length < 12) return "Password must be at least 12 characters.";
+  if (!/[a-z]/.test(password)) return "Password must include a lowercase letter.";
+  if (!/[A-Z]/.test(password)) return "Password must include an uppercase letter.";
+  if (!/[0-9]/.test(password)) return "Password must include a number.";
+  if (!/[^A-Za-z0-9]/.test(password)) return "Password must include a symbol.";
+  return "";
+}
+
 function hasRecoveryMarker() {
   if (typeof window === "undefined") return false;
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
@@ -105,8 +114,9 @@ export default function ResetPasswordPage() {
       setMessage("The password reset session is not ready. Open the latest reset email and try again.");
       return;
     }
-    if (password.length < 8) {
-      setMessage("Password must be at least 8 characters.");
+    const passwordError = strongPasswordError(password);
+    if (passwordError) {
+      setMessage(passwordError);
       return;
     }
     if (password !== confirmPassword) {
@@ -182,5 +192,5 @@ export default function ResetPasswordPage() {
 }
 
 function PasswordField({ id, label, value, onChange, visible, onToggle, disabled }: { id: string; label: string; value: string; onChange: (value: string) => void; visible: boolean; onToggle: () => void; disabled: boolean }) {
-  return <div className="grid gap-2"><label htmlFor={id}>{label}</label><div className="relative"><input id={id} type={visible ? "text" : "password"} value={value} onChange={(event) => onChange(event.target.value)} minLength={8} required disabled={disabled} className="w-full pr-12" placeholder="At least 8 characters" autoComplete="new-password" /><button type="button" onClick={onToggle} disabled={disabled} className="absolute inset-y-0 right-0 grid w-11 place-items-center text-[#53627A] hover:text-[#071D49]" aria-label={visible ? "Hide password" : "Show password"}>{visible ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}</button></div></div>;
+  return <div className="grid gap-2"><label htmlFor={id}>{label}</label><div className="relative"><input id={id} type={visible ? "text" : "password"} value={value} onChange={(event) => onChange(event.target.value)} minLength={12} required disabled={disabled} className="w-full pr-12" placeholder="12+ chars with upper, lower, number & symbol" autoComplete="new-password" /><button type="button" onClick={onToggle} disabled={disabled} className="absolute inset-y-0 right-0 grid w-11 place-items-center text-[#53627A] hover:text-[#071D49]" aria-label={visible ? "Hide password" : "Show password"}>{visible ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}</button></div></div>;
 }
