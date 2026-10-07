@@ -1,3 +1,17 @@
+## 2026-10-07 — Partner Policy Intake Details compact identity redesign
+
+- Branch: `ui/partner-policy-intake-detail-redesign-v2-2026-10-07`.
+- Partner App → Policy Intake Details now uses a simple `Policy Intake` page title with the intake number removed from the top header.
+- The status summary uses the OCR insurer logo (with fallback), intake number as the primary identity, a right-aligned semantic status badge (red rejected / green completed / orange active-review states), and the updated date/time directly beneath the badge.
+- Removed the generic status artwork, `CURRENT STATUS` label, header tracking subtitle, and duplicate bottom `Updated` line while preserving the existing four-step progress rail.
+- Extracted Policy details now carries the insurer logo; Vehicle details uses a new reusable `PartnerManufacturerLogo` backed by the existing catalog mapping with fallback artwork.
+- Replacement upload, OCR/manual-review behavior, Operations attention flow, final-policy navigation, submission data, APIs and backend are unchanged.
+- Added Policy Intake regression assertions to the existing Partner verification script.
+- No database/schema/RLS/API/native dependency/runtime change. **No APK/AAB created.**
+- **IMPLEMENTED ON BRANCH; PR/CI/merge/OTA pending.**
+
+---
+
 ## 2026-10-07 — Partner App Policy Details professional icon system
 
 - Branch: `ui/partner-policy-detail-professional-icons-2026-10-07`.
