@@ -7,7 +7,9 @@
 - Existing Business logo, notification/profile controls, Business title, search/filter row, data, navigation and calculations are unchanged.
 - Added visual-system regression guards for shared asset, height, opacity and shade.
 - No backend/schema/RLS/native dependency changes. No APK/AAB created.
-- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA PENDING.**
+- PR #2871 merged as `2ad9385e239381f50641964efb2f3b1584c4ef0a` after canonical Partner Verify #538 and Web Verify #5384 passed.
+- Release-marker PR #2874 merged as `ff0e0066763bf0eb95c652028713f7837a34474a`; `Publish Partner production OTA` run #78 succeeded for production runtime `0.2.0`, update group `d6f8c72b-a1f4-4df4-9371-83b3453c4072`.
+- **MERGED + DEPLOYED; installed-device verification pending. NO APK/AAB CREATED.**
 
 ---
 
