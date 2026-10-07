@@ -74,3 +74,31 @@ This foundation does not modify:
 **IMPLEMENTED ON FEATURE BRANCH; PR #2882 OPEN. Verify web portal run #5399 passed on the functional middleware/customer foundation head, including Customer isolation, Partner security, server-session coverage, typecheck, lint and production build. Final documentation/regression-hardening head requires its own green rerun. MERGE/DEPLOYMENT PENDING.**
 
 No APK/AAB created.
+
+## 2026-10-07 — Customer Web Phase 3: Exchange, Services and Support
+
+Branch: `feature/customer-web-phase3-services-support-2026-10-07`.
+
+Implemented strictly inside Customer Web:
+- `/customer/exchange` marketplace browse/search/category filtering using canonical `exchange_marketplace_feed`;
+- `/customer/exchange/[listingId]` verified listing/detail view using `exchange_listing_detail`;
+- Exchange web remains intentionally read-only in this phase: no bidding, favorites, seller listing mutations or contact-request writes;
+- `/customer/insurance-quote` with registered/new-vehicle selection, Renewal/New Policy/Change Insurer/Other requirement, consent and optional WhatsApp updates;
+- `/customer/e-challan` with vehicle selection, challan/reference and assisted-support request;
+- `/customer/support` unified Customer activity from `service_enquiries`, quick links, search and support-ticket creation;
+- `/customer/support/[id]` scoped request detail;
+- Customer-only `/customer/services/enquiry` POST endpoint validates Customer session, authorized customer account, referenced vehicle/claim ownership and then writes to the existing `service_enquiries` workflow;
+- desktop navigation adds Exchange, Insurance Quote, E-Challan and Support; mobile navigation adds Exchange and Support.
+
+Safety boundaries:
+- no Partner Portal functionality changed;
+- no Operations Portal functionality changed;
+- no Partner/Operations authorization, RPC or capability changes;
+- no Supabase schema/RLS migration;
+- no service-role/admin data access;
+- Exchange writes remain disabled on web;
+- support conversation replies and attachments remain read-only/not exposed on web;
+- no Customer App runtime/OTA/APK/AAB changes.
+
+User explicitly requested a separate branch and **no PR**.
+State: **IMPLEMENTED ON SEPARATE BRANCH; NO PR CREATED; NOT MERGED; NOT DEPLOYED.**
