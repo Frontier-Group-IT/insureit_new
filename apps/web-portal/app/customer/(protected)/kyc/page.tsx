@@ -25,6 +25,7 @@ export default async function CustomerKycPage({
   const data = await loadCustomerProfile(account.id);
   const { customer, kyc, kycDocuments } = data;
   const unsupported = Boolean(kyc?.partner_type && kyc.partner_type !== "individual_proprietor");
+  const editableKyc = kyc && !["rejected", "cancelled"].includes(kyc.status) ? kyc : null;
 
   return (
     <div className="space-y-5">
@@ -43,7 +44,7 @@ export default async function CustomerKycPage({
         />
       ) : (
         <CustomerKycForm
-          application={kyc}
+          application={editableKyc}
           documents={kycDocuments}
           defaultName={customer.contact_name}
           defaultEmail={customer.email ?? ""}
