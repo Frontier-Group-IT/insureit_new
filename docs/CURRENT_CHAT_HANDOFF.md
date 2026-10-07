@@ -8,7 +8,8 @@
 - Added Life/Health regression guards for editable controls and synchronized calculation fields.
 - Production data repair applied only to the investigated policy: ₹21,00,000 Pay-in → ₹2,10,000 TDS → ₹18,90,000 after TDS; ₹19,50,000 payout → **-₹60,000 retention**. Payout remains `Pending` / `needs_review`.
 - No schema/RLS/native/mobile change.
-- **IMPLEMENTED + PRODUCTION DATA REPAIR APPLIED; PR/CI/MERGE/WEB DEPLOYMENT PENDING.**
+- PR #2909 is open. First CI run #5568 exposed only a TypeScript basis-union inference issue; corrected on the branch. Verify web portal #5569 then passed Life/Health regression, typecheck, lint and production build.
+- **IMPLEMENTED + PRODUCTION DATA REPAIR APPLIED; PR OPEN; MERGE/WEB DEPLOYMENT PENDING.**
 
 ---
 
