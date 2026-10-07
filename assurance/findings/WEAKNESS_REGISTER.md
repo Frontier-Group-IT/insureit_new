@@ -180,3 +180,86 @@ A second subset still has table grants to `anon` / `authenticated`, but with RLS
 - **Impact:** current custom regressions are valuable but do not provide standard evidence for source scanning, dependency CVEs, committed-secret detection, SBOM inventory or DAST.
 - **Recommended remediation:** add reviewed/pinned CI gates for SAST, secret scanning, dependency/SCA + SBOM and authenticated DAST in a non-destructive environment. Preserve existing business regressions.
 - **Retest:** tools run on the exact certification commit and produce retained machine-readable + human-readable artifacts with policy-defined pass/fail thresholds.
+
+
+### INS-SEC-010 — Motor Policy Intake finalization trusts caller-supplied actor metadata
+- **Severity:** Critical
+- **Status:** OPEN
+- **Component:** PostgreSQL privileged RPC / Policy Intake
+- **Object:** `finalize_policy_intake_motor_v1(...)`
+- **Evidence:**
+  - SECURITY DEFINER and executable by `anon`.
+  - Actor is derived from `p_payload.meta.requestedBy`, not `auth.uid()`.
+  - Authorization only compares the caller-supplied actor UUID to `assigned_to_profile_id`.
+  - On success the RPC books a policy, links the policy copy, completes the intake and deletes the draft.
+- **Impact:** knowledge of an assigned reviewer UUID plus intake context may allow unauthorized finalization under elevated DB privileges.
+- **Recommended remediation:** require authenticated session; derive actor only from `auth.uid()`; verify active profile + policy-create/finalize capability and intake assignment server-side; revoke anon EXECUTE.
+- **Retest:** anonymous call rejected before locks/writes; mismatched authenticated reviewer rejected; assigned authorized reviewer succeeds.
+
+### INS-SEC-011 — Group customer link/unlink authorization trusts an arbitrary supplied manager profile ID
+- **Severity:** Critical
+- **Status:** OPEN
+- **Component:** PostgreSQL privileged RPC / Group relationships
+- **Objects:** `link_customer_to_group`, `unlink_customer_from_group`, helper `assert_group_relationship_manager`
+- **Evidence:**
+  - Entry points and helper are anonymously executable SECURITY DEFINER functions.
+  - Helper only looks up `profiles.role` for caller-supplied `p_actor_profile_id`; it does not require `p_actor_profile_id = auth.uid()`.
+  - Link/unlink functions change active customer relationship state.
+- **Impact:** a caller able to supply the UUID of any privileged profile can potentially alter Group customer relationships.
+- **Recommended remediation:** bind actor to `auth.uid()`, validate active profile and explicit group-management capability, verify scope over both parent and child customers, and revoke anon execute.
+- **Retest:** anonymous and unrelated-role callers rejected; authorized manager only within permitted scope can link/unlink.
+
+### INS-SEC-012 — External claim stage synchronization is anonymously executable without caller authorization
+- **Severity:** High
+- **Status:** OPEN
+- **Component:** PostgreSQL privileged RPC / Claims
+- **Object:** `sync_external_customer_stage_to_operations(...)`
+- **Evidence:**
+  - SECURITY DEFINER; executable by `anon`.
+  - No session authorization or ownership check.
+  - Function can update `claims.current_status` and insert status history based on current external-claim milestone state.
+  - `p_changed_by` is optional and not authenticated.
+- **Impact:** unauthorized triggering of shared claim-stage changes where prerequisite milestone state exists.
+- **Recommended remediation:** make this internal-only/trigger-owned or bind invocation to authenticated claim owner/authorized Operations actor; revoke anon execute.
+- **Retest:** direct anonymous call impossible; intended internal transition path remains functional.
+
+### INS-SEC-013 — Corporate onboarding contact synchronization allows anonymous privileged contact replacement
+- **Severity:** Critical
+- **Status:** OPEN
+- **Component:** PostgreSQL privileged RPC / Customer onboarding
+- **Object:** callable overload `sync_group_corporate_onboarding_contacts(p_application_id, p_draft_data)`
+- **Evidence:**
+  - SECURITY DEFINER; executable by `anon`.
+  - No auth/session/ownership validation.
+  - Deletes existing CEO/Admin/SPOC contact rows, inserts caller-supplied names/phones/emails, and updates application phone/email metadata.
+- **Impact:** unauthorized modification of Corporate onboarding/login contact identities and application contact state.
+- **Recommended remediation:** revoke client execute; route through authenticated onboarding workflow with ownership/role/capability validation; derive application ownership server-side; keep trigger overload separate/internal.
+- **Retest:** anonymous/unrelated users cannot modify contacts; intended onboarding owner/internal reviewer path succeeds.
+
+### INS-SEC-014 — Customer activity event insertion is anonymously executable without authorization
+- **Severity:** High
+- **Status:** OPEN
+- **Component:** PostgreSQL privileged RPC / Customer activity
+- **Object:** `insert_customer_activity_event(...)`
+- **Evidence:** SECURITY DEFINER, executable by `anon`, and function directly inserts caller-supplied customer/activity/title/message/metadata with no authorization check.
+- **Impact:** integrity/spam/audit-trust weakness; arbitrary customer activity may be injected if valid identifiers are supplied.
+- **Recommended remediation:** revoke public execute and make the function internal-only; if a public entry point is necessary, derive customer/source context from authenticated server-side state and constrain allowed event types.
+- **Retest:** direct client invocation denied; trusted triggers/server workflows continue to create valid activity.
+
+### INS-SEC-015 — Legacy intermediary migration/sync functions are anonymously executable privileged mutators
+- **Severity:** Critical
+- **Status:** OPEN
+- **Component:** PostgreSQL privileged RPC / Intermediary migration
+- **Objects reviewed:** `sync_existing_intermediary_migration`, `repair_legacy_partner_record_link`, `ensure_legacy_partner_record`, `sync_partner_details_to_linked_accounts`
+- **Evidence:**
+  - Anonymous SECURITY DEFINER execution is enabled.
+  - Reviewed definitions contain no authenticated-session binding.
+  - Functions update canonical Partner IDs, intermediary IDs, registrations, onboarding profiles, copied shared identity fields and linked-account state.
+- **Impact:** unauthorized canonical identity/workflow mutation if record identifiers and valid payload context are supplied.
+- **Recommended remediation:** make migration/repair/sync entry points service-role/internal-only; remove default PUBLIC execute; where interactive admin use is required, expose a separately authenticated approval RPC with `auth.uid()` + capability + scope checks.
+- **Retest:** no migration/repair helper callable by anon/authenticated client unless explicitly designed; approved administrative workflow passes.
+
+### INS-OBS-002 — Web portal already implements a substantive HTTP/session hardening baseline
+- **Type:** Positive control
+- **Evidence:** `apps/web-portal/next.config.mjs` defines CSP, HSTS in production, DENY framing default, nosniff, strict-origin referrer policy and Permissions-Policy. Middleware cookies are HttpOnly, SameSite=Lax and Secure in production; route authorization re-resolves the active profile rather than trusting the cached role cookie.
+- **Follow-up:** verify actual production response headers and cookie flags during smoke/DAST; source configuration alone is not runtime certification.
