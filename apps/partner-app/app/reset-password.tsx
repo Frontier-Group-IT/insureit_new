@@ -85,8 +85,9 @@ export default function ResetPasswordScreen() {
     setError('');
     setMessage('');
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
+    const passwordError = strongPasswordError(password);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
     if (password !== confirmPassword) {
@@ -122,7 +123,7 @@ export default function ResetPasswordScreen() {
             secureTextEntry={!passwordVisible}
             autoComplete="new-password"
             textContentType="newPassword"
-            placeholder="Enter new password"
+            placeholder="12+ chars with mixed character types"
             editable={ready && !busy}
             rightAccessory={
               <Pressable
