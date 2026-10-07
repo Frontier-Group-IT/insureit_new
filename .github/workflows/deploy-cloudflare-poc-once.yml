@@ -1,0 +1,63 @@
+name: Deploy Cloudflare POC once
+
+on:
+  push:
+    branches:
+      - cloudflare-poc
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-poc-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event.head_commit.message == 'Deploy Cloudflare preview worker'
+    name: Build and deploy preview Worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+    steps:
+      - name: Checkout Cloudflare preview branch
+        uses: actions/checkout@v4
+        with:
+          ref: cloudflare-poc
+
+      - name: Validate Cloudflare credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN is not configured."; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::CLOUDFLARE_ACCOUNT_ID is not configured."; exit 1; }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install repository dependencies
+        run: npm ci
+
+      - name: Build Cloudflare OpenNext preview
+        run: ./scripts/build-cloudflare-poc.sh
+
+      - name: Deploy Cloudflare preview Worker
+        run: ./scripts/deploy-cloudflare-poc.sh
+
+      - name: Deployment summary
+        if: success()
+        shell: bash
+        run: |
+          {
+            echo "## Cloudflare POC deployment"
+            echo "- Branch: `cloudflare-poc`"
+            echo "- Worker: `insureit-new`"
+            echo "- Runtime variables: preserved with `--keep-vars`"
+            echo "- Vercel / portal.insureit.in: untouched"
+          } >> "$GITHUB_STEP_SUMMARY"
