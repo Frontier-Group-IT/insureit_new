@@ -24,8 +24,10 @@
 - No schema/RLS/API/native dependency/runtime change. **No APK/AAB created.**
 - Replacement PR #2941 passed **Verify Partner app #591** and **Verify web portal #5610**, then merged as `04a73f7a8d67d6436279b20fadaa4e91e986a524`.
 - Original PR #2936 is superseded by that current-main reconciliation and must not be merged separately.
-- Production OTA release branch: `release/partner-policy-intake-detail-redesign-ota-2026-10-07`; trigger file updated for runtime 0.2.0.
-- **MERGED; production OTA pending.**
+- Production OTA release PR #2946 passed **Verify Partner app #593** and **Verify web portal #5618**, then merged as `58723c96d0d6b5ad9bf72bd93e8b0539a7aa05c6`.
+- **Publish Partner production OTA #91** completed successfully from current `main` to channel `production`, runtime `0.2.0`.
+- Original PR #2936 was closed as superseded after the reconciled replacement/release path completed, preventing a stale duplicate merge.
+- **MERGED + OTA PUBLISHED; installed-device verification pending. No APK/AAB created.**
 
 ---
 
