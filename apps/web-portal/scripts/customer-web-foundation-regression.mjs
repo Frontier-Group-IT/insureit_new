@@ -29,6 +29,15 @@ const requiredFiles = [
   "app/customer/(protected)/vehicles/[id]/page.tsx",
   "app/customer/(protected)/policies/page.tsx",
   "app/customer/(protected)/policies/[id]/page.tsx",
+  "lib/customer-web-phase3-data.ts",
+  "components/customer-portal/customer-service-request-form.tsx",
+  "app/customer/services/enquiry/route.ts",
+  "app/customer/(protected)/exchange/page.tsx",
+  "app/customer/(protected)/exchange/[listingId]/page.tsx",
+  "app/customer/(protected)/insurance-quote/page.tsx",
+  "app/customer/(protected)/e-challan/page.tsx",
+  "app/customer/(protected)/support/page.tsx",
+  "app/customer/(protected)/support/[id]/page.tsx",
 ];
 
 for (const file of requiredFiles) {
@@ -82,12 +91,49 @@ assert(policyDetailPage.includes("loadCustomerPolicyDetail(account.id, id"), "Po
 assert(vehicleDetailPage.includes('pathname="/customer/vehicles"'), "Vehicle Detail account switching must return to the scoped Vehicles list");
 assert(policyDetailPage.includes('pathname="/customer/policies"'), "Policy Detail account switching must return to the scoped Policies list");
 
+
+const phaseThreeData = read("lib/customer-web-phase3-data.ts");
+const phaseThreeForm = read("components/customer-portal/customer-service-request-form.tsx");
+const phaseThreeServiceRoute = read("app/customer/services/enquiry/route.ts");
+const exchangePage = read("app/customer/(protected)/exchange/page.tsx");
+const exchangeDetailPage = read("app/customer/(protected)/exchange/[listingId]/page.tsx");
+const quotePage = read("app/customer/(protected)/insurance-quote/page.tsx");
+const challanPage = read("app/customer/(protected)/e-challan/page.tsx");
+const supportPage = read("app/customer/(protected)/support/page.tsx");
+const supportDetailPage = read("app/customer/(protected)/support/[id]/page.tsx");
+
+assert(phaseThreeData.includes('exchange_marketplace_feed'), "Customer Phase 3 Exchange must use the canonical marketplace feed RPC");
+assert(phaseThreeData.includes('exchange_listing_detail'), "Customer Phase 3 Exchange detail must use the canonical listing detail RPC");
+assert(phaseThreeData.includes('.eq("customer_id", customerId)'), "Customer Phase 3 support activity must remain customer-id scoped");
+assert(!phaseThreeData.includes("createSupabaseAdminClient"), "Customer Phase 3 must not use admin/service-role data access");
+assert(!phaseThreeData.includes("@/lib/partner-web"), "Customer Phase 3 must not depend on Partner authorization");
+assert(!phaseThreeData.includes("exchange_place_bid"), "Customer Web Phase 3 Exchange must remain browse-only");
+assert(!phaseThreeData.includes("exchange_upsert_listing_draft"), "Customer Web Phase 3 Exchange must not expose seller writes");
+assert(!phaseThreeData.includes("exchange_toggle_favorite"), "Customer Web Phase 3 Exchange must not expose favorite writes");
+assert(phaseThreeServiceRoute.includes("await getCustomerWebSession()"), "Customer service writes must require the authenticated Customer Web session");
+assert(phaseThreeServiceRoute.includes("session.accounts.some"), "Customer service writes must verify the requested Customer account belongs to the session");
+assert(phaseThreeServiceRoute.includes('.eq("customer_id", customerId)'), "Customer service route must scope referenced vehicles/claims to the authorized Customer");
+assert(phaseThreeServiceRoute.includes('from("service_enquiries")'), "Customer Phase 3 services must use the unified service_enquiries workflow");
+assert(!phaseThreeServiceRoute.includes("SUPABASE_SERVICE_ROLE_KEY"), "Customer Phase 3 service writes must not use service-role credentials");
+assert(!phaseThreeServiceRoute.includes("@/lib/partner-web"), "Customer Phase 3 service writes must remain independent from Partner authorization");
+assert(phaseThreeForm.includes('fetch("/customer/services/enquiry"'), "Customer Phase 3 forms must use the isolated Customer service endpoint");
+assert(exchangePage.includes("resolveCustomerWebScope"), "Customer Exchange must resolve authorized Customer scope");
+assert(exchangeDetailPage.includes("loadCustomerExchangeListing"), "Customer Exchange detail must use the Phase 3 scoped data layer");
+assert(quotePage.includes("resolveCustomerWebScope"), "Customer Insurance Quote must resolve authorized Customer scope");
+assert(challanPage.includes("resolveCustomerWebScope"), "Customer E-Challan must resolve authorized Customer scope");
+assert(supportPage.includes("resolveCustomerWebScope"), "Customer Support must resolve authorized Customer scope");
+assert(supportDetailPage.includes("loadCustomerServiceActivityDetail(account.id, id)"), "Customer Support detail must validate the request inside Customer scope");
+
 const navigation = read("components/customer-portal/customer-navigation.tsx");
 assert(navigation.includes('fetch("/customer/auth/session", { method: "DELETE" })'), "Customer logout must clear the isolated session endpoint");
 assert(!navigation.includes('href="/partner'), "Customer navigation must not expose Partner routes");
 assert(!navigation.includes('href="/reports'), "Customer navigation must not expose Operations report routes");
 assert(navigation.includes('href="/customer/vehicles"'), "Customer navigation must expose Phase 1 Vehicles");
 assert(navigation.includes('href="/customer/policies"'), "Customer navigation must expose Phase 1 Policies");
+assert(navigation.includes('href="/customer/exchange"'), "Customer navigation must expose Phase 3 Exchange");
+assert(navigation.includes('href="/customer/insurance-quote"'), "Customer navigation must expose Phase 3 Insurance Quote");
+assert(navigation.includes('href="/customer/e-challan"'), "Customer navigation must expose Phase 3 E-Challan");
+assert(navigation.includes('href="/customer/support"'), "Customer navigation must expose Phase 3 Support");
 
 const portalRoutes = read("lib/portal-routes.ts");
 const middleware = read("middleware.ts");
