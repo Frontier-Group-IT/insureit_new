@@ -137,7 +137,7 @@ expectAll('app/customer/[id].tsx', [
 ]);
 expectAll('app/policy/[id].tsx', [[/router\.back\(\)/, 'Policy detail must support Back']]);
 expectAll('app/policy-intake-new.tsx', [[/router\.replace\(\{ pathname: '\/policy-intakes\/\[id\]'/, 'new Policy Intake must route to tracked status after submit']]);
-expectAll('app/policy-intakes/[id].tsx', [[/POLICY INTAKE/, 'Policy Intake tracking route must remain available']]);
+expectAll('app/policy-intakes/[id].tsx', [[/title="Policy Intake"/, 'Policy Intake tracking route must remain available']]);
 
 // Partner Home MTD comparison contract.
 expectAll('app/(tabs)/index.tsx', [

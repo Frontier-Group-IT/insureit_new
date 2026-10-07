@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Image, type ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -7,6 +7,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerButton } from '@/components/ui/partner-button';
+import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
+import { PartnerManufacturerLogo } from '@/components/ui/partner-manufacturer-logo';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerAssets } from '@/lib/partner-assets';
@@ -86,9 +88,7 @@ export default function PolicyIntakeDetailScreen() {
 
   return (
     <PartnerScreen
-      eyebrow="POLICY INTAKE"
-      title={row?.intake_number || 'Submission'}
-      subtitle="Track Operations progress and respond when needed"
+      title="Policy Intake"
       onBack={() => router.back()}
     >
       {submitted === '1' && row ? (
@@ -123,15 +123,26 @@ export default function PolicyIntakeDetailScreen() {
 
           <View style={styles.statusCard}>
             <View style={styles.statusTop}>
-              <View style={styles.statusArtworkWrap}><Image source={statusArtwork(row)} style={styles.statusArtwork} resizeMode="contain" /></View>
+              <View style={styles.statusLogoWrap}>
+                <PartnerInsurerLogo
+                  name={fields.get('insurer_name')?.value}
+                  fallback={PartnerAssets.navigation.policies}
+                  style={styles.statusLogo}
+                  accessibilityLabel={fields.get('insurer_name')?.value ? `${fields.get('insurer_name')?.value} logo` : 'Insurer'}
+                />
+              </View>
               <View style={styles.statusBody}>
-                <Text style={styles.statusLabel}>CURRENT STATUS</Text>
-                <Text style={styles.statusValue}>{statusLabel(row)}</Text>
+                <Text numberOfLines={1} style={styles.intakeNumber}>{row.intake_number}</Text>
                 <Text style={styles.statusHelp}>{statusHelp(row)}</Text>
+              </View>
+              <View style={styles.statusMeta}>
+                <View style={[styles.statusBadge, statusBadgeStyle(row)]}>
+                  <Text style={[styles.statusBadgeText, statusBadgeTextStyle(row)]}>{statusLabel(row)}</Text>
+                </View>
+                <Text style={styles.statusDate}>{formatDate(row.updated_at)}</Text>
               </View>
             </View>
             <IntakeProgress row={row} />
-            <Text style={styles.updated}>Updated {formatDate(row.updated_at)}</Text>
           </View>
 
           {row.final_policy_id ? (
@@ -196,6 +207,16 @@ export default function PolicyIntakeDetailScreen() {
               <PartnerSectionHeader title="Extracted details" meta={row.ocr_status === 'completed' ? 'OCR complete' : humanize(row.ocr_status)} />
               <DetailDisclosure
                 title="Policy details"
+                leading={
+                  <View style={styles.disclosureLogoWrap}>
+                    <PartnerInsurerLogo
+                      name={fields.get('insurer_name')?.value}
+                      fallback={PartnerAssets.navigation.policies}
+                      style={styles.disclosureLogo}
+                      accessibilityLabel={fields.get('insurer_name')?.value ? `${fields.get('insurer_name')?.value} logo` : 'Insurer'}
+                    />
+                  </View>
+                }
                 summary={fields.get('policy_number')?.value || fields.get('insurer_name')?.value || pendingLabel(row)}
                 expanded={showPolicyExtraction}
                 onPress={() => setShowPolicyExtraction((value) => !value)}
@@ -211,6 +232,16 @@ export default function PolicyIntakeDetailScreen() {
 
               <DetailDisclosure
                 title="Vehicle details"
+                leading={
+                  <View style={styles.disclosureLogoWrap}>
+                    <PartnerManufacturerLogo
+                      name={fields.get('vehicle_make')?.value}
+                      fallback={PartnerAssets.actions.addVehicle}
+                      style={styles.disclosureLogo}
+                      accessibilityLabel={fields.get('vehicle_make')?.value ? `${fields.get('vehicle_make')?.value} logo` : 'Vehicle manufacturer'}
+                    />
+                  </View>
+                }
                 summary={fields.get('vehicle_registration_number')?.value || [fields.get('vehicle_make')?.value, fields.get('vehicle_model')?.value].filter(Boolean).join(' · ') || pendingLabel(row)}
                 expanded={showVehicleExtraction}
                 onPress={() => setShowVehicleExtraction((value) => !value)}
@@ -302,12 +333,14 @@ function ReplacementProgress({ progress }: { progress: PartnerPolicyIntakeUpload
 function DetailDisclosure({
   title,
   summary,
+  leading,
   expanded,
   onPress,
   children,
 }: {
   title: string;
   summary: string;
+  leading?: ReactNode;
   expanded: boolean;
   onPress: () => void;
   children: ReactNode;
@@ -321,6 +354,7 @@ function DetailDisclosure({
         onPress={onPress}
         style={({ pressed }) => [styles.disclosure, pressed && styles.pressed]}
       >
+        {leading}
         <View style={styles.disclosureBody}>
           <Text style={styles.disclosureTitle}>{title}</Text>
           <Text numberOfLines={1} style={styles.disclosureSummary}>{summary}</Text>
@@ -341,13 +375,16 @@ function Detail({ label, value, last = false }: { label: string; value: string; 
   );
 }
 
-function statusArtwork(row: PartnerPolicyIntake): ImageSourcePropType {
-  const manual = row.status === 'processing' && row.ocr_status === 'failed';
-  if (row.status === 'completed') return PartnerAssets.status.verified;
-  if (row.status === 'rejected') return PartnerAssets.status.rejected;
-  if (row.status === 'needs_attention' || manual) return PartnerAssets.status.policyAttention;
-  if (row.status === 'ready_for_review' || row.status === 'in_review') return PartnerAssets.status.pendingReview;
-  return PartnerAssets.status.documentUpload;
+function statusBadgeStyle(row: PartnerPolicyIntake) {
+  if (row.status === 'rejected') return styles.statusBadgeRejected;
+  if (row.status === 'completed') return styles.statusBadgeCompleted;
+  return styles.statusBadgeProcessing;
+}
+
+function statusBadgeTextStyle(row: PartnerPolicyIntake) {
+  if (row.status === 'rejected') return styles.statusBadgeTextRejected;
+  if (row.status === 'completed') return styles.statusBadgeTextCompleted;
+  return styles.statusBadgeTextProcessing;
 }
 
 function statusLabel(row: PartnerPolicyIntake) {
@@ -405,13 +442,22 @@ function humanize(value: string) {
 const styles = StyleSheet.create({
   banner: { marginBottom: 10 },
   statusCard: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line, backgroundColor: partnerTheme.colors.surface },
-  statusTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  statusArtworkWrap: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  statusArtwork: { width: 42, height: 42 },
-  statusBody: { flex: 1 },
-  statusLabel: { color: partnerTheme.colors.inkMuted, letterSpacing: 0.7, ...partnerTheme.typography.meta },
-  statusValue: { marginTop: 3, color: partnerTheme.colors.ink, ...partnerTheme.typography.sectionTitle },
-  statusHelp: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  statusTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  statusLogoWrap: { width: 46, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F8FB', borderWidth: 1, borderColor: partnerTheme.colors.line },
+  statusLogo: { width: 38, height: 38 },
+  statusBody: { flex: 1, minWidth: 0, paddingTop: 2 },
+  intakeNumber: { color: partnerTheme.colors.ink, ...partnerTheme.typography.sectionTitle },
+  statusHelp: { marginTop: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  statusMeta: { maxWidth: '42%', alignItems: 'flex-end', gap: 5 },
+  statusBadge: { maxWidth: '100%', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5 },
+  statusBadgeCompleted: { backgroundColor: '#E8F7EE' },
+  statusBadgeRejected: { backgroundColor: '#FDECEC' },
+  statusBadgeProcessing: { backgroundColor: '#FFF3DF' },
+  statusBadgeText: { textAlign: 'right', ...partnerTheme.typography.meta },
+  statusBadgeTextCompleted: { color: '#19713C' },
+  statusBadgeTextRejected: { color: '#B42318' },
+  statusBadgeTextProcessing: { color: '#9A5B13' },
+  statusDate: { color: partnerTheme.colors.inkSubtle, textAlign: 'right', ...partnerTheme.typography.meta },
   progressWrap: { marginTop: 9, paddingTop: 8, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
   progressStep: { flex: 1, alignItems: 'center' },
   progressLineWrap: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
@@ -423,7 +469,6 @@ const styles = StyleSheet.create({
   progressLineComplete: { backgroundColor: partnerTheme.colors.brand },
   progressLabel: { marginTop: 5, color: partnerTheme.colors.inkSubtle, ...partnerTheme.typography.meta },
   progressLabelActive: { color: partnerTheme.colors.ink },
-  updated: { marginTop: 7, color: partnerTheme.colors.inkSubtle, textAlign: 'right', ...partnerTheme.typography.meta },
   finalPolicy: { marginTop: 10 },
   attention: { marginTop: 10, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#F0D7AE', backgroundColor: '#FFF7E8' },
   attentionTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -443,7 +488,9 @@ const styles = StyleSheet.create({
   proposalNoteText: { flex: 1, color: '#5B5681', ...partnerTheme.typography.caption },
   disclosureWrap: { marginBottom: 7 },
   disclosure: { minHeight: partnerTheme.control.minTouchTarget, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: partnerTheme.radius.lg, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  disclosureBody: { flex: 1 },
+  disclosureLogoWrap: { width: 34, height: 34, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F8FB', borderWidth: 1, borderColor: partnerTheme.colors.line },
+  disclosureLogo: { width: 28, height: 28 },
+  disclosureBody: { flex: 1, minWidth: 0 },
   disclosureTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   disclosureSummary: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   disclosureContent: { marginTop: 7 },
