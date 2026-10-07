@@ -48,7 +48,11 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-fund
+
+      - name: Dependency vulnerability gate
+        working-directory: ${{ github.workspace }}
+        run: npm audit --workspace @insureit/mobile-app --audit-level=high --omit=dev
 
       - name: Detect generated lockfile changes
         id: lockfile
