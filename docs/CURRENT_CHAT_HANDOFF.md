@@ -1,19 +1,38 @@
 ## 2026-10-07 — Internal production security boundary remediation (first audit pass)
 
-- Branch: `security/remediate-live-audit-2026-10-07-v4`.
-- Production audit confirmed: over-broad `staff_delete_reserved_for_it_super_user` policies; anonymous access to legacy `posp-documents`; two owner-privileged audit views readable from Data API roles; six privileged RPCs exposed beyond their server-only call path; anonymous execution inherited by public SECURITY DEFINER functions; 61 SECURITY DEFINER trigger/event-trigger functions callable as RPCs; 20 mutable function search paths.
-- Added migrations:
-  - `20261007130000_internal_security_boundary_hardening.sql`
-  - `20261007131000_security_function_surface_hardening.sql`
-  - `20261007132000_revoke_anon_security_definer_execution.sql`
-- Safety: each migration was executed against the current production schema inside a transaction ending in `ROLLBACK`, with assertions for policy scope, function grants, view access, storage policies and trigger runtime behavior. Production was not mutated.
-- Live RPC evidence: observed Policy Intake finalization requests used `service_role`; high-volume Partner RPCs used `authenticated` and remained executable in rollback validation.
-- Existing `release-blocker-security-regression.mjs` now guards the remediation contracts.
+- Working branch: `security/remediate-live-audit-2026-10-07-v4`; PR **#2897**.
+- Confirmed production findings addressed on branch:
+  - 34 over-broad `staff_delete_reserved_for_it_super_user` policies → authenticated IT Super User only.
+  - `current_app_role()` no longer defaults an unauthenticated/no-profile request to `customer`.
+  - 2 owner-privileged audit/cleanup views → `security_invoker=true`, browser grants removed.
+  - confirmed server-only privileged report/policy/partner/accounts RPCs → `service_role` only.
+  - legacy `posp-documents` anonymous read/upload removed; 10 MB and PDF/JPEG/PNG constraints added.
+  - 61 SECURITY DEFINER trigger/event-trigger functions removed from direct browser execution.
+  - 20 advisor-flagged mutable function search paths pinned.
+  - all public SECURITY DEFINER functions lose implicit anonymous execution; future function defaults hardened.
+  - group/customer/profile/downline viewer/actor helpers bind normal signed-in calls to `auth.uid()`; service-role compatibility retained.
+  - intermediary queue requires POSP/MISP management capability.
+  - internal activity/intermediary-sync/claim-sync/identity-sequence primitives made server-only.
+  - direct Corporate onboarding contact synchronization now requires owner/authorized parent manager/service role and editable state.
+  - all 102 RLS-enabled/no-policy tables remain deny-all and additionally lose anon/authenticated table privileges.
+  - `pg_trgm` safely moved from `public` to `extensions`.
+  - internal external-claim completed-stage helper made server-only.
+  - Web and Partner password reset policy raised to 12+ chars with upper/lower/number/symbol. Customer App remains phone OTP.
+- Supabase project is on **Free**; official Supabase docs state leaked-password protection is available on **Pro and above**, so the platform advisor warning cannot be eliminated on the current tier. Stronger password reset policy is a compensating control, not a false claim that HIBP protection is enabled.
+- Validation completed without production mutation:
+  - every migration compiled against current production schema inside `BEGIN … ROLLBACK`;
+  - session substitution tests blocked a signed-in IT Super User from supplying another Super Admin/viewer identity;
+  - direct browser execution counts project to 0 for anonymous SECURITY DEFINER functions and SECURITY DEFINER triggers;
+  - broad delete policy count projects to 0;
+  - legacy POSP anonymous storage policies project to 0;
+  - 20 mutable-search-path findings project to 0;
+  - all 102 deny-all tables project to 0 browser DML/SELECT privileges;
+  - `pg_trgm` relocation preserved the existing trigram GIN index and unqualified `similarity()` resolution;
+  - trigger runtime behavior was proven to continue after direct function EXECUTE revocation.
 - No APK/AAB created.
-- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/MIGRATION APPLICATION/PRODUCTION RETEST PENDING.**
+- **STATE:** IMPLEMENTED + ROLLBACK-VALIDATED ON BRANCH. Final PR CI, merge, Supabase migration application, and post-apply production advisor/retest are still required.
 
 ---
-
 ## 2026-10-07 — Partner Settings account icons + two-line Device Security rows
 
 - Branch: `ui/partner-settings-account-icons-security-layout-2026-10-07`.
