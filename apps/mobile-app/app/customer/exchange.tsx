@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Image,
@@ -18,6 +18,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ExchangeActivityCenter } from '@/components/exchange/ExchangeActivityCenter';
+import { ExchangeMarketplaceHome, type ExchangeHomeVehicle } from '@/components/exchange/ExchangeMarketplaceHome';
+import { ExchangeOfferReviewSheet } from '@/components/exchange/ExchangeOfferReviewSheet';
+import { ExchangeSellJourney } from '@/components/exchange/ExchangeSellJourney';
+
 import { getSelectedCustomerContext } from '@/lib/customer-context';
 import {
   acceptExchangeLeadingBid,
@@ -26,13 +31,13 @@ import {
   getExchangeMarketplaceFeed,
   getExchangeSellableVehicles,
   getExchangeSellerBidBook,
-  placeExchangeBid,
-  requestExchangeContact,
+  rejectExchangeLeadingOffer,
   respondExchangeContactRequest,
   saveExchangeListingDraft,
   submitExchangeListing,
   toggleExchangeFavorite,
   uploadExchangePhoto,
+  withdrawExchangeOffer,
   type ExchangeActivity,
   type ExchangeFeedRow,
   type ExchangeSellableVehicle,
@@ -46,6 +51,7 @@ type MarketplaceVehicle = {
   listingNo: string;
   title: string;
   category: Exclude<VehicleCategory, 'All'>;
+  sellingMode: 'fixed_price' | 'open_bidding' | 'managed_auction';
   year: number;
   km: number;
   location: string;
@@ -77,6 +83,15 @@ type SellDraft = {
   km: string;
   category: Exclude<VehicleCategory, 'All'>;
   askingPrice: string;
+  sellingMode: 'fixed_price' | 'open_bidding' | 'managed_auction';
+  overallCondition: 'excellent' | 'good' | 'fair' | 'needs_attention';
+  tyreConditionPercent: string;
+  knownIssues: string;
+  operatingHours: string;
+  bodyCondition: 'good' | 'fair' | 'needs_attention' | 'unknown';
+  cabinCondition: 'good' | 'fair' | 'needs_attention' | 'unknown';
+  hydraulicCondition: 'good' | 'fair' | 'needs_attention' | 'unknown';
+  undercarriageCondition: 'good' | 'fair' | 'needs_attention' | 'unknown';
 };
 
 type ExchangeFeedWithCover = ExchangeFeedRow & { cover_url: string | null };
@@ -157,6 +172,7 @@ function mapFeedVehicle(row: ExchangeFeedWithCover): MarketplaceVehicle {
     listingNo: row.listing_no,
     title: row.title,
     category,
+    sellingMode: row.selling_mode ?? 'open_bidding',
     year: Number(row.year ?? 0),
     km: Number(row.odometer_km ?? 0),
     location,
@@ -207,6 +223,15 @@ function blankDraft(): SellDraft {
     km: '',
     category: 'Truck',
     askingPrice: '',
+    sellingMode: 'open_bidding',
+    overallCondition: 'good',
+    tyreConditionPercent: '',
+    knownIssues: '',
+    operatingHours: '',
+    bodyCondition: 'unknown',
+    cabinCondition: 'unknown',
+    hydraulicCondition: 'unknown',
+    undercarriageCondition: 'unknown',
   };
 }
 
@@ -224,6 +249,12 @@ function recordNumber(row: Record<string, unknown>, key: string) {
   return typeof value === 'number' ? value : Number(value ?? 0);
 }
 
+function recordObject(row: Record<string, unknown>, key: string) {
+  const value = row[key];
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+
 export default function ExchangeMarketplaceScreen() {
   const router = useRouter();
   const [tab, setTab] = useState<ExchangeTab>('buy');
@@ -233,10 +264,11 @@ export default function ExchangeMarketplaceScreen() {
   const [feedRows, setFeedRows] = useState<ExchangeFeedWithCover[]>([]);
   const [sellableVehicles, setSellableVehicles] = useState<ExchangeSellableVehicle[]>([]);
   const [activity, setActivity] = useState<ExchangeActivity>(emptyActivity);
-  const [selectedVehicle, setSelectedVehicle] = useState<MarketplaceVehicle | null>(null);
   const [selectedSellVehicleId, setSelectedSellVehicleId] = useState<string | null>(null);
   const [savedListingId, setSavedListingId] = useState<string | null>(null);
   const [sellPreviewVisible, setSellPreviewVisible] = useState(false);
+  const [offerReviewListing, setOfferReviewListing] = useState<Record<string, unknown> | null>(null);
+  const [offerReviewBids, setOfferReviewBids] = useState<Array<Record<string, unknown>>>([]);
   const [sellDraft, setSellDraft] = useState<SellDraft>(blankDraft);
   const [photos, setPhotos] = useState<PhotoSlotState[]>(photoLabels.map((label) => ({ label, uri: null, uploaded: false })));
   const [loading, setLoading] = useState(true);
@@ -287,11 +319,6 @@ export default function ExchangeMarketplaceScreen() {
       setSellableVehicles(sellerVehicles);
       setActivity(nextActivity);
 
-      setSelectedVehicle((current) => {
-        if (!current) return null;
-        const replacement = (feed as ExchangeFeedWithCover[]).find((row) => row.listing_id === current.id);
-        return replacement ? mapFeedVehicle(replacement) : null;
-      });
     } catch (error) {
       setErrorMessage(exchangeError(error));
     } finally {
@@ -308,11 +335,6 @@ export default function ExchangeMarketplaceScreen() {
     ]);
     setFeedRows(feed as ExchangeFeedWithCover[]);
     setActivity(nextActivity);
-    setSelectedVehicle((current) => {
-      if (!current) return null;
-      const replacement = (feed as ExchangeFeedWithCover[]).find((row) => row.listing_id === current.id);
-      return replacement ? mapFeedVehicle(replacement) : current;
-    });
   }
 
   async function toggleFavorite(id: string) {
@@ -324,53 +346,6 @@ export default function ExchangeMarketplaceScreen() {
       setActivity(await getExchangeActivity(customerId));
     } catch (error) {
       Alert.alert('Could not update saved vehicle', exchangeError(error));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function placeBid(vehicle: MarketplaceVehicle, amount: number) {
-    if (!customerId || busy) return;
-    const minimum = vehicle.bids > 0
-      ? vehicle.currentBid + vehicle.minBidIncrement
-      : Math.max(vehicle.currentBid, vehicle.minBidIncrement);
-
-    if (amount < minimum) {
-      Alert.alert('Increase your bid', `The next bid starts at ${formatCompactCurrency(minimum)}.`);
-      return;
-    }
-
-    Alert.alert('Confirm your bid', `${formatCompactCurrency(amount)} for ${vehicle.title}`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Confirm',
-        onPress: () => {
-          void (async () => {
-            setBusy(true);
-            try {
-              await placeExchangeBid(vehicle.id, customerId, amount);
-              await refreshActivityAndFeed();
-              Alert.alert('Bid placed', 'Your bid has been recorded securely.');
-            } catch (error) {
-              Alert.alert('Bid not placed', exchangeError(error));
-            } finally {
-              setBusy(false);
-            }
-          })();
-        },
-      },
-    ]);
-  }
-
-  async function requestManagedContact(vehicle: MarketplaceVehicle) {
-    if (!customerId || busy) return;
-    setBusy(true);
-    try {
-      await requestExchangeContact(vehicle.id, customerId, 'managed_callback');
-      await refreshActivityAndFeed();
-      Alert.alert('Request sent', 'InsureIT will coordinate the connection without exposing seller contact details.');
-    } catch (error) {
-      Alert.alert('Request not sent', exchangeError(error));
     } finally {
       setBusy(false);
     }
@@ -395,6 +370,7 @@ export default function ExchangeMarketplaceScreen() {
     const category = categories.includes(savedCategory as VehicleCategory) && savedCategory !== 'All'
       ? savedCategory as Exclude<VehicleCategory, 'All'>
       : categoryFromSellableVehicle(vehicle);
+    const savedCondition = recordObject(editableListing ?? {}, 'condition_details');
 
     setSelectedSellVehicleId(vehicle.vehicle_id);
     setSavedListingId(editableListing ? recordString(editableListing, 'listing_id') : null);
@@ -405,9 +381,22 @@ export default function ExchangeMarketplaceScreen() {
         || [vehicle.make, vehicle.model].filter(Boolean).join(' ')
         || vehicle.vehicle_type,
       year: vehicle.year ? String(vehicle.year) : '',
-      km: '',
+      km: editableListing ? String(recordNumber(editableListing, 'odometer_km') || '') : '',
       category,
       askingPrice: editableListing ? String(recordNumber(editableListing, 'asking_price') || '') : '',
+      sellingMode: (editableListing && ['fixed_price','open_bidding','managed_auction'].includes(recordString(editableListing, 'selling_mode'))
+        ? recordString(editableListing, 'selling_mode')
+        : 'open_bidding') as SellDraft['sellingMode'],
+      overallCondition: (['excellent','good','fair','needs_attention'].includes(recordString(savedCondition, 'overall_condition'))
+        ? recordString(savedCondition, 'overall_condition')
+        : 'good') as SellDraft['overallCondition'],
+      tyreConditionPercent: editableListing ? String(recordNumber(editableListing, 'tyre_condition_percent') || '') : '',
+      knownIssues: recordString(savedCondition, 'known_issues'),
+      operatingHours: recordString(savedCondition, 'operating_hours'),
+      bodyCondition: (['good','fair','needs_attention','unknown'].includes(recordString(savedCondition, 'body_condition')) ? recordString(savedCondition, 'body_condition') : 'unknown') as SellDraft['bodyCondition'],
+      cabinCondition: (['good','fair','needs_attention','unknown'].includes(recordString(savedCondition, 'cabin_condition')) ? recordString(savedCondition, 'cabin_condition') : 'unknown') as SellDraft['cabinCondition'],
+      hydraulicCondition: (['good','fair','needs_attention','unknown'].includes(recordString(savedCondition, 'hydraulic_condition')) ? recordString(savedCondition, 'hydraulic_condition') : 'unknown') as SellDraft['hydraulicCondition'],
+      undercarriageCondition: (['good','fair','needs_attention','unknown'].includes(recordString(savedCondition, 'undercarriage_condition')) ? recordString(savedCondition, 'undercarriage_condition') : 'unknown') as SellDraft['undercarriageCondition'],
     });
   }
 
@@ -415,6 +404,7 @@ export default function ExchangeMarketplaceScreen() {
     if (!selectedSellVehicleId) return 'Select a vehicle from your fleet.';
     if (!sellDraft.km.trim() || Number(sellDraft.km) < 0) return 'Enter the current odometer reading.';
     if (!sellDraft.askingPrice.trim() || Number(sellDraft.askingPrice) <= 0) return 'Enter your expected price.';
+    if (sellDraft.tyreConditionPercent.trim() && (Number(sellDraft.tyreConditionPercent) < 0 || Number(sellDraft.tyreConditionPercent) > 100)) return 'Tyre condition must be between 0 and 100%.';
     return null;
   }
 
@@ -436,10 +426,20 @@ export default function ExchangeMarketplaceScreen() {
         category: sellDraft.category,
         odometerKm: Number(sellDraft.km),
         askingPrice: Number(sellDraft.askingPrice),
-        openingBid: 0,
+        sellingMode: sellDraft.sellingMode,
+        openingBid: sellDraft.sellingMode === 'managed_auction' ? Number(sellDraft.askingPrice) : 0,
         minBidIncrement: 10000,
+        tyreConditionPercent: sellDraft.tyreConditionPercent.trim() ? Number(sellDraft.tyreConditionPercent) : null,
         conditionDetails: {
           photo_slots: photos.filter((photo) => photo.uploaded).map((photo) => photo.label),
+          seller_declared: true,
+          overall_condition: sellDraft.overallCondition,
+          known_issues: sellDraft.knownIssues.trim(),
+          operating_hours: sellDraft.operatingHours.trim(),
+          body_condition: sellDraft.bodyCondition,
+          cabin_condition: sellDraft.cabinCondition,
+          hydraulic_condition: sellDraft.hydraulicCondition,
+          undercarriage_condition: sellDraft.undercarriageCondition,
         },
       });
       const listingId = String((data as { id?: unknown } | null)?.id ?? savedListingId ?? '');
@@ -500,17 +500,39 @@ export default function ExchangeMarketplaceScreen() {
       return;
     }
 
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Photo access required', 'Allow photo access to add vehicle images to your Exchange listing.');
-      return;
+    const chooseSource = () => new Promise<'camera' | 'gallery' | null>((resolve) => {
+      Alert.alert(
+        photos[index].label,
+        'Add this guided vehicle photo using the camera or your gallery.',
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => resolve(null) },
+          { text: 'Gallery', onPress: () => resolve('gallery') },
+          { text: 'Camera', onPress: () => resolve('camera') },
+        ],
+        { cancelable: true, onDismiss: () => resolve(null) },
+      );
+    });
+
+    const source = await chooseSource();
+    if (!source) return;
+
+    if (source === 'camera') {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Camera access required', 'Allow camera access to capture vehicle photos for your Exchange listing.');
+        return;
+      }
+    } else {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Photo access required', 'Allow photo access to add vehicle images to your Exchange listing.');
+        return;
+      }
     }
 
-    const picked = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsMultipleSelection: false,
-      quality: 0.82,
-    });
+    const picked = source === 'camera'
+      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.82 })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: false, quality: 0.82 });
     if (picked.canceled || !picked.assets[0]) return;
 
     const listingId = savedListingId || await persistDraft(false);
@@ -543,27 +565,57 @@ export default function ExchangeMarketplaceScreen() {
     setBusy(true);
     try {
       const bids = await getExchangeSellerBidBook(listingId) as Array<Record<string, unknown>>;
-      const leading = bids.find((bid) => recordString(bid, 'status') === 'leading') ?? bids[0];
-      if (!leading) {
-        Alert.alert('No bids yet', 'This listing does not have an active bid.');
-        return;
-      }
-      const alias = recordString(leading, 'bidder_alias') || 'Buyer';
-      const amount = recordNumber(leading, 'amount');
-      Alert.alert('Leading bid', `${alias} • ${formatCompactCurrency(amount)}`, [
-        { text: 'Not now', style: 'cancel' },
-        {
-          text: 'Accept bid',
-          onPress: () => {
-            void acceptSellerBid(listingId);
-          },
-        },
-      ]);
+      setOfferReviewListing(row);
+      setOfferReviewBids(bids);
     } catch (error) {
-      Alert.alert('Could not load bids', exchangeError(error));
+      Alert.alert('Could not load buyer responses', exchangeError(error));
     } finally {
       setBusy(false);
     }
+  }
+
+  async function rejectSellerOffer(listingId: string) {
+    if (!listingId || busy) return;
+    setBusy(true);
+    try {
+      await rejectExchangeLeadingOffer(listingId);
+      const bids = await getExchangeSellerBidBook(listingId) as Array<Record<string, unknown>>;
+      setOfferReviewBids(bids);
+      await refreshActivityAndFeed();
+      Alert.alert('Offer rejected', bids.some((bid) => recordString(bid, 'status') === 'leading')
+        ? 'The next best private offer is now highlighted.'
+        : 'There are no remaining active private offers.');
+    } catch (error) {
+      Alert.alert('Could not reject offer', exchangeError(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function withdrawBuyerOffer(bidId: string) {
+    if (!bidId || busy || !customerId) return;
+    Alert.alert('Withdraw offer?', 'This removes your private offer from the active listing. Auction bids cannot be withdrawn here.', [
+      { text: 'Keep offer', style: 'cancel' },
+      {
+        text: 'Withdraw',
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            setBusy(true);
+            try {
+              await withdrawExchangeOffer(bidId);
+              setActivity(await getExchangeActivity(customerId));
+              setFeedRows(await getExchangeMarketplaceFeed({ limit: 100 }) as ExchangeFeedWithCover[]);
+              Alert.alert('Offer withdrawn', 'Your private offer is no longer active.');
+            } catch (error) {
+              Alert.alert('Could not withdraw offer', exchangeError(error));
+            } finally {
+              setBusy(false);
+            }
+          })();
+        },
+      },
+    ]);
   }
 
   async function acceptSellerBid(listingId: string) {
@@ -571,7 +623,10 @@ export default function ExchangeMarketplaceScreen() {
     try {
       await acceptExchangeLeadingBid(listingId);
       await refreshActivityAndFeed();
-      Alert.alert('Bid accepted', 'The buyer can now confirm the deal. InsureIT will manage the next steps.');
+      const mode = recordString(offerReviewListing ?? {}, 'selling_mode');
+      setOfferReviewListing(null);
+      setOfferReviewBids([]);
+      Alert.alert(mode === 'managed_auction' ? 'Bid accepted' : 'Offer accepted', 'The buyer can now confirm the deal. InsureIT will manage the next steps.');
     } catch (error) {
       Alert.alert('Could not accept bid', exchangeError(error));
     } finally {
@@ -631,11 +686,13 @@ export default function ExchangeMarketplaceScreen() {
           onActivity={() => setTab('activity')}
         />
 
-        <View style={styles.navBar}>
-          <NavTab label="Explore" icon="compass-outline" active={tab === 'buy'} onPress={() => setTab('buy')} />
-          <NavTab label="Sell" icon="sale" active={tab === 'sell'} onPress={() => setTab('sell')} />
-          <NavTab label="My Exchange" icon="gavel" active={tab === 'activity'} onPress={() => setTab('activity')} />
-        </View>
+        {tab !== 'buy' ? (
+          <View style={styles.navBar}>
+            <NavTab label="Explore" icon="compass-outline" active={false} onPress={() => setTab('buy')} />
+            <NavTab label="Sell" icon="sale" active={tab === 'sell'} onPress={() => setTab('sell')} />
+            <NavTab label="My Exchange" icon="gavel" active={tab === 'activity'} onPress={() => setTab('activity')} />
+          </View>
+        ) : null}
 
         {errorMessage ? (
           <Pressable onPress={() => void loadExchange()} style={styles.emptyState}>
@@ -656,9 +713,12 @@ export default function ExchangeMarketplaceScreen() {
             onRefresh={() => void loadExchange(true)}
             onQueryChange={setQuery}
             onCategoryChange={setCategory}
-            onOpenVehicle={setSelectedVehicle}
+            onOpenVehicle={(vehicle) => router.push({ pathname: '/customer/exchange/[listingId]', params: { listingId: vehicle.id } })}
             onFavorite={(id) => void toggleFavorite(id)}
             onSell={() => setTab('sell')}
+            onActivity={() => setTab('activity')}
+            onValue={() => setTab('sell')}
+            onBrowseAll={() => router.push('/customer/exchange/search')}
           />
         ) : null}
 
@@ -677,18 +737,20 @@ export default function ExchangeMarketplaceScreen() {
             onPhotoPress={(index) => void addPhoto(index)}
             onPreview={previewListing}
             onSave={() => void persistDraft()}
+            onAddVehicle={() => router.push({ pathname: '/customer/add-vehicle', params: { fromExchange: '1' } })}
           />
         ) : null}
 
         {tab === 'activity' ? (
-          <ActivityExperience
+          <ExchangeActivityCenter
             activity={activity}
-            feedVehicles={vehicles}
             refreshing={refreshing}
             onRefresh={() => void loadExchange(true)}
             onBrowse={() => setTab('buy')}
             onSell={() => setTab('sell')}
-            onOpenVehicle={setSelectedVehicle}
+            onOpenListing={(listingId) => router.push({ pathname: '/customer/exchange/[listingId]', params: { listingId } })}
+            onOpenDeal={(dealId) => router.push({ pathname: '/customer/exchange/deal', params: { dealId } })}
+            onWithdrawOffer={(bidId) => void withdrawBuyerOffer(bidId)}
             onReviewBids={(row) => void reviewSellerBids(row)}
             onRespondContact={(requestId, accept) => void respondToContact(requestId, accept)}
             onConfirmDeal={(dealId) => void confirmDeal(dealId)}
@@ -696,15 +758,17 @@ export default function ExchangeMarketplaceScreen() {
         ) : null}
       </View>
 
-      <VehicleDetailModal
-        vehicle={selectedVehicle}
-        currentBid={selectedVehicle?.currentBid ?? 0}
-        isFavorite={Boolean(selectedVehicle && favoriteIds.includes(selectedVehicle.id))}
+      <ExchangeOfferReviewSheet
+        visible={Boolean(offerReviewListing)}
+        listing={offerReviewListing}
+        bids={offerReviewBids}
         busy={busy}
-        onClose={() => setSelectedVehicle(null)}
-        onFavorite={() => selectedVehicle && void toggleFavorite(selectedVehicle.id)}
-        onPlaceBid={(vehicle, amount) => void placeBid(vehicle, amount)}
-        onRequestContact={(vehicle) => void requestManagedContact(vehicle)}
+        onClose={() => {
+          setOfferReviewListing(null);
+          setOfferReviewBids([]);
+        }}
+        onAcceptLeading={(listingId) => void acceptSellerBid(listingId)}
+        onRejectLeading={(listingId) => void rejectSellerOffer(listingId)}
       />
 
       <SellPreviewModal
@@ -737,17 +801,27 @@ function PremiumHeader({
   const title = tab === 'sell' ? 'Sell with confidence' : tab === 'activity' ? 'My Exchange' : 'Exchange';
   const subtitle = tab === 'sell' ? 'Get the market working for you' : tab === 'activity' ? 'Track your deals in one place' : 'Commercial vehicles. Curated better.';
 
+  const marketplace = tab === 'buy';
+  const iconColor = marketplace ? '#0F1D33' : '#FFFFFF';
+
   return (
-    <View style={styles.header}>
-      <Pressable onPress={onBack} hitSlop={8} style={({ pressed }) => [styles.headerAction, pressed && styles.pressed]}>
-        <MaterialCommunityIcons name="arrow-left" size={21} color="#FFFFFF" />
+    <View style={[styles.header, marketplace && styles.headerMarketplace]}>
+      <Pressable
+        onPress={onBack}
+        hitSlop={8}
+        style={({ pressed }) => [styles.headerAction, marketplace && styles.headerActionMarketplace, pressed && styles.pressed]}
+      >
+        <MaterialCommunityIcons name="arrow-left" size={21} color={iconColor} />
       </Pressable>
       <View style={styles.headerCopy}>
-        <Text style={styles.headerTitle}>{title}</Text>
-        <Text style={styles.headerSubtitle}>{subtitle}</Text>
+        <Text style={[styles.headerTitle, marketplace && styles.headerTitleMarketplace]}>{title}</Text>
+        <Text style={[styles.headerSubtitle, marketplace && styles.headerSubtitleMarketplace]}>{subtitle}</Text>
       </View>
-      <Pressable onPress={onActivity} style={({ pressed }) => [styles.headerAction, pressed && styles.pressed]}>
-        <MaterialCommunityIcons name="heart-outline" size={20} color="#FFFFFF" />
+      <Pressable
+        onPress={onActivity}
+        style={({ pressed }) => [styles.headerAction, marketplace && styles.headerActionMarketplace, pressed && styles.pressed]}
+      >
+        <MaterialCommunityIcons name="heart-outline" size={20} color={iconColor} />
       </Pressable>
     </View>
   );
@@ -790,6 +864,9 @@ function BuyExperience({
   onOpenVehicle,
   onFavorite,
   onSell,
+  onActivity,
+  onValue,
+  onBrowseAll,
 }: {
   query: string;
   category: VehicleCategory;
@@ -803,300 +880,28 @@ function BuyExperience({
   onOpenVehicle: (vehicle: MarketplaceVehicle) => void;
   onFavorite: (id: string) => void;
   onSell: () => void;
-}) {
-  const featured = vehicles.slice(0, 3);
-
-  return (
-    <ScrollView
-      style={styles.flex}
-      contentContainerStyle={styles.buyContent}
-      showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      <View style={styles.discoveryHero}>
-        <View style={styles.heroOrbA} />
-        <View style={styles.heroOrbB} />
-        <View style={styles.discoveryTopline}>
-          <View style={styles.livePill}>
-            <View style={styles.liveDot} />
-            <Text style={styles.livePillText}>LIVE MARKET</Text>
-          </View>
-          <View style={styles.marketMetric}>
-            <Text style={styles.marketMetricValue}>{totalVehicles}</Text>
-            <Text style={styles.marketMetricLabel}>live vehicles</Text>
-          </View>
-        </View>
-        <Text style={styles.discoveryTitle}>Find the machine that moves your business.</Text>
-        <Text style={styles.discoverySubtitle}>Verified commercial vehicles, live market pricing and managed transactions.</Text>
-        <View style={styles.heroSearch}>
-          <MaterialCommunityIcons name="magnify" size={20} color="#59657A" />
-          <TextInput
-            value={query}
-            onChangeText={onQueryChange}
-            placeholder="Search make, model, city or category"
-            placeholderTextColor="#8B95A6"
-            style={styles.heroSearchInput}
-          />
-          {query ? (
-            <Pressable onPress={() => onQueryChange('')} hitSlop={8}>
-              <MaterialCommunityIcons name="close-circle" size={18} color="#9EA7B7" />
-            </Pressable>
-          ) : (
-            <View style={styles.filterKey}><MaterialCommunityIcons name="tune-variant" size={15} color="#0B1320" /></View>
-          )}
-        </View>
-      </View>
-
-      <View style={styles.quickStrip}>
-        <QuickValue icon="shield-check" label="Verified" value="InsureIT checked" />
-        <QuickDivider />
-        <QuickValue icon="chart-line" label="Market driven" value="Live bidding" />
-        <QuickDivider />
-        <QuickValue icon="account-lock-outline" label="Private" value="Managed connect" />
-      </View>
-
-      <SectionHeading title="Browse by category" action="Live inventory" />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRail}>
-        {categories.map((item) => (
-          <Pressable
-            key={item}
-            onPress={() => onCategoryChange(item)}
-            style={({ pressed }) => [
-              styles.categoryCard,
-              category === item && styles.categoryCardActive,
-              pressed && styles.cardPressed,
-            ]}
-          >
-            <View style={[styles.categoryIconBox, category === item && styles.categoryIconBoxActive]}>
-              <MaterialCommunityIcons
-                name={item === 'All' ? 'apps' : categoryIcon(item)}
-                size={21}
-                color={category === item ? '#FFFFFF' : '#5B5FF9'}
-              />
-            </View>
-            <Text style={[styles.categoryCardText, category === item && styles.categoryCardTextActive]}>{item}</Text>
-          </Pressable>
-        ))}
-      </ScrollView>
-
-      {featured.length ? (
-        <>
-          <SectionHeading title="Featured now" action="Live inventory" />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.featuredRail}>
-            {featured.map((vehicle) => (
-              <FeaturedCard
-                key={vehicle.id}
-                vehicle={vehicle}
-                currentBid={vehicle.currentBid}
-                favorite={favorites.includes(vehicle.id)}
-                onOpen={() => onOpenVehicle(vehicle)}
-                onFavorite={() => onFavorite(vehicle.id)}
-              />
-            ))}
-          </ScrollView>
-        </>
-      ) : null}
-
-      <View style={styles.sellBanner}>
-        <View style={styles.sellBannerIcon}><MaterialCommunityIcons name="cash-multiple" size={25} color="#0B1320" /></View>
-        <View style={styles.flex}>
-          <Text style={styles.sellBannerEyebrow}>SELL SMARTER</Text>
-          <Text style={styles.sellBannerTitle}>Let verified buyers compete for your vehicle.</Text>
-          <Text style={styles.sellBannerCopy}>List once. Compare offers. Stay in control.</Text>
-        </View>
-        <Pressable onPress={onSell} style={({ pressed }) => [styles.sellBannerButton, pressed && styles.pressed]}>
-          <MaterialCommunityIcons name="arrow-top-right" size={18} color="#0B1320" />
-        </Pressable>
-      </View>
-
-      <SectionHeading title={category === 'All' ? 'All vehicles' : category} action={`${vehicles.length} results`} />
-      <View style={styles.inventoryList}>
-        {vehicles.map((vehicle) => (
-          <InventoryCard
-            key={vehicle.id}
-            vehicle={vehicle}
-            currentBid={vehicle.currentBid}
-            favorite={favorites.includes(vehicle.id)}
-            onOpen={() => onOpenVehicle(vehicle)}
-            onFavorite={() => onFavorite(vehicle.id)}
-          />
-        ))}
-      </View>
-
-      {vehicles.length === 0 ? (
-        <View style={styles.emptyState}>
-          <View style={styles.emptyIcon}><MaterialCommunityIcons name="truck-outline" size={28} color="#59657A" /></View>
-          <Text style={styles.emptyTitle}>{query || category !== 'All' ? 'No exact matches' : 'Marketplace opening soon'}</Text>
-          <Text style={styles.emptyCopy}>{query || category !== 'All' ? 'Try another model, category or location.' : 'Approved vehicles will appear here as sellers publish them.'}</Text>
-        </View>
-      ) : null}
-
-      <View style={styles.promiseCard}>
-        <Text style={styles.promiseEyebrow}>THE INSUREIT STANDARD</Text>
-        <Text style={styles.promiseTitle}>More confidence in every kilometre.</Text>
-        <View style={styles.promiseGrid}>
-          <PromiseItem icon="account-check-outline" title="Verified seller" />
-          <PromiseItem icon="clipboard-check-outline" title="Condition insight" />
-          <PromiseItem icon="file-document-check-outline" title="Document support" />
-          <PromiseItem icon="shield-lock-outline" title="Managed transaction" />
-        </View>
-      </View>
-    </ScrollView>
-  );
-}
-
-function QuickValue({
-  icon,
-  label,
-  value,
-}: {
-  icon: 'shield-check' | 'chart-line' | 'account-lock-outline';
-  label: string;
-  value: string;
+  onActivity: () => void;
+  onValue: () => void;
+  onBrowseAll: () => void;
 }) {
   return (
-    <View style={styles.quickValue}>
-      <MaterialCommunityIcons name={icon} size={17} color="#5B5FF9" />
-      <View>
-        <Text style={styles.quickValueLabel}>{label}</Text>
-        <Text style={styles.quickValueText}>{value}</Text>
-      </View>
-    </View>
-  );
-}
-
-function QuickDivider() {
-  return <View style={styles.quickDivider} />;
-}
-
-function SectionHeading({ title, action }: { title: string; action: string }) {
-  return (
-    <View style={styles.sectionHeading}>
-      <Text style={styles.sectionHeadingTitle}>{title}</Text>
-      <Text style={styles.sectionHeadingAction}>{action}</Text>
-    </View>
-  );
-}
-
-function FeaturedCard({
-  vehicle,
-  currentBid,
-  favorite,
-  onOpen,
-  onFavorite,
-}: {
-  vehicle: MarketplaceVehicle;
-  currentBid: number;
-  favorite: boolean;
-  onOpen: () => void;
-  onFavorite: () => void;
-}) {
-  return (
-    <Pressable onPress={onOpen} style={({ pressed }) => [styles.featuredCard, { backgroundColor: vehicle.tint }, pressed && styles.cardPressed]}>
-      <View style={styles.featuredCardTop}>
-        <View style={[styles.signalBadge, { backgroundColor: vehicle.accent }]}><Text style={styles.signalBadgeText}>{vehicle.badge}</Text></View>
-        <Pressable
-          onPress={(event) => {
-            event.stopPropagation();
-            onFavorite();
-          }}
-          style={({ pressed }) => [styles.floatingFavorite, pressed && styles.pressed]}
-        >
-          <MaterialCommunityIcons name={favorite ? 'heart' : 'heart-outline'} size={19} color={favorite ? '#E04361' : '#263245'} />
-        </Pressable>
-      </View>
-      <View style={styles.featuredImageWrap}><Image source={vehicle.image} resizeMode="contain" style={styles.featuredImage} /></View>
-      <View style={styles.featuredBody}>
-        <Text numberOfLines={1} style={styles.featuredTitle}>{vehicle.title}</Text>
-        <Text style={styles.featuredMeta}>{vehicle.year || 'Year verified'} • {formatKm(vehicle.km)} • {vehicle.location}</Text>
-        <View style={styles.featuredPriceRow}>
-          <View>
-            <Text style={styles.priceOverline}>{vehicle.bids ? 'CURRENT BID' : 'ASKING PRICE'}</Text>
-            <Text style={styles.featuredPrice}>{formatCompactCurrency(vehicle.bids ? currentBid : vehicle.askingPrice)}</Text>
-          </View>
-          <View style={styles.featuredBidCount}>
-            <MaterialCommunityIcons name="gavel" size={14} color="#59657A" />
-            <Text style={styles.featuredBidCountText}>{vehicle.bids} bids</Text>
-          </View>
-        </View>
-      </View>
-    </Pressable>
-  );
-}
-
-function InventoryCard({
-  vehicle,
-  currentBid,
-  favorite,
-  onOpen,
-  onFavorite,
-}: {
-  vehicle: MarketplaceVehicle;
-  currentBid: number;
-  favorite: boolean;
-  onOpen: () => void;
-  onFavorite: () => void;
-}) {
-  return (
-    <Pressable onPress={onOpen} style={({ pressed }) => [styles.inventoryCard, pressed && styles.cardPressed]}>
-      <View style={[styles.inventoryImagePane, { backgroundColor: vehicle.tint }]}>
-        <Image source={vehicle.image} resizeMode="contain" style={styles.inventoryImage} />
-        {vehicle.inspected ? (
-          <View style={styles.scoreBadge}>
-            <MaterialCommunityIcons name="shield-check" size={12} color="#FFFFFF" />
-            <Text style={styles.scoreBadgeText}>{vehicle.score}</Text>
-          </View>
-        ) : null}
-      </View>
-      <View style={styles.inventoryBody}>
-        <View style={styles.inventoryTitleRow}>
-          <View style={styles.flex}>
-            <Text numberOfLines={1} style={styles.inventoryTitle}>{vehicle.title}</Text>
-            <Text style={styles.inventoryMeta}>{vehicle.year || 'Year verified'} • {formatKm(vehicle.km)}</Text>
-          </View>
-          <Pressable
-            onPress={(event) => {
-              event.stopPropagation();
-              onFavorite();
-            }}
-            hitSlop={8}
-          >
-            <MaterialCommunityIcons name={favorite ? 'heart' : 'heart-outline'} size={19} color={favorite ? '#E04361' : '#9AA3B3'} />
-          </Pressable>
-        </View>
-        <View style={styles.inventoryLocation}>
-          <MaterialCommunityIcons name="map-marker-outline" size={13} color="#7A8698" />
-          <Text style={styles.inventoryLocationText}>{vehicle.location}</Text>
-        </View>
-        <View style={styles.inventoryRule} />
-        <View style={styles.inventoryBottom}>
-          <View>
-            <Text style={styles.priceOverline}>ASKING</Text>
-            <Text style={styles.inventoryAsking}>{formatCompactCurrency(vehicle.askingPrice)}</Text>
-          </View>
-          <View style={styles.inventoryBidBlock}>
-            <Text style={styles.inventoryLive}>{vehicle.bids ? 'LIVE BID' : 'OPEN FOR BIDS'}</Text>
-            <Text style={styles.inventoryBid}>{vehicle.bids ? formatCompactCurrency(currentBid) : '—'}</Text>
-            <Text style={styles.inventoryEnd}>{vehicle.ending} left</Text>
-          </View>
-        </View>
-      </View>
-    </Pressable>
-  );
-}
-
-function PromiseItem({
-  icon,
-  title,
-}: {
-  icon: 'account-check-outline' | 'clipboard-check-outline' | 'file-document-check-outline' | 'shield-lock-outline';
-  title: string;
-}) {
-  return (
-    <View style={styles.promiseItem}>
-      <View style={styles.promiseIcon}><MaterialCommunityIcons name={icon} size={19} color="#FFFFFF" /></View>
-      <Text style={styles.promiseItemText}>{title}</Text>
-    </View>
+    <ExchangeMarketplaceHome
+      query={query}
+      category={category}
+      vehicles={vehicles}
+      totalVehicles={totalVehicles}
+      favorites={favorites}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      onQueryChange={onQueryChange}
+      onCategoryChange={onCategoryChange}
+      onOpenVehicle={(vehicle: ExchangeHomeVehicle) => onOpenVehicle(vehicle as MarketplaceVehicle)}
+      onFavorite={onFavorite}
+      onSell={onSell}
+      onActivity={onActivity}
+      onValue={onValue}
+      onBrowseAll={onBrowseAll}
+    />
   );
 }
 
@@ -1114,6 +919,7 @@ function SellExperience({
   onPhotoPress,
   onPreview,
   onSave,
+  onAddVehicle,
 }: {
   draft: SellDraft;
   draftSaved: boolean;
@@ -1128,723 +934,25 @@ function SellExperience({
   onPhotoPress: (index: number) => void;
   onPreview: () => void;
   onSave: () => void;
+  onAddVehicle: () => void;
 }) {
   return (
-    <ScrollView
-      style={styles.flex}
-      contentContainerStyle={styles.sellContent}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      <View style={styles.sellHero}>
-        <View style={styles.sellHeroGlow} />
-        <View style={styles.sellHeroCopy}>
-          <Text style={styles.sellHeroEyebrow}>SELL ON EXCHANGE</Text>
-          <Text style={styles.sellHeroTitle}>Your vehicle. The right buyers. A better price.</Text>
-          <Text style={styles.sellHeroSubtitle}>Create your listing in minutes and let qualified buyers compete.</Text>
-        </View>
-        <Image source={truckOrange} resizeMode="contain" style={styles.sellHeroImage} />
-      </View>
-
-      <View style={styles.sellBenefits}>
-        <SellBenefit icon="account-group-outline" title="Verified buyers" />
-        <SellBenefit icon="gavel" title="Live offers" />
-        <SellBenefit icon="shield-lock-outline" title="Private contact" />
-      </View>
-
-      <View style={styles.progressCard}>
-        <View style={styles.progressHeader}>
-          <Text style={styles.progressTitle}>Create your listing</Text>
-          <Text style={styles.progressMeta}>{draftSaved ? 'Draft saved' : 'Vehicle details'}</Text>
-        </View>
-        <View style={styles.progressTrack}><View style={[styles.progressFill, { width: draftSaved ? '70%' : '25%' }]} /></View>
-        <View style={styles.progressLabels}>
-          <Text style={styles.progressLabelActive}>Vehicle</Text>
-          <Text style={styles.progressLabel}>Condition</Text>
-          <Text style={styles.progressLabel}>Photos</Text>
-          <Text style={styles.progressLabel}>Review</Text>
-        </View>
-      </View>
-
-      <View style={styles.sellFormCard}>
-        <View style={styles.formHeader}>
-          <View>
-            <Text style={styles.formTitle}>Choose from your fleet</Text>
-            <Text style={styles.formSubtitle}>Only vehicles owned by this customer account can be listed</Text>
-          </View>
-          <View style={styles.autoFillChip}>
-            <MaterialCommunityIcons name="shield-check-outline" size={14} color="#5B5FF9" />
-            <Text style={styles.autoFillChipText}>Verified fleet</Text>
-          </View>
-        </View>
-
-        <View style={{ marginTop: 12, gap: 8 }}>
-          {sellableVehicles.map((vehicle) => {
-            const active = selectedVehicleId === vehicle.vehicle_id;
-            return (
-              <Pressable
-                key={vehicle.vehicle_id}
-                onPress={() => onSelectVehicle(vehicle)}
-                style={({ pressed }) => [
-                  styles.activityVehicleRow,
-                  {
-                    minHeight: 66,
-                    paddingHorizontal: 9,
-                    borderRadius: 16,
-                    backgroundColor: active ? '#ECECFF' : '#F7F8FA',
-                    opacity: vehicle.has_active_listing ? 0.55 : 1,
-                  },
-                  pressed && !vehicle.has_active_listing && styles.cardPressed,
-                ]}
-              >
-                <View style={[styles.activityThumb, { backgroundColor: '#FFFFFF' }]}>
-                  <Image source={imageForCategory(categoryFromSellableVehicle(vehicle))} resizeMode="contain" style={styles.activityThumbImage} />
-                </View>
-                <View style={styles.flex}>
-                  <Text style={styles.activityVehicleTitle}>{[vehicle.make, vehicle.model].filter(Boolean).join(' ') || vehicle.vehicle_type}</Text>
-                  <Text style={styles.activityVehicleMeta}>{vehicle.vehicle_no} • {vehicle.year || 'Year pending'}</Text>
-                </View>
-                {vehicle.has_active_listing ? (
-                  <View style={styles.savedPill}><Text style={styles.savedPillText}>LISTED</Text></View>
-                ) : (
-                  <MaterialCommunityIcons name={active ? 'check-circle' : 'chevron-right'} size={20} color={active ? '#5B5FF9' : '#A0A9B8'} />
-                )}
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {!sellableVehicles.length ? (
-          <View style={styles.activityEmpty}>
-            <View style={styles.activityEmptyIcon}><MaterialCommunityIcons name="truck-outline" size={22} color="#5B5FF9" /></View>
-            <View style={styles.flex}>
-              <Text style={styles.activityEmptyText}>No fleet vehicle is available for a new listing.</Text>
-            </View>
-          </View>
-        ) : null}
-      </View>
-
-      <View style={styles.sellFormCard}>
-        <View style={styles.formHeader}>
-          <View>
-            <Text style={styles.formTitle}>Vehicle identity</Text>
-            <Text style={styles.formSubtitle}>Fleet details stay linked to the original vehicle record</Text>
-          </View>
-          <View style={styles.autoFillChip}>
-            <MaterialCommunityIcons name="auto-fix" size={14} color="#5B5FF9" />
-            <Text style={styles.autoFillChipText}>Smart fill</Text>
-          </View>
-        </View>
-
-        <FormField label="Registration number" value={draft.registration} editable={false} placeholder="Select a fleet vehicle" />
-        <FormField label="Make / model" value={draft.makeModel} editable={false} placeholder="Select a fleet vehicle" />
-
-        <View style={styles.twoColumn}>
-          <View style={styles.flex}>
-            <FormField label="Year" value={draft.year} editable={false} placeholder="Year" />
-          </View>
-          <View style={styles.flex}>
-            <FormField
-              label="KM driven"
-              value={draft.km}
-              onChangeText={(value) => onUpdate('km', value.replace(/\D/g, ''))}
-              placeholder="72400"
-              keyboardType="number-pad"
-            />
-          </View>
-        </View>
-
-        <Text style={styles.fieldLabel}>Vehicle type</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sellCategoryRail}>
-          {categories.filter((item): item is Exclude<VehicleCategory, 'All'> => item !== 'All').map((item) => (
-            <Pressable
-              key={item}
-              onPress={() => onUpdate('category', item)}
-              style={({ pressed }) => [
-                styles.sellCategoryChip,
-                draft.category === item && styles.sellCategoryChipActive,
-                pressed && styles.pressed,
-              ]}
-            >
-              <MaterialCommunityIcons name={categoryIcon(item)} size={16} color={draft.category === item ? '#FFFFFF' : '#48566C'} />
-              <Text style={[styles.sellCategoryText, draft.category === item && styles.sellCategoryTextActive]}>{item}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      </View>
-
-      <View style={styles.sellFormCard}>
-        <View style={styles.formHeader}>
-          <View>
-            <Text style={styles.formTitle}>Show it honestly</Text>
-            <Text style={styles.formSubtitle}>Clear photos build buyer confidence</Text>
-          </View>
-          <MaterialCommunityIcons name="camera-outline" size={20} color="#5B5FF9" />
-        </View>
-
-        <View style={styles.photoGrid}>
-          {photos.map((photo, index) => (
-            <Pressable
-              key={photo.label}
-              disabled={busy}
-              onPress={() => onPhotoPress(index)}
-              style={[styles.photoSlot, index === 0 && !photo.uri && styles.photoSlotPrimary]}
-            >
-              {photo.uri ? (
-                <Image source={{ uri: photo.uri }} resizeMode="cover" style={{ width: '100%', height: '100%', borderRadius: 13 }} />
-              ) : (
-                <>
-                  <View style={styles.photoIcon}>
-                    <MaterialCommunityIcons name="camera-plus-outline" size={20} color={index === 0 ? '#FFFFFF' : '#59657A'} />
-                  </View>
-                  <Text style={[styles.photoLabel, index === 0 && styles.photoLabelPrimary]}>{photo.label}</Text>
-                </>
-              )}
-              {photo.uploaded ? (
-                <View style={[styles.savedPill, { position: 'absolute', right: 4, bottom: 4 }]}>
-                  <Text style={styles.savedPillText}>DONE</Text>
-                </View>
-              ) : null}
-            </Pressable>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.sellFormCard}>
-        <View style={styles.formHeader}>
-          <View>
-            <Text style={styles.formTitle}>Price strategy</Text>
-            <Text style={styles.formSubtitle}>Set your expectation. Let the market respond.</Text>
-          </View>
-          <MaterialCommunityIcons name="chart-line" size={21} color="#16A67A" />
-        </View>
-
-        <FormField
-          label="Expected price"
-          value={draft.askingPrice}
-          onChangeText={(value) => onUpdate('askingPrice', value.replace(/\D/g, ''))}
-          placeholder="840000"
-          keyboardType="number-pad"
-          prefix="₹"
-        />
-
-        <View style={styles.biddingChoice}>
-          <View style={styles.biddingChoiceIcon}><MaterialCommunityIcons name="gavel" size={20} color="#FFFFFF" /></View>
-          <View style={styles.flex}>
-            <Text style={styles.biddingChoiceTitle}>Open bidding</Text>
-            <Text style={styles.biddingChoiceCopy}>Receive competing offers while you keep final approval.</Text>
-          </View>
-          <MaterialCommunityIcons name="check-circle" size={20} color="#16A67A" />
-        </View>
-      </View>
-
-      <View style={styles.sellerShield}>
-        <View style={styles.sellerShieldIcon}><MaterialCommunityIcons name="shield-lock" size={23} color="#FFFFFF" /></View>
-        <View style={styles.flex}>
-          <Text style={styles.sellerShieldTitle}>You stay in control</Text>
-          <Text style={styles.sellerShieldCopy}>Your phone number stays private. Buyer connection is coordinated through InsureIT.</Text>
-        </View>
-      </View>
-
-      <View style={styles.sellActions}>
-        <Pressable disabled={busy} onPress={onSave} style={({ pressed }) => [styles.softButton, pressed && styles.pressed, busy && { opacity: 0.55 }]}>
-          <MaterialCommunityIcons name={draftSaved ? 'check' : 'bookmark-outline'} size={17} color="#0B1320" />
-          <Text style={styles.softButtonText}>{draftSaved ? 'Saved' : 'Save draft'}</Text>
-        </Pressable>
-        <Pressable disabled={busy} onPress={onPreview} style={({ pressed }) => [styles.darkButton, pressed && styles.darkButtonPressed, busy && { opacity: 0.55 }]}>
-          <Text style={styles.darkButtonText}>Review listing</Text>
-          <MaterialCommunityIcons name="arrow-right" size={17} color="#FFFFFF" />
-        </Pressable>
-      </View>
-    </ScrollView>
-  );
-}
-
-function SellBenefit({
-  icon,
-  title,
-}: {
-  icon: 'account-group-outline' | 'gavel' | 'shield-lock-outline';
-  title: string;
-}) {
-  return (
-    <View style={styles.sellBenefit}>
-      <MaterialCommunityIcons name={icon} size={18} color="#5B5FF9" />
-      <Text style={styles.sellBenefitText}>{title}</Text>
-    </View>
-  );
-}
-
-function FormField({
-  label,
-  prefix,
-  ...props
-}: TextInputProps & { label: string; prefix?: string }) {
-  return (
-    <View style={styles.fieldWrap}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={styles.fieldShell}>
-        {prefix ? <Text style={styles.fieldPrefix}>{prefix}</Text> : null}
-        <TextInput {...props} placeholderTextColor="#A0A9B8" style={[styles.fieldInput, prefix ? styles.fieldInputWithPrefix : null]} />
-      </View>
-    </View>
-  );
-}
-
-function ActivityExperience({
-  activity,
-  feedVehicles,
-  refreshing,
-  onRefresh,
-  onBrowse,
-  onSell,
-  onOpenVehicle,
-  onReviewBids,
-  onRespondContact,
-  onConfirmDeal,
-}: {
-  activity: ExchangeActivity;
-  feedVehicles: MarketplaceVehicle[];
-  refreshing: boolean;
-  onRefresh: () => void;
-  onBrowse: () => void;
-  onSell: () => void;
-  onOpenVehicle: (vehicle: MarketplaceVehicle) => void;
-  onReviewBids: (row: Record<string, unknown>) => void;
-  onRespondContact: (requestId: string, accept: boolean) => void;
-  onConfirmDeal: (dealId: string) => void;
-}) {
-  const favoriteRows = activity.favorites;
-  const bidRows = activity.bids;
-  const listingRows = activity.listings;
-  const dealRows = activity.deals;
-  const contactRows = activity.contact_requests;
-
-  return (
-    <ScrollView
-      style={styles.flex}
-      contentContainerStyle={styles.activityContent}
-      showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      <View style={styles.activityHero}>
-        <View>
-          <Text style={styles.activityEyebrow}>YOUR MARKETPLACE</Text>
-          <Text style={styles.activityTitle}>Everything in motion.</Text>
-          <Text style={styles.activitySubtitle}>Saved vehicles, bids, listings and deals — one clear view.</Text>
-        </View>
-        <View style={styles.activityStatRow}>
-          <ActivityStat value={String(favoriteRows.length)} label="Saved" />
-          <ActivityStat value={String(bidRows.length)} label="Bids" />
-          <ActivityStat value={String(listingRows.length)} label="Listings" />
-        </View>
-      </View>
-
-      <ActivitySection
-        title="Live bids"
-        subtitle="Your purchase activity"
-        empty={!bidRows.length}
-        emptyIcon="gavel"
-        emptyText="No bids yet"
-        emptyAction="Explore vehicles"
-        onEmptyAction={onBrowse}
-      >
-        {bidRows.map((row) => {
-          const listingId = recordString(row, 'listing_id');
-          const vehicle = feedVehicles.find((item) => item.id === listingId);
-          const amount = recordNumber(row, 'amount');
-          const status = recordString(row, 'status') || 'placed';
-          return (
-            <Pressable
-              key={recordString(row, 'bid_id') || listingId}
-              onPress={() => vehicle && onOpenVehicle(vehicle)}
-              style={({ pressed }) => [styles.activityVehicleRow, pressed && styles.cardPressed]}
-            >
-              <View style={[styles.activityThumb, { backgroundColor: vehicle?.tint ?? '#ECECFF' }]}>
-                <Image source={vehicle?.image ?? truckBlue} resizeMode="contain" style={styles.activityThumbImage} />
-              </View>
-              <View style={styles.flex}>
-                <Text numberOfLines={1} style={styles.activityVehicleTitle}>{recordString(row, 'title') || vehicle?.title || 'Exchange vehicle'}</Text>
-                <Text style={styles.activityVehicleMeta}>{status.replace(/_/g, ' ')} • {vehicle?.ending ?? 'Tracked'}</Text>
-              </View>
-              <View style={styles.activityAmountWrap}>
-                <Text style={styles.activityAmount}>{formatCompactCurrency(amount)}</Text>
-                <View style={status === 'leading' ? styles.leadingPill : styles.savedPill}>
-                  <Text style={status === 'leading' ? styles.leadingPillText : styles.savedPillText}>{status.toUpperCase().replace(/_/g, ' ')}</Text>
-                </View>
-              </View>
-            </Pressable>
-          );
-        })}
-      </ActivitySection>
-
-      <ActivitySection
-        title="Saved vehicles"
-        subtitle="Shortlist and compare"
-        empty={!favoriteRows.length}
-        emptyIcon="heart-outline"
-        emptyText="Save vehicles you want to revisit"
-        emptyAction="Browse inventory"
-        onEmptyAction={onBrowse}
-      >
-        {favoriteRows.map((row) => {
-          const listingId = recordString(row, 'listing_id');
-          const vehicle = feedVehicles.find((item) => item.id === listingId);
-          return (
-            <Pressable
-              key={listingId}
-              onPress={() => vehicle && onOpenVehicle(vehicle)}
-              style={({ pressed }) => [styles.activityVehicleRow, pressed && styles.cardPressed]}
-            >
-              <View style={[styles.activityThumb, { backgroundColor: vehicle?.tint ?? '#ECECFF' }]}>
-                <Image source={vehicle?.image ?? truckBlue} resizeMode="contain" style={styles.activityThumbImage} />
-              </View>
-              <View style={styles.flex}>
-                <Text numberOfLines={1} style={styles.activityVehicleTitle}>{recordString(row, 'title') || 'Exchange vehicle'}</Text>
-                <Text style={styles.activityVehicleMeta}>{recordString(row, 'city') || 'Marketplace'} • {formatCompactCurrency(recordNumber(row, 'asking_price'))}</Text>
-              </View>
-              <MaterialCommunityIcons name="chevron-right" size={21} color="#A0A9B8" />
-            </Pressable>
-          );
-        })}
-      </ActivitySection>
-
-      <ActivitySection
-        title="Selling"
-        subtitle="Listings and buyer offers"
-        empty={!listingRows.length}
-        emptyIcon="sale"
-        emptyText="Ready to sell your vehicle?"
-        emptyAction="Create a listing"
-        onEmptyAction={onSell}
-      >
-        {listingRows.map((row) => {
-          const status = recordString(row, 'status');
-          const bidCount = recordNumber(row, 'bid_count');
-          return (
-            <View key={recordString(row, 'listing_id')} style={styles.activityVehicleRow}>
-              <View style={[styles.activityThumb, { backgroundColor: '#ECECFF' }]}>
-                <Image source={truckBlue} resizeMode="contain" style={styles.activityThumbImage} />
-              </View>
-              <View style={styles.flex}>
-                <Text style={styles.activityVehicleTitle}>{recordString(row, 'title') || 'Vehicle listing'}</Text>
-                <Text style={styles.activityVehicleMeta}>{status.replace(/_/g, ' ')} • {bidCount} bids</Text>
-              </View>
-              {status === 'live' && bidCount > 0 ? (
-                <Pressable onPress={() => onReviewBids(row)} style={styles.savedPill}>
-                  <Text style={styles.savedPillText}>BIDS</Text>
-                </Pressable>
-              ) : (
-                <View style={styles.savedPill}><Text style={styles.savedPillText}>{status.toUpperCase().replace(/_/g, ' ')}</Text></View>
-              )}
-            </View>
-          );
-        })}
-      </ActivitySection>
-
-      {(dealRows.length || contactRows.length) ? (
-        <ActivitySection
-          title="Deal desk"
-          subtitle="Managed connections and transactions"
-          empty={false}
-          emptyIcon="gavel"
-          emptyText=""
-          emptyAction=""
-          onEmptyAction={onBrowse}
-        >
-          {contactRows.map((row) => {
-            const side = recordString(row, 'side');
-            const status = recordString(row, 'status');
-            const requestId = recordString(row, 'request_id');
-            return (
-              <View key={requestId} style={styles.activityVehicleRow}>
-                <View style={[styles.activityThumb, { backgroundColor: '#E8F8F2' }]}>
-                  <MaterialCommunityIcons name="phone-in-talk-outline" size={22} color="#0A7658" />
-                </View>
-                <View style={styles.flex}>
-                  <Text style={styles.activityVehicleTitle}>{recordString(row, 'title') || 'Managed contact'}</Text>
-                  <Text style={styles.activityVehicleMeta}>{side} • {status.replace(/_/g, ' ')}</Text>
-                </View>
-                {side === 'seller' && status === 'pending' ? (
-                  <View style={{ gap: 4 }}>
-                    <Pressable onPress={() => onRespondContact(requestId, true)} style={styles.leadingPill}><Text style={styles.leadingPillText}>ACCEPT</Text></Pressable>
-                    <Pressable onPress={() => onRespondContact(requestId, false)} style={styles.savedPill}><Text style={styles.savedPillText}>DECLINE</Text></Pressable>
-                  </View>
-                ) : (
-                  <View style={styles.savedPill}><Text style={styles.savedPillText}>{status.toUpperCase().replace(/_/g, ' ')}</Text></View>
-                )}
-              </View>
-            );
-          })}
-
-          {dealRows.map((row) => {
-            const status = recordString(row, 'status');
-            const side = recordString(row, 'side');
-            const dealId = recordString(row, 'deal_id');
-            return (
-              <View key={dealId} style={styles.activityVehicleRow}>
-                <View style={[styles.activityThumb, { backgroundColor: '#FFF0E3' }]}>
-                  <MaterialCommunityIcons name="handshake-outline" size={22} color="#C66F20" />
-                </View>
-                <View style={styles.flex}>
-                  <Text style={styles.activityVehicleTitle}>{recordString(row, 'title') || 'Exchange deal'}</Text>
-                  <Text style={styles.activityVehicleMeta}>{side} • {status.replace(/_/g, ' ')} • {formatCompactCurrency(recordNumber(row, 'agreed_price'))}</Text>
-                </View>
-                {side === 'buying' && status === 'seller_accepted' ? (
-                  <Pressable onPress={() => onConfirmDeal(dealId)} style={styles.leadingPill}><Text style={styles.leadingPillText}>CONFIRM</Text></Pressable>
-                ) : (
-                  <View style={styles.savedPill}><Text style={styles.savedPillText}>{status.toUpperCase().replace(/_/g, ' ')}</Text></View>
-                )}
-              </View>
-            );
-          })}
-        </ActivitySection>
-      ) : null}
-
-      <View style={styles.marketSupport}>
-        <View style={styles.marketSupportIcon}><MaterialCommunityIcons name="headset" size={20} color="#FFFFFF" /></View>
-        <View style={styles.flex}>
-          <Text style={styles.marketSupportTitle}>Need help with a deal?</Text>
-          <Text style={styles.marketSupportCopy}>Our Exchange team supports inspection, paperwork and buyer-seller coordination.</Text>
-        </View>
-        <MaterialCommunityIcons name="arrow-top-right" size={19} color="#FFFFFF" />
-      </View>
-    </ScrollView>
-  );
-}
-
-function ActivityStat({ value, label }: { value: string; label: string }) {
-  return (
-    <View style={styles.activityStat}>
-      <Text style={styles.activityStatValue}>{value}</Text>
-      <Text style={styles.activityStatLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function ActivitySection({
-  title,
-  subtitle,
-  empty,
-  emptyIcon,
-  emptyText,
-  emptyAction,
-  onEmptyAction,
-  children,
-}: {
-  title: string;
-  subtitle: string;
-  empty: boolean;
-  emptyIcon: 'gavel' | 'heart-outline' | 'sale';
-  emptyText: string;
-  emptyAction: string;
-  onEmptyAction: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <View style={styles.activitySection}>
-      <View style={styles.activitySectionHeader}>
-        <View>
-          <Text style={styles.activitySectionTitle}>{title}</Text>
-          <Text style={styles.activitySectionSubtitle}>{subtitle}</Text>
-        </View>
-      </View>
-      {empty ? (
-        <View style={styles.activityEmpty}>
-          <View style={styles.activityEmptyIcon}><MaterialCommunityIcons name={emptyIcon} size={22} color="#5B5FF9" /></View>
-          <View style={styles.flex}>
-            <Text style={styles.activityEmptyText}>{emptyText}</Text>
-            <Pressable onPress={onEmptyAction}><Text style={styles.activityEmptyAction}>{emptyAction}</Text></Pressable>
-          </View>
-        </View>
-      ) : (
-        <View style={styles.activityRows}>{children}</View>
-      )}
-    </View>
-  );
-}
-
-function VehicleDetailModal({
-  vehicle,
-  currentBid,
-  isFavorite,
-  busy,
-  onClose,
-  onFavorite,
-  onPlaceBid,
-  onRequestContact,
-}: {
-  vehicle: MarketplaceVehicle | null;
-  currentBid: number;
-  isFavorite: boolean;
-  busy: boolean;
-  onClose: () => void;
-  onFavorite: () => void;
-  onPlaceBid: (vehicle: MarketplaceVehicle, amount: number) => void;
-  onRequestContact: (vehicle: MarketplaceVehicle) => void;
-}) {
-  const [bidAmount, setBidAmount] = useState(0);
-
-  if (!vehicle) return null;
-  const minimumBid = vehicle.bids > 0
-    ? currentBid + vehicle.minBidIncrement
-    : Math.max(currentBid, vehicle.minBidIncrement);
-  const shownBid = bidAmount >= minimumBid ? bidAmount : minimumBid;
-
-  return (
-    <Modal visible animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={styles.detailSafe} edges={['top', 'bottom']}>
-        <View style={styles.detailHeader}>
-          <Pressable onPress={onClose} style={({ pressed }) => [styles.detailHeaderAction, pressed && styles.pressed]}>
-            <MaterialCommunityIcons name="arrow-left" size={21} color="#FFFFFF" />
-          </Pressable>
-          <Text style={styles.detailHeaderTitle}>Vehicle detail</Text>
-          <Pressable disabled={busy} onPress={onFavorite} style={({ pressed }) => [styles.detailHeaderAction, pressed && styles.pressed]}>
-            <MaterialCommunityIcons name={isFavorite ? 'heart' : 'heart-outline'} size={20} color={isFavorite ? '#FF6A82' : '#FFFFFF'} />
-          </Pressable>
-        </View>
-
-        <ScrollView style={styles.flex} contentContainerStyle={styles.detailContent} showsVerticalScrollIndicator={false}>
-          <View style={[styles.detailHero, { backgroundColor: vehicle.tint }]}>
-            <View style={[styles.detailAccent, { backgroundColor: vehicle.accent }]} />
-            <View style={styles.detailHeroBadge}>
-              <MaterialCommunityIcons name="shield-check" size={13} color="#FFFFFF" />
-              <Text style={styles.detailHeroBadgeText}>{vehicle.verified ? 'VERIFIED' : 'LISTED'}</Text>
-            </View>
-            <Image source={vehicle.image} resizeMode="contain" style={styles.detailHeroImage} />
-            {vehicle.inspected ? (
-              <View style={styles.detailScore}>
-                <Text style={styles.detailScoreValue}>{vehicle.score}</Text>
-                <Text style={styles.detailScoreLabel}>INSUREIT SCORE</Text>
-              </View>
-            ) : null}
-          </View>
-
-          <View style={styles.detailIntro}>
-            <Text style={styles.detailTitle}>{vehicle.title}</Text>
-            <Text style={styles.detailMeta}>{vehicle.year || 'Year verified'} • {formatKm(vehicle.km)} • {vehicle.fuel} • {vehicle.ownership}</Text>
-            <View style={styles.detailLocation}>
-              <MaterialCommunityIcons name="map-marker-outline" size={14} color="#788497" />
-              <Text style={styles.detailLocationText}>{vehicle.location}</Text>
-            </View>
-          </View>
-
-          <View style={styles.marketPriceCard}>
-            <View style={styles.marketPriceColumn}>
-              <Text style={styles.priceOverline}>ASKING PRICE</Text>
-              <Text style={styles.marketAsking}>{formatCompactCurrency(vehicle.askingPrice)}</Text>
-            </View>
-            <View style={styles.marketPriceLine} />
-            <View style={styles.marketPriceColumn}>
-              <Text style={styles.livePriceOverline}>{vehicle.bids ? 'LIVE BID' : 'BIDDING OPEN'}</Text>
-              <Text style={styles.marketBid}>{vehicle.bids ? formatCompactCurrency(currentBid) : '—'}</Text>
-              <Text style={styles.marketBidMeta}>{vehicle.bids} bids • {vehicle.ending} left</Text>
-            </View>
-          </View>
-
-          <View style={styles.detailSection}>
-            <Text style={styles.detailSectionEyebrow}>CONFIDENCE</Text>
-            <Text style={styles.detailSectionTitle}>What we know</Text>
-            <View style={styles.confidenceGrid}>
-              <ConfidenceItem icon="account-check-outline" title="Seller" value={vehicle.verified ? 'Verified' : 'Reviewing'} positive={vehicle.verified} />
-              <ConfidenceItem icon="file-document-check-outline" title="Documents" value={vehicle.documentsVerified ? 'Verified' : 'In review'} positive={vehicle.documentsVerified} />
-              <ConfidenceItem icon="clipboard-check-outline" title="Inspection" value={vehicle.inspected ? 'Completed' : 'Available'} positive={vehicle.inspected} />
-              <ConfidenceItem icon="shield-car" title="Vehicle score" value={vehicle.inspected ? `${vehicle.score}/100` : 'Pending'} positive={vehicle.inspected} />
-            </View>
-          </View>
-
-          <View style={styles.detailSection}>
-            <Text style={styles.detailSectionEyebrow}>OVERVIEW</Text>
-            <Text style={styles.detailSectionTitle}>Key details</Text>
-            <View style={styles.overviewList}>
-              <OverviewRow label="Listing" value={vehicle.listingNo} />
-              <OverviewRow label="Registration" value={vehicle.registration} />
-              <OverviewRow label="Ownership" value={vehicle.ownership} />
-              <OverviewRow label="Tyres" value={vehicle.tyres} />
-              <OverviewRow label="Permit" value={vehicle.permit} />
-              <OverviewRow label="Finance" value={vehicle.finance} last />
-            </View>
-          </View>
-
-          <View style={styles.privateConnect}>
-            <View style={styles.privateConnectIcon}><MaterialCommunityIcons name="account-lock-outline" size={23} color="#FFFFFF" /></View>
-            <View style={styles.flex}>
-              <Text style={styles.privateConnectTitle}>Private by design</Text>
-              <Text style={styles.privateConnectCopy}>Seller contact stays protected. InsureIT coordinates the connection once both sides are ready.</Text>
-            </View>
-          </View>
-
-          <View style={styles.bidPanel}>
-            <View style={styles.bidPanelHeader}>
-              <View>
-                <Text style={styles.detailSectionEyebrow}>YOUR OFFER</Text>
-                <Text style={styles.bidPanelTitle}>Bid with confidence</Text>
-              </View>
-              <Text style={styles.bidMinimum}>Min. {formatCompactCurrency(minimumBid)}</Text>
-            </View>
-
-            <View style={styles.bidAdjuster}>
-              <Pressable onPress={() => setBidAmount(Math.max(minimumBid, shownBid - vehicle.minBidIncrement))} style={styles.bidAdjustAction}>
-                <MaterialCommunityIcons name="minus" size={20} color="#0B1320" />
-              </Pressable>
-              <View style={styles.bidAdjustCenter}>
-                <Text style={styles.bidAdjustLabel}>YOUR BID</Text>
-                <Text style={styles.bidAdjustValue}>{formatCompactCurrency(shownBid)}</Text>
-              </View>
-              <Pressable onPress={() => setBidAmount(shownBid + vehicle.minBidIncrement)} style={styles.bidAdjustAction}>
-                <MaterialCommunityIcons name="plus" size={20} color="#0B1320" />
-              </Pressable>
-            </View>
-
-            <Pressable disabled={busy} onPress={() => onPlaceBid(vehicle, shownBid)} style={({ pressed }) => [styles.detailPrimaryButton, pressed && styles.darkButtonPressed, busy && { opacity: 0.55 }]}>
-              <MaterialCommunityIcons name="gavel" size={18} color="#FFFFFF" />
-              <Text style={styles.detailPrimaryButtonText}>Place bid</Text>
-            </Pressable>
-
-            <Pressable
-              disabled={busy}
-              onPress={() => onRequestContact(vehicle)}
-              style={({ pressed }) => [styles.detailSecondaryButton, pressed && styles.pressed, busy && { opacity: 0.55 }]}
-            >
-              <MaterialCommunityIcons name="phone-in-talk-outline" size={17} color="#0B1320" />
-              <Text style={styles.detailSecondaryButtonText}>Request a managed callback</Text>
-            </Pressable>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </Modal>
-  );
-}
-
-function ConfidenceItem({
-  icon,
-  title,
-  value,
-  positive,
-}: {
-  icon: 'account-check-outline' | 'file-document-check-outline' | 'clipboard-check-outline' | 'shield-car';
-  title: string;
-  value: string;
-  positive: boolean;
-}) {
-  return (
-    <View style={styles.confidenceItem}>
-      <View style={[styles.confidenceIcon, positive ? styles.confidenceIconPositive : styles.confidenceIconNeutral]}>
-        <MaterialCommunityIcons name={icon} size={18} color={positive ? '#0B6E53' : '#93620C'} />
-      </View>
-      <Text style={styles.confidenceTitle}>{title}</Text>
-      <Text style={styles.confidenceValue}>{value}</Text>
-    </View>
-  );
-}
-
-function OverviewRow({ label, value, last = false }: { label: string; value: string; last?: boolean }) {
-  return (
-    <View style={[styles.overviewRow, last && styles.overviewRowLast]}>
-      <Text style={styles.overviewLabel}>{label}</Text>
-      <Text style={styles.overviewValue}>{value}</Text>
-    </View>
+    <ExchangeSellJourney
+      draft={draft}
+      draftSaved={draftSaved}
+      sellableVehicles={sellableVehicles}
+      selectedVehicleId={selectedVehicleId}
+      photos={photos}
+      busy={busy}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      onSelectVehicle={onSelectVehicle}
+      onUpdate={(key, value) => onUpdate(key, value as SellDraft[typeof key])}
+      onPhotoPress={onPhotoPress}
+      onPreview={onPreview}
+      onSave={onSave}
+      onAddVehicle={onAddVehicle}
+    />
   );
 }
 
@@ -1929,6 +1037,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#07111F',
   },
+  headerMarketplace: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E7EBF0',
+  },
   headerAction: {
     width: 40,
     height: 40,
@@ -1939,9 +1052,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#202D40',
   },
+  headerActionMarketplace: {
+    backgroundColor: '#F4F6F8',
+    borderColor: '#E3E7EC',
+  },
   headerCopy: { flex: 1, paddingHorizontal: 12 },
   headerTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '900', letterSpacing: 0.1 },
+  headerTitleMarketplace: { color: '#0F1D33' },
   headerSubtitle: { marginTop: 3, color: '#8E9AAF', fontSize: 10.2, fontWeight: '700' },
+  headerSubtitleMarketplace: { color: '#7B8798' },
 
   navBar: {
     height: 54,
