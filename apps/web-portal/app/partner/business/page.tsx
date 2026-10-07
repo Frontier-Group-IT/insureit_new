@@ -1,21 +1,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  AlertTriangle,
-  ArrowRight,
   BarChart3,
-  CircleDollarSign,
-  FileText,
-  Filter,
-  Layers3,
-  Repeat2,
-  ShieldAlert,
-  TrendingUp,
+  BriefcaseBusiness,
+  Download,
+  SlidersHorizontal,
   UsersRound,
+  WalletCards,
 } from "lucide-react";
+
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import {
   getPartnerWebBusinessPerformance,
+  getPartnerWebPayoutSummary,
   listPartnerWebPolicies,
   type PartnerPolicyRow,
 } from "@/lib/partner-web";
@@ -24,418 +21,427 @@ import { getInsurerLogo } from "@/lib/insurer-logo";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type BusinessSearchParams = { from?: string; to?: string };
-type InsightTone = "blue" | "green" | "purple" | "orange";
-type InsightIcon = typeof BarChart3;
-
-type MixRow = {
-  label: string;
-  policies: number;
-  premium: number;
+type BusinessSearchParams = {
+  period?: string;
+  from?: string;
+  to?: string;
+  business?: string;
+  insurer?: string;
+  rm?: string;
+  intermediary?: string;
+  mix?: string;
 };
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+type MixMode = "business-type" | "insurer" | "rm";
+type CommercialRow = {
+  key: string;
+  name: string;
+  policies: number;
+  premium: number;
+  type?: string;
+  rm?: string;
+};
 
-function currency(value: number | string | null | undefined) {
-  const amount = Number(value ?? 0);
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(Number.isFinite(amount) ? amount : 0);
-}
-
-function shortMonth(value: string) {
-  const [year, month] = value.split("-").map(Number);
-  return new Intl.DateTimeFormat("en-IN", { month: "short" }).format(new Date(year, month - 1, 1));
-}
-
-function humanize(value: string) {
-  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function validIsoDate(value?: string) {
-  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
-}
+const BUSINESS_OPTIONS = ["all", "motor", "non motor", "life", "health"] as const;
+const PERIOD_OPTIONS = ["mtd", "last-month", "last-6-months", "custom"] as const;
 
 function numeric(value: number | string | null | undefined) {
   const amount = Number(value ?? 0);
   return Number.isFinite(amount) ? amount : 0;
 }
 
-function businessType(policy: PartnerPolicyRow) {
-  return String(policy.business_type ?? "").trim().toLowerCase();
+function currency(value: number | string | null | undefined) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(numeric(value));
 }
 
-function isRenewal(policy: PartnerPolicyRow) {
-  return businessType(policy).includes("renew");
+function compactCurrency(value: number) {
+  const amount = Math.abs(value);
+  if (amount >= 10_000_000) return `₹${(value / 10_000_000).toFixed(1)} Cr`;
+  if (amount >= 100_000) return `₹${(value / 100_000).toFixed(1)} L`;
+  if (amount >= 1_000) return `₹${(value / 1_000).toFixed(1)} K`;
+  return currency(value);
 }
 
-function isNewBusiness(policy: PartnerPolicyRow) {
-  const value = businessType(policy);
-  return value.includes("new") || value.includes("fresh");
+function integer(value: number) {
+  return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value);
+}
+
+function percent(value: number) {
+  return `${Number.isFinite(value) ? value.toFixed(1) : "0.0"}%`;
+}
+
+function validIsoDate(value?: string) {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
 }
 
 function policyDate(policy: PartnerPolicyRow) {
-  return policy.issuance_date || policy.start_date || null;
+  return (policy.issuance_date || policy.start_date || "").slice(0, 10);
 }
 
-function percentage(value: number) {
-  return `${value.toFixed(1)}%`;
+function normalizedBusinessType(policy: PartnerPolicyRow) {
+  const source = String(policy.business_type || policy.business_line || policy.policy_type || "").trim().toLowerCase();
+  if (source.includes("non") && source.includes("motor")) return "non motor";
+  if (source.includes("motor")) return "motor";
+  if (source.includes("life")) return "life";
+  if (source.includes("health")) return "health";
+  return source || "unclassified";
 }
 
-function policyEndOffsetDays(policy: PartnerPolicyRow, referenceEpoch: number) {
-  const endDate = policy.end_date?.slice(0, 10);
-  if (!endDate || !validIsoDate(endDate)) return null;
-  const endEpoch = Date.parse(`${endDate}T00:00:00Z`);
-  if (!Number.isFinite(endEpoch)) return null;
-  return Math.floor((endEpoch - referenceEpoch) / DAY_MS);
+function monthBounds(reference: string, mode: string) {
+  const base = new Date(`${reference}T00:00:00Z`);
+  if (mode === "last-month") {
+    const start = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() - 1, 1));
+    const end = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), 0));
+    return { from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
+  }
+  if (mode === "last-6-months") {
+    const start = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() - 5, 1));
+    return { from: start.toISOString().slice(0, 10), to: reference };
+  }
+  const start = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), 1));
+  return { from: start.toISOString().slice(0, 10), to: reference };
 }
 
-async function loadPortfolioPolicies() {
-  const pageSize = 200;
+async function loadPartnerPolicies() {
   const rows: PartnerPolicyRow[] = [];
-
+  const pageSize = 200;
   for (let offset = 0; offset < 5000; offset += pageSize) {
     const batch = await listPartnerWebPolicies({ limit: pageSize, offset, lifecycle: "all" });
     rows.push(...batch);
     if (batch.length < pageSize) break;
   }
-
   return rows;
 }
 
-function aggregateBy(rows: PartnerPolicyRow[], getLabel: (policy: PartnerPolicyRow) => string) {
-  const grouped = new Map<string, MixRow>();
+function buildBusinessRows(rows: PartnerPolicyRow[]) {
+  const standard = ["motor", "non motor", "life", "health"];
+  const labels = new Map([
+    ["motor", "Motor"],
+    ["non motor", "Non Motor"],
+    ["life", "Life"],
+    ["health", "Health"],
+  ]);
+  const totals = new Map<string, CommercialRow>();
+  for (const key of standard) totals.set(key, { key, name: labels.get(key) || key, policies: 0, premium: 0 });
 
   for (const policy of rows) {
-    const label = getLabel(policy).trim() || "Other";
-    const current = grouped.get(label) ?? { label, policies: 0, premium: 0 };
+    const key = normalizedBusinessType(policy);
+    const current = totals.get(key) ?? { key, name: key === "unclassified" ? "Unclassified" : key.replace(/\b\w/g, (m) => m.toUpperCase()), policies: 0, premium: 0 };
     current.policies += 1;
     current.premium += numeric(policy.premium_amount);
-    grouped.set(label, current);
+    totals.set(key, current);
   }
 
-  return [...grouped.values()].sort((a, b) => b.premium - a.premium || b.policies - a.policies);
+  const standardRows = standard.map((key) => totals.get(key)!);
+  const extras = [...totals.values()].filter((row) => !standard.includes(row.key)).sort((a, b) => b.premium - a.premium || b.policies - a.policies);
+  return [...standardRows, ...extras];
+}
+
+function aggregate(rows: PartnerPolicyRow[], getKey: (row: PartnerPolicyRow) => string, getName: (row: PartnerPolicyRow) => string) {
+  const totals = new Map<string, CommercialRow>();
+  for (const policy of rows) {
+    const key = getKey(policy) || "unassigned";
+    const name = getName(policy) || "Unassigned";
+    const current = totals.get(key) ?? { key, name, policies: 0, premium: 0 };
+    current.policies += 1;
+    current.premium += numeric(policy.premium_amount);
+    totals.set(key, current);
+  }
+  return [...totals.values()].sort((a, b) => b.premium - a.premium || b.policies - a.policies || a.name.localeCompare(b.name));
+}
+
+function buildIntermediaryRows(rows: PartnerPolicyRow[]) {
+  const totals = new Map<string, CommercialRow & { rmNames: Set<string> }>();
+  for (const policy of rows) {
+    const code = policy.intermediary_code?.trim() || "unassigned";
+    const name = policy.intermediary_group_name?.trim() || code;
+    const current = totals.get(code) ?? {
+      key: code,
+      name: code === "unassigned" ? "Unassigned" : name,
+      type: policy.intermediary_type || "—",
+      policies: 0,
+      premium: 0,
+      rmNames: new Set<string>(),
+    };
+    if (policy.rm_name?.trim()) current.rmNames.add(policy.rm_name.trim());
+    current.policies += 1;
+    current.premium += numeric(policy.premium_amount);
+    totals.set(code, current);
+  }
+  return [...totals.values()]
+    .map((row) => ({
+      key: row.key,
+      name: row.name,
+      type: row.type,
+      policies: row.policies,
+      premium: row.premium,
+      rm: row.rmNames.size === 0 ? "Unassigned" : row.rmNames.size === 1 ? [...row.rmNames][0] : "Multiple RMs",
+    }))
+    .sort((a, b) => b.premium - a.premium || b.policies - a.policies || a.name.localeCompare(b.name));
+}
+
+function queryHref(query: BusinessSearchParams, overrides: Record<string, string | undefined> = {}) {
+  const params = new URLSearchParams();
+  const merged = { ...query, ...overrides };
+  for (const [key, value] of Object.entries(merged)) {
+    if (value) params.set(key, value);
+  }
+  return `/partner/business?${params.toString()}`;
 }
 
 export default async function PartnerBusinessPage({ searchParams }: { searchParams: Promise<BusinessSearchParams> }) {
   const query = await searchParams;
-  const hasRange = validIsoDate(query.from) && validIsoDate(query.to) && String(query.from) <= String(query.to);
-  const [performance, portfolio] = await Promise.all([
+  const [performance, policies, payout] = await Promise.all([
     getPartnerWebBusinessPerformance(),
-    loadPortfolioPolicies(),
+    loadPartnerPolicies(),
+    getPartnerWebPayoutSummary().catch(() => null),
   ]);
 
-  const trendMonths = new Set(performance.trend.map((item) => item.month));
-  const analysisPolicies = portfolio.filter((policy) => {
+  const generatedDay = validIsoDate(performance.generated_at?.slice(0, 10))
+    ? performance.generated_at.slice(0, 10)
+    : new Date().toISOString().slice(0, 10);
+  const period = PERIOD_OPTIONS.includes(query.period as (typeof PERIOD_OPTIONS)[number]) ? String(query.period) : "mtd";
+  const customRange = period === "custom" && validIsoDate(query.from) && validIsoDate(query.to) && String(query.from) <= String(query.to);
+  const bounds = customRange ? { from: String(query.from), to: String(query.to) } : monthBounds(generatedDay, period);
+
+  const business = BUSINESS_OPTIONS.includes(query.business as (typeof BUSINESS_OPTIONS)[number]) ? String(query.business) : "all";
+
+  const insurerOptions = [...new Set(policies.map((row) => row.insurer_name?.trim()).filter(Boolean) as string[])].sort();
+  const rmOptions = [...new Set(policies.map((row) => row.rm_name?.trim()).filter(Boolean) as string[])].sort();
+  const intermediaryOptions = [...new Set(policies.map((row) => row.intermediary_code?.trim()).filter(Boolean) as string[])].sort();
+
+  const filtered = policies.filter((policy) => {
     const date = policyDate(policy);
-    if (!date) return false;
-    if (hasRange) {
-      const day = date.slice(0, 10);
-      return day >= String(query.from) && day <= String(query.to);
-    }
-    return trendMonths.has(date.slice(0, 7));
+    if (!date || date < bounds.from || date > bounds.to) return false;
+    if (business !== "all" && normalizedBusinessType(policy) !== business) return false;
+    if (query.insurer && policy.insurer_name !== query.insurer) return false;
+    if (query.rm && policy.rm_name !== query.rm) return false;
+    if (query.intermediary && policy.intermediary_code !== query.intermediary) return false;
+    return true;
   });
 
-  const newPolicies = analysisPolicies.filter(isNewBusiness);
-  const renewalPolicies = analysisPolicies.filter(isRenewal);
-  const analysisPremium = analysisPolicies.reduce((sum, policy) => sum + numeric(policy.premium_amount), 0);
-  const averagePremium = analysisPolicies.length ? analysisPremium / analysisPolicies.length : 0;
+  const totalPremium = filtered.reduce((sum, row) => sum + numeric(row.premium_amount), 0);
+  const uniqueCustomers = new Set(filtered.map((row) => row.customer_id).filter(Boolean)).size;
+  const businessRows = buildBusinessRows(filtered);
+  const insurerRows = aggregate(filtered, (row) => row.insurer_name?.toLowerCase() || "unassigned", (row) => row.insurer_name || "Unassigned");
+  const rmRows = aggregate(filtered, (row) => row.rm_name?.toLowerCase() || "unassigned", (row) => row.rm_name || "Unassigned");
+  const intermediaryRows = buildIntermediaryRows(filtered);
 
-  // Preserve the existing KPI calculation logic exactly: repeat-customer metrics use only canonical customer IDs.
-  const customerPolicyCounts = new Map<string, number>();
-  for (const policy of analysisPolicies) {
-    if (!policy.customer_id) continue;
-    customerPolicyCounts.set(policy.customer_id, (customerPolicyCounts.get(policy.customer_id) ?? 0) + 1);
-  }
-  const customerCounts = [...customerPolicyCounts.values()];
-  const uniqueCustomers = customerCounts.length;
-  const repeatCustomers = customerCounts.filter((count) => count > 1).length;
-  const repeatCustomerRate = uniqueCustomers ? (repeatCustomers / uniqueCustomers) * 100 : 0;
+  const mixMode: MixMode = query.mix === "insurer" || query.mix === "rm" ? query.mix : "business-type";
+  const mixRows = mixMode === "insurer" ? insurerRows : mixMode === "rm" ? rmRows : businessRows;
+  const mixLabel = mixMode === "insurer" ? "Insurer" : mixMode === "rm" ? "RM" : "Business Type";
+  const payoutValue = payout?.available ? numeric(payout.paid_amount) : null;
 
-  const unclassifiedPolicies = analysisPolicies.filter(
-    (policy) => !policy.business_type || (!policy.policy_product && !policy.policy_type && !policy.business_line),
-  ).length;
-
-  const productMix = aggregateBy(
-    analysisPolicies,
-    (policy) => policy.policy_product || policy.policy_type || policy.business_line || "Other",
-  ).slice(0, 5);
-  const insurerMix = aggregateBy(analysisPolicies, (policy) => policy.insurer_name || "Unassigned insurer").slice(0, 5);
-
-  // Renewal premium is intentionally treated as NIL until a canonical renewal-premium concept is introduced.
-  const monthlyPremiumTrend = performance.trend.map((item) => {
-    const monthPolicies = portfolio.filter((policy) => policyDate(policy)?.slice(0, 7) === item.month);
-    return {
-      month: item.month,
-      businessPremium: monthPolicies.reduce((sum, policy) => sum + numeric(policy.premium_amount), 0),
-      renewalPremium: 0,
-    };
-  });
-  const maxTrendPremium = Math.max(1, ...monthlyPremiumTrend.map((item) => item.businessPremium));
-  const analysisPeriodLabel = hasRange ? `${query.from} to ${query.to}` : "Last 6 months";
-
-  const generatedDay = performance.generated_at?.slice(0, 10);
-  const referenceDay = validIsoDate(generatedDay) ? String(generatedDay) : new Date().toISOString().slice(0, 10);
-  const referenceEpoch = Date.parse(`${referenceDay}T00:00:00Z`);
-  const renewalWindows = portfolio.map((policy) => ({ policy, days: policyEndOffsetDays(policy, referenceEpoch) }));
-  const due7 = renewalWindows.filter(({ days }) => days !== null && days >= 0 && days <= 7).map(({ policy }) => policy);
-  const due15 = renewalWindows.filter(({ days }) => days !== null && days >= 8 && days <= 15).map(({ policy }) => policy);
-  const due30 = renewalWindows.filter(({ days }) => days !== null && days >= 16 && days <= 30).map(({ policy }) => policy);
-  const premiumAtRiskRows = [...due7, ...due15, ...due30];
-  const expiredRows = renewalWindows
-    .filter(({ policy, days }) => policy.lifecycle_status === "expired" || (days !== null && days < 0))
-    .map(({ policy }) => policy);
-  const premiumAtRisk = premiumAtRiskRows.reduce((sum, policy) => sum + numeric(policy.premium_amount), 0);
-  const expiredPremiumExposure = expiredRows.reduce((sum, policy) => sum + numeric(policy.premium_amount), 0);
-
-  const due7Premium = due7.reduce((sum, policy) => sum + numeric(policy.premium_amount), 0);
-  const due15Premium = due15.reduce((sum, policy) => sum + numeric(policy.premium_amount), 0);
-  const due30Premium = due30.reduce((sum, policy) => sum + numeric(policy.premium_amount), 0);
-  const classifiedPolicies = Math.max(0, analysisPolicies.length - unclassifiedPolicies);
-
-  const metrics = [
-    {
-      label: "Business Premium",
-      value: currency(analysisPremium),
-      meta: `${analysisPolicies.length} recorded policies · ${analysisPeriodLabel}`,
-      tone: "blue" as const,
-      icon: BarChart3,
-    },
-    {
-      label: "Average Premium per Policy",
-      value: currency(averagePremium),
-      meta: `${analysisPolicies.length} recorded policies in period`,
-      tone: "purple" as const,
-      icon: CircleDollarSign,
-    },
-    {
-      label: "Repeat Customer Rate",
-      value: percentage(repeatCustomerRate),
-      meta: `${repeatCustomers} repeat of ${uniqueCustomers} policy customers`,
-      tone: "orange" as const,
-      icon: UsersRound,
-    },
-  ];
+  const exportHref = `/partner/business/export?${new URLSearchParams(
+    Object.entries({
+      period,
+      from: customRange ? bounds.from : "",
+      to: customRange ? bounds.to : "",
+      business: business === "all" ? "" : business,
+      insurer: query.insurer || "",
+      rm: query.rm || "",
+      intermediary: query.intermediary || "",
+    }).filter(([, value]) => Boolean(value)) as [string, string][],
+  ).toString()}`;
 
   return (
     <PartnerPortalShell title="My Business">
-      <div className="space-y-4 pb-3">
-        <section className="px-1 py-1">
-          <h1 className="text-[20px] font-extrabold leading-tight tracking-[-0.03em] text-[#142B50]">Business performance</h1>
-        </section>
+      <div className="space-y-3 pb-4">
+        <section className="flex flex-wrap items-end justify-between gap-3 border-b border-[#dfe6ef] pb-3">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.09em] text-[#7b8ca4]">Reports</p>
+            <h1 className="mt-1 text-[28px] font-extrabold tracking-[-0.04em] text-[#182d50]">Business</h1>
+          </div>
 
-        <section className="grid overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-[0_4px_14px_rgba(25,50,90,0.05)] md:grid-cols-3">
-          {metrics.map((metric) => <InsightMetricCard key={metric.label} {...metric} />)}
-        </section>
+          <form method="get" className="flex flex-wrap items-center justify-end gap-2">
+            <select name="period" defaultValue={period} className="h-10 min-w-[146px] rounded-lg border border-[#d4deeb] bg-white px-3 text-[11px] font-bold text-[#30445f]">
+              <option value="mtd">MTD</option>
+              <option value="last-month">Last Month</option>
+              <option value="last-6-months">Last 6 Months</option>
+              <option value="custom">Custom</option>
+            </select>
+            <select name="business" defaultValue={business} className="h-10 min-w-[170px] rounded-lg border border-[#d4deeb] bg-white px-3 text-[11px] font-bold text-[#30445f]">
+              <option value="all">All Business</option>
+              <option value="motor">Motor</option>
+              <option value="non motor">Non Motor</option>
+              <option value="life">Life</option>
+              <option value="health">Health</option>
+            </select>
 
-        <ContributionPanel icon={TrendingUp} title="Top Insurer Contribution" subtitle="Premium contribution by insurer" rows={insurerMix} totalPremium={analysisPremium} />
-
-        <section className="grid gap-3 xl:grid-cols-[1.15fr_.88fr_1fr]">
-          <InsightPanel icon={BarChart3} title="Business Premium Trend" subtitle="Monthly business premium; renewal premium is currently treated as nil">
-            <div className="flex items-center gap-3 text-[8px] font-bold text-[#61728A]">
-              <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#1689EA]" />Business Premium</span>
-              <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#7145E9]" />Renewal Premium · ₹0</span>
-            </div>
-            <div className="flex min-h-[175px] items-end gap-1 overflow-x-auto border-t border-[#EEF2F6] pt-3">
-              {monthlyPremiumTrend.map((item) => {
-                const totalHeight = Math.max(item.businessPremium > 0 ? 6 : 0, Math.round((item.businessPremium / maxTrendPremium) * 108));
-                return (
-                  <div key={item.month} className="flex min-w-[42px] flex-1 flex-col items-center">
-                    <div className="flex h-[118px] w-full items-end justify-center px-1">
-                      <div className="w-full max-w-[28px] overflow-hidden rounded-t-md bg-[#1689EA]" style={{ height: totalHeight }} />
-                    </div>
-                    <p className="mt-1 text-[8px] font-extrabold text-[#223755]">{shortMonth(item.month)}</p>
+            <details className="relative">
+              <summary className="flex h-10 cursor-pointer list-none items-center gap-2 rounded-lg border border-[#d4deeb] bg-white px-3 text-[11px] font-bold text-[#30445f]">
+                <SlidersHorizontal size={15} /> Filters
+              </summary>
+              <div className="absolute right-0 z-30 mt-2 w-[280px] space-y-2 rounded-xl border border-[#dbe3ee] bg-white p-3 shadow-xl">
+                <select name="insurer" defaultValue={query.insurer || ""} className="h-9 w-full rounded-lg border border-[#dbe3ee] px-2 text-[10px]">
+                  <option value="">All insurers</option>
+                  {insurerOptions.map((name) => <option key={name} value={name}>{name}</option>)}
+                </select>
+                <select name="rm" defaultValue={query.rm || ""} className="h-9 w-full rounded-lg border border-[#dbe3ee] px-2 text-[10px]">
+                  <option value="">All RMs</option>
+                  {rmOptions.map((name) => <option key={name} value={name}>{name}</option>)}
+                </select>
+                <select name="intermediary" defaultValue={query.intermediary || ""} className="h-9 w-full rounded-lg border border-[#dbe3ee] px-2 text-[10px]">
+                  <option value="">All intermediaries</option>
+                  {intermediaryOptions.map((code) => <option key={code} value={code}>{code}</option>)}
+                </select>
+                {period === "custom" ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <input name="from" type="date" defaultValue={bounds.from} className="h-9 rounded-lg border border-[#dbe3ee] px-2 text-[9px]" />
+                    <input name="to" type="date" defaultValue={bounds.to} className="h-9 rounded-lg border border-[#dbe3ee] px-2 text-[9px]" />
                   </div>
-                );
-              })}
-            </div>
-          </InsightPanel>
-
-          <section className="rounded-xl border border-[#D8EADF] bg-white p-3.5 shadow-[0_4px_14px_rgba(25,50,90,0.04)]">
-            <div className="flex items-start justify-between gap-2 border-b border-[#EDF1F5] pb-3">
-              <div className="flex items-start gap-2.5">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-[#DDF6EC] text-[#21A874]"><Layers3 className="h-4 w-4" /></span>
-                <div>
-                  <p className="text-[8px] font-black uppercase tracking-[0.09em] text-[#5C8D79]">Business Mix</p>
-                  <h2 className="mt-0.5 text-[13px] font-extrabold text-[#142B50]">By product</h2>
+                ) : null}
+                <div className="flex justify-end gap-2 pt-1">
+                  <Link href="/partner/business" className="rounded-lg border border-[#d4deeb] px-3 py-2 text-[9px] font-bold text-[#52657f]">Clear</Link>
+                  <button type="submit" className="rounded-lg bg-[#1f5fae] px-3 py-2 text-[9px] font-bold text-white">Apply</button>
                 </div>
               </div>
-              <span className="rounded-full border border-[#DCE6E1] px-2 py-1 text-[7px] font-bold text-[#61728A]">{analysisPeriodLabel}</span>
-            </div>
-            <div className="mt-3 space-y-2">
-              {productMix.length ? productMix.map((item) => {
-                const percent = analysisPremium > 0 ? Math.min(100, (item.premium / analysisPremium) * 100) : 0;
-                return (
-                  <div key={item.label} className="rounded-lg border border-[#E2E9F1] bg-[#FAFBFD] px-2.5 py-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="min-w-0 truncate text-[9px] font-extrabold text-[#203653]">{humanize(item.label)}</p>
-                      <p className="shrink-0 text-[8px] font-bold text-[#627692]">{percentage(percent)} · {currency(item.premium)}</p>
-                    </div>
-                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#E8EDF3]"><div className="h-full rounded-full bg-[#3D79E8]" style={{ width: `${percent}%` }} /></div>
-                  </div>
-                );
-              }) : <EmptyLine text="No product mix is available for this period." />}
-            </div>
-          </section>
+            </details>
 
-          <InsightPanel icon={ShieldAlert} title="Renewal Risk & Lost Business" subtitle="Track renewal exposure and expired premium">
-            <div className="grid grid-cols-2 gap-2">
-              <RiskSummary label="Upcoming Premium at Risk" value={currency(premiumAtRisk)} count={`${premiumAtRiskRows.length} policies`} tone="amber" />
-              <RiskSummary label="Expired Premium Exposure" value={currency(expiredPremiumExposure)} count={`${expiredRows.length} policies`} tone="red" />
-            </div>
-            <p className="pt-1 text-[8px] font-extrabold text-[#52637C]">Due in next</p>
-            <div className="grid grid-cols-3 gap-2">
-              <WindowCard label="7 days" value={currency(due7Premium)} count={`${due7.length} policies`} tone="red" />
-              <WindowCard label="15 days" value={currency(due15Premium)} count={`${due15.length} policies`} tone="amber" />
-              <WindowCard label="30 days" value={currency(due30Premium)} count={`${due30.length} policies`} tone="green" />
-            </div>
-          </InsightPanel>
+            <button type="submit" className="h-10 rounded-lg border border-[#d4deeb] bg-white px-4 text-[11px] font-bold text-[#30445f]">Apply</button>
+            <Link href={exportHref} className="flex h-10 items-center gap-2 rounded-lg bg-[#1166ad] px-4 text-[11px] font-extrabold text-white">
+              <Download size={15} /> Export
+            </Link>
+          </form>
         </section>
 
-        <section className="grid gap-3 xl:grid-cols-[1fr_1.1fr]">
-          <section className="rounded-xl border border-[#DCE5F1] bg-white p-3.5 shadow-[0_4px_14px_rgba(25,50,90,0.04)]">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-2.5">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-[#EEF4FF] text-[#3156B8]"><Filter className="h-4 w-4" /></span>
-                <div>
-                  <h2 className="text-[12px] font-extrabold text-[#183057]">Business Activity Funnel</h2>
-                  <p className="mt-0.5 text-[8.5px] font-medium text-[#8190A5]">Real portfolio counts from the selected period</p>
-                </div>
-              </div>
-              <span className="rounded-full border border-[#DCE5F1] px-2.5 py-1 text-[7px] font-bold text-[#61728A]">{analysisPeriodLabel}</span>
-            </div>
-            <div className="mt-3 grid grid-cols-2 overflow-hidden rounded-lg border border-[#E4EAF2] sm:grid-cols-5">
-              <FunnelStage label="Recorded" value={analysisPolicies.length} meta="policies" />
-              <FunnelStage label="Classified" value={classifiedPolicies} meta="policies" />
-              <FunnelStage label="New Business" value={newPolicies.length} meta="policies" accent="blue" />
-              <FunnelStage label="Renewal" value={renewalPolicies.length} meta="policies" accent="green" />
-              <FunnelStage label="Repeat" value={repeatCustomers} meta="customers" accent="purple" />
-            </div>
-          </section>
-
-          <section className="rounded-xl border border-[#DCE5F1] bg-white p-3.5 shadow-[0_4px_14px_rgba(25,50,90,0.04)]">
-            <div className="flex items-start gap-2.5">
-              <span className="grid h-8 w-8 place-items-center rounded-full bg-[#EEF4FF] text-[#3156B8]"><Layers3 className="h-4 w-4" /></span>
-              <div>
-                <p className="text-[8px] font-black uppercase tracking-[0.08em] text-[#71819A]">Workspaces</p>
-                <h2 className="mt-0.5 text-[13px] font-extrabold text-[#183057]">Continue working</h2>
-              </div>
-            </div>
-            <div className="mt-3 grid gap-2 sm:grid-cols-3">
-              <Action href="/partner/customers" title="Customer Book" subtitle="Open scoped customers" icon={UsersRound} />
-              <Action href="/partner/policies" title="Policy Register" subtitle="Review policy portfolio" icon={FileText} />
-              <Action href="/partner/renewals" title="Renewal Pipeline" subtitle="Open due and overdue business" icon={Repeat2} />
-            </div>
-          </section>
+        <section className="grid overflow-hidden rounded-xl border border-[#dfe6ef] bg-white md:grid-cols-4">
+          <Metric label="Business Premium" value={currency(totalPremium)} note={`${integer(filtered.length)} policies`} icon={BarChart3} />
+          <Metric label="Partner Payout" value={payoutValue === null ? "Restricted" : currency(payoutValue)} note={payout?.available ? `${integer(payout.paid_count)} paid` : "Based on your authorized payout scope"} icon={WalletCards} />
+          <Metric label="Policies" value={integer(filtered.length)} note={`${bounds.from} to ${bounds.to}`} icon={BriefcaseBusiness} />
+          <Metric label="Customers" value={integer(uniqueCustomers)} note="Unique customers in selected period" icon={UsersRound} last />
         </section>
+
+        <section className="grid gap-3 xl:grid-cols-[1.05fr_1fr]">
+          <article className="flex h-[278px] min-h-0 flex-col overflow-hidden rounded-xl border border-[#dfe6ef] bg-white">
+            <div className="flex min-h-12 shrink-0 items-center justify-between border-b border-[#e6ebf2] px-4">
+              <h2 className="text-[14px] font-extrabold text-[#1b3154]">Business Mix</h2>
+              <div className="inline-flex overflow-hidden rounded-lg border border-[#dbe3ee] text-[9px] font-bold">
+                <MixTab href={queryHref(query, { mix: "business-type" })} active={mixMode === "business-type"}>Business Type</MixTab>
+                <MixTab href={queryHref(query, { mix: "insurer" })} active={mixMode === "insurer"}>Insurer</MixTab>
+                <MixTab href={queryHref(query, { mix: "rm" })} active={mixMode === "rm"}>RM</MixTab>
+              </div>
+            </div>
+            <BusinessMix rows={mixRows} label={mixLabel} />
+          </article>
+
+          <article className="flex h-[278px] min-h-0 flex-col overflow-hidden rounded-xl border border-[#dfe6ef] bg-white">
+            <div className="min-h-12 shrink-0 border-b border-[#e6ebf2] px-4 py-3">
+              <h2 className="text-[14px] font-extrabold text-[#1b3154]">Insurer</h2>
+            </div>
+            <InsurerTable rows={insurerRows} />
+          </article>
+        </section>
+
+        <section className="overflow-hidden rounded-xl border border-[#dfe6ef] bg-white">
+          <Header title="RM Performance" />
+          <SimpleCommercialTable rows={rmRows} firstLabel="RM Name" />
+        </section>
+
+        <section className="overflow-hidden rounded-xl border border-[#dfe6ef] bg-white">
+          <Header title="Intermediaries Business" />
+          <IntermediaryTable rows={intermediaryRows} />
+        </section>
+
+        <p className="px-1 text-[9px] text-[#8190a4]">
+          Partner view is restricted to your authorized business scope. Pay-in is intentionally not shown on this page.
+        </p>
       </div>
     </PartnerPortalShell>
   );
 }
 
-const insightToneClasses: Record<InsightTone, string> = {
-  blue: "bg-[#E9F2FF] text-[#2B73E8]",
-  green: "bg-[#DFF7EC] text-[#20A978]",
-  purple: "bg-[#EEE7FF] text-[#794EE1]",
-  orange: "bg-[#FFF0DA] text-[#F09A1E]",
-};
-
-function InsightMetricCard({ label, value, meta, tone, icon: Icon }: { label: string; value: number | string; meta: string; tone: InsightTone; icon: InsightIcon }) {
+function Metric({ label, value, note, icon: Icon, last = false }: { label: string; value: string; note: string; icon: typeof BarChart3; last?: boolean }) {
   return (
-    <div className="flex min-h-[98px] items-center gap-3 border-b border-[#E8EDF3] px-4 py-3 md:border-b-0 md:border-r md:last:border-r-0">
-      <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${insightToneClasses[tone]}`}><Icon className="h-4.5 w-4.5" /></span>
-      <div className="min-w-0 flex-1">
-        <p className="text-[8px] font-black uppercase tracking-[0.06em] text-[#50637F]">{label}</p>
-        <p className="mt-1 truncate text-[17px] font-black leading-none tracking-[-0.025em] text-[#142A50]">{value}</p>
-        <p className="mt-1.5 truncate text-[8px] font-medium text-[#7A899E]">{meta}</p>
+    <div className={`flex min-h-[112px] items-center gap-3 px-5 py-4 ${last ? "" : "border-b border-[#e5ebf2] md:border-b-0 md:border-r"}`}>
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eef5ff] text-[#1c6ac4]"><Icon size={20} /></div>
+      <div className="min-w-0">
+        <p className="text-[8px] font-black uppercase tracking-[0.07em] text-[#6f829d]">{label}</p>
+        <p className="mt-1 truncate text-[21px] font-extrabold text-[#172d51]">{value}</p>
+        <p className="mt-1 truncate text-[8.5px] text-[#7d8da4]">{note}</p>
       </div>
     </div>
   );
 }
 
-function ContributionPanel({ icon: Icon, title, subtitle, rows, totalPremium }: { icon: InsightIcon; title: string; subtitle: string; rows: MixRow[]; totalPremium: number }) {
+function MixTab({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
+  return <Link href={href} className={active ? "bg-[#1f62b4] px-3 py-2 text-white" : "bg-white px-3 py-2 text-[#5f7088]"}>{children}</Link>;
+}
+
+function BusinessMix({ rows, label }: { rows: CommercialRow[]; label: string }) {
+  const total = rows.reduce((sum, row) => sum + row.premium, 0) || 1;
+  const max = Math.max(1, ...rows.map((row) => row.premium));
   return (
-    <section className="rounded-xl border border-[#DCE5F1] bg-white p-3.5 shadow-[0_4px_14px_rgba(25,50,90,0.04)]">
-      <div className="flex items-start gap-2.5 border-b border-[#EDF1F5] pb-3">
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#3156B8]"><Icon className="h-4 w-4" /></span>
-        <div><h2 className="text-[12px] font-extrabold text-[#183057]">{title}</h2><p className="mt-0.5 text-[8.5px] font-medium text-[#8190A5]">{subtitle}</p></div>
+    <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="sticky top-0 z-10 grid grid-cols-[28px_minmax(120px,1fr)_minmax(150px,1.5fr)_58px] gap-2 bg-[#f8fafc] px-4 py-2 text-[8px] font-black uppercase tracking-[.06em] text-[#7a899c]">
+        <span>#</span><span>{label}</span><span>Premium</span><span className="text-right">Share</span>
       </div>
-      <div className="mt-3 grid gap-1.5 xl:grid-cols-2">
-        {rows.length ? rows.map((item, index) => {
-          const percent = totalPremium > 0 ? Math.min(100, (item.premium / totalPremium) * 100) : 0;
-          const insurerLogo = getInsurerLogo(item.label);
-          return (
-            <div key={`${item.label}-${index}`} className="grid grid-cols-[32px_minmax(0,1fr)_82px] items-center gap-2 rounded-lg border border-[#E6EBF2] bg-[#FAFBFD] px-2.5 py-2">
-              <span className="flex h-8 w-8 items-center justify-center">
-                {insurerLogo ? (
-                  <Image
-                    src={insurerLogo}
-                    alt={`${item.label} logo`}
-                    width={30}
-                    height={30}
-                    className="max-h-7 max-w-[32px] object-contain"
-                  />
-                ) : null}
-              </span>
-              <div className="min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="truncate text-[8.5px] font-extrabold text-[#263A58]">{item.label}</p>
-                  <p className="text-[7.5px] font-bold text-[#657792]">{percentage(percent)}</p>
-                </div>
-                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#E8EDF3]"><div className="h-full rounded-full bg-[#3D79E8]" style={{ width: `${percent}%` }} /></div>
-              </div>
-              <p className="text-right text-[8px] font-extrabold text-[#27405F]">{currency(item.premium)}</p>
+      <div className="divide-y divide-[#edf1f5]">
+        {rows.map((row, index) => (
+          <div key={row.key} className="grid min-h-10 grid-cols-[28px_minmax(120px,1fr)_minmax(150px,1.5fr)_58px] items-center gap-2 px-4 text-[9.5px] text-[#3f526d]">
+            <span>{index + 1}</span>
+            <div className="min-w-0"><p className="truncate font-semibold">{row.name}</p><p className="text-[8px] text-[#8a96a7]">{integer(row.policies)} policies</p></div>
+            <div className="grid grid-cols-[minmax(0,1fr)_68px] items-center gap-2">
+              <div className="h-2 overflow-hidden rounded-sm bg-[#e9eef5]"><div className="h-full rounded-sm bg-[#347ed0]" style={{ width: row.premium > 0 ? `${Math.max((row.premium / max) * 100, 2)}%` : "0%" }} /></div>
+              <span className="text-right font-bold tabular-nums">{compactCurrency(row.premium)}</span>
             </div>
-          );
-        }) : <EmptyLine text={`No ${title.toLowerCase()} is available for this period.`} />}
+            <span className="text-right font-semibold tabular-nums">{percent((row.premium / total) * 100)}</span>
+          </div>
+        ))}
       </div>
-    </section>
-  );
-}
-
-function InsightPanel({ icon: Icon, title, subtitle, children }: { icon: InsightIcon; title: string; subtitle: string; children: React.ReactNode }) {
-  return (
-    <section className="rounded-xl border border-[#DCE5F1] bg-white p-3.5 shadow-[0_4px_14px_rgba(25,50,90,0.04)]">
-      <div className="flex items-start gap-2.5 border-b border-[#EDF1F5] pb-3">
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#3156B8]"><Icon className="h-4 w-4" /></span>
-        <div><h2 className="text-[12px] font-extrabold text-[#183057]">{title}</h2><p className="mt-0.5 text-[8.5px] font-medium text-[#8190A5]">{subtitle}</p></div>
-      </div>
-      <div className="mt-3 space-y-2">{children}</div>
-    </section>
-  );
-}
-
-function RiskSummary({ label, value, count, tone }: { label: string; value: string; count: string; tone: "amber" | "red" }) {
-  const classes = tone === "amber" ? "bg-[#FFF9EE] text-[#E59B25]" : "bg-[#FFF2F4] text-[#EB4E68]";
-  return (
-    <div className="rounded-lg border border-[#E7EBF1] bg-[#FAFBFD] px-2.5 py-2.5">
-      <div className="flex items-start gap-2"><span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${classes}`}><AlertTriangle className="h-3.5 w-3.5" /></span><div><p className="text-[7px] font-bold text-[#687A91]">{label}</p><p className="mt-1 text-[12px] font-black text-[#183057]">{value}</p><p className="mt-0.5 text-[7px] font-medium text-[#8190A5]">{count}</p></div></div>
     </div>
   );
 }
 
-function WindowCard({ label, value, count, tone }: { label: string; value: string; count: string; tone: "red" | "amber" | "green" }) {
-  const classes = tone === "red" ? "border-[#F7D9DF] bg-[#FFF2F4]" : tone === "amber" ? "border-[#F5E3C3] bg-[#FFF8EC]" : "border-[#D7EEE4] bg-[#EFFAF5]";
-  return <div className={`rounded-lg border px-2 py-2 ${classes}`}><p className="text-[7.5px] font-extrabold text-[#52637C]">{label}</p><p className="mt-1 text-[10px] font-black text-[#183057]">{value}</p><p className="mt-0.5 text-[7px] font-medium text-[#7D8CA1]">{count}</p></div>;
-}
-
-function FunnelStage({ label, value, meta, accent = "neutral" }: { label: string; value: number; meta: string; accent?: "neutral" | "blue" | "green" | "purple" }) {
-  const accentClasses = accent === "blue" ? "bg-[#EDF4FF]" : accent === "green" ? "bg-[#ECF9F3]" : accent === "purple" ? "bg-[#F3EFFF]" : "bg-[#FAFBFD]";
-  return <div className={`min-h-[70px] border-r border-[#E4EAF2] px-3 py-2.5 last:border-r-0 ${accentClasses}`}><p className="text-[7.5px] font-bold text-[#71819A]">{label}</p><p className="mt-1 text-[15px] font-black text-[#183057]">{value}</p><p className="text-[7px] font-medium text-[#8190A5]">{meta}</p></div>;
-}
-
-function EmptyLine({ text }: { text: string }) {
-  return <p className="rounded-lg border border-dashed border-[#DCE4EE] bg-[#FAFBFD] px-3 py-6 text-center text-[9px] font-medium text-[#7D8CA1]">{text}</p>;
-}
-
-function Action({ href, title, subtitle, icon: Icon }: { href: string; title: string; subtitle: string; icon: InsightIcon }) {
+function InsurerTable({ rows }: { rows: CommercialRow[] }) {
+  if (!rows.length) return <Empty />;
   return (
-    <Link href={href} prefetch={false} className="group flex min-h-[58px] items-center gap-2.5 rounded-lg border border-[#E2E8F0] bg-[#FAFBFD] px-3 py-2.5 transition hover:border-[#CAD6E5] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20">
-      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#3156B8]"><Icon className="h-3.5 w-3.5" /></span>
-      <span className="min-w-0 flex-1"><span className="block truncate text-[9px] font-extrabold text-[#172846]">{title}</span><span className="mt-0.5 block truncate text-[7.5px] font-medium text-[#74839A]">{subtitle}</span></span>
-      <ArrowRight className="h-3.5 w-3.5 text-[#8090A8] transition group-hover:translate-x-0.5" />
-    </Link>
+    <div className="min-h-0 flex-1 overflow-auto">
+      <table className="w-full min-w-[620px] border-collapse">
+        <thead className="sticky top-0 z-10 bg-[#f8fafc]"><tr className="text-[8px] font-black uppercase tracking-[.06em] text-[#7a899c]"><th className="px-4 py-2.5 text-left">Insurer Name</th><th className="px-3 py-2.5 text-right">Policies</th><th className="px-4 py-2.5 text-right">Premium</th></tr></thead>
+        <tbody className="divide-y divide-[#edf1f5]">
+          {rows.map((row) => {
+            const logo = getInsurerLogo(row.name);
+            return <tr key={row.key} className="text-[9.5px] text-[#40536d]"><td className="px-4 py-2.5 font-semibold"><div className="flex min-w-0 items-center gap-2">{logo ? <Image src={logo} alt={`${row.name} logo`} width={24} height={20} className="max-h-5 max-w-7 shrink-0 object-contain" /> : null}<span className="truncate">{row.name}</span></div></td><td className="px-3 py-2.5 text-right tabular-nums">{integer(row.policies)}</td><td className="px-4 py-2.5 text-right font-bold tabular-nums">{currency(row.premium)}</td></tr>;
+          })}
+        </tbody>
+      </table>
+    </div>
   );
+}
+
+function Header({ title }: { title: string }) {
+  return <div className="border-b border-[#e6ebf2] px-4 py-3"><h2 className="text-[14px] font-extrabold text-[#1b3154]">{title}</h2></div>;
+}
+
+function SimpleCommercialTable({ rows, firstLabel }: { rows: CommercialRow[]; firstLabel: string }) {
+  if (!rows.length) return <Empty />;
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[760px] border-collapse">
+        <thead className="bg-[#f8fafc]"><tr className="text-[8px] font-black uppercase tracking-[.06em] text-[#7a899c]"><th className="px-5 py-2.5 text-left">{firstLabel}</th><th className="px-3 py-2.5 text-right">Policies</th><th className="px-5 py-2.5 text-right">Premium</th></tr></thead>
+        <tbody className="divide-y divide-[#edf1f5]">{rows.map((row) => <tr key={row.key} className="text-[9.8px] text-[#40536d]"><td className="px-5 py-2.5 font-semibold">{row.name}</td><td className="px-3 py-2.5 text-right">{integer(row.policies)}</td><td className="px-5 py-2.5 text-right font-bold">{currency(row.premium)}</td></tr>)}</tbody>
+      </table>
+    </div>
+  );
+}
+
+function IntermediaryTable({ rows }: { rows: CommercialRow[] }) {
+  if (!rows.length) return <Empty />;
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[980px] border-collapse">
+        <thead className="bg-[#f8fafc]"><tr className="text-[8px] font-black uppercase tracking-[.06em] text-[#7a899c]"><th className="px-5 py-2.5 text-left">Name / Intermediary</th><th className="px-3 py-2.5 text-left">Type</th><th className="px-3 py-2.5 text-left">RM</th><th className="px-3 py-2.5 text-right">Policies</th><th className="px-5 py-2.5 text-right">Premium</th></tr></thead>
+        <tbody className="divide-y divide-[#edf1f5]">{rows.map((row) => <tr key={row.key} className="text-[9.8px] text-[#40536d]"><td className="px-5 py-2.5 font-semibold">{row.name}</td><td className="px-3 py-2.5 font-semibold uppercase">{row.type || "—"}</td><td className="px-3 py-2.5">{row.rm || "Unassigned"}</td><td className="px-3 py-2.5 text-right">{integer(row.policies)}</td><td className="px-5 py-2.5 text-right font-bold">{currency(row.premium)}</td></tr>)}</tbody>
+      </table>
+    </div>
+  );
+}
+
+function Empty() {
+  return <div className="px-5 py-8 text-center text-[10px] text-[#8a97aa]">No records for the selected filters.</div>;
 }
