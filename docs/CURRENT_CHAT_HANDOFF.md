@@ -1,3 +1,16 @@
+## 2026-10-07 — Partner App Policy Details professional icon system
+
+- Branch: `ui/partner-policy-detail-professional-icons-2026-10-07`.
+- Partner App → Policy Details now replaces the remaining generic raw Ionicons across the page with a dedicated professional semantic icon system aligned with the newer Business/Profile visual language.
+- Covered surfaces: Policy Period, Quick Actions header, Policy Document, Renew Policy, Raise Claim, Customer Details, Policy Overview header, Category, Product, Business Type, Issuance Date, Insurer, IDV, Premium header, Premium breakup, Customer & Vehicle header, Commercial Attribution header, and Sales ownership.
+- Quick Actions retain their existing blue/green/orange/purple semantic card backgrounds while using matching professional icon tiles; overview/detail icons use compact neutral/brand treatments.
+- Existing insurer/manufacturer/customer artwork, policy data, premium calculations, renewal/claim/customer navigation, permissions and backend calls remain unchanged.
+- Added visual regression coverage in `verify-visual-system-completion.mjs`.
+- No database/schema/RLS/native dependency change. **No APK/AAB created.**
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA pending.**
+
+---
+
 ## 2026-10-07 — Firebase OTP tester reCAPTCHA CSP fix
 
 - Cloudflare runtime evidence showed the same-origin Firebase SDK proxy was working, but the portal CSP blocked `https://www.google.com/recaptcha/api.js` because global `script-src` was limited to `'self' 'unsafe-inline'` in production.
