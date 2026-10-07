@@ -143,6 +143,9 @@ jobs:
       - name: Customer Exchange live backend regression
         run: node apps/mobile-app/scripts/customer-exchange-live-backend-regression.mjs
 
+      - name: Customer support Service Enquiries regression
+        run: node apps/mobile-app/scripts/customer-support-service-enquiry-regression.mjs
+
       - name: Build Expo web review export
         run: npm run build:mobile:web
 
