@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -30,6 +30,9 @@ type ErrorPopupState = { title: string; message: string; actionLabel?: string; o
 
 export default function AddVehicleScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ fromExchange?: string | string[] }>();
+  const fromExchangeParam = Array.isArray(params.fromExchange) ? params.fromExchange[0] : params.fromExchange;
+  const returnToExchange = fromExchangeParam === '1';
   const [contexts, setContexts] = useState<CustomerAccountContext[]>([]);
   const [manufacturers, setManufacturers] = useState<string[]>([]);
   const [companies, setCompanies] = useState<InsuranceCompany[]>([]);
@@ -408,7 +411,7 @@ export default function AddVehicleScreen() {
       }
     }
     setSaving(false);
-    router.replace(contexts.some(isPortfolioCustomerContext) ? '/customer/group/fleet' : '/customer/vehicles');
+    router.replace(returnToExchange ? '/customer/exchange' : (contexts.some(isPortfolioCustomerContext) ? '/customer/group/fleet' : '/customer/vehicles'));
   }
 
   async function pickPolicyCopy() {
