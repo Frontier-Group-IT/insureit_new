@@ -5,11 +5,10 @@ import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
-import { PartnerBusinessGrowthIcon } from '@/components/ui/partner-business-growth-icon';
 import { PartnerButton } from '@/components/ui/partner-button';
 import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
-import { PartnerAssets } from '@/lib/partner-assets';
+import { PartnerProfileMenuIcon, type PartnerProfileMenuIconKind } from '@/components/ui/partner-profile-menu-icon';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
@@ -123,29 +122,29 @@ export default function MoreScreen() {
       ) : null}
 
       <MenuSection title="WORK">
-        <MenuRow asset={PartnerAssets.actions.documentSearch} title="Search all business" helper="Customers, policies and claims" onPress={() => router.push('/search')} />
-        <MenuRow asset={PartnerAssets.actions.policyRegister} title="Policy Intake" onPress={() => router.push('/policy-intakes')} />
-        <MenuRow asset={PartnerAssets.actions.renewalsReference} title="Renewals" onPress={() => router.push('/renewals')} />
-        <MenuRow asset={PartnerAssets.actions.customerRegister} title="Customers" onPress={() => router.push('/customers')} last />
+        <MenuRow iconKind="search" title="Search all business" helper="Customers, policies and claims" onPress={() => router.push('/search')} />
+        <MenuRow iconKind="policy-intake" title="Policy Intake" onPress={() => router.push('/policy-intakes')} />
+        <MenuRow iconKind="renewals" title="Renewals" onPress={() => router.push('/renewals')} />
+        <MenuRow iconKind="customers" title="Customers" onPress={() => router.push('/customers')} last />
       </MenuSection>
 
       <MenuSection title="INSIGHTS">
-        <MenuRow icon={<PartnerBusinessGrowthIcon size={36} />} title="Your Week" onPress={() => router.push('/weekly-story')} />
-        <MenuRow asset={PartnerAssets.actions.businessInsights} title="My Impact" onPress={() => router.push('/impact')} />
-        <MenuRow asset={PartnerAssets.status.journey} title="My Journey" onPress={() => router.push('/journey')} />
-        <MenuRow asset={PartnerAssets.navigation.notifications} title="Activity" onPress={() => router.push('/activity')} last />
+        <MenuRow iconKind="week" title="Your Week" onPress={() => router.push('/weekly-story')} />
+        <MenuRow iconKind="impact" title="My Impact" onPress={() => router.push('/impact')} />
+        <MenuRow iconKind="journey" title="My Journey" onPress={() => router.push('/journey')} />
+        <MenuRow iconKind="activity" title="Activity" onPress={() => router.push('/activity')} last />
       </MenuSection>
 
       <MenuSection title="GROW & LEARN">
-        <MenuRow asset={PartnerAssets.actions.policyChecklist} title="60-Second Learn" onPress={() => router.push('/learn')} />
-        <MenuRow asset={PartnerAssets.status.achievement} title="Recognition" onPress={() => router.push('/recognition')} />
-        <MenuRow asset={PartnerAssets.status.businessGrowth} title="INSUREIT Stories" onPress={() => router.push('/stories')} last />
+        <MenuRow iconKind="learn" title="60-Second Learn" onPress={() => router.push('/learn')} />
+        <MenuRow iconKind="recognition" title="Recognition" onPress={() => router.push('/recognition')} />
+        <MenuRow iconKind="stories" title="INSUREIT Stories" onPress={() => router.push('/stories')} last />
       </MenuSection>
 
       <MenuSection title="ACCOUNT">
-        <MenuRow asset={PartnerAssets.navigation.profile} title="Profile & registration" onPress={() => router.push('/profile')} />
-        <MenuRow asset={PartnerAssets.actions.support} title="Support" onPress={() => router.push('/support')} />
-        <MenuRow asset={PartnerAssets.status.settings} title="Settings & app info" onPress={() => router.push('/settings')} last />
+        <MenuRow iconKind="profile" title="Profile & registration" onPress={() => router.push('/profile')} />
+        <MenuRow iconKind="support" title="Support" onPress={() => router.push('/support')} />
+        <MenuRow iconKind="settings" title="Settings & app info" onPress={() => router.push('/settings')} last />
       </MenuSection>
 
       <Pressable
@@ -181,15 +180,13 @@ function MenuSection({ title, children }: { title: string; children: ReactNode }
 }
 
 function MenuRow({
-  asset,
-  icon,
+  iconKind,
   title,
   helper,
   onPress,
   last = false,
 }: {
-  asset?: number;
-  icon?: ReactNode;
+  iconKind: PartnerProfileMenuIconKind;
   title: string;
   helper?: string;
   onPress: () => void;
@@ -207,7 +204,7 @@ function MenuRow({
       ]}
     >
       <View style={styles.rowIcon}>
-        {icon ?? (asset ? <Image source={asset} style={styles.rowAssetImage} resizeMode="contain" /> : null)}
+        <PartnerProfileMenuIcon kind={iconKind} size={38} />
       </View>
       <View style={styles.rowBody}>
         <Text style={styles.rowTitle}>{title}</Text>
@@ -368,10 +365,6 @@ const styles = StyleSheet.create({
     height: 38,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  rowAssetImage: {
-    width: 30,
-    height: 30,
   },
   rowBody: {
     flex: 1,
