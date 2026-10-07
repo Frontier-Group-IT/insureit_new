@@ -93,6 +93,14 @@ for (const businessAsset of ['actions.quickRenewals', 'actions.quickClaims', 'ac
 }
 requireText(business, 'function BlueIcon(', 'Business must keep the shared blue generated-icon treatment.');
 requireText(business, 'function productIcon(', 'Business product cards must keep differentiated product icon mapping.');
+requireText(business, 'const [overviewCustomOpen, setOverviewCustomOpen] = useState(false);', 'Business Overview must track custom-range panel visibility independently from the selected period.');
+requireText(business, "setOverviewCustomOpen((open) => (overviewRange === 'custom' ? !open : true));", 'Selecting Custom again must toggle the Business Overview custom range panel.');
+requireText(business, 'setOverviewCustomOpen(false);', 'Selecting a non-custom Business Overview period must close the custom range panel.');
+requireText(business, "{overviewCustomOpen ? (", 'Business Overview custom range card must render from explicit open state.');
+requireText(business, 'const [trendCustomOpen, setTrendCustomOpen] = useState(false);', 'Month-wise Trend must track custom-range panel visibility independently from the selected period.');
+requireText(business, "setTrendCustomOpen((open) => (trendRange === 'custom' ? !open : true));", 'Selecting Custom again must toggle the Month-wise Trend custom range panel.');
+requireText(business, 'setTrendCustomOpen(false);', 'Selecting a non-custom Month-wise Trend period must close the custom range panel.');
+requireText(business, "{trendCustomOpen ? (", 'Month-wise Trend custom range card must render from explicit open state.');
 requireText(business, '!payout.available', 'Business payout authorization gate must remain intact.');
 requireText(business, 'getPartnerPayoutSummary()', 'Business must continue loading payout data through the existing service.');
 requireText(business, "source={require('../../assets/partner/banners/claims-header-reference.jpg')}", 'Business header must use the same reference background as Claims and Policies.');
