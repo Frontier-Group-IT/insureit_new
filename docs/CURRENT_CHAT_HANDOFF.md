@@ -1,3 +1,19 @@
+## 2026-10-07 — Partner Home MTD vs previous-month MTD comparison
+
+- Branch: `fix/partner-home-mtd-previous-month-2026-10-07`.
+- Partner Home MTD no longer uses the generic immediately-preceding equal-day range as its comparison.
+- MTD now compares the current month-to-date against the same date span in the previous month. Example on 6 Oct: 1–6 Oct vs 1–6 Sep.
+- The comparison uses `net_premium` on both sides so the percentage matches the Net Premium value displayed in the Home business card.
+- The helper copy now explicitly says `above previous month` / `below previous month`.
+- If the previous month has fewer calendar days, the comparison end date is capped to that month's final day.
+- Other Home business-period comparison behavior is unchanged.
+- Uses the existing scoped `partner_app_business_range_v2` service; no DB migration/RLS/native dependency change.
+- Added Partner Phase 5 regression checks for previous-month MTD range, scoped fetch, net-premium comparison, and explicit comparison wording.
+- No APK/AAB created.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA NOT YET DONE.**
+
+---
+
 ## 2026-10-06 — Partner Your Week `This Week` pill clipping fix
 
 - Branch: `fix/partner-week-pill-clipping-2026-10-06`.
