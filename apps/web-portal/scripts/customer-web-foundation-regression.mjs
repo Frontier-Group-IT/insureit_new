@@ -23,6 +23,12 @@ const requiredFiles = [
   "app/customer/(protected)/page.tsx",
   "app/customer/(protected)/home/page.tsx",
   "components/customer-portal/customer-navigation.tsx",
+  "components/customer-portal/customer-phase1.tsx",
+  "lib/customer-web-data.ts",
+  "app/customer/(protected)/vehicles/page.tsx",
+  "app/customer/(protected)/vehicles/[id]/page.tsx",
+  "app/customer/(protected)/policies/page.tsx",
+  "app/customer/(protected)/policies/[id]/page.tsx",
 ];
 
 for (const file of requiredFiles) {
@@ -57,10 +63,31 @@ assert(login.includes("customerSessionErrorMessage"), "Customer login must surfa
 const protectedLayout = read("app/customer/(protected)/layout.tsx");
 assert(protectedLayout.includes("await getCustomerWebSession()"), "protected Customer layout must authenticate server-side");
 
+const phaseOneData = read("lib/customer-web-data.ts");
+assert(phaseOneData.includes("await getCustomerWebSession()"), "Customer Phase 1 data scope must derive from authenticated Customer Web session");
+assert(phaseOneData.includes('.eq("customer_id", customerId)'), "Customer Phase 1 queries must remain customer-id scoped");
+assert(phaseOneData.includes('from("external_policies")'), "Customer Policies must include external policy parity");
+assert(phaseOneData.includes("currentCustomerPolicies"), "Customer Policies must retain current-policy deduplication");
+assert(!phaseOneData.includes("createSupabaseAdminClient"), "Customer Phase 1 must not use admin/service-role data access");
+assert(!phaseOneData.includes("@/lib/partner-web"), "Customer Phase 1 must not depend on Partner authorization");
+
+const vehiclePage = read("app/customer/(protected)/vehicles/page.tsx");
+const vehicleDetailPage = read("app/customer/(protected)/vehicles/[id]/page.tsx");
+const policyPage = read("app/customer/(protected)/policies/page.tsx");
+const policyDetailPage = read("app/customer/(protected)/policies/[id]/page.tsx");
+assert(vehiclePage.includes("resolveCustomerWebScope"), "Customer Vehicles must resolve authorized Customer account scope");
+assert(vehicleDetailPage.includes("loadCustomerVehicleDetail(account.id, id)"), "Vehicle Detail must validate the requested vehicle inside Customer scope");
+assert(policyPage.includes("resolveCustomerWebScope"), "Customer Policies must resolve authorized Customer account scope");
+assert(policyDetailPage.includes("loadCustomerPolicyDetail(account.id, id"), "Policy Detail must validate the requested policy inside Customer scope");
+assert(vehicleDetailPage.includes('pathname="/customer/vehicles"'), "Vehicle Detail account switching must return to the scoped Vehicles list");
+assert(policyDetailPage.includes('pathname="/customer/policies"'), "Policy Detail account switching must return to the scoped Policies list");
+
 const navigation = read("components/customer-portal/customer-navigation.tsx");
 assert(navigation.includes('fetch("/customer/auth/session", { method: "DELETE" })'), "Customer logout must clear the isolated session endpoint");
 assert(!navigation.includes('href="/partner'), "Customer navigation must not expose Partner routes");
 assert(!navigation.includes('href="/reports'), "Customer navigation must not expose Operations report routes");
+assert(navigation.includes('href="/customer/vehicles"'), "Customer navigation must expose Phase 1 Vehicles");
+assert(navigation.includes('href="/customer/policies"'), "Customer navigation must expose Phase 1 Policies");
 
 const portalRoutes = read("lib/portal-routes.ts");
 const middleware = read("middleware.ts");
