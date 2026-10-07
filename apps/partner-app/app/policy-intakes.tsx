@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -218,9 +218,21 @@ function IntakeRecordLogo({ row }: { row: PartnerPolicyIntake }) {
     );
   }
 
+  return <DefaultPolicyIntakeRecordIcon />;
+}
+
+function DefaultPolicyIntakeRecordIcon() {
   return (
-    <View style={styles.rowArtwork}>
-      <Ionicons name="document-text-outline" size={24} color="#4774A8" />
+    <View
+      accessibilityLabel="Policy Intake record"
+      style={[styles.rowArtwork, styles.defaultPolicyArtwork]}
+    >
+      <Image
+        source={PartnerAssets.actions.quickPolicyIntake}
+        style={styles.defaultPolicyArtworkImage}
+        resizeMode="contain"
+      />
+      <View pointerEvents="none" style={styles.defaultPolicyBadgeMask} />
     </View>
   );
 }
@@ -282,7 +294,10 @@ const styles = StyleSheet.create({
   searchBand: { paddingHorizontal: 11, paddingTop: 8, paddingBottom: 8, flexDirection: 'row', backgroundColor: '#0860C8' }, searchBox: { flex: 1, minHeight: 38, borderRadius: 9, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#FFFFFF' }, searchInput: { flex: 1, paddingVertical: 0, color: '#1F314C', fontSize: 10.5, lineHeight: 14 },
   filtersWrap: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#DDE4EF', backgroundColor: '#FFFFFF' }, filtersContent: { paddingHorizontal: 10, paddingVertical: 7, gap: 7 }, filterChip: { minHeight: 31, borderRadius: 8, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F7F8FB', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E0E5ED' }, filterChipActive: { backgroundColor: '#183864', borderColor: '#183864' }, filterLabel: { color: '#4D5D75', fontSize: 9.2, lineHeight: 12, fontWeight: '700' }, filterLabelActive: { color: '#FFFFFF' }, filterCount: { color: '#728099', fontSize: 8.5, lineHeight: 11, fontWeight: '700' }, filterCountActive: { color: '#DDEAFF' },
   scroll: { flex: 1 }, content: { paddingHorizontal: 9, paddingTop: 9, paddingBottom: 12, gap: 8 }, inlineError: { marginBottom: 5, color: partnerTheme.colors.danger, textAlign: 'center', fontSize: 10 },
-  card: { borderRadius: 11, paddingHorizontal: 10, paddingVertical: 10, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E1E7F0', shadowColor: '#0B2447', shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 1 }, pressedCard: { opacity: 0.75 }, rowTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 }, rowArtwork: { width: 38, height: 38, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F7FC' }, rowArtworkImage: { width: 31, height: 31 }, identity: { flex: 1, minWidth: 0 }, statusStack: { maxWidth: 92, alignItems: 'flex-end', gap: 4 }, updatedDate: { color: '#7B8799', fontSize: 7, lineHeight: 9, textAlign: 'right' }, number: { color: '#1D2C45', fontSize: 11, lineHeight: 14, fontWeight: '800' }, customer: { marginTop: 2, color: '#687A92', fontSize: 8.5, lineHeight: 11 }, metaLine: { marginTop: 4, color: '#8290A3', fontSize: 8, lineHeight: 10.5 },
+  card: { borderRadius: 11, paddingHorizontal: 10, paddingVertical: 10, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E1E7F0', shadowColor: '#0B2447', shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 1 }, pressedCard: { opacity: 0.75 }, rowTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 }, rowArtwork: { width: 38, height: 38, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F7FC' }, rowArtworkImage: { width: 31, height: 31 },
+  defaultPolicyArtwork: { overflow: 'hidden', backgroundColor: '#EAF4FF' },
+  defaultPolicyArtworkImage: { width: 31, height: 31 },
+  defaultPolicyBadgeMask: { position: 'absolute', right: 2, bottom: 2, width: 13, height: 13, borderRadius: 7, backgroundColor: '#EAF4FF' }, identity: { flex: 1, minWidth: 0 }, statusStack: { maxWidth: 92, alignItems: 'flex-end', gap: 4 }, updatedDate: { color: '#7B8799', fontSize: 7, lineHeight: 9, textAlign: 'right' }, number: { color: '#1D2C45', fontSize: 11, lineHeight: 14, fontWeight: '800' }, customer: { marginTop: 2, color: '#687A92', fontSize: 8.5, lineHeight: 11 }, metaLine: { marginTop: 4, color: '#8290A3', fontSize: 8, lineHeight: 10.5 },
   progressWrap: { marginTop: 10, flexDirection: 'row', alignItems: 'flex-start' }, progressStep: { flex: 1, alignItems: 'center' }, progressLineWrap: { width: '100%', minHeight: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }, progressDot: { width: 10, height: 10, borderRadius: 5, alignItems: 'center', justifyContent: 'center', backgroundColor: '#DCE2EC' }, progressDotComplete: { backgroundColor: '#6541F4' }, progressDotRejected: { backgroundColor: '#EA625C' }, progressLine: { position: 'absolute', left: '57%', width: '86%', height: 1.5, backgroundColor: '#DCE2EC' }, progressLineComplete: { backgroundColor: '#6541F4' }, progressLabel: { marginTop: 3, color: '#7D899B', fontSize: 7.5, lineHeight: 10, fontWeight: '500' }, progressLabelActive: { color: '#23344E', fontWeight: '600' },
   attention: { marginTop: 8, minHeight: 28, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF3DF' }, attentionText: { flex: 1, color: '#9B5C10', fontSize: 8.5, lineHeight: 11, fontWeight: '700' },
   bottomNav: { height: 58, flexDirection: 'row', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DDE3EC', backgroundColor: '#FFFFFF' }, navItem: { flex: 1, alignItems: 'center', justifyContent: 'center' }, navIconWrap: { minWidth: 36, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }, navIconWrapActive: { backgroundColor: '#EEE9FF' }, navLabel: { marginTop: 1, color: '#60738F', fontSize: 7.5, lineHeight: 10, fontWeight: '600' }, navLabelActive: { color: '#633DF1', fontWeight: '800' }, pressed: { opacity: 0.7 },
