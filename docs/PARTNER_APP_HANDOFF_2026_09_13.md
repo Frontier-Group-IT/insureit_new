@@ -510,3 +510,7 @@ Never collapse merge, publish and device verification into one status.
 - Visual-system assertions prevent the removed metadata/chevron and wide logo spacing from returning.
 - No activity query, data semantics, route, API/RPC, schema, RLS, permission, native dependency or runtime change; OTA-safe for Partner production runtime 0.2.0.
 - Evidence state: **IMPLEMENTED; PR/CI/merge/production OTA/device verification pending. NO APK/AAB CREATED.**
+
+## 2026-10-07 — Profile hero logout confirmation (IMPLEMENTED)
+
+Branch `ui/partner-profile-hero-logout-confirm-2026-10-07` removes the large bottom logout button from `apps/partner-app/app/profile.tsx`. The right-side icon inside the blue identity hero is now a tappable `log-out-outline` button. Tapping it opens the same shared `PartnerConfirmDialog` used by More with title `Sign out of INSUREIT Partner?`, the same re-login warning, destructive `Sign out` confirmation, busy state, and matching failure handling. Confirm continues to call the existing Partner session `signOut()` and routes to `/login`; avatar/photo upload, registration rows, identity data, scope, APIs and navigation remain unchanged. A visual-system regression guard prevents the bottom logout button from returning and requires the confirmation path. **IMPLEMENTED; PR/CI/merge/production runtime 0.2.0 OTA/device verification pending. NO APK/AAB CREATED.**

@@ -6,6 +6,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
+import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { PARTNER_PROFILE_PHOTO_BUCKET, partnerProfilePhotoPath } from '@/lib/partner-profile-photo';
 import { supabase } from '@/lib/supabase';
 import { partnerTheme } from '@/lib/theme';
@@ -16,7 +17,9 @@ export default function ProfileScreen() {
   const { context, avatarUri, refreshAvatar, signOut } = usePartnerSession();
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarMessage, setAvatarMessage] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null);
+  const [logoutOpen, setLogoutOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
   if (!context) return null;
 
   const { identity } = context;
@@ -27,11 +30,14 @@ export default function ProfileScreen() {
   async function logout() {
     if (signingOut) return;
     setSigningOut(true);
+    setLogoutError('');
     try {
       await signOut();
-    } finally {
       router.replace('/login');
+    } catch {
+      setLogoutError('We could not sign you out. Please try again.');
       setSigningOut(false);
+      setLogoutOpen(false);
     }
   }
 
@@ -141,9 +147,18 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View style={styles.heroProfileIcon}>
-          <Ionicons name="person-outline" size={25} color="#BFD4FF" />
-        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Sign out"
+          disabled={signingOut}
+          onPress={() => setLogoutOpen(true)}
+          style={({ pressed }) => [
+            styles.heroProfileIcon,
+            (pressed || signingOut) && styles.heroProfileIconPressed,
+          ]}
+        >
+          <Ionicons name="log-out-outline" size={25} color="#FFFFFF" />
+        </Pressable>
       </View>
 
       <SectionTitle icon="document-text-outline" title="Registration" />
@@ -216,21 +231,22 @@ export default function ProfileScreen() {
         )}
       </View>
 
-      <View style={styles.logoutArea}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Logout"
-          disabled={signingOut}
-          onPress={() => void logout()}
-          style={({ pressed }) => [
-            styles.logoutButton,
-            (pressed || signingOut) && styles.logoutButtonPressed,
-          ]}
-        >
-          <Ionicons name="log-out-outline" size={22} color="#FF1F2D" />
-          <Text style={styles.logoutText}>{signingOut ? 'Logging out…' : 'Logout'}</Text>
-        </Pressable>
-      </View>
+      {logoutError ? (
+        <View style={styles.logoutFeedback}>
+          <PartnerBanner tone="danger" message={logoutError} />
+        </View>
+      ) : null}
+
+      <PartnerConfirmDialog
+        visible={logoutOpen}
+        title="Sign out of INSUREIT Partner?"
+        message="You will need to sign in again to access your business and service workspace."
+        confirmLabel="Sign out"
+        destructive
+        busy={signingOut}
+        onCancel={() => setLogoutOpen(false)}
+        onConfirm={() => void logout()}
+      />
     </PartnerScreen>
   );
 }
@@ -445,7 +461,10 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  heroProfileIconPressed: {
+    opacity: 0.68,
   },
 
   sectionTitleRow: {
@@ -507,29 +526,8 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     fontWeight: '800',
   },
-  logoutArea: {
-    marginTop: 'auto',
-    paddingTop: 32,
-  },
-  logoutButton: {
-    minHeight: 54,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 9,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#FF5B66',
-    backgroundColor: '#FFF8F8',
-  },
-  logoutButtonPressed: {
-    opacity: 0.68,
-  },
-  logoutText: {
-    color: '#FF1F2D',
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: '800',
+  logoutFeedback: {
+    marginTop: 12,
   },
 
 
