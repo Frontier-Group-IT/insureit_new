@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, LogOut } from "lucide-react";
+import { CarFront, Home, LogOut, ShieldCheck } from "lucide-react";
 import { BrandLockup } from "@/components/brand-lockup";
 import { createClient } from "@/lib/supabase";
 
@@ -16,7 +16,9 @@ export function CustomerNavigation() {
     window.location.href = "/customer/login";
   }
 
-  const active = pathname === "/customer" || pathname === "/customer/home";
+  const homeActive = pathname === "/customer" || pathname === "/customer/home";
+  const vehiclesActive = pathname.startsWith("/customer/vehicles");
+  const policiesActive = pathname.startsWith("/customer/policies");
 
   return (
     <>
@@ -26,10 +28,20 @@ export function CustomerNavigation() {
         </Link>
         <nav className="flex-1 px-3.5 py-5" aria-label="Customer navigation">
           <p className="mb-2 px-3 text-[9px] font-black uppercase tracking-[0.18em] text-white/55">Customer</p>
-          <Link href="/customer/home" className={`flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold transition ${active ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
-            <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><Home className="h-[17px] w-[17px]" /></span>
-            Home
-          </Link>
+          <div className="space-y-1.5">
+            <Link href="/customer/home" className={`flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold transition ${homeActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
+              <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><Home className="h-[17px] w-[17px]" /></span>
+              Home
+            </Link>
+            <Link href="/customer/vehicles" className={`flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold transition ${vehiclesActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
+              <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><CarFront className="h-[17px] w-[17px]" /></span>
+              Vehicles
+            </Link>
+            <Link href="/customer/policies" className={`flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold transition ${policiesActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
+              <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><ShieldCheck className="h-[17px] w-[17px]" /></span>
+              Policies
+            </Link>
+          </div>
         </nav>
         <div className="border-t border-white/10 p-3.5">
           <button type="button" onClick={() => void logout()} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3.5 text-left text-[12px] font-bold text-white/80 transition hover:bg-white/10 hover:text-white">
@@ -40,10 +52,15 @@ export function CustomerNavigation() {
       </aside>
 
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[#D7DEE8] bg-white/95 px-4 py-2 backdrop-blur lg:hidden" aria-label="Customer mobile navigation">
-        <div className="mx-auto flex max-w-md justify-center">
-          <Link href="/customer/home" className="flex min-w-[90px] flex-col items-center gap-1 rounded-xl px-4 py-1.5 text-[11px] font-bold text-[#142746]">
-            <Home className="h-5 w-5" />
-            Home
+        <div className="mx-auto grid max-w-md grid-cols-3 gap-1">
+          <Link href="/customer/home" className={`flex flex-col items-center gap-1 rounded-xl px-2 py-1.5 text-[10px] font-bold ${homeActive ? "bg-[#EEF4FF] text-[#174EA6]" : "text-[#53627A]"}`}>
+            <Home className="h-5 w-5" /> Home
+          </Link>
+          <Link href="/customer/vehicles" className={`flex flex-col items-center gap-1 rounded-xl px-2 py-1.5 text-[10px] font-bold ${vehiclesActive ? "bg-[#EEF4FF] text-[#174EA6]" : "text-[#53627A]"}`}>
+            <CarFront className="h-5 w-5" /> Vehicles
+          </Link>
+          <Link href="/customer/policies" className={`flex flex-col items-center gap-1 rounded-xl px-2 py-1.5 text-[10px] font-bold ${policiesActive ? "bg-[#EEF4FF] text-[#174EA6]" : "text-[#53627A]"}`}>
+            <ShieldCheck className="h-5 w-5" /> Policies
           </Link>
         </div>
       </nav>
