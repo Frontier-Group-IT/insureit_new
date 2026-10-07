@@ -266,3 +266,11 @@ alter function public.sync_pending_vehicle_no_from_chassis() set search_path = p
 alter function public.touch_policy_intake_updated_at() set search_path = public, pg_temp;
 alter function public.validate_intermediary_onboarding_profile() set search_path = public, pg_temp;
 alter function public.validate_required_intermediary_identity_fields() set search_path = public, pg_temp;
+
+
+-- ---------------------------------------------------------------------------
+-- 6. Extension schema hardening
+-- ---------------------------------------------------------------------------
+-- The live database search_path already includes "extensions"; move pg_trgm
+-- out of the exposed public schema without rebuilding dependent indexes.
+alter extension pg_trgm set schema extensions;
