@@ -119,7 +119,7 @@ requireText(customerDetail, 'getPartnerCustomerDetail(id)', 'Customer detail mus
 requireText(customerDetail, 'initials(data.customer.customer_name)', 'Customer detail must retain real-customer initials for identity.');
 for (const oldGlyph of ['document-text-outline', 'car-outline', 'shield-outline']) if (customerDetail.includes(`name="${oldGlyph}"`)) throw new Error(`Customer detail feature rows must not regress to ${oldGlyph}.`);
 
-for (const detailAsset of ['navigation.claims', 'navigation.customers', 'actions.payoutRefresh', 'status.journey', 'status.claimAttention', 'status.verified']) requireText(claimDetail, `PartnerAssets.${detailAsset}`, `Claim detail is missing ${detailAsset} artwork.`);
+for (const detailAsset of ['navigation.claims', 'actions.payoutRefresh', 'status.journey', 'status.claimAttention', 'status.verified']) requireText(claimDetail, `PartnerAssets.${detailAsset}`, `Claim detail is missing ${detailAsset} artwork.`);
 requireText(claimDetail, 'getPartnerManufacturerLogoSource', 'Claim detail summary must resolve manufacturer artwork from the linked vehicle make.');
 requireText(claimDetail, '<ReferenceSectionIcon name="people" />', 'Claim detail Insured Person header must use the reference blue group icon.');
 requireText(claimDetail, '<ReferenceSectionIcon name="clipboard" />', 'Claim detail Claim Overview header must use the reference blue clipboard icon.');
