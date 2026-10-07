@@ -21,6 +21,12 @@ const required = [
   "security_invoker = true",
   "from anon, authenticated",
   "set search_path = public, pg_temp",
+  "actor_profile_id is distinct from auth.uid()",
+  "p.prorettype = 'pg_catalog.trigger'::regtype",
+  "sync_existing_intermediary_migration",
+  "sync_external_customer_stage_to_operations",
+  "sync_partner_details_to_linked_accounts",
+  "sync_partner_identity_to_intermediary_register",
 ];
 
 for (const needle of required) {
