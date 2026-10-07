@@ -81,7 +81,7 @@ requireText(more, '<MenuRow icon={<PartnerBusinessGrowthIcon size={36} />} title
 requireText(businessGrowthIcon, 'styles.barOne', 'Shared business growth icon must keep the first reference bar.');
 requireText(businessGrowthIcon, 'styles.barFour', 'Shared business growth icon must keep the fourth reference bar.');
 requireText(businessGrowthIcon, 'name="trending-up"', 'Shared business growth icon must keep the rising trend line.');
-requireText(businessGrowthIcon, 'name="arrow-up"', 'Shared business growth icon must keep the top-right growth arrow.');
+if (businessGrowthIcon.includes('name="arrow-up"')) throw new Error('Shared business growth icon must not restore the removed top-right straight arrow.');
 for (const asset of ['PartnerAssets.actions.policyChecklist', 'PartnerAssets.status.businessGrowth', 'PartnerAssets.status.settings']) requireText(more, asset, `More screen is missing ${asset}.`);
 
 for (const businessAsset of ['actions.quickRenewals', 'actions.quickClaims', 'actions.quickCustomers']) {
