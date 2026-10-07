@@ -173,7 +173,12 @@ assert(kycDocumentRoute.includes('.eq("profile_id", session.user.id)'), "KYC doc
 assert(kycDocumentRoute.includes("MAX_FILE_SIZE = 5 * 1024 * 1024"), "KYC documents must keep the Customer App 5 MB limit");
 assert(kycSubmitRoute.includes('.eq("profile_id", session.user.id)'), "KYC submission must verify application ownership");
 assert(kycSubmitRoute.includes('submit_individual_onboarding_application'), "Customer Web must use the canonical Individual KYC submission RPC");
-assert(!kycSubmitRoute.includes("aadhaar_number:"), "Customer Web KYC draft must not persist raw Aadhaar");
+const kycDraftBlock = kycSubmitRoute.slice(
+  kycSubmitRoute.indexOf("const draftData = {"),
+  kycSubmitRoute.indexOf("const draft = await supabase"),
+);
+assert(!kycDraftBlock.toLowerCase().includes("aadhaar"), "Customer Web KYC draft must not persist raw Aadhaar");
+assert(kycSubmitRoute.includes("p_aadhaar_number: aadhaarNumber"), "Customer Web KYC must pass Aadhaar only to the canonical submission RPC");
 assert(kycForm.includes('type="password"'), "Customer Web KYC must mask Aadhaar entry");
 assert(profilePage.includes("loadCustomerProfile(account.id)"), "Customer Profile page must remain selected-account scoped");
 assert(documentsPage.includes("loadCustomerProfile(account.id)"), "Customer Documents page must remain selected-account scoped");
