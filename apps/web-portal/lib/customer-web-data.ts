@@ -36,6 +36,8 @@ export type CustomerPolicyRow = {
   end_date: string;
   premium_amount: number | null;
   insured_declared_value: number | null;
+  status?: string | null;
+  superseded_by_policy_id?: string | null;
   vehicle_no: string | null;
   vehicle_make: string | null;
   vehicle_model: string | null;
@@ -54,14 +56,10 @@ type ExternalPolicyRecord = {
   insurance_company_id: string | null;
   policy_no: string;
   policy_type: string;
-  business_line?: string | null;
-  policy_product?: string | null;
   start_date: string;
   end_date: string;
-  premium_amount: number | null;
-  insured_declared_value: number | null;
-  vehicles: { vehicle_no: string; make: string | null; model: string | null } | null;
-  insurance_companies: { name: string } | null;
+  premium_amount?: number | null;
+  insured_declared_value?: number | null;
 };
 
 export type CustomerWebScope = {
@@ -94,20 +92,34 @@ export const loadCustomerWebVehicles = cache(async (customerId: string): Promise
 
 export const loadCustomerWebPolicies = cache(async (customerId: string): Promise<CustomerPolicyRow[]> => {
   const supabase = await createServerSupabaseClient();
-  const [internalResult, externalResult] = await Promise.all([
+  const [internalResult, externalResult, vehicleResult, companyResult] = await Promise.all([
     supabase
       .from("policies")
-      .select("id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,business_line,policy_product,start_date,end_date,premium_amount,insured_declared_value,vehicles(vehicle_no,make,model),insurance_companies(name)")
+      .select("id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,business_line,policy_product,start_date,end_date,premium_amount,insured_declared_value,status,superseded_by_policy_id,vehicles(vehicle_no,make,model),insurance_companies(name)")
       .eq("customer_id", customerId)
       .order("end_date", { ascending: true }),
     supabase
       .from("external_policies")
-      .select("id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,business_line,policy_product,start_date,end_date,premium_amount,insured_declared_value,vehicles(vehicle_no,make,model),insurance_companies(name)")
+      .select("id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date,premium_amount,insured_declared_value")
       .eq("customer_id", customerId)
       .order("end_date", { ascending: true }),
+    supabase
+      .from("vehicles")
+      .select("id,vehicle_no,make,model")
+      .eq("customer_id", customerId),
+    supabase
+      .from("insurance_companies")
+      .select("id,name"),
   ]);
 
   if (internalResult.error) throw new Error("Customer policies are temporarily unavailable.");
+
+  const vehicleById = new Map(
+    (vehicleResult.data ?? []).map((row) => [row.id, row] as const),
+  );
+  const companyById = new Map(
+    (companyResult.data ?? []).map((row) => [row.id, row.name] as const),
+  );
 
   const internal = ((internalResult.data ?? []) as unknown as InternalPolicyRecord[]).map((row) => ({
     id: row.id,
@@ -123,6 +135,8 @@ export const loadCustomerWebPolicies = cache(async (customerId: string): Promise
     end_date: row.end_date,
     premium_amount: row.premium_amount,
     insured_declared_value: row.insured_declared_value,
+    status: row.status ?? null,
+    superseded_by_policy_id: row.superseded_by_policy_id ?? null,
     vehicle_no: row.vehicles?.vehicle_no ?? null,
     vehicle_make: row.vehicles?.make ?? null,
     vehicle_model: row.vehicles?.model ?? null,
@@ -131,30 +145,59 @@ export const loadCustomerWebPolicies = cache(async (customerId: string): Promise
 
   const external = externalResult.error
     ? []
-    : ((externalResult.data ?? []) as unknown as ExternalPolicyRecord[]).map((row) => ({
-        id: row.id,
-        source: "external" as const,
-        customer_id: row.customer_id,
-        vehicle_id: row.vehicle_id,
-        insurance_company_id: row.insurance_company_id,
-        policy_no: row.policy_no,
-        policy_type: row.policy_type,
-        business_line: row.business_line ?? null,
-        policy_product: row.policy_product ?? null,
-        start_date: row.start_date,
-        end_date: row.end_date,
-        premium_amount: row.premium_amount,
-        insured_declared_value: row.insured_declared_value,
-        vehicle_no: row.vehicles?.vehicle_no ?? null,
-        vehicle_make: row.vehicles?.make ?? null,
-        vehicle_model: row.vehicles?.model ?? null,
-        insurer_name: row.insurance_companies?.name ?? null,
-      }));
+    : ((externalResult.data ?? []) as unknown as ExternalPolicyRecord[]).map((row) => {
+        const vehicle = row.vehicle_id ? vehicleById.get(row.vehicle_id) : null;
+        return {
+          id: row.id,
+          source: "external" as const,
+          customer_id: row.customer_id,
+          vehicle_id: row.vehicle_id,
+          insurance_company_id: row.insurance_company_id,
+          policy_no: row.policy_no,
+          policy_type: row.policy_type,
+          business_line: null,
+          policy_product: null,
+          start_date: row.start_date,
+          end_date: row.end_date,
+          premium_amount: row.premium_amount ?? null,
+          insured_declared_value: row.insured_declared_value ?? null,
+          status: null,
+          superseded_by_policy_id: null,
+          vehicle_no: vehicle?.vehicle_no ?? null,
+          vehicle_make: vehicle?.make ?? null,
+          vehicle_model: vehicle?.model ?? null,
+          insurer_name: row.insurance_company_id ? companyById.get(row.insurance_company_id) ?? null : null,
+        };
+      });
 
-  return [...internal, ...external].sort(
+  return currentCustomerPolicies([...internal, ...external]);
+});
+
+function currentCustomerPolicies(policies: CustomerPolicyRow[]) {
+  const candidates = policies.filter((policy) => {
+    if (policy.superseded_by_policy_id) return false;
+    return !["superseded", "cancelled", "canceled", "rejected", "void"].includes((policy.status ?? "").trim().toLowerCase());
+  });
+
+  const latestByVehicle = new Map<string, CustomerPolicyRow>();
+  for (const policy of candidates) {
+    const key = policy.vehicle_id ? `vehicle:${policy.vehicle_id}` : `policy:${policy.source}:${policy.id}`;
+    const current = latestByVehicle.get(key);
+    if (!current || compareCustomerPolicyRecency(policy, current) > 0) latestByVehicle.set(key, policy);
+  }
+  return Array.from(latestByVehicle.values()).sort(
     (left, right) => new Date(left.end_date).getTime() - new Date(right.end_date).getTime(),
   );
-});
+}
+
+function compareCustomerPolicyRecency(left: CustomerPolicyRow, right: CustomerPolicyRow) {
+  const startDifference = new Date(left.start_date).getTime() - new Date(right.start_date).getTime();
+  if (startDifference !== 0) return startDifference;
+  const endDifference = new Date(left.end_date).getTime() - new Date(right.end_date).getTime();
+  if (endDifference !== 0) return endDifference;
+  if (left.source !== right.source) return left.source === "sibl" ? 1 : -1;
+  return left.id.localeCompare(right.id);
+}
 
 export async function loadCustomerVehicleDetail(customerId: string, vehicleId: string) {
   const vehicles = await loadCustomerWebVehicles(customerId);
