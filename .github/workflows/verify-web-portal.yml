@@ -67,6 +67,8 @@ jobs:
         run: node scripts/policy-intake-policy-register-links-regression.mjs
       - name: Partner web core security regression
         run: npm run partner-web:core-regression
+      - name: Customer Web foundation isolation regression
+        run: npm run customer-web:foundation-regression
       - name: External renewal intake visibility regression
         run: node scripts/partner-external-renewal-intake-visibility-regression.mjs
       - name: External renewal Administration import regression

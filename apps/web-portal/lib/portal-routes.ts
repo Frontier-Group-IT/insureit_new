@@ -4,6 +4,7 @@ export const protectedPortalRoots = [
   "/accounts",
   "/claim-documents",
   "/claims",
+  "/customer",
   "/customer-kyc",
   "/customers",
   "/dashboard",
