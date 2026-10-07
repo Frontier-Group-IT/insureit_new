@@ -511,6 +511,6 @@ Never collapse merge, publish and device verification into one status.
 - No activity query, data semantics, route, API/RPC, schema, RLS, permission, native dependency or runtime change; OTA-safe for Partner production runtime 0.2.0.
 - Evidence state: **IMPLEMENTED; PR/CI/merge/production OTA/device verification pending. NO APK/AAB CREATED.**
 
-## 2026-10-07 Partner Claim Details two reference heading icons — PR #2872
+## 2026-10-07 Claim Details two reference heading icons — PR #2872
 
-Insured Person section title swaps to a blue two-person glyph, Claim Overview swaps to a blue clipboard; both preserve existing pale-blue icon containers. No other Claim Details icon or layout, data, permissions or route changed. Verifier updated to enforce two new icons and remove obsolete asset assertion. IMPLEMENTED; CI/merge/OTA/installed-device verification pending. No APK/AAB.
+Insured Person uses blue two-person icon and Claim Overview uses blue clipboard icon within existing pale-blue tiles. Every other icon and functionality unchanged. Verification contract updated. IMPLEMENTED, pending merge/production OTA/installed-device verification, no APK/AAB.

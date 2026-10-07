@@ -62,7 +62,7 @@ The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` 
 
 ### Latest implementation ledger
 
-- **2026-10-07 — Partner Claim Details reference section icons:** PR #2872; Insured Person uses blue group and Claim Overview uses blue clipboard glyph inside existing pale-blue tiles. All other icons and business logic remain intact. **IMPLEMENTED; CI/merge/OTA/device verification pending. NO APK/AAB CREATED.** See `docs/PARTNER_APP_HANDOFF_2026_09_13.md`.
+- **2026-10-07 — Partner Claim Details reference section icons:** PR #2872; Insured Person uses blue group and Claim Overview uses blue clipboard in original pale-blue tiles, all other icons unchanged. **IMPLEMENTED; merge/OTA pending; NO APK/AAB.**
 
 - **2026-10-07 — Partner App Business header background parity:** branch `ui/partner-business-header-match-claims-rebased`; Business now uses the same `claims-header-reference.jpg` backdrop, 162px hero height, 0.92 image opacity and navy shade overlay as the current Claims/Policies headers, while preserving Business title/actions/search behavior. Added Partner visual regression guards. **IMPLEMENTED; PR/CI/merge/OTA pending. NO APK/AAB CREATED.** See `docs/CURRENT_CHAT_HANDOFF.md`.
 
