@@ -22,6 +22,7 @@ const listScreen = read('components/partner-list-screen.tsx');
 const home = read('app/(tabs)/index.tsx');
 const more = read('app/(tabs)/more.tsx');
 const businessGrowthIcon = read('components/ui/partner-business-growth-icon.tsx');
+const businessOverviewIcons = read('components/ui/partner-business-overview-icons.tsx');
 const homeMetricIcons = read('components/ui/partner-home-metric-icons.tsx');
 const business = read('app/(tabs)/business.tsx');
 const customers = read('app/customers.tsx');
@@ -92,6 +93,16 @@ for (const businessAsset of ['actions.quickRenewals', 'actions.quickClaims', 'ac
   requireText(business, `PartnerAssets.${businessAsset}`, `Business is missing ${businessAsset} artwork.`);
 }
 requireText(business, 'function BlueIcon(', 'Business must keep the shared blue generated-icon treatment.');
+requireText(business, '<PartnerBusinessOverviewIcon kind={icon} size={38} />', 'Business Overview KPI cards must use the professional shared KPI icon component.');
+for (const kind of ['premium', 'policies', 'commission', 'customers']) {
+  requireText(business, `icon="${kind}"`, `Business Overview must map the ${kind} professional KPI icon.`);
+  requireText(businessOverviewIcons, `${kind}:`, `Business Overview icon component is missing the ${kind} icon treatment.`);
+}
+requireText(businessOverviewIcons, "premium: { icon: 'cash', badge: 'rupee' }", 'Premium Generated must keep a finance icon with rupee badge.');
+requireText(businessOverviewIcons, "policies: { icon: 'document-text', badge: 'verified' }", 'Policies Sold must keep a verified policy-document icon.');
+requireText(businessOverviewIcons, "commission: { icon: 'wallet', badge: 'rupee' }", 'Commission Earned must keep a wallet/rupee icon.');
+requireText(businessOverviewIcons, "customers: { icon: 'people' }", 'Customers must keep a professional people-group icon.');
+requireText(businessOverviewIcons, "backgroundColor: '#EDF6FF'", 'Business Overview KPI icons must keep the soft professional blue tile.');
 requireText(business, 'function productIcon(', 'Business product cards must keep differentiated product icon mapping.');
 requireText(business, '!payout.available', 'Business payout authorization gate must remain intact.');
 requireText(business, 'getPartnerPayoutSummary()', 'Business must continue loading payout data through the existing service.');
