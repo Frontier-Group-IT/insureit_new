@@ -1,3 +1,14 @@
+## 2026-10-07 — Production schema parity repair for Partner customer status filter
+
+- PR #2866 merged, its Service Enquiries schema workflow succeeded, and Customer production OTA run #160 succeeded.
+- The automatic Vercel production deployment was blocked at schema parity because production was missing already-committed migration version `20261007103000` (Partner customer status filter).
+- Repair branch: `fix/apply-partner-customer-status-filter-schema-2026-10-07`.
+- `apply-partner-customer-filters.yml` now idempotently applies/repairs both `20260916154500` and pending `20261007103000`, then verifies both Partner customer RPC contracts.
+- `deploy-production.yml` now explicitly waits for that repair workflow when the schema workflow itself is changed, preventing a race where parity runs before the pending migration is applied.
+- **IMPLEMENTED; PR/CI/merge/schema repair/Vercel deployment pending.**
+
+---
+
 ## 2026-10-07 — Customer Support Ticket → Service Enquiries unification
 
 - Branch: `fix/unify-support-tickets-service-enquiries-v2-2026-10-07`.
