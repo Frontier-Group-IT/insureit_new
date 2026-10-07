@@ -1,3 +1,18 @@
+## 2026-10-07 — Life/Health issued-policy PayIn/Payout edit popup parity
+
+- Branch: `ui/life-health-edit-commercial-modals-v2-2026-10-07`.
+- Scope: Life/Health issued-policy Edit UI only.
+- Root cause: onboarding uses dedicated modal editors for Projected Insurer Pay-in and Partner Payout, while issued-policy Edit had a separate inline `Edit / Done` expansion inside the summary rail.
+- Fix: the Edit screen now keeps a compact Payin–Payout summary and opens onboarding-matched modal popups for Insurer Pay-in and Partner Payout.
+- Modal behavior matches onboarding: Net Premium % / Fixed Amount basis, insurer scheme/incentive, calculated base/total pay-in, TDS @ 10%, Pay-in after TDS, total agreed payout, projected retention, explanatory copy, Escape/close handling and `Save & Close`.
+- Existing Life/Health commercial state is still submitted only by the normal `Save Policy Changes` flow through the existing issued-policy edit server action; no independent database write is introduced by closing a popup.
+- Existing TDS/retention formula is unchanged: retention = Pay-in after 10% TDS − Partner Payout.
+- Canonical Life/Health regression updated so the old inline editor cannot silently return.
+- No schema, RLS, permissions, APIs, Motor/Non-Motor edit behavior, onboarding persistence, or mobile runtime change.
+- **IMPLEMENTED; PR/CI/MERGE/DEPLOYMENT PENDING.**
+
+---
+
 ## 2026-10-07 — Partner Policy Intake Details compact identity redesign
 
 - Release branch: `release/partner-policy-intake-detail-redesign-2026-10-07`, reconciled from approved PR #2936 onto latest `main`.
