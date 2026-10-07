@@ -33,6 +33,8 @@ const itSuperUserDeletePanel = source("components/it-super-user-delete-panel.tsx
 const policyPairDelete = source("app/policy-pair-delete-actions.ts");
 const policyPairDeleteMigration = source("../../supabase/migrations/20260908152200_delete_completed_policy_intake_pair.sql");
 const auditedBoundaryMigration = source("../../supabase/migrations/20261007130000_internal_security_boundary_hardening.sql");
+const functionSurfaceMigration = source("../../supabase/migrations/20261007131000_security_function_surface_hardening.sql");
+const anonDefinerMigration = source("../../supabase/migrations/20261007132000_revoke_anon_security_definer_execution.sql");
 
 for (const [name, content] of [
   ["account review page", accountReview],
@@ -134,6 +136,14 @@ requireText("legacy POSP anonymous read removed", auditedBoundaryMigration, 'dro
 requireText("legacy POSP anonymous upload removed", auditedBoundaryMigration, 'drop policy if exists "Allow anon upload posp-documents" on storage.objects');
 requireText("legacy POSP upload size bounded", auditedBoundaryMigration, "file_size_limit = 10485760");
 requireText("legacy POSP MIME types bounded", auditedBoundaryMigration, "allowed_mime_types = array['application/pdf','image/jpeg','image/png']::text[]");
+requireText("trigger SECURITY DEFINER browser execution revoked", functionSurfaceMigration, "pg_get_function_result(p.oid) in ('trigger', 'event_trigger')");
+requireText("trigger function PUBLIC/anon/authenticated revoke", functionSurfaceMigration, "'revoke execute on function %s from public, anon, authenticated'");
+requireText("advisor search_path hardening", functionSurfaceMigration, "'alter function %s set search_path to public'");
+requireText("all SECURITY DEFINER anon execution revoked", anonDefinerMigration, "where n.nspname = 'public'\n      and p.prosecdef");
+requireText("SECURITY DEFINER PUBLIC/anon revoke", anonDefinerMigration, "'revoke execute on function %s from public, anon'");
+requireText("SECURITY DEFINER service role preserved", anonDefinerMigration, "'grant execute on function %s to service_role'");
+requireText("future function PUBLIC default revoked", anonDefinerMigration, "alter default privileges for role postgres revoke execute on functions from public");
+requireText("future function anon default revoked", anonDefinerMigration, "alter default privileges for role postgres in schema public revoke execute on functions from anon");
 
 assert.deepEqual(
   classifyPolicyIntakeDeleteLinks([{ id: "rejected-1", status: "rejected" }]),
@@ -186,5 +196,8 @@ console.log(JSON.stringify({
   auditedDatabaseSecurityBoundaries: true,
   privilegedRpcBrowserExecutionRevoked: true,
   legacyPospAnonymousStorageClosed: true,
+  triggerFunctionRpcExposureClosed: true,
+  mutableFunctionSearchPathsPinned: true,
+  anonymousSecurityDefinerExecutionClosed: true,
   status: "ok",
 }, null, 2));
