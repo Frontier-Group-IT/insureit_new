@@ -50,6 +50,10 @@ for (const asset of ['policyChecklist', 'appsGrid', 'settings', 'supportVerified
   requireText(assets, `${asset}: require(`, `Partner asset registry must expose ${asset}.`);
 }
 
+requireText(home, 'source={PartnerAssets.actions.quickClaims} style={styles.pendingIcon}', 'Home Pending Tasks must use the exact reference claim clipboard/shield asset.');
+requireText(home, "${count} active ${count === 1 ? 'claim' : 'claims'}", 'Home Pending Tasks must keep the live count inline with the task title.');
+if (home.includes('pendingCount') || home.includes('pendingRowCount')) throw new Error('Home Pending Tasks must not add a separate red count treatment from the reference.');
+
 for (const feature of [
   'policy intake', 'renewal', 'claim', 'customer', 'policies', 'search', 'support', 'settings', 'profile',
   'recognition', 'journey', 'impact', 'your week', 'learn', 'stories', 'activity', 'business', 'more',
