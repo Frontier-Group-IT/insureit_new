@@ -1,3 +1,21 @@
+## 2026-10-07 — Partner Home metric icon reference refinement
+
+- Branch: `ui/partner-home-metric-icon-reference-2026-10-07`.
+- Partner Home first business card keeps the existing correct metric assets:
+  - Policies Sold → `PartnerAssets.actions.policyChecklist`
+  - Commission Earned → `PartnerAssets.actions.payoutGrowth`
+- Updated only the metric icon presentation to match the supplied reference more closely:
+  - 36×36 circular soft-blue icon container
+  - subtle light-blue border
+  - 29×29 artwork for stronger visual weight
+  - slightly improved spacing and divider height
+- Counts, commission values, labels, business logic, MTD logic, navigation, backend, database, schema, RLS, and native dependencies are unchanged.
+- Added visual regression checks covering both asset bindings and the reference-style icon treatment.
+- No APK/AAB created.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA NOT YET DONE.**
+
+---
+
 ## 2026-10-07 — Operations desktop sidebar state stability
 
 - Branch: `fix/sidebar-state-stability-v3-2026-10-07` (rebased on latest main before merge).
