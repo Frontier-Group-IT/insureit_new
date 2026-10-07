@@ -325,7 +325,7 @@ async function findExistingVehicleById(vehicleId: string) {
 
 function existingVehicleCapacity(vehicle: ExistingVehicleRow) {
   const vehicleClass = String(vehicle.vehicle_class_code ?? vehicle.vehicle_type ?? "").trim().toUpperCase();
-  if (vehicleClass === "PCP" || vehicleClass === "TWP") return vehicle.engine_capacity_cc == null ? "" : String(vehicle.engine_capacity_cc);
+  if (vehicleClass === "PCP" || vehicleClass === "TWP" || vehicleClass === "MISD") return vehicle.engine_capacity_cc == null ? "" : String(vehicle.engine_capacity_cc);
   if (vehicleClass === "PCV") return vehicle.seating_capacity == null ? "" : String(vehicle.seating_capacity);
   if (vehicleClass === "GCV" || vehicleClass === "CPM") return vehicle.gvw_kg == null ? "" : String(vehicle.gvw_kg);
   if (vehicle.engine_capacity_cc != null) return String(vehicle.engine_capacity_cc);
