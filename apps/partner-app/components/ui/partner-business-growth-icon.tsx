@@ -26,12 +26,6 @@ export function PartnerBusinessGrowthIcon({ size = 64 }: { size?: number }) {
         color="#147FD8"
         style={{ position: 'absolute', left: 13 * scale, top: 9 * scale }}
       />
-      <Ionicons
-        name="arrow-up"
-        size={19 * scale}
-        color="#147FD8"
-        style={{ position: 'absolute', right: 5 * scale, top: 5 * scale }}
-      />
     </View>
   );
 }
