@@ -55,16 +55,23 @@ for (const route of requiredRoutes) {
 }
 
 const homePage = read("app/partner/page.tsx");
+const homeTrend = read("app/partner/partner-business-trend.tsx");
 assert(homePage.includes('data-partner-home-reference-hero="true"'), "Partner Home must retain the approved reference header treatment");
 assert(homePage.includes('bg-white'), "Partner Home header must retain the approved white background");
 assert(!homePage.includes('data-partner-home-truck-art="true"'), "Partner Home header must not reintroduce truck artwork");
 assert(!homePage.includes('/assets/Custom-Icons/optimized-128/fleet-vehicle.png'), "Partner Home header must not reintroduce the fleet vehicle asset");
-assert(homePage.includes('data-partner-home-reference-cta="true"'), "Partner Home header must retain the reference-aligned CTA");
-assert(homePage.includes('bg-[#163968]'), "Partner Home CTA must retain the approved New Intake-style navy treatment");
-assert(homePage.includes('href="/partner/business"'), "Partner Home header CTA must continue to open My Business");
+assert(homeTrend.includes('data-partner-home-reference-cta="true"'), "Partner Home header must retain the reference-aligned CTA");
+assert(homeTrend.includes('bg-[#163968]'), "Partner Home CTA must retain the approved New Intake-style navy treatment");
+assert(homeTrend.includes('href="/partner/business"'), "Partner Home header CTA must continue to open My Business");
 assert(homePage.includes("Welcome, {name}"), "Partner Home header must keep the dynamic Partner display name");
-assert(homePage.includes("View My Business"), "Partner Home header must keep the My Business CTA label");
+assert(homeTrend.includes("View My Business"), "Partner Home header must keep the My Business CTA label");
 assert(!homePage.includes("Partner Overview"), "Partner Home header must keep the approved compact layout without the Partner Overview eyebrow");
+assert(!homePage.includes("Business highlights"), "Partner Home must not render the removed Business highlights section");
+assert(homePage.includes("<PartnerBusinessTrend"), "Partner Home must render the dedicated interactive business trend component");
+assert(homeTrend.includes('data-partner-business-trend-tooltip="true"'), "Partner Home business trend must expose the period detail tooltip");
+assert(homeTrend.includes("Net Premium:"), "Partner Home business trend tooltip must show Net Premium");
+assert(homeTrend.includes("Policies:"), "Partner Home business trend tooltip must show Policies");
+assert(!homeTrend.includes("<polyline"), "Partner Home business trend must not render the policy connecting line");
 
 const guardedSurface = [
   ...walk("app/partner"),
