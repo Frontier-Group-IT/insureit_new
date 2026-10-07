@@ -32,6 +32,17 @@ const policyIntakesPage = source("app/policy-intakes/page.tsx");
 const itSuperUserDeletePanel = source("components/it-super-user-delete-panel.tsx");
 const policyPairDelete = source("app/policy-pair-delete-actions.ts");
 const policyPairDeleteMigration = source("../../supabase/migrations/20260908152200_delete_completed_policy_intake_pair.sql");
+const auditedBoundaryMigration = source("../../supabase/migrations/20261007130000_internal_security_boundary_hardening.sql");
+const functionSurfaceMigration = source("../../supabase/migrations/20261007131000_security_function_surface_hardening.sql");
+const anonDefinerMigration = source("../../supabase/migrations/20261007132000_revoke_anon_security_definer_execution.sql");
+const authenticatedDefinerMigration = source("../../supabase/migrations/20261007133000_authenticated_definer_authorization_hardening.sql");
+const internalPrimitiveMigration = source("../../supabase/migrations/20261007134000_internal_rpc_primitive_hardening.sql");
+const associatedOnboardingMigration = source("../../supabase/migrations/20261007135000_associated_onboarding_authorization_hardening.sql");
+const denyAllTableMigration = source("../../supabase/migrations/20261007136000_deny_all_table_privilege_hardening.sql");
+const pgTrgmMigration = source("../../supabase/migrations/20261007137000_move_pg_trgm_to_extensions.sql");
+const claimProgressHelperMigration = source("../../supabase/migrations/20261007138000_internal_claim_progress_helper_hardening.sql");
+const webResetPasswordPage = source("app/reset-password/page.tsx");
+const partnerResetPasswordPage = source("../partner-app/app/reset-password.tsx");
 
 for (const [name, content] of [
   ["account review page", accountReview],
@@ -110,6 +121,84 @@ requireText("completed Policy + Intake audit trail", policyPairDeleteMigration, 
 requireText("completed Policy + Intake RPC browser revoke", policyPairDeleteMigration, "revoke all on function public.delete_policy_with_completed_intake_pair(uuid, uuid, uuid) from authenticated");
 requireText("completed Policy + Intake RPC service-role grant", policyPairDeleteMigration, "grant execute on function public.delete_policy_with_completed_intake_pair(uuid, uuid, uuid) to service_role");
 
+requireText("audited role resolution fails closed", auditedBoundaryMigration, "else (");
+rejectText("audited role resolution", auditedBoundaryMigration, "'customer'::public.app_role");
+requireText("audited generic delete policy authenticated-only", auditedBoundaryMigration, "alter policy %I on %I.%I to authenticated");
+requireText("audited generic delete policy IT Super User only", auditedBoundaryMigration, "(select public.current_app_role()) = ''it_super_user''::public.app_role");
+requireText("audited cleanup view security invoker", auditedBoundaryMigration, "alter view public.intermediary_customer_cleanup_candidates set (security_invoker = true)");
+requireText("audited cutover view security invoker", auditedBoundaryMigration, "alter view public.intermediary_onboarding_cutover_audit set (security_invoker = true)");
+requireText("audited cleanup view browser revoke", auditedBoundaryMigration, "revoke all on table public.intermediary_customer_cleanup_candidates from public, anon, authenticated");
+requireText("audited cutover view browser revoke", auditedBoundaryMigration, "revoke all on table public.intermediary_onboarding_cutover_audit from public, anon, authenticated");
+for (const signature of [
+  "public.finalize_policy_intake_motor_v1(uuid, jsonb, integer)",
+  "public.get_policy_business_report_v4(uuid[], date, date, uuid, uuid, text, text, text, integer, integer)",
+  "public.issue_partner_identity(uuid, uuid)",
+  "public.issue_legacy_partner_identity(uuid, uuid, text)",
+  "public.ensure_legacy_partner_record(uuid, uuid)",
+  "public.post_accounts_excel_reconciliation(uuid, jsonb, jsonb, jsonb)",
+]) {
+  requireText("audited privileged RPC browser revoke", auditedBoundaryMigration, `revoke all on function ${signature} from public, anon, authenticated`);
+  requireText("audited privileged RPC service-role grant", auditedBoundaryMigration, `grant execute on function ${signature} to service_role`);
+}
+requireText("legacy POSP anonymous read removed", auditedBoundaryMigration, 'drop policy if exists "Allow anon read posp-documents" on storage.objects');
+requireText("legacy POSP anonymous upload removed", auditedBoundaryMigration, 'drop policy if exists "Allow anon upload posp-documents" on storage.objects');
+requireText("legacy POSP upload size bounded", auditedBoundaryMigration, "file_size_limit = 10485760");
+requireText("legacy POSP MIME types bounded", auditedBoundaryMigration, "allowed_mime_types = array['application/pdf','image/jpeg','image/png']::text[]");
+requireText("trigger SECURITY DEFINER browser execution revoked", functionSurfaceMigration, "pg_get_function_result(p.oid) in ('trigger', 'event_trigger')");
+requireText("trigger function PUBLIC/anon/authenticated revoke", functionSurfaceMigration, "'revoke execute on function %s from public, anon, authenticated'");
+requireText("advisor search_path hardening", functionSurfaceMigration, "'alter function %s set search_path to public'");
+requireText("all SECURITY DEFINER anon execution revoked", anonDefinerMigration, "where n.nspname = 'public'\n      and p.prosecdef");
+requireText("SECURITY DEFINER PUBLIC/anon revoke", anonDefinerMigration, "'revoke execute on function %s from public, anon'");
+requireText("SECURITY DEFINER service role preserved", anonDefinerMigration, "'grant execute on function %s to service_role'");
+requireText("future function PUBLIC default revoked", anonDefinerMigration, "alter default privileges for role postgres revoke execute on functions from public");
+requireText("future function anon default revoked", anonDefinerMigration, "alter default privileges for role postgres in schema public revoke execute on functions from anon");
+requireText("group actor bound to authenticated user", authenticatedDefinerMigration, "actor_profile_id is distinct from auth.uid()");
+requireText("group service-role compatibility preserved", authenticatedDefinerMigration, "is_service_role boolean");
+requireText("downline root bound to session", authenticatedDefinerMigration, "root_user_id = auth.uid()");
+requireText("customer viewer bound to session", authenticatedDefinerMigration, "viewer_id = auth.uid()");
+requireText("profile viewer substitution blocked", authenticatedDefinerMigration, "if not is_service_role and viewer_id is distinct from auth.uid()");
+requireText("intermediary queue capability guard", authenticatedDefinerMigration, "where public.can_manage_posp_misp_onboarding()");
+for (const signature of [
+  "public.insert_customer_activity_event(",
+  "public.sync_existing_intermediary_migration(uuid, uuid, jsonb, text)",
+  "public.repair_legacy_partner_record_link(uuid, uuid)",
+  "public.resolve_intermediary_partner_record_id(uuid)",
+  "public.sync_external_customer_stage_to_operations(uuid, uuid)",
+]) {
+  requireText("internal maintenance RPC authenticated revoke", authenticatedDefinerMigration, signature);
+}
+requireText("internal maintenance RPC browser revoke", authenticatedDefinerMigration, "from public, anon, authenticated");
+for (const signature of [
+  "public.generate_customer_signup_code()",
+  "public.next_partner_application_reference()",
+  "public.next_partner_code()",
+  "public.next_partner_identity()",
+  "public.next_posp_identity()",
+  "public.next_registration_code(text)",
+  "public.sync_partner_details_to_linked_accounts(uuid)",
+  "public.sync_partner_identity_to_intermediary_register(uuid)",
+]) {
+  requireText("internal primitive browser revoke", internalPrimitiveMigration, signature);
+}
+requireText("internal primitive authenticated revoke", internalPrimitiveMigration, "from public, anon, authenticated");
+requireText("associated onboarding profile bound to session", associatedOnboardingMigration, "p_profile_id = auth.uid()");
+requireText("associated onboarding service-role path preserved", associatedOnboardingMigration, "= 'service_role'");
+requireText("corporate contact application row lock", associatedOnboardingMigration, "from public.customer_onboarding_applications\n  where id = p_application_id\n  for update");
+requireText("corporate contact owner or parent-manager guard", associatedOnboardingMigration, "v_application.profile_id = auth.uid()");
+requireText("corporate contact parent manager guard", associatedOnboardingMigration, "public.can_manage_group_associated_onboarding(");
+requireText("corporate contact editable-state guard", associatedOnboardingMigration, "status not in ('not_started', 'in_progress', 'changes_requested')");
+requireText("deny-all RLS table discovery", denyAllTableMigration, "having count(p.oid) = 0");
+requireText("deny-all browser privilege revoke", denyAllTableMigration, "'revoke all privileges on table %I.%I from anon, authenticated'");
+requireText("pg_trgm moved out of public", pgTrgmMigration, "alter extension pg_trgm set schema extensions");
+requireText("claim progress helper browser revoke", claimProgressHelperMigration, "public.external_claim_customer_completed_stage(uuid)");
+requireText("claim progress helper authenticated revoke", claimProgressHelperMigration, "from public, anon, authenticated");
+requireText("portal password reset 12-char baseline", webResetPasswordPage, "password.length < 12");
+requireText("portal password reset uppercase requirement", webResetPasswordPage, "/[A-Z]/.test(password)");
+requireText("portal password reset symbol requirement", webResetPasswordPage, "/[^A-Za-z0-9]/.test(password)");
+requireText("partner password reset 12-char baseline", partnerResetPasswordPage, "password.length < 12");
+requireText("partner password reset uppercase requirement", partnerResetPasswordPage, "/[A-Z]/.test(password)");
+requireText("partner password reset symbol requirement", partnerResetPasswordPage, "/[^A-Za-z0-9]/.test(password)");
+
 assert.deepEqual(
   classifyPolicyIntakeDeleteLinks([{ id: "rejected-1", status: "rejected" }]),
   { rejectedIds: ["rejected-1"], blockingCount: 0 },
@@ -158,5 +247,19 @@ console.log(JSON.stringify({
   completedPolicyIntakeProtectedDependencies: true,
   completedPolicyIntakeExternalRenewalGuard: true,
   completedPolicyIntakeStorageCleanupAudit: true,
+  auditedDatabaseSecurityBoundaries: true,
+  privilegedRpcBrowserExecutionRevoked: true,
+  legacyPospAnonymousStorageClosed: true,
+  triggerFunctionRpcExposureClosed: true,
+  mutableFunctionSearchPathsPinned: true,
+  anonymousSecurityDefinerExecutionClosed: true,
+  authenticatedActorViewerIdsSessionBound: true,
+  internalMaintenanceRpcsServerOnly: true,
+  internalRpcPrimitivesServerOnly: true,
+  associatedOnboardingAuthorizationBound: true,
+  denyAllRlsTablesExplicitlyServerOnly: true,
+  publicExtensionWarningClosed: true,
+  internalClaimProgressHelperServerOnly: true,
+  passwordResetStrengthCompensatingControl: true,
   status: "ok",
 }, null, 2));
