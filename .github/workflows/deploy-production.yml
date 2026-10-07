@@ -352,6 +352,9 @@ jobs:
             fi
             schema_workflow="apply-customer-exchange-marketplace-backend.yml"
             echo "Customer Exchange marketplace migrations detected. Waiting for their schema workflow..."
+          elif grep -qx 'supabase/migrations/20261007111500_unify_support_tickets_with_service_enquiries.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-service-enquiry-support-ticket-unification.yml"
+            echo "Service Enquiries support-ticket unification migration detected. Waiting for its schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"
