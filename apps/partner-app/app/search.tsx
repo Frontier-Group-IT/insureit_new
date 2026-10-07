@@ -38,10 +38,13 @@ export default function SearchScreen() {
   const [loading, setLoading] = useState(false);
   const [partialError, setPartialError] = useState('');
   const requestIdRef = useRef(0);
+  const appliedIncomingQueryRef = useRef('');
 
   useEffect(() => {
-    if (incomingQuery && incomingQuery !== query) setQuery(incomingQuery);
-  }, [incomingQuery, query, setQuery]);
+    if (!incomingQuery || appliedIncomingQueryRef.current === incomingQuery) return;
+    appliedIncomingQueryRef.current = incomingQuery;
+    setQuery(incomingQuery);
+  }, [incomingQuery, setQuery]);
 
   useEffect(() => {
     const search = debouncedQuery.trim();
