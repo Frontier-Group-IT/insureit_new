@@ -210,7 +210,12 @@ export default function BusinessScreen() {
       ) : (
         <>
           <View style={styles.heroBanner}>
-            <Image source={require('../../assets/partner/banners/business-growth-11.png')} style={styles.heroImage} resizeMode="cover" />
+            <Image
+              source={require('../../assets/partner/banners/claims-header-reference.jpg')}
+              style={styles.heroBackdrop}
+              resizeMode="cover"
+            />
+            <View style={styles.heroShade} />
             <View style={styles.heroTopRow}>
               <View style={styles.heroBrand}>
                 <Image source={require('../../assets/insureit-partner-official.png')} style={styles.heroLogo} resizeMode="contain" />
@@ -612,8 +617,9 @@ function formatCacheTime(value: number | null) { if (!value) return 'earlier'; r
 function humanize(value: string) { return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 
 const styles = StyleSheet.create({
-  heroBanner: { height: 158, marginHorizontal: -16, marginTop: -14, overflow: 'hidden', backgroundColor: '#0755A8' },
-  heroImage: { position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', opacity: 0.5 },
+  heroBanner: { height: 162, marginHorizontal: -16, marginTop: -14, overflow: 'hidden', backgroundColor: '#0752A2' },
+  heroBackdrop: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%', opacity: 0.92 },
+  heroShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(1,42,95,0.10)' },
   heroTopRow: { position: 'absolute', zIndex: 3, top: 30, left: 15, right: 15, minHeight: 35, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   heroBrand: { flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: '60%' },
   heroLogo: { width: 30, height: 35, tintColor: '#FFFFFF' },
