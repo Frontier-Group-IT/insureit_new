@@ -88,4 +88,4 @@ Historical Home icon-size milestone: **PR #1777 merged as `d3df6b77a6eb8c607d72f
 
 Update `../../docs/PARTNER_APP_HANDOFF_2026_09_13.md` or the current Partner refinement handoff after any material Partner runtime, channel, native-build, OTA, or user-visible milestone.
 
-- 2026-10-07 Claim Details reference icon refinement: branch `ui/partner-claim-two-section-icons-2026-10-07`, replaces only Insured Person heading icon with blue `people` and Claim Overview heading icon with blue `clipboard`, preserving icon backgrounds/sizes and every other Claim Details icon. IMPLEMENTED; PR/CI/merge/production OTA pending. No APK/AAB.
+- 2026-10-07 Claim Details only two heading icons, Insured Person blue people and Claim Overview blue clipboard. PR #2872; IMPLEMENTED pending CI/merge/OTA; no APK/AAB.

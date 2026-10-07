@@ -72,6 +72,10 @@ requireText(business, 'function BlueIcon(', 'Business must keep the shared blue 
 requireText(business, 'function productIcon(', 'Business product cards must keep differentiated product icon mapping.');
 requireText(business, '!payout.available', 'Business payout authorization gate must remain intact.');
 requireText(business, 'getPartnerPayoutSummary()', 'Business must continue loading payout data through the existing service.');
+requireText(business, "source={require('../../assets/partner/banners/claims-header-reference.jpg')}", 'Business header must use the same reference background as Claims and Policies.');
+requireText(business, "heroBackdrop: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%', opacity: 0.92 }", 'Business header backdrop must keep Claims/Policies crop and opacity.');
+requireText(business, "heroShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(1,42,95,0.10)' }", 'Business header must keep the Claims/Policies shade overlay.');
+requireText(business, "heroBanner: { height: 162", 'Business header height must match Claims and Policies.');
 
 requireText(customers, 'PartnerAssets.emptyStates.noCustomers', 'Customers empty state must use the prepared no-customers artwork.');
 requireText(policies, 'PartnerAssets.emptyStates.noPolicies', 'Policies empty state must use the prepared no-policies artwork.');
@@ -123,7 +127,6 @@ for (const detailAsset of ['navigation.claims', 'actions.payoutRefresh', 'status
 requireText(claimDetail, 'getPartnerManufacturerLogoSource', 'Claim detail summary must resolve manufacturer artwork from the linked vehicle make.');
 requireText(claimDetail, '<ReferenceSectionIcon name="people" />', 'Claim detail Insured Person header must use the reference blue group icon.');
 requireText(claimDetail, '<ReferenceSectionIcon name="clipboard" />', 'Claim detail Claim Overview header must use the reference blue clipboard icon.');
-requireText(claimDetail, '<SectionIcon asset={PartnerAssets.actions.payoutRefresh} />', 'Claim detail Financial Snapshot icon must remain unchanged.');
 requireText(claimDetail, '<SectionIcon asset={PartnerAssets.actions.payoutRefresh} />', 'Claim detail Financial Snapshot must keep professional payout artwork.');
 requireText(claimDetail, '<SectionIcon asset={PartnerAssets.status.journey} />', 'Claim detail Journey must keep professional journey artwork.');
 requireText(claimDetail, 'name="person-outline"', 'Claim detail insured-person row must use the approved clean profile icon.');
