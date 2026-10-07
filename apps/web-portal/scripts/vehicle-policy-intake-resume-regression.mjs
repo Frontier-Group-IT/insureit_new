@@ -151,6 +151,8 @@ assert(policyForm.includes("authoritativeInitialValues"));
 assert(policyForm.includes("sessionStorage.removeItem(POLICY_DRAFT_KEY)"));
 assert(policyForm.includes("if(isEdit||sourceIntakeId||authoritativeInitialValues||!draftHydrated.current"));
 assert(policyForm.includes("useState<string|null>(preselectedVehicleId)"));
+assert(policyForm.includes('form.vehicleClass==="PCP"||form.vehicleClass==="TWP"||form.vehicleClass==="MISD"?form.capacity:""'),"MISD capacity must be sent as engineCapacity during policy onboarding");
+assert(policyForm.includes('if(vehicleClass==="PCP"||vehicleClass==="TWP"||vehicleClass==="MISD")return review.engineCapacity??review.vehicleCategory??"";'),"MISD reviewed RC capacity must prefer engine CC");
 
 const policyPage=read("app/policies/new/page.tsx");
 assert(policyPage.includes("authoritativeInitialValues={vehicleHandoff}"));
@@ -160,6 +162,10 @@ assert(!policyPage.includes('dangerouslySetInnerHTML={{ __html: \'try{sessionSto
 const policyActions=read("app/policies/policy-onboarding-actions.ts");
 assert(policyActions.includes("finalize_policy_intake_motor_v1"));
 assert(policyActions.includes("sourceIntakeId"));
+assert(policyActions.includes('vehicleClass === "PCP" || vehicleClass === "TWP" || vehicleClass === "MISD"'),"existing MISD vehicles must reload capacity from engine_capacity_cc");
+
+const policyOnboardingMigration=read("../../supabase/migrations/20260805182000_policy_onboarding_v2.sql");
+assert(policyOnboardingMigration.includes("engine_capacity_cc = coalesce(nullif(p_payload #>> '{vehicle,engineCapacity}', '')::numeric"),"policy onboarding RPC must persist engineCapacity into engine_capacity_cc");
 
 const policyList=read("app/policies/page.tsx");
 assert(!policyList.includes("PolicyIntakeCompletionBridge"),"browser completion bridge must not remain authoritative");
