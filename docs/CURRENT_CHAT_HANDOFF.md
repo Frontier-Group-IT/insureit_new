@@ -2481,3 +2481,13 @@ PR #2170 merged as `ae609cfa573becf29ea1715096f595fb1c150047`. The first automat
 - No schema/RLS/mobile/OTA/APK/AAB changes.
 - User explicitly requested **no PR**.
 - State: implemented on branch; no PR; not merged/deployed.
+
+## 2026-10-07 — Customer Web Phase 4 on Phase 3 branch
+- Branch remains `feature/customer-web-phase3-services-support-2026-10-07` per user instruction.
+- Added Profile, Customer Documents vault and Individual KYC.
+- Profile writes and document writes are Customer-session/account scoped.
+- KYC uses existing onboarding tables, storage, PIN catalogue and canonical `submit_individual_onboarding_application` RPC.
+- Raw Aadhaar is not stored in the web draft.
+- Corporate/Dealership/Group KYC stays app-only in this phase.
+- No Partner/Operations behavior, schema/RLS, mobile runtime, OTA, APK or AAB changes.
+- No PR created.
