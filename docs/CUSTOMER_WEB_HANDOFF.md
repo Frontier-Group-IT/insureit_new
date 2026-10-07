@@ -74,3 +74,25 @@ This foundation does not modify:
 **IMPLEMENTED ON FEATURE BRANCH; PR #2882 OPEN. Verify web portal run #5399 passed on the functional middleware/customer foundation head, including Customer isolation, Partner security, server-session coverage, typecheck, lint and production build. Final documentation/regression-hardening head requires its own green rerun. MERGE/DEPLOYMENT PENDING.**
 
 No APK/AAB created.
+
+## 2026-10-07 — Customer Web Phase 1 final latest-main merge candidate
+
+Branch: `feature/customer-web-phase1-final-2026-10-07`.
+
+Scope:
+- real Customer Home dashboard;
+- Vehicles list/detail;
+- Policies list/detail;
+- authorized multi-account selector;
+- internal/external policy parity with current-policy-per-vehicle deduplication;
+- Customer desktop/mobile navigation for Home, Vehicles and Policies;
+- Customer-only authenticated Supabase/RLS data layer.
+
+Safety:
+- no Partner Portal functionality changed;
+- no Operations Portal functionality changed;
+- no Partner/Operations auth, RPC or capability changes;
+- no schema/RLS/data migration;
+- no mobile runtime/OTA/APK/AAB changes.
+
+This is the clean latest-main replacement for conflicted PR #2924.
