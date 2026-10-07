@@ -3,7 +3,8 @@
 This file is an operational marker for the guarded GitHub Actions production deployment path.
 
 - Date: 2026-10-07
-- Release intent: deploy the current verified `main` snapshot containing Partner Home M/M Business Trend PR #2859 and responsive/accessibility follow-up PR #2865.
+- Release intent: deploy the latest verified `main` snapshot containing Partner Home M/M Business Trend PR #2859 and responsive/accessibility follow-up PR #2865.
+- Deployment marker revision: final retry after subsequent Partner mobile OTA commits advanced `main`.
 - Runtime behavior: none.
 - Database/schema/RLS/native/mobile impact: none.
 - APK/AAB: none.
