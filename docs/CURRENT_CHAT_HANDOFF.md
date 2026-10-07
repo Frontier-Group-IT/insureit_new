@@ -1,3 +1,14 @@
+## 2026-10-07 — Firebase OTP tester Cloudflare SDK-load fix
+
+- Observed on `insureit-new.shahdolho.workers.dev/firebase-otp-test`: the page rendered but browser-direct loading of `https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js` failed before Firebase/reCAPTCHA initialized.
+- Fix branch: `fix/firebase-otp-sdk-proxy-v2-2026-10-07`.
+- Tester now loads Firebase app/auth compat SDK through same-origin routes `/firebase-otp-test/sdk/firebase-app-compat.js` and `/firebase-otp-test/sdk/firebase-auth-compat.js`.
+- The server route has a strict fixed allowlist for only those two Firebase 10.14.1 assets, returns JavaScript with cache headers, and cannot proxy arbitrary URLs.
+- No Supabase Auth/session/customer/profile/data integration, schema/RLS mutation, Customer App/native change, OTA, APK or AAB.
+- **IMPLEMENTED; PR/CI/MERGE PENDING.**
+
+---
+
 ## 2026-10-07 — Partner Business custom range toggle behavior
 
 - Branch: `fix/partner-business-custom-range-toggle-2026-10-07`.
