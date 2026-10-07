@@ -1,3 +1,20 @@
+## 2026-10-07 — Partner Home/Search shared query synchronization
+
+- Branch: `fix/partner-shared-search-state-2026-10-07`.
+- Added `PartnerSearchProvider` as a lightweight app-wide client state for the universal Partner search query.
+- Partner Home hero search now reads/writes the shared query instead of private local state.
+- When Home search contains non-whitespace text, the Search label and chevron turn blue; the empty state remains muted grey.
+- Submitting Home search still routes to `/search?q=...` with the typed query.
+- Universal Search now consumes the exact same shared query state.
+- Clearing the Search-page field clears the shared query, so returning Home shows an empty Home search box too.
+- Route query handoff is applied once per incoming query using `appliedIncomingQueryRef`, so later edits/clearing on Search are not overwritten by the original route parameter.
+- Existing customer/policy/claim search services, debouncing, result rendering, backend, database, schema, RLS, and native dependencies are unchanged.
+- Added Phase 5 regression checks for provider wiring, Home blue active state, Home → Search query routing, shared Search state, and cross-screen clear behavior.
+- No APK/AAB created.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA NOT YET DONE.**
+
+---
+
 ## 2026-10-07 — Isolated Firebase Phone OTP Cloudflare tester
 
 - Branch: `test/firebase-phone-otp-cloudflare-2026-10-07`.

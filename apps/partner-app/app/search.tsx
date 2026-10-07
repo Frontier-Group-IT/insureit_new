@@ -16,9 +16,8 @@ import { PartnerAssets } from '@/lib/partner-assets';
 import { listPartnerPolicies, type PartnerPolicyRow } from '@/lib/policies';
 import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
+import { usePartnerSearch } from '@/providers/partner-search-provider';
 import { usePartnerSession } from '@/providers/partner-session-provider';
-
-let savedUniversalQuery = '';
 
 type SearchResults = {
   customers: PartnerCustomerRow[];
@@ -32,21 +31,20 @@ export default function SearchScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ q?: string | string[] }>();
   const { context, avatarUri } = usePartnerSession();
+  const { query, setQuery, clearQuery } = usePartnerSearch();
   const incomingQuery = searchParam(params.q);
-  const [query, setQuery] = useState(incomingQuery || savedUniversalQuery);
   const debouncedQuery = useDebouncedValue(query.trim(), 300);
   const [results, setResults] = useState<SearchResults>(EMPTY_RESULTS);
   const [loading, setLoading] = useState(false);
   const [partialError, setPartialError] = useState('');
   const requestIdRef = useRef(0);
+  const appliedIncomingQueryRef = useRef('');
 
   useEffect(() => {
-    savedUniversalQuery = query;
-  }, [query]);
-
-  useEffect(() => {
-    if (incomingQuery) setQuery(incomingQuery);
-  }, [incomingQuery]);
+    if (!incomingQuery || appliedIncomingQueryRef.current === incomingQuery) return;
+    appliedIncomingQueryRef.current = incomingQuery;
+    setQuery(incomingQuery);
+  }, [incomingQuery, setQuery]);
 
   useEffect(() => {
     const search = debouncedQuery.trim();
@@ -116,7 +114,7 @@ export default function SearchScreen() {
       heroSearch={{
         value: query,
         onChangeText: setQuery,
-        onClear: () => setQuery(''),
+        onClear: clearQuery,
         placeholder: 'Search customer, vehicle number or policy no.',
       }}
     >
