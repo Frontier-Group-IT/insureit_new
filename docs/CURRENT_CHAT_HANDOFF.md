@@ -8,7 +8,36 @@
 - Existing date-range component, Apply range behavior, business RPCs, calculations, backend, database, schema, RLS, and native dependencies are unchanged.
 - Added visual regression checks covering both Overview and Trend custom-panel open/close behavior.
 - No APK/AAB created.
-- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA NOT YET DONE.**
+- **REBASING PR #2913 ONTO CURRENT MAIN FOR CI/SAFE MERGE.**
+
+---
+
+## 2026-10-07 — Partner App Business Overview professional KPI icons
+
+- Branch: `ui/partner-business-overview-professional-icons-rebased-2026-10-07`.
+- Partner App → Business → Business Overview now uses a dedicated professional icon system for all four KPI cards instead of small generic outline glyphs.
+- Icon mapping follows the approved visual reference: Premium Generated = finance/cash + rupee badge; Policies Sold = policy document + verified badge; Commission Earned = wallet + rupee badge; Customers = people group.
+- Icons share one soft-blue tile, border, glow, shadow and visual weight so the four KPI cards read as one professional system.
+- KPI values, labels, comparison logic, navigation, business data, permissions and backend calls are unchanged.
+- Added visual regression coverage in `verify-visual-system-completion.mjs`.
+- No schema/RLS/database/native dependency change. **No APK/AAB created.**
+- PR #2914 passed **Verify Partner app #568** and **Verify web portal #5572**, then merged as `530e009f511b36606a5f8292ad7d8c2d72a298c8`.
+- Production OTA release PR #2915 merged as `338b6105fdff23feb25a06c1e2d4f635c95edbaa` after **Verify Partner app #569** passed.
+- **Publish Partner production OTA #86** completed successfully from current `main` to channel `production`, runtime `0.2.0`.
+- **MERGED + OTA PUBLISHED; installed-device verification pending. No APK/AAB created.**
+
+---
+
+## 2026-10-07 — Life/Health issued-policy commercial edit + retention fix (rebased)
+
+- Original PR #2909 became stale because `main` advanced; replacement branch `fix/life-health-commercial-edit-retention-rebased` carries the same verified functional change on current main.
+- Root cause: issued Life/Health edit UI showed Pay-in from `projected_commission_amount` while stale `total_projected_payin`, TDS, `payin_after_tds`, and payout `retention_amount` were not synchronized.
+- Edit Policy now provides an **Edit** control for insurer Pay-in and Partner Payout, with live 10% TDS, after-TDS Pay-in, and retention preview.
+- Save synchronizes Pay-in basis/value, insurer scheme, `total_projected_payin`, TDS, `payin_after_tds`, payout basis/value, and latest payout `retention_amount` while preserving payout settlement state.
+- Regression guard covers editable controls and synchronized calculation fields.
+- Production data repair already applied to the investigated policy only: ₹21,00,000 Pay-in → ₹2,10,000 TDS → ₹18,90,000 after TDS; ₹19,50,000 payout → **-₹60,000 retention**. Payout remains `Pending` / `needs_review`.
+- No schema/RLS/native/mobile change.
+- **IMPLEMENTED + PRODUCTION DATA REPAIR APPLIED; REPLACEMENT PR/CI/MERGE/WEB DEPLOYMENT PENDING.**
 
 ---
 

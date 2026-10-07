@@ -11,7 +11,8 @@ import { StandardActivityStatusCard, type StandardActivityItem } from "@/compone
 
 export type LifeHealthIssuedEditSource = { id:string; type:"POSP"|"MISP"|"SIBL / Partner"; label:string; code:string; mobile:string; rmName:string; rmCode:string };
 export type LifeHealthIssuedEditInitial = { policyId:string; caseId:string; businessLine:"Life"|"Health"; sourcingDate:string; sourceId:string; customerName:string; customerPhone:string; customerEmail:string; insurerId:string; productName:string; policyNumber:string; proposalNumber:string; ppt:string; pd:string; paymentFrequency:string; premiumAmount:string; paymentMode:string; remarks:string; startDate:string; endDate:string; finalPremium:string; sumInsured:string };
-export type LifeHealthCommercialSummary = { payinEntered:boolean; payoutEntered:boolean; insurerPayin:number; partnerPayout:number; retention:number };
+type CommercialBasis = "NET_PREMIUM_PERCENT"|"FIXED_AMOUNT";
+export type LifeHealthCommercialSummary = { payinEntered:boolean; payoutEntered:boolean; payinBasis:CommercialBasis; payinPercent:number; payinFixedAmount:number; insurerSchemeAmount:number; payoutBasis:CommercialBasis; payoutPercent:number; payoutFixedAmount:number; insurerPayin:number; partnerPayout:number; payinAfterTds:number; retention:number };
 type Props = { initial:LifeHealthIssuedEditInitial; insurers:Array<{value:string;label:string}>; sources:LifeHealthIssuedEditSource[]; activityItems:StandardActivityItem[]; documents:LifeHealthIssuedDocument[]; commercialAccess:boolean; commercialSummary:LifeHealthCommercialSummary };
 const inputClass = "h-10 w-full rounded-xl border border-[#D8DEE9] bg-white px-3 text-[11px] font-medium text-[#17203A] outline-none transition placeholder:text-[#98A2B3] hover:border-[#B8C2D1] focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA] disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]";
 const labelClass = "mb-1.5 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.055em] text-[#475467]";
@@ -26,6 +27,16 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
   const initialSource = sources.find((source)=>source.id === initial.sourceId);
   const [intermediaryType,setIntermediaryType] = useState<LifeHealthIssuedEditSource["type"]>(initialSource?.type || "SIBL / Partner");
   const [documentState,setDocumentState] = useState(documents);
+  const [commercialEditing,setCommercialEditing] = useState(false);
+  const [commercial,setCommercial] = useState({
+    payinBasis:commercialSummary.payinBasis,
+    payinPercent:commercialSummary.payinPercent ? String(commercialSummary.payinPercent) : "",
+    payinFixedAmount:commercialSummary.payinFixedAmount ? String(commercialSummary.payinFixedAmount) : "",
+    insurerSchemeAmount:commercialSummary.insurerSchemeAmount ? String(commercialSummary.insurerSchemeAmount) : "",
+    payoutBasis:commercialSummary.payoutBasis,
+    payoutPercent:commercialSummary.payoutPercent ? String(commercialSummary.payoutPercent) : "",
+    payoutFixedAmount:commercialSummary.payoutFixedAmount ? String(commercialSummary.payoutFixedAmount) : "",
+  });
   const [error,setError] = useState<string|null>(null);
   const [pending,startTransition] = useTransition();
   const [documentPending,startDocumentTransition] = useTransition();
@@ -34,6 +45,15 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
   const insurer = insurers.find((item)=>item.value === form.insurerId)?.label ?? "Not selected";
   const required = [form.sourcingDate,form.sourceId,form.customerName,form.customerPhone,form.insurerId,form.productName,form.proposalNumber,form.paymentFrequency,form.premiumAmount,form.paymentMode,form.startDate,form.endDate,form.finalPremium];
   const completion = Math.round(required.filter(Boolean).length/required.length*100);
+  const commercialCalculations = useMemo(()=>{
+    const premium = Number(form.finalPremium || 0);
+    const payinBase = commercial.payinBasis === "FIXED_AMOUNT" ? Number(commercial.payinFixedAmount || 0) : premium * Number(commercial.payinPercent || 0) / 100;
+    const totalPayin = payinBase + Number(commercial.insurerSchemeAmount || 0);
+    const tds = totalPayin * 0.10;
+    const payinAfterTds = totalPayin - tds;
+    const totalPayout = commercial.payoutBasis === "FIXED_AMOUNT" ? Number(commercial.payoutFixedAmount || 0) : premium * Number(commercial.payoutPercent || 0) / 100;
+    return { totalPayin, tds, payinAfterTds, totalPayout, retention:payinAfterTds-totalPayout };
+  },[commercial,form.finalPremium]);
   const set = <K extends keyof LifeHealthIssuedEditInitial>(key:K,value:LifeHealthIssuedEditInitial[K])=>setForm((current)=>({...current,[key]:value}));
 
   function changeIntermediaryType(value: LifeHealthIssuedEditSource["type"]) {
@@ -44,6 +64,7 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
 
   function save() {
     const data = new FormData(); Object.entries(form).forEach(([key,value])=>data.set(key,value));
+    Object.entries(commercial).forEach(([key,value])=>data.set(key,String(value)));
     setError(null);
     startTransition(async()=>{
       const customerResult = await updateIssuedLifeHealthCustomer(data);
@@ -85,7 +106,7 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
       <aside className="self-start rounded-2xl border border-[#D9E2F0] bg-white shadow-sm xl:sticky xl:top-4">
         <div className="flex items-center justify-between border-b border-[#E5ECF5] p-4"><div><p className="text-[8px] font-bold uppercase tracking-[.08em] text-[#7A8799]">Policy status</p><h2 className="mt-1 text-[13px] font-semibold text-[#17365D]">Onboarding summary</h2></div><span className="grid h-12 w-12 place-items-center rounded-full border-[5px] border-[#E7EEF7] text-[10px] font-bold text-[#17365D]">{completion}%</span></div>
         <div className="space-y-4 p-4 text-[10px]"><Summary label="Policy Number" value={form.policyNumber}/><Summary label="Proposal" value={form.proposalNumber}/><Summary label="Insurer" value={insurer}/><Summary label="Product" value={form.productName}/><Summary label="Customer" value={form.customerName}/><div className="border-t pt-3"><p className="text-[9px] font-bold uppercase text-[#667085]">Premium</p><p className="mt-1 text-[18px] font-semibold text-[#17365D]">₹{form.finalPremium||"0"}</p><p className="mt-1 text-[9px] text-[#7A8799]">{form.paymentFrequency||"Frequency pending"} · {form.paymentMode||"Mode pending"}</p></div></div>
-        {commercialAccess?<CommercialStatus summary={commercialSummary}/>:null}
+        {commercialAccess?<CommercialStatus editing={commercialEditing} setEditing={setCommercialEditing} commercial={commercial} setCommercial={setCommercial} calculations={commercialCalculations}/>:null}
       </aside>
     </div>
     {error?<div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">{error}</div>:null}
@@ -98,7 +119,17 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
 }
 
 function money(value:number){return new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:0}).format(Number.isFinite(value)?value:0)}
-function CommercialStatus({summary}:{summary:LifeHealthCommercialSummary}){return <div className="mx-4 mb-4 overflow-hidden rounded-xl border border-[#D9E2F0] bg-[#FBFCFE]"><div className="border-b border-[#E5ECF5] px-3 py-2.5"><p className="text-[8px] font-bold uppercase tracking-[.06em] text-[#667085]">PayIn - PayOut</p></div><div className="space-y-3 px-3 py-3 text-[9px]"><div className="flex items-start justify-between gap-3"><div><p className="font-bold uppercase text-[#7A8799]">Insurer Pay-In</p><p className="mt-1 text-[11px] font-semibold text-[#17365D]">{summary.payinEntered?money(summary.insurerPayin):"Not entered"}</p></div></div><div className="flex items-start justify-between gap-3 border-t border-[#E8EEF6] pt-3"><div><p className="font-bold uppercase text-[#7A8799]">Partner Payout</p><p className="mt-1 text-[11px] font-semibold text-[#17365D]">{summary.payoutEntered?money(summary.partnerPayout):"Not entered"}</p></div></div><div className="flex items-end justify-between gap-3 border-t border-[#E8EEF6] pt-3"><div><p className="font-bold uppercase text-[#7A8799]">Projected Retention</p><p className="mt-1 text-[12px] font-semibold text-[#17365D]">{money(summary.retention)}</p></div><span className="text-[8px] text-[#98A2B3]">After 10% TDS</span></div></div></div>}
+function CommercialStatus({editing,setEditing,commercial,setCommercial,calculations}:{editing:boolean;setEditing:(value:boolean)=>void;commercial:{payinBasis:CommercialBasis;payinPercent:string;payinFixedAmount:string;insurerSchemeAmount:string;payoutBasis:CommercialBasis;payoutPercent:string;payoutFixedAmount:string};setCommercial:React.Dispatch<React.SetStateAction<{payinBasis:CommercialBasis;payinPercent:string;payinFixedAmount:string;insurerSchemeAmount:string;payoutBasis:CommercialBasis;payoutPercent:string;payoutFixedAmount:string}>>;calculations:{totalPayin:number;tds:number;payinAfterTds:number;totalPayout:number;retention:number}}){
+  const update=(key:string,value:string)=>setCommercial((current)=>({...current,[key]:value}));
+  return <div className="mx-4 mb-4 overflow-hidden rounded-xl border border-[#D9E2F0] bg-[#FBFCFE]">
+    <div className="flex items-center justify-between border-b border-[#E5ECF5] px-3 py-2.5"><p className="text-[8px] font-bold uppercase tracking-[.06em] text-[#667085]">PayIn - PayOut</p><button type="button" onClick={()=>setEditing(!editing)} className="rounded-lg border border-[#BFD3F5] bg-white px-2.5 py-1 text-[8px] font-bold text-[#1859B7]">{editing?"Done":"Edit"}</button></div>
+    <div className="space-y-3 px-3 py-3 text-[9px]">
+      <div><div className="flex items-start justify-between gap-3"><div><p className="font-bold uppercase text-[#7A8799]">Insurer Pay-In</p><p className="mt-1 text-[11px] font-semibold text-[#17365D]">{money(calculations.totalPayin)}</p></div></div>{editing?<div className="mt-2 grid gap-2"><select className={inputClass} value={commercial.payinBasis} onChange={(e)=>update("payinBasis",e.target.value)}><option value="NET_PREMIUM_PERCENT">Net Premium %</option><option value="FIXED_AMOUNT">Fixed Amount</option></select>{commercial.payinBasis==="NET_PREMIUM_PERCENT"?<input className={inputClass} value={commercial.payinPercent} onChange={(e)=>update("payinPercent",e.target.value.replace(/[^0-9.]/g,""))} placeholder="Pay-in %"/>:<input className={inputClass} value={commercial.payinFixedAmount} onChange={(e)=>update("payinFixedAmount",e.target.value.replace(/[^0-9.]/g,""))} placeholder="Pay-in amount"/>}<input className={inputClass} value={commercial.insurerSchemeAmount} onChange={(e)=>update("insurerSchemeAmount",e.target.value.replace(/[^0-9.]/g,""))} placeholder="Insurer scheme / incentive"/></div>:null}<p className="mt-1 text-[8px] text-[#98A2B3]">After 10% TDS: {money(calculations.payinAfterTds)}</p></div>
+      <div className="border-t border-[#E8EEF6] pt-3"><p className="font-bold uppercase text-[#7A8799]">Partner Payout</p><p className="mt-1 text-[11px] font-semibold text-[#17365D]">{money(calculations.totalPayout)}</p>{editing?<div className="mt-2 grid gap-2"><select className={inputClass} value={commercial.payoutBasis} onChange={(e)=>update("payoutBasis",e.target.value)}><option value="NET_PREMIUM_PERCENT">Net Premium %</option><option value="FIXED_AMOUNT">Fixed Amount</option></select>{commercial.payoutBasis==="NET_PREMIUM_PERCENT"?<input className={inputClass} value={commercial.payoutPercent} onChange={(e)=>update("payoutPercent",e.target.value.replace(/[^0-9.]/g,""))} placeholder="Payout %"/>:<input className={inputClass} value={commercial.payoutFixedAmount} onChange={(e)=>update("payoutFixedAmount",e.target.value.replace(/[^0-9.]/g,""))} placeholder="Payout amount"/>}</div>:null}</div>
+      <div className="flex items-end justify-between gap-3 border-t border-[#E8EEF6] pt-3"><div><p className="font-bold uppercase text-[#7A8799]">Projected Retention</p><p className={`mt-1 text-[12px] font-semibold ${calculations.retention<0?"text-red-600":"text-[#17365D]"}`}>{money(calculations.retention)}</p></div><span className="text-[8px] text-[#98A2B3]">After 10% TDS</span></div>
+    </div>
+  </div>
+}
 function Section({number,title,children}:{number:string;title:string;children:React.ReactNode}){return <section className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="flex items-center gap-3 border-b border-[#E5ECF5] px-4 py-3"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#17365D] text-[10px] font-bold text-white">{number}</span><h2 className="text-[12px] font-semibold text-[#17365D]">{title}</h2></div><div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">{children}</div></section>}
 function Field({label,value,onChange,type="text",disabled=false,required=false}:{label:string;value:string;onChange?:(v:string)=>void;type?:string;disabled?:boolean;required?:boolean}){return <div><label className={labelClass}>{label}{required?<Req/>:null}</label><input type={type} className={inputClass} value={value} onChange={(e)=>onChange?.(e.target.value)} disabled={disabled}/></div>}
 function Select({label,value,onChange,options,optional=false}:{label:string;value:string;onChange:(v:string)=>void;options:string[];optional?:boolean}){return <div><label className={labelClass}>{label}{optional?null:<Req/>}</label><select className={inputClass} value={value} onChange={(e)=>onChange(e.target.value)}>{optional?<option value="">Select term</option>:null}{options.map((o)=><option key={o} value={o}>{o}</option>)}</select></div>}
