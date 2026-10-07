@@ -22,6 +22,7 @@ const listScreen = read('components/partner-list-screen.tsx');
 const home = read('app/(tabs)/index.tsx');
 const more = read('app/(tabs)/more.tsx');
 const businessGrowthIcon = read('components/ui/partner-business-growth-icon.tsx');
+const homeMetricIcons = read('components/ui/partner-home-metric-icons.tsx');
 const business = read('app/(tabs)/business.tsx');
 const customers = read('app/customers.tsx');
 const policies = read('app/(tabs)/policies.tsx');
@@ -64,12 +65,14 @@ requireText(listScreen, 'artwork={artwork}', 'PartnerListScreen must preserve ex
 requireText(stateView, 'PartnerAssets.emptyStates.offline', 'Offline state must use branded Partner artwork.');
 requireText(stateView, 'PartnerAssets.emptyStates.validationError', 'Generic error state must use branded Partner artwork.');
 requireText(stateView, 'PartnerAssets.emptyStates.incompleteDetails', 'Unauthorized state must use branded Partner artwork.');
-requireText(home, 'asset={PartnerAssets.actions.policyChecklist}', 'Partner Home Policies Sold metric must keep the policy checklist asset.');
-requireText(home, 'asset={PartnerAssets.actions.payoutGrowth}', 'Partner Home Commission Earned metric must keep the payout growth asset.');
-requireText(home, 'width: 36', 'Partner Home metric icon container must keep the reference-size treatment.');
-requireText(home, 'borderRadius: 18', 'Partner Home metric icon container must remain circular.');
-requireText(home, "backgroundColor: '#EDF7FF'", 'Partner Home metric icon container must keep the soft blue reference background.');
-requireText(home, 'metricImage: { width: 29, height: 29 }', 'Partner Home metric artwork must keep the reference visual weight.');
+requireText(home, '<PartnerPoliciesSoldIcon size={36} />', 'Partner Home Policies Sold metric must use the generated policy icon.');
+requireText(home, '<PartnerCommissionEarnedIcon size={36} />', 'Partner Home Commission Earned metric must use the generated commission icon.');
+requireText(homeMetricIcons, 'export function PartnerPoliciesSoldIcon', 'Generated Policies Sold icon component must exist.');
+requireText(homeMetricIcons, 'export function PartnerCommissionEarnedIcon', 'Generated Commission Earned icon component must exist.');
+requireText(homeMetricIcons, 'styles.document', 'Policies Sold generated icon must retain the document treatment.');
+requireText(homeMetricIcons, 'styles.policyBadge', 'Policies Sold generated icon must retain the verified-policy badge.');
+requireText(homeMetricIcons, 'styles.coinTop', 'Commission Earned generated icon must retain stacked coin treatment.');
+requireText(homeMetricIcons, "backgroundColor: '#EDF7FF'", 'Generated Home metric icons must keep the soft blue reference tile.');
 
 const moreWithoutApprovedBusinessGrowthIcon = more.replace('<MenuRow icon={<PartnerBusinessGrowthIcon size={36} />} title="Your Week"', '');
 if (moreWithoutApprovedBusinessGrowthIcon.includes('<MenuRow icon=')) throw new Error('Feature rows in More must use Partner artwork instead of generic vector icons.');
