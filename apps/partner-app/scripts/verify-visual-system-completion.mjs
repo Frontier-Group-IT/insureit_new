@@ -36,6 +36,7 @@ const claimDetail = read('app/claim/[id].tsx');
 const search = read('app/search.tsx');
 const support = read('app/support.tsx');
 const settings = read('app/settings.tsx');
+const profile = read('app/profile.tsx');
 const activity = read('app/activity.tsx');
 const impact = read('app/impact.tsx');
 const journey = read('app/journey.tsx');
@@ -156,6 +157,13 @@ for (const featureAsset of ['navigation.customers', 'navigation.policies', 'navi
 requireText(support, 'PartnerAssets.actions.supportVerified', 'Support fallback must use the prepared verified-support artwork.');
 if (support.includes('asset={PartnerAssets.emptyStates.supportResolved}')) throw new Error('Support-unavailable errors must not misuse the support-resolved artwork.');
 for (const featureAsset of ['navigation.profile', 'actions.support', 'status.settings']) requireText(settings, `PartnerAssets.${featureAsset}`, `Settings is missing ${featureAsset} feature artwork.`);
+
+requireText(profile, 'name="log-out-outline"', 'Profile hero must expose the logout icon.');
+requireText(profile, 'onPress={() => setLogoutOpen(true)}', 'Profile hero logout icon must open confirmation instead of signing out immediately.');
+requireText(profile, '<PartnerConfirmDialog', 'Profile logout must use the shared confirmation dialog.');
+requireText(profile, 'title="Sign out of INSUREIT Partner?"', 'Profile logout confirmation must match the More screen title.');
+requireText(profile, 'message="You will need to sign in again to access your business and service workspace."', 'Profile logout confirmation must match the More screen message.');
+if (profile.includes('styles.logoutArea') || profile.includes('styles.logoutButton')) throw new Error('Profile must not restore the bottom logout button.');
 
 for (const activityAsset of ['status.policyActive', 'navigation.claims', 'navigation.policyIntake', 'actions.policyChecklist', 'status.announcement']) requireText(activity, `PartnerAssets.${activityAsset}`, `Activity is missing ${activityAsset} artwork.`);
 for (const tinySize of ['fontSize: 7.2', 'fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (activity.includes(tinySize)) throw new Error(`Activity must not regress to tiny timeline typography: ${tinySize}`);
