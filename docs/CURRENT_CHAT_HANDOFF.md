@@ -7,7 +7,10 @@
 - Existing insurer/manufacturer/customer artwork, policy data, premium calculations, renewal/claim/customer navigation, permissions and backend calls remain unchanged.
 - Added visual regression coverage in `verify-visual-system-completion.mjs`.
 - No database/schema/RLS/native dependency change. **No APK/AAB created.**
-- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA pending.**
+- PR #2933 passed **Verify Partner app #586** and **Verify web portal #5601**, then merged as `0e984e0ce63bea6ea92afa8ce483cf95fe0fbb1e`.
+- Production OTA release PR #2934 passed **Verify Partner app #587** and **Verify web portal #5602**, then merged as `bd3ce03545077dedbc33e351377c19b9d1072507`.
+- **Publish Partner production OTA #90** completed successfully from current `main` to channel `production`, runtime `0.2.0`.
+- **MERGED + OTA PUBLISHED; installed-device verification pending. No APK/AAB created.**
 
 ---
 
@@ -2468,3 +2471,13 @@ Automated non-exact comparisons create/reuse Anju tasks with field-level questio
 ## 2026-09-21 — Partner Business clean header deployment provenance
 
 PR #2170 merged as `ae609cfa573becf29ea1715096f595fb1c150047`. The first automatic production deploy run was blocked by the canonical provenance gate because PR #2170 had no completed `Verify web portal` pull-request run before merge. This follow-up PR exists only to establish canonical verification provenance on top of the already-merged Business header change; it does not alter runtime behavior. Canonical PR verification is required before the production deploy hook may run.
+
+## 2026-10-07 — Customer Web Phase 3 active branch
+- Branch: `feature/customer-web-phase3-services-support-2026-10-07`.
+- Scope: Exchange browse/detail, Insurance Quote, E-Challan, Support activity/detail and support-ticket creation.
+- Quote/Challan/Support writes use the existing unified `service_enquiries` model through a Customer-only validated server endpoint.
+- Exchange remains read-only on web in Phase 3.
+- Partner Portal and Operations Portal behavior remain unchanged.
+- No schema/RLS/mobile/OTA/APK/AAB changes.
+- User explicitly requested **no PR**.
+- State: implemented on branch; no PR; not merged/deployed.
