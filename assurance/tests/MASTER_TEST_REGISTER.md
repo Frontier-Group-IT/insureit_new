@@ -31,3 +31,9 @@
 | INS-TST-RPC-010 | RPC integrity | Customer activity insertion | Function definition/grants; no mutation | trusted internal path only | anonymous direct insert capability | FAIL |
 | INS-TST-RPC-011 | RPC authz | Legacy intermediary migration helpers | Function definition/grants; no mutation | internal/admin authenticated path only | multiple privileged mutators anonymously executable | FAIL |
 | INS-TST-WEB-001 | Web hardening | Source-level security header/session review | next.config.mjs + middleware.ts | standard headers + secure cookie flags | CSP/HSTS/frame/nosniff/referrer/permissions headers; HttpOnly/Lax/Secure(prod) cookies | PASS (source); runtime verification pending |
+
+| INS-TST-RLS-001 | Customer RLS | Customer A vs Customer B isolation | Simulated authenticated JWT context; read-only counts | own rows visible, unrelated customer rows hidden | Both sampled customers saw own customer/vehicle/external-policy/document rows; corresponding other-customer counts were 0 | PASS |
+| INS-TST-RLS-002 | Customer RLS | Customer master cross-visibility | Two independent active customer identities | each customer sees only own master | A own=1/other=0; B own=1/other=0 | PASS |
+| INS-TST-RLS-003 | Customer RLS | Vehicle cross-visibility | Same two authenticated contexts | unrelated vehicle hidden | A own=1/other=0; B own=1/other=0 | PASS |
+| INS-TST-RLS-004 | Customer RLS | External policy cross-visibility | Same two authenticated contexts | unrelated external policy hidden | A own=1/other=0; B own=1/other=0 | PASS |
+| INS-TST-RLS-005 | Customer RLS | Customer document cross-visibility | Same two authenticated contexts | unrelated document row hidden | A own=1/other=0; B own=1/other=0 | PASS |
