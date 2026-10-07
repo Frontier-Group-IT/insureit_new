@@ -1,0 +1,158 @@
+# INSUREIT Internal Weakness Register
+
+> Internal authorized production-assurance workstream. This file contains sanitized evidence only: no secrets, raw customer PII, access tokens, document contents, or exploit payloads.
+>
+> Audit started: 2026-10-07
+> Production Supabase project assessed: `ilzhsfqqjyppzzvfscmh`
+> Evidence rule: a finding is only marked VERIFIED when supported by direct configuration, source, or non-destructive runtime evidence.
+
+## Status model
+
+`OPEN -> REMEDIATION PLANNED -> FIXED -> RETEST PENDING -> VERIFIED CLOSED`
+
+## Severity model
+
+- **Critical** — unauthenticated/low-privilege path can materially alter privileged business/security state, or equivalent catastrophic exposure.
+- **High** — material confidentiality/integrity/authorization weakness.
+- **Medium** — meaningful weakness with constrained impact or additional conditions.
+- **Low** — hardening issue with limited direct impact.
+- **Observation** — noteworthy control state that is not currently proven vulnerable.
+
+## Findings
+
+### INS-SEC-001 — Public SECURITY DEFINER onboarding audit view exposes internal onboarding metadata
+- **Severity:** Medium
+- **Status:** OPEN
+- **Component:** Supabase / PostgreSQL / Data API
+- **Object:** `public.intermediary_onboarding_cutover_audit`
+- **Evidence:**
+  - View owned by `postgres`; Supabase advisor flags it as a Security Definer View.
+  - `anon` and `authenticated` currently have SELECT.
+  - Runtime validation under `SET LOCAL ROLE anon` returned **118 visible rows**.
+  - Projection includes onboarding application identifiers, requested type, status, creation time, document/contact counts, historical-copy indicator and PAN-job indicator.
+- **Impact:** unauthenticated disclosure of internal onboarding workflow metadata and identifiers; supports reconnaissance and violates least privilege.
+- **Recommended remediation:** revoke direct `anon`/unnecessary `authenticated` SELECT; replace with explicit scoped RPC/view using `security_invoker=true` where user access is genuinely required.
+- **Retest:** anonymous and unrelated authenticated principals must receive zero rows / permission denied; intended internal role must retain authorized access.
+
+### INS-SEC-002 — Cleanup view is anonymously selectable and projects high-sensitivity customer fields
+- **Severity:** High (latent/conditional; currently zero matching rows)
+- **Status:** OPEN
+- **Component:** Supabase / PostgreSQL / Data API
+- **Object:** `public.intermediary_customer_cleanup_candidates`
+- **Evidence:**
+  - View owned by `postgres`; Supabase advisor flags it as a Security Definer View.
+  - `anon` and `authenticated` currently have SELECT.
+  - View definition projects customer contact name, company name, phone and PAN number.
+  - Current anonymous aggregate test returned **0 rows**, so no live customer values were retrieved.
+- **Impact:** if matching rows appear, unauthenticated callers can potentially receive customer phone/PAN-related information through an owner-executed view.
+- **Recommended remediation:** revoke client roles immediately; keep this audit/cleanup surface service-role/internal-only or rebuild as a tightly scoped invoker view.
+- **Retest:** anonymous/authenticated public clients must be unable to query the view.
+
+### INS-SEC-003 — POSP document storage permits anonymous read and upload
+- **Severity:** High; escalate to Critical if controlled classification confirms identity/KYC document content is downloadable anonymously
+- **Status:** OPEN
+- **Component:** Supabase Storage
+- **Bucket:** `posp-documents`
+- **Evidence:**
+  - Bucket itself is marked private.
+  - Storage policy `Allow anon read posp-documents` grants SELECT to `anon` for every object in the bucket.
+  - Storage policy `Allow anon upload posp-documents` grants INSERT to `anon` for every object in the bucket.
+  - Metadata-only runtime test under `anon` saw **9 objects** in this bucket; other tested private buckets returned zero.
+  - Bucket has no configured file-size or MIME allow-list.
+- **Impact:** anonymous visibility/upload surface on an onboarding-document bucket; confidentiality, storage abuse, malware/content abuse and cost risks.
+- **Recommended remediation:** remove blanket anonymous SELECT/INSERT; require application/session-scoped object paths, short-lived upload authorization where pre-login onboarding is necessary, size/MIME restrictions, and server-side content validation.
+- **Retest:** anonymous object listing/read must fail; only authorized scoped upload token/session may write approved types/size.
+
+### INS-SEC-004 — Accounting reconciliation RPC is anonymously executable without session authorization
+- **Severity:** Critical
+- **Status:** OPEN
+- **Component:** PostgreSQL privileged RPC
+- **Object:** `public.post_accounts_excel_reconciliation(...)`
+- **Evidence:**
+  - `SECURITY DEFINER`.
+  - EXECUTE currently available to `anon` and `authenticated`.
+  - Function body does not bind `p_actor` to `auth.uid()` and only checks that `p_actor` is non-null.
+  - Function performs privileged inserts/updates across invoices, receivables, receipts, TDS and partner payments via service-privileged execution.
+  - No mutation was executed during the audit.
+- **Impact:** privilege boundary is callable without proven authentication; if valid identifiers/payload are supplied, financial/accounting state can be changed under elevated database privileges.
+- **Recommended remediation:** revoke PUBLIC/anon/authenticated EXECUTE unless required; expose only through an authorized server-side action or add strict `auth.uid()` binding + capability/role validation inside the RPC. Keep low-level financial helper RPCs non-client-executable.
+- **Retest:** anonymous/unprivileged direct RPC execution must be denied before any write path; authorized Accounts role must succeed through intended application path.
+
+### INS-SEC-005 — Partner identity activation/creation RPCs trust caller-supplied actor and are anonymously executable
+- **Severity:** Critical
+- **Status:** OPEN
+- **Component:** PostgreSQL privileged RPC
+- **Objects:** `issue_partner_identity`, `issue_legacy_partner_identity`, `ensure_legacy_partner_record`
+- **Evidence:**
+  - Functions are `SECURITY DEFINER`.
+  - EXECUTE currently available to `anon` and `authenticated`.
+  - Reviewed definitions do not require `p_actor_id = auth.uid()` and do not perform an equivalent authenticated-capability check before privileged partner activation/creation.
+  - Functions update onboarding status and create/link canonical partner/intermediary records.
+  - No mutation was executed during the audit.
+- **Impact:** direct privileged workflow manipulation risk, including unauthorized partner activation/identity creation.
+- **Recommended remediation:** revoke client EXECUTE and/or require authenticated session binding plus explicit approval capability inside each public entry-point. Keep internal helper functions private from PostgREST roles.
+- **Retest:** anonymous and unauthorized authenticated callers must be rejected before row locks/writes; approved internal role must pass.
+
+### INS-SEC-006 — Intermediary application queue RPC exposes onboarding records to anonymous callers
+- **Severity:** High
+- **Status:** OPEN
+- **Component:** PostgreSQL privileged reporting RPC
+- **Object:** `get_intermediary_application_queue(...)`
+- **Evidence:**
+  - `SECURITY DEFINER`, executable by `anon`.
+  - Definition has no session/role authorization predicate.
+  - Return schema includes applicant phone, applicant name, city, external onboarding ID, status and document counts.
+  - Runtime aggregate validation under `anon` returned **118 visible rows**.
+  - No PII values were retrieved or stored in audit evidence.
+- **Impact:** unauthenticated access to onboarding/application information and likely PII.
+- **Recommended remediation:** revoke anonymous execute; bind queue access to authenticated approved internal roles and enforce server-side scope.
+- **Retest:** anonymous call must fail/return no data; unrelated authenticated roles must fail; intended Operations roles must receive scoped rows.
+
+### INS-SEC-007 — Business reporting RPC exposes production portfolio/financial summary to anonymous callers
+- **Severity:** High
+- **Status:** OPEN
+- **Component:** PostgreSQL privileged reporting RPC
+- **Object:** `get_policy_business_report_v4(...)`
+- **Evidence:**
+  - `SECURITY DEFINER`, executable by `anon`.
+  - Function definition performs no authenticated-role authorization check.
+  - Anonymous runtime probe successfully returned a report payload with summary/filters/trend/register/insurer/RM sections.
+  - Aggregate evidence showed **1,117 policies visible to the report scope** and confirmed `gross_premium` is present in the anonymous summary payload.
+  - No policy-level details were retained in audit evidence.
+- **Impact:** unauthenticated business-confidential portfolio and financial information disclosure.
+- **Recommended remediation:** revoke anonymous/public execute; authorize report access in the function based on authenticated role/scope rather than trusting optional caller-supplied scope arrays.
+- **Retest:** anonymous direct call denied; limited-role calls cannot broaden scope; management/report roles receive only authorized portfolio.
+
+### INS-SEC-008 — Excessive anonymous surface across SECURITY DEFINER functions
+- **Severity:** High systemic weakness / audit umbrella
+- **Status:** OPEN
+- **Component:** PostgreSQL function grants
+- **Evidence:** current production catalogue contains **327 SECURITY DEFINER functions**, of which **153 are executable by anon** and **222 by authenticated**.
+- **Impact:** materially increases privileged attack surface and makes individual authorization mistakes high-impact.
+- **Recommended remediation:** inventory every SECURITY DEFINER function, classify trigger/helper/public RPC, revoke default PUBLIC EXECUTE, explicitly grant only required entry points, bind identity inside privileged functions, and move internal helpers to a non-exposed schema.
+- **Retest:** zero unintended anon-executable privileged functions; every remaining client RPC has explicit identity/scope tests.
+
+### INS-SEC-009 — Mutable search_path warnings remain on privileged/supporting functions
+- **Severity:** Medium hardening
+- **Status:** OPEN
+- **Component:** PostgreSQL functions
+- **Evidence:** current Supabase security advisor reports **20 `function_search_path_mutable` warnings**.
+- **Impact:** unpinned name resolution can increase risk in privileged function execution depending on function body/permissions.
+- **Recommended remediation:** pin safe `search_path` and schema-qualify referenced objects, prioritizing privileged functions.
+- **Retest:** Supabase advisor warning count reduced to zero or documented justified exceptions.
+
+## Control observations
+
+### INS-OBS-001 — Many RLS-enabled/no-policy tables are intentionally service-role-only
+The current advisor reports 102 `rls_enabled_no_policy` notices. Review showed a substantial subset have grants only to `postgres` / `service_role`, making RLS-with-no-client-policy an intentional deny-by-default control rather than a vulnerability.
+
+A second subset still has table grants to `anon` / `authenticated`, but with RLS enabled and zero policies direct row access is denied. These should be cleaned up for least privilege, but must not be misreported as proven data exposure without a bypassing view/function.
+
+## Next audit queue
+1. Complete classification of all 153 anon-executable SECURITY DEFINER functions.
+2. Validate exposed storage buckets and pre-login onboarding design.
+3. Audit table/RPC grants against PostgREST exposed schemas.
+4. Audit authenticated cross-tenant Customer/Partner access using synthetic test identities.
+5. Run current Supabase performance advisor and query hot-path review.
+6. Add SAST/SCA/secret-scan/SBOM evidence pipeline.
+7. Build deterministic E2E/smoke and controlled load harnesses.
