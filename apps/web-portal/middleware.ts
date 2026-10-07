@@ -136,6 +136,15 @@ export async function middleware(request: NextRequest) {
   if (canonicalRedirect) return canonicalRedirect;
 
   const { pathname } = request.nextUrl;
+
+  // Customer Web session creation/deletion is the authentication bootstrap itself.
+  // Let the dedicated route validate Supabase tokens/role and set or clear secure
+  // cookies; requiring an existing Customer cookie here would create a redirect loop
+  // and turn the POST into a 405 on /customer/login.
+  if (pathname === "/customer/auth/session") {
+    return NextResponse.next();
+  }
+
   const isRenewalVoiceLab = pathname === "/partner/renewals/voice-lab";
   let accessToken = request.cookies.get(accessTokenCookie)?.value;
   const refreshToken = request.cookies.get(refreshTokenCookie)?.value;

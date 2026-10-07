@@ -70,6 +70,11 @@ assert(middleware.includes('profile?.is_active && profile.role === "customer"'),
 assert(middleware.includes('if (check.status !== "customer")'), "Customer routes must reject non-customer sessions");
 assert(middleware.includes('if (check.status === "customer") return redirect(request, "/access-denied"'), "Customer sessions must remain denied from existing protected employee/Partner routes");
 assert(middleware.includes('"/customer/:path*"'), "Customer Web must remain inside middleware session-refresh coverage");
+assert(middleware.includes('pathname === "/customer/auth/session"'), "Customer session bootstrap must have an exact-path middleware bypass");
+assert(
+  middleware.indexOf('pathname === "/customer/auth/session"') < middleware.indexOf("if (isCustomerPortalPath(pathname))"),
+  "Customer session bootstrap bypass must run before protected Customer route enforcement",
+);
 
 const partnerGuard = read("lib/partner-web.ts");
 assert(partnerGuard.includes('profile.role !== "intermediary"'), "Partner authorization must remain intermediary-only");
