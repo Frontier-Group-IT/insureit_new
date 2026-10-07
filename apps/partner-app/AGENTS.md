@@ -87,3 +87,5 @@ Native app-icon milestone: user previously authorized one specific Android previ
 Historical Home icon-size milestone: **PR #1777 merged as `d3df6b77a6eb8c607d72ff7984a13e3e0b7c842a`; Partner 0.1.0 preview OTA DEPLOYED successfully.** This is historical evidence and not the current delivery target.
 
 Update `../../docs/PARTNER_APP_HANDOFF_2026_09_13.md` or the current Partner refinement handoff after any material Partner runtime, channel, native-build, OTA, or user-visible milestone.
+
+- 2026-10-07 Claim Details reference icon refinement: branch `ui/partner-claim-two-section-icons-2026-10-07`, replaces only Insured Person heading icon with blue `people` and Claim Overview heading icon with blue `clipboard`, preserving icon backgrounds/sizes and every other Claim Details icon. IMPLEMENTED; PR/CI/merge/production OTA pending. No APK/AAB.
