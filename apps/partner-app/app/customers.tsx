@@ -11,6 +11,7 @@ import {
   getPartnerCustomerSummary,
   listPartnerCustomers,
   type PartnerCustomerRow,
+  type PartnerCustomerStatusFilter,
   type PartnerCustomerSummary,
 } from '@/lib/customers';
 import { PartnerAssets } from '@/lib/partner-assets';
@@ -27,6 +28,7 @@ export default function CustomersScreen() {
   const router = useRouter();
   const { cacheScopeKey } = usePartnerSession();
   const [query, setQuery] = useState(savedCustomerQuery);
+  const [statusFilter, setStatusFilter] = useState<PartnerCustomerStatusFilter>('all');
   const debouncedSearch = useDebouncedValue(query.trim(), 350);
 
   useEffect(() => {
@@ -42,16 +44,16 @@ export default function CustomersScreen() {
   });
 
   const fetchPage = useCallback(async ({ limit, offset }: { limit: number; offset: number }) => {
-    const nextRows = await listPartnerCustomers({ limit, offset, search: debouncedSearch });
+    const nextRows = await listPartnerCustomers({ limit, offset, search: debouncedSearch, status: statusFilter });
     return {
       rows: nextRows,
       total: nextRows[0]?.total_count ?? 0,
     };
-  }, [debouncedSearch]);
+  }, [debouncedSearch, statusFilter]);
 
   const collection = usePartnerPageQuery<PartnerCustomerRow>({
     scopeKey: cacheScopeKey,
-    key: `customers:list:${debouncedSearch || 'all'}`,
+    key: `customers:list:${statusFilter}:${debouncedSearch || 'all'}`,
     pageSize: PAGE_SIZE,
     fetchPage,
     staleTimeMs: 60_000,
@@ -89,9 +91,29 @@ export default function CustomersScreen() {
           <View style={styles.kpiLoading}><ActivityIndicator size="small" color="#123E75" /></View>
         ) : (
           <View style={styles.kpiStrip}>
-            <KpiCell label="Customers" value={totals.customers} active first />
-            <KpiCell label="Active" value={totals.active} />
-            <KpiCell label="Inactive" value={totals.inactive} last />
+            <KpiCell
+              label="Customers"
+              value={totals.customers}
+              icon="people-outline"
+              active={statusFilter === 'all'}
+              first
+              onPress={() => setStatusFilter('all')}
+            />
+            <KpiCell
+              label="Active"
+              value={totals.active}
+              icon="checkmark-circle-outline"
+              active={statusFilter === 'active'}
+              onPress={() => setStatusFilter('active')}
+            />
+            <KpiCell
+              label="Inactive"
+              value={totals.inactive}
+              icon="remove-circle-outline"
+              active={statusFilter === 'inactive'}
+              last
+              onPress={() => setStatusFilter('inactive')}
+            />
           </View>
         )}
       </View>
@@ -143,7 +165,7 @@ export default function CustomersScreen() {
       state="empty"
       asset={PartnerAssets.emptyStates.noCustomers}
       title="No customers found"
-      message={debouncedSearch ? 'Try a different name, code, phone, email or city.' : 'Customers in your authorized business scope will appear here.'}
+      message={debouncedSearch ? 'Try a different name, code, phone, email or city.' : statusFilter === 'all' ? 'Customers in your authorized business scope will appear here.' : `No ${statusFilter} customers are available in your authorized business scope.`}
     />
   );
 
@@ -188,17 +210,47 @@ export default function CustomersScreen() {
   );
 }
 
-function KpiCell({ label, value, active = false, first = false, last = false }: { label: string; value: number; active?: boolean; first?: boolean; last?: boolean }) {
+function KpiCell({
+  label,
+  value,
+  icon,
+  active = false,
+  first = false,
+  last = false,
+  onPress,
+}: {
+  label: string;
+  value: number;
+  icon: keyof typeof Ionicons.glyphMap;
+  active?: boolean;
+  first?: boolean;
+  last?: boolean;
+  onPress: () => void;
+}) {
   return (
-    <View style={[styles.kpiCell, active && styles.kpiCellActive, first && styles.kpiCellFirst, last && styles.kpiCellLast]}>
-      <Text style={[styles.kpiValue, active && styles.kpiTextActive]}>{value}</Text>
-      <Text style={[styles.kpiLabel, active && styles.kpiTextActive]}>{label}</Text>
-    </View>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Show ${label.toLowerCase()} customers`}
+      accessibilityState={{ selected: active }}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.kpiCell,
+        active && styles.kpiCellActive,
+        first && styles.kpiCellFirst,
+        last && styles.kpiCellLast,
+        pressed && styles.kpiCellPressed,
+      ]}
+    >
+      <Ionicons name={icon} size={15} color={active ? '#FFFFFF' : '#1E5A98'} />
+      <View style={styles.kpiCopy}>
+        <Text style={[styles.kpiValue, active && styles.kpiTextActive]}>{value}</Text>
+        <Text style={[styles.kpiLabel, active && styles.kpiTextActive]}>{label}</Text>
+      </View>
+    </Pressable>
   );
 }
 
 function CustomerCard({ row, onOpen }: { row: PartnerCustomerRow; onOpen: () => void }) {
-  const location = [row.city, row.state].filter(Boolean).join(', ');
   const isActive = (row.customer_status || '').trim().toLowerCase() === 'active';
   const phone = normalizePhone(row.phone || '');
 
@@ -216,12 +268,6 @@ function CustomerCard({ row, onOpen }: { row: PartnerCustomerRow; onOpen: () => 
           </View>
           <Text numberOfLines={1} style={styles.meta}>{row.customer_code || 'Customer code pending'}{row.phone ? ` · ${row.phone}` : ''}</Text>
           <Text numberOfLines={1} style={styles.meta}>{row.intermediary_code || 'Direct / unassigned'}</Text>
-          {location ? (
-            <View style={styles.locationRow}>
-              <Ionicons name="location-outline" size={9} color="#6E809B" />
-              <Text numberOfLines={1} style={styles.location}>{location}</Text>
-            </View>
-          ) : null}
         </Pressable>
 
         <View style={styles.actions}>
@@ -270,8 +316,10 @@ const styles = StyleSheet.create({
   kpiOuter: { paddingHorizontal: 10, paddingTop: 8, backgroundColor: '#F5F7FB' },
   kpiLoading: { height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DEE7F2' },
   kpiStrip: { height: 48, flexDirection: 'row', borderRadius: 10, overflow: 'hidden', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DCE5F0' },
-  kpiCell: { flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'center', borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: '#E1E7F0', backgroundColor: '#FFFFFF' },
+  kpiCell: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: '#E1E7F0', backgroundColor: '#FFFFFF' },
   kpiCellActive: { backgroundColor: '#0B2E63', borderLeftColor: '#0B2E63' },
+  kpiCellPressed: { opacity: 0.78 },
+  kpiCopy: { minWidth: 0, alignItems: 'flex-start' },
   kpiCellFirst: { borderLeftWidth: 0 },
   kpiCellLast: {},
   kpiValue: { color: '#122B4E', fontSize: 12, lineHeight: 15, fontWeight: '800' },
@@ -296,8 +344,6 @@ const styles = StyleSheet.create({
   statusDotActive: { backgroundColor: '#1BB36B' },
   statusDotInactive: { backgroundColor: '#F3A32A' },
   meta: { marginTop: 1, color: '#60708A', fontSize: 6.9, lineHeight: 9 },
-  locationRow: { marginTop: 2, flexDirection: 'row', alignItems: 'center', gap: 2 },
-  location: { flex: 1, color: '#6E809B', fontSize: 6.5, lineHeight: 8.5 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   actionButton: { width: 29, height: 29, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F0FF' },
   actionButtonWhatsapp: { backgroundColor: '#ECFAF0' },
