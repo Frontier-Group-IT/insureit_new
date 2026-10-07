@@ -129,7 +129,11 @@ export function FirebaseOtpTestClient() {
     if (saved) setApiKey(saved);
   }, []);
 
-  useEffect(() => () => verifier?.clear(), [verifier]);
+  useEffect(() => {
+    return () => {
+      verifier?.clear();
+    };
+  }, []);
 
   async function prepareFirebase() {
     if (!apiKey.trim()) throw new Error("Enter the Firebase Web API key first.");
@@ -159,7 +163,10 @@ export function FirebaseOtpTestClient() {
 
     try {
       const { firebase, auth } = await prepareFirebase();
-      verifier?.clear();
+      if (verifier) {
+        verifier.clear();
+        setVerifier(null);
+      }
 
       const nextVerifier = new firebase.auth.RecaptchaVerifier("firebase-otp-recaptcha", {
         size: "normal",
@@ -173,10 +180,8 @@ export function FirebaseOtpTestClient() {
       setStatus("OTP request accepted by Firebase. Check the phone for a normal SMS, then enter the code below.");
     } catch (error) {
       setStatus(friendlyError(error));
-      setVerifier((current) => {
-        current?.clear();
-        return null;
-      });
+      if (verifier) verifier.clear();
+      setVerifier(null);
     } finally {
       setBusy(false);
     }
