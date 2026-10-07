@@ -348,7 +348,7 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
         </section>
 
         <p className="px-1 text-[9px] text-[#8190a4]">
-          Partner view is restricted to your authorized business scope. Pay-in is intentionally not shown on this page.
+          Partner view is restricted to your authorized business scope.
         </p>
       </div>
     </PartnerPortalShell>
