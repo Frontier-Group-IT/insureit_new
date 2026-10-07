@@ -62,6 +62,10 @@ The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` 
 
 ### Latest implementation ledger
 
+- **2026-10-07 — Customer Web Phase 2 Renewals / Claims tracking:** branch `feature/customer-web-phase2-renewals-claims-2026-10-07`; Customer-only Renewals, Claims list and Claim journey detail, including 45-day compliance renewals, internal shared claim projection and external/self-tracked milestone progress. Phase 2 is intentionally read-only. **No Partner Portal, Operations Portal, shared auth/RPC/capability, schema/RLS, mobile runtime, OTA, APK or AAB changes. IMPLEMENTED; PR/CI/merge/preview verification pending.** See `docs/CUSTOMER_WEB_HANDOFF.md`.
+
+
+
 - **2026-10-07 — Partner App Profile/More professional menu icons:** PR #2925 merged as `1ae7a74d1dd3792399bd1b58c4b812f98964c900` after Verify Partner app #583 and Verify web portal #5593 passed. Release PR #2927 merged as `a846340f19d91b32886c94911b0d8d2bd78cdcf1`; **Publish Partner production OTA #89 completed successfully** on channel `production`, runtime `0.2.0`. Mixed legacy More/Profile menu artwork across Work, Insights, Grow & Learn and Account is replaced with the shared professional icon system. **MERGED + OTA PUBLISHED; installed-device verification pending. NO APK/AAB CREATED.** See `docs/CURRENT_CHAT_HANDOFF.md`.
 
 - **2026-10-07 — Firebase OTP tester Cloudflare SDK-load fix:** PR #2921 merged as `35a1d12fac46150b898ffe137dd1f813abbcbda3`; browser-direct `www.gstatic.com` SDK loading was replaced by same-origin tester routes under `/firebase-otp-test/sdk/*` that fetch only the two fixed Firebase 10.14.1 compat assets server-side and return cacheable JavaScript. `Verify web portal` run #5586 passed all regressions, typecheck, lint and production build. No customer auth, Supabase, schema/RLS, mobile runtime, OTA, APK or AAB change. **MERGED; Cloudflare runtime retest pending.**
