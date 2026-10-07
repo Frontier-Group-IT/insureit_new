@@ -89,7 +89,8 @@ for (const kind of [
   'profile', 'support', 'settings',
 ]) {
   requireText(more, `iconKind="${kind}"`, `Partner Profile/More menu must map the professional ${kind} icon.`);
-  requireText(profileMenuIcon, `${kind}:`, `Partner Profile menu icon system is missing ${kind}.`);
+  const configKey = kind.includes('-') ? `'${kind}':` : `${kind}:`;
+  requireText(profileMenuIcon, configKey, `Partner Profile menu icon system is missing ${kind}.`);
 }
 requireText(profileMenuIcon, "backgroundColor: '#EDF6FF'", 'Partner Profile menu icons must keep the same soft professional blue tile language as Business KPI icons.');
 requireText(profileMenuIcon, "borderColor: '#D4E8FF'", 'Partner Profile menu icons must keep the professional blue border treatment.');
