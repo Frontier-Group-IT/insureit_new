@@ -5,7 +5,8 @@
 - Tester now loads Firebase app/auth compat SDK through same-origin routes `/firebase-otp-test/sdk/firebase-app-compat.js` and `/firebase-otp-test/sdk/firebase-auth-compat.js`.
 - The server route has a strict fixed allowlist for only those two Firebase 10.14.1 assets, returns JavaScript with cache headers, and cannot proxy arbitrary URLs.
 - No Supabase Auth/session/customer/profile/data integration, schema/RLS mutation, Customer App/native change, OTA, APK or AAB.
-- **IMPLEMENTED; PR/CI/MERGE PENDING.**
+- PR #2921 merged as `35a1d12fac46150b898ffe137dd1f813abbcbda3` after `Verify web portal` run #5586 passed all regressions, typecheck, lint and production build.
+- **MERGED; CLOUDFLARE RUNTIME RETEST PENDING.**
 
 ---
 
