@@ -11,13 +11,14 @@
 
 ## 2026-10-07 — Partner Home business trend interaction cleanup
 
-- Branch: `ui/partner-home-trend-tooltip-2026-10-07`.
+- Primary branch: `ui/partner-home-trend-tooltip-2026-10-07`; PR #2859 merged as `e7ef6f8a9a11a443bf6890ebe0660c5fd4fac084` after canonical **Verify web portal #5372** passed.
 - Partner Portal Home removes the **Business highlights** card completely and lets **M/M Business Trend** use the full row width.
 - The policy-series connecting line is removed from the trend chart; policy totals remain available in the per-period detail.
-- Hover, keyboard focus, or click/tap on a trend period now shows a compact reference-style detail popup with the period, Net Premium and Policies. Click/Enter/Space can pin or unpin the detail.
-- Existing trend period filters, business data sources, policy totals, CTA navigation and calculations remain unchanged. The now-unused highlights-only period-summary RPC call was removed from the page render.
+- Hover, keyboard focus, or click/tap on a trend period shows a compact reference-style detail popup with the period, Net Premium and Policies. Click/Enter/Space can pin or unpin the detail.
+- Follow-up branch `fix/partner-home-trend-responsive-accessibility-2026-10-07` corrects the existing responsive adapter to bind through the stable chart data hook with matching 30/570 plot boundaries and changes the interactive SVG from `role="img"` to `role="group"` so point controls remain exposed to assistive technology.
+- Existing trend period filters, business data sources, policy totals, CTA navigation and calculations remain unchanged. The highlights-only period-summary RPC call remains removed.
 - No database/schema/RLS/accounting/native/mobile/APK/AAB change.
-- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/DEPLOYMENT pending.**
+- **PRIMARY CHANGE MERGED; FOLLOW-UP IMPLEMENTED; follow-up PR/CI/merge and production deployment pending.**
 
 ---
 
