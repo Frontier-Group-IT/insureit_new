@@ -1,3 +1,16 @@
+## 2026-10-07 — Partner App Business Overview professional KPI icons
+
+- Branch: `ui/partner-business-overview-professional-icons-2026-10-07`.
+- Partner App → Business → Business Overview now uses a dedicated professional icon system for all four KPI cards instead of small generic outline glyphs.
+- Icon mapping follows the approved visual reference: Premium Generated = finance/cash + rupee badge; Policies Sold = policy document + verified badge; Commission Earned = wallet + rupee badge; Customers = people group.
+- Icons share one soft-blue tile, border, glow, shadow and visual weight so the four KPI cards read as one professional system.
+- KPI values, labels, comparison logic, navigation, business data, permissions and backend calls are unchanged.
+- Added visual regression coverage in `verify-visual-system-completion.mjs`.
+- No schema/RLS/database/native dependency change. **No APK/AAB created.**
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA pending.**
+
+---
+
 ## 2026-10-07 — Partner Home/Search shared query synchronization
 
 - Branch: `fix/partner-shared-search-state-2026-10-07`.
