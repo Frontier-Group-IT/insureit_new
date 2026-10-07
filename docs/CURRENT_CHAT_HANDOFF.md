@@ -1,3 +1,17 @@
+## 2026-10-07 — Life/Health issued-policy commercial edit + retention fix
+
+- Branch: `fix/life-health-commercial-edit-retention`.
+- Root cause confirmed on issued Life policy edit: UI displayed insurer Pay-in from `projected_commission_amount`, while stale persisted `total_projected_payin`, `tds_amount`, `payin_after_tds` and payout `retention_amount` remained at the old zero-Pay-in calculation.
+- Edit Policy commercial summary now derives retention from current commercial components instead of trusting stale stored retention.
+- Added an **Edit** control for commercial users with Pay-in basis/value, insurer scheme/incentive, Payout basis/value, live 10% TDS, after-TDS Pay-in and retention preview.
+- Saving an issued Life/Health policy now synchronizes Pay-in totals/TDS/after-TDS fields and the latest Partner Payout/retention row while preserving payout settlement status.
+- Added Life/Health regression guards for editable controls and synchronized calculation fields.
+- Production data repair applied only to the investigated policy: ₹21,00,000 Pay-in → ₹2,10,000 TDS → ₹18,90,000 after TDS; ₹19,50,000 payout → **-₹60,000 retention**. Payout remains `Pending` / `needs_review`.
+- No schema/RLS/native/mobile change.
+- **IMPLEMENTED + PRODUCTION DATA REPAIR APPLIED; PR/CI/MERGE/WEB DEPLOYMENT PENDING.**
+
+---
+
 ## 2026-10-07 — Isolated Firebase Phone OTP Cloudflare tester
 
 - Branch: `test/firebase-phone-otp-cloudflare-2026-10-07`.
