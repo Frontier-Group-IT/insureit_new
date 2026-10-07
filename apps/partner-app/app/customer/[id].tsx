@@ -83,17 +83,15 @@ export default function CustomerDetailScreen() {
               </View>
             </View>
             <View style={styles.contactActions}><PartnerContactActions phone={data.customer.phone} email={data.customer.email} /></View>
+            <View style={styles.relationshipInline}>
+              <Info label="Customer Type" value={humanize(data.customer.customer_type || 'not recorded')} />
+              <Info label="Fleet" value={humanize(data.customer.fleet_size_band || 'not recorded')} />
+              <Info label="Intermediary" value={data.customer.intermediary_code || 'Organization / unassigned'} />
+              <Info label="Customer Record Since" value={formatMonthYear(data.customer.created_at)} />
+            </View>
           </View>
 
           {data.summary.renewals_30_days > 0 ? <View style={styles.attention}><PartnerBanner tone="warning" title="Renewal attention" message={`${data.summary.renewals_30_days} ${data.summary.renewals_30_days === 1 ? 'policy is' : 'policies are'} due within 30 days.`} /></View> : null}
-
-          <SectionHeader icon="list-outline" title="Relationship" />
-          <View style={styles.relationshipCard}>
-            <Info label="Customer Type" value={humanize(data.customer.customer_type || 'not recorded')} />
-            <Info label="Fleet" value={humanize(data.customer.fleet_size_band || 'not recorded')} />
-            <Info label="Intermediary" value={data.customer.intermediary_code || 'Organization / unassigned'} />
-            <Info label="Customer Record Since" value={formatMonthYear(data.customer.created_at)} />
-          </View>
 
           <View style={styles.vehiclesSection}>
             <View style={styles.vehiclesHeader}>
@@ -133,9 +131,11 @@ export default function CustomerDetailScreen() {
                               <Logo source={insurerLogo} fallback={PartnerAssets.products.motorInsurance} compact />
                               <Pressable accessibilityRole="button" accessibilityLabel={`Open policy ${policy.policy_no || policy.policy_code || ''}`} onPress={() => router.push(`/policy/${policy.policy_id}` as never)} style={({ pressed }) => [styles.policyBody, pressed && styles.pressed]}>
                                 <View style={styles.itemHeading}><Text style={styles.itemTitle}>{policy.policy_no || policy.policy_code || 'Policy'}</Text><PartnerStatusBadge label={policyCategory(policy)} tone="brand" /></View>
-                                <Text numberOfLines={1} style={styles.itemText}>{policy.insurer_name || 'Insurer not recorded'}</Text>
                                 <Text style={styles.itemMeta}>Ends {formatDate(policy.end_date)} · {formatIndianCurrency(policy.premium_amount)}</Text>
-                                <Text style={styles.policyDetailsText}>Policy Details</Text>
+                              </Pressable>
+                              <Pressable accessibilityRole="button" accessibilityLabel={`Open policy ${policy.policy_no || policy.policy_code || ''}`} onPress={() => router.push(`/policy/${policy.policy_id}` as never)} style={({ pressed }) => [styles.policyDetailsButton, pressed && styles.pressed]}>
+                                <Text style={styles.policyDetailsButtonText}>Policy Details</Text>
+                                <Ionicons name="chevron-forward" size={13} color="#FFFFFF" />
                               </Pressable>
                               {policyClaims.length ? (
                                 <Pressable accessibilityRole="button" accessibilityLabel={claimsExpanded ? `Collapse ${policyClaims.length} claims` : `Expand ${policyClaims.length} claims`} onPress={() => toggleClaims(policy.policy_id)} style={({ pressed }) => [styles.claimToggle, pressed && styles.pressed]}>
@@ -249,15 +249,14 @@ const styles = StyleSheet.create({
   identityMainRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 10 },
   avatar: { width: 46, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1EDFF' }, avatarText: { color: '#4E25E8', fontSize: 18, fontWeight: '800' },
   identityBody: { flex: 1 }, identityTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 }, identityName: { flex: 1, color: '#10192D', fontSize: 14, lineHeight: 18, fontWeight: '800' }, identityMeta: { marginTop: 3, color: '#68758B', fontSize: 9.5, lineHeight: 13 },
-  contactActions: { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#EEF1F5' }, attention: { marginTop: 8 },
+  contactActions: { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#EEF1F5' }, relationshipInline: { marginTop: 9, paddingTop: 9, borderTopWidth: 1, borderTopColor: '#EEF1F5', flexDirection: 'row', flexWrap: 'wrap', rowGap: 10 }, attention: { marginTop: 8 },
   sectionHeader: { marginTop: 13, marginBottom: 6 }, sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 7 }, sectionTitle: { color: '#131D33', fontSize: 13, lineHeight: 17, fontWeight: '800' }, sectionMeta: { marginTop: 1, marginLeft: 26, color: '#7A8799', fontSize: 8.5, lineHeight: 11 },
-  relationshipCard: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#E4E9F2', backgroundColor: '#FFFFFF' },
   info: { width: '50%', paddingRight: 8 }, infoLabel: { color: '#768297', fontSize: 8, lineHeight: 10, textTransform: 'uppercase', letterSpacing: 0.35 }, infoValue: { marginTop: 3, color: '#111B30', fontSize: 10.5, lineHeight: 14, fontWeight: '700' }, inlineStatus: { alignSelf: 'flex-start', marginTop: 3, paddingHorizontal: 9, paddingVertical: 3, borderRadius: 10, backgroundColor: '#E6F8EF' }, inlineStatusText: { color: '#109E65', fontSize: 9, fontWeight: '800' },
   vehiclesSection: { marginTop: 13, padding: 10, borderRadius: 13, borderWidth: 1, borderColor: '#E4E9F2', backgroundColor: '#FFFFFF' }, vehiclesHeader: { marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, vehiclesCount: { color: '#7A8799', fontSize: 8.5, lineHeight: 11 },
   stack: { gap: 7 }, itemCard: { minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderRadius: 12, borderWidth: 1, borderColor: '#E4E9F2', backgroundColor: '#FFFFFF' },
   vehicleCard: { borderRadius: 11, borderWidth: 1, borderColor: '#E4E9F2', backgroundColor: '#FFFFFF', overflow: 'hidden' }, vehicleTopRow: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 9, padding: 10 },
   viewPolicyButton: { minHeight: 34, paddingHorizontal: 10, borderRadius: 9, backgroundColor: '#163F79', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }, viewPolicyText: { color: '#FFFFFF', fontSize: 8.5, fontWeight: '800' },
-  policyStack: { borderTopWidth: 1, borderTopColor: '#E8EDF5', backgroundColor: '#F8FAFD', padding: 8, gap: 7 }, policyCard: { borderRadius: 10, borderWidth: 1, borderColor: '#DDE5F0', backgroundColor: '#FFFFFF', overflow: 'hidden' }, policyRow: { minHeight: 66, flexDirection: 'row', alignItems: 'center', gap: 8, padding: 9 }, policyBody: { flex: 1, minWidth: 0 }, policyDetailsText: { marginTop: 4, color: '#163F79', fontSize: 8.5, fontWeight: '800' },
+  policyStack: { borderTopWidth: 1, borderTopColor: '#E8EDF5', backgroundColor: '#F8FAFD', padding: 8, gap: 7 }, policyCard: { borderRadius: 10, borderWidth: 1, borderColor: '#DDE5F0', backgroundColor: '#FFFFFF', overflow: 'hidden' }, policyRow: { minHeight: 66, flexDirection: 'row', alignItems: 'center', gap: 8, padding: 9 }, policyBody: { flex: 1, minWidth: 0 }, policyDetailsButton: { minHeight: 32, paddingHorizontal: 9, borderRadius: 9, backgroundColor: '#163F79', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 }, policyDetailsButtonText: { color: '#FFFFFF', fontSize: 8.5, fontWeight: '800' },
   claimToggle: { alignSelf: 'center', minHeight: 32, paddingHorizontal: 8, borderRadius: 9, borderWidth: 1, borderColor: '#C9D7E9', backgroundColor: '#F1F6FC', flexDirection: 'row', alignItems: 'center', gap: 3 }, claimToggleText: { color: '#163F79', fontSize: 8.5, fontWeight: '800' },
   claimStack: { borderTopWidth: 1, borderTopColor: '#E8EDF5', padding: 7, gap: 6, backgroundColor: '#FBFCFE' }, claimCard: { minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 8, padding: 8, borderRadius: 9, borderWidth: 1, borderColor: '#E4E9F2', backgroundColor: '#FFFFFF' }, claimIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF1DC' },
   logoShell: { width: 48, height: 48, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F9FC' }, logoImage: { width: 43, height: 43 }, logoShellCompact: { width: 40, height: 40, borderRadius: 9 }, logoImageCompact: { width: 35, height: 35 },
