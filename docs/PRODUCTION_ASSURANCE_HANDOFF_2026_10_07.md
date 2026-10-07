@@ -92,3 +92,13 @@ Advisor snapshot previously observed: 154 unindexed FKs, 95 auth/RLS init-plan w
 ## Branch continuity update
 - v4 diverged when main advanced by six commits touching Partner UI, AGENTS.md and CURRENT_CHAT_HANDOFF.md but not the Web Accounts/XLSX implementation.
 - v5 was recreated from that newer main. Assurance changes must be reapplied semantically; do not overwrite newer AGENTS content.
+
+
+## Web residual reachability classification — 2026-10-07
+- A production-only npm tree check (`npm ls --omit=dev`) showed Tailwind CSS and its chokidar/fast-glob/micromatch/braces chain are absent from the deployed production dependency tree. Treat these as build/development supply-chain exposure, not remotely shipped Web runtime code. They still require lifecycle remediation before final certification, but do not equate their audit count with remotely exploitable portal findings.
+- `js-yaml` and old `brace-expansion` were also absent from the production-only Web tree.
+- Next 15.5.24 production tree still includes `postcss@8.4.31`, with `nanoid@3.3.16` and `source-map-js@1.2.1`, plus `sharp@0.34.5`.
+- A parent-scoped npm override attempting to replace Next's nested PostCSS children did not change the installed nested versions and made npm report the tree invalid. Rejected; do not commit.
+- Current GitHub-reviewed PostCSS advisories require attacker-controlled CSS/sourceMappingURL input and are patched in newer PostCSS 8.5.x. Repository search found no application runtime import/use of PostCSS and no sourceMappingURL handling. Classify current direct application reachability as not demonstrated, while retaining the vulnerable nested dependency as a supply-chain blocker.
+- Current GitHub-reviewed Sharp advisories affect processing of untrusted images. Repository search found no `next/image` imports, `<Image>` use, `/_next/image` references, `remotePatterns`, or Next image configuration. Direct application reachability is therefore not demonstrated. Do not call this a false positive: `sharp@0.34.5` is genuinely vulnerable and remains installed through Next.
+- SheetJS CE 0.20.3 compatibility regression on a fresh Node 22 sandbox passed: hidden `INSUREIT_META` sheet, workbook custom properties, editable reconciliation values, XLSX round-trip, and Web TypeScript all preserved. This is technically compatible; distribution/provenance decision remains before commit.
