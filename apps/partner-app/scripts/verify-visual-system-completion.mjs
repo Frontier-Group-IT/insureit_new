@@ -152,7 +152,10 @@ if (renewals.includes('<Metric ') || renewals.includes('styles.metricRow')) thro
 requireText(policyIntakes, 'PartnerAssets.emptyStates.policyUpload', 'Empty Policy Intake history must use the prepared upload artwork.');
 requireText(policyIntakes, 'PartnerInsurerLogo', 'Policy Intake records must prefer insurer artwork through PartnerInsurerLogo.');
 requireText(policyIntakes, 'getPartnerManufacturerLogoSource', 'Policy Intake records must fall back to manufacturer artwork when insurer artwork is unavailable.');
-requireText(policyIntakes, 'document-text-outline', 'Policy Intake records must keep a neutral default icon when insurer/manufacturer artwork is unavailable.');
+requireText(policyIntakes, 'function DefaultPolicyIntakeRecordIcon()', 'Policy Intake records must keep a dedicated neutral fallback icon.');
+requireText(policyIntakes, 'PartnerAssets.actions.quickPolicyIntake', 'Policy Intake neutral fallback must use the approved blue policy-document artwork base.');
+requireText(policyIntakes, 'styles.defaultPolicyBadgeMask', 'Policy Intake neutral fallback must remove the action badge from the source artwork.');
+if (policyIntakes.includes('<Ionicons name="document-text-outline" size={24} color="#4774A8" />')) throw new Error('Policy Intake records must not regress to the generic document-text fallback.');
 if (policyIntakes.includes('rowFooter') || policyIntakes.includes('name="chevron-forward" size={17} color="#1E3C66"')) throw new Error('Policy Intake record rows must not restore the bottom footer chevron.');
 requireText(policyIntakes, 'styles.updatedDate', 'Policy Intake record rows must keep Updated date/time beneath the status badge.');
 
