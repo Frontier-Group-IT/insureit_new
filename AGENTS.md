@@ -1338,3 +1338,10 @@ When a new request touches any area above, first fetch the current `main` implem
 - Do not add decorative backgrounds behind the custom artwork merely to make it look like a generic icon tile; the approved Partner artwork should remain visually clean.
 - Stories is an immersive full-screen flow, so its Close/X semantics are intentional; ordinary pushed screens should use shared Back semantics.
 - Phase 1 completion must be visually verified through Partner preview OTA from exact current `main`; OTA-safe Phase 1 work must not trigger an APK/AAB.
+
+### Production assurance continuity — 2026-10-07
+
+- The active production-assurance/security-hardening programme is documented in `docs/PRODUCTION_ASSURANCE_HANDOFF_2026_10_07.md`. Read that file before continuing security, dependency, database-performance, CI/CD, production-gating, load/capacity, or third-party certification work.
+- Work one assurance class to closure: identify -> safely reproduce -> remediate -> regress -> retest -> evidence-backed close. Do not move to another test family while confirmed Critical/High findings in the active class remain unresolved.
+- Current Stage 2 supply-chain remediation is tracked in PR #2918. Do not weaken or bypass the dependency gate merely to make CI green; safely remediate reachable High/Critical production advisories and record the retest evidence.
+- The assurance handoff is engineering continuity evidence, not the final management report. Keep it updated after meaningful findings, fixes, PR/check results, deployment/config changes, and retests.
