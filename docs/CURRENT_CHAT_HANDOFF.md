@@ -5,7 +5,8 @@
 - Fix: MISD now follows the engine-capacity path for create payload, reviewed RC application, and existing-vehicle reload.
 - Existing database contract already persists `vehicle.engineCapacity` to `vehicles.engine_capacity_cc`; no migration/schema/RLS change is required.
 - Added regression guards in `vehicle-policy-intake-resume-regression.mjs` for the MISD create/reload/backend mapping chain.
-- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/DEPLOYMENT PENDING.**
+- PR #2861 is open. Canonical `Verify web portal` CI is pending; merge and deployment are not authorized/completed.
+- **IMPLEMENTED ON BRANCH; PR OPEN; NOT MERGED OR DEPLOYED.**
 
 ---
 
