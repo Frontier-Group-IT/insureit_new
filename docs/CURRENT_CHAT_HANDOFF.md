@@ -35,10 +35,11 @@
 - Partner Portal Home removes the **Business highlights** card completely and lets **M/M Business Trend** use the full row width.
 - The policy-series connecting line is removed from the trend chart; policy totals remain available in the per-period detail.
 - Hover, keyboard focus, or click/tap on a trend period shows a compact reference-style detail popup with the period, Net Premium and Policies. Click/Enter/Space can pin or unpin the detail.
-- Follow-up branch `fix/partner-home-trend-responsive-accessibility-2026-10-07` corrects the existing responsive adapter to bind through the stable chart data hook with matching 30/570 plot boundaries and changes the interactive SVG from `role="img"` to `role="group"` so point controls remain exposed to assistive technology.
+- Follow-up PR #2865 (`fix/partner-home-trend-responsive-accessibility-2026-10-07`) merged as `23e4490dd3d1cf1a46e3c48f3d65a03c4b3b876e` after canonical **Verify web portal #5376** passed. It corrects the existing responsive adapter to bind through the stable chart data hook with matching 30/570 plot boundaries and changes the interactive SVG from `role="img"` to `role="group"` so point controls remain exposed to assistive technology.
 - Existing trend period filters, business data sources, policy totals, CTA navigation and calculations remain unchanged. The highlights-only period-summary RPC call remains removed.
+- Because subsequent main/OTA commits advanced `main` before the guarded production run could become the current release, deployment marker branch `chore/deploy-partner-home-trend-2026-10-07` establishes a fresh verified web-release provenance point on latest main.
 - No database/schema/RLS/accounting/native/mobile/APK/AAB change.
-- **PRIMARY CHANGE MERGED; FOLLOW-UP IMPLEMENTED; follow-up PR/CI/merge and production deployment pending.**
+- **PRIMARY + FOLLOW-UP MERGED; deployment-marker PR/CI/merge/production deployment pending.**
 
 ---
 
