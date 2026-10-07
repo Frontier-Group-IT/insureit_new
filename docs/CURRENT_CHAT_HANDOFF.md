@@ -1,3 +1,14 @@
+## 2026-10-07 — Operations desktop sidebar state stability
+
+- Branch: `fix/sidebar-state-stability-v3-2026-10-07` (rebased on latest main before merge).
+- Root cause: shared Operations sidebar route-derived `openSection` state could overwrite manual clicks during unrelated renders; a separate desktop-sidebar event also cleared nested `openGroups`.
+- Fix: synchronize route-to-sidebar state only when pathname actually changes; preserve manual top-level toggles on the same route; restore only the active nested group after real navigation; remove the unrelated nested-group reset event.
+- Added `sidebar-state-stability-regression.mjs` to canonical web CI.
+- Frontend navigation-state only; no routes, permissions, auth, API, database, schema, RLS, policy/claim/accounting, or mobile runtime changes.
+- **IMPLEMENTED ON LATEST MAIN; PR/CI/MERGE/DEPLOYMENT PENDING.**
+
+---
+
 ## 2026-10-07 — Partner shared business growth icon refinement
 
 - Branch: `ui/partner-business-growth-shared-icon-2026-10-07`.
