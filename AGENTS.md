@@ -62,6 +62,8 @@ The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` 
 
 ### Latest implementation ledger
 
+- **2026-10-07 — Internal Security Pass 1 production closure:** PR #2899 merged as `ec216b15f72915f8d562c2eb4c2d69f81c88b37f`; migrations `20261007130000`–`20261007138000` are **APPLIED + VERIFIED**. Live assertions show 0 over-broad generic delete policies, 0 anonymous SECURITY DEFINER execution, 0 direct browser SECURITY DEFINER trigger execution, 0 legacy POSP anonymous storage policies, and no browser DML/SELECT grants on the intentional RLS/no-policy deny-all set. Remaining advisor entries were classified: 102 intentional deny-all tables, authenticated privileged functions all recursively identity-bound, and leaked-password protection unavailable on the current Supabase Free tier with stronger reset-password policy as compensating control. **MERGED + APPLIED + VERIFIED. NO APK/AAB CREATED.** See `docs/SECURITY_PASS_1_PRODUCTION_VERIFICATION_2026_10_07.md`.
+
 - **2026-10-07 — Internal production security boundary remediation:** branch `security/remediate-live-audit-2026-10-07-v5`; closes first-audit Supabase access-control findings across role resolution, delete policies, privileged views/RPCs, anonymous SECURITY DEFINER execution, trigger RPC exposure, mutable search paths, deny-all table grants, POSP document storage, authenticated actor/viewer binding, associated onboarding helpers and `pg_trgm` placement; strengthens Web/Partner reset-password policy. Full migration set rollback-validated against current production schema; no production mutation and no APK/AAB. **IMPLEMENTED + ROLLBACK-VALIDATED; PR/CI/merge/migration apply/post-apply retest pending.** See `docs/CURRENT_CHAT_HANDOFF.md`.
 
 

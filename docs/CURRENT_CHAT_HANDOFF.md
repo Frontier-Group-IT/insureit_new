@@ -1,3 +1,13 @@
+## 2026-10-07 — Internal Security Pass 1 production closure
+
+- PR #2899 merged as `ec216b15f72915f8d562c2eb4c2d69f81c88b37f`; Web Verify #5532 and Partner Verify #559 passed.
+- Nine security migrations `20261007130000`–`20261007138000` are applied and repository migration-history parity is verified.
+- Live assertions: 0 over-broad generic delete policies, 0 anonymous SECURITY DEFINER execution, 0 direct browser SECURITY DEFINER trigger/event-trigger execution, 0 legacy anonymous `posp-documents` policies, and no browser DML/SELECT privileges on the RLS/no-policy deny-all set.
+- Recursive call-chain validation found 0 authenticated-executable SECURITY DEFINER functions outside an identity-bound chain. The 102 RLS/no-policy entries are intentional deny-all/server-only. Leaked-password protection remains unavailable on the current Free tier; Web/Partner password reset requires 12+ chars with upper/lower/number/symbol as a compensating control.
+- Evidence: `docs/SECURITY_PASS_1_PRODUCTION_VERIFICATION_2026_10_07.md`.
+- **STATE: MERGED + APPLIED + PRODUCTION VERIFIED. SECURITY PASS 1 CLOSED. NO APK/AAB CREATED.**
+
+---
 ## 2026-10-07 — Partner Home generated metric icons
 
 - Branch: `ui/partner-home-generated-metric-icons-2026-10-07`.
