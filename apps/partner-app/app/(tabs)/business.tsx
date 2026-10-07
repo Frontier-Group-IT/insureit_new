@@ -465,6 +465,7 @@ function SectionHeader({ title, action }: { title: string; action?: ReactNode })
 }
 
 function OverviewCard({ icon, value, label, changeLabel, compareLabel = 'vs last month', onPress }: OverviewCardProps) {
+  const trend = overviewTrend(changeLabel);
   return (
     <Pressable
       accessibilityRole={onPress ? 'button' : undefined}
@@ -477,12 +478,19 @@ function OverviewCard({ icon, value, label, changeLabel, compareLabel = 'vs last
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={styles.overviewValue}>{value}</Text>
       <Text numberOfLines={2} style={styles.overviewLabel}>{label}</Text>
       <View style={styles.growthRow}>
-        <Ionicons name="trending-up" size={9} color="#16A34A" />
-        <Text numberOfLines={1} style={styles.growthText}>{changeLabel}</Text>
+        {trend ? <Ionicons name={trend.icon} size={9} color={trend.color} /> : null}
+        <Text numberOfLines={1} style={[styles.growthText, { color: trend?.color ?? '#718198' }]}>{changeLabel}</Text>
       </View>
       <Text numberOfLines={1} style={styles.vsText}>{compareLabel}</Text>
     </Pressable>
   );
+}
+
+function overviewTrend(changeLabel?: string): { icon: keyof typeof Ionicons.glyphMap; color: string } | null {
+  const value = changeLabel?.trim() ?? '';
+  if (/^-\d/.test(value)) return { icon: 'trending-down', color: '#DC2626' };
+  if (/^\+\d/.test(value)) return { icon: 'trending-up', color: '#16A34A' };
+  return null;
 }
 
 function TrendChart({ data, emptyMessage }: { data: TrendPoint[]; emptyMessage?: string }) {
