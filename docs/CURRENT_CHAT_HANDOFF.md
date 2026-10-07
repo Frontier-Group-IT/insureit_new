@@ -1,3 +1,23 @@
+## 2026-10-07 — Partner Settings account icons + two-line Device Security rows
+
+- Branch: `ui/partner-settings-account-icons-security-layout-2026-10-07`.
+- Settings → Account:
+  - Profile & registration now uses a clean `person-outline` icon.
+  - Support now uses a clean `headset-outline` icon.
+  - Both reuse the existing soft brand icon tile treatment for a more consistent professional Settings UI.
+- Settings → Device security:
+  - fixed the visible spacing issue by separating the row title style from the generic flexing link title style.
+  - Biometric re-entry title now sits directly above its helper text.
+  - Partner notifications title now sits directly above its current helper/status text.
+  - rows remain separate joined records with the divider preserved.
+  - tightened row height/padding without changing switch/action behavior.
+- Biometric logic, notification permission logic, app settings behavior, navigation, backend, database, schema, RLS, and native dependencies are unchanged.
+- Updated visual regression checks for the new Account icons and compact two-line Device Security layout.
+- No APK/AAB created.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA NOT YET DONE.**
+
+---
+
 ## 2026-10-07 — Partner Home metric icon reference refinement
 
 - Branch: `ui/partner-home-metric-icon-reference-2026-10-07`.
