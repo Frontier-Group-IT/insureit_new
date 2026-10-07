@@ -510,3 +510,7 @@ Never collapse merge, publish and device verification into one status.
 - Visual-system assertions prevent the removed metadata/chevron and wide logo spacing from returning.
 - No activity query, data semantics, route, API/RPC, schema, RLS, permission, native dependency or runtime change; OTA-safe for Partner production runtime 0.2.0.
 - Evidence state: **IMPLEMENTED; PR/CI/merge/production OTA/device verification pending. NO APK/AAB CREATED.**
+
+## 2026-10-07 — Claim Details two-section icon reference match (IMPLEMENTED)
+
+Branch `ui/partner-claim-two-section-icons-2026-10-07`: limited to the `Insured Person` and `Claim Overview` section-header icons on `apps/partner-app/app/claim/[id].tsx`. Their existing 28px pale blue containers remain, with reference-matched blue `people` and `clipboard` glyphs replacing those two existing artwork components. The header, summary, insured person row, overview grid tiles, financial snapshot, journey timeline, navigation and all other icons remain untouched. Existing data/APIs/RPCs/permissions/runtime remain unchanged. Visual-system verification updated only to recognize the two requested heading icons while preserving all other constraints. **IMPLEMENTED; PR/CI/merge/OTA/device verification pending. No APK/AAB.**
