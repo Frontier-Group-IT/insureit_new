@@ -41,7 +41,7 @@ This foundation does not modify:
 
 - Partner Portal routes, navigation, Partner RPCs, or `getPartnerWebSession`;
 - Operations routes, employee capabilities, or existing `/auth/session`;
-- global middleware;
+- existing Partner/Operations middleware routing behavior; the shared middleware now has an additive Customer-only session state and `/customer` session-refresh coverage required by repository regression policy;
 - Supabase schema, migrations, RLS, Storage, or production data;
 - Customer App runtime or Expo configuration;
 - APK/AAB or OTA workflows;
@@ -71,6 +71,6 @@ This foundation does not modify:
 
 ## Evidence state
 
-**IMPLEMENTED ON FEATURE BRANCH; PR/CI/MERGE/DEPLOYMENT NOT YET VERIFIED.**
+**IMPLEMENTED ON FEATURE BRANCH; PR #2882 OPEN. Verify web portal run #5399 passed on the functional middleware/customer foundation head, including Customer isolation, Partner security, server-session coverage, typecheck, lint and production build. Final documentation/regression-hardening head requires its own green rerun. MERGE/DEPLOYMENT PENDING.**
 
 No APK/AAB created.
