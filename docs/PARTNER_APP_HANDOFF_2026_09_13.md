@@ -518,3 +518,8 @@ Branch `ui/partner-profile-hero-logout-confirm-2026-10-07` removes the large bot
 ## 2026-10-07 — Home Pending Tasks reference match (IMPLEMENTED)
 
 Branch `ui/partner-home-pending-tasks-reference-v2-2026-10-07` refines only `PendingTasksCard` on Partner Home. The row icon is switched from the dark calendar/checklist artwork to the exact existing `PartnerAssets.actions.quickClaims` blue CLAIM clipboard + shield asset seen in the supplied reference. Card padding, row height, icon dimensions and the right-side decorative illustration position are tightened to the reference proportions. The live count remains part of the normal dark task title (`N active claim(s)`); the separate red number treatment visible in the reference is intentionally not implemented per user instruction. Existing `data.today` / `data.service.active_claims` logic, Claims navigation, Quick Actions, Stories, KPI cards, APIs/RPCs and runtime are unchanged. **IMPLEMENTED; PR/CI/merge/production runtime 0.2.0 OTA/device verification pending. NO APK/AAB CREATED.**
+
+
+## 2026-10-07 — Customer detail compact relationship and policy actions
+
+Branch `ui/partner-customer-detail-compact-2026-10-07` updates only the Partner Customer detail presentation. Relationship fields now live inside the main customer identity card and the standalone Relationship heading/card is removed. Expanded vehicle policy rows remove the repeated insurer-name text and place a navy `Policy Details` action at the far right, matching the placement/action treatment of the vehicle-level policy toggle. Customer/vehicle/policy queries, navigation destinations, business rules, schema/RLS and data persistence are unchanged. **IMPLEMENTED; PR/CI/merge/OTA/device verification pending. NO APK/AAB CREATED.**
