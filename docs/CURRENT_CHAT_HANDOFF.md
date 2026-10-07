@@ -9,8 +9,9 @@
 - No database/schema/RLS/native dependency change. **No APK/AAB created.**
 - Initial Partner visual regression guard failed because the hyphenated `policy-intake` config key was matched without its quoted object-key syntax; the guard was corrected without changing app runtime behavior.
 - PR #2925 then passed **Verify Partner app #583** and **Verify web portal #5593**, and merged as `1ae7a74d1dd3792399bd1b58c4b812f98964c900`.
-- Production OTA release branch: `release/partner-profile-professional-icons-ota-2026-10-07`; trigger file updated for runtime 0.2.0.
-- **MERGED; production OTA pending.**
+- Production OTA release PR #2927 passed **Verify Partner app #584** and **Verify web portal #5595**, then merged as `a846340f19d91b32886c94911b0d8d2bd78cdcf1`.
+- **Publish Partner production OTA #89** completed successfully from current `main` to channel `production`, runtime `0.2.0`.
+- **MERGED + OTA PUBLISHED; installed-device verification pending. No APK/AAB created.**
 
 ---
 
