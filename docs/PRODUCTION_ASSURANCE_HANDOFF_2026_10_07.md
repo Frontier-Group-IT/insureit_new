@@ -102,3 +102,15 @@ Advisor snapshot previously observed: 154 unindexed FKs, 95 auth/RLS init-plan w
 - Current GitHub-reviewed PostCSS advisories require attacker-controlled CSS/sourceMappingURL input and are patched in newer PostCSS 8.5.x. Repository search found no application runtime import/use of PostCSS and no sourceMappingURL handling. Classify current direct application reachability as not demonstrated, while retaining the vulnerable nested dependency as a supply-chain blocker.
 - Current GitHub-reviewed Sharp advisories affect processing of untrusted images. Repository search found no `next/image` imports, `<Image>` use, `/_next/image` references, `remotePatterns`, or Next image configuration. Direct application reachability is therefore not demonstrated. Do not call this a false positive: `sharp@0.34.5` is genuinely vulnerable and remains installed through Next.
 - SheetJS CE 0.20.3 compatibility regression on a fresh Node 22 sandbox passed: hidden `INSUREIT_META` sheet, workbook custom properties, editable reconciliation values, XLSX round-trip, and Web TypeScript all preserved. This is technically compatible; distribution/provenance decision remains before commit.
+
+
+## Commit-candidate validation — current main 94db727 — 2026-10-07
+A fresh disposable sandbox cloned main at `94db727ff8d8f9f62461346009b91e997573e7df`. Candidate manifests used Next 15.5.24, SheetJS CE 0.20.3 official tarball, and compatible transitive patches for shell-quote/compression/undici/nanoid/js-yaml/source-map-js.
+- npm-generated lockfile completed.
+- clean `npm ci --ignore-scripts` completed.
+- full `npm ls --all` dependency-tree validation exited clean.
+- Web TypeScript passed.
+- Workspace production audits: Web 0 Critical / 8 High; Customer 0 Critical / 61 High; Partner 0 Critical / 53 High.
+- Therefore candidate removes all observed Critical advisories without Expo/native migration, but Stage 2 is NOT closed because residual High findings remain.
+- The sandbox metadata described runtime node22, but the command environment reported Node v24.21.0/npm 11.19.0 and raised EBADENGINE against a candidate node 22.x engine pin. Do not claim true Node-22 validation from this sandbox. Validate Node 22 through GitHub Actions before any engine/runtime pin is accepted.
+- No production deploy, database change, OTA, APK or AAB occurred.
