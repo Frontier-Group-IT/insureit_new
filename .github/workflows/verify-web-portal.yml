@@ -49,6 +49,8 @@ jobs:
         run: npm run access-control:portal-governance-regression
       - name: Release blocker security regression
         run: npm run access-control:release-blockers-regression
+      - name: Internal assurance database security regression
+        run: npm run internal-assurance:db-security-regression
       - name: Backoffice data-entry security regression
         run: npm run access-control:backoffice-data-entry-regression
       - name: Service Enquiries unification regression
