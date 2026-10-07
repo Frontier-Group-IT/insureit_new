@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CheckSquare2, FileCheck2, Gauge, Menu, ShieldCheck, Sparkles, UsersRound } from "lucide-react";
+import { ClipboardList, FileCheck2, Gauge, Menu, ShieldCheck, Sparkles, UsersRound } from "lucide-react";
 import { isIntermediaryOnlyLaunch } from "@/lib/launch-scope";
 import type { Capability } from "@/lib/roles";
 import type { PermissionAccess } from "@/lib/permission-management";
@@ -13,7 +13,7 @@ const standardItems:QuickItem[]=[
   {href:"/dashboard",label:"Home",icon:Gauge,capability:"view_dashboard"},
   {href:"/claims",label:"Claims",icon:ShieldCheck,capability:"view_claims"},
   {href:"/customers",label:"Customers",icon:UsersRound,capability:"view_customers"},
-  {href:"/tasks",label:"Tasks",icon:CheckSquare2,capability:"view_tasks"},
+  {href:"/service-enquiries",label:"Enquiries",icon:ClipboardList,capability:"view_tasks"},
   {href:"/settings",label:"More",icon:Menu,capability:"manage_system"},
 ];
 
