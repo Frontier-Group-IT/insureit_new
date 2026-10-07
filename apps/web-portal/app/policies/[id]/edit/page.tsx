@@ -17,8 +17,8 @@ type CustomerRow = { contact_name:string; company_name:string|null; phone:string
 type IntermediaryRow = { id:string; intermediary_type:"posp"|"misp"|"partner"; display_name:string; intermediary_code:string|null; mobile:string|null; associate_employee_id:string|null };
 type EmployeeRow = { id:string; full_name:string|null; employee_code:string|null };
 type DocumentRow = { id:string; document_type:string; file_name:string; storage_bucket:string; storage_path:string };
-type PayinRow = { commercial_status:string|null; projected_commission_amount:number|null; insurer_scheme_amount:number|null };
-type PayoutRow = { commercial_status:string|null; partner_payout_amount:number|null; gross_payout:number|null; retention_amount:number|null };
+type PayinRow = { commercial_status:string|null; commercial_basis:string|null; projected_commission_percent:number|null; projected_commission_amount:number|null; insurer_scheme_amount:number|null; total_projected_payin:number|null; payin_after_tds:number|null };
+type PayoutRow = { commercial_status:string|null; payout_basis:string|null; partner_payout_percent:number|null; partner_payout_amount:number|null; gross_payout:number|null; retention_amount:number|null };
 
 export default async function EditPolicyPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
@@ -38,8 +38,8 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
       admin.from("policy_documents").select("id,document_type,file_name,storage_bucket,storage_path").eq("policy_id", policy.id).eq("document_type", "policy_copy").order("created_at", { ascending:false }).limit(1).returns<DocumentRow[]>(),
       getActiveInsuranceCompanyOptions(),
       loadPolicyActivityHistory({ policyId:policy.id, createdBy:policy.created_by, createdAt:policy.created_at, updatedAt:policy.updated_at }),
-      commercialAccess ? admin.from("policy_payin_details").select("commercial_status,projected_commission_amount,insurer_scheme_amount").eq("policy_id", policy.id).maybeSingle<PayinRow>() : Promise.resolve({ data:null as PayinRow|null, error:null }),
-      commercialAccess ? admin.from("policy_intermediary_payouts").select("commercial_status,partner_payout_amount,gross_payout,retention_amount").eq("policy_id", policy.id).order("created_at", { ascending:false }).limit(1).maybeSingle<PayoutRow>() : Promise.resolve({ data:null as PayoutRow|null, error:null }),
+      commercialAccess ? admin.from("policy_payin_details").select("commercial_status,commercial_basis,projected_commission_percent,projected_commission_amount,insurer_scheme_amount,total_projected_payin,payin_after_tds").eq("policy_id", policy.id).maybeSingle<PayinRow>() : Promise.resolve({ data:null as PayinRow|null, error:null }),
+      commercialAccess ? admin.from("policy_intermediary_payouts").select("commercial_status,payout_basis,partner_payout_percent,partner_payout_amount,gross_payout,retention_amount").eq("policy_id", policy.id).order("created_at", { ascending:false }).limit(1).maybeSingle<PayoutRow>() : Promise.resolve({ data:null as PayoutRow|null, error:null }),
     ]);
     if (!customer) notFound();
     if (payinResult.error) throw new Error(`Unable to load Life/Health PayIn summary: ${payinResult.error.message}`);
@@ -68,12 +68,27 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     const activityItems = activityHistory.map((activity)=>({ id:activity.id, title:activity.action, meta:activity.actorName ? `Created By: ${activity.actorName}` : null, at:activity.at }));
     const payin = payinResult.data;
     const payout = payoutResult.data;
+    const payinBasis: "NET_PREMIUM_PERCENT"|"FIXED_AMOUNT" = payin?.commercial_basis === "NET_PREMIUM_PERCENT" ? "NET_PREMIUM_PERCENT" : "FIXED_AMOUNT";
+    const payoutBasis: "NET_PREMIUM_PERCENT"|"FIXED_AMOUNT" = payout?.payout_basis === "NET_PREMIUM_PERCENT" ? "NET_PREMIUM_PERCENT" : "FIXED_AMOUNT";
+    const payinBase = Number(payin?.projected_commission_amount ?? 0);
+    const insurerSchemeAmount = Number(payin?.insurer_scheme_amount ?? 0);
+    const insurerPayin = Number(payin?.total_projected_payin ?? 0) || payinBase + insurerSchemeAmount;
+    const payinAfterTds = Number(payin?.payin_after_tds ?? 0) || insurerPayin * 0.9;
+    const partnerPayout = Number(payout?.partner_payout_amount ?? payout?.gross_payout ?? 0);
     const commercialSummary = {
       payinEntered:Boolean(payin),
       payoutEntered:Boolean(payout),
-      insurerPayin:Number(payin?.projected_commission_amount ?? payin?.insurer_scheme_amount ?? 0),
-      partnerPayout:Number(payout?.partner_payout_amount ?? payout?.gross_payout ?? 0),
-      retention:Number(payout?.retention_amount ?? 0),
+      payinBasis,
+      payinPercent:Number(payin?.projected_commission_percent ?? 0),
+      payinFixedAmount:payinBasis === "FIXED_AMOUNT" ? payinBase : 0,
+      insurerSchemeAmount,
+      payoutBasis,
+      payoutPercent:Number(payout?.partner_payout_percent ?? 0),
+      payoutFixedAmount:payoutBasis === "FIXED_AMOUNT" ? partnerPayout : 0,
+      insurerPayin,
+      partnerPayout,
+      payinAfterTds,
+      retention:payinAfterTds - partnerPayout,
     };
 
     return <AppShell title="Edit Policy"><LifeHealthIssuedPolicyEditForm initial={{
