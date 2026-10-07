@@ -50,18 +50,56 @@ export async function getAuthenticatedProfile(accessToken?: string) {
 
   const startedAt = performance.now();
   const supabase = createSupabaseWithAccessToken(accessToken);
-  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(accessToken);
-  const afterClaims = performance.now();
-  const claims = claimsData?.claims;
-  const userId = typeof claims?.sub === "string" ? claims.sub : null;
 
-  if (claimsError || !userId) {
-    return { user: null, profile: null, error: claimsError?.message ?? "Missing user" };
+  let userId: string | null = null;
+  let userEmail: string | undefined;
+  let authError: string | null = null;
+
+  try {
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(accessToken);
+    const claims = claimsData?.claims;
+    userId = typeof claims?.sub === "string" ? claims.sub : null;
+    userEmail = typeof claims?.email === "string" ? claims.email : undefined;
+    authError = claimsError?.message ?? null;
+  } catch (error) {
+    authError = error instanceof Error ? error.message : "Claims verification failed";
+  }
+
+  const afterClaims = performance.now();
+
+  // OpenNext/Cloudflare can fail Supabase getClaims() even when the token is valid.
+  // Fall back to Supabase Auth's server-side getUser() verification rather than
+  // rejecting a valid session. Vercel keeps the fast claims path when it succeeds.
+  if (!userId) {
+    try {
+      const {
+        data: { user: verifiedUser },
+        error: userError,
+      } = await supabase.auth.getUser(accessToken);
+
+      if (userError || !verifiedUser) {
+        return {
+          user: null,
+          profile: null,
+          error: userError?.message ?? authError ?? "Missing user",
+        };
+      }
+
+      userId = verifiedUser.id;
+      userEmail = verifiedUser.email ?? undefined;
+      authError = null;
+    } catch (error) {
+      return {
+        user: null,
+        profile: null,
+        error: error instanceof Error ? error.message : authError ?? "Missing user",
+      };
+    }
   }
 
   const user = {
     id: userId,
-    email: typeof claims?.email === "string" ? claims.email : undefined,
+    email: userEmail,
   };
 
   const { data: profile, error: profileError } = await supabase
