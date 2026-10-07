@@ -1,3 +1,15 @@
+## 2026-10-07 — Cloudflare direct-main production v3
+
+- Root cause of repeated Cloudflare type failure: `cloudflare-poc` was stale/diverged. Its `CustomerWebAccount` type still exposed `company_name`, while current `main` exposes `customer_name`; the shared Customer Web component uses `customer_name`.
+- This fresh branch starts from current `main`, so the type mismatch is already resolved at source.
+- Removes `.github/workflows/sync-main-to-cloudflare-preview.yml`.
+- Adds `scripts/build-cloudflare-poc.sh`, `apps/web-portal/wrangler.jsonc`, and `apps/web-portal/open-next.config.ts` directly to the production codebase for Cloudflare Git integration.
+- Cloudflare dashboard target: Production branch = `main`; Preview deployments disabled.
+- No Vercel, Supabase schema/RLS, mobile, OTA, APK or AAB change.
+- **IMPLEMENTED; PR/CI/MERGE PENDING.**
+
+---
+
 ## 2026-10-07 — Partner App Policy Details professional icon system
 
 - Branch: `ui/partner-policy-detail-professional-icons-2026-10-07`.
