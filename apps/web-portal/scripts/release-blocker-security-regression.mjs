@@ -35,6 +35,7 @@ const policyPairDeleteMigration = source("../../supabase/migrations/202609081522
 const auditedBoundaryMigration = source("../../supabase/migrations/20261007130000_internal_security_boundary_hardening.sql");
 const functionSurfaceMigration = source("../../supabase/migrations/20261007131000_security_function_surface_hardening.sql");
 const anonDefinerMigration = source("../../supabase/migrations/20261007132000_revoke_anon_security_definer_execution.sql");
+const authenticatedDefinerMigration = source("../../supabase/migrations/20261007133000_authenticated_definer_authorization_hardening.sql");
 
 for (const [name, content] of [
   ["account review page", accountReview],
@@ -144,6 +145,22 @@ requireText("SECURITY DEFINER PUBLIC/anon revoke", anonDefinerMigration, "'revok
 requireText("SECURITY DEFINER service role preserved", anonDefinerMigration, "'grant execute on function %s to service_role'");
 requireText("future function PUBLIC default revoked", anonDefinerMigration, "alter default privileges for role postgres revoke execute on functions from public");
 requireText("future function anon default revoked", anonDefinerMigration, "alter default privileges for role postgres in schema public revoke execute on functions from anon");
+requireText("group actor bound to authenticated user", authenticatedDefinerMigration, "actor_profile_id is distinct from auth.uid()");
+requireText("group service-role compatibility preserved", authenticatedDefinerMigration, "is_service_role boolean");
+requireText("downline root bound to session", authenticatedDefinerMigration, "root_user_id = auth.uid()");
+requireText("customer viewer bound to session", authenticatedDefinerMigration, "viewer_id = auth.uid()");
+requireText("profile viewer substitution blocked", authenticatedDefinerMigration, "if not is_service_role and viewer_id is distinct from auth.uid()");
+requireText("intermediary queue capability guard", authenticatedDefinerMigration, "where public.can_manage_posp_misp_onboarding()");
+for (const signature of [
+  "public.insert_customer_activity_event(",
+  "public.sync_existing_intermediary_migration(uuid, uuid, jsonb, text)",
+  "public.repair_legacy_partner_record_link(uuid, uuid)",
+  "public.resolve_intermediary_partner_record_id(uuid)",
+  "public.sync_external_customer_stage_to_operations(uuid, uuid)",
+]) {
+  requireText("internal maintenance RPC authenticated revoke", authenticatedDefinerMigration, signature);
+}
+requireText("internal maintenance RPC browser revoke", authenticatedDefinerMigration, "from public, anon, authenticated");
 
 assert.deepEqual(
   classifyPolicyIntakeDeleteLinks([{ id: "rejected-1", status: "rejected" }]),
@@ -199,5 +216,7 @@ console.log(JSON.stringify({
   triggerFunctionRpcExposureClosed: true,
   mutableFunctionSearchPathsPinned: true,
   anonymousSecurityDefinerExecutionClosed: true,
+  authenticatedActorViewerIdsSessionBound: true,
+  internalMaintenanceRpcsServerOnly: true,
   status: "ok",
 }, null, 2));
