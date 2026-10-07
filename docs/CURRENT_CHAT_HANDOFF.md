@@ -1,3 +1,15 @@
+## 2026-10-07 — Partner Home business trend interaction cleanup
+
+- Branch: `ui/partner-home-trend-tooltip-2026-10-07`.
+- Partner Portal Home removes the **Business highlights** card completely and lets **M/M Business Trend** use the full row width.
+- The policy-series connecting line is removed from the trend chart; policy totals remain available in the per-period detail.
+- Hover, keyboard focus, or click/tap on a trend period now shows a compact reference-style detail popup with the period, Net Premium and Policies. Click/Enter/Space can pin or unpin the detail.
+- Existing trend period filters, business data sources, policy totals, CTA navigation and calculations remain unchanged. The now-unused highlights-only period-summary RPC call was removed from the page render.
+- No database/schema/RLS/accounting/native/mobile/APK/AAB change.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/DEPLOYMENT pending.**
+
+---
+
 ## 2026-10-07 — Partner Home MTD vs previous-month MTD comparison
 
 - Branch: `fix/partner-home-mtd-previous-month-2026-10-07`.
