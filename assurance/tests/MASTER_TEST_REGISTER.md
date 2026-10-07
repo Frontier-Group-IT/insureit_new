@@ -23,3 +23,11 @@
 
 | INS-TST-PERF-001 | DB performance | Current Supabase performance advisor | Live advisor read | Establish current baseline | 154 unindexed FK; 95 RLS init-plan; 73 multiple permissive; 176 unused index; 3 duplicate index | PASS (baseline collected) |
 | INS-TST-CI-001 | Supply chain | Standard security-tool presence audit | Repository-wide code/workflow searches | SAST + secret scan + SCA/SBOM + DAST evidence gates present | No hits for reviewed standard tool families | FAIL |
+
+| INS-TST-RPC-006 | RPC authz | Policy Intake finalization actor binding | Live function/grant inspection; no mutation | actor derived from auth.uid + capability | actor taken from caller JSON; anon EXECUTE | FAIL |
+| INS-TST-RPC-007 | RPC authz | Group link/unlink actor binding | Live helper + entry-point definition inspection | caller identity bound to privileged profile | helper trusts supplied profile UUID; anon EXECUTE | FAIL |
+| INS-TST-RPC-008 | RPC authz | External claim stage sync | Function definition/grants; no mutation | claim owner/internal actor required | anonymous executable, no caller auth | FAIL |
+| INS-TST-RPC-009 | RPC authz | Corporate onboarding contact sync | Function definition/grants; no mutation | application owner/approved internal role required | callable overload anonymously replaces contacts | FAIL |
+| INS-TST-RPC-010 | RPC integrity | Customer activity insertion | Function definition/grants; no mutation | trusted internal path only | anonymous direct insert capability | FAIL |
+| INS-TST-RPC-011 | RPC authz | Legacy intermediary migration helpers | Function definition/grants; no mutation | internal/admin authenticated path only | multiple privileged mutators anonymously executable | FAIL |
+| INS-TST-WEB-001 | Web hardening | Source-level security header/session review | next.config.mjs + middleware.ts | standard headers + secure cookie flags | CSP/HSTS/frame/nosniff/referrer/permissions headers; HttpOnly/Lax/Secure(prod) cookies | PASS (source); runtime verification pending |
