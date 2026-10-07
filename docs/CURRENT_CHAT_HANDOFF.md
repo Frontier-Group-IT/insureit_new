@@ -1,3 +1,16 @@
+## 2026-10-07 — Partner Portal Pay-in UI removal
+
+- Branch: `ui/partner-portal-hide-payin-2026-10-07`.
+- Scope is UI-only. No Pay-in database records, backend calculations, accounting logic, schema, migration, or RLS are changed.
+- Partner Policy Details onboarding summary no longer shows the `Insurer Pay-in` action.
+- The combined `PayIn-PayOut` heading is replaced by `Partner Payout`, and the Pay-in-specific helper copy is removed.
+- Partner Payout remains visible and unchanged.
+- Added Partner web regression guards preventing the Pay-in UI from reappearing while requiring Partner Payout to remain.
+- No APK/AAB involved.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/DEPLOYMENT NOT YET DONE.**
+
+---
+
 ## 2026-10-07 — Production schema parity repair for Partner customer status filter
 
 - PR #2866 merged as `b6ec856a5e51d79477d81db407315b64e883e18c`; Service Enquiries schema run #1 and Customer production OTA run #160 succeeded.

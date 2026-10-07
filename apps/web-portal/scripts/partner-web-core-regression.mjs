@@ -148,6 +148,10 @@ assert(partnerPolicyDetailPage.includes("data.activity_history.map"), "Partner P
 assert(!partnerPolicyDetailPage.includes('id: "policy-status"'), "Partner Policy detail must not render synthetic Policy status activity");
 assert(!partnerPolicyDetailPage.includes('id: "policy-period"'), "Partner Policy detail must not render synthetic Policy period activity");
 assert(partnerPolicyDetailPage.includes("Created By:"), "Partner Policy detail must show canonical audit actor details");
+assert(!partnerPolicyDetailPage.includes("Insurer Pay-in"), "Partner Policy detail must not expose Insurer Pay-in in the Partner UI");
+assert(!partnerPolicyDetailPage.includes("PayIn-PayOut"), "Partner Policy detail must not expose the combined PayIn-PayOut heading");
+assert(partnerPolicyDetailPage.includes(">Partner Payout</p>"), "Partner Policy detail must retain a Partner Payout section heading");
+assert(partnerPolicyDetailPage.includes('title="Partner Payout"'), "Partner Policy detail must retain the Partner Payout action");
 
 const partnerVehicleDetailPage = read("app/partner/vehicles/[id]/page.tsx");
 assert(partnerVehicleDetailPage.includes("data.activity_history.map"), "Partner Vehicle detail must render canonical activity_history");
