@@ -62,6 +62,8 @@ The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` 
 
 ### Latest implementation ledger
 
+- **2026-10-07 — Isolated Firebase Phone OTP Cloudflare tester:** branch `test/firebase-phone-otp-cloudflare-2026-10-07`; added public test-only route `/firebase-otp-test` using Firebase Web Phone Auth + visible reCAPTCHA to verify real India SMS delivery on an authorized Cloudflare tester domain. Firebase Web API key is entered at runtime and retained only in browser sessionStorage; no Supabase session/customer/profile/data integration, schema/RLS change, mobile runtime change, OTA, APK or AAB. **IMPLEMENTED; PR/CI/merge pending.** See `docs/CURRENT_CHAT_HANDOFF.md`.
+
 - **2026-10-07 — Internal production security boundary remediation:** branch `security/remediate-live-audit-2026-10-07-v5`; closes first-audit Supabase access-control findings across role resolution, delete policies, privileged views/RPCs, anonymous SECURITY DEFINER execution, trigger RPC exposure, mutable search paths, deny-all table grants, POSP document storage, authenticated actor/viewer binding, associated onboarding helpers and `pg_trgm` placement; strengthens Web/Partner reset-password policy. Full migration set rollback-validated against current production schema; no production mutation and no APK/AAB. **IMPLEMENTED + ROLLBACK-VALIDATED; PR/CI/merge/migration apply/post-apply retest pending.** See `docs/CURRENT_CHAT_HANDOFF.md`.
 
 
