@@ -156,3 +156,27 @@ A second subset still has table grants to `anon` / `authenticated`, but with RLS
 5. Run current Supabase performance advisor and query hot-path review.
 6. Add SAST/SCA/secret-scan/SBOM evidence pipeline.
 7. Build deterministic E2E/smoke and controlled load harnesses.
+
+
+### INS-PERF-001 — Current database advisor backlog can constrain load-test readiness
+- **Severity:** Medium performance / certification blocker
+- **Status:** OPEN
+- **Component:** Supabase PostgreSQL
+- **Evidence (2026-10-07 current advisor):**
+  - 154 unindexed foreign-key findings.
+  - 95 RLS init-plan warnings.
+  - 73 multiple-permissive-policy warnings.
+  - 176 unused-index notices.
+  - 3 duplicate-index warnings.
+- **Impact:** avoidable query/RLS overhead and schema complexity can amplify latency under concurrency. Counts alone do not justify adding/removing indexes.
+- **Recommended remediation:** prioritize hot paths using query evidence and controlled `EXPLAIN (ANALYZE, BUFFERS)`/load tests; add only proven covering indexes; rewrite expensive RLS auth calls safely; consolidate overlapping policies only after authorization-parity tests; remove duplicates after dependency verification.
+- **Retest:** advisor delta documented; hot-path p95/load metrics demonstrate improvement without authorization regression.
+
+### INS-ASSURE-001 — Standard security/supply-chain evidence gates are absent from the repository
+- **Severity:** Medium process/control gap; blocks internal certification
+- **Status:** OPEN
+- **Component:** GitHub CI / software supply chain
+- **Evidence:** repository-wide searches on 2026-10-07 returned no implementation hits for CodeQL, Semgrep, Gitleaks, TruffleHog, OWASP ZAP, Trivy, Syft, CycloneDX/SBOM, npm audit or GitHub dependency-review action.
+- **Impact:** current custom regressions are valuable but do not provide standard evidence for source scanning, dependency CVEs, committed-secret detection, SBOM inventory or DAST.
+- **Recommended remediation:** add reviewed/pinned CI gates for SAST, secret scanning, dependency/SCA + SBOM and authenticated DAST in a non-destructive environment. Preserve existing business regressions.
+- **Retest:** tools run on the exact certification commit and produce retained machine-readable + human-readable artifacts with policy-defined pass/fail thresholds.
