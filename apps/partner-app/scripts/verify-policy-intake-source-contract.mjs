@@ -6,6 +6,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
 const service = fs.readFileSync(path.join(root, 'lib/policy-intakes.ts'), 'utf8');
 const screen = fs.readFileSync(path.join(root, 'app/policy-intake-new.tsx'), 'utf8');
+const detailScreen = fs.readFileSync(path.join(root, 'app/policy-intakes/[id].tsx'), 'utf8');
+const manufacturerLogo = fs.readFileSync(path.join(root, 'components/ui/partner-manufacturer-logo.tsx'), 'utf8');
 const api = fs.readFileSync(path.resolve(root, '../web-portal/app/api/partner/policy-intakes/route.ts'), 'utf8');
 
 function requireText(source, needle, message) {
@@ -49,4 +51,24 @@ requireText(api, 'action: "submit_without_proposal"', 'Partner Policy Intake API
 requireText(api, 'status: proposalForm ? "ready_for_review" : "processing"', 'Life/Health proposal submissions must bypass OCR and enter Operations review.');
 requireText(api, 'if (!proposalForm) {', 'Partner Policy Intake API must gate OCR processing away from Life/Health proposals.');
 
-console.log('Partner Policy Intake source and policy-type contracts verified.');
+for (const required of [
+  'title="Policy Intake"',
+  '<PartnerInsurerLogo',
+  '<PartnerManufacturerLogo',
+  'statusBadgeStyle(row)',
+  'statusDate',
+]) {
+  requireText(detailScreen, required, `Policy Intake detail redesign must preserve ${required}.`);
+}
+for (const removed of [
+  'eyebrow="POLICY INTAKE"',
+  'subtitle="Track Operations progress and respond when needed"',
+  '<Text style={styles.statusLabel}>CURRENT STATUS</Text>',
+  'Updated {formatDate(row.updated_at)}',
+]) {
+  if (detailScreen.includes(removed)) throw new Error(`Policy Intake detail must not restore removed UI: ${removed}`);
+}
+requireText(manufacturerLogo, 'getPartnerManufacturerLogoSource(name)', 'Partner manufacturer logo must reuse the catalog mapping.');
+requireText(manufacturerLogo, 'fallback ?? null', 'Partner manufacturer logo must preserve fallback artwork.');
+
+console.log('Partner Policy Intake source, policy-type and detail presentation contracts verified.');
