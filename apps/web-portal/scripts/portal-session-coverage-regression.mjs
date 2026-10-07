@@ -57,6 +57,7 @@ const intentionallyPublicPageRoots = new Set([
   "account-deletion",
   "auth",
   "forgot-password",
+  "firebase-otp-test",
   "invite",
   "login",
   "privacy-policy",
