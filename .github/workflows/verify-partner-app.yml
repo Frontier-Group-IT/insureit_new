@@ -43,7 +43,8 @@ jobs:
         run: npm ci --no-fund
 
       - name: Dependency vulnerability gate
-        run: npm audit --audit-level=high --omit=dev
+        working-directory: ${{ github.workspace }}
+        run: npm audit --workspace @insureit/partner-app --audit-level=high --omit=dev
 
       - name: Require synchronized dependency lockfile
         shell: bash
