@@ -1,3 +1,19 @@
+## 2026-10-07 — Internal production security boundary remediation (first audit pass)
+
+- Branch: `security/remediate-live-audit-2026-10-07-v4`.
+- Production audit confirmed: over-broad `staff_delete_reserved_for_it_super_user` policies; anonymous access to legacy `posp-documents`; two owner-privileged audit views readable from Data API roles; six privileged RPCs exposed beyond their server-only call path; anonymous execution inherited by public SECURITY DEFINER functions; 61 SECURITY DEFINER trigger/event-trigger functions callable as RPCs; 20 mutable function search paths.
+- Added migrations:
+  - `20261007130000_internal_security_boundary_hardening.sql`
+  - `20261007131000_security_function_surface_hardening.sql`
+  - `20261007132000_revoke_anon_security_definer_execution.sql`
+- Safety: each migration was executed against the current production schema inside a transaction ending in `ROLLBACK`, with assertions for policy scope, function grants, view access, storage policies and trigger runtime behavior. Production was not mutated.
+- Live RPC evidence: observed Policy Intake finalization requests used `service_role`; high-volume Partner RPCs used `authenticated` and remained executable in rollback validation.
+- Existing `release-blocker-security-regression.mjs` now guards the remediation contracts.
+- No APK/AAB created.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/MIGRATION APPLICATION/PRODUCTION RETEST PENDING.**
+
+---
+
 ## 2026-10-07 — Partner Settings account icons + two-line Device Security rows
 
 - Branch: `ui/partner-settings-account-icons-security-layout-2026-10-07`.
