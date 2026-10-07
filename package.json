@@ -15,7 +15,13 @@
     "react-native-safe-area-context": "5.6.2",
     "react-native-screens": "4.16.0",
     "@typescript-eslint/eslint-plugin": "8.65.0",
-    "@typescript-eslint/parser": "8.65.0"
+    "@typescript-eslint/parser": "8.65.0",
+    "shell-quote": "1.11.0",
+    "compression": "1.8.2",
+    "undici": "6.28.1",
+    "nanoid": "3.3.18",
+    "js-yaml": "4.3.2",
+    "source-map-js": "1.2.2"
   },
   "scripts": {
     "dev": "npm --workspace apps/web-portal run dev",
