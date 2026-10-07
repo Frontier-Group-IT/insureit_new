@@ -8,8 +8,9 @@
 - Added visual regression coverage in `verify-visual-system-completion.mjs`.
 - No schema/RLS/database/native dependency change. **No APK/AAB created.**
 - PR #2914 passed **Verify Partner app #568** and **Verify web portal #5572**, then merged as `530e009f511b36606a5f8292ad7d8c2d72a298c8`.
-- Production OTA release branch: `release/partner-business-overview-icons-ota-2026-10-07`; trigger file updated for runtime 0.2.0.
-- **MERGED; production OTA pending.**
+- Production OTA release PR #2915 merged as `338b6105fdff23feb25a06c1e2d4f635c95edbaa` after **Verify Partner app #569** passed.
+- **Publish Partner production OTA #86** completed successfully from current `main` to channel `production`, runtime `0.2.0`.
+- **MERGED + OTA PUBLISHED; installed-device verification pending. No APK/AAB created.**
 
 ---
 
