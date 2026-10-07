@@ -7,6 +7,7 @@ import { PartnerScreen } from '@/components/partner-screen';
 import { StoryRail } from '@/components/story-rail';
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
+import { PartnerBusinessGrowthIcon } from '@/components/ui/partner-business-growth-icon';
 import { PartnerEnter } from '@/components/ui/partner-enter';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
@@ -253,10 +254,7 @@ export default function PartnerHomeScreen() {
                   )}
                 </View>
 
-                <View style={styles.chartTile}>
-                  <Ionicons name="stats-chart" size={42} color="#0B82E6" />
-                  <Ionicons name="arrow-up" size={20} color="#0B82E6" style={styles.chartArrow} />
-                </View>
+                <PartnerBusinessGrowthIcon size={64} />
               </View>
 
               <View style={styles.businessDivider} />
@@ -562,15 +560,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.7,
   },
   businessCaption: { marginTop: 1, color: '#4F5D71', fontSize: 10.5, fontWeight: '600' },
-  chartTile: {
-    width: 64,
-    height: 64,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EAF6FF',
-  },
-  chartArrow: { position: 'absolute', right: 5, top: 5 },
   trend: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 4 },
   trendText: { fontSize: 9.5, fontWeight: '700' },
   trendNeutral: { marginTop: 8, color: '#8691A2', fontSize: 9.5, fontWeight: '600' },

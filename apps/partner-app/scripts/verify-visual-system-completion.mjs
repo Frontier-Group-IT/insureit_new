@@ -19,7 +19,9 @@ const topBar = read('components/ui/partner-top-bar.tsx');
 const stateView = read('components/ui/partner-state-view.tsx');
 const screen = read('components/partner-screen.tsx');
 const listScreen = read('components/partner-list-screen.tsx');
+const home = read('app/(tabs)/index.tsx');
 const more = read('app/(tabs)/more.tsx');
+const businessGrowthIcon = read('components/ui/partner-business-growth-icon.tsx');
 const business = read('app/(tabs)/business.tsx');
 const customers = read('app/customers.tsx');
 const policies = read('app/(tabs)/policies.tsx');
@@ -62,7 +64,14 @@ requireText(stateView, 'PartnerAssets.emptyStates.offline', 'Offline state must 
 requireText(stateView, 'PartnerAssets.emptyStates.validationError', 'Generic error state must use branded Partner artwork.');
 requireText(stateView, 'PartnerAssets.emptyStates.incompleteDetails', 'Unauthorized state must use branded Partner artwork.');
 
-if (more.includes('<MenuRow icon=')) throw new Error('Feature rows in More must use Partner artwork instead of generic vector icons.');
+const moreWithoutApprovedBusinessGrowthIcon = more.replace('<MenuRow icon={<PartnerBusinessGrowthIcon size={36} />} title="Your Week"', '');
+if (moreWithoutApprovedBusinessGrowthIcon.includes('<MenuRow icon=')) throw new Error('Feature rows in More must use Partner artwork instead of generic vector icons.');
+requireText(home, '<PartnerBusinessGrowthIcon size={64} />', 'Partner Home business card must use the shared reference-style growth icon.');
+requireText(more, '<MenuRow icon={<PartnerBusinessGrowthIcon size={36} />} title="Your Week"', 'More → Your Week must reuse the same shared business growth icon.');
+requireText(businessGrowthIcon, 'styles.barOne', 'Shared business growth icon must keep the first reference bar.');
+requireText(businessGrowthIcon, 'styles.barFour', 'Shared business growth icon must keep the fourth reference bar.');
+requireText(businessGrowthIcon, 'name="trending-up"', 'Shared business growth icon must keep the rising trend line.');
+requireText(businessGrowthIcon, 'name="arrow-up"', 'Shared business growth icon must keep the top-right growth arrow.');
 for (const asset of ['PartnerAssets.actions.policyChecklist', 'PartnerAssets.status.businessGrowth', 'PartnerAssets.status.settings']) requireText(more, asset, `More screen is missing ${asset}.`);
 
 for (const businessAsset of ['actions.quickRenewals', 'actions.quickClaims', 'actions.quickCustomers']) {
