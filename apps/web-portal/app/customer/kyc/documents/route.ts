@@ -4,7 +4,8 @@ import { getCustomerWebSession } from "@/lib/customer-web";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
-const DOCUMENT_TYPES = new Set(["pan_copy", "aadhaar_front", "aadhaar_back", "gst_copy"]);
+type KycDocumentType = "pan_copy" | "aadhaar_front" | "aadhaar_back" | "gst_copy";
+const DOCUMENT_TYPES = new Set<KycDocumentType>(["pan_copy", "aadhaar_front", "aadhaar_back", "gst_copy"]);
 
 function extension(file: File) {
   if (file.type === "application/pdf") return "pdf";
@@ -16,7 +17,8 @@ export async function POST(request: Request) {
   const session = await getCustomerWebSession();
   const form = await request.formData();
   const applicationId = String(form.get("applicationId") ?? "").trim();
-  const documentType = String(form.get("documentType") ?? "").trim();
+  const requestedDocumentType = String(form.get("documentType") ?? "").trim();
+  const documentType = requestedDocumentType as KycDocumentType;
   const file = form.get("file");
 
   if (!DOCUMENT_TYPES.has(documentType)) return NextResponse.json({ error: "Unsupported KYC document type." }, { status: 400 });
