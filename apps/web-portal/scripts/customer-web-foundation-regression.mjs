@@ -57,6 +57,15 @@ assert(navigation.includes('fetch("/customer/auth/session", { method: "DELETE" }
 assert(!navigation.includes('href="/partner'), "Customer navigation must not expose Partner routes");
 assert(!navigation.includes('href="/reports'), "Customer navigation must not expose Operations report routes");
 
+const portalRoutes = read("lib/portal-routes.ts");
+const middleware = read("middleware.ts");
+assert(portalRoutes.includes('"/customer"'), "Customer Web must participate in protected route session coverage");
+assert(middleware.includes('type SessionStatus = "authorized" | "customer" | "forbidden" | "invalid"'), "Customer sessions must remain distinct from employee/Partner authorization");
+assert(middleware.includes('profile?.is_active && profile.role === "customer"'), "middleware must recognize only active customer profiles");
+assert(middleware.includes('if (check.status !== "customer")'), "Customer routes must reject non-customer sessions");
+assert(middleware.includes('if (check.status === "customer") return redirect(request, "/access-denied"'), "Customer sessions must remain denied from existing protected employee/Partner routes");
+assert(middleware.includes('"/customer/:path*"'), "Customer Web must remain inside middleware session-refresh coverage");
+
 const partnerGuard = read("lib/partner-web.ts");
 assert(partnerGuard.includes('profile.role !== "intermediary"'), "Partner authorization must remain intermediary-only");
 
