@@ -1,3 +1,15 @@
+## 2026-10-07 — Cloudflare direct-main production v4
+
+- Rebuilt from latest `main` after PR #2940 completed green verification but became behind `main` while checks ran.
+- Keeps current `main` customer web type model, where `CustomerWebAccount.customer_name` matches the shared Customer Portal component.
+- Removes `.github/workflows/sync-main-to-cloudflare-preview.yml` so stale `cloudflare-poc` is no longer part of deployment.
+- Adds Cloudflare build entrypoint/config directly to `main`: `scripts/build-cloudflare-poc.sh`, `apps/web-portal/wrangler.jsonc`, `apps/web-portal/open-next.config.ts`.
+- `open-next.config.ts` is excluded from the normal app TypeScript project because `@opennextjs/cloudflare` is installed transiently only during the Cloudflare build.
+- Cloudflare dashboard target remains: Production branch = `main`; Preview deployments disabled.
+- **IMPLEMENTED; PR/CI/MERGE PENDING.**
+
+---
+
 ## 2026-10-07 — Partner Policy Intake Details compact identity redesign
 
 - Release branch: `release/partner-policy-intake-detail-redesign-2026-10-07`, reconciled from approved PR #2936 onto latest `main`.
