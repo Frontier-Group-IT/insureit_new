@@ -1,3 +1,23 @@
+## 2026-10-07 — Partner Customers clickable KPI filters + compact records
+
+- Branch: `ui/partner-customers-kpi-filters-2026-10-07`.
+- Partner App Customers top KPI strip is now interactive:
+  - Customers → all scoped customers
+  - Active → only status `active`
+  - Inactive → all scoped customers whose status is not `active`, matching the existing summary count semantics.
+- KPI cards now use clear professional Ionicons: people, check-circle, remove-circle, with accessible selected-state semantics.
+- Customer list records no longer render city/state or the location pin row.
+- Search still supports city as an input criterion; only the visible record location line was removed.
+- Added `partner_app_list_customers_v2` as a new scoped RPC instead of changing the existing RPC signature, preserving compatibility with older clients.
+- The v2 RPC keeps the same Partner commercial-scope enforcement, server-side pagination/search, and adds validated `active`/`inactive` filtering so KPI filters work across the full scoped dataset rather than only the current page.
+- Partner customer client service now accepts `all | active | inactive` and calls the v2 RPC.
+- Added Phase 5 regression guards for KPI filtering, icons, accessibility state, v2 RPC usage, and location-row removal.
+- Migration added: `supabase/migrations/20261007103000_partner_app_customer_status_filter.sql`.
+- No native dependency changes and no APK/AAB created.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/MIGRATION APPLY/OTA NOT YET DONE.**
+
+---
+
 ## 2026-10-07 — Partner Home MTD vs previous-month MTD comparison
 
 - Branch: `fix/partner-home-mtd-previous-month-2026-10-07`.
