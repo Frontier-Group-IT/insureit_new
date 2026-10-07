@@ -461,7 +461,10 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  heroProfileIconPressed: {
+    opacity: 0.68,
   },
 
   sectionTitleRow: {
