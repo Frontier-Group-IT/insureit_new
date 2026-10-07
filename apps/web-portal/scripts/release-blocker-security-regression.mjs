@@ -40,6 +40,9 @@ const internalPrimitiveMigration = source("../../supabase/migrations/20261007134
 const associatedOnboardingMigration = source("../../supabase/migrations/20261007135000_associated_onboarding_authorization_hardening.sql");
 const denyAllTableMigration = source("../../supabase/migrations/20261007136000_deny_all_table_privilege_hardening.sql");
 const pgTrgmMigration = source("../../supabase/migrations/20261007137000_move_pg_trgm_to_extensions.sql");
+const claimProgressHelperMigration = source("../../supabase/migrations/20261007138000_internal_claim_progress_helper_hardening.sql");
+const webResetPasswordPage = source("../app/reset-password/page.tsx");
+const partnerResetPasswordPage = source("../../partner-app/app/reset-password.tsx");
 
 for (const [name, content] of [
   ["account review page", accountReview],
@@ -187,6 +190,14 @@ requireText("corporate contact editable-state guard", associatedOnboardingMigrat
 requireText("deny-all RLS table discovery", denyAllTableMigration, "having count(p.oid) = 0");
 requireText("deny-all browser privilege revoke", denyAllTableMigration, "'revoke all privileges on table %I.%I from anon, authenticated'");
 requireText("pg_trgm moved out of public", pgTrgmMigration, "alter extension pg_trgm set schema extensions");
+requireText("claim progress helper browser revoke", claimProgressHelperMigration, "public.external_claim_customer_completed_stage(uuid)");
+requireText("claim progress helper authenticated revoke", claimProgressHelperMigration, "from public, anon, authenticated");
+requireText("portal password reset 12-char baseline", webResetPasswordPage, "password.length < 12");
+requireText("portal password reset uppercase requirement", webResetPasswordPage, "/[A-Z]/.test(password)");
+requireText("portal password reset symbol requirement", webResetPasswordPage, "/[^A-Za-z0-9]/.test(password)");
+requireText("partner password reset 12-char baseline", partnerResetPasswordPage, "password.length < 12");
+requireText("partner password reset uppercase requirement", partnerResetPasswordPage, "/[A-Z]/.test(password)");
+requireText("partner password reset symbol requirement", partnerResetPasswordPage, "/[^A-Za-z0-9]/.test(password)");
 
 assert.deepEqual(
   classifyPolicyIntakeDeleteLinks([{ id: "rejected-1", status: "rejected" }]),
@@ -248,5 +259,7 @@ console.log(JSON.stringify({
   associatedOnboardingAuthorizationBound: true,
   denyAllRlsTablesExplicitlyServerOnly: true,
   publicExtensionWarningClosed: true,
+  internalClaimProgressHelperServerOnly: true,
+  passwordResetStrengthCompensatingControl: true,
   status: "ok",
 }, null, 2));
