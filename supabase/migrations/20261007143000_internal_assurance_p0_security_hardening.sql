@@ -302,3 +302,14 @@ alter function public.validate_required_intermediary_identity_fields() set searc
 -- The live database search_path already includes "extensions"; move pg_trgm
 -- out of the exposed public schema without rebuilding dependent indexes.
 alter extension pg_trgm set schema extensions;
+
+
+-- ---------------------------------------------------------------------------
+-- 8. Explicit authenticated-only reference-data policy
+-- ---------------------------------------------------------------------------
+drop policy if exists "Authenticated users can read vehicle manufacturers" on public.vehicle_manufacturers;
+create policy "Authenticated users can read vehicle manufacturers"
+on public.vehicle_manufacturers
+for select
+to authenticated
+using (true);
