@@ -6,7 +6,7 @@ import type { Profile } from "@/lib/auth-config";
 
 export type CustomerWebAccount = {
   id: string;
-  company_name: string | null;
+  customer_name: string | null;
   contact_name: string | null;
 };
 
@@ -52,7 +52,7 @@ export const getCustomerWebSession = cache(async (): Promise<CustomerWebSession>
   const [directResult, membershipResult] = await Promise.all([
     supabase
       .from("customers")
-      .select("id, company_name, contact_name")
+      .select("id, customer_name:company_name, contact_name")
       .eq("profile_id", user.id)
       .order("updated_at", { ascending: false }),
     supabase
@@ -77,7 +77,7 @@ export const getCustomerWebSession = cache(async (): Promise<CustomerWebSession>
   if (membershipIds.length > 0) {
     const members = await supabase
       .from("customers")
-      .select("id, company_name, contact_name")
+      .select("id, customer_name:company_name, contact_name")
       .in("id", membershipIds);
     if (members.error) redirect("/access-denied");
     memberAccounts = (members.data ?? []) as CustomerWebAccount[];
