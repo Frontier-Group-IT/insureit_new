@@ -32,6 +32,7 @@ const policyIntakesPage = source("app/policy-intakes/page.tsx");
 const itSuperUserDeletePanel = source("components/it-super-user-delete-panel.tsx");
 const policyPairDelete = source("app/policy-pair-delete-actions.ts");
 const policyPairDeleteMigration = source("../../supabase/migrations/20260908152200_delete_completed_policy_intake_pair.sql");
+const auditedBoundaryMigration = source("../../supabase/migrations/20261007130000_internal_security_boundary_hardening.sql");
 
 for (const [name, content] of [
   ["account review page", accountReview],
@@ -110,6 +111,30 @@ requireText("completed Policy + Intake audit trail", policyPairDeleteMigration, 
 requireText("completed Policy + Intake RPC browser revoke", policyPairDeleteMigration, "revoke all on function public.delete_policy_with_completed_intake_pair(uuid, uuid, uuid) from authenticated");
 requireText("completed Policy + Intake RPC service-role grant", policyPairDeleteMigration, "grant execute on function public.delete_policy_with_completed_intake_pair(uuid, uuid, uuid) to service_role");
 
+requireText("audited role resolution fails closed", auditedBoundaryMigration, "else (");
+rejectText("audited role resolution", auditedBoundaryMigration, "'customer'::public.app_role");
+requireText("audited generic delete policy authenticated-only", auditedBoundaryMigration, "alter policy %I on %I.%I to authenticated");
+requireText("audited generic delete policy IT Super User only", auditedBoundaryMigration, "(select public.current_app_role()) = ''it_super_user''::public.app_role");
+requireText("audited cleanup view security invoker", auditedBoundaryMigration, "alter view public.intermediary_customer_cleanup_candidates set (security_invoker = true)");
+requireText("audited cutover view security invoker", auditedBoundaryMigration, "alter view public.intermediary_onboarding_cutover_audit set (security_invoker = true)");
+requireText("audited cleanup view browser revoke", auditedBoundaryMigration, "revoke all on table public.intermediary_customer_cleanup_candidates from public, anon, authenticated");
+requireText("audited cutover view browser revoke", auditedBoundaryMigration, "revoke all on table public.intermediary_onboarding_cutover_audit from public, anon, authenticated");
+for (const signature of [
+  "public.finalize_policy_intake_motor_v1(uuid, jsonb, integer)",
+  "public.get_policy_business_report_v4(uuid[], date, date, uuid, uuid, text, text, text, integer, integer)",
+  "public.issue_partner_identity(uuid, uuid)",
+  "public.issue_legacy_partner_identity(uuid, uuid, text)",
+  "public.ensure_legacy_partner_record(uuid, uuid)",
+  "public.post_accounts_excel_reconciliation(uuid, jsonb, jsonb, jsonb)",
+]) {
+  requireText("audited privileged RPC browser revoke", auditedBoundaryMigration, `revoke all on function ${signature} from public, anon, authenticated`);
+  requireText("audited privileged RPC service-role grant", auditedBoundaryMigration, `grant execute on function ${signature} to service_role`);
+}
+requireText("legacy POSP anonymous read removed", auditedBoundaryMigration, 'drop policy if exists "Allow anon read posp-documents" on storage.objects');
+requireText("legacy POSP anonymous upload removed", auditedBoundaryMigration, 'drop policy if exists "Allow anon upload posp-documents" on storage.objects');
+requireText("legacy POSP upload size bounded", auditedBoundaryMigration, "file_size_limit = 10485760");
+requireText("legacy POSP MIME types bounded", auditedBoundaryMigration, "allowed_mime_types = array['application/pdf','image/jpeg','image/png']::text[]");
+
 assert.deepEqual(
   classifyPolicyIntakeDeleteLinks([{ id: "rejected-1", status: "rejected" }]),
   { rejectedIds: ["rejected-1"], blockingCount: 0 },
@@ -158,5 +183,8 @@ console.log(JSON.stringify({
   completedPolicyIntakeProtectedDependencies: true,
   completedPolicyIntakeExternalRenewalGuard: true,
   completedPolicyIntakeStorageCleanupAudit: true,
+  auditedDatabaseSecurityBoundaries: true,
+  privilegedRpcBrowserExecutionRevoked: true,
+  legacyPospAnonymousStorageClosed: true,
   status: "ok",
 }, null, 2));
