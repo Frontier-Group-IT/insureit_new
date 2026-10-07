@@ -62,6 +62,10 @@ The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` 
 
 ### Latest implementation ledger
 
+- **2026-10-07 — Customer Web Cloudflare secure-session compatibility:** branch `fix/customer-web-cloudflare-session-2026-10-07`; Customer-only `/customer/auth/session` now verifies OTP access tokens server-side through Supabase Auth `getUser()` plus scoped Customer profile lookup instead of the shared claims helper, with safe Customer-only diagnostic codes and strengthened isolation regression. **No Partner Portal, Operations Portal, shared middleware, schema/RLS, production deployment, OTA, APK or AAB changes. IMPLEMENTED; PR/CI/Cloudflare preview verification/merge pending.** See `docs/CUSTOMER_WEB_HANDOFF.md`.
+
+
+
 - **2026-10-07 — Operations desktop sidebar state stability:** branch `fix/sidebar-state-stability-v3-2026-10-07`; route synchronization runs only on real pathname changes, manual workspace toggles are not overwritten by unrelated renders/permission refreshes, and the desktop expansion event no longer clears nested groups. Added a dedicated web regression guard. **IMPLEMENTED; PR/CI/merge/deployment pending. No schema/RLS/API/business-logic change.** See `docs/CURRENT_CHAT_HANDOFF.md`.
 
 - **2026-10-07 — Isolated Customer Web foundation:** branch `feature/customer-web-foundation-2026-10-07`, PR #2882; added customer-only `/customer` Next.js surface with phone OTP/session handling, active-customer server guard, membership account resolution, responsive shell/navigation, dedicated middleware session state/refresh coverage, and isolation regressions. Existing Partner/Operations authorization definitions, capabilities, routes, schema/RLS, Customer App runtime, deployment, and APK/AAB paths remain unchanged. `Verify web portal` run #5399 passed on the functional foundation head; final documentation/regression-hardening head CI pending. **IMPLEMENTED; PR OPEN; MERGE/DEPLOYMENT PENDING.** See `docs/CUSTOMER_WEB_HANDOFF.md`.
