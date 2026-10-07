@@ -27,6 +27,7 @@ const required = [
   "sync_external_customer_stage_to_operations",
   "sync_partner_details_to_linked_accounts",
   "sync_partner_identity_to_intermediary_register",
+  "alter extension pg_trgm set schema extensions",
 ];
 
 for (const needle of required) {
