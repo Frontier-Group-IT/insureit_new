@@ -1420,3 +1420,10 @@ Seller flow now routes “Add another vehicle” into the existing Customer `/cu
 
 ### Customer Exchange verified redesign checkpoint — 2026-10-07
 PR #2883 has reached a fully green implementation checkpoint covering marketplace Home/Search, dedicated Vehicle Detail + private gallery, source-aware Vehicle Health, guided seller flow with seller-declared condition + Camera/Gallery, Add Vehicle reuse, real selling modes, My Exchange Buying/Selling/Saved/Deals, offer withdrawal/rejection, Deal Room, 2–3 vehicle comparison and estimate-only EMI. Production Exchange currently has 0 listings/responses/deals, so valuation and marketplace-intelligence features are deliberately deferred until real comparable data or a trustworthy external source exists. Full exact state is in `docs/CUSTOMER_EXCHANGE_REDESIGN_HANDOFF_2026_10_07.md`. Keep PR unmerged and do not publish OTA / build APK-AAB unless explicitly approved.
+
+
+### Production assurance continuity — 2026-10-07
+
+- Read `docs/PRODUCTION_ASSURANCE_HANDOFF_2026_10_07.md` before continuing security, dependency, database-performance, CI/CD, production-gating, load/capacity, or third-party certification work.
+- Work one assurance class to closure: identify -> safely reproduce -> remediate -> regress -> retest -> evidence-backed close. Do not move to another test family while confirmed Critical/High findings in the active class remain unresolved.
+- Keep the assurance handoff updated after meaningful findings, fixes, PR/check results, deployment/config changes, and retests. It is engineering continuity evidence, not the final management report.
