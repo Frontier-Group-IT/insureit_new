@@ -21,6 +21,7 @@ const screen = read('components/partner-screen.tsx');
 const listScreen = read('components/partner-list-screen.tsx');
 const home = read('app/(tabs)/index.tsx');
 const more = read('app/(tabs)/more.tsx');
+const profileMenuIcon = read('components/ui/partner-profile-menu-icon.tsx');
 const businessGrowthIcon = read('components/ui/partner-business-growth-icon.tsx');
 const businessOverviewIcons = read('components/ui/partner-business-overview-icons.tsx');
 const homeMetricIcons = read('components/ui/partner-home-metric-icons.tsx');
@@ -79,15 +80,27 @@ requireText(homeMetricIcons, 'styles.policyBadge', 'Policies Sold generated icon
 requireText(homeMetricIcons, 'styles.coinTop', 'Commission Earned generated icon must retain stacked coin treatment.');
 requireText(homeMetricIcons, "backgroundColor: '#EDF7FF'", 'Generated Home metric icons must keep the soft blue reference tile.');
 
-const moreWithoutApprovedBusinessGrowthIcon = more.replace('<MenuRow icon={<PartnerBusinessGrowthIcon size={36} />} title="Your Week"', '');
-if (moreWithoutApprovedBusinessGrowthIcon.includes('<MenuRow icon=')) throw new Error('Feature rows in More must use Partner artwork instead of generic vector icons.');
 requireText(home, '<PartnerBusinessGrowthIcon size={64} />', 'Partner Home business card must use the shared reference-style growth icon.');
-requireText(more, '<MenuRow icon={<PartnerBusinessGrowthIcon size={36} />} title="Your Week"', 'More → Your Week must reuse the same shared business growth icon.');
+requireText(more, '<PartnerProfileMenuIcon kind={iconKind} size={38} />', 'Partner Profile/More menu rows must use the shared professional icon component.');
+for (const kind of [
+  'search', 'policy-intake', 'renewals', 'customers',
+  'week', 'impact', 'journey', 'activity',
+  'learn', 'recognition', 'stories',
+  'profile', 'support', 'settings',
+]) {
+  requireText(more, `iconKind="${kind}"`, `Partner Profile/More menu must map the professional ${kind} icon.`);
+  requireText(profileMenuIcon, `${kind}:`, `Partner Profile menu icon system is missing ${kind}.`);
+}
+requireText(profileMenuIcon, "backgroundColor: '#EDF6FF'", 'Partner Profile menu icons must keep the same soft professional blue tile language as Business KPI icons.');
+requireText(profileMenuIcon, "borderColor: '#D4E8FF'", 'Partner Profile menu icons must keep the professional blue border treatment.');
+requireText(profileMenuIcon, "shadowColor: '#0B4E9B'", 'Partner Profile menu icons must keep subtle branded depth.');
+if (more.includes('PartnerAssets.actions.') || more.includes('PartnerAssets.status.') || more.includes('PartnerAssets.navigation.')) {
+  throw new Error('Partner Profile/More menu must not regress to mixed legacy artwork after professional icon unification.');
+}
 requireText(businessGrowthIcon, 'styles.barOne', 'Shared business growth icon must keep the first reference bar.');
 requireText(businessGrowthIcon, 'styles.barFour', 'Shared business growth icon must keep the fourth reference bar.');
 requireText(businessGrowthIcon, 'name="trending-up"', 'Shared business growth icon must keep the rising trend line.');
 if (businessGrowthIcon.includes('name="arrow-up"')) throw new Error('Shared business growth icon must not restore the removed top-right straight arrow.');
-for (const asset of ['PartnerAssets.actions.policyChecklist', 'PartnerAssets.status.businessGrowth', 'PartnerAssets.status.settings']) requireText(more, asset, `More screen is missing ${asset}.`);
 
 for (const businessAsset of ['actions.quickRenewals', 'actions.quickClaims', 'actions.quickCustomers']) {
   requireText(business, `PartnerAssets.${businessAsset}`, `Business is missing ${businessAsset} artwork.`);
