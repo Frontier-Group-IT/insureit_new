@@ -53,6 +53,11 @@ const embeddedEditorHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: projectRoot,
+  // Cloudflare POC: serve original image URLs directly instead of /_next/image.
+  // This avoids requiring a Cloudflare Images binding for the Worker test deployment.
+  images: {
+    unoptimized: true,
+  },
   transpilePackages: ["@insureit/claim-journey"],
   async headers() {
     return [
