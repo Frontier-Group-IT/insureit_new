@@ -345,7 +345,7 @@ function PendingTasksCard({ data, onOpenClaims }: { data: PartnerHomeData; onOpe
         style={({ pressed }) => [styles.pendingRow, pressed && styles.pressed]}
       >
         <View style={styles.pendingIconBox}>
-          <Image source={PartnerAssets.actions.policyChecklist} style={styles.pendingIcon} resizeMode="contain" />
+          <Image source={PartnerAssets.actions.quickClaims} style={styles.pendingIcon} resizeMode="contain" />
         </View>
         <View style={styles.pendingCopy}>
           <Text style={styles.pendingRowTitle}>{title}</Text>
@@ -635,55 +635,54 @@ const styles = StyleSheet.create({
   pendingCard: {
     position: 'relative',
     marginBottom: 6,
-    paddingHorizontal: 13,
-    paddingTop: 11,
-    paddingBottom: 10,
+    paddingHorizontal: 12,
+    paddingTop: 9,
+    paddingBottom: 8,
     overflow: 'hidden',
-    borderRadius: 16,
-    backgroundColor: '#E7F4FF',
+    borderRadius: 15,
+    backgroundColor: '#E5F4FF',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#D3EAFB',
   },
   pendingHeadingRow: {
-    minHeight: 34,
+    minHeight: 29,
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
   },
-  pendingHeadingCopy: { paddingRight: 76 },
-  pendingTitle: { color: '#17366C', fontSize: 13, fontWeight: '800' },
-  pendingHint: { marginTop: 1, color: '#68809B', fontSize: 9.5, fontWeight: '500' },
+  pendingHeadingCopy: { paddingRight: 72 },
+  pendingTitle: { color: '#17366C', fontSize: 13, lineHeight: 16, fontWeight: '800' },
+  pendingHint: { marginTop: 1, color: '#68809B', fontSize: 9.5, lineHeight: 12, fontWeight: '500' },
   pendingDecor: {
     position: 'absolute',
-    right: -4,
-    top: -5,
-    width: 68,
-    height: 61,
+    right: 1,
+    top: 15,
+    width: 60,
+    height: 55,
     alignItems: 'center',
     justifyContent: 'center',
     opacity: 0.5,
   },
-  pendingDecorImage: { width: 64, height: 64 },
+  pendingDecorImage: { width: 58, height: 58 },
   pendingRow: {
-    minHeight: 47,
-    marginTop: 4,
-    paddingRight: 34,
+    minHeight: 35,
+    marginTop: 1,
+    paddingRight: 60,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
   pendingIconBox: {
-    width: 30,
-    height: 30,
-    borderRadius: 9,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F6FBFF',
   },
-  pendingIcon: { width: 24, height: 24 },
+  pendingIcon: { width: 27, height: 27 },
   pendingCopy: { flex: 1, minWidth: 0 },
-  pendingRowTitle: { color: '#25344C', fontSize: 10.5, fontWeight: '800' },
-  pendingRowSubtitle: { marginTop: 2, color: '#728198', fontSize: 8.8, fontWeight: '500' },
+  pendingRowTitle: { color: '#25344C', fontSize: 10.5, lineHeight: 13, fontWeight: '800' },
+  pendingRowSubtitle: { marginTop: 1, color: '#728198', fontSize: 8.8, lineHeight: 11, fontWeight: '500' },
 
   storiesWrap: { marginTop: 5, marginBottom: 4 },
 });
