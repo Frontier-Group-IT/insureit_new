@@ -1,0 +1,49 @@
+name: Sync main to Cloudflare preview
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cloudflare-preview-sync
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    name: Merge main into cloudflare-poc
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout Cloudflare preview branch
+        uses: actions/checkout@v4
+        with:
+          ref: cloudflare-poc
+          fetch-depth: 0
+
+      - name: Merge latest main into Cloudflare preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main cloudflare-poc
+          git checkout cloudflare-poc
+          git merge --no-edit origin/main
+          git push origin cloudflare-poc
+
+      - name: Write summary
+        shell: bash
+        run: |
+          {
+            echo "## Cloudflare preview sync"
+            echo "- Source: `main`"
+            echo "- Preview branch: `cloudflare-poc`"
+            echo "- Result: latest main merged into Cloudflare preview branch"
+            echo
+            echo "Cloudflare Git integration will deploy the updated preview branch."
+          } >> "$GITHUB_STEP_SUMMARY"
