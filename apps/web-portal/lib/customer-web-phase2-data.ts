@@ -202,6 +202,25 @@ export const loadCustomerClaims = cache(async (customerId: string) => {
   });
 });
 
+export async function loadCustomerClaimListContext(customerId: string) {
+  const claims = await loadCustomerClaims(customerId);
+  if (!claims.length) return { claims, milestones_by_claim: new Map<string, CustomerClaimMilestone[]>() };
+
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from("claim_milestones")
+    .select("id,claim_id,milestone_key,milestone_status,details,completed_at,updated_at")
+    .in("claim_id", claims.map((claim) => claim.id));
+
+  if (error) return { claims, milestones_by_claim: new Map<string, CustomerClaimMilestone[]>() };
+
+  const grouped = new Map<string, CustomerClaimMilestone[]>();
+  for (const milestone of (data ?? []) as CustomerClaimMilestone[]) {
+    grouped.set(milestone.claim_id, [...(grouped.get(milestone.claim_id) ?? []), milestone]);
+  }
+  return { claims, milestones_by_claim: grouped };
+}
+
 export async function loadCustomerClaimDetail(customerId: string, claimId: string) {
   const claims = await loadCustomerClaims(customerId);
   const claim = claims.find((item) => item.id === claimId);
