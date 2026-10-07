@@ -40,6 +40,10 @@ assert(!guard.includes("supabase-admin"), "Customer Web must not use service-rol
 const sessionRoute = read("app/customer/auth/session/route.ts");
 assert(sessionRoute.includes('profile.role !== "customer"'), "Customer Web session endpoint must reject non-customer roles");
 assert(sessionRoute.includes('sessionRoleCookie, "customer"'), "Customer Web session must record only the customer role");
+assert(sessionRoute.includes("supabase.auth.getUser(accessToken)"), "Customer Web session must verify the access token server-side through Supabase Auth");
+assert(sessionRoute.includes('from("profiles")'), "Customer Web session must verify the authenticated customer profile server-side");
+assert(!sessionRoute.includes("getAuthenticatedProfile"), "Customer Web Cloudflare session path must not depend on the shared getClaims-based auth helper");
+assert(!sessionRoute.includes("@/lib/partner-web"), "Customer Web session must remain independent from Partner authorization");
 assert(!sessionRoute.includes("isAuthorizedProfile"), "Customer Web session must not widen employee/Partner authorization");
 assert(!sessionRoute.includes("SUPABASE_SERVICE_ROLE_KEY"), "Customer Web session must not use service-role credentials");
 
@@ -48,6 +52,7 @@ assert(login.includes("shouldCreateUser: false"), "Customer login must not silen
 assert(login.includes('profile.role !== "customer"'), "Customer login must verify customer role before creating browser session");
 assert(login.includes('fetch("/customer/auth/session"'), "Customer login must use the isolated Customer Web session endpoint");
 assert(!login.includes('fetch("/auth/session"'), "Customer login must not use the employee/Partner session endpoint");
+assert(login.includes("customerSessionErrorMessage"), "Customer login must surface safe Customer-only session diagnostics");
 
 const protectedLayout = read("app/customer/(protected)/layout.tsx");
 assert(protectedLayout.includes("await getCustomerWebSession()"), "protected Customer layout must authenticate server-side");
