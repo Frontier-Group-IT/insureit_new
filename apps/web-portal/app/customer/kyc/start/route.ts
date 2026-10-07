@@ -6,6 +6,7 @@ export async function POST() {
   const session = await getCustomerWebSession();
   const supabase = await createServerSupabaseClient();
 
+  const profileResult = await supabase.from("profiles").select("phone,email").eq("id", session.user.id).maybeSingle();
   const existing = await supabase
     .from("customer_onboarding_applications")
     .select("id,partner_type,status")
@@ -43,8 +44,8 @@ export async function POST() {
       partner_type: "individual_proprietor",
       status: "in_progress",
       current_step: 1,
-      applicant_phone: session.profile.phone ?? null,
-      applicant_email: session.profile.email ?? null,
+      applicant_phone: profileResult.data?.phone ?? null,
+      applicant_email: profileResult.data?.email ?? session.user.email ?? null,
       draft_data: {},
     })
     .select("id,partner_type,status")
