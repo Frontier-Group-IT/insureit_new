@@ -1,3 +1,15 @@
+## 2026-10-07 — Internal Security Pass 1 production closure
+
+- PR #2899 merged as `ec216b15f72915f8d562c2eb4c2d69f81c88b37f` after Web Verify #5532 and Partner Verify #559 both passed.
+- Nine security migrations `20261007130000` through `20261007138000` are applied in production and migration-history versions now match repository filenames.
+- Live post-apply assertions: 0 over-broad generic delete policies, 0 anonymous SECURITY DEFINER execution, 0 direct browser execution of SECURITY DEFINER triggers/event triggers, 0 legacy anonymous `posp-documents` policies, and no browser DML/SELECT privileges detected on the RLS/no-policy deny-all table set.
+- Supabase security advisor now has only three categories: 102 RLS/no-policy INFO entries (verified intentional deny-all/server-only), 140 authenticated SECURITY DEFINER warnings (recursive call-chain review found 0 functions outside an identity-bound chain), and leaked-password protection disabled because the current Supabase organization is Free tier.
+- Web + Partner password reset now require 12+ characters with upper/lower/number/symbol as a compensating control. Customer App remains phone OTP.
+- Detailed production evidence: `docs/SECURITY_PASS_1_PRODUCTION_VERIFICATION_2026_10_07.md`.
+- No APK/AAB created.
+- **STATE: MERGED + APPLIED + PRODUCTION VERIFIED. SECURITY PASS 1 CLOSED.**
+
+---
 ## 2026-10-07 — Internal production security boundary remediation (first audit pass)
 
 - Working branch: `security/remediate-live-audit-2026-10-07-v5`.
