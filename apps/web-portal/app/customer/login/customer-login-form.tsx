@@ -84,7 +84,7 @@ export function CustomerLoginForm() {
       return;
     }
 
-    const response = await fetch("/customer/auth/session", {
+    const response = await fetch("/api/customer/auth/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
