@@ -149,6 +149,18 @@ export async function loadCustomerServiceActivityDetail(customerId: string, enqu
   return item;
 }
 
+export const loadCustomerSupportClaims = cache(async (customerId: string) => {
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from("claims")
+    .select("id,claim_no,current_status")
+    .eq("customer_id", customerId)
+    .order("updated_at", { ascending: false })
+    .limit(100);
+  if (error) return [];
+  return (data ?? []) as Array<{ id: string; claim_no: string; current_status: string }>;
+});
+
 export function serviceActivityLabel(type: CustomerServiceActivity["service_type"]) {
   if (type === "insurance_quote") return "Insurance Quote";
   if (type === "challan_assistance") return "Challan Assistance";
