@@ -20,7 +20,10 @@ declare
   v_authenticated_can_execute boolean;
 begin
   for r in
-    select p.oid, p.oid::regprocedure as signature
+    select
+      p.oid,
+      p.oid::regprocedure as signature,
+      p.prorettype = 'pg_catalog.trigger'::regtype as is_trigger
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
@@ -33,7 +36,9 @@ begin
     execute format('revoke execute on function %s from anon', r.signature);
     execute format('revoke execute on function %s from authenticated', r.signature);
 
-    if v_authenticated_can_execute then
+    -- Trigger functions are invoked only by their trigger and should never be
+    -- directly exposed as API RPCs.
+    if v_authenticated_can_execute and not r.is_trigger then
       execute format('grant execute on function %s to authenticated', r.signature);
     end if;
 
@@ -61,9 +66,71 @@ grant execute on function public.post_accounts_excel_reconciliation(uuid, jsonb,
 revoke execute on function public.finalize_policy_intake_motor_v1(uuid, jsonb, integer) from public, anon, authenticated;
 grant execute on function public.finalize_policy_intake_motor_v1(uuid, jsonb, integer) to service_role;
 
+
+-- Internal synchronization / repair helpers must not be directly client-callable.
+revoke execute on function public.insert_customer_activity_event(uuid, uuid, uuid, uuid, uuid, text, uuid, text, text, text, text, jsonb) from public, anon, authenticated;
+grant execute on function public.insert_customer_activity_event(uuid, uuid, uuid, uuid, uuid, text, uuid, text, text, text, text, jsonb) to service_role;
+
+revoke execute on function public.repair_legacy_partner_record_link(uuid, uuid) from public, anon, authenticated;
+grant execute on function public.repair_legacy_partner_record_link(uuid, uuid) to service_role;
+
+revoke execute on function public.sync_existing_intermediary_migration(uuid, uuid, jsonb, text) from public, anon, authenticated;
+grant execute on function public.sync_existing_intermediary_migration(uuid, uuid, jsonb, text) to service_role;
+
+revoke execute on function public.sync_external_customer_stage_to_operations(uuid, uuid) from public, anon, authenticated;
+grant execute on function public.sync_external_customer_stage_to_operations(uuid, uuid) to service_role;
+
+revoke execute on function public.sync_group_corporate_onboarding_contacts(uuid, jsonb) from public, anon, authenticated;
+grant execute on function public.sync_group_corporate_onboarding_contacts(uuid, jsonb) to service_role;
+
+revoke execute on function public.sync_partner_details_to_linked_accounts(uuid) from public, anon, authenticated;
+grant execute on function public.sync_partner_details_to_linked_accounts(uuid) to service_role;
+
+revoke execute on function public.sync_partner_identity_to_intermediary_register(uuid) from public, anon, authenticated;
+grant execute on function public.sync_partner_identity_to_intermediary_register(uuid) to service_role;
+
 -- ---------------------------------------------------------------------------
 -- 2. Role resolution and destructive RLS policies
 -- ---------------------------------------------------------------------------
+-- Bind group-management actor IDs to the authenticated caller. Server-side
+-- service-role workflows remain permitted when they explicitly supply the actor.
+create or replace function public.assert_group_relationship_manager(actor_profile_id uuid)
+returns void
+language plpgsql
+stable
+security definer
+set search_path = public
+as $function$
+declare
+  actor_role text;
+  request_role text := coalesce(
+    auth.jwt() ->> 'role',
+    current_setting('request.jwt.claim.role', true),
+    ''
+  );
+begin
+  if actor_profile_id is null then
+    raise exception 'A reviewer profile is required to manage Group affiliations.';
+  end if;
+
+  if request_role <> 'service_role' and actor_profile_id is distinct from auth.uid() then
+    raise exception 'The Group relationship actor does not match the authenticated user.';
+  end if;
+
+  select role::text into actor_role
+  from public.profiles
+  where id = actor_profile_id
+    and is_active;
+
+  if actor_role not in (
+    'super_admin', 'admin', 'manager', 'it_super_user',
+    'sales_operations_head', 'backoffice_executive'
+  ) then
+    raise exception 'You are not allowed to manage Group affiliations.';
+  end if;
+end;
+$function$;
+
 create or replace function public.current_app_role()
 returns public.app_role
 language sql
