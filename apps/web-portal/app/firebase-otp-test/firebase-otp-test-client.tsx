@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 declare global {
   interface Window {
@@ -120,7 +120,7 @@ export function FirebaseOtpTestClient() {
   const [status, setStatus] = useState("Enter the Firebase Web API key, then send one real OTP.");
   const [busy, setBusy] = useState(false);
   const [confirmation, setConfirmation] = useState<FirebaseConfirmationResult | null>(null);
-  const [verifier, setVerifier] = useState<FirebaseRecaptchaVerifier | null>(null);
+  const verifierRef = useRef<FirebaseRecaptchaVerifier | null>(null);
 
   const normalizedPhone = useMemo(() => normalizeIndianPhone(phone), [phone]);
 
@@ -131,7 +131,8 @@ export function FirebaseOtpTestClient() {
 
   useEffect(() => {
     return () => {
-      verifier?.clear();
+      verifierRef.current?.clear();
+      verifierRef.current = null;
     };
   }, []);
 
@@ -163,15 +164,13 @@ export function FirebaseOtpTestClient() {
 
     try {
       const { firebase, auth } = await prepareFirebase();
-      if (verifier) {
-        verifier.clear();
-        setVerifier(null);
-      }
+      verifierRef.current?.clear();
+      verifierRef.current = null;
 
       const nextVerifier = new firebase.auth.RecaptchaVerifier("firebase-otp-recaptcha", {
         size: "normal",
       });
-      setVerifier(nextVerifier);
+      verifierRef.current = nextVerifier;
       await nextVerifier.render();
 
       setStatus(`Requesting an SMS OTP for ${normalizedPhone}…`);
@@ -180,8 +179,8 @@ export function FirebaseOtpTestClient() {
       setStatus("OTP request accepted by Firebase. Check the phone for a normal SMS, then enter the code below.");
     } catch (error) {
       setStatus(friendlyError(error));
-      if (verifier) verifier.clear();
-      setVerifier(null);
+      verifierRef.current?.clear();
+      verifierRef.current = null;
     } finally {
       setBusy(false);
     }
