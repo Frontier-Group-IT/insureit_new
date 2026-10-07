@@ -1,3 +1,19 @@
+## 2026-10-07 — Customer Support Ticket → Service Enquiries unification
+
+- Branch: `fix/unify-support-tickets-service-enquiries-2026-10-07`.
+- Operations navigation removes the expandable **Tasks** section and **All Tasks** child; **Service Enquiries** is exposed directly in the sidebar. Mobile quick navigation points directly to Enquiries.
+- New Customer App **Raise Support Ticket** submissions now create `service_enquiries` rows with `service_type='support_ticket'` instead of writing new rows to legacy `support_tickets`.
+- Support request metadata is normalized into `service_enquiries.claim_id`, `category`, and `priority`; subject/description/status/customer/assignee remain on the unified enquiry row.
+- Support conversation and attachment continuity uses new `service_enquiry_messages` and `service_enquiry_attachments` tables. Existing private `support-ticket-files` storage is reused; no native dependency is introduced.
+- Customer Support Ticket Detail now reads the unified service-enquiry record and unified message thread.
+- Operations `/service-enquiries` now recognizes and labels **Support Ticket** rows and shows category/priority in the same queue as Insurance Quote and Challan Assistance.
+- Legacy `support_tickets`, `support_ticket_messages`, and `support_ticket_attachments` are intentionally left untouched for historical data; this change only moves new ticket creation to the unified model.
+- Migration: `20261007111500_unify_support_tickets_with_service_enquiries.sql`; dedicated schema workflow `apply-service-enquiry-support-ticket-unification.yml`; production deployment gate updated.
+- Added canonical web and mobile regression guards for navigation and Customer Support → Service Enquiries routing.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/SCHEMA APPLICATION/WEB DEPLOY/CUSTOMER OTA/DEVICE VERIFICATION PENDING. NO APK/AAB CREATED.**
+
+---
+
 ## 2026-10-07 — Policy Onboarding MISD Category / CC persistence
 
 - Branch: `fix/policy-onboarding-misd-capacity-rebased`.
