@@ -1,3 +1,16 @@
+## 2026-10-07 — Life/Health issued-policy commercial edit + retention fix (rebased)
+
+- Original PR #2909 became stale because `main` advanced; replacement branch `fix/life-health-commercial-edit-retention-rebased` carries the same verified functional change on current main.
+- Root cause: issued Life/Health edit UI showed Pay-in from `projected_commission_amount` while stale `total_projected_payin`, TDS, `payin_after_tds`, and payout `retention_amount` were not synchronized.
+- Edit Policy now provides an **Edit** control for insurer Pay-in and Partner Payout, with live 10% TDS, after-TDS Pay-in, and retention preview.
+- Save synchronizes Pay-in basis/value, insurer scheme, `total_projected_payin`, TDS, `payin_after_tds`, payout basis/value, and latest payout `retention_amount` while preserving payout settlement state.
+- Regression guard covers editable controls and synchronized calculation fields.
+- Production data repair already applied to the investigated policy only: ₹21,00,000 Pay-in → ₹2,10,000 TDS → ₹18,90,000 after TDS; ₹19,50,000 payout → **-₹60,000 retention**. Payout remains `Pending` / `needs_review`.
+- No schema/RLS/native/mobile change.
+- **IMPLEMENTED + PRODUCTION DATA REPAIR APPLIED; REPLACEMENT PR/CI/MERGE/WEB DEPLOYMENT PENDING.**
+
+---
+
 ## 2026-10-07 — Partner Home/Search shared query synchronization
 
 - Branch: `fix/partner-shared-search-state-2026-10-07`.

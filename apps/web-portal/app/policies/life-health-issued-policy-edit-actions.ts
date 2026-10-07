@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
+import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export type LifeHealthIssuedPolicyEditResult = { ok: true } | { ok: false; error: string };
@@ -12,6 +13,7 @@ export type LifeHealthPolicyCopyResult =
 const DOCUMENT_BUCKET = "policy-documents";
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
+const COMMERCIAL_BASES = new Set(["NET_PREMIUM_PERCENT", "FIXED_AMOUNT"]);
 const clean = (value: unknown) => String(value ?? "").trim();
 const amount = (value: unknown) => {
   const parsed = Number(clean(value).replace(/,/g, ""));
@@ -115,7 +117,8 @@ export async function deleteIssuedLifeHealthPolicyCopy(formData: FormData): Prom
 }
 
 export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<LifeHealthIssuedPolicyEditResult> {
-  await requirePolicyEditor();
+  const profile = await requirePolicyEditor();
+  const commercialAccess = canAccessPolicyCommercials(profile);
   const admin = createSupabaseAdminClient();
   const policyId = clean(formData.get("policyId"));
   const caseId = clean(formData.get("caseId"));
@@ -136,6 +139,18 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
   const sumInsuredRaw = clean(formData.get("sumInsured"));
   const sumInsured = sumInsuredRaw ? amount(sumInsuredRaw) : null;
   const remarks = clean(formData.get("remarks"));
+  const payinBasis = clean(formData.get("payinBasis")) || "FIXED_AMOUNT";
+  const payoutBasis = clean(formData.get("payoutBasis")) || "FIXED_AMOUNT";
+  const payinPercentEntered = clean(formData.get("payinPercent")) !== "";
+  const payinFixedEntered = clean(formData.get("payinFixedAmount")) !== "";
+  const schemeEntered = clean(formData.get("insurerSchemeAmount")) !== "";
+  const payoutPercentEntered = clean(formData.get("payoutPercent")) !== "";
+  const payoutFixedEntered = clean(formData.get("payoutFixedAmount")) !== "";
+  const payinPercent = amount(formData.get("payinPercent")) ?? 0;
+  const payinFixedAmount = amount(formData.get("payinFixedAmount")) ?? 0;
+  const insurerSchemeAmount = amount(formData.get("insurerSchemeAmount")) ?? 0;
+  const payoutPercent = amount(formData.get("payoutPercent")) ?? 0;
+  const payoutFixedAmount = amount(formData.get("payoutFixedAmount")) ?? 0;
 
   if (!policyId || !caseId) return { ok: false, error: "Policy edit reference is missing." };
   if (businessLine !== "Life" && businessLine !== "Health") return { ok: false, error: "Only Life and Health policies can use this editor." };
@@ -144,6 +159,10 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
   if (endDate < startDate) return { ok: false, error: "Policy end date cannot be before the start date." };
   if (!sourceId || !insurerId || !productName || !proposalNumber || !paymentFrequency || !paymentMode || premiumAmount === null || finalPremium === null) return { ok: false, error: "Complete all required policy onboarding fields." };
   if (sumInsuredRaw && sumInsured === null) return { ok: false, error: "Enter a valid sum assured / insured amount." };
+  if (commercialAccess) {
+    if (!COMMERCIAL_BASES.has(payinBasis) || !COMMERCIAL_BASES.has(payoutBasis)) return { ok: false, error: "Select a valid Pay-in and Payout basis." };
+    if (payinPercent > 100 || payoutPercent > 100) return { ok: false, error: "Pay-in and Payout percentages cannot exceed 100%." };
+  }
 
   const [{ data: policy }, { data: caseRow }, { data: source }] = await Promise.all([
     admin.from("policies").select("id,business_line,rm_employee_id,rm_name").eq("id", policyId).maybeSingle<{ id: string; business_line: string | null; rm_employee_id: string | null; rm_name: string | null }>(),
@@ -221,6 +240,56 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
     payment_mode: paymentMode,
   }).eq("policy_id", policyId);
   await admin.from("policy_premium_details").update({ net_premium: finalPremium, gross_premium: finalPremium }).eq("policy_id", policyId);
+
+  if (commercialAccess) {
+    const payinEntered = payinBasis === "FIXED_AMOUNT" ? payinFixedEntered || schemeEntered : payinPercentEntered || schemeEntered;
+    const payoutEntered = payoutBasis === "FIXED_AMOUNT" ? payoutFixedEntered : payoutPercentEntered;
+    const payinBase = payinBasis === "FIXED_AMOUNT" ? payinFixedAmount : finalPremium * payinPercent / 100;
+    const totalProjectedPayin = payinBase + insurerSchemeAmount;
+    const tdsPercent = 10;
+    const tdsAmount = totalProjectedPayin * tdsPercent / 100;
+    const payinAfterTds = totalProjectedPayin - tdsAmount;
+    const partnerPayoutAmount = payoutBasis === "FIXED_AMOUNT" ? payoutFixedAmount : finalPremium * payoutPercent / 100;
+    const retentionAmount = payinAfterTds - partnerPayoutAmount;
+
+    const { data: existingPayin, error: payinLookupError } = await admin.from("policy_payin_details").select("id").eq("policy_id", policyId).maybeSingle<{ id:string }>();
+    if (payinLookupError) return { ok: false, error: "The insurer Pay-in record could not be loaded." };
+    const payinValues = {
+      commercial_basis: payinEntered ? payinBasis : null,
+      projected_commission_percent: payinEntered && payinBasis === "NET_PREMIUM_PERCENT" ? payinPercent : null,
+      projected_commission_amount: payinEntered ? payinBase : null,
+      insurer_scheme_amount: insurerSchemeAmount,
+      total_projected_payin: totalProjectedPayin,
+      tds_percent: tdsPercent,
+      tds_amount: tdsAmount,
+      payin_after_tds: payinAfterTds,
+      calculation_version: "life_health_case_v3",
+      commercial_status: payinEntered ? "entered" : "needs_review",
+      updated_at: new Date().toISOString(),
+    };
+    const payinWrite = existingPayin
+      ? await admin.from("policy_payin_details").update(payinValues).eq("id", existingPayin.id)
+      : await admin.from("policy_payin_details").insert({ policy_id:policyId, ...payinValues });
+    if (payinWrite.error) return { ok: false, error: "The insurer Pay-in could not be updated." };
+
+    const { data: existingPayout, error: payoutLookupError } = await admin.from("policy_intermediary_payouts").select("id").eq("policy_id", policyId).order("created_at", { ascending:false }).limit(1).maybeSingle<{ id:string }>();
+    if (payoutLookupError) return { ok: false, error: "The Partner Payout record could not be loaded." };
+    const payoutValues = {
+      intermediary_type: intermediaryType,
+      intermediary_code: intermediaryCode || null,
+      payout_basis: payoutEntered ? payoutBasis : null,
+      partner_payout_percent: payoutEntered && payoutBasis === "NET_PREMIUM_PERCENT" ? payoutPercent : null,
+      partner_payout_amount: payoutEntered ? partnerPayoutAmount : null,
+      retention_amount: retentionAmount,
+      gross_payout: partnerPayoutAmount,
+      calculation_version: "life_health_case_v3",
+      commercial_status: payoutEntered ? "entered" : "needs_review",
+    };
+    const payoutWrite = existingPayout
+      ? await admin.from("policy_intermediary_payouts").update(payoutValues).eq("id", existingPayout.id)
+      : await admin.from("policy_intermediary_payouts").insert({ policy_id:policyId, status:"Pending", payout_date:null, voucher_number:null, remarks:remarks || null, ...payoutValues });
+    if (payoutWrite.error) return { ok: false, error: "The Partner Payout could not be updated." };
+  }
 
   revalidateIssuedPolicy(policyId, caseId);
   return { ok: true };

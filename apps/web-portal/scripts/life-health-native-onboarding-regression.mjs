@@ -17,6 +17,9 @@ const guard = read("components/policy-onboarding-product-guard.tsx");
 const page = read("app/policies/new/page.tsx");
 const routeLayout = read("app/policies/new/layout.tsx");
 const summaryCss = read("app/policy-summary-stability.css");
+const issuedEdit = read("components/life-health-issued-policy-edit-form.tsx");
+const issuedEditAction = read("app/policies/life-health-issued-policy-edit-actions.ts");
+const issuedEditPage = read("app/policies/[id]/edit/page.tsx");
 
 assert(unified.includes('import { LifeHealthPolicyForm } from "@/components/life-health-policy-form";'), "PolicyUnifiedForm must own the Life/Health component import");
 assert(unified.includes('const isLifeHealthPolicy=form.businessLine==="Life"||form.businessLine==="Health";'), "PolicyUnifiedForm must have an explicit Life/Health render branch");
@@ -44,5 +47,14 @@ assert(!routeLayout.includes("policy-summary-width.css"), "new policy route must
 assert(!summaryCss.includes("data-life-health"), "global summary stability CSS must not contain Life/Health portal rescue selectors");
 assert(!exists("app/policies/new/policy-summary-width.css"), "old Life/Health route width rescue stylesheet must stay deleted");
 assert(!exists("components/policy-life-health-onboarding-enhancements.tsx"), "old Life/Health MutationObserver enhancement bridge must stay deleted");
+
+assert(issuedEdit.includes('>{editing?"Done":"Edit"}</button>'), "issued Life/Health commercial summary must expose an Edit control");
+assert(issuedEdit.includes("payinAfterTds: totalPayin - tds") || issuedEdit.includes("const payinAfterTds = totalPayin - tds"), "issued Life/Health edit must calculate Pay-in after TDS");
+assert(issuedEdit.includes("retention:payinAfterTds-totalPayout"), "issued Life/Health edit must calculate retention from after-TDS Pay-in less payout");
+assert(issuedEditAction.includes('total_projected_payin: totalProjectedPayin'), "issued Life/Health save must synchronize total projected Pay-in");
+assert(issuedEditAction.includes('tds_amount: tdsAmount'), "issued Life/Health save must synchronize Pay-in TDS");
+assert(issuedEditAction.includes('payin_after_tds: payinAfterTds'), "issued Life/Health save must synchronize after-TDS Pay-in");
+assert(issuedEditAction.includes('retention_amount: retentionAmount'), "issued Life/Health save must synchronize payout retention");
+assert(issuedEditPage.includes('retention:payinAfterTds - partnerPayout'), "issued Life/Health edit page must derive retention from current commercial components instead of stale stored retention");
 
 console.log("Life/Health native onboarding architecture regression passed.");
