@@ -1,6 +1,6 @@
 name: Apply Partner customer filters migration
 
-# Operational trigger note: keep this workflow path-scoped so an approved main update can safely re-trigger the already-merged migration when schema parity blocks production.
+# Operational trigger note: keep this workflow path-scoped so an approved main update can safely re-trigger already-merged Partner customer filter migrations when schema parity blocks production.
 on:
   workflow_dispatch:
   push:
@@ -8,6 +8,7 @@ on:
       - main
     paths:
       - 'supabase/migrations/20260916154500_partner_web_customer_filters.sql'
+      - 'supabase/migrations/20261007103000_partner_app_customer_status_filter.sql'
       - '.github/workflows/apply-partner-customer-filters.yml'
 
 permissions:
@@ -15,7 +16,7 @@ permissions:
 
 jobs:
   migrate:
-    name: Apply Partner customer filters migration
+    name: Apply Partner customer filters migrations
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -46,6 +47,7 @@ jobs:
           test -n "$SUPABASE_DB_PASSWORD"
           test -n "$SUPABASE_PROJECT_REF"
           test -f supabase/migrations/20260916154500_partner_web_customer_filters.sql
+          test -f supabase/migrations/20261007103000_partner_app_customer_status_filter.sql
 
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
@@ -55,21 +57,55 @@ jobs:
       - name: Link Supabase project
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
 
-      - name: Apply Partner customer filters migration
-        run: supabase db query --linked --file supabase/migrations/20260916154500_partner_web_customer_filters.sql
+      - name: Ensure base Partner customer filters migration is applied
+        shell: bash
+        run: |
+          set -euo pipefail
+          applied=$(supabase db query --linked --output-format json "
+            select exists(
+              select 1 from supabase_migrations.schema_migrations
+              where version='20260916154500'
+            ) as applied;
+          ")
+          if echo "$applied" | grep -Eq '"applied"[[:space:]]*:[[:space:]]*true'; then
+            echo "Base Partner customer filters migration already applied."
+          else
+            supabase db query --linked --file supabase/migrations/20260916154500_partner_web_customer_filters.sql
+            supabase migration repair --linked --status applied 20260916154500
+          fi
 
-      - name: Record migration as applied
-        run: supabase migration repair --linked --status applied 20260916154500
+      - name: Ensure Partner customer status filter migration is applied
+        shell: bash
+        run: |
+          set -euo pipefail
+          applied=$(supabase db query --linked --output-format json "
+            select exists(
+              select 1 from supabase_migrations.schema_migrations
+              where version='20261007103000'
+            ) as applied;
+          ")
+          if echo "$applied" | grep -Eq '"applied"[[:space:]]*:[[:space:]]*true'; then
+            echo "Partner customer status filter migration already applied."
+          else
+            supabase db query --linked --file supabase/migrations/20261007103000_partner_app_customer_status_filter.sql
+            supabase migration repair --linked --status applied 20261007103000
+          fi
 
-      - name: Verify Partner customer filters RPC
+      - name: Verify Partner customer filter RPCs
         shell: bash
         run: |
           set -euo pipefail
           result=$(supabase db query --linked --output-format json "
             select
               to_regprocedure('public.partner_app_list_customers_filtered(integer,integer,text,text,text)') is not null as customer_filter_rpc_ready,
-              has_function_privilege('authenticated', 'public.partner_app_list_customers_filtered(integer,integer,text,text,text)', 'EXECUTE') as authenticated_execute_ready;
+              has_function_privilege('authenticated', 'public.partner_app_list_customers_filtered(integer,integer,text,text,text)', 'EXECUTE') as authenticated_filter_execute_ready,
+              to_regprocedure('public.partner_app_list_customers_v2(integer,integer,text,text)') is not null as customer_status_rpc_ready,
+              has_function_privilege('authenticated', 'public.partner_app_list_customers_v2(integer,integer,text,text)', 'EXECUTE') as authenticated_status_execute_ready;
           ")
           echo "$result"
-          echo "$result" | grep -Eq '"customer_filter_rpc_ready"[[:space:]]*:[[:space:]]*true'
-          echo "$result" | grep -Eq '"authenticated_execute_ready"[[:space:]]*:[[:space:]]*true'
+          for key in customer_filter_rpc_ready authenticated_filter_execute_ready customer_status_rpc_ready authenticated_status_execute_ready; do
+            echo "$result" | grep -Eq "\"$key\"[[:space:]]*:[[:space:]]*true" || {
+              echo "::error::Partner customer filter verification failed for $key"
+              exit 1
+            }
+          done
