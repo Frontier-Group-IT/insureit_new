@@ -1,3 +1,14 @@
+## 2026-10-07 — Production schema parity repair for Partner customer status filter
+
+- PR #2866 merged as `b6ec856a5e51d79477d81db407315b64e883e18c`; Service Enquiries schema run #1 and Customer production OTA run #160 succeeded.
+- Automatic Vercel production deployment run #2670 stopped at schema parity because production was missing already-committed migration version `20261007103000`.
+- Repair branch: `fix/apply-partner-customer-status-filter-schema-v2-2026-10-07`.
+- `apply-partner-customer-filters.yml` now idempotently applies/repairs both `20260916154500` and `20261007103000`, then verifies both Partner customer RPC contracts.
+- `deploy-production.yml` waits for this schema-repair workflow when the workflow itself changes, preventing parity from racing ahead of migration application.
+- **IMPLEMENTED; PR/CI/merge/schema repair/Vercel deployment pending.**
+
+---
+
 ## 2026-10-07 — Partner App Business header matches Claims / Policies
 
 - Branch: `ui/partner-business-header-match-claims-rebased`.
