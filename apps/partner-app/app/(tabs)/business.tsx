@@ -53,11 +53,13 @@ export default function BusinessScreen() {
   const { context, cacheScopeKey, avatarUri } = usePartnerSession();
   const [overviewRange, setOverviewRange] = useState<OverviewRange>('mtd');
   const [overviewMenuOpen, setOverviewMenuOpen] = useState(false);
+  const [overviewCustomOpen, setOverviewCustomOpen] = useState(false);
   const [overviewPreset, setOverviewPreset] = useState<PartnerBusinessRangeSummary | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [overviewError, setOverviewError] = useState<string | null>(null);
   const [trendRange, setTrendRange] = useState<TrendRange>('last_6_months');
   const [trendMenuOpen, setTrendMenuOpen] = useState(false);
+  const [trendCustomOpen, setTrendCustomOpen] = useState(false);
   const [trendPreset, setTrendPreset] = useState<PartnerBusinessRangeSummary | null>(null);
   const [trendLoading, setTrendLoading] = useState(false);
   const [trendError, setTrendError] = useState<string | null>(null);
@@ -126,11 +128,20 @@ export default function BusinessScreen() {
   }, [performance]);
 
   const selectOverviewRange = useCallback(async (next: OverviewRange) => {
-    setOverviewRange(next);
     setOverviewMenuOpen(false);
     setOverviewError(null);
+
+    if (next === 'custom') {
+      setOverviewRange('custom');
+      setOverviewCustomOpen((open) => (overviewRange === 'custom' ? !open : true));
+      return;
+    }
+
+    setOverviewRange(next);
+    setOverviewCustomOpen(false);
     setOverviewPreset(null);
-    if (next === 'mtd' || next === 'custom') return;
+
+    if (next === 'mtd') return;
     const range = presetDateRange(next);
     setOverviewLoading(true);
     try {
@@ -140,14 +151,23 @@ export default function BusinessScreen() {
     } finally {
       setOverviewLoading(false);
     }
-  }, []);
+  }, [overviewRange]);
 
   const selectTrendRange = useCallback(async (next: TrendRange) => {
-    setTrendRange(next);
     setTrendMenuOpen(false);
     setTrendError(null);
+
+    if (next === 'custom') {
+      setTrendRange('custom');
+      setTrendCustomOpen((open) => (trendRange === 'custom' ? !open : true));
+      return;
+    }
+
+    setTrendRange(next);
+    setTrendCustomOpen(false);
     setTrendPreset(null);
-    if (next === 'last_6_months' || next === 'custom') return;
+
+    if (next === 'last_6_months') return;
     const range = presetDateRange(next);
     setTrendLoading(true);
     try {
@@ -157,7 +177,7 @@ export default function BusinessScreen() {
     } finally {
       setTrendLoading(false);
     }
-  }, []);
+  }, [trendRange]);
 
   const overview = overviewRange === 'mtd' || !overviewPreset
     ? null
@@ -279,7 +299,7 @@ export default function BusinessScreen() {
             />
           </View>
 
-          {overviewRange === 'custom' ? (
+          {overviewCustomOpen ? (
             <View style={styles.rangeWrap}>
               <PartnerBusinessRangeSummaryCard onApplied={setOverviewPreset} />
             </View>
@@ -352,7 +372,7 @@ export default function BusinessScreen() {
             />
           </View>
 
-          {trendRange === 'custom' ? (
+          {trendCustomOpen ? (
             <View style={styles.rangeWrap}>
               <PartnerBusinessRangeSummaryCard
                 title="Custom trend range"
