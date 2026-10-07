@@ -1,3 +1,15 @@
+## 2026-10-07 — Isolated Firebase Phone OTP Cloudflare tester
+
+- Branch: `test/firebase-phone-otp-cloudflare-2026-10-07`.
+- Added `/firebase-otp-test` as a deliberately isolated Firebase Web Phone Auth delivery test.
+- Tester defaults to Firebase project `insureit-customer-auth`, accepts only the Firebase Web API key at runtime, loads Firebase compat Auth in the browser, renders visible reCAPTCHA, sends a real +91 OTP, and verifies the returned 6-digit code.
+- The Web API key is stored only in browser `sessionStorage` for the current tab/session; no service-account/private key is required or accepted.
+- Explicit isolation boundary: no Supabase Auth session, customer/profile creation, customer master linking, schema/RLS/database mutation, Customer App runtime change, APK/AAB, or OTA.
+- Intended test host is the user-authorized Cloudflare tester domain `insureit-new.shahdolho.workers.dev`.
+- **IMPLEMENTED; PR/CI/MERGE PENDING.**
+
+---
+
 ## 2026-10-07 — Partner Home generated metric icons
 
 - Branch: `ui/partner-home-generated-metric-icons-2026-10-07`.
