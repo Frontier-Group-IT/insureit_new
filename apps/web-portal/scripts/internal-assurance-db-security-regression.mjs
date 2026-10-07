@@ -28,6 +28,8 @@ const required = [
   "sync_partner_details_to_linked_accounts",
   "sync_partner_identity_to_intermediary_register",
   "alter extension pg_trgm set schema extensions",
+  "revoke all privileges on table public.%I from anon",
+  "revoke all privileges on table public.%I from authenticated",
 ];
 
 for (const needle of required) {
