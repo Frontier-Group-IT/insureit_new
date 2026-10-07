@@ -56,6 +56,7 @@ for (const route of requiredRoutes) {
 
 const homePage = read("app/partner/page.tsx");
 const homeTrend = read("app/partner/partner-business-trend.tsx");
+const homeTrendResponsiveFix = read("components/partner-portal/partner-business-trend-responsive-fix.tsx");
 assert(homePage.includes('data-partner-home-reference-hero="true"'), "Partner Home must retain the approved reference header treatment");
 assert(homePage.includes('bg-white'), "Partner Home header must retain the approved white background");
 assert(!homePage.includes('data-partner-home-truck-art="true"'), "Partner Home header must not reintroduce truck artwork");
@@ -72,6 +73,12 @@ assert(homeTrend.includes('data-partner-business-trend-tooltip="true"'), "Partne
 assert(homeTrend.includes("Net Premium:"), "Partner Home business trend tooltip must show Net Premium");
 assert(homeTrend.includes("Policies:"), "Partner Home business trend tooltip must show Policies");
 assert(!homeTrend.includes("<polyline"), "Partner Home business trend must not render the policy connecting line");
+assert(homeTrend.includes('data-partner-business-trend-chart="true"'), "Partner Home business trend must expose a stable responsive chart hook");
+assert(homeTrend.includes('role="group"'), "Partner Home interactive trend must preserve accessible interactive descendants");
+assert(!homeTrend.includes('role="img"'), "Partner Home interactive trend must not hide point controls behind an image role");
+assert(homeTrendResponsiveFix.includes('[data-partner-business-trend="interactive"] svg[data-partner-business-trend-chart="true"]'), "Partner Home responsive trend fix must bind to the stable chart hook");
+assert(homeTrendResponsiveFix.includes("const SOURCE_PLOT_LEFT = 30;"), "Partner Home responsive trend fix must match the current chart left boundary");
+assert(homeTrendResponsiveFix.includes("const SOURCE_PLOT_RIGHT = 570;"), "Partner Home responsive trend fix must match the current chart right boundary");
 
 const guardedSurface = [
   ...walk("app/partner"),

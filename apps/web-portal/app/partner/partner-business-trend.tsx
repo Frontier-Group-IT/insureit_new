@@ -154,10 +154,11 @@ export function PartnerBusinessTrend({
           ) : null}
 
           <svg
+            data-partner-business-trend-chart="true"
             viewBox="0 0 600 190"
             className="h-[210px] w-full"
-            role="img"
-            aria-label={`Net premium and policy totals for ${periodLabel.toLowerCase()}. Hover, focus, or click a period for details.`}
+            role="group"
+            aria-label={`Interactive net premium and policy totals for ${periodLabel.toLowerCase()}. Hover, focus, or click a period for details.`}
             onPointerLeave={() => setHoveredIndex(null)}
           >
             {[0, 1, 2, 3].map((grid) => {
