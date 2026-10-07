@@ -36,6 +36,8 @@ const auditedBoundaryMigration = source("../../supabase/migrations/2026100713000
 const functionSurfaceMigration = source("../../supabase/migrations/20261007131000_security_function_surface_hardening.sql");
 const anonDefinerMigration = source("../../supabase/migrations/20261007132000_revoke_anon_security_definer_execution.sql");
 const authenticatedDefinerMigration = source("../../supabase/migrations/20261007133000_authenticated_definer_authorization_hardening.sql");
+const internalPrimitiveMigration = source("../../supabase/migrations/20261007134000_internal_rpc_primitive_hardening.sql");
+const associatedOnboardingMigration = source("../../supabase/migrations/20261007135000_associated_onboarding_authorization_hardening.sql");
 
 for (const [name, content] of [
   ["account review page", accountReview],
@@ -161,6 +163,25 @@ for (const signature of [
   requireText("internal maintenance RPC authenticated revoke", authenticatedDefinerMigration, signature);
 }
 requireText("internal maintenance RPC browser revoke", authenticatedDefinerMigration, "from public, anon, authenticated");
+for (const signature of [
+  "public.generate_customer_signup_code()",
+  "public.next_partner_application_reference()",
+  "public.next_partner_code()",
+  "public.next_partner_identity()",
+  "public.next_posp_identity()",
+  "public.next_registration_code(text)",
+  "public.sync_partner_details_to_linked_accounts(uuid)",
+  "public.sync_partner_identity_to_intermediary_register(uuid)",
+]) {
+  requireText("internal primitive browser revoke", internalPrimitiveMigration, signature);
+}
+requireText("internal primitive authenticated revoke", internalPrimitiveMigration, "from public, anon, authenticated");
+requireText("associated onboarding profile bound to session", associatedOnboardingMigration, "p_profile_id = auth.uid()");
+requireText("associated onboarding service-role path preserved", associatedOnboardingMigration, "= 'service_role'");
+requireText("corporate contact application row lock", associatedOnboardingMigration, "from public.customer_onboarding_applications\n  where id = p_application_id\n  for update");
+requireText("corporate contact owner or parent-manager guard", associatedOnboardingMigration, "v_application.profile_id = auth.uid()");
+requireText("corporate contact parent manager guard", associatedOnboardingMigration, "public.can_manage_group_associated_onboarding(");
+requireText("corporate contact editable-state guard", associatedOnboardingMigration, "status not in ('not_started', 'in_progress', 'changes_requested')");
 
 assert.deepEqual(
   classifyPolicyIntakeDeleteLinks([{ id: "rejected-1", status: "rejected" }]),
@@ -218,5 +239,7 @@ console.log(JSON.stringify({
   anonymousSecurityDefinerExecutionClosed: true,
   authenticatedActorViewerIdsSessionBound: true,
   internalMaintenanceRpcsServerOnly: true,
+  internalRpcPrimitivesServerOnly: true,
+  associatedOnboardingAuthorizationBound: true,
   status: "ok",
 }, null, 2));
