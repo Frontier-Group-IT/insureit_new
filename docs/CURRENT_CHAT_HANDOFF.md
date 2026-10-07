@@ -1,3 +1,15 @@
+## 2026-10-07 — Cloudflare direct-main production deployment
+
+- Goal: every change merged/pushed to `main` should become the Cloudflare production build directly, without first syncing to `cloudflare-poc`.
+- Removed `.github/workflows/sync-main-to-cloudflare-preview.yml`; no repository automation will update `cloudflare-poc` after this merges.
+- Added the existing Cloudflare OpenNext build entrypoint/config to `main`: `scripts/build-cloudflare-poc.sh`, `apps/web-portal/wrangler.jsonc`, and `apps/web-portal/open-next.config.ts`. The legacy script filename is intentionally retained because the current Cloudflare build command already calls it.
+- Cloudflare Git integration should be configured with **Production branch = `main`** and **Preview deployments disabled**. That makes only the production branch auto-deploy; PR/feature branches do not publish preview Workers.
+- This approach intentionally uses Cloudflare Git integration rather than a GitHub Actions Wrangler deployment because the existing GitHub Cloudflare credential validation previously failed and Cloudflare already owns the production build/runtime environment variables.
+- Worker remains `insureit-new`; Vercel/`portal.insureit.in` is untouched.
+- **IMPLEMENTED; PR/CI/MERGE PENDING; CLOUDFLARE DASHBOARD BRANCH/PREVIEW SETTING PENDING.**
+
+---
+
 ## 2026-10-07 — Partner App Policy Details professional icon system
 
 - Branch: `ui/partner-policy-detail-professional-icons-2026-10-07`.
