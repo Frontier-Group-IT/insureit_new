@@ -1,3 +1,16 @@
+## 2026-10-07 — Operations desktop sidebar state stability
+
+- Branch: `fix/sidebar-state-stability-2026-10-07`.
+- Root cause: the shared Operations sidebar continuously re-applied route-derived `openSection` state whenever `sections` / query state re-rendered, so a user's manual click could be overwritten by the current route. A separate desktop-sidebar event also cleared all nested `openGroups`.
+- Fix: route-to-sidebar synchronization is now keyed to actual pathname changes only. Manual top-level section toggles remain authoritative while the user stays on the same route; permission/session/other render changes cannot reopen the route's old section.
+- On real navigation, the destination workspace still opens automatically and only the nested group containing the active route is restored.
+- Removed the unrelated desktop expansion listener that reset nested group state.
+- Added `sidebar-state-stability-regression.mjs` to canonical web verification.
+- Scope is frontend navigation state only: no routes, permissions, auth, API, database, schema, RLS, policy/claim/accounting logic, or mobile runtime changes.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/DEPLOYMENT PENDING.**
+
+---
+
 ## 2026-10-07 — Isolated Customer Web foundation
 
 - Branch: `feature/customer-web-foundation-2026-10-07`.
