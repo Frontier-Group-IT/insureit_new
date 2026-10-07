@@ -83,6 +83,29 @@ begin
     raise exception 'Policy intake finalization RPC is not service-role-only';
   end if;
 
+  -- RLS/no-policy tables are server-only and must not retain any direct
+  -- anon/authenticated table grants, including TRUNCATE/REFERENCES.
+  if exists (
+    with no_policy as (
+      select c.relname
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+      left join pg_policy p on p.polrelid = c.oid
+      where n.nspname = 'public'
+        and c.relkind = 'r'
+        and c.relrowsecurity
+      group by c.oid, c.relname
+      having count(p.oid) = 0
+    )
+    select 1
+    from information_schema.role_table_grants g
+    join no_policy np on np.relname = g.table_name
+    where g.table_schema = 'public'
+      and g.grantee in ('anon','authenticated')
+  ) then
+    raise exception 'Direct client grants remain on one or more RLS deny-all tables';
+  end if;
+
   -- The legacy POSP bucket must no longer expose anonymous read/upload policies.
   if exists (
     select 1 from pg_policies
