@@ -13,6 +13,19 @@ function normalizeIndianPhone(value: string) {
   return trimmed;
 }
 
+function customerSessionErrorMessage(status: number, code?: string) {
+  if (status === 503 || code === "customer_session_unavailable") {
+    return "Customer Web session service is temporarily unavailable. Please try again.";
+  }
+  if (status === 403 || code === "customer_session_forbidden") {
+    return "This account is not authorized for Customer Web.";
+  }
+  if (status === 401 || code === "customer_session_invalid") {
+    return "OTP was verified, but the secure Customer Web session could not be validated.";
+  }
+  return `Signed in, but the secure Customer Web session could not be created. (CW-${status || "ERR"})`;
+}
+
 export function CustomerLoginForm() {
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
@@ -82,8 +95,15 @@ export function CustomerLoginForm() {
     });
 
     if (!response.ok) {
+      let code: string | undefined;
+      try {
+        const body = (await response.json()) as { code?: string };
+        code = body.code;
+      } catch {
+        code = undefined;
+      }
       await supabase.auth.signOut();
-      setMessage("Signed in, but the secure Customer Web session could not be created.");
+      setMessage(customerSessionErrorMessage(response.status, code));
       setBusy(false);
       return;
     }
