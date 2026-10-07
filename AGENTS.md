@@ -62,6 +62,10 @@ The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` 
 
 ### Latest implementation ledger
 
+- **2026-10-07 — Customer Web Phase 1 Home / Vehicles / Policies:** branch `feature/customer-web-phase1-home-vehicles-policies-2026-10-07`; Customer-only dashboard plus Vehicles and Policies list/detail routes, multi-account authorized scope selector, internal/external policy parity and Customer navigation. Uses normal authenticated Supabase/RLS only. **No Partner Portal, Operations Portal, shared authorization, schema/RLS, mobile runtime, OTA, APK or AAB changes. IMPLEMENTED; PR/CI/merge/preview verification pending.** See `docs/CUSTOMER_WEB_HANDOFF.md`.
+
+
+
 - **2026-10-07 — Partner App Business Overview professional KPI icons:** PR #2914 merged as `530e009f511b36606a5f8292ad7d8c2d72a298c8` after Verify Partner app #568 and Verify web portal #5572 passed; replaces the four generic Business Overview glyphs with finance/₹, verified policy document, wallet/₹, and customers group icons. Release PR #2915 merged as `338b6105fdff23feb25a06c1e2d4f635c95edbaa`; **Publish Partner production OTA #86 completed successfully** on channel `production`, runtime `0.2.0`. **MERGED + OTA PUBLISHED; installed-device verification pending. NO APK/AAB CREATED.** See `docs/CURRENT_CHAT_HANDOFF.md`.
 
 - **2026-10-07 — Life/Health issued-policy commercial edit + retention synchronization:** rebased branch `fix/life-health-commercial-edit-retention-rebased`; issued Life/Health Edit Policy exposes editable insurer Pay-in / Partner Payout controls and synchronizes 10% TDS, Pay-in after TDS, and retention on save. The investigated production policy data repair is already applied at ₹21,00,000 Pay-in → ₹18,90,000 after TDS, ₹19,50,000 payout → **-₹60,000 retention**, with payout still Pending/Needs Review. **IMPLEMENTED + DATA REPAIR APPLIED; replacement PR/CI/merge/deployment pending.** See `docs/CURRENT_CHAT_HANDOFF.md`.
