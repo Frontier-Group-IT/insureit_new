@@ -91,8 +91,8 @@ export default function SettingsScreen() {
     <PartnerScreen eyebrow="ACCOUNT" title="Settings & app info" onBack={() => router.back()}>
       <PartnerSectionHeader title="Account" />
       <View style={styles.menu}>
-        <SettingsLink asset={PartnerAssets.navigation.profile} title="Profile & registration" onPress={() => router.push('/profile')} />
-        <SettingsLink asset={PartnerAssets.actions.support} title="Support" onPress={() => router.push('/support')} last />
+        <SettingsLink icon="person-outline" title="Profile & registration" onPress={() => router.push('/profile')} />
+        <SettingsLink icon="headset-outline" title="Support" onPress={() => router.push('/support')} last />
       </View>
 
       <PartnerSectionHeader title="Device security" />
@@ -157,7 +157,7 @@ export default function SettingsScreen() {
 }
 
 function SettingsLink({ icon, asset, title, onPress, last = false }: {
-  icon?: 'shield-checkmark-outline';
+  icon?: keyof typeof Ionicons.glyphMap;
   asset?: ImageSourcePropType;
   title: string;
   onPress: () => void;
@@ -196,7 +196,7 @@ function SettingsToggleRow({ icon, title, subtitle, value, disabled, onValueChan
     <View style={[styles.controlRow, !last && styles.divider]}>
       <View style={styles.linkIcon}><Ionicons name={icon} size={18} color={partnerTheme.colors.brand} /></View>
       <View style={styles.controlCopy}>
-        <Text style={styles.linkTitle}>{title}</Text>
+        <Text style={styles.controlTitle}>{title}</Text>
         <Text style={styles.controlSubtitle}>{subtitle}</Text>
       </View>
       <Switch
@@ -224,7 +224,7 @@ function SettingsActionRow({ icon, title, subtitle, actionLabel, disabled, onPre
     <View style={[styles.controlRow, !last && styles.divider]}>
       <View style={styles.linkIcon}><Ionicons name={icon} size={18} color={partnerTheme.colors.brand} /></View>
       <View style={styles.controlCopy}>
-        <Text style={styles.linkTitle}>{title}</Text>
+        <Text style={styles.controlTitle}>{title}</Text>
         <Text style={styles.controlSubtitle}>{subtitle}</Text>
       </View>
       <Pressable accessibilityRole="button" accessibilityLabel={`${actionLabel} ${title}`} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.smallAction, pressed && styles.pressed, disabled && styles.disabled]}>
@@ -247,13 +247,14 @@ const styles = StyleSheet.create({
   menu: { overflow: 'hidden', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   updateMenu: { marginTop: 8 },
   linkRow: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 13 },
-  controlRow: { minHeight: 66, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 13, paddingVertical: 8 },
+  controlRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 13, paddingVertical: 6 },
   linkIcon: { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
   linkArtwork: { backgroundColor: 'transparent' },
   linkArtworkImage: { width: 34, height: 34 },
   linkTitle: { flex: 1, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
-  controlCopy: { flex: 1, minWidth: 0 },
-  controlSubtitle: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  controlCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
+  controlTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  controlSubtitle: { marginTop: 1, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   smallAction: { minHeight: 36, minWidth: 62, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10, borderRadius: 10, backgroundColor: partnerTheme.colors.brandSoft },
   smallActionText: { color: partnerTheme.colors.brand, ...partnerTheme.typography.label },
   details: { overflow: 'hidden', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
