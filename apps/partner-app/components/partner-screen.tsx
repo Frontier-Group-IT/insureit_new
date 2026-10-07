@@ -1,4 +1,4 @@
-import { useState, type PropsWithChildren, type ReactNode } from 'react';
+import type { PropsWithChildren, ReactNode } from 'react';
 import {
   Image,
   Pressable,
@@ -18,6 +18,7 @@ import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerTopBar } from '@/components/ui/partner-top-bar';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerNetwork } from '@/providers/partner-network-provider';
+import { usePartnerSearch } from '@/providers/partner-search-provider';
 
 export function PartnerScreen({
   title,
@@ -51,10 +52,11 @@ export function PartnerScreen({
 }>) {
   const { isOffline } = usePartnerNetwork();
   const router = useRouter();
-  const [homeSearch, setHomeSearch] = useState('');
+  const sharedSearch = usePartnerSearch();
   const isHomeHero = eyebrow === 'INSUREIT PARTNER' && !onBack;
-  const heroSearchValue = heroSearch?.value ?? homeSearch;
-  const setHeroSearchValue = heroSearch?.onChangeText ?? setHomeSearch;
+  const heroSearchValue = heroSearch?.value ?? sharedSearch.query;
+  const setHeroSearchValue = heroSearch?.onChangeText ?? sharedSearch.setQuery;
+  const hasHeroSearchValue = heroSearchValue.trim().length > 0;
 
   const submitHomeSearch = () => {
     if (heroSearch?.onSubmit) {
@@ -166,8 +168,8 @@ export function PartnerScreen({
                 onPress={submitHomeSearch}
                 style={({ pressed }) => [styles.homeSearchAction, pressed && styles.homeSearchPressed]}
               >
-                <Text style={styles.homeSearchActionText}>Search</Text>
-                <Ionicons name="chevron-forward" size={17} color="#A3ABBA" />
+                <Text style={[styles.homeSearchActionText, hasHeroSearchValue && styles.homeSearchActionTextActive]}>Search</Text>
+                <Ionicons name="chevron-forward" size={17} color={hasHeroSearchValue ? '#1765C1' : '#A3ABBA'} />
               </Pressable>
             </View>
           </View>
@@ -385,5 +387,9 @@ const styles = StyleSheet.create({
     color: '#9DA6B6',
     fontSize: 10.5,
     fontWeight: '600',
+  },
+  homeSearchActionTextActive: {
+    color: '#1765C1',
+    fontWeight: '800',
   },
 });
