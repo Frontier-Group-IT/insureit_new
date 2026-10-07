@@ -23,7 +23,8 @@ export default async function CustomerPolicyDetailPage({
   params: Promise<{ id: string }>;
   searchParams?: Promise<{ account?: string; source?: string }>;
 }) {
-  const [{ id }, query] = await Promise.all([params, searchParams ?? Promise.resolve({})]);
+  const { id } = await params;
+  const query: { account?: string; source?: string } = searchParams ? await searchParams : {};
   const { account, accounts } = await resolveCustomerWebScope(query.account);
   const policy = await loadCustomerPolicyDetail(account.id, id, query.source);
   const status = customerPolicyTone(policy.end_date);
@@ -53,7 +54,7 @@ export default async function CustomerPolicyDetailPage({
         description={policy.insurer_name || policy.policy_product || policy.policy_type}
         action={<StatusPill tone={status.tone}>{statusLabel}</StatusPill>}
       />
-      <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname={`/customer/policies/${policy.id}`} />
+      <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/policies" />
 
       <div className="grid gap-4 xl:grid-cols-[1fr_0.75fr]">
         <section className="rounded-2xl border border-[#DCE4EE] bg-white p-4">
