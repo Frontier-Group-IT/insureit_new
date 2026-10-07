@@ -8,6 +8,7 @@ import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
+import { PartnerBusinessOverviewIcon, type PartnerBusinessOverviewIconKind } from '@/components/ui/partner-business-overview-icons';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerBusinessPerformance, type PartnerBusinessPerformance } from '@/lib/business';
 import { getPartnerClaimSummary, type PartnerClaimSummary } from '@/lib/claims';
@@ -22,7 +23,7 @@ import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 type OverviewCardProps = {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: PartnerBusinessOverviewIconKind;
   value: string;
   label: string;
   changeLabel?: string;
@@ -289,7 +290,7 @@ export default function BusinessScreen() {
 
           <View style={styles.overviewGrid}>
             <OverviewCard
-              icon="cash-outline"
+              icon="premium"
               value={formatCompactCurrency(overview?.premium ?? performance.premium_this_month)}
               label="Premium Generated"
               changeLabel={overviewChangeLabel}
@@ -297,7 +298,7 @@ export default function BusinessScreen() {
               onPress={() => router.push('/business-report')}
             />
             <OverviewCard
-              icon="document-text-outline"
+              icon="policies"
               value={String(overview?.policies ?? performance.policies_this_month)}
               label="Policies Sold"
               changeLabel={overview ? `${overview.policies} in range` : policiesChange === null ? 'Current month' : changeText(policiesChange, true)}
@@ -305,7 +306,7 @@ export default function BusinessScreen() {
               onPress={() => router.push('/(tabs)/policies')}
             />
             <OverviewCard
-              icon="wallet-outline"
+              icon="commission"
               value={overview?.commission_available
                 ? formatCompactCurrency(overview.commission_earned ?? 0)
                 : overview
@@ -317,7 +318,7 @@ export default function BusinessScreen() {
               onPress={() => router.push('/business-report')}
             />
             <OverviewCard
-              icon="people-outline"
+              icon="customers"
               value={String(overview?.customers ?? performance.total_customers)}
               label="Customers"
               changeLabel={overview ? 'Selected range' : 'Current portfolio'}
@@ -479,7 +480,7 @@ function OverviewCard({ icon, value, label, changeLabel, compareLabel = 'vs last
       onPress={onPress}
       style={({ pressed }) => [styles.overviewCard, pressed && onPress ? styles.pressed : null]}
     >
-      <View style={styles.overviewIcon}><Ionicons name={icon} size={17} color="#1951AE" /></View>
+      <PartnerBusinessOverviewIcon kind={icon} size={38} />
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={styles.overviewValue}>{value}</Text>
       <Text numberOfLines={2} style={styles.overviewLabel}>{label}</Text>
       <View style={styles.growthRow}>
@@ -658,7 +659,6 @@ const styles = StyleSheet.create({
   inlineLoading: { marginBottom: 7, color: '#718198', ...partnerTheme.typography.caption },
   overviewGrid: { flexDirection: 'row', gap: 5, borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
   overviewCard: { flex: 1, minHeight: 126, alignItems: 'center', justifyContent: 'center', borderRadius: 12, paddingHorizontal: 4, paddingVertical: 8, backgroundColor: '#F5F9FF' },
-  overviewIcon: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: '#E7F0FF' },
   overviewValue: { width: '100%', marginTop: 7, color: '#112C69', textAlign: 'center', fontSize: 17, lineHeight: 22, fontWeight: '800' },
   overviewLabel: { minHeight: 30, marginTop: 2, color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.caption },
   growthRow: { marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 2 },
