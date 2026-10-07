@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
+import { createSupabaseWithAccessToken } from "@/lib/auth";
+import { getServerAccessToken } from "@/lib/auth-server";
 import type { Profile } from "@/lib/auth-config";
 
 export type CustomerWebAccount = {
@@ -20,16 +21,38 @@ export const getCustomerWebSession = cache(async (): Promise<CustomerWebSession>
   const accessToken = await getServerAccessToken();
   if (!accessToken) redirect("/customer/login");
 
-  const { user, profile } = await getAuthenticatedProfile(accessToken);
-  if (!user || !profile?.is_active || profile.role !== "customer") {
+  // Customer Web uses Supabase Auth's server verification endpoint directly.
+  // This is compatible with Cloudflare/OpenNext and avoids getClaims(), which
+  // is used by the shared admin auth helper but is unreliable in this runtime.
+  const supabase = createSupabaseWithAccessToken(accessToken);
+  const {
+    data: { user: authUser },
+    error: userError,
+  } = await supabase.auth.getUser(accessToken);
+
+  if (userError || !authUser) {
+    redirect("/customer/login");
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, full_name, role, is_active")
+    .eq("id", authUser.id)
+    .maybeSingle<Profile>();
+
+  if (profileError || !profile?.is_active || profile.role !== "customer") {
     redirect("/access-denied");
   }
 
-  const supabase = await createServerSupabaseClient();
+  const user = {
+    id: authUser.id,
+    email: authUser.email || undefined,
+  };
+
   const [directResult, membershipResult] = await Promise.all([
     supabase
       .from("customers")
-      .select("id, customer_name, contact_name")
+      .select("id, customer_name:company_name, contact_name")
       .eq("profile_id", user.id)
       .order("updated_at", { ascending: false }),
     supabase
@@ -54,7 +77,7 @@ export const getCustomerWebSession = cache(async (): Promise<CustomerWebSession>
   if (membershipIds.length > 0) {
     const members = await supabase
       .from("customers")
-      .select("id, customer_name, contact_name")
+      .select("id, customer_name:company_name, contact_name")
       .in("id", membershipIds);
     if (members.error) redirect("/access-denied");
     memberAccounts = (members.data ?? []) as CustomerWebAccount[];

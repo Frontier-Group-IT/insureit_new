@@ -12,7 +12,7 @@ export function CustomerNavigation() {
   async function logout() {
     const supabase = createClient();
     await supabase.auth.signOut();
-    await fetch("/customer/auth/session", { method: "DELETE" });
+    await fetch("/api/customer/auth/session", { method: "DELETE" });
     window.location.href = "/customer/login";
   }
 

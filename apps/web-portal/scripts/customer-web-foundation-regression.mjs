@@ -16,7 +16,7 @@ function assert(condition, message) {
 
 const requiredFiles = [
   "lib/customer-web.ts",
-  "app/customer/auth/session/route.ts",
+  "app/api/customer/auth/session/route.ts",
   "app/customer/login/customer-login-form.tsx",
   "app/customer/login/page.tsx",
   "app/customer/(protected)/layout.tsx",
@@ -43,7 +43,7 @@ assert(guard.includes('.eq("status", "active")'), "Customer Web memberships must
 assert(!guard.includes("@/lib/partner-web"), "Customer Web must not depend on Partner authorization");
 assert(!guard.includes("supabase-admin"), "Customer Web must not use service-role/admin helpers");
 
-const sessionRoute = read("app/customer/auth/session/route.ts");
+const sessionRoute = read("app/api/customer/auth/session/route.ts");
 assert(sessionRoute.includes('profile.role !== "customer"'), "Customer Web session endpoint must reject non-customer roles");
 assert(sessionRoute.includes('sessionRoleCookie, "customer"'), "Customer Web session must record only the customer role");
 assert(sessionRoute.includes("supabase.auth.getUser(accessToken)"), "Customer Web session must verify the access token server-side through Supabase Auth");
@@ -56,7 +56,7 @@ assert(!sessionRoute.includes("SUPABASE_SERVICE_ROLE_KEY"), "Customer Web sessio
 const login = read("app/customer/login/customer-login-form.tsx");
 assert(login.includes("shouldCreateUser: false"), "Customer login must not silently create accounts");
 assert(login.includes('profile.role !== "customer"'), "Customer login must verify customer role before creating browser session");
-assert(login.includes('fetch("/customer/auth/session"'), "Customer login must use the isolated Customer Web session endpoint");
+assert(login.includes('fetch("/api/customer/auth/session"'), "Customer login must use the isolated Customer Web session API endpoint");
 assert(!login.includes('fetch("/auth/session"'), "Customer login must not use the employee/Partner session endpoint");
 assert(login.includes("customerSessionErrorMessage"), "Customer login must surface safe Customer-only session diagnostics");
 
@@ -83,7 +83,7 @@ assert(vehicleDetailPage.includes('pathname="/customer/vehicles"'), "Vehicle Det
 assert(policyDetailPage.includes('pathname="/customer/policies"'), "Policy Detail account switching must return to the scoped Policies list");
 
 const navigation = read("components/customer-portal/customer-navigation.tsx");
-assert(navigation.includes('fetch("/customer/auth/session", { method: "DELETE" })'), "Customer logout must clear the isolated session endpoint");
+assert(navigation.includes('fetch("/api/customer/auth/session", { method: "DELETE" })'), "Customer logout must clear the isolated session API endpoint");
 assert(!navigation.includes('href="/partner'), "Customer navigation must not expose Partner routes");
 assert(!navigation.includes('href="/reports'), "Customer navigation must not expose Operations report routes");
 assert(navigation.includes('href="/customer/vehicles"'), "Customer navigation must expose Phase 1 Vehicles");
