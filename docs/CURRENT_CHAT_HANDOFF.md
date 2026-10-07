@@ -7,7 +7,10 @@
 - Existing profile hero, identity card, section structure, permissions, navigation, session behavior and backend calls are unchanged.
 - Added visual regression guards in `verify-visual-system-completion.mjs`.
 - No database/schema/RLS/native dependency change. **No APK/AAB created.**
-- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA pending.**
+- Initial Partner visual regression guard failed because the hyphenated `policy-intake` config key was matched without its quoted object-key syntax; the guard was corrected without changing app runtime behavior.
+- PR #2925 then passed **Verify Partner app #583** and **Verify web portal #5593**, and merged as `1ae7a74d1dd3792399bd1b58c4b812f98964c900`.
+- Production OTA release branch: `release/partner-profile-professional-icons-ota-2026-10-07`; trigger file updated for runtime 0.2.0.
+- **MERGED; production OTA pending.**
 
 ---
 
