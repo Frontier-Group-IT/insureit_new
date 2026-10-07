@@ -1,3 +1,14 @@
+## 2026-10-07 — Business header background parity released
+
+- Business now uses the same `claims-header-reference.jpg` full-bleed hero background treatment as Claims and Policies: 162px hero height, `#0752A2` fallback, 0.92 backdrop opacity, and the same navy shade overlay.
+- Existing Business title, header actions, search/filter row, data queries, calculations and navigation remain unchanged.
+- Feature PR #2871 merged as `2ad9385e239381f50641964efb2f3b1584c4ef0a` after Partner Verify #538 and Web Verify #5384 passed.
+- Release-marker PR #2874 merged as `ff0e0066763bf0eb95c652028713f7837a34474a`.
+- Production runtime `0.2.0` OTA **DEPLOYED** via `Publish Partner production OTA` run #78, update group `d6f8c72b-a1f4-4df4-9371-83b3453c4072`.
+- Installed-device visual verification remains pending. **NO APK/AAB CREATED.**
+
+---
+
 ## 2026-09-25 — More header aligned with Home and Profile heading added
 
 - Branch: `refine/partner-more-home-header-profile`.
