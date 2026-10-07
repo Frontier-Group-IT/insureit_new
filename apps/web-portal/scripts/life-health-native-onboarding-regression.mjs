@@ -48,7 +48,13 @@ assert(!summaryCss.includes("data-life-health"), "global summary stability CSS m
 assert(!exists("app/policies/new/policy-summary-width.css"), "old Life/Health route width rescue stylesheet must stay deleted");
 assert(!exists("components/policy-life-health-onboarding-enhancements.tsx"), "old Life/Health MutationObserver enhancement bridge must stay deleted");
 
-assert(issuedEdit.includes('>{editing?"Done":"Edit"}</button>'), "issued Life/Health commercial summary must expose an Edit control");
+assert(issuedEdit.includes('commercialModal==="payin"?<ProjectedPayinModal'), "issued Life/Health edit must open the onboarding-style Projected Insurer Pay-in modal");
+assert(issuedEdit.includes('commercialModal==="payout"?<PartnerPayoutModal'), "issued Life/Health edit must open the onboarding-style Partner Payout modal");
+assert(issuedEdit.includes('title="Projected Insurer Pay-in"'), "issued Life/Health Pay-in modal title must match onboarding");
+assert(issuedEdit.includes('title="Partner Payout"'), "issued Life/Health payout modal title must match onboarding");
+assert(issuedEdit.includes('Save & Close'), "issued Life/Health commercial modals must preserve the onboarding Save & Close action");
+assert(issuedEdit.includes('createPortal('), "issued Life/Health commercial modal must portal above the edit workspace like onboarding");
+assert(!issuedEdit.includes('>{editing?"Done":"Edit"}</button>'), "issued Life/Health edit must not use the old inline Edit/Done commercial expansion");
 assert(issuedEdit.includes("payinAfterTds: totalPayin - tds") || issuedEdit.includes("const payinAfterTds = totalPayin - tds"), "issued Life/Health edit must calculate Pay-in after TDS");
 assert(issuedEdit.includes("retention:payinAfterTds-totalPayout"), "issued Life/Health edit must calculate retention from after-TDS Pay-in less payout");
 assert(issuedEditAction.includes('total_projected_payin: totalProjectedPayin'), "issued Life/Health save must synchronize total projected Pay-in");
