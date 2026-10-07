@@ -62,6 +62,10 @@ The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` 
 
 ### Latest implementation ledger
 
+- **2026-10-07 — Customer Web Cloudflare secure-session compatibility:** branch `fix/customer-web-cloudflare-session-rebased-2026-10-07`; Customer-only `/customer/auth/session` verifies OTP access tokens server-side through Supabase Auth `getUser()` plus scoped Customer profile lookup instead of the shared claims helper, with safe Customer-only diagnostic codes and strengthened isolation regression. **No Partner Portal, Operations Portal, shared middleware, schema/RLS, production deployment, OTA, APK or AAB changes. IMPLEMENTED; CI/merge/Cloudflare preview verification pending.** See `docs/CUSTOMER_WEB_HANDOFF.md`.
+
+
+
 - **2026-10-07 — Partner Profile hero logout confirmation:** branch `ui/partner-profile-hero-logout-confirm-2026-10-07`; removes the bottom Profile logout button, replaces the right-side hero profile glyph with a tappable logout icon, and reuses the More screen `PartnerConfirmDialog` copy/behavior before calling the existing session `signOut()`. Registration data, avatar upload, layout and session scope remain unchanged. **IMPLEMENTED; PR/CI/merge/OTA/device verification pending. NO APK/AAB CREATED.** See `docs/PARTNER_APP_HANDOFF_2026_09_13.md`.
 
 - **2026-10-07 — Operations desktop sidebar state stability:** branch `fix/sidebar-state-stability-v3-2026-10-07`; route synchronization runs only on real pathname changes, manual workspace toggles are not overwritten by unrelated renders/permission refreshes, and the desktop expansion event no longer clears nested groups. Added a dedicated web regression guard. **IMPLEMENTED; PR/CI/merge/deployment pending. No schema/RLS/API/business-logic change.** See `docs/CURRENT_CHAT_HANDOFF.md`.
