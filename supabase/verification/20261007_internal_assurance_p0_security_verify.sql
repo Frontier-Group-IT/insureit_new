@@ -183,6 +183,6 @@ begin
     raise exception 'pg_trgm remains installed in the public schema';
   end if;
 end
-$;
+$$;
 
 select 'internal assurance P0/P1 database security verification passed' as verification_result;
