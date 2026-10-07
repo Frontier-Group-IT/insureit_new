@@ -74,3 +74,27 @@ This foundation does not modify:
 **IMPLEMENTED ON FEATURE BRANCH; PR #2882 OPEN. Verify web portal run #5399 passed on the functional middleware/customer foundation head, including Customer isolation, Partner security, server-session coverage, typecheck, lint and production build. Final documentation/regression-hardening head requires its own green rerun. MERGE/DEPLOYMENT PENDING.**
 
 No APK/AAB created.
+
+## 2026-10-07 — Cloudflare Customer session compatibility fix
+
+Rebased branch: `fix/customer-web-cloudflare-session-rebased-2026-10-07`.
+
+Observed on `insureit-new.shahdolho.workers.dev/customer/login`:
+- phone OTP completed successfully;
+- browser-side active Customer profile validation completed successfully;
+- failure occurred only when `/customer/auth/session` attempted to establish the secure HTTP-only web session.
+
+Implementation:
+- Customer-only session verification now uses `supabase.auth.getUser(accessToken)` plus a scoped `profiles` lookup instead of the shared `getAuthenticatedProfile()` / `getClaims()` path;
+- token verification remains server-side; no trust is transferred to browser-only role checks;
+- safe Customer-specific response codes distinguish session failures without exposing tokens, secrets or provider internals;
+- Customer isolation regression requires server-side token/profile verification and rejects Partner/service-role/shared-claims coupling.
+
+Explicit non-changes:
+- no Partner Portal files, RPCs, authorization helpers or navigation changed;
+- no Operations pages, capabilities, roles or business logic changed;
+- no shared middleware change;
+- no Supabase schema/RLS/data change;
+- no production deployment, OTA, APK or AAB.
+
+State: **IMPLEMENTED ON LATEST-MAIN REBASED BRANCH; CI/MERGE/CLOUDFLARE PREVIEW VERIFICATION PENDING.**
