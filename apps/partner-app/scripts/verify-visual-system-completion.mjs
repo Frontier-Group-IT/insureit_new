@@ -121,8 +121,9 @@ for (const oldGlyph of ['document-text-outline', 'car-outline', 'shield-outline'
 
 for (const detailAsset of ['navigation.claims', 'navigation.customers', 'actions.payoutRefresh', 'status.journey', 'status.claimAttention', 'status.verified']) requireText(claimDetail, `PartnerAssets.${detailAsset}`, `Claim detail is missing ${detailAsset} artwork.`);
 requireText(claimDetail, 'getPartnerManufacturerLogoSource', 'Claim detail summary must resolve manufacturer artwork from the linked vehicle make.');
-requireText(claimDetail, '<SectionIcon asset={PartnerAssets.navigation.customers} />', 'Claim detail Insured Person section must keep professional customer artwork.');
-requireText(claimDetail, '<SectionIcon asset={PartnerAssets.navigation.claims} />', 'Claim detail Claim Overview section must keep professional claims artwork.');
+requireText(claimDetail, '<ReferenceSectionIcon name="people" />', 'Claim detail Insured Person header must use the reference blue group icon.');
+requireText(claimDetail, '<ReferenceSectionIcon name="clipboard" />', 'Claim detail Claim Overview header must use the reference blue clipboard icon.');
+requireText(claimDetail, '<SectionIcon asset={PartnerAssets.actions.payoutRefresh} />', 'Claim detail Financial Snapshot icon must remain unchanged.');
 requireText(claimDetail, '<SectionIcon asset={PartnerAssets.actions.payoutRefresh} />', 'Claim detail Financial Snapshot must keep professional payout artwork.');
 requireText(claimDetail, '<SectionIcon asset={PartnerAssets.status.journey} />', 'Claim detail Journey must keep professional journey artwork.');
 requireText(claimDetail, 'name="person-outline"', 'Claim detail insured-person row must use the approved clean profile icon.');
