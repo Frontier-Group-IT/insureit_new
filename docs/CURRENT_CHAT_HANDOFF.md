@@ -1,3 +1,38 @@
+## 2026-10-07 — Internal production security boundary remediation (first audit pass)
+
+- Working branch: `security/remediate-live-audit-2026-10-07-v5`.
+- Confirmed first-pass findings addressed on branch:
+  - 34 over-broad `staff_delete_reserved_for_it_super_user` policies restricted to authenticated IT Super User only.
+  - `current_app_role()` now fails closed instead of mapping unauthenticated/no-profile requests to customer.
+  - 2 owner-privileged audit/cleanup views changed to security-invoker and browser access removed.
+  - confirmed server-only policy/report/partner/accounts RPCs restricted to service-role execution.
+  - legacy `posp-documents` anonymous read/upload removed; 10 MB and PDF/JPEG/PNG limits added.
+  - SECURITY DEFINER trigger/event-trigger functions removed from direct browser execution.
+  - 20 advisor-flagged mutable function search paths pinned.
+  - implicit anonymous execution removed from all public SECURITY DEFINER functions; future function defaults hardened.
+  - signed-in actor/viewer helper functions now bind ordinary callers to `auth.uid()` while preserving service-role server workflows.
+  - internal identity/synchronization primitives made server-only.
+  - associated Corporate/group onboarding helper authorization hardened.
+  - all current RLS-enabled/no-policy tables additionally lose anon/authenticated table privileges, preserving deny-all semantics.
+  - `pg_trgm` relocates from exposed `public` to `extensions` while preserving trigram behavior.
+  - internal external-claim completed-stage helper made server-only.
+  - Web and Partner password reset policy raised to 12+ characters with uppercase/lowercase/number/symbol. Customer App remains phone-OTP based.
+- Validation evidence:
+  - all nine migrations compiled and executed against the current production schema inside one `BEGIN … ROLLBACK` transaction;
+  - projected anonymous SECURITY DEFINER execution count: 0;
+  - projected direct browser execution of SECURITY DEFINER trigger/event-trigger functions: 0;
+  - projected over-broad delete-policy count: 0;
+  - projected mutable-search-path findings for the 20 flagged functions: 0;
+  - projected browser privileges on RLS/no-policy deny-all tables: 0;
+  - legacy POSP anonymous storage policies absent after simulated migration;
+  - privileged audit views not browser-readable after simulated migration;
+  - `pg_trgm` relocation preserved `similarity()` behavior; sample result `similarity('policy','policies') = 0.454545`.
+- Supabase project remains unchanged because validation was rollback-only.
+- No APK/AAB created.
+- **STATE: IMPLEMENTED + ROLLBACK-VALIDATED ON CURRENT-MAIN-BASED BRANCH. PR/CI, merge, migration application, and post-apply production advisor/retest remain pending.**
+
+---
+
 ## 2026-10-07 — Partner Settings account icons + two-line Device Security rows
 
 - Branch: `ui/partner-settings-account-icons-security-layout-2026-10-07`.
