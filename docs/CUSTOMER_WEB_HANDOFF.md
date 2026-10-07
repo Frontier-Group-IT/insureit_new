@@ -74,3 +74,31 @@ This foundation does not modify:
 **IMPLEMENTED ON FEATURE BRANCH; PR #2882 OPEN. Verify web portal run #5399 passed on the functional middleware/customer foundation head, including Customer isolation, Partner security, server-session coverage, typecheck, lint and production build. Final documentation/regression-hardening head requires its own green rerun. MERGE/DEPLOYMENT PENDING.**
 
 No APK/AAB created.
+
+## 2026-10-07 — Customer Web Phase 1: Home, Vehicles and Policies
+
+Rebased branch: `feature/customer-web-phase1-home-vehicles-policies-rebased-2026-10-07`.
+
+Implemented strictly inside the Customer Web surface:
+- real customer-scoped Home dashboard with Vehicles, Active Cover, Renewal Due and Fleet Covered metrics;
+- authorized account selector for Customers with multiple active customer accounts/memberships;
+- `/customer/vehicles` and `/customer/vehicles/[id]`;
+- `/customer/policies` and `/customer/policies/[id]`;
+- internal + external policy parity with current-policy-per-vehicle deduplication matching the Customer App;
+- Customer desktop/mobile navigation now contains Home, Vehicles and Policies;
+- Customer-only normal authenticated Supabase/RLS data layer in `lib/customer-web-data.ts`.
+
+Hard boundaries:
+- no Partner Portal functionality changed;
+- no Operations Portal functionality changed;
+- no Partner/Operations authorization, RPC or capability changes;
+- no Supabase admin/service-role access from Customer Phase 1;
+- no schema/RLS/data migration;
+- no mobile runtime/OTA/APK/AAB changes;
+- no production deployment in this phase.
+
+Verification note:
+- initial PR #2920 failed Typecheck only because Next.js inferred detail-page fallback search params as `{}`; the corrected implementation explicitly types the Customer detail query params.
+- the rebased branch contains that correction plus regression guards for safe account switching.
+
+State: **IMPLEMENTED ON LATEST-MAIN REBASED BRANCH; REPLACEMENT PR/CI/MERGE/PREVIEW VERIFICATION PENDING.**
