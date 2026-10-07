@@ -94,7 +94,7 @@ export default function ClaimDetailScreen() {
 
             <View style={styles.card}>
               <View style={styles.sectionTitleRow}>
-                <SectionIcon asset={PartnerAssets.navigation.customers} />
+                <ReferenceSectionIcon name="people" />
                 <Text style={styles.sectionTitle}>Insured Person</Text>
               </View>
               <Pressable accessibilityRole="button" accessibilityLabel={`Open customer ${data.customer.name}`} onPress={() => router.push(`/customer/${data.customer.id}` as never)} style={({ pressed }) => [styles.personRow, pressed && styles.pressed]}>
@@ -109,7 +109,7 @@ export default function ClaimDetailScreen() {
 
             <View style={styles.card}>
               <View style={styles.sectionTitleRow}>
-                <SectionIcon asset={PartnerAssets.navigation.claims} />
+                <ReferenceSectionIcon name="clipboard" />
                 <Text style={styles.sectionTitle}>Claim Overview</Text>
                 <View style={styles.sectionSpacer} />
                 <Pressable
@@ -179,6 +179,10 @@ export default function ClaimDetailScreen() {
       </View>
     </SafeAreaView>
   );
+}
+
+function ReferenceSectionIcon({ name }: { name: 'people' | 'clipboard' }) {
+  return <View style={styles.sectionTitleIcon}><Ionicons name={name} size={18} color="#176FD1" /></View>;
 }
 
 function SectionIcon({ asset }: { asset: ImageSourcePropType }) {
