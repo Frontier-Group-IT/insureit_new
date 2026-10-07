@@ -62,6 +62,10 @@ The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` 
 
 ### Latest implementation ledger
 
+- **2026-10-07 — Customer Web Phase 4 Profile / KYC / Documents:** continued on `feature/customer-web-phase3-services-support-2026-10-07` per user instruction. Added Customer-only Profile editing, secure Customer document vault, authenticated PIN lookup, Individual KYC start/resume, KYC document replacement and canonical `submit_individual_onboarding_application` submission. Raw Aadhaar is not persisted in draft data. Corporate/Dealership/Group KYC remains app-only. **No Partner Portal, Operations Portal, shared auth/RPC/capability, schema/RLS, mobile runtime, OTA, APK or AAB changes. NO PR. NOT MERGED/DEPLOYED.** See `docs/CUSTOMER_WEB_HANDOFF.md`.
+
+
+
 - **2026-10-07 — Customer Web Phase 3 Exchange / Services / Support:** branch `feature/customer-web-phase3-services-support-2026-10-07`; Customer-only Exchange browse/detail, Insurance Quote, E-Challan, Support activity/detail and support-ticket creation. Quote/Challan/Support writes use the existing unified `service_enquiries` workflow through a Customer-session/account/vehicle/claim validated endpoint. Exchange web remains read-only. **No Partner Portal, Operations Portal, shared auth/RPC/capability, schema/RLS, mobile runtime, OTA, APK or AAB changes. User requested NO PR. IMPLEMENTED ON BRANCH; NOT MERGED/DEPLOYED.** See `docs/CUSTOMER_WEB_HANDOFF.md`.
 
 
