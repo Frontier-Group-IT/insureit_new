@@ -38,6 +38,8 @@ const anonDefinerMigration = source("../../supabase/migrations/20261007132000_re
 const authenticatedDefinerMigration = source("../../supabase/migrations/20261007133000_authenticated_definer_authorization_hardening.sql");
 const internalPrimitiveMigration = source("../../supabase/migrations/20261007134000_internal_rpc_primitive_hardening.sql");
 const associatedOnboardingMigration = source("../../supabase/migrations/20261007135000_associated_onboarding_authorization_hardening.sql");
+const denyAllTableMigration = source("../../supabase/migrations/20261007136000_deny_all_table_privilege_hardening.sql");
+const pgTrgmMigration = source("../../supabase/migrations/20261007137000_move_pg_trgm_to_extensions.sql");
 
 for (const [name, content] of [
   ["account review page", accountReview],
@@ -182,6 +184,9 @@ requireText("corporate contact application row lock", associatedOnboardingMigrat
 requireText("corporate contact owner or parent-manager guard", associatedOnboardingMigration, "v_application.profile_id = auth.uid()");
 requireText("corporate contact parent manager guard", associatedOnboardingMigration, "public.can_manage_group_associated_onboarding(");
 requireText("corporate contact editable-state guard", associatedOnboardingMigration, "status not in ('not_started', 'in_progress', 'changes_requested')");
+requireText("deny-all RLS table discovery", denyAllTableMigration, "having count(p.oid) = 0");
+requireText("deny-all browser privilege revoke", denyAllTableMigration, "'revoke all privileges on table %I.%I from anon, authenticated'");
+requireText("pg_trgm moved out of public", pgTrgmMigration, "alter extension pg_trgm set schema extensions");
 
 assert.deepEqual(
   classifyPolicyIntakeDeleteLinks([{ id: "rejected-1", status: "rejected" }]),
@@ -241,5 +246,7 @@ console.log(JSON.stringify({
   internalMaintenanceRpcsServerOnly: true,
   internalRpcPrimitivesServerOnly: true,
   associatedOnboardingAuthorizationBound: true,
+  denyAllRlsTablesExplicitlyServerOnly: true,
+  publicExtensionWarningClosed: true,
   status: "ok",
 }, null, 2));
