@@ -1,3 +1,17 @@
+## 2026-10-07 — Partner Business custom range toggle behavior
+
+- Branch: `fix/partner-business-custom-range-toggle-2026-10-07`.
+- Business Overview and Month-wise Trend now keep custom-range panel visibility separate from the selected period value.
+- Selecting `Custom` the first time opens the corresponding custom range panel.
+- Selecting `Custom` again toggles/closes that panel.
+- Selecting MTD, Last Month, or Last 6 Months closes the custom range panel automatically while preserving the existing period selection/fetch behavior.
+- Existing date-range component, Apply range behavior, business RPCs, calculations, backend, database, schema, RLS, and native dependencies are unchanged.
+- Added visual regression checks covering both Overview and Trend custom-panel open/close behavior.
+- No APK/AAB created.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA NOT YET DONE.**
+
+---
+
 ## 2026-10-07 — Partner Home/Search shared query synchronization
 
 - Branch: `fix/partner-shared-search-state-2026-10-07`.
