@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     .select("document_type,verification_status")
     .eq("application_id", applicationId);
   if (docs.error) return NextResponse.json({ error: "KYC documents could not be verified." }, { status: 500 });
-  const validTypes = new Set((docs.data ?? []).filter((doc) => doc.verification_status !== "rejected").map((doc) => doc.document_type));
+  const validTypes = new Set<string>((docs.data ?? []).filter((doc) => doc.verification_status !== "rejected").map((doc) => doc.document_type));
   const required = ["pan_copy", "aadhaar_front", "aadhaar_back", ...(isGstRegistered ? ["gst_copy"] : [])];
   const missing = required.find((type) => !validTypes.has(type));
   if (missing) return NextResponse.json({ error: "Upload all required KYC documents before submitting." }, { status: 400 });
