@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { Animated, Image, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -8,6 +8,7 @@ import { StoryRail } from '@/components/story-rail';
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerBusinessGrowthIcon } from '@/components/ui/partner-business-growth-icon';
+import { PartnerCommissionEarnedIcon, PartnerPoliciesSoldIcon } from '@/components/ui/partner-home-metric-icons';
 import { PartnerEnter } from '@/components/ui/partner-enter';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
@@ -260,13 +261,13 @@ export default function PartnerHomeScreen() {
               <View style={styles.businessDivider} />
               <View style={styles.businessBottomRow}>
                 <MetricCell
-                  asset={PartnerAssets.actions.policyChecklist}
+                  icon={<PartnerPoliciesSoldIcon size={36} />}
                   value={String(rangeData?.policies ?? data.business.policies_this_month)}
                   label="Policies Sold"
                 />
                 <View style={styles.metricDivider} />
                 <MetricCell
-                  asset={PartnerAssets.actions.payoutGrowth}
+                  icon={<PartnerCommissionEarnedIcon size={36} />}
                   value={rangeData?.commission_available ? formatIndianCurrency(rangeData.commission_earned ?? 0) : '—'}
                   label="Commission Earned"
                 />
@@ -356,11 +357,21 @@ function PendingTasksCard({ data, onOpenClaims }: { data: PartnerHomeData; onOpe
   );
 }
 
-function MetricCell({ asset, value, label }: { asset: number; value: string; label: string }) {
+function MetricCell({
+  asset,
+  icon,
+  value,
+  label,
+}: {
+  asset?: number;
+  icon?: ReactNode;
+  value: string;
+  label: string;
+}) {
   return (
     <View style={styles.metricCell}>
       <View style={styles.metricIconBox}>
-        <Image source={asset} style={styles.metricImage} resizeMode="contain" />
+        {icon ?? (asset ? <Image source={asset} style={styles.metricImage} resizeMode="contain" /> : null)}
       </View>
       <View style={styles.metricCopy}>
         <Text numberOfLines={1} style={styles.metricValue}>{value}</Text>
