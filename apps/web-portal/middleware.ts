@@ -4,7 +4,7 @@ import { internalLaunchHome, isIntermediaryLaunchPath, isIntermediaryOnlyLaunch 
 import { isAccountsRolePortalPath, isProtectedPortalPath, safePortalReturnPath } from "@/lib/portal-routes";
 import { hasCapability } from "@/lib/roles";
 
-type SessionStatus = "authorized" | "forbidden" | "invalid";
+type SessionStatus = "authorized" | "customer" | "forbidden" | "invalid";
 type SessionCheck = { status: SessionStatus; role: string | null };
 type RefreshedSession = { access_token: string; refresh_token: string; expires_in: number };
 const cookieOptions = { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/" };
@@ -19,6 +19,10 @@ function isSalesExecutivePortalPath(pathname: string) {
   if (pathname === "/policy-intakes" || pathname === "/policy-intakes/new") return true;
   if (/^\/policy-intakes\/[^/]+$/.test(pathname)) return true;
   return pathname === "/access-denied";
+}
+
+function isCustomerPortalPath(pathname: string) {
+  return pathname === "/customer" || pathname.startsWith("/customer/");
 }
 
 function canonicalPortalRedirect(request: NextRequest) {
@@ -70,6 +74,7 @@ async function checkSession(accessToken: string): Promise<SessionCheck> {
 
   const profiles = (await profileResponse.json()) as Profile[];
   const profile = profiles[0] ?? null;
+  if (profile?.is_active && profile.role === "customer") return { status: "customer", role: "customer" };
   return { status: isAuthorizedProfile(profile) ? "authorized" : "forbidden", role: profile?.role ?? null };
 }
 
@@ -153,12 +158,14 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname === "/") {
+    if (check.status === "customer") return redirect(request, "/customer/home", refreshedSession, check.role);
     if (check.status === "authorized" && check.role === "accounts") return redirect(request, accountsHome, refreshedSession, check.role);
     if (check.status === "authorized" && check.role === "sales_executive") return redirect(request, salesExecutiveHome, refreshedSession, check.role);
     return continueRequest(request, refreshedSession, check.role);
   }
 
   if (pathname === "/login") {
+    if (check.status === "customer") return redirect(request, "/customer/home", refreshedSession, check.role);
     if (check.status === "authorized") {
       if (check.role === "accounts") return redirect(request, accountsHome, refreshedSession, check.role);
       if (check.role === "sales_executive") return redirect(request, salesExecutiveHome, refreshedSession, check.role);
@@ -168,7 +175,26 @@ export async function middleware(request: NextRequest) {
     return clearSessionCookies(continueRequest(request));
   }
 
+  if (pathname === "/customer/login") {
+    if (check.status === "customer") return redirect(request, "/customer/home", refreshedSession, check.role);
+    if (check.status === "authorized" || check.status === "forbidden") {
+      return redirect(request, "/access-denied", refreshedSession, check.role);
+    }
+    return clearSessionCookies(continueRequest(request));
+  }
+
+  if (isCustomerPortalPath(pathname)) {
+    if (check.status === "invalid") {
+      return clearSessionCookies(redirect(request, "/customer/login"));
+    }
+    if (check.status !== "customer") {
+      return redirect(request, "/access-denied", refreshedSession, check.role);
+    }
+    return continueRequest(request, refreshedSession, check.role);
+  }
+
   if (isProtectedPortalPath(pathname)) {
+    if (check.status === "customer") return redirect(request, "/access-denied", refreshedSession, check.role);
     if (check.status === "invalid") {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("next", safePortalReturnPath(`${pathname}${request.nextUrl.search}`));
@@ -208,6 +234,7 @@ export const config = {
     "/accounts/:path*",
     "/claim-documents/:path*",
     "/claims/:path*",
+    "/customer/:path*",
     "/customer-kyc/:path*",
     "/customers/:path*",
     "/dashboard/:path*",
