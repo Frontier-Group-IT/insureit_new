@@ -22,7 +22,10 @@
 - Replacement upload, OCR/manual review, Operations attention, final-policy navigation, API/backend behavior remain unchanged.
 - Phase 5 and visual-system regression contracts were updated only where they still asserted the intentionally removed legacy artwork/text.
 - No schema/RLS/API/native dependency/runtime change. **No APK/AAB created.**
-- **RECONCILED ON LATEST MAIN; verification/merge/Partner preview OTA pending.**
+- Replacement PR #2941 passed **Verify Partner app #591** and **Verify web portal #5610**, then merged as `04a73f7a8d67d6436279b20fadaa4e91e986a524`.
+- Original PR #2936 is superseded by that current-main reconciliation and must not be merged separately.
+- Production OTA release branch: `release/partner-policy-intake-detail-redesign-ota-2026-10-07`; trigger file updated for runtime 0.2.0.
+- **MERGED; production OTA pending.**
 
 ---
 
