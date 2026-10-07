@@ -1,3 +1,18 @@
+## 2026-10-07 — Partner Home generated metric icons
+
+- Branch: `ui/partner-home-generated-metric-icons-2026-10-07`.
+- Replaced the Home business-card metric artwork for `Policies Sold` and `Commission Earned` with dedicated generated React Native icon components.
+- New file: `apps/partner-app/components/ui/partner-home-metric-icons.tsx`.
+- Policies Sold icon uses a blue policy/document treatment with a verified check badge.
+- Commission Earned icon uses a blue stacked-coins treatment.
+- Both use the same circular soft-blue Partner tile style and scale from a shared `size` prop.
+- Home metric values, labels, divider, MTD/business logic, commission logic, navigation, backend, database, schema, RLS, and native dependencies are unchanged.
+- Added visual regression checks requiring both generated icons and their defining visual treatments.
+- No APK/AAB created.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA NOT YET DONE.**
+
+---
+
 ## 2026-10-07 — Internal production security boundary remediation (first audit pass)
 
 - Working branch: `security/remediate-live-audit-2026-10-07-v5`.
