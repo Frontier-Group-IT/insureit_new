@@ -79,6 +79,8 @@ assert(vehiclePage.includes("resolveCustomerWebScope"), "Customer Vehicles must 
 assert(vehicleDetailPage.includes("loadCustomerVehicleDetail(account.id, id)"), "Vehicle Detail must validate the requested vehicle inside Customer scope");
 assert(policyPage.includes("resolveCustomerWebScope"), "Customer Policies must resolve authorized Customer account scope");
 assert(policyDetailPage.includes("loadCustomerPolicyDetail(account.id, id"), "Policy Detail must validate the requested policy inside Customer scope");
+assert(vehicleDetailPage.includes('pathname="/customer/vehicles"'), "Vehicle Detail account switching must return to the scoped Vehicles list");
+assert(policyDetailPage.includes('pathname="/customer/policies"'), "Policy Detail account switching must return to the scoped Policies list");
 
 const navigation = read("components/customer-portal/customer-navigation.tsx");
 assert(navigation.includes('fetch("/customer/auth/session", { method: "DELETE" })'), "Customer logout must clear the isolated session endpoint");
