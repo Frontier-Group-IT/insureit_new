@@ -136,7 +136,11 @@ requireText(renewals, 'sortAnchorRef.current?.measureInWindow', 'Renewal sort po
 requireText(renewals, 'styles.emptyCard', 'Renewal empty and loading states must remain within the opportunity card.');
 if (renewals.includes('<Metric ') || renewals.includes('styles.metricRow')) throw new Error('Renewal 0-7/8-15/16-30/overdue mini summary cards must not return.');
 requireText(policyIntakes, 'PartnerAssets.emptyStates.policyUpload', 'Empty Policy Intake history must use the prepared upload artwork.');
-for (const statusAsset of ['verified', 'rejected', 'policyAttention', 'pendingReview', 'documentUpload']) requireText(policyIntakes, `PartnerAssets.status.${statusAsset}`, `Policy Intake status mapping is missing ${statusAsset} artwork.`);
+requireText(policyIntakes, 'PartnerInsurerLogo', 'Policy Intake records must prefer insurer artwork through PartnerInsurerLogo.');
+requireText(policyIntakes, 'getPartnerManufacturerLogoSource', 'Policy Intake records must fall back to manufacturer artwork when insurer artwork is unavailable.');
+requireText(policyIntakes, 'document-text-outline', 'Policy Intake records must keep a neutral default icon when insurer/manufacturer artwork is unavailable.');
+if (policyIntakes.includes('rowFooter') || policyIntakes.includes('name="chevron-forward" size={17} color="#1E3C66"')) throw new Error('Policy Intake record rows must not restore the bottom footer chevron.');
+requireText(policyIntakes, 'styles.updatedDate', 'Policy Intake record rows must keep Updated date/time beneath the status badge.');
 
 requireText(policyIntakeNew, "'cloud-upload-outline'", 'New Policy Intake must keep the stable vector upload control.');
 requireText(policyIntakeNew, "'checkmark-circle-outline'", 'New Policy Intake must keep the stable vector selected/ready control.');
