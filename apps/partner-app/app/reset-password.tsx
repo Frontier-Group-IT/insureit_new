@@ -18,6 +18,15 @@ import { PartnerField } from '@/components/ui/partner-field';
 import { partnerTheme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 
+function strongPasswordError(password: string) {
+  if (password.length < 12) return 'Password must be at least 12 characters.';
+  if (!/[a-z]/.test(password)) return 'Password must include a lowercase letter.';
+  if (!/[A-Z]/.test(password)) return 'Password must include an uppercase letter.';
+  if (!/[0-9]/.test(password)) return 'Password must include a number.';
+  if (!/[^A-Za-z0-9]/.test(password)) return 'Password must include a symbol.';
+  return '';
+}
+
 export default function ResetPasswordScreen() {
   const router = useRouter();
   const [password, setPassword] = useState('');
