@@ -63,6 +63,12 @@ requireText(listScreen, 'artwork={artwork}', 'PartnerListScreen must preserve ex
 requireText(stateView, 'PartnerAssets.emptyStates.offline', 'Offline state must use branded Partner artwork.');
 requireText(stateView, 'PartnerAssets.emptyStates.validationError', 'Generic error state must use branded Partner artwork.');
 requireText(stateView, 'PartnerAssets.emptyStates.incompleteDetails', 'Unauthorized state must use branded Partner artwork.');
+requireText(home, 'asset={PartnerAssets.actions.policyChecklist}', 'Partner Home Policies Sold metric must keep the policy checklist asset.');
+requireText(home, 'asset={PartnerAssets.actions.payoutGrowth}', 'Partner Home Commission Earned metric must keep the payout growth asset.');
+requireText(home, 'width: 36', 'Partner Home metric icon container must keep the reference-size treatment.');
+requireText(home, 'borderRadius: 18', 'Partner Home metric icon container must remain circular.');
+requireText(home, "backgroundColor: '#EDF7FF'", 'Partner Home metric icon container must keep the soft blue reference background.');
+requireText(home, 'metricImage: { width: 29, height: 29 }', 'Partner Home metric artwork must keep the reference visual weight.');
 
 const moreWithoutApprovedBusinessGrowthIcon = more.replace('<MenuRow icon={<PartnerBusinessGrowthIcon size={36} />} title="Your Week"', '');
 if (moreWithoutApprovedBusinessGrowthIcon.includes('<MenuRow icon=')) throw new Error('Feature rows in More must use Partner artwork instead of generic vector icons.');
