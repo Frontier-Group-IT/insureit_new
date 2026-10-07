@@ -225,7 +225,7 @@ $$;
 -- RLS does not govern TRUNCATE / REFERENCES / TRIGGER privileges. Tables that
 -- intentionally have RLS enabled with zero policies are server-only; remove all
 -- direct client privileges so the deny-all contract is complete.
-do $
+do $$
 declare
   r record;
 begin
@@ -245,7 +245,7 @@ begin
     execute format('grant all privileges on table public.%I to service_role', r.relname);
   end loop;
 end
-$;
+$$;
 
 -- ---------------------------------------------------------------------------
 -- 4. Legacy POSP document bucket
