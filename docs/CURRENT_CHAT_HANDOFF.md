@@ -7,7 +7,9 @@
 - Existing insurer/manufacturer/customer artwork, policy data, premium calculations, renewal/claim/customer navigation, permissions and backend calls remain unchanged.
 - Added visual regression coverage in `verify-visual-system-completion.mjs`.
 - No database/schema/RLS/native dependency change. **No APK/AAB created.**
-- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA pending.**
+- PR #2933 passed **Verify Partner app #586** and **Verify web portal #5601**, then merged as `0e984e0ce63bea6ea92afa8ce483cf95fe0fbb1e`.
+- Production OTA release branch: `release/partner-policy-detail-icons-ota-2026-10-07`; trigger file updated for runtime 0.2.0.
+- **MERGED; production OTA pending.**
 
 ---
 
