@@ -20,3 +20,6 @@
 - Mutating authorization weaknesses are proven from grants + function body; do not mutate production merely to demonstrate impact.
 - Cross-tenant runtime checks will use synthetic identities/records in an approved test environment.
 - Every remediation must create a separate RETEST row referencing the exact commit/migration.
+
+| INS-TST-PERF-001 | DB performance | Current Supabase performance advisor | Live advisor read | Establish current baseline | 154 unindexed FK; 95 RLS init-plan; 73 multiple permissive; 176 unused index; 3 duplicate index | PASS (baseline collected) |
+| INS-TST-CI-001 | Supply chain | Standard security-tool presence audit | Repository-wide code/workflow searches | SAST + secret scan + SCA/SBOM + DAST evidence gates present | No hits for reviewed standard tool families | FAIL |
