@@ -2,7 +2,6 @@ import {
   Building2,
   Check,
   ChevronRight,
-  FileText,
   IndianRupee,
   ShieldCheck,
 } from "lucide-react";
@@ -159,10 +158,7 @@ export default async function PartnerPolicyDetailPage({ params }: { params: Prom
             </div>
 
             <div className="px-4 py-4">
-              <p className="text-[8px] font-black uppercase tracking-[0.08em] text-[#8995A7]">PayIn-PayOut</p>
-              <p className="mt-1 text-[8px] text-[#A1ACBB]">Sensitive terms · popup entry</p>
-
-              <ActionCard icon={<FileText className="h-4 w-4" />} title="Insurer Pay-in" subtitle="Add projected insurer terms" />
+              <p className="text-[8px] font-black uppercase tracking-[0.08em] text-[#8995A7]">Partner Payout</p>
               <ActionCard icon={<ShieldCheck className="h-4 w-4" />} title="Partner Payout" subtitle="Add agreed partner payout" />
             </div>
 

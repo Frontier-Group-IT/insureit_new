@@ -19,7 +19,9 @@ const topBar = read('components/ui/partner-top-bar.tsx');
 const stateView = read('components/ui/partner-state-view.tsx');
 const screen = read('components/partner-screen.tsx');
 const listScreen = read('components/partner-list-screen.tsx');
+const home = read('app/(tabs)/index.tsx');
 const more = read('app/(tabs)/more.tsx');
+const businessGrowthIcon = read('components/ui/partner-business-growth-icon.tsx');
 const business = read('app/(tabs)/business.tsx');
 const customers = read('app/customers.tsx');
 const policies = read('app/(tabs)/policies.tsx');
@@ -62,7 +64,14 @@ requireText(stateView, 'PartnerAssets.emptyStates.offline', 'Offline state must 
 requireText(stateView, 'PartnerAssets.emptyStates.validationError', 'Generic error state must use branded Partner artwork.');
 requireText(stateView, 'PartnerAssets.emptyStates.incompleteDetails', 'Unauthorized state must use branded Partner artwork.');
 
-if (more.includes('<MenuRow icon=')) throw new Error('Feature rows in More must use Partner artwork instead of generic vector icons.');
+const moreWithoutApprovedBusinessGrowthIcon = more.replace('<MenuRow icon={<PartnerBusinessGrowthIcon size={36} />} title="Your Week"', '');
+if (moreWithoutApprovedBusinessGrowthIcon.includes('<MenuRow icon=')) throw new Error('Feature rows in More must use Partner artwork instead of generic vector icons.');
+requireText(home, '<PartnerBusinessGrowthIcon size={64} />', 'Partner Home business card must use the shared reference-style growth icon.');
+requireText(more, '<MenuRow icon={<PartnerBusinessGrowthIcon size={36} />} title="Your Week"', 'More → Your Week must reuse the same shared business growth icon.');
+requireText(businessGrowthIcon, 'styles.barOne', 'Shared business growth icon must keep the first reference bar.');
+requireText(businessGrowthIcon, 'styles.barFour', 'Shared business growth icon must keep the fourth reference bar.');
+requireText(businessGrowthIcon, 'name="trending-up"', 'Shared business growth icon must keep the rising trend line.');
+requireText(businessGrowthIcon, 'name="arrow-up"', 'Shared business growth icon must keep the top-right growth arrow.');
 for (const asset of ['PartnerAssets.actions.policyChecklist', 'PartnerAssets.status.businessGrowth', 'PartnerAssets.status.settings']) requireText(more, asset, `More screen is missing ${asset}.`);
 
 for (const businessAsset of ['actions.quickRenewals', 'actions.quickClaims', 'actions.quickCustomers']) {
@@ -72,6 +81,10 @@ requireText(business, 'function BlueIcon(', 'Business must keep the shared blue 
 requireText(business, 'function productIcon(', 'Business product cards must keep differentiated product icon mapping.');
 requireText(business, '!payout.available', 'Business payout authorization gate must remain intact.');
 requireText(business, 'getPartnerPayoutSummary()', 'Business must continue loading payout data through the existing service.');
+requireText(business, "source={require('../../assets/partner/banners/claims-header-reference.jpg')}", 'Business header must use the same reference background as Claims and Policies.');
+requireText(business, "heroBackdrop: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%', opacity: 0.92 }", 'Business header backdrop must keep Claims/Policies crop and opacity.');
+requireText(business, "heroShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(1,42,95,0.10)' }", 'Business header must keep the Claims/Policies shade overlay.');
+requireText(business, "heroBanner: { height: 162", 'Business header height must match Claims and Policies.');
 
 requireText(customers, 'PartnerAssets.emptyStates.noCustomers', 'Customers empty state must use the prepared no-customers artwork.');
 requireText(policies, 'PartnerAssets.emptyStates.noPolicies', 'Policies empty state must use the prepared no-policies artwork.');
@@ -119,9 +132,14 @@ requireText(customerDetail, 'getPartnerCustomerDetail(id)', 'Customer detail mus
 requireText(customerDetail, 'initials(data.customer.customer_name)', 'Customer detail must retain real-customer initials for identity.');
 for (const oldGlyph of ['document-text-outline', 'car-outline', 'shield-outline']) if (customerDetail.includes(`name="${oldGlyph}"`)) throw new Error(`Customer detail feature rows must not regress to ${oldGlyph}.`);
 
-for (const detailAsset of ['navigation.claims', 'status.claimAttention', 'status.verified']) requireText(claimDetail, `PartnerAssets.${detailAsset}`, `Claim detail is missing ${detailAsset} artwork.`);
+for (const detailAsset of ['navigation.claims', 'actions.payoutRefresh', 'status.journey', 'status.claimAttention', 'status.verified']) requireText(claimDetail, `PartnerAssets.${detailAsset}`, `Claim detail is missing ${detailAsset} artwork.`);
 requireText(claimDetail, 'getPartnerManufacturerLogoSource', 'Claim detail summary must resolve manufacturer artwork from the linked vehicle make.');
+requireText(claimDetail, '<ReferenceSectionIcon name="people" />', 'Claim detail Insured Person header must use the reference blue group icon.');
+requireText(claimDetail, '<ReferenceSectionIcon name="clipboard" />', 'Claim detail Claim Overview header must use the reference blue clipboard icon.');
+requireText(claimDetail, '<SectionIcon asset={PartnerAssets.actions.payoutRefresh} />', 'Claim detail Financial Snapshot must keep professional payout artwork.');
+requireText(claimDetail, '<SectionIcon asset={PartnerAssets.status.journey} />', 'Claim detail Journey must keep professional journey artwork.');
 requireText(claimDetail, 'name="person-outline"', 'Claim detail insured-person row must use the approved clean profile icon.');
+requireText(claimDetail, 'summaryMetaIcon', 'Claim detail summary metadata must keep clear icon containers.');
 requireText(claimDetail, 'getPartnerClaimDetail(id)', 'Claim detail must preserve the existing scoped data service.');
 requireText(claimDetail, 'function timelineIcon(item: TimelineItem)', 'Claim detail must keep semantic journey icon mapping.');
 for (const journeyIcon of ['document-text-outline', 'person-add-outline', 'cloud-upload-outline', 'checkmark-circle-outline', 'shield-checkmark-outline']) requireText(claimDetail, journeyIcon, `Claim detail journey is missing ${journeyIcon} semantic icon coverage.`);

@@ -55,16 +55,30 @@ for (const route of requiredRoutes) {
 }
 
 const homePage = read("app/partner/page.tsx");
+const homeTrend = read("app/partner/partner-business-trend.tsx");
+const homeTrendResponsiveFix = read("components/partner-portal/partner-business-trend-responsive-fix.tsx");
 assert(homePage.includes('data-partner-home-reference-hero="true"'), "Partner Home must retain the approved reference header treatment");
 assert(homePage.includes('bg-white'), "Partner Home header must retain the approved white background");
 assert(!homePage.includes('data-partner-home-truck-art="true"'), "Partner Home header must not reintroduce truck artwork");
 assert(!homePage.includes('/assets/Custom-Icons/optimized-128/fleet-vehicle.png'), "Partner Home header must not reintroduce the fleet vehicle asset");
-assert(homePage.includes('data-partner-home-reference-cta="true"'), "Partner Home header must retain the reference-aligned CTA");
-assert(homePage.includes('bg-[#163968]'), "Partner Home CTA must retain the approved New Intake-style navy treatment");
-assert(homePage.includes('href="/partner/business"'), "Partner Home header CTA must continue to open My Business");
+assert(homeTrend.includes('data-partner-home-reference-cta="true"'), "Partner Home header must retain the reference-aligned CTA");
+assert(homeTrend.includes('bg-[#163968]'), "Partner Home CTA must retain the approved New Intake-style navy treatment");
+assert(homeTrend.includes('href="/partner/business"'), "Partner Home header CTA must continue to open My Business");
 assert(homePage.includes("Welcome, {name}"), "Partner Home header must keep the dynamic Partner display name");
-assert(homePage.includes("View My Business"), "Partner Home header must keep the My Business CTA label");
+assert(homeTrend.includes("View My Business"), "Partner Home header must keep the My Business CTA label");
 assert(!homePage.includes("Partner Overview"), "Partner Home header must keep the approved compact layout without the Partner Overview eyebrow");
+assert(!homePage.includes("Business highlights"), "Partner Home must not render the removed Business highlights section");
+assert(homePage.includes("<PartnerBusinessTrend"), "Partner Home must render the dedicated interactive business trend component");
+assert(homeTrend.includes('data-partner-business-trend-tooltip="true"'), "Partner Home business trend must expose the period detail tooltip");
+assert(homeTrend.includes("Net Premium:"), "Partner Home business trend tooltip must show Net Premium");
+assert(homeTrend.includes("Policies:"), "Partner Home business trend tooltip must show Policies");
+assert(!homeTrend.includes("<polyline"), "Partner Home business trend must not render the policy connecting line");
+assert(homeTrend.includes('data-partner-business-trend-chart="true"'), "Partner Home business trend must expose a stable responsive chart hook");
+assert(homeTrend.includes('role="group"'), "Partner Home interactive trend must preserve accessible interactive descendants");
+assert(!homeTrend.includes('role="img"'), "Partner Home interactive trend must not hide point controls behind an image role");
+assert(homeTrendResponsiveFix.includes('[data-partner-business-trend="interactive"] svg[data-partner-business-trend-chart="true"]'), "Partner Home responsive trend fix must bind to the stable chart hook");
+assert(homeTrendResponsiveFix.includes("const SOURCE_PLOT_LEFT = 30;"), "Partner Home responsive trend fix must match the current chart left boundary");
+assert(homeTrendResponsiveFix.includes("const SOURCE_PLOT_RIGHT = 570;"), "Partner Home responsive trend fix must match the current chart right boundary");
 
 const guardedSurface = [
   ...walk("app/partner"),
@@ -134,6 +148,10 @@ assert(partnerPolicyDetailPage.includes("data.activity_history.map"), "Partner P
 assert(!partnerPolicyDetailPage.includes('id: "policy-status"'), "Partner Policy detail must not render synthetic Policy status activity");
 assert(!partnerPolicyDetailPage.includes('id: "policy-period"'), "Partner Policy detail must not render synthetic Policy period activity");
 assert(partnerPolicyDetailPage.includes("Created By:"), "Partner Policy detail must show canonical audit actor details");
+assert(!partnerPolicyDetailPage.includes("Insurer Pay-in"), "Partner Policy detail must not expose Insurer Pay-in in the Partner UI");
+assert(!partnerPolicyDetailPage.includes("PayIn-PayOut"), "Partner Policy detail must not expose the combined PayIn-PayOut heading");
+assert(partnerPolicyDetailPage.includes(">Partner Payout</p>"), "Partner Policy detail must retain a Partner Payout section heading");
+assert(partnerPolicyDetailPage.includes('title="Partner Payout"'), "Partner Policy detail must retain the Partner Payout action");
 
 const partnerVehicleDetailPage = read("app/partner/vehicles/[id]/page.tsx");
 assert(partnerVehicleDetailPage.includes("data.activity_history.map"), "Partner Vehicle detail must render canonical activity_history");
@@ -156,10 +174,11 @@ assert(partnerFleetSummary.includes("getInsurerLogo(policy.insurer_name)"), "Par
 
 const partnerBusinessPage = read("app/partner/business/page.tsx");
 assert(partnerBusinessPage.includes('from "@/lib/insurer-logo"'), "My Business Top Insurer Contribution must use the shared insurer logo resolver");
-assert(partnerBusinessPage.includes("getInsurerLogo(item.label)"), "My Business insurer contribution rows must resolve logo from insurer label");
-assert(!partnerBusinessPage.includes("{index + 1}"), "My Business Top Insurer Contribution must not render ranking serial numbers");
+assert(partnerBusinessPage.includes("getInsurerLogo(row.name)"), "My Business insurer rows must resolve logo from insurer name");
+assert(partnerBusinessPage.includes("<InsurerTable rows={insurerRows} />"), "My Business must render the report-style insurer table");
 assert(!partnerBusinessPage.includes('shrink-0 text-[#6D7D96]'), "My Business KPI cards must not render right-side arrows");
-assert(partnerBusinessPage.includes('alt={`${item.label} logo`}'), "My Business insurer logos must keep accessible alt text");
+assert(partnerBusinessPage.includes('alt={`${row.name} logo`}'), "My Business insurer logos must keep accessible alt text");
+assert(!/pay-?in|payin/i.test(partnerBusinessPage), "Partner My Business must not expose pay-in labels or fields");
 
 const partnerActivityPage = read("app/partner/activity/page.tsx");
 const partnerActivityTimeline = read("app/partner/activity/activity-timeline-client.tsx");

@@ -51,6 +51,8 @@ jobs:
         run: npm run access-control:release-blockers-regression
       - name: Backoffice data-entry security regression
         run: npm run access-control:backoffice-data-entry-regression
+      - name: Service Enquiries unification regression
+        run: node scripts/service-enquiry-unification-regression.mjs
       - name: Intermediary optional surname and IIB live-name regression
         run: node scripts/intermediary-optional-surname-iib-regression.mjs
       - name: Intermediary IIB registration finalization regression
@@ -65,6 +67,8 @@ jobs:
         run: node scripts/policy-intake-policy-register-links-regression.mjs
       - name: Partner web core security regression
         run: npm run partner-web:core-regression
+      - name: Customer Web foundation isolation regression
+        run: npm run customer-web:foundation-regression
       - name: External renewal intake visibility regression
         run: node scripts/partner-external-renewal-intake-visibility-regression.mjs
       - name: External renewal Administration import regression

@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 
 const SOURCE_HEIGHT = 190;
-const SOURCE_PLOT_LEFT = 24;
-const SOURCE_PLOT_RIGHT = 576;
+const SOURCE_PLOT_LEFT = 30;
+const SOURCE_PLOT_RIGHT = 570;
 const TARGET_HEIGHT = 210;
 
 function remember(element: Element, attribute: string) {
@@ -117,7 +117,9 @@ export function PartnerBusinessTrendResponsiveFix() {
     };
 
     const connect = () => {
-      const svg = document.querySelector<SVGSVGElement>('svg[aria-label^="Premium and policy trend for"]');
+      const svg = document.querySelector<SVGSVGElement>(
+        '[data-partner-business-trend="interactive"] svg[data-partner-business-trend-chart="true"]',
+      );
       if (!svg) return;
 
       if (svg !== observedSvg) {

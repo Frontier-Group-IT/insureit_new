@@ -93,7 +93,22 @@ expectAll('app/policy-intakes/[id].tsx', [
 ]);
 
 // Frozen smoke journey route contracts.
-expectAll('app/customers.tsx', [[/router\.push\([\s\S]*\/customer\//, 'Customers list must open customer detail']]);
+expectAll('app/customers.tsx', [
+  [/router\.push\([\s\S]*\/customer\//, 'Customers list must open customer detail'],
+  [/statusFilter === 'all'/, 'Customers KPI strip must expose the All filter state'],
+  [/statusFilter === 'active'/, 'Customers KPI strip must expose the Active filter state'],
+  [/statusFilter === 'inactive'/, 'Customers KPI strip must expose the Inactive filter state'],
+  [/accessibilityState=\{\{ selected: active \}\}/, 'Customers KPI filters must expose their selected state'],
+  [/icon="people-outline"/, 'Customers KPI must use a clear people icon'],
+  [/icon="checkmark-circle-outline"/, 'Active KPI must use a clear success icon'],
+  [/icon="remove-circle-outline"/, 'Inactive KPI must use a clear inactive icon'],
+]);
+expect('app/customers.tsx', /^(?![\s\S]*name="location-outline")[\s\S]*$/, 'Customer list records must not render a location icon');
+expect('app/customers.tsx', /^(?![\s\S]*styles\.locationRow)[\s\S]*$/, 'Customer list records must not render the location row');
+expectAll('lib/customers.ts', [
+  [/partner_app_list_customers_v2/, 'Customers list must use the scoped status-filter RPC'],
+  [/p_status: status === 'all' \? null : status/, 'Customers list must pass the selected status filter'],
+]);
 expectAll('app/customer/[id].tsx', [
   [/router\.push\(\`\/policy\//, 'Customer detail must open policy detail'],
   [/router\.back\(\)/, 'Customer detail must support Back'],
@@ -101,6 +116,14 @@ expectAll('app/customer/[id].tsx', [
 expectAll('app/policy/[id].tsx', [[/router\.back\(\)/, 'Policy detail must support Back']]);
 expectAll('app/policy-intake-new.tsx', [[/router\.replace\(\{ pathname: '\/policy-intakes\/\[id\]'/, 'new Policy Intake must route to tracked status after submit']]);
 expectAll('app/policy-intakes/[id].tsx', [[/POLICY INTAKE/, 'Policy Intake tracking route must remain available']]);
+
+// Partner Home MTD comparison contract.
+expectAll('app/(tabs)/index.tsx', [
+  [/previousMonthMtdDateRange\(\)/, 'Partner Home MTD must derive a same-date previous-month comparison range'],
+  [/getPartnerBusinessRange\(previousMonthMtdRange\.from, previousMonthMtdRange\.to\)/, 'Partner Home MTD must load the previous-month MTD through the scoped business-range service'],
+  [/percentageChange\(Number\(rangeData\?\.net_premium \?\? 0\), Number\(previousMonthMtd\.data\?\.net_premium \?\? 0\)\)/, 'Partner Home MTD comparison must use net premium for both current and previous-month MTD'],
+  [/comparisonLabel="previous month"/, 'Partner Home MTD trend copy must explicitly say previous month'],
+]);
 
 // Partner claim detail presentation contract.
 expectAll('app/claim/[id].tsx', [

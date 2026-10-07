@@ -7,22 +7,33 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PARTNER_PROFILE_PHOTO_BUCKET, partnerProfilePhotoPath } from '@/lib/partner-profile-photo';
-import type { PartnerCommercialScope } from '@/lib/partner-session';
 import { supabase } from '@/lib/supabase';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { context, avatarUri, refreshAvatar } = usePartnerSession();
+  const { context, avatarUri, refreshAvatar, signOut } = usePartnerSession();
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarMessage, setAvatarMessage] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
   if (!context) return null;
 
-  const { identity, scope } = context;
+  const { identity } = context;
   const roleLabel = identity.actor_kind === 'employee'
     ? humanize(identity.role)
     : humanize(identity.intermediary_type);
+
+  async function logout() {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await signOut();
+    } finally {
+      router.replace('/login');
+      setSigningOut(false);
+    }
+  }
 
   async function changeProfilePhoto() {
     if (avatarUploading) return;
@@ -205,8 +216,21 @@ export default function ProfileScreen() {
         )}
       </View>
 
-      <SectionTitle icon="shield-checkmark-outline" title="Commercial Access" />
-      <ProfileScopeCard scope={scope} />
+      <View style={styles.logoutArea}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Logout"
+          disabled={signingOut}
+          onPress={() => void logout()}
+          style={({ pressed }) => [
+            styles.logoutButton,
+            (pressed || signingOut) && styles.logoutButtonPressed,
+          ]}
+        >
+          <Ionicons name="log-out-outline" size={22} color="#FF1F2D" />
+          <Text style={styles.logoutText}>{signingOut ? 'Logging out…' : 'Logout'}</Text>
+        </Pressable>
+      </View>
     </PartnerScreen>
   );
 }
@@ -245,33 +269,6 @@ function Detail({
     </View>
   );
 }
-
-function ProfileScopeCard({ scope }: { scope: PartnerCommercialScope }) {
-  return (
-    <View style={styles.scopeCard}>
-      <View style={styles.scopeHalo}>
-        <View style={styles.scopeIconWrap}>
-          <Ionicons name="shield-checkmark-outline" size={27} color="#12A86B" />
-        </View>
-      </View>
-
-      <View style={styles.scopeBody}>
-        <Text style={styles.scopeEyebrow}>AUTHORIZED BUSINESS SCOPE</Text>
-        <Text style={styles.scopeTitle}>{scopeLabel(scope.scope_mode)}</Text>
-        <Text style={styles.scopeCopy}>This view is generated from your server-authorized commercial relationships.</Text>
-      </View>
-    </View>
-  );
-}
-
-function scopeLabel(mode: PartnerCommercialScope['scope_mode']) {
-  if (mode === 'partner_family') return 'My Partner family';
-  if (mode === 'hierarchy') return 'My sales hierarchy';
-  if (mode === 'organization') return 'Organization-wide';
-  if (mode === 'self') return 'My business';
-  return 'No commercial scope';
-}
-
 
 function initials(value: string) {
   return value
@@ -510,56 +507,30 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     fontWeight: '800',
   },
-
-  scopeCard: {
+  logoutArea: {
+    marginTop: 'auto',
+    paddingTop: 32,
+  },
+  logoutButton: {
+    minHeight: 54,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    minHeight: 118,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: '#CDECDD',
-    backgroundColor: '#EFFAF5',
-  },
-  scopeHalo: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E2F7EC',
-  },
-  scopeIconWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    gap: 9,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#C7EBD8',
+    borderColor: '#FF5B66',
+    backgroundColor: '#FFF8F8',
   },
-  scopeBody: { flex: 1, minWidth: 0 },
-  scopeEyebrow: {
-    color: '#27886A',
-    fontSize: 8.5,
-    lineHeight: 11,
-    fontWeight: '800',
-    letterSpacing: 1.05,
+  logoutButtonPressed: {
+    opacity: 0.68,
   },
-  scopeTitle: {
-    marginTop: 5,
-    color: '#0F1C3A',
-    fontSize: 16,
-    lineHeight: 20,
+  logoutText: {
+    color: '#FF1F2D',
+    fontSize: 14,
+    lineHeight: 18,
     fontWeight: '800',
   },
-  scopeCopy: {
-    marginTop: 5,
-    color: '#5D6E8A',
-    fontSize: 10.5,
-    lineHeight: 15,
-  },
+
+
 });

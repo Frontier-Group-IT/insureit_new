@@ -33,19 +33,24 @@ export async function getPartnerCustomerSummary() {
   return data as PartnerCustomerSummary;
 }
 
+export type PartnerCustomerStatusFilter = 'all' | 'active' | 'inactive';
+
 export async function listPartnerCustomers({
   limit = 25,
   offset = 0,
   search,
+  status = 'all',
 }: {
   limit?: number;
   offset?: number;
   search?: string;
+  status?: PartnerCustomerStatusFilter;
 } = {}) {
-  const { data, error } = await supabase.rpc('partner_app_list_customers', {
+  const { data, error } = await supabase.rpc('partner_app_list_customers_v2', {
     p_limit: limit,
     p_offset: offset,
     p_search: search?.trim() || null,
+    p_status: status === 'all' ? null : status,
   });
   if (error) throw error;
   return (data ?? []) as PartnerCustomerRow[];

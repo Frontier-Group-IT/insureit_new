@@ -7,13 +7,16 @@ import { updateServiceEnquiryStatus } from "./actions";
 type ServiceEnquiryRow = {
   id: string;
   enquiry_no: string;
-  service_type: "insurance_quote" | "challan_assistance";
+  service_type: "insurance_quote" | "challan_assistance" | "support_ticket";
   source: "guest_login" | "guest_signup" | "customer_dashboard";
   customer_id: string | null;
   guest_name: string | null;
   guest_phone: string | null;
   guest_email: string | null;
   vehicle_no: string | null;
+  claim_id: string | null;
+  category: "claim" | "policy" | "documents" | "roadside" | "other" | null;
+  priority: "low" | "medium" | "high" | null;
   subject: string;
   description: string;
   details: Record<string, unknown> | null;
@@ -42,7 +45,7 @@ export default async function ServiceEnquiriesPage() {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("service_enquiries")
-    .select("id,enquiry_no,service_type,source,customer_id,guest_name,guest_phone,guest_email,vehicle_no,subject,description,details,status,consent_accepted,consent_accepted_at,consent_version,whatsapp_opt_in,created_at,customers(contact_name,phone,email,customer_code),vehicles(vehicle_no)")
+    .select("id,enquiry_no,service_type,source,customer_id,guest_name,guest_phone,guest_email,vehicle_no,claim_id,category,priority,subject,description,details,status,consent_accepted,consent_accepted_at,consent_version,whatsapp_opt_in,created_at,customers(contact_name,phone,email,customer_code),vehicles(vehicle_no)")
     .order("created_at", { ascending: false })
     .limit(200)
     .returns<ServiceEnquiryRow[]>();
@@ -56,7 +59,7 @@ export default async function ServiceEnquiriesPage() {
     <AppShell title="Service Enquiries">
       <PageHeader
         title="Service Enquiries"
-        description="Quote and challan requests from signed-in customers and verified guests."
+        description="Customer support tickets, insurance quote requests and challan assistance in one queue."
       />
 
       <section className="grid gap-3 sm:grid-cols-3">
@@ -100,8 +103,8 @@ export default async function ServiceEnquiriesPage() {
                       <span className="mt-2 inline-flex rounded-full bg-[#EEF3FF] px-2 py-1 text-[9px] font-black text-[#3156B8]">{sourceLabel(row.source)}</span>
                     </td>
                     <td className="px-4 py-4">
-                      <p className="font-black text-[#171D3D]">{row.service_type === "insurance_quote" ? "Insurance Quote" : "Challan Assistance"}</p>
-                      <p className="mt-1 max-w-[170px] text-[10px] leading-4 text-[#707A90]">{row.subject}</p>
+                      <p className="font-black text-[#171D3D]">{serviceLabel(row.service_type)}</p>
+                      <p className="mt-1 max-w-[170px] text-[10px] leading-4 text-[#707A90]">{row.subject}</p>{row.service_type === "support_ticket" ? <p className="mt-1 text-[9px] font-bold capitalize text-[#7B8498]">{row.category || "Support"} · {row.priority || "medium"} priority</p> : null}
                     </td>
                     <td className="px-4 py-4">
                       <p className="font-black text-[#171D3D]">{name}</p>
@@ -120,7 +123,7 @@ export default async function ServiceEnquiriesPage() {
                     <td className="px-4 py-4">
                       <div className="flex flex-col items-start gap-1.5">
                         <span className={`inline-flex rounded-full px-2 py-1 text-[9px] font-black ${row.consent_accepted ? "bg-[#EAF8F0] text-[#147A55]" : "bg-[#F3F5F9] text-[#7B8498]"}`}>
-                          {row.consent_accepted ? "Consent captured" : "Legacy request"}
+                          {row.service_type === "support_ticket" ? "App support request" : row.consent_accepted ? "Consent captured" : "Legacy request"}
                         </span>
                         {row.whatsapp_opt_in ? <span className="inline-flex rounded-full bg-[#EAF7F2] px-2 py-1 text-[9px] font-black text-[#15765B]">WhatsApp allowed</span> : null}
                         {row.consent_accepted_at ? <span className="text-[9px] text-[#8A93A6]">{formatDateTime(row.consent_accepted_at)}</span> : null}
@@ -146,7 +149,7 @@ export default async function ServiceEnquiriesPage() {
                 );
               })}
               {!rows.length ? (
-                <tr><td colSpan={8} className="px-5 py-12 text-center text-sm font-semibold text-[#7B8498]">No quote or challan enquiries yet.</td></tr>
+                <tr><td colSpan={8} className="px-5 py-12 text-center text-sm font-semibold text-[#7B8498]">No service enquiries yet.</td></tr>
               ) : null}
             </tbody>
           </table>
@@ -159,5 +162,6 @@ export default async function ServiceEnquiriesPage() {
 function Metric({ label, value }: { label: string; value: number }) {
   return <div className="rounded-[20px] border border-white/80 bg-white/78 px-4 py-3 shadow-[0_12px_35px_rgba(37,39,92,0.06)]"><p className="text-[10px] font-black uppercase tracking-[0.08em] text-[#7B8498]">{label}</p><p className="mt-1 text-2xl font-black text-[#171D3D]">{value}</p></div>;
 }
+function serviceLabel(type: ServiceEnquiryRow["service_type"]) { return type === "support_ticket" ? "Support Ticket" : type === "insurance_quote" ? "Insurance Quote" : "Challan Assistance"; }
 function sourceLabel(source: ServiceEnquiryRow["source"]) { return source === "customer_dashboard" ? "Customer app" : source === "guest_signup" ? "Signup guest" : "Login guest"; }
 function formatDateTime(value: string) { return new Date(value).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); }

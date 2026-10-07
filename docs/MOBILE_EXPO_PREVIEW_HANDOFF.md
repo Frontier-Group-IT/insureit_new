@@ -763,3 +763,81 @@ Safety:
 - no runtime-version change
 - no native dependency/config change
 - no database/schema/RPC/RLS change
+
+
+---
+
+## 2026-10-06 — Customer Exchange marketplace first visual draft
+
+- Branch: `feature/customer-exchange-marketplace-draft-2026-10-06`.
+- Customer App runtime remains **0.3.0**; no native package/config/runtime-version change.
+- Replaced `apps/mobile-app/app/customer/exchange.tsx` Coming Soon placeholder with an isolated first-draft marketplace screen for visual approval.
+- Buy tab: local sample commercial-vehicle inventory, search, category filtering, favorites, verification states, vehicle detail, controlled seller-contact messaging and interactive demo bid increments.
+- Sell tab: first-draft listing form, vehicle type selection, guided-photo placeholders, expected price, Open Bidding presentation, seller privacy explanation and listing preview.
+- My Activity: locally reflects saved vehicles, demo bids and the current-session draft listing.
+- **Safety boundary:** sample vehicles are presentation data only. Demo bids and sell drafts live only in React screen state; nothing is persisted to Supabase and no seller/buyer personal data is exposed.
+- Existing Customer Home quick action route remains unchanged; only the Exchange destination implementation is replaced.
+- No schema, migration, RLS, API/RPC, payment, call-masking, APK/AAB or native-runtime change.
+- PR #2846 merged as `926cc07465b5313b25f323c0a9433017fdabbb92` after **Verify mobile app #952** and **Verify web portal #5352** passed.
+- Production runtime **0.3.0 OTA DEPLOYED** successfully via `Publish customer 0.3.0 production OTA` run **#156** from merge commit `926cc07465b5313b25f323c0a9433017fdabbb92`.
+- Installed-device verification remains pending. **NO APK/AAB CREATED.**
+
+
+---
+
+## 2026-10-06 — Customer Exchange premium V2 visual system
+
+- Branch: `redesign/customer-exchange-premium-v2-2026-10-06`.
+- Customer runtime remains **0.3.0** with no native package/config/runtime-version change.
+- Research direction applied from leading used-vehicle/auction marketplace patterns: immersive discovery, high-confidence inventory cards, live bidding emphasis, verification/inspection trust, private managed contact, strong sell funnel and consolidated buyer/seller activity.
+- Reworked Exchange visual language beyond the default Customer App theme with dark graphite/navy surfaces, electric indigo, mint success accents, warm vehicle-specific accents, larger visual hierarchy and stronger use of bundled commercial-vehicle artwork.
+- Buy/Explore: premium discovery hero, live-market signal, integrated search, trust strip, category rail, featured inventory carousel, seller acquisition card, denser all-vehicle list and InsureIT trust promise.
+- Vehicle detail: visual hero, verification/inspection score, live bid vs asking price, confidence grid, commercial-vehicle overview, private connection explanation and bid controls.
+- Sell: premium seller hero, benefit strip, progress pattern, refined vehicle form, guided-photo grid, pricing/bidding strategy and privacy protection.
+- My Exchange: polished buyer/seller activity dashboard for saved vehicles, active bids and listings.
+- Removed visible draft/testing explanatory language from the Exchange UI so the screen reads as production-grade.
+- Existing sample inventory and local-only bid/favourite/draft state remain unchanged internally; no Supabase marketplace persistence has been introduced.
+- No schema, migration, RLS, API/RPC, payment, call-masking, APK/AAB or native-runtime change.
+- **IMPLEMENTED; PR/CI/merge/production OTA/installed-device verification pending.**
+
+
+---
+
+## 2026-10-06 — Customer Exchange backend foundation
+
+- Premium V2 PR #2847 merged as `65d263aa723f25c89f10eed4d4a9c1da693a4e86`.
+- Customer production runtime **0.3.0 OTA #157 completed successfully**; no APK/AAB was created.
+- Backend branch: `feature/customer-exchange-marketplace-backend-2026-10-06`.
+- Added migration `20261006183000_customer_exchange_marketplace_backend.sql`.
+- Core tables: `exchange_listings`, `exchange_listing_media`, `exchange_bids`, `exchange_favorites`, `exchange_contact_requests`, `exchange_deals`, `exchange_events`.
+- Direct authenticated table access is revoked and RLS remains enabled; customer/staff behavior goes through explicit SECURITY DEFINER RPCs with customer-scope validation.
+- Listing lifecycle: draft → pending_review → live → deal_in_progress → sold, with pause/reject/withdraw/expire paths.
+- Buyer workflow: marketplace feed → favourite → bid → managed contact request → buyer deal confirmation.
+- Seller workflow: own fleet → draft listing → submit for review → bid book → accept leading bid → managed deal.
+- Staff workflow: approve/reject listing, resolve controlled contact, progress inspection/payment/handover/RC-transfer/completion.
+- Seller/buyer phone numbers are not exposed by marketplace feed or bid-book RPCs.
+- Added private `exchange-media` bucket and seller/live-listing scoped storage policies.
+- Added mobile service layer `apps/mobile-app/lib/exchange.ts` for feed, listing drafts, bidding, favourites, contact, deals and media.
+- Added controlled migration workflow `.github/workflows/apply-customer-exchange-marketplace-backend.yml`.
+- The complete migration was executed against production inside a transaction and **rolled back successfully** to validate SQL syntax/dependencies; follow-up check confirmed `public.exchange_listings` did not remain.
+- Backend PR #2848 merged as `768c69af29c8c1229cfa63a3f1ec595a4e45f6d3`; migration `20261006183000` was **APPLIED + VERIFIED** by the dedicated Exchange migration workflow run #1.
+
+
+---
+
+## 2026-10-06 — Customer Exchange live backend wiring
+
+- Branch: `feature/customer-exchange-live-backend-2026-10-06`.
+- Replaces Customer Exchange local/sample marketplace state with the applied Exchange backend and the existing premium V2 presentation.
+- Startup resolves the current selected customer context, then loads live marketplace feed, owned/sellable fleet vehicles and My Exchange activity through the Exchange service/RPC layer.
+- Explore uses only approved/live backend listings. No hard-coded marketplace seed vehicles remain.
+- Saved vehicles now call `exchange_toggle_favorite`; bids call `exchange_place_bid`; managed callbacks call `exchange_request_contact`.
+- Seller flow now requires an owned fleet vehicle from `exchange_my_sellable_vehicles`, writes drafts through `exchange_upsert_listing_draft`, uploads private photos to `exchange-media`, and submits through `exchange_submit_listing`.
+- My Exchange now uses `exchange_my_activity` and exposes real seller bid review/acceptance, seller contact-request accept/decline, and buyer accepted-deal confirmation.
+- Seller/buyer direct contact information remains hidden; UI continues to route contact through InsureIT.
+- Pull-to-refresh reloads authoritative Exchange state after writes.
+- Added `customer-exchange-live-backend-regression.mjs` and wired it into canonical mobile verification to prevent sample-data regressions or RPC/service bypass.
+- Customer runtime remains **0.3.0**; no native dependency/runtime/APK/AAB change.
+- Added follow-up migration `20261006184500_customer_exchange_backend_hardening.sql`: one editable draft per vehicle is enforced at the database index/RPC layer, cross-customer listing/vehicle swaps are rejected, and draft saves reuse the existing editable listing after app restarts.
+- The hardening migration was executed against production inside `BEGIN … ROLLBACK` successfully; follow-up inspection confirmed migration version `20261006184500` remains unapplied and the live index/function stayed unchanged after rollback.
+- **IMPLEMENTED; PR/CI/merge/production OTA/installed-device verification pending.**

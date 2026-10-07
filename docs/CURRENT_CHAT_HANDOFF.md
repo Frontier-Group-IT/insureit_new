@@ -1,3 +1,142 @@
+## 2026-10-07 — Partner shared business growth icon refinement
+
+- Branch: `ui/partner-business-growth-shared-icon-2026-10-07`.
+- Replaced the generic Home business-card `stats-chart + arrow-up` treatment with a dedicated shared `PartnerBusinessGrowthIcon`.
+- The shared icon follows the supplied reference: four blue growth bars, rising trend line, top-right arrow, and soft light-blue rounded tile.
+- Reused the exact same shared icon on More → `Your Week`, so both surfaces stay visually identical.
+- No business logic, MTD calculations, navigation, backend, database, schema, RLS, or native dependency changes.
+- Added visual regression checks requiring the shared icon on Home and More → Your Week and guarding the four-bar/trend/arrow treatment.
+- No APK/AAB created.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA NOT YET DONE.**
+
+---
+
+## 2026-10-07 — Isolated Customer Web foundation
+
+- Branch: `feature/customer-web-foundation-2026-10-07`.
+- Customer Web is being added as an isolated Next.js surface under `apps/web-portal/app/customer`; Customer App remains the behavior source of truth.
+- Added customer-only server session guard, active customer/direct-membership account resolution, dedicated phone-OTP Customer login + `/customer/auth/session`, responsive Customer shell/navigation, protected Home foundation page, and `customer-web:foundation-regression`.
+- Partner/Operations authorization definitions and routing behavior remain unchanged. Shared middleware has only an additive Customer-specific session state plus `/customer` refresh coverage required by the repository session-coverage regression. Existing `/auth/session`, Supabase schema/RLS/data, Customer App runtime, Vercel production, and APK/AAB/OTA behavior are unchanged.
+- Safety rule: do not modify Partner or Operations functionality merely to support Customer Web until foundation isolation + repository regression checks pass.
+- Detailed handoff: `docs/CUSTOMER_WEB_HANDOFF.md`.
+- **IMPLEMENTED ON BRANCH; PR #2882 OPEN. Verify web portal run #5399 passed on the functional foundation head (including Customer isolation, Partner security, session coverage, typecheck, lint and production build). Final documentation/regression-hardening head CI pending. MERGE/DEPLOYMENT PENDING. NO APK/AAB CREATED.**
+
+---
+
+## 2026-10-07 — Partner Portal Pay-in UI removal
+
+- Branch: `ui/partner-portal-hide-payin-2026-10-07`.
+- Scope is UI-only. No Pay-in database records, backend calculations, accounting logic, schema, migration, or RLS are changed.
+- Partner Policy Details onboarding summary no longer shows the `Insurer Pay-in` action.
+- The combined `PayIn-PayOut` heading is replaced by `Partner Payout`, and the Pay-in-specific helper copy is removed.
+- Partner Payout remains visible and unchanged.
+- Added Partner web regression guards preventing the Pay-in UI from reappearing while requiring Partner Payout to remain.
+- No APK/AAB involved.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/DEPLOYMENT NOT YET DONE.**
+
+---
+
+## 2026-10-07 — Production schema parity repair for Partner customer status filter
+
+- PR #2866 merged as `b6ec856a5e51d79477d81db407315b64e883e18c`; Service Enquiries schema run #1 and Customer production OTA run #160 succeeded.
+- Automatic Vercel production deployment run #2670 stopped at schema parity because production was missing already-committed migration version `20261007103000`.
+- Repair branch: `fix/apply-partner-customer-status-filter-schema-v2-2026-10-07`.
+- `apply-partner-customer-filters.yml` now idempotently applies/repairs both `20260916154500` and `20261007103000`, then verifies both Partner customer RPC contracts.
+- `deploy-production.yml` waits for this schema-repair workflow when the workflow itself changes, preventing parity from racing ahead of migration application.
+- **IMPLEMENTED; PR/CI/merge/schema repair/Vercel deployment pending.**
+
+---
+
+## 2026-10-07 — Partner App Business header matches Claims / Policies
+
+- Branch: `ui/partner-business-header-match-claims-rebased`.
+- User reference confirmed Business should use the same header background treatment already used by Claims and Policies.
+- Business header now uses `assets/partner/banners/claims-header-reference.jpg` instead of `business-growth-11.png`.
+- Header visual contract now matches Claims/Policies: 162px height, `#0752A2` fallback blue, full-bleed cover backdrop at 0.92 opacity, and `rgba(1,42,95,0.10)` shade overlay.
+- Existing Business logo, notification/profile controls, Business title, search/filter row, data, navigation and calculations are unchanged.
+- Added visual-system regression guards for shared asset, height, opacity and shade.
+- No backend/schema/RLS/native dependency changes. No APK/AAB created.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA PENDING.**
+
+---
+
+## 2026-10-07 — Customer Support Ticket → Service Enquiries unification
+
+- Branch: `fix/unify-support-tickets-service-enquiries-v2-2026-10-07`.
+- Operations navigation removes the expandable **Tasks** section and **All Tasks** child; **Service Enquiries** is exposed directly in the sidebar. Mobile quick navigation points directly to Enquiries.
+- New Customer App **Raise Support Ticket** submissions now create `service_enquiries` rows with `service_type='support_ticket'` instead of writing new rows to legacy `support_tickets`.
+- Support request metadata is normalized into `service_enquiries.claim_id`, `category`, and `priority`; subject/description/status/customer/assignee remain on the unified enquiry row.
+- Support conversation and attachment continuity uses new `service_enquiry_messages` and `service_enquiry_attachments` tables. Existing private `support-ticket-files` storage is reused; no native dependency is introduced.
+- Customer Support Ticket Detail now reads the unified service-enquiry record and unified message thread.
+- Operations `/service-enquiries` now recognizes and labels **Support Ticket** rows and shows category/priority in the same queue as Insurance Quote and Challan Assistance.
+- Legacy `support_tickets`, `support_ticket_messages`, and `support_ticket_attachments` are intentionally left untouched for historical data; this change only moves new ticket creation to the unified model.
+- Migration: `20261007111500_unify_support_tickets_with_service_enquiries.sql`; dedicated schema workflow `apply-service-enquiry-support-ticket-unification.yml`; production deployment gate updated.
+- Added canonical web and mobile regression guards for navigation and Customer Support → Service Enquiries routing.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/SCHEMA APPLICATION/WEB DEPLOY/CUSTOMER OTA/DEVICE VERIFICATION PENDING. NO APK/AAB CREATED.**
+
+---
+
+## 2026-10-07 — Partner Customers clickable KPI filters + compact records
+
+- Branch: `ui/partner-customers-kpi-filters-2026-10-07`.
+- Partner App Customers top KPI strip is now interactive:
+  - Customers → all scoped customers
+  - Active → only status `active`
+  - Inactive → all scoped customers whose status is not `active`, matching the existing summary count semantics.
+- KPI cards now use clear professional Ionicons: people, check-circle, remove-circle, with accessible selected-state semantics.
+- Customer list records no longer render city/state or the location pin row.
+- Search still supports city as an input criterion; only the visible record location line was removed.
+- Added `partner_app_list_customers_v2` as a new scoped RPC instead of changing the existing RPC signature, preserving compatibility with older clients.
+- The v2 RPC keeps the same Partner commercial-scope enforcement, server-side pagination/search, and adds validated `active`/`inactive` filtering so KPI filters work across the full scoped dataset rather than only the current page.
+- Partner customer client service now accepts `all | active | inactive` and calls the v2 RPC.
+- Added Phase 5 regression guards for KPI filtering, icons, accessibility state, v2 RPC usage, and location-row removal.
+- Migration added: `supabase/migrations/20261007103000_partner_app_customer_status_filter.sql`.
+- No native dependency changes and no APK/AAB created.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/MIGRATION APPLY/OTA NOT YET DONE.**
+
+---
+
+## 2026-10-07 — Policy Onboarding MISD Category / CC persistence
+
+- Branch: `fix/policy-onboarding-misd-capacity-rebased`.
+- Root cause: Motor Policy Onboarding stored the visible `form.capacity` into `vehicle.engineCapacity` only for PCP/TWP, so MISD manual `Category / CC` values were dropped before the existing RPC persisted the vehicle.
+- Fix: MISD now follows the engine-capacity path for create payload, reviewed RC application, and existing-vehicle reload.
+- Existing database contract already persists `vehicle.engineCapacity` to `vehicles.engine_capacity_cc`; no migration/schema/RLS change is required.
+- Added regression guards in `vehicle-policy-intake-resume-regression.mjs` for the MISD create/reload/backend mapping chain.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/DEPLOYMENT PENDING.**
+
+---
+
+## 2026-10-07 — Partner Home business trend interaction cleanup
+
+- Primary branch: `ui/partner-home-trend-tooltip-2026-10-07`; PR #2859 merged as `e7ef6f8a9a11a443bf6890ebe0660c5fd4fac084` after canonical **Verify web portal #5372** passed.
+- Partner Portal Home removes the **Business highlights** card completely and lets **M/M Business Trend** use the full row width.
+- The policy-series connecting line is removed from the trend chart; policy totals remain available in the per-period detail.
+- Hover, keyboard focus, or click/tap on a trend period shows a compact reference-style detail popup with the period, Net Premium and Policies. Click/Enter/Space can pin or unpin the detail.
+- Follow-up PR #2865 (`fix/partner-home-trend-responsive-accessibility-2026-10-07`) merged as `23e4490dd3d1cf1a46e3c48f3d65a03c4b3b876e` after canonical **Verify web portal #5376** passed. It corrects the existing responsive adapter to bind through the stable chart data hook with matching 30/570 plot boundaries and changes the interactive SVG from `role="img"` to `role="group"` so point controls remain exposed to assistive technology.
+- Existing trend period filters, business data sources, policy totals, CTA navigation and calculations remain unchanged. The highlights-only period-summary RPC call remains removed.
+- Because subsequent main/OTA commits advanced `main` before the guarded production run could become the current release, deployment marker branch `chore/deploy-partner-home-trend-2026-10-07` establishes a fresh verified web-release provenance point on latest main.
+- No database/schema/RLS/accounting/native/mobile/APK/AAB change.
+- **PRIMARY + FOLLOW-UP MERGED; deployment-marker PR/CI/merge/production deployment pending.**
+
+---
+
+## 2026-10-07 — Partner Home MTD vs previous-month MTD comparison
+
+- Branch: `fix/partner-home-mtd-previous-month-2026-10-07`.
+- Partner Home MTD no longer uses the generic immediately-preceding equal-day range as its comparison.
+- MTD now compares the current month-to-date against the same date span in the previous month. Example on 6 Oct: 1–6 Oct vs 1–6 Sep.
+- The comparison uses `net_premium` on both sides so the percentage matches the Net Premium value displayed in the Home business card.
+- The helper copy now explicitly says `above previous month` / `below previous month`.
+- If the previous month has fewer calendar days, the comparison end date is capped to that month's final day.
+- Other Home business-period comparison behavior is unchanged.
+- Uses the existing scoped `partner_app_business_range_v2` service; no DB migration/RLS/native dependency change.
+- Added Partner Phase 5 regression checks for previous-month MTD range, scoped fetch, net-premium comparison, and explicit comparison wording.
+- No APK/AAB created.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA NOT YET DONE.**
+
+---
+
 ## 2026-10-06 — Partner Your Week `This Week` pill clipping fix
 
 - Branch: `fix/partner-week-pill-clipping-2026-10-06`.

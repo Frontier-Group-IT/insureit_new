@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
+import { PartnerBusinessGrowthIcon } from '@/components/ui/partner-business-growth-icon';
 import { PartnerButton } from '@/components/ui/partner-button';
 import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
@@ -129,7 +130,7 @@ export default function MoreScreen() {
       </MenuSection>
 
       <MenuSection title="INSIGHTS">
-        <MenuRow asset={PartnerAssets.actions.businessPerformance} title="Your Week" onPress={() => router.push('/weekly-story')} />
+        <MenuRow icon={<PartnerBusinessGrowthIcon size={36} />} title="Your Week" onPress={() => router.push('/weekly-story')} />
         <MenuRow asset={PartnerAssets.actions.businessInsights} title="My Impact" onPress={() => router.push('/impact')} />
         <MenuRow asset={PartnerAssets.status.journey} title="My Journey" onPress={() => router.push('/journey')} />
         <MenuRow asset={PartnerAssets.navigation.notifications} title="Activity" onPress={() => router.push('/activity')} last />
@@ -181,12 +182,14 @@ function MenuSection({ title, children }: { title: string; children: ReactNode }
 
 function MenuRow({
   asset,
+  icon,
   title,
   helper,
   onPress,
   last = false,
 }: {
-  asset: number;
+  asset?: number;
+  icon?: ReactNode;
   title: string;
   helper?: string;
   onPress: () => void;
@@ -204,7 +207,7 @@ function MenuRow({
       ]}
     >
       <View style={styles.rowIcon}>
-        <Image source={asset} style={styles.rowAssetImage} resizeMode="contain" />
+        {icon ?? (asset ? <Image source={asset} style={styles.rowAssetImage} resizeMode="contain" /> : null)}
       </View>
       <View style={styles.rowBody}>
         <Text style={styles.rowTitle}>{title}</Text>

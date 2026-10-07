@@ -7,6 +7,7 @@ import { PartnerScreen } from '@/components/partner-screen';
 import { StoryRail } from '@/components/story-rail';
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
+import { PartnerBusinessGrowthIcon } from '@/components/ui/partner-business-growth-icon';
 import { PartnerEnter } from '@/components/ui/partner-enter';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
@@ -63,11 +64,24 @@ export default function PartnerHomeScreen() {
     staleTimeMs: 60_000,
   });
 
+  const previousMonthMtdRange = previousMonthMtdDateRange();
+  const fetchPreviousMonthMtd = useCallback(
+    () => getPartnerBusinessRange(previousMonthMtdRange.from, previousMonthMtdRange.to),
+    [previousMonthMtdRange.from, previousMonthMtdRange.to],
+  );
+  const previousMonthMtd = usePartnerQuery({
+    scopeKey: cacheScopeKey,
+    key: `home:business:mtd-previous-month:${previousMonthMtdRange.from}:${previousMonthMtdRange.to}`,
+    fetcher: fetchPreviousMonthMtd,
+    staleTimeMs: 60_000,
+  });
+
   useFocusEffect(
     useCallback(() => {
       void workspace.ensureFresh();
       void business.ensureFresh();
-    }, [workspace.ensureFresh, business.ensureFresh]),
+      if (businessPeriod === 'mtd') void previousMonthMtd.ensureFresh();
+    }, [workspace.ensureFresh, business.ensureFresh, previousMonthMtd.ensureFresh, businessPeriod]),
   );
 
   if (!context) return null;
@@ -108,10 +122,11 @@ export default function PartnerHomeScreen() {
       scrollProps={{
         refreshControl: (
           <RefreshControl
-            refreshing={workspace.refreshing || business.refreshing}
+            refreshing={workspace.refreshing || business.refreshing || (businessPeriod === 'mtd' && previousMonthMtd.refreshing)}
             onRefresh={() => {
               void workspace.refresh();
               void business.refresh();
+              if (businessPeriod === 'mtd') void previousMonthMtd.refresh();
             }}
             tintColor={partnerTheme.colors.brand}
             colors={[partnerTheme.colors.brand]}
@@ -221,7 +236,17 @@ export default function PartnerHomeScreen() {
                     <Text style={styles.trendNeutral}>Updating business figures…</Text>
                   ) : business.error ? (
                     <Text style={styles.rangeError}>Unable to refresh selected period</Text>
-                  ) : businessPeriod === 'all' && Number(rangeData?.premium_previous_period ?? data.business.premium_last_month ?? 0) <= 0 ? null : (
+                  ) : businessPeriod === 'mtd' && previousMonthMtd.loading && !previousMonthMtd.data ? (
+                    <Text style={styles.trendNeutral}>Updating previous month comparison…</Text>
+                  ) : businessPeriod === 'mtd' && previousMonthMtd.error ? (
+                    <Text style={styles.rangeError}>Unable to refresh previous month comparison</Text>
+                  ) : businessPeriod === 'all' && Number(rangeData?.premium_previous_period ?? data.business.premium_last_month ?? 0) <= 0 ? null : businessPeriod === 'mtd' ? (
+                    <Trend
+                      value={percentageChange(Number(rangeData?.net_premium ?? 0), Number(previousMonthMtd.data?.net_premium ?? 0))}
+                      hasPrevious={Number(previousMonthMtd.data?.net_premium ?? 0) > 0}
+                      comparisonLabel="previous month"
+                    />
+                  ) : (
                     <Trend
                       value={Number(rangeData?.premium_change_percent ?? data.business.premium_change_percent ?? 0)}
                       hasPrevious={Number(rangeData?.premium_previous_period ?? data.business.premium_last_month ?? 0) > 0}
@@ -229,10 +254,7 @@ export default function PartnerHomeScreen() {
                   )}
                 </View>
 
-                <View style={styles.chartTile}>
-                  <Ionicons name="stats-chart" size={42} color="#0B82E6" />
-                  <Ionicons name="arrow-up" size={20} color="#0B82E6" style={styles.chartArrow} />
-                </View>
+                <PartnerBusinessGrowthIcon size={64} />
               </View>
 
               <View style={styles.businessDivider} />
@@ -378,7 +400,7 @@ function QuickAction({ asset, label, onPress }: { asset: number; label: string; 
   );
 }
 
-function Trend({ value, hasPrevious }: { value: number; hasPrevious: boolean }) {
+function Trend({ value, hasPrevious, comparisonLabel = 'previous period' }: { value: number; hasPrevious: boolean; comparisonLabel?: string }) {
   if (!hasPrevious) return <Text style={styles.trendNeutral}>First recorded comparison period</Text>;
   const positive = value >= 0;
   return (
@@ -389,10 +411,24 @@ function Trend({ value, hasPrevious }: { value: number; hasPrevious: boolean }) 
         color={positive ? '#1D9C60' : '#C27A11'}
       />
       <Text style={[styles.trendText, { color: positive ? '#1D9C60' : '#C27A11' }]}>
-        {Math.abs(value).toFixed(1)}% {positive ? 'above' : 'below'} previous period
+        {Math.abs(value).toFixed(1)}% {positive ? 'above' : 'below'} {comparisonLabel}
       </Text>
     </View>
   );
+}
+
+function percentageChange(current: number, previous: number) {
+  if (previous > 0) return ((current - previous) / previous) * 100;
+  return current > 0 ? 100 : 0;
+}
+
+function previousMonthMtdDateRange() {
+  const now = new Date();
+  const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const previousMonthLastDay = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+  const comparableDay = Math.min(now.getDate(), previousMonthLastDay);
+  const previousMonthEnd = new Date(now.getFullYear(), now.getMonth() - 1, comparableDay);
+  return { from: localDate(previousMonthStart), to: localDate(previousMonthEnd) };
 }
 
 function businessDateRange(period: BusinessPeriod) {
@@ -524,15 +560,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.7,
   },
   businessCaption: { marginTop: 1, color: '#4F5D71', fontSize: 10.5, fontWeight: '600' },
-  chartTile: {
-    width: 64,
-    height: 64,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EAF6FF',
-  },
-  chartArrow: { position: 'absolute', right: 5, top: 5 },
   trend: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 4 },
   trendText: { fontSize: 9.5, fontWeight: '700' },
   trendNeutral: { marginTop: 8, color: '#8691A2', fontSize: 9.5, fontWeight: '600' },
