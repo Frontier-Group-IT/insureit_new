@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BadgeIndianRupee, CarFront, Headphones, Home, LogOut, ReceiptText, ShieldCheck, Truck } from "lucide-react";
+import { BadgeIndianRupee, CarFront, FileText, Headphones, Home, IdCard, LogOut, ReceiptText, ShieldCheck, Truck, UserRound } from "lucide-react";
 import { BrandLockup } from "@/components/brand-lockup";
 import { createClient } from "@/lib/supabase";
 
@@ -23,6 +23,9 @@ export function CustomerNavigation() {
   const quoteActive = pathname.startsWith("/customer/insurance-quote");
   const challanActive = pathname.startsWith("/customer/e-challan");
   const supportActive = pathname.startsWith("/customer/support");
+  const profileActive = pathname.startsWith("/customer/profile");
+  const kycActive = pathname.startsWith("/customer/kyc");
+  const documentsActive = pathname.startsWith("/customer/documents");
 
   return (
     <>
@@ -30,7 +33,7 @@ export function CustomerNavigation() {
         <Link href="/customer/home" className="flex h-[78px] items-center border-b border-white/10 px-5" aria-label="INSUREIT Customer home">
           <BrandLockup compact inverse />
         </Link>
-        <nav className="flex-1 px-3.5 py-5" aria-label="Customer navigation">
+        <nav className="flex-1 overflow-y-auto px-3.5 py-5" aria-label="Customer navigation">
           <p className="mb-2 px-3 text-[9px] font-black uppercase tracking-[0.18em] text-white/55">Customer</p>
           <div className="space-y-1.5">
             <Link href="/customer/home" className={`flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold transition ${homeActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
@@ -61,6 +64,19 @@ export function CustomerNavigation() {
               <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><Headphones className="h-[17px] w-[17px]" /></span>
               Support
             </Link>
+            <p className="mb-1 mt-4 px-3 text-[8px] font-black uppercase tracking-[0.18em] text-white/45">Account</p>
+            <Link href="/customer/profile" className={`flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold transition ${profileActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
+              <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><UserRound className="h-[17px] w-[17px]" /></span>
+              Profile
+            </Link>
+            <Link href="/customer/kyc" className={`flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold transition ${kycActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
+              <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><IdCard className="h-[17px] w-[17px]" /></span>
+              KYC
+            </Link>
+            <Link href="/customer/documents" className={`flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold transition ${documentsActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
+              <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><FileText className="h-[17px] w-[17px]" /></span>
+              Documents
+            </Link>
           </div>
         </nav>
         <div className="border-t border-white/10 p-3.5">
@@ -72,7 +88,7 @@ export function CustomerNavigation() {
       </aside>
 
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[#D7DEE8] bg-white/95 px-4 py-2 backdrop-blur lg:hidden" aria-label="Customer mobile navigation">
-        <div className="mx-auto grid max-w-md grid-cols-5 gap-1">
+        <div className="mx-auto grid max-w-lg grid-cols-6 gap-1">
           <Link href="/customer/home" className={`flex flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[9px] font-bold ${homeActive ? "bg-[#EEF4FF] text-[#174EA6]" : "text-[#53627A]"}`}>
             <Home className="h-4.5 w-4.5" /> Home
           </Link>
@@ -87,6 +103,9 @@ export function CustomerNavigation() {
           </Link>
           <Link href="/customer/support" className={`flex flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[9px] font-bold ${supportActive || quoteActive || challanActive ? "bg-[#EEF4FF] text-[#174EA6]" : "text-[#53627A]"}`}>
             <Headphones className="h-4.5 w-4.5" /> Support
+          </Link>
+          <Link href="/customer/profile" className={`flex flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[9px] font-bold ${profileActive || kycActive || documentsActive ? "bg-[#EEF4FF] text-[#174EA6]" : "text-[#53627A]"}`}>
+            <UserRound className="h-4.5 w-4.5" /> Profile
           </Link>
         </div>
       </nav>
