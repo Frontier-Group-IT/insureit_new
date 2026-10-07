@@ -68,8 +68,8 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     const activityItems = activityHistory.map((activity)=>({ id:activity.id, title:activity.action, meta:activity.actorName ? `Created By: ${activity.actorName}` : null, at:activity.at }));
     const payin = payinResult.data;
     const payout = payoutResult.data;
-    const payinBasis = payin?.commercial_basis === "NET_PREMIUM_PERCENT" ? "NET_PREMIUM_PERCENT" : "FIXED_AMOUNT";
-    const payoutBasis = payout?.payout_basis === "NET_PREMIUM_PERCENT" ? "NET_PREMIUM_PERCENT" : "FIXED_AMOUNT";
+    const payinBasis: "NET_PREMIUM_PERCENT"|"FIXED_AMOUNT" = payin?.commercial_basis === "NET_PREMIUM_PERCENT" ? "NET_PREMIUM_PERCENT" : "FIXED_AMOUNT";
+    const payoutBasis: "NET_PREMIUM_PERCENT"|"FIXED_AMOUNT" = payout?.payout_basis === "NET_PREMIUM_PERCENT" ? "NET_PREMIUM_PERCENT" : "FIXED_AMOUNT";
     const payinBase = Number(payin?.projected_commission_amount ?? 0);
     const insurerSchemeAmount = Number(payin?.insurer_scheme_amount ?? 0);
     const insurerPayin = Number(payin?.total_projected_payin ?? 0) || payinBase + insurerSchemeAmount;
