@@ -1,3 +1,16 @@
+## 2026-10-07 — Partner App Profile/More professional menu icons
+
+- Branch: `ui/partner-profile-professional-icons-2026-10-07`.
+- Partner App → Profile/More page replaces the mixed legacy menu artwork with one professional icon system that matches the Business Overview KPI visual language.
+- All menu rows are covered: Search all business, Policy Intake, Renewals, Customers, Your Week, My Impact, My Journey, Activity, 60-Second Learn, Recognition, INSUREIT Stories, Profile & registration, Support, Settings & app info.
+- Icons use a consistent soft-blue tile, branded blue glyph, subtle highlight, border, depth, and compact semantic badge. Each row keeps its existing label, helper text, route and accessibility label.
+- Existing profile hero, identity card, section structure, permissions, navigation, session behavior and backend calls are unchanged.
+- Added visual regression guards in `verify-visual-system-completion.mjs`.
+- No database/schema/RLS/native dependency change. **No APK/AAB created.**
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA pending.**
+
+---
+
 ## 2026-10-07 — Firebase OTP tester Cloudflare SDK-load fix
 
 - Observed on `insureit-new.shahdolho.workers.dev/firebase-otp-test`: the page rendered but browser-direct loading of `https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js` failed before Firebase/reCAPTCHA initialized.
