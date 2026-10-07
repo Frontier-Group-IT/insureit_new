@@ -523,3 +523,8 @@ Branch `ui/partner-home-pending-tasks-reference-v2-2026-10-07` refines only `Pen
 ## 2026-10-07 — Customer detail compact relationship and policy actions
 
 Branch `ui/partner-customer-detail-compact-v2-2026-10-07` updates only the Partner Customer detail presentation. Relationship fields now live inside the main customer identity card and the standalone Relationship heading/card is removed. Expanded vehicle policy rows remove the repeated insurer-name text and place a navy `Policy Details` action at the far right, matching the placement/action treatment of the vehicle-level policy toggle. Customer/vehicle/policy queries, navigation destinations, business rules, schema/RLS and data persistence are unchanged. **IMPLEMENTED; PR/CI/merge/OTA/device verification pending. NO APK/AAB CREATED.**
+
+
+## 2026-10-07 — Customer vehicle/policy row cleanup
+
+Branch `ui/partner-customer-vehicle-row-cleanup-2026-10-07` refines the Customer Detail Vehicles card only. Vehicle make/model/year is kept as the secondary line immediately below the vehicle number / `NEW-[chassis]` identity, and linked policy rows no longer show the Motor/category badge. Policy number, expiry/premium, Policy Details action, manufacturer/insurer logos, data queries and routes are preserved. **IMPLEMENTED; PR/CI/merge/production runtime 0.2.0 OTA/device verification pending. NO APK/AAB CREATED.**
