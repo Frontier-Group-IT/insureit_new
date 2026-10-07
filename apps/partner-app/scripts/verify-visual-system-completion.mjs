@@ -165,8 +165,10 @@ if (policyIntakeNew.includes('PartnerAssets.status.documentUpload') || policyInt
 requireText(policyIntakeNew, 'submitPartnerPolicyIntake({', 'New Policy Intake must preserve the existing submit service path.');
 requireText(policyIntakeNew, 'savePartnerPolicyIntakeDraft({', 'New Policy Intake must preserve draft saving.');
 requireText(policyIntakeNew, 'loadPartnerPolicyIntakeDraft()', 'New Policy Intake must preserve draft restore.');
-for (const intakeDetailAsset of ['emptyStates.policyUpload', 'status.documentUpload', 'status.pendingReview', 'status.policyAttention', 'status.verified', 'status.rejected']) requireText(policyIntakeDetail, `PartnerAssets.${intakeDetailAsset}`, `Policy Intake detail is missing ${intakeDetailAsset} artwork.`);
-requireText(policyIntakeDetail, 'function statusArtwork(row: PartnerPolicyIntake)', 'Policy Intake detail must keep centralized semantic status-artwork mapping.');
+for (const intakeDetailAsset of ['emptyStates.policyUpload', 'status.documentUpload', 'status.policyAttention']) requireText(policyIntakeDetail, `PartnerAssets.${intakeDetailAsset}`, `Policy Intake detail is missing ${intakeDetailAsset} artwork.`);
+requireText(policyIntakeDetail, '<PartnerInsurerLogo', 'Policy Intake detail summary and policy disclosure must use insurer identity artwork.');
+requireText(policyIntakeDetail, '<PartnerManufacturerLogo', 'Policy Intake vehicle disclosure must use manufacturer identity artwork.');
+requireText(policyIntakeDetail, 'function statusBadgeStyle(row: PartnerPolicyIntake)', 'Policy Intake detail must keep centralized semantic status-badge mapping.');
 requireText(policyIntakeDetail, 'submitPartnerPolicyIntakeReplacement({', 'Policy Intake detail must preserve the replacement upload service path.');
 if (policyIntakeDetail.includes('git-network-outline') || policyIntakeDetail.includes('alert-circle-outline')) throw new Error('Policy Intake status and attention surfaces must not regress to generic feature glyphs.');
 
