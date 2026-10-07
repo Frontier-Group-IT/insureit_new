@@ -1,3 +1,16 @@
+## 2026-10-07 — Partner App Business header matches Claims / Policies
+
+- Branch: `ui/partner-business-header-match-claims`.
+- User reference confirmed Business should use the same header background treatment already used by Claims and Policies.
+- Business header now uses `assets/partner/banners/claims-header-reference.jpg` instead of `business-growth-11.png`.
+- Header visual contract now matches Claims/Policies: 162px height, `#0752A2` fallback blue, full-bleed cover backdrop at 0.92 opacity, and `rgba(1,42,95,0.10)` shade overlay.
+- Existing Business logo, notification/profile controls, Business title, search/filter row, data, navigation and calculations are unchanged.
+- Added visual-system regression guards for shared asset, height, opacity and shade.
+- No backend/schema/RLS/native dependency changes. No APK/AAB created.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA PENDING.**
+
+---
+
 ## 2026-10-07 — Partner Customers clickable KPI filters + compact records
 
 - Branch: `ui/partner-customers-kpi-filters-2026-10-07`.
