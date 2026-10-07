@@ -1,3 +1,16 @@
+## 2026-10-07 — Partner shared business growth icon refinement
+
+- Branch: `ui/partner-business-growth-shared-icon-2026-10-07`.
+- Replaced the generic Home business-card `stats-chart + arrow-up` treatment with a dedicated shared `PartnerBusinessGrowthIcon`.
+- The shared icon follows the supplied reference: four blue growth bars, rising trend line, top-right arrow, and soft light-blue rounded tile.
+- Reused the exact same shared icon on More → `Your Week`, so both surfaces stay visually identical.
+- No business logic, MTD calculations, navigation, backend, database, schema, RLS, or native dependency changes.
+- Added visual regression checks requiring the shared icon on Home and More → Your Week and guarding the four-bar/trend/arrow treatment.
+- No APK/AAB created.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA NOT YET DONE.**
+
+---
+
 ## 2026-10-07 — Isolated Customer Web foundation
 
 - Branch: `feature/customer-web-foundation-2026-10-07`.
