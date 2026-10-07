@@ -3,10 +3,10 @@
 - Branch: `feature/customer-web-foundation-2026-10-07`.
 - Customer Web is being added as an isolated Next.js surface under `apps/web-portal/app/customer`; Customer App remains the behavior source of truth.
 - Added customer-only server session guard, active customer/direct-membership account resolution, dedicated phone-OTP Customer login + `/customer/auth/session`, responsive Customer shell/navigation, protected Home foundation page, and `customer-web:foundation-regression`.
-- Partner/Operations authorization, global middleware, existing `/auth/session`, Supabase schema/RLS/data, Customer App runtime, Vercel production, and APK/AAB/OTA behavior are unchanged.
+- Partner/Operations authorization definitions and routing behavior remain unchanged. Shared middleware has only an additive Customer-specific session state plus `/customer` refresh coverage required by the repository session-coverage regression. Existing `/auth/session`, Supabase schema/RLS/data, Customer App runtime, Vercel production, and APK/AAB/OTA behavior are unchanged.
 - Safety rule: do not modify Partner or Operations functionality merely to support Customer Web until foundation isolation + repository regression checks pass.
 - Detailed handoff: `docs/CUSTOMER_WEB_HANDOFF.md`.
-- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/DEPLOYMENT PENDING. NO APK/AAB CREATED.**
+- **IMPLEMENTED ON BRANCH; PR #2882 OPEN. Verify web portal run #5399 passed on the functional foundation head (including Customer isolation, Partner security, session coverage, typecheck, lint and production build). Final documentation/regression-hardening head CI pending. MERGE/DEPLOYMENT PENDING. NO APK/AAB CREATED.**
 
 ---
 
