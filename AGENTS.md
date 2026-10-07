@@ -62,10 +62,6 @@ The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` 
 
 ### Latest implementation ledger
 
-- **2026-10-07 — Partner App Business Overview professional KPI icons:** PR #2914 merged as `530e009f511b36606a5f8292ad7d8c2d72a298c8` after Verify Partner app #568 and Verify web portal #5572 passed; replaces the four generic Business Overview glyphs with finance/₹, verified policy document, wallet/₹, and customers group icons. Release PR #2915 merged as `338b6105fdff23feb25a06c1e2d4f635c95edbaa`; **Publish Partner production OTA #86 completed successfully** on channel `production`, runtime `0.2.0`. **MERGED + OTA PUBLISHED; installed-device verification pending. NO APK/AAB CREATED.** See `docs/CURRENT_CHAT_HANDOFF.md`.
-
-- **2026-10-07 — Life/Health issued-policy commercial edit + retention synchronization:** rebased branch `fix/life-health-commercial-edit-retention-rebased`; issued Life/Health Edit Policy exposes editable insurer Pay-in / Partner Payout controls and synchronizes 10% TDS, Pay-in after TDS, and retention on save. The investigated production policy data repair is already applied at ₹21,00,000 Pay-in → ₹18,90,000 after TDS, ₹19,50,000 payout → **-₹60,000 retention**, with payout still Pending/Needs Review. **IMPLEMENTED + DATA REPAIR APPLIED; replacement PR/CI/merge/deployment pending.** See `docs/CURRENT_CHAT_HANDOFF.md`.
-
 - **2026-10-07 — Partner Home Pending Tasks reference match:** branch `ui/partner-home-pending-tasks-reference-v2-2026-10-07`; Pending Tasks now uses the exact existing blue CLAIM clipboard + shield asset from the supplied reference, tightens the card/row spacing and right illustration placement to the reference proportions, and keeps the live claim count inline in the normal task title instead of adding the reference's separate red count. Data source, Claims route, Quick Actions, Stories and all other Home sections remain unchanged. **IMPLEMENTED; PR/CI/merge/OTA/device verification pending. NO APK/AAB CREATED.** See `docs/PARTNER_APP_HANDOFF_2026_09_13.md`.
 
 - **2026-10-07 — Isolated Firebase Phone OTP Cloudflare tester:** PR #2904 merged as `def9cba89b20726f8390b22a00cd373da15a051d`; public test-only route `/firebase-otp-test` uses Firebase Web Phone Auth + visible reCAPTCHA to verify real India SMS delivery on the authorized Cloudflare tester domain. `Verify web portal` run #5552 passed all regressions, typecheck, lint and production build. Firebase Web API key is entered at runtime and retained only in browser sessionStorage; no Supabase session/customer/profile/data integration, schema/RLS change, mobile runtime change, OTA, APK or AAB. **MERGED; Cloudflare deployment/runtime SMS verification pending.** See `docs/CURRENT_CHAT_HANDOFF.md`.
@@ -1338,3 +1334,87 @@ When a new request touches any area above, first fetch the current `main` implem
 - Do not add decorative backgrounds behind the custom artwork merely to make it look like a generic icon tile; the approved Partner artwork should remain visually clean.
 - Stories is an immersive full-screen flow, so its Close/X semantics are intentional; ordinary pushed screens should use shared Back semantics.
 - Phase 1 completion must be visually verified through Partner preview OTA from exact current `main`; OTA-safe Phase 1 work must not trigger an APK/AAB.
+
+## Customer Exchange redesign — 2026-10-07
+
+The current Customer Exchange backend is retained, but the current UI is only a functional prototype and is not the accepted target design.
+
+Approved product direction: **InsureIT Exchange — Buy, sell and discover verified commercial vehicles.** Primary intents are Buy, Sell, Value, and My Exchange. Auction/bidding must be optional rather than the product identity.
+
+A full benchmark of 43 owner-supplied CarDekho mobile screenshots led to an approved phased redesign: search/location-first home, photography-first commercial vehicle cards, dedicated vehicle detail route, fleet-aware low-friction seller flow, Vehicle Health Report, valuation, offers/deal room, comparison, finance, then marketplace intelligence.
+
+Full handoff: `docs/CUSTOMER_EXCHANGE_REDESIGN_HANDOFF_2026_10_07.md`.
+
+Important: preserve PR #2848/#2849 backend work and Exchange migrations. Do not revert backend because of the redesign. Continue OTA-first and **do not create APK/AAB unless explicitly requested**.
+
+
+### Customer Exchange R1 implementation started — 2026-10-07
+Branch `feature/customer-exchange-marketplace-r1-2026-10-07` begins Phase 0/1. The default Buy/Explore marketplace is now modularized into `apps/mobile-app/components/exchange/ExchangeMarketplaceHome.tsx`, with marketplace-first search/categories, Buy/Sell/Value/My Exchange shortcuts, featured inventory, simplified photography-first cards, budget/sort filtering and contextual bid display. Backend contracts are intentionally preserved. Full status and pending phases are in `docs/CUSTOMER_EXCHANGE_REDESIGN_HANDOFF_2026_10_07.md`. No APK/AAB.
+
+
+### Customer Exchange Phase 2 — 2026-10-07
+On the active Exchange redesign branch, marketplace and My Exchange listing taps now open `apps/mobile-app/app/customer/exchange/[listingId].tsx`, a dedicated full-screen Vehicle Detail 2.0 experience. It uses live Exchange feed data only, adds commercial specs, verified-data InsureIT Insight, health/trust summary, seller privacy, contextual Make Offer/live-bid behavior, managed callback, similar vehicles and sticky actions. Do not fabricate valuation or unsupported vehicle/document fields; those require later backend phases. Full detail remains in `docs/CUSTOMER_EXCHANGE_REDESIGN_HANDOFF_2026_10_07.md`. No APK/AAB.
+
+
+### Customer Exchange Phase 3 seller UX — 2026-10-07
+The active redesign branch now uses `apps/mobile-app/components/exchange/ExchangeSellJourney.tsx` for a four-step Vehicle → Details → Photos → Review seller flow. It remains fleet-first, keeps existing private draft/media/preview/submit backend behavior, and intentionally does not fabricate a valuation range or unsupported transaction modes. Full progress: `docs/CUSTOMER_EXCHANGE_REDESIGN_HANDOFF_2026_10_07.md`. No APK/AAB.
+
+
+### Customer Exchange detail cleanup — 2026-10-07
+The obsolete `VehicleDetailModal` and duplicate modal-only bid/contact handlers have been removed from `apps/mobile-app/app/customer/exchange.tsx`. The dedicated `/customer/exchange/[listingId]` route is now the single Customer Exchange vehicle-detail implementation. No APK/AAB.
+
+
+### Customer Exchange recovery checkpoint — 2026-10-07
+PR #2883 remains the active reversible redesign PR. Phase 0/1 marketplace restructuring, Phase 2 dedicated vehicle details and the core Phase 3 guided seller journey are implemented. The existing database `exchange_listings.selling_mode` is now being wired end-to-end through migration `20261007125600_customer_exchange_selling_modes.sql`, supporting fixed price, open offers and managed auction without inventing a second transaction model. The Exchange schema workflow and production migration gate are updated for that migration. Full done-vs-pending phase matrix is in `docs/CUSTOMER_EXCHANGE_REDESIGN_HANDOFF_2026_10_07.md`. Continue OTA-first; do not create APK/AAB unless explicitly requested.
+
+
+### Customer Exchange Vehicle Health foundation — 2026-10-07
+Do not create duplicate Exchange columns for fleet facts already present in `vehicles` or policy tables. The active branch adds `exchange_listing_detail(uuid)` in the pending selling-mode migration and `getExchangeListingDetail` in the mobile service to surface authoritative RC/AuthBridge, insurance validity, fitness, PUC, road tax, permit, finance, GVW, wheelbase, body and emission data. The detail screen must continue to degrade safely if this pending RPC is not yet deployed. Do not expose full chassis/engine or unmasked registration to marketplace buyers.
+
+
+### Customer Exchange My Exchange centre — 2026-10-07
+The active redesign branch now uses `components/exchange/ExchangeActivityCenter.tsx` for My Exchange. Preserve the four-tab Buying / Selling / Saved / Deals structure. Selling rows must use the real `selling_mode` to distinguish offers vs auction bids; fixed-price listings must not be presented as bidding listings. Full details are recorded in the Exchange redesign handoff.
+
+
+### Customer Exchange offer review — 2026-10-07
+Seller response review is now a dedicated `ExchangeOfferReviewSheet`, not an Alert. Keep buyer aliases masked and selling-mode wording distinct: `open_bidding` is presented as private offers; `managed_auction` as bids. The underlying `exchange_bids` model is still leading/outbid-based, so do not implement counter-offers by relabeling alone; transaction semantics need an explicit backend design first.
+
+
+### Customer Exchange dedicated inventory search — 2026-10-07
+The active redesign branch now has `apps/mobile-app/app/customer/exchange/search.tsx`, opened from Buy a Vehicle / View all / Browse all. It uses live Exchange feed data for query, category, make, model, year, location, budget, sort and favourites. Current implementation filters up to 100 loaded feed rows client-side; do not represent this as final large-scale search. Future scale work should move these filters into paginated server-side RPC inputs and add saved searches.
+
+
+### Customer Exchange private gallery — 2026-10-07
+Vehicle Detail now uses ordered `exchange_listing_media` returned through `exchange_listing_detail(uuid)` and signs each object through the existing private `exchange-media` bucket. Preserve short-lived signed URLs and authenticated storage policy; do not make Exchange media public to simplify galleries.
+
+
+### Customer Exchange Vehicle Health Report — 2026-10-07
+The active redesign branch now has `app/customer/exchange/health.tsx`, linked from Vehicle Detail. It must remain source-aware: AuthBridge verification, vehicle master/registry fields and linked internal/external policy validity may be shown; missing values/timestamps must remain unavailable rather than inferred. Challan and detailed mechanical inspection categories are explicitly not connected yet.
+
+
+### Customer Exchange Deal Room — 2026-10-07
+The active redesign branch now has a participant-only `exchange_deal_detail(uuid)` RPC and `app/customer/exchange/deal.tsx`. My Exchange Deals opens this screen. Customers may only confirm the existing buyer-confirmation step; inspection/payment/handover/RC-transfer statuses remain staff-managed through the existing workflow. Do not expose customer IDs, private contacts or staff_notes in deal detail.
+
+
+### Customer Exchange private offer actions — 2026-10-07
+`exchange_withdraw_offer(uuid)` and `exchange_reject_leading_offer(uuid)` apply only to `open_bidding` private offers. Do not expose these actions for `managed_auction`. When a leading private offer is withdrawn/rejected, promote the next-highest existing `outbid` response and keep listing `current_bid` / `highest_bid_id` synchronized. Counter-offer remains deliberately unimplemented.
+
+
+### Customer Exchange comparison — 2026-10-07
+Search now supports selecting 2–3 vehicles and opening `app/customer/exchange/compare.tsx`. Comparison must remain factual: use live Exchange feed + authoritative listing detail fields, show missing values as unavailable, and do not invent winner scores or valuation advantages. Phase 7 finance/EMI work remains separate.
+
+
+### Customer Exchange finance estimator — 2026-10-07
+Vehicle Detail now links to `app/customer/exchange/finance.tsx`, an estimate-only EMI calculator. It may calculate from asking price, down payment, user-entered interest and tenure, but must never present that result as lender eligibility, approval or a live finance quote. Finance enquiry/lender integration remains intentionally unconnected.
+
+
+### Customer Exchange seller condition — 2026-10-07
+The seller journey now persists seller-declared overall/body/cabin condition, tyre %, known issues and construction-only operating hours/hydraulic/undercarriage condition through existing `condition_details` / `tyre_condition_percent`. Keep these clearly labelled seller-provided; never treat them as InsureIT inspection results. Guided photo slots now offer Camera or Gallery using the existing expo-image-picker/private media pipeline. No new native dependency or APK/AAB.
+
+
+### Customer Exchange Add another vehicle — 2026-10-07
+Seller flow now routes “Add another vehicle” into the existing Customer `/customer/add-vehicle` RC/fleet onboarding with `fromExchange=1`, then returns to Exchange after a successful save. Do not build a duplicate Exchange-only vehicle ownership/onboarding flow.
+
+
+### Customer Exchange verified redesign checkpoint — 2026-10-07
+PR #2883 has reached a fully green implementation checkpoint covering marketplace Home/Search, dedicated Vehicle Detail + private gallery, source-aware Vehicle Health, guided seller flow with seller-declared condition + Camera/Gallery, Add Vehicle reuse, real selling modes, My Exchange Buying/Selling/Saved/Deals, offer withdrawal/rejection, Deal Room, 2–3 vehicle comparison and estimate-only EMI. Production Exchange currently has 0 listings/responses/deals, so valuation and marketplace-intelligence features are deliberately deferred until real comparable data or a trustworthy external source exists. Full exact state is in `docs/CUSTOMER_EXCHANGE_REDESIGN_HANDOFF_2026_10_07.md`. Keep PR unmerged and do not publish OTA / build APK-AAB unless explicitly approved.

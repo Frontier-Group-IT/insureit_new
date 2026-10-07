@@ -8,6 +8,7 @@ on:
     paths:
       - 'supabase/migrations/20261006183000_customer_exchange_marketplace_backend.sql'
       - 'supabase/migrations/20261006184500_customer_exchange_backend_hardening.sql'
+      - 'supabase/migrations/20261007125600_customer_exchange_selling_modes.sql'
       - '.github/workflows/apply-customer-exchange-marketplace-backend.yml'
 
 permissions:
@@ -48,6 +49,7 @@ jobs:
           test -n "$SUPABASE_PROJECT_REF"
           test -f supabase/migrations/20261006183000_customer_exchange_marketplace_backend.sql
           test -f supabase/migrations/20261006184500_customer_exchange_backend_hardening.sql
+          test -f supabase/migrations/20261007125600_customer_exchange_selling_modes.sql
 
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
@@ -91,6 +93,23 @@ jobs:
             supabase migration repair --linked --status applied 20261006184500
           fi
 
+      - name: Ensure Exchange selling-mode migration is applied
+        shell: bash
+        run: |
+          set -euo pipefail
+          applied=$(supabase db query --linked --output-format json "
+            select exists(
+              select 1 from supabase_migrations.schema_migrations
+              where version='20261007125600'
+            ) as applied;
+          ")
+          if echo "$applied" | grep -Eq '"applied"[[:space:]]*:[[:space:]]*true'; then
+            echo "Selling-mode migration already recorded as applied; skipping execution."
+          else
+            supabase db query --linked --file supabase/migrations/20261007125600_customer_exchange_selling_modes.sql
+            supabase migration repair --linked --status applied 20261007125600
+          fi
+
       - name: Verify Exchange security and workflow contract
         shell: bash
         run: |
@@ -104,8 +123,27 @@ jobs:
               to_regclass('public.exchange_deals') is not null as deals_ready,
               to_regclass('public.exchange_events') is not null as events_ready,
               to_regprocedure('public.exchange_marketplace_feed(text,text,integer,integer)') is not null as feed_rpc_ready,
-              to_regprocedure('public.exchange_upsert_listing_draft(uuid,uuid,uuid,text,text,bigint,numeric,numeric,numeric,integer,integer,text,text,jsonb,jsonb)') is not null as draft_rpc_ready,
+              to_regprocedure('public.exchange_upsert_listing_draft(uuid,uuid,uuid,text,text,bigint,numeric,numeric,numeric,integer,integer,text,text,jsonb,jsonb,text)') is not null as draft_rpc_ready,
+              exists(
+                select 1 from information_schema.columns
+                where table_schema='public' and table_name='exchange_listings'
+                  and column_name='selling_mode'
+              ) as selling_mode_ready,
+              position(
+                'l.selling_mode'
+                in pg_get_functiondef('public.exchange_marketplace_feed(text,text,integer,integer)'::regprocedure)
+              ) > 0 as feed_selling_mode_ready,
+              position(
+                'p_selling_mode'
+                in pg_get_functiondef(
+                  'public.exchange_upsert_listing_draft(uuid,uuid,uuid,text,text,bigint,numeric,numeric,numeric,integer,integer,text,text,jsonb,jsonb,text)'::regprocedure
+                )
+              ) > 0 as draft_selling_mode_ready,
               to_regprocedure('public.exchange_place_bid(uuid,uuid,numeric)') is not null as bid_rpc_ready,
+              to_regprocedure('public.exchange_listing_detail(uuid)') is not null as listing_detail_rpc_ready,
+              to_regprocedure('public.exchange_deal_detail(uuid)') is not null as deal_detail_rpc_ready,
+              to_regprocedure('public.exchange_withdraw_offer(uuid)') is not null as withdraw_offer_rpc_ready,
+              to_regprocedure('public.exchange_reject_leading_offer(uuid)') is not null as reject_offer_rpc_ready,
               to_regprocedure('public.exchange_request_contact(uuid,uuid,text,text)') is not null as contact_rpc_ready,
               to_regprocedure('public.exchange_accept_leading_bid(uuid)') is not null as deal_rpc_ready,
               exists(select 1 from storage.buckets where id='exchange-media' and public=false) as private_media_bucket,
@@ -123,12 +161,12 @@ jobs:
               position(
                 'v_listing.seller_customer_id is distinct from p_customer_id'
                 in pg_get_functiondef(
-                  'public.exchange_upsert_listing_draft(uuid,uuid,uuid,text,text,bigint,numeric,numeric,numeric,integer,integer,text,text,jsonb,jsonb)'::regprocedure
+                  'public.exchange_upsert_listing_draft(uuid,uuid,uuid,text,text,bigint,numeric,numeric,numeric,integer,integer,text,text,jsonb,jsonb,text)'::regprocedure
                 )
               ) > 0 as owner_scope_guard;
           ")
           echo "$result"
-          for key in listings_ready bids_ready favorites_ready contact_ready deals_ready events_ready feed_rpc_ready draft_rpc_ready bid_rpc_ready contact_rpc_ready deal_rpc_ready private_media_bucket listings_rls bids_rls no_direct_listing_select no_direct_bid_select single_draft_guard owner_scope_guard; do
+          for key in listings_ready bids_ready favorites_ready contact_ready deals_ready events_ready feed_rpc_ready draft_rpc_ready selling_mode_ready feed_selling_mode_ready draft_selling_mode_ready bid_rpc_ready listing_detail_rpc_ready deal_detail_rpc_ready withdraw_offer_rpc_ready reject_offer_rpc_ready contact_rpc_ready deal_rpc_ready private_media_bucket listings_rls bids_rls no_direct_listing_select no_direct_bid_select single_draft_guard owner_scope_guard; do
             echo "$result" | grep -Eq "\"$key\"[[:space:]]*:[[:space:]]*true" || {
               echo "::error::Exchange verification failed for $key"
               exit 1

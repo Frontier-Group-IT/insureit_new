@@ -5,6 +5,7 @@ export type ExchangeFeedRow = {
   listing_no: string;
   title: string;
   category: 'Truck' | 'Tipper' | 'Pickup' | 'Bus' | 'Construction' | 'Other';
+  selling_mode: 'fixed_price' | 'open_bidding' | 'managed_auction';
   year: number | null;
   odometer_km: number | null;
   city: string | null;
@@ -30,6 +31,74 @@ export type ExchangeFeedRow = {
   cover_storage_bucket: string | null;
   cover_storage_path: string | null;
   is_favorite: boolean;
+};
+
+export type ExchangeListingDetail = {
+  listing_id: string;
+  listing_no: string;
+  selling_mode: 'fixed_price' | 'open_bidding' | 'managed_auction';
+  registration_status: string | null;
+  registration_status_as_on: string | null;
+  registration_date: string | null;
+  fitness_expiry_date: string | null;
+  puc_expiry_date: string | null;
+  road_tax_expiry_date: string | null;
+  permit_type: string | null;
+  permit_valid_from: string | null;
+  national_permit_expiry_date: string | null;
+  local_permit_expiry_date: string | null;
+  gvw_kg: number | null;
+  unladen_weight_kg: number | null;
+  wheel_base_mm: number | null;
+  body_type: string | null;
+  engine_capacity_cc: number | null;
+  emission_norm: string | null;
+  financed: boolean | null;
+  financer_name: string | null;
+  blacklist_status: string | null;
+  authbridge_verified: boolean | null;
+  authbridge_last_verified_at: string | null;
+  insurance: {
+    source?: string | null;
+    end_date?: string | null;
+    insurer_name?: string | null;
+  };
+  media: Array<{
+    id: string;
+    media_type: 'photo' | 'video';
+    label: string | null;
+    storage_bucket: string;
+    storage_path: string;
+    mime_type: string | null;
+    sort_order: number;
+    is_cover: boolean;
+    signed_url?: string | null;
+  }>;
+};
+
+export type ExchangeDealDetail = {
+  deal_id: string;
+  deal_no: string;
+  listing_id: string;
+  listing_no: string;
+  title: string;
+  selling_mode: 'fixed_price' | 'open_bidding' | 'managed_auction';
+  side: 'buying' | 'selling';
+  agreed_price: number;
+  status: 'seller_accepted' | 'buyer_confirmed' | 'inspection_pending' | 'inspection_complete' | 'payment_pending' | 'handover_pending' | 'rc_transfer_pending' | 'completed' | 'cancelled' | 'disputed';
+  created_at: string;
+  buyer_confirmed_at: string | null;
+  inspection_completed_at: string | null;
+  payment_confirmed_at: string | null;
+  handover_completed_at: string | null;
+  rc_transfer_completed_at: string | null;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  cancellation_reason: string | null;
+  masked_registration: string | null;
+  make: string | null;
+  model: string | null;
+  year: number | null;
 };
 
 export type ExchangeSellableVehicle = {
@@ -75,6 +144,48 @@ export async function getExchangeMarketplaceFeed(input?: {
   })));
 }
 
+export async function withdrawExchangeOffer(bidId: string) {
+  const { data, error } = await (supabase.rpc as any)('exchange_withdraw_offer', {
+    p_bid_id: bidId,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function rejectExchangeLeadingOffer(listingId: string) {
+  const { data, error } = await (supabase.rpc as any)('exchange_reject_leading_offer', {
+    p_listing_id: listingId,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function getExchangeDealDetail(dealId: string): Promise<ExchangeDealDetail | null> {
+  const { data, error } = await (supabase.rpc as any)('exchange_deal_detail', {
+    p_deal_id: dealId,
+  });
+  if (error) throw error;
+  if (!data || typeof data !== 'object') return null;
+  return data as ExchangeDealDetail;
+}
+
+export async function getExchangeListingDetail(listingId: string): Promise<ExchangeListingDetail | null> {
+  const { data, error } = await (supabase.rpc as any)('exchange_listing_detail', {
+    p_listing_id: listingId,
+  });
+  if (error) throw error;
+  if (!data || typeof data !== 'object') return null;
+
+  const detail = data as ExchangeListingDetail;
+  const media = Array.isArray(detail.media) ? detail.media : [];
+  const signedMedia = await Promise.all(media.map(async (item) => ({
+    ...item,
+    signed_url: await signedCoverUrl(item.storage_bucket, item.storage_path),
+  })));
+
+  return { ...detail, media: signedMedia };
+}
+
 export async function getExchangeSellableVehicles(customerId: string) {
   const { data, error } = await (supabase.rpc as any)('exchange_my_sellable_vehicles', {
     p_customer_id: customerId,
@@ -99,6 +210,7 @@ export async function saveExchangeListingDraft(input: {
   financeSummary?: string | null;
   conditionDetails?: Record<string, unknown>;
   sellerDeclaration?: Record<string, unknown>;
+  sellingMode?: 'fixed_price' | 'open_bidding' | 'managed_auction';
 }) {
   const { data, error } = await (supabase.rpc as any)('exchange_upsert_listing_draft', {
     p_listing_id: input.listingId ?? null,
@@ -116,6 +228,7 @@ export async function saveExchangeListingDraft(input: {
     p_finance_summary: input.financeSummary ?? null,
     p_condition_details: input.conditionDetails ?? {},
     p_seller_declaration: input.sellerDeclaration ?? {},
+    p_selling_mode: input.sellingMode ?? 'open_bidding',
   });
   if (error) throw error;
   return data;
