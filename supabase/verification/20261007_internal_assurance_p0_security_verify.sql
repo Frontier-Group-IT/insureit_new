@@ -14,6 +14,44 @@ begin
     raise exception 'Anonymous SECURITY DEFINER execution remains on % function(s)', v_count;
   end if;
 
+
+  -- Trigger functions must not be directly executable as API RPCs.
+  select count(*) into v_count
+  from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname = 'public'
+    and p.prosecdef
+    and p.prorettype = 'pg_catalog.trigger'::regtype
+    and has_function_privilege('authenticated', p.oid, 'EXECUTE');
+  if v_count <> 0 then
+    raise exception 'Authenticated direct trigger-function execution remains on % function(s)', v_count;
+  end if;
+
+  -- Internal helpers identified by the assurance review must be service-role-only.
+  if exists (
+    select 1
+    from unnest(array[
+      'public.insert_customer_activity_event(uuid,uuid,uuid,uuid,uuid,text,uuid,text,text,text,text,jsonb)'::regprocedure,
+      'public.repair_legacy_partner_record_link(uuid,uuid)'::regprocedure,
+      'public.sync_existing_intermediary_migration(uuid,uuid,jsonb,text)'::regprocedure,
+      'public.sync_external_customer_stage_to_operations(uuid,uuid)'::regprocedure,
+      'public.sync_group_corporate_onboarding_contacts(uuid,jsonb)'::regprocedure,
+      'public.sync_partner_details_to_linked_accounts(uuid)'::regprocedure,
+      'public.sync_partner_identity_to_intermediary_register(uuid)'::regprocedure
+    ]) as f(oid)
+    where has_function_privilege('anon', f.oid, 'EXECUTE')
+       or has_function_privilege('authenticated', f.oid, 'EXECUTE')
+  ) then
+    raise exception 'One or more internal synchronization helpers remain client-callable';
+  end if;
+
+  if position(
+    'actor_profile_id is distinct from auth.uid()'
+    in pg_get_functiondef('public.assert_group_relationship_manager(uuid)'::regprocedure)
+  ) = 0 then
+    raise exception 'Group relationship manager helper is not bound to auth.uid()';
+  end if;
+
   -- Confirm server-only administrative RPCs are not executable by ordinary clients.
   if has_function_privilege('anon', 'public.get_policy_business_report_v4(uuid[],date,date,uuid,uuid,text,text,text,integer,integer)'::regprocedure, 'EXECUTE')
      or has_function_privilege('authenticated', 'public.get_policy_business_report_v4(uuid[],date,date,uuid,uuid,text,text,text,integer,integer)'::regprocedure, 'EXECUTE') then
