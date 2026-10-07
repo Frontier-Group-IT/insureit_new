@@ -51,8 +51,8 @@ type FirebaseCompatAuthFactory = {
   ) => FirebaseRecaptchaVerifier;
 };
 
-const firebaseAppScript = "https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js";
-const firebaseAuthScript = "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js";
+const firebaseAppScript = "/firebase-otp-test/sdk/firebase-app-compat.js";
+const firebaseAuthScript = "/firebase-otp-test/sdk/firebase-auth-compat.js";
 
 function loadScript(src: string) {
   return new Promise<void>((resolve, reject) => {
@@ -99,6 +99,7 @@ function friendlyError(error: unknown) {
   const code = (error as { code?: string } | null)?.code ?? "";
   const combined = `${code} ${raw}`.toLowerCase();
 
+  if (combined.includes("could not load /firebase-otp-test/sdk/")) return "The local Firebase SDK proxy could not load. Refresh once; if it persists, the tester deployment cannot reach Google Firebase assets.";
   if (combined.includes("invalid-api-key")) return "Firebase rejected the API key. Copy the Web API key from Project settings → General → Your apps.";
   if (combined.includes("unauthorized-domain")) return "This tester domain is not authorized in Firebase Authentication → Settings → Authorized domains.";
   if (combined.includes("operation-not-allowed")) return "Phone sign-in is not enabled in Firebase Authentication.";
