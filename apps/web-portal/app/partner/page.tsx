@@ -19,7 +19,7 @@ import {
 } from "@/lib/partner-web";
 import { getPartnerExternalRenewalSummary } from "@/lib/partner-external-renewals";
 import { getPartnerWebActiveScheme } from "@/lib/partner-schemes";
-import { PartnerHomeTrendPeriodFilter } from "./partner-home-trend-period-filter";
+import { PartnerBusinessTrend, type TrendPeriod, type TrendPoint } from "./partner-business-trend";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -43,9 +43,6 @@ const homeIcons = {
 } as const;
 
 type HomeSearchParams = { trend?: string };
-type TrendPeriod = "6m" | "mtd" | "12m";
-type TrendPoint = { month: string; premium: number | string; policies: number; label?: string };
-
 const trendPeriodOptions: { value: TrendPeriod; label: string }[] = [
   { value: "6m", label: "Last 6 Months" },
   { value: "mtd", label: "MTD" },
@@ -58,16 +55,6 @@ function formatIndianCurrency(value: number | string) {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
-  }).format(Number.isFinite(amount) ? amount : 0);
-}
-
-function formatCompactCurrency(value: number | string) {
-  const amount = Number(value ?? 0);
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    notation: "compact",
-    maximumFractionDigits: 1,
   }).format(Number.isFinite(amount) ? amount : 0);
 }
 
@@ -110,12 +97,6 @@ function currentKolkataIsoDate(value = new Date()) {
   }).formatToParts(value);
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return `${values.year}-${values.month}-${values.day}`;
-}
-
-function monthLabel(value: string) {
-  const parsed = new Date(`${value}-01T00:00:00Z`);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return new Intl.DateTimeFormat("en-IN", { month: "short", timeZone: "UTC" }).format(parsed);
 }
 
 function shiftMonth(value: string, offset: number) {
@@ -213,11 +194,7 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
   ]);
 
   const today = currentKolkataIsoDate();
-  const monthCount = trendPeriod === "12m" ? 12 : trendPeriod === "mtd" ? 1 : 6;
   const currentMonth = businessPerformance.current_month;
-  const selectedStartMonth = shiftMonth(currentMonth, -(monthCount - 1));
-  const selectedFrom = `${selectedStartMonth}-01`;
-  const periodSummaryPromise = getPartnerWebBusinessRange(selectedFrom, today);
   const twelveMonthTrendPromise: Promise<TrendPoint[]> = trendPeriod === "12m"
     ? Promise.all(
         Array.from({ length: 12 }, (_, index) => shiftMonth(currentMonth, index - 11)).map(async (month) => {
@@ -240,8 +217,7 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
         }),
       )
     : Promise.resolve([]);
-  const [periodSummary, twelveMonthTrend, mtdWeeklyTrend] = await Promise.all([
-    periodSummaryPromise,
+  const [twelveMonthTrend, mtdWeeklyTrend] = await Promise.all([
     twelveMonthTrendPromise,
     mtdWeeklyTrendPromise,
   ]);
@@ -261,8 +237,6 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
   const payoutMeta = payout.available ? `${payout.paid_count} paid records` : "Commercial visibility restricted";
   const payoutOutstandingValue = payout.available ? formatIndianCurrency(payout.pending_amount) : "Restricted";
   const payoutOutstandingMeta = payout.available ? `${payout.pending_count} pending records` : "Commercial visibility restricted";
-  const selectedPremiumChange = Number(periodSummary.premium_change_percent ?? 0);
-  const selectedClaimRatio = periodSummary.policies > 0 ? (periodSummary.claims / periodSummary.policies) * 100 : 0;
   const premiumAtRisk = [
     renewalSummary.due_0_7_premium,
     renewalSummary.due_8_15_premium,
@@ -380,41 +354,13 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
           />
         </section>
 
-        <section className="grid gap-2 xl:grid-cols-[1.55fr_.75fr]">
-          <BusinessTrend trend={trendPoints} period={trendPeriod} periodLabel={trendPeriodLabel} />
-
-          <div className="overflow-hidden rounded-xl border border-[#DCE5F1] bg-white shadow-[0_4px_14px_rgba(25,50,90,0.05)]">
-            <div className="flex items-center gap-2.5 border-b border-[#E6ECF3] px-4 py-3">
-              <span className="grid h-6 w-6 place-items-center">
-                <ProfessionalIcon src={homeIcons.business} size={20} />
-              </span>
-              <h2 className="min-w-0 flex-1 text-[14px] font-extrabold tracking-[-0.02em] text-[#142B50]">Business highlights</h2>
-              <Ellipsis className="h-4 w-4 text-[#2F70E5]" aria-hidden="true" />
-            </div>
-            <div className="divide-y divide-[#E8EDF4] px-4">
-              <HighlightRow
-                label="Premium change"
-                value={`${selectedPremiumChange > 0 ? "+" : ""}${selectedPremiumChange.toFixed(1)}%`}
-                meta={`vs previous ${trendPeriodLabel.toLowerCase()} period`}
-                tone={selectedPremiumChange > 0 ? "positive" : selectedPremiumChange < 0 ? "negative" : "neutral"}
-              />
-              <HighlightRow
-                label="Customer activity"
-                value={`${periodSummary.customers} added`}
-                meta={`${home.business.total_customers} total customers · ${trendPeriodLabel}`}
-              />
-              <HighlightRow
-                label="Policy base"
-                value={`${periodSummary.policies} issued`}
-                meta={`${businessPerformance.total_policies} total policies · ${trendPeriodLabel}`}
-              />
-              <HighlightRow
-                label="Claim ratio"
-                value={`${selectedClaimRatio.toFixed(1)}%`}
-                meta={`${periodSummary.claims} claims / ${periodSummary.policies} policies`}
-              />
-            </div>
-          </div>
+        <section>
+          <PartnerBusinessTrend
+            trend={trendPoints}
+            period={trendPeriod}
+            periodLabel={trendPeriodLabel}
+            iconSrc={homeIcons.business}
+          />
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[1.05fr_.95fr]">
@@ -508,109 +454,6 @@ function SummaryCard({
       </span>
       <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#6D7D96] transition group-hover:translate-x-0.5" />
     </Link>
-  );
-}
-
-function BusinessTrend({ trend, period, periodLabel }: { trend: TrendPoint[]; period: TrendPeriod; periodLabel: string }) {
-  const points = trend;
-  const maxPremium = Math.max(1, ...points.map((point) => Number(point.premium ?? 0)));
-  const maxPolicies = Math.max(1, ...points.map((point) => point.policies));
-  const plotLeft = 24;
-  const plotRight = 576;
-  const plotTop = 28;
-  const plotBottom = 150;
-  const plotHeight = plotBottom - plotTop;
-  const slotWidth = points.length > 1 ? (plotRight - plotLeft) / (points.length - 1) : 0;
-  const barWidth = points.length >= 10 ? 26 : points.length >= 7 ? 34 : 44;
-  const linePoints = points
-    .map((point, index) => {
-      const x = points.length > 1 ? plotLeft + index * slotWidth : 300;
-      const y = plotBottom - (point.policies / maxPolicies) * plotHeight;
-      return `${x},${y}`;
-    })
-    .join(" ");
-
-  return (
-    <div className="overflow-visible rounded-xl border border-[#DCE5F1] bg-white shadow-[0_4px_14px_rgba(25,50,90,0.05)]">
-      <div className="flex flex-wrap items-center gap-3 border-b border-[#E6ECF3] px-4 py-3">
-        <span className="grid h-6 w-6 place-items-center">
-          <ProfessionalIcon src={homeIcons.business} size={20} />
-        </span>
-        <h2 className="min-w-0 flex-1 text-[14px] font-extrabold tracking-[-0.02em] text-[#142B50]">M/M Business Trend</h2>
-        <div className="flex items-center gap-3 text-[8.5px] font-semibold text-[#6F8098]">
-          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#A9CFFF]" />Premium</span>
-          <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-3 bg-[#163968]" />Policies</span>
-        </div>
-        <PartnerHomeTrendPeriodFilter period={period} label={periodLabel} />
-        <Link
-          href="/partner/business"
-          prefetch={false}
-          data-partner-home-reference-cta="true"
-          className="inline-flex h-7 shrink-0 items-center justify-center gap-1 bg-[#163968] px-2.5 text-[8.5px] font-semibold text-white shadow-none transition hover:bg-[#102F59] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163968]/30"
-        >
-          <span>View My Business</span>
-          <ArrowRight className="h-3 w-3" aria-hidden="true" />
-        </Link>
-      </div>
-
-      {points.length ? (
-        <div className="px-1 pb-2 pt-3">
-          <svg viewBox="0 0 600 190" className="h-[210px] w-full" role="img" aria-label={`Premium and policy trend for ${periodLabel.toLowerCase()}`}>
-            {[0, 1, 2, 3].map((grid) => {
-              const y = plotTop + (plotHeight / 3) * grid;
-              return <line key={grid} x1="8" x2="592" y1={y} y2={y} stroke="#E7EDF5" strokeWidth="1" />;
-            })}
-            {points.map((point, index) => {
-              const x = points.length > 1 ? plotLeft + index * slotWidth : 300;
-              const premium = Number(point.premium ?? 0);
-              const barHeight = Math.max(4, (premium / maxPremium) * plotHeight);
-              const y = plotBottom - barHeight;
-              const policyY = plotBottom - (point.policies / maxPolicies) * plotHeight;
-
-              return (
-                <g key={`${point.month}-${index}`}>
-                  <rect x={x - barWidth / 2} y={y} width={barWidth} height={barHeight} rx="5" fill={index === points.length - 1 ? "#7CB4FF" : "#C4DEFF"} />
-                  <text x={x} y={Math.max(14, y - 7)} textAnchor="middle" fontSize={points.length >= 10 ? "6.5" : "8"} fontWeight="700" fill="#536987">
-                    {formatCompactCurrency(point.premium)}
-                  </text>
-                  <circle cx={x} cy={policyY} r="4" fill="#163968" />
-                  <text x={x} y="176" textAnchor="middle" fontSize={points.length >= 10 ? "7" : "9"} fontWeight="700" fill="#536987">{point.label ?? monthLabel(point.month)}</text>
-                  <text x={x} y="187" textAnchor="middle" fontSize={points.length >= 10 ? "6" : "7.5"} fontWeight="600" fill="#8391A5">{point.policies} policies</text>
-                </g>
-              );
-            })}
-
-            {points.length > 1 ? <polyline points={linePoints} fill="none" stroke="#163968" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /> : null}
-          </svg>
-        </div>
-      ) : (
-        <div className="grid min-h-[210px] place-items-center px-4 text-[10px] font-semibold text-[#7A899E]">No trend data available.</div>
-      )}
-    </div>
-  );
-}
-
-function HighlightRow({
-  label,
-  value,
-  meta,
-  tone = "neutral",
-}: {
-  label: string;
-  value: string;
-  meta: string;
-  tone?: "positive" | "negative" | "neutral";
-}) {
-  const valueTone = tone === "positive" ? "text-[#14915F]" : tone === "negative" ? "text-[#D84A5E]" : "text-[#142A50]";
-
-  return (
-    <div className="flex min-h-[54px] items-center justify-between gap-3 py-2.5">
-      <div className="min-w-0">
-        <p className="text-[9px] font-extrabold text-[#2E4568]">{label}</p>
-        <p className="mt-0.5 truncate text-[8px] font-medium text-[#8190A4]">{meta}</p>
-      </div>
-      <p className={`shrink-0 text-[13px] font-black tracking-[-0.02em] ${valueTone}`}>{value}</p>
-    </div>
   );
 }
 
