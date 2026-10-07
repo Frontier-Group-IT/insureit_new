@@ -28,6 +28,28 @@ expectAll('app/_layout.tsx', [
   [/<PartnerErrorBoundary>[\s\S]*<PartnerSessionProvider>/, 'error boundary must wrap the Partner session/app tree'],
 ]);
 
+expectAll('app/_layout.tsx', [
+  [/PartnerSearchProvider/, 'root layout must provide shared Partner search state'],
+]);
+
+expectAll('providers/partner-search-provider.tsx', [
+  [/const \[query, setQuery\] = useState\(''\)/, 'shared Partner search provider must own the universal query'],
+  [/clearQuery: \(\) => setQuery\(''\)/, 'shared Partner search provider must expose query clearing'],
+]);
+
+expectAll('components/partner-screen.tsx', [
+  [/usePartnerSearch\(\)/, 'Home hero search must consume shared Partner search state'],
+  [/router\.push\(\`\/search\?q=\$\{encodeURIComponent\(query\)\}\`/, 'Home search submit must route the typed query to Universal Search'],
+  [/hasHeroSearchValue \? '#1765C1' : '#A3ABBA'/, 'Home Search chevron must turn blue when text is entered'],
+  [/homeSearchActionTextActive/, 'Home Search label must expose an active blue state when text is entered'],
+]);
+
+expectAll('app/search.tsx', [
+  [/usePartnerSearch\(\)/, 'Universal Search must consume the same shared query as Home'],
+  [/onClear: clearQuery/, 'clearing Universal Search must clear the shared Home query too'],
+  [/appliedIncomingQueryRef/, 'route query handoff must not overwrite later user edits or clearing'],
+]);
+
 expectAll('components/partner-error-boundary.tsx', [
   [/getDerivedStateFromError/, 'error boundary must enter a recovery state after render errors'],
   [/componentDidCatch/, 'error boundary must capture error details for observability readiness'],
