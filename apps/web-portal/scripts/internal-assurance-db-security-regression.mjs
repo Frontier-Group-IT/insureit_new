@@ -30,6 +30,7 @@ const required = [
   "alter extension pg_trgm set schema extensions",
   "revoke all privileges on table public.%I from anon",
   "revoke all privileges on table public.%I from authenticated",
+  'to authenticated\\nusing (true)',
 ];
 
 for (const needle of required) {
