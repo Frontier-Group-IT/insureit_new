@@ -162,6 +162,17 @@ begin
   if v_count <> 0 then
     raise exception 'Unsafe generic delete policy remains on % table(s)', v_count;
   end if;
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'vehicle_manufacturers'
+      and policyname = 'Authenticated users can read vehicle manufacturers'
+      and roles = array['authenticated']::name[]
+      and cmd = 'SELECT'
+  ) then
+    raise exception 'Vehicle manufacturer read policy is not authenticated-only';
+  end if;
   if exists (
     select 1
     from pg_extension e
