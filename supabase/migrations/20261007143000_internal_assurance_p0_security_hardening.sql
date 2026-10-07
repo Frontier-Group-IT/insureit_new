@@ -220,7 +220,35 @@ end
 $$;
 
 -- ---------------------------------------------------------------------------
--- 3. Legacy POSP document bucket
+-- 3. RLS deny-all tables: remove non-RLS client privileges
+-- ---------------------------------------------------------------------------
+-- RLS does not govern TRUNCATE / REFERENCES / TRIGGER privileges. Tables that
+-- intentionally have RLS enabled with zero policies are server-only; remove all
+-- direct client privileges so the deny-all contract is complete.
+do $
+declare
+  r record;
+begin
+  for r in
+    select c.relname
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    left join pg_policy p on p.polrelid = c.oid
+    where n.nspname = 'public'
+      and c.relkind = 'r'
+      and c.relrowsecurity
+    group by c.oid, c.relname
+    having count(p.oid) = 0
+  loop
+    execute format('revoke all privileges on table public.%I from anon', r.relname);
+    execute format('revoke all privileges on table public.%I from authenticated', r.relname);
+    execute format('grant all privileges on table public.%I to service_role', r.relname);
+  end loop;
+end
+$;
+
+-- ---------------------------------------------------------------------------
+-- 4. Legacy POSP document bucket
 -- ---------------------------------------------------------------------------
 drop policy if exists "Allow anon read posp-documents" on storage.objects;
 drop policy if exists "Allow anon upload posp-documents" on storage.objects;
@@ -233,7 +261,7 @@ set
 where id = 'posp-documents';
 
 -- ---------------------------------------------------------------------------
--- 4. Privileged audit/cleanup views
+-- 5. Privileged audit/cleanup views
 -- ---------------------------------------------------------------------------
 alter view public.intermediary_customer_cleanup_candidates set (security_invoker = true);
 alter view public.intermediary_onboarding_cutover_audit set (security_invoker = true);
@@ -244,7 +272,7 @@ grant select on table public.intermediary_customer_cleanup_candidates to service
 grant select on table public.intermediary_onboarding_cutover_audit to service_role;
 
 -- ---------------------------------------------------------------------------
--- 5. Mutable search_path hardening
+-- 6. Mutable search_path hardening
 -- ---------------------------------------------------------------------------
 alter function public.assign_support_ticket_number() set search_path = public, pg_temp;
 alter function public.audit_customer_creation_provenance() set search_path = public, pg_temp;
@@ -269,7 +297,7 @@ alter function public.validate_required_intermediary_identity_fields() set searc
 
 
 -- ---------------------------------------------------------------------------
--- 6. Extension schema hardening
+-- 7. Extension schema hardening
 -- ---------------------------------------------------------------------------
 -- The live database search_path already includes "extensions"; move pg_trgm
 -- out of the exposed public schema without rebuilding dependent indexes.
