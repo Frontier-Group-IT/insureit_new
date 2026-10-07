@@ -90,22 +90,22 @@ export function CustomerNavigation() {
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[#D7DEE8] bg-white/95 px-4 py-2 backdrop-blur lg:hidden" aria-label="Customer mobile navigation">
         <div className="mx-auto grid max-w-lg grid-cols-6 gap-1">
           <Link href="/customer/home" className={`flex flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[9px] font-bold ${homeActive ? "bg-[#EEF4FF] text-[#174EA6]" : "text-[#53627A]"}`}>
-            <Home className="h-4.5 w-4.5" /> Home
+            <Home className="h-[18px] w-[18px]" /> Home
           </Link>
           <Link href="/customer/vehicles" className={`flex flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[9px] font-bold ${vehiclesActive ? "bg-[#EEF4FF] text-[#174EA6]" : "text-[#53627A]"}`}>
-            <CarFront className="h-4.5 w-4.5" /> Vehicles
+            <CarFront className="h-[18px] w-[18px]" /> Vehicles
           </Link>
           <Link href="/customer/policies" className={`flex flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[9px] font-bold ${policiesActive ? "bg-[#EEF4FF] text-[#174EA6]" : "text-[#53627A]"}`}>
-            <ShieldCheck className="h-4.5 w-4.5" /> Policies
+            <ShieldCheck className="h-[18px] w-[18px]" /> Policies
           </Link>
           <Link href="/customer/exchange" className={`flex flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[9px] font-bold ${exchangeActive ? "bg-[#EEF4FF] text-[#174EA6]" : "text-[#53627A]"}`}>
-            <Truck className="h-4.5 w-4.5" /> Exchange
+            <Truck className="h-[18px] w-[18px]" /> Exchange
           </Link>
           <Link href="/customer/support" className={`flex flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[9px] font-bold ${supportActive || quoteActive || challanActive ? "bg-[#EEF4FF] text-[#174EA6]" : "text-[#53627A]"}`}>
-            <Headphones className="h-4.5 w-4.5" /> Support
+            <Headphones className="h-[18px] w-[18px]" /> Support
           </Link>
           <Link href="/customer/profile" className={`flex flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[9px] font-bold ${profileActive || kycActive || documentsActive ? "bg-[#EEF4FF] text-[#174EA6]" : "text-[#53627A]"}`}>
-            <UserRound className="h-4.5 w-4.5" /> Profile
+            <UserRound className="h-[18px] w-[18px]" /> Profile
           </Link>
         </div>
       </nav>
