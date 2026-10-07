@@ -74,3 +74,25 @@ This foundation does not modify:
 **IMPLEMENTED ON FEATURE BRANCH; PR #2882 OPEN. Verify web portal run #5399 passed on the functional middleware/customer foundation head, including Customer isolation, Partner security, server-session coverage, typecheck, lint and production build. Final documentation/regression-hardening head requires its own green rerun. MERGE/DEPLOYMENT PENDING.**
 
 No APK/AAB created.
+
+## 2026-10-07 — Customer Web Phase 2: Renewals and Claim Tracking
+
+Branch: `feature/customer-web-phase2-renewals-claims-2026-10-07`.
+
+Implemented strictly inside Customer Web:
+- `/customer/renewals` with the Customer App's 45-day renewal window for Insurance Policy, National Permit, Local Permit, Road Tax, PUC and Fitness;
+- summary counts for pending, due soon and expired items, with document-type filters and vehicle drill-down;
+- `/customer/claims` with All / Open / Action Required / Completed filters, search, internal vs external/self-tracked identity, assistance-request status and milestone-aware completion;
+- `/customer/claims/[id]` with claim identity, policy/insurer/vehicle context, progress, shared internal claim journey projection, self-tracked external milestone journey, document count, open task count and assistance state;
+- Customer desktop/mobile navigation now includes Renewals and Claims;
+- `lib/customer-web-phase2-data.ts` is read-only and uses the normal authenticated Supabase/RLS client.
+
+Safety boundary for Phase 2:
+- no claim creation, claim update, milestone write, document upload/delete or assistance-request mutation is exposed on Customer Web yet;
+- no Partner Portal functionality changed;
+- no Operations Portal functionality changed;
+- no Partner/Operations authorization, RPC or capability changes;
+- no schema/RLS/data migration;
+- no mobile runtime/OTA/APK/AAB changes.
+
+State: **IMPLEMENTED ON REVERSIBLE BRANCH; PR/CI/MERGE/PREVIEW VERIFICATION PENDING.**
