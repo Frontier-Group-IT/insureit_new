@@ -1,11 +1,9 @@
 name: Deploy Cloudflare production
 
 on:
-  pull_request:
+  push:
     branches:
       - main
-    types:
-      - closed
   workflow_dispatch:
 
 permissions:
@@ -17,7 +15,6 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     name: Build and deploy main to Cloudflare
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -26,25 +23,10 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
     steps:
-      - name: Resolve production commit
-        id: production
-        shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
-          MAIN_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            echo "sha=$MERGE_SHA" >> "$GITHUB_OUTPUT"
-          else
-            echo "sha=$MAIN_SHA" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Checkout merged main commit
+      - name: Checkout main commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ steps.production.outputs.sha }}
+          ref: ${{ github.sha }}
 
       - name: Validate Cloudflare credentials
         shell: bash
@@ -63,10 +45,10 @@ jobs:
         run: npm ci
 
       - name: Build Cloudflare production
-        run: ./scripts/build-cloudflare-production.sh
+        run: bash scripts/build-cloudflare-production.sh
 
       - name: Deploy Cloudflare production Worker
-        run: ./scripts/deploy-cloudflare-production.sh
+        run: bash scripts/deploy-cloudflare-production.sh
 
       - name: Deployment summary
         if: success()
@@ -75,9 +57,9 @@ jobs:
           {
             echo "## Cloudflare production deployment"
             echo "- Source branch: `main`"
-            echo "- Commit: `${{ steps.production.outputs.sha }}`"
+            echo "- Commit: `${{ github.sha }}`"
             echo "- Worker: `insureit-new`"
-            echo "- Trigger: merged PR to main or explicit manual production dispatch"
+            echo "- Trigger: push to main (including merged PRs) or explicit manual production dispatch"
             echo "- Preview/PR deployment: disabled in this workflow"
             echo "- Runtime variables: preserved with `--keep-vars`"
             echo "- Vercel / portal.insureit.in: untouched"
