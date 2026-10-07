@@ -36,7 +36,10 @@ jobs:
           cache: npm
           cache-dependency-path: apps/web-portal/package.json
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --prefix ../.. --no-fund
+      - name: Dependency vulnerability gate
+        working-directory: ${{ github.workspace }}
+        run: npm audit --workspace @insureit/web-portal --audit-level=high --omit=dev
       - name: PostgREST high-volume row-cap audit
         run: node scripts/postgrest-row-cap-audit.mjs
       - name: Access control V2 catalogue regression
