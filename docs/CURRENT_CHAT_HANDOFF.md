@@ -2414,3 +2414,11 @@ Automated non-exact comparisons create/reuse Anju tasks with field-level questio
 ## 2026-09-21 — Partner Business clean header deployment provenance
 
 PR #2170 merged as `ae609cfa573becf29ea1715096f595fb1c150047`. The first automatic production deploy run was blocked by the canonical provenance gate because PR #2170 had no completed `Verify web portal` pull-request run before merge. This follow-up PR exists only to establish canonical verification provenance on top of the already-merged Business header change; it does not alter runtime behavior. Canonical PR verification is required before the production deploy hook may run.
+
+## 2026-10-07 — Customer Web Phase 1 active work
+- Branch: `feature/customer-web-phase1-home-vehicles-policies-2026-10-07`.
+- Scope: Customer Home, Vehicles list/detail, Policies list/detail, customer-only data layer and navigation.
+- Customer account scope is derived only from `getCustomerWebSession()`; no admin/service-role client.
+- Partner Portal and Operations Portal behavior are explicitly out of scope and unchanged.
+- No schema/RLS/mobile/OTA/APK/AAB changes.
+- State: implemented; PR/CI/merge/Cloudflare preview verification pending.
