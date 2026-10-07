@@ -1317,3 +1317,15 @@ When a new request touches any area above, first fetch the current `main` implem
 - Do not add decorative backgrounds behind the custom artwork merely to make it look like a generic icon tile; the approved Partner artwork should remain visually clean.
 - Stories is an immersive full-screen flow, so its Close/X semantics are intentional; ordinary pushed screens should use shared Back semantics.
 - Phase 1 completion must be visually verified through Partner preview OTA from exact current `main`; OTA-safe Phase 1 work must not trigger an APK/AAB.
+
+## Customer Exchange redesign — 2026-10-07
+
+The current Customer Exchange backend is retained, but the current UI is only a functional prototype and is not the accepted target design.
+
+Approved product direction: **InsureIT Exchange — Buy, sell and discover verified commercial vehicles.** Primary intents are Buy, Sell, Value, and My Exchange. Auction/bidding must be optional rather than the product identity.
+
+A full benchmark of 43 owner-supplied CarDekho mobile screenshots led to an approved phased redesign: search/location-first home, photography-first commercial vehicle cards, dedicated vehicle detail route, fleet-aware low-friction seller flow, Vehicle Health Report, valuation, offers/deal room, comparison, finance, then marketplace intelligence.
+
+Full handoff: `docs/CUSTOMER_EXCHANGE_REDESIGN_HANDOFF_2026_10_07.md`.
+
+Important: preserve PR #2848/#2849 backend work and Exchange migrations. Do not revert backend because of the redesign. Continue OTA-first and **do not create APK/AAB unless explicitly requested**.
