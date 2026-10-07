@@ -35,6 +35,7 @@ const policyIntakeNew = read('app/policy-intake-new.tsx');
 const policyIntakeDetail = read('app/policy-intakes/[id].tsx');
 const customerDetail = read('app/customer/[id].tsx');
 const policyDetail = read('app/policy/[id].tsx');
+const policyDetailIcon = read('components/ui/partner-policy-detail-icon.tsx');
 const claimDetail = read('app/claim/[id].tsx');
 const search = read('app/search.tsx');
 const support = read('app/support.tsx');
@@ -171,6 +172,22 @@ if (policyIntakeDetail.includes('git-network-outline') || policyIntakeDetail.inc
 
 for (const detailAsset of ['products.motorInsurance', 'products.healthInsurance', 'products.familyInsurance', 'products.commercialInsurance', 'navigation.customers']) requireText(policyDetail, `PartnerAssets.${detailAsset}`, `Policy detail is missing ${detailAsset} artwork.`);
 requireText(policyDetail, 'getPartnerPolicyDetail(id)', 'Policy detail must preserve the existing scoped data service.');
+requireText(policyDetail, '<PartnerPolicyDetailIcon kind={iconKind}', 'Policy detail reusable sections must render the professional policy icon component.');
+for (const kind of [
+  'quick-actions', 'policy-document', 'renew-policy', 'raise-claim', 'customer-details',
+  'policy-overview', 'category', 'product', 'business-type', 'issuance-date', 'insurer',
+  'idv', 'premium', 'premium-breakup', 'customer-vehicle', 'commercial-attribution',
+  'sales-ownership', 'policy-period',
+]) {
+  const configKey = kind.includes('-') ? `'${kind}':` : `${kind}:`;
+  requireText(policyDetailIcon, configKey, `Policy detail professional icon system is missing ${kind}.`);
+}
+for (const directKind of ['premium-breakup', 'sales-ownership', 'policy-period']) {
+  requireText(policyDetail, `kind="${directKind}"`, `Policy detail must render the professional ${directKind} icon.`);
+}
+requireText(policyDetailIcon, "backgroundColor: palette.bg", 'Policy detail professional icons must render semantic tone backgrounds.');
+requireText(policyDetailIcon, "borderColor: palette.border", 'Policy detail professional icons must keep bordered professional tiles.');
+requireText(policyDetailIcon, "shadowColor: palette.fg", 'Policy detail professional icons must keep subtle semantic depth.');
 if (policyDetail.includes('name="person-outline"') || policyDetail.includes('name="car-outline"') || policyDetail.includes("category === 'Motor' ? 'car-outline'")) throw new Error('Policy detail feature/entity identity must not regress to generic person/car glyphs.');
 
 requireText(customerDetail, 'getPartnerInsurerLogoSource', 'Customer detail must resolve insurer logos for policy and claim rows.');
