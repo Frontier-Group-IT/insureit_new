@@ -74,3 +74,28 @@ This foundation does not modify:
 **IMPLEMENTED ON FEATURE BRANCH; PR #2882 OPEN. Verify web portal run #5399 passed on the functional middleware/customer foundation head, including Customer isolation, Partner security, server-session coverage, typecheck, lint and production build. Final documentation/regression-hardening head requires its own green rerun. MERGE/DEPLOYMENT PENDING.**
 
 No APK/AAB created.
+
+## 2026-10-07 — Customer Web Phase 1: Home, Vehicles and Policies
+
+Branch: `feature/customer-web-phase1-home-vehicles-policies-2026-10-07`.
+
+Implemented strictly inside the Customer Web surface:
+- replaced the foundation-only Customer Home with a real customer-scoped dashboard showing vehicles, active cover, renewal-due count and fleet coverage;
+- added authorized-account tabs for customers with more than one active account/membership;
+- added `/customer/vehicles` with search, active-policy status and compact fleet cards;
+- added `/customer/vehicles/[id]` with vehicle details, compliance expiries and customer-scoped insurance history;
+- added `/customer/policies` with internal + external policy parity, search and Active/Renewal Due/Expired filters;
+- added `/customer/policies/[id]` with coverage dates, premium/IDV, insurer/source and linked vehicle navigation;
+- added Customer desktop/mobile navigation entries for Home, Vehicles and Policies;
+- added `lib/customer-web-data.ts` as a normal authenticated Supabase/RLS data layer. Requested account IDs are accepted only when already present in the signed-in Customer Web session;
+- aligned policy behavior with the Customer App by merging external policies and applying current-policy-per-vehicle deduplication.
+
+Hard safety boundaries:
+- no Partner Portal route/component/RPC/authorization changes;
+- no Operations Portal route/component/capability/business-logic changes;
+- no Supabase admin/service-role use in Customer Phase 1;
+- no schema/RLS/data migration;
+- no mobile app/OTA/APK/AAB changes;
+- production deployment is not part of this implementation.
+
+State: **IMPLEMENTED ON REVERSIBLE BRANCH; PR/CI/MERGE/PREVIEW VERIFICATION PENDING.**
