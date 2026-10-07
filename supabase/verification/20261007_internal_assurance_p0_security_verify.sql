@@ -139,7 +139,16 @@ begin
   if v_count <> 0 then
     raise exception 'Unsafe generic delete policy remains on % table(s)', v_count;
   end if;
+  if exists (
+    select 1
+    from pg_extension e
+    join pg_namespace n on n.oid = e.extnamespace
+    where e.extname = 'pg_trgm'
+      and n.nspname = 'public'
+  ) then
+    raise exception 'pg_trgm remains installed in the public schema';
+  end if;
 end
-$$;
+$;
 
 select 'internal assurance P0/P1 database security verification passed' as verification_result;
