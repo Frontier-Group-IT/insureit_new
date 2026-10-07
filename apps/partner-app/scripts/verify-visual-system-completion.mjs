@@ -156,7 +156,13 @@ requireText(search, 'PartnerAssets.emptyStates.noSearchResults', 'Universal Sear
 for (const featureAsset of ['navigation.customers', 'navigation.policies', 'navigation.claims']) requireText(search, `PartnerAssets.${featureAsset}`, `Universal Search is missing ${featureAsset} result artwork.`);
 requireText(support, 'PartnerAssets.actions.supportVerified', 'Support fallback must use the prepared verified-support artwork.');
 if (support.includes('asset={PartnerAssets.emptyStates.supportResolved}')) throw new Error('Support-unavailable errors must not misuse the support-resolved artwork.');
-for (const featureAsset of ['navigation.profile', 'actions.support', 'status.settings']) requireText(settings, `PartnerAssets.${featureAsset}`, `Settings is missing ${featureAsset} feature artwork.`);
+requireText(settings, 'PartnerAssets.status.settings', 'Settings must retain branded Check for updates artwork.');
+requireText(settings, 'icon="person-outline" title="Profile & registration"', 'Settings Account profile row must use the professional profile icon.');
+requireText(settings, 'icon="headset-outline" title="Support"', 'Settings Account support row must use the professional support icon.');
+requireText(settings, 'controlTitle: { color: partnerTheme.colors.ink', 'Device security titles must use a dedicated non-flexing title style.');
+requireText(settings, "controlCopy: { flex: 1, minWidth: 0, justifyContent: 'center' }", 'Device security title and helper copy must remain a compact vertical stack.');
+requireText(settings, 'controlSubtitle: { marginTop: 1', 'Device security helper text must sit directly below its row title.');
+requireText(settings, 'controlRow: { minHeight: 58', 'Device security rows must keep the compact joined-list height.');
 
 requireText(profile, 'name="log-out-outline"', 'Profile hero must expose the logout icon.');
 requireText(profile, 'onPress={() => setLogoutOpen(true)}', 'Profile hero logout icon must open confirmation instead of signing out immediately.');
