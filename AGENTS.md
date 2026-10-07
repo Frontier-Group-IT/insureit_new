@@ -62,6 +62,8 @@ The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` 
 
 ### Latest implementation ledger
 
+- **2026-10-07 — Partner Home Pending Tasks reference match:** branch `ui/partner-home-pending-tasks-reference-2026-10-07`; Pending Tasks now uses the exact existing blue CLAIM clipboard + shield asset from the supplied reference, tightens the card/row spacing and right illustration placement to the reference proportions, and keeps the live claim count inline in the normal task title instead of adding the reference's separate red count. Data source, Claims route, Quick Actions, Stories and all other Home sections remain unchanged. **IMPLEMENTED; PR/CI/merge/OTA/device verification pending. NO APK/AAB CREATED.** See `docs/PARTNER_APP_HANDOFF_2026_09_13.md`.
+
 - **2026-10-07 — Internal production security boundary remediation:** branch `security/remediate-live-audit-2026-10-07-v5`; closes first-audit Supabase access-control findings across role resolution, delete policies, privileged views/RPCs, anonymous SECURITY DEFINER execution, trigger RPC exposure, mutable search paths, deny-all table grants, POSP document storage, authenticated actor/viewer binding, associated onboarding helpers and `pg_trgm` placement; strengthens Web/Partner reset-password policy. Full migration set rollback-validated against current production schema; no production mutation and no APK/AAB. **IMPLEMENTED + ROLLBACK-VALIDATED; PR/CI/merge/migration apply/post-apply retest pending.** See `docs/CURRENT_CHAT_HANDOFF.md`.
 
 
