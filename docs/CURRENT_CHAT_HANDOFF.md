@@ -1,3 +1,14 @@
+## 2026-10-07 — Policy Onboarding MISD Category / CC persistence
+
+- Branch: `fix/policy-onboarding-misd-capacity-rebased`.
+- Root cause: Motor Policy Onboarding stored the visible `form.capacity` into `vehicle.engineCapacity` only for PCP/TWP, so MISD manual `Category / CC` values were dropped before the existing RPC persisted the vehicle.
+- Fix: MISD now follows the engine-capacity path for create payload, reviewed RC application, and existing-vehicle reload.
+- Existing database contract already persists `vehicle.engineCapacity` to `vehicles.engine_capacity_cc`; no migration/schema/RLS change is required.
+- Added regression guards in `vehicle-policy-intake-resume-regression.mjs` for the MISD create/reload/backend mapping chain.
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/DEPLOYMENT PENDING.**
+
+---
+
 ## 2026-10-07 — Partner Home business trend interaction cleanup
 
 - Branch: `ui/partner-home-trend-tooltip-2026-10-07`.
