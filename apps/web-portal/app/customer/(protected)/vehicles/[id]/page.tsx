@@ -24,7 +24,8 @@ export default async function CustomerVehicleDetailPage({
   params: Promise<{ id: string }>;
   searchParams?: Promise<{ account?: string }>;
 }) {
-  const [{ id }, query] = await Promise.all([params, searchParams ?? Promise.resolve({})]);
+  const { id } = await params;
+  const query: { account?: string } = searchParams ? await searchParams : {};
   const { account, accounts } = await resolveCustomerWebScope(query.account);
   const { vehicle, policies } = await loadCustomerVehicleDetail(account.id, id);
   const currentPolicy = policies.find((policy) => customerPolicyTone(policy.end_date).tone !== "expired");
@@ -55,7 +56,7 @@ export default async function CustomerVehicleDetailPage({
         description={[vehicle.make, vehicle.model].filter(Boolean).join(" · ") || vehicle.vehicle_type}
         action={<StatusPill tone={currentPolicy ? "active" : "expired"}>{currentPolicy ? "Covered" : "No active policy"}</StatusPill>}
       />
-      <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname={`/customer/vehicles/${vehicle.id}`} />
+      <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/vehicles" />
 
       <div className="grid gap-4 xl:grid-cols-[1fr_0.8fr]">
         <section className="rounded-2xl border border-[#DCE4EE] bg-white p-4">
