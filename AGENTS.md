@@ -62,6 +62,9 @@ The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` 
 
 ### Latest implementation ledger
 
+- **2026-10-07 — Internal production security boundary remediation:** branch `security/remediate-live-audit-2026-10-07-v5`; closes first-audit Supabase access-control findings across role resolution, delete policies, privileged views/RPCs, anonymous SECURITY DEFINER execution, trigger RPC exposure, mutable search paths, deny-all table grants, POSP document storage, authenticated actor/viewer binding, associated onboarding helpers and `pg_trgm` placement; strengthens Web/Partner reset-password policy. Full migration set rollback-validated against current production schema; no production mutation and no APK/AAB. **IMPLEMENTED + ROLLBACK-VALIDATED; PR/CI/merge/migration apply/post-apply retest pending.** See `docs/CURRENT_CHAT_HANDOFF.md`.
+
+
 - **2026-10-07 — Customer Web session bootstrap middleware fix:** branch `fix/customer-session-bootstrap-middleware-2026-10-07`; exact path `/customer/auth/session` is allowed through middleware so the dedicated Customer-only route can validate Supabase tokens/role and create/delete secure cookies without being redirected to `/customer/login` as a POST (CW-405). All other Customer routes retain session enforcement. **No Partner Portal or Operations Portal behavior, routes, roles, capabilities, RPCs, schema/RLS, deployment, OTA, APK or AAB changes. IMPLEMENTED; PR/CI/merge/Cloudflare preview verification pending.**
 
 
