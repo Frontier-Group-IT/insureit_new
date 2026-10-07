@@ -2,6 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const isCloudflareBuild = process.env.INSUREIT_CLOUDFLARE_BUILD === "1";
 function configuredOrigin(value) {
   try {
     return value ? new URL(value).origin : "";
@@ -74,6 +75,10 @@ const embeddedEditorHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: projectRoot,
+  // Cloudflare staging has no Images binding. Disable Next image optimization only there.
+  images: {
+    unoptimized: isCloudflareBuild,
+  },
   transpilePackages: ["@insureit/claim-journey"],
   async headers() {
     return [
