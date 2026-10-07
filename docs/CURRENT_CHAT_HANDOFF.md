@@ -5,7 +5,8 @@
 - Global INSUREIT CSP remains unchanged for all normal portal routes.
 - The tester's `RecaptchaVerifier` lifecycle now uses one ref and clears at most once per replacement/unmount, avoiding the secondary Firebase `auth/internal-error` caused by duplicate cleanup after CSP failure.
 - No Supabase/customer/profile/session integration, schema/RLS change, Customer App/native change, OTA, APK or AAB.
-- **IMPLEMENTED; PR/CI/MERGE PENDING.**
+- PR #2931 merged as `04d2c70440d307f6085851335b04c240aaf287f4` after `Verify web portal` run #5599 passed all regressions, typecheck, lint and production build.
+- **MERGED; CLOUDFLARE RUNTIME RETEST PENDING.**
 
 ---
 
