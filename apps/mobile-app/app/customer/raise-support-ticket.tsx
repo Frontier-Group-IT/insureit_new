@@ -27,7 +27,36 @@ export default function RaiseSupportTicketScreen() {
   async function pickFile() { const result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'], copyToCacheDirectory: true }); if (!result.canceled && result.assets[0]) { const asset = result.assets[0]; if (asset.size && asset.size > 5 * 1024 * 1024) return setMessage('Please choose a file smaller than 5 MB.'); setFile({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? null, size: asset.size ?? null }); } }
   async function submit() {
     setMessage(''); if (!subject.trim() || subject.trim().length < 3) return setMessage('Add a short subject for your request.'); if (description.trim().length < 10) return setMessage('Please add a little more detail so the claim manager can help.'); if ((category === 'claim' || category === 'documents') && !selectedClaim) return setMessage('Select the related claim first.'); setSubmitting(true);
-    const { data: ticket, error } = await supabase.from('support_tickets').insert({ customer_id: customerId, claim_id: selectedClaim?.id ?? null, assigned_to: selectedClaim?.assigned_to ?? null, category, priority, subject: subject.trim(), description: description.trim(), created_by: userId }).select('*').single();
+    const { data: ticket, error } = await (supabase as any)
+      .from('service_enquiries')
+      .insert({
+        enquiry_no: '',
+        service_type: 'support_ticket',
+        source: 'customer_dashboard',
+        customer_id: customerId,
+        created_by: userId,
+        guest_name: null,
+        guest_phone: null,
+        guest_email: null,
+        vehicle_id: selectedClaim?.vehicle_id ?? null,
+        vehicle_no: null,
+        claim_id: selectedClaim?.id ?? null,
+        assigned_to: selectedClaim?.assigned_to ?? null,
+        category,
+        priority,
+        subject: subject.trim(),
+        description: description.trim(),
+        details: { supportCategory: category, priority, claimNo: selectedClaim?.claim_no ?? null },
+        consent_accepted: false,
+        consent_accepted_at: null,
+        consent_version: null,
+        terms_version: null,
+        privacy_policy_version: null,
+        whatsapp_opt_in: false,
+        status: 'open',
+      })
+      .select('id,enquiry_no,status')
+      .single();
     if (error || !ticket) { setSubmitting(false); return setMessage('Your ticket could not be created right now. Please try again shortly.'); }
     let attachmentWarning = false;
     if (file) {
@@ -40,7 +69,7 @@ export default function RaiseSupportTicketScreen() {
           console.warn('Support ticket attachment upload failed', upload.error.message);
           attachmentWarning = true;
         } else {
-          const attachmentResult = await supabase.from('support_ticket_attachments').insert({ ticket_id: ticket.id, file_name: file.name, storage_path: path, mime_type: file.mimeType, file_size: file.size, uploaded_by: userId });
+          const attachmentResult = await (supabase as any).from('service_enquiry_attachments').insert({ enquiry_id: ticket.id, file_name: file.name, storage_path: path, mime_type: file.mimeType, file_size: file.size, uploaded_by: userId });
           if (attachmentResult.error) {
             console.warn('Support ticket attachment record failed', attachmentResult.error.message);
             attachmentWarning = true;
