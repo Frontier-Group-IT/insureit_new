@@ -6,7 +6,8 @@
 - The Web API key is stored only in browser `sessionStorage` for the current tab/session; no service-account/private key is required or accepted.
 - Explicit isolation boundary: no Supabase Auth session, customer/profile creation, customer master linking, schema/RLS/database mutation, Customer App runtime change, APK/AAB, or OTA.
 - Intended test host is the user-authorized Cloudflare tester domain `insureit-new.shahdolho.workers.dev`.
-- **IMPLEMENTED; PR/CI/MERGE PENDING.**
+- PR #2904 merged as `def9cba89b20726f8390b22a00cd373da15a051d` after `Verify web portal` run #5552 passed all regressions, typecheck, lint and production build.
+- **MERGED; CLOUDFLARE DEPLOYMENT / REAL SMS RUNTIME VERIFICATION PENDING.**
 
 ---
 
