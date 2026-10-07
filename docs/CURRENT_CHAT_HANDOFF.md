@@ -7,7 +7,9 @@
 - KPI values, labels, comparison logic, navigation, business data, permissions and backend calls are unchanged.
 - Added visual regression coverage in `verify-visual-system-completion.mjs`.
 - No schema/RLS/database/native dependency change. **No APK/AAB created.**
-- **IMPLEMENTED ON REBASED BRANCH; PR/CI/MERGE/OTA pending.**
+- PR #2914 passed **Verify Partner app #568** and **Verify web portal #5572**, then merged as `530e009f511b36606a5f8292ad7d8c2d72a298c8`.
+- Production OTA release branch: `release/partner-business-overview-icons-ota-2026-10-07`; trigger file updated for runtime 0.2.0.
+- **MERGED; production OTA pending.**
 
 ---
 
