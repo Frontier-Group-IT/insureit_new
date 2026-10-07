@@ -102,3 +102,34 @@ Safety boundaries:
 
 User explicitly requested a separate branch and **no PR**.
 State: **IMPLEMENTED ON SEPARATE BRANCH; NO PR CREATED; NOT MERGED; NOT DEPLOYED.**
+
+## 2026-10-07 — Customer Web Phase 4: Profile, KYC and Documents
+
+Implemented on the existing branch:
+`feature/customer-web-phase3-services-support-2026-10-07`.
+
+Delivered strictly inside Customer Web:
+- `/customer/profile` with Customer identity summary, KYC state, contact details and scoped edit flow;
+- profile edits validate the selected Customer account against the authenticated Customer Web session before updating `customers`; the signed-in Customer profile row is synchronized best-effort to match existing Customer App behavior;
+- `/customer/documents` secure Customer document vault using existing `customer_documents` + `customer-documents` storage;
+- document upload accepts PDF/JPG/PNG/WEBP up to 5 MB; document open uses a short-lived signed URL; delete verifies both document ID and customer ownership before removing DB/storage records;
+- `/customer/kyc` Individual KYC using existing `customer_onboarding_applications`, `customer_onboarding_documents`, `india_locations` and `submit_individual_onboarding_application`;
+- KYC start/resume endpoint preserves existing active onboarding records and creates a new Individual application only when needed;
+- PIN lookup is authenticated and uses `india_locations`;
+- KYC document replacement is profile-owned, limited to PAN/Aadhaar/GST document types, max 5 MB, and resets verification state to pending;
+- KYC submission validates application ownership, KYC state, selected location, PAN/Aadhaar/GST formats, required documents and fleet band before calling the canonical submission RPC;
+- raw Aadhaar is never persisted into Customer Web draft data; it is passed only to the canonical protected submission RPC, matching Customer App privacy behavior;
+- rejected/cancelled KYC is treated as terminal and starts a fresh application instead of resubmitting the old record;
+- Corporate / Dealership / Group KYC is intentionally not exposed for editing on Customer Web yet; those types remain Customer App-only while the web page safely reports that limitation;
+- Customer navigation adds Profile, KYC and Documents; mobile Profile groups KYC/Documents access.
+
+Safety boundaries:
+- no Partner Portal functionality changed;
+- no Operations Portal functionality changed;
+- no Partner/Operations auth/RPC/capability changes;
+- no schema/RLS migration;
+- no service-role/admin data access;
+- no Customer App runtime/OTA/APK/AAB changes;
+- no PR created.
+
+State: **PHASE 4 IMPLEMENTED ON SAME BRANCH; NO PR; NOT MERGED; NOT DEPLOYED.**
