@@ -6,6 +6,7 @@ import { PartnerBiometricLockProvider } from '@/providers/partner-biometric-lock
 import { PartnerNativeRuntimeProvider } from '@/providers/partner-native-runtime-provider';
 import { PartnerNetworkProvider } from '@/providers/partner-network-provider';
 import { PartnerSensitivePrivacyProvider } from '@/providers/partner-sensitive-privacy-provider';
+import { PartnerSearchProvider } from '@/providers/partner-search-provider';
 import { PartnerSessionProvider } from '@/providers/partner-session-provider';
 
 export default function RootLayout() {
@@ -16,6 +17,7 @@ export default function RootLayout() {
           <PartnerBiometricLockProvider>
             <PartnerNativeRuntimeProvider>
               <PartnerSensitivePrivacyProvider>
+                <PartnerSearchProvider>
                 <StatusBar style="dark" />
                 <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
                   <Stack.Screen name="index" />
@@ -45,6 +47,7 @@ export default function RootLayout() {
                   <Stack.Screen name="policy-intakes/[id]" />
                   <Stack.Screen name="access-denied" />
                 </Stack>
+                </PartnerSearchProvider>
               </PartnerSensitivePrivacyProvider>
             </PartnerNativeRuntimeProvider>
           </PartnerBiometricLockProvider>
