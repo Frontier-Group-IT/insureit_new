@@ -30,6 +30,27 @@ const contentSecurityPolicy = [
 
 const embeddedEditorContentSecurityPolicy = contentSecurityPolicy.replace("frame-ancestors 'none'", "frame-ancestors 'self'");
 
+const firebaseOtpTestContentSecurityPolicy = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "script-src 'self' 'unsafe-inline' https://www.google.com https://www.gstatic.com https://www.recaptcha.net",
+  "style-src 'self' 'unsafe-inline' https://www.gstatic.com",
+  "font-src 'self' data:",
+  "img-src 'self' data: blob: https:",
+  "frame-src 'self' https://www.google.com https://www.recaptcha.net https://insureit-customer-auth.firebaseapp.com",
+  "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.google.com https://www.recaptcha.net https://www.gstatic.com",
+  "media-src 'self' blob: https:",
+  "worker-src 'self' blob:",
+  ...(process.env.NODE_ENV === "production" ? ["upgrade-insecure-requests"] : [])
+].join("; ");
+
+const firebaseOtpTestHeaders = [
+  { key: "Content-Security-Policy", value: firebaseOtpTestContentSecurityPolicy },
+];
+
 const securityHeaders = [
   { key: "Content-Security-Policy", value: contentSecurityPolicy },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -62,6 +83,10 @@ const nextConfig = {
   async headers() {
     return [
       { source: "/(.*)", headers: securityHeaders },
+      {
+        source: "/firebase-otp-test/:path*",
+        headers: firebaseOtpTestHeaders,
+      },
       {
         source: "/partner/renewals/voice-lab",
         headers: voiceLabHeaders,

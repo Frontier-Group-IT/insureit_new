@@ -1,3 +1,14 @@
+## 2026-10-07 — Firebase OTP tester reCAPTCHA CSP fix
+
+- Cloudflare runtime evidence showed the same-origin Firebase SDK proxy was working, but the portal CSP blocked `https://www.google.com/recaptcha/api.js` because global `script-src` was limited to `'self' 'unsafe-inline'` in production.
+- A route-specific CSP is added only for `/firebase-otp-test/:path*`, allowing Google reCAPTCHA / Firebase Auth dependencies: Google, gstatic, recaptcha.net, Firebase authDomain iframe, Identity Toolkit and Secure Token endpoints.
+- Global INSUREIT CSP remains unchanged for all normal portal routes.
+- The tester's `RecaptchaVerifier` lifecycle now uses one ref and clears at most once per replacement/unmount, avoiding the secondary Firebase `auth/internal-error` caused by duplicate cleanup after CSP failure.
+- No Supabase/customer/profile/session integration, schema/RLS change, Customer App/native change, OTA, APK or AAB.
+- **IMPLEMENTED; PR/CI/MERGE PENDING.**
+
+---
+
 ## 2026-10-07 — Partner App Profile/More professional menu icons
 
 - Branch: `ui/partner-profile-professional-icons-2026-10-07`.
