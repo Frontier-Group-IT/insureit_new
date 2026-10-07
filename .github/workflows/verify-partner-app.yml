@@ -40,7 +40,10 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-fund
+
+      - name: Dependency vulnerability gate
+        run: npm audit --audit-level=high --omit=dev
 
       - name: Require synchronized dependency lockfile
         shell: bash
