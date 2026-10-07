@@ -7,6 +7,7 @@ import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
+import { PartnerPolicyDetailIcon, type PartnerPolicyDetailIconKind, type PartnerPolicyDetailIconTone } from '@/components/ui/partner-policy-detail-icon';
 import { getPartnerPolicyDetail, type PartnerPolicyDetail } from '@/lib/policies';
 import { formatIndianCurrency } from '@/lib/format';
 import { PartnerAssets } from '@/lib/partner-assets';
@@ -96,31 +97,31 @@ export default function PolicyDetailScreen() {
               </View>
               <View style={styles.periodDivider} />
               <View style={styles.periodBlock}>
-                <View style={styles.periodTitleRow}><Ionicons name="calendar-outline" size={15} color="#1686E8" /><Text style={styles.periodLabel}>Policy Period</Text></View>
+                <View style={styles.periodTitleRow}><PartnerPolicyDetailIcon kind="policy-period" size={26} showBadge={false} /><Text style={styles.periodLabel}>Policy Period</Text></View>
                 <Text style={styles.periodValue}>{formatDate(data.policy.start_date)} – {formatDate(data.policy.end_date)}</Text>
               </View>
             </View>
           </View>
 
           <Card>
-            <CardHeader icon="document-text-outline" title="Quick Actions" actionLabel="View More" onAction={() => router.push('/policies' as never)} />
+            <CardHeader iconKind="quick-actions" title="Quick Actions" actionLabel="View More" onAction={() => router.push('/policies' as never)} />
             <View style={styles.quickGrid}>
-              <QuickAction icon="document-text-outline" label="Policy Document" tone="blue" onPress={() => router.push('/policies' as never)} />
-              <QuickAction icon="sync-outline" label="Renew Policy" tone="green" onPress={() => router.push('/renewals' as never)} />
-              <QuickAction icon="shield-checkmark-outline" label="Raise Claim" tone="orange" onPress={() => router.push('/claims' as never)} />
-              <QuickAction icon="people-outline" label="Customer Details" tone="purple" onPress={() => data.customer.id ? router.push(`/customer/${data.customer.id}` as never) : undefined} />
+              <QuickAction iconKind="policy-document" label="Policy Document" tone="blue" onPress={() => router.push('/policies' as never)} />
+              <QuickAction iconKind="renew-policy" label="Renew Policy" tone="green" onPress={() => router.push('/renewals' as never)} />
+              <QuickAction iconKind="raise-claim" label="Raise Claim" tone="orange" onPress={() => router.push('/claims' as never)} />
+              <QuickAction iconKind="customer-details" label="Customer Details" tone="purple" onPress={() => data.customer.id ? router.push(`/customer/${data.customer.id}` as never) : undefined} />
             </View>
           </Card>
 
           <Card>
-            <CardHeader icon="document-text-outline" title="Policy Overview" actionLabel="View All" onAction={() => setShowOverviewDetails((value) => !value)} />
+            <CardHeader iconKind="policy-overview" title="Policy Overview" actionLabel="View All" onAction={() => setShowOverviewDetails((value) => !value)} />
             <View style={styles.overviewGrid}>
-              <OverviewItem icon="grid-outline" label="Category" value={category} />
-              <OverviewItem icon="cube-outline" label="Product" value={data.policy.policy_product || data.policy.policy_type || data.policy.business_line || 'Not recorded'} />
-              <OverviewItem icon="briefcase-outline" label="Business Type" value={data.policy.business_type || 'Not recorded'} />
-              <OverviewItem icon="calendar-outline" label="Issuance Date" value={formatDate(data.policy.issuance_date)} />
-              <OverviewItem icon="business-outline" label="Insurer" value={data.insurer.name || 'Not recorded'} />
-              <OverviewItem icon="cash-outline" label="IDV" value={data.policy.insured_declared_value != null ? formatIndianCurrency(data.policy.insured_declared_value) : 'Not recorded'} />
+              <OverviewItem iconKind="category" label="Category" value={category} />
+              <OverviewItem iconKind="product" label="Product" value={data.policy.policy_product || data.policy.policy_type || data.policy.business_line || 'Not recorded'} />
+              <OverviewItem iconKind="business-type" label="Business Type" value={data.policy.business_type || 'Not recorded'} />
+              <OverviewItem iconKind="issuance-date" label="Issuance Date" value={formatDate(data.policy.issuance_date)} />
+              <OverviewItem iconKind="insurer" label="Insurer" value={data.insurer.name || 'Not recorded'} />
+              <OverviewItem iconKind="idv" label="IDV" value={data.policy.insured_declared_value != null ? formatIndianCurrency(data.policy.insured_declared_value) : 'Not recorded'} />
             </View>
             {showOverviewDetails ? (
               <View style={styles.detailGrid}>
@@ -133,9 +134,9 @@ export default function PolicyDetailScreen() {
           </Card>
 
           <Card>
-            <CardHeader icon="wallet-outline" title="Premium" />
+            <CardHeader iconKind="premium" title="Premium" />
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showPremiumDetails }} onPress={() => setShowPremiumDetails((value) => !value)} style={({ pressed }) => [styles.premiumDisclosure, pressed && styles.pressed]}>
-              <View style={styles.roundIcon}><Ionicons name="cash-outline" size={20} color="#1889EE" /></View>
+              <PartnerPolicyDetailIcon kind="premium-breakup" size={36} />
               <View style={styles.disclosureText}><Text style={styles.disclosureTitle}>Premium breakup</Text><Text style={styles.disclosureSummary}>{formatIndianCurrency(data.premium.gross_premium)}</Text></View>
               <Ionicons name={showPremiumDetails ? 'chevron-up' : 'chevron-forward'} size={17} color="#2468D7" />
             </Pressable>
@@ -152,7 +153,7 @@ export default function PolicyDetailScreen() {
 
           <Card>
             <CardHeader
-              icon="people-outline"
+              iconKind="customer-vehicle"
               title={data.vehicle ? 'Customer & Vehicle' : 'Customer & Insured Risk'}
               actionLabel="View Details"
               onAction={data.customer.id ? () => router.push(`/customer/${data.customer.id}` as never) : undefined}
@@ -178,9 +179,9 @@ export default function PolicyDetailScreen() {
           </Card>
 
           <Card>
-            <CardHeader icon="stats-chart-outline" title="Commercial Attribution" />
+            <CardHeader iconKind="commercial-attribution" title="Commercial Attribution" />
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }} onPress={() => setShowCommercialDetails((value) => !value)} style={({ pressed }) => [styles.commercialRow, pressed && styles.pressed]}>
-              <View style={styles.roundIcon}><Ionicons name="briefcase-outline" size={20} color="#1889EE" /></View>
+              <PartnerPolicyDetailIcon kind="sales-ownership" size={36} />
               <View style={styles.disclosureText}><Text style={styles.disclosureTitle}>Sales ownership</Text><Text numberOfLines={1} style={styles.disclosureSummary}>{[data.commercial.rm_name, data.commercial.intermediary_code].filter(Boolean).join(' · ') || 'View details'}</Text></View>
               <Ionicons name={showCommercialDetails ? 'chevron-up' : 'chevron-forward'} size={17} color="#2468D7" />
             </Pressable>
@@ -201,10 +202,10 @@ export default function PolicyDetailScreen() {
 
 function Card({ children }: { children: ReactNode }) { return <View style={styles.card}>{children}</View>; }
 
-function CardHeader({ icon, title, actionLabel, onAction }: { icon: keyof typeof Ionicons.glyphMap; title: string; actionLabel?: string; onAction?: () => void }) {
+function CardHeader({ iconKind, title, actionLabel, onAction }: { iconKind: PartnerPolicyDetailIconKind; title: string; actionLabel?: string; onAction?: () => void }) {
   return (
     <View style={styles.cardHeader}>
-      <View style={styles.cardHeaderLeft}><Ionicons name={icon} size={17} color="#1686E8" /><Text style={styles.cardTitle}>{title}</Text></View>
+      <View style={styles.cardHeaderLeft}><PartnerPolicyDetailIcon kind={iconKind} size={28} showBadge={false} /><Text style={styles.cardTitle}>{title}</Text></View>
       {actionLabel ? (
         <Pressable accessibilityRole="button" disabled={!onAction} onPress={onAction} hitSlop={8} style={({ pressed }) => [styles.cardHeaderAction, pressed && onAction ? styles.pressed : null]}>
           <Text style={styles.cardHeaderActionText}>{actionLabel}</Text><Ionicons name="chevron-forward" size={13} color="#6D46CE" />
@@ -214,12 +215,12 @@ function CardHeader({ icon, title, actionLabel, onAction }: { icon: keyof typeof
   );
 }
 
-function QuickAction({ icon, label, tone, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; tone: 'blue' | 'green' | 'orange' | 'purple'; onPress?: () => void }) {
-  return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.quickAction, quickToneStyle(tone), pressed && styles.pressed]}><Ionicons name={icon} size={25} color={quickToneColor(tone)} /><Text numberOfLines={2} style={styles.quickLabel}>{label}</Text></Pressable>;
+function QuickAction({ iconKind, label, tone, onPress }: { iconKind: PartnerPolicyDetailIconKind; label: string; tone: PartnerPolicyDetailIconTone; onPress?: () => void }) {
+  return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.quickAction, quickToneStyle(tone), pressed && styles.pressed]}><PartnerPolicyDetailIcon kind={iconKind} size={40} tone={tone} /><Text numberOfLines={2} style={styles.quickLabel}>{label}</Text></Pressable>;
 }
 
-function OverviewItem({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
-  return <View style={styles.overviewItem}><View style={styles.overviewIcon}><Ionicons name={icon} size={17} color="#4F6D9D" /></View><View style={styles.overviewCopy}><Text style={styles.overviewLabel}>{label}</Text><Text numberOfLines={2} style={styles.overviewValue}>{value}</Text></View></View>;
+function OverviewItem({ iconKind, label, value }: { iconKind: PartnerPolicyDetailIconKind; label: string; value: string }) {
+  return <View style={styles.overviewItem}><PartnerPolicyDetailIcon kind={iconKind} size={32} tone="neutral" /><View style={styles.overviewCopy}><Text style={styles.overviewLabel}>{label}</Text><Text numberOfLines={2} style={styles.overviewValue}>{value}</Text></View></View>;
 }
 
 function EntityRow({ image, title, subtitle, onPress }: { image: ImageSourcePropType; title: string; subtitle: string; onPress?: () => void }) {
@@ -227,8 +228,7 @@ function EntityRow({ image, title, subtitle, onPress }: { image: ImageSourceProp
 }
 
 function MiniInfo({ label, value }: { label: string; value: string }) { return <View style={styles.miniInfo}><Text style={styles.miniLabel}>{label}</Text><Text style={styles.miniValue}>{value}</Text></View>; }
-function quickToneColor(tone: 'blue' | 'green' | 'orange' | 'purple') { if (tone === 'green') return '#19A477'; if (tone === 'orange') return '#E7802F'; if (tone === 'purple') return '#6A43D6'; return '#187FD6'; }
-function quickToneStyle(tone: 'blue' | 'green' | 'orange' | 'purple') { if (tone === 'green') return styles.quickGreen; if (tone === 'orange') return styles.quickOrange; if (tone === 'purple') return styles.quickPurple; return styles.quickBlue; }
+function quickToneStyle(tone: PartnerPolicyDetailIconTone) { if (tone === 'green') return styles.quickGreen; if (tone === 'orange') return styles.quickOrange; if (tone === 'purple') return styles.quickPurple; return styles.quickBlue; }
 function policyArtwork(category: string): ImageSourcePropType { if (category === 'Motor') return PartnerAssets.products.motorInsurance; if (category === 'Health') return PartnerAssets.products.healthInsurance; if (category === 'Life') return PartnerAssets.products.familyInsurance; return PartnerAssets.products.commercialInsurance; }
 function displayParts(...values: Array<string | number | null | undefined>) { return values.map((value) => value == null ? '' : String(value).trim()).filter((value) => value && value.toLowerCase() !== 'null' && value.toLowerCase() !== 'undefined').join(' · '); }
 function policyCategory(data: PartnerPolicyDetail) { const value = [data.policy.policy_type, data.policy.policy_product, data.policy.business_line].filter(Boolean).join(' ').toLowerCase(); if (value.includes('health')) return 'Health'; if (value.includes('life')) return 'Life'; if (value.includes('motor') || data.vehicle) return 'Motor'; return 'Non-Motor'; }
@@ -267,10 +267,10 @@ const styles = StyleSheet.create({
   quickLabel: { color: '#17304F', textAlign: 'center', fontSize: 8.5, lineHeight: 11, fontWeight: '700' },
   overviewGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 10, paddingBottom: 8 },
   overviewItem: { width: '50%', minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 7, paddingHorizontal: 4, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDF1F6' },
-  overviewIcon: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F4F8FC' }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { color: '#8A95A6', fontSize: 8.5, lineHeight: 10 }, overviewValue: { marginTop: 2, color: '#192B46', fontSize: 10, lineHeight: 13, fontWeight: '700' },
+  overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { color: '#8A95A6', fontSize: 8.5, lineHeight: 10 }, overviewValue: { marginTop: 2, color: '#192B46', fontSize: 10, lineHeight: 13, fontWeight: '700' },
   premiumDisclosure: { minHeight: 58, marginHorizontal: 10, marginBottom: 9, paddingHorizontal: 9, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#F2F7FF' },
   commercialRow: { minHeight: 58, marginHorizontal: 10, marginBottom: 9, paddingHorizontal: 9, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#FAFCFF' },
-  roundIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E4F2FF' }, disclosureText: { flex: 1, minWidth: 0 }, disclosureTitle: { color: '#152945', fontSize: 10.5, lineHeight: 13, fontWeight: '700' }, disclosureSummary: { marginTop: 2, color: '#6F7F94', fontSize: 8.5, lineHeight: 11 },
+  disclosureText: { flex: 1, minWidth: 0 }, disclosureTitle: { color: '#152945', fontSize: 10.5, lineHeight: 13, fontWeight: '700' }, disclosureSummary: { marginTop: 2, color: '#6F7F94', fontSize: 8.5, lineHeight: 11 },
   detailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 10, paddingBottom: 10 }, miniInfo: { width: '47%', minHeight: 38, padding: 7, borderRadius: 8, backgroundColor: '#F7F9FC' }, miniLabel: { color: '#8A95A6', fontSize: 8, lineHeight: 10, textTransform: 'uppercase' }, miniValue: { marginTop: 2, color: '#21334E', fontSize: 9.5, lineHeight: 12, fontWeight: '700' },
   entityStack: { paddingHorizontal: 10, paddingBottom: 9 }, entityRow: { minHeight: 55, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDF1F6' }, entityIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EAF5FF' }, entityArtwork: { width: 27, height: 27 }, entityBody: { flex: 1, minWidth: 0 }, entityTitle: { color: '#142A49', fontSize: 10, lineHeight: 13, fontWeight: '800' }, entityMeta: { marginTop: 2, color: '#7C899B', fontSize: 8.5, lineHeight: 11 },
   pressed: { opacity: 0.68 },
