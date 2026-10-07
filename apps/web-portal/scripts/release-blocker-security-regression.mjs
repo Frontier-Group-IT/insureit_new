@@ -41,8 +41,8 @@ const associatedOnboardingMigration = source("../../supabase/migrations/20261007
 const denyAllTableMigration = source("../../supabase/migrations/20261007136000_deny_all_table_privilege_hardening.sql");
 const pgTrgmMigration = source("../../supabase/migrations/20261007137000_move_pg_trgm_to_extensions.sql");
 const claimProgressHelperMigration = source("../../supabase/migrations/20261007138000_internal_claim_progress_helper_hardening.sql");
-const webResetPasswordPage = source("../app/reset-password/page.tsx");
-const partnerResetPasswordPage = source("../../partner-app/app/reset-password.tsx");
+const webResetPasswordPage = source("app/reset-password/page.tsx");
+const partnerResetPasswordPage = source("../partner-app/app/reset-password.tsx");
 
 for (const [name, content] of [
   ["account review page", accountReview],
