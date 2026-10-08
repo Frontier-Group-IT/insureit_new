@@ -33,6 +33,8 @@ jobs:
           cache-dependency-path: package-lock.json
       - name: Generate deterministic npm lockfile
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Deduplicate compatible packages in npm lockfile
+        run: npm dedupe --package-lock-only --ignore-scripts --no-audit --no-fund
       - name: Verify patched dependency versions and reproducible install
         shell: bash
         run: |
