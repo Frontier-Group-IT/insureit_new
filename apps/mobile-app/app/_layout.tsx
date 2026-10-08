@@ -47,18 +47,23 @@ function RootApplication() {
   }, []);
 
   useEffect(() => {
-    if (__DEV__ || !Updates.isEnabled || !isUpdatePending || updateReloadRequested.current) return;
+    const safeStartupRoute = pathname === '/' || pathname === '/index';
+    if (__DEV__ || !Updates.isEnabled || !isUpdatePending || updateReloadRequested.current || !safeStartupRoute) return;
 
     updateReloadRequested.current = true;
-    console.log('[expo-update] Applying downloaded startup update.', runningUpdateIdentity());
+    console.log('[expo-update] Applying downloaded update at safe startup boundary.', {
+      ...runningUpdateIdentity(),
+      pathname,
+    });
     void Updates.reloadAsync().catch((error) => {
       updateReloadRequested.current = false;
       console.warn('[expo-update] Failed to activate downloaded startup update.', {
         ...runningUpdateIdentity(),
+        pathname,
         error: errorMessage(error),
       });
     });
-  }, [isUpdatePending]);
+  }, [isUpdatePending, pathname]);
 
   useEffect(() => {
     const error = checkError ?? downloadError;
