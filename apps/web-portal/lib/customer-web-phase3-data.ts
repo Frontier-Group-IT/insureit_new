@@ -90,6 +90,29 @@ export type CustomerServiceActivity = {
   updated_at: string;
 };
 
+type RpcResult = {
+  data: unknown;
+  error: { message?: string } | null;
+};
+
+type UntypedRpc = (
+  fn: string,
+  args: Record<string, unknown>,
+) => PromiseLike<RpcResult>;
+
+type ServiceActivityTable = {
+  select(columns: string): {
+    eq(column: "customer_id", value: string): {
+      order(column: "updated_at", options: { ascending: boolean }): {
+        limit(count: number): PromiseLike<{
+          data: CustomerServiceActivity[] | null;
+          error: { message?: string } | null;
+        }>;
+      };
+    };
+  };
+};
+
 async function signedUrl(bucket: string | null, storagePath: string | null) {
   if (!bucket || !storagePath) return null;
   const supabase = await createServerSupabaseClient();
@@ -99,7 +122,8 @@ async function signedUrl(bucket: string | null, storagePath: string | null) {
 
 export const loadCustomerExchangeFeed = cache(async (input?: { category?: string | null; query?: string | null }) => {
   const supabase = await createServerSupabaseClient();
-  const { data, error } = await (supabase.rpc as any)("exchange_marketplace_feed", {
+  const rpc = supabase.rpc as unknown as UntypedRpc;
+  const { data, error } = await rpc("exchange_marketplace_feed", {
     p_category: input?.category && input.category !== "All" ? input.category : null,
     p_query: input?.query?.trim() || null,
     p_limit: 100,
@@ -119,7 +143,8 @@ export async function loadCustomerExchangeListing(listingId: string) {
   if (!listing) notFound();
 
   const supabase = await createServerSupabaseClient();
-  const { data, error } = await (supabase.rpc as any)("exchange_listing_detail", { p_listing_id: listingId });
+  const rpc = supabase.rpc as unknown as UntypedRpc;
+  const { data, error } = await rpc("exchange_listing_detail", { p_listing_id: listingId });
   const detail = error || !data || typeof data !== "object" ? null : data as CustomerExchangeListingDetail;
   if (detail?.media?.length) {
     detail.media = await Promise.all(detail.media.map(async (item) => ({
@@ -132,8 +157,8 @@ export async function loadCustomerExchangeListing(listingId: string) {
 
 export const loadCustomerServiceActivity = cache(async (customerId: string): Promise<CustomerServiceActivity[]> => {
   const supabase = await createServerSupabaseClient();
-  const { data, error } = await (supabase as any)
-    .from("service_enquiries")
+  const serviceEnquiries = (supabase.from as unknown as (table: string) => ServiceActivityTable)("service_enquiries");
+  const { data, error } = await serviceEnquiries
     .select("id,enquiry_no,service_type,subject,description,status,vehicle_no,category,priority,claim_id,created_at,updated_at")
     .eq("customer_id", customerId)
     .order("updated_at", { ascending: false })
