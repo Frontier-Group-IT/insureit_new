@@ -7,6 +7,8 @@ on:
       - 'apps/mobile-app/lib/customer-otp-provider.ts'
       - 'apps/mobile-app/lib/firebase-data-client*'
       - 'pocs/customer-firebase-auth/**'
+      - 'apps/mobile-app/google-services.json'
+      - 'apps/mobile-app/app.json'
       - 'docs/CUSTOMER_FIREBASE_OTP_DIRECT_IMPLEMENTATION_2026_10_08.md'
       - '.github/workflows/verify-customer-firebase-otp.yml'
   workflow_dispatch:
@@ -23,5 +25,5 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: node --test apps/mobile-app/lib/firebase-otp-readiness.test.cjs apps/mobile-app/lib/firebase-native-phone-flow.test.cjs apps/mobile-app/lib/firebase-data-client.test.cjs pocs/customer-firebase-auth/sql-draft.test.cjs pocs/customer-firebase-auth/server-identity-binding.test.cjs pocs/customer-firebase-auth/firebase-admin-verifier.test.cjs pocs/customer-firebase-auth/firebase-binding-backend.test.cjs
+      - run: node --test apps/mobile-app/lib/firebase-otp-readiness.test.cjs apps/mobile-app/lib/firebase-native-phone-flow.test.cjs apps/mobile-app/lib/firebase-data-client.test.cjs pocs/customer-firebase-auth/sql-draft.test.cjs pocs/customer-firebase-auth/server-identity-binding.test.cjs pocs/customer-firebase-auth/firebase-admin-verifier.test.cjs pocs/customer-firebase-auth/firebase-binding-backend.test.cjs pocs/customer-firebase-auth/android-config.test.cjs
       - run: npx tsc --noEmit --skipLibCheck --target ES2020 --module commonjs apps/mobile-app/lib/firebase-otp-readiness.ts apps/mobile-app/lib/firebase-native-phone-flow.ts apps/mobile-app/lib/firebase-data-client.ts pocs/customer-firebase-auth/server-identity-binding.ts pocs/customer-firebase-auth/firebase-admin-verifier.ts pocs/customer-firebase-auth/firebase-binding-backend.ts
