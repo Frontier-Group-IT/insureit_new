@@ -14,6 +14,7 @@ export type VerifiedToken = Readonly<{
 export type IdentityLink = Readonly<{
   firebaseUid: string;
   profileId: string;
+  verifiedPhoneAtApproval: string;
   approved: boolean;
   active: boolean;
   profileRole: string;
@@ -58,6 +59,7 @@ export async function authorizeFirebaseCustomer(
   if (links.length !== 1) return { ok: false, reason: 'mapping_ambiguous_or_missing' };
   const link = links[0];
   if (link.firebaseUid !== identity.uid ||
+      link.verifiedPhoneAtApproval !== identity.phone_number ||
       !link.approved || !link.active ||
       !link.profileActive || link.profileRole !== 'customer' ||
       !UUID.test(link.profileId)) {
