@@ -27,7 +27,7 @@ export default async function AddCustomerVehicle({ searchParams }: { searchParam
     const engine=klass!=="GCV"&&klass!=="CPM"&&klass!=="PCV"?num("capacityEngine"):null;
     const date=(key:string)=>{const v=String(form.get(key)||"");if(v&&!/^\d{4}-\d{2}-\d{2}$/.test(v))throw new Error("Invalid vehicle date");return v||null;};
     const db=await createServerSupabaseClient();
-    const { error }=await (db.rpc as any)("create_customer_vehicle_v2",{
+    const { error }=await (db.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>)("create_customer_vehicle_v2",{
       p_customer_id:authorized.id,p_vehicle_no:reg,p_vehicle_type:klass,p_make:make,p_model:model,p_year:year,
       p_chassis_no:String(form.get("chassis")||"").trim().toUpperCase()||null,
       p_engine_no:String(form.get("engine")||"").trim().toUpperCase()||null,
