@@ -4,6 +4,7 @@ import { CalendarDays, ClipboardCheck, ShieldCheck, CarFront } from "lucide-reac
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail } from "@/lib/customer-web-phase2-data";
 import { createServerSupabaseClient } from "@/lib/auth-server";
+import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
 
 export const dynamic="force-dynamic";
 
@@ -60,7 +61,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
     <Link href={{pathname:"/customer/start-claim",query:{account:account.id}}} className="text-sm font-semibold text-[#29569A]">← Back to Start Claim</Link>
     <div className="rounded-2xl bg-[#0B3884] p-5 text-white">
       <div className="flex items-center justify-between border-b border-white/20 pb-3"><span className="flex items-center gap-2 text-sm font-bold"><ClipboardCheck className="h-5 w-5"/> Spot Intimation</span><span className="rounded-full bg-white/15 px-3 py-1 text-xs">{external?"Self-tracked claim":"Managed claim"}</span></div>
-      <div className="mt-3 grid gap-4 sm:grid-cols-2"><div className="flex items-center gap-3"><CarFront className="h-7 w-7"/><div><p className="text-sm font-bold">{claim.vehicle_no||"Vehicle"}</p><p className="text-xs text-white/80">{[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" · ")}</p></div></div><div className="flex items-center gap-3"><ShieldCheck className="h-7 w-7"/><div><p className="text-sm font-bold">{claim.policy_no||"Policy"}</p><p className="text-xs text-white/80">{claim.insurer_name}</p></div></div></div>
+      <div className="mt-3 grid gap-4 sm:grid-cols-2"><div className="flex items-center gap-3"><CustomerClaimLogo value={claim.vehicle_make} size={44}/><div><p className="text-sm font-bold">{claim.vehicle_no||"Vehicle"}</p><p className="text-xs text-white/80">{[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" · ")}</p></div></div><div className="flex items-center gap-3"><CustomerClaimLogo value={claim.insurer_name} kind="insurer" size={44}/><div><p className="text-sm font-bold">{claim.policy_no||"Policy"}</p><p className="text-xs text-white/80">{claim.insurer_name}</p></div></div></div>
     </div>
     <form action={submit} className="space-y-6 rounded-3xl border border-[#DBE4F0] bg-white p-5">
       <input type="hidden" name="account" value={account.id}/><input type="hidden" name="claim" value={claim.id}/>
