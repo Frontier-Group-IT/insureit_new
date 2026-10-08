@@ -33,6 +33,29 @@ const requiredFiles = [
   "app/customer/(protected)/renewals/page.tsx",
   "app/customer/(protected)/claims/page.tsx",
   "app/customer/(protected)/claims/[id]/page.tsx",
+  "lib/customer-web-phase3-data.ts",
+  "components/customer-portal/customer-service-request-form.tsx",
+  "app/customer/services/enquiry/route.ts",
+  "app/customer/(protected)/exchange/page.tsx",
+  "app/customer/(protected)/exchange/[listingId]/page.tsx",
+  "app/customer/(protected)/insurance-quote/page.tsx",
+  "app/customer/(protected)/e-challan/page.tsx",
+  "app/customer/(protected)/support/page.tsx",
+  "app/customer/(protected)/support/[id]/page.tsx",
+  "lib/customer-web-phase4-data.ts",
+  "components/customer-portal/customer-profile-editor.tsx",
+  "components/customer-portal/customer-document-vault.tsx",
+  "components/customer-portal/customer-kyc-form.tsx",
+  "app/customer/profile/update/route.ts",
+  "app/customer/documents/route.ts",
+  "app/customer/documents/open/route.ts",
+  "app/customer/kyc/start/route.ts",
+  "app/customer/kyc/locations/route.ts",
+  "app/customer/kyc/documents/route.ts",
+  "app/customer/kyc/submit/route.ts",
+  "app/customer/(protected)/profile/page.tsx",
+  "app/customer/(protected)/documents/page.tsx",
+  "app/customer/(protected)/kyc/page.tsx",
 ];
 
 for (const file of requiredFiles) {
@@ -107,6 +130,85 @@ assert(claimDetailPage.includes("@insureit/claim-journey"), "Claim Detail must r
 assert(!claimsPage.includes("supabase."), "Customer Claims page must use the scoped Customer data layer rather than direct client queries");
 assert(!claimDetailPage.includes("supabase."), "Customer Claim Detail must use the scoped Customer data layer rather than direct client queries");
 
+
+const phaseThreeData = read("lib/customer-web-phase3-data.ts");
+const phaseThreeForm = read("components/customer-portal/customer-service-request-form.tsx");
+const phaseThreeServiceRoute = read("app/customer/services/enquiry/route.ts");
+const exchangePage = read("app/customer/(protected)/exchange/page.tsx");
+const exchangeDetailPage = read("app/customer/(protected)/exchange/[listingId]/page.tsx");
+const quotePage = read("app/customer/(protected)/insurance-quote/page.tsx");
+const challanPage = read("app/customer/(protected)/e-challan/page.tsx");
+const supportPage = read("app/customer/(protected)/support/page.tsx");
+const supportDetailPage = read("app/customer/(protected)/support/[id]/page.tsx");
+
+assert(phaseThreeData.includes('exchange_marketplace_feed'), "Customer Phase 3 Exchange must use the canonical marketplace feed RPC");
+assert(phaseThreeData.includes('exchange_listing_detail'), "Customer Phase 3 Exchange detail must use the canonical listing detail RPC");
+assert(phaseThreeData.includes('.eq("customer_id", customerId)'), "Customer Phase 3 support activity must remain customer-id scoped");
+assert(!phaseThreeData.includes("createSupabaseAdminClient"), "Customer Phase 3 must not use admin/service-role data access");
+assert(!phaseThreeData.includes("@/lib/partner-web"), "Customer Phase 3 must not depend on Partner authorization");
+assert(!phaseThreeData.includes("exchange_place_bid"), "Customer Web Phase 3 Exchange must remain browse-only");
+assert(!phaseThreeData.includes("exchange_upsert_listing_draft"), "Customer Web Phase 3 Exchange must not expose seller writes");
+assert(!phaseThreeData.includes("exchange_toggle_favorite"), "Customer Web Phase 3 Exchange must not expose favorite writes");
+assert(phaseThreeServiceRoute.includes("await getCustomerWebSession()"), "Customer service writes must require the authenticated Customer Web session");
+assert(phaseThreeServiceRoute.includes("session.accounts.some"), "Customer service writes must verify the requested Customer account belongs to the session");
+assert(phaseThreeServiceRoute.includes('.eq("customer_id", customerId)'), "Customer service route must scope referenced vehicles/claims to the authorized Customer");
+assert(
+  phaseThreeServiceRoute.includes('"service_enquiries"') && phaseThreeServiceRoute.includes(".insert("),
+  "Customer Phase 3 services must use the unified service_enquiries workflow",
+);
+assert(!phaseThreeServiceRoute.includes("SUPABASE_SERVICE_ROLE_KEY"), "Customer Phase 3 service writes must not use service-role credentials");
+assert(!phaseThreeServiceRoute.includes("@/lib/partner-web"), "Customer Phase 3 service writes must remain independent from Partner authorization");
+assert(phaseThreeForm.includes('fetch("/customer/services/enquiry"'), "Customer Phase 3 forms must use the isolated Customer service endpoint");
+assert(exchangePage.includes("resolveCustomerWebScope"), "Customer Exchange must resolve authorized Customer scope");
+assert(exchangeDetailPage.includes("loadCustomerExchangeListing"), "Customer Exchange detail must use the Phase 3 scoped data layer");
+assert(quotePage.includes("resolveCustomerWebScope"), "Customer Insurance Quote must resolve authorized Customer scope");
+assert(challanPage.includes("resolveCustomerWebScope"), "Customer E-Challan must resolve authorized Customer scope");
+assert(supportPage.includes("resolveCustomerWebScope"), "Customer Support must resolve authorized Customer scope");
+assert(supportDetailPage.includes("loadCustomerServiceActivityDetail(account.id, id)"), "Customer Support detail must validate the request inside Customer scope");
+
+const phaseFourData = read("lib/customer-web-phase4-data.ts");
+const profileUpdateRoute = read("app/customer/profile/update/route.ts");
+const documentRoute = read("app/customer/documents/route.ts");
+const documentOpenRoute = read("app/customer/documents/open/route.ts");
+const kycStartRoute = read("app/customer/kyc/start/route.ts");
+const kycLocationRoute = read("app/customer/kyc/locations/route.ts");
+const kycDocumentRoute = read("app/customer/kyc/documents/route.ts");
+const kycSubmitRoute = read("app/customer/kyc/submit/route.ts");
+const profilePage = read("app/customer/(protected)/profile/page.tsx");
+const documentsPage = read("app/customer/(protected)/documents/page.tsx");
+const kycPage = read("app/customer/(protected)/kyc/page.tsx");
+const kycForm = read("components/customer-portal/customer-kyc-form.tsx");
+
+assert(phaseFourData.includes("await getCustomerWebSession()"), "Customer Phase 4 profile data must require the Customer Web session");
+assert(phaseFourData.includes('from("customer_documents")'), "Customer Phase 4 must use the existing Customer document vault");
+assert(phaseFourData.includes('from("customer_onboarding_applications")'), "Customer Phase 4 must use the existing onboarding application");
+assert(!phaseFourData.includes("createSupabaseAdminClient"), "Customer Phase 4 must not use admin/service-role data access");
+assert(!phaseFourData.includes("@/lib/partner-web"), "Customer Phase 4 must remain independent from Partner authorization");
+assert(profileUpdateRoute.includes("session.accounts.some"), "Customer profile writes must validate authorized Customer account ownership");
+assert(profileUpdateRoute.includes('.eq("id", customerId)'), "Customer profile writes must target only the selected Customer account");
+assert(!profileUpdateRoute.includes("SUPABASE_SERVICE_ROLE_KEY"), "Customer profile writes must not use service-role credentials");
+assert(documentRoute.includes("MAX_FILE_SIZE = 5 * 1024 * 1024"), "Customer document uploads must keep the 5 MB limit");
+assert(documentRoute.includes("session.accounts.some"), "Customer document writes must validate authorized Customer account ownership");
+assert(documentRoute.includes('.eq("customer_id", customerId)'), "Customer document deletion must remain customer-id scoped");
+assert(documentOpenRoute.includes("resolveCustomerWebScope(customerId)"), "Customer document open route must validate Customer account scope");
+assert(kycStartRoute.includes("await getCustomerWebSession()"), "Customer KYC start must require Customer session");
+assert(kycStartRoute.includes('partner_type: "individual_proprietor"'), "Customer Web KYC must preserve the app's Individual KYC route");
+assert(kycLocationRoute.includes("await getCustomerWebSession()"), "Customer KYC PIN lookup must require Customer session");
+assert(kycDocumentRoute.includes('.eq("profile_id", session.user.id)'), "KYC document writes must verify application ownership");
+assert(kycDocumentRoute.includes("MAX_FILE_SIZE = 5 * 1024 * 1024"), "KYC documents must keep the Customer App 5 MB limit");
+assert(kycSubmitRoute.includes('.eq("profile_id", session.user.id)'), "KYC submission must verify application ownership");
+assert(kycSubmitRoute.includes('submit_individual_onboarding_application'), "Customer Web must use the canonical Individual KYC submission RPC");
+const kycDraftBlock = kycSubmitRoute.slice(
+  kycSubmitRoute.indexOf("const draftData = {"),
+  kycSubmitRoute.indexOf("const draft = await supabase"),
+);
+assert(!kycDraftBlock.toLowerCase().includes("aadhaar"), "Customer Web KYC draft must not persist raw Aadhaar");
+assert(kycSubmitRoute.includes("p_aadhaar_number: aadhaarNumber"), "Customer Web KYC must pass Aadhaar only to the canonical submission RPC");
+assert(kycForm.includes('type="password"'), "Customer Web KYC must mask Aadhaar entry");
+assert(profilePage.includes("loadCustomerProfile(account.id)"), "Customer Profile page must remain selected-account scoped");
+assert(documentsPage.includes("loadCustomerProfile(account.id)"), "Customer Documents page must remain selected-account scoped");
+assert(kycPage.includes("loadCustomerProfile(account.id)"), "Customer KYC page must remain selected-account scoped");
+
 const navigation = read("components/customer-portal/customer-navigation.tsx");
 assert(navigation.includes('fetch("/api/customer/auth/session", { method: "DELETE" })'), "Customer logout must clear the isolated session API endpoint");
 assert(!navigation.includes('href="/partner'), "Customer navigation must not expose Partner routes");
@@ -115,6 +217,13 @@ assert(navigation.includes('href="/customer/vehicles"'), "Customer navigation mu
 assert(navigation.includes('href="/customer/policies"'), "Customer navigation must expose Phase 1 Policies");
 assert(navigation.includes('href="/customer/renewals"'), "Customer navigation must expose Phase 2 Renewals");
 assert(navigation.includes('href="/customer/claims"'), "Customer navigation must expose Phase 2 Claims");
+assert(navigation.includes('href="/customer/exchange"'), "Customer navigation must expose Phase 3 Exchange");
+assert(navigation.includes('href="/customer/insurance-quote"'), "Customer navigation must expose Phase 3 Insurance Quote");
+assert(navigation.includes('href="/customer/e-challan"'), "Customer navigation must expose Phase 3 E-Challan");
+assert(navigation.includes('href="/customer/support"'), "Customer navigation must expose Phase 3 Support");
+assert(navigation.includes('href="/customer/profile"'), "Customer navigation must expose Phase 4 Profile");
+assert(navigation.includes('href="/customer/kyc"'), "Customer navigation must expose Phase 4 KYC");
+assert(navigation.includes('href="/customer/documents"'), "Customer navigation must expose Phase 4 Documents");
 
 const portalRoutes = read("lib/portal-routes.ts");
 const middleware = read("middleware.ts");
