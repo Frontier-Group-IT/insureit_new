@@ -57,8 +57,11 @@ as $$
         else coalesce(pip.gross_payout, 0) end), 0)::numeric as payout
     from policy_family pf
     join public.policy_intermediary_payouts pip on pip.policy_id = pf.policy_id
-    join family f on f.partner_id = pf.partner_id
-      and upper(btrim(f.intermediary_code)) = upper(btrim(pip.intermediary_code))
+    where exists (
+      select 1 from family f
+      where f.partner_id = pf.partner_id
+        and upper(btrim(f.intermediary_code)) = upper(btrim(pip.intermediary_code))
+    )
     group by pf.partner_id
   )
   select sp.id, coalesce(ct.customer_count, 0), coalesce(pt.net_premium, 0),
