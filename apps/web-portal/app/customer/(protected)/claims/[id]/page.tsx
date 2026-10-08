@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowLeft, CarFront, Check, Circle, Clock3, FileText, ShieldCheck } from "lucide-react";
+import { ArrowLeft, CarFront, FileText, ShieldCheck } from "lucide-react";
+import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import {
   CustomerAccountTabs,
@@ -50,7 +51,7 @@ export default async function CustomerClaimDetailPage({
       }));
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       <Link href={{ pathname: "/customer/claims", query: { account: account.id } }} className="inline-flex items-center gap-1 text-[11px] font-black text-[#53627A] hover:text-[#142746]">
         <ArrowLeft className="h-3.5 w-3.5" /> Back to claims
       </Link>
@@ -63,8 +64,9 @@ export default async function CustomerClaimDetailPage({
       />
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/claims" />
 
-      <div className="grid gap-4 xl:grid-cols-[1fr_0.72fr]">
-        <section className="rounded-2xl border border-[#DCE4EE] bg-white p-4">
+      <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey={journey?.find(stage=>stage.current)?.key || "spot_intimation"} currentKey={journey?.find(stage=>stage.current)?.key || "spot_intimation"} completedKeys={journey?.filter(stage=>stage.complete).map(stage=>stage.key)||[]} />
+      <div className="grid gap-3 xl:grid-cols-[1fr_0.72fr]">
+        <section className="rounded-xl border border-[#DCE4EE] bg-white p-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#8794A7]">Current stage</p>
@@ -79,22 +81,13 @@ export default async function CustomerClaimDetailPage({
             </div>
           </div>
 
-          <div className="mt-5 space-y-2">
-            {journey?.map((stage) => (
-              <Link key={stage.key} href={{ pathname: `/customer/claims/${claim.id}/stage/${stage.key}`, query: { account: account.id } }} className={`flex items-center gap-3 rounded-xl border px-3 py-3 transition hover:border-[#AFC7EA] ${stage.current ? "border-[#AFC7EA] bg-[#F3F7FD]" : "border-[#E5EAF1] bg-[#FBFCFE]"}`}>
-                <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${stage.complete ? "bg-[#EAF7F0] text-[#0B7A54]" : stage.current ? "bg-[#E7F0FF] text-[#174EA6]" : "bg-[#F0F3F7] text-[#8B97A8]"}`}>
-                  {stage.complete ? <Check className="h-4 w-4" /> : stage.current ? <Clock3 className="h-4 w-4" /> : <Circle className="h-3.5 w-3.5" />}
-                </span>
-                <div className="min-w-0 flex-1"><p className="text-[11.5px] font-black text-[#10213D]">{stage.label}</p><p className="mt-0.5 text-[9.5px] font-semibold text-[#8290A3]">{stage.complete ? "Completed" : stage.current ? "Current stage" : "Upcoming"}</p></div>
-              </Link>
-            ))}
-          </div>
+
         </section>
 
         <aside className="space-y-3">
           <section className="rounded-2xl border border-[#DCE4EE] bg-white p-4">
             <div className="flex items-center gap-2"><CarFront className="h-4 w-4 text-[#174EA6]" /><h2 className="text-[13px] font-black text-[#10213D]">Claim information</h2></div>
-            <dl className="mt-4 space-y-3 text-[10.5px]">
+            <dl className="mt-2 text-[10.5px]">
               {[
                 ["Vehicle", claim.vehicle_no || "—"],
                 ["Make / Model", [claim.vehicle_make, claim.vehicle_model].filter(Boolean).join(" · ") || "—"],
@@ -104,7 +97,7 @@ export default async function CustomerClaimDetailPage({
                 ["Insurer claim no.", claim.insurer_claim_no || "Awaiting insurer"],
                 ["Incident", formatCustomerDateTime(claim.accident_at)],
                 ["Location", claim.accident_location || "—"],
-              ].map(([label, value]) => <div key={label} className="flex items-start justify-between gap-4 border-b border-[#EEF2F6] pb-2 last:border-0 last:pb-0"><dt className="font-bold text-[#8895A8]">{label}</dt><dd className="max-w-[60%] text-right font-black text-[#35445B]">{value}</dd></div>)}
+              ].map(([label, value]) => <div key={label} className="grid grid-cols-[110px_1fr] gap-3 border-b border-[#EEF2F6] px-2 py-2 last:border-0"><dt className="font-bold text-[#8895A8]">{label}</dt><dd className="break-words text-right font-black text-[#35445B]">{value}</dd></div>)}
             </dl>
           </section>
 

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CarFront, Search, ShieldCheck } from "lucide-react";
+import { Search } from "lucide-react";
 import {
   CustomerAccountTabs,
   CustomerPageHeading,
@@ -47,7 +47,7 @@ export default async function CustomerVehiclesPage({
   });
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       <CustomerPageHeading
         eyebrow="My fleet"
         title="Vehicles"
@@ -67,43 +67,23 @@ export default async function CustomerVehiclesPage({
         <button className="rounded-lg bg-[#142746] px-3 py-1.5 text-[10px] font-black text-white">Search</button>
       </form>
 
-      {rows.length === 0 ? (
-        <EmptyCustomerState
-          title={vehicles.length ? "No matching vehicles" : "No vehicles found"}
-          body={vehicles.length ? "Try a different registration, chassis, make or model." : "Vehicles linked to this Customer account will appear here."}
-        />
-      ) : (
-        <div className="grid gap-3 lg:grid-cols-2">
-          {rows.map((vehicle) => {
-            const policy = activePolicyByVehicle.get(vehicle.id);
-            return (
-              <Link
-                key={vehicle.id}
-                href={{ pathname: `/customer/vehicles/${vehicle.id}`, query: { account: account.id } }}
-                className="group rounded-2xl border border-[#DCE4EE] bg-white p-4 shadow-[0_8px_24px_rgba(28,50,82,0.04)] transition hover:-translate-y-0.5 hover:border-[#B9C9DB]"
-              >
-                <div className="flex items-start gap-3">
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#174EA6]"><CarFront className="h-5 w-5" /></span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="truncate text-[14px] font-black text-[#10213D]">{customerDisplayVehicleNo(vehicle)}</h2>
-                      <StatusPill tone={policy ? "active" : "expired"}>{policy ? "Covered" : "No active policy"}</StatusPill>
-                    </div>
-                    <p className="mt-1 truncate text-[11px] font-semibold text-[#6E7D93]">{[vehicle.make, vehicle.model].filter(Boolean).join(" · ") || vehicle.vehicle_type}</p>
-                    <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-[10.5px]">
-                      <div><p className="font-bold text-[#8995A8]">Chassis</p><p className="truncate font-black text-[#35445B]">{vehicle.chassis_no || "—"}</p></div>
-                      <div><p className="font-bold text-[#8995A8]">Engine</p><p className="truncate font-black text-[#35445B]">{vehicle.engine_no || "—"}</p></div>
-                      <div><p className="font-bold text-[#8995A8]">Type</p><p className="truncate font-black text-[#35445B]">{vehicle.vehicle_type || "—"}</p></div>
-                      <div>
-                        <p className="font-bold text-[#8995A8]">Insurance</p>
-                        <p className="inline-flex items-center gap-1 truncate font-black text-[#35445B]"><ShieldCheck className="h-3 w-3" />{policy?.policy_no || "Not active"}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
+      {rows.length === 0 ? <EmptyCustomerState title="No matching vehicles" body="Try another registration, chassis or model." /> : (
+        <div className="overflow-x-auto rounded-xl border border-[#D8E1EC] bg-white">
+          <table className="w-full min-w-[900px] border-collapse text-left text-[11px]">
+            <thead className="bg-[#F1F5FA] text-[10px] font-extrabold uppercase text-[#687991]"><tr>
+              {["Vehicle no.","Make / model","Type","Chassis no.","Engine no.","Active policy","Cover status",""].map(h=><th key={h} scope="col" className="border-b border-[#DCE5EF] px-3 py-3">{h}</th>)}
+            </tr></thead>
+            <tbody className="divide-y divide-[#E7EDF5]">{rows.map(vehicle=>{const policy=activePolicyByVehicle.get(vehicle.id);return <tr key={vehicle.id} className="hover:bg-[#F6F9FE]">
+              <td className="px-3 py-2.5 font-extrabold text-[#133C73]">{customerDisplayVehicleNo(vehicle)}</td>
+              <td className="px-3 py-2.5 font-semibold">{[vehicle.make,vehicle.model].filter(Boolean).join(" · ")||"—"}</td>
+              <td className="px-3 py-2.5">{vehicle.vehicle_type||"—"}</td>
+              <td className="px-3 py-2.5">{vehicle.chassis_no||"—"}</td>
+              <td className="px-3 py-2.5">{vehicle.engine_no||"—"}</td>
+              <td className="px-3 py-2.5 font-bold">{policy?.policy_no||"—"}</td>
+              <td className="px-3 py-2.5"><StatusPill tone={policy?"active":"expired"}>{policy?"Covered":"No active policy"}</StatusPill></td>
+              <td className="px-3 py-2.5"><Link href={{pathname:`/customer/vehicles/${vehicle.id}`,query:{account:account.id}}} className="font-extrabold text-[#1754A5] hover:underline">View →</Link></td>
+            </tr>})}</tbody>
+          </table>
         </div>
       )}
     </div>
