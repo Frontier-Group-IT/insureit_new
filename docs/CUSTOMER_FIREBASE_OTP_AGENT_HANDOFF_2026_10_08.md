@@ -131,3 +131,15 @@ Also audit `can_access_customer` (both overloads), `can_access_profile`, `can_ac
 - As of this update, GitHub checks #48/#1169/#5820 were running; confirm final results before proceeding.
 - **Still not installed**: `@react-native-firebase/app` and `@react-native-firebase/auth` are not in `apps/mobile-app/package.json` or root `package-lock.json`. Do not add dependencies without regenerating the lockfile; CI uses `npm ci`. Existing Expo binary will not contain native Firebase until a separately approved new build.
 - **Still not wired**: login/signup, Firebase identity mapping and RLS; existing Supabase OTP remains active. Do not confuse adding `google-services.json` with completing authentication.
+
+
+## 12. Native SDK source integration checkpoint (2026-10-08 evening)
+- React Native Firebase native package declarations added to `apps/mobile-app/package.json`: `@react-native-firebase/app` and `@react-native-firebase/auth` at `26.4.0`.
+- Expo `apps/mobile-app/app.json` native plugins configured; Android `googleServicesFile` references the committed Android client config.
+- Workspace `package-lock.json` synchronized by one-time feature-branch GitHub Actions workflow; that temporary workflow was subsequently deleted. Confirm the package lock and manifest still match using `npm ci --ignore-scripts`.
+- Actual SDK bridge added: `apps/mobile-app/lib/firebase-installed-android-otp.ts` invokes `getAuth()` and `signInWithPhoneNumber()` and adapts to `FirebasePhoneOtpFlow`. This bridge is NOT imported from the active login screen, and is not a validated installed-native device flow.
+- Source adapter and tests: `apps/mobile-app/lib/firebase-android-auth-adapter.ts` and `.test.cjs`.
+- Latest known commit before this note: `7729f38beb980d47b9a6f6f40e159dfc1d74c6c2`; Firebase workflow #60, Mobile #1182, Web #5842, Partner #627 were pending/in progress. Do not claim tests passed until checked.
+- **Main unsolved blockers:** Native Android build not created/authorized; actual Firebase OTP still not enabled; securely approved UID→existing Supabase UUID binding, identity-aware RLS/Storage/RPCs, and customer session routing remain unfinished. There is only a production Supabase database.
+- **Release boundaries unchanged:** do not run APK/AAB build, OTA, deployment, merge, or live Supabase mutation without explicit authorization. Keep Supabase OTP working.
+- Next agent: check CI and correct errors first. Then implement actual server auth/identity-mapping integration rather than more POC duplicates. Never treat Firebase ID token as a Supabase Auth session.
