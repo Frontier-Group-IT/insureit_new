@@ -23,7 +23,7 @@ export function CustomerDocumentVault({ customerId, documents }: { customerId: s
       form.set("customerId", customerId);
       form.set("documentType", type);
       form.set("file", file);
-      const response = await fetch("/customer/documents", { method: "POST", body: form });
+      const response = await fetch("/api/customer/documents", { method: "POST", body: form });
       const body = await response.json() as { error?: string };
       if (!response.ok) return setMessage(body.error || "Document upload failed.");
       setMessage("Document uploaded.");
@@ -37,7 +37,7 @@ export function CustomerDocumentVault({ customerId, documents }: { customerId: s
     if (busy || !window.confirm("Delete this document from your Customer vault?")) return;
     setBusy(true); setMessage("");
     try {
-      const response = await fetch("/customer/documents", {
+      const response = await fetch("/api/customer/documents", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ customerId, documentId }),
@@ -69,7 +69,7 @@ export function CustomerDocumentVault({ customerId, documents }: { customerId: s
           <div key={doc.id} className="flex items-center gap-3 rounded-xl border border-[#E0E7F0] bg-white p-3">
             <span className="grid h-9 w-9 place-items-center rounded-lg bg-[#EEF4FF] text-[#174EA6]"><FileText className="h-4 w-4" /></span>
             <div className="min-w-0 flex-1"><p className="truncate text-[10.5px] font-black text-[#10213D]">{doc.file_name}</p><p className="mt-0.5 text-[9px] font-semibold text-[#8390A2]">{doc.document_type} · {doc.file_size ? `${Math.max(1, Math.round(doc.file_size / 1024))} KB` : "Size unavailable"}</p></div>
-            <a href={`/customer/documents/open?customer=${encodeURIComponent(customerId)}&document=${encodeURIComponent(doc.id)}`} target="_blank" rel="noreferrer" className="rounded-lg border border-[#D6E0EB] px-2.5 py-1.5 text-[9px] font-black text-[#174EA6]">Open</a>
+            <a href={`/api/customer/documents/open?customer=${encodeURIComponent(customerId)}&document=${encodeURIComponent(doc.id)}`} target="_blank" rel="noreferrer" className="rounded-lg border border-[#D6E0EB] px-2.5 py-1.5 text-[9px] font-black text-[#174EA6]">Open</a>
             <button type="button" disabled={busy} onClick={() => void remove(doc.id)} className="grid h-8 w-8 place-items-center rounded-lg border border-[#F0D7D7] text-[#B44949] disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /></button>
           </div>
         ))}
