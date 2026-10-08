@@ -12,6 +12,7 @@ on:
       - 'supabase/migrations/20261008061000_customer_exchange_media_storage_access.sql'
       - 'supabase/migrations/20261008072500_customer_exchange_pending_listing_lifecycle.sql'
       - 'supabase/migrations/20261008075000_exchange_listing_review_governance.sql'
+      - 'supabase/migrations/20261008094500_exchange_pending_detail_json_limit.sql'
       - '.github/workflows/apply-customer-exchange-marketplace-backend.yml'
 
 permissions:
@@ -56,6 +57,7 @@ jobs:
           test -f supabase/migrations/20261008061000_customer_exchange_media_storage_access.sql
           test -f supabase/migrations/20261008072500_customer_exchange_pending_listing_lifecycle.sql
           test -f supabase/migrations/20261008075000_exchange_listing_review_governance.sql
+          test -f supabase/migrations/20261008094500_exchange_pending_detail_json_limit.sql
 
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
@@ -165,6 +167,23 @@ jobs:
           else
             supabase db query --linked --file supabase/migrations/20261008075000_exchange_listing_review_governance.sql
             supabase migration repair --linked --status applied 20261008075000
+          fi
+
+      - name: Ensure Exchange pending-detail JSON-limit migration is applied
+        shell: bash
+        run: |
+          set -euo pipefail
+          applied=$(supabase db query --linked --output-format json "
+            select exists(
+              select 1 from supabase_migrations.schema_migrations
+              where version='20261008094500'
+            ) as applied;
+          ")
+          if echo "$applied" | grep -Eq '"applied"[[:space:]]*:[[:space:]]*true'; then
+            echo "Pending-detail JSON-limit migration already recorded as applied; skipping execution."
+          else
+            supabase db query --linked --file supabase/migrations/20261008094500_exchange_pending_detail_json_limit.sql
+            supabase migration repair --linked --status applied 20261008094500
           fi
 
       - name: Verify Exchange security and workflow contract
