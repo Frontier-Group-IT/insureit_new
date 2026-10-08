@@ -2,8 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 const baseURL = process.env.SMOKE_BASE_URL || 'https://portal.insureit.in';
 const parsed = new URL(baseURL);
-if (parsed.protocol !== 'https:' || !['portal.insureit.in', 'staging.portal.insureit.in'].includes(parsed.hostname) || parsed.username || parsed.password || parsed.search || parsed.hash || parsed.pathname !== '/') {
-  throw new Error('SMOKE_BASE_URL must be the approved Insureit HTTPS portal origin');
+if (parsed.protocol !== 'https:' || !['portal.insureit.in', 'insureit-new.shahdolho.workers.dev'].includes(parsed.hostname) || parsed.username || parsed.password || parsed.search || parsed.hash || parsed.pathname !== '/') {
+  throw new Error('SMOKE_BASE_URL must be the approved Insureit HTTPS production frontend origin');
 }
 
 export default defineConfig({
