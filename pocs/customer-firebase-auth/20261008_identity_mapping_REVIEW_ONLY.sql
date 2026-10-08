@@ -56,7 +56,29 @@ BEGIN
 
   -- Preserve normal Supabase Auth user identities; don't cast Firebase
   -- non-UUID subjects via auth.uid().
-  IF token_sub ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' THEN
+  IF token_issuer ~ '^https://[a-z0-9-]+\\.supabase\\.co/auth/v1
+    RETURN token_sub::uuid;
+  END IF;
+  RETURN NULL;
+END;
+$function$;
+REVOKE ALL ON FUNCTION public.customer_auth_profile_id() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.customer_auth_profile_id() TO authenticated;
+-- This migration deliberately DOES NOT replace existing RLS policies or
+-- SECURITY DEFINER RPCs: calling the helper alone does not enable access.
+COMMIT;
+\n     AND token_sub ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}
+    RETURN token_sub::uuid;
+  END IF;
+  RETURN NULL;
+END;
+$function$;
+REVOKE ALL ON FUNCTION public.customer_auth_profile_id() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.customer_auth_profile_id() TO authenticated;
+-- This migration deliberately DOES NOT replace existing RLS policies or
+-- SECURITY DEFINER RPCs: calling the helper alone does not enable access.
+COMMIT;
+ THEN
     RETURN token_sub::uuid;
   END IF;
   RETURN NULL;
