@@ -62,6 +62,8 @@ The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` 
 
 ### Latest implementation ledger
 
+- **2026-10-08 — Partner Customer vehicle secondary text alignment:** same existing branch `fix/partner-intake-motor-vehicle-ocr-2026-10-08`; grouped vehicle number and manufacturer/model/year in an explicit identity stack so secondary text stays directly under vehicle heading, without moving policy expiry/premium or altering routes. **IMPLEMENTED on branch only; tests/PR/merge/OTA unverified. NO APK/AAB.**
+
 - **2026-10-08 — Motor Policy Intake missing vehicle OCR guard:** branch `fix/partner-intake-motor-vehicle-ocr-2026-10-08`; inspected Partner intake list/detail, API persistence, and trusted Document AI parser pipeline. OCR completion does not imply vehicle identifiers were extracted. Added an explicit Operations review warning only when Motor OCR is complete and all four vehicle fields are absent; no fabricated vehicle data or backend mutation. Actual document/Google response not available to verify parser root cause. **IMPLEMENTED (UI guard only); root-cause parser correction BLOCKED pending document/OCR evidence; PR/CI/merge/deploy UNVERIFIED. NO APK/AAB.**
 
 - **2026-10-07 — Partner Customer vehicle/policy row cleanup:** branch `ui/partner-customer-vehicle-row-cleanup-2026-10-07`; vehicle make/model/year is explicitly presented as the secondary detail directly below the `NEW-[chassis]`/vehicle number line, and the Motor/category badge is removed from linked policy rows while preserving policy number, expiry/premium and far-right Policy Details action. Queries, navigation and business logic are unchanged. **IMPLEMENTED; PR/CI/merge/production OTA/device verification pending. NO APK/AAB CREATED.**
