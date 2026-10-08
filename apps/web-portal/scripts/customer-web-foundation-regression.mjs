@@ -108,7 +108,7 @@ assert(!claimsPage.includes("supabase."), "Customer Claims page must use the sco
 assert(!claimDetailPage.includes("supabase."), "Customer Claim Detail must use the scoped Customer data layer rather than direct client queries");
 
 const navigation = read("components/customer-portal/customer-navigation.tsx");
-assert(navigation.includes('fetch("/customer/auth/session", { method: "DELETE" })'), "Customer logout must clear the isolated session API endpoint");
+assert(navigation.includes('fetch("/api/customer/auth/session", { method: "DELETE" })'), "Customer logout must clear the isolated session API endpoint");
 assert(!navigation.includes('href="/partner'), "Customer navigation must not expose Partner routes");
 assert(!navigation.includes('href="/reports'), "Customer navigation must not expose Operations report routes");
 assert(navigation.includes('href="/customer/vehicles"'), "Customer navigation must expose Phase 1 Vehicles");
