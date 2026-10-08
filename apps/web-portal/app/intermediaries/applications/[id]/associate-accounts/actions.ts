@@ -330,14 +330,19 @@ async function loadManagedAssociate(formData: FormData) {
   await assertPartnerAccess(reviewer, applicationId, intermediaryId, returnPath);
 
   const admin = createSupabaseAdminClient();
-  const { data: associate } = await admin.from("partner_portal_associate_accounts")
+  // The intermediary/application relationship was already verified above.
+  // Older associate records may have a NULL application_id even though their
+  // intermediary_id points to the correct, authorized partner.
+  const { data: associate, error: associateError } = await admin.from("partner_portal_associate_accounts")
     .select("id,intermediary_id,application_id,auth_user_id,name,phone_number,email,designation,address,city,state,postal_code,role,status,activated_at,invited_at")
     .eq("id", associateId)
     .eq("intermediary_id", intermediaryId)
-    .eq("application_id", applicationId)
     .maybeSingle<ManagedAssociate>();
 
-  if (!associate) redirect(`${returnPath}?error=associate_not_found`);
+  if (associateError) redirect(`${returnPath}?error=associate_lookup_failed`);
+  if (!associate || (associate.application_id && associate.application_id !== applicationId)) {
+    redirect(`${returnPath}?error=associate_not_found`);
+  }
 
   return {
     reviewerId: reviewer.id,
