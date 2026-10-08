@@ -114,3 +114,27 @@ A fresh disposable sandbox cloned main at `94db727ff8d8f9f62461346009b91e997573e
 - Therefore candidate removes all observed Critical advisories without Expo/native migration, but Stage 2 is NOT closed because residual High findings remain.
 - The sandbox metadata described runtime node22, but the command environment reported Node v24.21.0/npm 11.19.0 and raised EBADENGINE against a candidate node 22.x engine pin. Do not claim true Node-22 validation from this sandbox. Validate Node 22 through GitHub Actions before any engine/runtime pin is accepted.
 - No production deploy, database change, OTA, APK or AAB occurred.
+
+
+## Audit readiness checkpoint — 2026-10-08 (user-authorized continuation)
+
+**Status: NOT CERTIFIED; third-party initial VAPT and controlled smoke testing may begin.** Do not claim zero issues, a clean pentest, or production readiness. Existing dependency patch candidates were validated only in disposable sandbox and have not been merged/deployed.
+
+### Verified evidence and unresolved items
+- Candidate dependency set: Next 15.5.27, SheetJS CE 0.20.3 official tarball, compatible transitive patches (shell-quote, compression, undici, nanoid, js-yaml, source-map-js), preserving the root Node engine requirement `>=20.0.0`.
+- Sandbox: clean npm ci, full npm ls, Web typecheck; observed dependency audit: Web 0 Critical/8 High, Customer 0 Critical/61 High, Partner 0 Critical/53 High. These are dependency audit groups, not proven independently exploitable vulnerabilities. No claim that these numbers apply to current production.
+- Web Sharp 0.34.5 and nested PostCSS 8.4.31 remain vulnerable packages; application exploit reachability not demonstrated by code search. Tailwind/chokidar/micromatch/braces chain classified as build/dev-only in production-only npm tree, not automatically exempt from supply-chain assurance.
+- XLSX 0.20.3 synthetic reconciliation workbook metadata/round-trip and TypeScript compatibility passed; full application reconciliation upload/preview/export negative-path tests still pending; provenance and lock integrity review pending.
+- Security, database grants, privileged RPCs, RLS, storage restrictions, leaked-password protection, authn/authz, API, uploads, secrets/SAST/DAST, Android runtime and OTA, functional smoke, accessibility, observability, backup/restore, load/spike/soak and independent VAPT/retest remain subject to final evidence.
+- Latest compare: branch `security/assurance-stage2-supply-chain-2026-10-07-v5` diverged from `main` (4 ahead, 51 behind). Do not merge stale branch directly. Start fresh successor from latest main, replay only reviewed assurance changes, run CI before any merge.
+- GitHub connector safety checks blocked raw Git-object lockfile transfer; no bypass. No production deployment, database change, OTA, APK or AAB authorized or performed.
+
+### Execution order and audit handoff gate
+1. Rebase semantically via fresh branch from current main; preserve current functionality and documentation. Transfer exact npm-generated lockfile through an approved mechanism; never hand-edit a synthetic lock.
+2. Complete dependency class: reproducible npm ci, Web/Partner/Customer typecheck, lint, builds and regression, advisory reachability/exception register, SBOM/provenance, security audit gates. Do not blindly upgrade Expo SDK/native dependencies or build APK/AAB.
+3. Execute isolated staged Web and mobile smoke test matrix (login, role routing, policy intake/edits, reconciliation XLSX, claims, renewals, notifications, customer/partner sessions, upload restrictions). Record each test ID, commit/runtime, expected/actual, evidence, finding, fix, retest.
+4. Complete sequential SAST/secret scanning, authz/BOLA, API and upload abuse, RLS/RPC/storage, DAST, mobile/OTA and dependency checks, performance/load, backup/restore and DR. Avoid destructive production testing or live PII.
+5. Freeze tested commit/deployment/runtime/DB migration; prepare third-party scope and staging accounts, least-privilege test data, allowed test windows, exclusions, evidence/communication and incident contacts. Independent VAPT + retest required.
+6. Final management certification report only after all test classes are complete, findings resolved or formally accepted, and independent verification evidence exists.
+
+**Release rule:** Do not merge, deploy, run production attack traffic, create OTA or build APK/AAB without the relevant explicit authorization. No issue-free claim until verified.
