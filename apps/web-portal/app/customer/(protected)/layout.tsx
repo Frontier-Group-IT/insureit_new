@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { CustomerNavigation } from "@/components/customer-portal/customer-navigation";
+import { CustomerHeaderActions } from "@/components/customer-portal/customer-header-actions";
 import { getCustomerWebSession } from "@/lib/customer-web";
 
 export default async function CustomerProtectedLayout({ children }: { children: ReactNode }) {
@@ -15,7 +16,7 @@ export default async function CustomerProtectedLayout({ children }: { children: 
               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#6E7E94]">Customer Portal</p>
               <p className="mt-0.5 text-sm font-semibold text-[#142746]">{profile.full_name || "Customer"}</p>
             </div>
-            <div className="rounded-full bg-[#EAF1FA] px-3 py-1.5 text-[11px] font-bold text-[#245A9A]">Secure customer access</div>
+            <CustomerHeaderActions name={profile.full_name || "Customer"} />
           </div>
         </header>
         <main className="min-h-[calc(100vh-66px)] px-3 pb-24 pt-4 sm:px-5 sm:pt-5 lg:px-7 lg:pb-8 lg:pt-6">
