@@ -38,3 +38,25 @@ Test evidence: test ID, exact commit/deployment/mobile runtime/DB version, envir
 - Most recent audited baseline **before** PR #2966: Web 0 Critical/10 High/3 Moderate; Customer 0/34/23; Partner 0/55/14. **Re-run npm audit after PR #2966** to establish revised counts; do not predict them.
 - Stage 2 continues with remaining High findings: Web XLSX, Tailwind/build chain, Next nested PostCSS/Sharp, mobile Expo/React Native and upstream chains. Validate attack paths and version-compatibility. No blind Expo native/runtime upgrades or APK/AAB.
 - **Live deployment/OTA/installed-device verification remains unconfirmed.** No manual Vercel production action, database changes, OTA publish or APK/AAB build was initiated by this assurance program.
+
+
+## 2026-10-08 Stage 2 latest checkpoint — supersedes earlier counts
+
+**Merged and verified by review-branch CI:**
+- XLSX [PR #2971](https://github.com/Frontier-Group-IT/insureit_new/pull/2971), commit `105d74dddbfa1c85955ea32f5b28ad223073745b`: official SheetJS CE 0.20.3 tarball replacing vulnerable npm 0.18.5, lock integrity and version check, Business MIS hidden metadata/custom property synthetic round trip, Pay-In/Payout template read/write, clean Node 22 install, dependency audit, Web/Customer/Partner CI all SUCCESS. Real authenticated Accounts export→upload/preview/reconciliation negative paths remain **untested end-to-end**.
+- PostCSS/Sharp [PR #2973](https://github.com/Frontier-Group-IT/insureit_new/pull/2973), commit `5e7d3306eea2a3382a03955e2225a72434e13774`: PostCSS 8.5.24 and Sharp 0.35.5 with deduplicated lock, standalone PNG transform and CSS processing, Web build and all other CI SUCCESS. Initial overrides left invalid Next nested copies, rejected; validated dedupe eliminated invalid copies.
+- Node-side mobile transitives [PR #2974](https://github.com/Frontier-Group-IT/insureit_new/pull/2974), commit `31c0a9a7ef815d825d9d50897a771ed805e7d271`: undici 6.28.1, compression 1.8.2, exact npm lockfile + Node 22 validated, all Web/Customer/Partner and audit workflows SUCCESS. Source-level change only; no Expo SDK/native versions altered.
+- The disposable sandbox's attempted undici/compression validation was interrupted on stop (exit 143/HTTP 410); do **not** cite it as passed. GitHub's independent Node 22 repair and final CI are the authoritative checks.
+
+**Most recent verified audit on PR #2974 head `2fca43fc0ae0550da0441aa1a0a7e3f7094cf78d`:**
+- Web: **0 Critical / 5 High / 2 Moderate**
+- Customer: **0 Critical / 29 High / 23 Moderate**
+- Partner: **0 Critical / 50 High / 14 Moderate**
+- Audit artifact `11535467785`, SHA256 `8ebb7f653beb174b58bef127752e19793d0d35d032f72623eda838d479ecece0`.
+- These are npm workspace aggregate counts, not proven exploitable weaknesses or installed Android binary scan results. Earlier counts in this handoff are historical and **not current**.
+
+**Stage 2 not complete.** Remaining Web Highs: `braces`, `chokidar`, `fast-glob`, `micromatch`, `tailwindcss`, via Tailwind 3.4.19 dependency chain. No supported safe patch was verified on Tailwind 3; Tailwind 4 changes CSS build/design behavior, so create a separate visual-regression migration evaluation rather than blind upgrade. Direct exploitation via production request traffic has **not** been established or ruled out.
+
+Customer/Partner residual High advisories cluster in Expo SDK 54 / RN 0.81/Metro/CLI, node-forge, related libraries and build/native dependencies. Review root causes, bundling, exact entry points and installed runtime. **Do not auto-upgrade Expo to 57 or RN to 0.87**, and do not build APK/AAB without separate user request. A formal exception record requires owner, path, GHSA/CVE, affected artifact, proof of build-only/unreachable status or exposure, mitigating control, expiration, independent pentest review and re-evaluation trigger.
+
+**Next assurance gates:** inventory each residual High and verify runtime reachability with static bundle/native and backend entrypoint checks; evaluate Tailwind 4 separately with approved visual regression; evaluate Expo native migration separately; execute controlled authenticated Web/Customer/Partner smoke, API/authz/RLS/storage security checks, performance/load and independent VAPT/retest in sequence. No final issue-free report until completed. No destructive production test, new native build, OTA publish or manual production deployment was executed here; live rollout status not independently verified.
