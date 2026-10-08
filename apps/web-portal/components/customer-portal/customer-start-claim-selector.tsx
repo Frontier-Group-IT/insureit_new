@@ -37,7 +37,7 @@ export function CustomerStartClaimSelector({
             <h1 className="mt-1 text-2xl font-black text-[#10274B] sm:text-3xl">Select the vehicle</h1>
             <p className="mt-2 max-w-md text-xs leading-5 text-[#697A93]">Choose the vehicle involved and we’ll use its linked insurance policy.</p>
           </div>
-          <div className="hidden items-center gap-2 text-[#1C5CB4] sm:flex"><ShieldCheck className="h-16 w-16" strokeWidth={1.3} /><ClipboardCheck className="h-20 w-20" strokeWidth={1.4} /><CarFront className="h-14 w-14" strokeWidth={1.5} /></div>
+          <img src="/assets/customer-claim/start-claim-hero.webp" alt="Vehicle, shield and claim checklist" className="mx-auto w-full max-w-[300px] object-contain" />
         </div>
       </section>
 
@@ -75,7 +75,7 @@ export function CustomerStartClaimSelector({
         {existingClaim ? <Link href={{ pathname:`/customer/claims/${existingClaim.id}`, query:{account:accountId} }} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-[#0B3884] px-4 text-sm font-black text-white">Continue existing claim <ArrowRight className="h-5 w-5"/></Link>
         : <form action={prepareCustomerClaim} className="flex"><input type="hidden" name="account" value={accountId}/><input type="hidden" name="vehicle" value={vehicleId}/><input type="hidden" name="policy" value={policy?.id || ""}/><button type="submit" disabled={!policy || !vehicle} className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#0B3884] px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50">Start Claim <ArrowRight className="h-5 w-5"/></button></form>}
       </div>
-      <p className="text-center text-xs text-[#72819A]">Starting a claim prepares an account-scoped draft. Complete Spot Intimation before submitting incident details.</p>
+      <img src="/assets/customer-claim/start-claim-footer-scene.webp" alt="" className="mx-auto w-full max-w-[600px] object-contain" /><p className="text-center text-xs text-[#72819A]">Starting a claim prepares an account-scoped draft. Complete Spot Intimation before submitting incident details.</p>
     </div>
   );
 }
