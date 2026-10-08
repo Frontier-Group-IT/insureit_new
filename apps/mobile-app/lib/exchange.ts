@@ -360,6 +360,7 @@ export async function registerExchangeListingMedia(input: {
 export async function uploadExchangePhoto(input: {
   listingId: string;
   uri: string;
+  base64?: string | null;
   label?: string | null;
   mimeType?: string | null;
   sortOrder?: number;
@@ -367,14 +368,21 @@ export async function uploadExchangePhoto(input: {
 }) {
   const extension = extensionFromMime(input.mimeType) ?? extensionFromUri(input.uri) ?? 'jpg';
   const objectName = `${input.listingId}/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${extension}`;
-  const response = await fetch(input.uri);
-  if (!response.ok) throw new Error('Could not read the selected photo.');
-  const blob = await response.blob();
+  const contentType = input.mimeType ?? 'image/jpeg';
+
+  let body: ArrayBuffer;
+  if (input.base64) {
+    body = decodeBase64ToArrayBuffer(input.base64);
+  } else {
+    const response = await fetch(input.uri);
+    if (!response.ok) throw new Error('Could not read the selected photo.');
+    body = await response.arrayBuffer();
+  }
 
   const { error: uploadError } = await supabase.storage
     .from('exchange-media')
-    .upload(objectName, blob, {
-      contentType: input.mimeType ?? blob.type ?? 'image/jpeg',
+    .upload(objectName, body, {
+      contentType,
       upsert: false,
     });
   if (uploadError) throw uploadError;
@@ -385,8 +393,8 @@ export async function uploadExchangePhoto(input: {
       storagePath: objectName,
       mediaType: 'photo',
       label: input.label,
-      mimeType: input.mimeType ?? blob.type ?? 'image/jpeg',
-      fileSize: blob.size,
+      mimeType: contentType,
+      fileSize: body.byteLength,
       sortOrder: input.sortOrder ?? 0,
       isCover: input.isCover ?? false,
     });
@@ -394,6 +402,37 @@ export async function uploadExchangePhoto(input: {
     await supabase.storage.from('exchange-media').remove([objectName]);
     throw error;
   }
+}
+
+function decodeBase64ToArrayBuffer(value: string) {
+  const normalized = value.replace(/^data:[^;]+;base64,/, '').replace(/\s/g, '');
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const padding = normalized.endsWith('==') ? 2 : normalized.endsWith('=') ? 1 : 0;
+  const outputLength = Math.max(0, Math.floor((normalized.length * 3) / 4) - padding);
+  const bytes = new Uint8Array(outputLength);
+  let accumulator = 0;
+  let bits = 0;
+  let outputIndex = 0;
+
+  for (const char of normalized) {
+    if (char === '=') break;
+    const valueIndex = alphabet.indexOf(char);
+    if (valueIndex < 0) continue;
+    accumulator = (accumulator << 6) | valueIndex;
+    bits += 6;
+    if (bits >= 8) {
+      bits -= 8;
+      if (outputIndex < bytes.length) {
+        bytes[outputIndex++] = (accumulator >> bits) & 0xff;
+      }
+    }
+  }
+
+  if (outputIndex !== bytes.length) {
+    throw new Error('Local photo data could not be decoded.');
+  }
+
+  return bytes.buffer;
 }
 
 async function signedCoverUrl(bucket: string | null, path: string | null) {
