@@ -143,3 +143,14 @@ Also audit `can_access_customer` (both overloads), `can_access_profile`, `can_ac
 - **Main unsolved blockers:** Native Android build not created/authorized; actual Firebase OTP still not enabled; securely approved UID→existing Supabase UUID binding, identity-aware RLS/Storage/RPCs, and customer session routing remain unfinished. There is only a production Supabase database.
 - **Release boundaries unchanged:** do not run APK/AAB build, OTA, deployment, merge, or live Supabase mutation without explicit authorization. Keep Supabase OTP working.
 - Next agent: check CI and correct errors first. Then implement actual server auth/identity-mapping integration rather than more POC duplicates. Never treat Firebase ID token as a Supabase Auth session.
+
+
+## 13. PRODUCTION MIGRATION APPLIED — Firebase identity registry phase 1 (2026-10-08)
+**User approved carefully reviewed, reversible production Supabase identity-mapping work.** The first strictly additive migration was successfully applied using Supabase migration tooling to live project `ilzhsfqqjyppzzvfscmh` with name `customer_firebase_identity_links_phase1_20261008`.
+
+- Corresponding branch SQL: `pocs/customer-firebase-auth/phase1_identity_links_additive.sql`; guarded rollback draft: `pocs/customer-firebase-auth/phase1_identity_links_rollback_REVIEW_ONLY.sql`.
+- Created `public.customer_firebase_identity_links` with composite Firebase project+UID primary key, unique existing `profiles.id` binding, approved phone field, inactive/unapproved defaults, and constraints that prevent active links without approval.
+- Forced + enabled RLS and revoked table rights from `PUBLIC`, `anon` and `authenticated`. **No client RLS policy was created and no mapping row was inserted.** No existing function or access policy was modified.
+- **Post-apply verified on live Supabase:** table exists; RLS enabled=true; RLS forced=true; policies=0; `authenticated` SELECT privilege=false; `anon` SELECT privilege=false; mapping rows=0; `profiles` policy count=4 and `customer_memberships` policy count=3 (unchanged from preflight).
+- **Important:** all prior statements in this handoff that say *no production DB migration has occurred* were true only **before phase 1** and are superseded by this dated entry. Login still uses legacy Supabase OTP and Firebase login is **not** active.
+- Next: audit the SQL definition and complete secure server-controlled UID linking, provider trust/JWT resolution, customer data/RLS functions and account lifecycle in a separate reviewed stage. Do not populate mappings or change existing RLS without a comprehensive negative authorization test plan and evidence. No merge, deployment, OTA or APK/AAB.
