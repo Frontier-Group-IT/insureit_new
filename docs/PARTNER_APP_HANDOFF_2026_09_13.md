@@ -528,3 +528,8 @@ Branch `ui/partner-customer-detail-compact-v2-2026-10-07` updates only the Partn
 ## 2026-10-07 — Customer vehicle/policy row cleanup
 
 Branch `ui/partner-customer-vehicle-row-cleanup-2026-10-07` refines the Customer Detail Vehicles card only. Vehicle make/model/year is kept as the secondary line immediately below the vehicle number / `NEW-[chassis]` identity, and linked policy rows no longer show the Motor/category badge. Policy number, expiry/premium, Policy Details action, manufacturer/insurer logos, data queries and routes are preserved. **IMPLEMENTED; PR/CI/merge/production runtime 0.2.0 OTA/device verification pending. NO APK/AAB CREATED.**
+
+
+## 2026-10-08 — Motor intake vehicle extraction investigation
+
+Branch `fix/partner-intake-motor-vehicle-ocr-2026-10-08`: Partner app reads `ocr_fields` from `/api/partner/policy-intakes`, whose backend persists the trusted Document AI extraction result. The four vehicle keys are `vehicle_registration_number`, `vehicle_make`, `vehicle_model`, and `vehicle_chassis_number`. OCR status `completed` can coexist with all four keys missing. Added a scoped warning for this case; did not change Google Document AI, shared parsers, schema, RLS, or business rules. A true extraction correction requires examining the specific source document and the corresponding sanitized OCR response before introducing an insurer-specific parser regression. **UI GUARD IMPLEMENTED; root cause unverified; no PR/merge/publish; no APK/AAB.**
