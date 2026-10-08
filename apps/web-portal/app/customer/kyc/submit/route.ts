@@ -8,6 +8,12 @@ const FLEET = new Set(["less_than_5", "5_to_20", "20_to_50", "more_than_50"]);
 
 function clean(value: unknown, max = 500) { return typeof value === "string" ? value.trim().slice(0, max) : ""; }
 
+type RpcError = { message?: string } | null;
+type UntypedRpc = (
+  fn: string,
+  args: Record<string, unknown>,
+) => PromiseLike<{ data: unknown; error: RpcError }>;
+
 export async function POST(request: Request) {
   const session = await getCustomerWebSession();
   let body: Record<string, unknown>;
@@ -86,7 +92,8 @@ export async function POST(request: Request) {
     .eq("profile_id", session.user.id);
   if (draft.error) return NextResponse.json({ error: "KYC draft could not be saved." }, { status: 500 });
 
-  const { data, error } = await (supabase.rpc as any)("submit_individual_onboarding_application", {
+  const rpc = supabase.rpc as unknown as UntypedRpc;
+  const { data, error } = await rpc("submit_individual_onboarding_application", {
     p_application_id: applicationId,
     p_contact_name: contactName,
     p_email: email,
