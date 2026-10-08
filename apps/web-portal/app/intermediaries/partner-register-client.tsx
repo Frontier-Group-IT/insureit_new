@@ -21,6 +21,9 @@ export type PartnerRegisterRow = {
   linkedHref: string | null;
   portalAccess: string;
   partnerStatus: string;
+  customerCount: number | null;
+  netPremium: number | null;
+  payout: number | null;
   active: boolean;
   createType: "posp" | "misp";
   canCreateLinked: boolean;
@@ -179,7 +182,34 @@ function FilterButton({ label, count, active, onClick }: { label: string; count:
 }
 
 function PartnerTable({ rows }: { rows: PartnerRegisterRow[] }) {
-  return <div className="overflow-x-auto"><table className="w-full min-w-[1120px] table-fixed text-left text-[10.5px]"><thead className="border-b text-[8.5px] uppercase text-[#64748B]"><tr><th className="px-4 py-3">Partner Name</th><th className="px-3 py-3">Mobile Number</th><th className="px-3 py-3">Partner ID</th><th className="px-3 py-3">Type</th><th className="px-3 py-3">Assigned RM</th><th className="px-3 py-3">Linked account</th><th className="px-3 py-3">Portal access</th><th className="px-3 py-3">Status</th><th className="px-3 py-3 text-center">Action</th></tr></thead><tbody className="divide-y">{rows.map((row) => <tr key={row.id} className="h-[52px] transition hover:bg-[#F8FAFF]"><td className="truncate px-4 py-3"><FreshAccountReviewLink href={`/intermediaries/applications/${row.applicationId}`} className="font-semibold text-[#0F2A55] hover:text-[#315FEA] hover:underline">{row.displayName}</FreshAccountReviewLink></td><td className="truncate px-3 py-3 font-medium text-[#17203A]" title={row.mobile}>{row.mobile}</td><td className="truncate px-3 py-3 font-semibold text-[#0F2A55]" title={row.partnerId}>{row.partnerId}</td><td className="px-3 py-3">{row.accountType}</td><td className={`truncate px-3 py-3 ${row.assignedRm === "Not assigned" ? "font-medium text-amber-700" : "text-[#17203A]"}`} title={row.assignedRm}>{row.assignedRm}</td><td className="px-3 py-3"><Status value={row.linkedLabel} tone="linked" /></td><td className="px-3 py-3"><Status value={row.portalAccess} tone="portal" /></td><td className="px-3 py-3"><Status value={row.partnerStatus} tone="account" /></td><td className="px-3 py-3 text-center">{renderAction(row)}</td></tr>)}</tbody></table></div>;
+  const money = (value: number | null) => value === null ? "—" : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
+  return <div className="overflow-x-auto">
+    <table className="w-full min-w-[1040px] table-fixed text-left text-[10.5px]">
+      <thead className="border-b text-[8.5px] uppercase text-[#64748B]"><tr>
+        <th className="w-[20%] px-4 py-3">Partner Name</th>
+        <th className="w-[13%] px-3 py-3">Mobile Number</th>
+        <th className="w-[15%] px-3 py-3">Assigned RM</th>
+        <th className="w-[12%] px-3 py-3">Status</th>
+        <th className="w-[9%] px-3 py-3 text-right">Customers</th>
+        <th className="w-[11%] px-3 py-3 text-right">Net Premium</th>
+        <th className="w-[10%] px-3 py-3 text-right">Payout</th>
+        <th className="w-[10%] px-3 py-3 text-center">Action</th>
+      </tr></thead>
+      <tbody className="divide-y">{rows.map((row) => {
+        const label = `${row.createType.toUpperCase()} ${row.partnerStatus}`;
+        return <tr key={row.id} className="h-[52px] transition hover:bg-[#F8FAFF]">
+          <td className="px-4 py-3"><div className="min-w-0"><FreshAccountReviewLink href={`/intermediaries/applications/${row.applicationId}`} className="block truncate font-semibold text-[#0F2A55] hover:text-[#315FEA] hover:underline">{row.displayName}</FreshAccountReviewLink><span className="mt-0.5 block truncate text-[9px] font-medium text-[#8190A4]">{row.partnerId}</span></div></td>
+          <td className="truncate px-3 py-3 font-medium text-[#17203A]" title={row.mobile}>{row.mobile}</td>
+          <td className={`truncate px-3 py-3 ${row.assignedRm === "Not assigned" ? "font-medium text-amber-700" : "text-[#17203A]"}`} title={row.assignedRm}>{row.assignedRm}</td>
+          <td className="px-3 py-3"><Status value={label} tone="account" /></td>
+          <td className="px-3 py-3 text-right tabular-nums" title={row.customerCount === null ? "Customer attribution unavailable" : undefined}>{row.customerCount === null ? "—" : row.customerCount.toLocaleString("en-IN")}</td>
+          <td className="px-3 py-3 text-right tabular-nums" title={row.netPremium === null ? "Net premium attribution unavailable" : undefined}>{money(row.netPremium)}</td>
+          <td className="px-3 py-3 text-right tabular-nums" title={row.payout === null ? "Payout attribution unavailable" : undefined}>{money(row.payout)}</td>
+          <td className="px-3 py-3 text-center">{renderAction(row)}</td>
+        </tr>;
+      })}</tbody>
+    </table>
+  </div>;
 }
 
 function renderAction(row: PartnerRegisterRow) {
