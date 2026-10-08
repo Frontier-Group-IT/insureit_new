@@ -32,6 +32,7 @@ type AttentionSignal = {
 };
 
 type RailMetric = {
+  policyBreakdown?: { motor: number; nonMotor: number; life: number; health: number; other: number };
   label: string;
   value: string;
   meta?: string;
@@ -144,6 +145,7 @@ function buildMetricRail(data: DashboardCurrentData, access: DashboardAccess, _b
       : undefined;
     metrics.push({
       label: "Active policies",
+      policyBreakdown: data.portfolio ? { motor: data.portfolio.motor, nonMotor: data.portfolio.nonMotor, life: data.portfolio.life, health: data.portfolio.health, other: data.portfolio.other } : undefined,
       value: (data.portfolio?.active ?? data.base.totals.activePolicies).toLocaleString("en-IN"),
       meta: composition || undefined,
       href: "/policies",
@@ -772,6 +774,34 @@ function PolicyIntakeRow({ row }: { row: DashboardIntakeRow }) {
 }
 
 function MetricRail({ item, divided }: { item: RailMetric; divided: boolean }) {
+  if (item.label === "Active policies") {
+    const categories = item.policyBreakdown ? [
+      { label: "Motor", count: item.policyBreakdown.motor, color: "text-emerald-700", dot: "bg-emerald-500", tint: "bg-emerald-50" },
+      { label: "Non-Motor", count: item.policyBreakdown.nonMotor, color: "text-orange-700", dot: "bg-orange-500", tint: "bg-orange-50" },
+      { label: "Life", count: item.policyBreakdown.life, color: "text-yellow-700", dot: "bg-yellow-400", tint: "bg-yellow-50" },
+      { label: "Health", count: item.policyBreakdown.health, color: "text-blue-700", dot: "bg-blue-500", tint: "bg-blue-50" },
+    ] : [];
+    return (
+      <Link prefetch={false} href={item.href} className={`${divided ? "border-t md:border-l md:border-t-0" : ""} group flex min-w-0 flex-col justify-center border-[#E3E9F0] bg-white px-2.5 py-2.5 transition hover:bg-[#FAFBFD]`}>
+        <p className="text-center text-[8px] font-black uppercase tracking-[.075em] text-[#53637A]">Active Policies</p>
+        <p className="portal-display mt-1 text-center text-[25px] font-semibold leading-none tracking-[-.02em] text-[#10213D]">{item.value}</p>
+        {categories.length ? (
+          <div className="mt-2 grid grid-cols-4 gap-1">
+            {categories.map((category) => (
+              <div key={category.label} className="min-w-0 text-center">
+                <div className={`flex min-h-[24px] flex-col items-center justify-center gap-0.5 rounded-sm px-0.5 ${category.tint}`}>
+                  <span className={`h-1 w-3 rounded-full ${category.dot}`} />
+                  <span className={`text-[6px] font-bold leading-tight ${category.color}`}>{category.label}</span>
+                </div>
+                <p className={`mt-1 text-[10px] font-bold tabular-nums leading-none ${category.color}`}>{category.count.toLocaleString("en-IN")}</p>
+              </div>
+            ))}
+          </div>
+        ) : <p className="mt-2 text-center text-[8px] text-[#64748B]">Breakdown unavailable</p>}
+        {item.policyBreakdown?.other ? <p className="mt-1 text-center text-[7px] font-medium text-[#64748B]">Other: {item.policyBreakdown.other.toLocaleString("en-IN")}</p> : null}
+      </Link>
+    );
+  }
   return (
     <Link prefetch={false} href={item.href} className={`${divided ? "border-t md:border-l md:border-t-0" : ""} group flex min-w-0 flex-col border-[#E3E9F0] transition hover:brightness-[0.98]`}>
       <div className="flex min-h-[78px] w-full min-w-0 flex-1 items-center gap-3 bg-white px-4 py-3">
