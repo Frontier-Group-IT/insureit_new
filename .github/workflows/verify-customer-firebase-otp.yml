@@ -1,0 +1,23 @@
+name: Verify Customer Firebase OTP Readiness
+on:
+  pull_request:
+    paths:
+      - 'apps/mobile-app/lib/firebase-otp-readiness*'
+      - 'docs/CUSTOMER_FIREBASE_OTP_DIRECT_IMPLEMENTATION_2026_10_08.md'
+      - '.github/workflows/verify-customer-firebase-otp.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  readiness-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node --test apps/mobile-app/lib/firebase-otp-readiness.test.cjs
+      - run: npx tsc --noEmit --skipLibCheck --target ES2020 --module commonjs apps/mobile-app/lib/firebase-otp-readiness.ts
