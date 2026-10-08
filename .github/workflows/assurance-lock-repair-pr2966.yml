@@ -1,0 +1,57 @@
+name: One-time lockfile repair PR 2966
+
+on:
+  pull_request:
+    types: [synchronize]
+    paths:
+      - 'package.json'
+      - '.github/workflows/assurance-lock-repair-pr2966.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair-lock:
+    if: >-
+      github.event.pull_request.number == 2966 &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'security/high-transitive-patches-2026-10-08'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/high-transitive-patches-2026-10-08
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Regenerate and deduplicate lockfile
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm dedupe --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Verify versions and clean install
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const p=require('./package-lock.json').packages;
+          for(const [path,meta] of Object.entries(p)) {
+            if(/(^|\/)node_modules\/nanoid$/.test(path) && meta.version!=='3.3.18') throw Error('Unpatched nanoid '+path+' '+meta.version);
+            if(/(^|\/)node_modules\/source-map-js$/.test(path) && meta.version!=='1.2.2') throw Error('Unpatched source-map-js '+path+' '+meta.version);
+          }
+          NODE
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm ls --all >/tmp/tree.txt
+      - name: Commit only npm lockfile to this review branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- package-lock.json; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- package-lock.json
+          git commit -m 'security: synchronize patched transitive npm lockfile' --only package-lock.json
+          git push origin HEAD:refs/heads/security/high-transitive-patches-2026-10-08
