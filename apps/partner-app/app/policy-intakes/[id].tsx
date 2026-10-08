@@ -53,6 +53,10 @@ export default function PolicyIntakeDetailScreen() {
   }, [load]);
 
   const fields = useMemo(() => new Map((row?.ocr_fields ?? []).map((field) => [field.key, field])), [row?.ocr_fields]);
+  // Motor classification is not evidence that vehicle identifiers were extracted.
+  const missingVehicleExtraction = row?.policy_type === 'motor' && row.ocr_status === 'completed' &&
+    !['vehicle_registration_number', 'vehicle_make', 'vehicle_model', 'vehicle_chassis_number']
+      .some((key) => Boolean(fields.get(key)?.value?.trim()));
   const proposalForm = row?.policy_type === 'life' || row?.policy_type === 'health';
 
   async function replaceDocument() {
@@ -230,6 +234,9 @@ export default function PolicyIntakeDetailScreen() {
                 </View>
               </DetailDisclosure>
 
+              {missingVehicleExtraction ? (
+                <View style={styles.banner}><PartnerBanner tone="warning" title="Vehicle details need review" message="The policy was read, but vehicle identifiers were not extracted. Operations should verify them against the policy copy; no vehicle information has been assumed." /></View>
+              ) : null}
               <DetailDisclosure
                 title="Vehicle details"
                 leading={
