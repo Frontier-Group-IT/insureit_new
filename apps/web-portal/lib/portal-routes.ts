@@ -12,6 +12,7 @@ export const protectedPortalRoots = [
   "/development",
   "/documents",
   "/employees",
+  "/exchange",
   "/insurance-companies",
   "/intermediaries",
   "/intermediary-portal",
