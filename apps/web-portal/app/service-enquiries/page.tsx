@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { AppShell, PageHeader } from "@/components/shell";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { accessRank, getEffectivePermissionAccessMap } from "@/lib/effective-permissions";
@@ -33,7 +34,12 @@ type ServiceEnquiryRow = {
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function ServiceEnquiriesPage() {
+type EnquirySection = "tickets" | "quotes";
+type PageProps = { searchParams: Promise<{ section?: string }> };
+
+export default async function ServiceEnquiriesPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const section: EnquirySection = params.section === "quotes" ? "quotes" : "tickets";
   const token = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(token);
   if (!profile) redirect("/login");
@@ -51,21 +57,29 @@ export default async function ServiceEnquiriesPage() {
     .returns<ServiceEnquiryRow[]>();
 
   const rows = data ?? [];
-  const open = rows.filter((row) => row.status === "open").length;
-  const inProgress = rows.filter((row) => row.status === "in_progress").length;
-  const guest = rows.filter((row) => !row.customer_id).length;
+  const sectionRows = rows.filter((row) => section === "quotes" ? row.service_type === "insurance_quote" : row.service_type !== "insurance_quote");
+  const open = sectionRows.filter((row) => row.status === "open").length;
+  const inProgress = sectionRows.filter((row) => row.status === "in_progress").length;
+  const completed = sectionRows.filter((row) => row.status === "resolved" || row.status === "closed").length;
+  const ticketCount = rows.filter((row) => row.service_type !== "insurance_quote").length;
+  const quoteCount = rows.filter((row) => row.service_type === "insurance_quote").length;
 
   return (
     <AppShell title="Service Enquiries">
       <PageHeader
         title="Service Enquiries"
-        description="Customer support tickets, insurance quote requests and challan assistance in one queue."
+        description="Manage support tickets and insurance quote enquiries in dedicated workspaces."
       />
+
+      <nav aria-label="Service enquiry sections" className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#E4EAF3] bg-white/85 p-2">
+        <SectionLink href="/service-enquiries?section=tickets" active={section === "tickets"} label="Ticket Enquiries" count={ticketCount} />
+        <SectionLink href="/service-enquiries?section=quotes" active={section === "quotes"} label="Get Quote Enquiries" count={quoteCount} />
+      </nav>
 
       <section className="grid gap-3 sm:grid-cols-3">
         <Metric label="Open" value={open} />
         <Metric label="In progress" value={inProgress} />
-        <Metric label="Guest enquiries" value={guest} />
+        <Metric label={section === "quotes" ? "Completed" : "Resolved / Closed"} value={completed} />
       </section>
 
       {error ? (
@@ -74,6 +88,9 @@ export default async function ServiceEnquiriesPage() {
         </div>
       ) : null}
 
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div><h2 className="text-sm font-black text-[#171D3D]">{section === "quotes" ? "Quotation Register" : "Ticket Register"}</h2><p className="text-[11px] text-[#69738A]">{sectionRows.length} enquiries in this section</p></div>
+      </div>
       <section className="overflow-hidden rounded-[24px] border border-white/75 bg-white/80 shadow-[0_18px_50px_rgba(37,39,92,0.075)] backdrop-blur-xl">
         <div className="overflow-x-auto">
           <table className="min-w-[1050px] w-full text-left">
@@ -90,7 +107,7 @@ export default async function ServiceEnquiriesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EDF0F5]">
-              {rows.map((row) => {
+              {sectionRows.map((row) => {
                 const name = row.customer_id ? row.customers?.contact_name || "Customer" : row.guest_name || "Guest";
                 const phone = row.customer_id ? row.customers?.phone : row.guest_phone;
                 const email = row.customer_id ? row.customers?.email : row.guest_email;
@@ -148,8 +165,8 @@ export default async function ServiceEnquiriesPage() {
                   </tr>
                 );
               })}
-              {!rows.length ? (
-                <tr><td colSpan={8} className="px-5 py-12 text-center text-sm font-semibold text-[#7B8498]">No service enquiries yet.</td></tr>
+              {!sectionRows.length ? (
+                <tr><td colSpan={8} className="px-5 py-12 text-center text-sm font-semibold text-[#7B8498]">{section === "quotes" ? "No quote enquiries yet." : "No ticket enquiries yet."}</td></tr>
               ) : null}
             </tbody>
           </table>
@@ -165,3 +182,7 @@ function Metric({ label, value }: { label: string; value: number }) {
 function serviceLabel(type: ServiceEnquiryRow["service_type"]) { return type === "support_ticket" ? "Support Ticket" : type === "insurance_quote" ? "Insurance Quote" : "Challan Assistance"; }
 function sourceLabel(source: ServiceEnquiryRow["source"]) { return source === "customer_dashboard" ? "Customer app" : source === "guest_signup" ? "Signup guest" : "Login guest"; }
 function formatDateTime(value: string) { return new Date(value).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); }
+
+function SectionLink({ href, active, label, count }: { href: string; active: boolean; label: string; count: number }) {
+  return <Link href={href} aria-current={active ? "page" : undefined} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-colors ${active ? "bg-[#17213E] text-white shadow-sm" : "text-[#56637A] hover:bg-[#F0F4FA]"}`}>{label}<span className={`rounded-full px-2 py-0.5 text-[10px] ${active ? "bg-white/20 text-white" : "bg-[#EAF0F9] text-[#36517D]"}`}>{count}</span></Link>;
+}
