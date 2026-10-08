@@ -23,5 +23,5 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: node --test apps/mobile-app/lib/firebase-otp-readiness.test.cjs apps/mobile-app/lib/firebase-native-phone-flow.test.cjs apps/mobile-app/lib/firebase-data-client.test.cjs pocs/customer-firebase-auth/sql-draft.test.cjs pocs/customer-firebase-auth/server-identity-binding.test.cjs pocs/customer-firebase-auth/firebase-admin-verifier.test.cjs
-      - run: npx tsc --noEmit --skipLibCheck --target ES2020 --module commonjs apps/mobile-app/lib/firebase-otp-readiness.ts apps/mobile-app/lib/firebase-native-phone-flow.ts apps/mobile-app/lib/firebase-data-client.ts pocs/customer-firebase-auth/server-identity-binding.ts pocs/customer-firebase-auth/firebase-admin-verifier.ts
+      - run: node --test apps/mobile-app/lib/firebase-otp-readiness.test.cjs apps/mobile-app/lib/firebase-native-phone-flow.test.cjs apps/mobile-app/lib/firebase-data-client.test.cjs pocs/customer-firebase-auth/sql-draft.test.cjs pocs/customer-firebase-auth/server-identity-binding.test.cjs pocs/customer-firebase-auth/firebase-admin-verifier.test.cjs pocs/customer-firebase-auth/firebase-binding-backend.test.cjs
+      - run: npx tsc --noEmit --skipLibCheck --target ES2020 --module commonjs apps/mobile-app/lib/firebase-otp-readiness.ts apps/mobile-app/lib/firebase-native-phone-flow.ts apps/mobile-app/lib/firebase-data-client.ts pocs/customer-firebase-auth/server-identity-binding.ts pocs/customer-firebase-auth/firebase-admin-verifier.ts pocs/customer-firebase-auth/firebase-binding-backend.ts
