@@ -65,26 +65,13 @@ export default async function CustomerClaimDetailPage({
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/claims" />
 
       <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey={journey?.find(stage=>stage.current)?.key || "spot_intimation"} currentKey={journey?.find(stage=>stage.current)?.key || "spot_intimation"} completedKeys={journey?.filter(stage=>stage.complete).map(stage=>stage.key)||[]} />
-      <div className="grid gap-3 xl:grid-cols-[1fr_0.72fr]">
-        <section className="rounded-xl border border-[#DCE4EE] bg-white p-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#8794A7]">Current stage</p>
-              <h2 className="mt-1 text-[17px] font-black text-[#10213D]">{stageLabel}</h2>
-              <p className="mt-1 max-w-xl text-[10.5px] font-semibold text-[#74839A]">
-                {external ? "This journey is tracked from the Customer-added policy milestones." : internal_projection?.customerMessage}
-              </p>
-            </div>
-            <div className="min-w-[120px]">
-              <div className="flex items-center justify-between text-[9px] font-black text-[#718096]"><span>Progress</span><span>{progress}%</span></div>
-              <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[#E9EEF5]"><div className="h-full rounded-full bg-[#174EA6]" style={{ width: `${Math.max(0, Math.min(progress, 100))}%` }} /></div>
-            </div>
-          </div>
-
-
-        </section>
-
-        <aside className="space-y-3">
+      <div className="rounded-2xl border border-[#DFE8F4] bg-white px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div><p className="text-[9px] font-bold uppercase tracking-wider text-[#75869A]">Current stage</p><p className="text-sm font-semibold text-[#071D49]">{stageLabel}</p></div>
+          <div className="min-w-[150px]"><div className="flex justify-between text-[10px] text-[#718096]"><span>Progress</span><span>{progress}%</span></div><div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#E9EEF5]"><div className="h-full bg-[#174EA6]" style={{width:`${Math.max(0,Math.min(progress,100))}%`}} /></div></div>
+        </div>
+      </div>
+              <div className="grid gap-3 xl:grid-cols-[1.4fr_0.8fr_0.8fr]">
           <section className="rounded-2xl border border-[#DCE4EE] bg-white p-4">
             <div className="flex items-center gap-2"><CarFront className="h-4 w-4 text-[#174EA6]" /><h2 className="text-[13px] font-black text-[#10213D]">Claim information</h2></div>
             <dl className="mt-2 text-[10.5px]">
@@ -116,8 +103,8 @@ export default async function CustomerClaimDetailPage({
             <p className="mt-3 text-[11px] font-black text-[#35445B]">{external ? "Self tracked / Customer-added policy" : "INSUREIT managed"}</p>
             <p className="mt-1 text-[10px] font-semibold leading-4 text-[#7A8799]">{external ? "The journey is shown from customer-tracked milestones. INSUREIT processing is not implied unless assistance is accepted." : "The current journey state is projected from the shared internal claim workflow."}</p>
           </section>
-        </aside>
-      </div>
+        </div>
+
     </div>
   );
 }
