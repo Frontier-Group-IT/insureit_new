@@ -67,7 +67,7 @@ export default async function CustomerVehiclesPage({
         <button className="rounded-lg bg-[#142746] px-3 py-1.5 text-[10px] font-black text-white">Search</button>
       </form>
 
-      {rows.length ===       {rows.length === 0 ? <EmptyCustomerState title="No matching vehicles" body="Try another registration, chassis or model." /> : (
+      {rows.length === 0 ? <EmptyCustomerState title="No matching vehicles" body="Try another registration, chassis or model." /> : (
         <div className="overflow-x-auto rounded-xl border border-[#D8E1EC] bg-white">
           <table className="w-full min-w-[900px] border-collapse text-left text-[11px]">
             <thead className="bg-[#F1F5FA] text-[10px] font-extrabold uppercase text-[#687991]"><tr>
