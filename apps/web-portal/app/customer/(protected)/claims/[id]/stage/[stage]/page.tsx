@@ -4,7 +4,7 @@ import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import { CUSTOMER_EXTERNAL_STAGE_FIELDS } from "@/lib/customer-claim-stage-fields";
 import { saveCustomerExternalStage } from "./actions";
 import { uploadCustomerClaimDocument } from "./upload-action";
-import { Circle, ArrowLeft, LockKeyhole, FileText } from "lucide-react";
+import { Check, Circle, ArrowLeft, LockKeyhole, FileText } from "lucide-react";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
