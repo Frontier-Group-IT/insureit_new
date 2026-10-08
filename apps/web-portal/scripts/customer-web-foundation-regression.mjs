@@ -47,8 +47,8 @@ const requiredFiles = [
   "components/customer-portal/customer-document-vault.tsx",
   "components/customer-portal/customer-kyc-form.tsx",
   "app/customer/profile/update/route.ts",
-  "app/customer/documents/route.ts",
-  "app/customer/documents/open/route.ts",
+  "app/api/customer/documents/route.ts",
+  "app/api/customer/documents/open/route.ts",
   "app/customer/kyc/start/route.ts",
   "app/customer/kyc/locations/route.ts",
   "app/customer/kyc/documents/route.ts",
@@ -168,8 +168,8 @@ assert(supportDetailPage.includes("loadCustomerServiceActivityDetail(account.id,
 
 const phaseFourData = read("lib/customer-web-phase4-data.ts");
 const profileUpdateRoute = read("app/customer/profile/update/route.ts");
-const documentRoute = read("app/customer/documents/route.ts");
-const documentOpenRoute = read("app/customer/documents/open/route.ts");
+const documentRoute = read("app/api/customer/documents/route.ts");
+const documentOpenRoute = read("app/api/customer/documents/open/route.ts");
 const kycStartRoute = read("app/customer/kyc/start/route.ts");
 const kycLocationRoute = read("app/customer/kyc/locations/route.ts");
 const kycDocumentRoute = read("app/customer/kyc/documents/route.ts");
