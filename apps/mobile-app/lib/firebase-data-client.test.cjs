@@ -14,13 +14,13 @@ test('rejects missing or insecure Supabase configuration', () => {
   assert.throws(() => createCustomerFirebaseDataClient('http://example.com', 'anon', async () => 'token'), /configuration/);
   assert.throws(() => createCustomerFirebaseDataClient('https://example.com', '', async () => 'token'), /configuration/);
 });
-test('creates a separate client and never installs a Supabase Auth session', async () => {
+test('creates a separate client and never installs a Supabase Auth session', () => {
   let calls = 0;
   const client = createCustomerFirebaseDataClient('https://example.supabase.co', 'public-anon-key', async () => {
     calls++;
     return 'firebase-token';
   });
   assert.equal(typeof client.from, 'function');
-  await assert.rejects(() => client.auth.getSession(), /accessToken option/);
+  assert.throws(() => client.auth.getSession(), /accessToken option/);
   assert.equal(calls, 0);
 });
