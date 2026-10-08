@@ -1,0 +1,23 @@
+name: Stage 2 Metro image compatibility
+on:
+  pull_request:
+    paths:
+      - 'scripts/stage2-metro-image-contract.cjs'
+      - '.github/workflows/stage2-metro-image-compatibility.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  metro-image-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Clean lockfile install
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify current Metro image API for both apps
+        run: node scripts/stage2-metro-image-contract.cjs
