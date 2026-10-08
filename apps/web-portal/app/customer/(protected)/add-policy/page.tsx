@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/auth-server";
+import { getCustomerWebSession } from "@/lib/customer-web";
 import { resolveCustomerWebScope, loadCustomerWebVehicles, loadCustomerWebPolicies } from "@/lib/customer-web-data";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
 
@@ -35,7 +36,7 @@ export default async function AddCustomerPolicy({ searchParams }: { searchParams
     const premium = String(form.get("premium") || "");
     const idv = String(form.get("idv") || "");
     if ([premium,idv].some(v => v !== "" && (!Number.isFinite(Number(v)) || Number(v) < 0))) throw new Error("Invalid monetary value");
-    const { error } = await db.rpc("create_customer_external_policy", {
+    const { data: created, error } = await (db.rpc as any)("create_customer_external_policy", {
       p_customer_id: authorized.id,
       p_vehicle_id: vehicleId,
       p_insurance_company_id: insurerId,
@@ -47,6 +48,27 @@ export default async function AddCustomerPolicy({ searchParams }: { searchParams
       p_insured_declared_value: idv === "" ? null : Number(idv),
     });
     if (error) throw new Error("Policy could not be saved. Please verify its details.");
+    const row = Array.isArray(created) ? created[0] : created;
+    const newPolicyId = row && typeof row === "object" && "id" in row ? String(row.id) : "";
+    const upload = form.get("copy");
+    if (upload instanceof File && upload.size > 0) {
+      if (upload.size > 5 * 1024 * 1024 || !["application/pdf","image/jpeg","image/png","image/webp"].includes(upload.type)) throw new Error("Policy saved, but the file must be PDF/JPG/PNG/WEBP and under 5 MB");
+      if (!newPolicyId) throw new Error("Policy saved, but its ID could not be confirmed for document upload");
+      const session = await getCustomerWebSession();
+      const ext = upload.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g,"") || "pdf";
+      const storagePath = authorized.id + "/policy-copy/" + crypto.randomUUID() + "." + ext;
+      const stored = await db.storage.from("customer-documents").upload(storagePath, upload, { contentType: upload.type, upsert: false });
+      if (stored.error) throw new Error("Policy saved but document upload failed");
+      const saved = await db.from("customer_documents").insert({
+        customer_id: authorized.id, external_policy_id: newPolicyId, document_type: "policy_copy",
+        file_name: upload.name.slice(0,180), storage_bucket: "customer-documents", storage_path: storagePath,
+        mime_type: upload.type, file_size: upload.size, uploaded_by: session.user.id,
+      });
+      if (saved.error) {
+        await db.storage.from("customer-documents").remove([storagePath]);
+        throw new Error("Policy saved but document registration failed");
+      }
+    }
     redirect("/customer/start-claim?account=" + encodeURIComponent(authorized.id) + "&vehicle=" + encodeURIComponent(vehicleId));
   }
   return <div className="mx-auto max-w-3xl space-y-5">
@@ -68,8 +90,9 @@ export default async function AddCustomerPolicy({ searchParams }: { searchParams
       <label className="text-sm font-bold">End date *<input required type="date" name="end" className="mt-2 block w-full rounded-xl border p-3 text-sm"/></label>
       <label className="text-sm font-bold">Premium<input type="number" min="0" step="0.01" name="premium" className="mt-2 block w-full rounded-xl border p-3 text-sm"/></label>
       <label className="text-sm font-bold">IDV<input type="number" min="0" step="0.01" name="idv" className="mt-2 block w-full rounded-xl border p-3 text-sm"/></label>
+      <label className="text-sm font-bold sm:col-span-2">Policy copy (PDF/JPG/PNG/WEBP, up to 5 MB)<input name="copy" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="mt-2 block w-full rounded-xl border p-3 text-sm"/></label>
       <button className="sm:col-span-2 rounded-xl bg-[#0B3884] px-5 py-3 text-sm font-bold text-white">Save policy</button>
     </form>
-    <p className="text-xs text-[#718096]">External policy creation uses the same customer-authorized RPC as the mobile app. Policy copy upload will be added after document-storage parity checks.</p>
+    <p className="text-xs text-[#718096]">External policy creation uses the same customer-authorized RPC as the mobile app. Policy copies use the same customer-documents storage and document metadata pattern as the Customer App.</p>
   </div>;
 }
