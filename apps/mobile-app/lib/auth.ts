@@ -4,6 +4,7 @@ import * as Linking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { supabase } from './supabase';
+import { activeCustomerOtpProvider } from './customer-otp-provider';
 import type { AppRole, Customer, CustomerOnboardingApplication, CustomerOnboardingDocument, Json, PartnerType, Profile } from './types';
 import { isSalesHierarchyRole, isStaffRole } from './roles';
 import { clearSelectedCustomerContext, clearSelectedCustomerContextForUser } from './customer-context';
@@ -377,15 +378,7 @@ async function ensureCustomerSignupProfile(
 }
 
 export async function sendPhoneOtp(phone: string) {
-  const { data, error } = await supabase.auth.signInWithOtp({
-    phone,
-    options: {
-      channel: 'sms',
-      shouldCreateUser: false,
-    },
-  });
-  if (error) throw error;
-  return data;
+  return activeCustomerOtpProvider().sendLogin(phone);
 }
 
 export async function sendPhoneSignupOtp({
@@ -397,31 +390,13 @@ export async function sendPhoneSignupOtp({
   fullName: string;
   email?: string;
 }) {
-  const { data, error } = await supabase.auth.signInWithOtp({
-    phone,
-    options: {
-      channel: 'sms',
-      shouldCreateUser: true,
-      data: {
-        app_role: 'customer',
-        full_name: fullName,
-        phone,
-        ...(email ? { email } : {}),
-      },
-    },
-  });
-  if (error) throw error;
-  return data;
+  return activeCustomerOtpProvider().sendSignup(phone, { fullName, email });
 }
 
 export async function verifyPhoneOtp(phone: string, token: string) {
-  const { data, error } = await supabase.auth.verifyOtp({
-    phone,
-    token,
-    type: 'sms',
-  });
-  if (error) throw error;
-  return data;
+  const result = await activeCustomerOtpProvider().verify(phone, token);
+  if (result.error) throw result.error;
+  return result.data;
 }
 
 export async function signUp(email: string, password: string, fullName: string, phone?: string) {
