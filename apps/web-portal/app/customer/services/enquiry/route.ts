@@ -30,6 +30,23 @@ const CONSENT_VERSION = "2026-09-02-v1";
 const TERMS_VERSION = "2026-07-04";
 const PRIVACY_VERSION = "2026-07-04";
 
+type ServiceEnquiryInsertResult = {
+  id: string;
+  enquiry_no: string;
+  status: string;
+};
+
+type ServiceEnquiryInsertTable = {
+  insert(values: Record<string, unknown>): {
+    select(columns: string): {
+      single(): PromiseLike<{
+        data: ServiceEnquiryInsertResult | null;
+        error: { code?: string; message?: string } | null;
+      }>;
+    };
+  };
+};
+
 function text(value: unknown, max = 2000) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
@@ -56,7 +73,7 @@ export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient();
   let vehicleId = text(body.vehicleId, 64) || null;
   let vehicleNo = text(body.vehicleNo, 32).toUpperCase() || null;
-  let claimId = text(body.claimId, 64) || null;
+  const claimId = text(body.claimId, 64) || null;
   let assignedTo: string | null = null;
 
   if (vehicleId) {
@@ -118,8 +135,8 @@ export async function POST(request: Request) {
       ? { challanNo: text(body.challanNo, 100) || null, note: text(body.note, 1000) || null }
       : { supportCategory: category, priority, note: text(body.note, 1000) || null };
 
-  const { data, error } = await (supabase as any)
-    .from("service_enquiries")
+  const serviceEnquiries = (supabase.from as unknown as (table: string) => ServiceEnquiryInsertTable)("service_enquiries");
+  const { data, error } = await serviceEnquiries
     .insert({
       enquiry_no: "",
       service_type: serviceType,
