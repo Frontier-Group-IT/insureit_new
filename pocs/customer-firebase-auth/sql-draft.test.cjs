@@ -14,6 +14,7 @@ test('mapping remains deny-by-default', () => {
   assert.match(sql, /ENABLE ROW LEVEL SECURITY/);
   assert.match(sql, /REVOKE ALL ON TABLE .* FROM PUBLIC, anon, authenticated/);
   assert.match(sql, /is_approved AND link\.is_active/);
+  assert.match(sql, /verified_phone_at_approval text NOT NULL/);
   assert.doesNotMatch(sql, /CREATE POLICY/i);
 });
 test('only expected Firebase project is trusted in resolver', () => {
