@@ -73,6 +73,7 @@ const allTechnicalGrants: readonly RoleGrantV2[] = [
   grant("policy_intakes.finalize", "approve", "organization"),
   grant("policies.ocr_training.review", "edit"),
   grant("policies.ocr_training.approve", "approve"),
+  grant("exchange.listings.review", "approve"),
   grant("tasks.view", "view", "organization"),
   grant("tasks.create", "edit", "organization"),
   grant("tasks.assign", "approve", "organization"),
@@ -223,6 +224,7 @@ export const roleMatrixV2: readonly RoleDefinitionV2[] = [
       grant("policy_intakes.create", "edit", "organization"),
       grant("policy_intakes.review", "edit", "organization"),
       grant("policy_intakes.finalize", "approve", "organization"),
+      grant("exchange.listings.review", "approve"),
       grant("tasks.view", "view", "organization"),
       grant("tasks.create", "edit", "organization"),
       grant("tasks.assign", "edit", "organization"),
@@ -302,6 +304,7 @@ export const roleMatrixV2: readonly RoleDefinitionV2[] = [
       grant("reports.view", "view", "hierarchy"),
       grant("policy_intakes.view", "view", "hierarchy"),
       grant("policy_intakes.create", "edit", "hierarchy"),
+      grant("exchange.listings.review", "approve"),
     ],
   },
   {
