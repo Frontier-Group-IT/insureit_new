@@ -773,33 +773,40 @@ function PolicyIntakeRow({ row }: { row: DashboardIntakeRow }) {
 
 function MetricRail({ item, divided }: { item: RailMetric; divided: boolean }) {
   return (
-    <Link prefetch={false} href={item.href} className={`${divided ? "border-t md:border-l md:border-t-0" : ""} group flex min-h-[94px] items-center gap-3 border-[#E3E9F0] px-4 py-3.5 transition hover:bg-[#FAFBFD]`}>
-      <Icon src={item.icon} size={35} />
-      <div className="min-w-0 flex-1">
+    <Link prefetch={false} href={item.href} className={`${divided ? "border-t md:border-l md:border-t-0" : ""} group flex min-w-0 flex-col border-[#E3E9F0] transition hover:brightness-[0.98]`}>
+      <div className="flex min-h-[78px] w-full min-w-0 flex-1 items-center gap-3 bg-white px-4 py-3">
+        <Icon src={item.icon} size={35} />
+        <div className="min-w-0 flex-1">
+          {item.secondary ? (
+            <div className="grid grid-cols-[0.82fr_1.18fr] gap-3">
+              <div className="min-w-0">
+                <p className="portal-display whitespace-normal break-words text-[21px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">{item.value}</p>
+                <p className="mt-1 whitespace-normal break-words text-[7px] font-black uppercase leading-relaxed tracking-[.075em] text-[#5D6C83]">{item.label}</p>
+              </div>
+              <div className="min-w-0 border-l border-[#E7ECF2] pl-3">
+                <p className="portal-display whitespace-normal break-words text-[21px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">{item.secondary.value}</p>
+                <p className="mt-1 whitespace-normal break-words text-[7px] font-black uppercase leading-relaxed tracking-[.075em] text-[#5D6C83]">{item.secondary.label}</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="portal-display whitespace-normal break-words text-[25px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">{item.value}</p>
+              <p className="mt-2 whitespace-normal break-words text-[7.5px] font-black uppercase leading-relaxed tracking-[.085em] text-[#5D6C83]">{item.label}</p>
+            </>
+          )}
+        </div>
+        <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-[#A3ADBC] group-hover:text-[#203A63]" />
+      </div>
+      <div className="flex min-h-[30px] w-full min-w-0 items-center bg-[#142448] px-3 py-1.5 text-[8px] font-semibold leading-snug text-white">
         {item.secondary ? (
-          <div className="grid grid-cols-[0.82fr_1.18fr] gap-3">
-            <div className="min-w-0">
-              <p className="portal-display whitespace-normal break-words text-[21px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">{item.value}</p>
-              <p className="mt-1 whitespace-normal break-words text-[7px] font-black uppercase leading-relaxed tracking-[.075em] text-[#5D6C83]">{item.label}</p>
-              {item.meta ? <p className="mt-0.5 whitespace-normal break-words text-[6.5px] font-semibold leading-relaxed text-[#8B97A8]">{item.meta}</p> : null}
-            </div>
-            <div className="min-w-0 border-l border-[#E7ECF2] pl-3">
-              <p className="portal-display whitespace-normal break-words text-[21px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">{item.secondary.value}</p>
-              <p className="mt-1 whitespace-normal break-words text-[7px] font-black uppercase leading-relaxed tracking-[.075em] text-[#5D6C83]">{item.secondary.label}</p>
-              {item.secondary.meta ? <p className="mt-0.5 whitespace-normal break-words text-[6.5px] font-semibold leading-relaxed text-[#8B97A8]">{item.secondary.meta}</p> : null}
-            </div>
+          <div className="grid w-full min-w-0 grid-cols-[0.82fr_1.18fr] gap-3">
+            <span className="min-w-0 break-words">{item.meta || "—"}</span>
+            <span className="min-w-0 break-words border-l border-white/25 pl-3">{item.secondary.meta || "—"}</span>
           </div>
         ) : (
-          <>
-            <p className="portal-display whitespace-normal break-words text-[25px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">{item.value}</p>
-            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span className="whitespace-normal break-words text-[7.5px] font-black uppercase leading-relaxed tracking-[.085em] text-[#5D6C83]">{item.label}</span>
-              {item.meta ? <span className="whitespace-normal break-words text-[7px] font-semibold leading-relaxed text-[#8B97A8]">{item.meta}</span> : null}
-            </div>
-          </>
+          <span className="min-w-0 break-words">{item.meta || "—"}</span>
         )}
       </div>
-      <ArrowUpRight className="h-3.5 w-3.5 text-[#A3ADBC] group-hover:text-[#203A63]" />
     </Link>
   );
 }
