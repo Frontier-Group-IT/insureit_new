@@ -1,3 +1,25 @@
+## Implementation update — 2026-10-08 (follow-on)
+
+**IMPLEMENTED ON BRANCH / NOT MERGED OR DEPLOYED:**
+- Customer Add Vehicle UI with owner-scoped mobile-family `create_customer_vehicle_v2` RPC; currently basic registered vehicle fields only.
+- Customer Add Policy UI with owner-scoped `create_customer_external_policy` RPC, current-policy guard, insurer/date validation, policy copy upload to `customer-documents` and `customer_documents` metadata.
+- Start Claim now allows customer-scoped preparation of internal Draft or external self-managed draft via `ensure_self_managed_external_claim_draft`, after policy/vehicle/account membership checks, with active-claim reuse.
+- Customer Web Spot Intimation form: external uses `finalize_self_managed_external_claim_draft`, internal Draft advances to initial-documents-pending using the Customer App’s claim fields, keeping other internal stages Operations-controlled.
+- Nine-stage deep-link navigation under `/customer/claims/[id]/stage/[stage]`; authenticated customer ownership verified for each stage; informational stage detail, not unrestricted milestone writes.
+- Original Customer App hero and footer image blobs copied to `apps/web-portal/public/assets/customer-claim` without alteration.
+
+**STILL NOT COMPLETE / NOT CLAIMED AS FULL MOBILE PARITY:**
+- RC lookup, registered/unregistered add-vehicle variants, class-aware capacity/permit/compliance details and cross-account duplicate handling.
+- Full vehicle manufacturer/insurer logos across claim UI and exact icon parity in every stage.
+- Full Spot Intimation media/voice/photo uploads and document retry handling; add-vehicle policy-in-same-flow.
+- All nine individual stage-specific writable external forms and authorised internal customer document upload flows.
+- Accurate managed/external end-to-end browser validation and real device-size screenshot comparison.
+- Dedicated customer route regressions and GitHub CI verification for these new changes.
+
+**Release boundary:** Do not merge as full feature-complete parity until the remaining workflows are implemented, checks pass, and Customer Web runtime behaviour is verified. No APK/AAB, schema/RLS, Partner/Operations mutation, OTA, merge or deployment in this implementation.
+
+---
+
 # Customer Web Start Claim — Implementation Continuity (2026-10-08)
 
 ## Scope and evidence
