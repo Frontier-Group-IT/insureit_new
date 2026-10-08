@@ -2,6 +2,15 @@ name: Insureit Read-only Playwright Smoke
 
 on:
   workflow_dispatch:
+    inputs:
+      frontend:
+        description: 'Read-only public frontend to test'
+        required: true
+        type: choice
+        default: cloudflare
+        options:
+          - cloudflare
+          - vercel
   pull_request:
     paths:
       - 'tests/playwright/**'
@@ -24,7 +33,7 @@ jobs:
         working-directory: tests/playwright
     env:
       CI: 'true'
-      SMOKE_BASE_URL: https://portal.insureit.in
+      SMOKE_BASE_URL: ${{ (github.event_name == 'workflow_dispatch' && inputs.frontend == 'vercel') && 'https://portal.insureit.in' || 'https://insureit-new.shahdolho.workers.dev' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
