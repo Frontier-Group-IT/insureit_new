@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, CarFront, CheckCircle2, ChevronDown, ClipboardCheck, FilePlus2, Plus, Search, ShieldCheck, Users } from "lucide-react";
 import type { CustomerPolicyRow, CustomerVehicleRow } from "@/lib/customer-web-data";
 import { prepareCustomerClaim } from "@/app/customer/(protected)/start-claim/actions";
+import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
 
 type ClaimIdentity = { id: string; policy_id: string | null; external_policy_id: string | null; current_status: string };
 
@@ -45,7 +46,7 @@ export function CustomerStartClaimSelector({
         <label htmlFor="claim-vehicle-search" className="block text-sm font-black text-[#142D52]">Vehicle number *</label>
         <div className="relative">
           <button type="button" aria-expanded={pickerOpen} onClick={() => setPickerOpen(!pickerOpen)} className="flex min-h-[76px] w-full items-center gap-3 rounded-2xl border border-[#AEC8E7] bg-white p-3 text-left shadow-sm">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#EDF5FF] text-[#174EA6]"><CarFront className="h-6 w-6"/></span>
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#EDF5FF] text-[#174EA6]"><CustomerClaimLogo value={vehicle?.make} size={44}/></span>
             <span className="min-w-0 flex-1"><span className="block truncate text-sm font-black text-[#142746]">{vehicle ? vehicleLabel(vehicle) : "Select a vehicle"}</span><span className="block truncate text-[11px] text-[#74849C]">{vehicle ? [vehicle.make, vehicle.model].filter(Boolean).join(" · ") : "Choose from your linked vehicles"}</span></span>
             <ChevronDown className="h-5 w-5 shrink-0 text-[#244F87]"/>
           </button>
@@ -66,7 +67,7 @@ export function CustomerStartClaimSelector({
         <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-base font-black text-[#132B4F]">Policy details</h2><Link href={{ pathname:"/customer/add-policy", query: { account:accountId, vehicle: vehicleId } }} className="inline-flex items-center gap-1 rounded-xl border border-[#CEDFF3] bg-white px-3 py-2 text-xs font-bold text-[#174EA6]"><Plus className="h-4 w-4"/> Add policy</Link></div>
         {policy ? <div className="rounded-3xl bg-[#0B3884] p-5 text-white shadow-lg">
           <div className="flex items-center justify-between gap-3"><span className="text-[10px] font-extrabold uppercase tracking-widest text-white/75">{policy.source === "external" ? "Self-tracked claim" : "INSUREIT-managed claim"}</span><span className="rounded-full bg-white/15 px-3 py-1 text-[10px] font-bold">{eligibility}</span></div>
-          <div className="mt-4 flex items-center gap-4"><span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-white text-[#164EA0]"><ShieldCheck className="h-7 w-7"/></span><div className="min-w-0"><p className="truncate text-lg font-black tracking-wide">{policy.source === "external" ? policy.policy_no.replace(/(.)(.)/g, "$1•") : policy.policy_no}</p><p className="mt-1 text-xs text-white/80">{policy.insurer_name || "Insurance company"} · {policy.policy_type}</p><p className="mt-1 text-[11px] text-white/75">{policy.start_date} – {policy.end_date}</p></div></div>
+          <div className="mt-4 flex items-center gap-4"><span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-white text-[#164EA0]"><CustomerClaimLogo value={policy.insurer_name} kind="insurer" size={46}/></span><div className="min-w-0"><p className="truncate text-lg font-black tracking-wide">{policy.source === "external" ? policy.policy_no.replace(/(.)(.)/g, "$1•") : policy.policy_no}</p><p className="mt-1 text-xs text-white/80">{policy.insurer_name || "Insurance company"} · {policy.policy_type}</p><p className="mt-1 text-[11px] text-white/75">{policy.start_date} – {policy.end_date}</p></div></div>
         </div> : <div className="rounded-2xl border border-dashed border-[#C9D9EB] bg-white p-8 text-center text-sm text-[#74839A]">No insurance policy is linked to this vehicle.</div>}
       </section>
 
