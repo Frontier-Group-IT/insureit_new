@@ -28,14 +28,14 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
     <Link href={{pathname:`/customer/claims/${claim.id}`,query:{account:account.id}}} className="inline-flex items-center gap-2 text-sm font-bold text-[#245DAB]"><ArrowLeft className="h-4 w-4"/> Claim overview</Link>
     <div className="rounded-xl bg-[#0B3884] p-3 text-white"><p className="text-xs font-bold uppercase tracking-wider text-white/75">{external?"Self-tracked claim":"INSUREIT-managed claim"}</p><div className="mt-2 flex items-center gap-3"><img src={"/assets/customer-claim/stages/"+selected.key+".png"} alt="" className="h-12 w-12 rounded-xl bg-white object-contain p-1"/><h1 className="text-2xl font-black">{selected.label}</h1></div><p className="mt-1 text-sm text-white/80">{claim.claim_no} · {claim.vehicle_no} · {claim.insurer_name}</p></div>
     <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey={selected.key} currentKey={INTERNAL_JOURNEY_STAGES[currentIndex]?.key || "spot_intimation"} completedKeys={INTERNAL_JOURNEY_STAGES.filter((stage,i)=>external?projection?.stages.some(x=>x.key===stage.key&&x.completed):i<(internal_projection?.completedStageCount??0)).map(stage=>stage.key)} />
-    <section className="rounded-xl border bg-white p-3">
-      <h2 className="text-lg font-black text-[#112A50]">{selected.label} status</h2>
+    <section className="rounded-2xl border border-[#DFE8F4] bg-white p-4">
+      <h2 className="text-[17px] font-semibold text-[#071D49]">{selected.key === "spot_intimation" ? "Accident & Spot Intimation Details" : selected.label + " Details"}</h2>
       <p className="mt-2 flex items-center gap-2 text-sm text-[#516683]">{completed?<Check className="h-5 w-5 text-green-600"/>:activeIndex===currentIndex?<Circle className="h-5 w-5 text-blue-500"/>:<LockKeyhole className="h-5 w-5 text-[#8392A6]"/>}{completed?"Completed":activeIndex===currentIndex?"Current stage":"Not completed"}</p>
       {external&&milestone?.details ? <dl className="mt-3 overflow-hidden rounded-lg border text-[11px]">{Object.entries(milestone.details).filter(([,value])=>typeof value==="string"||typeof value==="number").slice(0,12).map(([key,value])=><div key={key} className="grid grid-cols-[minmax(110px,35%)_1fr] border-b last:border-0"><dt className="bg-[#F3F7FC] px-3 py-2 font-bold uppercase text-[#75869A]">{key.replace(/_/g," ")}</dt><dd className="break-words px-3 py-2 font-semibold text-[#172E51]">{String(value)}</dd></div>)}</dl>:null}
       <div className="mt-5 border-t pt-4 text-xs leading-5 text-[#64758C]">{external?"Self-managed stages follow the Customer App's milestone history. Stage changes require the same validation and evidence safeguards as mobile.":"Internal claims are managed by Operations. Customers can review every stage but cannot change Operations-owned statuses."}</div>
     </section>
     {external && claim.claim_service_mode==="self_managed" && claim.assistance_status!=="accepted" && CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key] ? (
-      <form action={saveCustomerExternalStage} className="grid gap-4 rounded-2xl border bg-white p-5 sm:grid-cols-2">
+      <form action={saveCustomerExternalStage} className="grid gap-3 rounded-xl border border-[#DFE8F4] bg-white p-4 sm:grid-cols-2 xl:grid-cols-4">
         <h2 className="text-lg font-black text-[#10213D] sm:col-span-2">Update {selected.label}</h2>
         <input type="hidden" name="account" value={account.id}/>
         <input type="hidden" name="claim" value={claim.id}/>
