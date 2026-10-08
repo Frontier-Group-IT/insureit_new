@@ -133,5 +133,6 @@ export default async function CustomerPoliciesPage({
           </table>
         </div>
       )}
- );
+    </div>
+  );
 }
