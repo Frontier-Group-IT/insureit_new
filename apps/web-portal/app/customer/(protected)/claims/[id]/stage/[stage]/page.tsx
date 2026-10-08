@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import { CUSTOMER_EXTERNAL_STAGE_FIELDS } from "@/lib/customer-claim-stage-fields";
 import { saveCustomerExternalStage } from "./actions";
-import { uploadCustomerClaimDocument } from "./upload-action";
-import { Check, Circle, ArrowLeft, LockKeyhole, FileText } from "lucide-react";
+import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/customer-claim-evidence-workspace";
+import { Check, Circle, ArrowLeft, LockKeyhole } from "lucide-react";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
@@ -52,19 +52,6 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
         <button type="submit" className="rounded-xl bg-[#0B3884] px-5 py-3 text-sm font-black text-white sm:col-span-2">Save {selected.label}</button>
       </form>
     ):null}
-    <section className="rounded-2xl border bg-white p-5"><h2 className="flex items-center gap-2 text-sm font-black text-[#112A50]"><FileText className="h-4 w-4"/> Claim documents</h2><p className="mt-2 text-sm text-[#71829B]">{documents.length} document(s) linked to this claim.</p>
-      <form action={uploadCustomerClaimDocument} className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
-        <input type="hidden" name="account" value={account.id}/><input type="hidden" name="claim" value={claim.id}/><input type="hidden" name="stage" value={selected.key}/>
-        <label className="text-xs font-bold text-[#183251]">Document type
-          <select name="type" required className="mt-1 block w-full rounded-xl border p-3 text-sm">
-            {["RC Copy","Insurance Copy","Driver Licence","GR / Load Bill","Accident Photo","Accident Video","Spot Intimation Attachment","Incident Voice Note","Estimate Copy","Fitness Copy","Spot Report"].map(type=><option key={type}>{type}</option>)}
-          </select>
-        </label>
-        <label className="text-xs font-bold text-[#183251]">File
-          <input type="file" name="file" required accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.mp4,.mov,.webm,.m4a" className="mt-1 block w-full rounded-xl border p-2.5 text-xs"/>
-        </label>
-        <button className="self-end rounded-xl bg-[#164D94] px-5 py-3 text-xs font-black text-white">Upload</button>
-      </form>
-      <p className="mt-2 text-xs text-[#8490A0]">PDF/images/audio up to 5 MB; videos up to 50 MB. Uploaded files remain subject to Operations verification.</p></section>
+    <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key}/>
   </div>;
 }
