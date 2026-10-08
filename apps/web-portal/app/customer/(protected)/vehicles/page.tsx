@@ -86,3 +86,6 @@ export default async function CustomerVehiclesPage({
           </table>
         </div>
       )}
+    </div>
+  );
+}
