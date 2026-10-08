@@ -35,3 +35,17 @@ Date: 2026-10-08
 - **Evidence limitation:** artifact contents/advisory counts not independently extracted in this checkpoint; success of the collection workflow is not a zero-vulnerability assertion. Existing security findings remain OPEN.
 - Existing CI uses `npm install` in the main app verification jobs. The separate assurance workflow now proves `npm ci` works without changing those jobs. Later migration of core jobs to `npm ci` requires independent regression.
 - No merge, deploy, production database action, OTA, APK/AAB or destructive test performed.
+
+
+## Raw audit artifact reviewed — current committed baseline, 2026-10-08
+**Source:** GitHub Actions run 37733095344, artifact 11531035071, three `npm audit --omit=dev --json` workspace reports. These results supersede any inference that the current production/main lock is Critical-free:
+
+| Workspace | Critical | High | Moderate | Total | Critical package |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Web portal | 1 | 12 | 2 | 15 | `next` |
+| Customer app | 1 | 37 | 20 | 58 | `shell-quote` |
+| Partner app | 1 | 58 | 11 | 70 | `shell-quote` |
+
+Web High package names: `brace-expansion`, `braces`, `chokidar`, `fast-glob`, `js-yaml`, `micromatch`, `nanoid`, `postcss`, `sharp`, `source-map-js`, `tailwindcss`, `xlsx`.
+
+**Interpretation:** the earlier 0-Critical candidate was an *unmerged isolated experiment*, not the current GitHub baseline. Audit workspace package counts fluctuate with lockfile resolution, advisory metadata and command context. They indicate review priority, not established exploitability. Production runtime reachability and exposure remain unverified. **Stage 2 remains OPEN and blocks a zero-issue certification.** No dependency package changes were made by PR #2957.
