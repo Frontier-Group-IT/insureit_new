@@ -36,7 +36,7 @@ export default async function AddCustomerPolicy({ searchParams }: { searchParams
     const premium = String(form.get("premium") || "");
     const idv = String(form.get("idv") || "");
     if ([premium,idv].some(v => v !== "" && (!Number.isFinite(Number(v)) || Number(v) < 0))) throw new Error("Invalid monetary value");
-    const { data: created, error } = await (db.rpc as any)("create_customer_external_policy", {
+    const { data: created, error } = await (db.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>)("create_customer_external_policy", {
       p_customer_id: authorized.id,
       p_vehicle_id: vehicleId,
       p_insurance_company_id: insurerId,
