@@ -19,6 +19,6 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - name: Run isolated contract tests
-        run: node --test pocs/firebase-supabase-bridge/identity-contract.test.cjs
+        run: node --test pocs/firebase-supabase-bridge/*.test.cjs
       - name: Typecheck POC without writes
-        run: npx tsc --noEmit --skipLibCheck --target ES2020 --module commonjs pocs/firebase-supabase-bridge/identity-contract.ts
+        run: npx tsc --noEmit --skipLibCheck --target ES2020 --module commonjs pocs/firebase-supabase-bridge/identity-contract.ts pocs/firebase-supabase-bridge/mapping-contract.ts
