@@ -1,3 +1,17 @@
+## 2026-10-08 — Customer Start Claim unexpected Home return / safe OTA activation
+
+- Branch: `fix/customer-ota-safe-activation-start-claim-2026-10-08`.
+- User evidence: Start Claim loads the correct vehicle and active policy, but tapping the vehicle selector sometimes shows the Start Claim loading skeleton again and then lands on Home instead of opening the selector.
+- Exact cause: the global Customer root layout listened to Expo `isUpdatePending` and immediately called `Updates.reloadAsync()` on any route. If an OTA finished downloading while the customer was inside Start Claim, the app bundle reloaded, navigation state was destroyed, and the normal restored-session bootstrap from `app/index.tsx` routed the customer to Home.
+- The Start Claim selector itself contains no Home navigation; its open path only measures the anchor and toggles local `vehicleOpen` state.
+- Fix: automatic OTA reload is now permitted only when the app is still on the safe bootstrap route (`/` or `/index`). A downloaded update can therefore activate during startup, but it cannot reload an active customer workflow such as Start Claim, Report Accident, Policy Detail, Add Vehicle, etc.
+- No vehicle query, policy query, Supabase/RLS, claims logic, account context, or selector UI behavior was changed.
+- Updated `customer-start-claim-ota-regression.mjs` to require the safe-startup gate and forbid a direct Start Claim → Customer Home redirect.
+- Runtime remains Customer `0.3.0`; no native dependency/configuration change and **NO APK/AAB CREATED**.
+- **IMPLEMENTED; PR/CI/MERGE/PRODUCTION OTA/INSTALLED-DEVICE VERIFICATION PENDING.**
+
+---
+
 ## 2026-10-08 — Customer Web claim/create/9-stage parity implementation (PR #2970)
 
 - Branch: `feature/customer-web-start-claim-phase1-2026-10-08`; draft PR #2970; **implemented on branch, NOT MERGED, NOT DEPLOYED, RUNTIME UNVERIFIED**.

@@ -62,8 +62,28 @@ assert.match(claimUploadHelper, /status === 409[\s\S]*already exists/, 'Storage 
 
 assert.match(rootLayout, /Updates\.useUpdates\(\)/, 'Root layout must observe Expo update download state.');
 assert.match(rootLayout, /isUpdatePending/, 'Root layout must detect a downloaded OTA waiting to be activated.');
-assert.match(rootLayout, /Updates\.reloadAsync\(\)/, 'A downloaded startup OTA must be activated without requiring another manual cold launch.');
+assert.match(rootLayout, /Updates\.reloadAsync\(\)/, 'A downloaded startup OTA must still activate automatically at the safe startup boundary.');
 assert.match(rootLayout, /updateReloadRequested/, 'OTA activation must be guarded against duplicate reload requests.');
+assert.match(
+  rootLayout,
+  /const safeStartupRoute = pathname === '\/' \|\| pathname === '\/index';/,
+  'Customer OTA activation must be restricted to the bootstrap route instead of reloading an active customer workflow.',
+);
+assert.match(
+  rootLayout,
+  /!safeStartupRoute\) return;/,
+  'Pending Customer OTA updates must not call reloadAsync while the user is inside Start Claim or another active route.',
+);
+assert.match(
+  rootLayout,
+  /\}, \[isUpdatePending, pathname\]\);/,
+  'Safe OTA activation must reevaluate only when update state or the current route changes.',
+);
+assert.doesNotMatch(
+  startClaim,
+  /router\.(?:replace|push)\(['"]\/customer\/home['"]\)/,
+  'Opening or using Start Claim must never directly redirect the customer back to Home.',
+);
 
 assert.equal(appConfig.version, '0.3.0', 'Customer OTA must remain compatible with production runtime 0.3.0.');
 assert.equal(appConfig.android?.versionCode, 9, 'Customer OTA must remain aligned with production Android versionCode 9.');
