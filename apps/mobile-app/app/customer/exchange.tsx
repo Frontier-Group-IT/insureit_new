@@ -531,8 +531,8 @@ export default function ExchangeMarketplaceScreen() {
     }
 
     const picked = source === 'camera'
-      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.82 })
-      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: false, quality: 0.82 });
+      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.82, base64: true })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: false, quality: 0.82, base64: true });
     if (picked.canceled || !picked.assets[0]) return;
 
     const listingId = savedListingId || await persistDraft(false);
@@ -544,6 +544,7 @@ export default function ExchangeMarketplaceScreen() {
       await uploadExchangePhoto({
         listingId,
         uri: asset.uri,
+        base64: asset.base64,
         label: photos[index].label,
         mimeType: asset.mimeType ?? 'image/jpeg',
         sortOrder: index,
