@@ -127,7 +127,10 @@ assert(!phaseThreeData.includes("exchange_toggle_favorite"), "Customer Web Phase
 assert(phaseThreeServiceRoute.includes("await getCustomerWebSession()"), "Customer service writes must require the authenticated Customer Web session");
 assert(phaseThreeServiceRoute.includes("session.accounts.some"), "Customer service writes must verify the requested Customer account belongs to the session");
 assert(phaseThreeServiceRoute.includes('.eq("customer_id", customerId)'), "Customer service route must scope referenced vehicles/claims to the authorized Customer");
-assert(phaseThreeServiceRoute.includes('from("service_enquiries")'), "Customer Phase 3 services must use the unified service_enquiries workflow");
+assert(
+  phaseThreeServiceRoute.includes('"service_enquiries"') && phaseThreeServiceRoute.includes(".insert("),
+  "Customer Phase 3 services must use the unified service_enquiries workflow",
+);
 assert(!phaseThreeServiceRoute.includes("SUPABASE_SERVICE_ROLE_KEY"), "Customer Phase 3 service writes must not use service-role credentials");
 assert(!phaseThreeServiceRoute.includes("@/lib/partner-web"), "Customer Phase 3 service writes must remain independent from Partner authorization");
 assert(phaseThreeForm.includes('fetch("/customer/services/enquiry"'), "Customer Phase 3 forms must use the isolated Customer service endpoint");
