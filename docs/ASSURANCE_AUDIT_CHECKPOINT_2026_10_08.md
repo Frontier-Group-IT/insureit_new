@@ -21,3 +21,10 @@ Dependency assurance/SBOM/provenance; SAST/secrets current and history; Supabase
 Test evidence: test ID, exact commit/deployment/mobile runtime/DB version, environment, safe test data, steps, expected/actual, artifacts, defect, fix PR, retest, sign-off. No production-destructive tests or PII in evidence. Final management certification follows only once all classes have completed and findings resolved or formally accepted.
 
 **Release guard:** merge only CI-green current branches; record deployment separately from merge. No manual production deployment, DB changes, OTA or APK/AAB without explicit authorization.
+
+
+## Verified merged-baseline GitHub dependency audit (2026-10-08)
+- Source: GitHub Actions dependency assurance run `37740826570`, commit `9ba64b63ed9c6487813a689c0d97af541b2f3588` based on merged Critical patch, artifact `11533563502`, SHA256 `d32be9173e053400db70185c31528d74f5260de16dbebdc07142e9e33a3d741e`.
+- Results (`npm audit --workspace <name> --omit=dev`): **Web: 0 Critical / 10 High / 3 Moderate; Customer: 0 Critical / 34 High / 23 Moderate; Partner: 0 Critical / 55 High / 14 Moderate.** `npm ci --ignore-scripts` and `npm ls --all` passed in GitHub Node 22. Audit groups are package dependency findings, not independently proven exploitable vulnerabilities.
+- Remaining Web Highs: `braces`, `chokidar`, `fast-glob`, `micromatch`, `nanoid`, `postcss`, `sharp`, `source-map-js`, `tailwindcss`, `xlsx`. Prior candidate transitive security overrides should be re-tested on this exact current source before any merge. No global force-upgrade or unverified native migration.
+- Main Critical patch PR #2964 merge is confirmed; live Vercel deployment of the merge commit is **not confirmed** by exact-SHA query. Do not conflate merged with deployed.
