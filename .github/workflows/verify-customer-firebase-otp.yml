@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'apps/mobile-app/lib/firebase-otp-readiness*'
+      - 'apps/mobile-app/lib/firebase-native-phone-flow*'
+      - 'apps/mobile-app/lib/customer-otp-provider.ts'
       - 'docs/CUSTOMER_FIREBASE_OTP_DIRECT_IMPLEMENTATION_2026_10_08.md'
       - '.github/workflows/verify-customer-firebase-otp.yml'
   workflow_dispatch:
@@ -19,5 +21,5 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: node --test apps/mobile-app/lib/firebase-otp-readiness.test.cjs
-      - run: npx tsc --noEmit --skipLibCheck --target ES2020 --module commonjs apps/mobile-app/lib/firebase-otp-readiness.ts
+      - run: node --test apps/mobile-app/lib/firebase-otp-readiness.test.cjs apps/mobile-app/lib/firebase-native-phone-flow.test.cjs
+      - run: npx tsc --noEmit --skipLibCheck --target ES2020 --module commonjs apps/mobile-app/lib/firebase-otp-readiness.ts apps/mobile-app/lib/firebase-native-phone-flow.ts
