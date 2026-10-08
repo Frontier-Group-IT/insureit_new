@@ -25,3 +25,13 @@ Date: 2026-10-08
 - Previous detailed assurance investigation: `security/assurance-stage2-supply-chain-2026-10-07-v5` at `docs/PRODUCTION_ASSURANCE_HANDOFF_2026_10_07.md`. The old branch is diverged and must not be merged directly.
 - **No merge, production deployment, production DB mutation, OTA publication or APK/AAB build authorized.** No destructive production pentest or live customer PII.
 - Distinguish sandbox/candidate results from merged, deployed and independently verified states.
+
+
+## GitHub CI checkpoint — 2026-10-08 (verified)
+- Draft PR [#2957](https://github.com/Frontier-Group-IT/insureit_new/pull/2957) is OPEN and unmerged; candidate SHA `d55cd26ab98d8a164037364d9d0f6ea28dbcc7c2`.
+- GitHub **INSUREIT dependency assurance evidence #1**, run `37733095344`, completed SUCCESS. Its Node 22 job passed `npm ci --ignore-scripts --no-audit --no-fund`, `npm ls --all`, and production dependency audit artifact generation for all three workspaces. This checks the current committed baseline, not the experimental patched candidate.
+- GitHub **Verify web portal #5634**, run `37733095110`, completed SUCCESS on the same SHA.
+- Audit artifact `dependency-assurance-160f865d6a00e7e484688cb3972e4cf3de848f73`, ID `11531035071`, retained until 2026-10-22; checksum `sha256:14d424758146191475351458ca2700a10e36b814c211911ac3fe822cbc5839fc`.
+- **Evidence limitation:** artifact contents/advisory counts not independently extracted in this checkpoint; success of the collection workflow is not a zero-vulnerability assertion. Existing security findings remain OPEN.
+- Existing CI uses `npm install` in the main app verification jobs. The separate assurance workflow now proves `npm ci` works without changing those jobs. Later migration of core jobs to `npm ci` requires independent regression.
+- No merge, deploy, production database action, OTA, APK/AAB or destructive test performed.
