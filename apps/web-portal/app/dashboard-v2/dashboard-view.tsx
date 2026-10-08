@@ -774,67 +774,54 @@ function PolicyIntakeRow({ row }: { row: DashboardIntakeRow }) {
 }
 
 function MetricRail({ item, divided }: { item: RailMetric; divided: boolean }) {
-  if (item.label === "Active policies") {
-    const categories = item.policyBreakdown ? [
-      { label: "Motor", count: item.policyBreakdown.motor, color: "text-emerald-700", dot: "bg-emerald-500", tint: "bg-emerald-50" },
-      { label: "Non-Motor", count: item.policyBreakdown.nonMotor, color: "text-orange-700", dot: "bg-orange-500", tint: "bg-orange-50" },
-      { label: "Life", count: item.policyBreakdown.life, color: "text-yellow-700", dot: "bg-yellow-400", tint: "bg-yellow-50" },
-      { label: "Health", count: item.policyBreakdown.health, color: "text-blue-700", dot: "bg-blue-500", tint: "bg-blue-50" },
-    ] : [];
-    return (
-      <Link prefetch={false} href={item.href} className={`${divided ? "border-t md:border-l md:border-t-0" : ""} group flex min-w-0 flex-col justify-center border-[#E3E9F0] bg-white px-2.5 py-2.5 transition hover:bg-[#FAFBFD]`}>
-        <p className="text-center text-[8px] font-black uppercase tracking-[.075em] text-[#53637A]">Active Policies</p>
-        <p className="portal-display mt-1 text-center text-[25px] font-semibold leading-none tracking-[-.02em] text-[#10213D]">{item.value}</p>
-        {categories.length ? (
-          <div className="mt-2 grid grid-cols-4 gap-1">
-            {categories.map((category) => (
-              <div key={category.label} className="min-w-0 text-center">
-                <div className={`flex min-h-[24px] flex-col items-center justify-center gap-0.5 rounded-sm px-0.5 ${category.tint}`}>
-                  <span className={`h-1 w-3 rounded-full ${category.dot}`} />
-                  <span className={`text-[6px] font-bold leading-tight ${category.color}`}>{category.label}</span>
-                </div>
-                <p className={`mt-1 text-[10px] font-bold tabular-nums leading-none ${category.color}`}>{category.count.toLocaleString("en-IN")}</p>
-              </div>
-            ))}
-          </div>
-        ) : <p className="mt-2 text-center text-[8px] text-[#64748B]">Breakdown unavailable</p>}
-        {item.policyBreakdown?.other ? <p className="mt-1 text-center text-[7px] font-medium text-[#64748B]">Other: {item.policyBreakdown.other.toLocaleString("en-IN")}</p> : null}
-      </Link>
-    );
-  }
+  const isPolicies = item.label === "Active policies";
+  const footer = isPolicies && item.policyBreakdown
+    ? [
+        `${item.policyBreakdown.motor.toLocaleString("en-IN")} Motor`,
+        `${item.policyBreakdown.nonMotor.toLocaleString("en-IN")} Non-Motor`,
+        `${item.policyBreakdown.life.toLocaleString("en-IN")} Life`,
+        `${item.policyBreakdown.health.toLocaleString("en-IN")} Health`,
+        ...(item.policyBreakdown.other ? [`${item.policyBreakdown.other.toLocaleString("en-IN")} Other`] : []),
+      ].join(" · ")
+    : item.meta || "—";
   return (
-    <Link prefetch={false} href={item.href} className={`${divided ? "border-t md:border-l md:border-t-0" : ""} group flex min-w-0 flex-col border-[#E3E9F0] transition hover:brightness-[0.98]`}>
-      <div className="flex min-h-[78px] w-full min-w-0 flex-1 items-center gap-3 bg-white px-4 py-3">
-        <Icon src={item.icon} size={35} />
-        <div className="min-w-0 flex-1">
-          {item.secondary ? (
-            <div className="grid grid-cols-[0.82fr_1.18fr] gap-3">
-              <div className="min-w-0">
-                <p className="portal-display whitespace-normal break-words text-[21px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">{item.value}</p>
-                <p className="mt-1 whitespace-normal break-words text-[7px] font-black uppercase leading-relaxed tracking-[.075em] text-[#5D6C83]">{item.label}</p>
+    <Link
+      prefetch={false}
+      href={item.href}
+      className={`${divided ? "border-t md:border-l md:border-t-0" : ""} group flex h-[128px] min-w-0 flex-col overflow-hidden border-[#E3E9F0] transition hover:brightness-[0.98]`}
+    >
+      <div className="flex h-[60%] min-h-0 flex-col bg-white px-3 py-2">
+        {item.secondary ? (
+          <>
+            <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">Claims</p>
+            <div className="grid min-h-0 flex-1 grid-cols-2 items-center gap-2">
+              <div className="min-w-0 text-center">
+                <p className="portal-display text-[23px] font-semibold leading-none text-[#10213D]">{item.value}</p>
+                <p className="mt-1 text-[8px] font-bold uppercase leading-tight text-[#5D6C83]">{item.label}</p>
               </div>
-              <div className="min-w-0 border-l border-[#E7ECF2] pl-3">
-                <p className="portal-display whitespace-normal break-words text-[21px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">{item.secondary.value}</p>
-                <p className="mt-1 whitespace-normal break-words text-[7px] font-black uppercase leading-relaxed tracking-[.075em] text-[#5D6C83]">{item.secondary.label}</p>
+              <div className="min-w-0 border-l border-[#E7ECF2] text-center">
+                <p className="portal-display text-[23px] font-semibold leading-none text-[#10213D]">{item.secondary.value}</p>
+                <p className="mt-1 text-[8px] font-bold uppercase leading-tight text-[#5D6C83]">{item.secondary.label}</p>
               </div>
             </div>
-          ) : (
-            <>
-              <p className="portal-display whitespace-normal break-words text-[25px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">{item.value}</p>
-              <p className="mt-2 whitespace-normal break-words text-[7.5px] font-black uppercase leading-relaxed tracking-[.085em] text-[#5D6C83]">{item.label}</p>
-            </>
-          )}
-        </div>
-        <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-[#A3ADBC] group-hover:text-[#203A63]" />
+          </>
+        ) : (
+          <>
+            <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">{item.label}</p>
+            <div className="flex min-h-0 flex-1 items-center justify-center">
+              <p className="portal-display text-center text-[27px] font-semibold leading-none tracking-[-.02em] text-[#10213D]">{item.value}</p>
+            </div>
+          </>
+        )}
       </div>
-      <div className="flex min-h-[30px] w-full min-w-0 items-center bg-[#142448] px-3 py-1.5 text-[8px] font-semibold leading-snug text-white">
+      <div className="flex h-[40%] min-h-0 items-center bg-[#142448] px-2.5 text-white">
         {item.secondary ? (
-          <div className="grid w-full min-w-0 grid-cols-[0.82fr_1.18fr] gap-3">
-            <span className="min-w-0 break-words">{item.meta || "—"}</span>
-            <span className="min-w-0 break-words border-l border-white/25 pl-3">{item.secondary.meta || "—"}</span>
+          <div className="grid w-full min-w-0 grid-cols-2 items-center gap-2">
+            <span className="block min-w-0 truncate text-center text-[10px] font-semibold leading-tight" title={item.meta || undefined}>{item.meta || "—"}</span>
+            <span className="block min-w-0 truncate border-l border-white/30 text-center text-[10px] font-semibold leading-tight" title={item.secondary.meta || undefined}>{item.secondary.meta || "—"}</span>
           </div>
         ) : (
-          <span className="min-w-0 break-words">{item.meta || "—"}</span>
+          <span className="block w-full min-w-0 overflow-x-auto whitespace-nowrap text-center text-[10px] font-semibold leading-tight [scrollbar-width:none]" title={footer}>{footer}</span>
         )}
       </div>
     </Link>
