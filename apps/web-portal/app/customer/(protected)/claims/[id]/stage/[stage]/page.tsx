@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
+import { CUSTOMER_EXTERNAL_STAGE_FIELDS } from "@/lib/customer-claim-stage-fields";
+import { saveCustomerExternalStage } from "./actions";
 import { Check, Circle, ArrowLeft, LockKeyhole, FileText } from "lucide-react";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
@@ -32,6 +34,24 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       {external&&milestone?.details ? <dl className="mt-4 grid gap-3 sm:grid-cols-2">{Object.entries(milestone.details).filter(([,value])=>typeof value==="string"||typeof value==="number").slice(0,12).map(([key,value])=><div key={key} className="rounded-xl bg-[#F5F8FC] p-3"><dt className="text-[10px] font-bold uppercase text-[#75869A]">{key.replace(/_/g," ")}</dt><dd className="mt-1 break-words text-sm font-semibold text-[#172E51]">{String(value)}</dd></div>)}</dl>:null}
       <div className="mt-5 border-t pt-4 text-xs leading-5 text-[#64758C]">{external?"Self-managed stages follow the Customer App's milestone history. Stage changes require the same validation and evidence safeguards as mobile.":"Internal claims are managed by Operations. Customers can review every stage but cannot change Operations-owned statuses."}</div>
     </section>
+    {external && claim.claim_service_mode==="self_managed" && claim.assistance_status!=="accepted" && CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key] ? (
+      <form action={saveCustomerExternalStage} className="grid gap-4 rounded-2xl border bg-white p-5 sm:grid-cols-2">
+        <h2 className="text-lg font-black text-[#10213D] sm:col-span-2">Update {selected.label}</h2>
+        <input type="hidden" name="account" value={account.id}/>
+        <input type="hidden" name="claim" value={claim.id}/>
+        <input type="hidden" name="stage" value={selected.key}/>
+        {CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key].map(field=>(
+          <label key={field.key} className="text-sm font-bold text-[#142746]">{field.label}{field.optional?"":" *"}
+            {field.type==="boolean"||field.type==="yesno"?(
+              <select required name={field.key} defaultValue={typeof milestone?.details?.[field.key]==="boolean"?String(milestone.details[field.key]):typeof milestone?.details?.[field.key]==="string"?String(milestone.details[field.key]):""} className="mt-2 block w-full rounded-xl border p-3 text-sm"><option value="">Select</option>{(field.type==="boolean"?[["true","Yes"],["false","No"]]:[["yes","Yes"],["no","No"]]).map(([v,label])=><option value={v} key={v}>{label}</option>)}</select>
+            ):(
+              <input name={field.key} type={field.type} required={!field.optional} maxLength={field.type==="number"?undefined:500} min={field.type==="number"?"0":undefined} step={field.type==="number"?"0.01":undefined} defaultValue={typeof milestone?.details?.[field.key]==="string"||typeof milestone?.details?.[field.key]==="number"?String(milestone.details[field.key]):""} className="mt-2 block w-full rounded-xl border p-3 text-sm"/>
+            )}
+          </label>
+        ))}
+        <button type="submit" className="rounded-xl bg-[#0B3884] px-5 py-3 text-sm font-black text-white sm:col-span-2">Save {selected.label}</button>
+      </form>
+    ):null}
     <section className="rounded-2xl border bg-white p-5"><h2 className="flex items-center gap-2 text-sm font-black text-[#112A50]"><FileText className="h-4 w-4"/> Claim documents</h2><p className="mt-2 text-sm text-[#71829B]">{documents.length} document(s) linked to this claim.</p></section>
   </div>;
 }
