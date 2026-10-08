@@ -62,6 +62,8 @@ The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` 
 
 ### Latest implementation ledger
 
+- **2026-10-08 — Cloudflare browser smoke extension:** draft stacked PR #2999 adds a GET-only unauthenticated dashboard login-gate test for desktop/mobile Chromium on production-connected Cloudflare. **IMPLEMENTED; CI pending; UNMERGED.** Not API/RLS security certification; no credentials, data mutations, deployment, OTA or APK/AAB. See `tests/playwright/specs/public-dashboard-gate.spec.ts`.
+
 - **2026-10-08 — Playwright public reliability Phase 2A:** stacked branch `test/playwright-public-reliability-phase2a-2026-10-08` builds on draft #2983 with repeated public login loading, viewport diagnostics, and uncaught JS-error checks for desktop/mobile Chromium. **IMPLEMENTED; CI/merge UNVERIFIED.** No credentials, state changes, deployment, OTA or APK/AAB. See `tests/playwright/PHASE_2A.md`.
 
 - **2026-10-08 — Read-only Playwright public browser smoke:** draft PR #2983 on `test/playwright-readonly-smoke-2026-10-08` adds isolated desktop/mobile Chromium public-login and reload tests plus artifact-uploading PR/manual CI workflow. **IMPLEMENTED; CI/merge/deployment UNVERIFIED.** No credentials, database writes, production deployment, OTA or APK/AAB. See `tests/playwright/README.md`.
