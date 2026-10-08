@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from "@/lib/auth-server";
 import { getCustomerWebSession } from "@/lib/customer-web";
 import { resolveCustomerWebScope, loadCustomerWebVehicles, loadCustomerWebPolicies } from "@/lib/customer-web-data";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
+import { CustomerPolicySelections } from "@/components/customer-portal/customer-policy-selections";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,8 @@ export default async function AddCustomerPolicy({ searchParams }: { searchParams
     const { account: authorized } = await resolveCustomerWebScope(accountId);
     const vehicleId = String(form.get("vehicle") || "");
     const permittedVehicles = await loadCustomerWebVehicles(authorized.id);
-    if (!permittedVehicles.some(v => v.id === vehicleId)) throw new Error("Vehicle not available to your account");
+    const selectedVehicle = permittedVehicles.find(v => v.id === vehicleId);
+    if (!selectedVehicle) throw new Error("Vehicle not available to your account");
     const rows = await loadCustomerWebPolicies(authorized.id);
     const startDate = String(form.get("start") || "");
     const endDate = String(form.get("end") || "");
@@ -30,6 +32,8 @@ export default async function AddCustomerPolicy({ searchParams }: { searchParams
     const no = String(form.get("number") || "").trim().toUpperCase();
     const kind = String(form.get("type") || "").trim();
     if (!no || !insurerId || !kind) throw new Error("Complete all mandatory policy fields");
+    const allowed = selectedVehicle.vehicle_type === "PCP" || selectedVehicle.vehicle_type === "TWP" ? ["Package","Third Party","SAOD","Bundled","Long Term Package","Long Term Third Party"] : ["Package","Third Party","SAOD"];
+    if (!allowed.includes(kind)) throw new Error("This policy product is not valid for the selected vehicle class");
     const db = await createServerSupabaseClient();
     const insurerCheck = await db.from("insurance_companies").select("id").eq("id", insurerId).maybeSingle();
     if (!insurerCheck.data) throw new Error("Invalid insurance company");
@@ -76,16 +80,11 @@ export default async function AddCustomerPolicy({ searchParams }: { searchParams
     <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/add-policy"/>
     <form action={save} className="grid gap-4 rounded-3xl border border-[#DDE6F2] bg-white p-5 sm:grid-cols-2">
       <input type="hidden" name="account" value={account.id}/>
-      <label className="sm:col-span-2 text-sm font-bold">Vehicle *
-        <select name="vehicle" required defaultValue={q.vehicle && vehicles.some(v=>v.id===q.vehicle) ? q.vehicle : ""} className="mt-2 block w-full rounded-xl border p-3 text-sm">
-          <option value="">Select a vehicle</option>{vehicles.map(v=><option key={v.id} value={v.id} disabled={policies.some(p=>p.vehicle_id===v.id && p.start_date<=new Date().toISOString().slice(0,10) && p.end_date>=new Date().toISOString().slice(0,10))}>{v.vehicle_no} · {v.make} {v.model}</option>)}
-        </select>
-      </label>
+      <CustomerPolicySelections vehicles={vehicles} blocked={policies.filter(p=>p.vehicle_id&&p.start_date<=new Date().toISOString().slice(0,10)&&p.end_date>=new Date().toISOString().slice(0,10)).map(p=>p.vehicle_id as string)} initial={q.vehicle}/>
       <label className="sm:col-span-2 text-sm font-bold">Insurance company *
         <select name="insurer" required className="mt-2 block w-full rounded-xl border p-3 text-sm"><option value="">Select insurer</option>{(companies.data||[]).map(i=><option key={i.id} value={i.id}>{i.name}</option>)}</select>
       </label>
       <label className="text-sm font-bold">Policy number *<input required name="number" maxLength={100} className="mt-2 block w-full rounded-xl border p-3 text-sm"/></label>
-      <label className="text-sm font-bold">Policy type *<select required name="type" className="mt-2 block w-full rounded-xl border p-3 text-sm"><option value="">Select type</option><option>Motor</option><option>Comprehensive</option><option>Third Party</option></select></label>
       <label className="text-sm font-bold">Start date *<input required type="date" name="start" className="mt-2 block w-full rounded-xl border p-3 text-sm"/></label>
       <label className="text-sm font-bold">End date *<input required type="date" name="end" className="mt-2 block w-full rounded-xl border p-3 text-sm"/></label>
       <label className="text-sm font-bold">Premium<input type="number" min="0" step="0.01" name="premium" className="mt-2 block w-full rounded-xl border p-3 text-sm"/></label>
