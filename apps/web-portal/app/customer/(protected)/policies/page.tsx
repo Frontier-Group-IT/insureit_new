@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search, ShieldCheck } from "lucide-react";
+import { Search } from "lucide-react";
 import {
   CustomerAccountTabs,
   CustomerPageHeading,
@@ -65,7 +65,7 @@ export default async function CustomerPoliciesPage({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       <CustomerPageHeading
         eyebrow="My insurance"
         title="Policies"
@@ -110,48 +110,28 @@ export default async function CustomerPoliciesPage({
         </div>
       </div>
 
-      {rows.length === 0 ? (
-        <EmptyCustomerState
-          title={policies.length ? "No matching policies" : "No policies found"}
-          body={policies.length ? "Change your search or status filter." : "Policies linked to this Customer account will appear here."}
-        />
-      ) : (
-        <div className="grid gap-3 lg:grid-cols-2">
-          {rows.map((policy) => {
-            const status = customerPolicyTone(policy.end_date);
-            const statusLabel = status.tone === "due" ? `Due in ${status.days}d` : status.tone;
-            return (
-              <Link
-                key={`${policy.source}:${policy.id}`}
-                href={{ pathname: `/customer/policies/${policy.id}`, query: { account: account.id, source: policy.source } }}
-                className="group overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white shadow-[0_8px_24px_rgba(28,50,82,0.04)] transition hover:-translate-y-0.5 hover:border-[#B9C9DB]"
-              >
-                <div className="h-1 bg-[#174EA6]" />
-                <div className="p-4">
-                  <div className="flex items-start gap-3">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#174EA6]"><ShieldCheck className="h-5 w-5" /></span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="truncate text-[13.5px] font-black text-[#10213D]">{policy.policy_no}</h2>
-                        <StatusPill tone={status.tone}>{statusLabel}</StatusPill>
-                      </div>
-                      <p className="mt-1 truncate text-[10.5px] font-bold text-[#6E7D93]">{policy.insurer_name || "Insurance company"}</p>
-                      <p className="mt-0.5 truncate text-[10px] font-semibold text-[#8B97A8]">{policy.policy_product || policy.policy_type || "Policy"}</p>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-[#F7F9FC] p-3 text-[10px]">
-                    <div><p className="font-bold text-[#8995A8]">Vehicle</p><p className="truncate font-black text-[#35445B]">{policy.vehicle_no || "Non-motor / not linked"}</p></div>
-                    <div><p className="font-bold text-[#8995A8]">Source</p><p className="font-black uppercase text-[#35445B]">{policy.source === "external" ? "External" : "INSUREIT"}</p></div>
-                    <div><p className="font-bold text-[#8995A8]">Valid until</p><p className="font-black text-[#35445B]">{formatCustomerDate(policy.end_date)}</p></div>
-                    <div><p className="font-bold text-[#8995A8]">Premium</p><p className="font-black text-[#35445B]">{formatCustomerMoney(policy.premium_amount)}</p></div>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
+      {rows.l      {rows.length === 0 ? <EmptyCustomerState title="No matching policies" body="Try adjusting your filters." /> : (
+        <div className="overflow-x-auto rounded-xl border border-[#D8E1EC] bg-white">
+          <table className="w-full min-w-[920px] border-collapse text-left text-[11px]">
+            <thead className="bg-[#F1F5FA] text-[10px] font-extrabold uppercase text-[#687991]"><tr>
+              {["Policy no.","Insurer","Vehicle","Product","Source","Valid from","Valid until","Premium","Status",""].map(h=><th key={h} scope="col" className="border-b border-[#DCE5EF] px-3 py-3">{h}</th>)}
+            </tr></thead>
+            <tbody className="divide-y divide-[#E7EDF5]">
+              {rows.map(policy=>{const status=customerPolicyTone(policy.end_date);return <tr key={`${policy.source}:${policy.id}`} className="hover:bg-[#F6F9FE]">
+                <td className="px-3 py-2.5 font-extrabold text-[#133C73]">{policy.policy_no}</td>
+                <td className="max-w-52 truncate px-3 py-2.5 font-semibold text-[#354967]" title={policy.insurer_name||""}>{policy.insurer_name||"—"}</td>
+                <td className="px-3 py-2.5 font-bold">{policy.vehicle_no||"—"}</td>
+                <td className="px-3 py-2.5">{policy.policy_product||policy.policy_type||"—"}</td>
+                <td className="px-3 py-2.5 uppercase">{policy.source==="external"?"External":"INSUREIT"}</td>
+                <td className="px-3 py-2.5 whitespace-nowrap">{formatCustomerDate(policy.start_date)}</td>
+                <td className="px-3 py-2.5 whitespace-nowrap">{formatCustomerDate(policy.end_date)}</td>
+                <td className="px-3 py-2.5 font-semibold">{formatCustomerMoney(policy.premium_amount)}</td>
+                <td className="px-3 py-2.5"><StatusPill tone={status.tone}>{status.tone==="due"?`Due in ${status.days}d`:status.tone}</StatusPill></td>
+                <td className="px-3 py-2.5"><Link href={{pathname:`/customer/policies/${policy.id}`,query:{account:account.id,source:policy.source}}} className="font-extrabold text-[#1754A5] hover:underline">View →</Link></td>
+              </tr>})}
+            </tbody>
+          </table>
         </div>
       )}
-    </div>
-  );
+ );
 }
