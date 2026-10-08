@@ -42,6 +42,11 @@ type ApplicationState = {
   partner_record_id: string | null;
   created_at: string;
 };
+type PartnerRegisterMetrics = {
+  customerCount: number;
+  netPremium: number;
+  payout: number;
+};
 type Filters = {
   search?: string;
   accountStatus?: string;
@@ -125,6 +130,10 @@ export async function IntermediaryRegister({
     if (!linkedApplicationMap.has(related.partner_record_id)) linkedApplicationMap.set(related.partner_record_id, related);
   }
 
+  const partnerMetrics = selectedType === "partner"
+    ? await buildPartnerRegisterMetrics(admin, partnerCountRows, applicationMap)
+    : new Map<string, PartnerRegisterMetrics>();
+
   const count = selectedType ? (() => 0) : await buildRegisterCounter(admin, accessibleIds);
 
   const pageTitle = selectedType === "posp" ? "POSP" : selectedType === "misp" ? "MISP" : selectedType === "partner" ? "Partners" : "Overview";
@@ -156,6 +165,7 @@ export async function IntermediaryRegister({
       const partnerComplete = app?.partner_status === "active_partner";
       const partnerId = displayIdentity(row, app, "partner");
       const linkedLabel = linked ? linkedAccountLabel(linkedType, linked.registration_status) : "Not created";
+      const metrics = app?.partner_record_id ? partnerMetrics.get(app.partner_record_id) : undefined;
       return {
         id: row.id,
         applicationId: row.application_id as string,
@@ -169,9 +179,9 @@ export async function IntermediaryRegister({
         linkedHref: linked ? `/intermediaries/applications/${linked.id}` : null,
         portalAccess: portalAccessLabel(row.portal_access_status),
         partnerStatus: linked ? (linked.registration_status === REGISTERED_STATUS ? "Active" : "Onboarding") : (partnerComplete ? "Active" : partnerStatusLabel(app?.partner_status ?? row.account_status)),
-        customerCount: null,
-        netPremium: null,
-        payout: null,
+        customerCount: metrics?.customerCount ?? (app?.partner_record_id ? 0 : null),
+        netPremium: metrics?.netPremium ?? (app?.partner_record_id ? 0 : null),
+        payout: metrics?.payout ?? (app?.partner_record_id ? 0 : null),
         active: partnerComplete,
         createType: allowedType,
         canCreateLinked: canReview && partnerComplete && !linked,
@@ -263,6 +273,193 @@ function partnerStatusLabel(status: string) { if (status === "active_partner" ||
 function registerFilterHref(base: string, search: string, status: string) { const params = new URLSearchParams(); if (search) params.set("q", search); if (status) params.set("account_status", status); const query = params.toString(); return `${base}${query ? `?${query}` : ""}`; }
 function mobile10(value: string | null | undefined) { const digits = value?.replace(/\D/g, "") ?? ""; return digits.length >= 10 ? digits.slice(-10) : digits || "—"; }
 function textValue(value: unknown) { return typeof value === "string" && value.trim() ? value.trim() : null; }
+
+async function buildPartnerRegisterMetrics(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  rows: IntermediaryRow[],
+  applicationMap: Map<string, ApplicationState>,
+) {
+  const partnerIds = Array.from(new Set(
+    rows
+      .map((row) => applicationMap.get(row.application_id as string)?.partner_record_id)
+      .filter((value): value is string => Boolean(value)),
+  ));
+  const metrics = new Map<string, PartnerRegisterMetrics>(
+    partnerIds.map((partnerId) => [partnerId, { customerCount: 0, netPremium: 0, payout: 0 }]),
+  );
+  if (!partnerIds.length) return metrics;
+
+  const familyByIntermediaryId = new Map<string, string>();
+  const familyByCode = new Map<string, string>();
+  const queryCodes = new Set<string>();
+
+  for (const row of rows) {
+    const partnerId = applicationMap.get(row.application_id as string)?.partner_record_id;
+    if (!partnerId) continue;
+    familyByIntermediaryId.set(row.id, partnerId);
+    if (row.intermediary_code?.trim()) {
+      queryCodes.add(row.intermediary_code.trim());
+      familyByCode.set(row.intermediary_code.trim().toUpperCase(), partnerId);
+    }
+  }
+
+  const onboardingProfiles = await collectChunked<{ id: string; partner_record_id: string | null }>(
+    partnerIds,
+    async (chunk) => {
+      const { data, error } = await admin
+        .from("posp_misp_onboarding_profiles")
+        .select("id,partner_record_id")
+        .in("partner_record_id", chunk);
+      if (error) throw error;
+      return data ?? [];
+    },
+  );
+  const profilePartnerMap = new Map(
+    onboardingProfiles
+      .filter((profile): profile is { id: string; partner_record_id: string } => Boolean(profile.partner_record_id))
+      .map((profile) => [profile.id, profile.partner_record_id]),
+  );
+
+  const profileIds = Array.from(profilePartnerMap.keys());
+  const childIntermediaries = await collectChunked<{
+    id: string;
+    intermediary_code: string | null;
+    onboarding_profile_id: string | null;
+  }>(
+    profileIds,
+    async (chunk) => {
+      const { data, error } = await admin
+        .from("intermediaries")
+        .select("id,intermediary_code,onboarding_profile_id")
+        .in("onboarding_profile_id", chunk)
+        .in("intermediary_type", ["posp", "misp"]);
+      if (error) throw error;
+      return data ?? [];
+    },
+  );
+
+  for (const intermediary of childIntermediaries) {
+    const partnerId = intermediary.onboarding_profile_id ? profilePartnerMap.get(intermediary.onboarding_profile_id) : undefined;
+    if (!partnerId) continue;
+    familyByIntermediaryId.set(intermediary.id, partnerId);
+    if (intermediary.intermediary_code?.trim()) {
+      queryCodes.add(intermediary.intermediary_code.trim());
+      familyByCode.set(intermediary.intermediary_code.trim().toUpperCase(), partnerId);
+    }
+  }
+
+  const intermediaryIds = Array.from(familyByIntermediaryId.keys());
+  const customers = await collectChunked<{ id: string; lead_source_intermediary_id: string | null }>(
+    intermediaryIds,
+    async (chunk) => loadPagedRows(async (from, to) => admin
+      .from("customers")
+      .select("id,lead_source_intermediary_id")
+      .in("lead_source_intermediary_id", chunk)
+      .range(from, to)),
+  );
+  const seenCustomers = new Map<string, Set<string>>();
+  for (const customer of customers) {
+    if (!customer.lead_source_intermediary_id) continue;
+    const partnerId = familyByIntermediaryId.get(customer.lead_source_intermediary_id);
+    if (!partnerId) continue;
+    const seen = seenCustomers.get(partnerId) ?? new Set<string>();
+    seen.add(customer.id);
+    seenCustomers.set(partnerId, seen);
+  }
+  for (const [partnerId, seen] of seenCustomers) {
+    const current = metrics.get(partnerId);
+    if (current) current.customerCount = seen.size;
+  }
+
+  const intermediaryCodes = Array.from(queryCodes);
+  const policies = await collectChunked<{ id: string; intermediary_code: string | null }>(
+    intermediaryCodes,
+    async (chunk) => loadPagedRows(async (from, to) => admin
+      .from("policies")
+      .select("id,intermediary_code")
+      .in("intermediary_code", chunk)
+      .range(from, to)),
+  );
+  const policyPartnerMap = new Map<string, string>();
+  for (const policy of policies) {
+    const code = policy.intermediary_code?.trim().toUpperCase();
+    const partnerId = code ? familyByCode.get(code) : undefined;
+    if (partnerId) policyPartnerMap.set(policy.id, partnerId);
+  }
+
+  const policyIds = Array.from(policyPartnerMap.keys());
+  const premiumRows = await collectChunked<{ policy_id: string; net_premium: number | string | null }>(
+    policyIds,
+    async (chunk) => loadPagedRows(async (from, to) => admin
+      .from("policy_premium_details")
+      .select("policy_id,net_premium")
+      .in("policy_id", chunk)
+      .range(from, to)),
+  );
+  for (const premium of premiumRows) {
+    const partnerId = policyPartnerMap.get(premium.policy_id);
+    const current = partnerId ? metrics.get(partnerId) : undefined;
+    if (!current) continue;
+    current.netPremium += numericValue(premium.net_premium);
+  }
+
+  const payoutRows = await collectChunked<{
+    intermediary_code: string | null;
+    payout_basis: string | null;
+    partner_payout_amount: number | string | null;
+    gross_payout: number | string | null;
+  }>(
+    intermediaryCodes,
+    async (chunk) => loadPagedRows(async (from, to) => admin
+      .from("policy_intermediary_payouts")
+      .select("intermediary_code,payout_basis,partner_payout_amount,gross_payout")
+      .in("intermediary_code", chunk)
+      .range(from, to)),
+  );
+  for (const payoutRow of payoutRows) {
+    const code = payoutRow.intermediary_code?.trim().toUpperCase();
+    const partnerId = code ? familyByCode.get(code) : undefined;
+    const current = partnerId ? metrics.get(partnerId) : undefined;
+    if (!current) continue;
+    current.payout += payoutRow.payout_basis
+      ? numericValue(payoutRow.partner_payout_amount)
+      : numericValue(payoutRow.gross_payout);
+  }
+
+  return metrics;
+}
+
+async function collectChunked<T>(
+  values: string[],
+  loader: (chunk: string[]) => Promise<T[]>,
+  chunkSize = 50,
+) {
+  if (!values.length) return [] as T[];
+  const chunks: string[][] = [];
+  for (let index = 0; index < values.length; index += chunkSize) chunks.push(values.slice(index, index + chunkSize));
+  const pages = await Promise.all(chunks.map((chunk) => loader(chunk)));
+  return pages.flat();
+}
+
+async function loadPagedRows<T>(
+  loader: (from: number, to: number) => Promise<{ data: T[] | null; error: { message: string } | null }>,
+  pageSize = 1000,
+) {
+  const rows: T[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await loader(from, from + pageSize - 1);
+    if (error) throw error;
+    const page = data ?? [];
+    rows.push(...page);
+    if (page.length < pageSize) break;
+  }
+  return rows;
+}
+
+function numericValue(value: number | string | null | undefined) {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
 
 async function buildRegisterCounter(admin: ReturnType<typeof createSupabaseAdminClient>, accessibleIds: string[] | null) {
   let countRequest = admin.from("intermediaries").select("id,intermediary_type,application_id");
