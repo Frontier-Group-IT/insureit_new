@@ -121,3 +121,13 @@ Also audit `can_access_customer` (both overloads), `can_access_profile`, `can_ac
 
 ## 10. Immediate agent briefing (copy/paste)
 > Continue INSUREIT Customer Firebase OTP integration using PR #2979. Read AGENTS.md and handoff. User supplied valid google-services.json for project insureit-customer-auth, Android package com.insureit.mobile. Stop generating extra POCs: configure actual native Firebase SDK and Expo app integration in PR branch, preserve legacy provider until backend identity mapping and all RLS secure; run CI. There is ONLY production Supabase; do not apply migrations/change production auth, merge, deploy, publish OTA, or build APK/AAB without fresh approval. Do not request Android registration again. Report concrete implementation evidence and remaining approval requirements.
+
+
+## 11. UPDATE — Android Firebase configuration committed (2026-10-08)
+- User uploaded `google-services(1).json`, validated that project ID is `insureit-customer-auth`, Android package is `com.insureit.mobile`, Android Firebase app ID is `1:637733440182:android:272f433664571de5293417`.
+- **IMPLEMENTED ON BRANCH, NOT MERGED**: `apps/mobile-app/google-services.json` contains the registered Android Firebase client configuration. This file includes the Android public-client API key, which is not an Admin credential; keep it out of documentation and ensure key restrictions are reviewed.
+- **IMPLEMENTED ON BRANCH, NOT MERGED**: `apps/mobile-app/app.json` references `android.googleServicesFile: './google-services.json'`.
+- Added `pocs/customer-firebase-auth/android-config.test.cjs`, wired into `.github/workflows/verify-customer-firebase-otp.yml` to assert Firebase project/Android package/app ID match. Commit `3affca677867527dcec144521e475d85ed8e32be` (prior commits `d29ae1b3`, `84ebc315`, `e20ee237`).
+- As of this update, GitHub checks #48/#1169/#5820 were running; confirm final results before proceeding.
+- **Still not installed**: `@react-native-firebase/app` and `@react-native-firebase/auth` are not in `apps/mobile-app/package.json` or root `package-lock.json`. Do not add dependencies without regenerating the lockfile; CI uses `npm ci`. Existing Expo binary will not contain native Firebase until a separately approved new build.
+- **Still not wired**: login/signup, Firebase identity mapping and RLS; existing Supabase OTP remains active. Do not confuse adding `google-services.json` with completing authentication.
