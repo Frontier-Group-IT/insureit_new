@@ -251,6 +251,7 @@ export const config = {
     "/development/:path*",
     "/documents/:path*",
     "/employees/:path*",
+    "/exchange/:path*",
     "/insurance-companies/:path*",
     "/intermediaries/:path*",
     "/intermediary-portal/:path*",
