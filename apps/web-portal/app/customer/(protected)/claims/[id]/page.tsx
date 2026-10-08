@@ -81,12 +81,12 @@ export default async function CustomerClaimDetailPage({
 
           <div className="mt-5 space-y-2">
             {journey?.map((stage) => (
-              <div key={stage.key} className={`flex items-center gap-3 rounded-xl border px-3 py-3 ${stage.current ? "border-[#AFC7EA] bg-[#F3F7FD]" : "border-[#E5EAF1] bg-[#FBFCFE]"}`}>
+              <Link key={stage.key} href={{ pathname: `/customer/claims/${claim.id}/stage/${stage.key}`, query: { account: account.id } }} className={`flex items-center gap-3 rounded-xl border px-3 py-3 transition hover:border-[#AFC7EA] ${stage.current ? "border-[#AFC7EA] bg-[#F3F7FD]" : "border-[#E5EAF1] bg-[#FBFCFE]"}`}>
                 <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${stage.complete ? "bg-[#EAF7F0] text-[#0B7A54]" : stage.current ? "bg-[#E7F0FF] text-[#174EA6]" : "bg-[#F0F3F7] text-[#8B97A8]"}`}>
                   {stage.complete ? <Check className="h-4 w-4" /> : stage.current ? <Clock3 className="h-4 w-4" /> : <Circle className="h-3.5 w-3.5" />}
                 </span>
                 <div className="min-w-0 flex-1"><p className="text-[11.5px] font-black text-[#10213D]">{stage.label}</p><p className="mt-0.5 text-[9.5px] font-semibold text-[#8290A3]">{stage.complete ? "Completed" : stage.current ? "Current stage" : "Upcoming"}</p></div>
-              </div>
+              </Link>
             ))}
           </div>
         </section>

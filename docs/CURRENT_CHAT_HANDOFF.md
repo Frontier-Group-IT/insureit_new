@@ -1,3 +1,18 @@
+## 2026-10-08 — Customer Web claim/create/9-stage parity implementation (PR #2970)
+
+- Branch: `feature/customer-web-start-claim-phase1-2026-10-08`; draft PR #2970; **implemented on branch, NOT MERGED, NOT DEPLOYED, RUNTIME UNVERIFIED**.
+- Customer-only protected routes: `/customer/start-claim`, `/customer/add-vehicle`, `/customer/add-policy`, `/customer/spot-intimation`, `/customer/claims/[id]/stage/[stage]`.
+- Vehicle creation uses `create_customer_vehicle_v2` via authenticated Customer RPC with customer-account validation; RC lookup reuses the existing authenticated `/api/customer/rc-lookup` AuthBridge route.
+- External policy creation uses existing `create_customer_external_policy` RPC, class-aware product selection, active-policy prevention, 5 MB copy upload and customer document metadata.
+- Internal managed claim creation prepares a Draft then Spot Intimation advances to `Initial Documents Pending`; external self-tracked claim uses `ensure_self_managed_external_claim_draft` and `finalize_self_managed_external_claim_draft`. No Operations-owned status is editable by later stage forms.
+- Nine-stage customer drilldowns use `INTERNAL_JOURNEY_STAGES`; permitted external self-managed updates use `save_self_managed_milestone` or mobile-matched direct customer milestone upsert for Spot Status/Vehicle Delivery. Stage date, sequencing, role, and ownership validation are enforced.
+- Customer evidence upload to `claim-documents` and `claim_documents` has format/size checks and storage cleanup; no verified document deletion.
+- Exact mobile Start Claim hero/footer and 9 stage icons copied from original blobs; web catalog manufacturer/insurer logos reused.
+- Known gaps to verify before considering release: complete UI parity and all mobile form details, internal/external real-account end-to-end tests, RC errors/registration edge cases, upload RLS/runtime behavior, and customer authorization regressions. GitHub verification must pass latest head. No APK/AAB.
+- Detailed continuity: `docs/CUSTOMER_WEB_START_CLAIM_IMPLEMENTATION_2026_10_08.md`.
+
+---
+
 ## 2026-10-07 — Life/Health issued-policy PayIn/Payout edit popup parity
 
 - Branch: `ui/life-health-edit-commercial-modals-v2-2026-10-07`.

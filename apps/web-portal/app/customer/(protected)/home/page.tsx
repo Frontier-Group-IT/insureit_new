@@ -35,7 +35,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
 
   const actions = [
     { label: "Renewal", href: "/customer/renewals", icon: CalendarClock },
-    { label: "Start claim", href: "/customer/claims", icon: FilePlus2 },
+    { label: "Start claim", href: "/customer/start-claim", icon: FilePlus2 },
     { label: "Exchange", href: "/customer/exchange", icon: RefreshCcw },
     { label: "Get quote", href: "/customer/insurance-quote", icon: BadgeIndianRupee },
     { label: "Pay challan", href: "/customer/e-challan", icon: ReceiptText },
