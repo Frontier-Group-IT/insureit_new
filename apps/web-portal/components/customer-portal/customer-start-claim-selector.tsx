@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CarFront, CheckCircle2, ChevronDown, ClipboardCheck, FilePlus2, Plus, Search, ShieldCheck, Users } from "lucide-react";
 import type { CustomerPolicyRow, CustomerVehicleRow } from "@/lib/customer-web-data";
+import { prepareCustomerClaim } from "@/app/customer/(protected)/start-claim/actions";
 
 type ClaimIdentity = { id: string; policy_id: string | null; external_policy_id: string | null; current_status: string };
 
@@ -72,9 +73,9 @@ export function CustomerStartClaimSelector({
       <div className="grid gap-3 sm:grid-cols-2">
         <Link href={{ pathname:"/customer/support", query: { account:accountId } }} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-[#B6CAE3] bg-white px-4 text-sm font-black text-[#2057A0]"><Users className="h-5 w-5"/> Get Assistance</Link>
         {existingClaim ? <Link href={{ pathname:`/customer/claims/${existingClaim.id}`, query:{account:accountId} }} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-[#0B3884] px-4 text-sm font-black text-white">Continue existing claim <ArrowRight className="h-5 w-5"/></Link>
-        : <div className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-[#E7EEF8] px-4 text-center text-xs font-semibold text-[#63748E]" role="status"><FilePlus2 className="h-5 w-5"/> New claim submission will be available after the secure intake stage is connected.</div>}
+        : <form action={prepareCustomerClaim} className="flex"><input type="hidden" name="account" value={accountId}/><input type="hidden" name="vehicle" value={vehicleId}/><input type="hidden" name="policy" value={policy?.id || ""}/><button type="submit" disabled={!policy || !vehicle} className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#0B3884] px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50">Start Claim <ArrowRight className="h-5 w-5"/></button></form>}
       </div>
-      <p className="text-center text-xs text-[#72819A]">To report an accident now, use the Customer App or contact Support. No claim is created by opening this page.</p>
+      <p className="text-center text-xs text-[#72819A]">Starting a claim prepares an account-scoped draft. Complete Spot Intimation before submitting incident details.</p>
     </div>
   );
 }
