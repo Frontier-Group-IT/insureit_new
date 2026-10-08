@@ -21,6 +21,6 @@ test('creates a separate client and never installs a Supabase Auth session', asy
     return 'firebase-token';
   });
   assert.equal(typeof client.from, 'function');
-  assert.equal((await client.auth.getSession()).data.session, null);
+  await assert.rejects(() => client.auth.getSession(), /accessToken option/);
   assert.equal(calls, 0);
 });
