@@ -4,13 +4,12 @@
  * Firebase implementation cannot be enabled until a native provider, validated
  * identity mapping and authorized data-access client are available.
  */
-import type { SignInWithOtpResponse } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 
 export type CustomerOtpDelivery = 'login' | 'signup';
 export type CustomerOtpSignup = { fullName: string; email?: string };
 export type CustomerOtpProvider = {
-  sendLogin: (phone: string) => Promise<SignInWithOtpResponse['data']>;
+  sendLogin: (phone: string) => Promise<Awaited<ReturnType<typeof supabase.auth.signInWithOtp>>['data']>;
   sendSignup: (phone: string, signup: CustomerOtpSignup) => Promise<SignInWithOtpResponse['data']>;
   verify: (phone: string, token: string) => ReturnType<typeof supabase.auth.verifyOtp>;
 };
