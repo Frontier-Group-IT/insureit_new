@@ -1,0 +1,60 @@
+name: One-time lockfile repair PR 2964
+
+on:
+  pull_request:
+    types: [synchronize]
+    paths:
+      - 'package.json'
+      - 'apps/web-portal/package.json'
+      - '.github/workflows/assurance-lock-repair-pr2964.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair-lock:
+    if: >-
+      github.event.pull_request.number == 2964 &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'security/critical-deps-main-reconciled-2026-10-08'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/critical-deps-main-reconciled-2026-10-08
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Generate and deduplicate npm lock
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm dedupe --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Check all patched versions, install and dependency tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const p=require('./package-lock.json').packages;
+          for(const [path,meta] of Object.entries(p)) {
+            if(/(^|\/)node_modules\/next$/.test(path) && meta.version!=='15.5.27') throw Error('Unpatched Next '+path+' '+meta.version);
+            if(/(^|\/)node_modules\/shell-quote$/.test(path) && meta.version!=='1.11.0') throw Error('Unpatched shell-quote '+path+' '+meta.version);
+          }
+          if(p['node_modules/next']?.version!=='15.5.27') throw Error('Root Next not patched');
+          if(p['node_modules/shell-quote']?.version!=='1.11.0') throw Error('Root shell-quote not patched');
+          NODE
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm ls --all > /tmp/dependency-tree.txt
+      - name: Commit only generated package-lock to this review branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- package-lock.json; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- package-lock.json
+          git commit -m 'security: regenerate verified patched npm lockfile' --only package-lock.json
+          git push origin HEAD:refs/heads/security/critical-deps-main-reconciled-2026-10-08
