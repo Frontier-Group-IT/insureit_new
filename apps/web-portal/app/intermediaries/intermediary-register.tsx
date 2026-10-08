@@ -291,12 +291,16 @@ async function buildPartnerRegisterMetrics(
 
   const familyByIntermediaryId = new Map<string, string>();
   const familyByCode = new Map<string, string>();
+  const queryCodes = new Set<string>();
 
   for (const row of rows) {
     const partnerId = applicationMap.get(row.application_id as string)?.partner_record_id;
     if (!partnerId) continue;
     familyByIntermediaryId.set(row.id, partnerId);
-    if (row.intermediary_code?.trim()) familyByCode.set(row.intermediary_code.trim().toUpperCase(), partnerId);
+    if (row.intermediary_code?.trim()) {
+      queryCodes.add(row.intermediary_code.trim());
+      familyByCode.set(row.intermediary_code.trim().toUpperCase(), partnerId);
+    }
   }
 
   const onboardingProfiles = await collectChunked<{ id: string; partner_record_id: string | null }>(
@@ -338,20 +342,20 @@ async function buildPartnerRegisterMetrics(
     const partnerId = intermediary.onboarding_profile_id ? profilePartnerMap.get(intermediary.onboarding_profile_id) : undefined;
     if (!partnerId) continue;
     familyByIntermediaryId.set(intermediary.id, partnerId);
-    if (intermediary.intermediary_code?.trim()) familyByCode.set(intermediary.intermediary_code.trim().toUpperCase(), partnerId);
+    if (intermediary.intermediary_code?.trim()) {
+      queryCodes.add(intermediary.intermediary_code.trim());
+      familyByCode.set(intermediary.intermediary_code.trim().toUpperCase(), partnerId);
+    }
   }
 
   const intermediaryIds = Array.from(familyByIntermediaryId.keys());
   const customers = await collectChunked<{ id: string; lead_source_intermediary_id: string | null }>(
     intermediaryIds,
-    async (chunk) => {
-      const { data, error } = await admin
-        .from("customers")
-        .select("id,lead_source_intermediary_id")
-        .in("lead_source_intermediary_id", chunk);
-      if (error) throw error;
-      return data ?? [];
-    },
+    async (chunk) => loadPagedRows((from, to) => admin
+      .from("customers")
+      .select("id,lead_source_intermediary_id")
+      .in("lead_source_intermediary_id", chunk)
+      .range(from, to)),
   );
   const seenCustomers = new Map<string, Set<string>>();
   for (const customer of customers) {
@@ -367,17 +371,14 @@ async function buildPartnerRegisterMetrics(
     if (current) current.customerCount = seen.size;
   }
 
-  const intermediaryCodes = Array.from(familyByCode.keys());
+  const intermediaryCodes = Array.from(queryCodes);
   const policies = await collectChunked<{ id: string; intermediary_code: string | null }>(
     intermediaryCodes,
-    async (chunk) => {
-      const { data, error } = await admin
-        .from("policies")
-        .select("id,intermediary_code")
-        .in("intermediary_code", chunk);
-      if (error) throw error;
-      return data ?? [];
-    },
+    async (chunk) => loadPagedRows((from, to) => admin
+      .from("policies")
+      .select("id,intermediary_code")
+      .in("intermediary_code", chunk)
+      .range(from, to)),
   );
   const policyPartnerMap = new Map<string, string>();
   for (const policy of policies) {
@@ -389,14 +390,11 @@ async function buildPartnerRegisterMetrics(
   const policyIds = Array.from(policyPartnerMap.keys());
   const premiumRows = await collectChunked<{ policy_id: string; net_premium: number | string | null }>(
     policyIds,
-    async (chunk) => {
-      const { data, error } = await admin
-        .from("policy_premium_details")
-        .select("policy_id,net_premium")
-        .in("policy_id", chunk);
-      if (error) throw error;
-      return data ?? [];
-    },
+    async (chunk) => loadPagedRows((from, to) => admin
+      .from("policy_premium_details")
+      .select("policy_id,net_premium")
+      .in("policy_id", chunk)
+      .range(from, to)),
   );
   for (const premium of premiumRows) {
     const partnerId = policyPartnerMap.get(premium.policy_id);
@@ -412,14 +410,11 @@ async function buildPartnerRegisterMetrics(
     gross_payout: number | string | null;
   }>(
     intermediaryCodes,
-    async (chunk) => {
-      const { data, error } = await admin
-        .from("policy_intermediary_payouts")
-        .select("intermediary_code,payout_basis,partner_payout_amount,gross_payout")
-        .in("intermediary_code", chunk);
-      if (error) throw error;
-      return data ?? [];
-    },
+    async (chunk) => loadPagedRows((from, to) => admin
+      .from("policy_intermediary_payouts")
+      .select("intermediary_code,payout_basis,partner_payout_amount,gross_payout")
+      .in("intermediary_code", chunk)
+      .range(from, to)),
   );
   for (const payoutRow of payoutRows) {
     const code = payoutRow.intermediary_code?.trim().toUpperCase();
@@ -437,13 +432,28 @@ async function buildPartnerRegisterMetrics(
 async function collectChunked<T>(
   values: string[],
   loader: (chunk: string[]) => Promise<T[]>,
-  chunkSize = 100,
+  chunkSize = 50,
 ) {
   if (!values.length) return [] as T[];
   const chunks: string[][] = [];
   for (let index = 0; index < values.length; index += chunkSize) chunks.push(values.slice(index, index + chunkSize));
   const pages = await Promise.all(chunks.map((chunk) => loader(chunk)));
   return pages.flat();
+}
+
+async function loadPagedRows<T>(
+  loader: (from: number, to: number) => Promise<{ data: T[] | null; error: { message: string } | null }>,
+  pageSize = 1000,
+) {
+  const rows: T[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await loader(from, from + pageSize - 1);
+    if (error) throw error;
+    const page = data ?? [];
+    rows.push(...page);
+    if (page.length < pageSize) break;
+  }
+  return rows;
 }
 
 function numericValue(value: number | string | null | undefined) {
