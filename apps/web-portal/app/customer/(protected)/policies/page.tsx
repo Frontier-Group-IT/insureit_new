@@ -110,7 +110,7 @@ export default async function CustomerPoliciesPage({
         </div>
       </div>
 
-      {rows.l      {rows.length === 0 ? <EmptyCustomerState title="No matching policies" body="Try adjusting your filters." /> : (
+      {rows.length === 0 ? <EmptyCustomerState title="No matching policies" body="Try adjusting your filters." /> : (
         <div className="overflow-x-auto rounded-xl border border-[#D8E1EC] bg-white">
           <table className="w-full min-w-[920px] border-collapse text-left text-[11px]">
             <thead className="bg-[#F1F5FA] text-[10px] font-extrabold uppercase text-[#687991]"><tr>
