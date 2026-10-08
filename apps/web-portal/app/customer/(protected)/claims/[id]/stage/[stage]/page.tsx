@@ -58,21 +58,21 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       )}
     </section>
     {external && claim.claim_service_mode==="self_managed" && claim.assistance_status!=="accepted" && CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key] ? (
-      <form action={saveCustomerExternalStage} className="grid gap-3 rounded-xl border border-[#DFE8F4] bg-white p-4 sm:grid-cols-2 xl:grid-cols-4">
-        <h2 className="text-lg font-black text-[#10213D] sm:col-span-2">Update {selected.label}</h2>
+      <form action={saveCustomerExternalStage} className={`mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3`}>
+        <h2 className="mb-3 text-[14px] font-semibold text-[#071D49]">{selected.label}</h2><div className={`grid gap-3 sm:grid-cols-2 ${selected.key==="work_approval"||selected.key==="payment_encashment"?"lg:grid-cols-5":selected.key==="repair_ri"||selected.key==="delivery_order"?"lg:grid-cols-3":selected.key==="billing"||selected.key==="vehicle_delivery"?"lg:grid-cols-2":"lg:grid-cols-4"}`}>
         <input type="hidden" name="account" value={account.id}/>
         <input type="hidden" name="claim" value={claim.id}/>
         <input type="hidden" name="stage" value={selected.key}/>
         {CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key].map(field=>(
-          <label key={field.key} className="text-sm font-bold text-[#142746]">{field.label}{field.optional?"":" *"}
+          <label key={field.key} className="min-w-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{field.label}{field.optional?"":" *"}
             {field.type==="boolean"||field.type==="yesno"?(
-              <select required name={field.key} defaultValue={typeof milestone?.details?.[field.key]==="boolean"?String(milestone.details[field.key]):typeof milestone?.details?.[field.key]==="string"?String(milestone.details[field.key]):""} className="mt-2 block w-full rounded-xl border p-3 text-sm"><option value="">Select</option>{(field.type==="boolean"?[["true","Yes"],["false","No"]]:[["yes","Yes"],["no","No"]]).map(([v,label])=><option value={v} key={v}>{label}</option>)}</select>
+              <select required name={field.key} defaultValue={typeof milestone?.details?.[field.key]==="boolean"?String(milestone.details[field.key]):typeof milestone?.details?.[field.key]==="string"?String(milestone.details[field.key]):""} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49]"><option value="">Select</option>{(field.type==="boolean"?[["true","Yes"],["false","No"]]:[["yes","Yes"],["no","No"]]).map(([v,label])=><option value={v} key={v}>{label}</option>)}</select>
             ):(
-              <input name={field.key} type={field.type} required={!field.optional} maxLength={field.type==="number"?undefined:500} min={field.type==="number"?"0":undefined} step={field.type==="number"?"0.01":undefined} defaultValue={typeof milestone?.details?.[field.key]==="string"||typeof milestone?.details?.[field.key]==="number"?String(milestone.details[field.key]):""} className="mt-2 block w-full rounded-xl border p-3 text-sm"/>
+              <input name={field.key} type={field.type} required={!field.optional} maxLength={field.type==="number"?undefined:500} min={field.type==="number"?"0":undefined} step={field.type==="number"?"0.01":undefined} defaultValue={typeof milestone?.details?.[field.key]==="string"||typeof milestone?.details?.[field.key]==="number"?String(milestone.details[field.key]):""} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49]"/>
             )}
           </label>
-        ))}
-        <button type="submit" className="rounded-xl bg-[#0B3884] px-5 py-3 text-sm font-black text-white sm:col-span-2">Save {selected.label}</button>
+        ))}</div>
+        <div className="mt-3 flex justify-end"><button type="submit" className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white">Save {selected.label}</button></div>
       </form>
     ):null}
     <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key}/>
