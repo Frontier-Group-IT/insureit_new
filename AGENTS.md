@@ -62,6 +62,9 @@ The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` 
 
 ### Latest implementation ledger
 
+- **2026-10-08 — Critical supply-chain remediation:** PR #2964 **MERGED** at `de397d4f1e6a3028b65f039782780a0c22635927` after Web #5668, Customer #1104, Partner #608 passed. Next 15.5.27 and shell-quote 1.11.0 lockfile validated; **PRODUCTION DEPLOYMENT UNVERIFIED**, residual Highs and third-party VAPT/functional smoke OPEN. Read `docs/ASSURANCE_AUDIT_CHECKPOINT_2026_10_08.md`. No APK/AAB/OTA issued as part of assurance work.
+
+
 - **2026-10-07 — Partner Customer vehicle/policy row cleanup:** branch `ui/partner-customer-vehicle-row-cleanup-2026-10-07`; vehicle make/model/year is explicitly presented as the secondary detail directly below the `NEW-[chassis]`/vehicle number line, and the Motor/category badge is removed from linked policy rows while preserving policy number, expiry/premium and far-right Policy Details action. Queries, navigation and business logic are unchanged. **IMPLEMENTED; PR/CI/merge/production OTA/device verification pending. NO APK/AAB CREATED.**
 
 - **2026-10-07 — Partner Customer detail compact relationship/policy actions:** branch `ui/partner-customer-detail-compact-v2-2026-10-07`; Customer relationship fields are consolidated into the main identity card, the standalone Relationship heading/card is removed, expanded vehicle policy rows no longer repeat insurer name, and Policy Details is a far-right navy action aligned with the vehicle policy toggle pattern. Data loading, routes and business logic are unchanged. **IMPLEMENTED; PR/CI/merge/OTA/device verification pending. NO APK/AAB CREATED.** See `docs/PARTNER_APP_HANDOFF_2026_09_13.md`.
