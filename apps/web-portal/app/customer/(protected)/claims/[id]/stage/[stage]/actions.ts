@@ -78,7 +78,7 @@ export async function saveCustomerExternalStage(form:FormData) {
     if(error)throw new Error("Could not save claim stage");
   }else{
     if(key==="repair_ri")values.ri_required="yes";
-    const {error}=await (db.rpc as any)("save_self_managed_milestone",{
+    const {error}=await (db.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>)("save_self_managed_milestone",{
       p_claim_id:claim.id,p_milestone_key:key,p_details:values,
       p_completed_at:current?.completed_at||new Date().toISOString(),
     });
