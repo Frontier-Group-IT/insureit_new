@@ -58,11 +58,11 @@ export function CustomerStartClaimSelector({
             </div>
           )}
         </div>
-        <p className="text-[11px] text-[#75839A]">Choose a linked vehicle to display its insurance details.</p>
+        <div className="flex items-center justify-between gap-2"><p className="text-[11px] text-[#75839A]">Choose a linked vehicle to display its insurance details.</p><Link href={{ pathname: "/customer/add-vehicle", query: { account: accountId } }} className="inline-flex items-center gap-1 text-xs font-bold text-[#174EA6]"><Plus className="h-4 w-4"/> Add vehicle</Link></div>
       </section>
 
       <section>
-        <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-base font-black text-[#132B4F]">Policy details</h2><Link href={{ pathname:"/customer/policies", query: { account:accountId } }} className="inline-flex items-center gap-1 rounded-xl border border-[#CEDFF3] bg-white px-3 py-2 text-xs font-bold text-[#174EA6]"><Plus className="h-4 w-4"/> View policies</Link></div>
+        <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-base font-black text-[#132B4F]">Policy details</h2><Link href={{ pathname:"/customer/add-policy", query: { account:accountId, vehicle: vehicleId } }} className="inline-flex items-center gap-1 rounded-xl border border-[#CEDFF3] bg-white px-3 py-2 text-xs font-bold text-[#174EA6]"><Plus className="h-4 w-4"/> Add policy</Link></div>
         {policy ? <div className="rounded-3xl bg-[#0B3884] p-5 text-white shadow-lg">
           <div className="flex items-center justify-between gap-3"><span className="text-[10px] font-extrabold uppercase tracking-widest text-white/75">{policy.source === "external" ? "Self-tracked claim" : "INSUREIT-managed claim"}</span><span className="rounded-full bg-white/15 px-3 py-1 text-[10px] font-bold">{eligibility}</span></div>
           <div className="mt-4 flex items-center gap-4"><span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-white text-[#164EA0]"><ShieldCheck className="h-7 w-7"/></span><div className="min-w-0"><p className="truncate text-lg font-black tracking-wide">{policy.source === "external" ? policy.policy_no.replace(/(.)(.)/g, "$1•") : policy.policy_no}</p><p className="mt-1 text-xs text-white/80">{policy.insurer_name || "Insurance company"} · {policy.policy_type}</p><p className="mt-1 text-[11px] text-white/75">{policy.start_date} – {policy.end_date}</p></div></div>
