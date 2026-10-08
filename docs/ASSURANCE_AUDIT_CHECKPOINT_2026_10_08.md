@@ -56,3 +56,10 @@ Web High package names: `brace-expansion`, `braces`, `chokidar`, `fast-glob`, `j
 - Changed only manifests: Web `next` and `eslint-config-next` 15.5.21 → 15.5.27; root `overrides.shell-quote` pinned to 1.11.0. Official Next September 30 security release prescribes 15.5.27; shell-quote CVE-2026-102422 fixed at 1.11.0.
 - **NOT YET COMPLETE:** exact `package-lock.json` still needs npm regeneration and commit, followed by clean `npm ci`, full CI and fresh per-workspace audit evidence. Existing Web / Customer / Partner PR checks started (run IDs 37734557291, 37734557237, 37734557837) but no conclusions recorded here.
 - The audit checkpoint PR #2957 and remediation PR #2959 are separate and both remain unmerged. No runtime/production remediation claimed, and no APK/AAB/OTA/deployment.
+
+
+## Critical patch CI and generated-lock evidence — 2026-10-08
+- Draft PR #2959 manifests applied; GitHub Web #5646, Customer #1091, Partner #596 concluded FAILURE because the committed lockfile was not synchronized. This is a deliberate dependency integrity gate, **not** evidence that application code failed typecheck/build.
+- Customer job successfully generated repair artifact `generated-package-lock-dd6d9aa76b3f86ef2486b68dd66adb325a744165` (ID `11531426082`, 3-day retention). ZIP contained `package-lock.json` (732,971 bytes). Artifact records `node_modules/shell-quote@1.11.0` and workspace-local `apps/web-portal/node_modules/next@15.5.27`, but also root `node_modules/next@15.5.21` — **old Next copy retained**. Do not blindly commit this lock or claim Critical closure without explaining/removing legacy transitive copy with npm and retesting.
+- Old isolated Vercel sandbox stopped (HTTP 410); it cannot be reused. Regenerate and validate a reproducible lock on current branch through a fresh sandbox or approved npm-enabled runner, inspect `npm ls next shell-quote --all`, then commit the exact generated output. Do not hand-edit dependency lock content.
+- No merge, deploy, DB, OTA, APK/AAB. Stage 2 remains OPEN.
