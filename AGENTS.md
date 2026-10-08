@@ -62,6 +62,8 @@ The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` 
 
 ### Latest implementation ledger
 
+- **2026-10-08 — Additional supply-chain High remediation:** PR #2966 **MERGED** as `49700da78e0bc93a181d149276ebd259bbd94c75` after Web #5674, Customer #1108, Partner #612 passed. Resolved transitive `nanoid` to 3.3.18 and `source-map-js` to 1.2.2, generated lockfile Node 22 verified. **MERGED; PRODUCTION DEPLOYMENT UNVERIFIED**, fresh post-merge audit and residual High remediation pending. See `docs/ASSURANCE_AUDIT_CHECKPOINT_2026_10_08.md`. No APK/AAB/OTA.
+
 - **2026-10-08 — Critical supply-chain remediation:** PR #2964 **MERGED** at `de397d4f1e6a3028b65f039782780a0c22635927` after Web #5668, Customer #1104, Partner #608 passed. Next 15.5.27 and shell-quote 1.11.0 lockfile validated; **PRODUCTION DEPLOYMENT UNVERIFIED**, residual Highs and third-party VAPT/functional smoke OPEN. Read `docs/ASSURANCE_AUDIT_CHECKPOINT_2026_10_08.md`. No APK/AAB/OTA issued as part of assurance work.
 
 
