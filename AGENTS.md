@@ -62,6 +62,8 @@ The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` 
 
 ### Latest implementation ledger
 
+- **2026-10-08 — Playwright public reliability Phase 2A:** stacked branch `test/playwright-public-reliability-phase2a-2026-10-08` builds on draft #2983 with repeated public login loading, viewport diagnostics, and uncaught JS-error checks for desktop/mobile Chromium. **IMPLEMENTED; CI/merge UNVERIFIED.** No credentials, state changes, deployment, OTA or APK/AAB. See `tests/playwright/PHASE_2A.md`.
+
 - **2026-10-08 — Read-only Playwright public browser smoke:** draft PR #2983 on `test/playwright-readonly-smoke-2026-10-08` adds isolated desktop/mobile Chromium public-login and reload tests plus artifact-uploading PR/manual CI workflow. **IMPLEMENTED; CI/merge/deployment UNVERIFIED.** No credentials, database writes, production deployment, OTA or APK/AAB. See `tests/playwright/README.md`.
 
 - **2026-10-08 — Production assurance deployment gap verified:** Vercel project `insureit_new`/`prj_OLXA2UB1LwMd0UidP8MNa1O9MLuq` has verified canonical domain `portal.insureit.in`; latest listed READY production deployment source SHA `d3974a94899e1bc2250a00fe1a8baa498b6188e7` predates merged Stage 2 dependency fixes (#2964/#2971/#2973/#2974). **SOURCE MERGED + CI VERIFIED; LIVE DEPLOYMENT UNVERIFIED.** Do not certify live portal issue-free. See `docs/ASSURANCE_AUDIT_CHECKPOINT_2026_10_08.md`; no manual deployment, OTA, APK/AAB in assurance program.
