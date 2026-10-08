@@ -16,7 +16,7 @@ test('mapping remains deny-by-default', () => {
   assert.match(sql, /is_approved AND link\.is_active/);
   assert.match(sql, /verified_phone_at_approval text NOT NULL/);
   assert.match(sql, /verified_phone_at_approval = claims ->> 'phone_number'/);
-  assert.match(sql, /verified_phone_at_approval ~ '\^\[\+\]91/);
+  assert.ok(sql.includes("verified_phone_at_approval ~ '^[+]91"));
   assert.doesNotMatch(sql, /CREATE POLICY/i);
 });
 test('only expected Firebase project is trusted in resolver', () => {
