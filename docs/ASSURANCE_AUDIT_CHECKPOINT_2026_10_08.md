@@ -1,7 +1,27 @@
-# INSUREIT audit readiness — 2026-10-08
+# INSUREIT Production Assurance — third-party readiness checkpoint
+Date: 2026-10-08
 
-Status: incomplete. Stage 2 dependency remediation and CI checks are still pending. The prior detailed handoff remains on branch security/assurance-stage2-supply-chain-2026-10-07-v5.
+**Evidence status: NOT CERTIFIED.** Controlled smoke testing and initial independent VAPT may start, but there is no verified zero-finding conclusion or release sign-off. This checkpoint is a working audit ledger, not the final management report.
 
-Initial third-party testing can begin in a controlled environment. No claim of zero issues or final certification.
+## Evidence already collected
+- Isolated sandbox candidate: Next 15.5.27, SheetJS CE 0.20.3 official package, and compatibility-selected transitive dependency patches.
+- Sandbox tests: clean `npm ci --ignore-scripts --no-audit --no-fund`, `npm ls --all`, Web TypeScript typecheck passed. Note that `--ignore-scripts` is not a complete runtime/build validation.
+- Candidate `npm audit --omit=dev` package counts: Web 0 Critical / 8 High; Customer 0 Critical / 61 High; Partner 0 Critical / 53 High. Findings include transitive and tooling dependencies and do not by themselves prove external exploitability. These numbers are **not** a current-production scan.
+- SheetJS synthetic Accounts reconciliation workbook round-trip preserved hidden metadata sheet, custom properties and editable cells. Full application export/import/preview and negative paths are not yet verified.
+- Next 15.5.27 continues to include nested PostCSS 8.4.31 and Sharp 0.34.5. Both require advisory-specific assessment; do not silently suppress.
+- Web and mobile CI workflows currently run extensive static/regression checks, use Node 22 on GitHub, and install with `npm install`. No native APK/AAB required to exercise the existing Expo web review jobs.
 
-Do not merge or deploy pending verification. Do not build APK/AAB or publish OTA.
+## Unresolved / sequential closure gates
+1. **Stage 2 dependency assurance OPEN.** Generate and commit exact lockfile from current-main source via trusted npm tool, ensure CDN tarball integrity/provenance, run clean `npm ci` on Node 22, full dependency tree, audit/SBOM, all CI regressions, lint, typecheck and build.
+2. Resolve High findings with supported, compatible fixes, or document each exception with package path, source/advisory, attack-surface evidence, owner, compensating controls and expiry. Avoid blind Expo SDK/native runtime changes.
+3. Web smoke (controlled nonproduction accounts): auth/roles/session, policy intake, Accounts XLSX reconciliation, renewals, claims, uploads, reports, notifications and protected routes; record IDs, expected/actual, test data, artifacts, fix/retest.
+4. Customer/Partner mobile smoke: install/runtime and OTA compatibility; login, account switching, fleet/policies/claims, network/commercial screens, upload/resume/offline/session edge cases; test on already available devices/builds **without creating APK/AAB**.
+5. Security testing sequentially: secret scan and SAST, API/authz/BOLA, Supabase RLS/RPC/storage/privilege, file-upload abuse, XSS/CSRF/injection, rate limits, mobile static/runtime, DAST, load/spike/soak, backups/restore/DR, observability and independent retest.
+6. External audit pack: freeze exact web commit/deployment, app runtime/OTA, DB migration; define staging targets, least-privilege role matrix and test accounts, non-PII fixtures, IP/window/traffic limits, exclusions, contacts and incident pause procedure.
+7. Final sign-off requires evidence for each completed class and independent VAPT/retest, with all findings fixed or formally accepted. Never claim issue-free without that proof.
+
+## Branch and authorization safeguards
+- Current successor branch: `security/assurance-audit-readiness-2026-10-08`, based on main.
+- Previous detailed assurance investigation: `security/assurance-stage2-supply-chain-2026-10-07-v5` at `docs/PRODUCTION_ASSURANCE_HANDOFF_2026_10_07.md`. The old branch is diverged and must not be merged directly.
+- **No merge, production deployment, production DB mutation, OTA publication or APK/AAB build authorized.** No destructive production pentest or live customer PII.
+- Distinguish sandbox/candidate results from merged, deployed and independently verified states.
