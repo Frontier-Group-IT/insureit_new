@@ -34,9 +34,9 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
         <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-5">
           {([
             ["Accident Date & Time",claim.accident_at],
-            ["Spot Intimation Date & Time",typeof milestone?.details?.spot_intimation_at==="string"?milestone.details.spot_intimation_at:null],
-            ["Driver Name",milestone?.details?.driver_name],
-            ["Driver Number",milestone?.details?.driver_phone],
+            ["Spot Intimation Date & Time",claim.spot_intimation_at||(typeof milestone?.details?.spot_intimation_at==="string"?milestone.details.spot_intimation_at:null)],
+            ["Driver Name",milestone?.details?.driver_name||(claim.accident_description?.match(/Driver:\\s*([^\\n]+)/)?.[1]??null)],
+            ["Driver Number",milestone?.details?.driver_phone||(claim.accident_description?.match(/Driver phone:\\s*([^\\n]+)/)?.[1]??null)],
             ["Location",claim.accident_location||milestone?.details?.location],
           ] as Array<[string,unknown]>).map(([label,value])=><div key={label} className="min-w-0">
             <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{label}</p>
