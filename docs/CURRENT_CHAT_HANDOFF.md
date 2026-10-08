@@ -1,4 +1,19 @@
-## 2026-10-08 — Customer Web claim/create/9-stage parity implementation (PR #2970)
+## ## 2026-10-08 — Operations Partner Register Customers / Net Premium / Payout population
+
+- Branch: `fix/partner-register-populate-business-columns-2026-10-08`.
+- Root cause: `PartnerRegisterRow` was explicitly populated with `customerCount: null`, `netPremium: null`, and `payout: null`, so the UI correctly rendered `—` for every row.
+- Fix is server-side only; no schema migration is required. The register now resolves each canonical Partner family from the existing Partner intermediary plus linked POSP/MISP profiles, then batches/paginates reads for customers, policies/premium details and payout rows.
+- Customer count uses the canonical `customers.lead_source_intermediary_id` relationship across the full Partner family.
+- Net Premium sums `policy_premium_details.net_premium` for policies attributed to any intermediary code in that family.
+- Payout follows the existing Partner payout rule: use `partner_payout_amount` when `payout_basis` is populated, otherwise legacy `gross_payout`.
+- Active rows with a canonical `partner_record_id` now render zero values when there is genuinely no business; `—` is retained only when the Partner relationship itself is unavailable.
+- A dedicated regression was added to `partner-web:core-regression`; high-volume metric queries are chunked and paged to avoid PostgREST row-cap truncation.
+- Read-only production validation before implementation found 76 active Partners, with non-zero customer data for 37, net premium for 31, and payout for 23, confirming the relationships contain live data. No production mutation was performed.
+- **IMPLEMENTED on branch; PR/CI/merge/deployment pending.**
+
+---
+
+2026-10-08 — Customer Web claim/create/9-stage parity implementation (PR #2970)
 
 - Branch: `feature/customer-web-start-claim-phase1-2026-10-08`; draft PR #2970; **implemented on branch, NOT MERGED, NOT DEPLOYED, RUNTIME UNVERIFIED**.
 - Customer-only protected routes: `/customer/start-claim`, `/customer/add-vehicle`, `/customer/add-policy`, `/customer/spot-intimation`, `/customer/claims/[id]/stage/[stage]`.
