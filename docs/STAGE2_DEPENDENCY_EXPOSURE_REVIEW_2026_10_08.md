@@ -29,3 +29,7 @@ Numbers are *package vulnerability aggregates*, not proven independent attack pa
 - Current low-disruption experimental candidate: `undici@6.28.1` and `compression@1.8.2` root npm overrides. Disposable sandbox terminated (exit 143 / 410) before audit tests completed, so **no passing claim from sandbox**. A Node 22 GitHub clean install/dependency-tree and complete workspace CI must validate before any merge.
 - Stage 2 remains OPEN until every residual High has either a compatible patch and regression evidence or a formal, time-limited, independently reviewable exception.
 - Do not perform production-destructive tests, live credential exfiltration, database changes, OTA publishing, or APK/AAB builds as part of this assessment. Final independent VAPT and full smoke test remain pending.
+
+
+## Final Oct 8 merge-state correction
+The undici/compression sandbox stop noted above was superseded by **GitHub Node 22 success** and merge [PR #2974](https://github.com/Frontier-Group-IT/insureit_new/pull/2974) (`31c0a9a7ef815d825d9d50897a771ed805e7d271`). Both patched versions were required across the generated lockfile; `npm ci`, `npm ls --all`, import contracts, all three application CI and dependency audit succeeded before merge. They are no longer an experimental-only candidate. The remaining npm audit counts are Web 0/5/2, Customer 0/29/23, Partner 0/50/14 (Critical/High/Moderate, artifact 11535467785). Stage 2 remains OPEN for the remaining Tailwind/Expo dependency chains and evidence of reachability.
