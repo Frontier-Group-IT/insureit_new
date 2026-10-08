@@ -1,10 +1,10 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { BadgeCheck, Camera, Clock3, Search, ShieldCheck, Store, XCircle } from "lucide-react";
+import { Camera, Clock3, Search, ShieldCheck, Store, XCircle } from "lucide-react";
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { reviewExchangeListing } from "./actions";
+import { ExchangeReviewPanel } from "./review-panel";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -254,28 +254,12 @@ export default async function ExchangeListingReviewPage({ searchParams }: PagePr
                       </td>
                       <td className="px-4 py-4">
                         {row.status === "pending_review" ? (
-                          <details className="min-w-[245px] rounded-xl border border-[#DFE5ED] bg-[#FBFCFE] p-2.5">
-                            <summary className="cursor-pointer list-none text-[10px] font-black text-[#3156B8]">Review listing</summary>
-                            <form action={reviewExchangeListing} className="mt-3 space-y-2">
-                              <input type="hidden" name="listing_id" value={row.id} />
-                              <label className="flex items-center gap-2 text-[9px] font-bold text-[#536078]">
-                                <input type="checkbox" name="document_verified" value="1" className="h-3.5 w-3.5 rounded border-[#BBC6D6]" />
-                                Documents verified
-                              </label>
-                              <label className="block text-[9px] font-bold text-[#536078]">
-                                Inspection score
-                                <input name="inspection_score" inputMode="numeric" placeholder="Optional 0–100" className="mt-1 h-8 w-full rounded-lg border border-[#DCE3EC] bg-white px-2 text-[10px] font-semibold outline-none focus:border-[#3156B8]" />
-                              </label>
-                              <button name="decision" value="approve" disabled={photos.length < 6} className="flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-[#164BB8] text-[10px] font-black text-white disabled:cursor-not-allowed disabled:bg-[#AEB8C8]">
-                                <BadgeCheck className="h-3.5 w-3.5" /> Approve & publish
-                              </button>
-                              {photos.length < 6 ? <p className="text-[8.5px] font-semibold leading-3 text-[#9A6500]">Approval unlocks after all 6 guided photos are present.</p> : null}
-                              <textarea name="notes" rows={2} placeholder="Rejection reason (required to reject)" className="w-full resize-none rounded-lg border border-[#DCE3EC] bg-white px-2 py-2 text-[9.5px] font-semibold outline-none focus:border-[#B54B5A]" />
-                              <button name="decision" value="reject" className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-[#E6C5CB] bg-[#FFF7F8] text-[9.5px] font-black text-[#A43E50]">
-                                <XCircle className="h-3.5 w-3.5" /> Reject listing
-                              </button>
-                            </form>
-                          </details>
+                          <ExchangeReviewPanel
+                            listingId={row.id}
+                            photoCount={photos.length}
+                            defaultDocumentVerified={row.document_verification_status === "verified"}
+                            defaultInspectionScore={row.inspection_score}
+                          />
                         ) : (
                           <div className="flex items-center gap-2 text-[10px] font-bold text-[#667287]">
                             {row.status === "live" ? <ShieldCheck className="h-4 w-4 text-[#147A55]" /> : <XCircle className="h-4 w-4 text-[#A43E50]" />}
