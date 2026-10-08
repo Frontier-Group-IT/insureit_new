@@ -146,6 +146,20 @@ export async function IntermediaryRegister({
       }, { active: 0, onboarding: 0 })
     : { active: 0, onboarding: 0 };
 
+  // One service-role RPC for all visible partners, rather than three queries per row.
+  // A failed/unapplied migration leaves metrics unavailable instead of showing false zeroes.
+  const partnerBusinessIds = [...new Set(partnerCountRows.map((row) =>
+    applicationMap.get(row.application_id as string)?.partner_record_id
+  ).filter((value): value is string => Boolean(value)))];
+  const { data: partnerBusinessData, error: partnerBusinessError } =
+    selectedType === "partner" && partnerBusinessIds.length
+      ? await admin.rpc("partner_register_business_metrics", { p_partner_ids: partnerBusinessIds })
+      : { data: [], error: null };
+  type PartnerBusinessMetric = { partner_id: string; customer_count: number | string; net_premium: number | string; payout: number | string };
+  const partnerBusinessMap = new Map<string, PartnerBusinessMetric>(
+    ((partnerBusinessData ?? []) as PartnerBusinessMetric[]).map((metric) => [metric.partner_id, metric])
+  );
+
   if (selectedType === "partner") {
     const clientRows: PartnerRegisterRow[] = partnerCountRows.map((row) => {
       const app = applicationMap.get(row.application_id as string);
@@ -155,6 +169,7 @@ export async function IntermediaryRegister({
       const assignedRm = textValue(app?.draft_data?.associate_name) ?? "Not assigned";
       const partnerComplete = app?.partner_status === "active_partner";
       const partnerId = displayIdentity(row, app, "partner");
+      const metric = app?.partner_record_id && !partnerBusinessError ? partnerBusinessMap.get(app.partner_record_id) : undefined;
       const linkedLabel = linked ? linkedAccountLabel(linkedType, linked.registration_status) : "Not created";
       return {
         id: row.id,
@@ -169,9 +184,9 @@ export async function IntermediaryRegister({
         linkedHref: linked ? `/intermediaries/applications/${linked.id}` : null,
         portalAccess: portalAccessLabel(row.portal_access_status),
         partnerStatus: linked ? (linked.registration_status === REGISTERED_STATUS ? "Active" : "Onboarding") : (partnerComplete ? "Active" : partnerStatusLabel(app?.partner_status ?? row.account_status)),
-        customerCount: null,
-        netPremium: null,
-        payout: null,
+        customerCount: metric ? Number(metric.customer_count) : null,
+        netPremium: metric ? Number(metric.net_premium) : null,
+        payout: metric ? Number(metric.payout) : null,
         active: partnerComplete,
         createType: allowedType,
         canCreateLinked: canReview && partnerComplete && !linked,
