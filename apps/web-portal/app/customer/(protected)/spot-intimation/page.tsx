@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarDays, ClipboardCheck, ShieldCheck, CarFront } from "lucide-react";
+import { CalendarDays, ClipboardCheck } from "lucide-react";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail } from "@/lib/customer-web-phase2-data";
 import { createServerSupabaseClient } from "@/lib/auth-server";
