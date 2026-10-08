@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await createServerSupabaseClient();
-    const reviewRpc = supabase.rpc as unknown as (
+    const reviewRpc = supabase.rpc.bind(supabase) as unknown as (
       fn: string,
       args: Record<string, unknown>,
     ) => Promise<{ error: { message?: string } | null }>;
