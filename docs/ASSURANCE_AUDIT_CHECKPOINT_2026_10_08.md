@@ -49,3 +49,10 @@ Date: 2026-10-08
 Web High package names: `brace-expansion`, `braces`, `chokidar`, `fast-glob`, `js-yaml`, `micromatch`, `nanoid`, `postcss`, `sharp`, `source-map-js`, `tailwindcss`, `xlsx`.
 
 **Interpretation:** the earlier 0-Critical candidate was an *unmerged isolated experiment*, not the current GitHub baseline. Audit workspace package counts fluctuate with lockfile resolution, advisory metadata and command context. They indicate review priority, not established exploitability. Production runtime reachability and exposure remain unverified. **Stage 2 remains OPEN and blocks a zero-issue certification.** No dependency package changes were made by PR #2957.
+
+
+## Critical dependency patch work — 2026-10-08
+- Created a **separate**, current-main-based reversible branch `security/assurance-critical-dependencies-2026-10-08` and draft [PR #2959](https://github.com/Frontier-Group-IT/insureit_new/pull/2959), head `861a844d5d347491673b70fd194343855eee11da`.
+- Changed only manifests: Web `next` and `eslint-config-next` 15.5.21 → 15.5.27; root `overrides.shell-quote` pinned to 1.11.0. Official Next September 30 security release prescribes 15.5.27; shell-quote CVE-2026-102422 fixed at 1.11.0.
+- **NOT YET COMPLETE:** exact `package-lock.json` still needs npm regeneration and commit, followed by clean `npm ci`, full CI and fresh per-workspace audit evidence. Existing Web / Customer / Partner PR checks started (run IDs 37734557291, 37734557237, 37734557837) but no conclusions recorded here.
+- The audit checkpoint PR #2957 and remediation PR #2959 are separate and both remain unmerged. No runtime/production remediation claimed, and no APK/AAB/OTA/deployment.
