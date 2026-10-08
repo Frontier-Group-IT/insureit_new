@@ -43,6 +43,7 @@ BEGIN
     JOIN public.profiles AS profile ON profile.id = link.profile_id
     WHERE link.firebase_project_id = 'insureit-customer-auth'
       AND link.firebase_uid = token_sub
+      AND link.verified_phone_at_approval = claims ->> 'phone_number'
       AND link.is_approved AND link.is_active
       AND profile.role::text = 'customer'
       AND profile.is_active
