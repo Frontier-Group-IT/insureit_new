@@ -46,7 +46,7 @@ export default async function CustomerVehicleDetailPage({
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       <Link href={{ pathname: "/customer/vehicles", query: { account: account.id } }} className="inline-flex items-center gap-1 text-[11px] font-black text-[#53627A] hover:text-[#142746]">
         <ArrowLeft className="h-3.5 w-3.5" /> Back to vehicles
       </Link>
@@ -58,20 +58,20 @@ export default async function CustomerVehicleDetailPage({
       />
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/vehicles" />
 
-      <div className="grid gap-4 xl:grid-cols-[1fr_0.8fr]">
-        <section className="rounded-2xl border border-[#DCE4EE] bg-white p-4">
+      <div className="grid gap-3 xl:grid-cols-[1fr_0.8fr]">
+        <section className="rounded-xl border border-[#DCE4EE] bg-white p-3">
           <div className="flex items-center gap-2"><CarFront className="h-4 w-4 text-[#174EA6]" /><h2 className="text-[13px] font-black text-[#10213D]">Vehicle information</h2></div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {details.map(([label, value]) => (
-              <div key={label} className="rounded-xl bg-[#F7F9FC] px-3 py-2.5">
-                <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#8794A7]">{label}</p>
-                <p className="mt-1 break-words text-[11.5px] font-black text-[#35445B]">{value}</p>
+          <div className="mt-3 overflow-hidden rounded-lg border border-[#E2EAF3] text-[11px]">
+            {details.map(([label,value])=>(
+              <div key={label} className="grid grid-cols-[minmax(130px,35%)_1fr] border-b border-[#E7EDF5] last:border-0">
+                <div className="bg-[#F2F6FB] px-3 py-2 font-bold text-[#73829A]">{label}</div>
+                <div className="break-words px-3 py-2 font-semibold text-[#253A5B]">{value}</div>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="rounded-2xl border border-[#DCE4EE] bg-white p-4">
+        <section className="rounded-xl border border-[#DCE4EE] bg-white p-3">
           <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#174EA6]" /><h2 className="text-[13px] font-black text-[#10213D]">Insurance history</h2></div>
           <div className="mt-4 space-y-2">
             {policies.map((policy) => {
