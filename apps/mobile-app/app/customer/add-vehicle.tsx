@@ -373,6 +373,24 @@ export default function AddVehicleScreen() {
     }
     if (error) {
       console.warn('Customer vehicle save failed', error.message);
+      if (isDuplicateVehicleRegistrationError(error)) {
+        const { data: existingVehicles } = await supabase
+          .from('vehicles')
+          .select('id,vehicle_no')
+          .eq('customer_id', target.customer_id)
+          .limit(250);
+        const alreadyInThisAccount = (existingVehicles ?? []).some(
+          (item) => normalizeRc(String(item.vehicle_no ?? '')) === rpcPayload.p_vehicle_no,
+        );
+        setSaving(false);
+        if (alreadyInThisAccount) {
+          return showError('Vehicle already added', 'This vehicle is already added to this account.');
+        }
+        return showError(
+          'Vehicle already linked',
+          'This vehicle is already linked to another customer. Please verify the vehicle details before continuing.',
+        );
+      }
       setSaving(false);
       return showError('Vehicle could not be saved', 'We could not save this vehicle right now. Please try again.');
     }
@@ -728,6 +746,11 @@ async function uploadPolicyCopy(customerId: string, file: PickedPolicyCopy, user
 function defaultPolicyStartDate(endIso: string) { const end = parseDate(endIso); if (!end) return ''; const start = new Date(end.getFullYear() - 1, end.getMonth(), end.getDate()); start.setDate(start.getDate() + 1); return formatIsoDate(start); }
 function defaultPolicyEndDate(startIso: string) { const start = parseDate(startIso); if (!start) return ''; const end = new Date(start.getFullYear() + 1, start.getMonth(), start.getDate()); end.setDate(end.getDate() - 1); return formatIsoDate(end); }
 function isMissingVehicleRpcSignature(error: { code?: string; message?: string } | null | undefined, functionName: string) { const message = error?.message?.toLowerCase() ?? ''; return error?.code === 'PGRST202' || (message.includes(functionName.toLowerCase()) && (message.includes('schema cache') || message.includes('could not find the function'))); }
+function isDuplicateVehicleRegistrationError(error: { code?: string; message?: string; details?: string } | null | undefined) {
+  if (!error) return false;
+  const combined = `${error.message ?? ''} ${error.details ?? ''}`.toLowerCase();
+  return error.code === '23505' && (combined.includes('vehicles_vehicle_no_key') || combined.includes('vehicle_no'));
+}
 function parseDate(value: string) { if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null; const [year, month, day] = value.split('-').map(Number); const parsed = new Date(year, month - 1, day); if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) return null; return parsed; }
 function monthStart(date: Date) { return new Date(date.getFullYear(), date.getMonth(), 1); }
 function buildMonthDays(month: Date) { const first = monthStart(month); const start = new Date(first); start.setDate(first.getDate() - first.getDay()); return Array.from({ length: 42 }, (_, index) => { const date = new Date(start); date.setDate(start.getDate() + index); return { date, inMonth: date.getMonth() === month.getMonth() }; }); }
