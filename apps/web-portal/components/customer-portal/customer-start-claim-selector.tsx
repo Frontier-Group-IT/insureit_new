@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CarFront, CheckCircle2, ChevronDown, ClipboardCheck, FilePlus2, Plus, Search, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, CarFront, CheckCircle2, ChevronDown, Plus, Search, Users } from "lucide-react";
 import type { CustomerPolicyRow, CustomerVehicleRow } from "@/lib/customer-web-data";
 import { prepareCustomerClaim } from "@/app/customer/(protected)/start-claim/actions";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
