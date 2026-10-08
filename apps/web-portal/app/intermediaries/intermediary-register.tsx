@@ -351,7 +351,7 @@ async function buildPartnerRegisterMetrics(
   const intermediaryIds = Array.from(familyByIntermediaryId.keys());
   const customers = await collectChunked<{ id: string; lead_source_intermediary_id: string | null }>(
     intermediaryIds,
-    async (chunk) => loadPagedRows((from, to) => admin
+    async (chunk) => loadPagedRows(async (from, to) => admin
       .from("customers")
       .select("id,lead_source_intermediary_id")
       .in("lead_source_intermediary_id", chunk)
@@ -374,7 +374,7 @@ async function buildPartnerRegisterMetrics(
   const intermediaryCodes = Array.from(queryCodes);
   const policies = await collectChunked<{ id: string; intermediary_code: string | null }>(
     intermediaryCodes,
-    async (chunk) => loadPagedRows((from, to) => admin
+    async (chunk) => loadPagedRows(async (from, to) => admin
       .from("policies")
       .select("id,intermediary_code")
       .in("intermediary_code", chunk)
@@ -390,7 +390,7 @@ async function buildPartnerRegisterMetrics(
   const policyIds = Array.from(policyPartnerMap.keys());
   const premiumRows = await collectChunked<{ policy_id: string; net_premium: number | string | null }>(
     policyIds,
-    async (chunk) => loadPagedRows((from, to) => admin
+    async (chunk) => loadPagedRows(async (from, to) => admin
       .from("policy_premium_details")
       .select("policy_id,net_premium")
       .in("policy_id", chunk)
@@ -410,7 +410,7 @@ async function buildPartnerRegisterMetrics(
     gross_payout: number | string | null;
   }>(
     intermediaryCodes,
-    async (chunk) => loadPagedRows((from, to) => admin
+    async (chunk) => loadPagedRows(async (from, to) => admin
       .from("policy_intermediary_payouts")
       .select("intermediary_code,payout_basis,partner_payout_amount,gross_payout")
       .in("intermediary_code", chunk)
