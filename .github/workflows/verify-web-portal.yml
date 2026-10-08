@@ -193,6 +193,8 @@ jobs:
         run: node --experimental-strip-types scripts/private-voice-training-redaction-regression.ts
       - name: Private voice dataset versioning regression
         run: node --experimental-strip-types scripts/private-voice-dataset-versioning-regression.ts
+      - name: Accounts XLSX 0.20.3 metadata and transaction round-trip regression
+        run: node scripts/sheetjs-xlsx-0203-regression.mjs
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
