@@ -62,6 +62,8 @@ The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` 
 
 ### Latest implementation ledger
 
+- **2026-10-08 — Stage 2 XLSX / PostCSS / Sharp / mobile Node-side transitives:** #2971 MERGED `105d74dd` (SheetJS 0.20.3 and Accounts workbook CI regression); #2973 MERGED `5e7d3306` (PostCSS 8.5.24 and Sharp 0.35.5); #2974 MERGED `31c0a9a7` (undici 6.28.1 and compression 1.8.2). All review-branch Web/Customer/Partner and audit CI checks **PASSED**. Latest audit **0 Critical**, **Web 5 High**, **Customer 29 High**, **Partner 50 High**; Tailwind/Expo High exposure review **OPEN**. No native upgrade, APK/AAB, OTA or manual production deployment. See `docs/ASSURANCE_AUDIT_CHECKPOINT_2026_10_08.md` and `docs/STAGE2_DEPENDENCY_EXPOSURE_REVIEW_2026_10_08.md`. **MERGED; production/device verification pending.**
+
 - **2026-10-08 — Additional supply-chain High remediation:** PR #2966 **MERGED** as `49700da78e0bc93a181d149276ebd259bbd94c75` after Web #5674, Customer #1108, Partner #612 passed. Resolved transitive `nanoid` to 3.3.18 and `source-map-js` to 1.2.2, generated lockfile Node 22 verified. **MERGED; PRODUCTION DEPLOYMENT UNVERIFIED**, fresh post-merge audit and residual High remediation pending. See `docs/ASSURANCE_AUDIT_CHECKPOINT_2026_10_08.md`. No APK/AAB/OTA.
 
 - **2026-10-08 — Critical supply-chain remediation:** PR #2964 **MERGED** at `de397d4f1e6a3028b65f039782780a0c22635927` after Web #5668, Customer #1104, Partner #608 passed. Next 15.5.27 and shell-quote 1.11.0 lockfile validated; **PRODUCTION DEPLOYMENT UNVERIFIED**, residual Highs and third-party VAPT/functional smoke OPEN. Read `docs/ASSURANCE_AUDIT_CHECKPOINT_2026_10_08.md`. No APK/AAB/OTA issued as part of assurance work.
