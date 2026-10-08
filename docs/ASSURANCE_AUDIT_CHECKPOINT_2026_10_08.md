@@ -28,3 +28,13 @@ Test evidence: test ID, exact commit/deployment/mobile runtime/DB version, envir
 - Results (`npm audit --workspace <name> --omit=dev`): **Web: 0 Critical / 10 High / 3 Moderate; Customer: 0 Critical / 34 High / 23 Moderate; Partner: 0 Critical / 55 High / 14 Moderate.** `npm ci --ignore-scripts` and `npm ls --all` passed in GitHub Node 22. Audit groups are package dependency findings, not independently proven exploitable vulnerabilities.
 - Remaining Web Highs: `braces`, `chokidar`, `fast-glob`, `micromatch`, `nanoid`, `postcss`, `sharp`, `source-map-js`, `tailwindcss`, `xlsx`. Prior candidate transitive security overrides should be re-tested on this exact current source before any merge. No global force-upgrade or unverified native migration.
 - Main Critical patch PR #2964 merge is confirmed; live Vercel deployment of the merge commit is **not confirmed** by exact-SHA query. Do not conflate merged with deployed.
+
+
+## Actual merged status — 2026-10-08 after two remediation PRs
+- **Critical fix** [PR #2964](https://github.com/Frontier-Group-IT/insureit_new/pull/2964) merged as `de397d4f1e6a3028b65f039782780a0c22635927`. Web #5668 / Customer #1104 / Partner #608 PASSED.
+- **Assurance evidence and continuity** [PR #2965](https://github.com/Frontier-Group-IT/insureit_new/pull/2965) merged as `6ef1e46cf32191efa18124e55c246d2e39ddd8ba`. Dependency evidence #10 and Web #5669 PASSED. Stale PRs #2957 / #2959 were closed unmerged.
+- **Targeted High fixes** [PR #2966](https://github.com/Frontier-Group-IT/insureit_new/pull/2966) merged as `49700da78e0bc93a181d149276ebd259bbd94c75`. Patched `nanoid` to 3.3.18 and `source-map-js` to 1.2.2, npm-generated lockfile checked on Node 22; final Web #5674 / Customer #1108 / Partner #612 PASSED. Temporary write-enabled lock repair job removed.
+- **Verified current main manifest/lock versions:** Next 15.5.27, shell-quote 1.11.0, nanoid 3.3.18, source-map-js 1.2.2. These are source dependency resolutions, NOT proof of rollout to the live Vercel domain or installed Android applications.
+- Most recent audited baseline **before** PR #2966: Web 0 Critical/10 High/3 Moderate; Customer 0/34/23; Partner 0/55/14. **Re-run npm audit after PR #2966** to establish revised counts; do not predict them.
+- Stage 2 continues with remaining High findings: Web XLSX, Tailwind/build chain, Next nested PostCSS/Sharp, mobile Expo/React Native and upstream chains. Validate attack paths and version-compatibility. No blind Expo native/runtime upgrades or APK/AAB.
+- **Live deployment/OTA/installed-device verification remains unconfirmed.** No manual Vercel production action, database changes, OTA publish or APK/AAB build was initiated by this assurance program.
