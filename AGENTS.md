@@ -62,7 +62,7 @@ The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` 
 
 ### Latest implementation ledger
 
-- **2026-10-08 — Customer Web Start Claim selector phase 1:** branch `feature/customer-web-start-claim-phase1-2026-10-08`; customer-scoped selection, policy preview, existing-claim continuation and Home entry under `/customer`, no claim/vehicle/policy writes yet. **IMPLEMENTED; draft PR/CI/merge/deploy pending. No APK/AAB.** See `docs/CUSTOMER_WEB_START_CLAIM_IMPLEMENTATION_2026_10_08.md`.
+- **2026-10-08 — Customer Web Start Claim, vehicle/policy intake and nine-stage UI WIP:** branch `feature/customer-web-start-claim-phase1-2026-10-08`, draft PR #2970. Added customer-scoped start selector, basic vehicle/policy creation via existing mobile RPCs, policy copy storage, internal/external claim draft and Spot Intimation preparation, nine-stage drilldowns, exact mobile Start Claim art. **IMPLEMENTED ON BRANCH; INCOMPLETE FUNCTIONAL PARITY; CI/review/merge/deploy unverified. NO APK/AAB.** See `docs/CUSTOMER_WEB_START_CLAIM_IMPLEMENTATION_2026_10_08.md`.
 
 - **2026-10-08 — Additional supply-chain High remediation:** PR #2966 **MERGED** as `49700da78e0bc93a181d149276ebd259bbd94c75` after Web #5674, Customer #1108, Partner #612 passed. Resolved transitive `nanoid` to 3.3.18 and `source-map-js` to 1.2.2, generated lockfile Node 22 verified. **MERGED; PRODUCTION DEPLOYMENT UNVERIFIED**, fresh post-merge audit and residual High remediation pending. See `docs/ASSURANCE_AUDIT_CHECKPOINT_2026_10_08.md`. No APK/AAB/OTA.
 
