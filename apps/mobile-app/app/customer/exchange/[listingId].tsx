@@ -114,20 +114,51 @@ export default function ExchangeVehicleDetailScreen() {
       if (!context) throw new Error('No active customer account is selected.');
       setCustomerId(context.customer_id);
 
-      const rows = await getExchangeMarketplaceFeed({ limit: 100 }) as ExchangeFeedWithCover[];
-      const selected = rows.find((row) => row.listing_id === listingId) ?? null;
+      const [rows, detail] = await Promise.all([
+        getExchangeMarketplaceFeed({ limit: 100 }) as Promise<ExchangeFeedWithCover[]>,
+        getExchangeListingDetail(listingId),
+      ]);
+
+      const publicRow = rows.find((row) => row.listing_id === listingId) ?? null;
+      const selected: ExchangeFeedWithCover | null = publicRow ?? (detail ? {
+        listing_id: detail.listing_id,
+        listing_no: detail.listing_no,
+        title: detail.title,
+        category: detail.category,
+        selling_mode: detail.selling_mode,
+        year: detail.year,
+        odometer_km: detail.odometer_km,
+        city: detail.city,
+        state: detail.state,
+        asking_price: detail.asking_price,
+        current_bid: detail.current_bid,
+        bid_count: detail.bid_count,
+        min_bid_increment: detail.min_bid_increment,
+        auction_ends_at: detail.auction_ends_at,
+        owner_verified: detail.owner_verified,
+        documents_verified: detail.documents_verified,
+        inspected: detail.inspected,
+        inspection_score: detail.inspection_score,
+        masked_registration: detail.masked_registration,
+        fuel_type: detail.fuel_type,
+        ownership_count: detail.ownership_count,
+        tyre_condition_percent: detail.tyre_condition_percent,
+        permit_summary: detail.permit_summary,
+        finance_summary: detail.finance_summary,
+        make: detail.make,
+        model: detail.model,
+        vehicle_type: detail.vehicle_type,
+        cover_storage_bucket: null,
+        cover_storage_path: null,
+        cover_url: detail.media.find((item) => item.is_cover)?.signed_url ?? detail.media[0]?.signed_url ?? null,
+        is_favorite: false,
+      } : null);
+
       if (!selected) throw new Error('This Exchange listing is no longer available.');
 
       setVehicle(selected);
-      try {
-        const detail = await getExchangeListingDetail(selected.listing_id);
-        setHealthDetail(detail);
-        setActiveMediaIndex(0);
-      } catch {
-        // Preview environments can temporarily run against production before the
-        // new detail RPC is deployed. Keep the core listing usable in that case.
-        setHealthDetail(null);
-      }
+      setHealthDetail(detail);
+      setActiveMediaIndex(0);
       setSimilar(
         rows
           .filter((row) => row.listing_id !== selected.listing_id && row.category === selected.category)
@@ -259,6 +290,8 @@ export default function ExchangeVehicleDetailScreen() {
   const roadTax = expiryState(healthDetail?.road_tax_expiry_date);
   const permitExpiry = expiryState(healthDetail?.national_permit_expiry_date ?? healthDetail?.local_permit_expiry_date);
   const insurance = expiryState(healthDetail?.insurance?.end_date);
+  const isPublicListing = healthDetail?.status === 'live' || healthDetail?.status === 'deal_in_progress' || healthDetail?.status === 'sold';
+  const isPendingReview = healthDetail?.status === 'pending_review';
 
   const insightRows = [
     vehicle.owner_verified ? 'Owner identity has been verified' : 'Owner verification is still in progress',
@@ -323,6 +356,16 @@ export default function ExchangeVehicleDetailScreen() {
           <Text style={styles.meta}>{km(vehicle.odometer_km)} • {fuel} • {owner}</Text>
           <View style={styles.locationRow}><MaterialCommunityIcons name="map-marker-outline" size={14} color="#758296" /><Text style={styles.locationText}>{location}</Text></View>
         </View>
+
+        {isPendingReview ? (
+          <View style={styles.reviewNotice}>
+            <MaterialCommunityIcons name="clock-outline" size={18} color="#A36A0A" />
+            <View style={styles.flex}>
+              <Text style={styles.reviewNoticeTitle}>Pending review</Text>
+              <Text style={styles.reviewNoticeCopy}>This listing is visible to you while InsureIT reviews it. It will appear publicly in Exchange after approval.</Text>
+            </View>
+          </View>
+        ) : null}
 
         <View style={styles.priceCard}>
           <View style={styles.priceMain}>
@@ -438,46 +481,50 @@ export default function ExchangeVehicleDetailScreen() {
           </View>
         </View>
 
-        <View style={styles.offerSection}>
-          <Text style={styles.sectionEyebrow}>{hasLiveBidding ? 'MANAGED AUCTION' : acceptsOffers ? 'MAKE AN OFFER' : 'FIXED PRICE'}</Text>
-          <Text style={styles.sectionTitle}>
-            {hasLiveBidding ? 'Compete through Exchange' : acceptsOffers ? 'Start a private commercial offer' : 'Interested in this vehicle?'}
-          </Text>
-          <Text style={styles.sectionCopy}>
-            {hasLiveBidding
-              ? `Current bid ${money(Number(vehicle.current_bid))} • ${vehicle.bid_count} bids recorded`
-              : acceptsOffers
-                ? 'Your offer is recorded securely and the seller can review it through Exchange.'
-                : `The seller has listed this vehicle at ${money(Number(vehicle.asking_price))}. Request a managed callback to continue.`}
-          </Text>
-
-          {!isFixedPrice ? (
-            <>
-              <View style={styles.offerAdjuster}>
-                <Pressable onPress={() => setOfferAmount(Math.max(minimumOffer, shownOffer - Number(vehicle.min_bid_increment || 10000)))} style={styles.adjustButton}>
-                  <MaterialCommunityIcons name="minus" size={20} color="#0F1D33" />
-                </Pressable>
-                <View style={styles.offerCenter}>
-                  <Text style={styles.offerLabel}>YOUR {hasLiveBidding ? 'BID' : 'OFFER'}</Text>
-                  <Text style={styles.offerValue}>{money(shownOffer)}</Text>
+        {isPublicListing ? (
+          <View style={styles.offerSection}>
+            <Text style={styles.sectionEyebrow}>{hasLiveBidding ? 'MANAGED AUCTION' : acceptsOffers ? 'MAKE AN OFFER' : 'FIXED PRICE'}</Text>
+            <Text style={styles.sectionTitle}>
+              {hasLiveBidding ? 'Compete through Exchange' : acceptsOffers ? 'Start a private commercial offer' : 'Interested in this vehicle?'}
+            </Text>
+            <Text style={styles.sectionCopy}>
+              {hasLiveBidding
+                ? `Current bid ${money(Number(vehicle.current_bid))} • ${vehicle.bid_count} bids recorded`
+                : acceptsOffers
+                  ? 'Your offer is recorded securely and the seller can review it through Exchange.'
+                  : `The seller has listed this vehicle at ${money(Number(vehicle.asking_price))}. Request a managed callback to continue.`}
+            </Text>
+  
+            {!isFixedPrice ? (
+              <>
+                <View style={styles.offerAdjuster}>
+                  <Pressable onPress={() => setOfferAmount(Math.max(minimumOffer, shownOffer - Number(vehicle.min_bid_increment || 10000)))} style={styles.adjustButton}>
+                    <MaterialCommunityIcons name="minus" size={20} color="#0F1D33" />
+                  </Pressable>
+                  <View style={styles.offerCenter}>
+                    <Text style={styles.offerLabel}>YOUR {hasLiveBidding ? 'BID' : 'OFFER'}</Text>
+                    <Text style={styles.offerValue}>{money(shownOffer)}</Text>
+                  </View>
+                  <Pressable onPress={() => setOfferAmount(shownOffer + Number(vehicle.min_bid_increment || 10000))} style={styles.adjustButton}>
+                    <MaterialCommunityIcons name="plus" size={20} color="#0F1D33" />
+                  </Pressable>
                 </View>
-                <Pressable onPress={() => setOfferAmount(shownOffer + Number(vehicle.min_bid_increment || 10000))} style={styles.adjustButton}>
-                  <MaterialCommunityIcons name="plus" size={20} color="#0F1D33" />
+  
+                <Pressable disabled={busy} onPress={() => void submitOffer()} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed, busy && styles.disabled]}>
+                  <MaterialCommunityIcons name={hasLiveBidding ? 'gavel' : 'handshake-outline'} size={18} color="#FFFFFF" />
+                  <Text style={styles.primaryButtonText}>{hasLiveBidding ? 'Place bid' : 'Submit offer'}</Text>
                 </Pressable>
-              </View>
-
-              <Pressable disabled={busy} onPress={() => void submitOffer()} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed, busy && styles.disabled]}>
-                <MaterialCommunityIcons name={hasLiveBidding ? 'gavel' : 'handshake-outline'} size={18} color="#FFFFFF" />
-                <Text style={styles.primaryButtonText}>{hasLiveBidding ? 'Place bid' : 'Submit offer'}</Text>
-              </Pressable>
-            </>
-          ) : null}
-
-          <Pressable disabled={busy} onPress={() => void requestCallback()} style={({ pressed }) => [isFixedPrice ? styles.primaryButton : styles.secondaryButton, pressed && styles.pressed, busy && styles.disabled]}>
-            <MaterialCommunityIcons name="phone-in-talk-outline" size={17} color={isFixedPrice ? '#FFFFFF' : '#164BB8'} />
-            <Text style={isFixedPrice ? styles.primaryButtonText : styles.secondaryButtonText}>{isFixedPrice ? 'Request seller callback' : 'Request managed callback'}</Text>
-          </Pressable>
-        </View>
+              </>
+            ) : null}
+  
+            <Pressable disabled={busy} onPress={() => void requestCallback()} style={({ pressed }) => [isFixedPrice ? styles.primaryButton : styles.secondaryButton, pressed && styles.pressed, busy && styles.disabled]}>
+              <MaterialCommunityIcons name="phone-in-talk-outline" size={17} color={isFixedPrice ? '#FFFFFF' : '#164BB8'} />
+              <Text style={isFixedPrice ? styles.primaryButtonText : styles.secondaryButtonText}>{isFixedPrice ? 'Request seller callback' : 'Request managed callback'}</Text>
+            </Pressable>
+          </View>
+  
+  
+        ) : null}
 
         {similar.length > 0 ? (
           <View style={styles.similarSection}>
@@ -502,17 +549,20 @@ export default function ExchangeVehicleDetailScreen() {
         ) : null}
       </ScrollView>
 
-      <View style={styles.stickyBar}>
-        <Pressable disabled={busy} onPress={() => void requestCallback()} style={isFixedPrice ? styles.stickyPrimary : styles.stickySecondary}>
-          <MaterialCommunityIcons name="phone-outline" size={18} color={isFixedPrice ? '#FFFFFF' : '#164BB8'} />
-          <Text style={isFixedPrice ? styles.stickyPrimaryText : styles.stickySecondaryText}>{isFixedPrice ? 'Request callback' : 'Callback'}</Text>
-        </Pressable>
-        {!isFixedPrice ? (
-          <Pressable disabled={busy} onPress={() => void submitOffer()} style={styles.stickyPrimary}>
-            <Text style={styles.stickyPrimaryText}>{hasLiveBidding ? 'Place bid' : 'Make offer'}</Text>
+      {isPublicListing ? (
+        <View style={styles.stickyBar}>
+          <Pressable disabled={busy} onPress={() => void requestCallback()} style={isFixedPrice ? styles.stickyPrimary : styles.stickySecondary}>
+            <MaterialCommunityIcons name="phone-outline" size={18} color={isFixedPrice ? '#FFFFFF' : '#164BB8'} />
+            <Text style={isFixedPrice ? styles.stickyPrimaryText : styles.stickySecondaryText}>{isFixedPrice ? 'Request callback' : 'Callback'}</Text>
           </Pressable>
-        ) : null}
-      </View>
+          {!isFixedPrice ? (
+            <Pressable disabled={busy} onPress={() => void submitOffer()} style={styles.stickyPrimary}>
+              <Text style={styles.stickyPrimaryText}>{hasLiveBidding ? 'Place bid' : 'Make offer'}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+  
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -577,6 +627,10 @@ const styles = StyleSheet.create({
   meta: { marginTop: 6, color: '#69778B', fontSize: 10, fontWeight: '700' },
   locationRow: { marginTop: 7, flexDirection: 'row', alignItems: 'center', gap: 4 },
   locationText: { color: '#758296', fontSize: 9.5, fontWeight: '700' },
+
+  reviewNotice: { marginHorizontal: 14, marginTop: 14, borderRadius: 16, padding: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 9, backgroundColor: '#FFF7E8', borderWidth: 1, borderColor: '#F1D59B' },
+  reviewNoticeTitle: { color: '#8A5B00', fontSize: 10.2, fontWeight: '900' },
+  reviewNoticeCopy: { marginTop: 3, color: '#806C45', fontSize: 8.4, lineHeight: 12, fontWeight: '700' },
 
   priceCard: { marginHorizontal: 14, marginTop: 15, borderRadius: 20, padding: 15, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E0E5EC' },
   priceMain: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },

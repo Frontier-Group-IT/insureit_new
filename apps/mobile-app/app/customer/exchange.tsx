@@ -408,6 +408,16 @@ export default function ExchangeMarketplaceScreen() {
     return null;
   }
 
+  function validateListingForSubmission() {
+    const draftValidation = validateSellDraft();
+    if (draftValidation) return draftValidation;
+    const uploadedPhotoCount = photos.filter((photo) => photo.uploaded).length;
+    if (uploadedPhotoCount < photoLabels.length) {
+      return `Add all ${photoLabels.length} guided vehicle photos before submitting. ${uploadedPhotoCount} of ${photoLabels.length} uploaded.`;
+    }
+    return null;
+  }
+
   async function persistDraft(showSuccess = true) {
     if (!customerId || busy) return null;
     const validation = validateSellDraft();
@@ -457,7 +467,7 @@ export default function ExchangeMarketplaceScreen() {
   }
 
   function previewListing() {
-    const validation = validateSellDraft();
+    const validation = validateListingForSubmission();
     if (validation) {
       Alert.alert('Complete listing', validation);
       return;
@@ -467,6 +477,11 @@ export default function ExchangeMarketplaceScreen() {
 
   async function submitListing() {
     setSellPreviewVisible(false);
+    const validation = validateListingForSubmission();
+    if (validation) {
+      Alert.alert('Complete listing', validation);
+      return;
+    }
     const listingId = savedListingId || await persistDraft(false);
     if (!listingId || busy) return;
 
