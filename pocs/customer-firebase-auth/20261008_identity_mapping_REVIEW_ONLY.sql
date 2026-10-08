@@ -56,7 +56,11 @@ BEGIN
 
   -- Preserve normal Supabase Auth user identities; don't cast Firebase
   -- non-UUID subjects via auth.uid().
-  IF token_issuer ~ '^https://[a-z0-9-]+\\.supabase\\.co/auth/v1
+  -- Legacy fallback is restricted to the deployment's own trusted
+  -- Supabase issuer. Update the expected issuer after explicit review.
+  -- A UUID-like subject from an unrelated provider is not sufficient.
+  IF token_issuer = 'https://REPLACE_WITH_OWN_PROJECT.supabase.co/auth/v1'
+     AND token_sub ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' THEN
     RETURN token_sub::uuid;
   END IF;
   RETURN NULL;
@@ -64,28 +68,6 @@ END;
 $function$;
 REVOKE ALL ON FUNCTION public.customer_auth_profile_id() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.customer_auth_profile_id() TO authenticated;
--- This migration deliberately DOES NOT replace existing RLS policies or
--- SECURITY DEFINER RPCs: calling the helper alone does not enable access.
-COMMIT;
-\n     AND token_sub ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}
-    RETURN token_sub::uuid;
-  END IF;
-  RETURN NULL;
-END;
-$function$;
-REVOKE ALL ON FUNCTION public.customer_auth_profile_id() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.customer_auth_profile_id() TO authenticated;
--- This migration deliberately DOES NOT replace existing RLS policies or
--- SECURITY DEFINER RPCs: calling the helper alone does not enable access.
-COMMIT;
- THEN
-    RETURN token_sub::uuid;
-  END IF;
-  RETURN NULL;
-END;
-$function$;
-REVOKE ALL ON FUNCTION public.customer_auth_profile_id() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.customer_auth_profile_id() TO authenticated;
--- This migration deliberately DOES NOT replace existing RLS policies or
--- SECURITY DEFINER RPCs: calling the helper alone does not enable access.
+-- This mapping draft DOES NOT replace RLS policies or customer RPCs.
+-- Placeholder issuer makes the draft non-deployable without explicit review.
 COMMIT;
