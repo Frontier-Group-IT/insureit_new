@@ -116,6 +116,8 @@ export type CustomerClaimRow = {
   insurer_claim_no: string | null;
   current_status: string;
   accident_at: string | null;
+  spot_intimation_at: string | null;
+  accident_description: string | null;
   accident_location: string | null;
   policy_service_source: "sibl" | "external" | null;
   claim_service_mode: "broker_managed" | "self_managed" | null;
