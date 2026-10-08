@@ -1,0 +1,75 @@
+name: INSUREIT dependency assurance evidence
+
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'apps/web-portal/package.json'
+      - 'apps/mobile-app/package.json'
+      - 'apps/partner-app/package.json'
+      - '.github/workflows/assurance-dependency-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: assurance-dependency-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-evidence:
+    name: Lockfile and workspace audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout audited commit
+        uses: actions/checkout@v4
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Validate reproducible lockfile
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Check dependency tree
+        run: npm ls --all > dependency-tree.txt
+      - name: Collect production-dependency advisory reports
+        shell: bash
+        run: |
+          mkdir -p assurance-artifacts
+          for workspace in @insureit/web-portal @insureit/mobile-app @insureit/partner-app; do
+            file="$(echo "$workspace" | sed 's#@insureit/##')"
+            npm audit --workspace "$workspace" --omit=dev --json > "assurance-artifacts/audit-${file}.json" || true
+          done
+          cp dependency-tree.txt assurance-artifacts/dependency-tree.txt
+          node <<'NODE'
+          const fs = require('fs');
+          const names = ['web-portal', 'mobile-app', 'partner-app'];
+          const lines = [
+            '## Dependency assurance evidence (not a release approval)',
+            '',
+            'npm ci and npm ls must pass. Current advisories are reported, not silently treated as remediated.',
+            '',
+            '| Workspace | Critical | High | Moderate | Low |',
+            '| --- | ---: | ---: | ---: | ---: |'
+          ];
+          for (const name of names) {
+            const report = JSON.parse(fs.readFileSync('assurance-artifacts/audit-' + name + '.json', 'utf8'));
+            const count = report.metadata?.vulnerabilities;
+            if (!count) throw new Error('Missing audit metadata for ' + name);
+            lines.push('| ' + name + ' | ' + count.critical + ' | ' + count.high + ' | ' + count.moderate + ' | ' + count.low + ' |');
+          }
+          lines.push('', 'Package counts do not establish runtime exploitability. Resolve or formally review all residual advisories.');
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+          NODE
+      - name: Preserve audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-assurance-${{ github.sha }}
+          path: assurance-artifacts/
+          if-no-files-found: ignore
+          retention-days: 14
