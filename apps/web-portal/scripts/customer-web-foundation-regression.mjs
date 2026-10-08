@@ -29,6 +29,10 @@ const requiredFiles = [
   "app/customer/(protected)/vehicles/[id]/page.tsx",
   "app/customer/(protected)/policies/page.tsx",
   "app/customer/(protected)/policies/[id]/page.tsx",
+  "lib/customer-web-phase2-data.ts",
+  "app/customer/(protected)/renewals/page.tsx",
+  "app/customer/(protected)/claims/page.tsx",
+  "app/customer/(protected)/claims/[id]/page.tsx",
 ];
 
 for (const file of requiredFiles) {
@@ -82,12 +86,35 @@ assert(policyDetailPage.includes("loadCustomerPolicyDetail(account.id, id"), "Po
 assert(vehicleDetailPage.includes('pathname="/customer/vehicles"'), "Vehicle Detail account switching must return to the scoped Vehicles list");
 assert(policyDetailPage.includes('pathname="/customer/policies"'), "Policy Detail account switching must return to the scoped Policies list");
 
+
+const phaseTwoData = read("lib/customer-web-phase2-data.ts");
+const renewalsPage = read("app/customer/(protected)/renewals/page.tsx");
+const claimsPage = read("app/customer/(protected)/claims/page.tsx");
+const claimDetailPage = read("app/customer/(protected)/claims/[id]/page.tsx");
+assert(phaseTwoData.includes("CUSTOMER_RENEWAL_DUE_WINDOW_DAYS = 45"), "Customer Renewals must preserve the 45-day Customer App due window");
+assert(phaseTwoData.includes('from("claims").select("*").eq("customer_id", customerId)'), "Customer Claims must remain customer-id scoped");
+assert(phaseTwoData.includes('from("claim_milestones")'), "Customer Claims must include claim milestone tracking");
+assert(phaseTwoData.includes("projectInternalClaim"), "Customer internal claim journeys must use the shared claim projection");
+assert(!phaseTwoData.includes("createSupabaseAdminClient"), "Customer Phase 2 must not use admin/service-role data access");
+assert(!phaseTwoData.includes("@/lib/partner-web"), "Customer Phase 2 must not depend on Partner authorization");
+assert(!phaseTwoData.includes(".insert("), "Customer Phase 2 data layer must remain read-only");
+assert(!phaseTwoData.includes(".update("), "Customer Phase 2 data layer must remain read-only");
+assert(!phaseTwoData.includes(".delete("), "Customer Phase 2 data layer must remain read-only");
+assert(renewalsPage.includes("resolveCustomerWebScope"), "Customer Renewals must resolve authorized Customer account scope");
+assert(claimsPage.includes("resolveCustomerWebScope"), "Customer Claims must resolve authorized Customer account scope");
+assert(claimDetailPage.includes("loadCustomerClaimDetail(account.id, id)"), "Claim Detail must validate the requested claim inside Customer scope");
+assert(claimDetailPage.includes("@insureit/claim-journey"), "Claim Detail must render the shared internal claim journey");
+assert(!claimsPage.includes("supabase."), "Customer Claims page must use the scoped Customer data layer rather than direct client queries");
+assert(!claimDetailPage.includes("supabase."), "Customer Claim Detail must use the scoped Customer data layer rather than direct client queries");
+
 const navigation = read("components/customer-portal/customer-navigation.tsx");
-assert(navigation.includes('fetch("/api/customer/auth/session", { method: "DELETE" })'), "Customer logout must clear the isolated session API endpoint");
+assert(navigation.includes('fetch("/customer/auth/session", { method: "DELETE" })'), "Customer logout must clear the isolated session API endpoint");
 assert(!navigation.includes('href="/partner'), "Customer navigation must not expose Partner routes");
 assert(!navigation.includes('href="/reports'), "Customer navigation must not expose Operations report routes");
 assert(navigation.includes('href="/customer/vehicles"'), "Customer navigation must expose Phase 1 Vehicles");
 assert(navigation.includes('href="/customer/policies"'), "Customer navigation must expose Phase 1 Policies");
+assert(navigation.includes('href="/customer/renewals"'), "Customer navigation must expose Phase 2 Renewals");
+assert(navigation.includes('href="/customer/claims"'), "Customer navigation must expose Phase 2 Claims");
 
 const portalRoutes = read("lib/portal-routes.ts");
 const middleware = read("middleware.ts");
