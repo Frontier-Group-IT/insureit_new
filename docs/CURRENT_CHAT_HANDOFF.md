@@ -1,14 +1,14 @@
-## 2026-10-09 — Customer App HDFC ERGO policy-card logo runtime fix
+## 2026-10-09 — Customer App HDFC ERGO policy-card logo visibility fix v2
 
-- Branch: `fix/customer-hdfc-ergo-logo`.
-- Investigated external policy for vehicle `MP20ZD1529`: production insurer value is exactly `HDFC ERGO`; existing Customer catalog resolver already normalizes it directly to `hdfcergo`. This was not a database-name/alias issue.
-- Customer App already bundled `assets/catalog/insurers/hdfc-ergo.png`, but the device showed a blank logo tile. The Customer copy was replaced with the known-good Partner App HDFC ERGO asset blob.
-- `PolicySummaryColumn` now uses `Image.onError` and falls back to the existing shield/car icon if any bundled catalog image fails at runtime, preventing a blank white tile.
-- `customer-catalog-logo-regression.mjs` now verifies the Customer HDFC asset is byte-identical to the known-good Partner asset and verifies the runtime fallback contract.
-- Existing insurer mapping/aliases and policy data loading remain unchanged.
+- Branch: `fix/customer-hdfc-ergo-logo-visibility-v2`.
+- Production insurer rows for `HDFC ERGO` / `HDFC ERGO General Insurance Company Limited` currently have `logo_path = null`; the red logo visible in Insurance Company Master is the website built-in fallback, not an uploaded managed-logo object.
+- The first Customer fix copied the Partner HDFC asset, but that asset is white `HDFC ERGO` text on transparency. Because Customer policy cards render logos on a white tile, the image loaded successfully but appeared blank; `Image.onError` could not help because no load error occurred.
+- Customer App `assets/catalog/insurers/hdfc-ergo.png` now uses the exact website asset `apps/web-portal/public/assets/insurers/hdfc-ergo.png`, which has the visible red background.
+- Existing `HDFC ERGO -> hdfcergo` resolver mapping stays unchanged.
+- Existing runtime `Image.onError` fallback remains in place for genuine asset-load failures.
+- `customer-catalog-logo-regression.mjs` now locks Customer HDFC to the website HDFC asset bytes so a transparent/invisible variant cannot silently return.
 - JavaScript/assets-only Customer App change. **NO APK/AAB CREATED OR AUTHORIZED.**
 - **IMPLEMENTED ON BRANCH; PR/CI/MERGE/PRODUCTION OTA/INSTALLED-DEVICE VERIFICATION PENDING.**
-
 ---
 
 ## 2026-10-09 — Customer Individual KYC filesystem-safe document reader
