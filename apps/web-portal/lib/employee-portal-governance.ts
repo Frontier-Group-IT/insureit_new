@@ -171,6 +171,72 @@ async function synchronizePortalIdentity(input: {
   }
 }
 
+export async function governedUpdateEmployeePortalRole(input: {
+  actorProfileId: string;
+  actorRole: AppRole;
+  employeeId: string;
+  nextRole: AppRole;
+}) {
+  const admin = createSupabaseAdminClient();
+  const { employee, profile } = await loadEmployeePortalContext(input.employeeId);
+  if (!profile) throw new Error("This employee does not have portal access yet.");
+  if (input.nextRole === "customer" || input.nextRole === "intermediary") {
+    throw new Error("Select a valid staff portal role.");
+  }
+  if (profile.role === input.nextRole) return { employee, profile, changed: false };
+
+  const roleCount = (profile.role === "super_admin" || profile.role === "it_super_user")
+    ? await activeRoleCount(profile.role)
+    : undefined;
+
+  const guard = evaluateEmployeePortalGovernanceGuard({
+    operation: "change_role",
+    actorProfileId: input.actorProfileId,
+    actorRole: input.actorRole,
+    targetProfileId: profile.id,
+    targetRole: profile.role,
+    assigningRole: input.nextRole,
+    activeTargetRoleCount: roleCount,
+    targetHasExistingProfile: true,
+  });
+  if (!guard.allowed) throw new Error(guard.reason);
+
+  const { data: authResult, error: authReadError } = await admin.auth.admin.getUserById(profile.id);
+  if (authReadError || !authResult.user) throw new Error("Portal authentication role could not be checked.");
+
+  const previousAppMetadata = { ...(authResult.user.app_metadata ?? {}) };
+  const nextAppMetadata = {
+    ...previousAppMetadata,
+    app_role: input.nextRole,
+    employee_id: employee.id,
+  };
+
+  const { error: authUpdateError } = await admin.auth.admin.updateUserById(profile.id, {
+    app_metadata: nextAppMetadata,
+  });
+  if (authUpdateError) throw new Error("Portal authentication role could not be updated.");
+
+  const { error: profileUpdateError } = await admin
+    .from("profiles")
+    .update({ role: input.nextRole, updated_by: input.actorProfileId })
+    .eq("id", profile.id);
+
+  if (profileUpdateError) {
+    await admin.auth.admin.updateUserById(profile.id, { app_metadata: previousAppMetadata });
+    throw new Error("Portal profile role could not be synchronized. The authentication role was restored.");
+  }
+
+  await writeLifecycleAudit({
+    actorProfileId: input.actorProfileId,
+    employeeId: employee.id,
+    action: "employee_portal_role_changed",
+    oldData: { profile_id: profile.id, role: profile.role },
+    newData: { profile_id: profile.id, role: input.nextRole },
+  });
+
+  return { employee, profile: { ...profile, role: input.nextRole }, changed: true };
+}
+
 export async function governedSetEmployeePortalStatus(input: {
   actorProfileId: string;
   actorRole: AppRole;
