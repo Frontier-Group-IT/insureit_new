@@ -18,6 +18,7 @@ on:
       - 'apps/mobile-app/lib/firebase-document-client.ts'
       - 'apps/mobile-app/app.json'
       - 'docs/CUSTOMER_FIREBASE_OTP_DIRECT_IMPLEMENTATION_2026_10_08.md'
+      - 'docs/CUSTOMER_FIREBASE_OTP_AGENT_HANDOFF_2026_10_08.md'
       - '.github/workflows/verify-customer-firebase-otp.yml'
   workflow_dispatch:
 permissions:
