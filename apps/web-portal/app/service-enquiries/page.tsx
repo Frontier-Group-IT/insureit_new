@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AppShell } from "@/components/shell";
+import EnquiryInstantFilters from "./instant-filters";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { accessRank, getEffectivePermissionAccessMap } from "@/lib/effective-permissions";
 import { updateServiceEnquiryStatus } from "./actions";
@@ -112,30 +113,12 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
   return (
     <AppShell title="Service Enquiries">
       <header className="flex min-w-0 items-center gap-3 overflow-x-auto border border-[#DCE4F0] bg-white px-4 py-3 [scrollbar-width:thin]">
-        <span aria-hidden="true" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#17365C] text-xl text-white">☷</span>
         <h1 className="shrink-0 whitespace-nowrap text-[18px] font-bold text-[#172844]">Service Enquiries</h1>
         <nav aria-label="Service enquiry sections" className="flex shrink-0 items-center rounded-lg border border-[#DCE4F0] bg-[#F8FAFD] p-1">
           <SectionLink href={filterUrl({ section: "tickets", page: "" })} active={section === "tickets"} label="Ticket Enquiries" count={ticketCount} />
           <SectionLink href={filterUrl({ section: "quotes", page: "" })} active={section === "quotes"} label="Get Quote Enquiries" count={quoteCount} />
         </nav>
-        <form method="get" action={basePath} className="ml-auto flex min-w-0 shrink-0 items-center gap-2">
-          <input type="hidden" name="section" value={section} />
-          {status ? <input type="hidden" name="status" value={status} /> : null}
-          <input name="q" defaultValue={query} aria-label="Search service enquiries" placeholder="Search request, customer, mobile, vehicle..." className="h-11 w-[min(28vw,420px)] min-w-[190px] rounded-lg border border-[#CBD6E6] bg-white px-3 text-xs text-[#172844] outline-none focus:border-[#1C4C8E]" />
-          <button type="submit" className="h-11 shrink-0 rounded-lg bg-[#073B81] px-3 text-xs font-bold text-white">Search</button>
-        </form>
-        <form method="get" action={basePath} className="flex shrink-0 items-center">
-          <input type="hidden" name="section" value={section} />
-          {query ? <input type="hidden" name="q" value={query} /> : null}
-          <select name="status" defaultValue={status} aria-label="Filter enquiry status" className="h-11 min-w-[145px] rounded-lg border border-[#CBD6E6] bg-white px-3 text-xs font-semibold text-[#172844]" >
-            <option value="">All statuses</option>
-            <option value="open">Open</option>
-            <option value="in_progress">In Progress</option>
-            <option value="resolved">Resolved</option>
-            <option value="closed">Closed</option>
-          </select>
-          <button type="submit" className="ml-2 h-11 rounded-lg border border-[#CBD6E6] px-3 text-xs font-bold text-[#17365C]">Apply</button>
-        </form>
+        <EnquiryInstantFilters section={section} query={query} status={status} />
       </header>
 
       {error ? (
