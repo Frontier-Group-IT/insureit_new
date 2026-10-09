@@ -55,9 +55,28 @@ Deno.serve(async (request: Request) => {
 
     // Only non-sensitive display metadata is accepted from the request.
     // Never accept profile ID, Firebase UID, phone or role from request JSON.
-    const length = Number(request.headers.get("content-length") ?? "0");
-    if (!Number.isFinite(length) || length > 2048) return reply(413, { error: "payload_too_large" });
-    const body: unknown = await request.json().catch(() => null);
+    const reader = request.body?.getReader();
+    if (!reader) return reply(400, { error: "invalid_signup_details" });
+    const decoder = new TextDecoder();
+    let rawBody = "";
+    let bodyBytes = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bodyBytes += value.byteLength;
+      if (bodyBytes > 2048) {
+        await reader.cancel();
+        return reply(413, { error: "payload_too_large" });
+      }
+      rawBody += decoder.decode(value, { stream: true });
+    }
+    rawBody += decoder.decode();
+    let body: unknown;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return reply(400, { error: "invalid_signup_details" });
+    }
     if (!body || typeof body !== "object" || Array.isArray(body)) {
       return reply(400, { error: "invalid_signup_details" });
     }
