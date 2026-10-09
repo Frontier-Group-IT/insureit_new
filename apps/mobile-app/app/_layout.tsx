@@ -26,6 +26,15 @@ export default function RootLayout() {
 function RootApplication() {
   const navigationState = useRootNavigationState();
   const pathname = usePathname();
+  const previousRoute = useRef<string | null>(null);
+  useEffect(() => {
+    const previous = previousRoute.current;
+    if (previous === '/customer/start-claim' || pathname === '/customer/start-claim') {
+      // Route names only: never log policy, vehicle, customer or session identifiers.
+      console.info('[claim-navigation] route changed', { from: previous, to: pathname });
+    }
+    previousRoute.current = pathname;
+  }, [pathname]);
   const insets = useSafeAreaInsets();
   const { checkError, downloadError, isUpdatePending } = Updates.useUpdates();
   const updateReloadRequested = useRef(false);
