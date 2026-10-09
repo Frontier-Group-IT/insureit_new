@@ -241,9 +241,21 @@ export default function IndividualKycScreen() {
       setFiles({});
       setSuccessVisible(true);
     } catch (nextError) {
-      const message = nextError instanceof Error ? nextError.message : '';
-      const safeDetail = message && !/\b\d{12}\b|\b[A-Z]{5}\d{4}[A-Z]\b|@|https?:\/\//i.test(message) ? message : '';
-      setError(`KYC failed while ${failedStage}. ${safeDetail || 'Please retry. Your saved details are still available.'}`);
+      const failure = nextError && typeof nextError === 'object' ? nextError as { message?: unknown; code?: unknown } : null;
+      const message = typeof failure?.message === 'string' ? failure.message : '';
+      const code = typeof failure?.code === 'string' && /^[A-Z0-9_]{3,12}$/i.test(failure.code) ? failure.code : '';
+      // Never display raw SQL/server details: they can contain identity fields or account data.
+      const allowedMessages = [
+        'Editable Individual / Proprietor application not found.',
+        'Full name is required.', 'Enter a valid email address.', 'Enter a valid PAN number.',
+        'Enter a valid 12-digit Aadhaar number.', 'Address is required.',
+        'Select a valid city and PIN code.', 'The selected city does not match the PIN code.',
+        'Select a valid fleet size.', 'Legal trade name is required for GST registration.',
+        'Enter a valid GSTIN.', 'PAN and both Aadhaar images are required.',
+        'GST certificate is required.',
+      ];
+      const safeDetail = allowedMessages.includes(message) ? message : '';
+      setError(`KYC failed while ${failedStage}. ${safeDetail || 'Please retry. Your saved details are still available.'}${code ? ` (Code: ${code})` : ''}`);
     } finally {
       setSubmitting(false);
     }
