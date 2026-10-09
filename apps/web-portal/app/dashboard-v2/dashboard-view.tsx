@@ -593,6 +593,7 @@ function RenewalHealth({ renewals, total, divided }: { renewals: NonNullable<Das
         <span className="portal-display text-[26px] font-semibold leading-none text-[#10213D]">{total}</span>
         <span className="pb-0.5 text-[8px] font-semibold text-[#718095]">within 45 days / expired</span>
       </div>
+      </div>
       <div className="mt-4 flex h-2.5 overflow-hidden bg-[#EDF1F5]">
         {items.filter((item) => item.value > 0).map((item) => <div key={item.label} className={item.tone} style={{ width: `${Math.max(3, Math.round((item.value / total) * 100))}%` }} />)}
       </div>
