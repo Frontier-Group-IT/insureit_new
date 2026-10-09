@@ -98,7 +98,13 @@ export default function ProfileScreen() {
         setCustomer(nextCustomer);
         setOnboarding(nextOnboarding);
         setProfilePhoto(latestProfilePhoto);
-        setDocuments(loadedDocuments.filter((document) => document.document_type !== 'Profile Photo'));
+        const kycDocumentTypes = new Set(['pan_copy', 'aadhaar_front', 'aadhaar_back']);
+        setDocuments(
+          loadedDocuments.filter((document) =>
+            document.document_type !== 'Profile Photo' &&
+            !kycDocumentTypes.has(document.document_type.trim().toLowerCase())
+          )
+        );
         if (latestProfilePhoto) {
           const signedPhoto = await supabase.storage.from(latestProfilePhoto.storage_bucket).createSignedUrl(latestProfilePhoto.storage_path, 3600);
           if (active && signedPhoto.data?.signedUrl) setAvatarUri(signedPhoto.data.signedUrl);
