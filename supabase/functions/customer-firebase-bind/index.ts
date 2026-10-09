@@ -15,6 +15,12 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 const PROJECT = "insureit-customer-auth";
 const ISSUER = `https://securetoken.google.com/${PROJECT}`;
 const PHONE = /^\+91[6-9]\d{9}$/;
+const canonicalIndianPhone = (value: unknown): string | null => {
+  if (typeof value !== "string") return null;
+  const digits = value.replace(/[^0-9]/g, "");
+  if (!/^(91)?[6-9][0-9]{9}$/.test(digits)) return null;
+  return "+91" + digits.slice(-10);
+};
 const reply = (status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), {
     status,
@@ -63,7 +69,9 @@ Deno.serve(async (request: Request) => {
       .from("profiles").select("id,phone,role,is_active")
       .eq("role", "customer").eq("is_active", true);
     if (profilesError || !Array.isArray(profiles)) throw new Error("Profile lookup failed");
-    const matches = profiles.filter((p) => p.phone === decoded.phone_number);
+    const matches = profiles.filter(
+      (p) => canonicalIndianPhone(p.phone) === decoded.phone_number,
+    );
     if (matches.length !== 1) return reply(409, { error: "customer_requires_review" });
     const profileId = matches[0].id as string;
     const [uidLinks, profileLinks] = await Promise.all([
