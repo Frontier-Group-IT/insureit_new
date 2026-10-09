@@ -304,6 +304,16 @@ export type IndividualOnboardingSubmission = {
 };
 
 export async function submitIndividualOnboarding(input: IndividualOnboardingSubmission) {
+  // A legacy Customer App signup can have an onboarding draft and uploaded documents
+  // without a customer master. The submission trigger requires that master.
+  // Reuse the existing authenticated, idempotent signup RPC to repair it first.
+  const session = await getCurrentSession();
+  if (!session?.user) throw new Error('Your session expired. Please sign in again.');
+  await ensureCustomerSignupProfile(session.user, {
+    fullName: input.contactName,
+    phone: session.user.phone || session.user.user_metadata?.phone || '',
+    email: input.email,
+  });
   const { data, error } = await supabase
     .rpc('submit_individual_onboarding_application', {
       p_application_id: input.applicationId,
