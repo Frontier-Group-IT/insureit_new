@@ -10,6 +10,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import {
   governedInviteEmployeePortalUser,
   governedSetEmployeePortalStatus,
+  governedUpdateEmployeePortalRole,
 } from "@/lib/employee-portal-governance";
 
 export type EmployeeActionState = {
@@ -31,7 +32,9 @@ function friendlyError(message: string) {
   if (message.includes("permission to manage employee portal access")) return "You do not have permission to manage employee portal access.";
   if (message.includes("cannot suspend your own portal access")) return "You cannot suspend your own portal access.";
   if (message.includes("final active Super Admin")) return "The final active Super Admin account cannot be suspended.";
-  if (message.includes("final active IT Super User")) return "The final active IT Super User account cannot be suspended.";
+  if (message.includes("final active IT Super User")) return message.includes("moved to another role") ? "The final active IT Super User account cannot be moved to another role." : "The final active IT Super User account cannot be suspended.";
+  if (message.includes("final active Super Admin") && message.includes("moved to another role")) return "The final active Super Admin account cannot be moved to another role.";
+  if (message.includes("does not have portal access yet")) return "This employee does not have portal access yet.";
   if (message.includes("protected technical role")) return "IT Super User is a protected technical role and cannot be assigned through normal user management.";
   if (message.includes("Only a Super Admin or IT Super User")) return "Only a Super Admin or IT Super User can assign Super Admin access.";
   if (message.includes("Reactivate this employee")) return "Reactivate this employee before sending portal access.";
@@ -262,6 +265,40 @@ export async function sendEmployeePortalInvite(
     };
   } catch (error) {
     return { status: "error", message: friendlyError(error instanceof Error ? error.message : "Could not send portal invitation.") };
+  }
+}
+
+export async function updateEmployeePortalRole(
+  employeeId: string,
+  _previousState: EmployeeActionState,
+  formData: FormData,
+): Promise<EmployeeActionState> {
+  try {
+    const actor = await requireEmployeePortalManager();
+    const requestedRole = textValue(formData, "portal_role");
+    if (!requestedRole || !isAppRole(requestedRole) || requestedRole === "customer" || requestedRole === "intermediary") {
+      return { status: "error", message: "Select a valid staff portal role." };
+    }
+
+    const result = await governedUpdateEmployeePortalRole({
+      actorProfileId: actor.id,
+      actorRole: actor.role,
+      employeeId,
+      nextRole: requestedRole,
+    });
+
+    revalidatePath("/employees");
+    revalidatePath("/users");
+    revalidatePath("/organization");
+    revalidatePath("/system/access-control");
+    return {
+      status: "success",
+      message: result.changed
+        ? `${result.employee.full_name}'s portal role was updated.`
+        : `${result.employee.full_name} already has this portal role.`,
+    };
+  } catch (error) {
+    return { status: "error", message: friendlyError(error instanceof Error ? error.message : "Could not update portal role.") };
   }
 }
 
