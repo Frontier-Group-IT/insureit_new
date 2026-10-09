@@ -4,6 +4,7 @@ import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import { CUSTOMER_EXTERNAL_STAGE_FIELDS } from "@/lib/customer-claim-stage-fields";
 import { saveCustomerExternalStage } from "./actions";
 import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/customer-claim-evidence-workspace";
+import { CustomerClaimDocumentGroups } from "@/components/customer-portal/customer-claim-document-groups";
 import { Check, Circle, ArrowLeft, LockKeyhole } from "lucide-react";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
@@ -76,12 +77,6 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       </form>
     ):null}
     {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key}/> : null}
-    {selected.key==="claim_intimation" ? <section className="rounded-2xl border border-[#DFE8F4] bg-white p-4">
-      <h2 className="mb-3 text-[17px] font-semibold text-[#071D49]">Document Verification</h2>
-      <div role="tablist" aria-label="Document groups" className="grid grid-cols-5 overflow-hidden rounded-lg border border-[#D9E3F0] text-[10px]">
-        {["Vehicle Docs","Driver Docs","Permit / Tax","KYC / Other","Forms"].map((label,i)=><div key={label} role="presentation" className={`flex min-h-11 items-center gap-2 border-r border-[#D9E3F0] px-3 last:border-r-0 ${i===0?"bg-gradient-to-r from-[#6853EE] to-[#4E95E9] font-semibold text-white":"bg-[#F9FBFF] text-[#122D59]"}`}><span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white/80 text-[10px] font-bold text-[#153A78]">{i+1}</span>{label}</div>)}
-      </div>
-      <p className="mt-3 rounded-lg border border-[#E1E8F3] bg-[#F8FAFE] px-3 py-5 text-center text-[11px] text-[#64748B]">Stage-specific document categories are read-only until their verified customer upload mapping is connected.</p>
-    </section> : null}
+    {selected.key==="claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} /> : null}
   </div>;
 }
