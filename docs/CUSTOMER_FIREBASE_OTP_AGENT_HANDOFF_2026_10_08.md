@@ -191,3 +191,11 @@ Also audit `can_access_customer` (both overloads), `can_access_profile`, `can_ac
 - User wants **one production Play Store AAB**, version `0.3.1 (10)` replacing `0.3.0 (9)`; release must ship real, end-to-end tested Firebase customer login, not simply unused Firebase packages.
 - Latest prior PR release preparation commit `ea04339f7d5af4d54aa80fc5af9829cb837d6538`. EAS account has not been connected via current available tools; do not claim a build exists.
 - Do not expose or request Firebase Admin service-account key in chat/committed repo. Configure a secure Firebase-admin server runtime, Supabase Third-Party Auth trusted project, and admin-only claim provisioning first. Then migrate identity functions and RLS comprehensively, wire mobile login, verify phone flows, and issue one production AAB. Existing Supabase OTP must continue until transition validated.
+
+
+## 18. Phase 3 canonical Firebase profile resolver APPLIED (2026-10-09)
+- New SQL source `pocs/customer-firebase-auth/phase3_firebase_profile_resolver.sql` in PR #2979, committed as `8845f8d2`.
+- Live Supabase project `ilzhsfqqjyppzzvfscmh`: migration `customer_firebase_profile_resolver_phase3_20261009` APPLIED successfully.
+- Creates additive `public.customer_firebase_profile_id()`, an explicit `SECURITY DEFINER` resolver verifying Firebase issuer, audience, `authenticated` role claim, Firebase UID, verified phone, approved/active binding and original active customer profile. Returns the *existing profile UUID* instead of replacing customers or their data.
+- Post-migration checks: anonymous returns NULL, anon EXECUTE=false, authenticated EXECUTE=true, mapping rows=0. Existing customer RLS and mobile Supabase OTP unchanged; not a production-auth cutover.
+- Still missing: secure Firebase Admin token verification and claim assignment, safe phone-account binding for existing customers including collisions/format exceptions, global identity-aware RLS/RPC/Storage, real mobile login/session migration, device test, one production AAB. No APK/AAB has been built.
