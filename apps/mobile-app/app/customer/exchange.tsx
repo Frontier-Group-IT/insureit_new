@@ -688,7 +688,7 @@ export default function ExchangeMarketplaceScreen() {
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <StatusBar style="light" backgroundColor="#081F48" />
         <View style={styles.shell}>
-          <PremiumHeader tab="buy" onBack={() => router.replace('/customer/home')} onActivity={() => setTab('activity')} />
+          <PremiumHeader onBack={() => router.replace('/customer/home')} />
           <View style={styles.emptyState}>
             <View style={styles.emptyIcon}><MaterialCommunityIcons name="truck-fast-outline" size={28} color="#5B5FF9" /></View>
             <Text style={styles.emptyTitle}>Opening Exchange</Text>
@@ -701,12 +701,9 @@ export default function ExchangeMarketplaceScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <StatusBar style="light" backgroundColor="#081F48" />
       <View style={styles.shell}>
-        <PremiumHeader
-          tab={tab}
-          onBack={() => router.replace('/customer/home')}
-          onActivity={() => setTab('activity')}
-        />
+        <PremiumHeader onBack={() => router.replace('/customer/home')} />
 
         {tab !== 'buy' ? (
           <View style={styles.navBar}>
@@ -811,15 +808,7 @@ function exchangeError(error: unknown) {
   return 'Please try again.';
 }
 
-function PremiumHeader({
-  tab,
-  onBack,
-  onActivity,
-}: {
-  tab: ExchangeTab;
-  onBack: () => void;
-  onActivity: () => void;
-}) {
+function PremiumHeader({ onBack }: { onBack: () => void }) {
   const [profileInitial, setProfileInitial] = useState('I');
   useEffect(() => {
     let active = true;
