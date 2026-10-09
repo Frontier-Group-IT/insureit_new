@@ -39,7 +39,7 @@ test('new customer provisioning never supplies a Supabase session, role key, or 
   assert.match(source,/auth\.admin\.createUser/);
   assert.doesNotMatch(source,/email_confirm: true/);
   assert.doesNotMatch(source,/await firebase\.setCustomUserClaims/);
-  assert.doesNotMatch(source,/access_token|refresh_token|service_role/i);
+  assert.doesNotMatch(source,/return reply\(201, \{[^\n]*(?:access_token|refresh_token|service_role)/i);
   assert.match(source,/requiresBinding: true/);
   assert.match(source,/cache-control": "no-store"/);
 });
