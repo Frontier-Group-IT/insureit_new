@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2 } from "lucide-react";
+import { Building2, CarFront, ShieldCheck, RefreshCw, ClipboardList, UserRound, FileText, Headphones, BadgeCheck, Truck, CircleDollarSign, LayoutDashboard } from "lucide-react";
 import type { CustomerWebAccount } from "@/lib/customer-web";
 
 function accountLabel(account: CustomerWebAccount) {
@@ -52,14 +52,23 @@ export function CustomerPageHeading({
   description?: string;
   action?: React.ReactNode;
 }) {
+  const titleIcons = {
+    Vehicles: CarFront, Policies: ShieldCheck, Renewals: RefreshCw, Claims: ClipboardList,
+    Profile: UserRound, KYC: BadgeCheck, Documents: FileText, Support: Headphones,
+    Exchange: Truck, "Insurance Quote": CircleDollarSign, "E-Challan": FileText, Home: LayoutDashboard,
+  };
+  const Icon = titleIcons[title as keyof typeof titleIcons] ?? FileText;
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#6C7E99]">{eyebrow}</p>
-        <h1 className="mt-1 text-[24px] font-black tracking-[-0.02em] text-[#10213D]">{title}</h1>
-        {description ? <p className="mt-1 max-w-2xl text-[12px] font-medium text-[#6B7890]">{description}</p> : null}
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#DBE5F1] bg-white px-3 py-2.5">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#17365F] text-white"><Icon className="h-5 w-5"/></span>
+        <div className="min-w-0">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#74839B]">{eyebrow}</p>
+          <h1 className="truncate text-[17px] font-semibold text-[#142746]">{title}</h1>
+          {description ? <p className="hidden max-w-[800px] truncate text-[10px] text-[#64748B] md:block">{description}</p> : null}
+        </div>
       </div>
-      {action}
+      {action ? <div className="shrink-0">{action}</div> : null}
     </div>
   );
 }
