@@ -102,8 +102,8 @@ const dashboardView = await readFile(new URL("../app/dashboard-v2/dashboard-view
 const dashboardLinks = dashboardView.match(/<Link\b[^>]*>/gs) ?? [];
 assert.ok(dashboardLinks.length > 0, "Dashboard should contain navigational links.");
 for (const link of dashboardLinks) assert.match(link, /prefetch=\{false\}/, "Dashboard links must not auto-prefetch heavy authenticated routes.");
-assert.match(dashboardView, /const pendingProposal = data\.policyIntakes[\s\S]*data\.policyIntakes\.actionRequired \+ data\.policyIntakes\.inReview/, "Dashboard Pending proposal must match Policy Register pending proposal semantics: Action Required plus In Review.");
-assert.match(dashboardView, /label: "Pending proposal"/, "Needs attention must show Pending proposal beside Policy Intakes pending.");
+assert.doesNotMatch(dashboardView, /label: "Pending proposal"/, "Needs attention must not show the removed Pending proposal card.");
+assert.doesNotMatch(dashboardView, /label: "Policy Intakes pending"/, "Needs attention must not show the removed Policy Intakes pending card.");
 assert.doesNotMatch(dashboardView, /label: "KYC applications"/, "Needs attention must not render the KYC applications card.");
 assert.match(dashboardView, /row\.label === "Life"/, "Business performance policy mix must include Life.");
 assert.match(dashboardView, /row\.label === "Health"/, "Business performance policy mix must include Health.");

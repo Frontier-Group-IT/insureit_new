@@ -203,31 +203,6 @@ function buildMetricRail(data: DashboardCurrentData, access: DashboardAccess, _b
 
 function buildAttention(data: DashboardCurrentData, access: DashboardAccess, business: DashboardBusinessData): AttentionSignal[] {
   const rows: AttentionSignal[] = [];
-  if (data.policyIntakes?.workload) {
-    rows.push({
-      label: "Policy Intakes pending",
-      value: data.policyIntakes.workload,
-      detail: `${data.policyIntakes.actionRequired} action · ${data.policyIntakes.inReview} review · ${data.policyIntakes.processing} processing`,
-      href: "/policy-intakes",
-      icon: DASHBOARD_ICON_ASSETS.policyIntakeReview,
-      tone: "violet",
-    });
-  }
-
-  const pendingProposal = data.policyIntakes
-    ? data.policyIntakes.actionRequired + data.policyIntakes.inReview
-    : 0;
-  if (pendingProposal) {
-    rows.push({
-      label: "Pending proposal",
-      value: pendingProposal,
-      detail: `${data.policyIntakes!.actionRequired} action · ${data.policyIntakes!.inReview} review`,
-      href: "/policy-intakes",
-      icon: DASHBOARD_ICON_ASSETS.policy,
-      tone: "red",
-    });
-  }
-
   if (data.intermediaries?.pendingApplications) {
     rows.push({
       label: "Intermediary onboarding",
@@ -437,22 +412,41 @@ function CommercialOperations({ business, canOpenControl }: { business: Dashboar
       </div>
 
       <div className="grid border-t border-[#E7ECF2] md:grid-cols-3">
-        <div className="border-[#E7ECF2] px-4 py-4 sm:px-5">
-          <p className="portal-display text-[24px] font-semibold text-[#153654]">{formatMoney(commercial.payinAfterTds)}</p>
-          <p className="mt-1.5 text-[7.5px] font-bold uppercase tracking-[.09em] text-[#7D899B]">Projected Net Pay-In</p>
-          <p className="mt-1 text-[7.5px] font-semibold text-[#8B97A8]">Projected cash inflow after TDS</p>
-          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 border-t border-[#EEF2F6] pt-2.5 text-[8px] font-semibold text-[#6E7C90]">
-            <span>Projected gross <b className="text-[#24344F]">{formatMoney(commercial.projectedPayin)}</b></span>
-            <span>Projected TDS <b className="text-[#24344F]">{formatMoney(commercial.tdsAmount)}</b></span>
+        <div className="flex h-[128px] min-w-0 flex-col overflow-hidden">
+          <div className="flex h-[60%] flex-col bg-white px-3 py-2">
+            <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">Net Pay-In</p>
+            <div className="flex min-h-0 flex-1 items-center justify-center">
+              <p className="portal-display text-center text-[27px] font-semibold leading-none text-[#10213D]">{formatMoney(commercial.payinAfterTds)}</p>
+            </div>
+          </div>
+          <div className="grid h-[40%] grid-cols-2 items-center bg-[#142448] px-2.5 text-white">
+            <div className="min-w-0 text-center">
+              <p className="text-[9px] font-semibold">Projected Gross</p>
+              <p className="mt-0.5 text-[11px] font-bold tabular-nums">{formatMoney(commercial.projectedPayin)}</p>
+            </div>
+            <div className="min-w-0 border-l border-white/30 text-center">
+              <p className="text-[9px] font-semibold">Projected TDS</p>
+              <p className="mt-0.5 text-[11px] font-bold tabular-nums">{formatMoney(commercial.tdsAmount)}</p>
+            </div>
           </div>
         </div>
-        <div className="border-t border-[#E7ECF2] px-4 py-4 md:border-l md:border-t-0 sm:px-5">
-          <p className="portal-display text-[22px] font-semibold text-[#153654]">{formatMoney(commercial.partnerPayout)}</p>
-          <p className="mt-1.5 text-[7.5px] font-bold uppercase tracking-[.09em] text-[#7D899B]">Partner Payout</p>
+        <div className="flex h-[128px] min-w-0 flex-col overflow-hidden border-t border-[#E7ECF2] md:border-l md:border-t-0">
+          <div className="flex h-[60%] flex-col bg-white px-3 py-2">
+            <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">Partner Payout</p>
+            <div className="flex min-h-0 flex-1 items-center justify-center">
+              <p className="portal-display text-center text-[27px] font-semibold leading-none text-[#10213D]">{formatMoney(commercial.partnerPayout)}</p>
+            </div>
+          </div>
+          <div className="flex h-[40%] items-center justify-center bg-[#142448] px-3 text-[10px] font-semibold text-white">{commercial.payoutPolicies} policies with payout</div>
         </div>
-        <div className="border-t border-[#E7ECF2] px-4 py-4 md:border-l md:border-t-0 sm:px-5">
-          <p className="portal-display text-[22px] font-semibold text-[#153654]">{formatMoney(commercial.retention)}</p>
-          <p className="mt-1.5 text-[7.5px] font-bold uppercase tracking-[.09em] text-[#7D899B]">Retention</p>
+        <div className="flex h-[128px] min-w-0 flex-col overflow-hidden border-t border-[#E7ECF2] md:border-l md:border-t-0">
+          <div className="flex h-[60%] flex-col bg-white px-3 py-2">
+            <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">Retention</p>
+            <div className="flex min-h-0 flex-1 items-center justify-center">
+              <p className="portal-display text-center text-[27px] font-semibold leading-none text-[#10213D]">{formatMoney(commercial.retention)}</p>
+            </div>
+          </div>
+          <div className="flex h-[40%] items-center justify-center bg-[#142448] px-3 text-[10px] font-semibold text-white">Retention rate {commercial.retentionRate.toFixed(1)}%</div>
         </div>
       </div>
 
@@ -493,44 +487,36 @@ function PortfolioHealth({ data, renewalTotal }: { data: DashboardCurrentData; r
 }
 
 function ClaimHealth({ claims }: { claims: NonNullable<DashboardCurrentData["claims"]> }) {
-  const total = Math.max(claims.aging.reduce((sum, item) => sum + item.value, 0), 1);
-  const nonZero = claims.aging.filter((item) => item.value > 0);
+  const agingSummary = claims.aging.map((item) => `${item.value} ${item.label}`).join(" · ");
 
   return (
-    <div className="px-4 py-4 sm:px-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-[8px] font-bold uppercase tracking-[.1em] text-[#8290A3]">Claim aging</p>
-          <div className="mt-1 flex items-end gap-2.5">
-            <span className="portal-display text-[26px] font-semibold leading-none text-[#10213D]">{claims.open}</span>
-            <span className="pb-0.5 text-[8px] font-semibold text-[#718095]">open claims</span>
+    <div className="flex min-w-0 flex-col">
+      <div className="flex h-[96px] min-h-0 flex-col bg-white px-3 py-2">
+        <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">Claim aging</p>
+        <div className="flex min-h-0 flex-1 items-center justify-center gap-4">
+          <div className="text-center">
+            <p className="portal-display text-[27px] font-semibold leading-none text-[#10213D]">{claims.open}</p>
+            <p className="mt-1 text-[8px] font-semibold uppercase text-[#5D6C83]">Open claims</p>
           </div>
+          {claims.estimateExposure > 0 ? (
+            <div className="border-l border-[#E7ECF2] pl-4 text-center">
+              <p className="portal-display text-[18px] font-semibold leading-none text-[#10213D]">{formatMoney(claims.estimateExposure)}</p>
+              <p className="mt-1 text-[8px] font-semibold uppercase text-[#5D6C83]">Estimate exposure</p>
+            </div>
+          ) : null}
         </div>
-        {claims.estimateExposure > 0 ? (
-          <div className="min-w-0 text-right">
-            <p className="portal-display text-[17px] font-semibold text-[#1F5B56]">{formatMoney(claims.estimateExposure)}</p>
-            <p className="mt-0.5 text-[7px] font-bold uppercase tracking-[.08em] text-[#8995A7]">Estimate exposure</p>
-          </div>
+      </div>
+      <div className="flex min-h-[64px] flex-col justify-center gap-1.5 bg-[#142448] px-3 py-2 text-white">
+        <p className="overflow-x-auto whitespace-nowrap text-center text-[9px] font-semibold [scrollbar-width:none]" title={agingSummary}>{agingSummary}</p>
+        {(claims.assistanceRequested || claims.pendingDocuments || claims.billExposure) ? (
+          <p className="overflow-x-auto whitespace-nowrap text-center text-[8px] text-white/85 [scrollbar-width:none]">
+            {[
+              claims.assistanceRequested ? `${claims.assistanceRequested} assistance requested` : null,
+              claims.pendingDocuments ? `${claims.pendingDocuments} documents pending` : null,
+              claims.billExposure ? `Bill exposure ${formatMoney(claims.billExposure)}` : null,
+            ].filter(Boolean).join(" · ")}
+          </p>
         ) : null}
-      </div>
-
-      <div className="mt-4 flex h-2.5 overflow-hidden bg-[#EDF1F5]">
-        {nonZero.map((item) => (
-          <div key={item.label} className={item.tone} style={{ width: `${Math.max(3, Math.round((item.value / total) * 100))}%` }} />
-        ))}
-      </div>
-      <div className="mt-3 grid grid-cols-5 gap-2">
-        {claims.aging.map((item) => (
-          <div key={item.label}>
-            <p className="text-[7px] font-semibold text-[#738197]">{item.label}</p>
-            <p className="mt-0.5 text-[10px] font-bold text-[#26354F]">{item.value}</p>
-          </div>
-        ))}
-      </div>
-      <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 border-t border-[#EEF2F6] pt-3 text-[7.5px] font-semibold text-[#758297]">
-        {claims.assistanceRequested ? <span><b className="text-[#D15A52]">{claims.assistanceRequested}</b> assistance requested</span> : null}
-        {claims.pendingDocuments ? <span><b className="text-[#31415D]">{claims.pendingDocuments}</b> documents pending</span> : null}
-        {claims.billExposure ? <span>Bill exposure <b className="text-[#31415D]">{formatMoney(claims.billExposure)}</b></span> : null}
       </div>
     </div>
   );
