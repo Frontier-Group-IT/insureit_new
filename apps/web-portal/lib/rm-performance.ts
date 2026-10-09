@@ -51,6 +51,8 @@ export type RmPerformanceData = {
   mtd: PolicyBusinessNetReport["summary"];
   todayCategoryMix: PolicyBusinessNetReport["category_mix"];
   mtdCategoryMix: PolicyBusinessNetReport["category_mix"];
+  todayBusinessLinePremium: Record<"life" | "health", number>;
+  mtdBusinessLinePremium: Record<"life" | "health", number>;
   ytdTrend: PolicyBusinessNetReport["trend"];
   rows: RmPerformanceRow[];
   recentPolicies: PolicyBusinessNetReport["register"]["rows"];
@@ -166,6 +168,8 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
     mtd: mtdPayload.report.summary,
     todayCategoryMix: todayPayload.report.category_mix,
     mtdCategoryMix: mtdPayload.report.category_mix,
+    todayBusinessLinePremium: lifeHealthPremium(todayRegisterRows),
+    mtdBusinessLinePremium: lifeHealthPremium(mtdRegisterRows),
     ytdTrend: ytdPayload.report.trend.slice(-6),
     rows,
     recentPolicies: mtdPayload.report.register.rows.slice(0, 10),
@@ -173,6 +177,17 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
       todayRegisterRows.length >= todayPayload.report.register.total_count
       && mtdRegisterRows.length >= mtdPayload.report.register.total_count,
   };
+}
+
+// The RPC category_mix covers Non Motor only. Life and Health are separate
+// business lines, so derive their premium from the complete, scoped register.
+function lifeHealthPremium(rows: PolicyBusinessRow[]): Record<"life" | "health", number> {
+  const totals = { life: 0, health: 0 };
+  for (const row of rows) {
+    const line = row.business_line.trim().toLowerCase();
+    if (line === "life" || line === "health") totals[line] += row.net_premium;
+  }
+  return totals;
 }
 
 async function loadCompleteRegisterRows(
