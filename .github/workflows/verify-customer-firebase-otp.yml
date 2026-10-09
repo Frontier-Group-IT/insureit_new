@@ -7,6 +7,8 @@ on:
       - 'apps/mobile-app/lib/customer-otp-provider.ts'
       - 'apps/mobile-app/lib/firebase-data-client*'
       - 'pocs/customer-firebase-auth/**'
+      - 'supabase/functions/customer-firebase-bind/**'
+      - 'apps/mobile-app/app/firebase-otp-test.tsx'
       - 'apps/mobile-app/google-services.json'
       - 'apps/mobile-app/lib/firebase-android-auth-adapter*'
       - 'apps/mobile-app/lib/firebase-installed-android-otp.ts'
@@ -28,5 +30,5 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: node --test apps/mobile-app/lib/firebase-otp-readiness.test.cjs apps/mobile-app/lib/firebase-native-phone-flow.test.cjs apps/mobile-app/lib/firebase-data-client.test.cjs pocs/customer-firebase-auth/sql-draft.test.cjs pocs/customer-firebase-auth/server-identity-binding.test.cjs pocs/customer-firebase-auth/firebase-admin-verifier.test.cjs pocs/customer-firebase-auth/firebase-binding-backend.test.cjs pocs/customer-firebase-auth/supabase-identity-store.test.cjs pocs/customer-firebase-auth/android-config.test.cjs apps/mobile-app/lib/firebase-android-auth-adapter.test.cjs
+      - run: node --test apps/mobile-app/lib/firebase-otp-readiness.test.cjs apps/mobile-app/lib/firebase-native-phone-flow.test.cjs apps/mobile-app/lib/firebase-data-client.test.cjs pocs/customer-firebase-auth/sql-draft.test.cjs pocs/customer-firebase-auth/server-identity-binding.test.cjs pocs/customer-firebase-auth/firebase-admin-verifier.test.cjs pocs/customer-firebase-auth/firebase-binding-backend.test.cjs pocs/customer-firebase-auth/supabase-identity-store.test.cjs pocs/customer-firebase-auth/android-config.test.cjs pocs/customer-firebase-auth/edge-binding-source.test.cjs apps/mobile-app/lib/firebase-android-auth-adapter.test.cjs
       - run: npx tsc --noEmit --skipLibCheck --target ES2020 --module commonjs apps/mobile-app/lib/firebase-otp-readiness.ts apps/mobile-app/lib/firebase-native-phone-flow.ts apps/mobile-app/lib/firebase-data-client.ts pocs/customer-firebase-auth/server-identity-binding.ts pocs/customer-firebase-auth/firebase-admin-verifier.ts pocs/customer-firebase-auth/firebase-binding-backend.ts pocs/customer-firebase-auth/supabase-identity-store.ts apps/mobile-app/lib/firebase-android-auth-adapter.ts apps/mobile-app/lib/firebase-installed-android-otp.ts apps/mobile-app/lib/firebase-customer-auth.ts
