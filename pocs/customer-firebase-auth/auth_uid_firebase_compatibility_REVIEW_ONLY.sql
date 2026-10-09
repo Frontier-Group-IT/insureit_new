@@ -1,3 +1,10 @@
+-- Ownership blocker observed 2026-10-09: auth.uid() is owned by
+-- supabase_auth_admin; connected migration role postgres is NOT a member
+-- (pg_has_role(...,'MEMBER') = false) and is NOT superuser.
+-- Do NOT try changing owner, granting roles, or executing this against
+-- production. Supabase-managed auth schema is not a safe application patch.
+-- Prefer review of an app-owned, scoped identity adapter or guarded gateway.
+
 -- REVIEW ONLY: do not apply until policy regression and rollback validation.
 -- This narrow compatibility repair prevents non-UUID Firebase JWT subjects from
 -- throwing SQLSTATE 22P02 inside existing auth.uid()-based RLS policies.
