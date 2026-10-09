@@ -4,6 +4,8 @@ import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import { CUSTOMER_EXTERNAL_STAGE_FIELDS } from "@/lib/customer-claim-stage-fields";
 import { saveCustomerExternalStage } from "./actions";
 import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/customer-claim-evidence-workspace";
+import { CustomerClaimDocumentGroups } from "@/components/customer-portal/customer-claim-document-groups";
+import { CustomerClaimBooleanChoice } from "@/components/customer-portal/customer-claim-boolean-choice";
 import { Check, Circle, ArrowLeft, LockKeyhole } from "lucide-react";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
@@ -28,7 +30,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
     <Link href={{pathname:`/customer/claims/${claim.id}`,query:{account:account.id}}} className="inline-flex items-center gap-2 text-sm font-bold text-[#245DAB]"><ArrowLeft className="h-4 w-4"/> Claim overview</Link>
     <div className="rounded-xl bg-[#0B3884] p-3 text-white"><p className="text-xs font-bold uppercase tracking-wider text-white/75">{external?"Self-tracked claim":"INSUREIT-managed claim"}</p><div className="mt-2 flex items-center gap-3"><img src={"/assets/customer-claim/stages/"+selected.key+".png"} alt="" className="h-12 w-12 rounded-xl bg-white object-contain p-1"/><h1 className="text-2xl font-black">{selected.label}</h1></div><p className="mt-1 text-sm text-white/80">{claim.claim_no} · {claim.vehicle_no} · {claim.insurer_name}</p></div>
     <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey={selected.key} currentKey={INTERNAL_JOURNEY_STAGES[currentIndex]?.key || "spot_intimation"} completedKeys={INTERNAL_JOURNEY_STAGES.filter((stage,i)=>external?projection?.stages.some(x=>x.key===stage.key&&x.completed):i<(internal_projection?.completedStageCount??0)).map(stage=>stage.key)} />
-    <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white">
+    {!(external && claim.claim_service_mode==="self_managed" && claim.assistance_status!=="accepted" && CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key]) ? <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white">
       <h2 className="border-b border-[#D9E3F0] px-5 py-4 text-[17px] font-semibold text-[#071D49]">{selected.key==="spot_intimation"?"Accident & Spot Intimation Details":selected.label+" Details"}</h2>
       {selected.key==="spot_intimation" ? (
         <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-5">
@@ -56,9 +58,9 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
           <p className="mt-3 flex items-center gap-2 text-[11px] text-[#536781]">{completed?<Check className="h-4 w-4 text-[#0A9B72]"/>:activeIndex===currentIndex?<Circle className="h-4 w-4 text-[#155EEF]"/>:<LockKeyhole className="h-4 w-4"/>}{completed?"Completed":activeIndex===currentIndex?"Current stage":"Upcoming stage"}</p>
         </div>
       )}
-    </section>
+    </section> : null}
     {external && claim.claim_service_mode==="self_managed" && claim.assistance_status!=="accepted" && CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key] ? (
-      <form action={saveCustomerExternalStage} className={`mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3`}>
+      <form action={saveCustomerExternalStage} className="mt-2 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
         <h2 className="mb-3 text-[14px] font-semibold text-[#071D49]">{selected.label}</h2><div className={`grid gap-3 sm:grid-cols-2 ${selected.key==="work_approval"||selected.key==="payment_encashment"?"lg:grid-cols-5":selected.key==="repair_ri"||selected.key==="delivery_order"?"lg:grid-cols-3":selected.key==="billing"||selected.key==="vehicle_delivery"?"lg:grid-cols-2":"lg:grid-cols-4"}`}>
         <input type="hidden" name="account" value={account.id}/>
         <input type="hidden" name="claim" value={claim.id}/>
@@ -66,15 +68,16 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
         {CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key].map(field=>(
           <label key={field.key} className="min-w-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{field.label}{field.optional?"":" *"}
             {field.type==="boolean"||field.type==="yesno"?(
-              <select required name={field.key} defaultValue={typeof milestone?.details?.[field.key]==="boolean"?String(milestone.details[field.key]):typeof milestone?.details?.[field.key]==="string"?String(milestone.details[field.key]):""} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49]"><option value="">Select</option>{(field.type==="boolean"?[["true","Yes"],["false","No"]]:[["yes","Yes"],["no","No"]]).map(([v,label])=><option value={v} key={v}>{label}</option>)}</select>
+<CustomerClaimBooleanChoice name={field.key} kind={field.type} value={typeof milestone?.details?.[field.key]==="boolean"?String(milestone.details[field.key]):typeof milestone?.details?.[field.key]==="string"?String(milestone.details[field.key]):""}/>
             ):(
               <input name={field.key} type={field.type} required={!field.optional} maxLength={field.type==="number"?undefined:500} min={field.type==="number"?"0":undefined} step={field.type==="number"?"0.01":undefined} defaultValue={typeof milestone?.details?.[field.key]==="string"||typeof milestone?.details?.[field.key]==="number"?String(milestone.details[field.key]):""} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49]"/>
             )}
           </label>
         ))}</div>
-        <div className="mt-3 flex justify-end"><button type="submit" className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white">Save {selected.label}</button></div>
+        <div className="mt-3 flex justify-end"><button type="submit" className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white">Save Details</button></div>
       </form>
     ):null}
-    <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key}/>
+    {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key}/> : null}
+    {selected.key==="claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} /> : null}
   </div>;
 }
