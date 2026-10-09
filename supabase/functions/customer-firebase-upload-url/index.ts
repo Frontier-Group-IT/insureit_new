@@ -72,7 +72,7 @@ Deno.serve(async (request: Request) => {
     if ((bucket !== "claim-documents" && bucket !== "customer-documents") ||
         typeof objectPath !== "string" || objectPath.length > 1024 ||
         objectPath.length < 38 || /[\x00-\x1f]/.test(objectPath) ||
-        objectPath.startsWith("/") ||
+        objectPath.startsWith("/") || objectPath.includes("%") || objectPath.includes("\\\\") ||
         objectPath.split("/").some((v) => !v || v === "." || v === "..")) {
       return reply(400, { error: "invalid_document_path" });
     }
