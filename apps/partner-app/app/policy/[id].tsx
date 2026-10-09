@@ -120,7 +120,7 @@ export default function PolicyDetailScreen() {
               <OverviewItem iconKind="product" label="Product" value={data.policy.policy_product || data.policy.policy_type || data.policy.business_line || 'Not recorded'} />
               <OverviewItem iconKind="business-type" label="Business Type" value={data.policy.business_type || 'Not recorded'} />
               <OverviewItem iconKind="issuance-date" label="Issuance Date" value={formatDate(data.policy.issuance_date)} />
-              <OverviewItem iconKind="insurer" label="Insurer" value={data.insurer.name || 'Not recorded'} />
+              <OverviewItem iconKind="insurer" label="Insurer" value={data.insurer.name || 'Not recorded'} insurerName={data.insurer.name} />
               <OverviewItem iconKind="idv" label="IDV" value={data.policy.insured_declared_value != null ? formatIndianCurrency(data.policy.insured_declared_value) : 'Not recorded'} />
             </View>
             {showOverviewDetails ? (
@@ -160,7 +160,7 @@ export default function PolicyDetailScreen() {
             />
             <View style={styles.entityStack}>
               <EntityRow
-                image={PartnerAssets.navigation.customers}
+                icon="person-outline"
                 title={data.customer.name}
                 subtitle={data.customer.customer_code || 'Customer'}
                 onPress={data.customer.id ? () => router.push(`/customer/${data.customer.id}` as never) : undefined}
@@ -219,12 +219,12 @@ function QuickAction({ iconKind, label, tone, onPress }: { iconKind: PartnerPoli
   return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.quickAction, quickToneStyle(tone), pressed && styles.pressed]}><PartnerPolicyDetailIcon kind={iconKind} size={40} tone={tone} /><Text numberOfLines={2} style={styles.quickLabel}>{label}</Text></Pressable>;
 }
 
-function OverviewItem({ iconKind, label, value }: { iconKind: PartnerPolicyDetailIconKind; label: string; value: string }) {
-  return <View style={styles.overviewItem}><PartnerPolicyDetailIcon kind={iconKind} size={32} tone="neutral" /><View style={styles.overviewCopy}><Text style={styles.overviewLabel}>{label}</Text><Text numberOfLines={2} style={styles.overviewValue}>{value}</Text></View></View>;
+function OverviewItem({ iconKind, label, value, insurerName }: { iconKind: PartnerPolicyDetailIconKind; label: string; value: string; insurerName?: string | null }) {
+  return <View style={styles.overviewItem}>{insurerName ? <View style={styles.overviewLogoWrap}><PartnerInsurerLogo name={insurerName} fallback={PartnerAssets.products.motorInsurance} style={styles.overviewLogo} /></View> : <PartnerPolicyDetailIcon kind={iconKind} size={32} tone="neutral" />}<View style={styles.overviewCopy}><Text style={styles.overviewLabel}>{label}</Text><Text numberOfLines={2} style={styles.overviewValue}>{value}</Text></View></View>;
 }
 
-function EntityRow({ image, title, subtitle, onPress }: { image: ImageSourcePropType; title: string; subtitle: string; onPress?: () => void }) {
-  return <Pressable accessibilityRole={onPress ? 'button' : undefined} disabled={!onPress} onPress={onPress} style={({ pressed }) => [styles.entityRow, pressed && onPress ? styles.pressed : null]}><View style={styles.entityIcon}><Image source={image} style={styles.entityArtwork} resizeMode="contain" /></View><View style={styles.entityBody}><Text numberOfLines={1} style={styles.entityTitle}>{title}</Text><Text numberOfLines={1} style={styles.entityMeta}>{subtitle}</Text></View><Ionicons name="chevron-forward" size={16} color="#8B9AAE" /></Pressable>;
+function EntityRow({ image, icon, title, subtitle, onPress }: { image?: ImageSourcePropType; icon?: keyof typeof Ionicons.glyphMap; title: string; subtitle: string; onPress?: () => void }) {
+  return <Pressable accessibilityRole={onPress ? 'button' : undefined} disabled={!onPress} onPress={onPress} style={({ pressed }) => [styles.entityRow, pressed && onPress ? styles.pressed : null]}><View style={styles.entityIcon}>{icon ? <Ionicons name={icon} size={20} color="#2468D7" /> : image ? <Image source={image} style={styles.entityArtwork} resizeMode="contain" /> : null}</View><View style={styles.entityBody}><Text numberOfLines={1} style={styles.entityTitle}>{title}</Text><Text numberOfLines={1} style={styles.entityMeta}>{subtitle}</Text></View><Ionicons name="chevron-forward" size={16} color="#8B9AAE" /></Pressable>;
 }
 
 function MiniInfo({ label, value }: { label: string; value: string }) { return <View style={styles.miniInfo}><Text style={styles.miniLabel}>{label}</Text><Text style={styles.miniValue}>{value}</Text></View>; }
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   quickLabel: { color: '#17304F', textAlign: 'center', fontSize: 8.5, lineHeight: 11, fontWeight: '700' },
   overviewGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 10, paddingBottom: 8 },
   overviewItem: { width: '50%', minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 7, paddingHorizontal: 4, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDF1F6' },
-  overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { color: '#8A95A6', fontSize: 8.5, lineHeight: 10 }, overviewValue: { marginTop: 2, color: '#192B46', fontSize: 10, lineHeight: 13, fontWeight: '700' },
+  overviewLogoWrap: { width: 32, height: 32, borderRadius: 9, backgroundColor: '#F0F5FC', alignItems: 'center', justifyContent: 'center' }, overviewLogo: { width: 27, height: 27 }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { color: '#8A95A6', fontSize: 8.5, lineHeight: 10 }, overviewValue: { marginTop: 2, color: '#192B46', fontSize: 10, lineHeight: 13, fontWeight: '700' },
   premiumDisclosure: { minHeight: 58, marginHorizontal: 10, marginBottom: 9, paddingHorizontal: 9, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#F2F7FF' },
   commercialRow: { minHeight: 58, marginHorizontal: 10, marginBottom: 9, paddingHorizontal: 9, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#FAFCFF' },
   disclosureText: { flex: 1, minWidth: 0 }, disclosureTitle: { color: '#152945', fontSize: 10.5, lineHeight: 13, fontWeight: '700' }, disclosureSummary: { marginTop: 2, color: '#6F7F94', fontSize: 8.5, lineHeight: 11 },
