@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, CalendarDays, CarFront, IndianRupee, ShieldCheck } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import {
   CustomerAccountTabs,
   CustomerPageHeading,
@@ -30,69 +30,82 @@ export default async function CustomerPolicyDetailPage({
   const status = customerPolicyTone(policy.end_date);
   const statusLabel = status.tone === "due" ? `Due in ${status.days}d` : status.tone;
 
-  const details = [
-    ["Policy type", policy.policy_type || "—"],
-    ["Business line", policy.business_line || "—"],
-    ["Product", policy.policy_product || "—"],
-    ["Insurer", policy.insurer_name || "—"],
-    ["Start date", formatCustomerDate(policy.start_date)],
-    ["End date", formatCustomerDate(policy.end_date)],
-    ["Premium", formatCustomerMoney(policy.premium_amount)],
-    ["IDV / Sum insured", formatCustomerMoney(policy.insured_declared_value)],
-    ["Source", policy.source === "external" ? "External policy" : "INSUREIT policy"],
-  ];
-
+  const field = (label: string, value: string) => (
+    <div className="min-w-0">
+      <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[#5D6D84]">{label}</p>
+      <div className="min-h-12 break-words rounded-xl border border-[#D9E2EF] bg-[#F8FAFD] px-3 py-3 text-[12px] font-medium text-[#243B5B]">{value || "—"}</div>
+    </div>
+  );
+  const sourceName = policy.source === "external" ? "External policy" : "INSUREIT policy";
   return (
-    <div className="space-y-3">
-      <Link href={{ pathname: "/customer/policies", query: { account: account.id } }} className="inline-flex items-center gap-1 text-[11px] font-black text-[#53627A] hover:text-[#142746]">
+    <div className="space-y-4 pb-6">
+      <Link href={{ pathname: "/customer/policies", query: { account: account.id } }} className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#53627A] hover:text-[#142746]">
         <ArrowLeft className="h-3.5 w-3.5" /> Back to policies
       </Link>
-
-      <CustomerPageHeading
-        eyebrow={policy.source === "external" ? "External policy" : "Policy detail"}
-        title={policy.policy_no}
-        description={policy.insurer_name || policy.policy_product || policy.policy_type}
-        action={<StatusPill tone={status.tone}>{statusLabel}</StatusPill>}
-      />
+      <div className="overflow-hidden rounded-2xl border border-[#D9E2EF] bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-[#0C254E] to-[#2B5594] px-6 py-5 text-white">
+          <div><p className="text-[11px] opacity-75">POLICY DETAILS · {sourceName.toUpperCase()}</p><h1 className="mt-1 break-all text-[18px] font-bold">{policy.policy_no}</h1><p className="mt-1 text-[12px] opacity-80">{policy.insurer_name || "Insurer not available"}</p></div>
+          <StatusPill tone={status.tone}>{statusLabel}</StatusPill>
+        </div>
+        <nav aria-label="Policy details sections" className="flex flex-wrap gap-5 border-b border-[#D9E2EF] bg-[#F7F9FD] px-5 py-3 text-[11px] font-semibold text-[#315487]">
+          <a href="#policy-source">01 Source</a><a href="#insured-vehicle">02 Customer &amp; Vehicle</a><a href="#policy-premium">03 Policy &amp; Premium</a>
+        </nav>
+      </div>
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/policies" />
-
-      <div className="grid gap-3 xl:grid-cols-[1fr_0.75fr]">
-        <section className="rounded-xl border border-[#DCE4EE] bg-white p-3">
-          <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#174EA6]" /><h2 className="text-[13px] font-black text-[#10213D]">Policy information</h2></div>
-          <div className="customer-detail-grid mt-2">
-            {details.map(([label,value])=>(
-              <div key={label} className="customer-detail-row">
-                <div className="customer-detail-label">{label}</div>
-                <div className="customer-detail-value">{value}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="space-y-3">
-          <div className="rounded-xl border border-[#DCE4EE] bg-white p-3">
-            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#8794A7]">Coverage timeline</p>
-            <div className="mt-3 flex items-center gap-3">
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#EEF4FF] text-[#174EA6]"><CalendarDays className="h-5 w-5" /></span>
-              <div><p className="text-[11px] font-black text-[#10213D]">{formatCustomerDate(policy.start_date)} → {formatCustomerDate(policy.end_date)}</p><p className="mt-0.5 text-[10px] font-semibold text-[#74839A]">Current status: {statusLabel}</p></div>
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <main className="space-y-4">
+          <section id="policy-source" className="overflow-hidden rounded-2xl border border-[#D9E2EF] bg-white">
+            <div className="flex items-center gap-3 border-b border-[#E1E8F1] px-5 py-4"><span className="rounded-lg bg-[#17345B] px-3 py-2 text-[12px] font-bold text-white">01</span><h2 className="text-[14px] font-semibold text-[#172844]">Policy source &amp; ownership</h2></div>
+            <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4">
+              {field("Policy issuance date", "—")}
+              {field("Policy type", policy.policy_type || "—")}
+              {field("Intermediary type", sourceName)}
+              {field("Lead source", "—")}
             </div>
-          </div>
-
-          <div className="rounded-xl border border-[#DCE4EE] bg-white p-3">
-            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#8794A7]">Premium & value</p>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <div className="rounded-xl bg-[#F7F9FC] p-3"><IndianRupee className="h-4 w-4 text-[#174EA6]" /><p className="mt-2 text-[9px] font-bold text-[#8794A7]">Premium</p><p className="text-[12px] font-black text-[#10213D]">{formatCustomerMoney(policy.premium_amount)}</p></div>
-              <div className="rounded-xl bg-[#F7F9FC] p-3"><ShieldCheck className="h-4 w-4 text-[#174EA6]" /><p className="mt-2 text-[9px] font-bold text-[#8794A7]">IDV / Sum insured</p><p className="text-[12px] font-black text-[#10213D]">{formatCustomerMoney(policy.insured_declared_value)}</p></div>
+          </section>
+          <section id="insured-vehicle" className="overflow-hidden rounded-2xl border border-[#D9E2EF] bg-white">
+            <div className="flex items-center gap-3 border-b border-[#E1E8F1] px-5 py-4"><span className="rounded-lg bg-[#17345B] px-3 py-2 text-[12px] font-bold text-white">02</span><div><h2 className="text-[14px] font-semibold text-[#172844]">Insured &amp; vehicle identification</h2><p className="text-[10px] text-[#7C8AA1]">Read-only details linked to this policy.</p></div></div>
+            <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4">
+              {field("Registration no.", policy.vehicle_no || "—")}
+              {field("Insured name", account.customer_name || account.contact_name || "—")}
+              {field("Phone number", "—")}
+              {field("Vehicle class", "—")}
+              {field("Make", policy.vehicle_make || "—")}
+              {field("Model", policy.vehicle_model || "—")}
+              {field("Fuel type", "—")}
+              {field("Manufacturing year", "—")}
+              {field("RTO", "—")}
+              {field("Capacity", "—")}
+              {field("Chassis number", "—")}
+              {field("Engine number", "—")}
             </div>
-          </div>
-
-          {policy.vehicle_id ? (
-            <Link href={{ pathname: `/customer/vehicles/${policy.vehicle_id}`, query: { account: account.id } }} className="flex items-center gap-3 rounded-xl border border-[#DCE4EE] bg-white p-3 hover:border-[#B9C9DB]">
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#EEF4FF] text-[#174EA6]"><CarFront className="h-5 w-5" /></span>
-              <div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#8794A7]">Covered vehicle</p><p className="truncate text-[12px] font-black text-[#10213D]">{policy.vehicle_no || "Open vehicle"}</p><p className="truncate text-[10px] font-semibold text-[#74839A]">{[policy.vehicle_make, policy.vehicle_model].filter(Boolean).join(" · ")}</p></div>
-            </Link>
-          ) : null}
-        </section>
+            {policy.vehicle_id ? <div className="border-t border-[#E1E8F1] px-5 py-3"><Link href={{ pathname: `/customer/vehicles/${policy.vehicle_id}`, query: { account: account.id } }} className="text-[11px] font-semibold text-[#174EA6] hover:underline">View linked vehicle details →</Link></div> : null}
+          </section>
+          <section id="policy-premium" className="overflow-hidden rounded-2xl border border-[#D9E2EF] bg-white">
+            <div className="flex items-center gap-3 border-b border-[#E1E8F1] px-5 py-4"><span className="rounded-lg bg-[#17345B] px-3 py-2 text-[12px] font-bold text-white">03</span><h2 className="text-[14px] font-semibold text-[#172844]">Policy &amp; premium</h2></div>
+            <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4">
+              {field("Policy number", policy.policy_no)}
+              {field("Insurer", policy.insurer_name || "—")}
+              {field("Product", policy.policy_product || policy.business_line || "—")}
+              {field("Start date", formatCustomerDate(policy.start_date))}
+              {field("End date", formatCustomerDate(policy.end_date))}
+              {field("Gross premium", formatCustomerMoney(policy.premium_amount))}
+              {field("IDV / Sum insured", formatCustomerMoney(policy.insured_declared_value))}
+              {field("Source", sourceName)}
+            </div>
+          </section>
+        </main>
+        <aside className="space-y-4 xl:sticky xl:top-4">
+          <section className="overflow-hidden rounded-2xl border border-[#D9E2EF] bg-white">
+            <div className="flex items-center justify-between border-b border-[#E1E8F1] px-5 py-4"><div><p className="text-[10px] uppercase text-[#788BA6]">Policy status</p><h2 className="text-[14px] font-semibold text-[#17345B]">Policy summary</h2></div><StatusPill tone={status.tone}>{statusLabel}</StatusPill></div>
+            <div className="space-y-4 p-5">
+              <div className="flex justify-between text-[12px]"><span>Net premium</span><strong>—</strong></div>
+              <div className="flex justify-between border-t border-[#E1E8F1] pt-3 text-[12px]"><span>GST</span><strong>—</strong></div>
+              <div className="flex justify-between border-t border-[#E1E8F1] pt-3 text-[12px]"><span>Gross premium</span><strong>{formatCustomerMoney(policy.premium_amount)}</strong></div>
+              <div className="border-t border-[#E1E8F1] pt-3 text-[11px] text-[#60738F]">Validity: {formatCustomerDate(policy.start_date)} – {formatCustomerDate(policy.end_date)}</div>
+            </div>
+          </section>
+        </aside>
       </div>
     </div>
   );
