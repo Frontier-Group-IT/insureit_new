@@ -46,13 +46,21 @@ export default function FirebaseOtpTestScreen() {
           return current?.uid === verified.uid ? current.getIdToken() : null;
         });
         // The resolver succeeding does not prove ordinary customer RLS.
-        const [ownProfile, membership] = await Promise.all([
+        const [ownProfile, membership, customerRows, vehicles, policies, claims, onboarding, externalPolicies] = await Promise.all([
           reader.from('profiles').select('id,role,is_active').eq('id', verified.profileId).maybeSingle(),
           reader.from('customer_memberships').select('customer_id').eq('profile_id', verified.profileId).eq('status', 'active').limit(5),
+          reader.from('customers').select('id').limit(5),
+          reader.from('vehicles').select('id').limit(1),
+          reader.from('policies').select('id').limit(1),
+          reader.from('claims').select('id').limit(1),
+          reader.from('customer_onboarding_applications').select('id').eq('profile_id', verified.profileId).limit(1),
+          reader.from('external_policies').select('id').limit(1),
         ]);
         if (ownProfile.error || !ownProfile.data || ownProfile.data.role !== 'customer' ||
-            ownProfile.data.is_active !== true || membership.error) {
-          throw new Error('Firebase identity passed, but customer data authorization is not ready.');
+            ownProfile.data.is_active !== true || membership.error || customerRows.error ||
+            vehicles.error || policies.error || claims.error || onboarding.error || externalPolicies.error ||
+            (!customerRows.data?.length && !onboarding.data?.length)) {
+          throw new Error('Firebase identity passed, but full customer data authorization is not ready.');
         }
         setProfileId(verified.profileId.slice(0, 8));
         setStatus(mode === 'signup'
