@@ -75,3 +75,15 @@ export async function getCustomerIdentity(): Promise<CustomerIdentity | null> {
     data: supabase,
   };
 }
+
+/** Discards the actual Firebase Auth session without inventing Supabase tokens.
+ * Clears any currently active legacy session so another remembered account
+ * cannot silently replace the signed-out Firebase identity.
+ */
+export async function signOutFirebaseCustomer(): Promise<void> {
+  if (!firebaseCustomerRolloutEnabled()) return;
+  const { getAuth, signOut } = await import('@react-native-firebase/auth');
+  await signOut(getAuth());
+  await supabase.auth.signOut({ scope: 'local' });
+  await selectCustomerAuthProvider('supabase');
+}
