@@ -1,7 +1,7 @@
 import * as Updates from 'expo-updates';
 import { Stack, usePathname, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -26,6 +26,18 @@ export default function RootLayout() {
 function RootApplication() {
   const navigationState = useRootNavigationState();
   const pathname = usePathname();
+  const previousRoute = useRef<string | null>(null);
+  useEffect(() => {
+    const from = previousRoute.current;
+    if (from === '/customer/start-claim' || pathname === '/customer/start-claim') {
+      console.warn('[claim-navigation] route', { from, to: pathname });
+    }
+    previousRoute.current = pathname;
+  }, [pathname]);
+  useEffect(() => {
+    console.warn('[claim-navigation] root-mounted', { runtime: Updates.runtimeVersion ?? 'unknown', channel: Updates.channel ?? 'unknown', update: Updates.updateId ?? 'embedded' });
+    return () => console.warn('[claim-navigation] root-unmounted');
+  }, []);
   const insets = useSafeAreaInsets();
   const { checkError, downloadError, isUpdatePending } = Updates.useUpdates();
   const [minimumIntroComplete, setMinimumIntroComplete] = useState(false);
