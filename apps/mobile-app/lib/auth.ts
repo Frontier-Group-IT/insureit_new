@@ -1,4 +1,4 @@
-import type { Session, User } from '@supabase/supabase-js';
+import type { Session, SupabaseClient, User } from '@supabase/supabase-js';
 import { Router } from 'expo-router';
 import * as Linking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -135,14 +135,14 @@ export async function getRestoredSession(waitMs = 8000): Promise<Session | null>
   });
 }
 
-export async function getProfile(userId: string): Promise<Profile | null> {
-  const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+export async function getProfile(userId: string, client: SupabaseClient = supabase): Promise<Profile | null> {
+  const { data, error } = await client.from('profiles').select('*').eq('id', userId).maybeSingle();
   if (error) throw error;
   return data;
 }
 
-export async function getCustomerForUser(userId: string): Promise<Customer | null> {
-  const direct = await supabase
+export async function getCustomerForUser(userId: string, client: SupabaseClient = supabase): Promise<Customer | null> {
+  const direct = await client
     .from('customers')
     .select('*')
     .eq('profile_id', userId)
@@ -152,7 +152,7 @@ export async function getCustomerForUser(userId: string): Promise<Customer | nul
   if (direct.error) throw direct.error;
   if (direct.data) return direct.data;
 
-  const membership = await supabase
+  const membership = await client
     .from('customer_memberships')
     .select('customer_id')
     .eq('profile_id', userId)
@@ -164,7 +164,7 @@ export async function getCustomerForUser(userId: string): Promise<Customer | nul
   if (membership.error) throw membership.error;
   if (!membership.data?.customer_id) return null;
 
-  const customer = await supabase
+  const customer = await client
     .from('customers')
     .select('*')
     .eq('id', membership.data.customer_id)
@@ -203,8 +203,8 @@ export async function ensureCustomerForUser(
   return null;
 }
 
-export async function getOnboardingApplicationForUser(userId: string, includeTerminal = false): Promise<CustomerOnboardingApplication | null> {
-  let query = supabase
+export async function getOnboardingApplicationForUser(userId: string, includeTerminal = false, client: SupabaseClient = supabase): Promise<CustomerOnboardingApplication | null> {
+  let query = client
     .from('customer_onboarding_applications')
     .select('*')
     .eq('profile_id', userId);
