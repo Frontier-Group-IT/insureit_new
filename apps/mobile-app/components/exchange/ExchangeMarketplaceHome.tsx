@@ -53,12 +53,12 @@ function formatKm(value: number) {
 }
 
 function categoryIcon(category: ExchangeHomeCategory) {
-  if (category === 'All') return 'view-grid-outline' as const;
+  if (category === 'All') return 'view-dashboard-outline' as const;
   if (category === 'Tipper') return 'dump-truck' as const;
-  if (category === 'Pickup') return 'car-pickup' as const;
-  if (category === 'Bus') return 'bus' as const;
+  if (category === 'Pickup') return 'truck-flatbed' as const;
+  if (category === 'Bus') return 'bus-side' as const;
   if (category === 'Construction') return 'excavator' as const;
-  return 'truck-outline' as const;
+  return 'truck-cargo-container' as const;
 }
 
 function budgetMatch(vehicle: ExchangeHomeVehicle, budget: BudgetFilter) {
@@ -141,18 +141,18 @@ export function ExchangeMarketplaceHome({
       >
         <View style={styles.locationRow}>
           <View style={styles.locationCopy}>
-            <MaterialCommunityIcons name="map-marker-outline" size={24} color="#19417E" />
+            <MaterialCommunityIcons name="map-marker-radius-outline" size={24} color="#19417E" />
             <Text style={styles.locationText}>All locations</Text>
             <MaterialCommunityIcons name="chevron-down" size={19} color="#19417E" />
           </View>
           <View style={styles.inventoryCount}>
-            <MaterialCommunityIcons name="truck-outline" size={23} color="#15529E" />
+            <MaterialCommunityIcons name="truck-cargo-container" size={23} color="#15529E" />
             <Text style={styles.inventoryCountValue}>{totalVehicles} {totalVehicles === 1 ? 'vehicle' : 'vehicles'}</Text>
           </View>
         </View>
 
         <View style={styles.searchShell}>
-          <MaterialCommunityIcons name="magnify" size={21} color="#6E7B8F" />
+          <MaterialCommunityIcons name="magnify" size={24} color="#6E7B8F" />
           <TextInput
             value={query}
             onChangeText={onQueryChange}
@@ -182,7 +182,7 @@ export function ExchangeMarketplaceHome({
               <View style={[styles.categoryIcon, category === item && styles.categoryIconActive]}>
                 <MaterialCommunityIcons
                   name={categoryIcon(item)}
-                  size={25}
+                  size={30}
                   color={category === item ? '#FFFFFF' : '#164BB8'}
                 />
               </View>
@@ -193,7 +193,7 @@ export function ExchangeMarketplaceHome({
 
         <View style={styles.intentGrid}>
           <IntentCard
-            icon="truck-fast-outline"
+            icon="truck-check-outline"
             title="Buy a Vehicle"
             copy="Find verified commercial vehicles"
             tone="blue"
@@ -207,14 +207,14 @@ export function ExchangeMarketplaceHome({
             onPress={onSell}
           />
           <IntentCard
-            icon="chart-timeline-variant"
+            icon="chart-line-variant"
             title="Check Value"
             copy="Know approximate market value"
             tone="green"
             onPress={onValue}
           />
           <IntentCard
-            icon="briefcase-outline"
+            icon="briefcase-check-outline"
             title="My Exchange"
             copy="Offers, listings and deals"
             tone="indigo"
@@ -360,7 +360,7 @@ function IntentCard({
   tone,
   onPress,
 }: {
-  icon: 'truck-fast-outline' | 'truck-plus-outline' | 'chart-timeline-variant' | 'briefcase-outline';
+  icon: 'truck-check-outline' | 'truck-plus-outline' | 'chart-line-variant' | 'briefcase-check-outline';
   title: string;
   copy: string;
   tone: 'blue' | 'orange' | 'green' | 'indigo';
@@ -378,7 +378,7 @@ function IntentCard({
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.intentCard, toneStyle, pressed && styles.pressed]}>
       <View style={styles.intentTop}>
-        <View style={styles.intentIconBadge}><MaterialCommunityIcons name={icon} size={27} color={iconColor} /></View>
+        <View style={styles.intentIconBadge}><MaterialCommunityIcons name={icon} size={30} color={iconColor} /></View>
         <MaterialCommunityIcons name="chevron-right" size={18} color={iconColor} />
       </View>
       <Text style={styles.intentTitle}>{title}</Text>
@@ -626,7 +626,7 @@ const styles = StyleSheet.create({
   categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' },
   categoryTile: { width: '31.3%', minHeight: 94, borderRadius: 14, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE3EC' },
   categoryTileActive: { borderColor: '#276DEB', backgroundColor: '#276DEB' },
-  categoryIcon: { width: 44, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF4FF' },
+  categoryIcon: { width: 48, height: 46, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF4FF' },
   categoryIconActive: { backgroundColor: 'rgba(255,255,255,0.14)' },
   categoryLabel: { color: '#193556', fontSize: 11, fontWeight: '800' },
   categoryLabelActive: { color: '#FFFFFF', fontWeight: '900' },
@@ -702,7 +702,7 @@ const styles = StyleSheet.create({
   sellBannerCopy: { marginTop: 3, color: '#687589', fontSize: 8.4, lineHeight: 11.5, fontWeight: '700' },
 
   viewAllRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  intentIconBadge: { width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.42)', alignItems: 'center', justifyContent: 'center' },
+  intentIconBadge: { width: 44, height: 44, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.42)', alignItems: 'center', justifyContent: 'center' },
   featureMetaRow: { marginTop: 8, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
   verifiedPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, height: 28, borderRadius: 15, backgroundColor: '#DCF5ED' },
   verifiedPillText: { color: '#087E69', fontSize: 10, fontWeight: '800' },
