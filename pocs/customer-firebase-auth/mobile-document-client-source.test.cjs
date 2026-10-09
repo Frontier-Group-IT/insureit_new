@@ -15,5 +15,5 @@ test('Firebase document signed URL must be short lived and bound to known servic
   assert.match(source,/expiresIn > 60/);
   assert.match(source,/url\.startsWith\(base \+ '\/storage\/v1\/'\)/);
   assert.match(source,/if \(!response\.ok\) throw/);
-  assert.match(source,/\['claim-documents', 'customer-documents'\]/);
+  assert.match(source,/\['claim-documents', 'customer-documents', 'policy-documents'\]/);
 });
