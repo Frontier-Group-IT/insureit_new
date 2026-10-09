@@ -172,7 +172,10 @@ requireText(policyIntakeDetail, 'function statusBadgeStyle(row: PartnerPolicyInt
 requireText(policyIntakeDetail, 'submitPartnerPolicyIntakeReplacement({', 'Policy Intake detail must preserve the replacement upload service path.');
 if (policyIntakeDetail.includes('git-network-outline') || policyIntakeDetail.includes('alert-circle-outline')) throw new Error('Policy Intake status and attention surfaces must not regress to generic feature glyphs.');
 
-for (const detailAsset of ['products.motorInsurance', 'products.healthInsurance', 'products.familyInsurance', 'products.commercialInsurance', 'navigation.customers']) requireText(policyDetail, `PartnerAssets.${detailAsset}`, `Policy detail is missing ${detailAsset} artwork.`);
+for (const detailAsset of ['products.motorInsurance', 'products.healthInsurance', 'products.familyInsurance', 'products.commercialInsurance']) requireText(policyDetail, `PartnerAssets.${detailAsset}`, `Policy detail is missing ${detailAsset} artwork.`);
+requireText(policyDetail, 'icon="person-outline"', 'Policy detail customer row must use a clear person profile icon.');
+requireText(policyDetail, 'insurerName={data.insurer.name}', 'Policy overview must pass insurer identity to logo renderer.');
+requireText(policyDetail, '<PartnerInsurerLogo name={insurerName}', 'Policy overview must render insurer brand artwork.');
 requireText(policyDetail, 'getPartnerPolicyDetail(id)', 'Policy detail must preserve the existing scoped data service.');
 requireText(policyDetail, '<PartnerPolicyDetailIcon kind={iconKind}', 'Policy detail reusable sections must render the professional policy icon component.');
 for (const kind of [
