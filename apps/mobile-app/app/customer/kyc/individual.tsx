@@ -254,7 +254,9 @@ export default function IndividualKycScreen() {
         'Enter a valid GSTIN.', 'PAN and both Aadhaar images are required.',
         'GST certificate is required.',
       ];
-      const safeDetail = allowedMessages.includes(message) ? message : '';
+      // Supabase may include a PostgreSQL exception prefix or trailing detail.
+      // Match only the known server-owned validation text; never show the raw message.
+      const safeDetail = allowedMessages.find((known) => message === known || message.includes(known)) || '';
       setError(`KYC failed while ${failedStage}. ${safeDetail || 'Please retry. Your saved details are still available.'}${code ? ` (Code: ${code})` : ''}`);
     } finally {
       setSubmitting(false);
