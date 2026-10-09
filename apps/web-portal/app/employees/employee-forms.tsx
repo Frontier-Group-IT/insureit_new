@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
-import { createEmployee, sendEmployeePortalInvite, updateEmployee, type EmployeeActionState } from "./actions";
+import { createEmployee, sendEmployeePortalInvite, updateEmployee, updateEmployeePortalRole, type EmployeeActionState } from "./actions";
 
 export type EmployeeRow = {
   id: string;
@@ -75,6 +75,36 @@ export function EmployeeEditForm({ employee, managers }: { employee: EmployeeRow
       <EmployeeFields employee={employee} managers={managers} />
       <ActionMessage state={state} />
       <FormSubmitButton label="Save changes" pendingLabel="Saving" className="inline-flex h-9 items-center justify-center rounded-md bg-[#071D49] px-4 text-[11px] font-semibold text-white disabled:opacity-70" />
+    </form>
+  );
+}
+
+export function EmployeePortalRoleForm({ employee, portalRoles }: { employee: EmployeeRow; portalRoles: PortalRoleOption[] }) {
+  const action = updateEmployeePortalRole.bind(null, employee.id);
+  const [state, formAction] = useActionState(action, initialEmployeeActionState);
+  const selectedRole = employee.portal_role && portalRoles.some((role) => role.value === employee.portal_role)
+    ? employee.portal_role
+    : portalRoles[0]?.value ?? "";
+
+  return (
+    <form action={formAction} className="grid gap-3 rounded-lg border border-[#DCE6F3] bg-[#FAFCFF] p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-[11px] font-semibold text-[#071D49]">Portal role</p>
+          <p className="mt-0.5 text-[10px] leading-4 text-[#667085]">Controls the employee&apos;s portal permissions. This change updates both the live profile and authentication role.</p>
+        </div>
+        <span className="rounded-full bg-[#EDF4FF] px-2 py-1 text-[9px] font-semibold text-[#3156B8]">{employee.portal_status === "active" ? "Portal active" : "Invite pending"}</span>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
+        <label className={labelClass}>
+          Assigned role
+          <select name="portal_role" className={inputClass} defaultValue={selectedRole} required>
+            {portalRoles.map((role) => <option key={role.value} value={role.value}>{role.label}</option>)}
+          </select>
+        </label>
+        <FormSubmitButton label="Change role" pendingLabel="Updating" className="inline-flex h-10 items-center justify-center rounded-md bg-[#071D49] px-4 text-[10px] font-semibold text-white disabled:opacity-60" />
+      </div>
+      <ActionMessage state={state} />
     </form>
   );
 }

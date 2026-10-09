@@ -1,6 +1,6 @@
 import type { AppRole } from "@/lib/roles";
 
-export type EmployeePortalOperation = "invite" | "suspend" | "restore";
+export type EmployeePortalOperation = "invite" | "suspend" | "restore" | "change_role";
 
 export type EmployeePortalGovernanceGuardInput = {
   operation: EmployeePortalOperation;
@@ -48,6 +48,32 @@ export function evaluateEmployeePortalGovernanceGuard(
 
   if (input.operation === "invite" && !portalManagerRoles.includes(input.actorRole)) {
     return { allowed: false, reason: "You do not have permission to manage employee portal access." };
+  }
+
+  if (input.operation === "change_role" && !portalManagerRoles.includes(input.actorRole)) {
+    return { allowed: false, reason: "You do not have permission to manage employee portal access." };
+  }
+
+  if (input.operation === "change_role" && input.assigningRole === "it_super_user" && input.targetRole !== "it_super_user") {
+    return { allowed: false, reason: "IT Super User is a protected technical role and cannot be assigned through normal user management." };
+  }
+
+  if (input.operation === "change_role" && input.assigningRole === "super_admin") {
+    if (input.actorRole !== "super_admin" && input.actorRole !== "it_super_user") {
+      return { allowed: false, reason: "Only a Super Admin or IT Super User can assign Super Admin access." };
+    }
+  }
+
+  if (
+    input.operation === "change_role"
+    && input.targetRole
+    && input.assigningRole
+    && input.assigningRole !== input.targetRole
+    && (input.targetRole === "super_admin" || input.targetRole === "it_super_user")
+    && (input.activeTargetRoleCount ?? 0) <= 1
+  ) {
+    const label = input.targetRole === "super_admin" ? "Super Admin" : "IT Super User";
+    return { allowed: false, reason: `The final active ${label} account cannot be moved to another role.` };
   }
 
   if (input.operation === "invite" && input.assigningRole === "it_super_user" && !input.targetHasExistingProfile) {
