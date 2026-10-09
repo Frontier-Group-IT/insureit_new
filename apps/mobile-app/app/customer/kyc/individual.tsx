@@ -6,6 +6,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, Sc
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandLogo } from '@/components/first-look';
+import { prepareCustomerDocument, readPreparedCustomerDocument, removePreparedCustomerDocument, type PreparedCustomerDocument } from '@/components/ui/customer-kyc-document-file';
 import {
   getCurrentSession,
   ensureCustomerOnboardingForPartner,
@@ -20,7 +21,7 @@ import type { CustomerOnboardingApplication, CustomerOnboardingDocument, IndiaLo
 
 type DocumentType = CustomerOnboardingDocument['document_type'];
 type FleetBand = 'less_than_5' | '5_to_20' | '20_to_50' | 'more_than_50';
-type PickedFile = { uri: string; name: string; mimeType: string | null; size: number | null };
+type PickedFile = PreparedCustomerDocument;
 
 const maxFileSize = 5 * 1024 * 1024;
 const panPattern = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
@@ -150,12 +151,25 @@ export default function IndividualKycScreen() {
       copyToCacheDirectory: true,
     });
     if (result.canceled || !result.assets[0]) return;
+
     const asset = result.assets[0];
     if (asset.size && asset.size > maxFileSize) return setError(`${documentLabels[type]} must be 5 MB or smaller.`);
-    setFiles((current) => ({
-      ...current,
-      [type]: { uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? null, size: asset.size ?? null },
-    }));
+
+    try {
+      const prepared = await prepareCustomerDocument(asset, maxFileSize);
+      setFiles((current) => {
+        const previous = current[type];
+        if (previous?.uri && previous.uri !== prepared.uri) removePreparedCustomerDocument(previous.uri);
+        return { ...current, [type]: prepared };
+      });
+    } catch (nextError) {
+      const detail = nextError instanceof Error ? nextError.message : '';
+      setError(
+        detail
+          ? `${documentLabels[type]} could not be prepared. ${detail}`
+          : `${documentLabels[type]} could not be prepared on this device. Please choose the file again.`,
+      );
+    }
   }
 
   function validate() {
@@ -287,8 +301,17 @@ export default function IndividualKycScreen() {
 async function uploadDocument(applicationId: string, type: DocumentType, file: PickedFile, currentDocuments: CustomerOnboardingDocument[]) {
   const session = await getCurrentSession();
   if (!session?.user) throw new Error('Your session expired. Please sign in again.');
-  const response = await fetch(file.uri);
-  const body = await response.arrayBuffer();
+  let body: ArrayBuffer;
+  try {
+    body = await readPreparedCustomerDocument(file.uri);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : '';
+    throw new Error(
+      detail
+        ? `${documentLabels[type]} could not be read from this device. ${detail}`
+        : `${documentLabels[type]} could not be read from this device. Please choose it again.`,
+    );
+  }
   if (body.byteLength > maxFileSize) throw new Error(`${documentLabels[type]} must be 5 MB or smaller.`);
   const extension = safeExtension(file);
   const storagePath = `${applicationId}/${type}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
@@ -314,6 +337,7 @@ async function uploadDocument(applicationId: string, type: DocumentType, file: P
     throw new Error(`${documentLabels[type]} record could not be saved.`);
   }
   if (existing?.storage_path && existing.storage_path !== storagePath) await supabase.storage.from('customer-documents').remove([existing.storage_path]);
+  removePreparedCustomerDocument(file.uri);
   return [data, ...currentDocuments.filter((item) => item.document_type !== type)];
 }
 
