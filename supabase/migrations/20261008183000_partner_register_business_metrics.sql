@@ -41,7 +41,8 @@ as $$
   policy_family as (
     select distinct f.partner_id, p.id as policy_id
     from family f
-    join public.policies p on p.intermediary_code = f.intermediary_code
+    join public.policies p
+      on upper(btrim(p.intermediary_code)) = upper(btrim(f.intermediary_code))
     where nullif(btrim(f.intermediary_code), '') is not null
   ),
   premium_totals as (
