@@ -1,0 +1,44 @@
+/* Customer Portal only. Does not affect Operations, Partner or public login. */
+.customer-compact {
+  --customer-compact-border: #dce5f0;
+  --customer-compact-navy: #102b52;
+}
+.customer-compact main { padding-top: 12px; }
+.customer-compact main :is(.space-y-5, .space-y-6) > :not([hidden]) ~ :not([hidden]) { margin-top: 12px; }
+.customer-compact main :is(.gap-5, .gap-6) { gap: 12px; }
+.customer-compact main :is(.gap-4) { gap: 10px; }
+.customer-compact main :is(.rounded-2xl, .rounded-3xl) { border-radius: 12px; }
+.customer-compact main :is(.p-8, .p-6, .p-5) { padding: 12px; }
+.customer-compact main :is(.p-4) { padding: 10px; }
+.customer-compact main :is(.px-5, .px-6, .px-8) { padding-left: 12px; padding-right: 12px; }
+.customer-compact main :is(.py-5, .py-6, .py-8) { padding-top: 10px; padding-bottom: 10px; }
+.customer-compact main :is(.mt-5, .mt-6, .mt-8) { margin-top: 10px; }
+.customer-compact main :is(.mb-5, .mb-6) { margin-bottom: 10px; }
+.customer-compact main :is(.min-h-24, .min-h-28) { min-height: 64px; }
+.customer-compact main :is(.text-3xl, .text-4xl) { font-size: 23px; line-height: 1.2; }
+.customer-compact main :is(.text-2xl) { font-size: 19px; line-height: 1.25; }
+.customer-compact main table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+.customer-compact main table th { background: #f3f6fa; font-size: 10px; line-height: 1.3; font-weight: 700; color: #61738b; white-space: nowrap; }
+.customer-compact main table :is(th,td) { padding: 8px 10px; border-bottom: 1px solid #e5ebf3; }
+.customer-compact main table td { font-size: 11px; line-height: 1.3; }
+.customer-compact main table tbody tr:hover { background: #f8faff; }
+.customer-compact main :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),select) { min-height: 34px; }
+.customer-compact main textarea { min-height: 66px; }
+.customer-compact main button, .customer-compact main a { touch-action: manipulation; }
+.customer-compact main :is(button,input,select,textarea,a):focus-visible { outline: 2px solid #2765c4; outline-offset: 2px; }
+/* Compact detail rows: common side-by-side label/value presentation. */
+.customer-compact .customer-detail-grid { overflow: hidden; border: 1px solid var(--customer-compact-border); border-radius: 9px; background: white; }
+.customer-compact .customer-detail-row { display: grid; grid-template-columns: minmax(130px, 35%) minmax(0,1fr); border-bottom: 1px solid #e5ebf3; font-size: 11px; }
+.customer-compact .customer-detail-row:last-child { border-bottom: 0; }
+.customer-compact .customer-detail-label { padding: 8px 11px; background: #f2f6fb; font-weight: 650; color: #73849c; }
+.customer-compact .customer-detail-value { padding: 8px 11px; min-width: 0; overflow-wrap: anywhere; color: #173253; font-weight: 600; }
+@media (max-width: 640px) {
+  .customer-compact main { padding-left: 10px; padding-right: 10px; }
+  .customer-compact main :is(.text-3xl,.text-4xl) { font-size: 20px; }
+  .customer-compact .customer-detail-row { grid-template-columns: minmax(105px,40%) minmax(0,1fr); }
+  .customer-compact main table :is(th,td) { padding: 7px 9px; }
+}
+/* Respect users requesting reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .customer-compact * { scroll-behavior: auto !important; }
+}
