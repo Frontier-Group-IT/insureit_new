@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarClock, CarFront, FileCheck2, ShieldCheck } from "lucide-react";
+import { CalendarClock } from "lucide-react";
 import {
   CustomerAccountTabs,
   CustomerPageHeading,
@@ -16,15 +16,6 @@ import {
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
-const renewalIcon = {
-  insurance_policy: ShieldCheck,
-  national_permit: FileCheck2,
-  local_permit: FileCheck2,
-  road_tax: FileCheck2,
-  puc: FileCheck2,
-  fitness: FileCheck2,
-} as const;
 
 export default async function CustomerRenewalsPage({
   searchParams,
@@ -73,34 +64,19 @@ export default async function CustomerRenewalsPage({
       {items.length === 0 ? (
         <EmptyCustomerState title="No pending renewals" body="No due or expired items were found for this Customer account." />
       ) : (
-        <div className="grid gap-3 lg:grid-cols-2">
-          {items.map((item) => {
-            const Icon = renewalIcon[item.key];
-            return (
-              <Link
-                key={item.id}
-                href={{ pathname: `/customer/vehicles/${item.vehicle_id}`, query: { account: account.id } }}
-                className="rounded-2xl border border-[#DCE4EE] bg-white p-4 shadow-[0_8px_24px_rgba(28,50,82,0.04)] transition hover:-translate-y-0.5 hover:border-[#B9C9DB]"
-              >
-                <div className="flex items-start gap-3">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#174EA6]"><Icon className="h-5 w-5" /></span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-[12px] font-black text-[#10213D]">{item.title}</p>
-                      <StatusPill tone={item.status === "expired" ? "expired" : "due"}>
-                        {item.status === "expired" ? "Expired" : `${item.days_until}d left`}
-                      </StatusPill>
-                    </div>
-                    <p className="mt-1 flex items-center gap-1 text-[11px] font-black text-[#35445B]"><CarFront className="h-3.5 w-3.5" />{item.vehicle_no}</p>
-                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] font-bold text-[#74839A]">
-                      <span className="inline-flex items-center gap-1"><CalendarClock className="h-3.5 w-3.5" />{formatRenewalExpiry(item.expiry_date)}</span>
-                      {item.meta ? <span className="truncate">{item.meta}</span> : null}
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
+        <div className="overflow-x-auto rounded-xl border border-[#D8E1EC] bg-white">
+          <table className="min-w-[830px] text-left text-[11px]">
+            <thead><tr>{["Renewal item","Vehicle","Reference","Expiry date","Days left","Status","Action"].map(label=><th scope="col" key={label}>{label}</th>)}</tr></thead>
+            <tbody>{items.map(item=><tr key={item.id} className="hover:bg-[#F8FAFD]">
+              <td className="font-semibold text-[#142746]">{item.title}</td>
+              <td className="font-bold text-[#154D9B]">{item.vehicle_no}</td>
+              <td className="max-w-[220px] truncate" title={item.meta||""}>{item.meta||"—"}</td>
+              <td className="whitespace-nowrap"><span className="inline-flex items-center gap-1"><CalendarClock className="h-3.5 w-3.5"/>{formatRenewalExpiry(item.expiry_date)}</span></td>
+              <td>{item.days_until<0?Math.abs(item.days_until)+" overdue":item.days_until+" days"}</td>
+              <td><StatusPill tone={item.status==="expired"?"expired":"due"}>{item.status==="expired"?"Expired":"Due soon"}</StatusPill></td>
+              <td><Link href={{ pathname:`/customer/vehicles/${item.vehicle_id}`,query:{account:account.id}}} className="whitespace-nowrap font-bold text-[#1754A5] hover:underline">View →</Link></td>
+            </tr>)}</tbody>
+          </table>
         </div>
       )}
     </div>
