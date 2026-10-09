@@ -1,0 +1,44 @@
+name: Run Firebase PR2979 isolated verification
+on:
+  push:
+    branches:
+      - ci/run-customer-firebase-pr2979-20261009
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  firebase-pr-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/customer-firebase-otp-direct-2026-10-08
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Firebase backend and native source regression tests
+        run: |
+          node --test \
+            apps/mobile-app/lib/firebase-otp-readiness.test.cjs \
+            apps/mobile-app/lib/firebase-native-phone-flow.test.cjs \
+            apps/mobile-app/lib/firebase-data-client.test.cjs \
+            pocs/customer-firebase-auth/sql-draft.test.cjs \
+            pocs/customer-firebase-auth/server-identity-binding.test.cjs \
+            pocs/customer-firebase-auth/firebase-admin-verifier.test.cjs \
+            pocs/customer-firebase-auth/firebase-binding-backend.test.cjs \
+            pocs/customer-firebase-auth/supabase-identity-store.test.cjs \
+            pocs/customer-firebase-auth/android-config.test.cjs \
+            pocs/customer-firebase-auth/edge-binding-source.test.cjs \
+            pocs/customer-firebase-auth/auth-uid-compatibility.test.cjs \
+            pocs/customer-firebase-auth/signup-edge-source.test.cjs \
+            pocs/customer-firebase-auth/doc-read-edge-source.test.cjs \
+            pocs/customer-firebase-auth/mobile-document-client-source.test.cjs \
+            apps/mobile-app/lib/firebase-android-auth-adapter.test.cjs
+      - name: Validate staging isolation smoke runner syntax
+        run: node --check pocs/customer-firebase-auth/staging-customer-isolation.mjs
+      - name: Firebase native app types
+        run: npx tsc --noEmit --skipLibCheck --target ES2020 --module commonjs apps/mobile-app/lib/firebase-otp-readiness.ts apps/mobile-app/lib/firebase-native-phone-flow.ts apps/mobile-app/lib/firebase-data-client.ts pocs/customer-firebase-auth/server-identity-binding.ts pocs/customer-firebase-auth/firebase-admin-verifier.ts pocs/customer-firebase-auth/firebase-binding-backend.ts pocs/customer-firebase-auth/supabase-identity-store.ts apps/mobile-app/lib/firebase-android-auth-adapter.ts apps/mobile-app/lib/firebase-installed-android-otp.ts apps/mobile-app/lib/firebase-customer-auth.ts
