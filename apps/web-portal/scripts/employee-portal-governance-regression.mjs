@@ -106,6 +106,39 @@ expect(
   true,
 );
 
+expect(
+  "non portal manager cannot change linked portal role",
+  { ...base, actorRole: "manager", operation: "change_role", targetProfileId: "target-user", targetRole: "sales_manager", assigningRole: "relationship_manager" },
+  false,
+  "permission to manage employee portal access",
+);
+
+expect(
+  "admin may change ordinary staff role",
+  { ...base, actorRole: "admin", operation: "change_role", targetProfileId: "target-user", targetRole: "sales_manager", assigningRole: "relationship_manager", activeTargetRoleCount: 3 },
+  true,
+);
+
+expect(
+  "normal user management cannot assign IT super user through role change",
+  { ...base, actorRole: "super_admin", operation: "change_role", targetProfileId: "target-user", targetRole: "admin", assigningRole: "it_super_user" },
+  false,
+  "protected technical role",
+);
+
+expect(
+  "final super admin cannot be moved to another role",
+  { ...base, actorRole: "it_super_user", operation: "change_role", targetProfileId: "target-sa", targetRole: "super_admin", assigningRole: "admin", activeTargetRoleCount: 1 },
+  false,
+  "final active Super Admin",
+);
+
+expect(
+  "one of multiple super admins may be moved to another role",
+  { ...base, actorRole: "it_super_user", operation: "change_role", targetProfileId: "target-sa", targetRole: "super_admin", assigningRole: "admin", activeTargetRoleCount: 2 },
+  true,
+);
+
 const governanceSource = readFileSync(
   resolve(process.cwd(), "lib/employee-portal-governance.ts"),
   "utf8",
@@ -140,7 +173,7 @@ if (!migrationSource.includes("p.employee_id is null") || !migrationSource.inclu
 }
 
 console.log(JSON.stringify({
-  governanceCases: 13,
+  governanceCases: 18,
   protectedRoles: ["super_admin", "it_super_user"],
   normalPortalManagerRoles: ["super_admin", "admin", "it_super_user"],
   accountsInviteRecovery: "guarded",
