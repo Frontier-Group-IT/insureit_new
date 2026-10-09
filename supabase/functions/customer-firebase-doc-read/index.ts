@@ -81,7 +81,7 @@ Deno.serve(async (request: Request) => {
       documentPath.split("/").some((part) => part === ".." || part === "." || part === "")) {
       return reply(400, { error: "invalid_document" });
     }
-    if (!["claim-documents", "customer-documents"].includes(bucket)) {
+    if (!["claim-documents", "customer-documents", "policy-documents"].includes(bucket)) {
       return reply(403, { error: "bucket_not_allowed" });
     }
 
@@ -128,6 +128,29 @@ Deno.serve(async (request: Request) => {
               .eq("customer_id", d.customer_id).eq("profile_id", profileId)
               .eq("status", "active").limit(1);
             if (membershipError) throw new Error("Membership lookup failed");
+            allowed = Boolean(memberships?.length);
+          }
+        }
+      }
+    } else if (bucket === "policy-documents") {
+      const { data: docs, error } = await db.from("policy_documents")
+        .select("id,policy_id").eq("storage_path", documentPath).limit(2);
+      if (error) throw new Error("Policy document lookup failed");
+      if (docs?.length === 1) {
+        const { data: policy, error: policyError } = await db.from("policies")
+          .select("id,customer_id").eq("id", docs[0].policy_id).maybeSingle();
+        if (policyError) throw new Error("Policy owner lookup failed");
+        if (policy?.customer_id) {
+          const { data: customer, error: customerError } = await db.from("customers")
+            .select("id,profile_id").eq("id", policy.customer_id).maybeSingle();
+          if (customerError) throw new Error("Policy customer lookup failed");
+          allowed = customer?.profile_id === profileId;
+          if (!allowed && customer?.id === policy.customer_id) {
+            const { data: memberships, error: membershipError } = await db
+              .from("customer_memberships").select("customer_id")
+              .eq("customer_id", policy.customer_id).eq("profile_id", profileId)
+              .eq("status", "active").limit(1);
+            if (membershipError) throw new Error("Policy membership lookup failed");
             allowed = Boolean(memberships?.length);
           }
         }
