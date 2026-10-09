@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, SafeAreaView, Text, TextInput, View } from 'react-native';
-import { confirmFirebaseCustomerOtp, sendFirebaseCustomerOtp } from '@/lib/firebase-customer-auth';
+import { confirmFirebaseCustomerOtp, confirmFirebaseCustomerSignup, sendFirebaseCustomerOtp } from '@/lib/firebase-customer-auth';
 
 /**
  * Isolated native authentication validation route.
@@ -8,6 +8,9 @@ import { confirmFirebaseCustomerOtp, sendFirebaseCustomerOtp } from '@/lib/fireb
  * Test with an authorized existing customer phone on a new native build.
  */
 export default function FirebaseOtpTestScreen() {
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [sent, setSent] = useState(false);
@@ -28,10 +31,15 @@ export default function FirebaseOtpTestScreen() {
         setStatus('Firebase verification code requested.');
       } else {
         if (!/^\d{6}$/.test(code)) throw new Error('Enter the six-digit verification code.');
-        const verified = await confirmFirebaseCustomerOtp(code);
+        if (mode === 'signup' && fullName.trim().length < 2) throw new Error('Enter your full name before registering.');
+        const verified = mode === 'signup'
+          ? await confirmFirebaseCustomerSignup(code, { fullName: fullName.trim(), ...(email.trim() ? { email: email.trim() } : {}) })
+          : await confirmFirebaseCustomerOtp(code);
         // Do not render the full profile UUID or Firebase ID token.
         setProfileId(verified.profileId.slice(0, 8));
-        setStatus('Firebase verified and existing customer profile resolved.');
+        setStatus(mode === 'signup'
+          ? 'Firebase verified and registered customer profile resolved.'
+          : 'Firebase verified and existing customer profile resolved.');
       }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Firebase validation failed.');
@@ -46,6 +54,31 @@ export default function FirebaseOtpTestScreen() {
       <Text style={{ marginVertical: 12, color: '#48556B' }}>
         Protected test: verifies Firebase phone sign-in and your existing INSUREIT identity without changing the working login.
       </Text>
+      <View style={{ flexDirection: 'row', marginBottom: 14, gap: 8 }}>
+        {(['login', 'signup'] as const).map((nextMode) => (
+          <Pressable key={nextMode} disabled={busy || sent}
+            accessibilityRole="button"
+            onPress={() => { setMode(nextMode); setStatus(''); setProfileId(''); }}
+            style={{ flex: 1, padding: 12, borderRadius: 10, backgroundColor: mode === nextMode ? '#09235A' : '#E4EAF3', alignItems: 'center' }}>
+            <Text style={{ color: mode === nextMode ? '#FFF' : '#09235A', fontWeight: '600' }}>
+              {nextMode === 'login' ? 'Existing customer' : 'New customer signup'}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      {mode === 'signup' ? (
+        <>
+          <TextInput accessibilityLabel="Customer full name"
+            placeholder="Full name" value={fullName} onChangeText={setFullName}
+            editable={!busy && !sent} maxLength={120}
+            style={{ borderWidth: 1, borderColor: '#C7D4E7', padding: 12, borderRadius: 10, marginBottom: 10 }} />
+          <TextInput accessibilityLabel="Optional contact email"
+            placeholder="Email (optional)" value={email} onChangeText={setEmail}
+            editable={!busy && !sent} keyboardType="email-address"
+            autoCapitalize="none" maxLength={254}
+            style={{ borderWidth: 1, borderColor: '#C7D4E7', padding: 12, borderRadius: 10, marginBottom: 10 }} />
+        </>
+      ) : null}
       <TextInput
         accessibilityLabel="Mobile number"
         keyboardType="phone-pad" placeholder="10 digit mobile number"
