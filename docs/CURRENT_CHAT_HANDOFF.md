@@ -1,3 +1,16 @@
+## 2026-10-09 — Customer App Profile duplicate PAN/Aadhaar rows
+
+- Branch: `fix/customer-profile-kyc-dedup`.
+- Root cause confirmed: Profile loads KYC files from `customer_onboarding_documents` and general files from `customer_documents`, then renders both. Historical PAN/Aadhaar rows also exist in `customer_documents`, so the same KYC appears twice.
+- Production data was inspected and duplicate presentation is real; no records were deleted.
+- Fix is UI-only and data-preserving: retain the labeled KYC cards from `customer_onboarding_documents`, but exclude `pan_copy`, `aadhaar_front`, and `aadhaar_back` from the general `customer_documents` list.
+- Policy copies and all non-KYC customer documents continue to render normally.
+- Added regression coverage to `customer-kyc-document-reader-regression.mjs`, which already runs in Verify mobile app.
+- **NO DATABASE CLEANUP, NO APK/AAB.**
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/OTA PENDING.**
+
+---
+
 ## 2026-10-09 — Customer App HDFC ERGO policy-card logo visibility fix v2
 
 - Branch: `fix/customer-hdfc-ergo-logo-visibility-v2`.
