@@ -499,18 +499,20 @@ function ClaimHealth({ claims }: { claims: NonNullable<DashboardCurrentData["cla
           ) : null}
         </div>
       </div>
-      <div className="flex min-h-[64px] flex-col justify-center gap-1.5 bg-[#142448] px-3 py-2 text-white">
-        <p className="overflow-x-auto whitespace-nowrap text-center text-[9px] font-semibold [scrollbar-width:none]" title={agingSummary}>{shortAging}</p>
-        {(claims.assistanceRequested || claims.pendingDocuments || claims.billExposure) ? (
-          <p className="overflow-x-auto whitespace-nowrap text-center text-[9px] text-white [scrollbar-width:none]">
+      <div className="flex min-h-[30px] items-center justify-center bg-white px-3 py-2">
+        <p className="overflow-x-auto whitespace-nowrap text-center text-[9px] font-semibold text-[#53637A] [scrollbar-width:none]" title={agingSummary}>{shortAging}</p>
+      </div>
+      {(claims.assistanceRequested || claims.pendingDocuments || claims.billExposure) ? (
+        <div className="flex min-h-[36px] items-center justify-center bg-[#142448] px-3 py-2">
+          <p className="overflow-x-auto whitespace-nowrap text-center text-[10px] font-semibold text-white [scrollbar-width:none]">
             {[
               claims.assistanceRequested ? `${claims.assistanceRequested} assistance` : null,
               claims.pendingDocuments ? `${claims.pendingDocuments} documents pending` : null,
               claims.billExposure ? `Bill ${formatMoney(claims.billExposure)}` : null,
             ].filter(Boolean).join(" · ")}
           </p>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }
