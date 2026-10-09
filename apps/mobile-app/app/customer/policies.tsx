@@ -467,11 +467,17 @@ function PolicySummaryColumn({
   tertiaryMuted?: boolean;
   tertiaryDotColor?: string;
 }) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [icon]);
+
   return (
     <View style={styles.summaryColumn}>
       <View style={styles.catalogIconWrap}>
-        {icon ? (
-          <Image source={icon} resizeMode="contain" style={styles.catalogIcon} />
+        {icon && !imageFailed ? (
+          <Image source={icon} resizeMode="contain" style={styles.catalogIcon} onError={() => setImageFailed(true)} />
         ) : (
           <MaterialCommunityIcons name={fallbackIcon} size={24} color={palette.navy} />
         )}
