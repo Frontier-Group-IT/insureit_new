@@ -1,4 +1,4 @@
-import { getAuth, type FirebaseAuthTypes } from '@react-native-firebase/auth';
+import { getAuth } from '@react-native-firebase/auth';
 import { createInstalledAndroidFirebaseOtpFlow } from './firebase-installed-android-otp';
 import { createCustomerFirebaseDataClient } from './firebase-data-client';
 
@@ -64,7 +64,7 @@ export async function confirmFirebaseCustomerOtp(
   if (result.status !== 'linked' || result.requiresTokenRefresh !== true) {
     throw new Error('Firebase account linkage could not be confirmed.');
   }
-  const firebaseUser: FirebaseAuthTypes.User | null = getAuth().currentUser;
+  const firebaseUser = getAuth().currentUser;
   if (!firebaseUser || firebaseUser.uid !== uid) throw new Error('Firebase account changed during verification');
   const refreshedToken = await firebaseUser.getIdToken(true);
   const dataClient = createCustomerFirebaseDataClient(supabaseUrl, publicKey, async () => {
