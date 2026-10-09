@@ -81,11 +81,11 @@ export default async function CustomerExchangeListingPage({
 
         <section className="rounded-2xl border border-[#DCE4EE] bg-white p-4">
           <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#174EA6]" /><h2 className="text-[13px] font-black text-[#10213D]">Vehicle health & documents</h2></div>
-          <div className="mt-4 grid gap-2">
+          <div className="customer-detail-grid mt-2">
             {rows.map(([label,value]) => (
-              <div key={label} className="flex items-start justify-between gap-4 rounded-xl bg-[#F7F9FC] px-3 py-2.5">
-                <span className="text-[9.5px] font-bold text-[#8794A7]">{label}</span>
-                <span className="max-w-[60%] text-right text-[10.5px] font-black text-[#35445B]">{value}</span>
+              <div key={label} className="customer-detail-row">
+                <span className="customer-detail-label">{label}</span>
+                <span className="customer-detail-value">{value}</span>
               </div>
             ))}
           </div>
