@@ -62,8 +62,8 @@ assert.match(claimUploadHelper, /status === 409[\s\S]*already exists/, 'Storage 
 
 assert.match(rootLayout, /Updates\.useUpdates\(\)/, 'Root layout must observe Expo update download state.');
 assert.match(rootLayout, /isUpdatePending/, 'Root layout must detect a downloaded OTA waiting to be activated.');
-assert.match(rootLayout, /Updates\.reloadAsync\(\)/, 'A downloaded startup OTA must be activated without requiring another manual cold launch.');
-assert.match(rootLayout, /updateReloadRequested/, 'OTA activation must be guarded against duplicate reload requests.');
+assert.doesNotMatch(rootLayout, /Updates\.reloadAsync\(\)/, 'A downloaded OTA must not restart an active customer workflow or reset claim navigation.');
+assert.match(rootLayout, /activation deferred until next app launch/, 'Pending OTA activation must be explicitly deferred to the next app launch.');
 
 assert.equal(appConfig.version, '0.3.0', 'Customer OTA must remain compatible with production runtime 0.3.0.');
 assert.equal(appConfig.android?.versionCode, 9, 'Customer OTA must remain aligned with production Android versionCode 9.');

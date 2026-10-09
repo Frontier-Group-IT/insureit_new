@@ -1,3 +1,7 @@
+## 2026-10-09 — Customer OTA active-session navigation safeguard
+
+**IMPLEMENTED on branch; NOT MERGED/PUBLISHED/DEVICE-VERIFIED.** Removed the root-layout automatic `Updates.reloadAsync()` on `isUpdatePending`. Expo can download OTA updates during an active session but activation is deferred to a subsequent app launch, preserving the current navigation stack and in-progress Start Claim interaction. The old behavior could restart JS and route a restored customer to Home; this is a confirmed risk, not confirmed as the sole cause of the observed redirect. Verify Expo next-launch activation, vehicle dropdown/claim progression, and explicit Home tab behavior on Android before merging. No database changes; no APK/AAB.
+
 ## 2026-09-25 — Customer external claim compact reference summary
 
 **IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `ui/customer-external-claim-reference-summary`.

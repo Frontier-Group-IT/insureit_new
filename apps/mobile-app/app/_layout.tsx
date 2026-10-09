@@ -1,7 +1,7 @@
 import * as Updates from 'expo-updates';
 import { Stack, usePathname, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -28,7 +28,6 @@ function RootApplication() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const { checkError, downloadError, isUpdatePending } = Updates.useUpdates();
-  const updateReloadRequested = useRef(false);
   const [minimumIntroComplete, setMinimumIntroComplete] = useState(false);
 
   useEffect(() => {
@@ -46,18 +45,14 @@ function RootApplication() {
     return () => data.subscription.unsubscribe();
   }, []);
 
+  // Expo applies a downloaded update on the next cold launch. Never call
+  // reloadAsync while a customer may be selecting a vehicle or filing a claim:
+  // restarting the JS runtime discards the current navigation stack and can
+  // silently return the customer to Home.
   useEffect(() => {
-    if (__DEV__ || !Updates.isEnabled || !isUpdatePending || updateReloadRequested.current) return;
-
-    updateReloadRequested.current = true;
-    console.log('[expo-update] Applying downloaded startup update.', runningUpdateIdentity());
-    void Updates.reloadAsync().catch((error) => {
-      updateReloadRequested.current = false;
-      console.warn('[expo-update] Failed to activate downloaded startup update.', {
-        ...runningUpdateIdentity(),
-        error: errorMessage(error),
-      });
-    });
+    if (!__DEV__ && Updates.isEnabled && isUpdatePending) {
+      console.info('[expo-update] Update downloaded; activation deferred until next app launch.');
+    }
   }, [isUpdatePending]);
 
   useEffect(() => {
