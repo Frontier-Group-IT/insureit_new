@@ -1,3 +1,4 @@
+- **2026-10-09 — Operations Dashboard Claim Aging reference layout:** branch `ui/claim-aging-reference-layout-2026-10-09`; restores left-aligned open claims, right-aligned estimated exposure, aging distribution bar and five bucket columns; retains the navy documents-pending footer and all existing claim values. Also compacts Commercial Operations height and aligns Projected Gross/TDS labels and amounts inline, preserving financial values and navy summary. **IMPLEMENTED on branch; PR, CI, merge, deployment and visual verification pending. No APK/AAB.**
 # Repository Agent Instructions
 
 ## Mandatory startup context
