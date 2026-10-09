@@ -17,7 +17,6 @@ import { getCustomerIdentity, signOutFirebaseCustomer } from '@/lib/customer-ide
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { buildComplianceRenewals } from '@/lib/compliance-renewals';
 import { getSelectedCustomerContext, type CustomerAccountContext } from '@/lib/customer-context';
-import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Claim, ClaimTask, Customer, CustomerOnboardingApplication, Policy, Profile, Vehicle } from '@/lib/types';
 
