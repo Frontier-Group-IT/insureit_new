@@ -192,7 +192,7 @@ export default function CustomerDetailScreen() {
 
           {unlinkedClaims.length ? (
             <>
-              <SectionHeader icon="shield-checkmark-outline" title="Other Claims" meta={`${unlinkedClaims.length} without a linked policy`} />
+              <SectionHeader icon="shield-checkmark-outline" title="Other Claims" meta={`${unlinkedClaims.length} without an internal policy link`} />
               <View style={styles.stack}>{unlinkedClaims.map((claim) => (
                 <Pressable accessibilityRole="button" accessibilityLabel={`Open claim ${claim.claim_no || ''}`} key={claim.claim_id} onPress={() => router.push(`/claim/${claim.claim_id}` as never)} style={({ pressed }) => [styles.itemCard, pressed && styles.pressed]}>
                   <Logo source={getPartnerInsurerLogoSource(claim.insurer_name)} fallback={PartnerAssets.navigation.claims} />
