@@ -84,13 +84,10 @@ Deno.serve(async (request: Request) => {
           l.verified_phone_at_approval !== decoded.phone_number)) {
       return reply(409, { error: "identity_conflict" });
     }
-    // Role claim is set ONLY after real Firebase verification and unique
-    // existing-profile match; other existing custom claims are retained.
-    const user = await firebase.getUser(decoded.uid);
-    await firebase.setCustomUserClaims(decoded.uid, {
-      ...(user.customClaims ?? {}),
-      role: "authenticated",
-    });
+    // Never activate an unapproved/disabled mapping.
+    if (existing.some((l) => !l.is_approved || !l.is_active)) {
+      return reply(409, { error: "identity_requires_approval" });
+    }
     if (existing.length === 0) {
       const { error: insertError } = await db.from("customer_firebase_identity_links")
         .insert({
@@ -102,6 +99,13 @@ Deno.serve(async (request: Request) => {
         });
       if (insertError) return reply(409, { error: "customer_requires_review" });
     }
+    // Only grant the Firebase authenticated role AFTER the protected database
+    // mapping exists and is approved. Retain other Firebase custom claims.
+    const user = await firebase.getUser(decoded.uid);
+    await firebase.setCustomUserClaims(decoded.uid, {
+      ...(user.customClaims ?? {}),
+      role: "authenticated",
+    });
     // Firebase client must force-refresh its ID token after role claim assignment.
     return reply(200, { status: "linked", requiresTokenRefresh: true });
   } catch (error) {
