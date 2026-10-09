@@ -59,7 +59,7 @@ export default async function AddCustomerVehicle({ searchParams }: { searchParam
       <section className="overflow-hidden rounded-xl border border-[#DCE4EE] bg-white">
         <div className="flex items-center gap-3 border-b border-[#DFE8F3] px-3 py-2.5"><span className="grid h-8 w-8 place-items-center rounded-lg bg-[#17365F] text-[11px] font-bold text-white">01</span><h2 className="text-[13px] font-semibold">Vehicle Ownership</h2></div>
         <div className="grid gap-3 p-3 md:grid-cols-2 xl:grid-cols-5">
-          <label className={label}>Customer<input value={account.name} readOnly className={field+" bg-[#F4F7FB]"}/></label>
+          <label className={label}>Customer<input value={account.customer_name||account.contact_name||"Customer"} readOnly className={field+" bg-[#F4F7FB]"}/></label>
           <CustomerRcLookup/>
           <label className={label}>Registration date<input name="registrationDate" type="date" className={field}/></label>
           <label className={label}>Manufacturer *<input name="make" required maxLength={100} className={field}/></label>
