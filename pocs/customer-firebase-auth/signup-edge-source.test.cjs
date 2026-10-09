@@ -54,3 +54,16 @@ test('native signup provisions only after Firebase phone code verification and r
   assert.match(nativeCustomerAuth,/rpc\('customer_firebase_profile_id'\)/);
   assert.match(nativeCustomerAuth,/export function confirmFirebaseCustomerSignup/);
 });
+
+test('new verified customer is given an owned Customer App onboarding application',()=>{
+  assert.match(source,/db\.from\("customer_onboarding_applications"\)/);
+  assert.match(source,/profile_id: data\.user\.id/);
+  assert.match(source,/initiated_by: data\.user\.id/);
+  assert.match(source,/source: "customer_app"/);
+  assert.match(source,/partner_type: "individual_proprietor"/);
+  assert.match(source,/status: "not_started"/);
+  assert.match(source,/applicant_phone: decoded\.phone_number/);
+  assert.ok(source.indexOf('const { error: onboardingError }') < source.indexOf('return reply(201'));
+  assert.match(source,/if \(onboardingError\) \{/);
+  assert.match(source,/db\.auth\.admin\.deleteUser\(data\.user\.id\)/);
+});
