@@ -4,6 +4,7 @@ const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), '
 
 const kyc = read('app/customer/kyc/individual.tsx');
 const helper = read('components/ui/customer-kyc-document-file.ts');
+const profile = read('app/customer/profile.tsx');
 const pkg = JSON.parse(read('package.json'));
 
 function requireText(source, needle, message) {
@@ -22,6 +23,8 @@ requireText(helper, 'source.copy(stable);', 'Customer KYC reader must copy selec
 requireText(helper, 'const bytes = await stable.bytes();', 'Customer KYC reader must verify binary readability before marking a document ready.');
 requireText(helper, 'const bytes = await file.bytes();', 'Customer KYC upload reader must obtain file bytes from expo-file-system.');
 requireText(helper, "CACHE_DIRECTORY_NAME = 'customer-kyc-documents'", 'Customer KYC reader must isolate prepared documents in a dedicated cache directory.');
+requireText(profile, "new Set(['pan_copy', 'aadhaar_front', 'aadhaar_back'])", 'Customer Profile must define the onboarding KYC document types that should not be rendered twice.');
+requireText(profile, "!onboardingKycTypes.has(documentType)", 'Customer Profile must filter duplicate PAN/Aadhaar rows from customer_documents while keeping onboarding KYC cards.');
 
 if (pkg.dependencies?.['expo-file-system'] !== '19.0.23') {
   throw new Error('Customer App must pin expo-file-system 19.0.23 to the installed 0.3.0 native baseline.');
