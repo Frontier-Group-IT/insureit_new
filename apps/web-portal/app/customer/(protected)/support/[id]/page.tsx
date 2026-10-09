@@ -37,7 +37,7 @@ export default async function CustomerSupportDetailPage({
       <div className="grid gap-4 xl:grid-cols-[1fr_0.72fr]">
         <section className="rounded-2xl border border-[#DCE4EE] bg-white p-4">
           <div className="flex items-center gap-2"><Headphones className="h-4 w-4 text-[#174EA6]" /><h2 className="text-[13px] font-black text-[#10213D]">Request details</h2></div>
-          <div className="mt-4 space-y-3">
+          <div className="customer-detail-grid mt-2">
             {[
               ["Service", serviceActivityLabel(item.service_type)],
               ["Reference", item.enquiry_no],
@@ -46,7 +46,7 @@ export default async function CustomerSupportDetailPage({
               ["Priority", item.priority || "—"],
               ["Created", formatCustomerCompactDate(item.created_at)],
               ["Updated", formatCustomerCompactDate(item.updated_at)],
-            ].map(([label,value]) => <div key={label} className="flex items-start justify-between gap-4 border-b border-[#EEF2F6] pb-2 last:border-0"><span className="text-[9.5px] font-bold text-[#8794A7]">{label}</span><span className="max-w-[65%] text-right text-[10.5px] font-black text-[#35445B]">{value}</span></div>)}
+            ].map(([label,value]) => <div key={label} className="customer-detail-row"><span className="customer-detail-label">{label}</span><span className="customer-detail-value">{value}</span></div>)}
           </div>
           <div className="mt-4 rounded-xl bg-[#F7F9FC] p-3"><p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#8794A7]">Details</p><p className="mt-1 whitespace-pre-wrap text-[11px] font-semibold leading-5 text-[#45546A]">{item.description}</p></div>
         </section>

@@ -61,11 +61,11 @@ export default async function CustomerVehicleDetailPage({
       <div className="grid gap-3 xl:grid-cols-[1fr_0.8fr]">
         <section className="rounded-xl border border-[#DCE4EE] bg-white p-3">
           <div className="flex items-center gap-2"><CarFront className="h-4 w-4 text-[#174EA6]" /><h2 className="text-[13px] font-black text-[#10213D]">Vehicle information</h2></div>
-          <div className="mt-3 overflow-hidden rounded-lg border border-[#E2EAF3] text-[11px]">
+          <div className="customer-detail-grid mt-2">
             {details.map(([label,value])=>(
-              <div key={label} className="grid grid-cols-[minmax(130px,35%)_1fr] border-b border-[#E7EDF5] last:border-0">
-                <div className="bg-[#F2F6FB] px-3 py-2 font-bold text-[#73829A]">{label}</div>
-                <div className="break-words px-3 py-2 font-semibold text-[#253A5B]">{value}</div>
+              <div key={label} className="customer-detail-row">
+                <div className="customer-detail-label">{label}</div>
+                <div className="customer-detail-value">{value}</div>
               </div>
             ))}
           </div>
