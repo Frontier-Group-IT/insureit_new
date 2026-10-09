@@ -43,3 +43,14 @@ test('new customer provisioning never supplies a Supabase session, role key, or 
   assert.match(source,/requiresBinding: true/);
   assert.match(source,/cache-control": "no-store"/);
 });
+
+const nativeCustomerAuth = fs.readFileSync(path.join(__dirname,'../../apps/mobile-app/lib/firebase-customer-auth.ts'),'utf8');
+test('native signup provisions only after Firebase phone code verification and reuses canonical binder',()=>{
+  assert.match(nativeCustomerAuth,/pendingFlow\.verify\(code\)/);
+  assert.match(nativeCustomerAuth,/functions\/v1\/customer-firebase-signup/);
+  assert.match(nativeCustomerAuth,/registration\.status !== 409 \|\| failure\.error !== 'phone_already_registered'/);
+  assert.match(nativeCustomerAuth,/functions\/v1\/customer-firebase-bind/);
+  assert.match(nativeCustomerAuth,/firebaseUser\.getIdToken\(true\)/);
+  assert.match(nativeCustomerAuth,/rpc\('customer_firebase_profile_id'\)/);
+  assert.match(nativeCustomerAuth,/export function confirmFirebaseCustomerSignup/);
+});
