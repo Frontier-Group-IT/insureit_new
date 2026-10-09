@@ -141,15 +141,13 @@ export function ExchangeMarketplaceHome({
       >
         <View style={styles.locationRow}>
           <View style={styles.locationCopy}>
-            <MaterialCommunityIcons name="map-marker-outline" size={17} color="#0F1D33" />
-            <View>
-              <Text style={styles.locationEyebrow}>BROWSING</Text>
-              <Text style={styles.locationText}>All locations</Text>
-            </View>
+            <MaterialCommunityIcons name="map-marker-outline" size={24} color="#19417E" />
+            <Text style={styles.locationText}>All locations</Text>
+            <MaterialCommunityIcons name="chevron-down" size={19} color="#19417E" />
           </View>
           <View style={styles.inventoryCount}>
-            <Text style={styles.inventoryCountValue}>{totalVehicles}</Text>
-            <Text style={styles.inventoryCountLabel}>vehicles</Text>
+            <MaterialCommunityIcons name="truck-outline" size={23} color="#15529E" />
+            <Text style={styles.inventoryCountValue}>{totalVehicles} {totalVehicles === 1 ? 'vehicle' : 'vehicles'}</Text>
           </View>
         </View>
 
@@ -229,7 +227,7 @@ export function ExchangeMarketplaceHome({
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Featured vehicles</Text>
               <Pressable onPress={onBrowseAll} hitSlop={8}>
-                <Text style={styles.sectionAction}>View all</Text>
+                <View style={styles.viewAllRow}><Text style={styles.sectionAction}>View all</Text><MaterialCommunityIcons name="chevron-right" size={17} color="#1455AB" /></View>
               </Pressable>
             </View>
             <ScrollView
@@ -380,7 +378,7 @@ function IntentCard({
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.intentCard, toneStyle, pressed && styles.pressed]}>
       <View style={styles.intentTop}>
-        <MaterialCommunityIcons name={icon} size={21} color={iconColor} />
+        <View style={styles.intentIconBadge}><MaterialCommunityIcons name={icon} size={27} color={iconColor} /></View>
         <MaterialCommunityIcons name="chevron-right" size={18} color={iconColor} />
       </View>
       <Text style={styles.intentTitle}>{title}</Text>
@@ -404,7 +402,7 @@ function FeaturedVehicleCard({
   return (
     <Pressable onPress={onOpen} style={({ pressed }) => [styles.featureCard, pressed && styles.pressed]}>
       <View style={styles.featureImageWrap}>
-        <Image source={vehicle.image} resizeMode="contain" style={styles.featureImage} />
+        <Image source={vehicle.image} resizeMode="cover" style={styles.featureImage} />
         <Pressable
           onPress={(event) => {
             event.stopPropagation();
@@ -417,11 +415,15 @@ function FeaturedVehicleCard({
       </View>
       <View style={styles.featureBody}>
         <Text numberOfLines={1} style={styles.featureTitle}>{vehicle.year ? `${vehicle.year} ` : ''}{vehicle.title}</Text>
-        <Text style={styles.featureMeta}>{formatKm(vehicle.km)} • {vehicle.fuel} • {vehicle.ownership}</Text>
+        <View style={styles.featureMetaRow}>
+          <MaterialCommunityIcons name="speedometer" size={15} color="#8091AB" /><Text style={styles.featureMeta}>{formatKm(vehicle.km)}</Text>
+          <Text style={styles.featureMeta}>·</Text><MaterialCommunityIcons name="gas-station" size={15} color="#8091AB" /><Text style={styles.featureMeta}>{vehicle.fuel}</Text>
+          {vehicle.verified ? <><Text style={styles.featureMeta}>·</Text><MaterialCommunityIcons name="check-decagram" size={15} color="#2674DB" /><Text style={styles.featureMeta}>Ownership verified</Text></> : null}
+        </View>
         <Text style={styles.featurePrice}>{formatCurrency(vehicle.askingPrice)}</Text>
         <View style={styles.featureFoot}>
-          <View style={styles.pricePill}><Text style={styles.pricePillText}>{priceSignal(vehicle)}</Text></View>
-          {trust ? <Text numberOfLines={1} style={styles.trustText}>✓ {trust}</Text> : null}
+          {trust ? <View style={styles.verifiedPill}><MaterialCommunityIcons name="shield-check" size={16} color="#087E69" /><Text style={styles.verifiedPillText}>Verified</Text></View> : null}
+          <View style={styles.offerPill}><MaterialCommunityIcons name="tag-outline" size={15} color="#2565B5" /><Text style={styles.offerPillText}>{priceSignal(vehicle)}</Text></View>
         </View>
       </View>
     </Pressable>
@@ -602,53 +604,53 @@ function FilterSheet({
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { paddingHorizontal: 14, paddingBottom: 36, backgroundColor: '#F7F8FA' },
+  content: { paddingHorizontal: 18, paddingBottom: 36, backgroundColor: '#F8FAFD' },
   pressed: { opacity: 0.84, transform: [{ scale: 0.99 }] },
 
-  locationRow: { marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  locationCopy: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  locationRow: { marginTop: 16, height: 54, borderRadius: 15, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#EDF4FF' },
+  locationCopy: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   locationEyebrow: { color: '#8A96A7', fontSize: 7.5, fontWeight: '900', letterSpacing: 0.8 },
-  locationText: { marginTop: 1, color: '#0F1D33', fontSize: 11.5, fontWeight: '900' },
-  inventoryCount: { alignItems: 'flex-end' },
-  inventoryCountValue: { color: '#164BB8', fontSize: 13, fontWeight: '900' },
+  locationText: { color: '#0B2145', fontSize: 15, fontWeight: '800' },
+  inventoryCount: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingLeft: 14, borderLeftWidth: 1, borderLeftColor: '#D3DEED' },
+  inventoryCountValue: { color: '#0B2145', fontSize: 12, fontWeight: '800' },
   inventoryCountLabel: { color: '#8A96A7', fontSize: 8, fontWeight: '800' },
 
-  searchShell: { marginTop: 12, minHeight: 50, borderRadius: 15, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE3EB' },
-  searchInput: { flex: 1, minHeight: 48, color: '#0F1D33', fontSize: 12, fontWeight: '700' },
+  searchShell: { marginTop: 16, minHeight: 54, borderRadius: 14, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D5DFEA' },
+  searchInput: { flex: 1, minHeight: 52, color: '#0F1D33', fontSize: 13, fontWeight: '600' },
 
-  sectionHeader: { marginTop: 22, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sectionTitle: { color: '#0F1D33', fontSize: 15, fontWeight: '900' },
+  sectionHeader: { marginTop: 26, marginBottom: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sectionTitle: { color: '#0A2146', fontSize: 18, fontWeight: '900' },
   sectionSubtitle: { marginTop: 2, color: '#8290A3', fontSize: 8.8, fontWeight: '700' },
-  sectionAction: { color: '#164BB8', fontSize: 9.5, fontWeight: '900' },
+  sectionAction: { color: '#1455AB', fontSize: 12, fontWeight: '800' },
 
-  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  categoryTile: { width: '31.6%', minHeight: 84, borderRadius: 17, paddingVertical: 11, alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E6ED' },
-  categoryTileActive: { borderColor: '#164BB8', backgroundColor: '#EEF4FF' },
-  categoryIcon: { width: 42, height: 35, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF4FF' },
-  categoryIconActive: { backgroundColor: '#164BB8' },
-  categoryLabel: { color: '#536176', fontSize: 9.2, fontWeight: '800' },
-  categoryLabelActive: { color: '#164BB8', fontWeight: '900' },
+  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' },
+  categoryTile: { width: '31.3%', minHeight: 94, borderRadius: 14, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE3EC' },
+  categoryTileActive: { borderColor: '#276DEB', backgroundColor: '#276DEB' },
+  categoryIcon: { width: 44, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF4FF' },
+  categoryIconActive: { backgroundColor: 'rgba(255,255,255,0.14)' },
+  categoryLabel: { color: '#193556', fontSize: 11, fontWeight: '800' },
+  categoryLabelActive: { color: '#FFFFFF', fontWeight: '900' },
 
-  intentGrid: { marginTop: 14, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  intentCard: { width: '48.7%', minHeight: 102, borderRadius: 17, padding: 12, borderWidth: 1 },
+  intentGrid: { marginTop: 20, flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' },
+  intentCard: { width: '48.4%', minHeight: 112, borderRadius: 15, padding: 14, borderWidth: 1 },
   intentBlue: { backgroundColor: '#EEF4FF', borderColor: '#D8E5FB' },
   intentOrange: { backgroundColor: '#FFF5E9', borderColor: '#F4E4CD' },
   intentGreen: { backgroundColor: '#ECF8F3', borderColor: '#D4ECE2' },
   intentIndigo: { backgroundColor: '#F0F0FC', borderColor: '#DDDDF6' },
   intentTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  intentTitle: { marginTop: 10, color: '#0F1D33', fontSize: 11.2, fontWeight: '900' },
-  intentCopy: { marginTop: 3, color: '#69768A', fontSize: 8.5, lineHeight: 12, fontWeight: '700' },
+  intentTitle: { marginTop: 11, color: '#0F1D33', fontSize: 12.5, fontWeight: '900' },
+  intentCopy: { marginTop: 4, color: '#69768A', fontSize: 10, lineHeight: 14, fontWeight: '600' },
 
-  featureRail: { paddingRight: 14, gap: 10 },
-  featureCard: { width: 238, overflow: 'hidden', borderRadius: 19, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E0E5EC' },
-  featureImageWrap: { height: 126, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F4F8' },
-  featureImage: { width: '86%', height: '82%' },
+  featureRail: { paddingRight: 18, gap: 12 },
+  featureCard: { width: 330, overflow: 'hidden', borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DFE7F0' },
+  featureImageWrap: { height: 180, margin: 9, borderRadius: 10, overflow: 'hidden', backgroundColor: '#EDF1F6' },
+  featureImage: { width: '100%', height: '100%' },
   favoriteFloat: { position: 'absolute', right: 9, top: 9, width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
-  featureBody: { padding: 12 },
-  featureTitle: { color: '#0F1D33', fontSize: 12, fontWeight: '900' },
-  featureMeta: { marginTop: 4, color: '#788598', fontSize: 8.6, fontWeight: '700' },
-  featurePrice: { marginTop: 8, color: '#0F1D33', fontSize: 15.5, fontWeight: '900' },
-  featureFoot: { marginTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  featureBody: { paddingHorizontal: 14, paddingBottom: 14, paddingTop: 4 },
+  featureTitle: { color: '#0F1D33', fontSize: 14, fontWeight: '900' },
+  featureMeta: { color: '#788598', fontSize: 10, fontWeight: '700' },
+  featurePrice: { marginTop: 12, color: '#0B2145', fontSize: 21, fontWeight: '900' },
+  featureFoot: { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 9, flexWrap: 'wrap' },
   pricePill: { minHeight: 22, borderRadius: 11, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E6F6EE' },
   pricePillText: { color: '#0D7C58', fontSize: 7.8, fontWeight: '900' },
   trustText: { flex: 1, color: '#687588', textAlign: 'right', fontSize: 7.6, fontWeight: '800' },
@@ -699,6 +701,13 @@ const styles = StyleSheet.create({
   sellBannerTitle: { color: '#0F1D33', fontSize: 10.5, fontWeight: '900' },
   sellBannerCopy: { marginTop: 3, color: '#687589', fontSize: 8.4, lineHeight: 11.5, fontWeight: '700' },
 
+  viewAllRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  intentIconBadge: { width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.42)', alignItems: 'center', justifyContent: 'center' },
+  featureMetaRow: { marginTop: 8, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
+  verifiedPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, height: 28, borderRadius: 15, backgroundColor: '#DCF5ED' },
+  verifiedPillText: { color: '#087E69', fontSize: 10, fontWeight: '800' },
+  offerPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, height: 28, borderRadius: 15, backgroundColor: '#E8F1FF' },
+  offerPillText: { color: '#2565B5', fontSize: 10, fontWeight: '800' },
   sheetBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(8,16,29,0.45)' },
   sheetDismiss: { flex: 1 },
   sheet: { paddingHorizontal: 16, paddingTop: 9, paddingBottom: 24, borderTopLeftRadius: 28, borderTopRightRadius: 28, backgroundColor: '#FFFFFF' },
