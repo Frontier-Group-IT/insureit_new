@@ -412,53 +412,45 @@ function CommercialOperations({ business, canOpenControl }: { business: Dashboar
       </div>
 
       <div className="grid border-t border-[#E7ECF2] md:grid-cols-3">
-        <div className="flex h-[128px] min-w-0 flex-col overflow-hidden">
-          <div className="flex h-[60%] flex-col bg-white px-3 py-2">
-            <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">Net Pay-In</p>
-            <div className="flex min-h-0 flex-1 items-center justify-center">
-              <p className="portal-display text-center text-[27px] font-semibold leading-none text-[#10213D]">{formatMoney(commercial.payinAfterTds)}</p>
-            </div>
-          </div>
-          <div className="grid h-[40%] grid-cols-2 items-center bg-[#142448] px-2.5 text-white">
-            <div className="min-w-0 text-center">
-              <p className="text-[9px] font-semibold">Projected Gross</p>
-              <p className="mt-0.5 text-[11px] font-bold tabular-nums">{formatMoney(commercial.projectedPayin)}</p>
-            </div>
-            <div className="min-w-0 border-l border-white/30 text-center">
-              <p className="text-[9px] font-semibold">Projected TDS</p>
-              <p className="mt-0.5 text-[11px] font-bold tabular-nums">{formatMoney(commercial.tdsAmount)}</p>
+        <div className="flex min-h-[128px] min-w-0 flex-col px-3 py-3">
+          <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">Net Pay-In</p>
+          <div className="flex min-h-0 flex-1 items-center justify-between gap-3">
+            <p className="portal-display min-w-0 text-[27px] font-semibold leading-none text-[#10213D]">{formatMoney(commercial.payinAfterTds)}</p>
+            <div className="flex shrink-0 flex-col gap-2 border-l border-[#E7ECF2] pl-3 text-right">
+              <div>
+                <p className="text-[8px] font-semibold uppercase text-[#65758B]">Projected Gross</p>
+                <p className="portal-display text-[13px] font-semibold text-[#10213D]">{formatMoney(commercial.projectedPayin)}</p>
+              </div>
+              <div>
+                <p className="text-[8px] font-semibold uppercase text-[#65758B]">Projected TDS</p>
+                <p className="portal-display text-[13px] font-semibold text-[#10213D]">{formatMoney(commercial.tdsAmount)}</p>
+              </div>
             </div>
           </div>
         </div>
-        <div className="flex h-[128px] min-w-0 flex-col overflow-hidden border-t border-[#E7ECF2] md:border-l md:border-t-0">
-          <div className="flex h-[60%] flex-col bg-white px-3 py-2">
-            <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">Partner Payout</p>
-            <div className="flex min-h-0 flex-1 items-center justify-center">
-              <p className="portal-display text-center text-[27px] font-semibold leading-none text-[#10213D]">{formatMoney(commercial.partnerPayout)}</p>
-            </div>
+        <div className="flex min-h-[128px] min-w-0 flex-col border-t border-[#E7ECF2] px-3 py-3 md:border-l md:border-t-0">
+          <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">Partner Payout</p>
+          <div className="flex flex-1 items-center justify-center">
+            <p className="portal-display text-[27px] font-semibold leading-none text-[#10213D]">{formatMoney(commercial.partnerPayout)}</p>
           </div>
-          <div className="flex h-[40%] items-center justify-center bg-[#142448] px-3 text-[10px] font-semibold text-white">{commercial.payoutPolicies} policies with payout</div>
         </div>
-        <div className="flex h-[128px] min-w-0 flex-col overflow-hidden border-t border-[#E7ECF2] md:border-l md:border-t-0">
-          <div className="flex h-[60%] flex-col bg-white px-3 py-2">
-            <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">Retention</p>
-            <div className="flex min-h-0 flex-1 items-center justify-center">
-              <p className="portal-display text-center text-[27px] font-semibold leading-none text-[#10213D]">{formatMoney(commercial.retention)}</p>
-            </div>
+        <div className="flex min-h-[128px] min-w-0 flex-col border-t border-[#E7ECF2] px-3 py-3 md:border-l md:border-t-0">
+          <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">Retention</p>
+          <div className="flex flex-1 items-center justify-center">
+            <p className="portal-display text-[27px] font-semibold leading-none text-[#10213D]">{formatMoney(commercial.retention)}</p>
           </div>
-          <div className="flex h-[40%] items-center justify-center bg-[#142448] px-3 text-[10px] font-semibold text-white">Retention rate {commercial.retentionRate.toFixed(1)}%</div>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-[#E7ECF2] px-4 py-3 text-[8px] font-semibold text-[#6E7C90] sm:px-5">
-        <span><b className="text-[#24344F]">{commercial.payinPolicies}</b> policies with Pay-In</span>
-        <span><b className="text-[#24344F]">{commercial.payoutPolicies}</b> policies with Payout</span>
-        <span>Retention rate <b className="text-[#24344F]">{commercial.retentionRate.toFixed(1)}%</b></span>
-        {commercial.needsReview ? <span><b className="text-[#C27C20]">{commercial.needsReview}</b> entries need review</span> : null}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 bg-[#142448] px-4 py-3 text-[9px] font-semibold text-white sm:px-5">
+        <span><b>{commercial.payinPolicies}</b> policies with Pay-In</span>
+        <span><b>{commercial.payoutPolicies}</b> policies with Payout</span>
+        <span>Retention rate <b>{commercial.retentionRate.toFixed(1)}%</b></span>
+        {commercial.needsReview ? <span className="text-[#FFD18C]"><b>{commercial.needsReview}</b> entries need review</span> : null}
         {commercial.reconciliationExceptions ? (
-          <span className="font-bold text-[#C44F48]">{commercial.reconciliationExceptions} Pay-In / TDS reconciliation exceptions</span>
+          <span className="font-bold text-[#FFB9B3]">{commercial.reconciliationExceptions} Pay-In / TDS reconciliation exceptions</span>
         ) : (
-          <span className="font-bold text-[#1F766D]">Commercial data reconciled</span>
+          <span className="font-bold text-[#A4E7D8]">Commercial data reconciled</span>
         )}
       </div>
     </section>
@@ -488,32 +480,33 @@ function PortfolioHealth({ data, renewalTotal }: { data: DashboardCurrentData; r
 
 function ClaimHealth({ claims }: { claims: NonNullable<DashboardCurrentData["claims"]> }) {
   const agingSummary = claims.aging.map((item) => `${item.value} ${item.label}`).join(" · ");
+  const shortAging = claims.aging.map((item) => `${item.value} ${item.label.replace(/days?/gi, "d").replace(/\s+/g, "")}`).join(" · ");
 
   return (
     <div className="flex min-w-0 flex-col">
-      <div className="flex h-[96px] min-h-0 flex-col bg-white px-3 py-2">
+      <div className="flex min-h-[96px] flex-col bg-white px-3 py-2">
         <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">Claim aging</p>
-        <div className="flex min-h-0 flex-1 items-center justify-center gap-4">
+        <div className="flex flex-1 items-center justify-center gap-4">
           <div className="text-center">
             <p className="portal-display text-[27px] font-semibold leading-none text-[#10213D]">{claims.open}</p>
-            <p className="mt-1 text-[8px] font-semibold uppercase text-[#5D6C83]">Open claims</p>
+            <p className="mt-1 text-[8px] font-semibold uppercase text-[#5D6C83]">Open</p>
           </div>
           {claims.estimateExposure > 0 ? (
             <div className="border-l border-[#E7ECF2] pl-4 text-center">
               <p className="portal-display text-[18px] font-semibold leading-none text-[#10213D]">{formatMoney(claims.estimateExposure)}</p>
-              <p className="mt-1 text-[8px] font-semibold uppercase text-[#5D6C83]">Estimate exposure</p>
+              <p className="mt-1 text-[8px] font-semibold uppercase text-[#5D6C83]">Exposure</p>
             </div>
           ) : null}
         </div>
       </div>
       <div className="flex min-h-[64px] flex-col justify-center gap-1.5 bg-[#142448] px-3 py-2 text-white">
-        <p className="overflow-x-auto whitespace-nowrap text-center text-[9px] font-semibold [scrollbar-width:none]" title={agingSummary}>{agingSummary}</p>
+        <p className="overflow-x-auto whitespace-nowrap text-center text-[9px] font-semibold [scrollbar-width:none]" title={agingSummary}>{shortAging}</p>
         {(claims.assistanceRequested || claims.pendingDocuments || claims.billExposure) ? (
-          <p className="overflow-x-auto whitespace-nowrap text-center text-[8px] text-white/85 [scrollbar-width:none]">
+          <p className="overflow-x-auto whitespace-nowrap text-center text-[9px] text-white [scrollbar-width:none]">
             {[
-              claims.assistanceRequested ? `${claims.assistanceRequested} assistance requested` : null,
+              claims.assistanceRequested ? `${claims.assistanceRequested} assistance` : null,
               claims.pendingDocuments ? `${claims.pendingDocuments} documents pending` : null,
-              claims.billExposure ? `Bill exposure ${formatMoney(claims.billExposure)}` : null,
+              claims.billExposure ? `Bill ${formatMoney(claims.billExposure)}` : null,
             ].filter(Boolean).join(" · ")}
           </p>
         ) : null}
