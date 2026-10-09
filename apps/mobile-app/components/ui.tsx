@@ -84,6 +84,10 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
   }
 
   function openDashboard() {
+    if (pathname === '/customer/start-claim') {
+      console.warn('[claim-navigation] dashboard-press-blocked');
+      return;
+    }
     if (profileRole) return router.replace(routeForRole(profileRole));
     return router.replace('/login');
   }
@@ -323,6 +327,7 @@ export function UniversalBottomTabs({ role, pathname, bottomInset, customerConte
               key={`${tab.href}-${tab.label}`}
               accessibilityRole="button"
               onPress={() => {
+                if (pathname === '/customer/start-claim') console.warn('[claim-navigation] bottom-tab-press', { tab: tab.label });
                 if (isAlreadyOnCustomerRootTab) return;
                 router.push(tab.href as LinkProps['href']);
               }}
