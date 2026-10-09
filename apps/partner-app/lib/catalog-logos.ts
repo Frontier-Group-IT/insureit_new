@@ -42,6 +42,7 @@ const insurers: Array<[string[], ImageSourcePropType]> = [
 // Keep only catalog files that are actually bundled. Unknown/unavailable brands resolve to
 // null so the Customer Detail screen can render its existing default fallback artwork/icon.
 const manufacturers: Array<[string[], ImageSourcePropType]> = [
+  [['honda'], require('../assets/catalog/vehicle-brands/honda.png')],
   [['bharatbenz', 'bharat benz', 'daimler'], require('../assets/catalog/vehicle-brands/bharatbenz.png')],
   [['eicher', 've commercial'], require('../assets/catalog/vehicle-brands/eicher.png')],
   [['jcb'], require('../assets/catalog/vehicle-brands/jcb.png')],

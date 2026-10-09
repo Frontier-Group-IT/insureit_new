@@ -41,7 +41,8 @@ export default function CustomerDetailScreen() {
 
   const visibleVehicles = data ? (showAllVehicles ? data.vehicles : data.vehicles.slice(0, 2)) : [];
   const unlinkedPolicies = data ? data.policies.filter((policy) => !policy.vehicle_id) : [];
-  const unlinkedClaims = data ? data.claims.filter((claim) => !claim.policy_id) : [];
+  const externalPolicyClaims = data ? data.claims.filter((claim) => !claim.policy_id && claim.external_policy_id) : [];
+  const unlinkedClaims = data ? data.claims.filter((claim) => !claim.policy_id && !claim.external_policy_id) : [];
 
   const toggleVehicle = (vehicleId: string) => {
     setExpandedVehicles((current) => ({ ...current, [vehicleId]: !current[vehicleId] }));
@@ -187,6 +188,22 @@ export default function CustomerDetailScreen() {
                   </Pressable>
                 );
               })}</View>
+            </>
+          ) : null}
+
+          {externalPolicyClaims.length ? (
+            <>
+              <SectionHeader icon="shield-checkmark-outline" title="External Policy Claims" meta={`${externalPolicyClaims.length} linked to external policies`} />
+              <View style={styles.stack}>{externalPolicyClaims.map((claim) => (
+                <Pressable accessibilityRole="button" accessibilityLabel={`Open claim ${claim.claim_no || ''}`} key={claim.claim_id} onPress={() => router.push(`/claim/${claim.claim_id}` as never)} style={({ pressed }) => [styles.itemCard, pressed && styles.pressed]}>
+                  <Logo source={getPartnerInsurerLogoSource(claim.insurer_name)} fallback={PartnerAssets.navigation.claims} />
+                  <View style={styles.itemBody}>
+                    <View style={styles.itemHeading}><Text style={styles.itemTitle}>{claim.claim_no || 'Claim'}</Text><PartnerStatusBadge label={humanize(claim.current_status || 'active')} tone={claimTone(claim.current_status)} /></View>
+                    <Text numberOfLines={1} style={styles.itemText}>{[claim.vehicle_no, claim.insurer_name].filter(Boolean).join(' · ') || 'External policy claim'}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color="#5A35EE" />
+                </Pressable>
+              ))}</View>
             </>
           ) : null}
 

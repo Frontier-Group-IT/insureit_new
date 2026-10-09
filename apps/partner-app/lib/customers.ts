@@ -109,6 +109,7 @@ export type PartnerCustomerDetail = {
     claim_id: string;
     vehicle_id: string | null;
     policy_id: string | null;
+    external_policy_id?: string | null;
     claim_no: string | null;
     current_status: string | null;
     created_at: string;
@@ -123,5 +124,22 @@ export async function getPartnerCustomerDetail(customerId: string) {
   });
   if (error) throw error;
   if (!data) throw new Error('Customer detail is unavailable.');
-  return data as PartnerCustomerDetail;
+  const detail = data as PartnerCustomerDetail;
+  // The customer RPC currently exposes internal policy_id only. Fetch scoped external
+  // links separately so a valid external-policy claim is not mislabeled unlinked.
+  if (!detail.claims.some((claim) => !claim.policy_id)) return detail;
+  const { data: links, error: linksError } = await supabase.rpc('partner_app_customer_external_claim_links', {
+    p_customer_id: customerId,
+  });
+  if (linksError) throw linksError;
+  const externalByClaim = new Map<string, string>(
+    ((links ?? []) as { claim_id: string; external_policy_id: string }[]).map((link) => [link.claim_id, link.external_policy_id]),
+  );
+  return {
+    ...detail,
+    claims: detail.claims.map((claim) => ({
+      ...claim,
+      external_policy_id: externalByClaim.get(claim.claim_id) ?? null,
+    })),
+  };
 }
