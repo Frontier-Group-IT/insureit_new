@@ -120,10 +120,22 @@ expect(
 );
 
 expect(
-  "normal user management cannot assign IT super user through role change",
-  { ...base, actorRole: "super_admin", operation: "change_role", targetProfileId: "target-user", targetRole: "admin", assigningRole: "it_super_user" },
+  "ordinary admin cannot assign IT super user through role change",
+  { ...base, actorRole: "admin", operation: "change_role", targetProfileId: "target-user", targetRole: "admin", assigningRole: "it_super_user" },
   false,
-  "protected technical role",
+  "Only a Super Admin or IT Super User",
+);
+
+expect(
+  "super admin may assign IT super user through role change",
+  { ...base, actorRole: "super_admin", operation: "change_role", targetProfileId: "target-user", targetRole: "admin", assigningRole: "it_super_user" },
+  true,
+);
+
+expect(
+  "IT super user may assign another IT super user through role change",
+  { ...base, actorRole: "it_super_user", operation: "change_role", targetProfileId: "target-user", targetRole: "admin", assigningRole: "it_super_user" },
+  true,
 );
 
 expect(
@@ -173,7 +185,7 @@ if (!migrationSource.includes("p.employee_id is null") || !migrationSource.inclu
 }
 
 console.log(JSON.stringify({
-  governanceCases: 18,
+  governanceCases: 20,
   protectedRoles: ["super_admin", "it_super_user"],
   normalPortalManagerRoles: ["super_admin", "admin", "it_super_user"],
   accountsInviteRecovery: "guarded",
