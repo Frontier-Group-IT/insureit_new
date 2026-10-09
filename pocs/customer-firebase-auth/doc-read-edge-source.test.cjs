@@ -36,3 +36,12 @@ test('gateway cannot mutate data or expose long-lived or unbounded storage acces
   assert.match(source,/expiresIn: 60/);
   assert.doesNotMatch(source,/\.remove\(|\.upload\(|\.update\(|\.insert\(|\.delete\(/);
 });
+
+test('policy document owner matches canonical customer or active membership',()=>{
+  assert.match(source,/bucket === "policy-documents"/);
+  assert.match(source,/from\("policy_documents"\)/);
+  assert.match(source,/\.eq\("storage_path", documentPath\)/);
+  assert.match(source,/from\("policies"\)/);
+  assert.match(source,/customer\?\.profile_id === profileId/);
+  assert.match(source,/\.eq\("customer_id", policy\.customer_id\)\.eq\("profile_id", profileId\)/);
+});
