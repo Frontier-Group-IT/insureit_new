@@ -3,6 +3,7 @@ import fs from 'node:fs';
 const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 const kyc = read('app/customer/kyc/individual.tsx');
+const profile = read('app/customer/profile.tsx');
 const helper = read('components/ui/customer-kyc-document-file.ts');
 const pkg = JSON.parse(read('package.json'));
 
@@ -26,5 +27,9 @@ requireText(helper, "CACHE_DIRECTORY_NAME = 'customer-kyc-documents'", 'Customer
 if (pkg.dependencies?.['expo-file-system'] !== '19.0.23') {
   throw new Error('Customer App must pin expo-file-system 19.0.23 to the installed 0.3.0 native baseline.');
 }
+
+requireText(profile, "new Set(['pan_copy', 'aadhaar_front', 'aadhaar_back'])", 'Customer Profile must identify KYC document types for deduplication.');
+requireText(profile, "!kycDocumentTypes.has(document.document_type.trim().toLowerCase())", 'Customer Profile must exclude duplicate KYC rows from the general document list.');
+requireText(profile, "setKycDocuments(kycResult.data ?? [])", 'Customer Profile must keep rendering canonical KYC documents from customer_onboarding_documents.');
 
 console.log('Customer KYC filesystem document-reader regression passed.');
