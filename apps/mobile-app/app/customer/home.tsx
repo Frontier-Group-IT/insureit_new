@@ -12,7 +12,9 @@ import { CustomerAccountSwitcherButton } from '@/components/customer-account-swi
 import { GroupHomeScreen } from '@/components/group/group-home-screen';
 import { NotificationBell } from '@/components/realtime-notifications';
 import { LoadingState, UniversalBottomTabs } from '@/components/ui';
-import { getCurrentSession, getCustomerForUser, getOnboardingApplicationForUser, getProfile, isValidProfile, resetLocalAuthState, signOut } from '@/lib/auth';
+import { getCustomerForUser, getOnboardingApplicationForUser, getProfile, isValidProfile, resetLocalAuthState, signOut } from '@/lib/auth';
+import { getCustomerIdentity, signOutFirebaseCustomer } from '@/lib/customer-identity';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { buildComplianceRenewals } from '@/lib/compliance-renewals';
 import { getSelectedCustomerContext, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
@@ -68,17 +70,19 @@ export default function CustomerMockupHomeScreen() {
       if (mode === 'initial') setLoading(true);
       else setRefreshing(true);
       setError('');
-      const session = await getCurrentSession();
-      if (!session?.user) return router.replace('/login');
-      const nextProfile = await waitForCustomerProfile(session.user.id);
+      const identity = await getCustomerIdentity();
+      if (!identity) return router.replace('/login');
+      const profileId = identity.profileId;
+      const customerClient = identity.data;
+      const nextProfile = await waitForCustomerProfile(profileId, customerClient);
       if (!isValidProfile(nextProfile) || nextProfile.role !== 'customer') return router.replace('/access-denied');
       const [nextOnboarding, selected] = await Promise.all([
-        getOnboardingApplicationForUser(session.user.id),
+        getOnboardingApplicationForUser(profileId, false, customerClient),
         getSelectedCustomerContext(),
       ]);
       const nextCustomer = selected
-        ? await getCustomerByContext(selected)
-        : await getCustomerForUser(session.user.id);
+        ? await getCustomerByContext(selected, customerClient)
+        : await getCustomerForUser(profileId, customerClient);
       if (!mountedRef.current) return;
       setProfile(nextProfile);
       setCustomer(nextCustomer);
@@ -89,15 +93,15 @@ export default function CustomerMockupHomeScreen() {
       setClaims([]);
       setClaimFinancials([]);
       setTasks([]);
-      const promptDismissed = await getKycPromptDismissed(session.user.id);
+      const promptDismissed = await getKycPromptDismissed(profileId);
       if (mountedRef.current) setKycPromptDismissed(Boolean(promptDismissed) || Boolean(nextCustomer) || nextOnboarding?.status === 'submitted' || nextOnboarding?.status === 'under_review');
       if (nextCustomer && !isPortfolioDashboardContext(selected)) {
         const [vehicleResult, policyResult, externalPolicyResult, claimResult, taskResult] = await Promise.all([
-          supabase.from('vehicles').select('*').eq('customer_id', nextCustomer.id),
-          supabase.from('policies').select('*').eq('customer_id', nextCustomer.id),
-          (supabase as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date,premium_amount,insured_declared_value').eq('customer_id', nextCustomer.id),
-          supabase.from('claims').select('*').eq('customer_id', nextCustomer.id),
-          supabase.from('claim_tasks').select('*').eq('status', 'open').order('created_at', { ascending: false }),
+          customerClient.from('vehicles').select('*').eq('customer_id', nextCustomer.id),
+          customerClient.from('policies').select('*').eq('customer_id', nextCustomer.id),
+          (customerClient as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date,premium_amount,insured_declared_value').eq('customer_id', nextCustomer.id),
+          customerClient.from('claims').select('*').eq('customer_id', nextCustomer.id),
+          customerClient.from('claim_tasks').select('*').eq('status', 'open').order('created_at', { ascending: false }),
         ]);
         if (!mountedRef.current) return;
         if (vehicleResult.error) console.warn('Customer vehicles load failed', vehicleResult.error.message);
@@ -108,7 +112,7 @@ export default function CustomerMockupHomeScreen() {
         const nextClaims = claimResult.data ?? [];
         const claimIds = nextClaims.map((claim) => claim.id);
         const financialResult = claimIds.length
-          ? await (supabase as any).from('claim_financials').select('claim_id,estimate_amount,do_amount').in('claim_id', claimIds)
+          ? await (customerClient as any).from('claim_financials').select('claim_id,estimate_amount,do_amount').in('claim_id', claimIds)
           : { data: [], error: null };
         if (!mountedRef.current) return;
         if (financialResult.error) console.warn('Customer claim financials load failed', financialResult.error.message);
@@ -130,6 +134,20 @@ export default function CustomerMockupHomeScreen() {
       }
     }
   }, [router]);
+
+  async function handleCustomerSignOut() {
+    try {
+      const identity = await getCustomerIdentity();
+      if (identity?.provider === 'firebase') {
+        await signOutFirebaseCustomer();
+        router.replace('/login');
+        return;
+      }
+      await signOut(router);
+    } catch {
+      setError('Could not sign out securely. Please try again.');
+    }
+  }
 
   useEffect(() => {
     mountedRef.current = true;
@@ -231,7 +249,7 @@ export default function CustomerMockupHomeScreen() {
       reviewNotes={kycReviewNotes}
       onStart={() => router.push(kycRoute as Href)}
       onDismiss={() => void dismissKycPrompt()}
-      onSignOut={() => void signOut(router)}
+      onSignOut={() => void handleCustomerSignOut()}
     />
   </SafeAreaView>;
 }
@@ -527,8 +545,8 @@ function isExpired(value: string) { return new Date(`${value}T23:59:59`).getTime
 function isPortfolioDashboardContext(context: CustomerAccountContext | null) {
   return Boolean(context && ['group', 'corporate', 'dealership'].includes(context.partner_type));
 }
-async function getCustomerByContext(context: CustomerAccountContext) {
-  const { data, error } = await supabase.from('customers').select('*').eq('id', context.customer_id).maybeSingle();
+async function getCustomerByContext(context: CustomerAccountContext, client: SupabaseClient) {
+  const { data, error } = await client.from('customers').select('*').eq('id', context.customer_id).maybeSingle();
   if (error) throw error;
   return data;
 }
@@ -538,14 +556,14 @@ function onboardingReviewNotes(application: CustomerOnboardingApplication | null
   const notes = draft.review_notes;
   return typeof notes === 'string' && notes.trim() ? notes.trim() : null;
 }
-async function waitForCustomerProfile(userId: string) {
+async function waitForCustomerProfile(userId: string, client: SupabaseClient) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < 9000) {
-    const profile = await getProfile(userId);
+    const profile = await getProfile(userId, client);
     if (profile) return profile;
     await delay(650);
   }
-  return getProfile(userId);
+  return getProfile(userId, client);
 }
 function delay(ms: number) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 async function getKycPromptDismissed(userId: string) {
