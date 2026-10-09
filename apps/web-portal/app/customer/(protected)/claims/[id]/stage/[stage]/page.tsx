@@ -6,7 +6,7 @@ import { saveCustomerExternalStage } from "./actions";
 import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/customer-claim-evidence-workspace";
 import { CustomerClaimDocumentGroups } from "@/components/customer-portal/customer-claim-document-groups";
 import { CustomerClaimBooleanChoice } from "@/components/customer-portal/customer-claim-boolean-choice";
-import { Check, Circle, ArrowLeft, LockKeyhole } from "lucide-react";
+import { Check, Circle, ArrowLeft, LockKeyhole, CarFront, FileText, ShieldCheck, CalendarDays } from "lucide-react";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
@@ -28,7 +28,31 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
   const milestone=milestones.find(m=>m.milestone_key===selected.key);
   return <div className="space-y-3">
     <Link href={{pathname:`/customer/claims/${claim.id}`,query:{account:account.id}}} className="inline-flex items-center gap-2 text-sm font-bold text-[#245DAB]"><ArrowLeft className="h-4 w-4"/> Claim overview</Link>
-    <div className="rounded-xl bg-[#0B3884] p-3 text-white"><p className="text-xs font-bold uppercase tracking-wider text-white/75">{external?"Self-tracked claim":"INSUREIT-managed claim"}</p><div className="mt-2 flex items-center gap-3"><img src={"/assets/customer-claim/stages/"+selected.key+".png"} alt="" className="h-12 w-12 rounded-xl bg-white object-contain p-1"/><h1 className="text-2xl font-black">{selected.label}</h1></div><p className="mt-1 text-sm text-white/80">{claim.claim_no} · {claim.vehicle_no} · {claim.insurer_name}</p></div>
+    <section className="overflow-hidden rounded-2xl border border-[#D9E3F0] bg-white">
+      <div className="grid grid-cols-2 lg:grid-cols-5">
+        {([
+          ["Customer", "Account holder", ""],
+          ["Vehicle No.", claim.vehicle_no || "—", "car"],
+          ["Make & Model", [claim.vehicle_make, claim.vehicle_model].filter(Boolean).join(" ") || "—", "car"],
+          ["Insurer", claim.insurer_name || "—", "insurer"],
+          ["Loss Date", claim.accident_at ? new Date(claim.accident_at).toLocaleDateString("en-GB") : "—", "date"],
+          ["Policy No.", claim.policy_no || "—", "policy"],
+          ["Control No.", claim.claim_no || "—", "policy"],
+          ["Claim No.", claim.insurer_claim_no || "—", "policy"],
+          ["Claim Status", claim.current_status, "insurer"],
+          ["Spot Intimation Date & Time", claim.spot_intimation_at ? new Date(claim.spot_intimation_at).toLocaleString("en-IN") : "—", "date"],
+        ] as const).map(([label,value,icon]) => <div key={label} className="flex min-h-[74px] items-start gap-2 border-b border-r border-[#D9E3F0] p-3">
+          <span className="mt-1 text-[#174EA6]">{icon==="car"?<CarFront className="h-5 w-5"/>:icon==="insurer"?<ShieldCheck className="h-5 w-5"/>:icon==="date"?<CalendarDays className="h-5 w-5"/>:<FileText className="h-5 w-5"/>}</span>
+          <div className="min-w-0"><p className="text-[10px] uppercase tracking-wide text-[#7386A2]">{label}</p><p className="break-words text-[12px] font-semibold text-[#17345D]">{value}</p></div>
+        </div>)}
+      </div>
+      <div className="grid gap-2 px-4 py-2 text-[10px] text-[#667A96] sm:grid-cols-2 lg:grid-cols-4">
+        <span>Policy source: <strong>{external ? "External policy" : "Internal policy"}</strong></span>
+        <span>Cover dates: <strong>Not available</strong></span>
+        <span>Premium / IDV: <strong>Not available</strong></span>
+        <span>Policy copy: <strong>Not available</strong></span>
+      </div>
+    </section>
     <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey={selected.key} currentKey={INTERNAL_JOURNEY_STAGES[currentIndex]?.key || "spot_intimation"} completedKeys={INTERNAL_JOURNEY_STAGES.filter((stage,i)=>external?projection?.stages.some(x=>x.key===stage.key&&x.completed):i<(internal_projection?.completedStageCount??0)).map(stage=>stage.key)} />
     {!(external && claim.claim_service_mode==="self_managed" && claim.assistance_status!=="accepted" && CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key]) ? <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white">
       <h2 className="border-b border-[#D9E3F0] px-5 py-4 text-[17px] font-semibold text-[#071D49]">{selected.key==="spot_intimation"?"Accident & Spot Intimation Details":selected.label+" Details"}</h2>
@@ -60,8 +84,8 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       )}
     </section> : null}
     {external && claim.claim_service_mode==="self_managed" && claim.assistance_status!=="accepted" && CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key] ? (
-      <form action={saveCustomerExternalStage} className="mt-2 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
-        <h2 className="mb-3 text-[14px] font-semibold text-[#071D49]">{selected.label}</h2><div className={`grid gap-3 sm:grid-cols-2 ${selected.key==="work_approval"||selected.key==="payment_encashment"?"lg:grid-cols-5":selected.key==="repair_ri"||selected.key==="delivery_order"?"lg:grid-cols-3":selected.key==="billing"||selected.key==="vehicle_delivery"?"lg:grid-cols-2":"lg:grid-cols-4"}`}>
+      <form action={saveCustomerExternalStage} className="mt-2 rounded-2xl border border-[#D9E6F7] bg-white p-5">
+        <div className="mb-4"><h2 className="text-[17px] font-semibold text-[#071D49]">Stage Details</h2><p className="text-[12px] text-[#75869A]">Record {selected.label.toLowerCase()} details.</p></div><div className={`grid gap-3 sm:grid-cols-2 ${selected.key==="claim_intimation"?"lg:grid-cols-5":selected.key==="work_approval"||selected.key==="payment_encashment"?"lg:grid-cols-5":selected.key==="repair_ri"||selected.key==="delivery_order"?"lg:grid-cols-3":selected.key==="billing"||selected.key==="vehicle_delivery"?"lg:grid-cols-2":"lg:grid-cols-4"}`}>
         <input type="hidden" name="account" value={account.id}/>
         <input type="hidden" name="claim" value={claim.id}/>
         <input type="hidden" name="stage" value={selected.key}/>

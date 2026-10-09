@@ -818,24 +818,24 @@ function PremiumHeader({
   const subtitle = tab === 'sell' ? 'Get the market working for you' : tab === 'activity' ? 'Track your deals in one place' : 'Commercial vehicles. Curated better.';
 
   const marketplace = tab === 'buy';
-  const iconColor = marketplace ? '#0F1D33' : '#FFFFFF';
+  const iconColor = '#FFFFFF';
 
   return (
-    <View style={[styles.header, marketplace && styles.headerMarketplace]}>
+    <View style={styles.header}>
       <Pressable
         onPress={onBack}
         hitSlop={8}
-        style={({ pressed }) => [styles.headerAction, marketplace && styles.headerActionMarketplace, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.headerAction, pressed && styles.pressed]}
       >
         <MaterialCommunityIcons name="arrow-left" size={21} color={iconColor} />
       </Pressable>
       <View style={styles.headerCopy}>
-        <Text style={[styles.headerTitle, marketplace && styles.headerTitleMarketplace]}>{title}</Text>
-        <Text style={[styles.headerSubtitle, marketplace && styles.headerSubtitleMarketplace]}>{subtitle}</Text>
+        <Text style={styles.headerTitle}>{title}</Text>
+        <Text style={styles.headerSubtitle}>{subtitle}</Text>
       </View>
       <Pressable
         onPress={onActivity}
-        style={({ pressed }) => [styles.headerAction, marketplace && styles.headerActionMarketplace, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.headerAction, pressed && styles.pressed]}
       >
         <MaterialCommunityIcons name="heart-outline" size={20} color={iconColor} />
       </Pressable>
@@ -1051,7 +1051,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#07111F',
+    backgroundColor: '#1C447D',
   },
   headerMarketplace: {
     backgroundColor: '#FFFFFF',
@@ -1064,18 +1064,18 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#111D2E',
-    borderWidth: 1,
-    borderColor: '#202D40',
+    backgroundColor: '#315D9E',
+    borderWidth: 0,
+    borderColor: '#315D9E',
   },
   headerActionMarketplace: {
     backgroundColor: '#F4F6F8',
     borderColor: '#E3E7EC',
   },
   headerCopy: { flex: 1, paddingHorizontal: 12 },
-  headerTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '900', letterSpacing: 0.1 },
+  headerTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: '900', letterSpacing: 0.1 },
   headerTitleMarketplace: { color: '#0F1D33' },
-  headerSubtitle: { marginTop: 3, color: '#8E9AAF', fontSize: 10.2, fontWeight: '700' },
+  headerSubtitle: { marginTop: 3, color: '#D8E5FA', fontSize: 11, fontWeight: '600' },
   headerSubtitleMarketplace: { color: '#7B8798' },
 
   navBar: {
