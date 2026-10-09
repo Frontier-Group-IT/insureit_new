@@ -297,6 +297,7 @@ export function UniversalBottomTabs({ role, pathname, bottomInset, customerConte
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const tabs = tabsForRole(role, customerContext);
   const customerNavyTabs = role === 'customer';
+  const claimSelectionScreen = pathname === '/customer/start-claim';
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
@@ -323,10 +324,12 @@ export function UniversalBottomTabs({ role, pathname, bottomInset, customerConte
               key={`${tab.href}-${tab.label}`}
               accessibilityRole="button"
               onPress={() => {
+                // Keep the claim selector on screen unless the user deliberately
+                // taps the Home tab itself. Never navigate on parent/backdrop taps.
                 if (isAlreadyOnCustomerRootTab) return;
                 router.push(tab.href as LinkProps['href']);
               }}
-              style={styles.bottomTab}
+              style={[styles.bottomTab, claimSelectionScreen && styles.claimSelectorBottomTab]}
             >
               <View style={[
                 styles.bottomIconShell,
@@ -643,6 +646,7 @@ export const styles = StyleSheet.create({
   bottomTabs: { minHeight: 66, backgroundColor: 'rgba(255,255,255,0.98)', borderRadius: 20, paddingVertical: 7, paddingHorizontal: 4, flexDirection: 'row', justifyContent: 'space-between', borderWidth: 1, borderColor: 'rgba(198,211,225,0.9)', shadowColor: '#17202F', shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 },
   customerBottomTabs: { backgroundColor: palette.navy, borderColor: '#12305F', shadowColor: '#020A1A', shadowOpacity: 0.22 },
   bottomTab: { flex: 1, minHeight: 50, alignItems: 'center', justifyContent: 'center', gap: 2, minWidth: 0 },
+  claimSelectorBottomTab: { overflow: 'hidden' },
   bottomIconShell: { width: 35, height: 30, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'transparent' },
   customerBottomIconShell: { backgroundColor: 'rgba(255,255,255,0.08)' },
   bottomIconShellActive: { backgroundColor: palette.surface, shadowColor: palette.ink, shadowOpacity: 0.08, shadowRadius: 6, elevation: 1 },
