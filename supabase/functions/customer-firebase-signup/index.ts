@@ -140,6 +140,28 @@ Deno.serve(async (request: Request) => {
       return reply(409, { error: "customer_registration_unavailable" });
     }
 
+    // New Firebase signup must leave a usable Customer App onboarding
+    // context; otherwise existing app startup rejects a bare profile.
+    // This is only created for the brand-new Supabase auth.users identity.
+    const { error: onboardingError } = await db.from("customer_onboarding_applications")
+      .insert({
+        profile_id: data.user.id,
+        initiated_by: data.user.id,
+        source: "customer_app",
+        status: "not_started",
+        partner_type: "individual_proprietor",
+        current_step: 1,
+        applicant_phone: decoded.phone_number,
+        ...(email ? { applicant_email: email } : {}),
+      });
+    if (onboardingError) {
+      // Compensate only this freshly created, unlinked account. Never
+      // delete or modify an existing customer account on signup failure.
+      const { error: rollbackError } = await db.auth.admin.deleteUser(data.user.id);
+      if (rollbackError) console.error("New signup compensation failed");
+      return reply(503, { error: "registration_unavailable" });
+    }
+
     // The caller must separately call customer-firebase-bind, which verifies
     // token revocation and creates an approved immutable Firebase UID mapping.
     // No customer data or Supabase session is returned by this endpoint.
