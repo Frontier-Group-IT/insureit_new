@@ -27,3 +27,15 @@ test('candidate grants no new customer table privileges or bypass role',()=>{
   assert.doesNotMatch(sql,/\bDISABLE ROW LEVEL SECURITY\b/i);
   assert.doesNotMatch(sql,/\bservice_role\b/i);
 });
+
+const documentRules = fs.readFileSync(path.join(__dirname,'phase6_customer_documents_read_rls_REVIEW_ONLY.sql'),'utf8');
+test('supplemental document policies require canonical customer ownership and matching claim',()=>{
+  assert.match(documentRules,/CREATE POLICY firebase_customer_claim_documents_select/);
+  assert.match(documentRules,/customer_firebase_can_read_customer\(customer_id\)/);
+  assert.match(documentRules,/c\.id = claim_id AND c\.customer_id = claim_documents\.customer_id/);
+  assert.match(documentRules,/CREATE POLICY firebase_customer_onboarding_applications_select/);
+  assert.match(documentRules,/CREATE POLICY firebase_customer_onboarding_documents_select/);
+  assert.match(documentRules,/a\.profile_id = \(SELECT public\.customer_firebase_profile_id\(\)\)/);
+  assert.match(documentRules,/a\.source = 'customer_app'/);
+  assert.doesNotMatch(documentRules,/\bFOR\s+(?:INSERT|UPDATE|DELETE)\b/i);
+});
