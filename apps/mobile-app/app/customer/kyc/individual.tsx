@@ -195,6 +195,7 @@ export default function IndividualKycScreen() {
     if (!location || !fleetBand) return;
     setSubmitting(true);
     setError('');
+    let failedStage = 'saving your KYC draft';
     try {
       const draft: Json = {
         contact_name: fullName.trim(),
@@ -214,9 +215,11 @@ export default function IndividualKycScreen() {
       await saveOnboardingDraft(application.id, draft, 3);
       let nextDocuments = documents;
       for (const [type, file] of Object.entries(files) as [DocumentType, PickedFile][]) {
+        failedStage = `uploading ${documentLabels[type]}`;
         nextDocuments = await uploadDocument(application.id, type, file, nextDocuments);
       }
       setDocuments(nextDocuments);
+      failedStage = 'finalizing your KYC application';
       await submitIndividualOnboarding({
         applicationId: application.id,
         contactName: fullName.trim(),
@@ -239,7 +242,8 @@ export default function IndividualKycScreen() {
       setSuccessVisible(true);
     } catch (nextError) {
       const message = nextError instanceof Error ? nextError.message : '';
-      setError(message || 'Your KYC could not be submitted. Your saved details are still available.');
+      const safeDetail = message && !/\b\d{12}\b|\b[A-Z]{5}\d{4}[A-Z]\b|@|https?:\/\//i.test(message) ? message : '';
+      setError(`KYC failed while ${failedStage}. ${safeDetail || 'Please retry. Your saved details are still available.'}`);
     } finally {
       setSubmitting(false);
     }
@@ -316,7 +320,7 @@ async function uploadDocument(applicationId: string, type: DocumentType, file: P
   const extension = safeExtension(file);
   const storagePath = `${applicationId}/${type}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
   const upload = await supabase.storage.from('customer-documents').upload(storagePath, body, { contentType: file.mimeType ?? 'application/octet-stream', upsert: false });
-  if (upload.error) throw new Error(`${documentLabels[type]} could not be uploaded.`);
+  if (upload.error) throw new Error(`${documentLabels[type]} could not be uploaded (${upload.error.name || 'storage error'}).`);
   const existing = currentDocuments.find((item) => item.document_type === type);
   const { data, error } = await supabase.from('customer_onboarding_documents').upsert({
     application_id: applicationId,
@@ -334,7 +338,7 @@ async function uploadDocument(applicationId: string, type: DocumentType, file: P
   }, { onConflict: 'application_id,document_type' }).select('*').single();
   if (error || !data) {
     await supabase.storage.from('customer-documents').remove([storagePath]);
-    throw new Error(`${documentLabels[type]} record could not be saved.`);
+    throw new Error(`${documentLabels[type]} record could not be saved (${error?.code || 'database error'}).`);
   }
   if (existing?.storage_path && existing.storage_path !== storagePath) await supabase.storage.from('customer-documents').remove([existing.storage_path]);
   removePreparedCustomerDocument(file.uri);
