@@ -88,6 +88,9 @@ Deno.serve(async (request: Request) => {
     if (fullName.length < 2 || fullName.length > 120 || /[\x00-\x1f]/.test(fullName)) {
       return reply(400, { error: "invalid_full_name" });
     }
+    if (record.email !== undefined && typeof record.email !== "string") {
+      return reply(400, { error: "invalid_email" });
+    }
     const email = typeof record.email === "string" ? record.email.trim().toLowerCase() : "";
     if (email && (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
       return reply(400, { error: "invalid_email" });
@@ -99,6 +102,12 @@ Deno.serve(async (request: Request) => {
     const db = createClient(supabaseUrl, serviceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
+
+    const { data: existingLinks, error: linksError } = await db.from("customer_firebase_identity_links")
+      .select("profile_id").eq("firebase_project_id", PROJECT)
+      .eq("firebase_uid", decoded.uid).limit(1);
+    if (linksError || !Array.isArray(existingLinks)) throw new Error("Identity lookup failed");
+    if (existingLinks.length > 0) return reply(409, { error: "firebase_identity_registered" });
 
     // Do not create a new account when the verified phone already belongs to
     // ANY Supabase profile (including inactive/staff profiles). In that case
