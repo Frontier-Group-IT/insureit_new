@@ -46,9 +46,28 @@ Deno.serve(async (request: Request) => {
       decoded.firebase?.sign_in_provider !== "phone" ||
       typeof decoded.phone_number !== "string" || !PHONE.test(decoded.phone_number) ||
       decoded.role !== "authenticated") return reply(401, { error: "invalid_identity" });
-    const bytes = Number(request.headers.get("content-length") ?? "0");
-    if (!Number.isFinite(bytes) || bytes > 2048) return reply(413, { error: "payload_too_large" });
-    const body: unknown = await request.json().catch(() => null);
+    const reader = request.body?.getReader();
+    if (!reader) return reply(400, { error: "invalid_request" });
+    const decoder = new TextDecoder();
+    let raw = "";
+    let bytes = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > 2048) {
+        await reader.cancel();
+        return reply(413, { error: "payload_too_large" });
+      }
+      raw += decoder.decode(value, { stream: true });
+    }
+    raw += decoder.decode();
+    let body: unknown;
+    try {
+      body = JSON.parse(raw);
+    } catch {
+      return reply(400, { error: "invalid_request" });
+    }
     if (!body || typeof body !== "object" || Array.isArray(body)) return reply(400, { error: "invalid_request" });
     const input = body as Record<string, unknown>;
     if (Object.keys(input).some((field) => !["bucket", "path"].includes(field))) {
