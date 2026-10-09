@@ -290,3 +290,26 @@ This is a release-blocking compatibility issue. Firebase-issued JWT `sub` is the
 - Added `apps/mobile-app/lib/firebase-document-client.ts` with short-lived trusted URL validation, and source invariants for both server and client. No production UI calls this adapter yet.
 - **Important:** signed Firebase document gateway has NOT been exercised with real Firebase ID tokens. Edge ACTIVE is deployment status, not security proof. Existing Storage policies and Supabase OTP are untouched. No whole-database snapshot/backup could be verified through connected tools, so preserve additive changes only.
 - Supabase docs confirm hosted Firebase third-party Auth requires integration under Authentication > Third-party Auth for `insureit-customer-auth`, plus server-set Firebase `role:authenticated` and forced token refresh. Connected Supabase tools cannot inspect or modify that dashboard setting directly. Must confirm this configuration and physical-device signed-token tests before full rollout.
+
+## 2026-10-09 — Firebase trusted project enabled; guarded production Data API activation
+
+User confirmed Supabase Third-Party Firebase Auth integration enabled for `insureit-customer-auth`. No paid staging branch created, per user instruction.
+
+Controlled production transaction tests with **temporary Firebase identity mappings rolled back in the same SQL transaction**:
+- Firebase profile resolver returned existing canonical profile UUID (success).
+- `customer_firebase_data_api_pre_request()` converted synthetic Firebase non-UUID JWT subject to canonical profile UUID for existing `auth.uid()` RLS (success).
+- Exactly one profile visible; zero other profiles visible.
+- Zero unauthorized customer, vehicle, policy, claim, membership, onboarding application and claim-document records visible.
+- Additional dashboard reads: zero unauthorized external policies, claim tasks, claim financials or policy documents.
+- After rollback, Firebase mappings count returned **zero**, unchanged; production Customers **1,011**, Vehicles **1,132**, Policies **1,130**, unchanged.
+- Unlinked Firebase-like identity was denied with SQLSTATE 42501. A synthetic legacy Supabase JWT call to the adapter returned normally and retained legacy UUID identity.
+- **LIMITATION:** Simulated JWT SQL checks do not prove cryptographic authentication or native Firebase token acceptance; real-device signed Firebase token test remains mandatory.
+
+Production applied migrations:
+- `customer_firebase_pre_request_function_only_20261009`: guarded app-owned callback created, not a change to Supabase-managed `auth.uid()`.
+- `customer_firebase_scoped_document_reads_phase6_20261009`: additive RLS SELECT for claim documents and onboarding documents/application; preexisting role policies preserved.
+- `customer_firebase_pre_request_activate_guarded_20261009`: PostgREST `authenticator` configured `pgrst.db_pre_request=public.customer_firebase_data_api_pre_request` (verified in `pg_roles.rolconfig`). For Supabase Auth/other JWT issuers the function returns unchanged; unlinked Firebase identities denied. Reset via reviewed `ALTER ROLE authenticator RESET pgrst.db_pre_request; NOTIFY pgrst,'reload config';` if needed. **This callback covers Data API only, NOT Storage.**
+- `customer_firebase_dashboard_scoped_reads_phase8_20261009`: four additive customer-scoped SELECT policies for `external_policies`, `claim_tasks`, `claim_financials`, `policy_documents`; transaction RLS tests returned zero unauthorized rows.
+
+**Release still blocked:** Main mobile app Login/Signup and customer navigation still use Supabase sessions; only isolated Firebase native route uses Firebase. Firebase token live E2E, claims custom role, cross-tenant signed-token tests, full Storage write paths, UI migration, regression CI, production AAB version 0.3.1(10), and Play Store upload (explicit permission required) remain incomplete. Do not claim rollout finished.
+
