@@ -1,0 +1,34 @@
+name: Verify Customer Firebase OTP Readiness
+on:
+  pull_request:
+    paths:
+      - 'apps/mobile-app/lib/firebase-*'
+      - 'apps/mobile-app/lib/customer-otp-provider.ts'
+      - 'apps/mobile-app/app/firebase-otp-test.tsx'
+      - 'pocs/customer-firebase-auth/**'
+      - 'supabase/functions/customer-firebase-*/**'
+      - '.github/workflows/verify-customer-firebase-otp.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  readiness-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Verify Firebase test suite when feature branch is present
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -f pocs/customer-firebase-auth/edge-binding-source.test.cjs ]]; then
+            echo "Firebase-specific source tests are not yet on this branch."
+            exit 0
+          fi
+          npm ci --ignore-scripts
+          node --test             apps/mobile-app/lib/firebase-otp-readiness.test.cjs             apps/mobile-app/lib/firebase-native-phone-flow.test.cjs             apps/mobile-app/lib/firebase-data-client.test.cjs             pocs/customer-firebase-auth/sql-draft.test.cjs             pocs/customer-firebase-auth/server-identity-binding.test.cjs             pocs/customer-firebase-auth/firebase-admin-verifier.test.cjs             pocs/customer-firebase-auth/firebase-binding-backend.test.cjs             pocs/customer-firebase-auth/supabase-identity-store.test.cjs             pocs/customer-firebase-auth/android-config.test.cjs             pocs/customer-firebase-auth/edge-binding-source.test.cjs             pocs/customer-firebase-auth/auth-uid-compatibility.test.cjs             pocs/customer-firebase-auth/signup-edge-source.test.cjs             pocs/customer-firebase-auth/doc-read-edge-source.test.cjs             pocs/customer-firebase-auth/mobile-document-client-source.test.cjs             apps/mobile-app/lib/firebase-android-auth-adapter.test.cjs
+          node --check pocs/customer-firebase-auth/staging-customer-isolation.mjs
