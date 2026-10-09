@@ -181,3 +181,13 @@ Also audit `can_access_customer` (both overloads), `can_access_profile`, `can_ac
 - Expo currently has a production channel/update branch; must avoid publishing unfinished OTA or uploading Play Store updates until proper regression, Google Play signing/version validation, and full Firebase authentication readiness.
 - GitHub connector has no EAS build dispatch action. A production AAB has **not been generated or published** in this chat; no Google Play release made.
 - `apps/mobile-app/package.json` workspace package version intentionally remains 0.3.0 to preserve npm lockfile consistency; Expo `app.json` carries Play Store version 0.3.1 (10).
+
+
+## 17. Critical Firebase -> Supabase cutover finding (2026-10-09)
+- Official Supabase guide https://supabase.com/docs/guides/auth/third-party/firebase-auth confirms Firebase requires a configured Supabase **Third-Party Auth integration** for project `insureit-customer-auth` and a securely server-assigned custom claim `role: authenticated`. Firebase PhoneAuth does NOT include this role automatically. Do not infer a Firebase account shown in console can query Supabase.
+- Adding this claim is **server/admin-owned**, not a client-controlled JWT field. On successful new Firebase phone auth, server must set custom claim via Firebase Admin SDK and refresh the ID token. Never give the user arbitrary permission/role-setting endpoints.
+- `auth.uid()` and existing mobile `supabase.auth.getSession()` both assume legacy Supabase users. Customer RLS, RPC, Storage and full app state must be migrated/tested before releasing Firebase-authenticated customer sessions; the project has no separate staging DB.
+- Prior user screenshots (2026-10-09) CONFIRM Firebase Phone provider enabled and Android app has both Play signing and upload-key SHA-1/SHA-256 registrations. No more manual Firebase fingerprint steps needed.
+- User wants **one production Play Store AAB**, version `0.3.1 (10)` replacing `0.3.0 (9)`; release must ship real, end-to-end tested Firebase customer login, not simply unused Firebase packages.
+- Latest prior PR release preparation commit `ea04339f7d5af4d54aa80fc5af9829cb837d6538`. EAS account has not been connected via current available tools; do not claim a build exists.
+- Do not expose or request Firebase Admin service-account key in chat/committed repo. Configure a secure Firebase-admin server runtime, Supabase Third-Party Auth trusted project, and admin-only claim provisioning first. Then migrate identity functions and RLS comprehensively, wire mobile login, verify phone flows, and issue one production AAB. Existing Supabase OTP must continue until transition validated.
