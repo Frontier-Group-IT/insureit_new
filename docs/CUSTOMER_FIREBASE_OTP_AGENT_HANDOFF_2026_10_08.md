@@ -154,3 +154,13 @@ Also audit `can_access_customer` (both overloads), `can_access_profile`, `can_ac
 - **Post-apply verified on live Supabase:** table exists; RLS enabled=true; RLS forced=true; policies=0; `authenticated` SELECT privilege=false; `anon` SELECT privilege=false; mapping rows=0; `profiles` policy count=4 and `customer_memberships` policy count=3 (unchanged from preflight).
 - **Important:** all prior statements in this handoff that say *no production DB migration has occurred* were true only **before phase 1** and are superseded by this dated entry. Login still uses legacy Supabase OTP and Firebase login is **not** active.
 - Next: audit the SQL definition and complete secure server-controlled UID linking, provider trust/JWT resolution, customer data/RLS functions and account lifecycle in a separate reviewed stage. Do not populate mappings or change existing RLS without a comprehensive negative authorization test plan and evidence. No merge, deployment, OTA or APK/AAB.
+
+
+## 14. Phase 2 live binding guard applied (2026-10-09)
+- User's prior approval for reversible production identity-mapping work used. Applied migration `customer_firebase_binding_guard_phase2_20261009` to live project `ilzhsfqqjyppzzvfscmh`; source in `pocs/customer-firebase-auth/phase2_binding_guard_review.sql`.
+- New BEFORE INSERT OR UPDATE trigger `validate_customer_firebase_identity_link_trigger` on `public.customer_firebase_identity_links`. For approved or active mappings, requires Firebase project `insureit-customer-auth`, exact phone match with existing active customer `profiles` row. Existing uniqueness, RLS deny, approval constraints from phase 1 stay intact.
+- Post-apply read-only verification: guard_installed=true, mapping_rows=0, client_policies=0. Existing customer login and RLS policy definitions were not altered.
+- Existing active customer profiles=19, exact `+91[6-9]XXXXXXXXX` format profiles=17. TWO profiles require privacy-preserving phone normalization review; do not alter or auto-link them.
+- This does NOT verify Firebase tokens, provision any mapping, authorize Firebase JWT access through existing customer RLS, or activate mobile Firebase login. Production mapping remains empty.
+- Rollback of phase 2 (if needed, after reviewing dependencies): `DROP TRIGGER IF EXISTS validate_customer_firebase_identity_link_trigger ON public.customer_firebase_identity_links; DROP FUNCTION IF EXISTS public.validate_customer_firebase_identity_link();`
+- NEXT: build/admin-verify server-side binding route, verify Supabase third-party Firebase JWT trust, prepare identity-aware RLS/RPC/Storage migration with strict regression coverage and controlled incremental release. Do not merge/deploy/publish OTA/build APK/AAB without separate approval.
