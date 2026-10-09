@@ -28,7 +28,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
     <Link href={{pathname:`/customer/claims/${claim.id}`,query:{account:account.id}}} className="inline-flex items-center gap-2 text-sm font-bold text-[#245DAB]"><ArrowLeft className="h-4 w-4"/> Claim overview</Link>
     <div className="rounded-xl bg-[#0B3884] p-3 text-white"><p className="text-xs font-bold uppercase tracking-wider text-white/75">{external?"Self-tracked claim":"INSUREIT-managed claim"}</p><div className="mt-2 flex items-center gap-3"><img src={"/assets/customer-claim/stages/"+selected.key+".png"} alt="" className="h-12 w-12 rounded-xl bg-white object-contain p-1"/><h1 className="text-2xl font-black">{selected.label}</h1></div><p className="mt-1 text-sm text-white/80">{claim.claim_no} · {claim.vehicle_no} · {claim.insurer_name}</p></div>
     <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey={selected.key} currentKey={INTERNAL_JOURNEY_STAGES[currentIndex]?.key || "spot_intimation"} completedKeys={INTERNAL_JOURNEY_STAGES.filter((stage,i)=>external?projection?.stages.some(x=>x.key===stage.key&&x.completed):i<(internal_projection?.completedStageCount??0)).map(stage=>stage.key)} />
-    <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white">
+    {!(external && claim.claim_service_mode==="self_managed" && claim.assistance_status!=="accepted" && CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key]) ? <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white">
       <h2 className="border-b border-[#D9E3F0] px-5 py-4 text-[17px] font-semibold text-[#071D49]">{selected.key==="spot_intimation"?"Accident & Spot Intimation Details":selected.label+" Details"}</h2>
       {selected.key==="spot_intimation" ? (
         <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-5">
@@ -56,9 +56,9 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
           <p className="mt-3 flex items-center gap-2 text-[11px] text-[#536781]">{completed?<Check className="h-4 w-4 text-[#0A9B72]"/>:activeIndex===currentIndex?<Circle className="h-4 w-4 text-[#155EEF]"/>:<LockKeyhole className="h-4 w-4"/>}{completed?"Completed":activeIndex===currentIndex?"Current stage":"Upcoming stage"}</p>
         </div>
       )}
-    </section>
+    </section> : null}
     {external && claim.claim_service_mode==="self_managed" && claim.assistance_status!=="accepted" && CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key] ? (
-      <form action={saveCustomerExternalStage} className={`mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3`}>
+      <form action={saveCustomerExternalStage} className="mt-2 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
         <h2 className="mb-3 text-[14px] font-semibold text-[#071D49]">{selected.label}</h2><div className={`grid gap-3 sm:grid-cols-2 ${selected.key==="work_approval"||selected.key==="payment_encashment"?"lg:grid-cols-5":selected.key==="repair_ri"||selected.key==="delivery_order"?"lg:grid-cols-3":selected.key==="billing"||selected.key==="vehicle_delivery"?"lg:grid-cols-2":"lg:grid-cols-4"}`}>
         <input type="hidden" name="account" value={account.id}/>
         <input type="hidden" name="claim" value={claim.id}/>
@@ -72,9 +72,16 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
             )}
           </label>
         ))}</div>
-        <div className="mt-3 flex justify-end"><button type="submit" className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white">Save {selected.label}</button></div>
+        <div className="mt-3 flex justify-end"><button type="submit" className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white">Save Details</button></div>
       </form>
     ):null}
-    <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key}/>
+    {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key}/> : null}
+    {selected.key==="claim_intimation" ? <section className="rounded-2xl border border-[#DFE8F4] bg-white p-4">
+      <h2 className="mb-3 text-[17px] font-semibold text-[#071D49]">Document Verification</h2>
+      <div role="tablist" aria-label="Document groups" className="grid grid-cols-5 overflow-hidden rounded-lg border border-[#D9E3F0] text-[10px]">
+        {["Vehicle Docs","Driver Docs","Permit / Tax","KYC / Other","Forms"].map((label,i)=><div key={label} role="presentation" className={`flex min-h-11 items-center gap-2 border-r border-[#D9E3F0] px-3 last:border-r-0 ${i===0?"bg-gradient-to-r from-[#6853EE] to-[#4E95E9] font-semibold text-white":"bg-[#F9FBFF] text-[#122D59]"}`}><span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white/80 text-[10px] font-bold text-[#153A78]">{i+1}</span>{label}</div>)}
+      </div>
+      <p className="mt-3 rounded-lg border border-[#E1E8F3] bg-[#F8FAFE] px-3 py-5 text-center text-[11px] text-[#64748B]">Stage-specific document categories are read-only until their verified customer upload mapping is connected.</p>
+    </section> : null}
   </div>;
 }
