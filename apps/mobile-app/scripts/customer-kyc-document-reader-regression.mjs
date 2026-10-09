@@ -17,7 +17,7 @@ requireText(kyc, 'removePreparedCustomerDocument(file.uri)', 'Individual KYC mus
 if (kyc.includes('fetch(file.uri)')) throw new Error('Individual KYC must not use fetch(file:///content://) for local documents.');
 
 requireText(helper, "import { Directory, File, Paths } from 'expo-file-system';", 'Customer KYC reader must use expo-file-system.');
-requireText(helper, 'const source = new File(asset);', 'Customer KYC reader must use the documented DocumentPicker asset -> File bridge.');
+requireText(helper, 'const source = new File(asset.uri);', 'Customer KYC reader must use the picker cache URI through expo-file-system.');
 requireText(helper, 'source.copy(stable);', 'Customer KYC reader must copy selected documents into app-controlled cache.');
 requireText(helper, 'const bytes = await stable.bytes();', 'Customer KYC reader must verify binary readability before marking a document ready.');
 requireText(helper, 'const bytes = await file.bytes();', 'Customer KYC upload reader must obtain file bytes from expo-file-system.');
