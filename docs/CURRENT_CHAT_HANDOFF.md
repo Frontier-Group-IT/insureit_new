@@ -7,8 +7,12 @@
 - User-facing errors now identify whether the selected document could not be prepared/read and ask the user to choose it again, instead of surfacing the low-level XHR message.
 - Added `customer-kyc-document-reader-regression.mjs` and wired it into `Verify mobile app`.
 - Dependency is intentionally pinned to `expo-file-system@19.0.23` to match the Customer 0.3.0/versionCode 9 native baseline evidence. The source/lockfile used for the canonical 0.3.0 baseline already contained `node_modules/expo/node_modules/expo-file-system@19.0.23`, so the required native Expo module belongs to that installed native era; no new native capability is being introduced.
-- **NO APK/AAB BUILD IS AUTHORIZED OR CREATED.**
-- **IMPLEMENTED ON BRANCH; lockfile synchronization / CI / merge / OTA pending.**
+- Lockfile synchronization was repaired using the CI-generated ordering; `npm install` then left `package-lock.json` unchanged.
+- Initial typecheck exposed an SDK 54 typing mismatch for `new File(asset)`; the implementation was corrected to `new File(asset.uri)` while preserving the same filesystem-safe flow.
+- PR #3009 passed **Verify mobile app #1200**, **Verify Partner app #644**, **Verify web portal #5865**, and **INSUREIT dependency assurance #50**, then merged as `9898b02b479e47df3a5c506cb36247ccb977177a`.
+- Existing Customer 0.3.0/versionCode 9 native-baseline source lock already contained `expo/node_modules/expo-file-system@19.0.23`; the fix pins the same package version as a direct app dependency. This is build-source/native-contract evidence that the required Expo native module belongs to the installed 0.3.0 native era; no new native module version was introduced.
+- **Publish customer 0.3.0 production OTA #165 completed successfully**, including production-channel verification. Installed-device verification remains pending.
+- **NO APK/AAB BUILD WAS CREATED.**
 
 ---
 
