@@ -1,3 +1,17 @@
+## 2026-10-09 — Customer Individual KYC filesystem-safe document reader
+
+- Branch: `fix/customer-kyc-filesystem-document-reader-2026-10-09`.
+- Exact failure addressed: Individual KYC previously read Android picker URIs with `fetch(file.uri)`; the global fallback converted local `file://` / `content://` reads to React Native XHR, which can fail with `Local document could not be read` before Supabase Storage is reached.
+- Individual KYC now keeps `DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true })`, then immediately wraps the returned picker asset with Expo FileSystem `File`, copies it into a dedicated app cache directory, verifies non-empty readable bytes, and only then marks the document as selected.
+- Submission reads the prepared cache file through Expo FileSystem `File.bytes()`; it no longer uses network `fetch()` for local document URIs. Successful uploads clean the prepared cache file; failed uploads retain it for retry.
+- User-facing errors now identify whether the selected document could not be prepared/read and ask the user to choose it again, instead of surfacing the low-level XHR message.
+- Added `customer-kyc-document-reader-regression.mjs` and wired it into `Verify mobile app`.
+- Dependency is intentionally pinned to `expo-file-system@19.0.23` to match the Customer 0.3.0/versionCode 9 native baseline evidence. The source/lockfile used for the canonical 0.3.0 baseline already contained `node_modules/expo/node_modules/expo-file-system@19.0.23`, so the required native Expo module belongs to that installed native era; no new native capability is being introduced.
+- **NO APK/AAB BUILD IS AUTHORIZED OR CREATED.**
+- **IMPLEMENTED ON BRANCH; lockfile synchronization / CI / merge / OTA pending.**
+
+---
+
 ## 2026-10-08 — Customer Web claim/create/9-stage parity implementation (PR #2970)
 
 - Branch: `feature/customer-web-start-claim-phase1-2026-10-08`; draft PR #2970; **implemented on branch, NOT MERGED, NOT DEPLOYED, RUNTIME UNVERIFIED**.
