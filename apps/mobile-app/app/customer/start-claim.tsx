@@ -453,9 +453,9 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
       onRequestClose={closeSelector}
       onShow={focusSearchInput}
     >
-      <Pressable accessibilityRole="button" accessibilityLabel="Close vehicle selector" onPress={closeSelector} style={styles.vehicleDropdownOverlay}>
-        <Pressable
-          onPress={(event) => event.stopPropagation()}
+      <View style={styles.vehicleDropdownOverlay}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Close vehicle selector" onPress={closeSelector} style={StyleSheet.absoluteFillObject} />
+        <View
           style={[
             styles.vehicleAnchoredMenu,
             {
@@ -502,8 +502,8 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
               </Pressable>
             )) : <Text style={styles.emptyLookupText}>No matching vehicles found.</Text>}
           </ScrollView>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   </View>;
 }
