@@ -39,3 +39,17 @@ test('supplemental document policies require canonical customer ownership and ma
   assert.match(documentRules,/a\.source = 'customer_app'/);
   assert.doesNotMatch(documentRules,/\bFOR\s+(?:INSERT|UPDATE|DELETE)\b/i);
 });
+
+const preRequest = fs.readFileSync(path.join(__dirname,'phase7_firebase_postgrest_pre_request_REVIEW_ONLY.sql'),'utf8');
+test('proposed PostgREST adapter preserves legacy sessions and maps only approved Firebase identities',()=>{
+  assert.match(preRequest,/SECURITY DEFINER/);
+  assert.match(preRequest,/SET search_path = ''/);
+  assert.match(preRequest,/public\.customer_firebase_profile_id\(\)/);
+  assert.match(preRequest,/IF profile IS NULL THEN/);
+  assert.match(preRequest,/RAISE insufficient_privilege/);
+  assert.match(preRequest,/set_config\('request\.jwt\.claim\.sub', profile::text, true\)/);
+  assert.match(preRequest,/claims->>'iss' IS DISTINCT FROM/);
+  assert.match(preRequest,/Supabase Auth, service, anonymous and other request types are unchanged/);
+  assert.match(preRequest,/ALTER ROLE authenticator SET pgrst\.db_pre_request/);
+  assert.doesNotMatch(preRequest,/(?:^|\n)\s*ALTER ROLE authenticator SET pgrst\.db_pre_request/m);
+});
