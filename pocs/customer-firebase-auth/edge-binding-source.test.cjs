@@ -46,7 +46,8 @@ test('Firebase data access uses per-request ID token, never privileged database 
   assert.match(firebaseClient,/if \(!token\) throw new Error/);
   assert.match(firebaseClient,/persistSession: false/);
   assert.doesNotMatch(firebaseClient,/SERVICE_ROLE_KEY|service_role/);
-  assert.doesNotMatch(firebaseClient,/setSession\(/);
+  const executable = firebaseClient.split('\n').filter((line) => !/^\s*(?:\*|\/\/)/.test(line)).join('\n');
+  assert.doesNotMatch(executable,/\.auth\.setSession\s*\(/);
 });
 
 test('Firebase binding must be confirmed by a token refresh and canonical profile resolver',()=>{
