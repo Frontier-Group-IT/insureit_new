@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { createServerSupabaseClient } from "@/lib/auth-server";
@@ -45,7 +46,7 @@ export default async function AddCustomerVehicle({ searchParams }: { searchParam
     <div className="overflow-hidden rounded-xl border border-[#DCE4EE] bg-white">
       <div className="flex items-center justify-between bg-[#1E416D] px-4 py-3 text-white">
         <h1 className="text-[17px] font-semibold">Vehicle Onboarding</h1>
-        <a href="/customer/vehicles" className="rounded-lg border border-white/30 px-4 py-2 text-[11px] font-semibold hover:bg-white/10">Back</a>
+        <Link href={{pathname:"/customer/vehicles",query:{account:account.id}}} className="rounded-lg border border-white/30 px-4 py-2 text-[11px] font-semibold hover:bg-white/10">Back</Link>
       </div>
       <div className="grid grid-cols-3 divide-x divide-[#DFE8F3] bg-[#F8FAFD]">
         {sections.map((name,i)=><div key={name} className="flex items-center justify-center gap-2 px-2 py-3 text-center text-[11px] text-[#425772]">
