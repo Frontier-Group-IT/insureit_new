@@ -37,10 +37,11 @@ jobs:
             pocs/customer-firebase-auth/signup-edge-source.test.cjs \
             pocs/customer-firebase-auth/doc-read-edge-source.test.cjs \
             pocs/customer-firebase-auth/mobile-document-client-source.test.cjs \
+            pocs/customer-firebase-auth/customer-identity-source.test.cjs \
             apps/mobile-app/lib/firebase-android-auth-adapter.test.cjs
       - name: Validate staging isolation smoke runner syntax
         run: node --check pocs/customer-firebase-auth/staging-customer-isolation.mjs
       - name: Firebase native app types
-        run: npx tsc --noEmit --skipLibCheck --target ES2020 --module commonjs apps/mobile-app/lib/firebase-otp-readiness.ts apps/mobile-app/lib/firebase-native-phone-flow.ts apps/mobile-app/lib/firebase-data-client.ts pocs/customer-firebase-auth/server-identity-binding.ts pocs/customer-firebase-auth/firebase-admin-verifier.ts pocs/customer-firebase-auth/firebase-binding-backend.ts pocs/customer-firebase-auth/supabase-identity-store.ts apps/mobile-app/lib/firebase-android-auth-adapter.ts apps/mobile-app/lib/firebase-installed-android-otp.ts apps/mobile-app/lib/firebase-customer-auth.ts
+        run: npx tsc --noEmit --skipLibCheck --target ES2020 --module commonjs apps/mobile-app/lib/firebase-otp-readiness.ts apps/mobile-app/lib/firebase-native-phone-flow.ts apps/mobile-app/lib/firebase-data-client.ts pocs/customer-firebase-auth/server-identity-binding.ts pocs/customer-firebase-auth/firebase-admin-verifier.ts pocs/customer-firebase-auth/firebase-binding-backend.ts pocs/customer-firebase-auth/supabase-identity-store.ts apps/mobile-app/lib/firebase-android-auth-adapter.ts apps/mobile-app/lib/firebase-installed-android-otp.ts apps/mobile-app/lib/firebase-customer-auth.ts apps/mobile-app/lib/customer-identity.ts apps/mobile-app/lib/firebase-document-client.ts
 
 # Run 2: verify corrected document assertions and no-session source check.
