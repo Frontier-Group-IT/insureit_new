@@ -1,3 +1,16 @@
+## 2026-10-09 — Customer App HDFC ERGO policy-card logo runtime fix
+
+- Branch: `fix/customer-hdfc-ergo-logo`.
+- Investigated external policy for vehicle `MP20ZD1529`: production insurer value is exactly `HDFC ERGO`; existing Customer catalog resolver already normalizes it directly to `hdfcergo`. This was not a database-name/alias issue.
+- Customer App already bundled `assets/catalog/insurers/hdfc-ergo.png`, but the device showed a blank logo tile. The Customer copy was replaced with the known-good Partner App HDFC ERGO asset blob.
+- `PolicySummaryColumn` now uses `Image.onError` and falls back to the existing shield/car icon if any bundled catalog image fails at runtime, preventing a blank white tile.
+- `customer-catalog-logo-regression.mjs` now verifies the Customer HDFC asset is byte-identical to the known-good Partner asset and verifies the runtime fallback contract.
+- Existing insurer mapping/aliases and policy data loading remain unchanged.
+- JavaScript/assets-only Customer App change. **NO APK/AAB CREATED OR AUTHORIZED.**
+- **IMPLEMENTED ON BRANCH; PR/CI/MERGE/PRODUCTION OTA/INSTALLED-DEVICE VERIFICATION PENDING.**
+
+---
+
 ## 2026-10-09 — Customer Individual KYC filesystem-safe document reader
 
 - Branch: `fix/customer-kyc-filesystem-document-reader-2026-10-09`.
