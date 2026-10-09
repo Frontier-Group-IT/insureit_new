@@ -66,11 +66,19 @@ Deno.serve(async (request: Request) => {
     const matches = profiles.filter((p) => p.phone === decoded.phone_number);
     if (matches.length !== 1) return reply(409, { error: "customer_requires_review" });
     const profileId = matches[0].id as string;
-    const { data: existing, error: existingError } = await db
-      .from("customer_firebase_identity_links")
-      .select("firebase_uid,profile_id,verified_phone_at_approval,is_approved,is_active")
-      .or(`firebase_uid.eq.${decoded.uid},profile_id.eq.${profileId}`);
-    if (existingError || !Array.isArray(existing)) throw new Error("Mapping lookup failed");
+    const [uidLinks, profileLinks] = await Promise.all([
+      db.from("customer_firebase_identity_links")
+        .select("firebase_uid,profile_id,verified_phone_at_approval,is_approved,is_active")
+        .eq("firebase_project_id", PROJECT).eq("firebase_uid", decoded.uid),
+      db.from("customer_firebase_identity_links")
+        .select("firebase_uid,profile_id,verified_phone_at_approval,is_approved,is_active")
+        .eq("profile_id", profileId),
+    ]);
+    if (uidLinks.error || profileLinks.error || !Array.isArray(uidLinks.data) ||
+        !Array.isArray(profileLinks.data)) throw new Error("Mapping lookup failed");
+    const existing = [...uidLinks.data, ...profileLinks.data.filter(
+      (l) => !uidLinks.data!.some((one) => one.firebase_uid === l.firebase_uid)
+    )];
     if (existing.some((l) => l.profile_id !== profileId ||
           l.firebase_uid !== decoded.uid ||
           l.verified_phone_at_approval !== decoded.phone_number)) {
