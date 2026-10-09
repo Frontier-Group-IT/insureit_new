@@ -22,3 +22,9 @@ via `posp_misp_onboarding_profiles.partner_record_id`.
 - Risk: verify the historical intermediary code normalization and legacy records;
   no production data was queried or changed in this branch.
 - No APK/AAB.
+
+## 2026-10-09 branch follow-up
+
+Normalized policy intermediary-code matching with `upper(btrim(...))`, consistent with payout-code matching, so historical capitalization and surrounding whitespace do not silently exclude attributable policies. The existing `distinct (partner_id, policy_id)` policy-family step still prevents multiple linked intermediaries with the same code from duplicating premium totals.
+
+Evidence: committed SQL correction only; no production query, migration application, CI execution, runtime verification, or deployment has been performed. Before rollout, check representative partner totals and code collisions against production read-only records, confirm the RPC migration is applied, and run CI. Do not apply the migration or deploy without separate approval.
