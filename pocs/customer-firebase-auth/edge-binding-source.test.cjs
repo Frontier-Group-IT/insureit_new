@@ -13,6 +13,7 @@ test('inactive mapping denied and role assigned after link stored',()=>{
 });
 test('no client supplied profile, role or phone can influence account binding',()=>{
   assert.doesNotMatch(source,/await request\.json\(/);
-  assert.match(source,/const matches = profiles\.filter\(\(p\) => p\.phone === decoded\.phone_number\)/);
+  assert.match(source,/canonicalIndianPhone\(p\.phone\) === decoded\.phone_number/);
+  assert.match(source,/if \(matches\.length !== 1\) return reply\(409/);
   assert.match(source,/\.eq\("firebase_project_id", PROJECT\)/);
 });
