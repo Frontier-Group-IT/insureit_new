@@ -48,8 +48,8 @@ export default async function RmPerformancePage({ searchParams }: { searchParams
 
         <section className="mt-3 overflow-hidden rounded-[18px] border border-[#DCE4EE] bg-white shadow-[0_10px_28px_rgba(30,49,80,.04)]">
           <div className="grid xl:grid-cols-[1fr_1fr_1.05fr]">
-            <PerformancePanel eyebrow="TODAY" title={money(data.today.net_premium)} policies={data.today.policy_count} motor={data.today.motor_net_premium} nonMotor={data.today.non_motor_net_premium} life={mixAmount(data.todayCategoryMix, "life")} health={mixAmount(data.todayCategoryMix, "health")} payin={todayFinance?.report.summary.payin_after_tds ?? 0} payout={todayFinance?.report.summary.gross_payout ?? 0} />
-            <PerformancePanel eyebrow={data.period.label} title={money(data.mtd.net_premium)} policies={data.mtd.policy_count} motor={data.mtd.motor_net_premium} nonMotor={data.mtd.non_motor_net_premium} life={mixAmount(data.mtdCategoryMix, "life")} health={mixAmount(data.mtdCategoryMix, "health")} payin={periodFinance?.report.summary.payin_after_tds ?? 0} payout={periodFinance?.report.summary.gross_payout ?? 0} bordered />
+            <PerformancePanel eyebrow="TODAY" title={money(data.today.net_premium)} policies={data.today.policy_count} motor={data.today.motor_net_premium} nonMotor={data.today.non_motor_net_premium} life={data.todayBusinessLinePremium.life} health={data.todayBusinessLinePremium.health} payin={todayFinance?.report.summary.payin_after_tds ?? 0} payout={todayFinance?.report.summary.gross_payout ?? 0} />
+            <PerformancePanel eyebrow={data.period.label} title={money(data.mtd.net_premium)} policies={data.mtd.policy_count} motor={data.mtd.motor_net_premium} nonMotor={data.mtd.non_motor_net_premium} life={data.mtdBusinessLinePremium.life} health={data.mtdBusinessLinePremium.health} payin={periodFinance?.report.summary.payin_after_tds ?? 0} payout={periodFinance?.report.summary.gross_payout ?? 0} bordered />
             <MtdContextPanel rows={data.ytdTrend} periodLabel={data.period.shortLabel} highlightMonth={data.period.highlightMonth} />
           </div>
         </section>
@@ -106,7 +106,6 @@ function viewAllHref(period: Awaited<ReturnType<typeof loadRmPerformance>>["peri
   return `/rm-performance?${params.toString()}`;
 }
 
-function mixAmount(rows: Array<{ category: string; net_premium: number }>, key: string) { return rows.filter((row) => row.category.trim().toLowerCase() === key).reduce((sum, row) => sum + row.net_premium, 0); }
 function Empty({ label }: { label: string }) { return <div className="px-5 py-8 text-center text-[11px] font-semibold text-[#667386]">{label}</div>; }
 function money(value: number) { return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0); }
 function number(value: number) { return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value || 0); }
