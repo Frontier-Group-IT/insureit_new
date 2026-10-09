@@ -6,13 +6,13 @@ import { getAuth } from '@react-native-firebase/auth';
  * Never uses a service role key, caller-selected profile UUID or a
  * long-lived signed URL cache.
  */
-export type FirebasePrivateDocumentBucket = 'claim-documents' | 'customer-documents';
+export type FirebasePrivateDocumentBucket = 'claim-documents' | 'customer-documents' | 'policy-documents';
 
 export async function getFirebaseCustomerDocumentUrl(
   bucket: FirebasePrivateDocumentBucket,
   path: string,
 ): Promise<string> {
-  if (!['claim-documents', 'customer-documents'].includes(bucket)) {
+  if (!['claim-documents', 'customer-documents', 'policy-documents'].includes(bucket)) {
     throw new Error('Document bucket is not supported.');
   }
   if (!path || path.length > 1024 || path.startsWith('/') ||
