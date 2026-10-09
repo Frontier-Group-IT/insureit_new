@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { getAuth } from '@react-native-firebase/auth';
+import { createCustomerFirebaseDataClient } from '@/lib/firebase-data-client';
 import { ActivityIndicator, Pressable, SafeAreaView, Text, TextInput, View } from 'react-native';
 import { confirmFirebaseCustomerOtp, confirmFirebaseCustomerSignup, sendFirebaseCustomerOtp } from '@/lib/firebase-customer-auth';
 
@@ -36,10 +38,26 @@ export default function FirebaseOtpTestScreen() {
           ? await confirmFirebaseCustomerSignup(code, { fullName: fullName.trim(), ...(email.trim() ? { email: email.trim() } : {}) })
           : await confirmFirebaseCustomerOtp(code);
         // Do not render the full profile UUID or Firebase ID token.
+        const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
+        const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+        if (!url || !key) throw new Error('Data API configuration unavailable.');
+        const reader = createCustomerFirebaseDataClient(url, key, async () => {
+          const current = getAuth().currentUser;
+          return current?.uid === verified.uid ? current.getIdToken() : null;
+        });
+        // The resolver succeeding does not prove ordinary customer RLS.
+        const [ownProfile, membership] = await Promise.all([
+          reader.from('profiles').select('id,role,is_active').eq('id', verified.profileId).maybeSingle(),
+          reader.from('customer_memberships').select('customer_id').eq('profile_id', verified.profileId).eq('status', 'active').limit(5),
+        ]);
+        if (ownProfile.error || !ownProfile.data || ownProfile.data.role !== 'customer' ||
+            ownProfile.data.is_active !== true || membership.error) {
+          throw new Error('Firebase identity passed, but customer data authorization is not ready.');
+        }
         setProfileId(verified.profileId.slice(0, 8));
         setStatus(mode === 'signup'
-          ? 'Firebase verified and registered customer profile resolved.'
-          : 'Firebase verified and existing customer profile resolved.');
+          ? 'Firebase OTP, profile authorization and membership query verified.'
+          : 'Firebase OTP, profile authorization and membership query verified.');
       }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Firebase validation failed.');
