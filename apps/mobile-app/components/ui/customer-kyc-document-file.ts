@@ -14,7 +14,7 @@ export async function prepareCustomerDocument(
   asset: DocumentPickerAsset,
   maxBytes: number,
 ): Promise<PreparedCustomerDocument> {
-  const source = new File(asset);
+  const source = new File(asset.uri);
   if (!source.exists) {
     throw new Error('The selected document is no longer available on this device.');
   }
