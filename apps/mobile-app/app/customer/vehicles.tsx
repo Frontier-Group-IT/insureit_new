@@ -6,10 +6,9 @@ import { Animated, Image, Modal, NativeModules, Pressable, StyleSheet, Text, Tex
 import type { ImageSourcePropType } from 'react-native';
 
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
-import { getCurrentSession } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
 import { getInsurerLogoSource } from '@/lib/catalog-logos';
 import { getOperationalCustomerContexts, type CustomerAccountContext } from '@/lib/customer-context';
-import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Claim, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
 
@@ -76,19 +75,20 @@ export default function VehiclesScreen() {
 
   useEffect(() => {
     async function load() {
-      const session = await getCurrentSession();
-      if (!session?.user) return router.replace('/login');
+      const identity = await getCustomerIdentity();
+      if (!identity) return router.replace('/login');
+      const customerClient = identity.data;
 
       const contexts = await getOperationalCustomerContexts();
       const ids = contexts.map((context) => context.customer_id);
       setContexts(contexts);
       if (ids.length) {
         const [vehicleResult, policyResult, externalPolicyResult, claimResult, insurerResult] = await Promise.all([
-          supabase.from('vehicles').select('*').in('customer_id', ids).order('created_at', { ascending: false }),
-          supabase.from('policies').select('*').in('customer_id', ids),
-          (supabase as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,start_date,end_date').in('customer_id', ids),
-          supabase.from('claims').select('*').in('customer_id', ids),
-          supabase.from('insurance_companies').select('*'),
+          customerClient.from('vehicles').select('*').in('customer_id', ids).order('created_at', { ascending: false }),
+          customerClient.from('policies').select('*').in('customer_id', ids),
+          (customerClient as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,start_date,end_date').in('customer_id', ids),
+          customerClient.from('claims').select('*').in('customer_id', ids),
+          customerClient.from('insurance_companies').select('*'),
         ]);
 
         setVehicles(vehicleResult.data ?? []);
