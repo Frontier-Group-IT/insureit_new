@@ -21,7 +21,7 @@ test('approved mapping and unchanged active customer profile are required',()=>{
   assert.match(source,/CANONICAL\(profile\.phone\) !== decoded\.phone_number/);
 });
 test('private document access must check registered path plus ownership or membership',()=>{
-  assert.match(source,/\["claim-documents", "customer-documents"\]/);
+  assert.match(source,/\["claim-documents", "customer-documents", "policy-documents"\]/);
   assert.match(source,/\.eq\("storage_bucket", bucket\)\.eq\("storage_path", documentPath\)/);
   assert.match(source,/claim\?\.customer_id === d\.customer_id/);
   assert.match(source,/customer\.profile_id === profileId/);
