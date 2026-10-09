@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -17,6 +18,9 @@ import {
   type TextInputProps,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BrandLogo } from '@/components/first-look';
+import { NotificationBell } from '@/components/realtime-notifications';
+import { CustomerAccountSwitcherButton } from '@/components/customer-account-switcher';
 
 import { ExchangeActivityCenter } from '@/components/exchange/ExchangeActivityCenter';
 import { ExchangeMarketplaceHome, type ExchangeHomeVehicle } from '@/components/exchange/ExchangeMarketplaceHome';
@@ -681,6 +685,7 @@ export default function ExchangeMarketplaceScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <StatusBar style="light" backgroundColor="#071D43" />
         <View style={styles.shell}>
           <PremiumHeader tab="buy" onBack={() => router.replace('/customer/home')} onActivity={() => setTab('activity')} />
           <View style={styles.emptyState}>
@@ -695,6 +700,7 @@ export default function ExchangeMarketplaceScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <StatusBar style="light" backgroundColor="#071D43" />
       <View style={styles.shell}>
         <PremiumHeader
           tab={tab}
@@ -814,31 +820,20 @@ function PremiumHeader({
   onBack: () => void;
   onActivity: () => void;
 }) {
-  const title = tab === 'sell' ? 'Sell with confidence' : tab === 'activity' ? 'My Exchange' : 'Exchange';
-  const subtitle = tab === 'sell' ? 'Get the market working for you' : tab === 'activity' ? 'Track your deals in one place' : 'Commercial vehicles. Curated better.';
-
-  const marketplace = tab === 'buy';
-  const iconColor = '#FFFFFF';
-
+  // Match the shared Customer Policies header: navy, branded logo, bell and profile.
+  // Exchange activity remains available from the My Exchange service card.
+  void tab;
+  void onActivity;
   return (
     <View style={styles.header}>
-      <Pressable
-        onPress={onBack}
-        hitSlop={8}
-        style={({ pressed }) => [styles.headerAction, pressed && styles.pressed]}
-      >
-        <MaterialCommunityIcons name="arrow-left" size={21} color={iconColor} />
+      <Pressable accessibilityRole="button" accessibilityLabel="Back to Home" onPress={onBack} style={styles.headerBack}>
+        <MaterialCommunityIcons name="chevron-left" size={24} color="#FFFFFF" />
       </Pressable>
-      <View style={styles.headerCopy}>
-        <Text style={styles.headerTitle}>{title}</Text>
-        <Text style={styles.headerSubtitle}>{subtitle}</Text>
+      <View style={styles.headerBrand}>
+        <BrandLogo width={132} inverse />
       </View>
-      <Pressable
-        onPress={onActivity}
-        style={({ pressed }) => [styles.headerAction, pressed && styles.pressed]}
-      >
-        <MaterialCommunityIcons name="heart-outline" size={20} color={iconColor} />
-      </Pressable>
+      <View style={styles.headerBell}><NotificationBell color="#FFFFFF" /></View>
+      <CustomerAccountSwitcherButton initial="I" />
     </View>
   );
 }
@@ -1046,38 +1041,10 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.72 },
   cardPressed: { opacity: 0.92, transform: [{ scale: 0.995 }] },
 
-  header: {
-    minHeight: 76,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1C447D',
-  },
-  headerMarketplace: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E7EBF0',
-  },
-  headerAction: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#315D9E',
-    borderWidth: 0,
-    borderColor: '#315D9E',
-  },
-  headerActionMarketplace: {
-    backgroundColor: '#F4F6F8',
-    borderColor: '#E3E7EC',
-  },
-  headerCopy: { flex: 1, paddingHorizontal: 12 },
-  headerTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: '900', letterSpacing: 0.1 },
-  headerTitleMarketplace: { color: '#0F1D33' },
-  headerSubtitle: { marginTop: 3, color: '#D8E5FA', fontSize: 11, fontWeight: '600' },
-  headerSubtitleMarketplace: { color: '#7B8798' },
-
+  header: { minHeight: 58, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', backgroundColor: '#071D43' },
+  headerBack: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.08)' },
+  headerBrand: { flex: 1, minWidth: 0, paddingLeft: 9, justifyContent: 'center' },
+  headerBell: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   navBar: {
     height: 54,
     paddingHorizontal: 12,

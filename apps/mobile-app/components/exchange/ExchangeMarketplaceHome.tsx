@@ -53,12 +53,12 @@ function formatKm(value: number) {
 }
 
 function categoryIcon(category: ExchangeHomeCategory) {
-  if (category === 'All') return 'view-dashboard-outline' as const;
-  if (category === 'Tipper') return 'dump-truck' as const;
-  if (category === 'Pickup') return 'truck-flatbed' as const;
-  if (category === 'Bus') return 'bus-side' as const;
+  if (category === 'All') return 'apps' as const;
+  if (category === 'Tipper') return 'truck-trailer' as const;
+  if (category === 'Pickup') return 'car-pickup' as const;
+  if (category === 'Bus') return 'bus' as const;
   if (category === 'Construction') return 'excavator' as const;
-  return 'truck-cargo-container' as const;
+  return 'truck-outline' as const;
 }
 
 function budgetMatch(vehicle: ExchangeHomeVehicle, budget: BudgetFilter) {
@@ -193,7 +193,7 @@ export function ExchangeMarketplaceHome({
 
         <View style={styles.intentGrid}>
           <IntentCard
-            icon="truck-check-outline"
+            icon="truck-fast-outline"
             title="Buy a Vehicle"
             copy="Find verified commercial vehicles"
             tone="blue"
@@ -207,14 +207,14 @@ export function ExchangeMarketplaceHome({
             onPress={onSell}
           />
           <IntentCard
-            icon="chart-line-variant"
+            icon="finance"
             title="Check Value"
             copy="Know approximate market value"
             tone="green"
             onPress={onValue}
           />
           <IntentCard
-            icon="briefcase-check-outline"
+            icon="clipboard-check-outline"
             title="My Exchange"
             copy="Offers, listings and deals"
             tone="indigo"
@@ -360,7 +360,7 @@ function IntentCard({
   tone,
   onPress,
 }: {
-  icon: 'truck-check-outline' | 'truck-plus-outline' | 'chart-line-variant' | 'briefcase-check-outline';
+  icon: 'truck-fast-outline' | 'truck-plus-outline' | 'finance' | 'clipboard-check-outline';
   title: string;
   copy: string;
   tone: 'blue' | 'orange' | 'green' | 'indigo';
