@@ -10,7 +10,7 @@ import { LoadingState, Message, Screen } from '@/components/ui';
 import { ensureCustomerForUser, getCurrentSession, getOnboardingApplicationForUser, getProfile, signOut } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { palette, roleTheme } from '@/lib/theme';
-import type { Customer, CustomerDocument, CustomerOnboardingApplication, Profile } from '@/lib/types';
+import type { Customer, CustomerDocument, CustomerOnboardingApplication, CustomerOnboardingDocument, Profile } from '@/lib/types';
 
 const contactInformationIcon = require('../../assets/custom-icons/profile/contact-information.png');
 const documentsKycIcon = require('../../assets/custom-icons/profile/documents-kyc.png');
@@ -22,6 +22,7 @@ export default function ProfileScreen() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [onboarding, setOnboarding] = useState<CustomerOnboardingApplication | null>(null);
   const [documents, setDocuments] = useState<CustomerDocument[]>([]);
+  const [kycDocuments, setKycDocuments] = useState<CustomerOnboardingDocument[]>([]);
   const [profilePhoto, setProfilePhoto] = useState<CustomerDocument | null>(null);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -86,6 +87,12 @@ export default function ProfileScreen() {
           : { data: [] };
         if (!active) return;
         const loadedDocuments = documentResult.data ?? [];
+        const kycResult = nextOnboarding
+          ? await supabase.from('customer_onboarding_documents').select('*').eq('application_id', nextOnboarding.id).in('document_type', ['pan_copy', 'aadhaar_front', 'aadhaar_back'])
+          : { data: [], error: null };
+        if (kycResult.error) throw kycResult.error;
+        if (!active) return;
+        setKycDocuments(kycResult.data ?? []);
         const latestProfilePhoto = loadedDocuments.find((document) => document.document_type === 'Profile Photo') ?? null;
         setProfile(nextProfile);
         setCustomer(nextCustomer);
@@ -329,6 +336,13 @@ export default function ProfileScreen() {
     }
   }
 
+  async function openKycDocument(document: CustomerOnboardingDocument) {
+    setMessage(null);
+    const { data, error } = await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 300);
+    if (error || !data?.signedUrl) return setMessage({ text: 'Could not open this KYC document.', type: 'error' });
+    await Linking.openURL(data.signedUrl);
+  }
+
   async function openCustomerDocument(document: CustomerDocument) {
     setMessage(null);
     const { data, error } = await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 300);
@@ -425,7 +439,20 @@ export default function ProfileScreen() {
           </Pressable>
 
           <View style={styles.customerDocList}>
-            {documents.length ? documents.map((document) => (
+            {(documents.length || kycDocuments.length) ? <>
+              {kycDocuments.map((document) => (
+                <View key={`kyc-${document.id}`} style={styles.customerDocTile}>
+                  <View style={styles.customerDocIcon}><MaterialCommunityIcons name="file-document-check-outline" size={19} color="#0B63CE" /></View>
+                  <View style={styles.customerDocCopy}>
+                    <Text style={styles.customerDocType}>{document.document_type === 'pan_copy' ? 'PAN Card' : document.document_type === 'aadhaar_front' ? 'Aadhaar Front' : 'Aadhaar Back'}</Text>
+                    <Text style={styles.customerDocName} numberOfLines={1}>{document.file_name}</Text>
+                  </View>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Open KYC document" onPress={() => void openKycDocument(document)} style={styles.customerDocAction}>
+                    <MaterialCommunityIcons name="open-in-new" size={16} color={palette.navy} />
+                  </Pressable>
+                </View>
+              ))}
+              {documents.map((document) => (
               <View key={document.id} style={styles.customerDocTile}>
                 <View style={styles.customerDocIcon}><MaterialCommunityIcons name={documentIcon(document)} size={19} color="#0B63CE" /></View>
                 <View style={styles.customerDocCopy}>
@@ -439,7 +466,8 @@ export default function ProfileScreen() {
                   <MaterialCommunityIcons name="trash-can-outline" size={16} color="#C43838" />
                 </Pressable>
               </View>
-            )) : (
+            ))}
+            </> : (
               <View style={styles.emptyDocsPanel}>
                 <MaterialCommunityIcons name="cloud-upload-outline" size={24} color={roleTheme.customer.accent} />
                 <Text style={styles.emptyDocsTitle}>No KYC documents uploaded yet</Text>
