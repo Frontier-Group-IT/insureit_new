@@ -62,3 +62,13 @@ test('binding endpoint fails closed for unknown customers without creating or ch
   assert.doesNotMatch(source,/\.from\("customers"\)\.insert\(/);
   assert.doesNotMatch(source,/\.from\("profiles"\)\.update\(/);
 });
+
+test('release gate: no Firebase primary auth while UUID-subject incompatibility remains unresolved',()=>{
+  // Several existing PostgreSQL RLS policies still call auth.uid().
+  // A Firebase JWT carries a provider UID, not necessarily a UUID. Production
+  // read-only SQL verification raised SQLSTATE 22P02 for a Firebase-style UID.
+  // Keep Supabase OTP until scoped token handling and negative RLS tests pass.
+  assert.match(otpProvider,/export function activeCustomerOtpProvider/);
+  assert.match(otpProvider,/return legacySupabaseOtpProvider;/);
+  assert.doesNotMatch(otpProvider,/return firebaseOtpProvider;/);
+});
