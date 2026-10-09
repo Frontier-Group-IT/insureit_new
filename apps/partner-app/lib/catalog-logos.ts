@@ -43,6 +43,42 @@ const insurers: Array<[string[], ImageSourcePropType]> = [
 // null so the Customer Detail screen can render its existing default fallback artwork/icon.
 const manufacturers: Array<[string[], ImageSourcePropType]> = [
   [['honda'], require('../assets/catalog/vehicle-brands/honda.png')],
+  [['ace', 'action construction equipment'], require('../assets/catalog/vehicle-brands/ace.png')],
+  [['ammann'], require('../assets/catalog/vehicle-brands/ammann.png')],
+  [['ather'], require('../assets/catalog/vehicle-brands/ather.png')],
+  [['atul auto', 'atul'], require('../assets/catalog/vehicle-brands/atul-auto.png')],
+  [['bmw'], require('../assets/catalog/vehicle-brands/bmw.png')],
+  [['cummins'], require('../assets/catalog/vehicle-brands/cummins.png')],
+  [['escorts'], require('../assets/catalog/vehicle-brands/escorts.png')],
+  [['euler'], require('../assets/catalog/vehicle-brands/euler.png')],
+  [['fiat'], require('../assets/catalog/vehicle-brands/fiat.png')],
+  [['ford'], require('../assets/catalog/vehicle-brands/ford.png')],
+  [['foton'], require('../assets/catalog/vehicle-brands/foton.png')],
+  [['general motors', 'chevrolet'], require('../assets/catalog/vehicle-brands/general-motors.png')],
+  [['gromax'], require('../assets/catalog/vehicle-brands/gromax.png')],
+  [['harley davidson'], require('../assets/catalog/vehicle-brands/harley-davidson.png')],
+  [['hindustan motors'], require('../assets/catalog/vehicle-brands/hindustan-motors.png')],
+  [['indo farm'], require('../assets/catalog/vehicle-brands/indo-farm.png')],
+  [['international harvester'], require('../assets/catalog/vehicle-brands/international-harvester.png')],
+  [['jaguar'], require('../assets/catalog/vehicle-brands/jaguar.png')],
+  [['jsw'], require('../assets/catalog/vehicle-brands/jsw.png')],
+  [['kawasaki'], require('../assets/catalog/vehicle-brands/kawasaki.png')],
+  [['nissan'], require('../assets/catalog/vehicle-brands/nissan.png')],
+  [['olectra'], require('../assets/catalog/vehicle-brands/olectra.png')],
+  [['preet'], require('../assets/catalog/vehicle-brands/preet.png')],
+  [['renault'], require('../assets/catalog/vehicle-brands/renault.png')],
+  [['schwing stetter'], require('../assets/catalog/vehicle-brands/schwing-stetter.png')],
+  [['skoda'], require('../assets/catalog/vehicle-brands/skoda.png')],
+  [['sml', 'sml isuzu'], require('../assets/catalog/vehicle-brands/sml.png')],
+  [['stellantis'], require('../assets/catalog/vehicle-brands/stellantis.png')],
+  [['tafe'], require('../assets/catalog/vehicle-brands/tafe.png')],
+  [['terex'], require('../assets/catalog/vehicle-brands/terex.png')],
+  [['ti group'], require('../assets/catalog/vehicle-brands/ti-group.png')],
+  [['triumph'], require('../assets/catalog/vehicle-brands/triumph.png')],
+  [['vinfast'], require('../assets/catalog/vehicle-brands/vinfast.png')],
+  [['vst tillers'], require('../assets/catalog/vehicle-brands/vst-tillers.png')],
+  [['wirtgen'], require('../assets/catalog/vehicle-brands/wirtgen.png')],
+  [['yamaha'], require('../assets/catalog/vehicle-brands/yamaha.png')],
   [['bharatbenz', 'bharat benz', 'daimler'], require('../assets/catalog/vehicle-brands/bharatbenz.png')],
   [['eicher', 've commercial'], require('../assets/catalog/vehicle-brands/eicher.png')],
   [['jcb'], require('../assets/catalog/vehicle-brands/jcb.png')],
@@ -69,7 +105,7 @@ function resolve(value: string | null | undefined, entries: Array<[string[], Ima
   const key = normalize(value);
   if (!key) return null;
   for (const [aliases, source] of entries) {
-    if (aliases.some((alias) => key.includes(alias))) return source;
+    if (aliases.some((alias) => key === alias || key.startsWith(`${alias} `) || key.endsWith(` ${alias}`))) return source;
   }
   return null;
 }
