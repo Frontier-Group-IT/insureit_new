@@ -247,3 +247,11 @@ Also audit `can_access_customer` (both overloads), `can_access_profile`, `can_ac
 - Inspected live resolver `customer_firebase_profile_id()`: it checks Firebase issuer/audience/role/sub/verified phone, approved active mapping and active profile; customer scope helper follows direct customer ownership or active membership.
 - Full production Firebase cutover, new-customer signup, real-device authorization negative tests and AAB remain **NOT DONE**. Do not describe source assertions as passed runtime tests. No GitHub Actions workflow runs were returned for commit c1202c13a370c0b23fb40317be54ee08696400a8.
 - Gate: preserve existing Supabase OTP; build and exercise Firebase runtime in safe test conditions; review all client data RPCs and Storage policies before switching.
+
+### Critical new finding: Firebase UID type is incompatible with existing `auth.uid()` RLS
+
+A **read-only transaction** simulated a JWT subject `firebaseUidNotUuid_123` with authenticated role. `select auth.uid()` raised SQLSTATE **22P02** (invalid UUID input). No customer data was read or changed. Production policy audit found **136 policies on 54 public tables** referencing `auth.uid()`; among key app tables: claims 5, memberships 2, onboarding applications 4, onboarding documents 5, customers 6, policies 7, profiles 2, vehicles 7.
+
+This is a release-blocking compatibility issue. Firebase-issued JWT `sub` is the Firebase UID, which is not guaranteed to be a UUID. Existing Supabase policies evaluate `auth.uid()` as a UUID cast, so unrelated permissive Firebase RLS policies do **not** guarantee safe queries: legacy policy expressions may still be evaluated and error.
+
+**Do not enable Firebase tokens in production customer data requests yet.** Do not overwrite Firebase UID, weaken RLS or change legacy authentication just to bypass this. Investigate a narrowly scoped backend Firebase-to-canonical-profile authorization gateway (server verifies Firebase Admin token, checks approved binding and grants only resource-scoped operations) or a carefully verified safe database policy migration. Any solution must include isolation tests, existing Supabase JWT regression, all customer write/Storage/RPC paths, and fail-closed behavior. No mass automated rewrite of 136 live policies without detailed security review.
