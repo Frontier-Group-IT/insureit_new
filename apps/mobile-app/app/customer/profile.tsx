@@ -232,6 +232,8 @@ export default function ProfileScreen() {
 
     setAvatarUploading(true);
     try {
+      const identity = await getCustomerIdentity();
+      if (!identity || identity.profileId !== profile.id) throw new Error('Customer session unavailable');
       const response = await fetch(asset.uri);
       const body = await response.arrayBuffer();
       if (body.byteLength > 5 * 1024 * 1024) {
@@ -242,16 +244,20 @@ export default function ProfileScreen() {
       const extension = profilePhotoExtension(asset.fileName, asset.mimeType);
       const fileName = asset.fileName?.trim() || `profile-photo.${extension}`;
       const storagePath = `${customer.id}/profile/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-      const uploadResult = await supabase.storage.from('customer-documents').upload(storagePath, body, {
-        contentType: asset.mimeType ?? 'image/jpeg',
-        upsert: false,
-      });
-      if (uploadResult.error) {
-        setMessage({ text: 'Profile photo upload failed. Please try again.', type: 'error' });
-        return;
+      if (identity.provider === 'firebase') {
+        await uploadFirebaseCustomerDocument({ bucket: 'customer-documents', path: storagePath, file: body, contentType: asset.mimeType ?? 'image/jpeg' });
+      } else {
+        const uploadResult = await identity.data.storage.from('customer-documents').upload(storagePath, body, {
+          contentType: asset.mimeType ?? 'image/jpeg',
+          upsert: false,
+        });
+        if (uploadResult.error) {
+          setMessage({ text: 'Profile photo upload failed. Please try again.', type: 'error' });
+          return;
+        }
       }
 
-      const { data, error } = await supabase.from('customer_documents').insert({
+      const { data, error } = await identity.data.from('customer_documents').insert({
         customer_id: customer.id,
         document_type: 'Profile Photo',
         file_name: fileName,
@@ -263,25 +269,27 @@ export default function ProfileScreen() {
       }).select('*').single();
 
       if (error || !data) {
-        await supabase.storage.from('customer-documents').remove([storagePath]);
+        if (identity.provider === 'supabase') await identity.data.storage.from('customer-documents').remove([storagePath]);
         setMessage({ text: 'Profile photo could not be saved. Please try again.', type: 'error' });
         return;
       }
 
-      const signedPhoto = await supabase.storage.from(data.storage_bucket).createSignedUrl(data.storage_path, 3600);
-      if (!signedPhoto.data?.signedUrl) {
+      const photoUrl = identity.provider === 'firebase'
+        ? await getFirebaseCustomerDocumentUrl('customer-documents', data.storage_path)
+        : (await identity.data.storage.from(data.storage_bucket).createSignedUrl(data.storage_path, 3600)).data?.signedUrl;
+      if (!photoUrl) {
         setMessage({ text: 'Profile photo saved, but it could not be displayed yet.', type: 'error' });
         return;
       }
 
       const previousPhoto = profilePhoto;
       setProfilePhoto(data);
-      setAvatarUri(signedPhoto.data.signedUrl);
+      setAvatarUri(photoUrl);
       setMessage({ text: 'Profile photo updated.', type: 'success' });
 
-      if (previousPhoto) {
-        await supabase.from('customer_documents').delete().eq('id', previousPhoto.id);
-        await supabase.storage.from(previousPhoto.storage_bucket).remove([previousPhoto.storage_path]);
+      if (previousPhoto && identity.provider === 'supabase') {
+        await identity.data.from('customer_documents').delete().eq('id', previousPhoto.id);
+        await identity.data.storage.from(previousPhoto.storage_bucket).remove([previousPhoto.storage_path]);
       }
     } catch {
       setMessage({ text: 'Profile photo upload failed. Please try again.', type: 'error' });
