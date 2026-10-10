@@ -6,8 +6,10 @@ import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, Sc
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandLogo } from '@/components/first-look';
-import { ensureCustomerOnboardingForPartner, getCurrentSession, getOnboardingDocuments, saveOnboardingDraft } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { getOnboardingDocuments, getProfile, saveOnboardingDraft } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
+import { ensureOnboardingForCurrentCustomer } from '@/lib/customer-onboarding-identity';
+import { uploadFirebaseCustomerDocument } from '@/lib/firebase-upload-client';
 import { palette } from '@/lib/theme';
 import type { CustomerOnboardingApplication, CustomerOnboardingDocument, IndiaLocation, Json } from '@/lib/types';
 
@@ -42,22 +44,23 @@ export default function CorporateKycScreen() {
 
   useEffect(() => { let active = true; (async () => {
     try {
-      const session = await getCurrentSession(); if (!session?.user) return router.replace('/login');
-      setCreatorPhone(String(session.user.phone ?? '').replace(/\D/g,'').slice(-10));
-      const nextApplication = await ensureCustomerOnboardingForPartner(session.user, 'corporate');
+      const identity = await getCustomerIdentity(); if (!identity) return router.replace('/login');
+      const profile = await getProfile(identity.profileId, identity.data);
+      setCreatorPhone(String(profile?.phone ?? '').replace(/\D/g,'').slice(-10));
+      const nextApplication = await ensureOnboardingForCurrentCustomer('corporate');
       if (['submitted','under_review'].includes(nextApplication.status)) return router.replace('/customer/home');
       if (nextApplication.partner_type !== 'corporate') {
         if (active) setError('Your Corporate KYC could not be opened. Go back and choose the partner type again.');
         return;
       }
-      const nextDocuments = await getOnboardingDocuments(nextApplication.id); if (!active) return;
+      const nextDocuments = await getOnboardingDocuments(nextApplication.id, identity.data); if (!active) return;
       setApplication(nextApplication); setDocuments(nextDocuments);
       const draft = asDraft(nextApplication.draft_data);
       setCompanyName(textDraft(draft,'company_name')); setCompanyPan(textDraft(draft,'company_pan')); setGstNumber(textDraft(draft,'gst_number'));
       setStreet(textDraft(draft,'address_street')); setLocality(textDraft(draft,'address_locality')); setLocationQuery(textDraft(draft,'city'));
       const savedFleet = textDraft(draft,'fleet_size_band'); if (fleetOptions.some((item) => item.value === savedFleet)) setFleetBand(savedFleet as FleetBand);
-      const locationId = textDraft(draft,'india_location_id'); if (locationId) { const result = await supabase.from('india_locations').select('*').eq('id',locationId).maybeSingle(); if (result.data) { setLocation(result.data); setLocationQuery(result.data.city_name); } }
-      const contacts = await supabase.from('customer_onboarding_contacts').select('contact_role,full_name,phone,email').eq('application_id',nextApplication.id);
+      const locationId = textDraft(draft,'india_location_id'); if (locationId) { const result = await identity.data.from('india_locations').select('*').eq('id',locationId).maybeSingle(); if (result.data) { setLocation(result.data); setLocationQuery(result.data.city_name); } }
+      const contacts = await identity.data.from('customer_onboarding_contacts').select('contact_role,full_name,phone,email').eq('application_id',nextApplication.id);
       for (const contact of contacts.data ?? []) { const value = { name: contact.full_name ?? '', phone: String(contact.phone ?? '').replace(/^\+91/,''), email: contact.email ?? '' }; if (contact.contact_role === 'ceo_head') setCeo(value); if (contact.contact_role === 'admin_head') setAdmin(value); if (contact.contact_role === 'dedicated_spoc') setSpoc(value); }
       const reviewNotes = textDraft(draft,'review_notes'); if (nextApplication.status === 'changes_requested' && reviewNotes) setError(`Please update your application: ${reviewNotes}`);
     } catch { if (active) setError('We could not open Corporate KYC. Please try again.'); } finally { if (active) setLoading(false); }
@@ -75,7 +78,9 @@ export default function CorporateKycScreen() {
     const timer = setTimeout(async () => {
       setLocationSearching(true);
       setLocationSearched(false);
-      const result = await supabase.from('india_locations').select('*').ilike('city_name', `%${query}%`).order('city_name').order('state_name').limit(15);
+      const identity = await getCustomerIdentity();
+      if (!identity) { setLocationSearching(false); return; }
+      const result = await identity.data.from('india_locations').select('*').ilike('city_name', `%${query}%`).order('city_name').order('state_name').limit(15);
       if (!active) return;
       setLocationSearching(false);
       setLocationSearched(true);
@@ -102,9 +107,10 @@ export default function CorporateKycScreen() {
 
   async function submit() { if (!application || submitting) return; const issue = validate(); if (issue) return setError(issue); if (!location || !fleetBand) return; setSubmitting(true); setError(''); try {
     const draft: Json = { company_name:companyName.trim(), company_pan:companyPan, gst_number:gstNumber || null, address_street:street.trim(), address_locality:locality.trim() || null, india_location_id:location.id, city:location.city_name, state:location.state_name, postal_code:location.pincode, fleet_size_band:fleetBand };
-    await saveOnboardingDraft(application.id,draft,3);
+    const identity = await getCustomerIdentity(); if (!identity) throw new Error('Please sign in again.');
+    await saveOnboardingDraft(application.id,draft,3,identity.data);
     if (panFile) await uploadDocument(application.id,'company_pan_copy',panFile); if (gstFile) await uploadDocument(application.id,'gst_copy',gstFile);
-    const { error: submitError } = await supabase.rpc('submit_corporate_onboarding_application',{ p_application_id:application.id,p_company_name:companyName.trim(),p_company_pan:companyPan,p_gst_number:gstNumber || null,p_address_street:street.trim(),p_address_locality:locality.trim() || null,p_india_location_id:location.id,p_city:location.city_name,p_state:location.state_name,p_postal_code:location.pincode,p_fleet_size_band:fleetBand,p_ceo_name:ceo.name.trim(),p_ceo_phone:ceo.phone,p_ceo_email:ceo.email || null,p_admin_name:admin.name.trim(),p_admin_phone:admin.phone,p_admin_email:admin.email || null,p_spoc_name:spoc.name.trim(),p_spoc_phone:spoc.phone,p_spoc_email:spoc.email || null });
+    const { error: submitError } = await identity.data.rpc('submit_corporate_onboarding_application',{ p_application_id:application.id,p_company_name:companyName.trim(),p_company_pan:companyPan,p_gst_number:gstNumber || null,p_address_street:street.trim(),p_address_locality:locality.trim() || null,p_india_location_id:location.id,p_city:location.city_name,p_state:location.state_name,p_postal_code:location.pincode,p_fleet_size_band:fleetBand,p_ceo_name:ceo.name.trim(),p_ceo_phone:ceo.phone,p_ceo_email:ceo.email || null,p_admin_name:admin.name.trim(),p_admin_phone:admin.phone,p_admin_email:admin.email || null,p_spoc_name:spoc.name.trim(),p_spoc_phone:spoc.phone,p_spoc_email:spoc.email || null });
     if (submitError) throw submitError; setSuccessVisible(true);
   } catch (nextError) { setError(nextError instanceof Error ? nextError.message : 'Corporate KYC could not be submitted.'); } finally { setSubmitting(false); } }
 
@@ -112,7 +118,27 @@ export default function CorporateKycScreen() {
   return <SafeAreaView style={styles.safe} edges={['top','bottom']}><View style={styles.header}><Pressable onPress={() => router.replace('/customer/kyc/partner-type')} style={styles.back}><MaterialCommunityIcons name="chevron-left" size={27} color={palette.navy}/></Pressable><BrandLogo width={145}/><View style={{width:42}}/></View><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboard}><ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets keyboardDismissMode="interactive"><Text style={styles.title}>Corporate KYC</Text><Section title="Company details"><Field label="Company name" value={companyName} onChangeText={setCompanyName}/><Field label="Company PAN" value={companyPan} onChangeText={(v)=>setCompanyPan(normalizePan(v))} autoCapitalize="none" autoCorrect={false}/><Field label="GSTIN optional" value={gstNumber} onChangeText={(v)=>setGstNumber(v.replace(/[^a-z0-9]/gi,'').toUpperCase().slice(0,15))}/><FileButton label="Company PAN copy" file={panFile?.name} onPress={()=>chooseFile('company_pan_copy')}/>{gstNumber ? <FileButton label="GST certificate" file={gstFile?.name} onPress={()=>chooseFile('gst_copy')}/> : null}</Section><Section title="Company address"><Field label="Street" value={street} onChangeText={setStreet}/><Field label="Locality" value={locality} onChangeText={setLocality}/><LocationField query={locationQuery} selected={location} options={locationOptions} searching={locationSearching} searched={locationSearched} onChange={(value)=>{setLocationQuery(value);setLocation(null);}} onSelect={chooseLocation}/></Section><Section title="Fleet size"><OptionDropdown label="Fleet size" value={fleetBand} options={fleetOptions} open={fleetOpen} onToggle={()=>setFleetOpen((value)=>!value)} onSelect={(value)=>{setFleetBand(value as FleetBand);setFleetOpen(false);}} /></Section><ContactSection title="CEO / Head" value={ceo} onChange={setCeo}/><ContactSection title="Admin Head" value={admin} onChange={setAdmin}/><ContactSection title="Dedicated SPOC" value={spoc} onChange={setSpoc}/></ScrollView><View style={styles.footer}>{error ? <View style={styles.error}><Text style={styles.errorText}>{error}</Text></View> : null}<Pressable disabled={submitting} onPress={submit} style={styles.submit}>{submitting?<ActivityIndicator color="#fff"/>:<Text style={styles.submitText}>Submit Corporate KYC</Text>}</Pressable></View></KeyboardAvoidingView><Modal visible={successVisible} transparent animationType="fade"><View style={styles.modalBackdrop}><View style={styles.modal}><Text style={styles.modalTitle}>KYC saved</Text><Text style={styles.modalText}>Your company details have been saved directly to the same customer profile. Additional contact logins remain linked to this account.</Text><Pressable onPress={()=>router.replace('/customer/home')} style={styles.modalButton}><Text style={styles.submitText}>Return to dashboard</Text></Pressable></View></View></Modal></SafeAreaView>;
 }
 
-async function uploadDocument(applicationId:string,type:string,file:PickedFile){ const session=await getCurrentSession(); if(!session?.user) throw new Error('Sign in again.'); const extension=file.name.split('.').pop()?.toLowerCase()||'bin'; const path=`${applicationId}/${type}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`; const response=await fetch(file.uri); const bytes=await response.arrayBuffer(); const upload=await supabase.storage.from('customer-documents').upload(path,bytes,{contentType:file.mimeType??'application/octet-stream',upsert:false}); if(upload.error) throw upload.error; const record=await supabase.from('customer_onboarding_documents').upsert({application_id:applicationId,document_type:type,file_name:file.name,storage_bucket:'customer-documents',storage_path:path,mime_type:file.mimeType,file_size:file.size,verification_status:'pending',uploaded_by:session.user.id},{onConflict:'application_id,document_type'}); if(record.error){await supabase.storage.from('customer-documents').remove([path]); throw record.error;} }
+async function uploadDocument(applicationId:string,type:string,file:PickedFile){
+  const identity=await getCustomerIdentity(); if(!identity) throw new Error('Sign in again.');
+  const extension=file.name.split('.').pop()?.toLowerCase()||'bin';
+  const path=`${applicationId}/${type}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+  const bytes=await (await fetch(file.uri)).arrayBuffer();
+  if(bytes.byteLength>maxFileSize) throw new Error('Document must be 5 MB or smaller.');
+  if(identity.provider==='firebase') {
+    await uploadFirebaseCustomerDocument({bucket:'customer-documents',path,file:bytes,contentType:file.mimeType??'application/octet-stream'});
+  } else {
+    const upload=await identity.data.storage.from('customer-documents').upload(path,bytes,{contentType:file.mimeType??'application/octet-stream',upsert:false});
+    if(upload.error) throw upload.error;
+  }
+  const record=await identity.data.from('customer_onboarding_documents').upsert({
+    application_id:applicationId,document_type:type,file_name:file.name,storage_bucket:'customer-documents',storage_path:path,
+    mime_type:file.mimeType,file_size:file.size,verification_status:'pending',uploaded_by:identity.profileId
+  },{onConflict:'application_id,document_type'});
+  if(record.error) {
+    if(identity.provider==='supabase') await identity.data.storage.from('customer-documents').remove([path]);
+    throw record.error;
+  }
+}
 function Section({title,children}:{title:string;children:React.ReactNode}){return <View style={styles.card}><Text style={styles.sectionTitle}>{title}</Text>{children}</View>}
 function Field(props:React.ComponentProps<typeof TextInput>&{label:string}){const{label,...rest}=props;return <View style={styles.field}><Text style={styles.label}>{label}</Text><TextInput {...rest} placeholderTextColor="#9AA7B8" style={styles.input}/></View>}
 function FileButton({label,file,onPress}:{label:string;file?:string;onPress:()=>void}){return <Pressable onPress={onPress} style={styles.file}><MaterialCommunityIcons name="paperclip" size={18} color="#0A43A3"/><Text style={styles.fileText}>{file||label}</Text></Pressable>}
