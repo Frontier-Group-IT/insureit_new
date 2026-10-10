@@ -40,6 +40,7 @@ jobs:
             pocs/customer-firebase-auth/customer-identity-source.test.cjs \
             pocs/customer-firebase-auth/upload-ticket-edge-source.test.cjs \
             pocs/customer-firebase-auth/upload-client-source.test.cjs \
+            pocs/customer-firebase-auth/customer-auth-route-source.test.cjs \
             apps/mobile-app/lib/firebase-android-auth-adapter.test.cjs
       - name: Validate staging isolation smoke runner syntax
         run: node --check pocs/customer-firebase-auth/staging-customer-isolation.mjs
