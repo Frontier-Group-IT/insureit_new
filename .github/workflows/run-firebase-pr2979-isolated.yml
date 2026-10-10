@@ -54,3 +54,5 @@ jobs:
 # CI: validate all routed customer screens, signed claim uploads and restored Firebase startup.
 
 # Verify Firebase customer add-policy and add-vehicle flows against entire mobile app.
+
+# Validate Firebase customer profile, policy and vehicle onboarding with native workspace types.
