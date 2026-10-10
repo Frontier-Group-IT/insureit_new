@@ -175,7 +175,19 @@ export function ExchangeMarketplaceHome({
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <Text style={styles.pageTitle}>Exchange</Text>
+        <View style={styles.pageHeadingRow}>
+          <Text style={styles.pageTitle}>Exchange</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Planning to sell a commercial vehicle?"
+            onPress={onSell}
+            style={({ pressed }) => [styles.sellHeadingAction, pressed && styles.pressed]}
+          >
+            <MaterialCommunityIcons name="truck-plus-outline" size={17} color="#164BB8" />
+            <Text numberOfLines={1} ellipsizeMode="clip" style={styles.sellHeadingText}>Planning to sell a commercial vehicle</Text>
+            <MaterialCommunityIcons name="chevron-right" size={16} color="#164BB8" />
+          </Pressable>
+        </View>
         <View style={styles.searchFilterRow}>
           <MaterialCommunityIcons name="magnify" size={21} color="#8190A5" />
           <TextInput
@@ -348,18 +360,6 @@ export function ExchangeMarketplaceHome({
           <MaterialCommunityIcons name="arrow-right" size={17} color="#FFFFFF" />
         </Pressable>
 
-        <View style={styles.sellBanner}>
-          <View style={styles.sellBannerIcon}>
-            <MaterialCommunityIcons name="truck-plus-outline" size={25} color="#164BB8" />
-          </View>
-          <View style={styles.flex}>
-            <Text style={styles.sellBannerTitle}>Planning to sell a commercial vehicle?</Text>
-            <Text style={styles.sellBannerCopy}>Start with a vehicle already saved in your InsureIT fleet.</Text>
-          </View>
-          <Pressable onPress={onSell} hitSlop={8}>
-            <MaterialCommunityIcons name="chevron-right" size={24} color="#164BB8" />
-          </Pressable>
-        </View>
       </ScrollView>
 
       <FilterSheet
@@ -639,7 +639,10 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 18, paddingBottom: 36, backgroundColor: '#F8FAFD' },
   pressed: { opacity: 0.84, transform: [{ scale: 0.99 }] },
 
-  pageTitle: { marginTop: 18, color: '#0A2146', fontSize: 19, fontWeight: '900' },
+  pageHeadingRow: { marginTop: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  pageTitle: { flexShrink: 0, color: '#0A2146', fontSize: 19, fontWeight: '900' },
+  sellHeadingAction: { flex: 1, minWidth: 0, minHeight: 38, paddingHorizontal: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 3, borderRadius: 12, backgroundColor: '#EEF4FF' },
+  sellHeadingText: { flexShrink: 1, textAlign: 'right', fontSize: 9, lineHeight: 12, color: '#164BB8', fontWeight: '800' },
   locationModalBackdrop: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, backgroundColor: 'rgba(9,22,46,0.48)' },
   locationModalCard: { maxHeight: '70%', borderRadius: 20, backgroundColor: '#FFFFFF', padding: 18 },
   locationModalHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
