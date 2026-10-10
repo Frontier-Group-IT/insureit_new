@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BadgeIndianRupee, CarFront, ClipboardList, FileText, Headphones, Home, IdCard, Settings, ReceiptText, RefreshCcw, ShieldCheck, Truck, UserRound } from "lucide-react";
+import { BadgeIndianRupee, CarFront, ClipboardList, Headphones, Home, Settings, ReceiptText, RefreshCcw, ShieldCheck, Truck, UserRound } from "lucide-react";
 import { BrandLockup } from "@/components/brand-lockup";
 
 export function CustomerNavigation() {
@@ -71,14 +71,6 @@ export function CustomerNavigation() {
             <Link href="/customer/profile" className={`flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold transition ${profileActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
               <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><UserRound className="h-[17px] w-[17px]" /></span>
               Profile
-            </Link>
-            <Link href="/customer/kyc" className={`flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold transition ${kycActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
-              <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><IdCard className="h-[17px] w-[17px]" /></span>
-              KYC
-            </Link>
-            <Link href="/customer/documents" className={`flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold transition ${documentsActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
-              <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><FileText className="h-[17px] w-[17px]" /></span>
-              Documents
             </Link>
           </div>
         </nav>
