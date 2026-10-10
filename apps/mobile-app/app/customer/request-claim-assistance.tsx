@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppBadge } from '@/components/design-system';
 import { LoadingState, Message, Screen } from '@/components/ui';
-import { supabase } from '@/lib/supabase';
+import { getCustomerIdentity } from '@/lib/customer-identity';
 import { palette } from '@/lib/theme';
 
 type ClaimRow = {
@@ -42,7 +42,9 @@ export default function RequestClaimAssistanceScreen() {
     if (!id) { setError('Claim reference is missing.'); setLoading(false); return; }
     let active = true;
     void (async () => {
-      const { data, error: loadError } = await supabase.from('claims').select('id,claim_no,claim_service_mode,assistance_status,policy_id,policy_service_source').eq('id', id).maybeSingle();
+      const identity = await getCustomerIdentity();
+      if (!identity) { if (active) { setError('Please sign in again.'); setLoading(false); } return; }
+      const { data, error: loadError } = await identity.data.from('claims').select('id,claim_no,claim_service_mode,assistance_status,policy_id,policy_service_source').eq('id', id).maybeSingle();
       if (!active) return;
       if (loadError || !data) setError('We could not load this claim.'); else setClaim(data as ClaimRow);
       setLoading(false);
@@ -53,7 +55,9 @@ export default function RequestClaimAssistanceScreen() {
   async function submit() {
     if (!claim || submitting) return;
     setSubmitting(true); setError('');
-    const { error: rpcError } = await (supabase.rpc as any)('request_claim_assistance', { p_claim_id: claim.id, p_note: note.trim() || null });
+    const identity = await getCustomerIdentity();
+    if (!identity) { setSubmitting(false); setError('Please sign in again.'); return; }
+    const { error: rpcError } = await (identity.data.rpc as any)('request_claim_assistance', { p_claim_id: claim.id, p_note: note.trim() || null });
     setSubmitting(false);
     if (rpcError) { console.warn('Claim assistance request failed', rpcError.message); setError('We could not send your assistance request right now. Please try again.'); return; }
     if (returnStage === 'spot_intimation') {
