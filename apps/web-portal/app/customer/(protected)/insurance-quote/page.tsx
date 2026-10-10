@@ -26,7 +26,7 @@ export default async function CustomerInsuranceQuotePage({
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/insurance-quote" />
       <section className="relative isolate overflow-hidden rounded-xl bg-[#061A38] text-white shadow-[0_6px_22px_rgba(10,32,68,.12)]">
         <div className="absolute inset-0 bg-[linear-gradient(90deg,#06152e_0%,#062349_43%,transparent_76%)]" />
-        <div className="absolute inset-y-0 right-0 w-[66%] bg-[url('/customer-insurance-quote-vehicles.svg')] bg-cover bg-center opacity-90" />
+        <div className="absolute inset-y-0 right-0 w-[66%] bg-cover bg-center opacity-90" style={{ backgroundImage: 'url("/customer-insurance-quote-banner.webp"), url("/customer-insurance-quote-vehicles.svg")' }} />
         <div className="absolute inset-0 bg-gradient-to-r from-[#06152e] via-[#061b38]/95 via-45% to-transparent" />
         <div className="relative flex min-h-[180px] items-center justify-between gap-2 px-4 py-4 sm:min-h-[205px] sm:px-6">
           <div className="max-w-[55%]">
