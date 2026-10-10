@@ -151,7 +151,7 @@ export function ExchangeMarketplaceHome({
   const matchedLocations = Array.from(new Set([
     ...masterLocations,
     ...availableLocations.filter((location) => location.toLowerCase().includes(normalizedLocationQuery)),
-  ])).filter((location) => !normalizedLocationQuery || location.toLowerCase().includes(normalizedLocationQuery));
+  ]));
 
   useEffect(() => {
     if (!locationVisible || normalizedLocationQuery.length < 2) {
