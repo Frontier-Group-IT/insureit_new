@@ -76,3 +76,5 @@ jobs:
 # Verify complete self-managed milestone Firebase token routing and Storage upload handlers.
 
 # Verify zero direct legacy Customer App session references after route migration.
+
+# Recheck resolved Firebase/claim identity variable shadowing on 2026-10-10.
