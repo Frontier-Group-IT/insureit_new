@@ -449,8 +449,8 @@ export default function SelfManagedClaimScreen() {
     let storagePath = '';
     let storageUploaded = false;
     try {
-      const session = await getCurrentSession();
-      if (!session?.user) return { ok: false, message: 'Please sign in again before uploading documents.', document: null };
+      const identity = await getCustomerIdentity();
+      if (!identity) return { ok: false, message: 'Please sign in again before uploading documents.', document: null };
       let uploadUri = pickedFile.uri;
       let uploadName = pickedFile.name;
       let uploadMimeType = pickedFile.mimeType;
@@ -493,11 +493,16 @@ export default function SelfManagedClaimScreen() {
       for (let attempt = 1; attempt <= CLAIM_UPLOAD_MAX_ATTEMPTS; attempt += 1) {
         let uploadError: unknown = null;
         try {
-          const uploadResult = await supabase.storage.from(storageBucket).upload(storagePath, body, {
-            contentType: uploadMimeType,
-            upsert: false,
-          });
-          uploadError = uploadResult.error;
+          if (identity.provider === 'firebase') {
+            await uploadFirebaseCustomerDocument({ bucket: 'claim-documents', path: storagePath, file: body, contentType: uploadMimeType });
+            uploadError = null;
+          } else {
+            const uploadResult = await identity.data.storage.from(storageBucket).upload(storagePath, body, {
+              contentType: uploadMimeType,
+              upsert: false,
+            });
+            uploadError = uploadResult.error;
+          }
         } catch (error) {
           uploadError = error;
         }
@@ -525,8 +530,15 @@ export default function SelfManagedClaimScreen() {
 
         if (canRefreshAuth) {
           authRefreshAttempted = true;
-          const { error: refreshError } = await supabase.auth.refreshSession();
-          if (refreshError) break;
+          if (identity.provider === 'firebase') {
+            const { getAuth } = await import('@react-native-firebase/auth');
+            const current = getAuth().currentUser;
+            if (!current || current.uid !== identity.firebaseUid) break;
+            await current.getIdToken(true);
+          } else {
+            const { error: refreshError } = await identity.data.auth.refreshSession();
+            if (refreshError) break;
+          }
         }
 
         await waitForClaimUploadRetry(attempt);
@@ -534,7 +546,7 @@ export default function SelfManagedClaimScreen() {
 
       if (!storageUploaded) return { ok: false, message: claimUploadStorageMessage(pickedFile.name, true), document: null };
 
-      const { data, error } = await supabase.from('claim_documents').insert({
+      const { data, error } = await identity.data.from('claim_documents').insert({
         claim_id: targetClaimId,
         customer_id: customerId,
         document_type: documentType,
@@ -543,16 +555,16 @@ export default function SelfManagedClaimScreen() {
         storage_path: storagePath,
         mime_type: uploadMimeType,
         file_size: body.byteLength,
-        uploaded_by: session.user.id,
+        uploaded_by: identity.profileId,
       }).select('*').single();
       if (error) {
-        await supabase.storage.from(storageBucket).remove([storagePath]);
+        if (identity.provider === 'supabase') await identity.data.storage.from(storageBucket).remove([storagePath]);
         storageUploaded = false;
         return { ok: false, message: claimUploadMetadataMessage(pickedFile.name), document: null };
       }
       return { ok: true, message: '', document: data as ClaimDocument };
     } catch {
-      if (storageUploaded && storagePath) await supabase.storage.from(storageBucket).remove([storagePath]);
+      if (storageUploaded && storagePath) if (identity.provider === 'supabase') await identity.data.storage.from(storageBucket).remove([storagePath]);
       return { ok: false, message: `${pickedFile.name || 'The selected document'} could not be uploaded. Please try again.`, document: null };
     } finally {
       if (isAccidentVideo) setVideoProcessingStatus('');
