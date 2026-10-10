@@ -54,3 +54,12 @@ test('registered customer profile photos and customer documents have independent
   assert.match(source,/\.eq\("customer_id", customerId\)\.eq\("profile_id", profileId\)/);
   assert.match(source,/if \(!allowed\) return reply\(404/);
 });
+
+test('policy copies physically stored in customer-documents are still ownership checked',()=>{
+  assert.match(source,/policyDocs, error: policyDocError/);
+  assert.match(source,/from\("policy_documents"\)/);
+  assert.match(source,/\.eq\("storage_bucket", bucket\)/);
+  assert.match(source,/\.eq\("storage_path", documentPath\)/);
+  assert.match(source,/customer\?\.id === policy\.customer_id && customer\?\.profile_id === profileId/);
+  assert.match(source,/\.eq\("customer_id", policy\.customer_id\)\.eq\("profile_id", profileId\)/);
+});
