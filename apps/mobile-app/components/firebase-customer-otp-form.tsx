@@ -135,6 +135,10 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
         onPress={() => router.replace(mode === 'signup' ? '/login' : '/signup')}>
         <Text style={styles.link}>{mode === 'signup' ? 'Already have an account? Log in' : 'New customer? Sign up'}</Text>
       </Pressable>
+      <Pressable accessibilityRole="button" disabled={busy}
+        onPress={() => router.replace({ pathname: mode === 'signup' ? '/signup' : '/login', params: { legacyOtp: '1' } })}>
+        <Text style={styles.link}>Use existing Supabase OTP instead</Text>
+      </Pressable>
     </View>
   );
 }
