@@ -3,6 +3,21 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { CarFront, Search } from "lucide-react";
 
+const manufacturerIcons: Record<string, string> = {
+  honda: "honda", suzuki: "suzuki", yamaha: "yamaha", hero: "hero", bajaj: "bajaj",
+  tvs: "tvs", tata: "tata", mahindra: "mahindra", hyundai: "hyundai",
+  toyota: "toyota", ford: "ford", kia: "kia", bmw: "bmw", audi: "audi",
+  volkswagen: "volkswagen", renault: "renault", nissan: "nissan", skoda: "skoda",
+  volvo: "volvo", mercedes: "mercedesbenz", isuzu: "isuzu",
+};
+function ManufacturerMark({ make }: { make: string }) {
+  const key = make.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  const brand = manufacturerIcons[key];
+  const [failed, setFailed] = useState(false);
+  if (!brand || failed) return <span aria-label={make || "Unknown manufacturer"} title={make || "Unknown manufacturer"} className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#EDF3FA] text-[9px] font-bold text-[#426083]">{make ? make.slice(0, 2).toUpperCase() : "—"}</span>;
+  return <img src={`https://cdn.jsdelivr.net/npm/simple-icons@v15/icons/${brand}.svg`} alt={`${make} logo`} title={make} width={24} height={24} loading="lazy" onError={() => setFailed(true)} className="h-6 w-6 shrink-0 object-contain" />;
+}
+
 export type VehicleItem = { id: string; number: string; make: string; model: string; type: string; chassis: string; engine: string; policy: string | null };
 export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }: { accountId: string; items: VehicleItem[]; initialQuery?: string }) {
   const [query, setQuery] = useState(initialQuery);
@@ -14,7 +29,7 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
     <header className="flex flex-wrap items-center gap-3 rounded-xl border border-[#D8E1EC] bg-white px-4 py-3">
       <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#17345B] text-white"><CarFront className="h-5 w-5" /></span>
       <h1 className="text-[18px] font-bold text-[#142746]">Vehicles</h1>
-      <label className="flex min-w-[200px] flex-1 items-center gap-2 px-2 py-2.5 sm:max-w-[420px]">
+      <label className="flex min-w-[200px] flex-1 items-center gap-2 rounded-lg border border-[#D8E1EC] bg-white px-3 py-2.5 transition-colors focus-within:border-[#4E95E9] sm:max-w-[420px]">
         <Search className="h-4 w-4 text-[#73829A]" /><span className="sr-only">Search vehicles</span>
         <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search registration, chassis, make or model" className="w-full min-w-0 border-0 bg-transparent p-0 text-[12px] shadow-none outline-none ring-0 focus:outline-none focus:ring-0" />
       </label>
@@ -25,7 +40,7 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
         <thead className="bg-[#F1F5FA] text-[10px] font-extrabold uppercase text-[#687991]"><tr>{["Vehicle no.", "Make / model", "Type", "Chassis no.", "Engine no.", "Active policy", "Cover status"].map(h => <th key={h} className="border-b px-3 py-3">{h}</th>)}</tr></thead>
         <tbody className="divide-y divide-[#E7EDF5]">{rows.map(v => <tr key={v.id} className="hover:bg-[#F6F9FE]">
           <td className="px-3 py-2.5 font-extrabold text-[#133C73]"><Link href={{ pathname: `/customer/vehicles/${v.id}`, query: { account: accountId } }} className="hover:underline">{v.number}</Link></td>
-          <td className="px-3 py-2.5 font-semibold">{v.model || v.make || "—"}</td>
+          <td className="px-3 py-2.5 font-semibold"><span className="flex items-center gap-2"><ManufacturerMark make={v.make}/><span>{v.model || v.make || "—"}</span></span></td>
           <td className="px-3 py-2.5">{v.type || "—"}</td><td className="px-3 py-2.5">{v.chassis || "—"}</td><td className="px-3 py-2.5">{v.engine || "—"}</td>
           <td className="px-3 py-2.5 font-bold">{v.policy || "—"}</td>
           <td className="px-3 py-2.5"><span className={`rounded-full border px-2 py-1 text-[10px] font-bold uppercase ${v.policy ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-600"}`}>{v.policy ? "Covered" : "No active policy"}</span></td>
