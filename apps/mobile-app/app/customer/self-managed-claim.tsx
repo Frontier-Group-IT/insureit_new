@@ -564,7 +564,12 @@ export default function SelfManagedClaimScreen() {
       }
       return { ok: true, message: '', document: data as ClaimDocument };
     } catch {
-      if (storageUploaded && storagePath) if (identity.provider === 'supabase') await identity.data.storage.from(storageBucket).remove([storagePath]);
+      if (storageUploaded && storagePath) {
+        const cleanupIdentity = await getCustomerIdentity().catch(() => null);
+        if (cleanupIdentity?.provider === 'supabase') {
+          await cleanupIdentity.data.storage.from(storageBucket).remove([storagePath]);
+        }
+      }
       return { ok: false, message: `${pickedFile.name || 'The selected document'} could not be uploaded. Please try again.`, document: null };
     } finally {
       if (isAccidentVideo) setVideoProcessingStatus('');
