@@ -7,14 +7,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandLogo } from '@/components/first-look';
 import {
-  getCurrentSession,
-  ensureCustomerOnboardingForPartner,
   getOnboardingDocuments,
   getProfile,
   saveOnboardingDraft,
   submitIndividualOnboarding,
 } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { getCustomerIdentity } from '@/lib/customer-identity';
+import { ensureOnboardingForCurrentCustomer } from '@/lib/customer-onboarding-identity';
+import { uploadFirebaseCustomerDocument } from '@/lib/firebase-upload-client';
 import { palette } from '@/lib/theme';
 import type { CustomerOnboardingApplication, CustomerOnboardingDocument, IndiaLocation, Json, Profile } from '@/lib/types';
 
@@ -67,25 +67,25 @@ export default function IndividualKycScreen() {
     let active = true;
     async function load() {
       try {
-        const session = await getCurrentSession();
-        if (!session?.user) return router.replace('/login');
+        const identity = await getCustomerIdentity();
+        if (!identity) return router.replace('/login');
         const [nextProfile, nextApplication] = await Promise.all([
-          getProfile(session.user.id),
-          ensureCustomerOnboardingForPartner(session.user, 'individual_proprietor'),
+          getProfile(identity.profileId, identity.data),
+          ensureOnboardingForCurrentCustomer('individual_proprietor'),
         ]);
         if (nextApplication.status === 'submitted' || nextApplication.status === 'under_review') return router.replace('/customer/home');
         if (nextApplication.partner_type !== 'individual_proprietor') {
           if (active) setError('Your KYC type could not be opened. Go back and choose the partner type again.');
           return;
         }
-        const nextDocuments = await getOnboardingDocuments(nextApplication.id);
+        const nextDocuments = await getOnboardingDocuments(nextApplication.id, identity.data);
         if (!active) return;
         const draft = asDraft(nextApplication.draft_data);
         setProfile(nextProfile);
         setApplication(nextApplication);
         setDocuments(nextDocuments);
         setFullName(textDraft(draft, 'contact_name') || nextProfile?.full_name || '');
-        setEmail(textDraft(draft, 'email') || nextProfile?.email || session.user.email || '');
+        setEmail(textDraft(draft, 'email') || nextProfile?.email || (identity.provider === 'supabase' ? identity.session.user.email : null) || '');
         setPanNumber(textDraft(draft, 'pan_number'));
         setAddressStreet(textDraft(draft, 'address_street'));
         setAddressLocality(textDraft(draft, 'address_locality'));
@@ -99,7 +99,7 @@ export default function IndividualKycScreen() {
         if (fleetOptions.some((option) => option.value === savedFleet)) setFleetBand(savedFleet as FleetBand);
         const locationId = textDraft(draft, 'india_location_id');
         if (locationId) {
-          const result = await supabase.from('india_locations').select('*').eq('id', locationId).maybeSingle();
+          const result = await identity.data.from('india_locations').select('*').eq('id', locationId).maybeSingle();
           if (active && result.data) setLocation(result.data);
         }
       } catch {
@@ -119,7 +119,9 @@ export default function IndividualKycScreen() {
     }
     const timer = setTimeout(async () => {
       setLookingUpPin(true);
-      const { data, error: lookupError } = await supabase.from('india_locations').select('*').eq('pincode', postalCode).order('city_name').limit(12);
+      const identity = await getCustomerIdentity();
+      if (!identity) { setLookingUpPin(false); return; }
+      const { data, error: lookupError } = await identity.data.from('india_locations').select('*').eq('pincode', postalCode).order('city_name').limit(12);
       setLookingUpPin(false);
       if (lookupError) return setError('PIN code lookup is unavailable. Please try again.');
       const options = data ?? [];
@@ -197,7 +199,9 @@ export default function IndividualKycScreen() {
         gst_number: gstRegistered ? gstNumber : null,
         fleet_size_band: fleetBand,
       };
-      await saveOnboardingDraft(application.id, draft, 3);
+      const identity = await getCustomerIdentity();
+      if (!identity) throw new Error('Please sign in again.');
+      await saveOnboardingDraft(application.id, draft, 3, identity.data);
       let nextDocuments = documents;
       for (const [type, file] of Object.entries(files) as [DocumentType, PickedFile][]) {
         nextDocuments = await uploadDocument(application.id, type, file, nextDocuments);
@@ -219,7 +223,7 @@ export default function IndividualKycScreen() {
         isGstRegistered: gstRegistered,
         gstNumber,
         fleetSizeBand: fleetBand,
-      });
+      }, identity.data);
       setAadhaarNumber('');
       setFiles({});
       setSuccessVisible(true);
@@ -285,17 +289,21 @@ export default function IndividualKycScreen() {
 }
 
 async function uploadDocument(applicationId: string, type: DocumentType, file: PickedFile, currentDocuments: CustomerOnboardingDocument[]) {
-  const session = await getCurrentSession();
-  if (!session?.user) throw new Error('Your session expired. Please sign in again.');
+  const identity = await getCustomerIdentity();
+  if (!identity) throw new Error('Your session expired. Please sign in again.');
   const response = await fetch(file.uri);
   const body = await response.arrayBuffer();
   if (body.byteLength > maxFileSize) throw new Error(`${documentLabels[type]} must be 5 MB or smaller.`);
   const extension = safeExtension(file);
   const storagePath = `${applicationId}/${type}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-  const upload = await supabase.storage.from('customer-documents').upload(storagePath, body, { contentType: file.mimeType ?? 'application/octet-stream', upsert: false });
-  if (upload.error) throw new Error(`${documentLabels[type]} could not be uploaded.`);
+  if (identity.provider === 'firebase') {
+    await uploadFirebaseCustomerDocument({ bucket: 'customer-documents', path: storagePath, file: body, contentType: file.mimeType ?? 'application/octet-stream' });
+  } else {
+    const upload = await identity.data.storage.from('customer-documents').upload(storagePath, body, { contentType: file.mimeType ?? 'application/octet-stream', upsert: false });
+    if (upload.error) throw new Error(`${documentLabels[type]} could not be uploaded.`);
+  }
   const existing = currentDocuments.find((item) => item.document_type === type);
-  const { data, error } = await supabase.from('customer_onboarding_documents').upsert({
+  const { data, error } = await identity.data.from('customer_onboarding_documents').upsert({
     application_id: applicationId,
     document_type: type,
     file_name: file.name,
@@ -305,15 +313,15 @@ async function uploadDocument(applicationId: string, type: DocumentType, file: P
     file_size: file.size ?? body.byteLength,
     verification_status: 'pending',
     rejection_reason: null,
-    uploaded_by: session.user.id,
+    uploaded_by: identity.profileId,
     verified_by: null,
     verified_at: null,
   }, { onConflict: 'application_id,document_type' }).select('*').single();
   if (error || !data) {
-    await supabase.storage.from('customer-documents').remove([storagePath]);
+    if (identity.provider === 'supabase') await identity.data.storage.from('customer-documents').remove([storagePath]);
     throw new Error(`${documentLabels[type]} record could not be saved.`);
   }
-  if (existing?.storage_path && existing.storage_path !== storagePath) await supabase.storage.from('customer-documents').remove([existing.storage_path]);
+  if (existing?.storage_path && existing.storage_path !== storagePath && identity.provider === 'supabase') await identity.data.storage.from('customer-documents').remove([existing.storage_path]);
   return [data, ...currentDocuments.filter((item) => item.document_type !== type)];
 }
 
