@@ -484,8 +484,8 @@ function ClaimHealth({ claims }: { claims: NonNullable<DashboardCurrentData["cla
 
   return (
     <div className="flex min-w-0 flex-col">
-      <div className="flex min-h-[160px] flex-1 flex-col bg-white px-4 py-4 sm:px-5">
-        <div className="xl:h-[76px]">
+      <div className="flex min-h-[140px] flex-1 flex-col bg-white px-3 py-3 sm:px-4">
+        <div className="xl:h-[64px]">
         <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">Claim aging</p>
         <div className="mt-2 flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-baseline gap-2">
@@ -498,16 +498,16 @@ function ClaimHealth({ claims }: { claims: NonNullable<DashboardCurrentData["cla
           </div>
         </div>
         </div>
-        <div className="mt-4 flex h-[12px] w-full overflow-hidden" role="img" aria-label={`Claim aging distribution: ${claims.aging.map((item) => `${item.label} ${item.value}`).join(", ")}`}>
+        <div className="mt-2 flex h-[12px] w-full overflow-hidden" role="img" aria-label={`Claim aging distribution: ${claims.aging.map((item) => `${item.label} ${item.value}`).join(", ")}`}>
           {claims.aging.map((item, index) => (
             <div key={item.label} style={{ width: agingTotal > 0 ? `${(item.value / agingTotal) * 100}%` : "0%", backgroundColor: agingColors[Math.min(index, agingColors.length - 1)] }} />
           ))}
         </div>
-        <div className="mt-3 grid grid-cols-5 gap-1.5">
+        <div className="mt-1.5 grid grid-cols-5 gap-1.5">
           {claims.aging.map((item) => (
             <div key={item.label} className="min-w-0">
               <p className="truncate text-[8px] text-[#64748B]" title={item.label}>{item.label}</p>
-              <p className="mt-1 text-[11px] font-semibold tabular-nums text-[#233650]">{item.value}</p>
+              <p className="mt-0.5 text-[11px] font-semibold tabular-nums text-[#233650]">{item.value}</p>
             </div>
           ))}
         </div>
@@ -536,8 +536,9 @@ function FleetHealth({ fleet, divided }: { fleet: NonNullable<DashboardCurrentDa
   ].filter((item) => item.value > 0);
 
   return (
-    <div className={`${divided ? "border-t xl:border-l xl:border-t-0" : ""} border-[#E7ECF2] px-4 py-4 sm:px-5`}>
-      <div className="xl:h-[76px]">
+    <div className={`${divided ? "border-t xl:border-l xl:border-t-0" : ""} border-[#E7ECF2] flex min-w-0 flex-col`}>
+      <div className="flex min-h-[140px] flex-1 flex-col px-3 py-3 sm:px-4">
+      <div className="xl:h-[64px]">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[8px] font-bold uppercase tracking-[.1em] text-[#8290A3]">Fleet readiness</p>
@@ -554,10 +555,10 @@ function FleetHealth({ fleet, divided }: { fleet: NonNullable<DashboardCurrentDa
         ) : null}
       </div>
       </div>
-      <div className="mt-4 flex h-2.5 overflow-hidden bg-[#EDF1F5]">
+      <div className="mt-2 flex h-2.5 overflow-hidden bg-[#EDF1F5]">
         {items.map((item) => <div key={item.label} className={item.tone} style={{ width: `${Math.max(3, Math.round((item.value / total) * 100))}%` }} />)}
       </div>
-      <div className="mt-3 grid grid-cols-3 gap-3">
+      <div className="mt-1.5 grid grid-cols-3 gap-3">
         {[
           { label: "Registered", value: fleet.registered },
           { label: "Pending", value: fleet.registrationPending },
@@ -569,7 +570,8 @@ function FleetHealth({ fleet, divided }: { fleet: NonNullable<DashboardCurrentDa
           </div>
         ))}
       </div>
-      <Link prefetch={false} href="/vehicles" className="mt-4 inline-flex items-center gap-1 text-[8px] font-bold text-[#65758B] hover:text-[#203A63]">
+      </div>
+      <Link prefetch={false} href="/vehicles" className="flex min-h-[36px] items-center justify-center gap-1 bg-[#142448] px-3 py-2 text-[10px] font-semibold text-white hover:bg-[#203A63]">
         Vehicle Register <ArrowUpRight className="h-3 w-3" />
       </Link>
     </div>
@@ -586,18 +588,19 @@ function RenewalHealth({ renewals, total, divided }: { renewals: NonNullable<Das
   ];
 
   return (
-    <div className={`${divided ? "border-t xl:border-l xl:border-t-0" : ""} border-[#E7ECF2] px-4 py-4 sm:px-5`}>
-      <div className="xl:h-[76px]">
+    <div className={`${divided ? "border-t xl:border-l xl:border-t-0" : ""} border-[#E7ECF2] flex min-w-0 flex-col`}>
+      <div className="flex min-h-[140px] flex-1 flex-col px-3 py-3 sm:px-4">
+      <div className="xl:h-[64px]">
       <p className="text-[8px] font-bold uppercase tracking-[.1em] text-[#8290A3]">Renewal horizon</p>
       <div className="mt-1 flex items-end gap-2.5">
         <span className="portal-display text-[26px] font-semibold leading-none text-[#10213D]">{total}</span>
         <span className="pb-0.5 text-[8px] font-semibold text-[#718095]">within 45 days / expired</span>
       </div>
       </div>
-      <div className="mt-4 flex h-2.5 overflow-hidden bg-[#EDF1F5]">
+      <div className="mt-2 flex h-2.5 overflow-hidden bg-[#EDF1F5]">
         {items.filter((item) => item.value > 0).map((item) => <div key={item.label} className={item.tone} style={{ width: `${Math.max(3, Math.round((item.value / total) * 100))}%` }} />)}
       </div>
-      <div className="mt-3 grid grid-cols-5 gap-2">
+      <div className="mt-1.5 grid grid-cols-5 gap-2">
         {items.map((item) => (
           <div key={item.label}>
             <p className="text-[7px] font-semibold text-[#738197]">{item.label}</p>
@@ -605,7 +608,8 @@ function RenewalHealth({ renewals, total, divided }: { renewals: NonNullable<Das
           </div>
         ))}
       </div>
-      <Link prefetch={false} href="/policies" className="mt-4 inline-flex items-center gap-1 text-[8px] font-bold text-[#65758B] hover:text-[#203A63]">
+      </div>
+      <Link prefetch={false} href="/policies" className="flex min-h-[36px] items-center justify-center gap-1 bg-[#142448] px-3 py-2 text-[10px] font-semibold text-white hover:bg-[#203A63]">
         Policy Register <ArrowUpRight className="h-3 w-3" />
       </Link>
     </div>
