@@ -12,7 +12,7 @@ import { AppDatePicker } from '@/components/design-system';
 import { ExternalClaimDocumentTabs } from '@/components/external-claim-document-tabs';
 import { ClaimActionBar, ClaimFormSection } from '@/components/external-claim-ui';
 import { EmptyState, LoadingState, Message, Screen, TextField } from '@/components/ui';
-import { supabase } from '@/lib/supabase';
+import { getCustomerIdentity } from '@/lib/customer-identity';
 import { getInsurerLogoSource, getVehicleBrandLogoSource } from '@/lib/catalog-logos';
 import { palette } from '@/lib/theme';
 import { ExternalClaimMilestoneStageBody } from './self-managed-milestone';
@@ -159,10 +159,13 @@ export default function InternalClaimStageScreen() {
         return;
       }
 
+      const identity = await getCustomerIdentity();
+      if (!identity) return router.replace('/login');
+      const client = identity.data;
       const [claimResult, detailsResult, documentsResult] = await Promise.all([
-        supabase.from('claims').select('id,claim_no,insurer_claim_no,customer_id,vehicle_id,policy_id,current_status,claim_service_mode,accident_at,spot_intimation_at,accident_location,accident_description,estimated_loss,approved_amount,settlement_amount').eq('id', claimId).maybeSingle(),
-        supabase.from('claim_stage_details').select('stage,details,created_at').eq('claim_id', claimId).order('created_at', { ascending: false }),
-        supabase.from('claim_documents').select('document_type').eq('claim_id', claimId),
+        client.from('claims').select('id,claim_no,insurer_claim_no,customer_id,vehicle_id,policy_id,current_status,claim_service_mode,accident_at,spot_intimation_at,accident_location,accident_description,estimated_loss,approved_amount,settlement_amount').eq('id', claimId).maybeSingle(),
+        client.from('claim_stage_details').select('stage,details,created_at').eq('claim_id', claimId).order('created_at', { ascending: false }),
+        client.from('claim_documents').select('document_type').eq('claim_id', claimId),
       ]);
       if (!active) return;
       if (claimResult.error || !claimResult.data) {
@@ -182,7 +185,7 @@ export default function InternalClaimStageScreen() {
       setStageDetails((detailsResult.data ?? []) as unknown as StageDetail[]);
       setDocumentTypes((documentsResult.data ?? []).map((item: any) => String(item.document_type || '')).filter(Boolean));
 
-      const vehicleResult = await supabase.from('vehicles').select('vehicle_no,make,model').eq('id', nextClaim.vehicle_id).maybeSingle();
+      const vehicleResult = await client.from('vehicles').select('vehicle_no,make,model').eq('id', nextClaim.vehicle_id).maybeSingle();
       if (!active) return;
       setVehicleNo(vehicleResult.data?.vehicle_no ?? '');
       setVehicleMake(vehicleResult.data?.make ?? '');
@@ -190,11 +193,11 @@ export default function InternalClaimStageScreen() {
       setVehicleMeta([vehicleResult.data?.make, vehicleResult.data?.model].filter(Boolean).join(' · '));
 
       if (nextClaim.policy_id) {
-        const policyResult = await supabase.from('policies').select('policy_no,insurance_company_id').eq('id', nextClaim.policy_id).maybeSingle();
+        const policyResult = await client.from('policies').select('policy_no,insurance_company_id').eq('id', nextClaim.policy_id).maybeSingle();
         if (!active) return;
         setPolicyNo(policyResult.data?.policy_no ?? '');
         if (policyResult.data?.insurance_company_id) {
-          const insurerResult = await supabase.from('insurance_companies').select('name').eq('id', policyResult.data.insurance_company_id).maybeSingle();
+          const insurerResult = await client.from('insurance_companies').select('name').eq('id', policyResult.data.insurance_company_id).maybeSingle();
           if (!active) return;
           setInsurerName(insurerResult.data?.name ?? '');
         }
@@ -208,7 +211,9 @@ export default function InternalClaimStageScreen() {
     if (!claimId || !definition) return;
 
     const refreshStageDetails = async () => {
-      const result = await supabase
+      const identity = await getCustomerIdentity();
+      if (!identity) return;
+      const result = await identity.data
         .from('claim_stage_details')
         .select('stage,details,created_at')
         .eq('claim_id', claimId)
@@ -216,19 +221,26 @@ export default function InternalClaimStageScreen() {
       if (!result.error) setStageDetails((result.data ?? []) as unknown as StageDetail[]);
     };
 
-    const channel = supabase
-      .channel(`managed-claim-sync-${claimId}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'claims', filter: `id=eq.${claimId}` }, (payload) => {
-        const next = payload.new as Partial<ManagedClaim>;
-        setClaim((current) => current ? { ...current, ...next } : current);
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'claim_stage_details', filter: `claim_id=eq.${claimId}` }, () => {
-        void refreshStageDetails();
-      })
-      .subscribe();
-
+    let cancelled = false;
+    let cleanup: (() => void) | null = null;
+    void (async () => {
+      const identity = await getCustomerIdentity();
+      if (!identity || cancelled) return;
+      const channel = identity.data
+        .channel(`managed-claim-sync-${claimId}`)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'claims', filter: `id=eq.${claimId}` }, (payload) => {
+          const next = payload.new as Partial<ManagedClaim>;
+          setClaim((current) => current ? { ...current, ...next } : current);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'claim_stage_details', filter: `claim_id=eq.${claimId}` }, () => {
+          void refreshStageDetails();
+        })
+        .subscribe();
+      cleanup = () => { void identity.data.removeChannel(channel); };
+    })();
     return () => {
-      void supabase.removeChannel(channel);
+      cancelled = true;
+      cleanup?.();
     };
   }, [claimId, definition]);
 
