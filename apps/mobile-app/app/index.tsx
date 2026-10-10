@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { StartupSkeleton } from '@/components/startup-skeleton';
 import { Screen, Button, Message } from '@/components/ui';
 import { getCurrentSession, getRestoredSession } from '@/lib/auth';
+import { firebaseCustomerRolloutEnabled, getCustomerIdentity } from '@/lib/customer-identity';
 import { logStartupDiagnostic } from '@/lib/startup-diagnostics';
 import { routeRestoredUser } from '@/lib/startup-routing';
 
@@ -21,6 +22,14 @@ export default function IndexScreen() {
       setError('');
       await logStartupDiagnostic('bootstrap_started');
       try {
+        if (firebaseCustomerRolloutEnabled()) {
+          const customerIdentity = await withTimeout(getCustomerIdentity(), 10000);
+          if (customerIdentity?.provider === 'firebase') {
+            await logStartupDiagnostic('session_resolved', { sessionPresent: true });
+            router.replace('/customer/home');
+            return;
+          }
+        }
         const restoredSession = await withTimeout(getRestoredSession(), 10000);
         const session = restoredSession ?? await confirmStoredSession();
         await logStartupDiagnostic('session_resolved', { sessionPresent: Boolean(session?.user) });
