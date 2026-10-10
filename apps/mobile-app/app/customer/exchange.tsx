@@ -300,20 +300,16 @@ export default function ExchangeMarketplaceScreen() {
     try {
       const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const [address] = await Location.reverseGeocodeAsync(current.coords);
-      const city = (address?.city || address?.subregion || address?.district || '').trim().toLowerCase();
-      const region = (address?.region || '').trim().toLowerCase();
-      // Only select a real marketplace location; never fabricate nearby inventory.
-      const match = availableLocations.find((item) => {
-        const lower = item.toLowerCase();
-        return Boolean(city) && lower.split(',')[0].trim() === city &&
-          (!region || lower.includes(region) || lower.includes(region.slice(0, 2)));
-      }) ?? availableLocations.find((item) => Boolean(city) && item.toLowerCase().split(',')[0].trim() === city);
-      if (!match) {
-        Alert.alert('No nearby listings', 'There are no listed vehicles for your current city. Choose another available location or All locations.');
+      const city = (address?.city || address?.subregion || address?.district || '').trim();
+      const region = (address?.region || '').trim();
+      if (!city) {
+        Alert.alert('Location unavailable', 'Could not identify your city. Please search for a city or PIN code.');
         return null;
       }
-      setSelectedLocation(match);
-      return match;
+      // Location choice is independent of listing inventory; zero vehicles is a valid result.
+      const selected = [city, region].filter(Boolean).join(', ');
+      setSelectedLocation(selected);
+      return selected;
     } catch {
       Alert.alert('Location unavailable', 'Could not determine your city. Please choose a location from the list.');
       return null;
@@ -329,7 +325,11 @@ export default function ExchangeMarketplaceScreen() {
         vehicle.title.toLowerCase().includes(normalized) ||
         vehicle.location.toLowerCase().includes(normalized) ||
         vehicle.category.toLowerCase().includes(normalized);
-      const locationMatch = !selectedLocation || vehicle.location === selectedLocation;
+      const desiredCity = selectedLocation?.split(',')[0].trim().toLocaleLowerCase();
+      // Compare city names independently from state formatting ("MP" vs "Madhya Pradesh").
+      // A valid city without listings correctly produces an empty marketplace.
+      const listingCity = vehicle.location.split(',')[0].trim().toLocaleLowerCase();
+      const locationMatch = !desiredCity || listingCity === desiredCity;
       return categoryMatch && queryMatch && locationMatch;
     });
   }, [category, query, selectedLocation, vehicles]);

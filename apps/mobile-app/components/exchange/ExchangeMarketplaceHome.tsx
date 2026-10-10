@@ -1,6 +1,9 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { supabase } from '@/lib/supabase';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Animated,
+  Easing,
   Image,
   Modal,
   useWindowDimensions,
@@ -134,18 +137,63 @@ export function ExchangeMarketplaceHome({
   const [locating, setLocating] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [hintIndex, setHintIndex] = useState(0);
+  const hintProgress = useRef(new Animated.Value(0)).current;
   const [slideIndex, setSlideIndex] = useState(0);
   const [carouselPaused, setCarouselPaused] = useState(false);
   const carouselRef = useRef<ScrollView>(null);
   const { width: viewportWidth } = useWindowDimensions();
   const carouselWidth = viewportWidth - 36;
   const searchHints = ['Search trucks...', 'Search tippers...', 'Search pickup vehicles...', 'Search buses...', 'Search construction equipment...', 'Search make or model...'];
-  const matchedLocations = availableLocations.filter((location) => location.toLowerCase().includes(locationQuery.trim().toLowerCase()));
+  const [masterLocations, setMasterLocations] = useState<string[]>([]);
+  const [locationSearchLoading, setLocationSearchLoading] = useState(false);
+  const [locationSearchError, setLocationSearchError] = useState(false);
+  const normalizedLocationQuery = locationQuery.trim().toLowerCase();
+  const matchedLocations = Array.from(new Set([
+    ...masterLocations,
+    ...availableLocations.filter((location) => location.toLowerCase().includes(normalizedLocationQuery)),
+  ]));
+
+  useEffect(() => {
+    if (!locationVisible || normalizedLocationQuery.length < 2) {
+      setMasterLocations([]);
+      setLocationSearchError(false);
+      setLocationSearchLoading(false);
+      return;
+    }
+    let active = true;
+    const timer = setTimeout(async () => {
+      setLocationSearchLoading(true);
+      setLocationSearchError(false);
+      // Master Data location discovery is separate from Exchange vehicle inventory.
+      const escaped = normalizedLocationQuery.replace(/[%,]/g, '');
+      const { data, error } = await supabase
+        .from('india_locations')
+        .select('city_name, district, state_name, pincode')
+        .ilike('search_text', `%${escaped}%`)
+        .order('city_name')
+        .limit(50);
+      if (!active) return;
+      setLocationSearchLoading(false);
+      if (error) {
+        setLocationSearchError(true);
+        setMasterLocations([]);
+      } else {
+        const labels = (data ?? []).map((row) => [row.city_name, row.state_name].filter(Boolean).join(', '));
+        setMasterLocations(Array.from(new Set(labels)));
+      }
+    }, 300);
+    return () => { active = false; clearTimeout(timer); };
+  }, [locationVisible, normalizedLocationQuery]);
 
   useEffect(() => {
     if (searchFocused || query.trim()) return;
-    const timer = setInterval(() => setHintIndex((previous) => (previous + 1) % searchHints.length), 2800);
-    return () => clearInterval(timer);
+    const timer = setInterval(() => {
+      hintProgress.setValue(0);
+      Animated.timing(hintProgress, { toValue: 1, duration: 420, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }).start(({ finished }) => {
+        if (finished) { setHintIndex((previous) => (previous + 1) % searchHints.length); hintProgress.setValue(0); }
+      });
+    }, 2800);
+    return () => { clearInterval(timer); hintProgress.stopAnimation(); hintProgress.setValue(0); };
   }, [searchFocused, query]);
 
   useEffect(() => {
@@ -188,7 +236,7 @@ export function ExchangeMarketplaceHome({
               <TextInput
                 value={locationQuery}
                 onChangeText={setLocationQuery}
-                placeholder="Search by city or area"
+                placeholder="Search city, district or PIN code"
                 placeholderTextColor="#8993A2"
                 style={styles.locationSearchInput}
                 accessibilityLabel="Search available vehicle locations"
@@ -207,7 +255,7 @@ export function ExchangeMarketplaceHome({
               <MaterialCommunityIcons name="crosshairs-gps" size={21} color="#1764D8" />
               <View style={styles.flex}>
                 <Text style={styles.currentLocationTitle}>{locating ? 'Finding your location...' : 'Use my current location'}</Text>
-                <Text style={styles.currentLocationCopy}>Match your city to available vehicle listings</Text>
+                <Text style={styles.currentLocationCopy}>Detect your city; listings may be unavailable</Text>
               </View>
               <MaterialCommunityIcons name="chevron-right" size={19} color="#1764D8" />
             </Pressable>
@@ -229,7 +277,10 @@ export function ExchangeMarketplaceHome({
                   </Pressable>
                 );
               })}
-              {matchedLocations.length === 0 && locationQuery.trim() ? <Text style={styles.noLocationText}>No matching marketplace locations</Text> : null}
+              {locationSearchLoading ? <Text style={styles.noLocationText}>Searching locations...</Text> : null}
+              {locationSearchError ? <Text style={styles.noLocationText}>City lookup unavailable. Showing locations from listed vehicles.</Text> : null}
+              {!locationSearchLoading && matchedLocations.length === 0 && normalizedLocationQuery.length >= 2 ? <Text style={styles.noLocationText}>No matching city or PIN code in location master</Text> : null}
+              {normalizedLocationQuery.length === 1 ? <Text style={styles.noLocationText}>Enter at least 2 characters to search cities or PIN codes</Text> : null}
             </ScrollView>
           </View>
         </View>
@@ -253,31 +304,6 @@ export function ExchangeMarketplaceHome({
             <MaterialCommunityIcons name="chevron-right" size={16} color="#164BB8" />
           </Pressable>
         </View>
-        <Pressable accessibilityRole="button" onPress={() => setLocationVisible(true)} style={styles.selectedLocationRow}>
-          <MaterialCommunityIcons name="map-marker" size={18} color="#1764D8" />
-          <Text numberOfLines={1} style={styles.selectedLocationText}>{selectedLocation ?? 'All locations'}</Text>
-          <MaterialCommunityIcons name="chevron-down" size={17} color="#1764D8" />
-        </Pressable>
-        <View style={styles.searchFilterRow}>
-          <MaterialCommunityIcons name="magnify" size={21} color="#8190A5" />
-          <TextInput
-            value={query}
-            onChangeText={onQueryChange}
-            placeholder={searchHints[hintIndex]}
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
-            placeholderTextColor="#8A95A5"
-            style={styles.searchInput}
-            accessibilityLabel="Search exchange vehicles"
-          />
-          {query ? (
-            <Pressable onPress={() => onQueryChange('')} hitSlop={8} accessibilityLabel="Clear search">
-              <MaterialCommunityIcons name="close-circle" size={18} color="#9AA5B5" />
-            </Pressable>
-          ) : null}
-
-        </View>
-
         <View style={styles.segmentedStrip}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.segmentedContent} accessibilityLabel="Vehicle category filters">
             {categories.map((item) => {
@@ -297,6 +323,45 @@ export function ExchangeMarketplaceHome({
             })}
           </ScrollView>
         </View>
+        <Pressable accessibilityRole="button" onPress={() => setLocationVisible(true)} style={styles.selectedLocationRow}>
+          <MaterialCommunityIcons name="map-marker" size={18} color="#1764D8" />
+          <Text numberOfLines={1} style={styles.selectedLocationText}>{selectedLocation ?? 'All locations'}</Text>
+          <MaterialCommunityIcons name="chevron-down" size={17} color="#1764D8" />
+        </Pressable>
+        <View style={styles.searchFilterRow}>
+          <MaterialCommunityIcons name="magnify" size={21} color="#8190A5" />
+          <View style={styles.searchEntry}>
+            {!searchFocused && !query ? (
+              <View pointerEvents="none" style={styles.hintViewport}>
+                <Animated.Text style={[styles.hintText, { transform: [{ translateY: hintProgress.interpolate({ inputRange: [0, 1], outputRange: [0, -24] }) }] }]}>
+                  {searchHints[hintIndex]}
+                </Animated.Text>
+                <Animated.Text style={[styles.hintText, { transform: [{ translateY: hintProgress.interpolate({ inputRange: [0, 1], outputRange: [0, -24] }) }] }]}>
+                  {searchHints[(hintIndex + 1) % searchHints.length]}
+                </Animated.Text>
+              </View>
+            ) : null}
+          <TextInput
+            value={query}
+            onChangeText={onQueryChange}
+            placeholder={searchFocused || query ? '' : ' '}
+            
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+            placeholderTextColor="#8A95A5"
+            style={[styles.searchInput, !searchFocused && !query && styles.transparentInput]}
+            accessibilityLabel="Search exchange vehicles"
+          />
+          </View>
+          {query ? (
+            <Pressable onPress={() => onQueryChange('')} hitSlop={8} accessibilityLabel="Clear search">
+              <MaterialCommunityIcons name="close-circle" size={18} color="#9AA5B5" />
+            </Pressable>
+          ) : null}
+
+        </View>
+
+
 
         <View style={styles.carouselWrap}>
           <ScrollView
@@ -719,7 +784,7 @@ const styles = StyleSheet.create({
 
   pageHeadingRow: { marginTop: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   pageTitle: { flexShrink: 0, color: '#0A2146', fontSize: 19, fontWeight: '900' },
-  sellHeadingAction: { flex: 1, minWidth: 0, minHeight: 38, paddingHorizontal: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 3, borderRadius: 12, backgroundColor: '#EEF4FF' },
+  sellHeadingAction: { flex: 1, minWidth: 0, minHeight: 38, paddingHorizontal: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 3, borderRadius: 12, backgroundColor: 'transparent' },
   sellHeadingText: { flexShrink: 1, textAlign: 'right', fontSize: 9, lineHeight: 12, color: '#164BB8', fontWeight: '800' },
   selectedLocationRow: { marginTop: 12, alignSelf: 'flex-start', maxWidth: '100%', minHeight: 26, flexDirection: 'row', alignItems: 'center', gap: 5 },
   selectedLocationText: { maxWidth: '85%', color: '#123F8F', fontSize: 12, fontWeight: '800' },
@@ -741,7 +806,11 @@ const styles = StyleSheet.create({
   locationModalOptionText: { flex: 1, fontSize: 12, fontWeight: '700', color: '#203956' },
   noLocationText: { padding: 16, fontSize: 12, color: '#78869B' },
   searchFilterRow: { marginTop: 14, minHeight: 48, borderRadius: 13, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F8F9FC', borderWidth: 1, borderColor: '#E2E7F0' },
-  searchInput: { flex: 1, minWidth: 0, height: 46, paddingVertical: 0, color: '#10213D', fontSize: 12, fontWeight: '600' },
+  searchEntry: { flex: 1, height: 46, minWidth: 0, justifyContent: 'center' },
+  searchInput: { width: '100%', height: 46, paddingVertical: 0, color: '#10213D', fontSize: 12, fontWeight: '600' },
+  transparentInput: { color: 'transparent' },
+  hintViewport: { position: 'absolute', left: 0, right: 0, top: 12, height: 23, overflow: 'hidden' },
+  hintText: { height: 24, color: '#8A95A5', fontSize: 12, fontWeight: '600', textAlignVertical: 'center' },
   locationIndicator: { width: 30, height: 42, alignItems: 'center', justifyContent: 'center' },
   segmentedStrip: { marginTop: 9, backgroundColor: '#FFFFFF', borderRadius: 13, borderWidth: 1, borderColor: '#DEE5F0', overflow: 'hidden' },
   segmentedContent: { alignItems: 'stretch', minHeight: 47 },
