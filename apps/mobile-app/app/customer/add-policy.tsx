@@ -6,9 +6,9 @@ import { ActivityIndicator, Image, Keyboard, Modal, Pressable, ScrollView, Style
 
 import { AnchoredSearchSelect } from '@/components/anchored-search-select';
 import { Button, Card, Message, Screen } from '@/components/ui';
-import { getCurrentSession } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
+import { uploadFirebaseCustomerDocument } from '@/lib/firebase-upload-client';
 import { getOperationalCustomerContexts, isPortfolioCustomerContext, type CustomerAccountContext } from '@/lib/customer-context';
-import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
 
@@ -54,15 +54,16 @@ export default function AddPolicyScreen() {
   useEffect(() => {
     let active = true;
     async function load() {
-      const session = await getCurrentSession();
-      if (!session?.user) return router.replace('/login');
+      const identity = await getCustomerIdentity();
+      if (!identity) return router.replace('/login');
+      const client = identity.data;
       const nextContexts = await getOperationalCustomerContexts();
       const ids = nextContexts.map((context) => context.customer_id);
       const [vehicleResult, companyResult, policyResult, externalPolicyResult] = await Promise.all([
-        ids.length ? supabase.from('vehicles').select('*').in('customer_id', ids).order('vehicle_no') : Promise.resolve({ data: [] as Vehicle[] }),
-        supabase.from('insurance_companies').select('*').order('name'),
-        ids.length ? supabase.from('policies').select('vehicle_id,start_date,end_date').in('customer_id', ids) : Promise.resolve({ data: [] as PolicyDateRow[] }),
-        ids.length ? (supabase as any).from('external_policies').select('vehicle_id,start_date,end_date').in('customer_id', ids) : Promise.resolve({ data: [] as PolicyDateRow[] }),
+        ids.length ? client.from('vehicles').select('*').in('customer_id', ids).order('vehicle_no') : Promise.resolve({ data: [] as Vehicle[] }),
+        client.from('insurance_companies').select('*').order('name'),
+        ids.length ? client.from('policies').select('vehicle_id,start_date,end_date').in('customer_id', ids) : Promise.resolve({ data: [] as PolicyDateRow[] }),
+        ids.length ? (client as any).from('external_policies').select('vehicle_id,start_date,end_date').in('customer_id', ids) : Promise.resolve({ data: [] as PolicyDateRow[] }),
       ]);
       if (!active) return;
       const nextVehicles = (vehicleResult.data ?? []) as Vehicle[];
@@ -122,8 +123,8 @@ export default function AddPolicyScreen() {
   async function save() {
     setMessage('');
     if (saving) return;
-    const session = await getCurrentSession();
-    if (!session?.user) return router.replace('/login');
+    const identity = await getCustomerIdentity();
+    if (!identity) return router.replace('/login');
     const target = contexts.find((context) => context.customer_id === selectedCustomerId);
     if (!target) return setMessage('Select the customer account for this policy.');
     if (!selectedVehicleId) return setMessage('Select a vehicle for this policy.');
@@ -152,7 +153,7 @@ export default function AddPolicyScreen() {
     };
 
     setSaving(true);
-    const result = await (supabase.rpc as any)('create_customer_external_policy', payload);
+    const result = await (identity.data.rpc as any)('create_customer_external_policy', payload);
     if (result.error) {
       console.warn('Customer policy save failed', result.error.message);
       setSaving(false);
@@ -164,7 +165,7 @@ export default function AddPolicyScreen() {
         ? result.data as { id?: string }
         : null;
     if (policyCopy && createdPolicy?.id) {
-      const uploadError = await uploadPolicyCopy(target.customer_id, createdPolicy.id, policyCopy, session.user.id);
+      const uploadError = await uploadPolicyCopy(target.customer_id, createdPolicy.id, policyCopy, identity.profileId);
       if (uploadError) {
         console.warn('Customer policy copy upload failed', uploadError);
         setSaving(false);
@@ -526,11 +527,22 @@ async function uploadPolicyCopy(customerId: string, externalPolicyId: string, fi
   const storagePath = `${customerId}/policy-copy/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
   try {
     const body = await (await fetch(file.uri)).arrayBuffer();
-    const uploadResult = await supabase.storage.from('customer-documents').upload(storagePath, body, { contentType: file.mimeType ?? 'application/octet-stream', upsert: false });
-    if (uploadResult.error) return uploadResult.error.message;
-    const recordResult = await supabase.from('customer_documents').insert({ customer_id: customerId, external_policy_id: externalPolicyId, document_type: 'policy_copy', file_name: file.name, storage_bucket: 'customer-documents', storage_path: storagePath, mime_type: file.mimeType, file_size: file.size, uploaded_by: userId });
+    const identity = await getCustomerIdentity();
+    if (!identity || identity.profileId !== userId) return 'Customer identity no longer matches.';
+    if (identity.provider === 'firebase') {
+      await uploadFirebaseCustomerDocument({
+        bucket: 'customer-documents',
+        path: storagePath,
+        file: body,
+        contentType: file.mimeType ?? 'application/octet-stream',
+      });
+    } else {
+      const uploadResult = await identity.data.storage.from('customer-documents').upload(storagePath, body, { contentType: file.mimeType ?? 'application/octet-stream', upsert: false });
+      if (uploadResult.error) return uploadResult.error.message;
+    }
+    const recordResult = await identity.data.from('customer_documents').insert({ customer_id: customerId, external_policy_id: externalPolicyId, document_type: 'policy_copy', file_name: file.name, storage_bucket: 'customer-documents', storage_path: storagePath, mime_type: file.mimeType, file_size: file.size, uploaded_by: userId });
     if (recordResult.error) {
-      await supabase.storage.from('customer-documents').remove([storagePath]);
+      if (identity.provider === 'supabase') await identity.data.storage.from('customer-documents').remove([storagePath]);
       return recordResult.error.message;
     }
     return null;
