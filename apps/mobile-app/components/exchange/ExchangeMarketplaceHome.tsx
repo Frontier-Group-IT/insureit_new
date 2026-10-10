@@ -184,7 +184,7 @@ export function ExchangeMarketplaceHome({
             style={({ pressed }) => [styles.sellHeadingAction, pressed && styles.pressed]}
           >
             <MaterialCommunityIcons name="truck-plus-outline" size={17} color="#164BB8" />
-            <Text numberOfLines={2} style={styles.sellHeadingText}>Planning to sell a commercial vehicle?</Text>
+            <Text numberOfLines={1} ellipsizeMode="clip" style={styles.sellHeadingText}>Planning to sell a commercial vehicle</Text>
             <MaterialCommunityIcons name="chevron-right" size={16} color="#164BB8" />
           </Pressable>
         </View>
@@ -641,8 +641,8 @@ const styles = StyleSheet.create({
 
   pageHeadingRow: { marginTop: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   pageTitle: { flexShrink: 0, color: '#0A2146', fontSize: 19, fontWeight: '900' },
-  sellHeadingAction: { flex: 1, maxWidth: 235, minHeight: 38, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 5, borderRadius: 12, backgroundColor: '#EEF4FF' },
-  sellHeadingText: { flexShrink: 1, textAlign: 'right', fontSize: 10, lineHeight: 13, color: '#164BB8', fontWeight: '800' },
+  sellHeadingAction: { flex: 1, minWidth: 0, minHeight: 38, paddingHorizontal: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 3, borderRadius: 12, backgroundColor: '#EEF4FF' },
+  sellHeadingText: { flexShrink: 1, textAlign: 'right', fontSize: 9, lineHeight: 12, color: '#164BB8', fontWeight: '800' },
   locationModalBackdrop: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, backgroundColor: 'rgba(9,22,46,0.48)' },
   locationModalCard: { maxHeight: '70%', borderRadius: 20, backgroundColor: '#FFFFFF', padding: 18 },
   locationModalHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
