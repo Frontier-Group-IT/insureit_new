@@ -265,8 +265,8 @@ export async function ensureCustomerOnboardingForPartner(user: User, partnerType
   return startCustomerOnboarding(user, partnerType);
 }
 
-export async function getOnboardingDocuments(applicationId: string): Promise<CustomerOnboardingDocument[]> {
-  const { data, error } = await supabase
+export async function getOnboardingDocuments(applicationId: string, client: SupabaseClient = supabase): Promise<CustomerOnboardingDocument[]> {
+  const { data, error } = await client
     .from('customer_onboarding_documents')
     .select('*')
     .eq('application_id', applicationId)
@@ -275,8 +275,8 @@ export async function getOnboardingDocuments(applicationId: string): Promise<Cus
   return data ?? [];
 }
 
-export async function saveOnboardingDraft(applicationId: string, draftData: Json, currentStep = 2) {
-  const { data, error } = await supabase
+export async function saveOnboardingDraft(applicationId: string, draftData: Json, currentStep = 2, client: SupabaseClient = supabase) {
+  const { data, error } = await client
     .from('customer_onboarding_applications')
     .update({ status: 'in_progress', current_step: currentStep, draft_data: draftData })
     .eq('id', applicationId)
@@ -304,8 +304,8 @@ export type IndividualOnboardingSubmission = {
   fleetSizeBand: 'less_than_5' | '5_to_20' | '20_to_50' | 'more_than_50';
 };
 
-export async function submitIndividualOnboarding(input: IndividualOnboardingSubmission) {
-  const { data, error } = await supabase
+export async function submitIndividualOnboarding(input: IndividualOnboardingSubmission, client: SupabaseClient = supabase) {
+  const { data, error } = await client
     .rpc('submit_individual_onboarding_application', {
       p_application_id: input.applicationId,
       p_contact_name: input.contactName,
