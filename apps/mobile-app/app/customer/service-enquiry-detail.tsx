@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
-import { supabase } from '@/lib/supabase';
+import { getCustomerIdentity } from '@/lib/customer-identity';
 import { palette } from '@/lib/theme';
 
 type ServiceEnquiry = {
@@ -29,7 +29,9 @@ export default function ServiceEnquiryDetailScreen() {
     let active = true;
     void (async () => {
       if (!id) { setLoading(false); return; }
-      const { data } = await (supabase as any)
+      const identity = await getCustomerIdentity();
+      if (!identity) { if (active) { setLoading(false); } return router.replace('/login'); }
+      const { data } = await (identity.data as any)
         .from('service_enquiries')
         .select('id,enquiry_no,service_type,subject,description,status,vehicle_no,created_at,updated_at')
         .eq('id', id)
