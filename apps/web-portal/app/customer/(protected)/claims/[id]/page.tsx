@@ -1,24 +1,11 @@
-import Link from "next/link";
-import { ArrowLeft, CarFront, FileText, ShieldCheck } from "lucide-react";
-import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
-import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
-import {
-  CustomerAccountTabs,
-  CustomerPageHeading,
-  StatusPill,
-} from "@/components/customer-portal/customer-phase1";
+import { redirect } from "next/navigation";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
-import {
-  buildExternalClaimProjection,
-  customerClaimStatusTone,
-  formatCustomerDateTime,
-  isExternalCustomerClaim,
-  loadCustomerClaimDetail,
-} from "@/lib/customer-web-phase2-data";
+import { loadCustomerClaimDetail } from "@/lib/customer-web-phase2-data";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+/** Keep old claim-detail links working while using the canonical stage layout. */
 export default async function CustomerClaimDetailPage({
   params,
   searchParams,
@@ -27,84 +14,10 @@ export default async function CustomerClaimDetailPage({
   searchParams?: Promise<{ account?: string }>;
 }) {
   const { id } = await params;
-  const query: { account?: string } = searchParams ? await searchParams : {};
-  const { account, accounts } = await resolveCustomerWebScope(query.account);
-  const detail = await loadCustomerClaimDetail(account.id, id);
-  const { claim, documents, tasks, milestones, internal_projection } = detail;
-  const external = isExternalCustomerClaim(claim);
-  const externalProjection = external ? buildExternalClaimProjection(milestones) : null;
-  const completed = external ? externalProjection?.completed : internal_projection?.isTerminal;
-  const actionRequired = external
-    ? claim.claim_service_mode === "self_managed" && !externalProjection?.completed &&
-      (claim.current_status.includes("Document") || claim.current_status.includes("Awaited") || claim.current_status.includes("Pending"))
-    : Boolean(internal_projection?.customerActionRequired);
-
-  const stageLabel = externalProjection?.current_stage.label ?? internal_projection?.stageLabel ?? claim.current_status;
-  const progress = externalProjection?.progress ?? internal_projection?.progress ?? 0;
-  const journey = external
-    ? externalProjection?.stages.map((stage) => ({ key: stage.key, label: stage.label, complete: stage.completed, current: stage.key === externalProjection.current_stage.key }))
-    : INTERNAL_JOURNEY_STAGES.map((stage, index) => ({
-        key: stage.key,
-        label: stage.label,
-        complete: index < (internal_projection?.completedStageCount ?? 0),
-        current: index === (internal_projection?.stageIndex ?? 0),
-      }));
-
-  return (
-    <div className="space-y-3">
-      <Link href={{ pathname: "/customer/claims", query: { account: account.id } }} className="inline-flex items-center gap-1 text-[11px] font-black text-[#53627A] hover:text-[#142746]">
-        <ArrowLeft className="h-3.5 w-3.5" /> Back to claims
-      </Link>
-
-      <CustomerPageHeading
-        eyebrow={external ? "Self-tracked / external claim" : "Claim journey"}
-        title={claim.vehicle_no || claim.claim_no}
-        description={`${claim.claim_no} · ${claim.insurer_name || claim.policy_no || "Insurance claim"}`}
-        action={<StatusPill tone={completed ? "active" : actionRequired ? "due" : customerClaimStatusTone(claim.current_status)}>{completed ? "Completed" : actionRequired ? "Action required" : claim.current_status}</StatusPill>}
-      />
-      <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/claims" />
-
-      <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey={journey?.find(stage=>stage.current)?.key || "spot_intimation"} currentKey={journey?.find(stage=>stage.current)?.key || "spot_intimation"} completedKeys={journey?.filter(stage=>stage.complete).map(stage=>stage.key)||[]} />
-      <div className="rounded-2xl border border-[#DFE8F4] bg-white px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div><p className="text-[9px] font-bold uppercase tracking-wider text-[#75869A]">Current stage</p><p className="text-sm font-semibold text-[#071D49]">{stageLabel}</p></div>
-          <div className="min-w-[150px]"><div className="flex justify-between text-[10px] text-[#718096]"><span>Progress</span><span>{progress}%</span></div><div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#E9EEF5]"><div className="h-full bg-[#174EA6]" style={{width:`${Math.max(0,Math.min(progress,100))}%`}} /></div></div>
-        </div>
-      </div>
-              <div className="grid gap-3 xl:grid-cols-[1.4fr_0.8fr_0.8fr]">
-          <section className="rounded-2xl border border-[#DCE4EE] bg-white p-4">
-            <div className="flex items-center gap-2"><CarFront className="h-4 w-4 text-[#174EA6]" /><h2 className="text-[13px] font-black text-[#10213D]">Claim information</h2></div>
-            <dl className="mt-2 text-[10.5px]">
-              {[
-                ["Vehicle", claim.vehicle_no || "—"],
-                ["Make / Model", [claim.vehicle_make, claim.vehicle_model].filter(Boolean).join(" · ") || "—"],
-                ["Policy", claim.policy_no || "—"],
-                ["Insurer", claim.insurer_name || "—"],
-                ["Control no.", claim.claim_no],
-                ["Insurer claim no.", claim.insurer_claim_no || "Awaiting insurer"],
-                ["Incident", formatCustomerDateTime(claim.accident_at)],
-                ["Location", claim.accident_location || "—"],
-              ].map(([label, value]) => <div key={label} className="grid grid-cols-[110px_1fr] gap-3 border-b border-[#EEF2F6] px-2 py-2 last:border-0"><dt className="font-bold text-[#8895A8]">{label}</dt><dd className="break-words text-right font-black text-[#35445B]">{value}</dd></div>)}
-            </dl>
-          </section>
-
-          <section className="rounded-2xl border border-[#DCE4EE] bg-white p-4">
-            <div className="flex items-center gap-2"><FileText className="h-4 w-4 text-[#174EA6]" /><h2 className="text-[13px] font-black text-[#10213D]">Documents & actions</h2></div>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <div className="rounded-xl bg-[#F7F9FC] p-3"><p className="text-[9px] font-bold text-[#8794A7]">Documents</p><p className="mt-1 text-[18px] font-black text-[#10213D]">{documents.length}</p></div>
-              <div className="rounded-xl bg-[#F7F9FC] p-3"><p className="text-[9px] font-bold text-[#8794A7]">Open tasks</p><p className="mt-1 text-[18px] font-black text-[#10213D]">{tasks.length}</p></div>
-            </div>
-            {claim.assistance_status === "requested" ? <p className="mt-3 rounded-xl bg-[#FFF7E8] px-3 py-2 text-[10px] font-bold text-[#8C6419]">Assistance has been requested and is awaiting response.</p> : null}
-            {actionRequired ? <p className="mt-3 rounded-xl bg-[#FFF0F0] px-3 py-2 text-[10px] font-bold text-[#A13B3B]">Customer action is required in the mobile app for this stage. Web writes remain intentionally disabled in Phase 2.</p> : null}
-          </section>
-
-          <section className="rounded-2xl border border-[#DCE4EE] bg-white p-4">
-            <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#174EA6]" /><h2 className="text-[13px] font-black text-[#10213D]">Service mode</h2></div>
-            <p className="mt-3 text-[11px] font-black text-[#35445B]">{external ? "Self tracked / Customer-added policy" : "INSUREIT managed"}</p>
-            <p className="mt-1 text-[10px] font-semibold leading-4 text-[#7A8799]">{external ? "The journey is shown from customer-tracked milestones. INSUREIT processing is not implied unless assistance is accepted." : "The current journey state is projected from the shared internal claim workflow."}</p>
-          </section>
-        </div>
-
-    </div>
-  );
+  const query = searchParams ? await searchParams : {};
+  const { account } = await resolveCustomerWebScope(query.account);
+  // Authorize this claim within the selected customer account before redirecting.
+  const { claim } = await loadCustomerClaimDetail(account.id, id);
+  const target = new URLSearchParams({ account: account.id });
+  redirect(`/customer/claims/${encodeURIComponent(claim.id)}/stage/spot_intimation?${target.toString()}`);
 }
