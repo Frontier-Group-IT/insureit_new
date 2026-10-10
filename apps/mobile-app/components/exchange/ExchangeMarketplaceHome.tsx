@@ -604,6 +604,10 @@ const styles = StyleSheet.create({
   segmentTabActive: { backgroundColor: '#EDF4FF', borderBottomColor: '#164B99' },
   segmentLabel: { color: '#69758A', fontSize: 11, fontWeight: '700' },
   segmentLabelActive: { color: '#163E79', fontWeight: '800' },
+  sectionHeader: { marginTop: 26, marginBottom: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sectionTitle: { color: '#0A2146', fontSize: 18, fontWeight: '900' },
+  sectionSubtitle: { marginTop: 2, color: '#8290A3', fontSize: 8.8, fontWeight: '700' },
+  sectionAction: { color: '#1455AB', fontSize: 12, fontWeight: '800' },
 
   intentGrid: { marginTop: 20, flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' },
   intentCard: { width: '48.4%', minHeight: 112, borderRadius: 15, padding: 14, borderWidth: 1 },
