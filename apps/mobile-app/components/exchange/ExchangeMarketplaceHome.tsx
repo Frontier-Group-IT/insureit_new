@@ -354,17 +354,29 @@ export function ExchangeMarketplaceHome({
               </>
             ) : (
               <View style={styles.addLocationConfirm}>
-                <MaterialCommunityIcons name="map-marker-check" size={40} color="#1764D8" />
-                <Text style={styles.addLocationConfirmTitle}>{candidateLocation}</Text>
-                <Text style={styles.addLocationExplanation}>Review the selected area on a map, then confirm to use it for Exchange vehicle searches.</Text>
-                <Pressable style={styles.addLocationSecondary} onPress={() => void showCandidateMap()}>
-                  <MaterialCommunityIcons name="map-outline" size={20} color="#1764D8" />
-                  <Text style={styles.currentLocationTitle}>Open location on map</Text>
+                <View style={styles.confirmLocationCard}>
+                  <View style={styles.confirmMapBadge}>
+                    <MaterialCommunityIcons name="map-marker-radius" size={43} color="#1764D8" />
+                  </View>
+                  <View style={styles.confirmLocationDetails}>
+                    <Text style={styles.addLocationConfirmTitle} numberOfLines={2}>{candidateLocation}</Text>
+                    <View style={styles.confirmSelectedRow}>
+                      <MaterialCommunityIcons name="map-marker" size={15} color="#5F92CE" />
+                      <Text style={styles.confirmSelectedLabel}>Selected location</Text>
+                    </View>
+                  </View>
+                </View>
+                <Pressable accessibilityRole="button" style={styles.confirmPrimaryButton} onPress={confirmCandidate}>
+                  <Text style={styles.confirmPrimaryText}>Confirm location</Text>
+                  <MaterialCommunityIcons name="arrow-right" size={20} color="#FFFFFF" />
                 </Pressable>
-                <Pressable style={styles.addLocationPrimary} onPress={confirmCandidate}>
-                  <Text style={styles.addLocationPrimaryText}>Confirm location</Text>
+                <Pressable accessibilityRole="button" style={styles.confirmMapButton} onPress={() => void showCandidateMap()}>
+                  <MaterialCommunityIcons name="map-outline" size={22} color="#1764D8" />
+                  <Text style={styles.confirmMapButtonText}>Open location on map</Text>
                 </Pressable>
-                <Pressable onPress={() => setAddLocationStep('search')}><Text style={styles.addLocationChangeText}>Change location</Text></Pressable>
+                <Pressable accessibilityRole="button" onPress={() => setAddLocationStep('search')} style={styles.confirmChangeButton}>
+                  <Text style={styles.addLocationChangeText}>Change location</Text>
+                </Pressable>
               </View>
             )}
           </View>
@@ -879,9 +891,19 @@ const styles = StyleSheet.create({
   addLocationPrimary: { backgroundColor: '#2068ED', borderRadius: 13, minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   addLocationPrimaryText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
   addLocationSecondary: { minHeight: 49, borderRadius: 13, borderColor: '#1764D8', borderWidth: 1, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
-  addLocationConfirm: { alignItems: 'center', paddingTop: 20, gap: 15 },
-  addLocationConfirmTitle: { color: '#15253D', fontSize: 17, fontWeight: '800', textAlign: 'center' },
-  addLocationChangeText: { color: '#1764D8', fontSize: 12, fontWeight: '800', padding: 10 },
+  addLocationConfirm: { width: '100%', paddingTop: 12, gap: 14 },
+  confirmLocationCard: { width: '100%', minHeight: 126, backgroundColor: '#F0F5FF', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 18, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  confirmMapBadge: { width: 102, height: 94, backgroundColor: '#E2EEFC', borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  confirmLocationDetails: { flex: 1, minWidth: 0, gap: 12 },
+  addLocationConfirmTitle: { color: '#15253D', fontSize: 16, fontWeight: '800' },
+  confirmSelectedRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  confirmSelectedLabel: { color: '#76869A', fontSize: 12, fontWeight: '600' },
+  confirmPrimaryButton: { minHeight: 52, width: '100%', backgroundColor: '#2468E7', borderRadius: 13, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 12 },
+  confirmPrimaryText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
+  confirmMapButton: { minHeight: 52, width: '100%', borderRadius: 13, borderWidth: 1, borderColor: '#1764D8', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10 },
+  confirmMapButtonText: { color: '#1764D8', fontSize: 14, fontWeight: '800' },
+  confirmChangeButton: { alignSelf: 'center', minHeight: 44, justifyContent: 'center' },
+  addLocationChangeText: { color: '#1764D8', fontSize: 12, fontWeight: '800' },
   locationSheetBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(9,22,46,0.52)' },
   locationSheetDismiss: { flex: 1 },
   locationSheet: { maxHeight: '82%', minHeight: '57%', backgroundColor: '#FFFFFF', borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20, paddingBottom: 36 },
