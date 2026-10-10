@@ -680,17 +680,17 @@ export default function SelfManagedClaimScreen() {
 
     if (editing) {
       const current = milestones.find((item) => item.milestone_key === 'spot_intimation');
-      const session = await getCurrentSession();
-      if (!session?.user) { setSaving(false); return router.replace('/login'); }
+      const identity = await getCustomerIdentity();
+      if (!identity) { setSaving(false); return router.replace('/login'); }
       const [claimUpdate, milestoneUpdate] = await Promise.all([
-        (supabase as any).from('claims').update({ accident_at: incidentAt.toISOString(), accident_location: location.trim() || null }).eq('id', claimId),
-        (supabase as any).from('claim_milestones').upsert({
+        (identity.data as any).from('claims').update({ accident_at: incidentAt.toISOString(), accident_location: location.trim() || null }).eq('id', claimId),
+        (identity.data as any).from('claim_milestones').upsert({
           claim_id: claimId,
           milestone_key: 'spot_intimation',
           milestone_status: 'completed',
           details: { ...detailRecord(current?.details), ...details },
           completed_at: current?.completed_at ?? new Date().toISOString(),
-          recorded_by: session.user.id,
+          recorded_by: identity.profileId,
           recorded_by_actor: 'customer',
         }, { onConflict: 'claim_id,milestone_key' }),
       ]);
@@ -708,7 +708,9 @@ export default function SelfManagedClaimScreen() {
       return;
     }
 
-    const { data, error } = await (supabase.rpc as any)('finalize_self_managed_external_claim_draft', {
+    const identity = await getCustomerIdentity();
+    if (!identity) { setSaving(false); return router.replace('/login'); }
+    const { data, error } = await (identity.data.rpc as any)('finalize_self_managed_external_claim_draft', {
       p_claim_id: draft.id,
       p_accident_at: incidentAt.toISOString(),
       p_spot_intimation_at: spotIntimationAt.toISOString(),
@@ -726,7 +728,7 @@ export default function SelfManagedClaimScreen() {
 
     let controlNo = typeof created.claim_no === 'string' ? created.claim_no.trim() : draft.controlNo || draftClaimNo;
     if (!controlNo) {
-      const claimResult = await (supabase as any).from('claims').select('claim_no').eq('id', created.claim_id).maybeSingle();
+      const claimResult = await (identity.data as any).from('claims').select('claim_no').eq('id', created.claim_id).maybeSingle();
       controlNo = typeof claimResult.data?.claim_no === 'string' ? claimResult.data.claim_no.trim() : '';
     }
     if (!controlNo) {
