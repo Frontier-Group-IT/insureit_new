@@ -229,8 +229,15 @@ assert(navigation.includes('href="/customer/insurance-quote"'), "Customer naviga
 assert(navigation.includes('href="/customer/e-challan"'), "Customer navigation must expose Phase 3 E-Challan");
 assert(navigation.includes('href="/customer/support"'), "Customer navigation must expose Phase 3 Support");
 assert(navigation.includes('href="/customer/profile"'), "Customer navigation must expose Phase 4 Profile");
-assert(navigation.includes('href="/customer/kyc"'), "Customer navigation must expose Phase 4 KYC");
-assert(navigation.includes('href="/customer/documents"'), "Customer navigation must expose Phase 4 Documents");
+const profileDocuments = read("components/customer-portal/customer-profile-documents.tsx");
+assert(!navigation.includes('href="/customer/kyc"'), "Customer sidebar must not expose a separate KYC shortcut");
+assert(!navigation.includes('href="/customer/documents"'), "Customer sidebar must not expose a separate Documents shortcut");
+assert(profilePage.includes("CustomerProfileDocuments"), "Customer Profile must embed the document vault");
+assert(profileDocuments.includes("CustomerDocumentVault"), "Customer Profile documents must reuse the authorized document vault");
+assert(profileDocuments.includes("useState(false)"), "Customer Profile document vault must be collapsed by default");
+assert(profileDocuments.includes('aria-expanded={expanded}'), "Customer Profile document vault must expose its expanded state accessibly");
+assert(documentsPage.includes("loadCustomerProfile(account.id)"), "Direct Customer Documents route must retain account-scoped access");
+assert(kycPage.includes("loadCustomerProfile(account.id)"), "Direct Customer KYC route must retain account-scoped access");
 
 const portalRoutes = read("lib/portal-routes.ts");
 const middleware = read("middleware.ts");

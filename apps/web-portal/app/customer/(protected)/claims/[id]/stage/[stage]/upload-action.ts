@@ -10,6 +10,8 @@ const documentTypes=[
   "RC Copy","Insurance Copy","Driver Licence","GR / Load Bill",
   "Accident Photo","Accident Video","Spot Intimation Attachment","Incident Voice Note",
   "Estimate Copy","Fitness Copy","Spot Report",
+  "Fasttag report last 15 days","Permit Copy","Tax Receipt","PUC Copy",
+  "KYC Document","Other Document","Claim Form","Discharge Voucher",
 ];
 
 export async function uploadCustomerClaimDocument(form:FormData) {

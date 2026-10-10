@@ -102,6 +102,6 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       </form>
     ):null}
     {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key}/> : null}
-    {selected.key==="claim_intimation" ? <><CustomerClaimDocumentGroups documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} /><div className="flex justify-end"><button type="submit" form="customer-claim-stage-details-form" className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white">Save Details</button></div></> : null}
+    {selected.key==="claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} showSaveDetails={external && claim.claim_service_mode==="self_managed" && claim.assistance_status!=="accepted"} /> : null}
   </div>;
 }

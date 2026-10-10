@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ClipboardList, Search } from "lucide-react";
+import { ClipboardList } from "lucide-react";
+import { CustomerClaimsSearch, CustomerClaimsStageFilter } from "./customer-claims-search";
 import { projectInternalClaim } from "@insureit/claim-journey";
 import { CustomerAccountTabs, EmptyCustomerState } from "@/components/customer-portal/customer-phase1";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
@@ -54,20 +55,9 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
       <section className="flex flex-wrap items-center gap-3 rounded-xl border border-[#DCE4EE] bg-white px-4 py-3 shadow-sm">
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#15345B] text-white"><ClipboardList className="h-5 w-5" /></span>
         <h1 className="mr-1 text-[17px] font-bold text-[#142746]">Claim Portfolio</h1>
-        <form className="flex min-w-[220px] flex-1 flex-wrap items-center gap-2">
-          <input type="hidden" name="account" value={account.id} />
-          <input type="hidden" name="type" value={type} />
-          <div className="flex min-w-[180px] max-w-[440px] flex-1 items-center gap-2 px-2 py-2.5">
-            <Search className="h-4 w-4 text-[#71829A]" />
-            <input name="q" defaultValue={params.q ?? ""} placeholder="Search customer, vehicle no., claim no., policy no., control no."
-              className="w-full min-w-0 border-0 bg-transparent p-0 text-[11px] shadow-none outline-none ring-0 focus:outline-none focus:ring-0 placeholder:text-[#8A9AB0]" />
-          </div>
-          <select name="stage" defaultValue={stageFilter} className="max-w-[210px] rounded-lg border border-[#CBD8E9] bg-white px-3 py-2.5 text-[11px] text-[#142746]">
-            <option value="">All claim stages</option>
-            {stages.map((stage) => <option key={stage} value={stage}>{stage}</option>)}
-          </select>
-          <button className="rounded-lg bg-[#07367A] px-4 py-2.5 text-[11px] font-semibold text-white">Search</button>
-        </form>
+        <CustomerClaimsSearch initialQuery={params.q ?? ""} accountId={account.id} type={type} />
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <CustomerClaimsStageFilter value={stageFilter} stages={stages} accountId={account.id} type={type} query={params.q ?? ""} />
         <div className="flex rounded-lg border border-[#DCE4EE] bg-[#F8FAFD] p-0.5 text-[11px] font-semibold">
           {(["internal", "external"] as const).map((key) => (
             <Link key={key} href={href({ type: key, stage: "", page: "1" })}
@@ -75,6 +65,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
               {key === "internal" ? "Internal claims" : "External claims"} <span className="ml-1 rounded-full bg-[#D9E8FA] px-1.5 py-0.5">{key === "internal" ? internalCount : externalCount}</span>
             </Link>
           ))}
+        </div>
         </div>
       </section>
       <section className="overflow-hidden rounded-xl border border-[#DCE4EE] bg-white shadow-sm">

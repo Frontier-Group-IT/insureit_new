@@ -1,10 +1,10 @@
-import Link from "next/link";
-import { FileText, MapPin, ShieldCheck, UserRound } from "lucide-react";
+import { MapPin, UserRound } from "lucide-react";
 import {
   CustomerAccountTabs,
   CustomerPageHeading,
   StatusPill,
 } from "@/components/customer-portal/customer-phase1";
+import { CustomerProfileDocuments } from "@/components/customer-portal/customer-profile-documents";
 import { CustomerProfileEditor } from "@/components/customer-portal/customer-profile-editor";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import {
@@ -65,18 +65,7 @@ export default async function CustomerProfilePage({
         {customer.address ? <p className="mt-3 inline-flex items-start gap-1.5 text-[10px] font-semibold leading-5 text-[#6B7A90]"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />{customer.address}{customer.postal_code ? ` · ${customer.postal_code}` : ""}</p> : null}
       </section>
 
-      <div className="grid gap-3 md:grid-cols-2">
-        <Link href={{ pathname: "/customer/kyc", query: { account: account.id } }} className="rounded-2xl border border-[#CFE0FF] bg-white p-4 transition hover:border-[#9EBCE4]">
-          <ShieldCheck className="h-5 w-5 text-[#174EA6]" />
-          <div className="mt-2 flex items-center gap-2"><p className="text-[13px] font-black text-[#10213D]">KYC & Verification</p><StatusPill tone={customerKycTone(kyc?.status)}>{customerKycStatusLabel(kyc?.status)}</StatusPill></div>
-          <p className="mt-1 text-[10px] font-semibold leading-4 text-[#74839A]">{kyc?.status === "approved" ? "Your KYC is verified." : kyc?.status === "submitted" || kyc?.status === "under_review" ? "Your KYC is being reviewed." : "Complete or resume your Customer KYC."}</p>
-        </Link>
-        <Link href={{ pathname: "/customer/documents", query: { account: account.id } }} className="rounded-2xl border border-[#CFE0FF] bg-white p-4 transition hover:border-[#9EBCE4]">
-          <FileText className="h-5 w-5 text-[#174EA6]" />
-          <p className="mt-2 text-[13px] font-black text-[#10213D]">Document Vault</p>
-          <p className="mt-1 text-[10px] font-semibold leading-4 text-[#74839A]">Open, upload and manage Customer documents. {documents.length} document{documents.length === 1 ? "" : "s"} currently stored.</p>
-        </Link>
-      </div>
+      <CustomerProfileDocuments customerId={account.id} documents={documents} />
     </div>
   );
 }
