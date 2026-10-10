@@ -188,7 +188,7 @@ export default function SelfManagedDocumentsScreen() {
         }
       }
 
-      const { data, error: insertError } = await supabase
+      const { data, error: insertError } = await identity.data
         .from('claim_documents')
         .insert({
           claim_id: claim.id,
