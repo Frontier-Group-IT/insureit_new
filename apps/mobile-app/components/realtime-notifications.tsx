@@ -4,7 +4,8 @@ import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useRe
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { getProfile, isValidProfile } from '@/lib/auth';
-import { getCustomerIdentity } from '@/lib/customer-identity';
+import { firebaseCustomerRolloutEnabled, getCustomerIdentity } from '@/lib/customer-identity';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { approvedCustomerNotifications, CUSTOMER_NOTIFICATION_TITLES, isApprovedCustomerNotification } from '@/lib/customer-notification-whitelist';
 import { supabase } from '@/lib/supabase';
 import { colors, palette, radii, roleTheme } from '@/lib/theme';
@@ -19,6 +20,8 @@ const NotificationContext = createContext<NotificationContextValue>({ latest: nu
 
 export function RealtimeNotificationProvider({ children }: PropsWithChildren) {
   const router = useRouter();
+  const pathname = usePathname();
+  const [realtimeClient, setRealtimeClient] = useState<SupabaseClient>(supabase);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [latest, setLatest] = useState<ClaimNotification | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -26,20 +29,51 @@ export function RealtimeNotificationProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     let active = true;
-    async function loadProfile(userId?: string) {
-      if (!userId) { if (active) { setProfile(null); setLatest(null); setUnreadCount(0); } return; }
-      try { const nextProfile = await getProfile(userId); if (active) setProfile(isValidProfile(nextProfile) ? nextProfile : null); }
-      catch (error) { console.warn('Realtime profile lookup failed.', error); if (active) { setProfile(null); setLatest(null); setUnreadCount(0); } }
+    let unsubscribeLegacy: (() => void) | null = null;
+    const clear = () => {
+      if (active) { setProfile(null); setLatest(null); setUnreadCount(0); }
+    };
+    async function loadProfile(userId: string | undefined, client: SupabaseClient) {
+      if (!userId) { clear(); return; }
+      try {
+        const nextProfile = await getProfile(userId, client);
+        if (active) { setRealtimeClient(client); setProfile(isValidProfile(nextProfile) ? nextProfile : null); }
+      } catch {
+        clear();
+      }
     }
-    supabase.auth.getSession().then(({ data }) => loadProfile(data.session?.user.id)).catch(() => loadProfile());
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => { void loadProfile(session?.user.id); });
-    return () => { active = false; listener.subscription.unsubscribe(); };
-  }, []);
+    void (async () => {
+      if (pathname.startsWith('/customer') && firebaseCustomerRolloutEnabled()) {
+        try {
+          const identity = await getCustomerIdentity();
+          if (identity?.provider === 'firebase') {
+            await loadProfile(identity.profileId, identity.data);
+            return;
+          }
+        } catch {
+          // Fail closed. Do not use unrelated legacy account subscriptions.
+          clear();
+          return;
+        }
+      }
+      const { data } = await supabase.auth.getSession();
+      if (!active) return;
+      await loadProfile(data.session?.user.id, supabase);
+      const listener = supabase.auth.onAuthStateChange((_event, session) => {
+        void loadProfile(session?.user.id, supabase);
+      });
+      unsubscribeLegacy = () => listener.data.subscription.unsubscribe();
+    })().catch(clear);
+    return () => {
+      active = false;
+      unsubscribeLegacy?.();
+    };
+  }, [pathname]);
 
   useEffect(() => {
     if (!profile) return undefined;
     void refreshUnreadCountFor(profile.id, profile.role === 'customer');
-    const channel = supabase.channel(`claim-notifications-${profile.id}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
+    const channel = realtimeClient.channel(`claim-notifications-${profile.id}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
       const notification = payload.new as Notification;
       if (!isNotificationForProfile(notification, profile.id)) return;
       if (profile.role === 'customer' && !isApprovedCustomerNotification(notification)) return;
@@ -56,11 +90,11 @@ export function RealtimeNotificationProvider({ children }: PropsWithChildren) {
       setLatest({ id: notification.id, claimId, title: notification.title, message: notification.message, createdAt: notification.created_at ?? new Date().toISOString(), route });
       setUnreadCount((current) => Math.min(current + 1, 99));
     }
-    return () => { void supabase.removeChannel(channel); };
-  }, [profile]);
+    return () => { void realtimeClient.removeChannel(channel); };
+  }, [profile, realtimeClient]);
 
   async function refreshUnreadCountFor(profileId: string, customerMode = profile?.role === 'customer') {
-    let query = supabase.from('notifications').select('id', { count: 'exact', head: true }).or(notificationAudienceFilter(profileId)).eq('status', 'unread');
+    let query = realtimeClient.from('notifications').select('id', { count: 'exact', head: true }).or(notificationAudienceFilter(profileId)).eq('status', 'unread');
     if (customerMode) query = query.in('title', [...CUSTOMER_NOTIFICATION_TITLES]);
     const { count } = await query;
     setUnreadCount(Math.min(count ?? 0, 99));
@@ -72,13 +106,13 @@ export function RealtimeNotificationProvider({ children }: PropsWithChildren) {
     markSeen: () => {
       setUnreadCount(0);
       if (profile) {
-        let query = supabase.from('notifications').update({ status: 'read' }).or(notificationAudienceFilter(profile.id)).eq('status', 'unread');
+        let query = realtimeClient.from('notifications').update({ status: 'read' }).or(notificationAudienceFilter(profile.id)).eq('status', 'unread');
         if (profile.role === 'customer') query = query.in('title', [...CUSTOMER_NOTIFICATION_TITLES]);
         void query;
       }
     },
     refreshUnreadCount: async () => { if (profile) await refreshUnreadCountFor(profile.id, profile.role === 'customer'); },
-  }), [latest, profile, unreadCount]);
+  }), [latest, profile, unreadCount, realtimeClient]);
 
   return <NotificationContext.Provider value={value}>{children}<NotificationBanner notification={latest} onOpen={(route) => { setUnreadCount(0); router.push(route); }} /></NotificationContext.Provider>;
 }
