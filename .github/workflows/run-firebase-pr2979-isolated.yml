@@ -52,3 +52,5 @@ jobs:
 # 2026-10-10: customer policy route typecheck correction and claim document integration.
 
 # CI: validate all routed customer screens, signed claim uploads and restored Firebase startup.
+
+# Verify Firebase customer add-policy and add-vehicle flows against entire mobile app.
