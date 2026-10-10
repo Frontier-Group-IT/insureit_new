@@ -5,6 +5,7 @@ import {
   Animated,
   Easing,
   Image,
+  Linking,
   Modal,
   useWindowDimensions,
   Pressable,
@@ -133,6 +134,10 @@ export function ExchangeMarketplaceHome({
   const [sortMode, setSortMode] = useState<SortMode>('Recommended');
   const [filterVisible, setFilterVisible] = useState(false);
   const [locationVisible, setLocationVisible] = useState(false);
+  const [addLocationStep, setAddLocationStep] = useState<'select' | 'method' | 'search' | 'confirm'>('select');
+  const [candidateLocation, setCandidateLocation] = useState<string | null>(null);
+  const [candidateQuery, setCandidateQuery] = useState('');
+  const [candidateLatLong, setCandidateLatLong] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationQuery, setLocationQuery] = useState('');
   const [locating, setLocating] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -147,14 +152,14 @@ export function ExchangeMarketplaceHome({
   const [masterLocations, setMasterLocations] = useState<string[]>([]);
   const [locationSearchLoading, setLocationSearchLoading] = useState(false);
   const [locationSearchError, setLocationSearchError] = useState(false);
-  const normalizedLocationQuery = locationQuery.trim().toLowerCase();
+  const normalizedLocationQuery = (addLocationStep === 'search' ? candidateQuery : locationQuery).trim().toLowerCase();
   const matchedLocations = Array.from(new Set([
     ...masterLocations,
     ...availableLocations.filter((location) => location.toLowerCase().includes(normalizedLocationQuery)),
   ]));
 
   useEffect(() => {
-    if (!locationVisible || normalizedLocationQuery.length < 2) {
+    if (!locationVisible || (addLocationStep !== 'search' && addLocationStep !== 'select') || normalizedLocationQuery.length < 2) {
       setMasterLocations([]);
       setLocationSearchError(false);
       setLocationSearchLoading(false);
@@ -183,7 +188,7 @@ export function ExchangeMarketplaceHome({
       }
     }, 300);
     return () => { active = false; clearTimeout(timer); };
-  }, [locationVisible, normalizedLocationQuery]);
+  }, [locationVisible, addLocationStep, normalizedLocationQuery]);
 
   useEffect(() => {
     if (searchFocused || query.trim()) return;
@@ -217,20 +222,42 @@ export function ExchangeMarketplaceHome({
   }, [budget, sortMode, vehicles]);
 
   const featured = visibleVehicles.slice(0, 4);
+  function closeLocationFlow() {
+    setLocationVisible(false);
+    setAddLocationStep('select');
+    setCandidateQuery('');
+    setCandidateLocation(null);
+    setCandidateLatLong(null);
+  }
+  function confirmCandidate() {
+    if (!candidateLocation) return;
+    onLocationChange(candidateLocation);
+    closeLocationFlow();
+  }
+  async function showCandidateMap() {
+    if (!candidateLocation) return;
+    const label = encodeURIComponent(candidateLocation);
+    const url = candidateLatLong
+      ? `https://www.openstreetmap.org/?mlat=${candidateLatLong.latitude}&mlon=${candidateLatLong.longitude}&zoom=16`
+      : `https://www.openstreetmap.org/search?query=${label}`;
+    await Linking.openURL(url);
+  }
 
   return (
     <>
-      <Modal transparent visible={locationVisible} animationType="slide" onRequestClose={() => setLocationVisible(false)}>
+      <Modal transparent visible={locationVisible} animationType="slide" onRequestClose={closeLocationFlow}>
         <View style={styles.locationSheetBackdrop}>
-          <Pressable style={styles.locationSheetDismiss} accessibilityLabel="Close location selection" onPress={() => setLocationVisible(false)} />
+          <Pressable style={styles.locationSheetDismiss} accessibilityLabel="Close location selection" onPress={closeLocationFlow} />
           <View style={styles.locationSheet}>
             <View style={styles.locationSheetHandle} />
             <View style={styles.locationModalHeading}>
-              <Text style={styles.locationModalTitle}>Select location</Text>
+              <Text style={styles.locationModalTitle}>{addLocationStep === 'select' ? 'Select location' : addLocationStep === 'method' ? 'Add new location' : addLocationStep === 'search' ? 'Search for a place' : 'Confirm location'}</Text>
               <Pressable accessibilityRole="button" accessibilityLabel="Close locations" onPress={() => setLocationVisible(false)} hitSlop={10}>
                 <MaterialCommunityIcons name="close" size={23} color="#44536B" />
               </Pressable>
             </View>
+            {addLocationStep === 'select' ? (
+              <>
             <View style={styles.locationSearch}>
               <MaterialCommunityIcons name="magnify" size={20} color="#7D8898" />
               <TextInput
@@ -259,6 +286,11 @@ export function ExchangeMarketplaceHome({
               </View>
               <MaterialCommunityIcons name="chevron-right" size={19} color="#1764D8" />
             </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Add New location" style={styles.addNewLocationButton} onPress={() => { setAddLocationStep('method'); setCandidateQuery(''); }}>
+              <MaterialCommunityIcons name="plus" size={23} color="#1764D8" />
+              <Text style={styles.currentLocationTitle}>Add New</Text>
+              <MaterialCommunityIcons name="chevron-right" size={19} color="#1764D8" />
+            </Pressable>
             <Text style={styles.availableLocationsTitle}>Available locations</Text>
             <ScrollView style={styles.locationModalOptions} keyboardShouldPersistTaps="handled">
               {[null, ...matchedLocations].map((location) => {
@@ -282,6 +314,59 @@ export function ExchangeMarketplaceHome({
               {!locationSearchLoading && matchedLocations.length === 0 && normalizedLocationQuery.length >= 2 ? <Text style={styles.noLocationText}>No matching city or PIN code in location master</Text> : null}
               {normalizedLocationQuery.length === 1 ? <Text style={styles.noLocationText}>Enter at least 2 characters to search cities or PIN codes</Text> : null}
             </ScrollView>
+
+              </>
+            ) : addLocationStep === 'method' ? (
+              <View style={styles.addLocationMethod}>
+                <Text style={styles.addLocationExplanation}>Where would you like to look for vehicles?</Text>
+                <Pressable style={styles.addLocationPrimary} onPress={() => { setCandidateQuery(''); setAddLocationStep('search'); }}>
+                  <Text style={styles.addLocationPrimaryText}>Away from my location</Text>
+                </Pressable>
+                <Pressable style={styles.addLocationSecondary} disabled={locating} onPress={() => {
+                  setLocating(true);
+                  void onUseCurrentLocation().then((location) => {
+                    if (location) { setCandidateLocation(location); setCandidateLatLong(null); setAddLocationStep('confirm'); }
+                  }).finally(() => setLocating(false));
+                }}>
+                  <MaterialCommunityIcons name="crosshairs-gps" size={21} color="#1764D8" />
+                  <Text style={styles.currentLocationTitle}>{locating ? 'Locating...' : 'Use current location'}</Text>
+                </Pressable>
+              </View>
+            ) : addLocationStep === 'search' ? (
+              <>
+                <View style={styles.locationSearch}>
+                  <MaterialCommunityIcons name="magnify" size={20} color="#7D8898" />
+                  <TextInput autoFocus value={candidateQuery} onChangeText={setCandidateQuery} placeholder="Search area, city, district or PIN" placeholderTextColor="#8993A2" style={styles.locationSearchInput} accessibilityLabel="Search new location" />
+                  {candidateQuery ? <Pressable accessibilityLabel="Clear location search" onPress={() => setCandidateQuery('')}><MaterialCommunityIcons name="close" size={18} color="#6B7E95" /></Pressable> : null}
+                </View>
+                <ScrollView style={styles.locationModalOptions} keyboardShouldPersistTaps="handled">
+                  {locationSearchLoading && <Text style={styles.noLocationText}>Searching places...</Text>}
+                  {locationSearchError && <Text style={styles.noLocationText}>Place search unavailable. Try another city or PIN.</Text>}
+                  {matchedLocations.map((location) => (
+                    <Pressable key={location} style={styles.locationModalOption} onPress={() => { setCandidateLocation(location); setCandidateLatLong(null); setAddLocationStep('confirm'); }}>
+                      <MaterialCommunityIcons name="map-marker-outline" size={22} color="#536477"/>
+                      <Text style={styles.locationModalOptionText}>{location}</Text>
+                      <MaterialCommunityIcons name="chevron-right" size={17} color="#8C9AAE"/>
+                    </Pressable>
+                  ))}
+                  {!locationSearchLoading && matchedLocations.length === 0 && candidateQuery.trim().length >= 2 ? <Text style={styles.noLocationText}>No matching place. Try a city, district or PIN code.</Text> : null}
+                </ScrollView>
+              </>
+            ) : (
+              <View style={styles.addLocationConfirm}>
+                <MaterialCommunityIcons name="map-marker-check" size={40} color="#1764D8" />
+                <Text style={styles.addLocationConfirmTitle}>{candidateLocation}</Text>
+                <Text style={styles.addLocationExplanation}>Review the selected area on a map, then confirm to use it for Exchange vehicle searches.</Text>
+                <Pressable style={styles.addLocationSecondary} onPress={() => void showCandidateMap()}>
+                  <MaterialCommunityIcons name="map-outline" size={20} color="#1764D8" />
+                  <Text style={styles.currentLocationTitle}>Open location on map</Text>
+                </Pressable>
+                <Pressable style={styles.addLocationPrimary} onPress={confirmCandidate}>
+                  <Text style={styles.addLocationPrimaryText}>Confirm location</Text>
+                </Pressable>
+                <Pressable onPress={() => setAddLocationStep('search')}><Text style={styles.addLocationChangeText}>Change location</Text></Pressable>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
@@ -788,6 +873,15 @@ const styles = StyleSheet.create({
   sellHeadingText: { flexShrink: 1, textAlign: 'right', fontSize: 9, lineHeight: 12, color: '#164BB8', fontWeight: '800' },
   selectedLocationRow: { marginTop: 12, alignSelf: 'flex-start', maxWidth: '100%', minHeight: 26, flexDirection: 'row', alignItems: 'center', gap: 5 },
   selectedLocationText: { maxWidth: '85%', color: '#123F8F', fontSize: 12, fontWeight: '800' },
+  addNewLocationButton: { marginTop: 10, minHeight: 49, backgroundColor: '#EDF6FF', borderRadius: 14, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  addLocationMethod: { gap: 16, paddingTop: 14 },
+  addLocationExplanation: { color: '#66788E', fontSize: 12, lineHeight: 19 },
+  addLocationPrimary: { backgroundColor: '#2068ED', borderRadius: 13, minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  addLocationPrimaryText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
+  addLocationSecondary: { minHeight: 49, borderRadius: 13, borderColor: '#1764D8', borderWidth: 1, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
+  addLocationConfirm: { alignItems: 'center', paddingTop: 20, gap: 15 },
+  addLocationConfirmTitle: { color: '#15253D', fontSize: 17, fontWeight: '800', textAlign: 'center' },
+  addLocationChangeText: { color: '#1764D8', fontSize: 12, fontWeight: '800', padding: 10 },
   locationSheetBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(9,22,46,0.52)' },
   locationSheetDismiss: { flex: 1 },
   locationSheet: { maxHeight: '82%', minHeight: '57%', backgroundColor: '#FFFFFF', borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20, paddingBottom: 36 },
