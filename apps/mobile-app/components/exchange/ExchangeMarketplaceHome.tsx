@@ -139,32 +139,32 @@ export function ExchangeMarketplaceHome({
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <View style={styles.locationRow}>
-          <View style={styles.locationCopy}>
-            <MaterialCommunityIcons name="map-marker-radius-outline" size={24} color="#19417E" />
-            <Text style={styles.locationText}>All locations</Text>
-            <MaterialCommunityIcons name="chevron-down" size={19} color="#19417E" />
+        <View style={styles.searchFilterRow}>
+          <View style={styles.searchShell}>
+            <MaterialCommunityIcons name="magnify" size={23} color="#123F8F" />
+            <TextInput
+              value={query}
+              onChangeText={onQueryChange}
+              placeholder="Search"
+              placeholderTextColor="#7E8DA5"
+              style={styles.searchInput}
+              accessibilityLabel="Search exchange vehicles"
+            />
+            {query ? (
+              <Pressable onPress={() => onQueryChange('')} hitSlop={8} accessibilityLabel="Clear search">
+                <MaterialCommunityIcons name="close-circle" size={17} color="#9AA5B5" />
+              </Pressable>
+            ) : null}
           </View>
-          <View style={styles.inventoryCount}>
-            <MaterialCommunityIcons name="truck-cargo-container" size={23} color="#15529E" />
-            <Text style={styles.inventoryCountValue}>{totalVehicles} {totalVehicles === 1 ? 'vehicle' : 'vehicles'}</Text>
+          <View style={styles.locationPill} accessibilityLabel="All locations">
+            <MaterialCommunityIcons name="map-marker" size={21} color="#103F92" />
+            <Text style={styles.locationPillText} numberOfLines={1}>Location</Text>
+            <MaterialCommunityIcons name="chevron-down" size={17} color="#103F92" />
           </View>
-        </View>
-
-        <View style={styles.searchShell}>
-          <MaterialCommunityIcons name="magnify" size={24} color="#6E7B8F" />
-          <TextInput
-            value={query}
-            onChangeText={onQueryChange}
-            placeholder="Search trucks, tippers, buses, JCB..."
-            placeholderTextColor="#8A96A8"
-            style={styles.searchInput}
-          />
-          {query ? (
-            <Pressable onPress={() => onQueryChange('')} hitSlop={8}>
-              <MaterialCommunityIcons name="close-circle" size={19} color="#9AA5B5" />
-            </Pressable>
-          ) : null}
+          <View style={styles.inventoryCount} accessibilityLabel={`${totalVehicles} exchange vehicles`}>
+            <MaterialCommunityIcons name="car" size={23} color="#103F92" />
+            <Text style={styles.inventoryCountValue} numberOfLines={1}>{totalVehicles} {totalVehicles === 1 ? 'vehicle' : 'vehicles'}</Text>
+          </View>
         </View>
 
         <SectionHeader title="What are you looking for?" />
@@ -607,16 +607,13 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 18, paddingBottom: 36, backgroundColor: '#F8FAFD' },
   pressed: { opacity: 0.84, transform: [{ scale: 0.99 }] },
 
-  locationRow: { marginTop: 16, height: 54, borderRadius: 15, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#EDF4FF' },
-  locationCopy: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
-  locationEyebrow: { color: '#8A96A7', fontSize: 7.5, fontWeight: '900', letterSpacing: 0.8 },
-  locationText: { color: '#0B2145', fontSize: 15, fontWeight: '800' },
-  inventoryCount: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingLeft: 14, borderLeftWidth: 1, borderLeftColor: '#D3DEED' },
-  inventoryCountValue: { color: '#0B2145', fontSize: 12, fontWeight: '800' },
-  inventoryCountLabel: { color: '#8A96A7', fontSize: 8, fontWeight: '800' },
-
-  searchShell: { marginTop: 16, minHeight: 54, borderRadius: 14, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D5DFEA' },
-  searchInput: { flex: 1, minHeight: 52, color: '#0F1D33', fontSize: 13, fontWeight: '600' },
+  searchFilterRow: { marginTop: 16, marginBottom: 6, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  searchShell: { flex: 1, minWidth: 0, height: 47, borderRadius: 24, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D1DCEC' },
+  searchInput: { flex: 1, minWidth: 0, height: 45, color: '#0F1D33', fontSize: 13, fontWeight: '600', paddingVertical: 0 },
+  locationPill: { height: 45, maxWidth: 124, borderRadius: 23, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, backgroundColor: '#E6F0FF', borderWidth: 1, borderColor: '#D3E1F6' },
+  locationPillText: { color: '#0B337A', fontSize: 11, fontWeight: '700', flexShrink: 1 },
+  inventoryCount: { height: 45, maxWidth: 112, borderRadius: 23, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: '#DFEBFF' },
+  inventoryCountValue: { color: '#0B337A', fontSize: 10.5, fontWeight: '800', flexShrink: 1 },
 
   sectionHeader: { marginTop: 26, marginBottom: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { color: '#0A2146', fontSize: 18, fontWeight: '900' },
