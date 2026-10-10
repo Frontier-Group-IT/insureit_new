@@ -7,8 +7,10 @@ import { Animated, Image, Linking, Pressable, StyleSheet, Text, TextInput, View 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LoadingState, Message, Screen } from '@/components/ui';
-import { ensureCustomerForUser, getCurrentSession, getOnboardingApplicationForUser, getProfile, signOut } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { ensureCustomerForUser, getCustomerForUser, getOnboardingApplicationForUser, getProfile, signOut } from '@/lib/auth';
+import { getCustomerIdentity, signOutFirebaseCustomer } from '@/lib/customer-identity';
+import { getFirebaseCustomerDocumentUrl } from '@/lib/firebase-document-client';
+import { uploadFirebaseCustomerDocument } from '@/lib/firebase-upload-client';
 import { palette, roleTheme } from '@/lib/theme';
 import type { Customer, CustomerDocument, CustomerOnboardingApplication, Profile } from '@/lib/types';
 
@@ -77,12 +79,18 @@ export default function ProfileScreen() {
     let active = true;
     async function load() {
       try {
-        const session = await getCurrentSession();
-        if (!session?.user) return router.replace('/login');
-        const [nextProfile, nextCustomer, nextOnboarding] = await Promise.all([getProfile(session.user.id), ensureCustomerForUser(session.user), getOnboardingApplicationForUser(session.user.id, true)]);
+        const identity = await getCustomerIdentity();
+        if (!identity) return router.replace('/login');
+        const [nextProfile, nextCustomer, nextOnboarding] = await Promise.all([
+          getProfile(identity.profileId, identity.data),
+          identity.provider === 'firebase'
+            ? getCustomerForUser(identity.profileId, identity.data)
+            : ensureCustomerForUser(identity.session.user),
+          getOnboardingApplicationForUser(identity.profileId, true, identity.data),
+        ]);
         if (!active) return;
         const documentResult = nextCustomer
-          ? await supabase.from('customer_documents').select('*').eq('customer_id', nextCustomer.id).order('created_at', { ascending: false })
+          ? await identity.data.from('customer_documents').select('*').eq('customer_id', nextCustomer.id).order('created_at', { ascending: false })
           : { data: [] };
         if (!active) return;
         const loadedDocuments = documentResult.data ?? [];
@@ -93,8 +101,10 @@ export default function ProfileScreen() {
         setProfilePhoto(latestProfilePhoto);
         setDocuments(loadedDocuments.filter((document) => document.document_type !== 'Profile Photo'));
         if (latestProfilePhoto) {
-          const signedPhoto = await supabase.storage.from(latestProfilePhoto.storage_bucket).createSignedUrl(latestProfilePhoto.storage_path, 3600);
-          if (active && signedPhoto.data?.signedUrl) setAvatarUri(signedPhoto.data.signedUrl);
+          const photoUrl = identity.provider === 'firebase'
+            ? await getFirebaseCustomerDocumentUrl('customer-documents', latestProfilePhoto.storage_path)
+            : (await identity.data.storage.from(latestProfilePhoto.storage_bucket).createSignedUrl(latestProfilePhoto.storage_path, 3600)).data?.signedUrl;
+          if (active && photoUrl) setAvatarUri(photoUrl);
         } else {
           setAvatarUri(null);
         }
@@ -125,13 +135,19 @@ export default function ProfileScreen() {
     setMessage(null);
 
     try {
+      const identity = await getCustomerIdentity();
+      if (!identity || identity.profileId !== profile.id) throw new Error('Customer identity unavailable');
       const name = draft.name.trim();
       const phone = draft.phone.trim();
       const email = draft.email.trim();
       const address = draft.address.trim();
+      if (identity.provider === 'firebase' && phone !== (customer?.phone ?? profile.phone ?? '')) {
+        setMessage({ text: 'Verify your new mobile number before changing it.', type: 'error' });
+        return;
+      }
 
       if (!customer) {
-        const profileResult = await supabase
+        const profileResult = await identity.data
           .from('profiles')
           .update({
             full_name: name,
@@ -153,7 +169,7 @@ export default function ProfileScreen() {
         return;
       }
 
-      const customerResult = await supabase
+      const customerResult = await identity.data
         .from('customers')
         .update({
           contact_name: name,
@@ -174,7 +190,7 @@ export default function ProfileScreen() {
       setEditing(false);
       setMessage({ text: 'Contact details saved successfully.', type: 'success' });
 
-      const profileResult = await supabase
+      const profileResult = await identity.data
         .from('profiles')
         .update({
           full_name: name,
