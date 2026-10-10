@@ -45,3 +45,12 @@ test('policy document owner matches canonical customer or active membership',()=
   assert.match(source,/customer\?\.profile_id === profileId/);
   assert.match(source,/\.eq\("customer_id", policy\.customer_id\)\.eq\("profile_id", profileId\)/);
 });
+
+test('registered customer profile photos and customer documents have independent ownership checks',()=>{
+  assert.match(source,/from\("customer_documents"\)/);
+  assert.match(source,/\.eq\("storage_bucket", bucket\)/);
+  assert.match(source,/\.eq\("storage_path", documentPath\)/);
+  assert.match(source,/customer\?\.id === customerId && customer\?\.profile_id === profileId/);
+  assert.match(source,/\.eq\("customer_id", customerId\)\.eq\("profile_id", profileId\)/);
+  assert.match(source,/if \(!allowed\) return reply\(404/);
+});
