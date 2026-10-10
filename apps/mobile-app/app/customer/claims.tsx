@@ -6,10 +6,10 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 
 import { AppSearchBar } from '@/components/design-system';
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
-import { getCurrentSession, getCustomerForUser } from '@/lib/auth';
+import { getCustomerForUser } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
 import { hasAllRequiredDocuments, hasOutstandingRejectedDocumentsForStatus, requestedFinalDocumentTypesFor } from '@/lib/claim-documents';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestone } from '@/lib/claim-service-mode';
-import { supabase } from '@/lib/supabase';
 import { getVehicleBrandLogoSource } from '@/lib/catalog-logos';
 import { palette } from '@/lib/theme';
 import type { Claim, ClaimDocument, ClaimStatus, ClaimTask, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
@@ -43,23 +43,24 @@ export default function ClaimsScreen() {
 
   useEffect(() => {
     async function load() {
-      const session = await getCurrentSession();
-      if (!session?.user) return router.replace('/login');
-      const customer = await getCustomerForUser(session.user.id);
+      const identity = await getCustomerIdentity();
+      if (!identity) return router.replace('/login');
+      const customerClient = identity.data;
+      const customer = await getCustomerForUser(identity.profileId, customerClient);
       if (customer) {
         const [claimResult, vehicleResult, policyResult, insurerResult] = await Promise.all([
-          supabase.from('claims').select('*').eq('customer_id', customer.id).order('created_at', { ascending: false }),
-          supabase.from('vehicles').select('*').eq('customer_id', customer.id),
-          supabase.from('policies').select('*').eq('customer_id', customer.id),
-          supabase.from('insurance_companies').select('*'),
+          customerClient.from('claims').select('*').eq('customer_id', customer.id).order('created_at', { ascending: false }),
+          customerClient.from('vehicles').select('*').eq('customer_id', customer.id),
+          customerClient.from('policies').select('*').eq('customer_id', customer.id),
+          customerClient.from('insurance_companies').select('*'),
         ]);
         const nextClaims = (claimResult.data ?? []) as CustomerClaim[];
         const claimIds = nextClaims.map((claim) => claim.id);
         const [milestoneResult, documentsResult, tasksResult] = claimIds.length
           ? await Promise.all([
-              (supabase as any).from('claim_milestones').select('*').in('claim_id', claimIds),
-              supabase.from('claim_documents').select('*').in('claim_id', claimIds),
-              supabase.from('claim_tasks').select('*').in('claim_id', claimIds).eq('status', 'open'),
+              (customerClient as any).from('claim_milestones').select('*').in('claim_id', claimIds),
+              customerClient.from('claim_documents').select('*').in('claim_id', claimIds),
+              customerClient.from('claim_tasks').select('*').in('claim_id', claimIds).eq('status', 'open'),
             ])
           : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }];
         if (milestoneResult.error) console.warn('Customer claim milestones load failed', milestoneResult.error.message);
