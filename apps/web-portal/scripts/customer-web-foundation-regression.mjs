@@ -126,7 +126,11 @@ assert(!phaseTwoData.includes(".delete("), "Customer Phase 2 data layer must rem
 assert(renewalsPage.includes("resolveCustomerWebScope"), "Customer Renewals must resolve authorized Customer account scope");
 assert(claimsPage.includes("resolveCustomerWebScope"), "Customer Claims must resolve authorized Customer account scope");
 assert(claimDetailPage.includes("loadCustomerClaimDetail(account.id, id)"), "Claim Detail must validate the requested claim inside Customer scope");
-assert(claimDetailPage.includes("@insureit/claim-journey"), "Claim Detail must render the shared internal claim journey");
+const claimStagePage = read("app/customer/(protected)/claims/[id]/stage/[stage]/page.tsx");
+assert(claimDetailPage.includes("loadCustomerClaimDetail(account.id, id)"), "Claim Detail redirect must validate the requested claim within Customer scope");
+assert(claimDetailPage.includes("stage/spot_intimation"), "Claim Detail must open the canonical first stage");
+assert(claimStagePage.includes("@insureit/claim-journey"), "Claim Stage must render the shared internal claim journey");
+assert(claimStagePage.includes("loadCustomerClaimDetail(account.id,p.id)"), "Claim Stage must validate the requested claim within Customer scope");
 assert(!claimsPage.includes("supabase."), "Customer Claims page must use the scoped Customer data layer rather than direct client queries");
 assert(!claimDetailPage.includes("supabase."), "Customer Claim Detail must use the scoped Customer data layer rather than direct client queries");
 

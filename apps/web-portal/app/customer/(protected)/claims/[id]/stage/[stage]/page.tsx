@@ -84,7 +84,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       )}
     </section> : null}
     {external && claim.claim_service_mode==="self_managed" && claim.assistance_status!=="accepted" && CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key] ? (
-      <form action={saveCustomerExternalStage} className="mt-2 rounded-2xl border border-[#D9E6F7] bg-white p-5">
+      <form id="customer-claim-stage-details-form" action={saveCustomerExternalStage} className="mt-2 rounded-2xl border border-[#D9E6F7] bg-white p-5">
         <div className="mb-4"><h2 className="text-[17px] font-semibold text-[#071D49]">Stage Details</h2><p className="text-[12px] text-[#75869A]">Record {selected.label.toLowerCase()} details.</p></div><div className={`grid gap-3 sm:grid-cols-2 ${selected.key==="claim_intimation"?"lg:grid-cols-5":selected.key==="work_approval"||selected.key==="payment_encashment"?"lg:grid-cols-5":selected.key==="repair_ri"||selected.key==="delivery_order"?"lg:grid-cols-3":selected.key==="billing"||selected.key==="vehicle_delivery"?"lg:grid-cols-2":"lg:grid-cols-4"}`}>
         <input type="hidden" name="account" value={account.id}/>
         <input type="hidden" name="claim" value={claim.id}/>
@@ -98,10 +98,10 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
             )}
           </label>
         ))}</div>
-        <div className="mt-3 flex justify-end"><button type="submit" className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white">Save Details</button></div>
+
       </form>
     ):null}
     {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key}/> : null}
-    {selected.key==="claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} /> : null}
+    {selected.key==="claim_intimation" ? <><CustomerClaimDocumentGroups documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} /><div className="flex justify-end"><button type="submit" form="customer-claim-stage-details-form" className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white">Save Details</button></div></> : null}
   </div>;
 }
