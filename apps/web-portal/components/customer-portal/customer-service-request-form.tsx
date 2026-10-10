@@ -226,24 +226,24 @@ export function CustomerServiceRequestForm(props: Props) {
   // Insurance quote and challan assistance are handled above; only support tickets remain.
   if (props.mode !== "support_ticket") return null;
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div>
-        <label className="text-[10px] font-black uppercase tracking-[0.1em] text-[#718096]">Related claim</label>
+        <label className="text-[10px] font-black uppercase tracking-[0.1em] text-[#718096]">Related to</label>
         <select className={`${inputClass} mt-2`} value={claimId} onChange={(event) => setClaimId(event.target.value)}>
           <option value="">General support</option>
           {props.claims.map((claim) => <option key={claim.id} value={claim.id}>{claim.claim_no} · {claim.status}</option>)}
         </select>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <select className={inputClass} value={category} onChange={(event) => setCategory(event.target.value)}>
+        <label className="block text-[11px] font-bold text-[#142746]">Category *<select className={`${inputClass} mt-1`} value={category} onChange={(event) => setCategory(event.target.value)}>
           <option value="claim">Claim Support</option><option value="policy">Policy Support</option><option value="documents">Document Help</option><option value="roadside">Roadside Help</option><option value="other">Other</option>
-        </select>
-        <select className={inputClass} value={priority} onChange={(event) => setPriority(event.target.value)}>
+        </select></label>
+        <label className="block text-[11px] font-bold text-[#142746]">Priority *<select className={`${inputClass} mt-1`} value={priority} onChange={(event) => setPriority(event.target.value)}>
           <option value="low">Low priority</option><option value="medium">Medium priority</option><option value="high">High priority</option>
-        </select>
+        </select></label>
       </div>
-      <input className={inputClass} value={subject} onChange={(event) => setSubject(event.target.value.slice(0, 120))} placeholder="Brief subject" />
-      <textarea className={areaClass} value={description} onChange={(event) => setDescription(event.target.value.slice(0, 2000))} placeholder="Describe what you need help with" />
+      <label className="block text-[11px] font-bold text-[#142746]">Subject *<input className={`${inputClass} mt-1`} value={subject} onChange={(event) => setSubject(event.target.value.slice(0, 120))} placeholder="Brief subject" /></label>
+      <label className="block text-[11px] font-bold text-[#142746]">Describe your request *<textarea className={`${areaClass} mt-1`} value={description} onChange={(event) => setDescription(event.target.value.slice(0, 2000))} placeholder="Describe what you need help with" /></label>
       {error ? <p role="alert" className="rounded-xl bg-[#FFF0F0] px-3 py-2 text-[10.5px] font-bold text-[#A13B3B]">{error}</p> : null}
       <button type="button" disabled={busy} onClick={() => void submit()} className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#142746] px-4 text-[11px] font-black text-white disabled:opacity-60">
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
