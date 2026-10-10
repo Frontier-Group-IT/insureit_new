@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowRight, CarFront, CheckCircle2, CirclePlus, ClipboardList, Loader2, MessageSquareText, ShieldCheck } from "lucide-react";
 
 type VehicleOption = { id: string; label: string };
 type ClaimOption = { id: string; claim_no: string; status: string };
@@ -152,6 +152,29 @@ export function CustomerServiceRequestForm(props: Props) {
 
   const inputClass = "h-11 w-full rounded-xl border border-[#D8E1EC] bg-white px-3 text-[12px] font-semibold text-[#10213D] outline-none focus:border-[#8EACD1]";
   const areaClass = "min-h-24 w-full rounded-xl border border-[#D8E1EC] bg-white px-3 py-2.5 text-[12px] font-semibold text-[#10213D] outline-none focus:border-[#8EACD1]";
+
+  if (props.mode === "insurance_quote") {
+    return (
+      <div className="space-y-0">
+        <div className="grid gap-3 border-b border-[#E8EDF5] pb-4 lg:grid-cols-[230px_1fr]">
+          <div className="flex items-start gap-3"><CarFront className="mt-1 h-6 w-6 text-[#122B51]"/><div><h3 className="text-[13px] font-black text-[#10213D]">Vehicle</h3><p className="mt-1 text-[11px] text-[#657791]">Select the vehicle you want a quote for.</p></div></div>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" aria-pressed={!newVehicle} onClick={() => setNewVehicle(false)} className={`flex items-center gap-3 rounded-xl border p-3 text-left transition ${!newVehicle ? "border-[#267AFF] bg-[#EDF5FF] ring-1 ring-[#267AFF]" : "border-[#D7E2F0] hover:bg-[#F8FAFD]"}`}><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#E2EFFF] text-[#146AD3]"><CarFront className="h-5 w-5"/></span><span><strong className="block text-[11px] text-[#11284B]">Registered vehicle</strong><small className="text-[10px] text-[#71839A]">Select from your fleet</small></span></button>
+              <button type="button" aria-pressed={newVehicle} onClick={() => {setNewVehicle(true);setVehicleId("");setVehicleNo("");}} className={`flex items-center gap-3 rounded-xl border p-3 text-left transition ${newVehicle ? "border-[#267AFF] bg-[#EDF5FF] ring-1 ring-[#267AFF]" : "border-[#D7E2F0] hover:bg-[#F8FAFD]"}`}><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#F1F5FB] text-[#183C6B]"><CirclePlus className="h-5 w-5"/></span><span><strong className="block text-[11px] text-[#11284B]">Brand new vehicle</strong><small className="text-[10px] text-[#71839A]">Get a new policy</small></span></button>
+            </div>
+            {!newVehicle && props.vehicles.length ? <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{props.vehicles.map(vehicle => <button type="button" key={vehicle.id} aria-pressed={vehicleId===vehicle.id} onClick={()=>chooseVehicle(vehicle.id)} className={`flex min-h-[62px] items-center gap-3 rounded-xl border p-3 text-left ${vehicleId===vehicle.id ? "border-[#267AFF] bg-[#F1F7FF]" : "border-[#D7E2F0] bg-white hover:bg-[#F8FAFD]"}`}><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#E9F3FF] text-[#1A6CC3]"><CarFront className="h-5 w-5"/></span><span className="min-w-0 flex-1 truncate text-[11px] font-black text-[#183256]">{vehicle.label}</span><span className={`h-4 w-4 shrink-0 rounded-full border-2 ${vehicleId===vehicle.id ? "border-[#267AFF] bg-[#267AFF] shadow-[inset_0_0_0_3px_white]" : "border-[#A8B8CC]"}`}/></button>)}</div> : null}
+            <label className="block text-[10px] font-bold text-[#61738B]">{newVehicle ? "Vehicle make / model" : "Vehicle registration number"}<input className={`${inputClass} mt-1.5`} value={newVehicle ? vehicleDetails : vehicleNo} onChange={event=>{if(newVehicle){setVehicleDetails(event.target.value);}else{setVehicleNo(event.target.value.toUpperCase());if(selectedVehicle?.label!==event.target.value)setVehicleId("");}}} placeholder={newVehicle ? "Enter vehicle make / model" : "Enter registration number or select above"}/></label>
+          </div>
+        </div>
+        <div className="grid gap-3 border-b border-[#E8EDF5] py-4 lg:grid-cols-[230px_1fr]"><div className="flex items-start gap-3"><ClipboardList className="mt-1 h-6 w-6 text-[#122B51]"/><div><h3 className="text-[13px] font-black text-[#10213D]">Quote requirement</h3><p className="mt-1 text-[11px] text-[#657791]">Tell us what you need.</p></div></div><div className="flex flex-wrap gap-2">{[["renewal","Renewal"],["new_policy","New policy"],["change_insurer","Change insurer"],["other","Other"]].map(([key,label])=><button type="button" key={key} aria-pressed={quoteNeed===key} onClick={()=>setQuoteNeed(key)} className={`inline-flex min-h-10 items-center gap-2 rounded-full border px-4 text-[11px] font-bold ${quoteNeed===key ? "border-[#267AFF] bg-[#EDF5FF] text-[#095EC6]" : "border-[#D7E2F0] text-[#415775] hover:bg-[#F8FAFD]"}`}><span className={`grid h-4 w-4 place-items-center rounded-full border-2 ${quoteNeed===key ? "border-[#267AFF] bg-[#267AFF] shadow-[inset_0_0_0_3px_white]" : "border-[#A8B8CC]"}`}/>{label}</button>)}</div></div>
+        <div className="grid gap-3 py-4 lg:grid-cols-[230px_1fr]"><div className="flex items-start gap-3"><MessageSquareText className="mt-1 h-6 w-6 text-[#122B51]"/><div><h3 className="text-[13px] font-black text-[#10213D]">Additional information</h3><p className="mt-1 text-[11px] text-[#657791]">Any specific details (optional).</p></div></div><textarea className={areaClass} value={note} onChange={event=>setNote(event.target.value)} placeholder="Add a note (optional)"/></div>
+        <div className="space-y-3 rounded-xl border border-[#DCE6F2] bg-[#F6F9FD] p-4"><label className="flex items-start gap-3 text-[11px] font-medium text-[#405473]"><input type="checkbox" checked={consent} onChange={event=>setConsent(event.target.checked)} className="mt-0.5 h-4 w-4 accent-[#1766C4]"/><span>I agree to the Terms of Use, Privacy Policy and authorize INSUREIT to contact me about this request.</span></label><label className="flex items-center gap-3 text-[11px] font-medium text-[#405473]"><input type="checkbox" checked={whatsapp} onChange={event=>setWhatsapp(event.target.checked)} className="h-4 w-4 accent-[#1766C4]"/>Send updates on WhatsApp</label></div>
+        {error ? <p role="alert" className="mt-3 rounded-xl bg-[#FFF0F0] px-3 py-2 text-[11px] font-bold text-[#A13B3B]">{error}</p> : null}
+        <button type="button" disabled={busy} onClick={()=>void submit()} className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#0D2C56] text-[12px] font-black text-white transition hover:bg-[#17447E] disabled:opacity-60">{busy ? <Loader2 className="h-4 w-4 animate-spin"/> : <ShieldCheck className="h-4 w-4"/>}{busy ? "Submitting..." : "Get Insurance Quote"}<ArrowRight className="h-4 w-4"/></button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
