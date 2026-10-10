@@ -2,19 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BadgeIndianRupee, CarFront, ClipboardList, FileText, Headphones, Home, IdCard, LogOut, ReceiptText, RefreshCcw, ShieldCheck, Truck, UserRound } from "lucide-react";
+import { BadgeIndianRupee, CarFront, ClipboardList, FileText, Headphones, Home, IdCard, Settings, ReceiptText, RefreshCcw, ShieldCheck, Truck, UserRound } from "lucide-react";
 import { BrandLockup } from "@/components/brand-lockup";
-import { createClient } from "@/lib/supabase";
 
 export function CustomerNavigation() {
   const pathname = usePathname();
-
-  async function logout() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    await fetch("/api/customer/auth/session", { method: "DELETE" });
-    window.location.href = "/customer/login";
-  }
 
   const homeActive = pathname === "/customer" || pathname === "/customer/home";
   const vehiclesActive = pathname.startsWith("/customer/vehicles");
@@ -28,6 +20,7 @@ export function CustomerNavigation() {
   const profileActive = pathname.startsWith("/customer/profile");
   const kycActive = pathname.startsWith("/customer/kyc");
   const documentsActive = pathname.startsWith("/customer/documents");
+  const settingsActive = pathname.startsWith("/customer/settings");
 
   return (
     <>
@@ -90,10 +83,10 @@ export function CustomerNavigation() {
           </div>
         </nav>
         <div className="border-t border-white/10 p-3.5">
-          <button type="button" onClick={() => void logout()} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3.5 text-left text-[12px] font-bold text-white/80 transition hover:bg-white/10 hover:text-white">
-            <LogOut className="h-4 w-4" />
-            Sign out
-          </button>
+          <Link href="/customer/settings" className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3.5 text-left text-[12px] font-bold transition ${settingsActive ? "bg-white text-[#141D3B]" : "text-white/80 hover:bg-white/10 hover:text-white"}`}>
+            <Settings className="h-4 w-4" />
+            Settings
+          </Link>
         </div>
       </aside>
 
