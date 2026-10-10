@@ -210,7 +210,10 @@ assert(documentsPage.includes("loadCustomerProfile(account.id)"), "Customer Docu
 assert(kycPage.includes("loadCustomerProfile(account.id)"), "Customer KYC page must remain selected-account scoped");
 
 const navigation = read("components/customer-portal/customer-navigation.tsx");
-assert(navigation.includes('fetch("/api/customer/auth/session", { method: "DELETE" })'), "Customer logout must clear the isolated session API endpoint");
+const customerSettings = read("app/customer/(protected)/settings/page.tsx");
+assert(navigation.includes('href="/customer/settings"'), "Customer sidebar must offer Settings instead of direct sign out");
+assert(customerSettings.includes('fetch("/api/customer/auth/session", { method: "DELETE" })'), "Customer logout in Settings must clear the isolated session API endpoint");
+assert(customerSettings.includes("supabase.auth.signOut()"), "Customer logout in Settings must terminate Supabase Auth session");
 assert(!navigation.includes('href="/partner'), "Customer navigation must not expose Partner routes");
 assert(!navigation.includes('href="/reports'), "Customer navigation must not expose Operations report routes");
 assert(navigation.includes('href="/customer/vehicles"'), "Customer navigation must expose Phase 1 Vehicles");
