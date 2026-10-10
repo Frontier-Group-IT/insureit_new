@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -289,6 +290,35 @@ export default function ExchangeMarketplaceScreen() {
   );
 
   const availableLocations = useMemo(() => [...new Set(vehicles.map((vehicle) => vehicle.location).filter((location) => location !== 'Location available on request'))].sort((a, b) => a.localeCompare(b)), [vehicles]);
+
+  async function useMarketplaceCurrentLocation(): Promise<string | null> {
+    const permission = await Location.requestForegroundPermissionsAsync();
+    if (permission.status !== 'granted') {
+      Alert.alert('Location permission', 'Allow location access to find vehicles in a nearby marketplace location.');
+      return null;
+    }
+    try {
+      const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const [address] = await Location.reverseGeocodeAsync(current.coords);
+      const city = (address?.city || address?.subregion || address?.district || '').trim().toLowerCase();
+      const region = (address?.region || '').trim().toLowerCase();
+      // Only select a real marketplace location; never fabricate nearby inventory.
+      const match = availableLocations.find((item) => {
+        const lower = item.toLowerCase();
+        return Boolean(city) && lower.split(',')[0].trim() === city &&
+          (!region || lower.includes(region) || lower.includes(region.slice(0, 2)));
+      }) ?? availableLocations.find((item) => Boolean(city) && item.toLowerCase().split(',')[0].trim() === city);
+      if (!match) {
+        Alert.alert('No nearby listings', 'There are no listed vehicles for your current city. Choose another available location or All locations.');
+        return null;
+      }
+      setSelectedLocation(match);
+      return match;
+    } catch {
+      Alert.alert('Location unavailable', 'Could not determine your city. Please choose a location from the list.');
+      return null;
+    }
+  }
 
   const filteredVehicles = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -738,6 +768,7 @@ export default function ExchangeMarketplaceScreen() {
             selectedLocation={selectedLocation}
             availableLocations={availableLocations}
             onLocationChange={setSelectedLocation}
+            onUseCurrentLocation={useMarketplaceCurrentLocation}
             onCategoryChange={setCategory}
             onOpenVehicle={(vehicle) => router.push({ pathname: '/customer/exchange/[listingId]', params: { listingId: vehicle.id } })}
             onFavorite={(id) => void toggleFavorite(id)}
@@ -883,6 +914,7 @@ function BuyExperience({
   selectedLocation,
   availableLocations,
   onLocationChange,
+  onUseCurrentLocation,
   onCategoryChange,
   onOpenVehicle,
   onFavorite,
@@ -902,6 +934,7 @@ function BuyExperience({
   selectedLocation: string | null;
   availableLocations: string[];
   onLocationChange: (location: string | null) => void;
+  onUseCurrentLocation: () => Promise<string | null>;
   onCategoryChange: (category: VehicleCategory) => void;
   onOpenVehicle: (vehicle: MarketplaceVehicle) => void;
   onFavorite: (id: string) => void;
@@ -923,6 +956,7 @@ function BuyExperience({
       selectedLocation={selectedLocation}
       availableLocations={availableLocations}
       onLocationChange={onLocationChange}
+      onUseCurrentLocation={onUseCurrentLocation}
       onCategoryChange={onCategoryChange}
       onOpenVehicle={(vehicle: ExchangeHomeVehicle) => onOpenVehicle(vehicle as MarketplaceVehicle)}
       onFavorite={onFavorite}
