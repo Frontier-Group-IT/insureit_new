@@ -814,7 +814,9 @@ function FinalBillUpload({ claimId }: { claimId: string }) {
     let active = true;
     void (async () => {
       setLoading(true);
-      const { data, error: loadError } = await (supabase as any)
+      const identity = await getCustomerIdentity();
+      if (!identity) { if (active) setLoading(false); return; }
+      const { data, error: loadError } = await (identity.data as any)
         .from('claim_documents')
         .select('id,file_name,storage_bucket,storage_path')
         .eq('claim_id', claimId)
@@ -840,11 +842,15 @@ function FinalBillUpload({ claimId }: { claimId: string }) {
     if (!document?.storage_bucket || !document.storage_path || uploading || removing) return;
     setError('');
     try {
-      const { data, error: signedUrlError } = await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 600);
-      if (signedUrlError || !data?.signedUrl) return setError('We could not open the bill. Please try again.');
-      const supported = await Linking.canOpenURL(data.signedUrl);
+      const identity = await getCustomerIdentity();
+      if (!identity) return setError('Please sign in again.');
+      const signedUrl = identity.provider === 'firebase'
+        ? await getFirebaseCustomerDocumentUrl('claim-documents', document.storage_path)
+        : (await identity.data.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 600)).data?.signedUrl;
+      if (!signedUrl) return setError('We could not open the bill. Please try again.');
+      const supported = await Linking.canOpenURL(signedUrl);
       if (!supported) return setError('This bill could not be opened on this device.');
-      await Linking.openURL(data.signedUrl);
+      await Linking.openURL(signedUrl);
     } catch {
       setError('We could not open the bill. Please try again.');
     }
@@ -855,7 +861,9 @@ function FinalBillUpload({ claimId }: { claimId: string }) {
     setError('');
     setSuccess('');
 
-    const { data: claimIdentity, error: claimIdentityError } = await supabase
+    const identity = await getCustomerIdentity();
+    if (!identity) return setError('Please sign in again.');
+    const { data: claimIdentity, error: claimIdentityError } = await identity.data
       .from('claims')
       .select('customer_id')
       .eq('id', claimId)
@@ -880,8 +888,7 @@ function FinalBillUpload({ claimId }: { claimId: string }) {
 
     const normalizedExtension = extension === 'jpeg' ? 'jpg' : extension || (file.mimeType === 'application/pdf' ? 'pdf' : file.mimeType === 'image/png' ? 'png' : 'jpg');
     const contentType = normalizedExtension === 'pdf' ? 'application/pdf' : normalizedExtension === 'png' ? 'image/png' : 'image/jpeg';
-    const session = await getCurrentSession();
-    if (!session?.user) return setError('Please sign in again before uploading the bill.');
+
 
     setUploading(true);
     let newStoragePath = '';
@@ -891,10 +898,14 @@ function FinalBillUpload({ claimId }: { claimId: string }) {
       if (body.byteLength > MAX_FINAL_BILL_SIZE_BYTES) return setError('Selected bill file is too large. Please choose a smaller file.');
 
       newStoragePath = `${resolvedCustomerId}/${claimId}/billing/${Date.now()}-${Math.random().toString(36).slice(2)}.${normalizedExtension}`;
-      const uploadResult = await supabase.storage.from('claim-documents').upload(newStoragePath, body, { contentType, upsert: false });
-      if (uploadResult.error) return setError('The bill could not be uploaded. Please try again.');
+      if (identity.provider === 'firebase') {
+        await uploadFirebaseCustomerDocument({ bucket: 'claim-documents', path: newStoragePath, file: body, contentType });
+      } else {
+        const uploadResult = await identity.data.storage.from('claim-documents').upload(newStoragePath, body, { contentType, upsert: false });
+        if (uploadResult.error) return setError('The bill could not be uploaded. Please try again.');
+      }
 
-      const { data: inserted, error: insertError } = await supabase.from('claim_documents').insert({
+      const { data: inserted, error: insertError } = await identity.data.from('claim_documents').insert({
         claim_id: claimId,
         customer_id: resolvedCustomerId,
         document_type: FINAL_BILL_DOCUMENT_TYPE,
@@ -903,27 +914,30 @@ function FinalBillUpload({ claimId }: { claimId: string }) {
         storage_path: newStoragePath,
         mime_type: contentType,
         file_size: file.size ?? body.byteLength,
-        uploaded_by: session.user.id,
+        uploaded_by: identity.profileId,
       }).select('id,file_name,storage_bucket,storage_path').single();
 
       if (insertError || !inserted) {
-        await supabase.storage.from('claim-documents').remove([newStoragePath]);
+        if (identity.provider === 'supabase') await identity.data.storage.from('claim-documents').remove([newStoragePath]);
         return setError('The bill uploaded, but its claim document record could not be saved.');
       }
 
       const previous = document;
       setDocument(inserted as BillDocumentRecord);
       setSuccess(previous ? 'Bill replaced successfully.' : 'Bill uploaded successfully.');
-      if (previous) {
-        const removeOldRecord = await (supabase as any).from('claim_documents').delete().eq('id', previous.id).eq('claim_id', claimId);
+      if (previous && identity.provider === 'supabase') {
+        const removeOldRecord = await (identity.data as any).from('claim_documents').delete().eq('id', previous.id).eq('claim_id', claimId);
         if (!removeOldRecord.error && previous.storage_bucket && previous.storage_path) {
-          await supabase.storage.from(previous.storage_bucket).remove([previous.storage_path]);
+          await identity.data.storage.from(previous.storage_bucket).remove([previous.storage_path]);
         } else if (removeOldRecord.error) {
           setError('The new bill is saved, but the previous document record could not be cleaned up.');
         }
       }
     } catch {
-      if (newStoragePath) await supabase.storage.from('claim-documents').remove([newStoragePath]);
+      if (newStoragePath) {
+        const cleanupIdentity = await getCustomerIdentity().catch(() => null);
+        if (cleanupIdentity?.provider === 'supabase') await cleanupIdentity.data.storage.from('claim-documents').remove([newStoragePath]);
+      }
       setError('The bill could not be uploaded. Please try again.');
     } finally {
       setUploading(false);
@@ -932,16 +946,18 @@ function FinalBillUpload({ claimId }: { claimId: string }) {
 
   async function removeBill() {
     if (!document || uploading || removing) return;
+    const identity = await getCustomerIdentity();
+    if (!identity || identity.provider === 'firebase') return setError('Document removal requires support verification.');
     setConfirmRemove(false);
     setError('');
     setSuccess('');
     setRemoving(true);
     const current = document;
     try {
-      const removeRecord = await (supabase as any).from('claim_documents').delete().eq('id', current.id).eq('claim_id', claimId);
+      const removeRecord = await (identity.data as any).from('claim_documents').delete().eq('id', current.id).eq('claim_id', claimId);
       if (removeRecord.error) return setError('We could not remove the bill. Please try again.');
       if (current.storage_bucket && current.storage_path) {
-        const storageResult = await supabase.storage.from(current.storage_bucket).remove([current.storage_path]);
+        const storageResult = await identity.data.storage.from(current.storage_bucket).remove([current.storage_path]);
         if (storageResult.error) setError('The bill was removed from the claim, but storage cleanup could not be completed.');
       }
       setDocument(null);
