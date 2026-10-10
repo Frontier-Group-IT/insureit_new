@@ -57,6 +57,8 @@ jobs:
         run: node scripts/sidebar-state-stability-regression.mjs
       - name: Intermediary optional surname and IIB live-name regression
         run: node scripts/intermediary-optional-surname-iib-regression.mjs
+      - name: Partner Register business metrics migration contract regression
+        run: node scripts/partner-register-business-metrics-regression.mjs
       - name: Intermediary IIB registration finalization regression
         run: node scripts/intermediary-iib-registration-finalization-regression.mjs
       - name: Policy intake workflow regression
