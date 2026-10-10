@@ -589,7 +589,9 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
     let active = true;
     void (async () => {
       setLoading(true);
-      const { data, error: loadError } = await (supabase as any)
+      const identity = await getCustomerIdentity();
+      if (!identity) { if (active) setLoading(false); return; }
+      const { data, error: loadError } = await (identity.data as any)
         .from('claim_documents')
         .select('id,document_type,file_name,storage_bucket,storage_path')
         .eq('claim_id', claimId)
@@ -614,19 +616,23 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
   const bulkDocuments = documents.filter((item) => item.document_type === WORK_APPROVAL_BULK_DOCUMENT_TYPE);
 
   async function uploadFile(documentType: string, file: DocumentPicker.DocumentPickerAsset) {
-    const session = await getCurrentSession();
-    if (!session?.user) return { ok: false, document: null as ApprovalDocumentRecord | null };
+    const identity = await getCustomerIdentity();
+    if (!identity) return { ok: false, document: null as ApprovalDocumentRecord | null };
     const response = await fetch(file.uri);
     const body = await response.arrayBuffer();
     if (body.byteLength > MAX_APPROVAL_PDF_SIZE_BYTES) return { ok: false, document: null as ApprovalDocumentRecord | null };
     const extension = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
     const storagePath = `${customerId}/${claimId}/work-approval/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-    const uploadResult = await supabase.storage.from('claim-documents').upload(storagePath, body, {
-      contentType: file.mimeType ?? 'application/octet-stream',
-      upsert: false,
-    });
-    if (uploadResult.error) return { ok: false, document: null as ApprovalDocumentRecord | null };
-    const { data, error: insertError } = await supabase.from('claim_documents').insert({
+    if (identity.provider === 'firebase') {
+      await uploadFirebaseCustomerDocument({ bucket: 'claim-documents', path: storagePath, file: body, contentType: file.mimeType ?? 'application/octet-stream' });
+    } else {
+      const uploadResult = await identity.data.storage.from('claim-documents').upload(storagePath, body, {
+        contentType: file.mimeType ?? 'application/octet-stream',
+        upsert: false,
+      });
+      if (uploadResult.error) return { ok: false, document: null as ApprovalDocumentRecord | null };
+    }
+    const { data, error: insertError } = await identity.data.from('claim_documents').insert({
       claim_id: claimId,
       customer_id: customerId,
       document_type: documentType,
@@ -635,10 +641,10 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
       storage_path: storagePath,
       mime_type: file.mimeType ?? null,
       file_size: file.size ?? body.byteLength,
-      uploaded_by: session.user.id,
+      uploaded_by: identity.profileId,
     }).select('id,document_type,file_name,storage_bucket,storage_path').single();
     if (insertError || !data) {
-      await supabase.storage.from('claim-documents').remove([storagePath]);
+      if (identity.provider === 'supabase') await identity.data.storage.from('claim-documents').remove([storagePath]);
       return { ok: false, document: null as ApprovalDocumentRecord | null };
     }
     return { ok: true, document: data as ApprovalDocumentRecord };
@@ -646,15 +652,17 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
 
   async function removeRows(rows: ApprovalDocumentRecord[]) {
     if (!rows.length) return true;
+    const identity = await getCustomerIdentity();
+    if (!identity || identity.provider === 'firebase') return false;
     const ids = rows.map((item) => item.id);
-    const removeRecords = await (supabase as any).from('claim_documents').delete().in('id', ids).eq('claim_id', claimId);
+    const removeRecords = await (identity.data as any).from('claim_documents').delete().in('id', ids).eq('claim_id', claimId);
     if (removeRecords.error) return false;
     const byBucket = new Map<string, string[]>();
     for (const item of rows) {
       if (!item.storage_bucket || !item.storage_path) continue;
       byBucket.set(item.storage_bucket, [...(byBucket.get(item.storage_bucket) ?? []), item.storage_path]);
     }
-    for (const [bucket, paths] of byBucket) await supabase.storage.from(bucket).remove(paths);
+    for (const [bucket, paths] of byBucket) await identity.data.storage.from(bucket).remove(paths);
     return true;
   }
 
