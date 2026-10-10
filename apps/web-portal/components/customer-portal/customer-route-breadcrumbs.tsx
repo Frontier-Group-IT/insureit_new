@@ -17,6 +17,7 @@ const labels: Record<string, string> = {
   challan: "E-Challan",
   support: "Support",
   profile: "Profile",
+  settings: "Settings",
   kyc: "KYC",
   notifications: "Notifications",
   "start-claim": "Start Claim",
