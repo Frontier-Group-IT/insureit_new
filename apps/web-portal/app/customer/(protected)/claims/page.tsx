@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertCircle, ArrowUpRight, CheckCircle2, ClipboardList, Clock3, FileText, ShieldCheck } from "lucide-react";
+import { AlertCircle, ArrowUpRight, CheckCircle2, Clock3, FileText, ShieldCheck } from "lucide-react";
 import { CustomerClaimsSearch, CustomerClaimsStageFilter } from "./customer-claims-search";
 import { projectInternalClaim } from "@insureit/claim-journey";
 import { CustomerAccountTabs, EmptyCustomerState } from "@/components/customer-portal/customer-phase1";
@@ -101,7 +101,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
                     <td className={cell}><p className="font-bold text-[#164B91]">{claim.vehicle_no || "—"}</p><p className="mt-1 max-w-[175px] truncate text-[9px] text-[#7B8CA4]">{[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" ") || "—"}</p></td>
                     <td className={cell}>{claim.insurer_name || "—"}</td>
                     <td className={cell}>{claim.policy_no || "—"}</td>
-                    <td className={cell}>Vehicle claim</td>
+                    <td className={cell}>—</td>
                     <td className={cell}>{claim.accident_at ? new Date(claim.accident_at).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : "—"}</td>
                     <td className={cell}>{stage}</td>
                     <td className={cell}><span className="rounded-full border border-[#D9E5F3] bg-[#F2F7FD] px-2 py-1 text-[10px] font-semibold text-[#315B89]">{claim.current_status || "—"}</span></td>
