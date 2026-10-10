@@ -1,0 +1,71 @@
+name: Deploy INSUREIT to Vercel (Manual Only)
+
+# Intentionally NO push, pull_request, schedule, or workflow_run trigger.
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type DEPLOY to authorize one production deployment of current main'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: insureit-vercel-manual-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and publish production
+    if: ${{ github.ref == 'refs/heads/main' && inputs.confirmation == 'DEPLOY' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Checkout exact main commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check deployment credentials are configured
+        shell: bash
+        run: |
+          for name in VERCEL_ORG_ID VERCEL_PROJECT_ID VERCEL_TOKEN; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error title=Missing secret::Configure GitHub Actions secret ${name} before manual deployment."
+              exit 1
+            fi
+          done
+          if [[ "$VERCEL_PROJECT_ID" != "prj_OLXA2UB1LwMd0UidP8MNa1O9MLuq" ]]; then
+            echo "::error title=Wrong Vercel project::The project ID does not match INSUREIT insureit_new."
+            exit 1
+          fi
+          if [[ "$VERCEL_ORG_ID" != "team_DsOUqnF8Pbd7YGNt8RCE8NgA" ]]; then
+            echo "::error title=Wrong Vercel team::The team ID does not match the INSUREIT owner."
+            exit 1
+          fi
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      # Vercel Git automatic deployments stay disabled in vercel.json.
+      # A prebuilt CLI upload does not submit a Git-triggered build for evaluation
+      # by the Ignored Build Step.
+      - name: Load existing Vercel production configuration
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build using production configuration
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      - name: Publish prebuilt production output
+        run: vercel deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN"
