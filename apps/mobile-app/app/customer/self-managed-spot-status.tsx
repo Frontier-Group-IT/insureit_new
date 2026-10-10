@@ -6,10 +6,9 @@ import { AppDatePicker } from '@/components/design-system';
 import { ExternalClaimErrorPopup } from '@/components/external-claim-error-popup';
 import { ClaimActionBar, ClaimFormSection, ClaimIdentityCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
 import { LoadingState, Screen, TextField } from '@/components/ui';
-import { getCurrentSession } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
 import { type ClaimMilestone } from '@/lib/claim-service-mode';
 import { validateStageChronology } from '@/lib/self-managed-claim-timeline';
-import { supabase } from '@/lib/supabase';
 
 export default function SelfManagedSpotStatusScreen() {
   const router = useRouter();
@@ -37,9 +36,12 @@ export default function SelfManagedSpotStatusScreen() {
     }
     let active = true;
     async function load() {
+      const identity = await getCustomerIdentity();
+      if (!identity) return router.replace('/login');
+      const client = identity.data;
       const [claimResult, milestoneResult] = await Promise.all([
-        supabase.from('claims').select('id, claim_no, customer_id, claim_service_mode, vehicle_id, external_policy_id').eq('id', id).maybeSingle(),
-        (supabase as any).from('claim_milestones').select('*').eq('claim_id', id),
+        client.from('claims').select('id, claim_no, customer_id, claim_service_mode, vehicle_id, external_policy_id').eq('id', id).maybeSingle(),
+        (client as any).from('claim_milestones').select('*').eq('claim_id', id),
       ]);
       if (!active) return;
       if (claimResult.error || !claimResult.data) {
@@ -54,7 +56,7 @@ export default function SelfManagedSpotStatusScreen() {
       setClaimNo((claimResult.data as any).claim_no);
       const vehicleId = (claimResult.data as any).vehicle_id as string | undefined;
       if (vehicleId) {
-        const vehicleResult = await supabase.from('vehicles').select('vehicle_no,make,model').eq('id', vehicleId).maybeSingle();
+        const vehicleResult = await client.from('vehicles').select('vehicle_no,make,model').eq('id', vehicleId).maybeSingle();
         if (active && vehicleResult.data) {
           setVehicleNo((vehicleResult.data as any).vehicle_no ?? '');
           setVehicleMeta([(vehicleResult.data as any).make, (vehicleResult.data as any).model].filter(Boolean).join(' · '));
@@ -62,11 +64,11 @@ export default function SelfManagedSpotStatusScreen() {
       }
       const externalPolicyId = (claimResult.data as any).external_policy_id as string | undefined;
       if (externalPolicyId) {
-        const policyResult = await (supabase as any).from('external_policies').select('policy_no,insurance_company_id').eq('id', externalPolicyId).maybeSingle();
+        const policyResult = await (client as any).from('external_policies').select('policy_no,insurance_company_id').eq('id', externalPolicyId).maybeSingle();
         if (active && policyResult.data) {
           setPolicyNo(policyResult.data.policy_no ?? '');
           if (policyResult.data.insurance_company_id) {
-            const insurerResult = await supabase.from('insurance_companies').select('name').eq('id', policyResult.data.insurance_company_id).maybeSingle();
+            const insurerResult = await client.from('insurance_companies').select('name').eq('id', policyResult.data.insurance_company_id).maybeSingle();
             if (active && insurerResult.data?.name) setInsurerName(insurerResult.data.name);
           }
         }
@@ -100,10 +102,10 @@ export default function SelfManagedSpotStatusScreen() {
 
     setSubmitting(true);
     try {
-      const session = await getCurrentSession();
-      if (!session?.user) return router.replace('/login');
+      const identity = await getCustomerIdentity();
+      if (!identity) return router.replace('/login');
       const current = milestones.find((item) => item.milestone_key === 'spot_status');
-      const { error } = await (supabase as any).from('claim_milestones').upsert({
+      const { error } = await (identity.data as any).from('claim_milestones').upsert({
         claim_id: id,
         milestone_key: 'spot_status',
         milestone_status: 'completed',
@@ -114,7 +116,7 @@ export default function SelfManagedSpotStatusScreen() {
           surveyor_phone: surveyorPhone.trim() || null,
         },
         completed_at: current?.completed_at ?? new Date().toISOString(),
-        recorded_by: session.user.id,
+        recorded_by: identity.profileId,
         recorded_by_actor: 'customer',
       }, { onConflict: 'claim_id,milestone_key' });
       if (error) {
