@@ -14,6 +14,7 @@ import {
   type RememberedCustomerAccount,
 } from '@/lib/customer-account-vault';
 import { getSelectedCustomerContext } from '@/lib/customer-context';
+import { getCustomerIdentity } from '@/lib/customer-identity';
 import { palette } from '@/lib/theme';
 
 export function CustomerAccountSwitcherButton({ initial = 'C', style }: { initial?: string; style?: StyleProp<ViewStyle> }) {
@@ -24,11 +25,17 @@ export function CustomerAccountSwitcherButton({ initial = 'C', style }: { initia
   const [accounts, setAccounts] = useState<RememberedCustomerAccount[]>([]);
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [firebaseMode, setFirebaseMode] = useState(false);
 
   useEffect(() => {
     let active = true;
     void (async () => {
       try {
+        const identity = await getCustomerIdentity();
+        if (identity?.provider === 'firebase') {
+          if (active) setFirebaseMode(true);
+          return;
+        }
         const session = await getCurrentSession();
         if (!session?.user || !active) return;
         const profile = await getProfile(session.user.id);
@@ -49,6 +56,7 @@ export function CustomerAccountSwitcherButton({ initial = 'C', style }: { initia
   }, []);
 
   async function openSwitcher() {
+    if (firebaseMode) return;
     setError('');
     try {
       setAccounts(await listRememberedCustomerAccounts());
@@ -104,6 +112,8 @@ export function CustomerAccountSwitcherButton({ initial = 'C', style }: { initia
     setOpen(false);
     router.push({ pathname: '/login', params: { addAccount: '1' } });
   }
+
+  if (firebaseMode) return null;
 
   return (
     <>
