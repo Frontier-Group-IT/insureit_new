@@ -10,10 +10,11 @@ import { ExternalClaimDocumentTabs } from '@/components/external-claim-document-
 import { ExternalClaimErrorPopup } from '@/components/external-claim-error-popup';
 import { ClaimActionBar, ClaimChoice, ClaimFinancialSummary, ClaimFormSection, ClaimIdentityCard, ClaimInlineNote, ExternalClaimStageHeader } from '@/components/external-claim-ui';
 import { Screen, TextField } from '@/components/ui';
-import { getCurrentSession } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
+import { getFirebaseCustomerDocumentUrl } from '@/lib/firebase-document-client';
+import { uploadFirebaseCustomerDocument } from '@/lib/firebase-upload-client';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestone, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
 import { stageBusinessDateOnly, validateStageChronology } from '@/lib/self-managed-claim-timeline';
-import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 
 type FieldKey =
@@ -78,9 +79,12 @@ export default function SelfManagedMilestoneScreen() {
     let active = true;
     async function load() {
       if (!claimId || !definition) { if (active) setLoading(false); return; }
+      const identity = await getCustomerIdentity();
+      if (!identity) return router.replace('/login');
+      const client = identity.data;
       const [milestoneResult, claimResult] = await Promise.all([
-        (supabase as any).from('claim_milestones').select('*').eq('claim_id', claimId),
-        supabase.from('claims').select('claim_no, insurer_claim_no, vehicle_id, customer_id, external_policy_id').eq('id', claimId).maybeSingle(),
+        (client as any).from('claim_milestones').select('*').eq('claim_id', claimId),
+        client.from('claims').select('claim_no, insurer_claim_no, vehicle_id, customer_id, external_policy_id').eq('id', claimId).maybeSingle(),
       ]);
       if (!active) return;
       const nextMilestones = (milestoneResult.data ?? []) as ClaimMilestone[];
@@ -94,18 +98,18 @@ export default function SelfManagedMilestoneScreen() {
       setClaimNumberDraft(nextInsurerClaimNo);
       setCustomerId(identity.customer_id ?? '');
       if (identity.vehicle_id) {
-        const vehicleResult = await supabase.from('vehicles').select('vehicle_no,make,model').eq('id', identity.vehicle_id).maybeSingle();
+        const vehicleResult = await client.from('vehicles').select('vehicle_no,make,model').eq('id', identity.vehicle_id).maybeSingle();
         if (active && vehicleResult.data) {
           setVehicleNo((vehicleResult.data as any).vehicle_no ?? '');
           setVehicleMeta([(vehicleResult.data as any).make, (vehicleResult.data as any).model].filter(Boolean).join(' · '));
         }
       }
       if (identity.external_policy_id) {
-        const policyResult = await (supabase as any).from('external_policies').select('policy_no,insurance_company_id').eq('id', identity.external_policy_id).maybeSingle();
+        const policyResult = await (client as any).from('external_policies').select('policy_no,insurance_company_id').eq('id', identity.external_policy_id).maybeSingle();
         if (active && policyResult.data) {
           setPolicyNo(policyResult.data.policy_no ?? '');
           if (policyResult.data.insurance_company_id) {
-            const insurerResult = await supabase.from('insurance_companies').select('name').eq('id', policyResult.data.insurance_company_id).maybeSingle();
+            const insurerResult = await client.from('insurance_companies').select('name').eq('id', policyResult.data.insurance_company_id).maybeSingle();
             if (active && insurerResult.data?.name) setInsurerName(insurerResult.data.name);
           }
         }
@@ -153,7 +157,9 @@ export default function SelfManagedMilestoneScreen() {
 
     setClaimNumberError('');
     setClaimNumberSaving(true);
-    const { error } = await supabase
+    const identity = await getCustomerIdentity();
+    if (!identity) { setClaimNumberSaving(false); return setClaimNumberError('Please sign in again.'); }
+    const { error } = await identity.data
       .from('claims')
       .update({ insurer_claim_no: nextClaimNumber })
       .eq('id', claimId);
@@ -198,16 +204,16 @@ export default function SelfManagedMilestoneScreen() {
     setSaving(true);
 
     if (key === 'vehicle_delivery') {
-      const session = await getCurrentSession();
-      if (!session?.user) { setSaving(false); return router.replace('/login'); }
+      const identity = await getCustomerIdentity();
+      if (!identity) { setSaving(false); return router.replace('/login'); }
       const completed = values.vehicle_received === 'yes' && Boolean(values.vehicle_received_date);
-      const { error } = await (supabase as any).from('claim_milestones').upsert({
+      const { error } = await (identity.data as any).from('claim_milestones').upsert({
         claim_id: claimId,
         milestone_key: key,
         milestone_status: completed ? 'completed' : 'in_progress',
         details,
         completed_at: completed ? (current?.completed_at ?? new Date().toISOString()) : null,
-        recorded_by: session.user.id,
+        recorded_by: identity.profileId,
         recorded_by_actor: 'customer',
       }, { onConflict: 'claim_id,milestone_key' });
       setSaving(false);
@@ -216,7 +222,9 @@ export default function SelfManagedMilestoneScreen() {
       return;
     }
 
-    const { error } = await (supabase.rpc as any)('save_self_managed_milestone', {
+    const identity = await getCustomerIdentity();
+    if (!identity) { setSaving(false); return router.replace('/login'); }
+    const { error } = await (identity.data.rpc as any)('save_self_managed_milestone', {
       p_claim_id: claimId,
       p_milestone_key: key,
       p_details: details,
