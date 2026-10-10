@@ -315,6 +315,8 @@ export default function ProfileScreen() {
 
     setDocumentUploading(true);
     try {
+      const identity = await getCustomerIdentity();
+      if (!identity || identity.profileId !== profile.id) throw new Error('Customer session unavailable');
       const extension = asset.name.includes('.') ? asset.name.split('.').pop() : 'bin';
       const storagePath = `${customer.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
       const response = await fetch(asset.uri);
@@ -323,15 +325,19 @@ export default function ProfileScreen() {
         setMessage({ text: 'Please upload a document below 5 MB.', type: 'error' });
         return;
       }
-      const uploadResult = await supabase.storage.from('customer-documents').upload(storagePath, body, {
-        contentType: asset.mimeType ?? 'application/octet-stream',
-        upsert: false,
-      });
-      if (uploadResult.error) {
-        setMessage({ text: 'Document upload failed. Please try again.', type: 'error' });
-        return;
+      if (identity.provider === 'firebase') {
+        await uploadFirebaseCustomerDocument({ bucket: 'customer-documents', path: storagePath, file: body, contentType: asset.mimeType ?? 'application/octet-stream' });
+      } else {
+        const uploadResult = await identity.data.storage.from('customer-documents').upload(storagePath, body, {
+          contentType: asset.mimeType ?? 'application/octet-stream',
+          upsert: false,
+        });
+        if (uploadResult.error) {
+          setMessage({ text: 'Document upload failed. Please try again.', type: 'error' });
+          return;
+        }
       }
-      const { data, error } = await supabase.from('customer_documents').insert({
+      const { data, error } = await identity.data.from('customer_documents').insert({
         customer_id: customer.id,
         document_type: selectedDocType,
         file_name: asset.name,
@@ -355,19 +361,36 @@ export default function ProfileScreen() {
 
   async function openCustomerDocument(document: CustomerDocument) {
     setMessage(null);
-    const { data, error } = await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 300);
+    const identity = await getCustomerIdentity();
+    if (!identity) return setMessage({ text: 'Please sign in again.', type: 'error' });
+    if (identity.provider === 'firebase') {
+      try {
+        const signedUrl = await getFirebaseCustomerDocumentUrl('customer-documents', document.storage_path);
+        await Linking.openURL(signedUrl);
+      } catch {
+        setMessage({ text: 'Could not open this document.', type: 'error' });
+      }
+      return;
+    }
+    const { data, error } = await identity.data.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 300);
     if (error || !data?.signedUrl) return setMessage({ text: 'Could not open this document.', type: 'error' });
     await Linking.openURL(data.signedUrl);
   }
 
   async function deleteCustomerDocument(document: CustomerDocument) {
     setMessage(null);
-    const { error } = await supabase.from('customer_documents').delete().eq('id', document.id);
+    const identity = await getCustomerIdentity();
+    if (!identity) return setMessage({ text: 'Please sign in again.', type: 'error' });
+    if (identity.provider === 'firebase') {
+      setMessage({ text: 'Document removal requires customer support verification.', type: 'error' });
+      return;
+    }
+    const { error } = await identity.data.from('customer_documents').delete().eq('id', document.id);
     if (error) {
       setMessage({ text: 'Could not delete this document.', type: 'error' });
       return;
     }
-    await supabase.storage.from(document.storage_bucket).remove([document.storage_path]);
+    await identity.data.storage.from(document.storage_bucket).remove([document.storage_path]);
     setDocuments((current) => current.filter((item) => item.id !== document.id));
     setMessage({ text: 'Document deleted.', type: 'success' });
   }
@@ -480,7 +503,11 @@ export default function ProfileScreen() {
         <ActionRow icon="account-remove-outline" label="Request account deletion" onPress={() => router.push('/customer/account-deletion')} />
       </Section>
 
-      <Pressable accessibilityRole="button" onPress={() => void signOut(router)} style={styles.signOut}><MaterialCommunityIcons name="logout" size={18} color="#C43838" /><Text style={styles.signOutText}>Sign out securely</Text></Pressable>
+      <Pressable accessibilityRole="button" onPress={() => void (async () => {
+        const identity = await getCustomerIdentity();
+        if (identity?.provider === 'firebase') { await signOutFirebaseCustomer(); router.replace('/login'); }
+        else await signOut(router);
+      })()} style={styles.signOut}><MaterialCommunityIcons name="logout" size={18} color="#C43838" /><Text style={styles.signOutText}>Sign out securely</Text></Pressable>
       </Screen>
 
       {message?.type === 'success' ? (
