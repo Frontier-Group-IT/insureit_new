@@ -134,7 +134,7 @@ Deno.serve(async (request: Request) => {
       }
     } else if (bucket === "policy-documents") {
       const { data: docs, error } = await db.from("policy_documents")
-        .select("id,policy_id").eq("storage_path", documentPath).limit(2);
+        .select("id,policy_id").eq("storage_bucket", bucket).eq("storage_path", documentPath).limit(2);
       if (error) throw new Error("Policy document lookup failed");
       if (docs?.length === 1) {
         const { data: policy, error: policyError } = await db.from("policies")
@@ -166,6 +166,31 @@ Deno.serve(async (request: Request) => {
           .eq("id", docs[0].application_id).maybeSingle();
         if (appError) throw new Error("Onboarding owner lookup failed");
         allowed = application?.profile_id === profileId && application.source === "customer_app";
+      }
+
+      // Customer profile photos and attached policies use a different
+      // canonical metadata table from onboarding documents. Never infer
+      // ownership from storage paths alone.
+      if (!allowed) {
+        const { data: files, error: fileError } = await db.from("customer_documents")
+          .select("id,customer_id").eq("storage_bucket", bucket)
+          .eq("storage_path", documentPath).limit(2);
+        if (fileError) throw new Error("Customer document lookup failed");
+        if (files?.length === 1) {
+          const customerId = files[0].customer_id;
+          const { data: customer, error: customerError } = await db.from("customers")
+            .select("id,profile_id").eq("id", customerId).maybeSingle();
+          if (customerError) throw new Error("Customer document owner lookup failed");
+          allowed = customer?.id === customerId && customer?.profile_id === profileId;
+          if (!allowed && customer?.id === customerId) {
+            const { data: memberships, error: membershipError } = await db
+              .from("customer_memberships").select("customer_id")
+              .eq("customer_id", customerId).eq("profile_id", profileId)
+              .eq("status", "active").limit(1);
+            if (membershipError) throw new Error("Customer document membership lookup failed");
+            allowed = Boolean(memberships?.length);
+          }
+        }
       }
     }
     if (!allowed) return reply(404, { error: "document_unavailable" });
