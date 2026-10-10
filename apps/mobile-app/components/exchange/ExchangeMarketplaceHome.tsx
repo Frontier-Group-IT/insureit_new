@@ -121,7 +121,7 @@ export function ExchangeMarketplaceHome({
   selectedLocation: string | null;
   availableLocations: string[];
   onLocationChange: (location: string | null) => void;
-  onUseCurrentLocation: () => Promise<string | null>;
+  onUseCurrentLocation: (applySelection?: boolean) => Promise<string | null>;
   onCategoryChange: (category: ExchangeHomeCategory) => void;
   onOpenVehicle: (vehicle: ExchangeHomeVehicle) => void;
   onFavorite: (id: string) => void;
@@ -324,7 +324,7 @@ export function ExchangeMarketplaceHome({
                 </Pressable>
                 <Pressable style={styles.addLocationSecondary} disabled={locating} onPress={() => {
                   setLocating(true);
-                  void onUseCurrentLocation().then((location) => {
+                  void onUseCurrentLocation(false).then((location) => {
                     if (location) { setCandidateLocation(location); setCandidateLatLong(null); setAddLocationStep('confirm'); }
                   }).finally(() => setLocating(false));
                 }}>
