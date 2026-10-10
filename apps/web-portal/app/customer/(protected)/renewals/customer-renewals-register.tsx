@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { AlertCircle, CalendarCheck2, CalendarClock, CarFront, ChevronRight, ClipboardList, FileText, RefreshCw, Search, ShieldCheck } from "lucide-react";
+import { AlertCircle, CalendarCheck2, CalendarClock, CarFront, ChevronRight, ClipboardList, FileText, Search, ShieldCheck } from "lucide-react";
 
 export type RenewalRegisterItem = {
   id: string; title: string; key: string; vehicleId: string; vehicleNo: string;
@@ -15,18 +15,19 @@ export function CustomerRenewalsRegister({ accountId, items, categories }: {
 }) {
   const [query, setQuery] = useState("");
   const [selectedType, setSelectedType] = useState("all");
+  const [selectedTiming, setSelectedTiming] = useState("all");
   const visible = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return items.filter(item => (selectedType === "all" || item.key === selectedType) &&
+    return items.filter(item => (selectedType === "all" || item.key === selectedType) && (selectedTiming === "all" || (selectedTiming === "overdue" ? item.daysUntil < 0 : item.daysUntil >= 0)) &&
       (!term || [item.title, item.vehicleNo, item.reference, item.status, item.expiry].some(value => value.toLowerCase().includes(term))));
-  }, [items, query, selectedType]);
+  }, [items, query, selectedType, selectedTiming]);
   const overdue = items.filter(item => item.daysUntil < 0).length;
   const dueSoon = items.filter(item => item.daysUntil >= 0).length;
   const countFor = (term: string) => categories.filter(category => category.title.toLowerCase().includes(term)).reduce((total, category) => total + category.count, 0);
   const metrics = [
     { label: "Total renewals", value: items.length, Icon: ClipboardList, theme: "bg-[#F0F6FF]", icon: "text-[#1572D7]", filter: "all" },
-    { label: "Due soon", value: dueSoon, Icon: CalendarCheck2, theme: "bg-[#ECFAF3]", icon: "text-[#00A56A]", filter: "all" },
-    { label: "Overdue", value: overdue, Icon: AlertCircle, theme: "bg-[#FFF0F1]", icon: "text-[#D62C3C]", filter: "all" },
+    { label: "Due soon", value: dueSoon, Icon: CalendarCheck2, theme: "bg-[#ECFAF3]", icon: "text-[#00A56A]", filter: "due" },
+    { label: "Overdue", value: overdue, Icon: AlertCircle, theme: "bg-[#FFF0F1]", icon: "text-[#D62C3C]", filter: "overdue" },
     { label: "Insurance policy", value: countFor("insurance"), Icon: ShieldCheck, theme: "bg-[#F4F1FF]", icon: "text-[#6B50D4]", filter: categories.find(c => c.title.toLowerCase().includes("insurance"))?.key ?? "all" },
     { label: "Road tax", value: countFor("road tax"), Icon: FileText, theme: "bg-[#FFF7EC]", icon: "text-[#E07D11]", filter: categories.find(c => c.title.toLowerCase().includes("road tax"))?.key ?? "all" },
     { label: "Fitness", value: countFor("fitness"), Icon: CarFront, theme: "bg-[#EDFBFE]", icon: "text-[#00A1B5]", filter: categories.find(c => c.title.toLowerCase().includes("fitness"))?.key ?? "all" },
@@ -44,7 +45,7 @@ export function CustomerRenewalsRegister({ accountId, items, categories }: {
       </div>
     </section>
     <section aria-label="Renewal summary" className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
-      {metrics.map(({ label, value, Icon, theme, icon, filter }) => <button type="button" key={label} onClick={() => setSelectedType(filter)} className={`flex min-h-[80px] items-center gap-2 rounded-xl border border-[#DEE7F1] p-2.5 text-left transition hover:border-[#8CB9EE] ${theme}`}>
+      {metrics.map(({ label, value, Icon, theme, icon, filter }) => <button type="button" key={label} onClick={() => { if (filter === "due" || filter === "overdue") { setSelectedType("all"); setSelectedTiming(filter); } else { setSelectedType(filter); setSelectedTiming("all"); } }} className={`flex min-h-[80px] items-center gap-2 rounded-xl border border-[#DEE7F1] p-2.5 text-left transition hover:border-[#8CB9EE] ${theme}`}>
         <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/75 ${icon}`}><Icon className="h-5 w-5" /></span>
         <span className="min-w-0 flex-1"><strong className="block text-[21px] font-black text-[#10213D]">{value}</strong><span className="block text-[10px] font-semibold leading-tight text-[#506684]">{label}</span></span>
         <ChevronRight className="h-3 w-3 shrink-0 text-[#6E85A4]" />
@@ -59,7 +60,7 @@ export function CustomerRenewalsRegister({ accountId, items, categories }: {
         </label>
         <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter renewal category">
           {[{ key: "all", title: "All", count: items.length }, ...categories].map(category =>
-            <button key={category.key} type="button" aria-pressed={selectedType === category.key} onClick={() => setSelectedType(category.key)}
+            <button key={category.key} type="button" aria-pressed={selectedType === category.key} onClick={() => { setSelectedType(category.key); setSelectedTiming("all"); }}
               className={`rounded-full border px-2.5 py-1.5 text-[10px] font-bold transition ${selectedType === category.key ? "border-[#0E3268] bg-[#0E3268] text-white" : "border-[#D8E1EC] bg-white text-[#64748B] hover:bg-[#F1F5FA]"}`}>
               {category.title} · {category.count}
             </button>)}
