@@ -190,13 +190,13 @@ export function CustomerServiceRequestForm(props: Props) {
               ))}
             </div>
           </div>
-          {props.mode === "insurance_quote" ? (
+          {false ? (
             <div className="flex gap-2">
               <button type="button" onClick={() => setNewVehicle(false)} className={`rounded-lg border px-3 py-2 text-[10px] font-black ${!newVehicle ? "border-[#142746] bg-[#EEF4FF] text-[#142746]" : "border-[#D8E1EC] text-[#64748B]"}`}>Registered vehicle</button>
               <button type="button" onClick={() => { setNewVehicle(true); setVehicleId(""); setVehicleNo(""); }} className={`rounded-lg border px-3 py-2 text-[10px] font-black ${newVehicle ? "border-[#142746] bg-[#EEF4FF] text-[#142746]" : "border-[#D8E1EC] text-[#64748B]"}`}>Brand new</button>
             </div>
           ) : null}
-          {props.mode === "insurance_quote" && newVehicle ? (
+          {false && newVehicle ? (
             <input className={inputClass} value={vehicleDetails} onChange={(event) => setVehicleDetails(event.target.value)} placeholder="Vehicle make / model" />
           ) : (
             <input className={inputClass} value={vehicleNo} onChange={(event) => { setVehicleNo(event.target.value.toUpperCase()); if (selectedVehicle?.label !== event.target.value) setVehicleId(""); }} placeholder="Vehicle registration number" />
@@ -204,7 +204,7 @@ export function CustomerServiceRequestForm(props: Props) {
         </>
       ) : null}
 
-      {props.mode === "insurance_quote" ? (
+      {false ? (
         <>
           <div>
             <label className="text-[10px] font-black uppercase tracking-[0.1em] text-[#718096]">Quote requirement</label>
@@ -264,7 +264,7 @@ export function CustomerServiceRequestForm(props: Props) {
 
       <button type="button" disabled={busy} onClick={() => void submit()} className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#142746] px-4 text-[11px] font-black text-white disabled:opacity-60">
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-        {busy ? "Submitting..." : props.mode === "insurance_quote" ? "Get Insurance Quote" : props.mode === "challan_assistance" ? "Get Challan Assistance" : "Submit Ticket"}
+        {busy ? "Submitting..." : false ? "Get Insurance Quote" : props.mode === "challan_assistance" ? "Get Challan Assistance" : "Submit Ticket"}
       </button>
     </div>
   );
