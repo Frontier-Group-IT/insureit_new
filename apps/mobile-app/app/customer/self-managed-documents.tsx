@@ -6,9 +6,10 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppBadge } from '@/components/design-system';
 import { LoadingState, Message, Screen } from '@/components/ui';
-import { getCurrentSession } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
+import { getFirebaseCustomerDocumentUrl } from '@/lib/firebase-document-client';
+import { uploadFirebaseCustomerDocument } from '@/lib/firebase-upload-client';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
-import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
@@ -89,7 +90,9 @@ export default function SelfManagedDocumentsScreen() {
 
     let active = true;
     void (async () => {
-      const { data: claimData, error: claimError } = await supabase
+      const identity = await getCustomerIdentity();
+      if (!identity) return router.replace('/login');
+      const { data: claimData, error: claimError } = await identity.data
         .from('claims')
         .select('id,claim_no,customer_id,claim_service_mode,assistance_status')
         .eq('id', id)
@@ -160,8 +163,8 @@ export default function SelfManagedDocumentsScreen() {
     const uploadKey = `${milestoneKey}:${definition.type}`;
     setUploading(uploadKey);
     try {
-      const session = await getCurrentSession();
-      if (!session?.user) return router.replace('/login');
+      const identity = await getCustomerIdentity();
+      if (!identity) return router.replace('/login');
 
       const extension = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
       const storagePath = `${claim.customer_id}/${claim.id}/self-managed/${milestoneKey}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
@@ -172,13 +175,17 @@ export default function SelfManagedDocumentsScreen() {
         return;
       }
 
-      const storageResult = await supabase.storage.from('claim-documents').upload(storagePath, body, {
-        contentType: file.mimeType ?? 'application/octet-stream',
-        upsert: false,
-      });
-      if (storageResult.error) {
-        setError('This file could not be uploaded.');
-        return;
+      if (identity.provider === 'firebase') {
+        await uploadFirebaseCustomerDocument({ bucket: 'claim-documents', path: storagePath, file: body, contentType: file.mimeType ?? 'application/octet-stream' });
+      } else {
+        const storageResult = await identity.data.storage.from('claim-documents').upload(storagePath, body, {
+          contentType: file.mimeType ?? 'application/octet-stream',
+          upsert: false,
+        });
+        if (storageResult.error) {
+          setError('This file could not be uploaded.');
+          return;
+        }
       }
 
       const { data, error: insertError } = await supabase
@@ -193,14 +200,14 @@ export default function SelfManagedDocumentsScreen() {
           storage_path: storagePath,
           mime_type: file.mimeType ?? null,
           file_size: file.size ?? null,
-          uploaded_by: session.user.id,
+          uploaded_by: identity.profileId,
           verification_required: false,
         } as never)
         .select('id,claim_id,customer_id,milestone_key,document_type,file_name,storage_bucket,storage_path,mime_type,file_size,verification_required,created_at')
         .single();
 
       if (insertError || !data) {
-        await supabase.storage.from('claim-documents').remove([storagePath]);
+        if (identity.provider === 'supabase') await identity.data.storage.from('claim-documents').remove([storagePath]);
         setError('The file uploaded, but its claim record could not be saved. Please try again.');
         return;
       }
@@ -216,7 +223,18 @@ export default function SelfManagedDocumentsScreen() {
 
   async function openDocument(document: DocumentRow) {
     setError('');
-    const { data, error: signedError } = await supabase.storage
+    const identity = await getCustomerIdentity();
+    if (!identity) return setError('Please sign in again.');
+    if (identity.provider === 'firebase') {
+      try {
+        const url = await getFirebaseCustomerDocumentUrl('claim-documents', document.storage_path);
+        await Linking.openURL(url);
+      } catch {
+        setError('This document could not be opened for your account.');
+      }
+      return;
+    }
+    const { data, error: signedError } = await identity.data.storage
       .from(document.storage_bucket)
       .createSignedUrl(document.storage_path, 300);
     if (signedError || !data?.signedUrl) {
