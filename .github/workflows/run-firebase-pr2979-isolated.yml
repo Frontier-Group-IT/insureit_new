@@ -74,3 +74,5 @@ jobs:
 # Validate policy detail components, customer notification panel, and current Firebase backend tests.
 
 # Verify complete self-managed milestone Firebase token routing and Storage upload handlers.
+
+# Verify zero direct legacy Customer App session references after route migration.
