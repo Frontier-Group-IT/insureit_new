@@ -72,7 +72,7 @@ export default async function CustomerSupportPage({
         </section>
         <aside className="space-y-4">
           <div className="rounded-2xl border border-[#E0E9F4] bg-white p-4 shadow-[0_6px_20px_rgba(28,50,82,.04)]">
-            <div className="flex items-center gap-3 rounded-xl bg-[#EDF5FF] p-3"><Lightbulb className="h-6 w-6 text-[#176FD3]"/><div><h3 className="text-[13px] font-black text-[#10213D]">Before you raise a ticket</h3><p className="text-[10px] text-[#647995]">Choose a topic to preselect the support category.</p></div></div>
+            <div className="flex items-center gap-3 rounded-xl bg-[#EDF5FF] p-3"><Lightbulb className="h-6 w-6 text-[#176FD3]"/><div><h3 className="text-[13px] font-black text-[#10213D]">Before you raise a ticket</h3><p className="text-[10px] text-[#647995]">Common topics our support team can help with.</p></div></div>
             <div className="mt-2 divide-y divide-[#E6EDF5]">
               {[
                 ["Policy related questions","policy"],
@@ -82,7 +82,7 @@ export default async function CustomerSupportPage({
                 ["Payments and refunds","payments"],
                 ["Account and profile","account"],
                 ["Other support topics","other"],
-              ].map(([label,topic])=><Link key={topic} href={{pathname:"/customer/support",query:{account:account.id,topic}}} className="flex items-center justify-between gap-2 px-2 py-2.5 text-[11px] font-semibold text-[#25466F] hover:bg-[#F6F9FD]"><span className="flex items-center gap-2"><CircleHelp className="h-3.5 w-3.5 text-[#176FD3]"/>{label}</span><ChevronRight className="h-4 w-4"/></Link>)}
+              ].map(([label,topic])=><div key={topic} className="flex items-center justify-between gap-2 px-2 py-2.5 text-[11px] font-semibold text-[#25466F]"><span className="flex items-center gap-2"><CircleHelp className="h-3.5 w-3.5 text-[#176FD3]"/>{label}</span></div>)}
             </div>
           </div>
           <a href="#support-activity" className="flex items-center gap-3 rounded-2xl border border-[#E0E9F4] bg-white p-4 shadow-[0_6px_20px_rgba(28,50,82,.04)] hover:border-[#9EBCE4]"><span className="grid h-11 w-11 place-items-center rounded-xl bg-[#E4F1FF] text-[#1268C8]"><Clock3 className="h-6 w-6"/></span><span className="flex-1"><strong className="block text-[12px] font-black text-[#10213D]">Your Support Activity</strong><span className="mt-1 block text-[10px] text-[#647995]">View and track all your raised requests.</span></span><ChevronRight className="h-5 w-5 text-[#1268C8]"/></a>
