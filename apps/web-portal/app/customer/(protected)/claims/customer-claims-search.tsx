@@ -31,3 +31,21 @@ export function CustomerClaimsSearch({ initialQuery, accountId, type }: { initia
       className="w-full min-w-0 border-0 bg-transparent p-0 text-[11px] shadow-none outline-none ring-0 focus:outline-none focus:ring-0 placeholder:text-[#8A9AB0]"/>
   </label>;
 }
+
+export function CustomerClaimsStageFilter({ value, stages, accountId, type, query }: { value: string; stages: string[]; accountId: string; type: string; query: string }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  return <select aria-label="Filter claim stage" value={value} onChange={event => {
+    const next = new URLSearchParams(params.toString());
+    next.set("account", accountId);
+    next.set("type", type);
+    if (query) next.set("q", query); else next.delete("q");
+    if (event.target.value) next.set("stage", event.target.value); else next.delete("stage");
+    next.delete("page");
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+  }} className="max-w-[210px] rounded-lg border border-[#CBD8E9] bg-white px-3 py-2.5 text-[11px] text-[#142746]">
+    <option value="">All claim stages</option>
+    {stages.map(stage => <option key={stage} value={stage}>{stage}</option>)}
+  </select>;
+}
