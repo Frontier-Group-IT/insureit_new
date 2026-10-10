@@ -6,8 +6,7 @@ import { AppDatePicker } from '@/components/design-system';
 import { ExternalClaimErrorPopup } from '@/components/external-claim-error-popup';
 import { ClaimFormSection } from '@/components/external-claim-ui';
 import { LoadingState, Screen, TextField } from '@/components/ui';
-import { getCurrentSession } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { getCustomerIdentity } from '@/lib/customer-identity';
 
 export default function InternalSpotStatusScreen() {
   const router = useRouter();
@@ -34,9 +33,12 @@ export default function InternalSpotStatusScreen() {
     }
     let active = true;
     void (async () => {
+      const identity = await getCustomerIdentity();
+      if (!identity) return router.replace('/login');
+      const client = identity.data;
       const [claimResult, stageDetailResult] = await Promise.all([
-        supabase.from('claims').select('id,claim_no,claim_service_mode,vehicle_id,policy_id').eq('id', id).maybeSingle(),
-        (supabase as any).from('claim_stage_details').select('stage,details,created_at').eq('claim_id', id).order('created_at', { ascending: false }),
+        client.from('claims').select('id,claim_no,claim_service_mode,vehicle_id,policy_id').eq('id', id).maybeSingle(),
+        (client as any).from('claim_stage_details').select('stage,details,created_at').eq('claim_id', id).order('created_at', { ascending: false }),
       ]);
       if (!active) return;
       if (claimResult.error || !claimResult.data) {
@@ -51,7 +53,7 @@ export default function InternalSpotStatusScreen() {
       }
       setClaimNo(claim.claim_no ?? '');
       if (claim.vehicle_id) {
-        const vehicleResult = await supabase.from('vehicles').select('vehicle_no,make,model').eq('id', claim.vehicle_id).maybeSingle();
+        const vehicleResult = await client.from('vehicles').select('vehicle_no,make,model').eq('id', claim.vehicle_id).maybeSingle();
         if (active && vehicleResult.data) {
           const vehicle = vehicleResult.data as any;
           setVehicleNo(vehicle.vehicle_no ?? '');
@@ -59,12 +61,12 @@ export default function InternalSpotStatusScreen() {
         }
       }
       if (claim.policy_id) {
-        const policyResult = await supabase.from('policies').select('policy_no,insurance_company_id').eq('id', claim.policy_id).maybeSingle();
+        const policyResult = await client.from('policies').select('policy_no,insurance_company_id').eq('id', claim.policy_id).maybeSingle();
         if (active && policyResult.data) {
           const policy = policyResult.data as any;
           setPolicyNo(policy.policy_no ?? '');
           if (policy.insurance_company_id) {
-            const insurerResult = await supabase.from('insurance_companies').select('name').eq('id', policy.insurance_company_id).maybeSingle();
+            const insurerResult = await client.from('insurance_companies').select('name').eq('id', policy.insurance_company_id).maybeSingle();
             if (active && insurerResult.data?.name) setInsurerName(insurerResult.data.name);
           }
         }
@@ -92,8 +94,8 @@ export default function InternalSpotStatusScreen() {
 
     setSubmitting(true);
     try {
-      const session = await getCurrentSession();
-      if (!session?.user) return router.replace('/login');
+      const identity = await getCustomerIdentity();
+      if (!identity) return router.replace('/login');
       router.replace({ pathname: '/customer/internal-claim-stage', params: { id, key: 'claim_intimation' } });
     } finally {
       setSubmitting(false);
