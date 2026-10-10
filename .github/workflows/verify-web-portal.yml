@@ -123,6 +123,8 @@ jobs:
         run: node scripts/dashboard-pending-intermediary-count-regression.mjs
       - name: Dashboard Claim action pending regression
         run: node scripts/dashboard-claim-action-pending-regression.mjs
+      - name: IT Super User commercial dashboard parity regression
+        run: node scripts/it-super-user-commercial-dashboard-parity-regression.mjs
       - name: Portal route enhancement performance regression
         run: npm run portal-route-enhancements:regression
       - name: Aadhaar mask observer performance regression
