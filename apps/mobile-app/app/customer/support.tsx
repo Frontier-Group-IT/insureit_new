@@ -4,8 +4,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { EmptyState, LoadingState, Message, Screen } from '@/components/ui';
-import { getCurrentSession, getCustomerForUser } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { getCustomerForUser } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
 import { palette, roleTheme } from '@/lib/theme';
 import type { Claim, SupportTicket } from '@/lib/types';
 
@@ -39,14 +39,14 @@ export default function SupportScreen() {
 
   const load = useCallback(async () => {
     setMessage('');
-    const session = await getCurrentSession();
-    if (!session?.user) return router.replace('/login');
-    const customer = await getCustomerForUser(session.user.id);
+    const identity = await getCustomerIdentity();
+    if (!identity) return router.replace('/login');
+    const customer = await getCustomerForUser(identity.profileId, identity.data);
     if (!customer) return router.replace('/customer/home');
     const [ticketResult, enquiryResult, claimsResult] = await Promise.all([
-      supabase.from('support_tickets').select('*').eq('customer_id', customer.id).order('updated_at', { ascending: false }).limit(10),
-      (supabase as any).from('service_enquiries').select('id,enquiry_no,service_type,subject,status,created_at,updated_at').eq('customer_id', customer.id).order('updated_at', { ascending: false }).limit(10),
-      supabase.from('claims').select('*').eq('customer_id', customer.id).order('updated_at', { ascending: false }),
+      identity.data.from('support_tickets').select('*').eq('customer_id', customer.id).order('updated_at', { ascending: false }).limit(10),
+      (identity.data as any).from('service_enquiries').select('id,enquiry_no,service_type,subject,status,created_at,updated_at').eq('customer_id', customer.id).order('updated_at', { ascending: false }).limit(10),
+      identity.data.from('claims').select('*').eq('customer_id', customer.id).order('updated_at', { ascending: false }),
     ]);
     if (ticketResult.error || enquiryResult.error) setMessage('Your support activity could not be loaded right now. Please try again shortly.');
     setTickets(ticketResult.data ?? []);
