@@ -45,3 +45,5 @@ jobs:
         run: node --check pocs/customer-firebase-auth/staging-customer-isolation.mjs
       - name: Complete Customer App workspace TypeScript checks
         run: npm run typecheck:mobile
+
+# Validate feature-gated Android Firebase login and fallback paths (2026-10-10).
