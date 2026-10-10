@@ -4,7 +4,8 @@ import { View } from 'react-native';
 
 import { GroupHomeScreen } from '@/components/group/group-home-screen';
 import { LoadingState } from '@/components/ui';
-import { getCurrentSession, getOnboardingApplicationForUser, getProfile, isValidProfile } from '@/lib/auth';
+import { getOnboardingApplicationForUser, getProfile, isValidProfile } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
 import type { CustomerOnboardingApplication, Profile } from '@/lib/types';
 
 export default function GroupUnderReviewScreen() {
@@ -17,11 +18,11 @@ export default function GroupUnderReviewScreen() {
     let active = true;
     async function load() {
       try {
-        const session = await getCurrentSession();
-        if (!session?.user) return router.replace('/login');
+        const identity = await getCustomerIdentity();
+        if (!identity) return router.replace('/login');
         const [nextProfile, nextApplication] = await Promise.all([
-          getProfile(session.user.id),
-          getOnboardingApplicationForUser(session.user.id),
+          getProfile(identity.profileId, identity.data),
+          getOnboardingApplicationForUser(identity.profileId, false, identity.data),
         ]);
         if (!active) return;
         if (!isValidProfile(nextProfile) || nextProfile.role !== 'customer') return router.replace('/access-denied');
