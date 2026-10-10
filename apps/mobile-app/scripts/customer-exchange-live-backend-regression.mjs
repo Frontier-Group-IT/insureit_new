@@ -32,6 +32,18 @@ const offerReview = fs.readFileSync(offerReviewPath, 'utf8');
 const service = fs.readFileSync(servicePath, 'utf8');
 const migration = fs.readFileSync(migrationPath, 'utf8');
 const appSource = [screen, detail, search, health, deal, home, sell, activity, offerReview].join('\n');
+const locationContracts = [
+  [home, "from('india_locations')", 'independent India location master lookup'],
+  [home, "ilike('search_text'", 'city district state PIN search'],
+  [home, "locationSearchLoading", 'debounced location search loading feedback'],
+  [screen, "setSelectedLocation(selected)", 'GPS city selection independent of inventory'],
+  [screen, "listingCity === desiredCity", 'city match tolerates state abbreviation differences'],
+];
+for (const [source, needle, label] of locationContracts) {
+  if (!source.includes(needle)) throw new Error('Customer Exchange missing ' + label);
+}
+if (screen.includes("Alert.alert('No nearby listings'")) throw new Error('GPS must not require active listing in exact current city');
+
 
 const requiredAppContracts = [
   'getSelectedCustomerContext',
