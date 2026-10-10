@@ -6,10 +6,10 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, Text
 
 import { AnchoredSearchSelect } from '@/components/anchored-search-select';
 import { Button, Card, Screen } from '@/components/ui';
-import { getCurrentSession } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
+import { uploadFirebaseCustomerDocument } from '@/lib/firebase-upload-client';
 import { customerAccountTitle, getOperationalCustomerContexts, isPortfolioCustomerContext, partnerTypeLabel, type CustomerAccountContext } from '@/lib/customer-context';
 import { lookupCustomerRc } from '@/lib/customer-rc-lookup';
-import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany } from '@/lib/types';
 
@@ -102,8 +102,8 @@ export default function AddVehicleScreen() {
   useEffect(() => {
     let active = true;
     async function loadContexts() {
-      const session = await getCurrentSession();
-      if (!session?.user) return router.replace('/login');
+      const identity = await getCustomerIdentity();
+      if (!identity) return router.replace('/login');
       const operationalContexts = await getOperationalCustomerContexts();
       const groupParent = operationalContexts.find((context) => context.partner_type === 'group' && context.access_source === 'direct');
       const nextContexts = groupParent
@@ -120,9 +120,11 @@ export default function AddVehicleScreen() {
   useEffect(() => {
     let active = true;
     async function loadLookups() {
+      const identity = await getCustomerIdentity();
+      if (!identity) return;
       const [manufacturerResult, companyResult] = await Promise.all([
-        supabase.from('vehicle_manufacturer_brands').select('brand_name').eq('is_active', true).order('brand_name', { ascending: true }),
-        supabase.from('insurance_companies').select('*').order('name'),
+        identity.data.from('vehicle_manufacturer_brands').select('brand_name').eq('is_active', true).order('brand_name', { ascending: true }),
+        identity.data.from('insurance_companies').select('*').order('name'),
       ]);
       if (!active) return;
       setCompanies((companyResult.data ?? []) as InsuranceCompany[]);
@@ -172,7 +174,9 @@ export default function AddVehicleScreen() {
     if (lastFetchedRc === normalized && rcLookupState === 'success') return;
 
     if (selectedCustomerId) {
-      const { data: existingVehicles } = await supabase.from('vehicles').select('id,vehicle_no').eq('customer_id', selectedCustomerId).limit(250);
+      const identity = await getCustomerIdentity();
+      if (!identity) return showError('Sign in required', 'Please sign in before searching your vehicles.');
+      const { data: existingVehicles } = await identity.data.from('vehicles').select('id,vehicle_no').eq('customer_id', selectedCustomerId).limit(250);
       const duplicate = (existingVehicles ?? []).find((item) => normalizeRc(String(item.vehicle_no ?? '')) === normalized);
       if (duplicate) {
         setRcLookupState('error');
@@ -275,8 +279,8 @@ export default function AddVehicleScreen() {
   async function save() {
     setErrorPopup(null);
     if (saving) return;
-    const session = await getCurrentSession();
-    if (!session?.user) return router.replace('/login');
+    const identity = await getCustomerIdentity();
+    if (!identity) return router.replace('/login');
     const target = contexts.find((context) => context.customer_id === selectedCustomerId);
     if (!target) return showError('Customer account required', 'Please select the customer account for this vehicle.');
     if (!isValidIndianRegistrationNumber(normalizeRc(vehicleNo))) return showError('Invalid registration number', 'Please enter the complete vehicle registration number.');
@@ -333,7 +337,7 @@ export default function AddVehicleScreen() {
     };
 
     setSaving(true);
-    let { data: vehicleData, error } = await (supabase.rpc as any)('create_customer_vehicle_v2', rpcPayload);
+    let { data: vehicleData, error } = await (identity.data.rpc as any)('create_customer_vehicle_v2', rpcPayload);
     if (isMissingVehicleRpcSignature(error, 'create_customer_vehicle_v2')) {
       console.warn('create_customer_vehicle_v2 is unavailable; retrying compatible vehicle save');
       const compatiblePayload = {
@@ -355,11 +359,11 @@ export default function AddVehicleScreen() {
         p_national_permit_expiry_date: rpcPayload.p_national_permit_expiry_date,
         p_local_permit_expiry_date: rpcPayload.p_local_permit_expiry_date,
       };
-      const fallback = await (supabase.rpc as any)('create_customer_vehicle', compatiblePayload);
+      const fallback = await (identity.data.rpc as any)('create_customer_vehicle', compatiblePayload);
       vehicleData = fallback.data;
       error = fallback.error;
       if (isMissingVehicleRpcSignature(error, 'create_customer_vehicle')) {
-        const legacy = await (supabase.rpc as any)('create_customer_vehicle', {
+        const legacy = await (identity.data.rpc as any)('create_customer_vehicle', {
           p_customer_id: rpcPayload.p_customer_id,
           p_vehicle_no: rpcPayload.p_vehicle_no,
           p_vehicle_type: rpcPayload.p_vehicle_type,
@@ -374,7 +378,7 @@ export default function AddVehicleScreen() {
     if (error) {
       console.warn('Customer vehicle save failed', error.message);
       if (isDuplicateVehicleRegistrationError(error)) {
-        const { data: existingVehicles } = await supabase
+        const { data: existingVehicles } = await identity.data
           .from('vehicles')
           .select('id,vehicle_no')
           .eq('customer_id', target.customer_id)
@@ -413,14 +417,14 @@ export default function AddVehicleScreen() {
         p_premium_amount: premiumValue,
         p_insured_declared_value: idvValue,
       };
-      const policyResult = await (supabase.rpc as any)('create_customer_external_policy', policyPayload);
+      const policyResult = await (identity.data.rpc as any)('create_customer_external_policy', policyPayload);
       if (policyResult.error) {
         console.warn('Customer vehicle policy save failed', policyResult.error.message);
         setSaving(false);
         return showError('Policy could not be saved', 'Vehicle was saved successfully, but the policy details could not be saved. You can add the policy again from the vehicle screen.');
       }
       if (policyCopy) {
-        const uploadError = await uploadPolicyCopy(target.customer_id, policyCopy, session.user.id);
+        const uploadError = await uploadPolicyCopy(target.customer_id, policyCopy, identity.profileId);
         if (uploadError) {
           console.warn('Customer vehicle policy copy upload failed', uploadError);
           setSaving(false);
@@ -736,10 +740,24 @@ async function uploadPolicyCopy(customerId: string, file: PickedPolicyCopy, user
   const storagePath = `${customerId}/policy-copy/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
   try {
     const body = await (await fetch(file.uri)).arrayBuffer();
-    const uploadResult = await supabase.storage.from('customer-documents').upload(storagePath, body, { contentType: file.mimeType ?? 'application/octet-stream', upsert: false });
-    if (uploadResult.error) return uploadResult.error.message;
-    const recordResult = await supabase.from('customer_documents').insert({ customer_id: customerId, document_type: 'policy_copy', file_name: file.name, storage_bucket: 'customer-documents', storage_path: storagePath, mime_type: file.mimeType, file_size: file.size, uploaded_by: userId });
-    if (recordResult.error) { await supabase.storage.from('customer-documents').remove([storagePath]); return recordResult.error.message; }
+    const identity = await getCustomerIdentity();
+    if (!identity || identity.profileId !== userId) return 'Customer authorization expired.';
+    if (identity.provider === 'firebase') {
+      await uploadFirebaseCustomerDocument({
+        bucket: 'customer-documents',
+        path: storagePath,
+        file: body,
+        contentType: file.mimeType ?? 'application/octet-stream',
+      });
+    } else {
+      const uploadResult = await identity.data.storage.from('customer-documents').upload(storagePath, body, { contentType: file.mimeType ?? 'application/octet-stream', upsert: false });
+      if (uploadResult.error) return uploadResult.error.message;
+    }
+    const recordResult = await identity.data.from('customer_documents').insert({ customer_id: customerId, document_type: 'policy_copy', file_name: file.name, storage_bucket: 'customer-documents', storage_path: storagePath, mime_type: file.mimeType, file_size: file.size, uploaded_by: userId });
+    if (recordResult.error) {
+      if (identity.provider === 'supabase') await identity.data.storage.from('customer-documents').remove([storagePath]);
+      return recordResult.error.message;
+    }
     return null;
   } catch (error) { return error instanceof Error ? error.message : 'Upload failed.'; }
 }
