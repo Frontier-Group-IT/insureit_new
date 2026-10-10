@@ -52,3 +52,10 @@ test('Firebase login does not bypass backend approved binding and profile resolv
  assert.match(form,/confirmFirebaseCustomerOtp/);
  assert.match(form,/confirmFirebaseCustomerSignup/);
 });
+
+test('successful legacy OTP resets persisted provider to Supabase before routing',()=>{
+ const login=mobile('app/login.tsx');
+ const signup=mobile('app/signup.tsx');
+ assert.match(login,/if \(data\.user\) await selectCustomerAuthProvider\('supabase'\)/);
+ assert.match(signup,/if \(data\.user\) await selectCustomerAuthProvider\('supabase'\)/);
+});
