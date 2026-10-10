@@ -5,8 +5,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { LoadingState, Message, Screen } from '@/components/ui';
-import { getCurrentSession, getCustomerForUser } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { getCustomerForUser } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
 import { palette, roleTheme } from '@/lib/theme';
 import type { Claim, SupportTicket } from '@/lib/types';
 
@@ -21,13 +21,16 @@ export default function RaiseSupportTicketScreen() {
   const [claims, setClaims] = useState<Claim[]>([]); const [customerId, setCustomerId] = useState(''); const [userId, setUserId] = useState('');
   const [claimId, setClaimId] = useState(''); const [category, setCategory] = useState<SupportTicket['category']>(initialCategory && categories.some((item) => item.key === initialCategory) ? initialCategory : 'claim'); const [priority, setPriority] = useState<SupportTicket['priority']>('medium'); const [subject, setSubject] = useState(''); const [description, setDescription] = useState(''); const [file, setFile] = useState<PickedFile | null>(null); const [loading, setLoading] = useState(true); const [submitting, setSubmitting] = useState(false); const [message, setMessage] = useState('');
 
-  useEffect(() => { async function load() { const session = await getCurrentSession(); if (!session?.user) return router.replace('/login'); const customer = await getCustomerForUser(session.user.id); if (!customer) return router.replace('/customer/home'); const { data } = await supabase.from('claims').select('*').eq('customer_id', customer.id).order('updated_at', { ascending: false }); setCustomerId(customer.id); setUserId(session.user.id); setClaims(data ?? []); if (data?.length === 1) setClaimId(data[0].id); setLoading(false); } void load(); }, [router]);
+  useEffect(() => { async function load() { const identity = await getCustomerIdentity(); if (!identity) return router.replace('/login'); const customer = await getCustomerForUser(identity.profileId, identity.data); if (!customer) return router.replace('/customer/home'); const { data } = await identity.data.from('claims').select('*').eq('customer_id', customer.id).order('updated_at', { ascending: false }); setCustomerId(customer.id); setUserId(identity.profileId); setClaims(data ?? []); if (data?.length === 1) setClaimId(data[0].id); setLoading(false); } void load(); }, [router]);
   const selectedClaim = useMemo(() => claims.find((item) => item.id === claimId) ?? null, [claims, claimId]);
 
   async function pickFile() { const result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'], copyToCacheDirectory: true }); if (!result.canceled && result.assets[0]) { const asset = result.assets[0]; if (asset.size && asset.size > 5 * 1024 * 1024) return setMessage('Please choose a file smaller than 5 MB.'); setFile({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? null, size: asset.size ?? null }); } }
   async function submit() {
     setMessage(''); if (!subject.trim() || subject.trim().length < 3) return setMessage('Add a short subject for your request.'); if (description.trim().length < 10) return setMessage('Please add a little more detail so the claim manager can help.'); if ((category === 'claim' || category === 'documents') && !selectedClaim) return setMessage('Select the related claim first.'); setSubmitting(true);
-    const { data: ticket, error } = await (supabase as any)
+    const identity = await getCustomerIdentity();
+    if (!identity || identity.profileId !== userId) { setSubmitting(false); return setMessage('Please sign in again.'); }
+    if (identity.provider === 'firebase' && file) { setSubmitting(false); return setMessage('Please submit this request without an attachment and add the document through claim documents.'); }
+    const { data: ticket, error } = await (identity.data as any)
       .from('service_enquiries')
       .insert({
         enquiry_no: '',
@@ -64,12 +67,12 @@ export default function RaiseSupportTicketScreen() {
       const path = `${customerId}/${ticket.id}/${Date.now()}.${extension}`;
       try {
         const body = await (await fetch(file.uri)).arrayBuffer();
-        const upload = await supabase.storage.from('support-ticket-files').upload(path, body, { contentType: file.mimeType ?? 'application/octet-stream' });
+        const upload = await identity.data.storage.from('support-ticket-files').upload(path, body, { contentType: file.mimeType ?? 'application/octet-stream' });
         if (upload.error) {
           console.warn('Support ticket attachment upload failed', upload.error.message);
           attachmentWarning = true;
         } else {
-          const attachmentResult = await (supabase as any).from('service_enquiry_attachments').insert({ enquiry_id: ticket.id, file_name: file.name, storage_path: path, mime_type: file.mimeType, file_size: file.size, uploaded_by: userId });
+          const attachmentResult = await (identity.data as any).from('service_enquiry_attachments').insert({ enquiry_id: ticket.id, file_name: file.name, storage_path: path, mime_type: file.mimeType, file_size: file.size, uploaded_by: userId });
           if (attachmentResult.error) {
             console.warn('Support ticket attachment record failed', attachmentResult.error.message);
             attachmentWarning = true;
