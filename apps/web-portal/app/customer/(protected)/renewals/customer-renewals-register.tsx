@@ -24,10 +24,10 @@ export function CustomerRenewalsRegister({ accountId, items, categories }: {
     <header className="flex flex-wrap items-center gap-3 rounded-xl border border-[#D8E1EC] bg-white px-4 py-3">
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#17345B] text-white"><RefreshCw className="h-5 w-5" /></span>
       <h1 className="text-[18px] font-bold text-[#142746]">Renewals</h1>
-      <label className="flex min-w-[200px] flex-1 items-center gap-2 rounded-lg border border-[#D8E1EC] px-3 py-2.5">
+      <label className="flex min-w-[200px] flex-1 items-center gap-2 px-2 py-2.5 sm:max-w-[420px]">
         <Search className="h-4 w-4 shrink-0 text-[#73829A]" aria-hidden="true" />
         <span className="sr-only">Search renewals</span>
-        <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search vehicle, reference, renewal item..." className="w-full min-w-0 bg-transparent text-[12px] outline-none" />
+        <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search vehicle, reference, renewal item..." className="w-full min-w-0 border-0 bg-transparent p-0 text-[12px] shadow-none outline-none ring-0 focus:outline-none focus:ring-0" />
       </label>
       <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter renewal category">
         {[{ key: "all", title: "All", count: items.length }, ...categories].map(category =>
