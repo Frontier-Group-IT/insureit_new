@@ -44,6 +44,8 @@ jobs:
             apps/mobile-app/lib/firebase-android-auth-adapter.test.cjs
       - name: Validate staging isolation smoke runner syntax
         run: node --check pocs/customer-firebase-auth/staging-customer-isolation.mjs
+      - name: Report remaining Customer App Supabase session dependencies
+        run: node apps/mobile-app/scripts/customer-firebase-boundary-audit.cjs
       - name: Complete Customer App workspace TypeScript checks
         run: npm run typecheck:mobile
 
