@@ -140,51 +140,44 @@ export function ExchangeMarketplaceHome({
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <View style={styles.searchFilterRow}>
-          <View style={styles.searchShell}>
-            <MaterialCommunityIcons name="magnify" size={23} color="#123F8F" />
-            <TextInput
-              value={query}
-              onChangeText={onQueryChange}
-              placeholder="Search"
-              placeholderTextColor="#7E8DA5"
-              style={styles.searchInput}
-              accessibilityLabel="Search exchange vehicles"
-            />
-            {query ? (
-              <Pressable onPress={() => onQueryChange('')} hitSlop={8} accessibilityLabel="Clear search">
-                <MaterialCommunityIcons name="close-circle" size={17} color="#9AA5B5" />
-              </Pressable>
-            ) : null}
-          </View>
-          <View style={styles.locationPill} accessibilityLabel="All locations">
-            <MaterialCommunityIcons name="map-marker" size={21} color="#103F92" />
-            <Text style={styles.locationPillText} numberOfLines={1}>Location</Text>
-            <MaterialCommunityIcons name="chevron-down" size={17} color="#103F92" />
-          </View>
-          <View style={styles.inventoryCount} accessibilityLabel={`${totalVehicles} exchange vehicles`}>
-            <MaterialCommunityIcons name="car" size={23} color="#103F92" />
-            <Text style={styles.inventoryCountValue} numberOfLines={1}>{totalVehicles} {totalVehicles === 1 ? 'vehicle' : 'vehicles'}</Text>
+          <MaterialCommunityIcons name="magnify" size={21} color="#8190A5" />
+          <TextInput
+            value={query}
+            onChangeText={onQueryChange}
+            placeholder="Search trucks, tippers, buses, JCB..."
+            placeholderTextColor="#8A95A5"
+            style={styles.searchInput}
+            accessibilityLabel="Search exchange vehicles"
+          />
+          {query ? (
+            <Pressable onPress={() => onQueryChange('')} hitSlop={8} accessibilityLabel="Clear search">
+              <MaterialCommunityIcons name="close-circle" size={18} color="#9AA5B5" />
+            </Pressable>
+          ) : null}
+          <View accessibilityLabel="All locations" style={styles.locationIndicator}>
+            <MaterialCommunityIcons name="map-marker-outline" size={23} color="#8290A4" />
           </View>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryPillRail} accessibilityLabel="Vehicle category filters">
-          {categories.map((item) => {
-            const count = item === 'All' ? totalVehicles : vehicles.filter((vehicle) => vehicle.category === item).length;
-            const selected = category === item;
-            return (
-              <Pressable
-                key={item}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                onPress={() => onCategoryChange(item)}
-                style={({ pressed }) => [styles.categoryPill, selected && styles.categoryPillActive, pressed && styles.pressed]}
-              >
-                <Text style={[styles.categoryPillText, selected && styles.categoryPillTextActive]}>{item} ({count})</Text>
-                {selected ? <MaterialCommunityIcons name="chevron-down" size={16} color="#FFFFFF" /> : null}
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <View style={styles.segmentedStrip}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.segmentedContent} accessibilityLabel="Vehicle category filters">
+            {categories.map((item) => {
+              const count = item === 'All' ? totalVehicles : vehicles.filter((vehicle) => vehicle.category === item).length;
+              const selected = category === item;
+              return (
+                <Pressable
+                  key={item}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  onPress={() => onCategoryChange(item)}
+                  style={({ pressed }) => [styles.segmentTab, selected && styles.segmentTabActive, pressed && styles.pressed]}
+                >
+                  <Text style={[styles.segmentLabel, selected && styles.segmentLabelActive]}>{item} ({count})</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
 
         <View style={styles.intentGrid}>
           <IntentCard
@@ -602,24 +595,19 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 18, paddingBottom: 36, backgroundColor: '#F8FAFD' },
   pressed: { opacity: 0.84, transform: [{ scale: 0.99 }] },
 
-  searchFilterRow: { marginTop: 16, marginBottom: 6, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  searchShell: { width: '65%', flexShrink: 0, minWidth: 0, height: 47, borderRadius: 24, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D1DCEC' },
-  searchInput: { flex: 1, minWidth: 0, height: 45, color: '#0F1D33', fontSize: 13, fontWeight: '600', paddingVertical: 0 },
-  locationPill: { flex: 1, minWidth: 0, height: 45, borderRadius: 23, paddingHorizontal: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, backgroundColor: '#E6F0FF', borderWidth: 1, borderColor: '#D3E1F6' },
-  locationPillText: { color: '#0B337A', fontSize: 9, fontWeight: '700', flexShrink: 1 },
-  inventoryCount: { flex: 1, minWidth: 0, height: 45, borderRadius: 23, paddingHorizontal: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: '#DFEBFF' },
-  inventoryCountValue: { color: '#0B337A', fontSize: 9, fontWeight: '800', flexShrink: 1 },
-
+  searchFilterRow: { marginTop: 14, minHeight: 48, borderRadius: 13, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F8F9FC', borderWidth: 1, borderColor: '#E2E7F0' },
+  searchInput: { flex: 1, minWidth: 0, height: 46, paddingVertical: 0, color: '#10213D', fontSize: 12, fontWeight: '600' },
+  locationIndicator: { width: 30, height: 42, alignItems: 'center', justifyContent: 'center' },
+  segmentedStrip: { marginTop: 9, backgroundColor: '#FFFFFF', borderRadius: 13, borderWidth: 1, borderColor: '#DEE5F0', overflow: 'hidden' },
+  segmentedContent: { alignItems: 'stretch', minHeight: 47 },
+  segmentTab: { minHeight: 47, paddingHorizontal: 14, borderBottomWidth: 2, borderBottomColor: 'transparent', justifyContent: 'center', alignItems: 'center' },
+  segmentTabActive: { backgroundColor: '#EDF4FF', borderBottomColor: '#164B99' },
+  segmentLabel: { color: '#69758A', fontSize: 11, fontWeight: '700' },
+  segmentLabelActive: { color: '#163E79', fontWeight: '800' },
   sectionHeader: { marginTop: 26, marginBottom: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { color: '#0A2146', fontSize: 18, fontWeight: '900' },
   sectionSubtitle: { marginTop: 2, color: '#8290A3', fontSize: 8.8, fontWeight: '700' },
   sectionAction: { color: '#1455AB', fontSize: 12, fontWeight: '800' },
-
-  categoryPillRail: { paddingTop: 24, paddingBottom: 4, gap: 9, alignItems: 'center' },
-  categoryPill: { minHeight: 44, borderRadius: 25, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE5EF' },
-  categoryPillActive: { backgroundColor: '#081F4B', borderColor: '#081F4B' },
-  categoryPillText: { fontSize: 12, fontWeight: '800', color: '#606B7C' },
-  categoryPillTextActive: { color: '#FFFFFF' },
 
   intentGrid: { marginTop: 20, flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' },
   intentCard: { width: '48.4%', minHeight: 112, borderRadius: 15, padding: 14, borderWidth: 1 },
