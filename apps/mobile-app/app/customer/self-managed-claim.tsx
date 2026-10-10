@@ -10,7 +10,8 @@ import { ExternalClaimErrorPopup } from '@/components/external-claim-error-popup
 import { IncidentVoiceNote, type IncidentVoiceNoteFile } from '@/components/incident-voice-note';
 import { ClaimActionBar, ClaimFormSection, ClaimIdentityCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
 import { LoadingState, Screen, TextField } from '@/components/ui';
-import { getCurrentSession } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
+import { uploadFirebaseCustomerDocument } from '@/lib/firebase-upload-client';
 import {
   claimUploadFileReadMessage,
   claimUploadMetadataMessage,
@@ -118,11 +119,14 @@ export default function SelfManagedClaimScreen() {
   useEffect(() => {
     let active = true;
     void (async () => {
+      const identity = await getCustomerIdentity();
+      if (!identity) return router.replace('/login');
+      const customerClient = identity.data;
       if (editing) {
         const [claimResult, milestoneResult, documentResult] = await Promise.all([
-          (supabase as any).from('claims').select('id,claim_no,customer_id,vehicle_id,external_policy_id,accident_at,accident_location,claim_service_mode').eq('id', claimId).maybeSingle(),
-          (supabase as any).from('claim_milestones').select('*').eq('claim_id', claimId),
-          (supabase as any).from('claim_documents').select('*').eq('claim_id', claimId).order('created_at', { ascending: false }),
+          (customerClient as any).from('claims').select('id,claim_no,customer_id,vehicle_id,external_policy_id,accident_at,accident_location,claim_service_mode').eq('id', claimId).maybeSingle(),
+          (customerClient as any).from('claim_milestones').select('*').eq('claim_id', claimId),
+          (customerClient as any).from('claim_documents').select('*').eq('claim_id', claimId).order('created_at', { ascending: false }),
         ]);
         if (!active) return;
         const claim = claimResult.data as any;
@@ -133,8 +137,8 @@ export default function SelfManagedClaimScreen() {
           return;
         }
         const [policyResult, vehicleResult] = await Promise.all([
-          (supabase as any).from('external_policies').select('*').eq('id', claim.external_policy_id).maybeSingle(),
-          supabase.from('vehicles').select('*').eq('id', claim.vehicle_id).maybeSingle(),
+          (customerClient as any).from('external_policies').select('*').eq('id', claim.external_policy_id).maybeSingle(),
+          customerClient.from('vehicles').select('*').eq('id', claim.vehicle_id).maybeSingle(),
         ]);
         if (!active) return;
         const nextPolicy = policyResult.data as ExternalPolicy | null;
@@ -146,7 +150,7 @@ export default function SelfManagedClaimScreen() {
         setSavedDocumentTypes(existingTypes);
         setSavedBulkCount(existingTypes.filter((type: string) => type === BULK_DOCUMENT_TYPE).length);
         if (nextPolicy?.insurance_company_id) {
-          const insurerResult = await supabase.from('insurance_companies').select('name').eq('id', nextPolicy.insurance_company_id).maybeSingle();
+          const insurerResult = await customerClient.from('insurance_companies').select('name').eq('id', nextPolicy.insurance_company_id).maybeSingle();
           if (active && insurerResult.data?.name) setInsurerName(insurerResult.data.name);
         }
         const nextMilestones = (milestoneResult.data ?? []) as ClaimMilestone[];
@@ -171,13 +175,13 @@ export default function SelfManagedClaimScreen() {
       }
 
       if (!externalPolicyId) { setMessage('Select a policy before starting a claim.'); setLoading(false); return; }
-      const { data } = await (supabase as any).from('external_policies').select('*').eq('id', externalPolicyId).maybeSingle();
+      const { data } = await (customerClient as any).from('external_policies').select('*').eq('id', externalPolicyId).maybeSingle();
       if (!active) return;
       const next = data as ExternalPolicy | null;
       if (!next) { setMessage('This customer-added policy is not available.'); setLoading(false); return; }
       const [vehicleResult, insurerResult] = await Promise.all([
-        supabase.from('vehicles').select('*').eq('id', next.vehicle_id).maybeSingle(),
-        supabase.from('insurance_companies').select('name').eq('id', next.insurance_company_id).maybeSingle(),
+        customerClient.from('vehicles').select('*').eq('id', next.vehicle_id).maybeSingle(),
+        customerClient.from('insurance_companies').select('name').eq('id', next.insurance_company_id).maybeSingle(),
       ]);
       if (!active) return;
       setPolicy(next);
@@ -197,7 +201,9 @@ export default function SelfManagedClaimScreen() {
     if (editing) return { id: claimId, controlNo: claimNo };
     if (draftClaimId) return { id: draftClaimId, controlNo: draftClaimNo };
 
-    const { data, error } = await (supabase.rpc as any)('ensure_self_managed_external_claim_draft', {
+    const identity = await getCustomerIdentity();
+    if (!identity) { setMessage('Please sign in again.'); return null; }
+    const { data, error } = await (identity.data.rpc as any)('ensure_self_managed_external_claim_draft', {
       p_customer_id: policy.customer_id,
       p_vehicle_id: policy.vehicle_id,
       p_external_policy_id: policy.id,
@@ -292,9 +298,11 @@ export default function SelfManagedClaimScreen() {
     const targetClaimId = editing ? claimId : draftClaimId;
     if (!targetClaimId || uploadingDocuments) return true;
     setMessage('');
+    const identity = await getCustomerIdentity();
+    if (!identity || identity.provider === 'firebase') { setMessage('Document removal requires support verification.'); return false; }
     setUploadingDocuments(true);
     try {
-      const { data, error } = await (supabase as any).from('claim_documents').select('id,storage_bucket,storage_path').eq('claim_id', targetClaimId).eq('document_type', documentType);
+      const { data, error } = await (identity.data as any).from('claim_documents').select('id,storage_bucket,storage_path').eq('claim_id', targetClaimId).eq('document_type', documentType);
       if (error) {
         setMessage('We could not load the saved document for removal. Please try again.');
         return false;
@@ -303,7 +311,7 @@ export default function SelfManagedClaimScreen() {
       if (!rows.length) return true;
       const ids = rows.map((item: any) => item.id).filter(Boolean);
       if (ids.length) {
-        const removeRecords = await (supabase as any).from('claim_documents').delete().in('id', ids);
+        const removeRecords = await (identity.data as any).from('claim_documents').delete().in('id', ids);
         if (removeRecords.error) {
           setMessage('We could not remove the document from this claim. Please try again.');
           return false;
@@ -316,7 +324,7 @@ export default function SelfManagedClaimScreen() {
         pathsByBucket.set(bucket, [...(pathsByBucket.get(bucket) ?? []), String(item.storage_path)]);
       }
       for (const [bucket, paths] of pathsByBucket) {
-        const storageResult = await supabase.storage.from(bucket).remove(paths);
+        const storageResult = await identity.data.storage.from(bucket).remove(paths);
         if (storageResult.error) setMessage('The document was removed from the claim, but storage cleanup could not be completed.');
       }
       return true;
@@ -329,16 +337,18 @@ export default function SelfManagedClaimScreen() {
     const targetClaimId = editing ? claimId : draftClaimId;
     if (!targetClaimId || uploadingDocuments) return false;
     setMessage('');
+    const identity = await getCustomerIdentity();
+    if (!identity || identity.provider === 'firebase') { setMessage('Document removal requires support verification.'); return false; }
     setSuccessMessage('');
     setUploadingDocuments(true);
     try {
-      const removeRecord = await (supabase as any).from('claim_documents').delete().eq('id', document.id).eq('claim_id', targetClaimId);
+      const removeRecord = await (identity.data as any).from('claim_documents').delete().eq('id', document.id).eq('claim_id', targetClaimId);
       if (removeRecord.error) {
         setMessage('We could not remove the document from this claim. Please try again.');
         return false;
       }
       if (document.storage_bucket && document.storage_path) {
-        const storageResult = await supabase.storage.from(document.storage_bucket).remove([document.storage_path]);
+        const storageResult = await identity.data.storage.from(document.storage_bucket).remove([document.storage_path]);
         if (storageResult.error) {
           setMessage('The document was removed from the claim, but storage cleanup could not be completed.');
         }
