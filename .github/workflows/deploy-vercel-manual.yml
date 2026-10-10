@@ -42,7 +42,7 @@ jobs:
             fi
           done
           if [[ "$VERCEL_PROJECT_ID" != "prj_OLXA2UB1LwMd0UidP8MNa1O9MLuq" ]]; then
-            echo "::error title=Wrong Vercel project::The project ID does not match INSUREIT insur eit_new."
+            echo "::error title=Wrong Vercel project::The project ID does not match INSUREIT insureit_new."
             exit 1
           fi
           if [[ "$VERCEL_ORG_ID" != "team_DsOUqnF8Pbd7YGNt8RCE8NgA" ]]; then
