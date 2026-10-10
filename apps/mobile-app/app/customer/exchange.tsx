@@ -291,7 +291,7 @@ export default function ExchangeMarketplaceScreen() {
 
   const availableLocations = useMemo(() => [...new Set(vehicles.map((vehicle) => vehicle.location).filter((location) => location !== 'Location available on request'))].sort((a, b) => a.localeCompare(b)), [vehicles]);
 
-  async function useMarketplaceCurrentLocation(): Promise<string | null> {
+  async function useMarketplaceCurrentLocation(applySelection = true): Promise<string | null> {
     const permission = await Location.requestForegroundPermissionsAsync();
     if (permission.status !== 'granted') {
       Alert.alert('Location permission', 'Allow location access to find vehicles in a nearby marketplace location.');
@@ -308,7 +308,7 @@ export default function ExchangeMarketplaceScreen() {
       }
       // Location choice is independent of listing inventory; zero vehicles is a valid result.
       const selected = [city, region].filter(Boolean).join(', ');
-      setSelectedLocation(selected);
+      if (applySelection) setSelectedLocation(selected);
       return selected;
     } catch {
       Alert.alert('Location unavailable', 'Could not determine your city. Please choose a location from the list.');
@@ -934,7 +934,7 @@ function BuyExperience({
   selectedLocation: string | null;
   availableLocations: string[];
   onLocationChange: (location: string | null) => void;
-  onUseCurrentLocation: () => Promise<string | null>;
+  onUseCurrentLocation: (applySelection?: boolean) => Promise<string | null>;
   onCategoryChange: (category: VehicleCategory) => void;
   onOpenVehicle: (vehicle: MarketplaceVehicle) => void;
   onFavorite: (id: string) => void;
