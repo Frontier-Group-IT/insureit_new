@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertCircle, ArrowRight, BadgeIndianRupee, BellRing, CalendarClock, CarFront, CheckCircle2, ClipboardList, FilePlus2, Headphones, MessageCircle, PhoneCall, ReceiptText, RefreshCcw, ShieldCheck, Truck } from "lucide-react";
+import { AlertCircle, ArrowRight, BadgeIndianRupee, BellRing, CalendarClock, CarFront, ChartPie, CheckCircle2, ClipboardList, FilePlus2, Headphones, MessageCircle, PhoneCall, ReceiptText, RefreshCcw, ShieldCheck } from "lucide-react";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
 import { customerPolicyTone, loadCustomerWebPolicies, loadCustomerWebVehicles, resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { isCompletedCustomerClaim, loadCustomerClaimListContext } from "@/lib/customer-web-phase2-data";
@@ -29,7 +29,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
     { label: "Vehicles", value: vehicles.length, icon: CarFront, info: "In your fleet" },
     { label: "Active cover", value: currentPolicies.length, icon: ShieldCheck, info: "Policies not expired" },
     { label: "Renewal due", value: due, icon: CalendarClock, info: "Due for renewal" },
-    { label: "Fleet covered", value: `${coverage}%`, icon: CheckCircle2, info: `${covered} of ${vehicles.length} vehicles` },
+    { label: "Fleet covered", value: `${coverage}%`, icon: ChartPie, info: `${covered} of ${vehicles.length} vehicles` },
     { label: "Uncovered vehicles", value: uncovered, icon: AlertCircle, info: "Without active cover" },
   ];
 
@@ -49,58 +49,39 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
       </div>
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/home" />
 
-      <section className="overflow-hidden rounded-xl border border-[#D9E3F0] bg-white shadow-[0_4px_18px_rgba(21,47,81,0.07)]">
-        <div className="px-4 py-3">
-          <p className="text-[11px] font-black uppercase tracking-wide text-[#61728B]">Your Fleet Summary</p>
-          <div className="mt-1 grid grid-cols-[1fr_1.25fr_1fr] items-center gap-2 sm:grid-cols-[1fr_1.6fr_1fr]">
-            <div className="text-center"><p className="text-3xl font-black text-[#112A52] sm:text-4xl">{vehicles.length}</p><p className="mt-1 text-[10px] font-black uppercase text-[#758198]">Vehicles</p></div>
-            <div aria-label="Car, commercial truck and fleet" className="relative flex h-20 items-end justify-center gap-0 overflow-hidden rounded-2xl bg-gradient-to-t from-[#EEF5FD] via-[#F6FAFF] to-white text-[#2364B0]">
-              <CarFront className="mb-2 h-9 w-9 shrink-0 -rotate-6 drop-shadow-md sm:h-16 sm:w-16" />
-              <Truck className="mb-1 h-14 w-14 shrink-0 drop-shadow-md sm:h-24 sm:w-24" strokeWidth={1.3} />
-              <CarFront className="mb-2 h-8 w-8 shrink-0 rotate-6 drop-shadow-md sm:h-14 sm:w-14" />
-            </div>
-            <div className="flex justify-center">
-              <div className="grid h-[68px] w-[68px] place-items-center rounded-full p-2 sm:h-20 sm:w-20" style={{ background: `conic-gradient(#1754A5 ${coverage}%, #E7EEF8 ${coverage}% 100%)` }}>
-                <div className="grid h-full w-full place-content-center rounded-full bg-white text-center">
-                  <p className="text-xl font-black text-[#112A52] sm:text-2xl">{coverage}%</p>
-                  <p className="text-[10px] font-bold text-[#66758D]">Covered</p>
-                </div>
-              </div>
-            </div>
+      <section className="overflow-hidden rounded-2xl border border-[#E1E9F4] bg-white shadow-[0_4px_18px_rgba(21,47,81,0.06)]">
+        <div className="grid min-h-[150px] grid-cols-[minmax(125px,1fr)_minmax(0,2fr)_minmax(92px,.8fr)] items-center gap-2 px-4 py-3">
+          <div className="self-stretch flex flex-col justify-between gap-2">
+            <div><p className="text-[11px] font-black uppercase tracking-wide text-[#61728B]">Your Fleet Summary</p><p className="mt-2 text-3xl font-black text-[#112A52] sm:text-4xl">{vehicles.length}</p><p className="text-[10px] font-black uppercase text-[#758198]">Vehicles</p></div>
+            <Link href={{ pathname: "/customer/vehicles", query: accountQuery }} className="flex max-w-[260px] items-center justify-between gap-2 rounded-lg bg-[#FFF2F2] px-2.5 py-2 text-[10px] font-semibold text-[#D82D38] hover:bg-[#FFE8E8]"><span className="flex items-center gap-1.5"><AlertCircle className="h-4 w-4 shrink-0"/>{uncovered ? `${uncovered} vehicle${uncovered === 1 ? "" : "s"} without active policy` : "All vehicles covered"}</span><ArrowRight className="h-4 w-4 shrink-0"/></Link>
           </div>
+          <img src="/customer-fleet-banner.svg" alt="Two passenger cars and a blue commercial truck in front of a city skyline" className="h-[130px] w-full object-contain sm:h-[150px]" />
+          <div className="flex justify-center"><div className="grid h-[76px] w-[76px] place-items-center rounded-full p-2 sm:h-[108px] sm:w-[108px]" style={{background:`conic-gradient(#1684E9 ${coverage}%, #E7EEF8 ${coverage}% 100%)`}}><div className="grid h-full w-full place-content-center rounded-full bg-white text-center"><p className="text-xl font-black text-[#112A52] sm:text-3xl">{coverage}%</p><p className="text-[10px] font-bold text-[#66758D]">Covered</p></div></div></div>
         </div>
-        <Link href={{ pathname: "/customer/vehicles", query: accountQuery }} className="flex items-center justify-between gap-3 border-t border-[#E3EAF3] px-5 py-3 text-[12px] font-bold text-[#173A66] hover:bg-[#F7FAFE]">
-          <span className="flex items-center gap-2"><AlertCircle className={`h-5 w-5 ${uncovered ? "text-red-500" : "text-emerald-600"}`} /> {uncovered ? `${uncovered} vehicle${uncovered === 1 ? "" : "s"} without active policy` : "All linked vehicles have active cover"}</span>
-          <ArrowRight className="h-4 w-4 shrink-0" />
-        </Link>
       </section>
-
       <section aria-label="Fleet key metrics" className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5">
-        {kpis.map(({ label, value, icon: Icon, info }) => (
-          <div key={label} className="rounded-2xl border border-[#DCE5F0] bg-white p-3 shadow-[0_3px_12px_rgba(21,47,81,0.04)]">
-            <div className="flex items-center justify-between gap-2"><p className="text-[10px] font-black uppercase tracking-wide text-[#75839B]">{label}</p><Icon className="h-4 w-4 text-[#245DAD]" /></div>
-            <p className="mt-1 text-2xl font-black text-[#112A52]">{value}</p><p className="mt-0.5 text-[10px] font-medium text-[#7B879A]">{info}</p>
+        {kpis.map(({ label, value, icon: Icon, info }, index) => (
+          <div key={label} className={`flex min-h-[95px] items-center gap-3 rounded-2xl border border-white/80 p-3 shadow-[0_3px_12px_rgba(21,47,81,0.04)] ${["bg-[#F1F7FF]","bg-[#EFFAF4]","bg-[#FFF8EB]","bg-[#F0F7FF]","bg-[#FFF0F1]"][index]}`}>
+            <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl ${["bg-[#DCEBFF] text-[#1755AB]","bg-[#DDF7E9] text-[#08955E]","bg-[#FFF0D3] text-[#E18D14]","bg-[#E0F0FF] text-[#2182D0]","bg-[#FFE1E4] text-[#D52B37]"][index]}`}><Icon className="h-7 w-7"/></span>
+            <div className="min-w-0"><p className="text-[10px] font-black uppercase text-[#63758F]">{label}</p><p className="mt-1 text-2xl font-black text-[#112A52]">{value}</p><p className="text-[10px] text-[#758198]">{info}</p></div>
           </div>
         ))}
       </section>
-
       <section className="rounded-[22px] border border-[#D9E3F0] bg-white p-3 shadow-[0_4px_18px_rgba(21,47,81,0.06)]">
-        <div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-black uppercase text-[#61728B]">Quick Actions</h2><span className="text-[11px] font-semibold text-[#7A8799]">One tap services</span></div>
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-          {actions.map(({ label, href, icon: Icon }) => <Link key={label} href={{ pathname: href, query: accountQuery }} className="flex min-h-[64px] flex-col items-center justify-center gap-2 rounded-2xl border border-[#E0E8F2] bg-[#F9FBFE] p-2 text-center text-[11px] font-bold text-[#112A52] transition hover:bg-[#EFF5FF]"><span className="grid h-8 w-8 place-items-center rounded-xl bg-[#EAF2FF] text-[#1958AC]"><Icon className="h-4 w-4" /></span>{label}</Link>)}
+        <div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-black uppercase text-[#314767]">Quick Actions</h2><span className="text-[11px] font-semibold text-[#7A8799]">One tap services</span></div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+          {actions.map(({ label, href, icon: Icon }, index) => <Link key={label} href={{ pathname: href, query: accountQuery }} className={`flex min-h-[78px] items-center gap-3 rounded-xl p-3 text-[11px] font-bold text-[#112A52] transition hover:brightness-[.97] ${["bg-[#EDF6FF]","bg-[#ECFAF4]","bg-[#F4F0FF]","bg-[#FFF5E8]","bg-[#FFF0F2]"][index]}`}><span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${["bg-[#DCEBFF] text-[#1755AB]","bg-[#DDF7E9] text-[#08955E]","bg-[#E8E0FF] text-[#6245D8]","bg-[#FFEDD3] text-[#DB8211]","bg-[#FFE0E5] text-[#D52B37]"][index]}`}><Icon className="h-6 w-6"/></span><span className="flex-1">{label}</span><span className="grid h-6 w-6 place-items-center rounded-full bg-white/80 text-[#245DAD]"><ArrowRight className="h-3.5 w-3.5"/></span></Link>)}
         </div>
       </section>
-
       <section className="overflow-hidden rounded-[22px] border border-[#D9E3F0] bg-white shadow-[0_4px_18px_rgba(21,47,81,0.06)]">
-        <div className="bg-[#071E49] p-3 text-white">
-          <div className="flex items-center justify-between"><h2 className="text-xl font-black">Claims</h2><Link href={{ pathname: "/customer/claims", query: accountQuery }} className="flex items-center gap-1 text-xs font-bold text-[#D4E1F8] hover:text-white">View all <ArrowRight className="h-4 w-4" /></Link></div>
-          <div className="mt-2 grid grid-cols-3 divide-x divide-white/15 text-center">
-            <div><p className="text-2xl font-black text-[#A7C8FF]">{claims.length}</p><p className="mt-1 text-[11px] font-bold">Total</p></div>
-            <div><p className="text-2xl font-black text-[#F3C365]">{open}</p><p className="mt-1 text-[11px] font-bold">Open</p></div>
-            <div><p className="text-2xl font-black text-[#62D9B5]">{settled}</p><p className="mt-1 text-[11px] font-bold">Settled</p></div>
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#0B234D] via-[#123B72] to-[#0B4684] p-4 text-white">
+          <div className="pointer-events-none absolute -bottom-16 -left-12 h-32 w-[55%] rounded-[50%] bg-[#1870BA]/20"/><div className="pointer-events-none absolute -bottom-20 right-0 h-36 w-[55%] rounded-[50%] bg-[#287CC4]/20"/>
+          <div className="relative flex items-center justify-between"><div className="flex items-center gap-3"><h2 className="text-xl font-black">Claims</h2><span className="hidden text-[11px] text-[#B9CDE8] sm:inline">Track and manage your claims easily.</span></div><Link href={{ pathname: "/customer/claims", query: accountQuery }} className="flex items-center gap-2 text-xs font-bold text-[#E4EDFA] hover:text-white">View all <span className="grid h-6 w-6 place-items-center rounded-full bg-[#225D9F]"><ArrowRight className="h-4 w-4"/></span></Link></div>
+          <div className="relative mt-3 grid grid-cols-3 divide-x divide-white/15">
+            {[{label:"Total",value:claims.length,icon:ClipboardList,color:"text-[#D6E7FF]"},{label:"Open",value:open,icon:CalendarClock,color:"text-[#FFC45C]"},{label:"Settled",value:settled,icon:CheckCircle2,color:"text-white"}].map(({label,value,icon:Icon,color}) => <div key={label} className="flex items-center justify-center gap-3 px-2"><span className="hidden h-10 w-10 shrink-0 place-items-center rounded-full bg-[#235A9E] sm:grid"><Icon className="h-5 w-5"/></span><div><p className={`text-2xl font-black ${color}`}>{value}</p><p className="text-[11px] font-bold">{label}</p></div></div>)}
           </div>
         </div>
-        <Link href={{ pathname: "/customer/claims", query: accountQuery }} className="flex items-center justify-between gap-2 px-3 py-2 text-[12px] font-bold text-[#183256] hover:bg-[#F7FAFE]"><span className="flex items-center gap-2"><ClipboardList className="h-4 w-4 text-emerald-600" />{claims.length ? `${open} claim${open === 1 ? "" : "s"} in progress` : "No claims yet"}</span><ArrowRight className="h-4 w-4" /></Link>
+        <Link href={{ pathname: "/customer/claims", query: accountQuery }} className="flex items-center justify-between gap-2 px-4 py-3 text-[12px] font-bold text-[#183256] hover:bg-[#F7FAFE]"><span className="flex items-center gap-2"><ClipboardList className="h-4 w-4 text-emerald-600" />{claims.length ? `${open} claim${open === 1 ? "" : "s"} in progress` : "No claims yet"}</span><ArrowRight className="h-4 w-4"/></Link>
       </section>
 
       <section className="rounded-[22px] border border-[#E2EAF4] bg-[#F0F7FF] p-3">
