@@ -202,11 +202,16 @@ export default function StartClaimScreen() {
     router.push({ pathname: '/customer/claim-detail', params: { id } });
   }
 
+  useEffect(() => {
+    console.warn('[claim-navigation] start-claim-mounted');
+    return () => console.warn('[claim-navigation] start-claim-unmounted');
+  }, []);
+
   if (loading) return <Screen title="Start Claim"><LoadingState label="Loading your policies" /></Screen>;
 
   return (
     <Screen title="Start Claim" showTitleHeader={false} showBackNavigation={false} topSpacing="tight">
-      <View style={styles.hero}>
+      <View style={styles.hero} onTouchStart={() => console.warn('[claim-navigation] touch-region', { region: 'hero' })}>
         <View style={styles.heroCopy}>
           <Text style={styles.eyebrow}>START A CLAIM</Text>
           <Text style={styles.title}>Select the vehicle</Text>
@@ -224,7 +229,7 @@ export default function StartClaimScreen() {
         </View>
       ) : null}
 
-      <View style={[styles.section, styles.vehicleSection]}>
+      <View style={[styles.section, styles.vehicleSection]} onTouchStart={() => console.warn('[claim-navigation] touch-region', { region: 'vehicle-section' })}>
         {accountVehicles.length ? (
           <VehicleDropdown
             vehicles={filteredVehicles}
@@ -438,7 +443,7 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
         accessibilityLabel="Open vehicle selector"
         accessibilityState={{ expanded: open }}
         hitSlop={8}
-        onPress={toggleSelector}
+        onPress={() => { console.warn('[claim-navigation] vehicle-selector-icon-press'); toggleSelector(); }}
         style={({ pressed }) => [styles.vehicleSelectorTrigger, pressed && styles.vehicleSelectorTriggerPressed]}
       >
         <MaterialCommunityIcons name="format-list-bulleted" size={20} color={palette.navy} />
