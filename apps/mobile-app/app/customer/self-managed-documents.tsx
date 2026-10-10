@@ -109,7 +109,7 @@ export default function SelfManagedDocumentsScreen() {
         return;
       }
 
-      const { data: documentData, error: documentError } = await supabase
+      const { data: documentData, error: documentError } = await identity.data
         .from('claim_documents')
         .select('id,claim_id,customer_id,milestone_key,document_type,file_name,storage_bucket,storage_path,mime_type,file_size,verification_required,created_at')
         .eq('claim_id', claimData.id)
