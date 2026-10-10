@@ -69,7 +69,7 @@ export default function CustomerPolicyDetailRoute() {
       const policyIdentity = `${policyType ?? ''} ${policyProduct ?? ''}`.trim();
       if (/\b(life|health)\b/i.test(policyIdentity)) {
         setDetailKind('life-health');
-      } else if (/\bmotor\b|package|comprehensive|standalone|third.?party|own.?damage/i.test(identity)) {
+      } else if (/\bmotor\b|package|comprehensive|standalone|third.?party|own.?damage/i.test(policyIdentity)) {
         setDetailKind('motor');
       } else {
         setDetailKind('legacy');
