@@ -6,11 +6,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Message, Screen } from '@/components/ui';
-import { getCurrentSession } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
+import { getFirebaseCustomerDocumentUrl } from '@/lib/firebase-document-client';
+import { uploadFirebaseCustomerDocument } from '@/lib/firebase-upload-client';
 import { documentStatusLabel, finalDocumentGroups, matchesRequiredDocument, requestedFinalDocumentTypesFor, requiredDocumentsForStatus } from '@/lib/claim-documents';
 import { customerStageCopy } from '@/lib/claim-workflow';
 import { getOperationalCustomerContexts } from '@/lib/customer-context';
-import { supabase } from '@/lib/supabase';
 import { palette, roleTheme } from '@/lib/theme';
 import type { Claim, ClaimDocument, ClaimTask, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
 
@@ -37,20 +38,21 @@ export default function UploadDocumentsScreen() {
 
   useEffect(() => {
     async function load() {
-      const session = await getCurrentSession();
-      if (!session?.user) return router.replace('/login');
+      const identity = await getCustomerIdentity();
+      if (!identity) return router.replace('/login');
+      const customerClient = identity.data;
 
       const contexts = await getOperationalCustomerContexts();
       const ids = contexts.map((context) => context.customer_id);
       if (!ids.length) return;
 
       const [claimsResult, documentsResult, tasksResult, vehicleResult, policyResult, insurerResult] = await Promise.all([
-        supabase.from('claims').select('*').in('customer_id', ids).order('created_at', { ascending: false }),
-        supabase.from('claim_documents').select('*').in('customer_id', ids).order('created_at', { ascending: false }),
-        supabase.from('claim_tasks').select('*').order('created_at', { ascending: false }),
-        supabase.from('vehicles').select('*').in('customer_id', ids),
-        supabase.from('policies').select('*').in('customer_id', ids),
-        supabase.from('insurance_companies').select('*'),
+        customerClient.from('claims').select('*').in('customer_id', ids).order('created_at', { ascending: false }),
+        customerClient.from('claim_documents').select('*').in('customer_id', ids).order('created_at', { ascending: false }),
+        customerClient.from('claim_tasks').select('*').order('created_at', { ascending: false }),
+        customerClient.from('vehicles').select('*').in('customer_id', ids),
+        customerClient.from('policies').select('*').in('customer_id', ids),
+        customerClient.from('insurance_companies').select('*'),
       ]);
 
       const nextClaims = claimsResult.data ?? [];
@@ -187,15 +189,15 @@ export default function UploadDocumentsScreen() {
     setUploadingType(documentType);
 
     try {
-      const session = await getCurrentSession();
-      if (!session?.user) return router.replace('/login');
+      const identity = await getCustomerIdentity();
+      if (!identity) return router.replace('/login');
 
       const uploadedRows: ClaimDocument[] = [];
       const failedNames: string[] = [];
 
       for (const pickedFile of validFiles) {
         setFiles((current) => ({ ...current, [documentType]: pickedFile }));
-        const uploaded = await uploadSingleDocument(documentType, pickedFile, session.user.id);
+        const uploaded = await uploadSingleDocument(documentType, pickedFile, identity.profileId);
         if (uploaded) uploadedRows.push(uploaded);
         else failedNames.push(pickedFile.name);
       }
@@ -237,13 +239,24 @@ export default function UploadDocumentsScreen() {
 
       if (body.byteLength > MAX_UPLOAD_SIZE_BYTES) return null;
 
-      const uploadResult = await supabase.storage.from('claim-documents').upload(storagePath, body, {
-        contentType: pickedFile.mimeType ?? 'application/octet-stream',
-        upsert: false,
-      });
-      if (uploadResult.error) return null;
+      const identity = await getCustomerIdentity();
+      if (!identity) return null;
+      if (identity.provider === 'firebase') {
+        await uploadFirebaseCustomerDocument({
+          bucket: 'claim-documents',
+          path: storagePath,
+          file: body,
+          contentType: pickedFile.mimeType ?? 'application/octet-stream',
+        });
+      } else {
+        const uploadResult = await identity.data.storage.from('claim-documents').upload(storagePath, body, {
+          contentType: pickedFile.mimeType ?? 'application/octet-stream',
+          upsert: false,
+        });
+        if (uploadResult.error) return null;
+      }
 
-      const { data, error } = await supabase.from('claim_documents').insert({
+      const { data, error } = await identity.data.from('claim_documents').insert({
         claim_id: selectedClaim.id,
         customer_id: selectedClaim.customer_id,
         document_type: documentType,
@@ -256,7 +269,7 @@ export default function UploadDocumentsScreen() {
       }).select('*').single();
 
       if (error || !data) {
-        await supabase.storage.from('claim-documents').remove([storagePath]);
+        if (identity.provider === 'supabase') await identity.data.storage.from('claim-documents').remove([storagePath]);
         return null;
       }
       return data as ClaimDocument;
@@ -267,7 +280,18 @@ export default function UploadDocumentsScreen() {
 
   async function openDocument(document: ClaimDocument) {
     setMessage('');
-    const { data, error } = await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 300);
+    const identity = await getCustomerIdentity();
+    if (!identity) return setMessage('Please sign in to open your document.');
+    if (identity.provider === 'firebase') {
+      try {
+        const url = await getFirebaseCustomerDocumentUrl(document.storage_bucket as 'claim-documents', document.storage_path);
+        await Linking.openURL(url);
+      } catch {
+        setMessage('This document is not available for your account.');
+      }
+      return;
+    }
+    const { data, error } = await identity.data.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 300);
     if (error || !data?.signedUrl) return setMessage('This document could not be opened.');
     await Linking.openURL(data.signedUrl);
   }
