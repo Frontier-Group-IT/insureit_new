@@ -6,7 +6,7 @@ import { Animated, Pressable, StyleSheet, Text, TextInput, View } from 'react-na
 
 import { AuthExperience, SignupPromptCard } from '@/components/auth-experience';
 import { FirebaseCustomerOtpForm } from '@/components/firebase-customer-otp-form';
-import { firebaseCustomerRolloutEnabled, getCustomerIdentity } from '@/lib/customer-identity';
+import { firebaseCustomerRolloutEnabled, getCustomerIdentity, selectCustomerAuthProvider } from '@/lib/customer-identity';
 import { AuthGlassPanel, AuthStatusMessage, SecureActionButton } from '@/components/first-look';
 import { OtpDotsInput } from '@/components/otp-dots-input';
 import { getCurrentSession, getProfile, getRestoredSession, routeSignedInUser, sendPhoneOtp, verifyPhoneOtp } from '@/lib/auth';
@@ -129,6 +129,7 @@ export default function LoginScreen() {
     let candidateSessionInstalled = false;
     try {
       const data = await verifyPhoneOtp(fullPhone, otp);
+      if (data.user) await selectCustomerAuthProvider('supabase');
       candidateSessionInstalled = Boolean(addingAccount && data.session);
       if (!data.user) {
         throw new Error('OTP verification did not return an active account.');
