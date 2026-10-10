@@ -7,8 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnchoredSearchSelect } from '@/components/anchored-search-select';
 import { BrandLogo } from '@/components/first-look';
-import { ensureCustomerOnboardingForPartner, getCurrentSession, getOnboardingDocuments, getProfile } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { getOnboardingDocuments, getProfile } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
+import { ensureOnboardingForCurrentCustomer } from '@/lib/customer-onboarding-identity';
+import { uploadFirebaseCustomerDocument } from '@/lib/firebase-upload-client';
 import { palette } from '@/lib/theme';
 import type { CustomerOnboardingApplication, CustomerOnboardingDocument, IndiaLocation, Json } from '@/lib/types';
 
@@ -61,19 +63,19 @@ export default function DealershipKycScreen() {
     let active = true;
     void (async () => {
       try {
-        const session = await getCurrentSession();
-        if (!session?.user) return router.replace('/login');
+        const identity = await getCustomerIdentity();
+        if (!identity) return router.replace('/login');
         const [nextProfile, nextApplication, manufacturerResult] = await Promise.all([
-          getProfile(session.user.id),
-          ensureCustomerOnboardingForPartner(session.user, 'dealership'),
-          supabase.from('vehicle_manufacturers').select('name').eq('is_active', true).order('sort_order', { ascending: true }).order('name', { ascending: true }),
+          getProfile(identity.profileId, identity.data),
+          ensureOnboardingForCurrentCustomer('dealership'),
+          identity.data.from('vehicle_manufacturers').select('name').eq('is_active', true).order('sort_order', { ascending: true }).order('name', { ascending: true }),
         ]);
         if (['submitted', 'under_review'].includes(nextApplication.status)) return router.replace('/customer/home');
         if (nextApplication.partner_type !== 'dealership') {
           if (active) setError('Your Dealership KYC could not be opened. Go back and choose the partner type again.');
           return;
         }
-        const nextDocuments = await getOnboardingDocuments(nextApplication.id);
+        const nextDocuments = await getOnboardingDocuments(nextApplication.id, identity.data);
         if (!active) return;
         const draft = asDraft(nextApplication.draft_data);
         setApplication(nextApplication);
@@ -81,8 +83,8 @@ export default function DealershipKycScreen() {
         setDealershipType(textDraft(draft, 'dealership_type') === 'misp' ? 'misp' : 'posp');
         setDealershipName(textDraft(draft, 'dealership_name'));
         setOwnerName(textDraft(draft, 'owner_name') || nextProfile?.full_name || '');
-        setPhone(normalizeMobile(textDraft(draft, 'phone') || nextProfile?.phone || session.user.phone || ''));
-        setEmail(textDraft(draft, 'email') || nextProfile?.email || session.user.email || '');
+        setPhone(normalizeMobile(textDraft(draft, 'phone') || nextProfile?.phone || ''));
+        setEmail(textDraft(draft, 'email') || nextProfile?.email || '');
         setStreet(textDraft(draft, 'address_street'));
         setLocality(textDraft(draft, 'address_locality'));
         const draftOem = textDraft(draft, 'oem_name');
@@ -98,7 +100,7 @@ export default function DealershipKycScreen() {
         setRepresentativePan(textDraft(draft, 'representative_pan'));
         const locationId = textDraft(draft, 'india_location_id');
         if (locationId) {
-          const locationResult = await supabase.from('india_locations').select('*').eq('id', locationId).maybeSingle();
+          const locationResult = await identity.data.from('india_locations').select('*').eq('id', locationId).maybeSingle();
           if (locationResult.data && active) {
             setSelectedLocation(locationResult.data);
             setLocationQuery(locationResult.data.city_name);
@@ -125,7 +127,9 @@ export default function DealershipKycScreen() {
     const timer = setTimeout(async () => {
       setLocationSearching(true);
       setLocationSearched(false);
-      const result = await supabase.from('india_locations').select('*').ilike('city_name', `%${query}%`).order('city_name').order('state_name').limit(15);
+      const identity = await getCustomerIdentity();
+      if (!identity) { setLocationSearching(false); return; }
+      const result = await identity.data.from('india_locations').select('*').ilike('city_name', `%${query}%`).order('city_name').order('state_name').limit(15);
       if (!active) return;
       setLocationSearching(false);
       setLocationSearched(true);
@@ -206,7 +210,9 @@ export default function DealershipKycScreen() {
         representative_pan: representativePan,
       };
       for (const [documentType, file] of Object.entries(files)) if (file) await uploadDocument(application.id, documentType, file);
-      const submitted = await (supabase.rpc as any)('submit_dealership_onboarding_application', { p_application_id: application.id, p_draft_data: draft });
+      const identity = await getCustomerIdentity();
+      if (!identity) throw new Error('Please sign in again.');
+      const submitted = await (identity.data.rpc as any)('submit_dealership_onboarding_application', { p_application_id: application.id, p_draft_data: draft });
       if (submitted.error) throw new Error(submitted.error.message || 'Dealership KYC could not be submitted.');
       setSuccessVisible(true);
     } catch (nextError) {
@@ -237,16 +243,23 @@ export default function DealershipKycScreen() {
 }
 
 async function uploadDocument(applicationId: string, type: string, file: PickedFile) {
-  const session = await getCurrentSession();
-  if (!session?.user) throw new Error('Sign in again.');
-  const response = await fetch(file.uri);
-  const bytes = await response.arrayBuffer();
+  const identity = await getCustomerIdentity();
+  if (!identity) throw new Error('Sign in again.');
+  const bytes = await (await fetch(file.uri)).arrayBuffer();
+  if (bytes.byteLength > maxFileSize) throw new Error('Document must be 5 MB or smaller.');
   const extension = file.mimeType === 'application/pdf' ? 'pdf' : file.mimeType === 'image/png' ? 'png' : 'jpg';
   const path = `${applicationId}/${type}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-  const upload = await supabase.storage.from('customer-documents').upload(path, bytes, { contentType: file.mimeType ?? 'application/octet-stream', upsert: false });
-  if (upload.error) throw upload.error;
-  const record = await supabase.from('customer_onboarding_documents').upsert({ application_id: applicationId, document_type: type, file_name: file.name, storage_bucket: 'customer-documents', storage_path: path, mime_type: file.mimeType, file_size: file.size, verification_status: 'pending', uploaded_by: session.user.id }, { onConflict: 'application_id,document_type' });
-  if (record.error) { await supabase.storage.from('customer-documents').remove([path]); throw record.error; }
+  if (identity.provider === 'firebase') {
+    await uploadFirebaseCustomerDocument({ bucket: 'customer-documents', path, file: bytes, contentType: file.mimeType ?? 'application/octet-stream' });
+  } else {
+    const upload = await identity.data.storage.from('customer-documents').upload(path, bytes, { contentType: file.mimeType ?? 'application/octet-stream', upsert: false });
+    if (upload.error) throw upload.error;
+  }
+  const record = await identity.data.from('customer_onboarding_documents').upsert({ application_id: applicationId, document_type: type, file_name: file.name, storage_bucket: 'customer-documents', storage_path: path, mime_type: file.mimeType, file_size: file.size, verification_status: 'pending', uploaded_by: identity.profileId }, { onConflict: 'application_id,document_type' });
+  if (record.error) {
+    if (identity.provider === 'supabase') await identity.data.storage.from('customer-documents').remove([path]);
+    throw record.error;
+  }
 }
 function Section({ title, children }: { title: string; children: React.ReactNode }) { return <View style={styles.card}><Text style={styles.sectionTitle}>{title}</Text>{children}</View>; }
 function Field(props: React.ComponentProps<typeof TextInput> & { label: string }) { const { label, ...rest } = props; return <View style={styles.field}><Text style={styles.label}>{label}</Text><TextInput {...rest} placeholderTextColor="#9AA7B8" style={styles.input} /></View>; }
