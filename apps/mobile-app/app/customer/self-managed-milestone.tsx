@@ -91,21 +91,21 @@ export default function SelfManagedMilestoneScreen() {
       setMilestones(nextMilestones);
       const current = nextMilestones.find((item) => item.milestone_key === key);
       setValues(toFormValues(current?.details));
-      const identity = (claimResult.data ?? {}) as ClaimIdentity;
-      const nextInsurerClaimNo = identity.insurer_claim_no?.trim() ?? '';
-      setClaimNo(identity.claim_no ?? '');
+      const claimIdentity = (claimResult.data ?? {}) as ClaimIdentity;
+      const nextInsurerClaimNo = claimIdentity.insurer_claim_no?.trim() ?? '';
+      setClaimNo(claimIdentity.claim_no ?? '');
       setInsurerClaimNo(nextInsurerClaimNo);
       setClaimNumberDraft(nextInsurerClaimNo);
-      setCustomerId(identity.customer_id ?? '');
-      if (identity.vehicle_id) {
-        const vehicleResult = await client.from('vehicles').select('vehicle_no,make,model').eq('id', identity.vehicle_id).maybeSingle();
+      setCustomerId(claimIdentity.customer_id ?? '');
+      if (claimIdentity.vehicle_id) {
+        const vehicleResult = await client.from('vehicles').select('vehicle_no,make,model').eq('id', claimIdentity.vehicle_id).maybeSingle();
         if (active && vehicleResult.data) {
           setVehicleNo((vehicleResult.data as any).vehicle_no ?? '');
           setVehicleMeta([(vehicleResult.data as any).make, (vehicleResult.data as any).model].filter(Boolean).join(' · '));
         }
       }
-      if (identity.external_policy_id) {
-        const policyResult = await (client as any).from('external_policies').select('policy_no,insurance_company_id').eq('id', identity.external_policy_id).maybeSingle();
+      if (claimIdentity.external_policy_id) {
+        const policyResult = await (client as any).from('external_policies').select('policy_no,insurance_company_id').eq('id', claimIdentity.external_policy_id).maybeSingle();
         if (active && policyResult.data) {
           setPolicyNo(policyResult.data.policy_no ?? '');
           if (policyResult.data.insurance_company_id) {
