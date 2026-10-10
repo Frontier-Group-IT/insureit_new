@@ -147,6 +147,7 @@ export type CustomerClaimDocument = {
   document_type: string;
   verification_status: string | null;
   created_at: string;
+  file_name: string | null;
 };
 
 export type CustomerClaimTask = {
@@ -231,7 +232,7 @@ export async function loadCustomerClaimDetail(customerId: string, claimId: strin
   const supabase = await createServerSupabaseClient();
   const [milestoneResult, documentResult, taskResult] = await Promise.all([
     supabase.from("claim_milestones").select("id,claim_id,milestone_key,milestone_status,details,completed_at,updated_at").eq("claim_id", claimId),
-    supabase.from("claim_documents").select("id,claim_id,document_type,verification_status,created_at").eq("claim_id", claimId).order("created_at", { ascending: false }),
+    supabase.from("claim_documents").select("id,claim_id,document_type,verification_status,created_at,file_name").eq("claim_id", claimId).order("created_at", { ascending: false }),
     supabase.from("claim_tasks").select("id,claim_id,title,status").eq("claim_id", claimId).eq("status", "open"),
   ]);
 
