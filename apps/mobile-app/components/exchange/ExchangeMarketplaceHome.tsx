@@ -93,6 +93,9 @@ export function ExchangeMarketplaceHome({
   refreshing,
   onRefresh,
   onQueryChange,
+  selectedLocation,
+  availableLocations,
+  onLocationChange,
   onCategoryChange,
   onOpenVehicle,
   onFavorite,
@@ -109,6 +112,9 @@ export function ExchangeMarketplaceHome({
   refreshing: boolean;
   onRefresh: () => void;
   onQueryChange: (value: string) => void;
+  selectedLocation: string | null;
+  availableLocations: string[];
+  onLocationChange: (location: string | null) => void;
   onCategoryChange: (category: ExchangeHomeCategory) => void;
   onOpenVehicle: (vehicle: ExchangeHomeVehicle) => void;
   onFavorite: (id: string) => void;
@@ -120,6 +126,7 @@ export function ExchangeMarketplaceHome({
   const [budget, setBudget] = useState<BudgetFilter>('All');
   const [sortMode, setSortMode] = useState<SortMode>('Recommended');
   const [filterVisible, setFilterVisible] = useState(false);
+  const [locationVisible, setLocationVisible] = useState(false);
 
   const visibleVehicles = useMemo(() => {
     const filtered = vehicles.filter((vehicle) => budgetMatch(vehicle, budget));
@@ -133,12 +140,42 @@ export function ExchangeMarketplaceHome({
 
   return (
     <>
+      <Modal transparent visible={locationVisible} animationType="fade" onRequestClose={() => setLocationVisible(false)}>
+        <View style={styles.locationModalBackdrop}>
+          <View style={styles.locationModalCard}>
+            <View style={styles.locationModalHeading}>
+              <Text style={styles.locationModalTitle}>Select location</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close locations" onPress={() => setLocationVisible(false)} hitSlop={10}>
+                <MaterialCommunityIcons name="close" size={22} color="#44536B" />
+              </Pressable>
+            </View>
+            <ScrollView style={styles.locationModalOptions} keyboardShouldPersistTaps="handled">
+              {[null, ...availableLocations].map((location) => {
+                const active = selectedLocation === location;
+                return (
+                  <Pressable
+                    key={location ?? 'all-locations'}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    onPress={() => { onLocationChange(location); setLocationVisible(false); }}
+                    style={[styles.locationModalOption, active && styles.locationModalOptionActive]}
+                  >
+                    <MaterialCommunityIcons name={active ? "radiobox-marked" : "radiobox-blank"} size={19} color={active ? "#174EA6" : "#8C9AAE"} />
+                    <Text numberOfLines={2} style={styles.locationModalOptionText}>{location ?? 'All locations'}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
       <ScrollView
         style={styles.flex}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        <Text style={styles.pageTitle}>Exchange</Text>
         <View style={styles.searchFilterRow}>
           <MaterialCommunityIcons name="magnify" size={21} color="#8190A5" />
           <TextInput
@@ -154,9 +191,16 @@ export function ExchangeMarketplaceHome({
               <MaterialCommunityIcons name="close-circle" size={18} color="#9AA5B5" />
             </Pressable>
           ) : null}
-          <View accessibilityLabel="All locations" style={styles.locationIndicator}>
-            <MaterialCommunityIcons name="map-marker-outline" size={23} color="#8290A4" />
-          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={selectedLocation ? `Change location filter, ${selectedLocation}` : 'Filter by location'}
+            accessibilityHint="Opens a list of marketplace locations"
+            onPress={() => setLocationVisible(true)}
+            hitSlop={8}
+            style={styles.locationIndicator}
+          >
+            <MaterialCommunityIcons name={selectedLocation ? "map-marker" : "map-marker-outline"} size={23} color={selectedLocation ? "#174EA6" : "#8290A4"} />
+          </Pressable>
         </View>
 
         <View style={styles.segmentedStrip}>
@@ -595,6 +639,15 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 18, paddingBottom: 36, backgroundColor: '#F8FAFD' },
   pressed: { opacity: 0.84, transform: [{ scale: 0.99 }] },
 
+  pageTitle: { marginTop: 18, color: '#0A2146', fontSize: 19, fontWeight: '900' },
+  locationModalBackdrop: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, backgroundColor: 'rgba(9,22,46,0.48)' },
+  locationModalCard: { maxHeight: '70%', borderRadius: 20, backgroundColor: '#FFFFFF', padding: 18 },
+  locationModalHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  locationModalTitle: { color: '#0A2146', fontSize: 17, fontWeight: '900' },
+  locationModalOptions: { flexGrow: 0 },
+  locationModalOption: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 10, paddingHorizontal: 10 },
+  locationModalOptionActive: { backgroundColor: '#EEF4FF' },
+  locationModalOptionText: { flexShrink: 1, fontSize: 13, fontWeight: '700', color: '#203956' },
   searchFilterRow: { marginTop: 14, minHeight: 48, borderRadius: 13, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F8F9FC', borderWidth: 1, borderColor: '#E2E7F0' },
   searchInput: { flex: 1, minWidth: 0, height: 46, paddingVertical: 0, color: '#10213D', fontSize: 12, fontWeight: '600' },
   locationIndicator: { width: 30, height: 42, alignItems: 'center', justifyContent: 'center' },
