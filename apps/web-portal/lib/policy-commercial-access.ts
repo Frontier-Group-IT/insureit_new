@@ -9,6 +9,7 @@ const COMMERCIAL_PROFILE_IDS = new Set([
   "21a8b85f-5051-4fec-8b29-3960163b6d1f",
   "dd3a036f-2cca-4a1e-b639-21fc1cc807ef",
   "1b7cb2bb-e9a3-4713-ab42-56758dab10c9", // Ragini Gupta — Operations it_super_user
+  "8c4ec4a2-d940-4394-b484-698e9ab70a69", // Nikhil Awadhwal — Operations it_super_user
   "f634d48a-e075-4dbd-849c-3e17974f3f94",
 ]);
 
