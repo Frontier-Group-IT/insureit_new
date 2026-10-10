@@ -192,6 +192,35 @@ Deno.serve(async (request: Request) => {
           }
         }
       }
+
+      // A customer-uploaded policy copy can be registered in policy_documents
+      // while physically stored in customer-documents. Validate both bucket
+      // and path, and resolve owner from the canonical policies table.
+      if (!allowed) {
+        const { data: policyDocs, error: policyDocError } = await db.from("policy_documents")
+          .select("id,policy_id").eq("storage_bucket", bucket)
+          .eq("storage_path", documentPath).limit(2);
+        if (policyDocError) throw new Error("Policy copy lookup failed");
+        if (policyDocs?.length === 1) {
+          const { data: policy, error: policyError } = await db.from("policies")
+            .select("id,customer_id").eq("id", policyDocs[0].policy_id).maybeSingle();
+          if (policyError) throw new Error("Policy copy owner lookup failed");
+          if (policy?.customer_id) {
+            const { data: customer, error: customerError } = await db.from("customers")
+              .select("id,profile_id").eq("id", policy.customer_id).maybeSingle();
+            if (customerError) throw new Error("Policy copy customer lookup failed");
+            allowed = customer?.id === policy.customer_id && customer?.profile_id === profileId;
+            if (!allowed && customer?.id === policy.customer_id) {
+              const { data: memberships, error: membershipError } = await db
+                .from("customer_memberships").select("customer_id")
+                .eq("customer_id", policy.customer_id).eq("profile_id", profileId)
+                .eq("status", "active").limit(1);
+              if (membershipError) throw new Error("Policy copy membership lookup failed");
+              allowed = Boolean(memberships?.length);
+            }
+          }
+        }
+      }
     }
     if (!allowed) return reply(404, { error: "document_unavailable" });
 
