@@ -60,3 +60,5 @@ jobs:
 # Run Customer App KYC identity integration for individual, corporate, dealership and group.
 
 # 2026-10-10 claim assistance, support conversations and customer KYC latest source check.
+
+# Validate self-managed claim write, upload and customer session routes.
