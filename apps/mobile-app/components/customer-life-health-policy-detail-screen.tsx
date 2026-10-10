@@ -5,11 +5,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Card, EmptyState, LoadingState, Screen } from '@/components/ui';
-import { getCurrentSession } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
+import { getFirebaseCustomerDocumentUrl } from '@/lib/firebase-document-client';
+import { uploadFirebaseCustomerDocument } from '@/lib/firebase-upload-client';
 import { getInsurerLogoSource } from '@/lib/catalog-logos';
 import { getOperationalCustomerContexts } from '@/lib/customer-context';
 import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
-import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany } from '@/lib/types';
 
@@ -72,8 +73,9 @@ export default function CustomerLifeHealthPolicyDetailScreen() {
     let active = true;
     void (async () => {
       if (!id) return;
-      const session = await getCurrentSession();
-      if (!session?.user) return router.replace('/login');
+      const identity = await getCustomerIdentity();
+      if (!identity) return router.replace('/login');
+      const customerClient = identity.data;
       const contexts = await getOperationalCustomerContexts();
       const customerIds = contexts.map((context) => context.customer_id);
       if (!customerIds.length) {
@@ -85,7 +87,7 @@ export default function CustomerLifeHealthPolicyDetailScreen() {
       let nextSource: 'sibl' | 'external' = source === 'external' ? 'external' : 'sibl';
       if (source === 'external') {
         next = (
-          await (supabase as any)
+          await (customerClient as any)
             .from('external_policies')
             .select('*')
             .eq('id', id)
@@ -94,11 +96,11 @@ export default function CustomerLifeHealthPolicyDetailScreen() {
         ).data;
       } else {
         next = (
-          await supabase.from('policies').select('*').eq('id', id).in('customer_id', customerIds).maybeSingle()
+          await customerClient.from('policies').select('*').eq('id', id).in('customer_id', customerIds).maybeSingle()
         ).data;
         if (!next) {
           next = (
-            await (supabase as any)
+            await (customerClient as any)
               .from('external_policies')
               .select('*')
               .eq('id', id)
@@ -117,11 +119,11 @@ export default function CustomerLifeHealthPolicyDetailScreen() {
       setPolicy(nextPolicy);
 
       const companyQuery = next.insurance_company_id
-        ? supabase.from('insurance_companies').select('*').eq('id', next.insurance_company_id).maybeSingle()
+        ? customerClient.from('insurance_companies').select('*').eq('id', next.insurance_company_id).maybeSingle()
         : Promise.resolve({ data: null });
       const detailsQuery =
         nextSource === 'sibl'
-          ? (supabase as any)
+          ? (customerClient as any)
               .from('life_health_policy_details')
               .select('proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode')
               .eq('policy_id', next.id)
@@ -129,13 +131,13 @@ export default function CustomerLifeHealthPolicyDetailScreen() {
           : Promise.resolve({ data: null });
       const documentsQuery =
         nextSource === 'sibl'
-          ? (supabase as any)
+          ? (customerClient as any)
               .from('policy_documents')
               .select('id,document_type,file_name,storage_bucket,storage_path,mime_type,file_size,created_at')
               .eq('policy_id', next.id)
               .in('document_type', DOCUMENT_TYPES.map(([type]) => type))
               .order('created_at', { ascending: false })
-          : (supabase as any)
+          : (customerClient as any)
               .from('customer_documents')
               .select('id,document_type,file_name,storage_bucket,storage_path,mime_type,file_size,created_at')
               .eq('external_policy_id', next.id)
@@ -170,9 +172,13 @@ export default function CustomerLifeHealthPolicyDetailScreen() {
     setUploadMessage('');
     setOpeningDocumentId(document.id);
     try {
-      const signed = await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 10 * 60);
-      if (signed.error || !signed.data?.signedUrl) throw signed.error ?? new Error('Document URL unavailable');
-      await Linking.openURL(signed.data.signedUrl);
+      const identity = await getCustomerIdentity();
+      if (!identity) throw new Error('Please sign in again');
+      const signedUrl = identity.provider === 'firebase'
+        ? await getFirebaseCustomerDocumentUrl(document.storage_bucket as 'policy-documents' | 'customer-documents', document.storage_path)
+        : (await identity.data.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 10 * 60)).data?.signedUrl;
+      if (!signedUrl) throw new Error('Document URL unavailable');
+      await Linking.openURL(signedUrl);
     } catch (error) {
       console.warn('Customer Life/Health policy document open failed', error);
       setUploadMessage('Document could not be opened. Please try again.');
@@ -194,18 +200,22 @@ export default function CustomerLifeHealthPolicyDetailScreen() {
       setUploadMessage('Policy copy must be 5 MB or smaller.');
       return;
     }
-    const session = await getCurrentSession();
-    if (!session?.user) return router.replace('/login');
+    const identity = await getCustomerIdentity();
+    if (!identity) return router.replace('/login');
     setUploadingCopy(true);
     const extension = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
     const storagePath = `${policy.customer_id}/policy-copy/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
     try {
       const body = await (await fetch(file.uri)).arrayBuffer();
-      const uploaded = await supabase.storage.from('customer-documents').upload(storagePath, body, {
-        contentType: file.mimeType ?? 'application/octet-stream',
-        upsert: false,
-      });
-      if (uploaded.error) throw uploaded.error;
+      if (identity.provider === 'firebase') {
+        await uploadFirebaseCustomerDocument({ bucket: 'customer-documents', path: storagePath, file: body, contentType: file.mimeType ?? 'application/octet-stream' });
+      } else {
+        const uploaded = await identity.data.storage.from('customer-documents').upload(storagePath, body, {
+          contentType: file.mimeType ?? 'application/octet-stream',
+          upsert: false,
+        });
+        if (uploaded.error) throw uploaded.error;
+      }
       const payload =
         policy.source === 'external'
           ? {
@@ -217,7 +227,7 @@ export default function CustomerLifeHealthPolicyDetailScreen() {
               storage_path: storagePath,
               mime_type: file.mimeType ?? null,
               file_size: file.size ?? null,
-              uploaded_by: session.user.id,
+              uploaded_by: identity.profileId,
             }
           : {
               policy_id: policy.id,
@@ -229,13 +239,13 @@ export default function CustomerLifeHealthPolicyDetailScreen() {
               file_size: file.size ?? null,
             };
       const table = policy.source === 'external' ? 'customer_documents' : 'policy_documents';
-      const recorded = await (supabase as any)
+      const recorded = await (identity.data as any)
         .from(table)
         .insert(payload)
         .select('id,document_type,file_name,storage_bucket,storage_path,mime_type,file_size,created_at')
         .single();
       if (recorded.error) {
-        await supabase.storage.from('customer-documents').remove([storagePath]);
+        if (identity.provider === 'supabase') await identity.data.storage.from('customer-documents').remove([storagePath]);
         throw recorded.error;
       }
       setDocuments((current) => [recorded.data as PolicyDocument, ...current]);
