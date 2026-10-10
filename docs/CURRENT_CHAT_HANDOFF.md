@@ -1,3 +1,15 @@
+## 2026-10-10 — Nikhil Awadhwal commercial dashboard parity
+
+- Account: employee code `6666`, profile `8c4ec4a2-d940-4394-b484-698e9ab70a69`, role `it_super_user`.
+- Nikhil already had the same core effective permission role and organization-wide scope as Nishant Mishra and Ragini Gupta.
+- Exact cause of the visible dashboard mismatch: commercial visibility is controlled by an additional hard-coded server-side allowlist in `apps/web-portal/lib/policy-commercial-access.ts`, separate from the normal role/capability system. Nishant and Ragini were present; Nikhil was not.
+- Because `canAccessPolicyCommercials(profile)` returned false, the dashboard suppressed both the **Commercial operations** card and the **Commercial review** item inside **Needs attention**, even though Nikhil was an active IT Super User.
+- Fix adds Nikhil's profile ID to the approved commercial profile allowlist. No employment metadata, general permissions, customer/vehicle/policy scope, database records, schema or RLS are changed.
+- Added `it-super-user-commercial-dashboard-parity-regression.mjs` to canonical web CI to keep Nishant, Ragini and Nikhil aligned for commercial dashboard visibility.
+- **IMPLEMENTED; PR/CI/MERGE/DEPLOYMENT PENDING.**
+
+---
+
 ## 2026-10-09 — Customer App HDFC ERGO policy-card logo visibility fix v2
 
 - Branch: `fix/customer-hdfc-ergo-logo-visibility-v2`.
