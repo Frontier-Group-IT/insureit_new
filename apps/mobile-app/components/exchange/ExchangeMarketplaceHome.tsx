@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { supabase } from '@/lib/supabase';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
@@ -143,7 +144,46 @@ export function ExchangeMarketplaceHome({
   const { width: viewportWidth } = useWindowDimensions();
   const carouselWidth = viewportWidth - 36;
   const searchHints = ['Search trucks...', 'Search tippers...', 'Search pickup vehicles...', 'Search buses...', 'Search construction equipment...', 'Search make or model...'];
-  const matchedLocations = availableLocations.filter((location) => location.toLowerCase().includes(locationQuery.trim().toLowerCase()));
+  const [masterLocations, setMasterLocations] = useState<string[]>([]);
+  const [locationSearchLoading, setLocationSearchLoading] = useState(false);
+  const [locationSearchError, setLocationSearchError] = useState(false);
+  const normalizedLocationQuery = locationQuery.trim().toLowerCase();
+  const matchedLocations = Array.from(new Set([
+    ...masterLocations,
+    ...availableLocations.filter((location) => location.toLowerCase().includes(normalizedLocationQuery)),
+  ])).filter((location) => !normalizedLocationQuery || location.toLowerCase().includes(normalizedLocationQuery));
+
+  useEffect(() => {
+    if (!locationVisible || normalizedLocationQuery.length < 2) {
+      setMasterLocations([]);
+      setLocationSearchError(false);
+      setLocationSearchLoading(false);
+      return;
+    }
+    let active = true;
+    const timer = setTimeout(async () => {
+      setLocationSearchLoading(true);
+      setLocationSearchError(false);
+      // Master Data location discovery is separate from Exchange vehicle inventory.
+      const escaped = normalizedLocationQuery.replace(/[%,]/g, '');
+      const { data, error } = await supabase
+        .from('india_locations')
+        .select('city_name, district, state_name, pincode')
+        .ilike('search_text', `%${escaped}%`)
+        .order('city_name')
+        .limit(50);
+      if (!active) return;
+      setLocationSearchLoading(false);
+      if (error) {
+        setLocationSearchError(true);
+        setMasterLocations([]);
+      } else {
+        const labels = (data ?? []).map((row) => [row.city_name, row.state_name].filter(Boolean).join(', '));
+        setMasterLocations(Array.from(new Set(labels)));
+      }
+    }, 300);
+    return () => { active = false; clearTimeout(timer); };
+  }, [locationVisible, normalizedLocationQuery]);
 
   useEffect(() => {
     if (searchFocused || query.trim()) return;
@@ -196,7 +236,7 @@ export function ExchangeMarketplaceHome({
               <TextInput
                 value={locationQuery}
                 onChangeText={setLocationQuery}
-                placeholder="Search by city or area"
+                placeholder="Search city, district or PIN code"
                 placeholderTextColor="#8993A2"
                 style={styles.locationSearchInput}
                 accessibilityLabel="Search available vehicle locations"
@@ -215,7 +255,7 @@ export function ExchangeMarketplaceHome({
               <MaterialCommunityIcons name="crosshairs-gps" size={21} color="#1764D8" />
               <View style={styles.flex}>
                 <Text style={styles.currentLocationTitle}>{locating ? 'Finding your location...' : 'Use my current location'}</Text>
-                <Text style={styles.currentLocationCopy}>Match your city to available vehicle listings</Text>
+                <Text style={styles.currentLocationCopy}>Detect your city; listings may be unavailable</Text>
               </View>
               <MaterialCommunityIcons name="chevron-right" size={19} color="#1764D8" />
             </Pressable>
@@ -237,7 +277,10 @@ export function ExchangeMarketplaceHome({
                   </Pressable>
                 );
               })}
-              {matchedLocations.length === 0 && locationQuery.trim() ? <Text style={styles.noLocationText}>No matching marketplace locations</Text> : null}
+              {locationSearchLoading ? <Text style={styles.noLocationText}>Searching locations...</Text> : null}
+              {locationSearchError ? <Text style={styles.noLocationText}>City lookup unavailable. Showing locations from listed vehicles.</Text> : null}
+              {!locationSearchLoading && matchedLocations.length === 0 && normalizedLocationQuery.length >= 2 ? <Text style={styles.noLocationText}>No matching city or PIN code in location master</Text> : null}
+              {normalizedLocationQuery.length === 1 ? <Text style={styles.noLocationText}>Enter at least 2 characters to search cities or PIN codes</Text> : null}
             </ScrollView>
           </View>
         </View>
