@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 
 import { AppSearchBar } from '@/components/design-system';
@@ -53,6 +53,17 @@ type PolicyRow = {
 
 const POLICY_CATEGORY_OPTIONS: PolicyCategoryFilter[] = ['All', 'Motor', 'Non-Motor', 'Health', 'Life'];
 
+// Master Data uploads are authoritative. Bundled catalog images are offline/error fallbacks.
+// The name endpoints resolve aliases and the current uploaded logo without exposing master data.
+const LOGO_ORIGIN = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '');
+function masterLogoUrl(kind: 'manufacturer' | 'insurer', name: string | null | undefined, revision: number) {
+  const label = name?.trim();
+  if (!label) return null;
+  const route = kind === 'manufacturer' ? 'manufacturer-logo' : 'insurer-logo';
+  const parameter = kind === 'manufacturer' ? 'make' : 'name';
+  return `${LOGO_ORIGIN}/api/${route}?${parameter}=${encodeURIComponent(label)}&v=${revision}`;
+}
+
 export default function PoliciesScreen() {
   const router = useRouter();
   const [policies, setPolicies] = useState<PolicyRow[]>([]);
@@ -63,6 +74,12 @@ export default function PoliciesScreen() {
   const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const [filter, setFilter] = useState<PolicyFilter>('All');
   const [loading, setLoading] = useState(true);
+  const [logoRevision, setLogoRevision] = useState(() => Date.now());
+
+  // Re-check latest website logos whenever users return to Policies, without an app update.
+  useFocusEffect(useCallback(() => {
+    setLogoRevision(Date.now());
+  }, []));
 
   useEffect(() => {
     let active = true;
@@ -276,6 +293,8 @@ export default function PoliciesScreen() {
         const colors = policyToneColors(tone);
         const manufacturerLogo = getVehicleBrandLogoSource(vehicle?.make);
         const insurerLogo = getInsurerLogoSource(company?.name);
+        const manufacturerLogoUrl = masterLogoUrl('manufacturer', vehicle?.make, logoRevision);
+        const insurerLogoUrl = masterLogoUrl('insurer', company?.name, logoRevision);
         const lifeHealthKind = getLifeHealthKind(policy);
 
         return (
@@ -313,6 +332,7 @@ export default function PoliciesScreen() {
                 policy={policy}
                 kind={lifeHealthKind}
                 insurerLogo={insurerLogo}
+                insurerLogoUrl={insurerLogoUrl}
                 companyName={company?.name ?? '-'}
                 toneColor={colors.accent}
               />
@@ -320,6 +340,7 @@ export default function PoliciesScreen() {
               <View style={styles.policyContentRow}>
                 <PolicySummaryColumn
                   icon={insurerLogo}
+                  remoteLogoUrl={insurerLogoUrl}
                   fallbackIcon="shield-outline"
                   primaryValue={policy.source === 'external' ? formatExternalPolicyNumber(policy.policy_no) : policy.policy_no}
                   secondaryValue={company?.name ?? '-'}
@@ -329,6 +350,7 @@ export default function PoliciesScreen() {
                 <View style={styles.contentDivider} />
                 <PolicySummaryColumn
                   icon={manufacturerLogo}
+                  remoteLogoUrl={manufacturerLogoUrl}
                   fallbackIcon="car-side"
                   primaryValue={vehicle?.vehicle_no ?? 'Vehicle unavailable'}
                   secondaryValue={vehicle?.make ?? '-'}
@@ -350,12 +372,14 @@ function LifeHealthPolicyBody({
   policy,
   kind,
   insurerLogo,
+  insurerLogoUrl,
   companyName,
   toneColor,
 }: {
   policy: PolicyRow;
   kind: LifeHealthKind;
   insurerLogo: ImageSourcePropType | null;
+  insurerLogoUrl: string | null;
   companyName: string;
   toneColor: string;
 }) {
@@ -372,6 +396,7 @@ function LifeHealthPolicyBody({
       <View style={styles.policyContentRow}>
         <PolicySummaryColumn
           icon={insurerLogo}
+          remoteLogoUrl={insurerLogoUrl}
           fallbackIcon="shield-outline"
           primaryValue={displayedPolicyNo}
           secondaryValue={companyName}
@@ -452,6 +477,7 @@ function LifeHealthMetric({
 
 function PolicySummaryColumn({
   icon,
+  remoteLogoUrl,
   fallbackIcon,
   primaryValue,
   secondaryValue,
@@ -460,6 +486,7 @@ function PolicySummaryColumn({
   tertiaryDotColor,
 }: {
   icon: ImageSourcePropType | null;
+  remoteLogoUrl?: string | null;
   fallbackIcon: 'car-side' | 'shield-outline';
   primaryValue: string;
   secondaryValue: string;
@@ -467,17 +494,29 @@ function PolicySummaryColumn({
   tertiaryMuted?: boolean;
   tertiaryDotColor?: string;
 }) {
+  const [remoteFailed, setRemoteFailed] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
 
   useEffect(() => {
+    setRemoteFailed(false);
     setImageFailed(false);
-  }, [icon]);
+  }, [remoteLogoUrl, icon]);
+
+  const visibleSource = !remoteFailed && remoteLogoUrl ? { uri: remoteLogoUrl } : icon;
 
   return (
     <View style={styles.summaryColumn}>
       <View style={styles.catalogIconWrap}>
-        {icon && !imageFailed ? (
-          <Image source={icon} resizeMode="contain" style={styles.catalogIcon} onError={() => setImageFailed(true)} />
+        {visibleSource && !imageFailed ? (
+          <Image
+            source={visibleSource}
+            resizeMode="contain"
+            style={styles.catalogIcon}
+            onError={() => {
+              if (remoteLogoUrl && !remoteFailed) setRemoteFailed(true);
+              else setImageFailed(true);
+            }}
+          />
         ) : (
           <MaterialCommunityIcons name={fallbackIcon} size={24} color={palette.navy} />
         )}
