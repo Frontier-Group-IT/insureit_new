@@ -389,25 +389,6 @@ export function ExchangeMarketplaceHome({
             <MaterialCommunityIcons name="chevron-right" size={16} color="#164BB8" />
           </Pressable>
         </View>
-        <View style={styles.segmentedStrip}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.segmentedContent} accessibilityLabel="Vehicle category filters">
-            {categories.map((item) => {
-              const count = item === 'All' ? totalVehicles : vehicles.filter((vehicle) => vehicle.category === item).length;
-              const selected = category === item;
-              return (
-                <Pressable
-                  key={item}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                  onPress={() => onCategoryChange(item)}
-                  style={({ pressed }) => [styles.segmentTab, selected && styles.segmentTabActive, pressed && styles.pressed]}
-                >
-                  <Text style={[styles.segmentLabel, selected && styles.segmentLabelActive]}>{item} ({count})</Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
         <Pressable accessibilityRole="button" onPress={() => setLocationVisible(true)} style={styles.selectedLocationRow}>
           <MaterialCommunityIcons name="map-marker" size={18} color="#1764D8" />
           <Text numberOfLines={1} style={styles.selectedLocationText}>{selectedLocation ?? 'All locations'}</Text>
@@ -483,30 +464,44 @@ export function ExchangeMarketplaceHome({
         </View>
 
         {featured.length > 0 ? (
-          <>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Featured vehicles</Text>
-              <Pressable onPress={onBrowseAll} hitSlop={8}>
-                <View style={styles.viewAllRow}><Text style={styles.sectionAction}>View all</Text><MaterialCommunityIcons name="chevron-right" size={17} color="#1455AB" /></View>
+          <View style={styles.featuredSection}>
+            <View style={styles.featuredHeading}>
+              <Text style={styles.featuredHeadingText}>Featured Vehicles</Text>
+              <Pressable onPress={onBrowseAll} hitSlop={8} accessibilityRole="button" accessibilityLabel="View all featured vehicles">
+                <View style={styles.viewAllRow}>
+                  <Text style={styles.featuredViewAll}>View all</Text>
+                  <MaterialCommunityIcons name="arrow-right" size={16} color="#E1ECFF" />
+                </View>
               </Pressable>
             </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.featureRail}
-            >
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.featureRail}>
               {featured.map((vehicle) => (
-                <FeaturedVehicleCard
-                  key={vehicle.id}
-                  vehicle={vehicle}
-                  favorite={favorites.includes(vehicle.id)}
-                  onFavorite={() => onFavorite(vehicle.id)}
-                  onOpen={() => onOpenVehicle(vehicle)}
-                />
+                <FeaturedVehicleCard key={vehicle.id} vehicle={vehicle} favorite={favorites.includes(vehicle.id)}
+                  onFavorite={() => onFavorite(vehicle.id)} onOpen={() => onOpenVehicle(vehicle)} />
               ))}
             </ScrollView>
-          </>
+          </View>
         ) : null}
+
+        <View style={styles.segmentedStrip}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.segmentedContent} accessibilityLabel="Vehicle category filters">
+            {categories.map((item) => {
+              const count = item === 'All' ? totalVehicles : vehicles.filter((vehicle) => vehicle.category === item).length;
+              const selected = category === item;
+              return (
+                <Pressable
+                  key={item}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  onPress={() => onCategoryChange(item)}
+                  style={({ pressed }) => [styles.segmentTab, selected && styles.segmentTabActive, pressed && styles.pressed]}
+                >
+                  <Text style={[styles.segmentLabel, selected && styles.segmentLabelActive]}>{item} ({count})</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
 
         <View style={styles.listHeader}>
           <View>
@@ -576,18 +571,6 @@ export function ExchangeMarketplaceHome({
           <MaterialCommunityIcons name="arrow-right" size={17} color="#FFFFFF" />
         </Pressable>
 
-        <View style={styles.sellBanner}>
-          <View style={styles.sellBannerIcon}>
-            <MaterialCommunityIcons name="truck-plus-outline" size={25} color="#164BB8" />
-          </View>
-          <View style={styles.flex}>
-            <Text style={styles.sellBannerTitle}>Planning to sell a commercial vehicle?</Text>
-            <Text style={styles.sellBannerCopy}>Start with a vehicle already saved in your InsureIT fleet.</Text>
-          </View>
-          <Pressable onPress={onSell} hitSlop={8}>
-            <MaterialCommunityIcons name="chevron-right" size={24} color="#164BB8" />
-          </Pressable>
-        </View>
       </ScrollView>
 
       <FilterSheet
@@ -869,7 +852,7 @@ const styles = StyleSheet.create({
 
   pageHeadingRow: { marginTop: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   pageTitle: { flexShrink: 0, color: '#0A2146', fontSize: 19, fontWeight: '900' },
-  sellHeadingAction: { flex: 1, minWidth: 0, minHeight: 38, paddingHorizontal: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 3, borderRadius: 12, backgroundColor: 'transparent' },
+  sellHeadingAction: { flex: 1, minWidth: 0, minHeight: 35, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 3, borderRadius: 22, borderWidth: 1, borderColor: '#C2D9FA', backgroundColor: '#E7F1FF' },
   sellHeadingText: { flexShrink: 1, textAlign: 'right', fontSize: 9, lineHeight: 12, color: '#164BB8', fontWeight: '800' },
   selectedLocationRow: { marginTop: 12, alignSelf: 'flex-start', maxWidth: '100%', minHeight: 26, flexDirection: 'row', alignItems: 'center', gap: 5 },
   selectedLocationText: { maxWidth: '85%', color: '#123F8F', fontSize: 12, fontWeight: '800' },
@@ -917,6 +900,10 @@ const styles = StyleSheet.create({
   sectionSubtitle: { marginTop: 2, color: '#8290A3', fontSize: 8.8, fontWeight: '700' },
   sectionAction: { color: '#1455AB', fontSize: 12, fontWeight: '800' },
 
+  featuredSection: { marginTop: 24, borderRadius: 16, backgroundColor: '#1B2028', paddingVertical: 14, paddingLeft: 12, overflow: 'hidden' },
+  featuredHeading: { paddingRight: 12, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#39414E', marginBottom: 12 },
+  featuredHeadingText: { fontSize: 16, fontWeight: '900', color: '#FFFFFF' },
+  featuredViewAll: { fontSize: 11, fontWeight: '800', color: '#E1ECFF' },
   carouselWrap: { marginTop: 18 },
   carouselDots: { marginTop: 10, flexDirection: 'row', justifyContent: 'center', gap: 6 },
   carouselDot: { width: 7, height: 5, borderRadius: 4, backgroundColor: '#CCD5E5' },
