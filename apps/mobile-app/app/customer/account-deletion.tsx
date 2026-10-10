@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { LoadingState, Message, Screen } from '@/components/ui';
-import { getCurrentSession, getCustomerForUser } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { getCustomerForUser } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
 import { palette, roleTheme } from '@/lib/theme';
 
 export default function AccountDeletionScreen() {
@@ -23,20 +23,20 @@ export default function AccountDeletionScreen() {
 
     async function load() {
       try {
-        const session = await getCurrentSession();
-        if (!session?.user) {
+        const identity = await getCustomerIdentity();
+        if (!identity) {
           router.replace('/login');
           return;
         }
 
-        const customer = await getCustomerForUser(session.user.id);
+        const customer = await getCustomerForUser(identity.profileId, identity.data);
         if (!customer) {
           if (!active) return;
-          setUserId(session.user.id);
+          setUserId(identity.profileId);
           return;
         }
 
-        const { data } = await supabase
+        const { data } = await identity.data
           .from('support_tickets')
           .select('id,ticket_no,status')
           .eq('customer_id', customer.id)
@@ -49,7 +49,7 @@ export default function AccountDeletionScreen() {
 
         if (!active) return;
         setCustomerId(customer.id);
-        setUserId(session.user.id);
+        setUserId(identity.profileId);
         setExistingRequest(data ?? null);
       } catch {
         if (active) setMessage('We could not load account deletion options. Please try again.');
@@ -71,7 +71,9 @@ export default function AccountDeletionScreen() {
     setMessage('');
 
     try {
-      const { data, error } = await supabase
+      const identity = await getCustomerIdentity();
+      if (!identity || identity.profileId !== userId) throw new Error('Customer identity unavailable');
+      const { data, error } = await identity.data
         .from('support_tickets')
         .insert({
           customer_id: customerId,
