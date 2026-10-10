@@ -62,3 +62,5 @@ jobs:
 # 2026-10-10 claim assistance, support conversations and customer KYC latest source check.
 
 # Validate self-managed claim write, upload and customer session routes.
+
+# Validate customer_documents signed reader ownership and Firebase self-managed claims.
