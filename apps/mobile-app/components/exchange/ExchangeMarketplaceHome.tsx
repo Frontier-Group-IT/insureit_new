@@ -1,8 +1,9 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
   Modal,
+  useWindowDimensions,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -96,6 +97,7 @@ export function ExchangeMarketplaceHome({
   selectedLocation,
   availableLocations,
   onLocationChange,
+  onUseCurrentLocation,
   onCategoryChange,
   onOpenVehicle,
   onFavorite,
@@ -115,6 +117,7 @@ export function ExchangeMarketplaceHome({
   selectedLocation: string | null;
   availableLocations: string[];
   onLocationChange: (location: string | null) => void;
+  onUseCurrentLocation: () => Promise<string | null>;
   onCategoryChange: (category: ExchangeHomeCategory) => void;
   onOpenVehicle: (vehicle: ExchangeHomeVehicle) => void;
   onFavorite: (id: string) => void;
@@ -127,6 +130,35 @@ export function ExchangeMarketplaceHome({
   const [sortMode, setSortMode] = useState<SortMode>('Recommended');
   const [filterVisible, setFilterVisible] = useState(false);
   const [locationVisible, setLocationVisible] = useState(false);
+  const [locationQuery, setLocationQuery] = useState('');
+  const [locating, setLocating] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [hintIndex, setHintIndex] = useState(0);
+  const [slideIndex, setSlideIndex] = useState(0);
+  const [carouselPaused, setCarouselPaused] = useState(false);
+  const carouselRef = useRef<ScrollView>(null);
+  const { width: viewportWidth } = useWindowDimensions();
+  const carouselWidth = viewportWidth - 36;
+  const searchHints = ['Search trucks...', 'Search tippers...', 'Search pickup vehicles...', 'Search buses...', 'Search construction equipment...', 'Search make or model...'];
+  const matchedLocations = availableLocations.filter((location) => location.toLowerCase().includes(locationQuery.trim().toLowerCase()));
+
+  useEffect(() => {
+    if (searchFocused || query.trim()) return;
+    const timer = setInterval(() => setHintIndex((previous) => (previous + 1) % searchHints.length), 2800);
+    return () => clearInterval(timer);
+  }, [searchFocused, query]);
+
+  useEffect(() => {
+    if (carouselPaused) return;
+    const timer = setInterval(() => {
+      setSlideIndex((previous) => {
+        const next = (previous + 1) % 4;
+        carouselRef.current?.scrollTo({ x: next * carouselWidth, animated: next !== 0 });
+        return next;
+      });
+    }, 3600);
+    return () => clearInterval(timer);
+  }, [carouselPaused, carouselWidth]);
 
   const visibleVehicles = useMemo(() => {
     const filtered = vehicles.filter((vehicle) => budgetMatch(vehicle, budget));
@@ -140,31 +172,64 @@ export function ExchangeMarketplaceHome({
 
   return (
     <>
-      <Modal transparent visible={locationVisible} animationType="fade" onRequestClose={() => setLocationVisible(false)}>
-        <View style={styles.locationModalBackdrop}>
-          <View style={styles.locationModalCard}>
+      <Modal transparent visible={locationVisible} animationType="slide" onRequestClose={() => setLocationVisible(false)}>
+        <View style={styles.locationSheetBackdrop}>
+          <Pressable style={styles.locationSheetDismiss} accessibilityLabel="Close location selection" onPress={() => setLocationVisible(false)} />
+          <View style={styles.locationSheet}>
+            <View style={styles.locationSheetHandle} />
             <View style={styles.locationModalHeading}>
               <Text style={styles.locationModalTitle}>Select location</Text>
               <Pressable accessibilityRole="button" accessibilityLabel="Close locations" onPress={() => setLocationVisible(false)} hitSlop={10}>
-                <MaterialCommunityIcons name="close" size={22} color="#44536B" />
+                <MaterialCommunityIcons name="close" size={23} color="#44536B" />
               </Pressable>
             </View>
+            <View style={styles.locationSearch}>
+              <MaterialCommunityIcons name="magnify" size={20} color="#7D8898" />
+              <TextInput
+                value={locationQuery}
+                onChangeText={setLocationQuery}
+                placeholder="Search by city or area"
+                placeholderTextColor="#8993A2"
+                style={styles.locationSearchInput}
+                accessibilityLabel="Search available vehicle locations"
+              />
+            </View>
+            <Pressable
+              style={styles.currentLocationButton}
+              disabled={locating}
+              onPress={() => {
+                setLocating(true);
+                void onUseCurrentLocation().then((location) => {
+                  if (location) setLocationVisible(false);
+                }).finally(() => setLocating(false));
+              }}
+            >
+              <MaterialCommunityIcons name="crosshairs-gps" size={21} color="#1764D8" />
+              <View style={styles.flex}>
+                <Text style={styles.currentLocationTitle}>{locating ? 'Finding your location...' : 'Use my current location'}</Text>
+                <Text style={styles.currentLocationCopy}>Match your city to available vehicle listings</Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={19} color="#1764D8" />
+            </Pressable>
+            <Text style={styles.availableLocationsTitle}>Available locations</Text>
             <ScrollView style={styles.locationModalOptions} keyboardShouldPersistTaps="handled">
-              {[null, ...availableLocations].map((location) => {
+              {[null, ...matchedLocations].map((location) => {
                 const active = selectedLocation === location;
                 return (
                   <Pressable
                     key={location ?? 'all-locations'}
                     accessibilityRole="button"
                     accessibilityState={{ selected: active }}
-                    onPress={() => { onLocationChange(location); setLocationVisible(false); }}
+                    onPress={() => { onLocationChange(location); setLocationVisible(false); setLocationQuery(''); }}
                     style={[styles.locationModalOption, active && styles.locationModalOptionActive]}
                   >
-                    <MaterialCommunityIcons name={active ? "radiobox-marked" : "radiobox-blank"} size={19} color={active ? "#174EA6" : "#8C9AAE"} />
+                    <MaterialCommunityIcons name={active ? "radiobox-marked" : "map-marker-outline"} size={21} color={active ? "#1764D8" : "#8697AC"} />
                     <Text numberOfLines={2} style={styles.locationModalOptionText}>{location ?? 'All locations'}</Text>
+                    {active ? <MaterialCommunityIcons name="check" size={17} color="#1764D8" /> : null}
                   </Pressable>
                 );
               })}
+              {matchedLocations.length === 0 && locationQuery.trim() ? <Text style={styles.noLocationText}>No matching marketplace locations</Text> : null}
             </ScrollView>
           </View>
         </View>
@@ -188,12 +253,19 @@ export function ExchangeMarketplaceHome({
             <MaterialCommunityIcons name="chevron-right" size={16} color="#164BB8" />
           </Pressable>
         </View>
+        <Pressable accessibilityRole="button" onPress={() => setLocationVisible(true)} style={styles.selectedLocationRow}>
+          <MaterialCommunityIcons name="map-marker" size={18} color="#1764D8" />
+          <Text numberOfLines={1} style={styles.selectedLocationText}>{selectedLocation ?? 'All locations'}</Text>
+          <MaterialCommunityIcons name="chevron-down" size={17} color="#1764D8" />
+        </Pressable>
         <View style={styles.searchFilterRow}>
           <MaterialCommunityIcons name="magnify" size={21} color="#8190A5" />
           <TextInput
             value={query}
             onChangeText={onQueryChange}
-            placeholder="Search trucks, tippers, buses, JCB..."
+            placeholder={searchHints[hintIndex]}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
             placeholderTextColor="#8A95A5"
             style={styles.searchInput}
             accessibilityLabel="Search exchange vehicles"
@@ -203,16 +275,7 @@ export function ExchangeMarketplaceHome({
               <MaterialCommunityIcons name="close-circle" size={18} color="#9AA5B5" />
             </Pressable>
           ) : null}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={selectedLocation ? `Change location filter, ${selectedLocation}` : 'Filter by location'}
-            accessibilityHint="Opens a list of marketplace locations"
-            onPress={() => setLocationVisible(true)}
-            hitSlop={8}
-            style={styles.locationIndicator}
-          >
-            <MaterialCommunityIcons name={selectedLocation ? "map-marker" : "map-marker-outline"} size={23} color={selectedLocation ? "#174EA6" : "#8290A4"} />
-          </Pressable>
+
         </View>
 
         <View style={styles.segmentedStrip}>
@@ -235,35 +298,38 @@ export function ExchangeMarketplaceHome({
           </ScrollView>
         </View>
 
-        <View style={styles.intentGrid}>
-          <IntentCard
-            icon="truck-check"
-            title="Buy a Vehicle"
-            copy="Find verified commercial vehicles"
-            tone="blue"
-            onPress={onBrowseAll}
-          />
-          <IntentCard
-            icon="truck-plus"
-            title="Sell a Vehicle"
-            copy="List a vehicle from your fleet"
-            tone="orange"
-            onPress={onSell}
-          />
-          <IntentCard
-            icon="chart-line"
-            title="Check Value"
-            copy="Know approximate market value"
-            tone="green"
-            onPress={onValue}
-          />
-          <IntentCard
-            icon="clipboard-check-outline"
-            title="My Exchange"
-            copy="Offers, listings and deals"
-            tone="indigo"
-            onPress={onActivity}
-          />
+        <View style={styles.carouselWrap}>
+          <ScrollView
+            ref={carouselRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onTouchStart={() => setCarouselPaused(true)}
+            onTouchEnd={() => setCarouselPaused(false)}
+            onMomentumScrollEnd={(event) => setSlideIndex(Math.min(3, Math.max(0, Math.round(event.nativeEvent.contentOffset.x / carouselWidth))))}
+          >
+            {([
+              { icon: 'truck-check' as const, title: 'Buy a Vehicle', copy: 'Find verified commercial vehicles', tone: 'blue' as const, onPress: onBrowseAll },
+              { icon: 'truck-plus' as const, title: 'Sell a Vehicle', copy: 'List a vehicle from your fleet', tone: 'orange' as const, onPress: onSell },
+              { icon: 'chart-line' as const, title: 'Check Value', copy: 'Know approximate market value', tone: 'green' as const, onPress: onValue },
+              { icon: 'clipboard-check-outline' as const, title: 'My Exchange', copy: 'Offers, listings and deals', tone: 'indigo' as const, onPress: onActivity },
+            ]).map((item) => (
+              <View key={item.title} style={{ width: carouselWidth }}>
+                <IntentCard {...item} />
+              </View>
+            ))}
+          </ScrollView>
+          <View style={styles.carouselDots}>
+            {[0, 1, 2, 3].map((index) => (
+              <Pressable
+                key={index}
+                accessibilityRole="button"
+                accessibilityLabel={`Show action ${index + 1}`}
+                onPress={() => { setSlideIndex(index); carouselRef.current?.scrollTo({ x: index * carouselWidth, animated: true }); }}
+                style={[styles.carouselDot, index === slideIndex && styles.carouselDotActive]}
+              />
+            ))}
+          </View>
         </View>
 
         {featured.length > 0 ? (
@@ -360,6 +426,18 @@ export function ExchangeMarketplaceHome({
           <MaterialCommunityIcons name="arrow-right" size={17} color="#FFFFFF" />
         </Pressable>
 
+        <View style={styles.sellBanner}>
+          <View style={styles.sellBannerIcon}>
+            <MaterialCommunityIcons name="truck-plus-outline" size={25} color="#164BB8" />
+          </View>
+          <View style={styles.flex}>
+            <Text style={styles.sellBannerTitle}>Planning to sell a commercial vehicle?</Text>
+            <Text style={styles.sellBannerCopy}>Start with a vehicle already saved in your InsureIT fleet.</Text>
+          </View>
+          <Pressable onPress={onSell} hitSlop={8}>
+            <MaterialCommunityIcons name="chevron-right" size={24} color="#164BB8" />
+          </Pressable>
+        </View>
       </ScrollView>
 
       <FilterSheet
@@ -643,14 +721,25 @@ const styles = StyleSheet.create({
   pageTitle: { flexShrink: 0, color: '#0A2146', fontSize: 19, fontWeight: '900' },
   sellHeadingAction: { flex: 1, minWidth: 0, minHeight: 38, paddingHorizontal: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 3, borderRadius: 12, backgroundColor: '#EEF4FF' },
   sellHeadingText: { flexShrink: 1, textAlign: 'right', fontSize: 9, lineHeight: 12, color: '#164BB8', fontWeight: '800' },
-  locationModalBackdrop: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, backgroundColor: 'rgba(9,22,46,0.48)' },
-  locationModalCard: { maxHeight: '70%', borderRadius: 20, backgroundColor: '#FFFFFF', padding: 18 },
-  locationModalHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  locationModalTitle: { color: '#0A2146', fontSize: 17, fontWeight: '900' },
+  selectedLocationRow: { marginTop: 12, alignSelf: 'flex-start', maxWidth: '100%', minHeight: 26, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  selectedLocationText: { maxWidth: '85%', color: '#123F8F', fontSize: 12, fontWeight: '800' },
+  locationSheetBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(9,22,46,0.52)' },
+  locationSheetDismiss: { flex: 1 },
+  locationSheet: { maxHeight: '82%', minHeight: '57%', backgroundColor: '#FFFFFF', borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20, paddingBottom: 36 },
+  locationSheetHandle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 3, backgroundColor: '#E0E5EC', marginBottom: 14 },
+  locationModalHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  locationModalTitle: { color: '#15253D', fontSize: 18, fontWeight: '900' },
+  locationSearch: { height: 49, borderRadius: 16, borderColor: '#C9D2DF', borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14 },
+  locationSearchInput: { flex: 1, minWidth: 0, fontSize: 13, color: '#172C49' },
+  currentLocationButton: { marginTop: 18, backgroundColor: '#EDF6FF', borderRadius: 14, paddingHorizontal: 12, minHeight: 62, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  currentLocationTitle: { color: '#1764D8', fontSize: 13, fontWeight: '800' },
+  currentLocationCopy: { color: '#6C7B8F', fontSize: 10, marginTop: 3 },
+  availableLocationsTitle: { color: '#79818D', fontSize: 12, fontWeight: '800', marginTop: 20, marginBottom: 8 },
   locationModalOptions: { flexGrow: 0 },
-  locationModalOption: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 10, paddingHorizontal: 10 },
-  locationModalOptionActive: { backgroundColor: '#EEF4FF' },
-  locationModalOptionText: { flexShrink: 1, fontSize: 13, fontWeight: '700', color: '#203956' },
+  locationModalOption: { minHeight: 49, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: 1, borderBottomColor: '#F0F3F7', paddingHorizontal: 8 },
+  locationModalOptionActive: { backgroundColor: '#EDF4FF' },
+  locationModalOptionText: { flex: 1, fontSize: 12, fontWeight: '700', color: '#203956' },
+  noLocationText: { padding: 16, fontSize: 12, color: '#78869B' },
   searchFilterRow: { marginTop: 14, minHeight: 48, borderRadius: 13, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F8F9FC', borderWidth: 1, borderColor: '#E2E7F0' },
   searchInput: { flex: 1, minWidth: 0, height: 46, paddingVertical: 0, color: '#10213D', fontSize: 12, fontWeight: '600' },
   locationIndicator: { width: 30, height: 42, alignItems: 'center', justifyContent: 'center' },
@@ -665,8 +754,11 @@ const styles = StyleSheet.create({
   sectionSubtitle: { marginTop: 2, color: '#8290A3', fontSize: 8.8, fontWeight: '700' },
   sectionAction: { color: '#1455AB', fontSize: 12, fontWeight: '800' },
 
-  intentGrid: { marginTop: 20, flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' },
-  intentCard: { width: '48.4%', minHeight: 112, borderRadius: 15, padding: 14, borderWidth: 1 },
+  carouselWrap: { marginTop: 18 },
+  carouselDots: { marginTop: 10, flexDirection: 'row', justifyContent: 'center', gap: 6 },
+  carouselDot: { width: 7, height: 5, borderRadius: 4, backgroundColor: '#CCD5E5' },
+  carouselDotActive: { width: 22, backgroundColor: '#164BB8' },
+  intentCard: { minHeight: 112, borderRadius: 15, padding: 14, borderWidth: 1 },
   intentBlue: { backgroundColor: '#EEF4FF', borderColor: '#D8E5FB' },
   intentOrange: { backgroundColor: '#FFF5E9', borderColor: '#F4E4CD' },
   intentGreen: { backgroundColor: '#ECF8F3', borderColor: '#D4ECE2' },
