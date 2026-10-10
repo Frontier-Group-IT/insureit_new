@@ -50,3 +50,5 @@ jobs:
 # Validate feature-gated Android Firebase login and fallback paths (2026-10-10).
 
 # 2026-10-10: customer policy route typecheck correction and claim document integration.
+
+# CI: validate all routed customer screens, signed claim uploads and restored Firebase startup.
