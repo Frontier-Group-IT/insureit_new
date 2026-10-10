@@ -5,9 +5,8 @@ import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } fr
 
 import { LoadingState, Screen } from '@/components/ui';
 import { buildComplianceRenewals, RENEWAL_DUE_WINDOW_DAYS, type ComplianceDocumentKey } from '@/lib/compliance-renewals';
-import { getCurrentSession } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
 import { customerAccountTitle, getOperationalCustomerContexts } from '@/lib/customer-context';
-import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Policy, Vehicle } from '@/lib/types';
 
@@ -50,8 +49,9 @@ export default function ComplianceRenewalsScreen() {
     let active = true;
     async function load() {
       try {
-        const session = await getCurrentSession();
-        if (!session?.user) return router.replace('/login');
+        const identity = await getCustomerIdentity();
+        if (!identity) return router.replace('/login');
+        const customerClient = identity.data;
         const contexts = await getOperationalCustomerContexts();
         const ids = contexts.map((context) => context.customer_id);
         const accountNames = new Map(contexts.map((context) => [context.customer_id, customerAccountTitle(context)]));
@@ -60,9 +60,9 @@ export default function ComplianceRenewalsScreen() {
           return;
         }
         const [vehicleResult, policyResult, externalPolicyResult] = await Promise.all([
-          supabase.from('vehicles').select('*').in('customer_id', ids),
-          supabase.from('policies').select('*').in('customer_id', ids),
-          (supabase as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').in('customer_id', ids),
+          customerClient.from('vehicles').select('*').in('customer_id', ids),
+          customerClient.from('policies').select('*').in('customer_id', ids),
+          (customerClient as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').in('customer_id', ids),
         ]);
         if (vehicleResult.error || policyResult.error || externalPolicyResult.error) {
           throw vehicleResult.error ?? policyResult.error ?? externalPolicyResult.error;
