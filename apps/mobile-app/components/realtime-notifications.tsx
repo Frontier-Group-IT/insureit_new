@@ -3,7 +3,8 @@ import { Href, usePathname, useRouter } from 'expo-router';
 import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { getCurrentSession, getProfile, isValidProfile } from '@/lib/auth';
+import { getProfile, isValidProfile } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
 import { approvedCustomerNotifications, CUSTOMER_NOTIFICATION_TITLES, isApprovedCustomerNotification } from '@/lib/customer-notification-whitelist';
 import { supabase } from '@/lib/supabase';
 import { colors, palette, radii, roleTheme } from '@/lib/theme';
@@ -97,11 +98,11 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
   async function loadCustomerNotifications() {
     setPanelLoading(true); setPanelMessage('');
     try {
-      const session = await getCurrentSession();
-      if (!session?.user) { setPanelNotifications([]); setPanelMessage('Please sign in again to view notifications.'); return; }
-      const nextProfile = await getProfile(session.user.id);
+      const identity = await getCustomerIdentity();
+      if (!identity) { setPanelNotifications([]); setPanelMessage('Please sign in again to view notifications.'); return; }
+      const nextProfile = await getProfile(identity.profileId, identity.data);
       if (!isValidProfile(nextProfile) || nextProfile.role !== 'customer') { setPanelNotifications([]); setPanelMessage('Notifications are not available for this account.'); return; }
-      const { data, error } = await supabase.from('notifications').select('*').or(notificationAudienceFilter(nextProfile.id)).in('title', [...CUSTOMER_NOTIFICATION_TITLES]).order('created_at', { ascending: false }).limit(30);
+      const { data, error } = await identity.data.from('notifications').select('*').or(notificationAudienceFilter(nextProfile.id)).in('title', [...CUSTOMER_NOTIFICATION_TITLES]).order('created_at', { ascending: false }).limit(30);
       if (error) { setPanelNotifications([]); setPanelMessage('Notifications could not be loaded.'); return; }
       setPanelNotifications(approvedCustomerNotifications(data ?? [])); await refreshUnreadCount();
     } catch (error) { console.warn('Customer notification panel load failed.', error); setPanelNotifications([]); setPanelMessage('Notifications could not be loaded.'); }
@@ -113,9 +114,11 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
   function togglePanel() { if (!customerMode) { router.push('/staff/notifications'); return; } if (panelMounted) closeCustomerPanel(); else openCustomerPanel(); }
 
   async function openPanelNotification(notification: Notification) {
-    if (notification.status === 'unread') { const { error } = await supabase.from('notifications').update({ status: 'read' }).eq('id', notification.id); if (!error) { setPanelNotifications((current) => current.map((item) => item.id === notification.id ? { ...item, status: 'read' } : item)); await refreshUnreadCount(); } }
+    const identity = await getCustomerIdentity();
+    if (!identity) return;
+    if (notification.status === 'unread') { const { error } = await identity.data.from('notifications').update({ status: 'read' }).eq('id', notification.id); if (!error) { setPanelNotifications((current) => current.map((item) => item.id === notification.id ? { ...item, status: 'read' } : item)); await refreshUnreadCount(); } }
     if (!notification.claim_id) return;
-    const { data: linkedClaim } = await supabase.from('claims').select('claim_service_mode').eq('id', notification.claim_id).maybeSingle();
+    const { data: linkedClaim } = await identity.data.from('claims').select('claim_service_mode').eq('id', notification.claim_id).maybeSingle();
     const route = linkedClaim?.claim_service_mode === 'self_managed' ? ({ pathname: '/customer/self-managed-claim-detail', params: { id: notification.claim_id } } as Href) : ({ pathname: '/customer/claim-detail', params: { id: notification.claim_id } } as Href);
     closeCustomerPanel(); router.push(route);
   }
