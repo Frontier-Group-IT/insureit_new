@@ -66,3 +66,5 @@ jobs:
 # Validate customer_documents signed reader ownership and Firebase self-managed claims.
 
 # Regression: fix Firebase claim document insert and retry cleanup scopes.
+
+# Validate all policy detail components and corrected self-managed upload code.
