@@ -265,6 +265,7 @@ export default function ExchangeMarketplaceScreen() {
   const [tab, setTab] = useState<ExchangeTab>('buy');
   const [category, setCategory] = useState<VehicleCategory>('All');
   const [query, setQuery] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [feedRows, setFeedRows] = useState<ExchangeFeedWithCover[]>([]);
   const [sellableVehicles, setSellableVehicles] = useState<ExchangeSellableVehicle[]>([]);
@@ -287,6 +288,8 @@ export default function ExchangeMarketplaceScreen() {
     [feedRows],
   );
 
+  const availableLocations = useMemo(() => [...new Set(vehicles.map((vehicle) => vehicle.location).filter((location) => location !== 'Location available on request'))].sort((a, b) => a.localeCompare(b)), [vehicles]);
+
   const filteredVehicles = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return vehicles.filter((vehicle) => {
@@ -296,9 +299,10 @@ export default function ExchangeMarketplaceScreen() {
         vehicle.title.toLowerCase().includes(normalized) ||
         vehicle.location.toLowerCase().includes(normalized) ||
         vehicle.category.toLowerCase().includes(normalized);
-      return categoryMatch && queryMatch;
+      const locationMatch = !selectedLocation || vehicle.location === selectedLocation;
+      return categoryMatch && queryMatch && locationMatch;
     });
-  }, [category, query, vehicles]);
+  }, [category, query, selectedLocation, vehicles]);
 
   useEffect(() => {
     void loadExchange();
@@ -731,6 +735,9 @@ export default function ExchangeMarketplaceScreen() {
             refreshing={refreshing}
             onRefresh={() => void loadExchange(true)}
             onQueryChange={setQuery}
+            selectedLocation={selectedLocation}
+            availableLocations={availableLocations}
+            onLocationChange={setSelectedLocation}
             onCategoryChange={setCategory}
             onOpenVehicle={(vehicle) => router.push({ pathname: '/customer/exchange/[listingId]', params: { listingId: vehicle.id } })}
             onFavorite={(id) => void toggleFavorite(id)}
@@ -873,6 +880,9 @@ function BuyExperience({
   refreshing,
   onRefresh,
   onQueryChange,
+  selectedLocation,
+  availableLocations,
+  onLocationChange,
   onCategoryChange,
   onOpenVehicle,
   onFavorite,
@@ -889,6 +899,9 @@ function BuyExperience({
   refreshing: boolean;
   onRefresh: () => void;
   onQueryChange: (value: string) => void;
+  selectedLocation: string | null;
+  availableLocations: string[];
+  onLocationChange: (location: string | null) => void;
   onCategoryChange: (category: VehicleCategory) => void;
   onOpenVehicle: (vehicle: MarketplaceVehicle) => void;
   onFavorite: (id: string) => void;
@@ -907,6 +920,9 @@ function BuyExperience({
       refreshing={refreshing}
       onRefresh={onRefresh}
       onQueryChange={onQueryChange}
+      selectedLocation={selectedLocation}
+      availableLocations={availableLocations}
+      onLocationChange={onLocationChange}
       onCategoryChange={onCategoryChange}
       onOpenVehicle={(vehicle: ExchangeHomeVehicle) => onOpenVehicle(vehicle as MarketplaceVehicle)}
       onFavorite={onFavorite}
