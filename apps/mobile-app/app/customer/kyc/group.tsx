@@ -5,8 +5,9 @@ import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, Sc
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandLogo } from '@/components/first-look';
-import { ensureCustomerOnboardingForPartner, getCurrentSession, getProfile, saveOnboardingDraft } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { getProfile, saveOnboardingDraft } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
+import { ensureOnboardingForCurrentCustomer } from '@/lib/customer-onboarding-identity';
 import { palette } from '@/lib/theme';
 import type { CustomerOnboardingApplication, Json, Profile } from '@/lib/types';
 
@@ -28,11 +29,11 @@ export default function GroupKycScreen() {
     let active = true;
     async function load() {
       try {
-        const session = await getCurrentSession();
-        if (!session?.user) return router.replace('/login');
+        const identity = await getCustomerIdentity();
+        if (!identity) return router.replace('/login');
         const [nextProfile, nextApplication] = await Promise.all([
-          getProfile(session.user.id),
-          ensureCustomerOnboardingForPartner(session.user, 'group'),
+          getProfile(identity.profileId, identity.data),
+          ensureOnboardingForCurrentCustomer('group'),
         ]);
         if (nextApplication.status === 'submitted' || nextApplication.status === 'under_review') return router.replace('/customer/home');
         if (nextApplication.partner_type !== 'group') {
@@ -46,7 +47,7 @@ export default function GroupKycScreen() {
         setGroupName(textDraft(draft, 'group_name'));
         setOwnerName(textDraft(draft, 'owner_name') || nextProfile?.full_name || '');
         setOwnerPhone(normalizeMobile(textDraft(draft, 'owner_phone')));
-        setEmail(textDraft(draft, 'email') || nextProfile?.email || session.user.email || '');
+        setEmail(textDraft(draft, 'email') || nextProfile?.email || '');
         const reviewNotes = textDraft(draft, 'review_notes');
         if (nextApplication.status === 'changes_requested' && reviewNotes) setError(`Please update your application: ${reviewNotes}`);
       } catch {
@@ -87,8 +88,10 @@ export default function GroupKycScreen() {
         owner_phone: `+91${ownerPhone}`,
         email: email.trim().toLowerCase() || null,
       };
-      await saveOnboardingDraft(application.id, draft, 3);
-      const { error: submitError } = await supabase.rpc('submit_group_onboarding_application', {
+      const identity = await getCustomerIdentity();
+      if (!identity) throw new Error('Please sign in again.');
+      await saveOnboardingDraft(application.id, draft, 3, identity.data);
+      const { error: submitError } = await identity.data.rpc('submit_group_onboarding_application', {
         p_application_id: application.id,
         p_group_name: groupName.trim(),
         p_owner_name: ownerName.trim(),
