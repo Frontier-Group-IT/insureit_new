@@ -7,7 +7,7 @@ import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-na
 
 import { AuthExperience, LoginPromptCard } from '@/components/auth-experience';
 import { FirebaseCustomerOtpForm } from '@/components/firebase-customer-otp-form';
-import { firebaseCustomerRolloutEnabled } from '@/lib/customer-identity';
+import { firebaseCustomerRolloutEnabled, selectCustomerAuthProvider } from '@/lib/customer-identity';
 import { AuthGlassPanel, AuthStatusMessage, SecureActionButton } from '@/components/first-look';
 import { OtpDotsInput } from '@/components/otp-dots-input';
 import { routeSignedInUser, sendPhoneSignupOtp, syncCustomerSignupDetails, verifyPhoneOtp } from '@/lib/auth';
@@ -95,6 +95,7 @@ export default function SignupScreen() {
     setLoading(true);
     try {
       const data = await verifyPhoneOtp(fullPhone, otp);
+      if (data.user) await selectCustomerAuthProvider('supabase');
       if (!data.user) {
         setError('OTP verification did not return an active account.');
         return;
