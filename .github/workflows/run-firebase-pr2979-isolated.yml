@@ -72,3 +72,5 @@ jobs:
 # Validate all policy detail components and corrected self-managed upload code.
 
 # Validate policy detail components, customer notification panel, and current Firebase backend tests.
+
+# Verify complete self-managed milestone Firebase token routing and Storage upload handlers.
