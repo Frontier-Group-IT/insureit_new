@@ -56,3 +56,5 @@ jobs:
 # Verify Firebase customer add-policy and add-vehicle flows against entire mobile app.
 
 # Validate Firebase customer profile, policy and vehicle onboarding with native workspace types.
+
+# Run Customer App KYC identity integration for individual, corporate, dealership and group.
