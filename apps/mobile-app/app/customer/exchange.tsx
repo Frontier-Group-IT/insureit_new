@@ -326,15 +326,10 @@ export default function ExchangeMarketplaceScreen() {
         vehicle.location.toLowerCase().includes(normalized) ||
         vehicle.category.toLowerCase().includes(normalized);
       const desiredCity = selectedLocation?.split(',')[0].trim().toLocaleLowerCase();
-      const desiredState = selectedLocation?.split(',').slice(1).join(',').trim().toLocaleLowerCase();
-      const [listingCity, ...listingStateParts] = vehicle.location.split(',');
-      const listingState = listingStateParts.join(',').trim().toLocaleLowerCase();
-      // Match by city, with optional state when both sides have comparable names.
-      // A location without listings correctly produces an empty marketplace.
-      const locationMatch = !desiredCity ||
-        (listingCity.trim().toLocaleLowerCase() === desiredCity &&
-          (!desiredState || !listingState || desiredState === listingState ||
-            listingState.startsWith(desiredState) || desiredState.startsWith(listingState)));
+      // Compare city names independently from state formatting ("MP" vs "Madhya Pradesh").
+      // A valid city without listings correctly produces an empty marketplace.
+      const listingCity = vehicle.location.split(',')[0].trim().toLocaleLowerCase();
+      const locationMatch = !desiredCity || listingCity === desiredCity;
       return categoryMatch && queryMatch && locationMatch;
     });
   }, [category, query, selectedLocation, vehicles]);
