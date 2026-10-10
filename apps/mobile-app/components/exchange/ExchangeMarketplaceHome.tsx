@@ -167,29 +167,24 @@ export function ExchangeMarketplaceHome({
           </View>
         </View>
 
-        <SectionHeader title="What are you looking for?" />
-        <View style={styles.categoryGrid}>
-          {categories.map((item) => (
-            <Pressable
-              key={item}
-              onPress={() => onCategoryChange(item)}
-              style={({ pressed }) => [
-                styles.categoryTile,
-                category === item && styles.categoryTileActive,
-                pressed && styles.pressed,
-              ]}
-            >
-              <View style={[styles.categoryIcon, category === item && styles.categoryIconActive]}>
-                <MaterialCommunityIcons
-                  name={categoryIcon(item)}
-                  size={30}
-                  color={category === item ? '#FFFFFF' : '#164BB8'}
-                />
-              </View>
-              <Text style={[styles.categoryLabel, category === item && styles.categoryLabelActive]}>{item}</Text>
-            </Pressable>
-          ))}
-        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryPillRail} accessibilityLabel="Vehicle category filters">
+          {categories.map((item) => {
+            const count = item === 'All' ? totalVehicles : vehicles.filter((vehicle) => vehicle.category === item).length;
+            const selected = category === item;
+            return (
+              <Pressable
+                key={item}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                onPress={() => onCategoryChange(item)}
+                style={({ pressed }) => [styles.categoryPill, selected && styles.categoryPillActive, pressed && styles.pressed]}
+              >
+                <Text style={[styles.categoryPillText, selected && styles.categoryPillTextActive]}>{item} ({count})</Text>
+                {selected ? <MaterialCommunityIcons name="chevron-down" size={16} color="#FFFFFF" /> : null}
+              </Pressable>
+            );
+          })}
+        </ScrollView>
 
         <View style={styles.intentGrid}>
           <IntentCard
@@ -608,25 +603,23 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.84, transform: [{ scale: 0.99 }] },
 
   searchFilterRow: { marginTop: 16, marginBottom: 6, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  searchShell: { flex: 1, minWidth: 0, height: 47, borderRadius: 24, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D1DCEC' },
+  searchShell: { width: '65%', flexShrink: 0, minWidth: 0, height: 47, borderRadius: 24, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D1DCEC' },
   searchInput: { flex: 1, minWidth: 0, height: 45, color: '#0F1D33', fontSize: 13, fontWeight: '600', paddingVertical: 0 },
-  locationPill: { height: 45, maxWidth: 124, borderRadius: 23, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, backgroundColor: '#E6F0FF', borderWidth: 1, borderColor: '#D3E1F6' },
-  locationPillText: { color: '#0B337A', fontSize: 11, fontWeight: '700', flexShrink: 1 },
-  inventoryCount: { height: 45, maxWidth: 112, borderRadius: 23, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: '#DFEBFF' },
-  inventoryCountValue: { color: '#0B337A', fontSize: 10.5, fontWeight: '800', flexShrink: 1 },
+  locationPill: { flex: 1, minWidth: 0, height: 45, borderRadius: 23, paddingHorizontal: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, backgroundColor: '#E6F0FF', borderWidth: 1, borderColor: '#D3E1F6' },
+  locationPillText: { color: '#0B337A', fontSize: 9, fontWeight: '700', flexShrink: 1 },
+  inventoryCount: { flex: 1, minWidth: 0, height: 45, borderRadius: 23, paddingHorizontal: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: '#DFEBFF' },
+  inventoryCountValue: { color: '#0B337A', fontSize: 9, fontWeight: '800', flexShrink: 1 },
 
   sectionHeader: { marginTop: 26, marginBottom: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { color: '#0A2146', fontSize: 18, fontWeight: '900' },
   sectionSubtitle: { marginTop: 2, color: '#8290A3', fontSize: 8.8, fontWeight: '700' },
   sectionAction: { color: '#1455AB', fontSize: 12, fontWeight: '800' },
 
-  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' },
-  categoryTile: { width: '31.3%', minHeight: 94, borderRadius: 14, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE3EC' },
-  categoryTileActive: { borderColor: '#276DEB', backgroundColor: '#276DEB' },
-  categoryIcon: { width: 48, height: 46, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF4FF' },
-  categoryIconActive: { backgroundColor: 'rgba(255,255,255,0.14)' },
-  categoryLabel: { color: '#193556', fontSize: 11, fontWeight: '800' },
-  categoryLabelActive: { color: '#FFFFFF', fontWeight: '900' },
+  categoryPillRail: { paddingTop: 24, paddingBottom: 4, gap: 9, alignItems: 'center' },
+  categoryPill: { minHeight: 44, borderRadius: 25, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE5EF' },
+  categoryPillActive: { backgroundColor: '#081F4B', borderColor: '#081F4B' },
+  categoryPillText: { fontSize: 12, fontWeight: '800', color: '#606B7C' },
+  categoryPillTextActive: { color: '#FFFFFF' },
 
   intentGrid: { marginTop: 20, flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' },
   intentCard: { width: '48.4%', minHeight: 112, borderRadius: 15, padding: 14, borderWidth: 1 },
