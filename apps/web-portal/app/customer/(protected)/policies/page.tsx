@@ -1,3 +1,4 @@
+import { PolicySourceFilter } from "./policy-source-filter";
 import Link from "next/link";
 import { FileText, Search } from "lucide-react";
 import { getStaticInsurerLogo } from "@/lib/insurer-logo";
@@ -91,7 +92,7 @@ export default async function CustomerPoliciesPage({
           <input type="hidden" name="account" value={account.id} />
           {statusFilter !== "all" ? <input type="hidden" name="status" value={statusFilter} /> : null}
           {sourceFilter !== "all" ? <input type="hidden" name="source" value={sourceFilter} /> : null}
-          <input name="q" defaultValue={currentQuery} aria-label="Search policies" placeholder="Search policy, insurer, vehicle or product" className="w-full min-w-0 bg-transparent text-[12px] text-[#203650] outline-none placeholder:text-[#95A2B7]" />
+          <input name="q" defaultValue={currentQuery} aria-label="Search policies" placeholder="Search policy, insurer, vehicle or product" className="w-full min-w-0 border-0 bg-transparent p-0 text-[12px] text-[#203650] shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 placeholder:text-[#95A2B7]" />
           <button type="submit" className="sr-only">Search</button>
         </form>
         <div className="flex items-center gap-1 rounded-xl border border-[#D8E2F0] bg-[#F8FAFD] p-1">
@@ -106,17 +107,7 @@ export default async function CustomerPoliciesPage({
             </Link>
           ))}
         </div>
-        <form action="/customer/policies" method="get">
-          <input type="hidden" name="account" value={account.id} />
-          {currentQuery ? <input type="hidden" name="q" value={currentQuery} /> : null}
-          {statusFilter !== "all" ? <input type="hidden" name="status" value={statusFilter} /> : null}
-          <select name="source" aria-label="Filter policy source" defaultValue={sourceFilter} onChange={undefined} className="rounded-xl border border-[#D8E2F0] bg-white px-3 py-2.5 text-[11px] font-semibold text-[#17345B]">
-            <option value="all">All Sources</option>
-            <option value="internal">Internal</option>
-            <option value="external">External</option>
-          </select>
-          <button type="submit" className="ml-1 rounded-lg bg-[#17345B] px-3 py-2.5 text-[11px] font-semibold text-white">Apply</button>
-        </form>
+        <PolicySourceFilter accountId={account.id} query={currentQuery} status={statusFilter ?? "all"} source={sourceFilter ?? "all"} />
       </div>
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/policies" />
 
@@ -157,7 +148,7 @@ export default async function CustomerPoliciesPage({
                       <td className="px-3 py-3"><StatusPill tone={status.tone}>{status.tone === "due" ? "Due" : status.tone}</StatusPill></td>
                       <td className="whitespace-nowrap px-3 py-3 text-right font-semibold text-[#263B59]">{formatCustomerMoney(policy.insured_declared_value)}</td>
                       <td className="whitespace-nowrap px-3 py-3 text-right font-semibold text-[#263B59]">{formatCustomerMoney(policy.premium_amount)}</td>
-                      <td className="px-3 py-3 text-[9px] font-semibold uppercase text-[#64748B]">{policy.source === "external" ? "External" : "INSUREIT"}</td>
+                      <td className="px-3 py-3 text-[9px] font-semibold uppercase text-[#64748B]">{policy.source === "external" ? "External" : "Internal"}</td>
                     </tr>
                   );
                 })}
@@ -182,7 +173,7 @@ export default async function CustomerPoliciesPage({
                     <span className="min-w-0 flex-1 truncate">{policy.insurer_name || "Insurer unavailable"}</span>
                     <span className="font-semibold">{formatCustomerMoney(policy.premium_amount)}</span>
                   </div>
-                  <p className="mt-1 text-[9px] text-[#8A9AB0]">{formatCustomerDate(policy.start_date)} – {formatCustomerDate(policy.end_date)} · {policy.source === "external" ? "External" : "INSUREIT"}</p>
+                  <p className="mt-1 text-[9px] text-[#8A9AB0]">{formatCustomerDate(policy.start_date)} – {formatCustomerDate(policy.end_date)} · {policy.source === "external" ? "External" : "Internal"}</p>
                 </Link>
               );
             })}
