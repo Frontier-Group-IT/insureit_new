@@ -54,6 +54,20 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
       <section className="flex flex-wrap items-center gap-3 rounded-xl border border-[#DCE4EE] bg-white px-4 py-3 shadow-sm">
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#15345B] text-white"><ClipboardList className="h-5 w-5" /></span>
         <h1 className="mr-1 text-[17px] font-bold text-[#142746]">Claim Portfolio</h1>
+        <form className="flex min-w-[220px] flex-1 flex-wrap items-center gap-2">
+          <input type="hidden" name="account" value={account.id} />
+          <input type="hidden" name="type" value={type} />
+          <div className="flex min-w-[180px] max-w-[440px] flex-1 items-center gap-2 px-2 py-2.5">
+            <Search className="h-4 w-4 text-[#71829A]" />
+            <input name="q" defaultValue={params.q ?? ""} placeholder="Search customer, vehicle no., claim no., policy no., control no."
+              className="w-full min-w-0 border-0 bg-transparent p-0 text-[11px] shadow-none outline-none ring-0 focus:outline-none focus:ring-0 placeholder:text-[#8A9AB0]" />
+          </div>
+          <select name="stage" defaultValue={stageFilter} className="max-w-[210px] rounded-lg border border-[#CBD8E9] bg-white px-3 py-2.5 text-[11px] text-[#142746]">
+            <option value="">All claim stages</option>
+            {stages.map((stage) => <option key={stage} value={stage}>{stage}</option>)}
+          </select>
+          <button className="rounded-lg bg-[#07367A] px-4 py-2.5 text-[11px] font-semibold text-white">Search</button>
+        </form>
         <div className="flex rounded-lg border border-[#DCE4EE] bg-[#F8FAFD] p-0.5 text-[11px] font-semibold">
           {(["internal", "external"] as const).map((key) => (
             <Link key={key} href={href({ type: key, stage: "", page: "1" })}
@@ -62,20 +76,6 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
             </Link>
           ))}
         </div>
-        <form className="flex min-w-[220px] flex-1 flex-wrap items-center gap-2">
-          <input type="hidden" name="account" value={account.id} />
-          <input type="hidden" name="type" value={type} />
-          <div className="flex min-w-[180px] flex-1 items-center gap-2 rounded-lg border border-[#CBD8E9] px-3 py-2.5">
-            <Search className="h-4 w-4 text-[#71829A]" />
-            <input name="q" defaultValue={params.q ?? ""} placeholder="Search customer, vehicle no., claim no., policy no., control no."
-              className="w-full min-w-0 bg-transparent text-[11px] outline-none placeholder:text-[#8A9AB0]" />
-          </div>
-          <select name="stage" defaultValue={stageFilter} className="max-w-[210px] rounded-lg border border-[#CBD8E9] bg-white px-3 py-2.5 text-[11px] text-[#142746]">
-            <option value="">All claim stages</option>
-            {stages.map((stage) => <option key={stage} value={stage}>{stage}</option>)}
-          </select>
-          <button className="rounded-lg bg-[#07367A] px-4 py-2.5 text-[11px] font-semibold text-white">Search</button>
-        </form>
       </section>
       <section className="overflow-hidden rounded-xl border border-[#DCE4EE] bg-white shadow-sm">
         <div className="flex items-center gap-2 px-4 py-3 text-[13px] font-semibold text-[#142746]">
