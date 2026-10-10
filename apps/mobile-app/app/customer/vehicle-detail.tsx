@@ -4,11 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Card, EmptyState, LoadingState, Screen } from '@/components/ui';
-import { getCurrentSession } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
 import { getInsurerLogoSource } from '@/lib/catalog-logos';
 import { getOperationalCustomerContexts } from '@/lib/customer-context';
 import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
-import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
 
@@ -40,8 +39,9 @@ export default function VehicleDetailScreen() {
   useEffect(() => {
     async function load() {
       if (!id) return;
-      const session = await getCurrentSession();
-      if (!session?.user) return router.replace('/login');
+      const identity = await getCustomerIdentity();
+      if (!identity) return router.replace('/login');
+      const customerClient = identity.data;
       const contexts = await getOperationalCustomerContexts();
       const ids = contexts.map((context) => context.customer_id);
       if (!ids.length) {
@@ -49,13 +49,13 @@ export default function VehicleDetailScreen() {
         return;
       }
 
-      const vehicleResult = await supabase.from('vehicles').select('*').eq('id', id).in('customer_id', ids).maybeSingle();
+      const vehicleResult = await customerClient.from('vehicles').select('*').eq('id', id).in('customer_id', ids).maybeSingle();
       setVehicle(vehicleResult.data);
       if (vehicleResult.data) {
         const [policyResult, externalPolicyResult, companyResult] = await Promise.all([
-          supabase.from('policies').select('id,vehicle_id,insurance_company_id,policy_no,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', ids),
-          (supabase as any).from('external_policies').select('id,vehicle_id,insurance_company_id,policy_no,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', ids),
-          supabase.from('insurance_companies').select('*'),
+          customerClient.from('policies').select('id,vehicle_id,insurance_company_id,policy_no,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', ids),
+          (customerClient as any).from('external_policies').select('id,vehicle_id,insurance_company_id,policy_no,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', ids),
+          customerClient.from('insurance_companies').select('*'),
         ]);
         const nextPolicies: VehiclePolicyDisplay[] = [
           ...((policyResult.data ?? []).map((policy) => ({ ...policy, source: 'sibl' as const }))),
