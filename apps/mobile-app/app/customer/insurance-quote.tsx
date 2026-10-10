@@ -5,7 +5,8 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandLogo } from '@/components/first-look';
-import { getCurrentSession, getCustomerForUser, getProfile } from '@/lib/auth';
+import { getCustomerForUser, getProfile } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
 import {
   requestGuestEnquiryOtp,
   submitCustomerServiceEnquiry,
@@ -13,7 +14,6 @@ import {
   verifyGuestEnquiryOtp,
   type ServiceEnquirySource,
 } from '@/lib/service-enquiries';
-import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Customer, Profile, Vehicle } from '@/lib/types';
 
@@ -58,18 +58,18 @@ export default function InsuranceQuoteScreen() {
   useEffect(() => {
     let active = true;
     void (async () => {
-      const session = await getCurrentSession();
+      const identity = await getCustomerIdentity();
       if (!active) return;
-      setIsSignedIn(Boolean(session?.user));
-      if (!session?.user) return;
+      setIsSignedIn(Boolean(identity));
+      if (!identity) return;
 
-      const [nextProfile, nextCustomer] = await Promise.all([getProfile(session.user.id), getCustomerForUser(session.user.id)]);
+      const [nextProfile, nextCustomer] = await Promise.all([getProfile(identity.profileId, identity.data), getCustomerForUser(identity.profileId, identity.data)]);
       if (!active) return;
       setProfile(nextProfile);
       setCustomer(nextCustomer);
       if (!nextCustomer) return;
 
-      const { data } = await supabase.from('vehicles').select('*').eq('customer_id', nextCustomer.id).order('created_at', { ascending: false });
+      const { data } = await identity.data.from('vehicles').select('*').eq('customer_id', nextCustomer.id).order('created_at', { ascending: false });
       if (!active) return;
       const list = data ?? [];
       setVehicles(list);
