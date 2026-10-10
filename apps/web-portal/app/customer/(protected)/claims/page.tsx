@@ -58,4 +58,57 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
         <CustomerClaimsSearch initialQuery={params.q ?? ""} accountId={account.id} type={type} />
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <CustomerClaimsStageFilter value={stageFilter} stages={stages} accountId={account.id} type={type} query={params.q ?? ""} />
-
+        <div className="flex rounded-lg border border-[#DCE4EE] bg-[#F8FAFD] p-0.5 text-[11px] font-semibold">
+          {(["internal", "external"] as const).map((key) => (
+            <Link key={key} href={href({ type: key, stage: "", page: "1" })}
+              className={`rounded-md px-3 py-2 ${type === key ? "bg-[#E4EFFD] text-[#124788]" : "text-[#64748B]"}`}>
+              {key === "internal" ? "Internal claims" : "External claims"} <span className="ml-1 rounded-full bg-[#D9E8FA] px-1.5 py-0.5">{key === "internal" ? internalCount : externalCount}</span>
+            </Link>
+          ))}
+        </div>
+        </div>
+      </section>
+      <section className="overflow-hidden rounded-xl border border-[#DCE4EE] bg-white shadow-sm">
+        <div className="flex items-center gap-2 px-4 py-3 text-[13px] font-semibold text-[#142746]">
+          {type === "internal" ? "Internal claims" : "External claims"}
+          <span className="rounded-full bg-[#EEF4FF] px-2.5 py-1 text-[10px] text-[#24538A]">{filtered.length} claims</span>
+        </div>
+        {rows.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1250px] border-collapse text-left">
+              <thead className="bg-[#07367A] text-[11px] text-white">
+                <tr>{["Customer / Mobile", "Vehicle No.", "Vehicle", "Loss Date", "Insurer", "Policy", "Control No.", "Claim No.", "Process", "Action"].map((heading) =>
+                  <th key={heading} className="whitespace-nowrap px-3 py-3 font-semibold">{heading}</th>)}</tr>
+              </thead>
+              <tbody className="divide-y divide-[#E2E9F3]">
+                {rows.map(({ claim, stage }) => (
+                  <tr key={claim.id} className="hover:bg-[#F6F9FE]">
+                    <td className={cell}>Account holder</td>
+                    <td className={cell}>{claim.vehicle_no || "—"}</td>
+                    <td className={cell}>{[claim.vehicle_make, claim.vehicle_model].filter(Boolean).join(" ") || "—"}</td>
+                    <td className={cell}>{claim.accident_at ? new Date(claim.accident_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</td>
+                    <td className={cell}>{claim.insurer_name || "—"}</td>
+                    <td className={cell}>{claim.policy_no || "—"}</td>
+                    <td className={cell}>{claim.claim_no || "—"}</td>
+                    <td className={cell}>{claim.insurer_claim_no || "—"}</td>
+                    <td className={cell}>{stage}</td>
+                    <td className={cell}><Link href={{ pathname: `/customer/claims/${claim.id}`, query: { account: account.id } }}
+                      className="inline-block rounded-lg bg-[#07367A] px-3 py-2 font-semibold text-white hover:bg-[#0B4B9B]">Proceed</Link></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <EmptyCustomerState title="No matching claims" body="Change the claim type, search or stage filter." />}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E2E9F3] px-5 py-4 text-[11px] text-[#536681]">
+          <span>Showing {filtered.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}</span>
+          <div className="flex items-center gap-3">
+            {page > 1 ? <Link href={href({ page: String(page - 1) })} className="rounded-lg border px-3 py-2">Previous</Link> : <span className="rounded-lg border px-3 py-2 opacity-40">Previous</span>}
+            <span>{page} / {totalPages}</span>
+            {page < totalPages ? <Link href={href({ page: String(page + 1) })} className="rounded-lg border px-3 py-2">Next</Link> : <span className="rounded-lg border px-3 py-2 opacity-40">Next</span>}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
