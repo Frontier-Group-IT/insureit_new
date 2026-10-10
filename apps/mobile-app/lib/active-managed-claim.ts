@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
 export type ActiveManagedClaim = {
@@ -8,8 +9,8 @@ export type ActiveManagedClaim = {
 
 const COMPLETED_MANAGED_CLAIM_STATUSES = new Set(['Settled', 'Closed', 'Claim Complete']);
 
-export async function findActiveManagedClaim(policyId: string): Promise<ActiveManagedClaim | null> {
-  const { data, error } = await (supabase as any)
+export async function findActiveManagedClaim(policyId: string, client: SupabaseClient = supabase): Promise<ActiveManagedClaim | null> {
+  const { data, error } = await (client as any)
     .from('claims')
     .select('id,current_status,created_at')
     .eq('policy_id', policyId)
