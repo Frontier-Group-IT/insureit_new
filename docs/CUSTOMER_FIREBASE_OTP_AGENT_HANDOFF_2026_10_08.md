@@ -465,3 +465,11 @@ Rollback strategy for newly added preflight ONLY, if necessary, is to stop clien
 ### 2026-10-12 — Live preflight HTTP smoke passed
 
 Isolated GitHub Actions run [#38233117544](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/38233117544) **SUCCESS**. Real requests to deployed `customer-firebase-registration-check` returned HTTP 400 with `invalid_phone` for malformed phone and HTTP 200 with `not_registered` for a synthetic unknown Indian phone. No SMS issued. The earlier database rollback-only registered and inactive-profile checks also passed. This confirms function routing, anonymous pre-OTP access, server role RPC integration, and a basic rate-key path; it does NOT verify existing customer's actual device SMS/binding or staff role regression. Client remains unpublished.
+
+### 2026-10-12 Production signup classification and Android rollout
+
+Deployed migration `customer_firebase_master_only_signup_eligibility_20261012`: a phone appearing only in Customer Master now counts as not registered for the Customer App, not as an existing login. The rollback-only production SQL test confirmed the classification. Customer business records remain intact.
+
+Read-only cohort: 23 active Customer App profiles, nine inactive phone-confirmed customer profiles. The inactive cohort has no customer-owner or membership links; one has onboarding history. Their inactive reason is not established. Firebase binder does not authorize inactive profiles. Do not claim legacy account recovery or Firebase SMS delivery is fixed until real signed OTP tests and status review establish it.
+
+Guarded Android 0.3.1 OTA workflow: https://github.com/Frontier-Group-IT/insureit_new/actions/runs/38236698411 . It checks native TypeScript, lint, regression tests, production registration endpoint and Android JS export before publishing. Publication must be confirmed from successful run and Expo update record. No APK/AAB or Play publishing.
