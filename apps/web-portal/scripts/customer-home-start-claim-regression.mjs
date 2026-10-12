@@ -1,0 +1,11 @@
+import fs from "node:fs";
+import assert from "node:assert/strict";
+const home=fs.readFileSync("app/customer/(protected)/home/page.tsx","utf8");
+assert.match(home, /pathname: "\/customer\/start-claim", query: accountQuery/);
+assert.match(home, /Start New Claim/);
+assert.match(home, /pathname: "\/customer\/claims", query: accountQuery/);
+assert.match(home, /Track Existing Claims/);
+assert.doesNotMatch(home, /openClaims\.length \? "\/customer\/claims" : "\/customer\/start-claim"/);
+assert.match(home, /resolveCustomerWebScope\(params\.account\)/);
+assert.match(home, /loadCustomerClaimListContext\(account\.id\)/);
+console.log("Customer Home permanent Start Claim regression passed.");
