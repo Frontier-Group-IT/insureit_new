@@ -107,7 +107,17 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
         style={customerHeader ? 'light' : 'dark'}
         backgroundColor={customerHeader ? palette.navy : '#EEF7FF'}
       />
-      <SafeAreaView style={styles.safeArea} edges={[]}>
+      <SafeAreaView
+        style={styles.safeArea}
+        edges={[]}
+        onTouchStartCapture={(event) => {
+          if (pathname !== '/customer/start-claim') return;
+          const { pageX, pageY } = event.nativeEvent;
+          console.warn('[claim-navigation] screen-touch-capture', {
+            x: Math.round(pageX), y: Math.round(pageY),
+          });
+        }}
+      >
       <View pointerEvents="none" style={styles.backdropTop} />
       <View pointerEvents="none" style={styles.backdropBand} />
       {customerHeader ? (
