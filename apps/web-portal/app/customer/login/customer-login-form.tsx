@@ -2,6 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useState } from "react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { CustomerPhoneField, toIndianE164 } from "./customer-phone-field";
 
@@ -138,10 +139,12 @@ export function CustomerLoginForm() {
       <button
         type="submit"
         disabled={busy || (!otpSent && phone.length !== 10)}
-        className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-[#142746] px-4 text-sm font-bold text-white transition hover:bg-[#0C1B35] disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex h-14 w-full items-center justify-center gap-3 rounded-xl bg-[#073783] px-4 text-sm font-bold text-white shadow-[0_8px_18px_rgba(10,56,128,0.17)] transition hover:bg-[#092D68] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 disabled:cursor-not-allowed disabled:bg-[#75849A] disabled:shadow-none"
       >
         {busy ? (otpSent ? "Verifying..." : "Sending OTP...") : (otpSent ? "Verify & continue" : "Send OTP")}
+        {!busy ? <ArrowRight aria-hidden="true" className="h-4 w-4" /> : null}
       </button>
+      {!otpSent ? <p className="flex items-center justify-center gap-2 text-center text-xs text-[#71839B]"><ShieldCheck aria-hidden="true" className="h-4 w-4" />We’ll send a one-time password (OTP) to verify your number.</p> : null}
 
       {otpSent ? (
         <button
