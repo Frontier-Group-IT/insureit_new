@@ -38,10 +38,23 @@ export class FirebasePhoneOtpFlow {
     if (!this.pending || !this.pendingPhone) throw new Error('Request OTP first');
     const confirmation = this.pending;
     const phone = this.pendingPhone;
-    // One attempt consumes the pending handle. Retry must request a new OTP.
+    let result: Awaited<ReturnType<NativePhoneConfirmation['confirm']>>;
+    try {
+      result = await confirmation.confirm(code);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message.toLowerCase() : '';
+      // Invalid codes must NOT silently discard a valid confirmation session.
+      // An expired/invalidated session must be replaced with a fresh SMS.
+      if (!reason.includes('invalid-verification-code') &&
+          !reason.includes('invalid code') &&
+          !reason.includes('invalid otp')) {
+        this.pending = null;
+        this.pendingPhone = null;
+      }
+      throw error;
+    }
     this.pending = null;
     this.pendingPhone = null;
-    const result = await confirmation.confirm(code);
     if (result.user.phoneNumber !== phone || !result.user.uid) {
       throw new Error('Firebase returned a mismatched phone identity');
     }
