@@ -36,3 +36,5 @@ jobs:
           echo "No EAS publish, AAB, APK, Supabase migration, function deployment, or Play publication performed by this workflow."
 
 # Rerun revised source assertions and corrected E.164 input validation.
+
+# Check signup-incomplete phone routing, Firebase invalid/expired OTP retry, and existing customer safety.
