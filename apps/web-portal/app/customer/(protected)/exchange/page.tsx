@@ -26,7 +26,18 @@ export default async function CustomerExchangePage({
   const { account, accounts } = await resolveCustomerWebScope(params.account);
   const category = categories.includes((params.category ?? "All") as (typeof categories)[number]) ? (params.category ?? "All") : "All";
   const query = params.q?.trim() ?? "";
-  const rows = await loadCustomerExchangeFeed({ category, query });
+  // Keep transient marketplace failures inside Exchange so Customer navigation stays usable.
+  // Do not catch session/account authorization failures from resolveCustomerWebScope.
+  let rows: Awaited<ReturnType<typeof loadCustomerExchangeFeed>> = [];
+  let feedUnavailable = false;
+  try {
+    rows = await loadCustomerExchangeFeed({ category, query });
+  } catch (error) {
+    feedUnavailable = true;
+    console.error("[customer-exchange-feed] Unable to load marketplace feed", {
+      error: error instanceof Error ? error.message : "Unknown feed failure",
+    });
+  }
 
   return (
     <div className="space-y-5">
@@ -64,7 +75,28 @@ export default async function CustomerExchangePage({
         </div>
       </div>
 
-      {rows.length === 0 ? (
+      {feedUnavailable ? (
+        <section role="alert" className="rounded-2xl border border-[#DCE4EE] bg-white p-6 text-center shadow-sm">
+          <h2 className="text-base font-extrabold text-[#172846]">Exchange listings could not be loaded</h2>
+          <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-[#64748B]">
+            The marketplace is temporarily unavailable. Your account and existing data are unchanged.
+            If retrying does not help, return to the Customer dashboard and try again later.
+          </p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            <form action="/customer/exchange" method="get">
+              <input type="hidden" name="account" value={account.id} />
+              {query ? <input type="hidden" name="q" value={query} /> : null}
+              {category !== "All" ? <input type="hidden" name="category" value={category} /> : null}
+              <button type="submit" className="rounded-lg bg-[#173B68] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#102F56]">
+                Try Exchange again
+              </button>
+            </form>
+            <Link href="/customer/home" className="rounded-lg border border-[#CFD9E8] bg-white px-4 py-2.5 text-sm font-bold text-[#27415F] hover:bg-[#F6F9FD]">
+              Back to dashboard
+            </Link>
+          </div>
+        </section>
+      ) : rows.length === 0 ? (
         <EmptyCustomerState title="No Exchange listings found" body="Try another category or search term." />
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
