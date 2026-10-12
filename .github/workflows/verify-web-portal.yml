@@ -75,6 +75,9 @@ jobs:
         run: npm run partner-web:core-regression
       - name: Customer Web foundation isolation regression
         run: npm run customer-web:foundation-regression
+      - name: Premium Customer login regression
+        working-directory: apps/web-portal
+        run: node scripts/customer-premium-login-regression.mjs
       - name: Customer Exchange recovery regression
         working-directory: apps/web-portal
         run: node scripts/customer-exchange-recovery-regression.mjs
