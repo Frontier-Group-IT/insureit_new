@@ -336,19 +336,19 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
         </div>
       </div>
 
-      <div className={`grid border-t border-[#E7ECF2] ${headlineGrid(headline.length + 1)}`}>
-        <div className="flex min-h-[88px] min-w-0 flex-col px-3 py-2.5">
+      <div className="grid grid-cols-1 border-t border-[#E7ECF2] sm:grid-cols-2 lg:grid-cols-4">
+        <div className="flex min-h-[112px] min-w-0 flex-col px-3 py-2.5">
           <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">
             Policies · {business.periodShortLabel}
           </p>
-          <div className="flex min-h-0 flex-1 items-center justify-between gap-3">
+          <div className="flex min-h-0 flex-1 items-center justify-center gap-2">
             <p className="portal-display min-w-0 flex-1 text-center text-[27px] font-semibold leading-none text-[#10213D]">
               {business.policyCount.toLocaleString("en-IN")}
             </p>
-            <div className="flex shrink-0 flex-col gap-1.5 border-l border-[#E7ECF2] pl-3">
+            <div className="flex shrink-0 flex-col gap-1 border-l border-[#E7ECF2] pl-2">
               {policyBreakdown.map((item) => (
-                <div key={item.label} className="flex items-center justify-between gap-3 whitespace-nowrap">
-                  <span className="text-[8px] font-semibold uppercase text-[#65758B]">{item.label}</span>
+                <div key={item.label} className="flex items-center justify-between gap-2 whitespace-nowrap">
+                  <span className="text-[7px] font-semibold uppercase text-[#65758B]">{item.label}</span>
                   <span className="portal-display text-[12px] font-semibold tabular-nums text-[#10213D]">{item.value.toLocaleString("en-IN")}</span>
                 </div>
               ))}
@@ -356,7 +356,7 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
           </div>
         </div>
         {headline.map((item) => (
-          <div key={item.label} className="flex min-h-[88px] min-w-0 flex-col border-t border-[#E7ECF2] px-3 py-2.5 sm:border-l sm:border-t-0">
+          <div key={item.label} className="flex min-h-[112px] min-w-0 flex-col border-t border-[#E7ECF2] px-3 py-2.5 sm:border-t-0 sm:[&:nth-child(even)]:border-l lg:border-l">
             <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">{item.label}</p>
             <div className="flex min-h-0 flex-1 items-center justify-center">
               <p className="portal-display break-words text-center text-[27px] font-semibold leading-tight text-[#10213D]">{item.value}</p>
