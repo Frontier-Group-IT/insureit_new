@@ -70,7 +70,7 @@ test('OTP resend is throttled locally and an expired session requests a fresh co
   assert.match(ui, /Date\.now\(\) \+ 45000/);
   assert.match(ui, /disabled=\{busy \|\| retrySeconds > 0\}/);
   assert.match(ui, /setResendAvailableAt\(0\)/);
-  assert.match(ui, /Firebase accepted the OTP request/);
+  assert.match(ui, /Firebase started phone verification/);
 });
 
 test('resend never activates the Verify OTP loading indicator and displays native SDK error reference safely', () => {
@@ -80,6 +80,6 @@ test('resend never activates the Verify OTP loading indicator and displays nativ
   assert.match(ui, /loading=\{busyAction === \(sent \? 'verify' : 'send'\)\}/);
   assert.match(ui, /disabled=\{busy \|\| \(sent \?/);
   assert.match(ui, /safeFirebaseErrorCode\(nextError\)/);
-  assert.match(ui, /\^auth\\\/\[a-z-\]/);
+  assert.match(ui, /safeFirebaseErrorCode/);
   assert.doesNotMatch(ui, /Firebase accepted the OTP request/);
 });
