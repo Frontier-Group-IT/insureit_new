@@ -27,13 +27,17 @@ function RootApplication() {
   const navigationState = useRootNavigationState();
   const navigationRef = useNavigationContainerRef();
   const activeRouteRef = useRef<string | null>(null);
+  const getDiagnosticRoute = () => {
+    const ref = navigationRef as unknown as { getCurrentRoute: () => { name?: string } | undefined };
+    return ref.getCurrentRoute()?.name ?? null;
+  };
   const pathname = usePathname();
   const previousRoute = useRef<string | null>(null);
   // Observe the navigation container itself, not individual screen handlers.
   // Never include route params, navigation keys, or action payloads in logs.
   useEffect(() => {
     const focus = () => {
-      const current = navigationRef.getCurrentRoute()?.name ?? null;
+      const current = getDiagnosticRoute();
       const previous = activeRouteRef.current;
       if (current === 'customer/start-claim' || previous === 'customer/start-claim') {
         console.warn('[claim-navigation] container-route', { from: previous, to: current });
@@ -53,7 +57,7 @@ function RootApplication() {
     let unsubscribeAction: (() => void) | undefined;
     try {
       unsubscribeAction = actionObserver.addListener?.('__unsafe_action__', (event) => {
-        const current = navigationRef.getCurrentRoute()?.name ?? null;
+        const current = getDiagnosticRoute();
         if (current === 'customer/start-claim' || activeRouteRef.current === 'customer/start-claim') {
           console.warn('[claim-navigation] navigator-dispatch', {
             type: event.data?.action?.type ?? 'unknown',
