@@ -80,18 +80,6 @@ export default async function CustomerPoliciesPage({
     },
   });
 
-  /* Summary KPI cards intentionally removed from this compact register. */
-  /* const totalInsured = policies.reduce((sum, policy) => {
-    const amount = Number(policy.insured_declared_value);
-    return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;
-  }, 0);
-  const summary = [
-    { label: "Total policies", value: String(policies.length), Icon: FileText, theme: "bg-[#EDF5FF] text-[#1766D2]" },
-    { label: "Active policies", value: String(counts.active), Icon: ShieldCheck, theme: "bg-[#EDFAF3] text-[#008A59]" },
-    { label: "Due for renewal", value: String(counts.due), Icon: Clock3, theme: "bg-[#FFF6E9] text-[#D77B13]" },
-    { label: "Expired policies", value: String(counts.expired), Icon: AlertCircle, theme: "bg-[#FFF0F1] text-[#D22C3B]" },
-    { label: "Total insured value", value: totalInsured ? formatCustomerMoney(totalInsured) : "—", Icon: Wallet, theme: "bg-[#F4F1FF] text-[#7653D6]" },
-  ]; */
   return (
     <div className="space-y-3">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/policies" />
