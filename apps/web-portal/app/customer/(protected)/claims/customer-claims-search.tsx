@@ -24,10 +24,10 @@ export function CustomerClaimsSearch({ initialQuery, accountId, type }: { initia
     }, 300);
     return () => clearTimeout(timer);
   }, [query, urlQuery, params, accountId, type, pathname, router]);
-  return <label className="flex min-w-[200px] max-w-[440px] flex-1 items-center gap-2 rounded-lg border border-[#D8E1EC] bg-white px-3 py-2.5 transition-colors focus-within:border-[#4E95E9]">
+  return <label className="flex w-full min-w-0 items-center gap-2 sm:w-[190px] sm:shrink-0 rounded-lg border border-[#D8E1EC] bg-white px-3 py-2.5 transition-colors focus-within:border-[#4E95E9]">
     <Search className="h-4 w-4 shrink-0 text-[#71829A]" aria-hidden="true"/>
     <span className="sr-only">Search claims</span>
-    <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search customer, vehicle no., claim no., policy no., control no." aria-busy={pending}
+    <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search claims..." aria-busy={pending}
       className="w-full min-w-0 border-0 bg-transparent p-0 text-[11px] shadow-none outline-none ring-0 focus:outline-none focus:ring-0 placeholder:text-[#8A9AB0]"/>
   </label>;
 }
