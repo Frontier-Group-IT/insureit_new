@@ -85,3 +85,37 @@ export function confirmFirebaseCustomerSignup(
 ): Promise<{ uid: string; phoneNumber: string; profileId: string }> {
   return confirmFirebaseCustomerOtp(code, signup);
 }
+
+/** A read-only, rate-limited backend eligibility check. Never read customer
+ * profiles or auth.users directly from the unauthenticated mobile client. */
+export type FirebaseCustomerRegistration = {
+  status: 'registered' | 'not_registered' | 'account_requires_review';
+};
+
+export async function checkFirebaseCustomerRegistration(phone: string): Promise<FirebaseCustomerRegistration> {
+  if (!/^\\+91[6-9]\\d{9}$/.test(phone)) throw new Error('invalid-phone-number');
+  const baseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const publicKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+  if (!baseUrl || !publicKey) throw new Error('registration_check_unavailable');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
+  try {
+    const result = await fetch(`${baseUrl}/functions/v1/customer-firebase-registration-check`, {
+      method: 'POST',
+      headers: { apikey: publicKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
+      signal: controller.signal,
+    });
+    if (!result.ok) {
+      if (result.status === 429) throw new Error('too-many-requests');
+      throw new Error('registration_check_unavailable');
+    }
+    const data: { status?: string } = await result.json();
+    if (data.status !== 'registered' && data.status !== 'not_registered' && data.status !== 'account_requires_review') {
+      throw new Error('registration_check_unavailable');
+    }
+    return { status: data.status };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
