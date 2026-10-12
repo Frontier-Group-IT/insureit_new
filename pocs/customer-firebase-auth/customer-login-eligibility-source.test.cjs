@@ -37,8 +37,8 @@ test('preflight database classification includes old customer master and auth.us
   assert.match(sql, /from public\.profiles p/);
   assert.match(sql, /from auth\.users u/);
   assert.match(sql, /account_requires_review/);
-  assert.match(sql, /grant execute on function public\.customer_firebase_registration_preflight\(text,text\) to service_role/);
-  assert.match(sql, /revoke all on function public\.customer_firebase_registration_preflight\(text,text\) from public, anon, authenticated/);
+  assert.match(sql, /grant execute on function public\.customer_firebase_registration_preflight\(text,text,text\) to service_role/);
+  assert.match(sql, /revoke all on function public\.customer_firebase_registration_preflight\(text,text,text\) from public, anon, authenticated/);
   assert.match(sql, /pg_advisory_xact_lock/);
   assert.match(sql, /v_ip_attempts > 30/);
   assert.match(sql, /v_phone_attempts > 10/);
