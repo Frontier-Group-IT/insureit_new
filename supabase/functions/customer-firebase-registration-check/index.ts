@@ -57,7 +57,7 @@ Deno.serve(async (request: Request) => {
       return reply(503, { error: "registration_lookup_unavailable" });
     }
     if (status === "rate_limited") return reply(429, { error: "rate_limited" });
-    if (!["registered", "not_registered", "account_requires_review"].includes(status)) {
+    if (!["registered", "not_registered", "signup_incomplete", "account_requires_review"].includes(status)) {
       return reply(503, { error: "registration_lookup_unavailable" });
     }
     return reply(200, { status });
