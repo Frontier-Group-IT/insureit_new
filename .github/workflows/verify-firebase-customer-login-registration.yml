@@ -38,3 +38,5 @@ jobs:
 # Rerun revised source assertions and corrected E.164 input validation.
 
 # Check signup-incomplete phone routing, Firebase invalid/expired OTP retry, and existing customer safety.
+
+# Verify backend signup-incomplete route, resend cooldown, expired OTP recovery and E2E-safe source contracts.
