@@ -1,0 +1,38 @@
+name: Verify live Firebase registration preflight (no SMS)
+on:
+  push:
+    branches:
+      - fix/firebase-login-signup-existing-customers-20261012
+    paths:
+      - '.github/workflows/verify-firebase-registration-live-endpoint.yml'
+permissions:
+  contents: read
+jobs:
+  preflight-http:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      ENDPOINT: https://ilzhsfqqjyppzzvfscmh.supabase.co/functions/v1/customer-firebase-registration-check
+      PUBLIC_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
+    steps:
+      - name: Check public endpoint is reachable without any OTP
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl --silent --show-error --max-time 12 --output /tmp/invalid-result --write-out '%{http_code}' --request POST --header "apikey: ${PUBLIC_KEY}" --header 'Content-Type: application/json' --data '{"phone":"invalid"}' "${ENDPOINT}")"
+          if [ "${code}" != "400" ]; then
+            echo "::error::Expected invalid-phone 400, got ${code}"
+            exit 1
+          fi
+          grep -q 'invalid_phone' /tmp/invalid-result || { echo "::error::Invalid phone response not recognized"; exit 1; }
+      - name: Test a synthetic unregistered number without sending SMS
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl --silent --show-error --max-time 12 --output /tmp/unknown-result --write-out '%{http_code}' --request POST --header "apikey: ${PUBLIC_KEY}" --header 'Content-Type: application/json' --data '{"phone":"+919000000000"}' "${ENDPOINT}")"
+          if [ "${code}" != "200" ]; then
+            echo "::error::Expected 200 for synthetic test, got ${code}"
+            exit 1
+          fi
+          grep -q 'not_registered' /tmp/unknown-result || { echo "::error::Unexpected registration classification"; exit 1; }
+          echo 'Production registration check responds correctly without sending any SMS.'
