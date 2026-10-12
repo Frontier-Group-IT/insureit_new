@@ -61,8 +61,10 @@ jobs:
       - name: Publish only Android runtime 0.3.1 OTA (no build)
         working-directory: apps/mobile-app
         run: |
-          npx eas-cli update --channel production --platform android --message "INSUREIT branded Firebase login and registered-only OTP precheck" --non-interactive
+          npx eas-cli update --channel production --platform android --message "INSUREIT Firebase incomplete signup routing and corrected OTP retry" --non-interactive
       - name: Confirm Play Store unaffected
         if: always()
         run: |
           echo 'Android OTA runtime 0.3.1 only. No APK, AAB, database migration, native build, or Play submission.' >> "$GITHUB_STEP_SUMMARY"
+
+# Oct 12: publish verified customer enrollment classification and Firebase SMS retry fixes.
