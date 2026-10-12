@@ -72,3 +72,14 @@ test('OTP resend is throttled locally and an expired session requests a fresh co
   assert.match(ui, /setResendAvailableAt\(0\)/);
   assert.match(ui, /Firebase accepted the OTP request/);
 });
+
+test('resend never activates the Verify OTP loading indicator and displays native SDK error reference safely', () => {
+  const ui = mobile('components/firebase-customer-otp-form.tsx');
+  assert.match(ui, /setBusyAction\('send'\)/);
+  assert.match(ui, /setBusyAction\('verify'\)/);
+  assert.match(ui, /loading=\{busyAction === \(sent \? 'verify' : 'send'\)\}/);
+  assert.match(ui, /disabled=\{busy \|\| \(sent \?/);
+  assert.match(ui, /safeFirebaseErrorCode\(nextError\)/);
+  assert.match(ui, /\^auth\\\/\[a-z-\]/);
+  assert.doesNotMatch(ui, /Firebase accepted the OTP request/);
+});
