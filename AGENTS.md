@@ -64,6 +64,8 @@ The private-agent rollout is deliberately isolated from the working Sarvam manag
 The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` remains the compact rule/index surface.
 
 ### Latest implementation ledger
+- **2026-10-12 — Customer Profile camera avatar parity:** branch `feat/customer-profile-camera-20261012`; adds camera picker in Customer header dropdown, employee-compatible user-ID-scoped browser-local JPG/PNG/WebP storage (2 MB max), without DB/RLS change. CI regression added. **BRANCH IMPLEMENTED; PR/CI/MERGE/DEPLOY/BROWSER VERIFICATION PENDING.** See `docs/CUSTOMER_PROFILE_CAMERA_2026_10_12.md`.
+
 - **2026-10-12 — Customer Home action-first redesign:** branch `ui/customer-action-first-home-20261012`; replaces redundant KPIs and misleading support buttons with protection hero, scoped uncovered vehicle/renewal tasks, claim progress and services. **IMPLEMENTED ON BRANCH; PR/CI/MERGE/DEPLOY/REAL-BROWSER VERIFICATION PENDING.** No schema/RLS/APK/AAB. See `docs/CUSTOMER_ACTION_FIRST_HOME_2026_10_12.md`.
 
 - **2026-10-12 — Premium Customer Web login layout:** branch `ui/customer-premium-login-20261012`; premium split hero/OTP card, responsive feature chips and integrated signup, existing auth preserved, regression added to web CI. **IMPLEMENTED ON BRANCH, EXACT GENERATED HIGHWAY ASSET NOT YET TRANSFERRED; PR/CI/MERGE/DEPLOY/REAL-BROWSER VERIFICATION PENDING.** No APK/AAB. See `docs/CUSTOMER_PREMIUM_LOGIN_2026_10_12.md`.
