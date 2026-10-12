@@ -3,16 +3,24 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowLeftRight, CalendarSync, CarFront, ClipboardCheck, FileText, Headset, LayoutDashboard, PanelLeftClose, PanelLeftOpen, Receipt, Settings, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowLeftRight, BadgeIndianRupee, CalendarSync, CarFront, ClipboardCheck, ClipboardList, FileText, Headset, LayoutDashboard, PanelLeftClose, PanelLeftOpen, ReceiptText, Settings, ShieldCheck, Store, UserRound } from "lucide-react";
 import { BrandLockup } from "@/components/brand-lockup";
 
 export function CustomerNavigation() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [hoverLabel, setHoverLabel] = useState<{ label: string; top: number } | null>(null);
+  function showTooltip(label: string, target: HTMLElement) {
+    if (!collapsed) return;
+    const rect = target.getBoundingClientRect();
+    setHoverLabel({ label, top: rect.top + rect.height / 2 });
+  }
+  function hideTooltip() { setHoverLabel(null); }
   useEffect(() => {
     try { setCollapsed(window.localStorage.getItem("insureit:customer-sidebar-collapsed") === "1"); } catch { /* use expanded default */ }
   }, []);
   function toggleSidebar() {
+    setHoverLabel(null);
     setCollapsed((previous) => {
       const next = !previous;
       try { window.localStorage.setItem("insureit:customer-sidebar-collapsed", next ? "1" : "0"); } catch { /* ignore */ }
@@ -47,38 +55,44 @@ export function CustomerNavigation() {
         <nav className={`flex-1 overflow-y-auto py-5 ${collapsed ? "px-2" : "px-3.5"}`} aria-label="Customer navigation">
           <p className={collapsed ? "sr-only" : "mb-2 px-3 text-[9px] font-black uppercase tracking-[0.18em] text-white/55"}>Customer</p>
           <div className="space-y-1.5">
-            <Link title={collapsed ? "Home" : undefined} aria-label="Home" href="/customer/home" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${homeActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
-              <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><LayoutDashboard className="h-[17px] w-[17px]" /></span>
+            <Link aria-label="Home" onMouseEnter={(event) => showTooltip("Home", event.currentTarget)} onMouseLeave={hideTooltip} onFocus={(event) => showTooltip("Home", event.currentTarget)} onBlur={hideTooltip} href="/customer/home" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${homeActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-[#4B53AE] text-white"><LayoutDashboard className="h-[18px] w-[18px]" /></span>
               {!collapsed && <span>Home</span>}
             </Link>
-            <Link title={collapsed ? "Vehicles" : undefined} aria-label="Vehicles" href="/customer/vehicles" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${vehiclesActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
-              <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><CarFront className="h-[17px] w-[17px]" /></span>{!collapsed && <span>Vehicles</span>}</Link>
-            <Link title={collapsed ? "Policies" : undefined} aria-label="Policies" href="/customer/policies" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${policiesActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
-              <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><ShieldCheck className="h-[17px] w-[17px]" /></span>{!collapsed && <span>Policies</span>}</Link>
-            <Link title={collapsed ? "Renewals" : undefined} aria-label="Renewals" href="/customer/renewals" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${renewalsActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
-              <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><CalendarSync className="h-[17px] w-[17px]" /></span>{!collapsed && <span>Renewals</span>}</Link>
-            <Link title={collapsed ? "Claims" : undefined} aria-label="Claims" href="/customer/claims" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${claimsActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
-              <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><ClipboardCheck className="h-[17px] w-[17px]" /></span>{!collapsed && <span>Claims</span>}</Link>
-            <Link title={collapsed ? "Exchange" : undefined} aria-label="Exchange" href="/customer/exchange" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${exchangeActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
-              <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><ArrowLeftRight className="h-[17px] w-[17px]" /></span>{!collapsed && <span>Exchange</span>}</Link>
-            <Link title={collapsed ? "Insurance Quote" : undefined} aria-label="Insurance Quote" href="/customer/insurance-quote" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${quoteActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
-              <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><FileText className="h-[17px] w-[17px]" /></span>{!collapsed && <span>Insurance Quote</span>}</Link>
-            <Link title={collapsed ? "E-Challan" : undefined} aria-label="E-Challan" href="/customer/e-challan" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${challanActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
-              <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><Receipt className="h-[17px] w-[17px]" /></span>{!collapsed && <span>E-Challan</span>}</Link>
-            <Link title={collapsed ? "Support" : undefined} aria-label="Support" href="/customer/support" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${supportActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
-              <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><Headset className="h-[17px] w-[17px]" /></span>{!collapsed && <span>Support</span>}</Link>
+            <Link aria-label="Vehicles" onMouseEnter={(event) => showTooltip("Vehicles", event.currentTarget)} onMouseLeave={hideTooltip} onFocus={(event) => showTooltip("Vehicles", event.currentTarget)} onBlur={hideTooltip} href="/customer/vehicles" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${vehiclesActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-[#4869E4] text-white"><CarFront className="h-[18px] w-[18px]" /></span>{!collapsed && <span>Vehicles</span>}</Link>
+            <Link aria-label="Policies" onMouseEnter={(event) => showTooltip("Policies", event.currentTarget)} onMouseLeave={hideTooltip} onFocus={(event) => showTooltip("Policies", event.currentTarget)} onBlur={hideTooltip} href="/customer/policies" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${policiesActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-[#FF8067] text-white"><ShieldCheck className="h-[18px] w-[18px]" /></span>{!collapsed && <span>Policies</span>}</Link>
+            <Link aria-label="Renewals" onMouseEnter={(event) => showTooltip("Renewals", event.currentTarget)} onMouseLeave={hideTooltip} onFocus={(event) => showTooltip("Renewals", event.currentTarget)} onBlur={hideTooltip} href="/customer/renewals" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${renewalsActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-[#15BDD0] text-white"><CalendarSync className="h-[18px] w-[18px]" /></span>{!collapsed && <span>Renewals</span>}</Link>
+            <Link aria-label="Claims" onMouseEnter={(event) => showTooltip("Claims", event.currentTarget)} onMouseLeave={hideTooltip} onFocus={(event) => showTooltip("Claims", event.currentTarget)} onBlur={hideTooltip} href="/customer/claims" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${claimsActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-[#20C9C3] text-white"><ClipboardCheck className="h-[18px] w-[18px]" /></span>{!collapsed && <span>Claims</span>}</Link>
+            <Link aria-label="Exchange" onMouseEnter={(event) => showTooltip("Exchange", event.currentTarget)} onMouseLeave={hideTooltip} onFocus={(event) => showTooltip("Exchange", event.currentTarget)} onBlur={hideTooltip} href="/customer/exchange" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${exchangeActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-[#0BA6D2] text-white"><Store className="h-[18px] w-[18px]" /></span>{!collapsed && <span>Exchange</span>}</Link>
+            <Link aria-label="Insurance Quote" onMouseEnter={(event) => showTooltip("Insurance Quote", event.currentTarget)} onMouseLeave={hideTooltip} onFocus={(event) => showTooltip("Insurance Quote", event.currentTarget)} onBlur={hideTooltip} href="/customer/insurance-quote" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${quoteActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-[#099F9C] text-white"><BadgeIndianRupee className="h-[18px] w-[18px]" /></span>{!collapsed && <span>Insurance Quote</span>}</Link>
+            <Link aria-label="E-Challan" onMouseEnter={(event) => showTooltip("E-Challan", event.currentTarget)} onMouseLeave={hideTooltip} onFocus={(event) => showTooltip("E-Challan", event.currentTarget)} onBlur={hideTooltip} href="/customer/e-challan" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${challanActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-[#1592D3] text-white"><ReceiptText className="h-[18px] w-[18px]" /></span>{!collapsed && <span>E-Challan</span>}</Link>
+            <Link aria-label="Support" onMouseEnter={(event) => showTooltip("Support", event.currentTarget)} onMouseLeave={hideTooltip} onFocus={(event) => showTooltip("Support", event.currentTarget)} onBlur={hideTooltip} href="/customer/support" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${supportActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-[#4B63DD] text-white"><Headset className="h-[18px] w-[18px]" /></span>{!collapsed && <span>Support</span>}</Link>
             <p className={collapsed ? "sr-only" : "mb-1 mt-4 px-3 text-[8px] font-black uppercase tracking-[0.18em] text-white/45"}>Account</p>
-            <Link title={collapsed ? "Profile" : undefined} aria-label="Profile" href="/customer/profile" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${profileActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
-              <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><UserRound className="h-[17px] w-[17px]" /></span>{!collapsed && <span>Profile</span>}</Link>
+            <Link aria-label="Profile" onMouseEnter={(event) => showTooltip("Profile", event.currentTarget)} onMouseLeave={hideTooltip} onFocus={(event) => showTooltip("Profile", event.currentTarget)} onBlur={hideTooltip} href="/customer/profile" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${profileActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-[#7560EE] text-white"><UserRound className="h-[18px] w-[18px]" /></span>{!collapsed && <span>Profile</span>}</Link>
           </div>
         </nav>
         <div className={`border-t border-white/10 ${collapsed ? "p-2" : "p-3.5"}`}>
-          <Link title={collapsed ? "Settings" : undefined} aria-label="Settings" href="/customer/settings" className={`flex min-h-11 w-full items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-left text-[12px] font-bold transition ${settingsActive ? "bg-white text-[#141D3B]" : "text-white/80 hover:bg-white/10 hover:text-white"}`}>
-            <Settings className="h-4 w-4" />
+          <Link aria-label="Settings" onMouseEnter={(event) => showTooltip("Settings", event.currentTarget)} onMouseLeave={hideTooltip} onFocus={(event) => showTooltip("Settings", event.currentTarget)} onBlur={hideTooltip} href="/customer/settings" className={`flex min-h-11 w-full items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-left text-[12px] font-bold transition ${settingsActive ? "bg-white text-[#141D3B]" : "text-white/80 hover:bg-white/10 hover:text-white"}`}>
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-[#6255E9] text-white"><Settings className="h-[18px] w-[18px]" /></span>
             {!collapsed && <span>Settings</span>}
           </Link>
         </div>
       </aside>
+      {collapsed && hoverLabel && (
+        <div role="tooltip" className="pointer-events-none fixed left-[70px] z-[100] -translate-y-1/2 whitespace-nowrap rounded-lg border border-[#D4E2F7] bg-white px-3 py-2 text-[12px] font-bold text-[#152649] shadow-[0_8px_22px_rgba(5,15,35,0.25)]" style={{ top: hoverLabel.top }}>
+          {hoverLabel.label}
+        </div>
+      )}
+
 
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[#D7DEE8] bg-white/95 px-2 py-2 backdrop-blur lg:hidden" aria-label="Customer mobile navigation">
         <div className="mx-auto flex max-w-full gap-1 overflow-x-auto">
