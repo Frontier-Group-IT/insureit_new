@@ -40,7 +40,8 @@ test('preflight database classification includes old customer master and auth.us
   assert.match(sql, /grant execute on function public\.customer_firebase_registration_preflight\(text,text\) to service_role/);
   assert.match(sql, /revoke all on function public\.customer_firebase_registration_preflight\(text,text\) from public, anon, authenticated/);
   assert.match(sql, /pg_advisory_xact_lock/);
-  assert.match(sql, /attempt_count > 30/);
+  assert.match(sql, /v_ip_attempts > 30/);
+  assert.match(sql, /v_phone_attempts > 10/);
 });
 test('preflight Edge server uses server HMAC and server-only RPC with no profile disclosure', () => {
   assert.match(edge, /crypto\.subtle\.sign\("HMAC"/);
