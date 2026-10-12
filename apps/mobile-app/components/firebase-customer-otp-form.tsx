@@ -22,6 +22,7 @@ function readableFirebaseError(error: unknown, stage: 'send' | 'verify'): string
   const message = error instanceof Error ? error.message : '';
   const lowered = message.toLowerCase();
   if (lowered.includes('not_registered')) return 'This mobile number is not registered with INSUREIT. Please sign up first.';
+  if (lowered.includes('signup_incomplete')) return 'This customer account has not finished mobile verification. Use Sign up to complete it.';
   if (lowered.includes('already_registered')) return 'An INSUREIT account already exists for this number. Please log in.';
   if (lowered.includes('account_requires_review')) return 'We found an older account that requires verification. Please contact INSUREIT support; your existing records are safe.';
   if (lowered.includes('identity_conflict') || lowered.includes('customer_requires_review')) {
@@ -86,6 +87,10 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
         setError('This mobile number is not registered with INSUREIT. Please sign up first.');
         return;
       }
+      if (mode === 'login' && result.status === 'signup_incomplete') {
+        setError('This number has an unfinished Customer App registration. Please select Sign up to finish verification.');
+        return;
+      }
       if (result.status === 'account_requires_review') {
         setError('An older account was found, but its ownership needs verification before OTP login. Please contact INSUREIT support.');
         return;
@@ -95,7 +100,7 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
         return;
       }
       if (mode === 'login' && result.status !== 'registered') throw new Error('registration_check_unavailable');
-      if (mode === 'signup' && result.status !== 'not_registered') throw new Error('registration_check_unavailable');
+      if (mode === 'signup' && result.status !== 'not_registered' && result.status !== 'signup_incomplete') throw new Error('registration_check_unavailable');
 
       startFirebaseCustomerOtp();
       await sendFirebaseCustomerOtp('+91' + mobile);
@@ -104,6 +109,8 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
       setMessage('Verification code requested. Enter the SMS OTP when it arrives.');
     } catch (nextError) {
       setError(readableFirebaseError(nextError, 'send'));
+      // Keep screen in the request stage if SMS dispatch did not succeed.
+      setSent(false);
     } finally {
       setBusy(false);
     }
@@ -115,7 +122,7 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
     setMessage('');
     if (!/^\d{6}$/.test(otp)) return setError('Enter the six-digit verification code.');
     if ((mode === 'login' && registration?.status !== 'registered') ||
-        (mode === 'signup' && registration?.status !== 'not_registered')) {
+        (mode === 'signup' && registration?.status !== 'not_registered' && registration?.status !== 'signup_incomplete')) {
       return setError('Please recheck your mobile number.');
     }
     setBusy(true);
@@ -128,6 +135,14 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
       router.replace('/customer/home');
     } catch (nextError) {
       setError(readableFirebaseError(nextError, 'verify'));
+      // A truly expired verification session must request another OTP;
+      // never present the old confirmation as a still usable handle.
+      const code = nextError instanceof Error ? nextError.message.toLowerCase() : '';
+      if (code.includes('session-expired') || code.includes('code-expired')) {
+        setSent(false);
+        setOtp('');
+        setRegistration(null);
+      }
     } finally {
       setBusy(false);
     }
