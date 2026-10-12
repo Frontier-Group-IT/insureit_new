@@ -39,7 +39,7 @@ export function CustomerNavigation() {
     <>
       <aside className={`fixed inset-y-0 left-0 z-50 hidden border-r border-white/10 bg-[#111A35] text-white transition-[width] duration-200 lg:flex lg:flex-col ${collapsed ? "w-16" : "w-[248px]"}`}>
         <div className={`flex h-[78px] items-center border-b border-white/10 ${collapsed ? "justify-center px-1" : "justify-between pl-5 pr-2"}`}>
-          {!collapsed && <Link title={collapsed ? "Home" : undefined} aria-label="Home" href="/customer/home" aria-label="INSUREIT Customer home"><BrandLockup compact inverse /></Link>}
+          {!collapsed && <Link href="/customer/home" aria-label="INSUREIT Customer home"><BrandLockup compact inverse /></Link>}
           <button type="button" onClick={toggleSidebar} title={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!collapsed} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-white/85 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
             {collapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
           </button>
@@ -47,9 +47,9 @@ export function CustomerNavigation() {
         <nav className={`flex-1 overflow-y-auto py-5 ${collapsed ? "px-2" : "px-3.5"}`} aria-label="Customer navigation">
           <p className={collapsed ? "sr-only" : "mb-2 px-3 text-[9px] font-black uppercase tracking-[0.18em] text-white/55"}>Customer</p>
           <div className="space-y-1.5">
-            <Link href="/customer/home" className={`flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold transition ${homeActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
+            <Link title={collapsed ? "Home" : undefined} aria-label="Home" href="/customer/home" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${homeActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
               <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><LayoutDashboard className="h-[17px] w-[17px]" /></span>
-              Home
+              {!collapsed && <span>Home</span>}
             </Link>
             <Link title={collapsed ? "Vehicles" : undefined} aria-label="Vehicles" href="/customer/vehicles" className={`flex min-h-11 items-center rounded-xl ${collapsed ? "justify-center px-1" : "gap-3 px-3.5"} text-[12px] font-bold transition ${vehiclesActive ? "bg-white text-[#141D3B]" : "text-white/88 hover:bg-white/10"}`}>
               <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-[#2F63E9] text-white"><CarFront className="h-[17px] w-[17px]" /></span>{!collapsed && <span>Vehicles</span>}</Link>
