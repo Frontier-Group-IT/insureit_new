@@ -184,7 +184,7 @@ export async function middleware(request: NextRequest) {
     return clearSessionCookies(continueRequest(request));
   }
 
-  if (pathname === "/customer/login") {
+  if (pathname === "/customer/login" || pathname === "/customer/signup") {
     if (check.status === "customer") return redirect(request, "/customer/home", refreshedSession, check.role);
     if (check.status === "authorized" || check.status === "forbidden") {
       return redirect(request, "/access-denied", refreshedSession, check.role);
