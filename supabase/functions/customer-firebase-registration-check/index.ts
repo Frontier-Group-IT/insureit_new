@@ -42,11 +42,15 @@ Deno.serve(async (request: Request) => {
     const cryptoKey = await crypto.subtle.importKey(
       "raw", new TextEncoder().encode(key), { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
     );
-    const hash = await crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(ip));
-    const fingerprint = [...new Uint8Array(hash)].map((v) => v.toString(16).padStart(2, "0")).join("");
+    const digest = async (value: string) => {
+      const hash = await crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(value));
+      return [...new Uint8Array(hash)].map((v) => v.toString(16).padStart(2, "0")).join("");
+    };
+    const fingerprint = await digest("ip:" + ip);
+    const phoneFingerprint = await digest("phone:" + data.phone);
     const db = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
     const { data: status, error } = await db.rpc("customer_firebase_registration_preflight", {
-      p_phone: data.phone, p_identity_hash: fingerprint,
+      p_phone: data.phone, p_identity_hash: fingerprint, p_phone_hash: phoneFingerprint,
     });
     if (error || typeof status !== "string") {
       console.error("Firebase registration preflight denied", error?.code ?? "unknown");
