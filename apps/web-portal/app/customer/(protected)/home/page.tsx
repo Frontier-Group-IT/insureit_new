@@ -67,9 +67,9 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
         <section className="rounded-xl border border-[#E0E8F3] bg-white p-3">
           <div className="mb-3 flex items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-[14px] font-black text-[#10284A]"><AlertTriangle className="h-4 w-4 text-red-500"/>Needs your attention</h2><Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="text-[10px] font-bold text-[#176CD4]">View all →</Link></div>
           <div className="space-y-2">
-            {uncoveredVehicles.slice(0,2).map(vehicle=><Link key={vehicle.id} href={{pathname:`/customer/vehicles/${vehicle.id}`,query:accountQuery}} className="flex items-center gap-3 rounded-xl border border-[#FFE0E0] bg-[#FFF3F3] p-3 hover:bg-[#FFEAEA]"><AlertTriangle className="h-5 w-5 shrink-0 text-red-500"/><span className="min-w-0 flex-1"><strong className="block truncate text-[11px] text-[#142C4D]">{vehicle.vehicle_no || (vehicle.chassis_no ? `New-${vehicle.chassis_no}` : "Unregistered vehicle")}</strong><small className="text-[10px] text-red-500">No active insurance cover</small></span><ArrowRight className="h-4 w-4 text-red-500"/></Link>)}
-            {duePolicies.slice(0,2).map(policy=><Link key={policy.id} href={{pathname:`/customer/policies/${policy.id}`,query:{...accountQuery,source:policy.source}}} className="flex items-center gap-3 rounded-xl bg-amber-50 p-3"><CalendarClock className="h-5 w-5 text-amber-600"/><span className="min-w-0 flex-1"><strong className="block truncate text-[11px]">{policy.policy_no || "Renewal due"}</strong><small className="text-[10px] text-amber-700">Renewal due</small></span><ArrowRight className="h-4 w-4"/></Link>)}
-            {attentionCount===0?<p className="rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700">No urgent insurance actions.</p>:null}
+            {uncoveredVehicles.slice(0, 3).map(vehicle=><Link key={vehicle.id} href={{pathname:`/customer/vehicles/${vehicle.id}`,query:accountQuery}} className="flex items-center gap-3 rounded-xl border border-[#FFE0E0] bg-[#FFF3F3] p-3 hover:bg-[#FFEAEA]"><AlertTriangle className="h-5 w-5 shrink-0 text-red-500"/><span className="min-w-0 flex-1"><strong className="block truncate text-[11px] text-[#142C4D]">{vehicle.vehicle_no || (vehicle.chassis_no ? `New-${vehicle.chassis_no}` : "Unregistered vehicle")}</strong><small className="text-[10px] text-red-500">No active insurance cover</small></span><ArrowRight className="h-4 w-4 text-red-500"/></Link>)}
+            {duePolicies.slice(0, 2).map(policy=><Link key={policy.id} href={{pathname:`/customer/policies/${policy.id}`,query:{...accountQuery,source:policy.source}}} className="flex items-center gap-3 rounded-xl bg-amber-50 p-3"><CalendarClock className="h-5 w-5 text-amber-600"/><span className="min-w-0 flex-1"><strong className="block truncate text-[11px]">{policy.policy_no || "Renewal due"}</strong><small className="text-[10px] text-amber-700">Renewal due</small></span><ArrowRight className="h-4 w-4"/></Link>)}
+            {attentionCount === 0?<p className="rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700">No urgent insurance actions.</p>:null}
           </div>
         </section>
         <section className="min-w-0 rounded-xl border border-[#E0E8F3] bg-white p-3">
@@ -89,6 +89,26 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
           </div>
         </section>
       </div>
+      <section className="grid gap-3 lg:grid-cols-3">
+        <div className="rounded-xl border border-[#E0E8F3] bg-white p-3">
+          <h2 className="mb-2 text-sm font-bold text-[#10284A]">Your next steps</h2>
+          <div className="flex flex-wrap gap-2">
+            <Link href={{pathname:"/customer/insurance-quote",query:accountQuery}} className="rounded-lg bg-[#EDF5FF] px-3 py-2 text-xs font-semibold text-[#155B9F]">Get a quote</Link>
+            <Link href={{pathname:"/customer/renewals",query:accountQuery}} className="rounded-lg bg-[#EDF5FF] px-3 py-2 text-xs font-semibold text-[#155B9F]">Renew policies</Link>
+          </div>
+        </div>
+        <div className="rounded-xl border border-[#E0E8F3] bg-white p-3">
+          <h2 className="mb-2 text-sm font-bold text-[#10284A]">Everyday services</h2>
+          <div className="flex flex-wrap gap-2">
+            <Link href={{pathname:"/customer/exchange",query:accountQuery}} className="rounded-lg bg-[#F1F6FC] px-3 py-2 text-xs font-semibold text-[#155B9F]">Vehicle exchange</Link>
+            <Link href={{pathname:"/customer/support",query:accountQuery}} className="rounded-lg bg-[#F1F6FC] px-3 py-2 text-xs font-semibold text-[#155B9F]">Get support</Link>
+          </div>
+        </div>
+        <div className="rounded-xl border border-[#E0E8F3] bg-white p-3">
+          <h2 className="mb-2 text-sm font-bold text-[#10284A]">Claims progress</h2>
+          <Link href={{pathname:"/customer/claims",query:accountQuery}} className="flex items-center justify-between text-xs text-[#155B9F]"><span>{openClaims.length} open claim{openClaims.length===1?"":"s"} · {claims.length} total</span><ArrowRight className="h-4 w-4"/></Link>
+        </div>
+      </section>
       <div className="grid gap-3 lg:grid-cols-2">
         <section className="min-w-0 rounded-xl border border-[#E0E8F3] bg-white p-3">
           <div className="mb-3 flex items-center justify-between"><h2 className="flex items-center gap-2 text-[14px] font-black text-[#10284A]"><ShieldCheck className="h-4 w-4 text-[#1672DC]"/>My Policies</h2><Link href={{pathname:"/customer/policies",query:accountQuery}} className="text-[10px] font-bold text-[#176CD4]">View all →</Link></div>
