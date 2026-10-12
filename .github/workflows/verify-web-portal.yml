@@ -75,6 +75,8 @@ jobs:
         run: npm run partner-web:core-regression
       - name: Customer Web foundation isolation regression
         run: npm run customer-web:foundation-regression
+      - name: Customer Web login and signup entry regression
+        run: node scripts/customer-web-auth-entry-regression.mjs
       - name: External renewal intake visibility regression
         run: node scripts/partner-external-renewal-intake-visibility-regression.mjs
       - name: External renewal Administration import regression
