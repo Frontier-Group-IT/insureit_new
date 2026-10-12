@@ -1,5 +1,5 @@
 import * as Updates from 'expo-updates';
-import { Stack, usePathname, useRootNavigationState } from 'expo-router';
+import { Stack, useNavigationContainerRef, usePathname, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import { BackHandler, Platform, StyleSheet, View } from 'react-native';
@@ -25,8 +25,50 @@ export default function RootLayout() {
 
 function RootApplication() {
   const navigationState = useRootNavigationState();
+  const navigationRef = useNavigationContainerRef();
+  const activeRouteRef = useRef<string | null>(null);
   const pathname = usePathname();
   const previousRoute = useRef<string | null>(null);
+  // Observe the navigation container itself, not individual screen handlers.
+  // Never include route params, navigation keys, or action payloads in logs.
+  useEffect(() => {
+    const focus = () => {
+      const current = navigationRef.getCurrentRoute()?.name ?? null;
+      const previous = activeRouteRef.current;
+      if (current === 'customer/start-claim' || previous === 'customer/start-claim') {
+        console.warn('[claim-navigation] container-route', { from: previous, to: current });
+      }
+      activeRouteRef.current = current;
+    };
+    const unsubscribeState = navigationRef.addListener('state', focus);
+    focus();
+
+    // React Navigation emits this internal event on dispatch. It is diagnostic
+    // only and optional across library versions; the state listener above remains
+    // authoritative when the internal action event isn't implemented.
+    type DiagnosticActionEvent = { data?: { action?: { type?: string } } };
+    const actionObserver = navigationRef as unknown as {
+      addListener?: (event: string, callback: (event: DiagnosticActionEvent) => void) => () => void;
+    };
+    let unsubscribeAction: (() => void) | undefined;
+    try {
+      unsubscribeAction = actionObserver.addListener?.('__unsafe_action__', (event) => {
+        const current = navigationRef.getCurrentRoute()?.name ?? null;
+        if (current === 'customer/start-claim' || activeRouteRef.current === 'customer/start-claim') {
+          console.warn('[claim-navigation] navigator-dispatch', {
+            type: event.data?.action?.type ?? 'unknown',
+            activeRoute: current,
+          });
+        }
+      });
+    } catch {
+      console.warn('[claim-navigation] action-observer-unavailable');
+    }
+    return () => {
+      unsubscribeState();
+      unsubscribeAction?.();
+    };
+  }, [navigationRef]);
   useEffect(() => {
     if (Platform.OS !== 'android' || pathname !== '/customer/start-claim') return;
     const listener = BackHandler.addEventListener('hardwareBackPress', () => {
