@@ -64,6 +64,8 @@ The private-agent rollout is deliberately isolated from the working Sarvam manag
 The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` remains the compact rule/index surface.
 
 ### Latest implementation ledger
+- **2026-10-12 — Customer Home action-first redesign:** branch `ui/customer-action-first-home-20261012`; replaces redundant KPIs and misleading support buttons with protection hero, scoped uncovered vehicle/renewal tasks, claim progress and services. **IMPLEMENTED ON BRANCH; PR/CI/MERGE/DEPLOY/REAL-BROWSER VERIFICATION PENDING.** No schema/RLS/APK/AAB. See `docs/CUSTOMER_ACTION_FIRST_HOME_2026_10_12.md`.
+
 - **2026-10-12 — Premium Customer Web login layout:** branch `ui/customer-premium-login-20261012`; premium split hero/OTP card, responsive feature chips and integrated signup, existing auth preserved, regression added to web CI. **IMPLEMENTED ON BRANCH, EXACT GENERATED HIGHWAY ASSET NOT YET TRANSFERRED; PR/CI/MERGE/DEPLOY/REAL-BROWSER VERIFICATION PENDING.** No APK/AAB. See `docs/CUSTOMER_PREMIUM_LOGIN_2026_10_12.md`.
 
 - **2026-10-12 — Customer Web Signup public-route fix:** branch `fix/customer-signup-public-middleware-20261012`; middleware treats `/customer/signup` exactly like `/customer/login` as a public auth-entry route for invalid sessions, redirects existing customer sessions to Customer Home, and denies non-customer roles. All other `/customer/*`, Operations, Partner and API authorization rules untouched. Canonical Customer Web auth-entry regression extended for this boundary. **BRANCH ONLY: PR/CI/MERGE/DEPLOY/REAL-BROWSER VERIFICATION PENDING. No APK/AAB.**
