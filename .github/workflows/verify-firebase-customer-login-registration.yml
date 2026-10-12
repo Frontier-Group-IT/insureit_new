@@ -34,3 +34,5 @@ jobs:
       - name: Verify no release or backend changes
         run: |
           echo "No EAS publish, AAB, APK, Supabase migration, function deployment, or Play publication performed by this workflow."
+
+# Rerun revised source assertions and corrected E.164 input validation.
