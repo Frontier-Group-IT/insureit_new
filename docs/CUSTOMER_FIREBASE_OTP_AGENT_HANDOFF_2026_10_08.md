@@ -376,3 +376,11 @@ User supplied Expo screenshots confirming live Play Store Android AAB **0.3.0 (9
 - Native real-device Firebase SMS verification, signed-token customer A/B isolation, backend latest source/deploy hash parity, file operations, and EAS signing proof have **NOT** yet been established by this build trigger.
 
 **Three-step closeout remains:** (1) fix/verify branch and server/security; (2) build 0.3.1(10) Firebase-enabled AAB candidate (triggered, awaiting result); (3) device tests, Firebase-only customer OTP lock-in, Play submission only after explicit approval. Keep documentation exact: QUEUED/FAILED/SUCCESS matters more than intended command.
+
+## 2026-10-12 BLACK SCREEN — ANDROID AAB 0.3.1 (10)
+
+Internal testing user installed AAB successfully but launch remained black. Audited exact built SHA `33973dc3` and EAS/GitHub build logs from successful AAB run #38213023646. EAS reported **zero production Plain-text/Sensitive environment variables** and stated that only `EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_ENABLED` came from the remote build profile. Missing: `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_PORTAL_URL`. Meanwhile `lib/supabase.ts` throws immediately during root import if either Supabase URL or key is missing. This is a concrete release misconfiguration and a strong cause of startup failure; Android logcat is still needed to exclude a second native problem.
+
+Created separate exact-AAB-based branch `fix/customer-0310-black-screen-eas-env-20261012` with **public-only** required EAS build-profile environment values. One-off workflow publishes a production-channel **Android-only 0.3.1 runtime-scoped Expo OTA** after actual Android bundle export verification, mobile types and lint. It **does not build an APK or AAB**; appVersion runtime isolates existing live 0.3.0. Check GitHub run https://github.com/Frontier-Group-IT/insureit_new/actions/runs/38222149248 and Expo update ID before claiming fix. Ask tester to force-stop and relaunch online twice after successful OTA. If still black, require Android vitals crash stack or adb logcat; do not blindly build another AAB. All production DB records untouched and no Play submission.
+
+**Status:** Broken 0.3.1 internal tester install; candidate repair in progress, not device-verified.
