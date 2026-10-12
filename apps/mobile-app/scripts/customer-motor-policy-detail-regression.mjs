@@ -45,7 +45,8 @@ assert(detail.includes(".select('company_name,contact_name,phone')"), 'Motor det
 assert(detail.includes("policy.source === 'external' ? 'customer_documents' : 'policy_documents'"), 'Internal and external Motor policies must share the same document UI while using their customer-safe storage tables.');
 assert(detail.includes(".eq('external_policy_id', next.id)"), 'External Motor policy documents must resolve by external_policy_id.');
 assert(detail.includes("createSignedUrl(policyCopy.storage_path, 10 * 60)"), 'Motor policy copy must create a fresh short-lived URL when opened.');
-assert(detail.includes('Linking.openURL(signed.data.signedUrl)'), 'Motor policy documents must open in the browser/system viewer.');
+assert(detail.includes('Linking.openURL(signedUrl)'), 'Motor policy documents must open the resolved signed URL in the browser/system viewer.');
+assert(detail.includes('getFirebaseCustomerDocumentUrl('), 'Firebase customers must use the authorized document reader.');
 assert(detail.includes('accessibilityLabel="Open policy copy"'), 'Uploaded Motor policy copy must expose an open action.');
 assert(!detail.includes('policyCopyExpanded'), 'Motor policy copy must not use an inline accordion preview.');
 assert(!detail.includes('chevron-up') && !detail.includes('chevron-down'), 'Motor document rows must not show chevrons.');
