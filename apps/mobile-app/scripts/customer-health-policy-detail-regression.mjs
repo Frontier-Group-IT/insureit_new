@@ -50,7 +50,8 @@ assert(lifeHealthDetail.includes("['illustration_form', 'Illustration form'"), '
 assert(lifeHealthDetail.includes("['payment_receipt', 'Payment receipt'"), 'Documents must include Payment receipt.');
 assert(lifeHealthDetail.includes("['other_form', 'Other form'"), 'Documents must include Other form.');
 assert(lifeHealthDetail.includes('createSignedUrl(document.storage_path, 10 * 60)'), 'Opening a Life/Health document must create a fresh short-lived signed URL.');
-assert(lifeHealthDetail.includes('Linking.openURL(signed.data.signedUrl)'), 'Life/Health documents must open in the browser/system viewer.');
+assert(lifeHealthDetail.includes('Linking.openURL(signedUrl)'), 'Life/Health documents must open the resolved signed URL in the browser/system viewer.');
+assert(lifeHealthDetail.includes('getFirebaseCustomerDocumentUrl('), 'Firebase customers must use the authorized document-reader service.');
 assert(lifeHealthDetail.includes('`Open ${label.toLowerCase()}`'), 'Uploaded Life/Health documents must expose an open action.');
 assert(!lifeHealthDetail.includes('policyCopyExpanded'), 'Life/Health documents must not use inline accordion previews.');
 assert(!lifeHealthDetail.includes('chevron-up') && !lifeHealthDetail.includes('chevron-down'), 'Life/Health document rows must not show chevrons.');
