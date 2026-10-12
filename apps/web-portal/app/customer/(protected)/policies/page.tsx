@@ -10,7 +10,6 @@ import {
 import {
   customerPolicyTone,
   formatCustomerDate,
-  formatCustomerMoney,
   loadCustomerWebPolicies,
   resolveCustomerWebScope,
 } from "@/lib/customer-web-data";
@@ -93,8 +92,9 @@ export default async function CustomerPoliciesPage({
         </div>
       </section>
       <section className="overflow-hidden rounded-2xl border border-[#D9E2EF] bg-white shadow-[0_8px_30px_rgba(24,42,72,.04)]">
-        <div className="flex flex-wrap items-center gap-2 border-b border-[#E4EAF2] px-3 py-3 sm:px-4 xl:flex-nowrap">\n          <h2 className="shrink-0 text-[17px] font-black text-[#10213D]">Policy Register</h2>
-          <form className="flex w-full min-w-0 items-center gap-2 rounded-lg border border-[#D7E0EF] bg-[#FAFCFF] px-3 py-2.5 sm:w-[190px] sm:shrink-0 xl:w-[190px]">
+        <div className="flex flex-wrap items-center gap-2 border-b border-[#E4EAF2] px-3 py-3 sm:px-4 xl:flex-nowrap">
+          <h2 className="shrink-0 text-[17px] font-black text-[#10213D]">Policy Register</h2>
+          <form className="flex w-full min-w-0 items-center gap-2 rounded-lg border border-[#D7E0EF] bg-[#FAFCFF] px-3 py-2.5 sm:w-[300px] sm:shrink-0 xl:w-[300px]">
             <Search className="h-4 w-4 shrink-0 text-[#8C9BB2]" />
             <input type="hidden" name="account" value={account.id} />
             {statusFilter !== "all" ? <input type="hidden" name="status" value={statusFilter} /> : null}
@@ -117,10 +117,10 @@ export default async function CustomerPoliciesPage({
       ) : (
         <>
           <div className="hidden overflow-x-auto lg:block">
-            <table className="w-full min-w-[990px] border-collapse text-left text-[11px]">
+            <table className="w-full min-w-[850px] border-collapse text-left text-[11px]">
               <thead className="bg-[#F4F7FA] text-[9px] font-bold uppercase tracking-[.045em] text-[#697D98]">
                 <tr>
-                  {["Policy / Product", "Vehicle / Asset", "Insurer", "Validity", "Status", "Insured Value", "Gross Premium", "Source"].map((heading) => <th key={heading} scope="col" className="whitespace-nowrap border-b border-[#DFE7F0] px-3 py-3">{heading}</th>)}
+                  {["Policy / Product", "Vehicle / Asset", "Insurer", "Validity", "Status", "Net Premium", "Source"].map((heading) => <th key={heading} scope="col" className="whitespace-nowrap border-b border-[#DFE7F0] px-3 py-3">{heading}</th>)}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E8EDF4]">
@@ -138,8 +138,8 @@ export default async function CustomerPoliciesPage({
                       <td className="px-3 py-3"><p className="font-bold text-[#334762]">{policy.vehicle_no || "—"}</p><p className="mt-1 max-w-[170px] truncate text-[9px] text-[#7A8CA4]">{[policy.vehicle_make,policy.vehicle_model].filter(Boolean).join(" ") || "—"}</p></td>
                       <td className="max-w-[160px] px-3 py-3" title={policy.insurer_name || ""}>
                         <div className="flex items-center gap-2">
-                          {logo ? <img src={logo} alt={policy.insurer_name || "Insurer"} className="h-7 w-7 shrink-0 object-contain" /> : <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#EDF2F8] text-[#506786]"><FileText className="h-4 w-4" /></span>}
-                          <span className="max-w-[150px] truncate text-[10px] font-semibold text-[#304A6A]">{policy.insurer_name || "Insurer unavailable"}</span>
+                          {logo ? <img src={logo} alt={policy.insurer_name || "Insurer"} className="h-7 w-7 shrink-0 object-contain" /> : <span role="img" aria-label={policy.insurer_name || "Insurer unavailable"} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#EDF2F8] text-[#506786]"><FileText className="h-4 w-4" /></span>}
+
                         </div>
                       </td>
                       <td className="whitespace-nowrap px-3 py-3">
@@ -147,8 +147,7 @@ export default async function CustomerPoliciesPage({
                         <p className="mt-1 text-[9px] text-[#7A8CA4]">{status.days < 0 ? `${Math.abs(status.days)} days expired` : `${status.days} days left`}</p>
                       </td>
                       <td className="px-3 py-3"><StatusPill tone={status.tone}>{status.tone === "due" ? "Due" : status.tone}</StatusPill></td>
-                      <td className="whitespace-nowrap px-3 py-3 text-right font-semibold text-[#263B59]">{formatCustomerMoney(policy.insured_declared_value)}</td>
-                      <td className="whitespace-nowrap px-3 py-3 text-right font-semibold text-[#263B59]">{formatCustomerMoney(policy.premium_amount)}</td>
+                                            <td className="whitespace-nowrap px-3 py-3 text-right font-semibold text-[#263B59]" title="Net premium unavailable from current customer policy data">—</td>
                       <td className="px-3 py-3 text-[9px] font-semibold uppercase text-[#64748B]">{policy.source === "external" ? "External" : "Internal"}</td>
                     </tr>
                   );
@@ -171,8 +170,8 @@ export default async function CustomerPoliciesPage({
                   </div>
                   <div className="mt-2 flex items-center gap-2 text-[10px] text-[#526682]">
                     {logo ? <img src={logo} alt="" className="h-6 w-6 object-contain" /> : null}
-                    <span className="min-w-0 flex-1 truncate">{policy.insurer_name || "Insurer unavailable"}</span>
-                    <span className="font-semibold">{formatCustomerMoney(policy.premium_amount)}</span>
+                    <span className="min-w-0 flex-1" aria-label={policy.insurer_name || "Insurer unavailable"} />
+                    <span className="font-semibold" title="Net premium unavailable from current customer policy data">—</span>
                   </div>
                   <p className="mt-1 text-[9px] text-[#8A9AB0]">{formatCustomerDate(policy.start_date)} – {formatCustomerDate(policy.end_date)} · {policy.source === "external" ? "External" : "Internal"}</p>
                 </Link>
