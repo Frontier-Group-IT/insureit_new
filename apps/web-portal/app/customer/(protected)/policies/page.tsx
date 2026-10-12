@@ -1,6 +1,6 @@
 import { PolicySourceFilter } from "./policy-source-filter";
 import Link from "next/link";
-import { AlertCircle, ArrowUpRight, Clock3, FileText, Search, ShieldCheck, Wallet } from "lucide-react";
+import { FileText, Search } from "lucide-react";
 import { getStaticInsurerLogo } from "@/lib/insurer-logo";
 import {
   CustomerAccountTabs,
@@ -80,7 +80,8 @@ export default async function CustomerPoliciesPage({
     },
   });
 
-  const totalInsured = policies.reduce((sum, policy) => {
+  /* Summary KPI cards intentionally removed from this compact register. */
+  /* const totalInsured = policies.reduce((sum, policy) => {
     const amount = Number(policy.insured_declared_value);
     return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;
   }, 0);
@@ -90,7 +91,7 @@ export default async function CustomerPoliciesPage({
     { label: "Due for renewal", value: String(counts.due), Icon: Clock3, theme: "bg-[#FFF6E9] text-[#D77B13]" },
     { label: "Expired policies", value: String(counts.expired), Icon: AlertCircle, theme: "bg-[#FFF0F1] text-[#D22C3B]" },
     { label: "Total insured value", value: totalInsured ? formatCustomerMoney(totalInsured) : "—", Icon: Wallet, theme: "bg-[#F4F1FF] text-[#7653D6]" },
-  ];
+  ]; */
   return (
     <div className="space-y-3">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/policies" />
@@ -99,21 +100,13 @@ export default async function CustomerPoliciesPage({
         <div className="absolute inset-0 bg-gradient-to-r from-[#06162F] via-[#08254C]/95 via-45% to-transparent" />
         <div className="relative flex min-h-[165px] items-center px-5 py-5 sm:min-h-[200px] sm:px-8">
           <div className="max-w-[55%]">
-            <p className="text-[9px] font-extrabold uppercase tracking-[.16em] text-[#8DC8FF]">Insurance portfolio</p>
-            <h1 className="mt-2 text-[clamp(22px,2.8vw,36px)] font-black leading-tight">Your <span className="text-[#369BFF]">Policy</span> Portfolio</h1>
-            <p className="mt-2 max-w-[360px] text-[11px] leading-5 text-[#E0EEFF]">Track your insurance policies, renewals and coverage across your vehicles and assets.</p>
+            <h1 className="text-[clamp(22px,2.8vw,36px)] font-black leading-tight">Your <span className="text-[#369BFF]">Policy</span> Portfolio</h1>
           </div>
         </div>
       </section>
-      <section aria-label="Policy summary" className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5">
-        {summary.map(({label,value,Icon,theme}) => <div key={label} className={`flex min-h-[83px] items-center gap-3 rounded-xl border border-[#DCE5F0] p-3 ${theme.split(" ")[0]}`}>
-          <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/80 ${theme.split(" ")[1]}`}><Icon className="h-5 w-5"/></span>
-          <span className="min-w-0"><strong className="block text-[clamp(15px,1.6vw,22px)] font-black text-[#10213D]">{value}</strong><span className="block text-[10px] font-semibold text-[#5C6D88]">{label}</span></span>
-        </div>)}
-      </section>
       <section className="overflow-hidden rounded-2xl border border-[#D9E2EF] bg-white shadow-[0_8px_30px_rgba(24,42,72,.04)]">
-        <div className="flex flex-wrap items-center gap-2 border-b border-[#E4EAF2] px-3 py-3 sm:px-4">
-          <form className="flex min-w-[210px] flex-1 items-center gap-2 rounded-lg border border-[#D7E0EF] bg-[#FAFCFF] px-3 py-2.5">
+        <div className="flex flex-wrap items-center gap-2 border-b border-[#E4EAF2] px-3 py-3 sm:px-4 xl:flex-nowrap">\n          <h2 className="shrink-0 text-[17px] font-black text-[#10213D]">Policy Register</h2>
+          <form className="flex w-full min-w-0 items-center gap-2 rounded-lg border border-[#D7E0EF] bg-[#FAFCFF] px-3 py-2.5 sm:w-[190px] sm:shrink-0 xl:w-[190px]">
             <Search className="h-4 w-4 shrink-0 text-[#8C9BB2]" />
             <input type="hidden" name="account" value={account.id} />
             {statusFilter !== "all" ? <input type="hidden" name="status" value={statusFilter} /> : null}
@@ -121,7 +114,7 @@ export default async function CustomerPoliciesPage({
             <input name="q" defaultValue={currentQuery} aria-label="Search policies" placeholder="Search policy, insurer, vehicle or product..." className="w-full min-w-0 border-0 bg-transparent p-0 text-[11px] text-[#203650] outline-none placeholder:text-[#95A2B7]" />
             <button type="submit" className="sr-only">Search</button>
           </form>
-          <div aria-label="Policy status filter" className="flex flex-wrap items-center gap-1 rounded-lg border border-[#D8E2F0] bg-[#F8FAFD] p-1">
+          <div aria-label="Policy status filter" className="ml-auto flex flex-wrap items-center gap-1 rounded-lg border border-[#D8E2F0] bg-[#F8FAFD] p-1">
             {[
               ["all", "All", policies.length],
               ["active", "Active", counts.active],
@@ -136,10 +129,10 @@ export default async function CustomerPoliciesPage({
       ) : (
         <>
           <div className="hidden overflow-x-auto lg:block">
-            <table className="w-full min-w-[1080px] border-collapse text-left text-[11px]">
+            <table className="w-full min-w-[990px] border-collapse text-left text-[11px]">
               <thead className="bg-[#F4F7FA] text-[9px] font-bold uppercase tracking-[.045em] text-[#697D98]">
                 <tr>
-                  {["Policy / Product", "Vehicle / Asset", "Insurer", "Validity", "Status", "Insured Value", "Gross Premium", "Source", "Details"].map((heading) => <th key={heading} scope="col" className="whitespace-nowrap border-b border-[#DFE7F0] px-3 py-3">{heading}</th>)}
+                  {["Policy / Product", "Vehicle / Asset", "Insurer", "Validity", "Status", "Insured Value", "Gross Premium", "Source"].map((heading) => <th key={heading} scope="col" className="whitespace-nowrap border-b border-[#DFE7F0] px-3 py-3">{heading}</th>)}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E8EDF4]">
@@ -147,9 +140,9 @@ export default async function CustomerPoliciesPage({
                   const status = customerPolicyTone(policy.end_date);
                   const logo = getStaticInsurerLogo(policy.insurer_name);
                   return (
-                    <tr key={`${policy.source}:${policy.id}`} className="group hover:bg-[#F7FAFE]">
+                    <tr key={`${policy.source}:${policy.id}`} className="group relative hover:bg-[#F7FAFE] focus-within:bg-[#F0F7FF]">
                       <td className="max-w-[220px] px-3 py-3">
-                        <Link href={{ pathname: `/customer/policies/${policy.id}`, query: { account: account.id, source: policy.source } }} className="block hover:underline focus-visible:underline" aria-label={`View policy ${policy.policy_no}`}>
+                        <Link href={{ pathname: `/customer/policies/${policy.id}`, query: { account: account.id, source: policy.source } }} className="block after:absolute after:inset-0 after:cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#267AFF] focus-visible:outline-offset-2" aria-label={`View policy ${policy.policy_no}`}>
                         <p className="whitespace-nowrap text-[12px] font-semibold text-[#182D4B]">{policy.business_line || "Motor"} <span className="font-normal">· {policy.policy_product || policy.policy_type || "Policy"}</span></p>
                         <p className="mt-1 truncate text-[9px] text-[#7588A3]" title={policy.policy_no}>{policy.policy_no}</p>
                         </Link>
@@ -168,7 +161,7 @@ export default async function CustomerPoliciesPage({
                       <td className="px-3 py-3"><StatusPill tone={status.tone}>{status.tone === "due" ? "Due" : status.tone}</StatusPill></td>
                       <td className="whitespace-nowrap px-3 py-3 text-right font-semibold text-[#263B59]">{formatCustomerMoney(policy.insured_declared_value)}</td>
                       <td className="whitespace-nowrap px-3 py-3 text-right font-semibold text-[#263B59]">{formatCustomerMoney(policy.premium_amount)}</td>
-                      <td className="px-3 py-3 text-[9px] font-semibold uppercase text-[#64748B]">{policy.source === "external" ? "External" : "Internal"}</td><td className="px-3 py-3"><Link aria-label={`View policy ${policy.policy_no}`} href={{ pathname: `/customer/policies/${policy.id}`, query: { account: account.id, source: policy.source } }} className="inline-flex rounded-md border border-[#DCE6F2] p-1.5 text-[#1B5794] hover:bg-[#EDF5FF]"><ArrowUpRight className="h-4 w-4"/></Link></td>
+                      <td className="px-3 py-3 text-[9px] font-semibold uppercase text-[#64748B]">{policy.source === "external" ? "External" : "Internal"}</td>
                     </tr>
                   );
                 })}
