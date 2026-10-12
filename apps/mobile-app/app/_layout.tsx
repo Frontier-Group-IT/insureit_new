@@ -2,7 +2,7 @@ import * as Updates from 'expo-updates';
 import { Stack, usePathname, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { BackHandler, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppLoadingProvider } from '@/components/app-loading';
@@ -27,6 +27,19 @@ function RootApplication() {
   const navigationState = useRootNavigationState();
   const pathname = usePathname();
   const previousRoute = useRef<string | null>(null);
+  useEffect(() => {
+    if (Platform.OS !== 'android' || pathname !== '/customer/start-claim') return;
+    const listener = BackHandler.addEventListener('hardwareBackPress', () => {
+      console.warn('[claim-navigation] android-back-event', { route: '/customer/start-claim' });
+      return false; // Observe only; preserve normal Android back handling.
+    });
+    return () => listener.remove();
+  }, [pathname]);
+  useEffect(() => {
+    if (pathname !== '/customer/start-claim' && previousRoute.current !== '/customer/start-claim') return;
+    const routes = navigationState?.routes?.map((route) => route.name) ?? [];
+    console.warn('[claim-navigation] nav-state', { route: pathname, routeNames: routes, index: navigationState?.index ?? -1 });
+  }, [navigationState, pathname]);
   useEffect(() => {
     const from = previousRoute.current;
     if (from === '/customer/start-claim' || pathname === '/customer/start-claim') {
