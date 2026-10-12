@@ -18,6 +18,16 @@ import { selectCustomerAuthProvider } from '@/lib/customer-identity';
 
 const normalizeMobile = (value: string) => value.replace(/\D/g, '').slice(0, 10);
 
+/** Show only the allowlisted SDK error code, never raw SMS or identity data. */
+function safeFirebaseErrorCode(error: unknown): string | null {
+  const code = error && typeof error === 'object' && 'code' in error
+    ? (error as { code?: unknown }).code : null;
+  const message = error instanceof Error ? error.message : '';
+  const candidate = typeof code === 'string'
+    ? code : /\[(auth\/[a-z-]+)\]/i.exec(message)?.[1];
+  return candidate && /^auth\/[a-z-]{3,60}$/.test(candidate) ? candidate : null;
+}
+
 function readableFirebaseError(error: unknown, stage: 'send' | 'verify'): string {
   const message = error instanceof Error ? error.message : '';
   const lowered = message.toLowerCase();
@@ -70,6 +80,8 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
   const [otp, setOtp] = useState('');
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState<'send' | 'verify' | null>(null);
+  const [errorReference, setErrorReference] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [registration, setRegistration] = useState<FirebaseCustomerRegistration | null>(null);
@@ -88,11 +100,13 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
   async function requestOtp() {
     if (busy || (sent && Date.now() < resendAvailableAt)) return;
     setError('');
+    setErrorReference(null);
     setMessage('');
     if (!validMobile) return setError('Enter a valid 10-digit mobile number.');
     if (mode === 'signup' && !validName) return setError('Enter your full name.');
     if (mode === 'signup' && !validEmail) return setError('Enter a valid email address or leave it blank.');
     setBusy(true);
+    setBusyAction('send');
     try {
       // Fail closed: unknown and ambiguous legacy identities never receive
       // a Firebase login OTP or get silently re-created on signup.
@@ -124,19 +138,22 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
       const availableAt = Date.now() + 45000;
       setResendAvailableAt(availableAt);
       setClock(Date.now());
-      setMessage('Firebase accepted the OTP request. Use the latest SMS code only. Delivery may take a moment.');
+      setMessage('Firebase started phone verification. Enter the latest SMS code if one arrives.');
     } catch (nextError) {
       setError(readableFirebaseError(nextError, 'send'));
+      setErrorReference(safeFirebaseErrorCode(nextError));
       // Keep screen in the request stage if SMS dispatch did not succeed.
       setSent(false);
     } finally {
       setBusy(false);
+      setBusyAction(null);
     }
   }
 
   async function verifyOtp() {
     if (busy) return;
     setError('');
+    setErrorReference(null);
     setMessage('');
     if (!/^\d{6}$/.test(otp)) return setError('Enter the six-digit verification code.');
     if ((mode === 'login' && registration?.status !== 'registered') ||
@@ -144,6 +161,7 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
       return setError('Please recheck your mobile number.');
     }
     setBusy(true);
+    setBusyAction('verify');
     try {
       const verified = mode === 'signup'
         ? await confirmFirebaseCustomerSignup(otp, { fullName: fullName.trim(), ...(email.trim() ? { email: email.trim() } : {}) })
@@ -153,6 +171,7 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
       router.replace('/customer/home');
     } catch (nextError) {
       setError(readableFirebaseError(nextError, 'verify'));
+      setErrorReference(safeFirebaseErrorCode(nextError));
       // A truly expired verification session must request another OTP;
       // never present the old confirmation as a still usable handle.
       const code = nextError instanceof Error ? nextError.message.toLowerCase() : '';
@@ -164,6 +183,7 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
       }
     } finally {
       setBusy(false);
+      setBusyAction(null);
     }
   }
 
@@ -173,6 +193,7 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
     setOtp('');
     setMessage('');
     setError('');
+    setErrorReference(null);
     setRegistration(null);
     setResendAvailableAt(0);
     startFirebaseCustomerOtp();
@@ -190,7 +211,7 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
           </View>
           <Text style={styles.heading}>{mode === 'login' ? 'Login with mobile OTP' : 'Create customer account'}</Text>
         </View>
-        {error ? <AuthStatusMessage type="error">{error}</AuthStatusMessage> : null}
+        {error ? <AuthStatusMessage type="error">{error}{errorReference ? ` (Reference: ${errorReference})` : ""}</AuthStatusMessage> : null}
         {message ? <AuthStatusMessage type="success">{message}</AuthStatusMessage> : null}
         {mode === 'signup' ? (
           <>
@@ -236,8 +257,8 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
           <SecureActionButton
             label={sent ? 'Verify OTP' : 'Get OTP'}
             icon={sent ? 'shield-check-outline' : 'message-text-lock-outline'}
-            loading={busy}
-            disabled={sent ? otp.length !== 6 : (!validMobile || (mode === 'signup' && (!validName || !validEmail)))}
+            loading={busyAction === (sent ? 'verify' : 'send')}
+            disabled={busy || (sent ? otp.length !== 6 : (!validMobile || (mode === 'signup' && (!validName || !validEmail))))}
             variant={mode === 'signup' ? 'success' : 'primary'}
             onPress={() => void (sent ? verifyOtp() : requestOtp())}
           />
