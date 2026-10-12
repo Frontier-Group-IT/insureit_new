@@ -48,8 +48,8 @@ export default async function RmPerformancePage({ searchParams }: { searchParams
 
         <section className="mt-3 overflow-hidden rounded-[18px] border border-[#DCE4EE] bg-white shadow-[0_10px_28px_rgba(30,49,80,.04)]">
           <div className="grid xl:grid-cols-[1fr_1fr_1.05fr]">
-            <PerformancePanel eyebrow="TODAY" title={money(data.today.net_premium)} policies={data.today.policy_count} motor={data.today.motor_net_premium} nonMotor={data.today.non_motor_net_premium} life={data.todayBusinessLinePremium.life} health={data.todayBusinessLinePremium.health} payin={todayFinance?.report.summary.payin_after_tds ?? 0} payout={todayFinance?.report.summary.gross_payout ?? 0} />
-            <PerformancePanel eyebrow={data.period.label} title={money(data.mtd.net_premium)} policies={data.mtd.policy_count} motor={data.mtd.motor_net_premium} nonMotor={data.mtd.non_motor_net_premium} life={data.mtdBusinessLinePremium.life} health={data.mtdBusinessLinePremium.health} payin={periodFinance?.report.summary.payin_after_tds ?? 0} payout={periodFinance?.report.summary.gross_payout ?? 0} bordered />
+            <PerformancePanel eyebrow="TODAY" title={money(data.today.net_premium)} policies={data.today.policy_count} motorPolicies={data.today.motor_policy_count} motor={data.today.motor_net_premium} nonMotor={data.today.non_motor_net_premium} life={data.todayBusinessLinePremium.life} health={data.todayBusinessLinePremium.health} payin={todayFinance?.report.summary.payin_after_tds ?? 0} payout={todayFinance?.report.summary.gross_payout ?? 0} />
+            <PerformancePanel eyebrow={data.period.label} title={money(data.mtd.net_premium)} policies={data.mtd.policy_count} motorPolicies={data.mtd.motor_policy_count} motor={data.mtd.motor_net_premium} nonMotor={data.mtd.non_motor_net_premium} life={data.mtdBusinessLinePremium.life} health={data.mtdBusinessLinePremium.health} payin={periodFinance?.report.summary.payin_after_tds ?? 0} payout={periodFinance?.report.summary.gross_payout ?? 0} bordered />
             <MtdContextPanel rows={data.ytdTrend} periodLabel={data.period.shortLabel} highlightMonth={data.period.highlightMonth} />
           </div>
         </section>
@@ -63,13 +63,13 @@ export default async function RmPerformancePage({ searchParams }: { searchParams
   );
 }
 
-function PerformancePanel({ eyebrow, title, policies, motor, nonMotor, life, health, payin, payout, bordered = false }: { eyebrow: string; title: string; policies: number; motor: number; nonMotor: number; life: number; health: number; payin: number; payout: number; bordered?: boolean }) {
+function PerformancePanel({ eyebrow, title, policies, motorPolicies, motor, nonMotor, life, health, payin, payout, bordered = false }: { eyebrow: string; title: string; policies: number; motorPolicies: number; motor: number; nonMotor: number; life: number; health: number; payin: number; payout: number; bordered?: boolean }) {
   const retention = payin - payout;
   return (
     <div className={"px-5 py-3.5 " + (bordered ? "border-t border-[#E9EDF3] xl:border-l xl:border-t-0" : "")}>
       <p className="text-[10px] font-black tracking-[.14em] text-[#566477]">{eyebrow}</p>
       <div className="mt-1 flex items-start justify-between gap-4">
-        <div className="min-w-0"><p className="truncate text-[24px] font-semibold tracking-[-.035em] text-[#13233E]">{title}</p><p className="text-[10px] font-medium text-[#647286]">Net Premium</p></div>
+        <div className="min-w-0"><p className="truncate text-[24px] font-semibold tracking-[-.035em] text-[#13233E]">{title}</p><p className="text-[10px] font-medium text-[#647286]">Net Premium</p><p className="mt-1 flex items-center gap-2 text-[10px] font-semibold text-[#34445B]"><span>Motor</span><span className="tabular-nums text-[#17365D]">{number(motorPolicies)} policies</span></p></div>
         <div className="pt-0.5 text-right"><p className="text-[15px] font-black text-[#24364F]">{number(policies)}</p><p className="text-[10px] font-medium text-[#647286]">Policies</p></div>
       </div>
       <div className="mt-3 grid grid-cols-2 border-t border-[#E7ECF2] pt-3 text-[9.5px]">
