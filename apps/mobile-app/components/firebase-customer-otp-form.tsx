@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AuthExperience, LoginPromptCard, SignupPromptCard } from './auth-experience';
@@ -37,6 +37,13 @@ function readableFirebaseError(error: unknown, stage: 'send' | 'verify'): string
   if (lowered.includes('too-many-requests') || lowered.includes('quota') || lowered.includes('rate')) {
     return 'Too many attempts. Wait a few minutes before requesting another OTP.';
   }
+  if (lowered.includes('app-not-authorized') || lowered.includes('invalid-app-credential') ||
+      lowered.includes('missing-client-identifier') || lowered.includes('captcha-check-failed')) {
+    return 'Firebase could not verify this Android app. Please contact INSUREIT support.';
+  }
+  if (lowered.includes('operation-not-allowed') || lowered.includes('unsupported-first-factor')) {
+    return 'Firebase SMS verification is unavailable right now. Please contact INSUREIT support.';
+  }
   if (lowered.includes('invalid-phone-number')) return 'Enter a valid Indian mobile number.';
   if (lowered.includes('network') || lowered.includes('fetch')) return 'Connection failed. Check the internet and try again.';
   if (lowered.includes('registration_check_unavailable') || lowered.includes('registration_lookup_unavailable')) {
@@ -66,12 +73,20 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [registration, setRegistration] = useState<FirebaseCustomerRegistration | null>(null);
+  const [resendAvailableAt, setResendAvailableAt] = useState(0);
+  const [clock, setClock] = useState(Date.now());
+  useEffect(() => {
+    if (!sent || !resendAvailableAt) return;
+    const timer = setInterval(() => setClock(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [sent, resendAvailableAt]);
+  const retrySeconds = Math.max(0, Math.ceil((resendAvailableAt - clock) / 1000));
   const validMobile = /^[6-9]\d{9}$/.test(mobile);
   const validName = fullName.trim().length >= 2;
   const validEmail = !email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
   async function requestOtp() {
-    if (busy) return;
+    if (busy || (sent && Date.now() < resendAvailableAt)) return;
     setError('');
     setMessage('');
     if (!validMobile) return setError('Enter a valid 10-digit mobile number.');
@@ -106,7 +121,10 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
       await sendFirebaseCustomerOtp('+91' + mobile);
       setSent(true);
       setOtp('');
-      setMessage('Verification code requested. Enter the SMS OTP when it arrives.');
+      const availableAt = Date.now() + 45000;
+      setResendAvailableAt(availableAt);
+      setClock(Date.now());
+      setMessage('Firebase accepted the OTP request. Use the latest SMS code only. Delivery may take a moment.');
     } catch (nextError) {
       setError(readableFirebaseError(nextError, 'send'));
       // Keep screen in the request stage if SMS dispatch did not succeed.
@@ -142,6 +160,7 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
         setSent(false);
         setOtp('');
         setRegistration(null);
+        setResendAvailableAt(0);
       }
     } finally {
       setBusy(false);
@@ -155,6 +174,7 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
     setMessage('');
     setError('');
     setRegistration(null);
+    setResendAvailableAt(0);
     startFirebaseCustomerOtp();
   }
 
@@ -205,8 +225,10 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
           <>
             <Text style={styles.label}>Enter OTP</Text>
             <OtpDotsInput value={otp} onChangeText={setOtp} disabled={busy} autoFocus={sent} highlighted />
-            <Pressable accessibilityRole="button" disabled={busy} onPress={() => void requestOtp()}>
-              <Text style={styles.resend}>Resend OTP</Text>
+            <Pressable accessibilityRole="button" disabled={busy || retrySeconds > 0} onPress={() => void requestOtp()}>
+              <Text style={[styles.resend, retrySeconds > 0 && styles.resendDisabled]}>
+                {retrySeconds > 0 ? `Resend OTP in ${retrySeconds}s` : 'Resend OTP'}
+              </Text>
             </Pressable>
           </>
         ) : null}
@@ -246,6 +268,7 @@ const styles = StyleSheet.create({
   countryText: { color: '#071D49', fontWeight: '700', fontSize: 15 },
   edit: { color: '#0B63CE', fontWeight: '700', fontSize: 12 },
   resend: { textAlign: 'right', color: '#0B63CE', paddingVertical: 10, fontWeight: '700' },
+  resendDisabled: { color: '#64748B' },
   action: { marginTop: 8 },
   legal: { fontSize: 11, lineHeight: 16, color: '#64748B', marginTop: 14, textAlign: 'center' },
   fallback: { color: '#0B63CE', fontSize: 12, textAlign: 'center', marginTop: 18, fontWeight: '600' },
