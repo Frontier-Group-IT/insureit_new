@@ -43,7 +43,7 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
     <section className="rounded-2xl border border-[#D8E1EC] bg-white p-3 shadow-[0_8px_25px_rgba(20,40,75,.04)] sm:p-4">
       <header className="mb-3 flex flex-wrap items-center gap-3">
         <h2 className="flex shrink-0 items-center gap-2 text-[19px] font-black text-[#10213D]"><CarFront className="h-5 w-5 text-[#175CA8]" aria-hidden="true" />Vehicle Register</h2>
-        <label className="flex min-w-[220px] flex-1 items-center gap-2 rounded-lg border border-[#D8E1EC] bg-white px-3 py-2.5 focus-within:border-[#4E95E9]">
+        <label className="flex w-full min-w-0 flex-1 items-center gap-2 rounded-lg border sm:min-w-[220px] sm:max-w-[400px] border-[#D8E1EC] bg-white px-3 py-2.5 focus-within:border-[#4E95E9]">
           <Search className="h-4 w-4 shrink-0 text-[#73829A]" /><span className="sr-only">Search vehicles</span>
           <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search vehicles..." className="w-full min-w-0 border-0 bg-transparent p-0 text-[11px] outline-none" />
         </label>
