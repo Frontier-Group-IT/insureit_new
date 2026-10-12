@@ -47,7 +47,7 @@ export function CustomerRenewalsRegister({ accountId, items, categories }: {
 
     <section className="rounded-2xl border border-[#D8E1EC] bg-white p-3 shadow-[0_8px_30px_rgba(20,40,75,.04)] sm:p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 text-[17px] font-black text-[#10213D]"><span aria-hidden="true" className="text-[#175CA8]">↻</span>Policy Renewal Register</h2>
+        <h2 className="flex items-center gap-2 text-[17px] font-black text-[#10213D]"><CalendarClock className="h-5 w-5 text-[#175CA8]" aria-hidden="true" />Policy Renewal Register</h2>
         <label className="flex w-full items-center gap-2 rounded-lg border border-[#D8E1EC] bg-[#FBFCFE] px-3 py-2.5 focus-within:border-[#4E95E9] sm:w-[300px]">
           <Search className="h-4 w-4 shrink-0 text-[#73829A]" aria-hidden="true" />
           <span className="sr-only">Search renewals</span>
