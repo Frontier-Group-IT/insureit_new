@@ -107,10 +107,8 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
         style={customerHeader ? 'light' : 'dark'}
         backgroundColor={customerHeader ? palette.navy : '#EEF7FF'}
       />
-      <SafeAreaView
-        style={styles.safeArea}
-        edges={[]}
-        onTouchStartCapture={(event) => {
+      <SafeAreaView style={styles.safeArea} edges={[]}>
+        <View style={styles.safeArea} onTouchStartCapture={(event: import('react-native').GestureResponderEvent) => {
           if (pathname !== '/customer/start-claim') return;
           const { pageX, pageY } = event.nativeEvent;
           console.warn('[claim-navigation] screen-touch-capture', {
@@ -199,6 +197,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
         </ScrollView>
         {showProfile && !keyboardVisible && tabRole && (!pathname.startsWith('/customer') || customerContext !== undefined) ? <UniversalBottomTabs role={tabRole} pathname={pathname} bottomInset={insets.bottom} customerContext={customerContext} /> : null}
       </KeyboardAvoidingView>
+        </View>
       </SafeAreaView>
     </>
   );
