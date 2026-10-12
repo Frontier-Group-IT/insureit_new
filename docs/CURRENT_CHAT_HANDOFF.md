@@ -1,3 +1,21 @@
+## 2026-10-12 — Customer Web fixed +91 login field + new-customer signup
+
+- Branch: `feature/customer-web-signup-phone-prefix-2026-10-12`.
+- Customer Login mobile entry now uses a fixed visible `+91` prefix and a local 10-digit input with placeholder **Enter 10 digit number**; `+91` is no longer embedded in the placeholder.
+- Login security semantics remain unchanged: OTP login still uses `shouldCreateUser: false`, so the Login page cannot accidentally create a new authentication user.
+- Added `/customer/signup` with the requested new-customer path modeled on the existing Customer App flow: Full name, fixed +91 mobile, optional email, Get OTP, OTP verification, legal acknowledgement, and **Already registered? Login with your mobile number.**
+- Signup explicitly uses `shouldCreateUser: true` with customer metadata, then reuses the established production RPCs rather than creating a parallel customer model:
+  - `get_existing_customer_accounts_for_signup` to detect matching customer masters by verified mobile;
+  - `link_existing_customer_account` when the user selects an existing master;
+  - `ensure_customer_signup_profile` for idempotent profile/customer-master setup.
+- Successful signup creates the same secure Customer Web server session through `/api/customer/auth/session` and routes to `/customer/home`.
+- If the verified mobile already matches one or more customer masters, the page shows an account-selection screen including customer code, city/state and vehicle/policy/claim counts; this preserves existing business data and avoids duplicate empty customer masters.
+- Added shared `CustomerPhoneField` for login/signup country-code presentation and `customer-web-auth-entry-regression.mjs` to canonical web CI.
+- No database/schema/RLS migration is required because the signup/linking RPCs already exist in production.
+- **IMPLEMENTED; PR/CI/MERGE/DEPLOYMENT PENDING.**
+
+---
+
 ## 2026-10-12 — Collapsed sidebar direct-link cleanup
 
 - Branch: `fix/collapsed-sidebar-direct-links-2026-10-12`.
