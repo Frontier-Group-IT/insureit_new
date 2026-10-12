@@ -183,7 +183,7 @@ export default function CustomerMockupHomeScreen() {
 
   return <SafeAreaView style={styles.safeArea} edges={['top']}>
     <View style={styles.header}>
-      <Pressable onPress={() => router.replace('/customer/home')} style={styles.brand}><BrandLogo width={132} inverse /></Pressable>
+      <Pressable onPress={() => { console.warn('[claim-navigation] replace-caller', { source: 'customer-home-brand', destination: '/customer/home' }); router.replace('/customer/home'); }} style={styles.brand}><BrandLogo width={132} inverse /></Pressable>
       <View style={styles.iconCircle}><NotificationBell color="#FFFFFF" /></View>
       <CustomerAccountSwitcherButton initial={initialFor(name)} />
     </View>
