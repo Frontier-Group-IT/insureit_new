@@ -44,7 +44,7 @@ export async function confirmFirebaseCustomerOtp(
       // A verified existing phone uses the same canonical binding flow as
       // Login. Never provision a duplicate Supabase profile for that phone.
       if (registration.status !== 409 || failure.error !== 'phone_already_registered') {
-        throw new Error('Customer account registration could not be completed.');
+        throw new Error('registration_' + (failure.error ?? 'unavailable'));
       }
     } else {
       const result: { status?: string; requiresBinding?: boolean } = await registration.json();
@@ -59,10 +59,13 @@ export async function confirmFirebaseCustomerOtp(
     headers: { Authorization: `Bearer ${idToken}`, 'Content-Type': 'application/json', apikey: publicKey },
     body: '{}',
   });
-  if (!response.ok) throw new Error('Your verified phone could not be linked to an existing account.');
+  if (!response.ok) {
+    const detail: { error?: string } = await response.json().catch(() => ({}));
+    throw new Error('bind_' + (detail.error ?? 'unavailable'));
+  }
   const result: { status?: string; requiresTokenRefresh?: boolean } = await response.json();
   if (result.status !== 'linked' || result.requiresTokenRefresh !== true) {
-    throw new Error('Firebase account linkage could not be confirmed.');
+    throw new Error('bind_unexpected_response');
   }
   const firebaseUser = getAuth().currentUser;
   if (!firebaseUser || firebaseUser.uid !== uid) throw new Error('Firebase account changed during verification');
@@ -72,7 +75,7 @@ export async function confirmFirebaseCustomerOtp(
     return current?.uid === uid ? current.getIdToken() : null;
   });
   const { data, error } = await dataClient.rpc('customer_firebase_profile_id');
-  if (error || typeof data !== 'string') throw new Error('Customer authorization was not granted');
+  if (error || typeof data !== 'string') throw new Error('authorization_profile_resolution_failed');
   // Fail closed if refreshed token cannot access the canonical profile.
   if (!refreshedToken) throw new Error('Could not refresh Firebase authorization');
   return { uid, phoneNumber, profileId: data };
