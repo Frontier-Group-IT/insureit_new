@@ -92,7 +92,7 @@ export function confirmFirebaseCustomerSignup(
 /** A read-only, rate-limited backend eligibility check. Never read customer
  * profiles or auth.users directly from the unauthenticated mobile client. */
 export type FirebaseCustomerRegistration = {
-  status: 'registered' | 'not_registered' | 'account_requires_review';
+  status: 'registered' | 'not_registered' | 'signup_incomplete' | 'account_requires_review';
 };
 
 export async function checkFirebaseCustomerRegistration(phone: string): Promise<FirebaseCustomerRegistration> {
@@ -114,7 +114,7 @@ export async function checkFirebaseCustomerRegistration(phone: string): Promise<
       throw new Error('registration_check_unavailable');
     }
     const data: { status?: string } = await result.json();
-    if (data.status !== 'registered' && data.status !== 'not_registered' && data.status !== 'account_requires_review') {
+    if (data.status !== 'registered' && data.status !== 'not_registered' && data.status !== 'signup_incomplete' && data.status !== 'account_requires_review') {
       throw new Error('registration_check_unavailable');
     }
     return { status: data.status };
