@@ -13,6 +13,9 @@
       "autoIncrement": false,
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_ENABLED": "true"
       }
     }
   }
