@@ -83,9 +83,14 @@ export default async function CustomerExchangePage({
             If retrying does not help, return to the Customer dashboard and try again later.
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2">
-            <Link href={{ pathname: "/customer/exchange", query: { account: account.id, ...(query ? { q: query } : {}), ...(category !== "All" ? { category } : {}), retry: "1" } }} className="rounded-lg bg-[#173B68] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#102F56]">
-              Try Exchange again
-            </Link>
+            <form action="/customer/exchange" method="get">
+              <input type="hidden" name="account" value={account.id} />
+              {query ? <input type="hidden" name="q" value={query} /> : null}
+              {category !== "All" ? <input type="hidden" name="category" value={category} /> : null}
+              <button type="submit" className="rounded-lg bg-[#173B68] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#102F56]">
+                Try Exchange again
+              </button>
+            </form>
             <Link href="/customer/home" className="rounded-lg border border-[#CFD9E8] bg-white px-4 py-2.5 text-sm font-bold text-[#27415F] hover:bg-[#F6F9FD]">
               Back to dashboard
             </Link>
