@@ -236,6 +236,7 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
           }
 
           .desktop-sidebar-collapsed > aside nav > a,
+          .desktop-sidebar-collapsed > aside nav > div > a,
           .desktop-sidebar-collapsed > aside nav > div > div > button {
             position: relative !important;
             width: 48px !important;
@@ -250,11 +251,13 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
           }
 
           .desktop-sidebar-collapsed > aside nav > a:hover,
+          .desktop-sidebar-collapsed > aside nav > div > a:hover,
           .desktop-sidebar-collapsed > aside nav > div > div > button:hover {
             background-color: rgba(255, 255, 255, 0.10) !important;
           }
 
           .desktop-sidebar-collapsed > aside nav > a > span:first-child,
+          .desktop-sidebar-collapsed > aside nav > div > a > span:first-child,
           .desktop-sidebar-collapsed > aside nav > div > div > button > span:first-child {
             width: 32px !important;
             height: 32px !important;
@@ -264,6 +267,7 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
           }
 
           .desktop-sidebar-collapsed > aside nav > a > .flex-1,
+          .desktop-sidebar-collapsed > aside nav > div > a > .flex-1,
           .desktop-sidebar-collapsed > aside nav > div > div > button > .flex-1,
           .desktop-sidebar-collapsed > aside > div:last-child > a > .flex-1 {
             display: none !important;
@@ -299,6 +303,7 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
           }
 
           .desktop-sidebar-collapsed > aside nav > a > svg:last-child,
+          .desktop-sidebar-collapsed > aside nav > div > a > svg:last-child,
           .desktop-sidebar-collapsed > aside nav > div > div > button > svg:last-child {
             display: none !important;
           }
