@@ -30,6 +30,7 @@ export function createInstalledAndroidFirebaseOtpFlow(): FirebaseAndroidPhoneEve
         );
       },
     }),
+    getCurrentVerifiedUser: async () => native.currentUser,
     signInWithPhoneCredential: (verificationId, code) =>
       signInWithCredential(native, PhoneAuthProvider.credential(verificationId, code)),
   });
