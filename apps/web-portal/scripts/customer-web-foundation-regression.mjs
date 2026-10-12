@@ -19,6 +19,9 @@ const requiredFiles = [
   "app/api/customer/auth/session/route.ts",
   "app/customer/login/customer-login-form.tsx",
   "app/customer/login/page.tsx",
+  "app/customer/signup/customer-signup-form.tsx",
+  "app/customer/signup/page.tsx",
+  "lib/customer-web-auth-client.ts",
   "app/customer/(protected)/layout.tsx",
   "app/customer/(protected)/page.tsx",
   "app/customer/(protected)/home/page.tsx",
@@ -81,11 +84,16 @@ assert(!sessionRoute.includes("isAuthorizedProfile"), "Customer Web session must
 assert(!sessionRoute.includes("SUPABASE_SERVICE_ROLE_KEY"), "Customer Web session must not use service-role credentials");
 
 const login = read("app/customer/login/customer-login-form.tsx");
+const signup = read("app/customer/signup/customer-signup-form.tsx");
+const customerAuthClient = read("lib/customer-web-auth-client.ts");
 assert(login.includes("shouldCreateUser: false"), "Customer login must not silently create accounts");
 assert(login.includes('profile.role !== "customer"'), "Customer login must verify customer role before creating browser session");
-assert(login.includes('fetch("/api/customer/auth/session"'), "Customer login must use the isolated Customer Web session API endpoint");
-assert(!login.includes('fetch("/auth/session"'), "Customer login must not use the employee/Partner session endpoint");
-assert(login.includes("customerSessionErrorMessage"), "Customer login must surface safe Customer-only session diagnostics");
+assert(login.includes("establishCustomerWebSession"), "Customer login must use the isolated Customer Web session helper");
+assert(signup.includes("shouldCreateUser: true"), "Customer signup must explicitly create Customer auth users only from the signup flow");
+assert(signup.includes("ensure_customer_signup_profile"), "Customer signup must reuse the canonical signup profile/customer-master RPC");
+assert(customerAuthClient.includes('fetch("/api/customer/auth/session"'), "Customer auth flows must use the isolated Customer Web session API endpoint");
+assert(!customerAuthClient.includes('fetch("/auth/session"'), "Customer auth flows must not use the employee/Partner session endpoint");
+assert(customerAuthClient.includes("customerSessionErrorMessage"), "Customer auth flows must surface safe Customer-only session diagnostics");
 
 const protectedLayout = read("app/customer/(protected)/layout.tsx");
 assert(protectedLayout.includes("await getCustomerWebSession()"), "protected Customer layout must authenticate server-side");
