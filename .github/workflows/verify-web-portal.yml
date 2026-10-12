@@ -55,6 +55,8 @@ jobs:
         run: node scripts/service-enquiry-unification-regression.mjs
       - name: Sidebar state stability regression
         run: node scripts/sidebar-state-stability-regression.mjs
+      - name: Collapsed sidebar direct-link regression
+        run: node scripts/collapsed-sidebar-direct-links-regression.mjs
       - name: Intermediary optional surname and IIB live-name regression
         run: node scripts/intermediary-optional-surname-iib-regression.mjs
       - name: Partner Register business metrics migration contract regression
