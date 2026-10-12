@@ -3,28 +3,7 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase";
-
-function normalizeIndianPhone(value: string) {
-  const trimmed = value.trim();
-  if (trimmed.startsWith("+")) return trimmed.replace(/\s+/g, "");
-  const digits = trimmed.replace(/\D/g, "");
-  if (digits.length === 10) return `+91${digits}`;
-  if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`;
-  return trimmed;
-}
-
-function customerSessionErrorMessage(status: number, code?: string) {
-  if (status === 503 || code === "customer_session_unavailable") {
-    return "Customer Web session service is temporarily unavailable. Please try again.";
-  }
-  if (status === 403 || code === "customer_session_forbidden") {
-    return "This account is not authorized for Customer Web.";
-  }
-  if (status === 401 || code === "customer_session_invalid") {
-    return "OTP was verified, but the secure Customer Web session could not be validated.";
-  }
-  return `Signed in, but the secure Customer Web session could not be created. (CW-${status || "ERR"})`;
-}
+import { customerPhoneE164, establishCustomerWebSession, normalizeCustomerPhone10 } from "@/lib/customer-web-auth-client";
 
 export function CustomerLoginForm() {
   const [phone, setPhone] = useState("");
@@ -37,7 +16,12 @@ export function CustomerLoginForm() {
     event.preventDefault();
     setBusy(true);
     setMessage(null);
-    const normalizedPhone = normalizeIndianPhone(phone);
+    const normalizedPhone = customerPhoneE164(phone);
+    if (!normalizedPhone) {
+      setMessage("Enter a valid 10 digit mobile number.");
+      setBusy(false);
+      return;
+    }
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       phone: normalizedPhone,
@@ -48,7 +32,6 @@ export function CustomerLoginForm() {
       setBusy(false);
       return;
     }
-    setPhone(normalizedPhone);
     setOtpSent(true);
     setMessage("OTP sent to your registered mobile number.");
     setBusy(false);
@@ -60,7 +43,7 @@ export function CustomerLoginForm() {
     setMessage(null);
     const supabase = createClient();
     const { data, error } = await supabase.auth.verifyOtp({
-      phone: normalizeIndianPhone(phone),
+      phone: customerPhoneE164(phone),
       token: otp.trim(),
       type: "sms",
     });
@@ -84,26 +67,11 @@ export function CustomerLoginForm() {
       return;
     }
 
-    const response = await fetch("/api/customer/auth/session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
-        expires_in: data.session.expires_in,
-      }),
-    });
-
-    if (!response.ok) {
-      let code: string | undefined;
-      try {
-        const body = (await response.json()) as { code?: string };
-        code = body.code;
-      } catch {
-        code = undefined;
-      }
+    try {
+      await establishCustomerWebSession(data.session);
+    } catch (sessionError) {
       await supabase.auth.signOut();
-      setMessage(customerSessionErrorMessage(response.status, code));
+      setMessage(sessionError instanceof Error ? sessionError.message : "The secure Customer Web session could not be created.");
       setBusy(false);
       return;
     }
@@ -115,18 +83,22 @@ export function CustomerLoginForm() {
     <form className="space-y-4" onSubmit={otpSent ? verifyOtp : sendOtp}>
       <div className="grid gap-2">
         <label htmlFor="customer-phone" className="text-sm font-semibold text-[#10213D]">Registered mobile number</label>
-        <input
-          id="customer-phone"
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
-          value={phone}
-          onChange={(event) => setPhone(event.target.value)}
-          disabled={busy || otpSent}
-          placeholder="+91 98765 43210"
-          className="h-12 rounded-xl border border-[#CFD8E6] bg-white px-3 text-sm outline-none transition focus:border-[#245A9A] focus:ring-2 focus:ring-[#245A9A]/15 disabled:bg-slate-50"
-          required
-        />
+        <div className="flex h-12 overflow-hidden rounded-xl border border-[#CFD8E6] bg-white transition focus-within:border-[#245A9A] focus-within:ring-2 focus-within:ring-[#245A9A]/15">
+          <div className="grid min-w-[64px] place-items-center border-r border-[#DCE4EF] bg-[#F3F7FC] px-3 text-sm font-bold text-[#10213D]">+91</div>
+          <input
+            id="customer-phone"
+            type="tel"
+            inputMode="numeric"
+            autoComplete="tel-national"
+            value={phone}
+            onChange={(event) => setPhone(normalizeCustomerPhone10(event.target.value))}
+            disabled={busy || otpSent}
+            maxLength={10}
+            placeholder="Enter 10 digit number"
+            className="min-w-0 flex-1 bg-white px-3 text-sm outline-none disabled:bg-slate-50"
+            required
+          />
+        </div>
       </div>
 
       {otpSent ? (
