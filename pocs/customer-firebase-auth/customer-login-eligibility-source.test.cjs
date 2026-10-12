@@ -64,3 +64,11 @@ test('incomplete customer signup stays out of normal login OTP and is allowed on
   assert.match(sql, /return 'signup_incomplete'/);
   assert.doesNotMatch(sql, /update public\.profiles|delete from public\.profiles/i);
 });
+
+test('OTP resend is throttled locally and an expired session requests a fresh code', () => {
+  const ui = mobile('components/firebase-customer-otp-form.tsx');
+  assert.match(ui, /Date\.now\(\) \+ 45000/);
+  assert.match(ui, /disabled=\{busy \|\| retrySeconds > 0\}/);
+  assert.match(ui, /setResendAvailableAt\(0\)/);
+  assert.match(ui, /Firebase accepted the OTP request/);
+});
