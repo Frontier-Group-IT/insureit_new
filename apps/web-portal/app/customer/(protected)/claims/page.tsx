@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { AlertCircle, ArrowUpRight, CheckCircle2, Clock3, FileText, ShieldCheck } from "lucide-react";
+import { FileText } from "lucide-react";
+import { getStaticInsurerLogo } from "@/lib/insurer-logo";
+import { ManufacturerMark } from "../vehicles/customer-vehicles-register";
 import { CustomerClaimsSearch, CustomerClaimsStageFilter } from "./customer-claims-search";
-import { projectInternalClaim } from "@insureit/claim-journey";
+import { INTERNAL_JOURNEY_STAGES, projectInternalClaim } from "@insureit/claim-journey";
 import { CustomerAccountTabs, EmptyCustomerState } from "@/components/customer-portal/customer-phase1";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import {
@@ -32,7 +34,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
   });
   const internalCount = enriched.filter((item) => !item.external).length;
   const externalCount = enriched.length - internalCount;
-  const stages = [...new Set(enriched.filter((item) => item.external === (type === "external")).map((item) => item.stage))].sort();
+  const stages = INTERNAL_JOURNEY_STAGES.map((stage) => stage.label);
   const filtered = enriched.filter(({ claim, external, stage }) => {
     if (external !== (type === "external")) return false;
     if (stageFilter && stage !== stageFilter) return false;
@@ -57,26 +59,13 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
         <div className="absolute inset-0 bg-gradient-to-r from-[#06162F] via-[#08254C]/95 via-45% to-transparent" />
         <div className="relative flex min-h-[165px] items-center px-5 py-5 sm:min-h-[205px] sm:px-8">
           <div className="max-w-[58%]">
-            <p className="text-[9px] font-extrabold uppercase tracking-[.15em] text-[#86C8FF]">Claims and assistance</p>
-            <h1 className="mt-2 text-[clamp(23px,3vw,38px)] font-black leading-tight">Your <span className="text-[#369BFF]">Claim</span> Portfolio</h1>
-            <p className="mt-2 max-w-[400px] text-[11px] leading-5 text-[#E0EEFF]">Track and manage your vehicle and asset claims in one place with complete transparency.</p>
+            <h1 className="text-[clamp(23px,3vw,38px)] font-black leading-tight">Your <span className="text-[#369BFF]">Claim</span> Portfolio</h1>
           </div>
         </div>
       </section>
-      <section aria-label="Claim summary" className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5">
-        {[
-          { label: "Total claims", value: enriched.length, Icon: FileText, theme: "bg-[#EFF6FF]", color: "text-[#1671DA]" },
-          { label: "In process", value: enriched.filter(({claim,stage}) => !/settled|approved|rejected|closed|cancelled|customer action/i.test(`${claim.current_status} ${stage}`)).length, Icon: Clock3, theme: "bg-[#EEFBF6]", color: "text-[#0DA87A]" },
-          { label: "Approved / settled", value: enriched.filter(({claim,stage}) => /approved|settled/i.test(`${claim.current_status} ${stage}`)).length, Icon: CheckCircle2, theme: "bg-[#FFF7EC]", color: "text-[#E68A1B]" },
-          { label: "Rejected", value: enriched.filter(({claim,stage}) => /rejected/i.test(`${claim.current_status} ${stage}`)).length, Icon: AlertCircle, theme: "bg-[#FFF1F2]", color: "text-[#D52E42]" },
-          { label: "Customer action", value: enriched.filter(({claim,stage}) => /customer action/i.test(`${claim.current_status} ${stage}`)).length, Icon: ShieldCheck, theme: "bg-[#F4F1FF]", color: "text-[#7654D5]" },
-        ].map(({label,value,Icon,theme,color}) => <div key={label} className={`flex min-h-[82px] items-center gap-3 rounded-xl border border-[#DEE7F1] p-3 ${theme}`}>
-          <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/80 ${color}`}><Icon className="h-5 w-5" /></span>
-          <span><strong className="block text-[22px] font-black text-[#10213D]">{value}</strong><span className="block text-[10px] font-semibold text-[#526985]">{label}</span></span>
-        </div>)}
-      </section>
       <section className="overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white shadow-[0_8px_30px_rgba(20,40,75,.04)]">
-        <div className="flex flex-wrap items-center gap-2 border-b border-[#E6ECF4] p-3 sm:p-4">
+        <div className="flex flex-wrap items-center gap-2 border-b border-[#E6ECF4] p-3 sm:p-4 xl:flex-nowrap">
+          <h2 className="shrink-0 text-[17px] font-black text-[#10213D]">Claims Register</h2>
           <CustomerClaimsSearch initialQuery={params.q ?? ""} accountId={account.id} type={type} />
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <CustomerClaimsStageFilter value={stageFilter} stages={stages} accountId={account.id} type={type} query={params.q ?? ""} />
@@ -89,23 +78,22 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
         </div>
         {rows.length ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1180px] border-collapse text-left">
+            <table className="w-full min-w-[1050px] border-collapse text-left">
               <thead className="bg-[#F1F5FA] text-[10px] uppercase text-[#687991]">
-                <tr>{["Claim / Control No.", "Vehicle / Asset", "Insurer", "Policy No.", "Claim type", "Incident date", "Stage", "Status", "Actions"].map((heading) =>
+                <tr>{["Claim / Control No.", "Vehicle / Asset", "Insurer", "Policy No.", "Claim type", "Incident date", "Stage", "Status"].map((heading) =>
                   <th key={heading} className="whitespace-nowrap px-3 py-3 font-semibold">{heading}</th>)}</tr>
               </thead>
               <tbody className="divide-y divide-[#E2E9F3]">
                 {rows.map(({ claim, stage }) => (
-                  <tr key={claim.id} className="hover:bg-[#F6F9FE]">
-                    <td className={cell}><p className="font-bold text-[#16375C]">{claim.insurer_claim_no || claim.claim_no || "—"}</p><p className="mt-1 text-[9px] text-[#7B8CA4]">{claim.claim_no && claim.insurer_claim_no ? claim.claim_no : "—"}</p></td>
-                    <td className={cell}><p className="font-bold text-[#164B91]">{claim.vehicle_no || "—"}</p><p className="mt-1 max-w-[175px] truncate text-[9px] text-[#7B8CA4]">{[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" ") || "—"}</p></td>
-                    <td className={cell}>{claim.insurer_name || "—"}</td>
+                  <tr key={claim.id} className="group relative hover:bg-[#F6F9FE] focus-within:bg-[#EFF6FF]">
+                    <td className={cell}><Link href={{pathname:`/customer/claims/${claim.id}`,query:{account:account.id}}} aria-label={`View claim ${claim.claim_no || claim.id}`} className="font-bold text-[#16375C] after:absolute after:inset-0 after:cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#267AFF] focus-visible:outline-offset-2">{claim.insurer_claim_no || claim.claim_no || "—"}</Link><p className="mt-1 text-[9px] text-[#7B8CA4]">{claim.claim_no && claim.insurer_claim_no ? claim.claim_no : "—"}</p></td>
+                    <td className={cell}><p className="font-bold text-[#164B91]">{claim.vehicle_no || "—"}</p><div className="mt-1 flex items-center gap-1" title={[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" ")}><ManufacturerMark make={claim.vehicle_make || ""} /></div></td>
+                    <td className={cell}>{getStaticInsurerLogo(claim.insurer_name) ? <img src={getStaticInsurerLogo(claim.insurer_name)!} alt={claim.insurer_name || "Insurer"} title={claim.insurer_name || "Insurer"} className="h-7 w-7 object-contain" /> : <span title={claim.insurer_name || "Insurer unavailable"} aria-label={claim.insurer_name || "Insurer unavailable"} className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[#EDF2F8] text-[#506786]"><FileText className="h-4 w-4" /></span>}</td>
                     <td className={cell}>{claim.policy_no || "—"}</td>
                     <td className={cell}>—</td>
                     <td className={cell}>{claim.accident_at ? new Date(claim.accident_at).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : "—"}</td>
                     <td className={cell}>{stage}</td>
                     <td className={cell}><span className="rounded-full border border-[#D9E5F3] bg-[#F2F7FD] px-2 py-1 text-[10px] font-semibold text-[#315B89]">{claim.current_status || "—"}</span></td>
-                    <td className={cell}><Link aria-label={`View claim ${claim.claim_no || claim.id}`} href={{pathname:`/customer/claims/${claim.id}`,query:{account:account.id}}} className="inline-flex rounded-lg border border-[#DCE6F2] p-2 text-[#1B5794] hover:bg-[#EDF5FF]"><ArrowUpRight className="h-4 w-4"/></Link></td>
                   </tr>
                 ))}
               </tbody>
