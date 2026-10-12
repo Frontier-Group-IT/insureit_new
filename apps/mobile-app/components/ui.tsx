@@ -88,6 +88,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
       console.warn('[claim-navigation] dashboard-press-blocked');
       return;
     }
+    console.warn('[claim-navigation] replace-caller', { source: 'shared-dashboard-handler', destination: profileRole ? 'role-dashboard' : 'login' });
     if (profileRole) return router.replace(routeForRole(profileRole));
     return router.replace('/login');
   }
