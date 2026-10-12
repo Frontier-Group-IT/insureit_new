@@ -1,10 +1,12 @@
-import { FileText, Mail, MapPin, Phone, ShieldCheck, UserRound } from "lucide-react";
+import { FileText, Mail, MapPin, Phone, ShieldCheck } from "lucide-react";
 import {
   CustomerAccountTabs,
   StatusPill,
 } from "@/components/customer-portal/customer-phase1";
 import { CustomerProfileDocuments } from "@/components/customer-portal/customer-profile-documents";
 import { CustomerProfileEditor } from "@/components/customer-portal/customer-profile-editor";
+import { CustomerAvatar } from "@/components/customer-portal/customer-avatar";
+import { getCustomerWebSession } from "@/lib/customer-web";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import {
   customerKycStatusLabel,
@@ -21,6 +23,7 @@ export default async function CustomerProfilePage({
   searchParams?: Promise<{ account?: string }>;
 }) {
   const params = searchParams ? await searchParams : {};
+  const { user } = await getCustomerWebSession();
   const { account, accounts } = await resolveCustomerWebScope(params.account);
   const data = await loadCustomerProfile(account.id);
   const { customer, kyc, documents } = data;
@@ -47,7 +50,7 @@ export default async function CustomerProfilePage({
       <section className="rounded-2xl border border-[#DCE4EE] bg-white p-4 shadow-[0_8px_24px_rgba(28,50,82,.04)] sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-4">
-            <span className="grid h-20 w-20 shrink-0 place-items-center rounded-full bg-[#E1EEFF] text-[24px] font-black text-[#1262BC]">{customer.contact_name?.trim().split(/\\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join("").toUpperCase() || <UserRound className="h-8 w-8"/>}</span>
+            <CustomerAvatar userId={user.id} size="profile" />
             <div className="min-w-0">
               <h2 className="break-words text-[19px] font-black text-[#10213D]">{customer.contact_name}</h2>
               <p className="mt-1 text-[11px] font-semibold text-[#7286A8]">Customer ID: {customer.customer_code}</p>
