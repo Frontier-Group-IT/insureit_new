@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AuthExperience, LoginPromptCard, SignupPromptCard } from './auth-experience';
@@ -11,6 +11,7 @@ import {
   confirmFirebaseCustomerOtp,
   confirmFirebaseCustomerSignup,
   sendFirebaseCustomerOtp,
+  subscribeFirebaseCustomerOtpStatus,
   startFirebaseCustomerOtp,
   type FirebaseCustomerRegistration,
 } from '@/lib/firebase-customer-auth';
@@ -87,6 +88,9 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
   const [registration, setRegistration] = useState<FirebaseCustomerRegistration | null>(null);
   const [resendAvailableAt, setResendAvailableAt] = useState(0);
   const [clock, setClock] = useState(Date.now());
+  const unsubscribeRef = useRef<(() => void) | null>(null);
+  const autoCompletingRef = useRef(false);
+  useEffect(() => () => { unsubscribeRef.current?.(); }, []);
   useEffect(() => {
     if (!sent || !resendAvailableAt) return;
     const timer = setInterval(() => setClock(Date.now()), 1000);
@@ -96,6 +100,35 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
   const validMobile = /^[6-9]\d{9}$/.test(mobile);
   const validName = fullName.trim().length >= 2;
   const validEmail = !email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
+  async function completeAutoVerified() {
+    if (autoCompletingRef.current) return;
+    autoCompletingRef.current = true;
+    setBusy(true);
+    setBusyAction('verify');
+    setError('');
+    setErrorReference(null);
+    setMessage('Your phone was verified automatically. Opening your account...');
+    try {
+      // The Firebase SDK has already verified the correct phone identity.
+      // Backend binding and scoped customer authorization are STILL mandatory.
+      const verified = mode === 'signup'
+        ? await confirmFirebaseCustomerSignup('', { fullName: fullName.trim(), ...(email.trim() ? { email: email.trim() } : {}) })
+        : await confirmFirebaseCustomerOtp('');
+      if (!verified.profileId) throw new Error('profile_not_resolved');
+      await selectCustomerAuthProvider('firebase');
+      unsubscribeRef.current?.();
+      router.replace('/customer/home');
+    } catch (e) {
+      setError(readableFirebaseError(e, 'verify'));
+      setErrorReference(safeFirebaseErrorCode(e));
+      setMessage('');
+      autoCompletingRef.current = false;
+    } finally {
+      setBusy(false);
+      setBusyAction(null);
+    }
+  }
 
   async function requestOtp() {
     if (busy || (sent && Date.now() < resendAvailableAt)) return;
@@ -131,14 +164,37 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
       if (mode === 'login' && result.status !== 'registered') throw new Error('registration_check_unavailable');
       if (mode === 'signup' && result.status !== 'not_registered' && result.status !== 'signup_incomplete') throw new Error('registration_check_unavailable');
 
-      startFirebaseCustomerOtp();
+      // Preserve the same native phone session for resends. Android may
+      // auto-verify without displaying an SMS; do not discard that event.
+      if (!sent) {
+        unsubscribeRef.current?.();
+        startFirebaseCustomerOtp();
+        autoCompletingRef.current = false;
+        unsubscribeRef.current = subscribeFirebaseCustomerOtpStatus(status => {
+          if (status.state === 'sent') {
+            setSent(true);
+            setMessage('Firebase has sent a verification code. Enter the newest SMS code.');
+          } else if (status.state === 'timeout') {
+            setMessage('Automatic verification timed out. You can still use the SMS code.');
+          } else if (status.state === 'auto_verifying') {
+            setMessage('Firebase is verifying your phone automatically...');
+          } else if (status.state === 'auto_verified') {
+            void completeAutoVerified();
+          } else if (status.state === 'error') {
+            setErrorReference(status.code);
+            setMessage('');
+            setError('Firebase phone verification failed. Please request a fresh code.');
+          }
+        });
+      }
       await sendFirebaseCustomerOtp('+91' + mobile);
-      setSent(true);
-      setOtp('');
-      const availableAt = Date.now() + 45000;
-      setResendAvailableAt(availableAt);
-      setClock(Date.now());
-      setMessage('Firebase started phone verification. Enter the latest SMS code if one arrives.');
+      if (!autoCompletingRef.current) {
+        setSent(true);
+        setOtp('');
+        const availableAt = Date.now() + 45000;
+        setResendAvailableAt(availableAt);
+        setClock(Date.now());
+      }
     } catch (nextError) {
       setError(readableFirebaseError(nextError, 'send'));
       setErrorReference(safeFirebaseErrorCode(nextError));
@@ -196,6 +252,8 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
     setErrorReference(null);
     setRegistration(null);
     setResendAvailableAt(0);
+    unsubscribeRef.current?.();
+    unsubscribeRef.current = null;
     startFirebaseCustomerOtp();
   }
 
