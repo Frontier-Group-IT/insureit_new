@@ -10,7 +10,7 @@ const manufacturerIcons: Record<string, string> = {
   volkswagen: "volkswagen", renault: "renault", nissan: "nissan", skoda: "skoda",
   volvo: "volvo", mercedes: "mercedesbenz", isuzu: "isuzu",
 };
-function ManufacturerMark({ make }: { make: string }) {
+export function ManufacturerMark({ make }: { make: string }) {
   const key = make.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
   const brand = manufacturerIcons[key];
   const [failed, setFailed] = useState(false);
