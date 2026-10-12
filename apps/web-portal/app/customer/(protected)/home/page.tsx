@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, BadgeIndianRupee, CalendarClock, CarFront, CheckCircle2, ClipboardList, FilePlus2, Headphones, Plus, ReceiptText, RefreshCcw, ShieldCheck, Sparkles } from "lucide-react";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
+import { ManufacturerMark } from "../vehicles/customer-vehicles-register";
 import { customerPolicyTone, loadCustomerWebPolicies, loadCustomerWebVehicles, resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { isCompletedCustomerClaim, loadCustomerClaimListContext } from "@/lib/customer-web-phase2-data";
 
@@ -25,13 +26,6 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
   const openClaims = claims.filter((claim) => !isCompletedCustomerClaim(claim, milestones_by_claim.get(claim.id) ?? []) && claim.current_status !== "Rejected");
   const attentionCount = uncoveredVehicles.length + duePolicies.length;
   const accountQuery = { account: account.id };
-  const vehicleArtwork = (make: string, model: string, type: string) => {
-    const identity = `${make} ${model} ${type}`.toLowerCase();
-    if (/jcb|backhoe|excavator|loader|3dx/.test(identity)) return "/customer-quote-backhoe.svg";
-    if (/truck|tata|lpt|tipper|goods|commercial|ashok leyland|bharatbenz/.test(identity)) return "/customer-quote-truck.svg";
-    if (/bike|scooter|two.wheel|motorcycle|access|weGo|tvs|honda activa|hero/.test(identity)) return null;
-    return "/customer-quote-suv.svg";
-  };
   const latestPolicies = policies.slice(0, 4);
   const latestClaims = claims.slice(0, 4);
   return (
@@ -39,8 +33,9 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/home" />
       <section className="relative isolate overflow-hidden rounded-2xl bg-[linear-gradient(110deg,#071C3E_0%,#103E78_58%,#3288D6_100%)] p-4 text-white shadow-[0_12px_32px_rgba(18,46,86,.12)] sm:p-5">
         <div className="pointer-events-none absolute inset-y-0 right-0 w-[55%] bg-[radial-gradient(ellipse_at_75%_35%,rgba(150,214,255,.52),transparent_70%)]" />
-        <div className="relative grid items-center gap-4 md:grid-cols-[1fr_0.95fr]">
-          <div>
+        <div className="relative">
+          <Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="absolute right-0 top-0 inline-flex items-center gap-2 rounded-full border border-white/20 bg-[#1663AF] px-4 py-2 text-[11px] font-bold text-white hover:bg-[#0F5092]">View My Fleet <ArrowRight className="h-4 w-4"/></Link>
+          <div className="pr-0 sm:pr-36">
             <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.2em] text-[#B2D7FC]"><Sparkles className="h-4 w-4" /> My protection hub</p>
             <h1 className="mt-1 text-[clamp(25px,3vw,37px)] font-black tracking-tight">Welcome back, {account.contact_name?.split(" ")[0] || "Customer"}!</h1>
             <p className="mt-1 text-[12px] text-[#D9E8FA]">Keep your vehicles, policies and claims organized in one place.</p>
@@ -49,10 +44,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
               <Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="flex items-center gap-3 rounded-xl border border-white/15 bg-white/10 p-3 hover:bg-white/20"><ShieldCheck className="h-7 w-7 text-[#8CE6C2]"/><span><strong className="block text-lg">{coverage}%</strong><small className="text-[10px] text-[#D6E6F9]">Fleet protection</small></span><ArrowRight className="ml-auto h-3.5 w-3.5"/></Link>
             </div>
           </div>
-          <div className="relative flex min-h-[155px] flex-col items-center justify-center">
-            <img src="/customer-fleet-banner.svg" alt="Illustrated fleet of vehicles" className="h-[145px] w-full object-contain drop-shadow-lg" />
-            <Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="mt-1 inline-flex items-center gap-2 rounded-full bg-[#1663AF] px-4 py-2 text-[11px] font-bold hover:bg-[#0F5092]">View My Fleet <ArrowRight className="h-4 w-4"/></Link>
-          </div>
+
         </div>
       </section>
       <nav aria-label="Quick actions" className="grid grid-cols-2 gap-2 lg:grid-cols-4">
@@ -76,13 +68,11 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
           <div className="mb-3 flex items-center justify-between"><h2 className="flex items-center gap-2 text-[14px] font-black text-[#10284A]"><CarFront className="h-4 w-4 text-[#1672DC]"/>My Vehicles</h2><Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="text-[10px] font-bold text-[#176CD4]">View all →</Link></div>
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {vehicles.slice(0,3).map(vehicle=>{
-              const art=vehicleArtwork(vehicle.make??"",vehicle.model??"",vehicle.vehicle_type??"");
               const insured=coveredIds.has(vehicle.id);
               return <Link key={vehicle.id} href={{pathname:`/customer/vehicles/${vehicle.id}`,query:accountQuery}} className="min-w-0 overflow-hidden rounded-xl border border-[#E2EAF4] bg-white p-2 hover:border-[#9CC5EF]">
-                <div className="flex h-[78px] items-center justify-center rounded-lg bg-[#F5F9FE]">{art?<img src={art} alt={`${vehicle.make??""} ${vehicle.model??""} vehicle illustration`} className="h-full w-full object-contain"/>:<CarFront className="h-10 w-10 text-[#9CB5D0]" aria-label="Vehicle illustration unavailable"/>}</div>
-                <strong className="mt-2 block truncate text-[11px] text-[#15345E]">{vehicle.vehicle_no || (vehicle.chassis_no?`New-${vehicle.chassis_no}`:"Unregistered")}</strong>
-                <p className="truncate text-[10px] text-[#69809B]">{[vehicle.make,vehicle.model].filter(Boolean).join(" ")||"Vehicle"}</p>
-                <span className={`mt-2 inline-block rounded-full px-2 py-1 text-[9px] font-bold ${insured?"bg-emerald-50 text-emerald-700":"bg-red-50 text-red-600"}`}>{insured?"Insured":"Not insured"}</span>
+                <div className="flex h-[78px] items-center justify-center rounded-lg bg-[#F5F9FE]"><span className="scale-[1.8]"><ManufacturerMark make={vehicle.make??""}/></span></div>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5"><strong className="min-w-0 truncate text-[11px] text-[#15345E]">{vehicle.vehicle_no || (vehicle.chassis_no?`New-${vehicle.chassis_no}`:"Unregistered")}</strong><span className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-bold ${insured?"bg-emerald-50 text-emerald-700":"bg-red-50 text-red-600"}`}>{insured?"Insured":"Not insured"}</span></div>
+                <p className="mt-1 truncate text-[10px] text-[#69809B]">{[vehicle.make,vehicle.model].filter(Boolean).join(" ")||"Vehicle"}</p>
               </Link>;
             })}
             {vehicles.length===0?<p className="text-xs text-[#7186A0]">No vehicles found.</p>:null}
