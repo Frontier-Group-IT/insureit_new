@@ -1,3 +1,21 @@
+## 2026-10-12 — Customer Web login + signup entry
+
+- Branch: `feature/customer-web-login-signup-v2-2026-10-12`.
+- Customer Login mobile field now separates the fixed India prefix `+91` from the editable input. The user enters only a 10-digit national number; E.164 `+91XXXXXXXXXX` normalization happens only at OTP submission.
+- Existing login remains existing-account-only with Supabase `shouldCreateUser:false`; it cannot silently create a new auth account.
+- Login page now offers a clear **New customer? Create your customer account** action.
+- Added public Customer Web route `/customer/signup` with Full name, fixed `+91` mobile, optional email, OTP, Privacy Policy copy and **Already registered? Login** action.
+- Signup uses Supabase phone OTP with `shouldCreateUser:true` and customer role metadata, then reuses the existing production RPCs `get_existing_customer_accounts_for_signup`, `link_existing_customer_account`, and `ensure_customer_signup_profile`.
+- Existing customer masters found for the same mobile are shown for explicit selection so vehicles, policies and claims remain attached to the selected customer instead of creating a duplicate master.
+- OTP verification rejects an existing non-customer/inactive portal identity before any customer-link mutation.
+- Login and signup share the isolated `/api/customer/auth/session` cookie bootstrap helper; Partner/Operations auth remains separate.
+- Middleware explicitly allows both `/customer/login` and `/customer/signup` as Customer auth entry routes, while signed-in customers are redirected Home and employee/Partner sessions are denied.
+- Added `customer-web-auth-signup-regression.mjs` and extended Customer Web foundation regression coverage.
+- No Supabase schema/RLS migration is required; this reuses the existing Customer App signup backend contract.
+- **IMPLEMENTED; PR/CI/MERGE/DEPLOYMENT PENDING.**
+
+---
+
 ## 2026-10-12 — Collapsed sidebar direct-link cleanup
 
 - Branch: `fix/collapsed-sidebar-direct-links-2026-10-12`.
