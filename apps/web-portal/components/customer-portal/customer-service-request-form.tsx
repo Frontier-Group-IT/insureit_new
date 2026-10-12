@@ -165,19 +165,26 @@ export function CustomerServiceRequestForm(props: Props) {
             </div>
           </div>
         </div>
-        {!newVehicle && props.vehicles.length ? (
-          <div className="grid grid-cols-2 gap-2 border-b border-[#E8EDF5] py-3 sm:grid-cols-3 xl:grid-cols-4">
-            {props.vehicles.map(vehicle => {
-              const make = (vehicle.make ?? "").trim();
-              const model = (vehicle.model ?? "").trim();
-              const category = /jcb|backhoe|excavator|loader|3dx/i.test(`${make} ${model} ${vehicle.vehicleType ?? ""}`) ? "backhoe" : /tata|truck|lpt|tipper|goods|commercial/i.test(`${make} ${model} ${vehicle.vehicleType ?? ""}`) ? "truck" : "suv";
-              return <button type="button" key={vehicle.id} aria-pressed={vehicleId === vehicle.id} onClick={() => chooseVehicle(vehicle.id)} className={`flex min-h-[66px] items-center gap-2 rounded-xl border px-2 py-2 text-left transition ${vehicleId === vehicle.id ? "border-[#267AFF] bg-[#F1F7FF]" : "border-[#D7E2F0] bg-white hover:bg-[#F8FAFD]"}`}>
-                <img src={`/customer-quote-${category}.svg`} alt="" className="h-12 w-16 shrink-0 object-contain" />
-                <span className="min-w-0 flex-1"><span className="flex min-w-0 items-center gap-1.5"><span title={make || "Vehicle manufacturer"} aria-label={make ? `${make} manufacturer` : "Vehicle manufacturer unavailable"} className="grid h-5 min-w-5 shrink-0 place-items-center rounded-md border border-[#D8E5F2] bg-white px-1 text-[8px] font-black uppercase tracking-tight text-[#1B5794]">{make ? make.slice(0, 2) : <CarFront className="h-3 w-3"/>}</span><strong className="block min-w-0 truncate text-[10px] text-[#183256]">{vehicle.label}</strong></span><small className="mt-1 block truncate text-[9px] text-[#71839A]">{[make,model].filter(Boolean).join(" · ") || "Vehicle"}</small></span>
-                <span className={`h-4 w-4 shrink-0 rounded-full border-2 ${vehicleId === vehicle.id ? "border-[#267AFF] bg-[#267AFF] shadow-[inset_0_0_0_3px_white]" : "border-[#A8B8CC]"}`}/>
-              </button>;
-            })}
-            <button type="button" onClick={() => {setNewVehicle(true);setVehicleId("");setVehicleNo("");}} className="flex min-h-[66px] items-center gap-2 rounded-xl border border-[#D7E2F0] bg-[#F9FBFF] px-3 py-2 text-left hover:bg-[#EDF5FF]"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#E3F0FF] text-[#1775E6]"><CirclePlus className="h-5 w-5"/></span><span><strong className="block text-[10px] text-[#183256]">Add another vehicle</strong><small className="text-[9px] text-[#71839A]">Not in the list?</small></span></button>
+        {!newVehicle && props.vehicles.length > 0 ? (
+          <div className="flex flex-col gap-2 border-b border-[#E8EDF5] py-3 lg:pl-[202px]">
+            <label htmlFor="insurance-quote-vehicle" className="text-[11px] font-bold text-[#142746]">Select your vehicle</label>
+            <select
+              id="insurance-quote-vehicle"
+              value={vehicleId}
+              onChange={(event) => chooseVehicle(event.target.value)}
+              className={inputClass + " max-w-[560px]"}
+            >
+              <option value="">Select a registered vehicle</option>
+              {props.vehicles.map(vehicle => (
+                <option key={vehicle.id} value={vehicle.id}>
+                  {vehicle.label}{[vehicle.make, vehicle.model].filter(Boolean).length ? " — " + [vehicle.make, vehicle.model].filter(Boolean).join(" ") : ""}
+                </option>
+              ))}
+            </select>
+            <button type="button" onClick={() => { setNewVehicle(true); setVehicleId(""); setVehicleNo(""); }}
+              className="inline-flex w-fit items-center gap-1.5 text-[11px] font-bold text-[#146AD3] hover:underline">
+              <CirclePlus className="h-4 w-4" aria-hidden="true" /> Add another vehicle
+            </button>
           </div>
         ) : null}
         {newVehicle ? <label className="block border-b border-[#E8EDF5] py-2 text-[10px] font-bold text-[#61738B]">Vehicle make / model<input className={`${inputClass} mt-1`} value={vehicleDetails} onChange={event=>setVehicleDetails(event.target.value)} placeholder="Enter vehicle make / model"/></label> : !props.vehicles.length ? <label className="block border-b border-[#E8EDF5] py-2 text-[10px] font-bold text-[#61738B]">Vehicle registration number<input className={`${inputClass} mt-1`} value={vehicleNo} onChange={event=>setVehicleNo(event.target.value.toUpperCase())} placeholder="Enter registration number"/></label> : null}

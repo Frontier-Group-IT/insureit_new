@@ -24,13 +24,22 @@ export default async function CustomerVehiclesPage({
     loadCustomerWebVehicles(account.id),
     loadCustomerWebPolicies(account.id),
   ]);
-  const activePolicyByVehicle = new Map(
-    policies
-      .filter((policy) => policy.vehicle_id && customerPolicyTone(policy.end_date).tone !== "expired")
-      .map((policy) => [policy.vehicle_id as string, policy]),
-  );
+  const policiesByVehicle = new Map<string, typeof policies>();
+  for (const policy of policies) {
+    if (!policy.vehicle_id) continue;
+    const related = policiesByVehicle.get(policy.vehicle_id) ?? [];
+    related.push(policy);
+    policiesByVehicle.set(policy.vehicle_id, related);
+  }
+  const inactivePolicyStatuses = new Set(["superseded", "cancelled", "canceled", "rejected", "void", "inactive"]);
   const items = vehicles.map(vehicle => {
-    const policy = activePolicyByVehicle.get(vehicle.id);
+    const associated = policiesByVehicle.get(vehicle.id) ?? [];
+    const eligible = associated.filter(policy => !inactivePolicyStatuses.has((policy.status ?? "").trim().toLowerCase()));
+    const active = eligible.filter(policy => customerPolicyTone(policy.end_date).tone !== "expired");
+    const priority = { active: 2, due: 1, expired: 0 };
+    active.sort((a, b) => priority[customerPolicyTone(b.end_date).tone] - priority[customerPolicyTone(a.end_date).tone]);
+    const policy = active[0];
+    const status: "due" | "active" | "inactive" | "expired" = policy ? customerPolicyTone(policy.end_date).tone : eligible.length ? "expired" : "inactive";
     return {
       id: vehicle.id,
       number: customerDisplayVehicleNo(vehicle),
@@ -40,6 +49,7 @@ export default async function CustomerVehiclesPage({
       chassis: vehicle.chassis_no ?? "",
       engine: vehicle.engine_no ?? "",
       policy: policy?.policy_no ?? null,
+      status,
     };
   });
   return <div className="space-y-3">
