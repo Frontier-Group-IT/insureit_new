@@ -108,7 +108,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
         backgroundColor={customerHeader ? palette.navy : '#EEF7FF'}
       />
       <SafeAreaView style={styles.safeArea} edges={[]}>
-        <View style={styles.safeArea} onTouchStartCapture={(event: import('react-native').GestureResponderEvent) => {
+        <View style={styles.safeArea} onTouchStart={(event: import('react-native').GestureResponderEvent) => {
           if (pathname !== '/customer/start-claim') return;
           const { pageX, pageY } = event.nativeEvent;
           console.warn('[claim-navigation] screen-touch-capture', {
