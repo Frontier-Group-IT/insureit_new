@@ -1,4 +1,4 @@
-import { ClipboardCheck, Headset, MessageCircle, ShieldCheck } from "lucide-react";
+import { ClipboardCheck, Headset, MessageCircle, ShieldCheck, FileText } from "lucide-react";
 import {
   CustomerAccountTabs,
 } from "@/components/customer-portal/customer-phase1";
@@ -44,6 +44,7 @@ export default async function CustomerInsuranceQuotePage({
         </div>
       </section>
       <section className="overflow-hidden rounded-xl border border-[#DCE5F1] bg-white p-3 shadow-[0_8px_26px_rgba(28,50,82,.06)] sm:p-5">
+        <h2 className="mb-3 flex items-center gap-2 text-[17px] font-black text-[#10213D]"><FileText className="h-5 w-5 text-[#175CA8]" aria-hidden="true" />Insurance Quote Request</h2>
         <CustomerServiceRequestForm
           mode="insurance_quote"
           customerId={account.id}
