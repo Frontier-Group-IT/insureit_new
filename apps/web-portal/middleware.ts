@@ -184,7 +184,9 @@ export async function middleware(request: NextRequest) {
     return clearSessionCookies(continueRequest(request));
   }
 
-  // Signup is a public Customer authentication-entry page, not a protected Customer workspace.\n  // Reuse the Login authorization boundary without changing Operations or Partner routing.\n  if (pathname === "/customer/login" || pathname === "/customer/signup") {
+  // Signup is a public Customer authentication-entry page, not a protected Customer workspace.
+  // Reuse the Login authorization boundary without changing Operations or Partner routing.
+  if (pathname === "/customer/login" || pathname === "/customer/signup") {
     if (check.status === "customer") return redirect(request, "/customer/home", refreshedSession, check.role);
     if (check.status === "authorized" || check.status === "forbidden") {
       return redirect(request, "/access-denied", refreshedSession, check.role);
