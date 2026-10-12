@@ -1,7 +1,15 @@
 # Firebase customer identity mapping — staged migration review
-2026-10-08 · **DRAFT / NOT APPLIED**
+2026-10-08 · **ORIGINAL DRAFT ONLY** (later separate migrations historically applied; see override)
 
 File: `20261008_identity_mapping_REVIEW_ONLY.sql`.
+
+## Current status override — 2026-10-12
+
+This README describes the original **review-only October 8 mapping draft**, not the whole migration. Subsequent code/migrations in draft PR #2979 historically deployed Firebase bind/signup/document-read/upload Edge functions and guarded customer data authorization to production; source-only checks and an isolated mobile workspace TypeScript run passed on 2026-10-10. Customer App Firebase OTP remains **OFF by default**, no native on-device signed-token acceptance verified, and one final release AAB 0.3.1 (10) has **not** been built. Supabase connector access was denied on 2026-10-12; prior deployment state is historical until rechecked.
+
+For exact three-step closeout, blockers, user authorization, non-destructive production-only test policy, and mobile release conditions, see `docs/CUSTOMER_FIREBASE_OTP_AGENT_HANDOFF_2026_10_08.md` first. Do not run this original draft SQL or disable Supabase Auth globally. Existing business data and partner/staff login must remain unchanged.
+
+
 
 The migration is deliberately limited to an approved Firebase UID → existing
 profile UUID mapping and an independent resolver helper. It does **not**
