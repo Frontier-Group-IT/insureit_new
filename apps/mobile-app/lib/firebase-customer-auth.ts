@@ -96,7 +96,7 @@ export type FirebaseCustomerRegistration = {
 };
 
 export async function checkFirebaseCustomerRegistration(phone: string): Promise<FirebaseCustomerRegistration> {
-  if (!/^\\+91[6-9]\\d{9}$/.test(phone)) throw new Error('invalid-phone-number');
+  if (!/^\+91[6-9]\d{9}$/.test(phone)) throw new Error('invalid-phone-number');
   const baseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
   const publicKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
   if (!baseUrl || !publicKey) throw new Error('registration_check_unavailable');
