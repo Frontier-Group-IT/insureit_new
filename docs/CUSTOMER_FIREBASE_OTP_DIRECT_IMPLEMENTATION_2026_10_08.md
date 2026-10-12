@@ -1,8 +1,14 @@
 # Customer Firebase Phone OTP — production-app implementation staging
 Date: 2026-10-08
-Status: **PARTIAL / NOT ENABLED** (separate branch; no production changes)
+Status: **HISTORICAL STAGING SNAPSHOT** — see current override; Customer Firebase OTP NOT LIVE
 
-## Why this is not yet a live provider switch
+## Current override (2026-10-12): implementation advanced, NOT live
+
+This is an **October 8 staging snapshot**, not the current release state. Use `docs/CUSTOMER_FIREBASE_OTP_AGENT_HANDOFF_2026_10_08.md` **CURRENT TRUTH** section for live continuation. Native RNFirebase, Android config, customer identity adapter, feature-gated login/signup, Edge bind/signup/document read/upload services and additive Supabase auth/RLS compatibility were implemented later in draft PR #2979. Historical production deployments recorded in the handoff cannot be freshly verified because the Supabase connector was denied on 2026-10-12. The latest isolated source CI #38032951263 is green (71 tests + mobile TypeScript); real installed Android SMS, Firebase signed-token E2E, and release remain unverified.
+
+**Only closeout path:** (1) reconcile branch and server/Storage authorization; (2) test actual signed Firebase OTP and A/B customer isolation on Android; (3) make Firebase-only Customer Android OTP and build/test one production AAB 0.3.1 (10), without Google Play publishing. Supabase remains the DB and staff/partner Auth provider. Existing Supabase Customer OTP is still the default until intentional switch.
+
+## Why this was not a live provider switch on 2026-10-08
 - Browser `/firebase-otp-test` verified Indian SMS delivery. It does not verify native Android.
 - The customer mobile app `apps/mobile-app/app/login.tsx` and `signup.tsx` use `sendPhoneOtp` / `verifyPhoneOtp` from `lib/auth.ts`, which currently obtain Supabase Auth user IDs, sessions and refresh tokens. `lib/customer-account-vault.ts`, `lib/startup-routing.ts`, and `lib/supabase.ts` depend on those sessions.
 - Supabase official Firebase third-party Auth passes Firebase ID tokens through a Supabase client `accessToken` callback. It does **not** mint the pre-existing user's Supabase Auth session. `auth.uid()` in RLS currently assumes pre-existing Supabase UUID identity; Firebase UID generally is a different format.
