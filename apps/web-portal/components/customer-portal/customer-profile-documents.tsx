@@ -10,7 +10,7 @@ type Document = {
 };
 
 export function CustomerProfileDocuments({ customerId, documents }: { customerId: string; documents: Document[] }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   return <section className="overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white shadow-[0_8px_24px_rgba(28,50,82,0.04)]">
     <button type="button" aria-expanded={expanded} aria-controls="customer-profile-vault-content" onClick={() => setExpanded(value => !value)} className="flex w-full items-center gap-3 p-4 text-left hover:bg-[#FAFCFF]">
       <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#17345B] text-white"><FileText className="h-5 w-5"/></span>
