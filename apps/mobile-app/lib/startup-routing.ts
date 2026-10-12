@@ -57,6 +57,7 @@ export async function routeRestoredUser(user: User, router: Router) {
     }
   }
 
+  console.warn('[claim-navigation] replace-caller', { source: 'startup-routing', destination: 'role-dashboard' });
   router.replace(routeForRole(profile.role));
   return profile;
 }
