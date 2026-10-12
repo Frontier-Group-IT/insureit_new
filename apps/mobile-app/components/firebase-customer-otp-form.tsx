@@ -1,157 +1,237 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { AuthExperience, LoginPromptCard, SignupPromptCard } from './auth-experience';
+import { AuthGlassPanel, AuthStatusMessage, SecureActionButton } from './first-look';
+import { OtpDotsInput } from './otp-dots-input';
 import {
+  checkFirebaseCustomerRegistration,
   confirmFirebaseCustomerOtp,
   confirmFirebaseCustomerSignup,
   sendFirebaseCustomerOtp,
   startFirebaseCustomerOtp,
+  type FirebaseCustomerRegistration,
 } from '@/lib/firebase-customer-auth';
 import { selectCustomerAuthProvider } from '@/lib/customer-identity';
 
+const normalizeMobile = (value: string) => value.replace(/\D/g, '').slice(0, 10);
+
+function readableFirebaseError(error: unknown, stage: 'send' | 'verify'): string {
+  const message = error instanceof Error ? error.message : '';
+  const lowered = message.toLowerCase();
+  if (lowered.includes('not_registered')) return 'This mobile number is not registered with INSUREIT. Please sign up first.';
+  if (lowered.includes('already_registered')) return 'An INSUREIT account already exists for this number. Please log in.';
+  if (lowered.includes('account_requires_review')) return 'We found an older account that requires verification. Please contact INSUREIT support; your existing records are safe.';
+  if (lowered.includes('identity_conflict') || lowered.includes('customer_requires_review')) {
+    return 'Your verified number could not be matched safely to a single customer account. Please contact INSUREIT support.';
+  }
+  if (lowered.includes('invalid-verification-code') || lowered.includes('invalid otp') || lowered.includes('invalid code')) {
+    return 'The OTP is incorrect. Check the code and try again.';
+  }
+  if (lowered.includes('session-expired') || lowered.includes('code-expired') || lowered.includes('expired')) {
+    return 'This OTP has expired. Request a fresh code.';
+  }
+  if (lowered.includes('too-many-requests') || lowered.includes('quota') || lowered.includes('rate')) {
+    return 'Too many attempts. Wait a few minutes before requesting another OTP.';
+  }
+  if (lowered.includes('invalid-phone-number')) return 'Enter a valid Indian mobile number.';
+  if (lowered.includes('network') || lowered.includes('fetch')) return 'Connection failed. Check the internet and try again.';
+  if (lowered.includes('registration_check_unavailable') || lowered.includes('registration_lookup_unavailable')) {
+    return 'We could not check your registration right now. Please try again shortly.';
+  }
+  if (lowered.includes('bind_') || lowered.includes('profile_') || lowered.includes('authorization')) {
+    return 'The OTP was verified, but your customer account could not be opened. Please contact INSUREIT support.';
+  }
+  return stage === 'send'
+    ? 'The OTP could not be sent. Please try again shortly.'
+    : 'Verification could not be completed. Please try again or contact support.';
+}
+
 /**
- * Explicitly gated Android-only Firebase OTP entry screen.
- * Existing Supabase OTP screens remain the default and are not removed.
- * No simulated or fabricated Supabase sessions are created.
+ * Reuses the EXISTING INSUREIT branded login/signup experience.
+ * Registration eligibility is checked before requesting an SMS; the client
+ * never queries private profile/auth tables or contains service credentials.
  */
 export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) {
   const router = useRouter();
   const [mobile, setMobile] = useState('');
-  const [name, setName] = useState('');
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [registration, setRegistration] = useState<FirebaseCustomerRegistration | null>(null);
+  const validMobile = /^[6-9]\d{9}$/.test(mobile);
+  const validName = fullName.trim().length >= 2;
+  const validEmail = !email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
-  async function send() {
+  async function requestOtp() {
     if (busy) return;
     setError('');
     setMessage('');
-    if (!/^[6-9][0-9]{9}$/.test(mobile)) {
-      setError('Enter a valid 10-digit mobile number.');
-      return;
-    }
-    if (mode === 'signup' && name.trim().length < 2) {
-      setError('Enter your full name.');
-      return;
-    }
-    if (mode === 'signup' && email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setError('Enter a valid email address or leave it blank.');
-      return;
-    }
+    if (!validMobile) return setError('Enter a valid 10-digit mobile number.');
+    if (mode === 'signup' && !validName) return setError('Enter your full name.');
+    if (mode === 'signup' && !validEmail) return setError('Enter a valid email address or leave it blank.');
     setBusy(true);
     try {
+      // Fail closed: unknown and ambiguous legacy identities never receive
+      // a Firebase login OTP or get silently re-created on signup.
+      const result = await checkFirebaseCustomerRegistration('+91' + mobile);
+      setRegistration(result);
+      if (mode === 'login' && result.status === 'not_registered') {
+        setError('This mobile number is not registered with INSUREIT. Please sign up first.');
+        return;
+      }
+      if (result.status === 'account_requires_review') {
+        setError('An older account was found, but its ownership needs verification before OTP login. Please contact INSUREIT support.');
+        return;
+      }
+      if (mode === 'signup' && result.status === 'registered') {
+        setError('This number is already registered with INSUREIT. Please log in instead.');
+        return;
+      }
+      if (mode === 'login' && result.status !== 'registered') throw new Error('registration_check_unavailable');
+      if (mode === 'signup' && result.status !== 'not_registered') throw new Error('registration_check_unavailable');
+
       startFirebaseCustomerOtp();
       await sendFirebaseCustomerOtp('+91' + mobile);
       setSent(true);
-      setMessage('A verification code has been sent to your mobile number.');
-    } catch {
-      setError('Could not send the verification code. Please try again.');
+      setOtp('');
+      setMessage('Verification code requested. Enter the SMS OTP when it arrives.');
+    } catch (nextError) {
+      setError(readableFirebaseError(nextError, 'send'));
     } finally {
       setBusy(false);
     }
   }
 
-  async function verify() {
+  async function verifyOtp() {
     if (busy) return;
     setError('');
-    if (!/^[0-9]{6}$/.test(otp)) {
-      setError('Enter the six-digit verification code.');
-      return;
+    setMessage('');
+    if (!/^\d{6}$/.test(otp)) return setError('Enter the six-digit verification code.');
+    if ((mode === 'login' && registration?.status !== 'registered') ||
+        (mode === 'signup' && registration?.status !== 'not_registered')) {
+      return setError('Please recheck your mobile number.');
     }
     setBusy(true);
     try {
       const verified = mode === 'signup'
-        ? await confirmFirebaseCustomerSignup(otp, {
-            fullName: name.trim(),
-            ...(email.trim() ? { email: email.trim() } : {}),
-          })
+        ? await confirmFirebaseCustomerSignup(otp, { fullName: fullName.trim(), ...(email.trim() ? { email: email.trim() } : {}) })
         : await confirmFirebaseCustomerOtp(otp);
-      if (!verified.profileId) throw new Error('Customer profile not verified.');
-      // Persist the selected identity only after Firebase Admin binding and
-      // the canonical customer profile resolver both succeed.
+      if (!verified.profileId) throw new Error('profile_not_resolved');
       await selectCustomerAuthProvider('firebase');
       router.replace('/customer/home');
-    } catch {
-      setError('The code could not be verified or your account is not ready. Please try again.');
+    } catch (nextError) {
+      setError(readableFirebaseError(nextError, 'verify'));
     } finally {
       setBusy(false);
     }
   }
 
-  function editNumber() {
+  function editDetails() {
     if (busy) return;
     setSent(false);
     setOtp('');
     setMessage('');
     setError('');
+    setRegistration(null);
     startFirebaseCustomerOtp();
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.heading}>{mode === 'signup' ? 'Create customer account' : 'Customer login'}</Text>
-      <Text style={styles.helper}>Verify your mobile number securely with Firebase OTP.</Text>
-      {mode === 'signup' ? (
-        <>
-          <TextInput accessibilityLabel="Full name" placeholder="Full name"
-            value={name} onChangeText={setName} editable={!busy && !sent}
-            maxLength={120} style={styles.input} />
-          <TextInput accessibilityLabel="Email address (optional)" placeholder="Email address (optional)"
-            value={email} onChangeText={setEmail} editable={!busy && !sent}
-            keyboardType="email-address" autoCapitalize="none"
-            maxLength={254} style={styles.input} />
-        </>
-      ) : null}
-      <View style={styles.phoneRow}>
-        <Text>+91</Text>
-        <TextInput accessibilityLabel="Mobile number" placeholder="10-digit mobile number"
-          keyboardType="phone-pad" maxLength={10} value={mobile}
-          onChangeText={(next) => setMobile(next.replace(/\D/g, '').slice(0, 10))}
-          editable={!busy && !sent} style={[styles.input, styles.phoneInput]} />
-      </View>
-      {sent ? (
-        <>
-          <TextInput accessibilityLabel="Firebase OTP" placeholder="Six-digit code"
-            keyboardType="number-pad" value={otp}
-            onChangeText={(next) => setOtp(next.replace(/\D/g, '').slice(0, 6))}
-            maxLength={6} editable={!busy} style={styles.input} />
-          <Pressable accessibilityRole="button" disabled={busy} onPress={editNumber}>
-            <Text style={styles.link}>Change mobile number</Text>
-          </Pressable>
-        </>
-      ) : null}
-      {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-      {message ? <Text accessibilityRole="alert" style={styles.helper}>{message}</Text> : null}
-      <Pressable accessibilityRole="button" disabled={busy} onPress={() => void (sent ? verify() : send())}
-        style={styles.action}>
-        {busy ? <ActivityIndicator color="#fff" /> :
-          <Text style={styles.actionText}>{sent ? 'Verify OTP' : 'Send OTP'}</Text>}
-      </Pressable>
-      <Pressable accessibilityRole="button" disabled={busy}
-        onPress={() => router.replace(mode === 'signup' ? '/login' : '/signup')}>
-        <Text style={styles.link}>{mode === 'signup' ? 'Already have an account? Log in' : 'New customer? Sign up'}</Text>
-      </Pressable>
-      <Pressable accessibilityRole="button" disabled={busy}
-        onPress={() => router.replace({ pathname: mode === 'signup' ? '/signup' : '/login', params: { legacyOtp: '1' } })}>
-        <Text style={styles.link}>Use existing Supabase OTP instead</Text>
-      </Pressable>
-    </View>
+    <AuthExperience showLegal={false} footer={mode === 'login'
+      ? <Pressable accessibilityRole="button" onPress={() => router.replace('/signup')}><SignupPromptCard /></Pressable>
+      : <Pressable accessibilityRole="button" onPress={() => router.replace('/login')}><LoginPromptCard /></Pressable>
+    }>
+      <AuthGlassPanel>
+        <View style={styles.header}>
+          <View style={styles.headerIcon}>
+            <MaterialCommunityIcons name={mode === 'login' ? 'cellphone-lock' : 'account-lock-outline'} size={20} color="#0F9F6E" />
+          </View>
+          <Text style={styles.heading}>{mode === 'login' ? 'Login with mobile OTP' : 'Create customer account'}</Text>
+        </View>
+        {error ? <AuthStatusMessage type="error">{error}</AuthStatusMessage> : null}
+        {message ? <AuthStatusMessage type="success">{message}</AuthStatusMessage> : null}
+        {mode === 'signup' ? (
+          <>
+            <Text style={styles.label}>Full name</Text>
+            <View style={styles.field}>
+              <MaterialCommunityIcons name="account-outline" size={19} color="#1F6FEB" />
+              <TextInput accessibilityLabel="Full name" value={fullName} onChangeText={setFullName}
+                editable={!sent && !busy} maxLength={120} autoCapitalize="words" placeholder="Your full name"
+                placeholderTextColor="#94A3B8" style={styles.fieldInput} />
+            </View>
+            <Text style={styles.label}>Email (optional)</Text>
+            <View style={styles.field}>
+              <MaterialCommunityIcons name="email-outline" size={19} color="#1F6FEB" />
+              <TextInput accessibilityLabel="Email address" value={email} onChangeText={setEmail}
+                editable={!sent && !busy} maxLength={254} keyboardType="email-address" autoCapitalize="none"
+                placeholder="name@example.com" placeholderTextColor="#94A3B8" style={styles.fieldInput} />
+            </View>
+          </>
+        ) : null}
+        <Text style={styles.label}>Mobile number</Text>
+        <View style={styles.field}>
+          <View style={styles.countryCode}><Text style={styles.countryText}>+91</Text></View>
+          <TextInput accessibilityLabel="Mobile number" value={mobile}
+            onChangeText={(v) => { setMobile(normalizeMobile(v)); setRegistration(null); setError(''); }}
+            editable={!sent && !busy} keyboardType="number-pad" maxLength={10} placeholder="98765 43210"
+            placeholderTextColor="#94A3B8" style={styles.fieldInput} />
+          {sent ? <Pressable accessibilityRole="button" disabled={busy} onPress={editDetails}>
+            <Text style={styles.edit}>Edit</Text>
+          </Pressable> : null}
+        </View>
+        {sent ? (
+          <>
+            <Text style={styles.label}>Enter OTP</Text>
+            <OtpDotsInput value={otp} onChangeText={setOtp} disabled={busy} autoFocus={sent} highlighted />
+            <Pressable accessibilityRole="button" disabled={busy} onPress={() => void requestOtp()}>
+              <Text style={styles.resend}>Resend OTP</Text>
+            </Pressable>
+          </>
+        ) : null}
+        <View style={styles.action}>
+          <SecureActionButton
+            label={sent ? 'Verify OTP' : 'Get OTP'}
+            icon={sent ? 'shield-check-outline' : 'message-text-lock-outline'}
+            loading={busy}
+            disabled={sent ? otp.length !== 6 : (!validMobile || (mode === 'signup' && (!validName || !validEmail)))}
+            variant={mode === 'signup' ? 'success' : 'primary'}
+            onPress={() => void (sent ? verifyOtp() : requestOtp())}
+          />
+        </View>
+        <Text style={styles.legal}>
+          By continuing, you agree to our Terms & Conditions and Privacy Policy.
+        </Text>
+        <Pressable accessibilityRole="button"
+          onPress={() => router.replace({ pathname: mode === 'signup' ? '/signup' : '/login', params: { legacyOtp: '1' } })}>
+          <Text style={styles.fallback}>Having trouble? Use the previous OTP method</Text>
+        </Pressable>
+      </AuthGlassPanel>
+    </AuthExperience>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, justifyContent: 'center', backgroundColor: '#F4F8FC' },
-  heading: { fontSize: 24, fontWeight: '700', color: '#09235A', marginBottom: 8 },
-  helper: { fontSize: 14, color: '#475569', marginBottom: 14 },
-  input: { backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#CBD5E1', padding: 13, marginBottom: 12 },
-  phoneRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  phoneInput: { flex: 1 },
-  action: { backgroundColor: '#09235A', borderRadius: 10, padding: 15, alignItems: 'center', marginVertical: 12 },
-  actionText: { color: '#fff', fontWeight: '700' },
-  link: { color: '#0B63CE', fontWeight: '600', paddingVertical: 10 },
-  error: { color: '#B91C1C', marginTop: 8 },
+  header: { marginHorizontal: -22, marginTop: -20, marginBottom: 18, borderTopLeftRadius: 27, borderTopRightRadius: 27,
+    backgroundColor: '#F3F6FA', minHeight: 58, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
+  headerIcon: { width: 32, height: 32, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8F8F0' },
+  heading: { color: '#071D49', fontSize: 15.5, fontWeight: '700' },
+  label: { color: '#17202F', fontSize: 15, fontWeight: '600', marginBottom: 9 },
+  field: { minHeight: 61, borderRadius: 16, borderWidth: 1.3, borderColor: '#CFE2FF', backgroundColor: '#F8FBFF',
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, marginBottom: 17, gap: 10 },
+  fieldInput: { flex: 1, fontSize: 17, minHeight: 52, color: '#17202F' },
+  countryCode: { minWidth: 52, minHeight: 42, alignItems: 'center', justifyContent: 'center',
+    borderRadius: 11, backgroundColor: '#ECF3FF' },
+  countryText: { color: '#071D49', fontWeight: '700', fontSize: 15 },
+  edit: { color: '#0B63CE', fontWeight: '700', fontSize: 12 },
+  resend: { textAlign: 'right', color: '#0B63CE', paddingVertical: 10, fontWeight: '700' },
+  action: { marginTop: 8 },
+  legal: { fontSize: 11, lineHeight: 16, color: '#64748B', marginTop: 14, textAlign: 'center' },
+  fallback: { color: '#0B63CE', fontSize: 12, textAlign: 'center', marginTop: 18, fontWeight: '600' },
 });
