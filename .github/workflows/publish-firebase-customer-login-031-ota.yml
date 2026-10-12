@@ -60,7 +60,8 @@ jobs:
         run: npx expo export --platform android --output-dir dist-login-preflight
       - name: Publish only Android runtime 0.3.1 OTA (no build)
         working-directory: apps/mobile-app
-        run: npx eas-cli update --channel production --platform android --message "INSUREIT: restore branded Firebase login/signup and registered-only OTP precheck" --non-interactive
+        run: |
+          npx eas-cli update --channel production --platform android --message "INSUREIT branded Firebase login and registered-only OTP precheck" --non-interactive
       - name: Confirm Play Store unaffected
         if: always()
         run: |
