@@ -1,3 +1,16 @@
+## 2026-10-12 — Collapsed sidebar direct-link cleanup
+
+- Branch: `fix/collapsed-sidebar-direct-links-2026-10-12`.
+- Exact cause: collapsed CSS covered Dashboard and expandable workspace buttons, but not direct workspace links nested as `nav > div > a`; therefore **Service Enquiries** kept its text visible outside the 64px rail.
+- **Settings** had a separate mismatch: its label span did not carry the `flex-1` class used by the existing collapsed text-hiding selector.
+- Fix extends the collapsed direct-link selectors for sizing, hover, icon tile, text hiding and trailing-icon handling; Settings label now participates in the existing hide rule.
+- Existing `data-sidebar-label` tooltips remain intact for both Service Enquiries and Settings.
+- Added `collapsed-sidebar-direct-links-regression.mjs` to canonical web CI.
+- Frontend CSS/markup only; no routing, permission, sidebar state, database, schema, RLS, or business-logic change.
+- **IMPLEMENTED; PR/CI/MERGE/DEPLOYMENT PENDING.**
+
+---
+
 ## 2026-10-10 — Nikhil Awadhwal commercial dashboard parity
 
 - Account: employee code `6666`, profile `8c4ec4a2-d940-4394-b484-698e9ab70a69`, role `it_super_user`.
