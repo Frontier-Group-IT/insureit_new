@@ -39,7 +39,7 @@ export default async function CustomerVehiclesPage({
     const priority = { active: 2, due: 1, expired: 0 };
     active.sort((a, b) => priority[customerPolicyTone(b.end_date).tone] - priority[customerPolicyTone(a.end_date).tone]);
     const policy = active[0];
-    const status = policy ? customerPolicyTone(policy.end_date).tone : eligible.length ? "expired" : "inactive";
+    const status: "due" | "active" | "inactive" | "expired" = policy ? customerPolicyTone(policy.end_date).tone : eligible.length ? "expired" : "inactive";
     return {
       id: vehicle.id,
       number: customerDisplayVehicleNo(vehicle),
