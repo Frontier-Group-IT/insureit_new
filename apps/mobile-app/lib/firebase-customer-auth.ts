@@ -1,5 +1,6 @@
 import { getAuth } from '@react-native-firebase/auth';
 import { createInstalledAndroidFirebaseOtpFlow } from './firebase-installed-android-otp';
+import type { PhoneVerificationStatus } from './firebase-android-phone-event-flow';
 import { createCustomerFirebaseDataClient } from './firebase-data-client';
 
 /**
@@ -12,6 +13,12 @@ let pendingFlow: ReturnType<typeof createInstalledAndroidFirebaseOtpFlow> | null
 export function startFirebaseCustomerOtp() {
   pendingFlow = createInstalledAndroidFirebaseOtpFlow();
   return pendingFlow;
+}
+
+/** Subscribe before sending: native Android may verify without showing an SMS. */
+export function subscribeFirebaseCustomerOtpStatus(callback: (status: PhoneVerificationStatus) => void): () => void {
+  if (!pendingFlow) throw new Error('auth/verification-not-started');
+  return pendingFlow.subscribe(callback);
 }
 
 export async function sendFirebaseCustomerOtp(phone: string): Promise<void> {
