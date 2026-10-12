@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Bell, ChevronRight, LogOut, UserRound } from "lucide-react";
+import { Bell, ChevronRight, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase";
+import { CustomerAvatar } from "./customer-avatar";
 
-export function CustomerHeaderActions({ name }: { name: string }) {
+export function CustomerHeaderActions({ name, userId }: { name: string; userId: string }) {
   const [open, setOpen] = useState(false);
   const initial = name.trim().charAt(0).toUpperCase() || "C";
 
@@ -26,9 +27,9 @@ export function CustomerHeaderActions({ name }: { name: string }) {
         {open ? (
           <>
             <button className="fixed inset-0 z-40 cursor-default" aria-label="Close profile menu" onClick={() => setOpen(false)} />
-            <div className="absolute right-0 top-14 z-50 w-[min(320px,calc(100vw-24px))] overflow-hidden rounded-3xl border border-[#DBE4F0] bg-white shadow-[0_20px_50px_rgba(15,32,57,0.17)]">
+            <div className="absolute right-0 top-14 z-50 w-[min(320px,calc(100vw-24px))] rounded-3xl border border-[#DBE4F0] bg-white shadow-[0_20px_50px_rgba(15,32,57,0.17)]">
               <Link href="/customer/profile" onClick={() => setOpen(false)} className="flex items-center gap-3 border-b border-[#EDF1F6] px-4 py-4 hover:bg-[#F6F9FD]">
-                <span className="grid h-11 w-11 place-items-center rounded-full bg-[#EDF3FF] text-[#1A4F9D]"><UserRound className="h-5 w-5" /></span>
+                <CustomerAvatar userId={userId} />
                 <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-[#142746]">{name}</span><span className="text-xs text-[#78869A]">View user details</span></span>
               </Link>
               <Link href="/customer/profile" onClick={() => setOpen(false)} className="flex items-center justify-between px-5 py-4 text-sm font-semibold text-[#142746] hover:bg-[#F6F9FD]">Profile & account <ChevronRight className="h-4 w-4" /></Link>
