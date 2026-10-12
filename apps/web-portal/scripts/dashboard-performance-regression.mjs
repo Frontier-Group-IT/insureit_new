@@ -107,7 +107,9 @@ assert.doesNotMatch(dashboardView, /label: "Policy Intakes pending"/, "Needs att
 assert.doesNotMatch(dashboardView, /label: "KYC applications"/, "Needs attention must not render the KYC applications card.");
 assert.match(dashboardView, /row\.label === "Life"/, "Business performance policy mix must include Life.");
 assert.match(dashboardView, /row\.label === "Health"/, "Business performance policy mix must include Health.");
-assert.match(dashboardView, /grid-cols-\[1fr_2fr\]/, "Business performance Policies card must reserve one-third for total policies and two-thirds for the vertical business-line mix without an internal divider.");
+assert.match(dashboardView, /Policies · \{business\.periodShortLabel\}/, "Business performance must show the Policies heading above its count.");
+assert.match(dashboardView, /policyBreakdown\.map\(\(item\)/, "Business performance must retain the policy type breakdown.");
+assert.match(dashboardView, /flex-1 items-center justify-center/, "Business performance KPI values must be centered.");
 assert.match(dashboardView, /label: "Producing intermediary"/, "Business performance must rename Active producers to Producing intermediary.");
 
 console.log("Dashboard performance regression passed.");
