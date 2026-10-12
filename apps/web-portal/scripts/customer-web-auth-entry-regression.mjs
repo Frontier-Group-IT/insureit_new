@@ -5,8 +5,17 @@ const loginPage = fs.readFileSync(new URL("../app/customer/login/page.tsx", impo
 const phone = fs.readFileSync(new URL("../app/customer/login/customer-phone-field.tsx", import.meta.url), "utf8");
 const signup = fs.readFileSync(new URL("../app/customer/signup/customer-signup-form.tsx", import.meta.url), "utf8");
 const signupPage = fs.readFileSync(new URL("../app/customer/signup/page.tsx", import.meta.url), "utf8");
+const middleware = fs.readFileSync(new URL("../middleware.ts", import.meta.url), "utf8");
+
+const customerEntryGuard = middleware.match(/if \(pathname === "\/customer\/login" \|\| pathname === "\/customer\/signup"\) \{([\s\S]*?)\n  \}/)?.[1] ?? "";
+const protectedCustomerGuard = middleware.match(/if \(isCustomerPortalPath\(pathname\)\) \{([\s\S]*?)\n  \}/)?.[1] ?? "";
 
 const checks = [
+  [Boolean(customerEntryGuard), "Customer Signup must share the explicitly public Customer Login middleware entry boundary."],
+  [customerEntryGuard.includes('check.status === "customer"') && customerEntryGuard.includes('"/customer/home"'), "Existing customer sessions must redirect to Customer Home."],
+  [customerEntryGuard.includes('check.status === "authorized" || check.status === "forbidden"') && customerEntryGuard.includes('"/access-denied"'), "Non-customer authenticated roles must remain denied on Customer auth-entry routes."],
+  [customerEntryGuard.includes('clearSessionCookies(continueRequest(request))'), "Unauthenticated signup must be allowed without stale customer session cookies."],
+  [protectedCustomerGuard.includes('check.status === "invalid"') && protectedCustomerGuard.includes('"/customer/login"') && protectedCustomerGuard.includes('check.status !== "customer"'), "All other Customer workspace routes must stay protected."],
   [phone.includes(">\n        +91\n      </div>"), "Customer Web mobile field must render +91 as a fixed visible prefix."],
   [phone.includes('placeholder = "Enter 10 digit number"'), "Customer Web mobile field must use a local-number placeholder without +91."],
   [!login.includes('placeholder="+91'), "Customer Login must not keep +91 inside the placeholder."],
