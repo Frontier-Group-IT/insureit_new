@@ -1,8 +1,16 @@
 # Firebase customer authorization migration — review-only design
 
-**NOT applied to a database. NOT safe to run without full security review.**
+**Original 2026-10-08 draft NOT applied as written; later separate production migrations were historically reported applied.**
 
-## Verified blocker
+## 2026-10-12 evidence override — DO NOT TREAT THIS AS AN UNAPPLIED CURRENT DESIGN
+
+The original text below is an October 8 **review-only blueprint**, and the original status sentence applies to THAT draft SQL, not all subsequent migrations. Later commits in PR #2979 and previous connected Supabase work recorded additive identity mapping/resolver, customer SELECT policies and a guarded `pgrst.db_pre_request` hook applied to production. The last SQL simulation reportedly resolved Firebase UID to existing UUID, denied wrong-account reads and rolled back temporary mapping writes. These are **not real Firebase signed-token security proofs**. Current Supabase access returned permission denied on 2026-10-12; live settings/function versions cannot be asserted from today's audit.
+
+**Critical cutover requirement:** validate the actual signed Firebase token over PostgREST and verify every required RPC and Storage read/write against two controlled customer identities, including direct malicious cross-customer access. PostgREST pre-request hooks **do not protect Supabase Storage automatically**: separately verify deployed Firebase signed read and upload services and their metadata ownership. Treat the Firebase-only switch as blocked until proven. Never modify the managed `auth.uid()` function or give Firebase users generic service-role access. Preserve staff, partner and web Supabase sessions.
+
+The exact three-step cutover and release stop conditions are pinned at the top of `docs/CUSTOMER_FIREBASE_OTP_AGENT_HANDOFF_2026_10_08.md`.
+
+## Verified blocker (2026-10-08 snapshot)
 
 The existing `profiles.id`, `customers.profile_id` and customer-membership
 columns reference Supabase Auth UUIDs. A Firebase ID token uses the Firebase
