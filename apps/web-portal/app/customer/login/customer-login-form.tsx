@@ -3,15 +3,7 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase";
-
-function normalizeIndianPhone(value: string) {
-  const trimmed = value.trim();
-  if (trimmed.startsWith("+")) return trimmed.replace(/\s+/g, "");
-  const digits = trimmed.replace(/\D/g, "");
-  if (digits.length === 10) return `+91${digits}`;
-  if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`;
-  return trimmed;
-}
+import { CustomerPhoneField, toIndianE164 } from "./customer-phone-field";
 
 function customerSessionErrorMessage(status: number, code?: string) {
   if (status === 503 || code === "customer_session_unavailable") {
@@ -37,7 +29,8 @@ export function CustomerLoginForm() {
     event.preventDefault();
     setBusy(true);
     setMessage(null);
-    const normalizedPhone = normalizeIndianPhone(phone);
+    const normalizedPhone = toIndianE164(phone);
+    if (!normalizedPhone) { setMessage("Enter a valid 10 digit mobile number."); setBusy(false); return; }
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       phone: normalizedPhone,
@@ -48,7 +41,6 @@ export function CustomerLoginForm() {
       setBusy(false);
       return;
     }
-    setPhone(normalizedPhone);
     setOtpSent(true);
     setMessage("OTP sent to your registered mobile number.");
     setBusy(false);
@@ -60,7 +52,7 @@ export function CustomerLoginForm() {
     setMessage(null);
     const supabase = createClient();
     const { data, error } = await supabase.auth.verifyOtp({
-      phone: normalizeIndianPhone(phone),
+      phone: toIndianE164(phone),
       token: otp.trim(),
       type: "sms",
     });
@@ -115,17 +107,12 @@ export function CustomerLoginForm() {
     <form className="space-y-4" onSubmit={otpSent ? verifyOtp : sendOtp}>
       <div className="grid gap-2">
         <label htmlFor="customer-phone" className="text-sm font-semibold text-[#10213D]">Registered mobile number</label>
-        <input
+        <CustomerPhoneField
           id="customer-phone"
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
           value={phone}
-          onChange={(event) => setPhone(event.target.value)}
+          onChange={setPhone}
           disabled={busy || otpSent}
-          placeholder="+91 98765 43210"
-          className="h-12 rounded-xl border border-[#CFD8E6] bg-white px-3 text-sm outline-none transition focus:border-[#245A9A] focus:ring-2 focus:ring-[#245A9A]/15 disabled:bg-slate-50"
-          required
+          placeholder="Enter 10 digit number"
         />
       </div>
 
@@ -150,7 +137,7 @@ export function CustomerLoginForm() {
 
       <button
         type="submit"
-        disabled={busy}
+        disabled={busy || (!otpSent && phone.length !== 10)}
         className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-[#142746] px-4 text-sm font-bold text-white transition hover:bg-[#0C1B35] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {busy ? (otpSent ? "Verifying..." : "Sending OTP...") : (otpSent ? "Verify & continue" : "Send OTP")}
