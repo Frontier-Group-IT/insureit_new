@@ -100,6 +100,23 @@ export function CustomerSignupForm() {
       return;
     }
 
+    const { data: existingProfile, error: existingProfileError } = await supabase
+      .from("profiles")
+      .select("role,is_active")
+      .eq("id", data.user.id)
+      .maybeSingle<{ role: string; is_active: boolean }>();
+    if (existingProfileError) {
+      setError(existingProfileError.message);
+      setBusy(false);
+      return;
+    }
+    if (existingProfile && (existingProfile.role !== "customer" || existingProfile.is_active === false)) {
+      await supabase.auth.signOut();
+      setError("This mobile number is already assigned to a non-customer or inactive portal account.");
+      setBusy(false);
+      return;
+    }
+
     const { data: matches, error: matchesError } = await (supabase.rpc as any)("get_existing_customer_accounts_for_signup");
     if (matchesError) {
       setError(matchesError.message);
