@@ -38,3 +38,28 @@ test('mismatched phone and missing token denied', async () => {
   await b.send(phone);
   await assert.rejects(() => b.verify('123456'), /ID token/);
 });
+
+test('incorrect Firebase OTP keeps pending confirmation for a corrected code', async () => {
+  let tries = 0;
+  const flow = new FirebasePhoneOtpFlow({
+    signInWithPhoneNumber: async () => ({
+      confirm: async (code) => {
+        tries++;
+        if (code === '000000') throw new Error('[auth/invalid-verification-code] Bad code');
+        return { user: { uid: 'firebase-uid', phoneNumber: phone, getIdToken: async () => 'valid-token' } };
+      },
+    }),
+  });
+  await flow.send(phone);
+  await assert.rejects(() => flow.verify('000000'), /invalid-verification-code/);
+  assert.equal((await flow.verify('123456')).idToken, 'valid-token');
+  assert.equal(tries, 2);
+});
+test('expired Firebase confirmation cannot be reused to report misleading verification results', async () => {
+  const flow = new FirebasePhoneOtpFlow({
+    signInWithPhoneNumber: async () => ({ confirm: async () => { throw new Error('[auth/session-expired] Session expired'); } }),
+  });
+  await flow.send(phone);
+  await assert.rejects(() => flow.verify('123456'), /session-expired/);
+  await assert.rejects(() => flow.verify('123456'), /Request OTP first/);
+});
