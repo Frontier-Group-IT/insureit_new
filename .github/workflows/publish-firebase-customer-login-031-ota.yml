@@ -44,7 +44,7 @@ jobs:
           npm run typecheck:mobile
           npm run lint:mobile
       - name: Run complete Firebase source regression suite
-        run: node --test pocs/customer-firebase-auth/*.test.cjs
+        run: node --test pocs/customer-firebase-auth/*.test.cjs apps/mobile-app/lib/firebase-android-phone-event-flow.test.cjs apps/mobile-app/lib/firebase-native-phone-flow.test.cjs
       - name: Verify production registration-check service before publishing
         shell: bash
         run: |
@@ -61,7 +61,7 @@ jobs:
       - name: Publish only Android runtime 0.3.1 OTA (no build)
         working-directory: apps/mobile-app
         run: |
-          npx eas-cli update --channel production --platform android --message "INSUREIT Firebase resend spinner fix and native error diagnostics" --non-interactive
+          npx eas-cli update --channel production --platform android --message "INSUREIT Android Firebase native verification events and SMS auto verification repair" --non-interactive
       - name: Confirm Play Store unaffected
         if: always()
         run: |
@@ -70,3 +70,5 @@ jobs:
 # Oct 12: publish verified customer enrollment classification and Firebase SMS retry fixes.
 
 # Oct 12: Android-only 0.3.1 Firebase SMS diagnostic and resend spinner fix.
+
+# 2026-10-12 native phone event-flow cutover: no new APK/AAB, runtime 0.3.1 only.
