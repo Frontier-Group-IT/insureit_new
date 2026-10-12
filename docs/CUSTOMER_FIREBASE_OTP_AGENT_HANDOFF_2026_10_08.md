@@ -440,3 +440,11 @@ User confirmed installed 0.3.1 (10) now OPENS after Android 0.3.1-specific OTA. 
 - GitHub CI run **#38227624096 SUCCESS**: mobile workspace TypeScript, mobile lint and 67 Firebase/source regression tests. This is NOT runtime OTP delivery proof.
 - Existing AAB 0.3.1 now opens successfully on tester device after startup OTA; current app still displays temporary login/signup until redesigned client can safely ship.
 - **Deployment order mandatory:** (1) restore production Supabase connector permission; read-only compare auth.users, profiles, customers, membership and identity links for affected legacy phones without revealing phone values; decide safe legacy linkage rather than inventing data, (2) production apply reversible preflight migration and deploy/verify registration Edge endpoint with realistic caller headers, (3) OTA mobile branded UI and run installed-device SMS/login/signup tests. Do NOT release client before preflight endpoint is healthy; it intentionally fails closed. No Play submission or APK/AAB build performed.
+
+### 2026-10-12 Production connection restored
+
+Shahdolho Supabase connection now supports read-only SQL and Edge listings. Firebase bind v2, signup v2, document read v2, upload URL v1 are ACTIVE. Registration preflight not deployed at initial inspection.
+
+Aggregate audit: 34 Supabase Auth accounts contain usable phone numbers; 23 correspond to active Customer App profiles; 9 correspond to inactive customer profiles; 1 is intermediary; 1 lacks a profile. Customer Master records without a matching active customer login profile by phone: 1,077. Those master records are business data, not evidence of previous app enrollment. Do not automatically promote inactive customers or attach business records by phone alone. The legacy-SMS-delivery question remains separate from post-OTP binder authorization.
+
+Additive preflight deployment and live verification must be confirmed separately. Customer App rollout must remain blocked until endpoint is available and tested.
