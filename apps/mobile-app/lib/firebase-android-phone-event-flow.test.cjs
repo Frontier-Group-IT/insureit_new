@@ -65,3 +65,31 @@ test('wrong manual code permits retry against same verificationId',async()=>{
  const result=await flow.verify('123456');
  assert.equal(result.uid,'test-firebase-uid');assert.equal(attempts,2);
 });
+
+test('instant verified event without SMS code uses only a matching signed-in Firebase user',async()=>{
+ const handlers=[];const events=[];
+ const flow=new FirebaseAndroidPhoneEventFlow({
+   verifyPhoneNumber:()=>({on:(_e,observer)=>{handlers.push(observer);}}),
+   getCurrentVerifiedUser:async()=>user,
+   signInWithPhoneCredential:async()=>{throw Error('must not invent SMS code');},
+ });
+ flow.subscribe(e=>events.push(e.state));
+ const send=flow.send(phone);
+ handlers[0]({state:'verified',verificationId:'native-id',code:null});
+ await send;await tick();
+ assert.equal((await flow.verify('')).uid,'test-firebase-uid');
+ assert.ok(events.includes('auto_verified'));
+});
+test('instant verification without a matching authenticated Firebase user never grants access',async()=>{
+ const handlers=[];const statuses=[];
+ const flow=new FirebaseAndroidPhoneEventFlow({
+   verifyPhoneNumber:()=>({on:(_e,observer)=>{handlers.push(observer);}}),
+   getCurrentVerifiedUser:async()=>({...user,phoneNumber:'+919999999999'}),
+   signInWithPhoneCredential:async()=>({user}),
+ });
+ flow.subscribe(s=>statuses.push(s));
+ const send=flow.send(phone);handlers[0]({state:'verified',code:null});
+ await send;await tick();
+ assert.ok(statuses.some(s=>s.state==='error'));
+ await assert.rejects(flow.verify('123456'), /missing-verification-id/);
+});
