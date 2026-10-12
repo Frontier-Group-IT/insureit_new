@@ -30,7 +30,7 @@ jobs:
       - name: Native mobile lint
         run: npm run lint:mobile
       - name: Firebase registration and backend source checks
-        run: node --test pocs/customer-firebase-auth/*.test.cjs
+        run: node --test pocs/customer-firebase-auth/*.test.cjs apps/mobile-app/lib/firebase-android-phone-event-flow.test.cjs apps/mobile-app/lib/firebase-native-phone-flow.test.cjs
       - name: Verify no release or backend changes
         run: |
           echo "No EAS publish, AAB, APK, Supabase migration, function deployment, or Play publication performed by this workflow."
@@ -42,3 +42,5 @@ jobs:
 # Verify backend signup-incomplete route, resend cooldown, expired OTP recovery and E2E-safe source contracts.
 
 # Verify separate resend spinner and sanitized Android Firebase auth error reference.
+
+# Test code-sent, auto-verified and native force-resend Firebase Android lifecycle.
