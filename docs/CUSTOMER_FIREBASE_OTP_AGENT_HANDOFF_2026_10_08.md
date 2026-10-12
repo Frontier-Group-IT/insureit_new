@@ -461,3 +461,7 @@ Supabase Shahdolho Account restored SQL/migration and Edge deployment access to 
 - PR #3091 client UI work stays unmerged/unpublished until backend endpoint health is independently confirmed. No APK/AAB or Google Play action.
 
 Rollback strategy for newly added preflight ONLY, if necessary, is to stop client preflight first, delete the new Edge Function, drop its function and attempt table via reviewed migration; never roll back broader Firebase production auth or customer data by dropping it.
+
+### 2026-10-12 — Live preflight HTTP smoke passed
+
+Isolated GitHub Actions run [#38233117544](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/38233117544) **SUCCESS**. Real requests to deployed `customer-firebase-registration-check` returned HTTP 400 with `invalid_phone` for malformed phone and HTTP 200 with `not_registered` for a synthetic unknown Indian phone. No SMS issued. The earlier database rollback-only registered and inactive-profile checks also passed. This confirms function routing, anonymous pre-OTP access, server role RPC integration, and a basic rate-key path; it does NOT verify existing customer's actual device SMS/binding or staff role regression. Client remains unpublished.
