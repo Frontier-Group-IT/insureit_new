@@ -448,3 +448,16 @@ Shahdolho Supabase connection now supports read-only SQL and Edge listings. Fire
 Aggregate audit: 34 Supabase Auth accounts contain usable phone numbers; 23 correspond to active Customer App profiles; 9 correspond to inactive customer profiles; 1 is intermediary; 1 lacks a profile. Customer Master records without a matching active customer login profile by phone: 1,077. Those master records are business data, not evidence of previous app enrollment. Do not automatically promote inactive customers or attach business records by phone alone. The legacy-SMS-delivery question remains separate from post-OTP binder authorization.
 
 Additive preflight deployment and live verification must be confirmed separately. Customer App rollout must remain blocked until endpoint is available and tested.
+
+### 2026-10-12 — Production preflight backend DEPLOYED after connector restoration
+
+Supabase Shahdolho Account restored SQL/migration and Edge deployment access to project `ilzhsfqqjyppzzvfscmh`.
+
+- Applied **ADDITIVE** migration `customer_firebase_registration_preflight_20261012` successfully. Creates protected preflight attempt counters and `customer_firebase_registration_preflight(text,text,text)`; never changes `auth.users`, existing `profiles`, `customers`, `customer_memberships`, policies, or Firebase link records. Rate-limit keys use server-secret HMAC fingerprints, **not reversible phone MD5 hashes**.
+- Deployed `customer-firebase-registration-check` Edge Function **v1 ACTIVE**, SHA-256 `8bc7bda5534222d889bc8b54a4a9091c908bc0f4579436c789e1c4befa4e4474`. It is unauthenticated before OTP by design, but only server-side service role may invoke the SQL lookup and attempt counters; credentials remain server-side.
+- Rollback-only SQL classification checks: **active customer profile => `registered`**, **unknown phone => `not_registered`**, **inactive customer profile => `account_requires_review`**. The test transaction was rolled back. Confirmed routine execute grants only `postgres` and `service_role`, not `anon` or `authenticated`.
+- Live account summary: among 34 legacy Supabase Auth accounts with phones, 23 have an active customer profile, 9 are inactive customer profiles, 1 intermediary, and 1 without a profile. No private phone values retained in logs. Customer Master-only records must not be automatically treated as eligible Customer App login.
+- **NOT YET VERIFIED:** actual HTTP Edge route behavior from installed device, Firebase SMS delivery for old numbers, Firebase UID binding for each affected existing customer, two-customer signed-token isolation. Verify edge trusted IP-header behavior with a real endpoint request before OTA. The existing Firebase binder still requires exactly one active customer profile; **do not promote inactive profiles or reassign customer ownership by matching phone alone**.
+- PR #3091 client UI work stays unmerged/unpublished until backend endpoint health is independently confirmed. No APK/AAB or Google Play action.
+
+Rollback strategy for newly added preflight ONLY, if necessary, is to stop client preflight first, delete the new Edge Function, drop its function and attempt table via reviewed migration; never roll back broader Firebase production auth or customer data by dropping it.
