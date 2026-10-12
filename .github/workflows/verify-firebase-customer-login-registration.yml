@@ -40,3 +40,5 @@ jobs:
 # Check signup-incomplete phone routing, Firebase invalid/expired OTP retry, and existing customer safety.
 
 # Verify backend signup-incomplete route, resend cooldown, expired OTP recovery and E2E-safe source contracts.
+
+# Verify separate resend spinner and sanitized Android Firebase auth error reference.
