@@ -1,6 +1,6 @@
 import { PolicySourceFilter } from "./policy-source-filter";
 import Link from "next/link";
-import { FileText, Search } from "lucide-react";
+import { FileText, Search, ShieldCheck } from "lucide-react";
 import { getStaticInsurerLogo } from "@/lib/insurer-logo";
 import {
   CustomerAccountTabs,
@@ -93,7 +93,7 @@ export default async function CustomerPoliciesPage({
       </section>
       <section className="overflow-hidden rounded-2xl border border-[#D9E2EF] bg-white shadow-[0_8px_30px_rgba(24,42,72,.04)]">
         <div className="flex flex-wrap items-center gap-2 border-b border-[#E4EAF2] px-3 py-3 sm:px-4 xl:flex-nowrap">
-          <h2 className="shrink-0 text-[17px] font-black text-[#10213D]">Policy Register</h2>
+          <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-black text-[#10213D]"><ShieldCheck className="h-5 w-5 text-[#175CA8]" aria-hidden="true" />Policy Register</h2>
           <form className="flex w-full min-w-0 items-center gap-2 rounded-lg border border-[#D7E0EF] bg-[#FAFCFF] px-3 py-2.5 sm:w-[300px] sm:shrink-0 xl:w-[300px]">
             <Search className="h-4 w-4 shrink-0 text-[#8C9BB2]" />
             <input type="hidden" name="account" value={account.id} />
