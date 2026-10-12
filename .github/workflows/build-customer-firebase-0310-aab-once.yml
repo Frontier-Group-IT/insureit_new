@@ -1,0 +1,118 @@
+name: Build Customer Firebase Android AAB 0.3.1 (10) once
+
+on:
+  push:
+    branches:
+      - feature/customer-firebase-otp-direct-2026-10-08
+    paths:
+      - '.github/workflows/build-customer-firebase-0310-aab-once.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: customer-firebase-aab-0310-once
+  cancel-in-progress: false
+
+jobs:
+  build-customer-aab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ilzhsfqqjyppzzvfscmh.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+      EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
+    steps:
+      - name: Checkout exact Firebase candidate branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/customer-firebase-otp-direct-2026-10-08
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate version and Firebase bundle configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const app = require('./apps/mobile-app/app.json').expo;
+          const eas = require('./apps/mobile-app/eas.json');
+          const gs = JSON.parse(fs.readFileSync('./apps/mobile-app/google-services.json','utf8'));
+          if (app.android?.package !== 'com.insureit.mobile') throw new Error('Wrong Android package.');
+          if (app.version !== '0.3.1' || app.android.versionCode !== 10) throw new Error('Wrong Android version; expected 0.3.1 (10).');
+          if (app.runtimeVersion?.policy !== 'appVersion') throw new Error('Wrong Expo runtime policy.');
+          if (gs.project_info?.project_id !== 'insureit-customer-auth') throw new Error('Wrong Firebase project.');
+          if (!gs.client?.some(x => x.client_info?.android_client_info?.package_name === app.android.package)) throw new Error('Missing matching Android Firebase client.');
+          for (const plugin of ['@react-native-firebase/app','@react-native-firebase/auth']) {
+            if (!app.plugins.includes(plugin)) throw new Error('Missing native Firebase config plugin: ' + plugin);
+          }
+          if (eas.build.production?.android?.buildType !== 'app-bundle') throw new Error('AAB-only production profile required.');
+          if (eas.build.production?.autoIncrement !== false) throw new Error('versionCode auto increment disabled for exact release.');
+          if (eas.build.production?.env?.EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_ENABLED !== 'true') throw new Error('Firebase Customer OTP is not enabled in release profile.');
+          if (app.extra?.eas?.projectId !== 'aadcb7a5-072b-4bf9-bc81-c52fabdd5caa') throw new Error('Wrong Expo EAS project.');
+          console.log('Validated INSUREIT Customer Android Firebase 0.3.1 (10) production AAB candidate.');
+          NODE
+          [ -n "${EXPO_TOKEN:-}" ] || { echo '::error::EXPO_TOKEN GitHub secret required'; exit 1; }
+          [ -n "${EXPO_PUBLIC_SUPABASE_ANON_KEY:-}" ] || { echo '::error::Supabase publishable key required'; exit 1; }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck complete mobile workspace
+        run: npm run typecheck:mobile
+
+      - name: Lint complete mobile workspace
+        run: npm run lint:mobile
+
+      - name: Verify Firebase regression contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test pocs/customer-firebase-auth/*.test.cjs apps/mobile-app/lib/firebase-*.test.cjs
+          node apps/mobile-app/scripts/customer-firebase-boundary-audit.cjs
+
+      - name: Confirm authorized Expo project
+        working-directory: apps/mobile-app
+        run: |
+          npx eas-cli whoami
+          npx eas-cli project:info --non-interactive
+
+      - name: Produce one production Android App Bundle
+        working-directory: apps/mobile-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx eas-cli build --platform android --profile production --non-interactive --wait --json > customer-firebase-0310-aab.json
+          node -e "const fs=require('fs'); const v=JSON.parse(fs.readFileSync('customer-firebase-0310-aab.json','utf8')); console.log(JSON.stringify(Array.isArray(v)?v.map(x=>({id:x.id,status:x.status,buildArtifactUrl:x.artifacts?.buildUrl})):({id:v.id,status:v.status,buildArtifactUrl:v.artifacts?.buildUrl}),null,2))"
+
+      - name: Save build metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: customer-firebase-android-aab-0310-build-metadata
+          path: apps/mobile-app/customer-firebase-0310-aab.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Report non-publishing build
+        if: always()
+        run: |
+          {
+            echo '## Customer Firebase Android release candidate'
+            echo
+            echo '- Package: `com.insureit.mobile`'
+            echo '- Version: `0.3.1 (10)`'
+            echo '- Android output: **AAB only**; no APK'
+            echo '- Firebase Customer login default: **enabled for this candidate**'
+            echo '- Google Play upload/submission: **NOT PERFORMED**'
+            echo '- Source: feature branch, not merged into main'
+          } >> "$GITHUB_STEP_SUMMARY"
