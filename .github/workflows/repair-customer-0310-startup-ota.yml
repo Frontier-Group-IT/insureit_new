@@ -1,0 +1,101 @@
+name: Repair Customer 0.3.1 Android startup using runtime-scoped OTA
+
+on:
+  push:
+    branches:
+      - fix/customer-0310-black-screen-eas-env-20261012
+    paths:
+      - '.github/workflows/repair-customer-0310-startup-ota.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: customer-0310-startup-fix-ota
+  cancel-in-progress: false
+
+jobs:
+  repair-0310-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_SUPABASE_URL: https://ilzhsfqqjyppzzvfscmh.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
+      EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
+      EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_ENABLED: 'true'
+      CI: '1'
+    steps:
+      - name: Checkout exact 0.3.1 AAB source plus public configuration repair
+        uses: actions/checkout@v4
+        with:
+          ref: fix/customer-0310-black-screen-eas-env-20261012
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Validate runtime and public startup configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const app = require('./apps/mobile-app/app.json').expo;
+          const eas = require('./apps/mobile-app/eas.json');
+          if (app.version !== '0.3.1' || app.android?.versionCode !== 10 ||
+              app.android?.package !== 'com.insureit.mobile' ||
+              app.runtimeVersion?.policy !== 'appVersion' ||
+              eas.build.production.channel !== 'production' ||
+              eas.build.production.env.EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_ENABLED !== 'true') {
+            throw new Error('Wrong customer runtime/version/channel; refuse OTA');
+          }
+          for (const key of ['EXPO_PUBLIC_SUPABASE_URL', 'EXPO_PUBLIC_SUPABASE_ANON_KEY',
+                             'EXPO_PUBLIC_PORTAL_URL']) {
+            if (!process.env[key] || process.env[key] !== eas.build.production.env[key])
+              throw new Error('Missing or mismatched public EAS runtime configuration: ' + key);
+          }
+          console.log('Approved Android runtime 0.3.1, Firebase enabled, complete public configuration.');
+          NODE
+          test -n "${EXPO_TOKEN:-}" || { echo "::error::Expo token unavailable"; exit 1; }
+      - name: Install exact dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Check mobile types and lint
+        run: |
+          npm run typecheck:mobile
+          npm run lint:mobile
+      - name: Export and verify real Android JS bundle includes required public values
+        working-directory: apps/mobile-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx expo export --platform android --output-dir dist-startup-validation
+          test -n "$(find dist-startup-validation -type f -name '*.hbc' -o -name '*.js' | head -1)" || {
+            echo "::error::No Android JS bundle found"; exit 1;
+          }
+          if find dist-startup-validation -type f -name '*.js' | grep -q .; then
+            grep -RFl -- "${EXPO_PUBLIC_SUPABASE_URL}" dist-startup-validation >/dev/null || {
+              echo "::error::Supabase URL missing from Android JS export"; exit 1;
+            }
+            grep -RFl -- "${EXPO_PUBLIC_SUPABASE_ANON_KEY}" dist-startup-validation >/dev/null || {
+              echo "::error::Supabase publishable key missing from Android JS export"; exit 1;
+            }
+          fi
+          echo 'Android JS export completed with public Supabase startup configuration.'
+      - name: Publish Android OTA only to 0.3.1 runtime on production channel
+        working-directory: apps/mobile-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx eas-cli update --channel production --platform android --message "Fix 0.3.1 Android black screen: embed required public Supabase startup config" --non-interactive
+      - name: Explain OTA boundary
+        if: always()
+        run: |
+          {
+            echo '## INSUREIT 0.3.1 black screen repair'
+            echo '- Exact runtime source: Android 0.3.1 (10)'
+            echo '- Channel: production, Android only'
+            echo '- No APK/AAB created, no Google Play submission'
+            echo '- 0.3.0 app has different appVersion runtime and does not receive this OTA'
+            echo '- Existing Firebase feature flag preserved'
+            echo '- OTA delivery on device depends on Expo Updates native startup successfully running'
+          } >> "$GITHUB_STEP_SUMMARY"
