@@ -20,6 +20,7 @@ export type NativePhoneListener = {
 };
 export type AndroidNativePhoneSdk = {
   verifyPhoneNumber: (phone: string, forceResend: boolean) => NativePhoneListener;
+  getCurrentVerifiedUser?: () => Promise<{ uid: string; phoneNumber: string | null; getIdToken: (refresh?: boolean) => Promise<string> } | null>;
   signInWithPhoneCredential: (verificationId: string, code: string) => Promise<{
     user: { uid: string; phoneNumber: string | null; getIdToken: (refresh?: boolean) => Promise<string> };
   }>;
@@ -71,6 +72,7 @@ export class FirebaseAndroidPhoneEventFlow {
       const succeed = () => { if (!settled) { settled = true; resolve(); } };
       const fail = (error: unknown) => {
         if (requestId !== this.requestSequence) return;
+        this.verificationId = null;
         this.emit({ state: 'error', code: codeOf(error) });
         if (!settled) { settled = true; reject(error); }
       };
@@ -87,9 +89,11 @@ export class FirebaseAndroidPhoneEventFlow {
           else fail(new Error('auth/session-expired'));
         } else if (snap.state === 'verified') {
           if (!this.verificationId || !snap.code) {
-            // Native instant verification can have no SMS/verification code.
-            // Never fabricate a credential or show 'SMS sent' in that case.
+            // Some Android instant-verification events have no SMS code.
+            // Only accept an actual already-authenticated matching Firebase
+            // user with a signed ID token; never invent a credential.
             this.emit({ state: 'auto_verifying' });
+            void this.finishAlreadySignedIn(requestId).catch(fail);
             succeed();
             return;
           }
@@ -103,6 +107,19 @@ export class FirebaseAndroidPhoneEventFlow {
         this.sdk.verifyPhoneNumber(phone, resend).on('state_changed', observe, fail);
       } catch (error) { fail(error); }
     });
+  }
+
+  private async finishAlreadySignedIn(sequence: number): Promise<VerifiedFirebasePhone> {
+    const user = await this.sdk.getCurrentVerifiedUser?.();
+    if (sequence !== this.requestSequence || !this.phone || !user?.uid || user.phoneNumber !== this.phone) {
+      throw new Error('auth/auto-verification-incomplete');
+    }
+    const idToken = await user.getIdToken();
+    if (!idToken) throw new Error('auth/missing-id-token');
+    const verified = { uid: user.uid, phoneNumber: this.phone, idToken };
+    this.verified = verified;
+    this.emit({ state: 'auto_verified', verified });
+    return verified;
   }
 
   private async finishCredential(id: string, code: string, sequence: number): Promise<VerifiedFirebasePhone> {
