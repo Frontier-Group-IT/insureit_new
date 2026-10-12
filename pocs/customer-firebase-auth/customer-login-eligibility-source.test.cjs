@@ -51,3 +51,16 @@ test('preflight Edge server uses server HMAC and server-only RPC with no profile
   assert.match(edge, /rate_limited/);
   assert.doesNotMatch(edge, /console\.log\(.*phone/);
 });
+
+test('incomplete customer signup stays out of normal login OTP and is allowed on signup', () => {
+  const form = mobile('components/firebase-customer-otp-form.tsx');
+  const auth = mobile('lib/firebase-customer-auth.ts');
+  const sql = fs.readFileSync(path.join(__dirname, '../../supabase/migrations/20261012183000_firebase_unconfirmed_customer_enrollment.sql'), 'utf8');
+  assert.match(form, /mode === 'login' && result.status === 'signup_incomplete'/);
+  assert.match(form, /mode === 'signup' && result.status !== 'not_registered' && result.status !== 'signup_incomplete'/);
+  assert.match(auth, /signup_incomplete/);
+  assert.match(edge, /signup_incomplete/);
+  assert.match(sql, /u.phone_confirmed_at is null/);
+  assert.match(sql, /return 'signup_incomplete'/);
+  assert.doesNotMatch(sql, /update public\.profiles|delete from public\.profiles/i);
+});
