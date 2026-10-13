@@ -53,6 +53,8 @@ export type RmPerformanceData = {
   mtdCategoryMix: PolicyBusinessNetReport["category_mix"];
   todayBusinessLinePremium: Record<"life" | "health", number>;
   mtdBusinessLinePremium: Record<"life" | "health", number>;
+  todayBusinessLineCounts: Record<"life" | "health", number>;
+  mtdBusinessLineCounts: Record<"life" | "health", number>;
   ytdTrend: PolicyBusinessNetReport["trend"];
   rows: RmPerformanceRow[];
   recentPolicies: PolicyBusinessNetReport["register"]["rows"];
@@ -170,6 +172,8 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
     mtdCategoryMix: mtdPayload.report.category_mix,
     todayBusinessLinePremium: lifeHealthPremium(todayRegisterRows),
     mtdBusinessLinePremium: lifeHealthPremium(mtdRegisterRows),
+    todayBusinessLineCounts: lifeHealthCounts(todayRegisterRows),
+    mtdBusinessLineCounts: lifeHealthCounts(mtdRegisterRows),
     ytdTrend: ytdPayload.report.trend.slice(-6),
     rows,
     recentPolicies: mtdPayload.report.register.rows.slice(0, 10),
@@ -186,6 +190,15 @@ function lifeHealthPremium(rows: PolicyBusinessRow[]): Record<"life" | "health",
   for (const row of rows) {
     const line = row.business_line.trim().toLowerCase();
     if (line === "life" || line === "health") totals[line] += row.net_premium;
+  }
+  return totals;
+}
+
+function lifeHealthCounts(rows: PolicyBusinessRow[]): Record<"life" | "health", number> {
+  const totals = { life: 0, health: 0 };
+  for (const row of rows) {
+    const line = row.business_line.trim().toLowerCase();
+    if (line === "life" || line === "health") totals[line] += 1;
   }
   return totals;
 }
