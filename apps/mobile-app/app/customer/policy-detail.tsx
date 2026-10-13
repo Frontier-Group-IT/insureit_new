@@ -67,10 +67,10 @@ export default function CustomerPolicyDetailRoute() {
       }
 
       if (!active) return;
-      const identity = `${policyType ?? ''} ${policyProduct ?? ''}`.trim();
-      if (/\b(life|health)\b/i.test(identity)) {
+      const policyIdentityText = `${policyType ?? ''} ${policyProduct ?? ''}`.trim();
+      if (/\b(life|health)\b/i.test(policyIdentityText)) {
         setDetailKind('life-health');
-      } else if (/\bmotor\b|package|comprehensive|standalone|third.?party|own.?damage/i.test(identity)) {
+      } else if (/\bmotor\b|package|comprehensive|standalone|third.?party|own.?damage/i.test(policyIdentityText)) {
         setDetailKind('motor');
       } else {
         setDetailKind('legacy');
