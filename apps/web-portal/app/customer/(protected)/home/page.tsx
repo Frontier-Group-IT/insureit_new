@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, BadgeIndianRupee, CalendarClock, CarFront, CheckCircle2, ClipboardList, FilePlus2, Headphones, Plus, ReceiptText, RefreshCcw, ShieldCheck, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowRight, BadgeIndianRupee, CalendarClock, CarFront, CheckCircle2, ClipboardCheck, ClipboardList, FilePlus2, Headphones, ShieldPlus, Plus, ReceiptText, RefreshCcw, ShieldCheck, Sparkles } from "lucide-react";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
 import { ManufacturerMark } from "../vehicles/customer-vehicles-register";
 import { customerPolicyTone, loadCustomerWebPolicies, loadCustomerWebVehicles, resolveCustomerWebScope } from "@/lib/customer-web-data";
@@ -40,8 +40,8 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
             <h1 className="mt-1 text-[clamp(25px,3vw,37px)] font-black tracking-tight">Welcome back, {account.contact_name?.split(" ")[0] || "Customer"}!</h1>
             <p className="mt-1 text-[12px] text-[#D9E8FA]">Keep your vehicles, policies and claims organized in one place.</p>
             <div className="mt-4 grid max-w-[420px] grid-cols-2 gap-2">
-              <Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="flex items-center gap-3 rounded-xl border border-white/15 bg-white/10 p-3 hover:bg-white/20"><CarFront className="h-7 w-7 text-[#8BC9FF]"/><span><strong className="block text-lg">{covered} / {vehicles.length}</strong><small className="text-[10px] text-[#D6E6F9]">Vehicles covered</small></span><ArrowRight className="ml-auto h-3.5 w-3.5"/></Link>
-              <Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="flex items-center gap-3 rounded-xl border border-white/15 bg-white/10 p-3 hover:bg-white/20"><ShieldCheck className="h-7 w-7 text-[#8CE6C2]"/><span><strong className="block text-lg">{coverage}%</strong><small className="text-[10px] text-[#D6E6F9]">Fleet protection</small></span><ArrowRight className="ml-auto h-3.5 w-3.5"/></Link>
+              <Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="flex items-center gap-3 rounded-xl border border-white/15 bg-white/10 p-3 hover:bg-white/20"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/15 bg-white/10"><CarFront className="h-5 w-5 text-[#8BC9FF]"/></span><span><strong className="block text-lg">{covered} / {vehicles.length}</strong><small className="text-[10px] text-[#D6E6F9]">Vehicles covered</small></span><ArrowRight className="ml-auto h-3.5 w-3.5"/></Link>
+              <Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="flex items-center gap-3 rounded-xl border border-white/15 bg-white/10 p-3 hover:bg-white/20"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/15 bg-white/10"><ShieldCheck className="h-5 w-5 text-[#8CE6C2]"/></span><span><strong className="block text-lg">{coverage}%</strong><small className="text-[10px] text-[#D6E6F9]">Fleet protection</small></span><ArrowRight className="ml-auto h-3.5 w-3.5"/></Link>
             </div>
           </div>
 
@@ -49,9 +49,9 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
       </section>
       <nav aria-label="Quick actions" className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         {[
-          {title:"Insure a Vehicle",desc:"Get an insurance quote",href:"/customer/insurance-quote",icon:ShieldCheck,background:"bg-[#EAF3FF]",color:"text-[#176CD4]"},
+          {title:"Insure a Vehicle",desc:"Get an insurance quote",href:"/customer/insurance-quote",icon:ShieldPlus,background:"bg-[#EAF3FF]",color:"text-[#176CD4]"},
           {title:"Start New Claim",desc:"Report an incident",href:"/customer/start-claim",icon:FilePlus2,background:"bg-[#E9F9F1]",color:"text-[#07865F]"},
-          {title:"Track Existing Claims",desc:`${openClaims.length} claim${openClaims.length===1?"":"s"} in progress`,href:"/customer/claims",icon:ClipboardList,background:"bg-[#FFF4E8]",color:"text-[#C46A13]"},
+          {title:"Track Existing Claims",desc:`${openClaims.length} claim${openClaims.length===1?"":"s"} in progress`,href:"/customer/claims",icon:ClipboardCheck,background:"bg-[#FFF4E8]",color:"text-[#C46A13]"},
           {title:"View My Vehicles",desc:"Manage your fleet",href:"/customer/vehicles",icon:CarFront,background:"bg-[#F2EDFF]",color:"text-[#7444CE]"},
         ].map(({title,desc,href,icon:Icon,background,color})=><Link key={href} href={href === "/customer/start-claim" ? { pathname: "/customer/start-claim", query: accountQuery } : href === "/customer/claims" ? { pathname: "/customer/claims", query: accountQuery } : { pathname: href, query: accountQuery }} className="flex min-w-0 items-center gap-2 rounded-xl border border-[#E3EAF3] bg-white p-3 shadow-sm transition hover:border-[#BBD2EC] hover:shadow-md"><span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${background} ${color}`}><Icon className="h-5 w-5"/></span><span className="min-w-0 flex-1"><strong className="block truncate text-[11px] text-[#10284A]">{title}</strong><small className="block truncate text-[10px] text-[#7186A0]">{desc}</small></span><ArrowRight className={`h-4 w-4 shrink-0 ${color}`}/></Link>)}
       </nav>
@@ -70,9 +70,11 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
             {vehicles.slice(0,3).map(vehicle=>{
               const insured=coveredIds.has(vehicle.id);
               return <Link key={vehicle.id} href={{pathname:`/customer/vehicles/${vehicle.id}`,query:accountQuery}} className="min-w-0 overflow-hidden rounded-xl border border-[#E2EAF4] bg-white p-2 hover:border-[#9CC5EF]">
-                <div className="flex h-[78px] items-center justify-center rounded-lg bg-[#F5F9FE]"><span className="scale-[1.8]"><ManufacturerMark make={vehicle.make??""}/></span></div>
-                <div className="mt-2 flex flex-wrap items-center gap-1.5"><strong className="min-w-0 truncate text-[11px] text-[#15345E]">{vehicle.vehicle_no || (vehicle.chassis_no?`New-${vehicle.chassis_no}`:"Unregistered")}</strong><span className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-bold ${insured?"bg-emerald-50 text-emerald-700":"bg-red-50 text-red-600"}`}>{insured?"Insured":"Not insured"}</span></div>
-                <p className="mt-1 truncate text-[10px] text-[#69809B]">{[vehicle.make,vehicle.model].filter(Boolean).join(" ")||"Vehicle"}</p>
+                <div className="flex min-h-[60px] items-center gap-2.5">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#F5F9FE]"><ManufacturerMark make={vehicle.make??""}/></span>
+                  <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5"><strong className="min-w-0 truncate text-[11px] text-[#15345E]">{vehicle.vehicle_no || (vehicle.chassis_no?`New-${vehicle.chassis_no}`:"Unregistered")}</strong><span className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-bold ${insured?"bg-emerald-50 text-emerald-700":"bg-red-50 text-red-600"}`}>{insured?"Insured":"Not insured"}</span></span>
+                  <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#90A4BC]"/>
+                </div>
               </Link>;
             })}
             {vehicles.length===0?<p className="text-xs text-[#7186A0]">No vehicles found.</p>:null}
