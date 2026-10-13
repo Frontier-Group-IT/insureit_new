@@ -13,11 +13,11 @@ import {
 } from 'react-native';
 
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
-import { getCurrentSession } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
+import { getCustomerPrivateDocumentUrl, uploadCustomerPrivateDocument, removeCustomerPrivateDocument } from '@/lib/customer-private-documents';
 import { getInsurerLogoSource, getVehicleBrandLogoSource } from '@/lib/catalog-logos';
 import { getOperationalCustomerContexts } from '@/lib/customer-context';
 import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
-import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
 
@@ -83,9 +83,9 @@ export default function CustomerPolicyDetailScreen() {
     setPolicyCopyExpanded(false);
     if (!document?.storage_bucket || !document.storage_path) return;
 
-    const signed = await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 10 * 60);
-    if (signed.error) return;
-    const url = signed.data?.signedUrl ?? null;
+    let url: string;
+    try { url = await getCustomerPrivateDocumentUrl(document.storage_bucket, document.storage_path); }
+    catch { setUploadMessage('Policy copy could not be opened. Please try again.'); return; }
     setPolicyCopyUrl(url);
     if (url && isImagePolicyCopy(document)) {
       Image.getSize(
@@ -102,8 +102,10 @@ export default function CustomerPolicyDetailScreen() {
     let active = true;
     void (async () => {
       if (!id) return;
-      const session = await getCurrentSession();
-      if (!session?.user) return router.replace('/login');
+      try {
+      const identity = await getCustomerIdentity();
+      if (!identity) return router.replace('/login');
+      const client = identity.data;
 
       const contexts = await getOperationalCustomerContexts();
       const customerIds = contexts.map((context) => context.customer_id);
@@ -116,7 +118,7 @@ export default function CustomerPolicyDetailScreen() {
       let nextSource: 'sibl' | 'external' = source === 'external' ? 'external' : 'sibl';
       if (source === 'external') {
         next = (
-          await (supabase as any)
+          await (client as any)
             .from('external_policies')
             .select('*')
             .eq('id', id)
@@ -125,11 +127,11 @@ export default function CustomerPolicyDetailScreen() {
         ).data;
       } else {
         next = (
-          await supabase.from('policies').select('*').eq('id', id).in('customer_id', customerIds).maybeSingle()
+          await client.from('policies').select('*').eq('id', id).in('customer_id', customerIds).maybeSingle()
         ).data;
         if (!next) {
           next = (
-            await (supabase as any)
+            await (client as any)
               .from('external_policies')
               .select('*')
               .eq('id', id)
@@ -146,7 +148,7 @@ export default function CustomerPolicyDetailScreen() {
       if (next) {
         const documentQuery =
           nextSource === 'sibl'
-            ? (supabase as any)
+            ? (client as any)
                 .from('policy_documents')
                 .select('id,file_name,storage_bucket,storage_path,mime_type,file_size,created_at')
                 .eq('policy_id', next.id)
@@ -154,7 +156,7 @@ export default function CustomerPolicyDetailScreen() {
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle()
-            : (supabase as any)
+            : (client as any)
                 .from('customer_documents')
                 .select('id,file_name,storage_bucket,storage_path,mime_type,file_size,created_at')
                 .eq('external_policy_id', next.id)
@@ -165,14 +167,14 @@ export default function CustomerPolicyDetailScreen() {
                 .maybeSingle();
 
         const vehicleQuery = next.vehicle_id
-          ? supabase.from('vehicles').select('*').eq('id', next.vehicle_id).in('customer_id', customerIds).maybeSingle()
+          ? client.from('vehicles').select('*').eq('id', next.vehicle_id).in('customer_id', customerIds).maybeSingle()
           : Promise.resolve({ data: null });
         const companyQuery = next.insurance_company_id
-          ? supabase.from('insurance_companies').select('*').eq('id', next.insurance_company_id).maybeSingle()
+          ? client.from('insurance_companies').select('*').eq('id', next.insurance_company_id).maybeSingle()
           : Promise.resolve({ data: null });
         const premiumQuery =
           nextSource === 'sibl'
-            ? (supabase as any)
+            ? (client as any)
                 .from('policy_premium_details')
                 .select('od_premium,tp_premium,cpa_amount')
                 .eq('policy_id', next.id)
@@ -193,6 +195,7 @@ export default function CustomerPolicyDetailScreen() {
       }
 
       if (active) setLoading(false);
+      } catch { if (active) { setUploadMessage('Unable to load policy details for this customer account.'); setLoading(false); } }
     })();
 
     return () => {
@@ -215,19 +218,16 @@ export default function CustomerPolicyDetailScreen() {
       return;
     }
 
-    const session = await getCurrentSession();
-    if (!session?.user) return router.replace('/login');
+    const identity = await getCustomerIdentity();
+    if (!identity) return router.replace('/login');
+    const client = identity.data;
     setUploadingCopy(true);
     const extension = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
     const storagePath = `${policy.customer_id}/policy-copy/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
 
     try {
       const body = await (await fetch(file.uri)).arrayBuffer();
-      const uploaded = await supabase.storage.from('customer-documents').upload(storagePath, body, {
-        contentType: file.mimeType ?? 'application/octet-stream',
-        upsert: false,
-      });
-      if (uploaded.error) throw uploaded.error;
+      await uploadCustomerPrivateDocument({ bucket: 'customer-documents', path: storagePath, bytes: body, contentType: file.mimeType ?? 'application/octet-stream' });
 
       const payload =
         policy.source === 'external'
@@ -240,7 +240,7 @@ export default function CustomerPolicyDetailScreen() {
               storage_path: storagePath,
               mime_type: file.mimeType ?? null,
               file_size: file.size ?? null,
-              uploaded_by: session.user.id,
+              uploaded_by: identity.profileId,
             }
           : {
               policy_id: policy.id,
@@ -252,18 +252,18 @@ export default function CustomerPolicyDetailScreen() {
               file_size: file.size ?? null,
             };
       const table = policy.source === 'external' ? 'customer_documents' : 'policy_documents';
-      const recorded = await (supabase as any)
+      const recorded = await (client as any)
         .from(table)
         .insert(payload)
         .select('id,file_name,storage_bucket,storage_path,mime_type,file_size,created_at')
         .single();
       if (recorded.error) {
-        await supabase.storage.from('customer-documents').remove([storagePath]);
+        await removeCustomerPrivateDocument('customer-documents', storagePath);
         throw recorded.error;
       }
       await applyPolicyCopy(recorded.data as PolicyCopyDocument);
     } catch (error) {
-      console.warn('Customer policy copy upload failed', error);
+      console.warn('Customer policy copy upload failed');
       setUploadMessage('Policy copy could not be uploaded. Please try again.');
     } finally {
       setUploadingCopy(false);
