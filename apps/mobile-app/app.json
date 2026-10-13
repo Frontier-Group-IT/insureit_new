@@ -2,7 +2,7 @@
   "expo": {
     "name": "insureit",
     "slug": "insureit-mobile",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "orientation": "portrait",
     "scheme": "insureit",
     "userInterfaceStyle": "light",
@@ -33,7 +33,8 @@
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ],
-      "versionCode": 9
+      "versionCode": 10,
+      "googleServicesFile": "./google-services.json"
     },
     "ios": {
       "bundleIdentifier": "com.insureit.mobile",
@@ -78,7 +79,9 @@
         }
       ],
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth"
     ],
     "experiments": {
       "typedRoutes": true
