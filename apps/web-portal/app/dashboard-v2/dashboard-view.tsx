@@ -339,15 +339,16 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
       <div className="border-t border-[#E7ECF2]">
         <div className="flex w-full flex-nowrap divide-x divide-[#E7ECF2] bg-[#FAFCFE]">
           <div className="flex min-w-0 flex-col px-2 py-3 sm:px-3" style={{ width: commercial ? "30%" : "50%" }}>
-            <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">
+            <p className="text-left text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">
               Policies · {business.periodShortLabel}
             </p>
-            <div className="mt-2 grid min-h-[96px] min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1">
-              <div aria-hidden="true" />
-              <p className="portal-display text-center text-[clamp(18px,2vw,27px)] font-semibold leading-none tabular-nums text-[#10213D]">
-                {business.policyCount.toLocaleString("en-IN")}
-              </p>
-              <div className="ml-auto flex w-full max-w-[140px] min-w-0 flex-col gap-1.5">
+            <div className="mt-2 grid min-h-[96px] min-w-0 flex-1 grid-cols-2 items-center">
+              <div className="flex min-w-0 items-center justify-center">
+                <p className="portal-display text-center text-[clamp(18px,2vw,27px)] font-semibold leading-none tabular-nums text-[#10213D]">
+                  {business.policyCount.toLocaleString("en-IN")}
+                </p>
+              </div>
+              <div className="flex min-w-0 flex-col gap-1.5 border-l border-[#DDE5EF] pl-3">
                 {policyBreakdown.map((item) => (
                   <div key={item.label} className="flex min-w-0 items-center justify-between gap-1">
                     <span className="min-w-0 truncate text-[clamp(6px,0.65vw,8px)] font-semibold uppercase text-[#65758B]" title={item.label}>{item.label}</span>
