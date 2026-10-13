@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "637733440182",
+    "project_id": "insureit-customer-auth",
+    "storage_bucket": "insureit-customer-auth.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:637733440182:android:272f433664571de5293417",
+        "android_client_info": {
+          "package_name": "com.insureit.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB7gezpTY9d2g6VNwVscMNLgszdZlA-FRk"
+        }
+      ],
+      "services": {
+        "appinvite": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
