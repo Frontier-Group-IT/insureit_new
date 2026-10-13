@@ -348,7 +348,7 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
                   {business.policyCount.toLocaleString("en-IN")}
                 </p>
               </div>
-              <div className="relative flex w-full min-w-0 flex-col gap-1.25 border-0 pl-4 pr-1 before:absolute before:inset-y-2 before:left-0 before:w-px before:bg-[#DDE5EF] before:content-[''] after:hidden">
+              <div className="relative flex w-full min-w-0 flex-col gap-1.5 border-0 pl-4 pr-1 before:absolute before:inset-y-2 before:left-0 before:w-px before:bg-[#DDE5EF] before:content-[''] after:hidden">
                 {policyBreakdown.map((item) => (
                   <div key={item.label} className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-0 after:hidden before:hidden">
                     <span className="min-w-0 truncate text-[clamp(6px,0.65vw,8px)] font-semibold uppercase text-[#65758B]" title={item.label}>{item.label}</span>
