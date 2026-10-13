@@ -173,6 +173,7 @@ export default function PoliciesScreen() {
             </View>
             <Text style={styles.summaryValue}>{metric.value === undefined ? '—' : metric.value.toLocaleString('en-IN')}</Text>
             <Text numberOfLines={2} style={styles.summaryLabel}>{metric.label}</Text>
+            <Text style={styles.summaryPercent}>{formatPortfolioShare(metric.value, summary.data?.total_policies)}</Text>
           </View>
         ))}
       </View>
@@ -347,6 +348,15 @@ function PolicyCard({ row, onPress }: { row: PartnerPolicyRow; onPress: () => vo
   );
 }
 
+/** Portfolio composition, not month-over-month growth. No percentage when summary is unavailable. */
+function formatPortfolioShare(count: number | undefined, total: number | undefined) {
+  if (count == null || total == null || !Number.isFinite(count) || !Number.isFinite(total) || total < 0) return '—';
+  if (total === 0) return '0% of total';
+  const percentage = (count / total) * 100;
+  const formatted = Number.isInteger(percentage) ? percentage.toFixed(0) : percentage.toFixed(1);
+  return `${formatted}% of total`;
+}
+
 function policyFilterCount(summary: PartnerPolicySummary | null, lifecycle: PartnerPolicyLifecycle) {
   if (!summary) return null;
   if (lifecycle === 'in_force') return summary.in_force_policies;
@@ -498,6 +508,7 @@ const styles = StyleSheet.create({
   summaryIcon: { width: 27, height: 27, borderRadius: 8, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
   summaryValue: { marginTop: 3, color: '#153C89', fontSize: 17, lineHeight: 19, fontWeight: '900' },
   summaryLabel: { marginTop: 2, color: '#6077A0', fontSize: 7.5, lineHeight: 10, textAlign: 'center', fontWeight: '700' },
+  summaryPercent: { marginTop: 2, color: '#3156B8', fontSize: 7, lineHeight: 9, textAlign: 'center', fontWeight: '800' },
   intakeBanner: { marginHorizontal: 12, marginTop: 8, minHeight: 53, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, borderRadius: 9, backgroundColor: '#082D70', borderWidth: 1, borderColor: '#0C4794' },
   intakeBannerIcon: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#174F9C' },
   intakeBannerCopy: { flex: 1 },
