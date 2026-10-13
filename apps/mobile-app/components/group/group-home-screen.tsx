@@ -99,7 +99,7 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
 
   return <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
     <View style={styles.header}>
-      <Pressable onPress={() => router.replace('/customer/home')} style={styles.brand}><BrandLogo width={132} inverse /></Pressable>
+      <Pressable onPress={() => { console.warn('[claim-navigation] replace-caller', { source: 'group-home-brand', destination: '/customer/home' }); router.replace('/customer/home'); }} style={styles.brand}><BrandLogo width={132} inverse /></Pressable>
       <View style={styles.iconCircle}><NotificationBell color="#FFFFFF" /></View>
       <CustomerAccountSwitcherButton initial={initialFor(profile.full_name || groupName)} />
     </View>
