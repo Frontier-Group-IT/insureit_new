@@ -15,7 +15,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
-import { PartnerPagination } from '@/components/ui/partner-pagination';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import {
   getPartnerClaimSummary,
@@ -31,7 +30,7 @@ import { usePartnerPageQuery } from '@/lib/use-partner-page-query';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 const filters: Array<{ value: PartnerClaimState; label: string }> = [
   { value: 'all', label: 'All' },
   { value: 'active', label: 'In Progress' },
@@ -46,7 +45,9 @@ export default function ClaimsScreen() {
   const { cacheScopeKey, context, avatarUri } = usePartnerSession();
   const [state, setState] = useState<PartnerClaimState>(savedClaimState);
   const [query, setQuery] = useState(savedClaimQuery);
+  const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
   const debouncedSearch = useDebouncedValue(query.trim(), 350);
+  useEffect(() => { setVisibleLimit(PAGE_SIZE); }, [state, debouncedSearch]);
 
   useEffect(() => {
     savedClaimQuery = query;
@@ -68,8 +69,8 @@ export default function ClaimsScreen() {
 
   const collection = usePartnerPageQuery<PartnerClaimRow>({
     scopeKey: cacheScopeKey,
-    key: `claims:list:${state}:${debouncedSearch || 'all'}`,
-    pageSize: PAGE_SIZE,
+    key: `claims:list:${state}:${debouncedSearch || 'all'}:limit:${visibleLimit}`,
+    pageSize: visibleLimit,
     fetchPage,
     staleTimeMs: 60_000,
   });
@@ -151,6 +152,22 @@ export default function ClaimsScreen() {
           ) : null}
         </View>
 
+        <View style={styles.summaryRow}>
+          {([
+            { label: 'Total Claims', value: summary.data?.total_claims, icon: 'document-text-outline' as const },
+            { label: 'Settled Claims', value: summary.data?.completed_claims, icon: 'shield-checkmark' as const },
+            { label: 'In Progress', value: summary.data?.active_claims, icon: 'hourglass-outline' as const },
+            { label: 'Rejected Claims', value: undefined, icon: 'close-circle' as const },
+          ]).map((metric) => (
+            <View key={metric.label} style={styles.summaryCard}>
+              <View style={styles.summaryIcon}><Ionicons name={metric.icon} size={17} color="#153F88" /></View>
+              <Text style={styles.summaryValue}>{metric.value == null ? '—' : metric.value.toLocaleString('en-IN')}</Text>
+              <Text numberOfLines={2} style={styles.summaryLabel}>{metric.label}</Text>
+              <Text style={styles.summaryChange}>—% vs last month</Text>
+            </View>
+          ))}
+        </View>
+
         {(collection.stale || summary.stale) ? (
           <View style={styles.banner}>
             <PartnerBanner
@@ -215,23 +232,24 @@ export default function ClaimsScreen() {
     />
   );
 
-  const footer = rows.length ? (
-    <PartnerPagination
-      page={collection.page}
-      totalPages={collection.totalPages}
-      total={collection.total}
-      pageSize={PAGE_SIZE}
-      rowCount={rows.length}
-      onPrevious={collection.previousPage}
-      onNext={collection.nextPage}
-      disabled={collection.changingPage}
-    />
+  const footer = rows.length && rows.length < collection.total ? (
+    <View style={styles.listFooter}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Load More Claims"
+        disabled={collection.loading || collection.changingPage}
+        onPress={() => setVisibleLimit((current) => current + PAGE_SIZE)}
+        style={({ pressed }) => [styles.loadMoreButton, pressed && styles.pressed]}
+      >
+        <Text style={styles.loadMoreText}>{collection.loading ? 'Loading Claims…' : 'Load More Claims'}</Text>
+        <Feather name="chevron-down" size={13} color="#3156B8" />
+      </Pressable>
+    </View>
   ) : null;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <FlatList
-        key={`claims-page-${collection.page}`}
         data={rows}
         keyExtractor={(row) => row.claim_id}
         renderItem={({ item }) => (
@@ -404,6 +422,12 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, minWidth: 0, paddingVertical: 7, color: '#18304F', fontSize: 9.5, lineHeight: 13 },
   banner: { marginTop: 8 },
+  summaryRow: { flexDirection: 'row', gap: 3, marginTop: 8 },
+  summaryCard: { flex: 1, minWidth: 0, alignItems: 'center', paddingVertical: 8, paddingHorizontal: 2, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E3ECF8', borderRadius: 9, elevation: 1 },
+  summaryIcon: { width: 27, height: 27, borderRadius: 9, backgroundColor: '#EDF4FF', alignItems: 'center', justifyContent: 'center' },
+  summaryValue: { marginTop: 3, color: '#153F88', fontSize: 15, fontWeight: '800' },
+  summaryLabel: { color: '#506481', fontSize: 7.5, fontWeight: '700', textAlign: 'center', minHeight: 18 },
+  summaryChange: { color: '#8492A8', fontSize: 6.5, textAlign: 'center' },
   controls: {
     marginTop: 8,
     minHeight: 46,
@@ -434,14 +458,14 @@ const styles = StyleSheet.create({
   tabCountActive: { color: '#1738D5' },
   inlineBanner: { marginTop: 6 },
 
-  rowWrap: { paddingHorizontal: 10, marginTop: 5 },
+  rowWrap: { paddingHorizontal: 10, marginTop: 2 },
   claimCard: {
-    minHeight: 72,
+    minHeight: 55,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 8,
-    paddingVertical: 7,
+    paddingVertical: 4,
     borderRadius: 11,
     backgroundColor: '#FFFFFF',
     borderWidth: StyleSheet.hairlineWidth,
@@ -454,8 +478,8 @@ const styles = StyleSheet.create({
   },
   claimCardPressed: { backgroundColor: '#F4F8FF' },
   claimIconWrap: {
-    width: 40,
-    height: 40,
+    width: 34,
+    height: 34,
     borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
@@ -463,7 +487,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#E6ECF4',
   },
-  claimIcon: { width: 32, height: 32 },
+  claimIcon: { width: 28, height: 28 },
   claimCopy: { flex: 1, minWidth: 0 },
   claimHeadingRow: { minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 5 },
   claimNo: { flexShrink: 1, color: '#071D49', fontSize: 13, lineHeight: 16, fontWeight: '800' },
@@ -471,8 +495,8 @@ const styles = StyleSheet.create({
   modeBadgeExternal: { backgroundColor: '#F0EAFE' },
   modeBadgeText: { color: '#2355A7', fontSize: 7.2, lineHeight: 9.5, fontWeight: '800' },
   modeBadgeTextExternal: { color: '#6842B8' },
-  claimCustomer: { marginTop: 2, color: '#405A82', fontSize: 9.4, lineHeight: 12, fontWeight: '700' },
-  claimDetail: { marginTop: 2, color: '#7788A5', fontSize: 8.2, lineHeight: 10.5 },
+  claimCustomer: { marginTop: 1, color: '#405A82', fontSize: 9.4, lineHeight: 12, fontWeight: '700' },
+  claimDetail: { marginTop: 1, color: '#7788A5', fontSize: 8.2, lineHeight: 10.5 },
   claimStatusRight: { width: 92, alignItems: 'flex-end', justifyContent: 'center' },
   statusPill: {
     maxWidth: 92,
