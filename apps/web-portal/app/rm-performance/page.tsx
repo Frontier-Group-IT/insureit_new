@@ -48,8 +48,8 @@ export default async function RmPerformancePage({ searchParams }: { searchParams
 
         <section className="mt-3 overflow-hidden rounded-[18px] border border-[#DCE4EE] bg-white shadow-[0_10px_28px_rgba(30,49,80,.04)]">
           <div className="grid xl:grid-cols-[1fr_1fr_1.05fr]">
-            <PerformancePanel eyebrow="TODAY" title={money(data.today.net_premium)} policies={data.today.policy_count} motorPolicies={data.today.motor_policy_count} motor={data.today.motor_net_premium} nonMotor={data.today.non_motor_net_premium} life={data.todayBusinessLinePremium.life} health={data.todayBusinessLinePremium.health} payin={todayFinance?.report.summary.payin_after_tds ?? 0} payout={todayFinance?.report.summary.gross_payout ?? 0} />
-            <PerformancePanel eyebrow={data.period.label} title={money(data.mtd.net_premium)} policies={data.mtd.policy_count} motorPolicies={data.mtd.motor_policy_count} motor={data.mtd.motor_net_premium} nonMotor={data.mtd.non_motor_net_premium} life={data.mtdBusinessLinePremium.life} health={data.mtdBusinessLinePremium.health} payin={periodFinance?.report.summary.payin_after_tds ?? 0} payout={periodFinance?.report.summary.gross_payout ?? 0} bordered />
+            <PerformancePanel eyebrow="TODAY" title={money(data.today.net_premium)} policies={data.today.policy_count} motorPolicies={data.today.motor_policy_count} nonMotorPolicies={data.today.non_motor_policy_count} lifePolicies={data.todayBusinessLineCounts.life} healthPolicies={data.todayBusinessLineCounts.health} motor={data.today.motor_net_premium} nonMotor={data.today.non_motor_net_premium} life={data.todayBusinessLinePremium.life} health={data.todayBusinessLinePremium.health} payin={todayFinance?.report.summary.payin_after_tds ?? 0} payout={todayFinance?.report.summary.gross_payout ?? 0} />
+            <PerformancePanel eyebrow={data.period.label} title={money(data.mtd.net_premium)} policies={data.mtd.policy_count} motorPolicies={data.mtd.motor_policy_count} nonMotorPolicies={data.mtd.non_motor_policy_count} lifePolicies={data.mtdBusinessLineCounts.life} healthPolicies={data.mtdBusinessLineCounts.health} motor={data.mtd.motor_net_premium} nonMotor={data.mtd.non_motor_net_premium} life={data.mtdBusinessLinePremium.life} health={data.mtdBusinessLinePremium.health} payin={periodFinance?.report.summary.payin_after_tds ?? 0} payout={periodFinance?.report.summary.gross_payout ?? 0} bordered />
             <MtdContextPanel rows={data.ytdTrend} periodLabel={data.period.shortLabel} highlightMonth={data.period.highlightMonth} />
           </div>
         </section>
@@ -63,21 +63,21 @@ export default async function RmPerformancePage({ searchParams }: { searchParams
   );
 }
 
-function PerformancePanel({ eyebrow, title, policies, motorPolicies, motor, nonMotor, life, health, payin, payout, bordered = false }: { eyebrow: string; title: string; policies: number; motorPolicies: number; motor: number; nonMotor: number; life: number; health: number; payin: number; payout: number; bordered?: boolean }) {
+function PerformancePanel({ eyebrow, title, policies, motorPolicies, nonMotorPolicies, lifePolicies, healthPolicies, motor, nonMotor, life, health, payin, payout, bordered = false }: { eyebrow: string; title: string; policies: number; motorPolicies: number; nonMotorPolicies: number; lifePolicies: number; healthPolicies: number; motor: number; nonMotor: number; life: number; health: number; payin: number; payout: number; bordered?: boolean }) {
   const retention = payin - payout;
   return (
     <div className={"px-5 py-3.5 " + (bordered ? "border-t border-[#E9EDF3] xl:border-l xl:border-t-0" : "")}>
       <p className="text-[10px] font-black tracking-[.14em] text-[#566477]">{eyebrow}</p>
       <div className="mt-1 flex items-start justify-between gap-4">
-        <div className="min-w-0"><p className="truncate text-[24px] font-semibold tracking-[-.035em] text-[#13233E]">{title}</p><p className="text-[10px] font-medium text-[#647286]">Net Premium</p><p className="mt-1 flex items-center gap-2 text-[10px] font-semibold text-[#34445B]"><span>Motor</span><span className="tabular-nums text-[#17365D]">{number(motorPolicies)} policies</span></p></div>
+        <div className="min-w-0"><p className="truncate text-[24px] font-semibold tracking-[-.035em] text-[#13233E]">{title}</p><p className="text-[10px] font-medium text-[#647286]">Net Premium</p></div>
         <div className="pt-0.5 text-right"><p className="text-[15px] font-black text-[#24364F]">{number(policies)}</p><p className="text-[10px] font-medium text-[#647286]">Policies</p></div>
       </div>
       <div className="mt-3 grid grid-cols-2 border-t border-[#E7ECF2] pt-3 text-[9.5px]">
         <div className="space-y-1.5 pr-4">
-          <InlineMetric label="Motor" value={motor} />
-          <InlineMetric label="Non-Motor" value={nonMotor} />
-          <InlineMetric label="Life" value={life} />
-          <InlineMetric label="Health" value={health} />
+          <InlineMetric label="Motor" count={motorPolicies} value={motor} />
+          <InlineMetric label="Non-Motor" count={nonMotorPolicies} value={nonMotor} />
+          <InlineMetric label="Life" count={lifePolicies} value={life} />
+          <InlineMetric label="Health" count={healthPolicies} value={health} />
         </div>
         <div className="space-y-1.5 border-l border-[#DDE5EF] pl-4">
           <InlineMetric label="Proj. Pay-in" value={payin} />
@@ -90,7 +90,7 @@ function PerformancePanel({ eyebrow, title, policies, motorPolicies, motor, nonM
   );
 }
 
-function InlineMetric({ label, value }: { label: string; value: number }) { return <div className="flex min-w-0 items-center gap-2"><span className="min-w-0 whitespace-nowrap font-medium text-[#667386]">{label}</span><span className="ml-auto shrink-0 whitespace-nowrap text-right font-black text-[#34445B]">{money(value)}</span></div>; }
+function InlineMetric({ label, value, count }: { label: string; value: number; count?: number }) { return <div className="flex min-w-0 items-center gap-2"><span className="min-w-0 whitespace-nowrap font-medium text-[#667386]">{label}</span>{count !== undefined ? <span className="shrink-0 tabular-nums font-bold text-[#17365D]">{number(count)}</span> : null}<span className="ml-auto shrink-0 whitespace-nowrap text-right font-black text-[#34445B]">{money(value)}</span></div>; }
 
 function MtdContextPanel({ rows, periodLabel, highlightMonth }: { rows: Awaited<ReturnType<typeof loadRmPerformance>>["ytdTrend"]; periodLabel: string; highlightMonth: string }) {
   const latest = rows.at(-1); const previous = rows.at(-2); const movement = latest && previous && previous.net_premium > 0 ? ((latest.net_premium - previous.net_premium) / previous.net_premium) * 100 : null;
