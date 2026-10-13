@@ -221,6 +221,10 @@ export default function CustomerMotorPolicyDetailScreen() {
     }
     const identity = await getCustomerIdentity();
     if (!identity) return router.replace('/login');
+    if (identity.provider === 'firebase' && policy.source === 'sibl') {
+      setUploadMessage('Policy copy upload is not available for this account yet. Please contact support.');
+      return;
+    }
     const client = identity.data;
     setUploadingCopy(true);
     const extension = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
