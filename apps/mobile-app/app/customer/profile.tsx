@@ -7,7 +7,9 @@ import { Animated, Image, Linking, Pressable, StyleSheet, Text, TextInput, View 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LoadingState, Message, Screen } from '@/components/ui';
-import { ensureCustomerForUser, getCurrentSession, getOnboardingApplicationForUser, getProfile, signOut } from '@/lib/auth';
+import { getCustomerForUser, getOnboardingApplicationForUser, getProfile, signOut } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
+import { getCustomerPrivateDocumentUrl } from '@/lib/customer-private-documents';
 import { supabase } from '@/lib/supabase';
 import { palette, roleTheme } from '@/lib/theme';
 import type { Customer, CustomerDocument, CustomerOnboardingApplication, CustomerOnboardingDocument, Profile } from '@/lib/types';
@@ -78,17 +80,22 @@ export default function ProfileScreen() {
     let active = true;
     async function load() {
       try {
-        const session = await getCurrentSession();
-        if (!session?.user) return router.replace('/login');
-        const [nextProfile, nextCustomer, nextOnboarding] = await Promise.all([getProfile(session.user.id), ensureCustomerForUser(session.user), getOnboardingApplicationForUser(session.user.id, true)]);
+        const identity = await getCustomerIdentity();
+        if (!identity) return router.replace('/login');
+        const client = identity.data;
+        const [nextProfile, nextCustomer, nextOnboarding] = await Promise.all([
+          getProfile(identity.profileId, client),
+          getCustomerForUser(identity.profileId, client),
+          getOnboardingApplicationForUser(identity.profileId, true, client),
+        ]);
         if (!active) return;
         const documentResult = nextCustomer
-          ? await supabase.from('customer_documents').select('*').eq('customer_id', nextCustomer.id).order('created_at', { ascending: false })
+          ? await client.from('customer_documents').select('*').eq('customer_id', nextCustomer.id).order('created_at', { ascending: false })
           : { data: [] };
         if (!active) return;
         const loadedDocuments = documentResult.data ?? [];
         const kycResult = nextOnboarding
-          ? await supabase.from('customer_onboarding_documents').select('*').eq('application_id', nextOnboarding.id).in('document_type', ['pan_copy', 'aadhaar_front', 'aadhaar_back'])
+          ? await client.from('customer_onboarding_documents').select('*').eq('application_id', nextOnboarding.id).in('document_type', ['pan_copy', 'aadhaar_front', 'aadhaar_back'])
           : { data: [], error: null };
         if (kycResult.error) throw kycResult.error;
         if (!active) return;
@@ -106,8 +113,10 @@ export default function ProfileScreen() {
           )
         );
         if (latestProfilePhoto) {
-          const signedPhoto = await supabase.storage.from(latestProfilePhoto.storage_bucket).createSignedUrl(latestProfilePhoto.storage_path, 3600);
-          if (active && signedPhoto.data?.signedUrl) setAvatarUri(signedPhoto.data.signedUrl);
+          try {
+            const photoUrl = await getCustomerPrivateDocumentUrl(latestProfilePhoto.storage_bucket, latestProfilePhoto.storage_path);
+            if (active) setAvatarUri(photoUrl);
+          } catch { if (active) setAvatarUri(null); }
         } else {
           setAvatarUri(null);
         }
@@ -133,6 +142,12 @@ export default function ProfileScreen() {
 
   async function saveContactDetails() {
     if (!profile || saving) return;
+    const identity = await getCustomerIdentity().catch(() => null);
+    if (!identity) { router.replace('/login'); return; }
+    if (identity.provider === 'firebase') {
+      setMessage({ text: 'Profile editing is temporarily unavailable for Firebase accounts. Please contact support.', type: 'error' });
+      return;
+    }
 
     setSaving(true);
     setMessage(null);
@@ -202,7 +217,7 @@ export default function ProfileScreen() {
         setProfile(profileResult.data);
       }
     } catch (error) {
-      console.error('Contact save failed', error);
+      console.error('Contact save failed');
       setMessage({ text: 'Your contact details could not be saved.', type: 'error' });
     } finally {
       setSaving(false);
@@ -211,6 +226,12 @@ export default function ProfileScreen() {
 
   async function changeProfilePhoto() {
     if (!customer || !profile || avatarUploading) return;
+    const identity = await getCustomerIdentity().catch(() => null);
+    if (!identity) { router.replace('/login'); return; }
+    if (identity.provider === 'firebase') {
+      setMessage({ text: 'Profile photo updates are temporarily unavailable for Firebase accounts.', type: 'error' });
+      return;
+    }
 
     setMessage(null);
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -289,6 +310,12 @@ export default function ProfileScreen() {
 
   async function uploadCustomerDocument() {
     if (!customer || !profile || documentUploading) return;
+    const identity = await getCustomerIdentity().catch(() => null);
+    if (!identity) { router.replace('/login'); return; }
+    if (identity.provider === 'firebase') {
+      setMessage({ text: 'Document uploads are temporarily unavailable for Firebase accounts.', type: 'error' });
+      return;
+    }
     setMessage(null);
     const result = await DocumentPicker.getDocumentAsync({
       type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
@@ -344,19 +371,27 @@ export default function ProfileScreen() {
 
   async function openKycDocument(document: CustomerOnboardingDocument) {
     setMessage(null);
-    const { data, error } = await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 300);
-    if (error || !data?.signedUrl) return setMessage({ text: 'Could not open this KYC document.', type: 'error' });
-    await Linking.openURL(data.signedUrl);
+    try {
+      const url = await getCustomerPrivateDocumentUrl(document.storage_bucket, document.storage_path);
+      await Linking.openURL(url);
+    } catch { setMessage({ text: 'Could not open this KYC document.', type: 'error' }); }
   }
 
   async function openCustomerDocument(document: CustomerDocument) {
     setMessage(null);
-    const { data, error } = await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 300);
-    if (error || !data?.signedUrl) return setMessage({ text: 'Could not open this document.', type: 'error' });
-    await Linking.openURL(data.signedUrl);
+    try {
+      const url = await getCustomerPrivateDocumentUrl(document.storage_bucket, document.storage_path);
+      await Linking.openURL(url);
+    } catch { setMessage({ text: 'Could not open this document.', type: 'error' }); }
   }
 
   async function deleteCustomerDocument(document: CustomerDocument) {
+    const identity = await getCustomerIdentity().catch(() => null);
+    if (!identity) { router.replace('/login'); return; }
+    if (identity.provider === 'firebase') {
+      setMessage({ text: 'Document deletion is temporarily unavailable for Firebase accounts.', type: 'error' });
+      return;
+    }
     setMessage(null);
     const { error } = await supabase.from('customer_documents').delete().eq('id', document.id);
     if (error) {
