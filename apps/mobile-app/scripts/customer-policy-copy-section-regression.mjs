@@ -9,7 +9,8 @@ function assert(condition, message) {
 assert(detail.includes("from('policy_documents')"), 'Internal policy details must load policy copies from policy_documents.');
 assert(detail.includes("from('customer_documents')"), 'External policy details must load customer-uploaded policy copies.');
 assert(detail.includes(".eq('document_type', 'policy_copy')") || detail.includes(".eq('document_type','policy_copy')"), 'Policy copy queries must be scoped to policy_copy documents.');
-assert(detail.includes('createSignedUrl(document.storage_path, 10 * 60)'), 'Policy copies must use short-lived signed URLs.');
+const documentBoundary = fs.readFileSync(new URL('../lib/customer-private-documents.ts', import.meta.url), 'utf8');
+assert(detail.includes('getCustomerPrivateDocumentUrl(document.storage_bucket, document.storage_path)') && documentBoundary.includes('createSignedUrl(path, 60)') && documentBoundary.includes('getFirebaseCustomerDocumentUrl('), 'Policy copies must use short-lived account-scoped signed URLs for Firebase and legacy Customer sessions.');
 assert(detail.includes('Policy copy not uploaded'), 'Policy details must show an explicit empty policy-copy state.');
 assert(detail.includes('const [policyCopyExpanded, setPolicyCopyExpanded] = useState(false)'), 'Policy copy must be collapsed by default.');
 assert(detail.includes("'Expand policy copy'"), 'Collapsed policy copy must expose an expand action.');
