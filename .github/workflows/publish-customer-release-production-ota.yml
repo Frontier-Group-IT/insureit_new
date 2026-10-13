@@ -1,12 +1,6 @@
-name: Publish customer 0.3.0 production OTA
+name: Publish Customer 0.3.1 Firebase production OTA (manual only)
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'apps/mobile-app/**'
-      - '.github/workflows/publish-customer-release-production-ota.yml'
   workflow_dispatch:
     inputs:
       enable_resumable_video_upload:
@@ -31,6 +25,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ilzhsfqqjyppzzvfscmh.supabase.co' }}
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
       EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
+      EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_ENABLED: 'true'
       EXPO_PUBLIC_CLAIM_VIDEO_RESUMABLE_UPLOAD: ${{ github.event_name == 'workflow_dispatch' && inputs.enable_resumable_video_upload || 'true' }}
     steps:
       - name: Check out exact main source
@@ -59,11 +54,11 @@ jobs:
           set -euo pipefail
           node <<'NODE'
           const app = require('./apps/mobile-app/app.json').expo;
-          if (app.version !== '0.3.0') throw new Error(`Expected app/runtime 0.3.0, found ${app.version}`);
-          if (app.android?.versionCode !== 9) throw new Error(`Expected production Android versionCode 9, found ${app.android?.versionCode}`);
+          if (app.version !== '0.3.1') throw new Error(`Expected app/runtime 0.3.1, found ${app.version}`);
+          if (app.android?.versionCode !== 10) throw new Error(`Expected production Android versionCode 10, found ${app.android?.versionCode}`);
           if (!app.android?.permissions?.includes('android.permission.RECORD_AUDIO')) throw new Error('Production native baseline must retain RECORD_AUDIO permission.');
           if (app.runtimeVersion?.policy !== 'appVersion') throw new Error('Expected runtimeVersion policy appVersion.');
-          console.log('Verified Customer production runtime 0.3.0 / Android versionCode 9.');
+          console.log('Verified Customer production runtime 0.3.1 / Android versionCode 10.');
           NODE
 
       - name: Verify production bundle environment
@@ -97,7 +92,7 @@ jobs:
           npx eas-cli update \
             --channel production \
             --environment production \
-            --message "Customer production 0.3.0 from main ${GITHUB_SHA}" \
+            --message "Customer Firebase production 0.3.1 from main ${GITHUB_SHA}" \
             --non-interactive \
             --json \
             > expo-update.json \
@@ -137,8 +132,8 @@ jobs:
             '| Field | Value |', '| --- | --- |',
             `| Publish result | ${icon} ${result} |`,
             '| Expo channel | `production` |',
-            '| Runtime | `0.3.0` |',
-            '| Android versionCode | `9` |',
+            '| Runtime | `0.3.1` |',
+            '| Android versionCode | `10` |',
             `| Resumable Accident Video rollout | \`${videoRollout}\` |`,
             `| CLI exit code | \`${exitCode}\` |`,
             `| Source commit | \`${process.env.GITHUB_SHA || 'unknown'}\` |`, '',
