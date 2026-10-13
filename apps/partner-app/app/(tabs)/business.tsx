@@ -10,7 +10,8 @@ import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerBusinessOverviewIcon, type PartnerBusinessOverviewIconKind } from '@/components/ui/partner-business-overview-icons';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
-import { getPartnerBusinessPerformance, type PartnerBusinessPerformance } from '@/lib/business';
+import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
+import { getPartnerBusinessPerformance, getPartnerTopInsurers, type PartnerTopInsurer, type PartnerBusinessPerformance } from '@/lib/business';
 import { getPartnerClaimSummary, type PartnerClaimSummary } from '@/lib/claims';
 import { formatIndianCurrency } from '@/lib/format';
 import { getPartnerBusinessRange, type PartnerBusinessRangeSummary } from '@/lib/home';
@@ -73,14 +74,16 @@ export default function BusinessScreen() {
     renewals: PartnerRenewalSummary | null;
     claims: PartnerClaimSummary | null;
     payout: PartnerPayoutSummary | null;
+    topInsurers: PartnerTopInsurer[] | null;
     secondaryWarning: boolean;
   }> => {
-    const [performanceResult, networkResult, renewalResult, claimResult, payoutResult] = await Promise.allSettled([
+    const [performanceResult, networkResult, renewalResult, claimResult, payoutResult, insurersResult] = await Promise.allSettled([
       getPartnerBusinessPerformance(),
       getPartnerNetwork(),
       getPartnerRenewalSummary(),
       getPartnerClaimSummary(),
       getPartnerPayoutSummary(),
+      getPartnerTopInsurers(),
     ]);
 
     if (performanceResult.status === 'rejected') throw performanceResult.reason;
@@ -92,6 +95,7 @@ export default function BusinessScreen() {
       renewals: renewalResult.status === 'fulfilled' ? renewalResult.value : null,
       claims: claimResult.status === 'fulfilled' ? claimResult.value : null,
       payout: payoutResult.status === 'fulfilled' ? payoutResult.value : null,
+      topInsurers: insurersResult.status === 'fulfilled' ? insurersResult.value : null,
       secondaryWarning: renewalResult.status === 'rejected'
         || claimResult.status === 'rejected'
         || payoutResult.status === 'rejected',
@@ -114,6 +118,7 @@ export default function BusinessScreen() {
   const renewals = workspace.data?.renewals ?? null;
   const claims = workspace.data?.claims ?? null;
   const payout = workspace.data?.payout ?? null;
+  const topInsurers = workspace.data?.topInsurers ?? null;
 
   const policiesChange = useMemo(() => {
     if (!performance || !performance.policies_last_month) return null;
@@ -411,13 +416,25 @@ export default function BusinessScreen() {
           </View>
 
           <SectionHeader title="Top Insurers" action={<Pressable onPress={() => router.push('/business-report')}><Text style={styles.viewAll}>View All ›</Text></Pressable>} />
-          <View style={styles.insurerCard}>
-            <View style={styles.insurerEmptyIcon}><Ionicons name="business-outline" size={18} color="#3156B8" /></View>
-            <View style={styles.insurerEmptyBody}>
-              <Text style={styles.insurerEmptyTitle}>Insurer mix</Text>
-              <Text style={styles.insurerEmptyText}>Insurer-wise totals are not included in the current Business data.</Text>
+          {topInsurers?.length ? (
+            <View style={styles.insurerGrid}>
+              {topInsurers.slice(0, 5).map((insurer) => (
+                <View key={insurer.name} style={styles.insurerTile}>
+                  <PartnerInsurerLogo name={insurer.name} style={styles.insurerLogo} />
+                  <Text numberOfLines={2} style={styles.insurerName}>{insurer.name}</Text>
+                  <Text numberOfLines={1} style={styles.insurerCount}>{insurer.policies} policies</Text>
+                </View>
+              ))}
             </View>
-          </View>
+          ) : (
+            <View style={styles.insurerCard}>
+              <View style={styles.insurerEmptyIcon}><Ionicons name="business-outline" size={18} color="#3156B8" /></View>
+              <View style={styles.insurerEmptyBody}>
+                <Text style={styles.insurerEmptyTitle}>Insurer mix</Text>
+                <Text style={styles.insurerEmptyText}>{topInsurers === null ? 'Insurer ranking temporarily unavailable.' : 'No insurer business this month.'}</Text>
+              </View>
+            </View>
+          )}
 
           <SectionHeader title="Quick Actions" />
           <View style={[styles.quickGrid, compactScreen && styles.tightContainer]}>
@@ -703,6 +720,11 @@ const styles = StyleSheet.create({
   productShare: { marginTop: 1, color: '#3156B8', ...partnerTheme.typography.meta, fontWeight: '800' },
   emptyCompact: { flex: 1, minHeight: 72, alignItems: 'center', justifyContent: 'center' },
   emptyCompactText: { color: '#8795A9', ...partnerTheme.typography.caption },
+  insurerGrid: { flexDirection: 'row', gap: 3, padding: 4, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1' },
+  insurerTile: { flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'center', minHeight: 63, borderRadius: 9, backgroundColor: '#F5F9FF', paddingHorizontal: 2, paddingVertical: 4 },
+  insurerLogo: { width: 28, height: 24 },
+  insurerName: { color: '#14367B', textAlign: 'center', fontSize: 7, lineHeight: 9, fontWeight: '700', marginTop: 2 },
+  insurerCount: { color: '#718198', fontSize: 7, lineHeight: 10 },
   insurerCard: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 16, padding: 12, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
   insurerEmptyIcon: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center', borderRadius: 11, backgroundColor: '#F1F6FF' },
   insurerEmptyBody: { flex: 1 },
