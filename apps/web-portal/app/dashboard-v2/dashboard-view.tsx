@@ -337,16 +337,16 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
       </div>
 
       <div className="overflow-x-auto border-t border-[#E7ECF2]">
-        <div className="grid min-w-[880px] divide-x divide-[#E7ECF2]" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gridAutoFlow: "row" }}>
-          <div className="flex min-h-[124px] min-w-0 flex-col px-3 py-2.5">
+        <div className="flex min-w-[880px] flex-nowrap divide-x divide-[#E7ECF2] bg-[#FAFCFE]">
+          <div className="min-w-0 shrink-0 px-4 py-3" style={{ width: commercial ? "25%" : "50%" }}>
             <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">
               Policies · {business.periodShortLabel}
             </p>
-            <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] items-center">
-              <p className="portal-display min-w-0 text-center text-[27px] font-semibold leading-none text-[#10213D]">
+            <div className="mt-2 flex min-h-[88px] items-center gap-3">
+              <p className="portal-display min-w-0 flex-1 text-left text-[27px] font-semibold leading-none text-[#10213D]">
                 {business.policyCount.toLocaleString("en-IN")}
               </p>
-              <div className="flex flex-col gap-1.5 border-l border-[#DDE5EF] pl-3">
+              <div className="flex min-w-0 flex-[1.3] flex-col gap-1.5 border-l border-[#DDE5EF] pl-3">
                 {policyBreakdown.map((item) => (
                   <div key={item.label} className="flex min-w-0 items-center justify-between gap-2">
                     <span className="truncate text-[8px] font-semibold uppercase text-[#65758B]" title={item.label}>{item.label}</span>
@@ -357,11 +357,9 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
             </div>
           </div>
           {headline.map((item) => (
-            <div key={item.label} className="flex min-h-[124px] min-w-0 flex-col px-3 py-2.5">
+            <div key={item.label} className="flex min-w-0 shrink-0 flex-col px-4 py-3" style={{ width: commercial ? "25%" : "50%" }}>
               <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">{item.label}</p>
-              <div className="flex min-h-0 flex-1 items-center justify-center">
-                <p className="portal-display break-words text-center text-[27px] font-semibold leading-tight text-[#10213D]">{item.value}</p>
-              </div>
+              <p className="portal-display mt-4 break-words text-left text-[27px] font-semibold leading-tight text-[#10213D]">{item.value}</p>
             </div>
           ))}
         </div>
