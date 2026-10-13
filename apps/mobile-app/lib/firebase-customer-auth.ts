@@ -1,5 +1,6 @@
 import { getAuth } from '@react-native-firebase/auth';
 import { createInstalledAndroidFirebaseOtpFlow } from './firebase-installed-android-otp';
+import type { PhoneVerificationStatus } from './firebase-android-phone-event-flow';
 import { createCustomerFirebaseDataClient } from './firebase-data-client';
 
 /**
@@ -12,6 +13,12 @@ let pendingFlow: ReturnType<typeof createInstalledAndroidFirebaseOtpFlow> | null
 export function startFirebaseCustomerOtp() {
   pendingFlow = createInstalledAndroidFirebaseOtpFlow();
   return pendingFlow;
+}
+
+/** Subscribe before sending: native Android may verify without showing an SMS. */
+export function subscribeFirebaseCustomerOtpStatus(callback: (status: PhoneVerificationStatus) => void): () => void {
+  if (!pendingFlow) throw new Error('auth/verification-not-started');
+  return pendingFlow.subscribe(callback);
 }
 
 export async function sendFirebaseCustomerOtp(phone: string): Promise<void> {
@@ -44,7 +51,7 @@ export async function confirmFirebaseCustomerOtp(
       // A verified existing phone uses the same canonical binding flow as
       // Login. Never provision a duplicate Supabase profile for that phone.
       if (registration.status !== 409 || failure.error !== 'phone_already_registered') {
-        throw new Error('Customer account registration could not be completed.');
+        throw new Error('registration_' + (failure.error ?? 'unavailable'));
       }
     } else {
       const result: { status?: string; requiresBinding?: boolean } = await registration.json();
@@ -59,10 +66,13 @@ export async function confirmFirebaseCustomerOtp(
     headers: { Authorization: `Bearer ${idToken}`, 'Content-Type': 'application/json', apikey: publicKey },
     body: '{}',
   });
-  if (!response.ok) throw new Error('Your verified phone could not be linked to an existing account.');
+  if (!response.ok) {
+    const detail: { error?: string } = await response.json().catch(() => ({}));
+    throw new Error('bind_' + (detail.error ?? 'unavailable'));
+  }
   const result: { status?: string; requiresTokenRefresh?: boolean } = await response.json();
   if (result.status !== 'linked' || result.requiresTokenRefresh !== true) {
-    throw new Error('Firebase account linkage could not be confirmed.');
+    throw new Error('bind_unexpected_response');
   }
   const firebaseUser = getAuth().currentUser;
   if (!firebaseUser || firebaseUser.uid !== uid) throw new Error('Firebase account changed during verification');
@@ -72,7 +82,7 @@ export async function confirmFirebaseCustomerOtp(
     return current?.uid === uid ? current.getIdToken() : null;
   });
   const { data, error } = await dataClient.rpc('customer_firebase_profile_id');
-  if (error || typeof data !== 'string') throw new Error('Customer authorization was not granted');
+  if (error || typeof data !== 'string') throw new Error('authorization_profile_resolution_failed');
   // Fail closed if refreshed token cannot access the canonical profile.
   if (!refreshedToken) throw new Error('Could not refresh Firebase authorization');
   return { uid, phoneNumber, profileId: data };
@@ -84,4 +94,38 @@ export function confirmFirebaseCustomerSignup(
   signup: { fullName: string; email?: string },
 ): Promise<{ uid: string; phoneNumber: string; profileId: string }> {
   return confirmFirebaseCustomerOtp(code, signup);
+}
+
+/** A read-only, rate-limited backend eligibility check. Never read customer
+ * profiles or auth.users directly from the unauthenticated mobile client. */
+export type FirebaseCustomerRegistration = {
+  status: 'registered' | 'not_registered' | 'signup_incomplete' | 'account_requires_review';
+};
+
+export async function checkFirebaseCustomerRegistration(phone: string): Promise<FirebaseCustomerRegistration> {
+  if (!/^\+91[6-9]\d{9}$/.test(phone)) throw new Error('invalid-phone-number');
+  const baseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const publicKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+  if (!baseUrl || !publicKey) throw new Error('registration_check_unavailable');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
+  try {
+    const result = await fetch(`${baseUrl}/functions/v1/customer-firebase-registration-check`, {
+      method: 'POST',
+      headers: { apikey: publicKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
+      signal: controller.signal,
+    });
+    if (!result.ok) {
+      if (result.status === 429) throw new Error('too-many-requests');
+      throw new Error('registration_check_unavailable');
+    }
+    const data: { status?: string } = await result.json();
+    if (data.status !== 'registered' && data.status !== 'not_registered' && data.status !== 'signup_incomplete' && data.status !== 'account_requires_review') {
+      throw new Error('registration_check_unavailable');
+    }
+    return { status: data.status };
+  } finally {
+    clearTimeout(timeout);
+  }
 }

@@ -1,0 +1,46 @@
+name: Verify Firebase registered-only login and INSUREIT branded screens
+on:
+  push:
+    branches:
+      - fix/firebase-login-signup-existing-customers-20261012
+    paths:
+      - '.github/workflows/verify-firebase-customer-login-registration.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://ilzhsfqqjyppzzvfscmh.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
+      EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_ENABLED: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/firebase-login-signup-existing-customers-20261012
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Native mobile TypeScript
+        run: npm run typecheck:mobile
+      - name: Native mobile lint
+        run: npm run lint:mobile
+      - name: Firebase registration and backend source checks
+        run: node --test pocs/customer-firebase-auth/*.test.cjs apps/mobile-app/lib/firebase-android-phone-event-flow.test.cjs apps/mobile-app/lib/firebase-native-phone-flow.test.cjs
+      - name: Verify no release or backend changes
+        run: |
+          echo "No EAS publish, AAB, APK, Supabase migration, function deployment, or Play publication performed by this workflow."
+
+# Rerun revised source assertions and corrected E.164 input validation.
+
+# Check signup-incomplete phone routing, Firebase invalid/expired OTP retry, and existing customer safety.
+
+# Verify backend signup-incomplete route, resend cooldown, expired OTP recovery and E2E-safe source contracts.
+
+# Verify separate resend spinner and sanitized Android Firebase auth error reference.
+
+# Test code-sent, auto-verified and native force-resend Firebase Android lifecycle.

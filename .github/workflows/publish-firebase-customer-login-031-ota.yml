@@ -1,0 +1,78 @@
+name: Publish verified Firebase login UX Android OTA 0.3.1
+on:
+  push:
+    branches: [fix/firebase-login-signup-existing-customers-20261012]
+    paths: ['.github/workflows/publish-firebase-customer-login-031-ota.yml']
+permissions:
+  contents: read
+concurrency:
+  group: firebase-customer-login-031-ota-one-off
+  cancel-in-progress: false
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_SUPABASE_URL: https://ilzhsfqqjyppzzvfscmh.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
+      EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
+      EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_ENABLED: 'true'
+      CI: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/firebase-login-signup-existing-customers-20261012
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Verify exact 0.3.1 Firebase native runtime
+        shell: bash
+        run: |
+          node <<'NODE'
+          const app=require('./apps/mobile-app/app.json').expo;
+          const eas=require('./apps/mobile-app/eas.json');
+          if(app.version!=='0.3.1'||app.android?.versionCode!==10||app.android?.package!=='com.insureit.mobile'||app.runtimeVersion?.policy!=='appVersion'||eas.build.production.channel!=='production'||eas.build.production.env.EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_ENABLED!=='true') throw Error('Wrong Android runtime/channel/identity');
+          for(const key of ['EXPO_PUBLIC_SUPABASE_URL','EXPO_PUBLIC_SUPABASE_ANON_KEY','EXPO_PUBLIC_PORTAL_URL']) if(!process.env[key]||process.env[key]!==eas.build.production.env[key]) throw Error('Mismatched remote public env: '+key);
+          NODE
+          test -n "${EXPO_TOKEN:-}" || { echo "::error::Expo token missing"; exit 1; }
+      - run: npm ci --no-audit --no-fund
+      - name: Check complete mobile TypeScript and lint
+        run: |
+          npm run typecheck:mobile
+          npm run lint:mobile
+      - name: Run complete Firebase source regression suite
+        run: node --test pocs/customer-firebase-auth/*.test.cjs apps/mobile-app/lib/firebase-android-phone-event-flow.test.cjs apps/mobile-app/lib/firebase-native-phone-flow.test.cjs
+      - name: Verify production registration-check service before publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="https://ilzhsfqqjyppzzvfscmh.supabase.co/functions/v1/customer-firebase-registration-check"
+          invalid="$(curl --silent --show-error --max-time 15 --request POST --header "apikey: ${EXPO_PUBLIC_SUPABASE_ANON_KEY}" --header 'Content-Type: application/json' --data '{"phone":"invalid"}' "$endpoint" 2>/dev/null || true)"
+          case "$invalid" in *invalid_phone*) ;; *) echo "::error::Preflight missing or invalid"; exit 1;; esac
+          unknown="$(curl --silent --show-error --max-time 15 --request POST --header "apikey: ${EXPO_PUBLIC_SUPABASE_ANON_KEY}" --header 'Content-Type: application/json' --data '{"phone":"+919000000000"}' "$endpoint")"
+          case "$unknown" in *not_registered*) ;; *) echo "::error::Unknown phone check not ready"; exit 1;; esac
+          echo 'Backend accepts pre-SMS registration checks.'
+      - name: Verify real native Android bundle
+        working-directory: apps/mobile-app
+        run: npx expo export --platform android --output-dir dist-login-preflight
+      - name: Publish only Android runtime 0.3.1 OTA (no build)
+        working-directory: apps/mobile-app
+        run: |
+          npx eas-cli update --channel production --platform android --message "INSUREIT Android Firebase native verification events and SMS auto verification repair" --non-interactive
+      - name: Confirm Play Store unaffected
+        if: always()
+        run: |
+          echo 'Android OTA runtime 0.3.1 only. No APK, AAB, database migration, native build, or Play submission.' >> "$GITHUB_STEP_SUMMARY"
+
+# Oct 12: publish verified customer enrollment classification and Firebase SMS retry fixes.
+
+# Oct 12: Android-only 0.3.1 Firebase SMS diagnostic and resend spinner fix.
+
+# 2026-10-12 native phone event-flow cutover: no new APK/AAB, runtime 0.3.1 only.
+
+# 2026-10-13: publish completed native verifyPhoneNumber event-flow with instant-auth race regression.
+
+# 2026-10-13: retry after aligning fail-closed Android phone mismatch regression assertion.
