@@ -15,7 +15,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
-import { PartnerPagination } from '@/components/ui/partner-pagination';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import {
@@ -33,7 +32,7 @@ import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerNetwork } from '@/providers/partner-network-provider';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 const filters: Array<{ value: PartnerPolicyLifecycle; label: string }> = [
   { value: 'all', label: 'All' },
   { value: 'in_force', label: 'Active' },
@@ -51,7 +50,10 @@ export default function PoliciesScreen() {
   const { isOffline } = usePartnerNetwork();
   const [lifecycle, setLifecycle] = useState<PartnerPolicyLifecycle>(savedPolicyLifecycle);
   const [query, setQuery] = useState(savedPolicyQuery);
+  const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
   const debouncedSearch = useDebouncedValue(query.trim(), 350);
+
+  useEffect(() => { setVisibleLimit(PAGE_SIZE); }, [lifecycle, debouncedSearch]);
 
   useEffect(() => {
     savedPolicyQuery = query;
@@ -82,7 +84,7 @@ export default function PoliciesScreen() {
   const collection = usePartnerPageQuery<PartnerPolicyRow>({
     scopeKey: cacheScopeKey,
     key: `policies:list:${lifecycle}:${debouncedSearch || 'all'}`,
-    pageSize: PAGE_SIZE,
+    pageSize: visibleLimit,
     fetchPage,
     staleTimeMs: 60_000,
   });
@@ -145,15 +147,7 @@ export default function PoliciesScreen() {
 
         <View style={styles.heroHeadingRow}>
           <Text style={styles.heroTitle}>Policies</Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Open Policy Intake"
-            onPress={() => router.push('/policy-intakes')}
-            style={({ pressed }) => [styles.intakeHeaderButton, pressed && styles.pressed]}
-          >
-            <Ionicons name="add-circle-outline" size={16} color="#0B2E63" />
-            <Text style={styles.intakeHeaderText}>Policy Intake</Text>
-          </Pressable>
+
         </View>
       </View>
 
@@ -165,6 +159,37 @@ export default function PoliciesScreen() {
           placeholder="Search customer, vehicle number or policy number..."
         />
       </View>
+
+      <View style={styles.summaryRow}>
+        {([
+          { label: 'Total Policies', value: summary.data?.total_policies, icon: 'document-text' as const, tint: '#2559AD' },
+          { label: 'Active Policies', value: summary.data?.in_force_policies, icon: 'shield-checkmark' as const, tint: '#123B83' },
+          { label: 'Expiring Soon', value: summary.data?.expiring_30_days, icon: 'hourglass' as const, tint: '#2347A2' },
+          { label: 'Lapsed Policies', value: summary.data?.expired_policies, icon: 'close-circle' as const, tint: '#163B82' },
+        ]).map((metric) => (
+          <View key={metric.label} style={styles.summaryCard}>
+            <View style={styles.summaryIcon}>
+              <Ionicons name={metric.icon} size={19} color={metric.tint} />
+            </View>
+            <Text style={styles.summaryValue}>{metric.value === undefined ? '—' : metric.value.toLocaleString('en-IN')}</Text>
+            <Text numberOfLines={2} style={styles.summaryLabel}>{metric.label}</Text>
+          </View>
+        ))}
+      </View>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open Policy Intake"
+        onPress={() => router.push('/policy-intakes')}
+        style={({ pressed }) => [styles.intakeBanner, pressed && styles.pressed]}
+      >
+        <View style={styles.intakeBannerIcon}><Ionicons name="document-text" size={23} color="#FFFFFF" /></View>
+        <View style={styles.intakeBannerCopy}>
+          <Text style={styles.intakeBannerTitle}>Policy Intake</Text>
+          <Text style={styles.intakeBannerSubtitle}>Create new policy for your customer</Text>
+        </View>
+        <Feather name="chevron-right" size={20} color="#FFFFFF" />
+      </Pressable>
 
       {isOffline || collection.stale || summary.stale ? (
         <View style={styles.feedback}>
@@ -231,23 +256,22 @@ export default function PoliciesScreen() {
     />
   );
 
-  const footer = collection.rows.length ? (
-    <PartnerPagination
-      page={collection.page}
-      totalPages={collection.totalPages}
-      total={collection.total}
-      pageSize={PAGE_SIZE}
-      rowCount={collection.rows.length}
-      onPrevious={collection.previousPage}
-      onNext={collection.nextPage}
-      disabled={collection.changingPage}
-    />
+  const footer = collection.rows.length && collection.rows.length < collection.total ? (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Load More Policies"
+      disabled={collection.loading || collection.changingPage}
+      onPress={() => setVisibleLimit((current) => current + PAGE_SIZE)}
+      style={({ pressed }) => [styles.loadMoreButton, pressed && styles.pressed]}
+    >
+      <Text style={styles.loadMoreText}>{collection.loading ? 'Loading Policies…' : 'Load More Policies'}</Text>
+      <Feather name="chevron-down" size={13} color="#3156B8" />
+    </Pressable>
   ) : null;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <FlatList
-        key={`policies-page-${collection.page}`}
         data={collection.rows}
         keyExtractor={(row) => row.policy_id}
         renderItem={({ item }) => (
@@ -469,6 +493,16 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     zIndex: 4,
   },
+  summaryRow: { flexDirection: 'row', marginHorizontal: 12, marginTop: 9, gap: 4 },
+  summaryCard: { flex: 1, minWidth: 0, minHeight: 86, alignItems: 'center', paddingVertical: 7, paddingHorizontal: 2, borderRadius: 9, backgroundColor: '#F6F9FF', borderWidth: 1, borderColor: '#E8EFFB', shadowColor: '#17448C', shadowOpacity: 0.06, shadowRadius: 4, elevation: 1 },
+  summaryIcon: { width: 27, height: 27, borderRadius: 8, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
+  summaryValue: { marginTop: 3, color: '#153C89', fontSize: 17, lineHeight: 19, fontWeight: '900' },
+  summaryLabel: { marginTop: 2, color: '#6077A0', fontSize: 7.5, lineHeight: 10, textAlign: 'center', fontWeight: '700' },
+  intakeBanner: { marginHorizontal: 12, marginTop: 8, minHeight: 53, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, borderRadius: 9, backgroundColor: '#082D70', borderWidth: 1, borderColor: '#0C4794' },
+  intakeBannerIcon: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#174F9C' },
+  intakeBannerCopy: { flex: 1 },
+  intakeBannerTitle: { color: '#FFFFFF', fontSize: 12, lineHeight: 15, fontWeight: '800' },
+  intakeBannerSubtitle: { marginTop: 2, color: '#D6E6FF', fontSize: 8.5, lineHeight: 11 },
   feedback: { marginHorizontal: 12, marginTop: 7 },
   tabsRow: {
     minHeight: 48,
@@ -500,25 +534,25 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#183E87', fontWeight: '800' },
   tabCount: { color: '#8B98AA', fontSize: 8.2, lineHeight: 11, fontWeight: '800' },
   tabCountActive: { color: '#3156B8' },
-  cardGap: { height: 5 },
+  cardGap: { height: 2 },
   policyCard: {
-    minHeight: 66,
+    minHeight: 54,
     marginHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    borderRadius: 11,
-    paddingHorizontal: 9,
-    paddingVertical: 7,
+    gap: 7,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E9F3',
   },
   policyCardPressed: { backgroundColor: '#F6F9FF' },
   policyIconShell: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F5F8FC',
@@ -526,7 +560,7 @@ const styles = StyleSheet.create({
     borderColor: '#E2E9F3',
     overflow: 'hidden',
   },
-  insurerLogo: { width: 31, height: 31 },
+  insurerLogo: { width: 27, height: 27 },
   policyIconMini: {
     position: 'absolute',
     right: 3,
@@ -540,17 +574,19 @@ const styles = StyleSheet.create({
   },
   policyMain: { flex: 1, minWidth: 0 },
   customerName: { color: '#173A7D', fontSize: 12, lineHeight: 15, fontWeight: '800' },
-  policyNumber: { marginTop: 2, color: '#5C6C84', fontSize: 8.2, lineHeight: 11, fontWeight: '600' },
-  vehicleText: { marginTop: 2, color: '#7D8CA1', fontSize: 7.6, lineHeight: 10, fontWeight: '600' },
+  policyNumber: { marginTop: 1, color: '#5C6C84', fontSize: 8.2, lineHeight: 11, fontWeight: '600' },
+  vehicleText: { marginTop: 1, color: '#7D8CA1', fontSize: 7.6, lineHeight: 10, fontWeight: '600' },
   policyRight: { width: 104, alignItems: 'flex-end' },
   statusPill: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 999, paddingHorizontal: 7, paddingVertical: 4 },
   statusDot: { width: 4, height: 4, borderRadius: 2 },
   statusText: { fontSize: 7.4, lineHeight: 10, fontWeight: '800' },
-  policyPeriod: { marginTop: 4, color: '#72829A', fontSize: 7.1, lineHeight: 9.5, fontWeight: '600', textAlign: 'right' },
+  policyPeriod: { marginTop: 2, color: '#72829A', fontSize: 7.1, lineHeight: 9.5, fontWeight: '600', textAlign: 'right' },
   listFooter: { minHeight: 58, marginHorizontal: 12, alignItems: 'center', justifyContent: 'center' },
   loadingMore: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   loadingMoreText: { color: '#708099', fontSize: 8, lineHeight: 11, fontWeight: '600' },
   loadMoreButton: {
+    marginHorizontal: 12,
+    marginTop: 5,
     minHeight: 36,
     alignSelf: 'stretch',
     flexDirection: 'row',
