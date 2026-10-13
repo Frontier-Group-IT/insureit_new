@@ -54,7 +54,8 @@ test('Firebase binding must be confirmed by a token refresh and canonical profil
   assert.match(nativeFlow,/getIdToken\(true\)/);
   assert.match(nativeFlow,/rpc\('customer_firebase_profile_id'\)/);
   assert.match(nativeFlow,/current\?\.uid === uid/);
-  assert.match(nativeFlow,/if \(error \|\| typeof data !== 'string'\) throw/);
+  assert.match(nativeFlow,/if \(error \|\| typeof data !== 'string'\) \{/);
+  assert.match(nativeFlow,/throw new FirebaseCustomerOtpError\('customer_authorization', 'customer\/forbidden'\)/);
 });
 
 test('binding endpoint fails closed for unknown customers without creating or changing existing records',()=>{
