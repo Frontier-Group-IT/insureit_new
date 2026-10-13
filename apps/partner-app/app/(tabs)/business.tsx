@@ -558,8 +558,12 @@ function TrendChart({ data, emptyMessage, compact = false }: { data: TrendPoint[
           const label = item.month === 'MTD' ? 'MTD' : item.month === 'LAST' ? 'Last' : item.month === 'CUSTOM' ? 'Custom' : shortMonth(item.month);
           return (
             <View key={`${item.month}-${index}`} style={styles.barColumn}>
-              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={styles.barValue}>{formatCompactCurrency(premium)}</Text>
-              <View style={[styles.barTrack, compact && styles.barTrackCompact]}><View style={[styles.bar, { height }]} /></View>
+              <View style={[styles.barTrack, compact && styles.barTrackCompact]}>
+                <View style={[styles.bar, { height }]} />
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.barValue, { bottom: height + 3 }]}>
+                  {formatCompactCurrency(premium)}
+                </Text>
+              </View>
               <Text style={styles.barMonth}>{label}</Text>
             </View>
           );
@@ -572,7 +576,11 @@ function TrendChart({ data, emptyMessage, compact = false }: { data: TrendPoint[
 function ProductTile({ icon, label, share }: { icon: keyof typeof Ionicons.glyphMap; label: string; share: number }) {
   return (
     <View style={styles.productTile}>
-      {productAsset(icon, label) ? <Image source={productAsset(icon, label)!} style={styles.productIconAsset} resizeMode="contain" /> : <BlueIcon icon={icon} size={25} />}
+      {icon === 'car-sport' || label.toLowerCase().includes('package') || label.toLowerCase().includes('life')
+        ? <BlueIcon icon={icon} size={25} />
+        : productAsset(icon, label)
+          ? <Image source={productAsset(icon, label)!} style={styles.productIconAsset} resizeMode="contain" />
+          : <BlueIcon icon={icon} size={25} />}
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={styles.productLabel}>{label}</Text>
       <Text style={styles.productShare}>{share}%</Text>
     </View>
@@ -733,8 +741,8 @@ const styles = StyleSheet.create({
   axisText: { color: '#8795A9', ...partnerTheme.typography.meta },
   chart: { flex: 1, height: 91, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 6 },
   barColumn: { flex: 1, maxWidth: 54, height: '100%', alignItems: 'center', justifyContent: 'flex-end' },
-  barValue: { width: '100%', minHeight: 16, color: '#3156B8', textAlign: 'center', ...partnerTheme.typography.meta, fontWeight: '700' },
-  barTrack: { height: 72, width: '78%', justifyContent: 'flex-end', overflow: 'hidden', borderTopLeftRadius: 7, borderTopRightRadius: 7, backgroundColor: '#EEF3FA' },
+  barValue: { position: 'absolute', left: -4, right: -4, height: 13, color: '#3156B8', textAlign: 'center', fontSize: 8, lineHeight: 12, fontWeight: '700' },
+  barTrack: { height: 72, width: '78%', justifyContent: 'flex-end', position: 'relative', borderTopLeftRadius: 7, borderTopRightRadius: 7, backgroundColor: '#EEF3FA' },
   bar: { width: '100%', borderTopLeftRadius: 7, borderTopRightRadius: 7, backgroundColor: '#2298E8' },
   barMonth: { marginTop: 5, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   productGrid: { flexDirection: 'row', gap: 5, borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
