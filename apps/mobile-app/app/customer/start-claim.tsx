@@ -93,7 +93,8 @@ export default function StartClaimScreen() {
         setSelectedCustomerId(firstCustomerId);
         setSelectedVehicleId(firstVehicle?.id ?? '');
       } catch (error) {
-        console.warn('Start claim selector load failed', error);
+        // Customer data failures must not emit raw SDK errors or account identifiers to device logs.
+        console.warn('Start claim selector load failed (customer data boundary)');
         if (active) setMessage('We could not load your policy portfolio. Please try again.');
       } finally {
         if (active) setLoading(false);
