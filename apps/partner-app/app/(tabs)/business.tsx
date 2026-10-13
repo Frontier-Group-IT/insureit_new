@@ -309,7 +309,12 @@ export default function BusinessScreen() {
 
           {overviewCustomOpen ? (
             <View style={styles.rangeWrap}>
-              <PartnerBusinessRangeSummaryCard onApplied={setOverviewPreset} />
+              <PartnerBusinessRangeSummaryCard
+                onApplied={(result) => {
+                  setOverviewPreset(result);
+                  setOverviewCustomOpen(false);
+                }}
+              />
             </View>
           ) : null}
           {overviewLoading ? <Text style={styles.inlineLoading}>Loading selected range…</Text> : null}
@@ -385,7 +390,10 @@ export default function BusinessScreen() {
               <PartnerBusinessRangeSummaryCard
                 title="Custom trend range"
                 meta="Choose a date range for the trend total"
-                onApplied={setTrendPreset}
+                onApplied={(result) => {
+                  setTrendPreset(result);
+                  setTrendCustomOpen(false);
+                }}
               />
             </View>
           ) : null}
@@ -521,7 +529,7 @@ function OverviewCard({ icon, value, label, changeLabel, compareLabel = 'vs last
     >
       <PartnerBusinessOverviewIcon kind={icon} size={24} />
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={styles.overviewValue}>{value}</Text>
-      <Text numberOfLines={2} style={styles.overviewLabel}>{label}</Text>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={styles.overviewLabel}>{label}</Text>
       <View style={styles.growthRow}>
         {trend ? <Ionicons name={trend.icon} size={9} color={trend.color} /> : null}
         <Text numberOfLines={1} style={[styles.growthText, { color: trend?.color ?? '#718198' }]}>{changeLabel}</Text>
@@ -729,9 +737,9 @@ const styles = StyleSheet.create({
   rangeWrap: { marginBottom: 8 },
   inlineLoading: { marginBottom: 7, color: '#718198', ...partnerTheme.typography.caption },
   overviewGrid: { flexDirection: 'row', gap: 5, borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
-  overviewCard: { flex: 1, minHeight: 78, alignItems: 'center', justifyContent: 'center', borderRadius: 12, paddingHorizontal: 4, paddingVertical: 8, backgroundColor: '#F5F9FF' },
+  overviewCard: { flex: 1, minWidth: 0, minHeight: 78, alignItems: 'center', justifyContent: 'center', borderRadius: 12, paddingHorizontal: 2, paddingVertical: 8, backgroundColor: '#F5F9FF' },
   overviewValue: { width: '100%', marginTop: 2, color: '#112C69', textAlign: 'center', fontSize: 12, lineHeight: 15, fontWeight: '800' },
-  overviewLabel: { minHeight: 18, marginTop: 0, color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.caption },
+  overviewLabel: { width: '100%', marginTop: 1, color: partnerTheme.colors.inkMuted, textAlign: 'center', fontSize: 8.5, lineHeight: 12, fontWeight: '600' },
   growthRow: { marginTop: 1, flexDirection: 'row', alignItems: 'center', gap: 2 },
   growthText: { maxWidth: 72, color: '#16A34A', ...partnerTheme.typography.meta, fontWeight: '800' },
   vsText: { marginTop: 1, maxWidth: 72, color: '#9AA7B8', textAlign: 'center', ...partnerTheme.typography.meta, fontWeight: '500' },
