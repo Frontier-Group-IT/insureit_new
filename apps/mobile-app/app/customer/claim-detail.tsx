@@ -13,7 +13,9 @@ import { hasAllRequiredDocuments, hasOutstandingRejectedDocumentsForStatus, requ
 import { getInsurerLogoSource, getVehicleBrandLogoSource } from '@/lib/catalog-logos';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestone, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
 import { formatJourneyAmount, formatJourneyDate, stageMainAmount } from '@/lib/self-managed-claim-timeline';
-import { supabase } from '@/lib/supabase';
+import { getCustomerIdentity } from '@/lib/customer-identity';
+import { getOperationalCustomerContexts } from '@/lib/customer-context';
+import { getFirebaseCustomerDocumentUrl } from '@/lib/firebase-document-client';
 import { palette, roleTheme } from '@/lib/theme';
 import type { Claim, ClaimDocument, ClaimTask, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
 
@@ -55,12 +57,19 @@ export default function ClaimDetailScreen() {
     let active = true;
     void (async () => {
       if (!id) return;
+      try {
+      const identity = await getCustomerIdentity();
+      if (!identity) { if (active) router.replace('/login'); return; }
+      const client = identity.data;
+      const contexts = await getOperationalCustomerContexts();
+      const allowedIds = contexts.map((context) => context.customer_id);
+      if (!allowedIds.length) { if (active) setLoading(false); return; }
       const [claimResult, documentsResult, milestoneResult, activityResult, tasksResult] = await Promise.all([
-        supabase.from('claims').select('*').eq('id', id).maybeSingle(),
-        supabase.from('claim_documents').select('*').eq('claim_id', id).order('created_at', { ascending: false }),
-        (supabase as any).from('claim_milestones').select('*').eq('claim_id', id),
-        supabase.from('customer_activity_events').select('id,title,message,metadata,created_at').eq('claim_id', id).eq('event_type', 'claim_document_reuploaded').order('created_at', { ascending: false }).limit(5),
-        supabase.from('claim_tasks').select('*').eq('claim_id', id).eq('status', 'open'),
+        client.from('claims').select('*').eq('id', id).in('customer_id', allowedIds).maybeSingle(),
+        client.from('claim_documents').select('*').eq('claim_id', id).order('created_at', { ascending: false }),
+        (client as any).from('claim_milestones').select('*').eq('claim_id', id),
+        client.from('customer_activity_events').select('id,title,message,metadata,created_at').eq('claim_id', id).eq('event_type', 'claim_document_reuploaded').order('created_at', { ascending: false }).limit(5),
+        client.from('claim_tasks').select('*').eq('claim_id', id).eq('status', 'open'),
       ]);
       if (!active) return;
       const nextClaim = claimResult.data as ClaimWithOwnership | null;
@@ -71,26 +80,29 @@ export default function ClaimDetailScreen() {
       setMilestones((milestoneResult.data ?? []) as ClaimMilestone[]);
       if (!nextClaim) { setLoading(false); return; }
 
-      const vehicleResult = await supabase.from('vehicles').select('*').eq('id', nextClaim.vehicle_id).maybeSingle();
+      const vehicleResult = await client.from('vehicles').select('*').eq('id', nextClaim.vehicle_id).maybeSingle();
       if (!active) return;
       setVehicle(vehicleResult.data);
 
       let nextPolicy: PolicyDisplay | null = null;
       if (nextClaim.policy_id) {
-        const result = await supabase.from('policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').eq('id', nextClaim.policy_id).maybeSingle();
+        const result = await client.from('policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').eq('id', nextClaim.policy_id).maybeSingle();
         if (result.data) nextPolicy = { ...(result.data as any), source: nextClaim.policy_service_source === 'external' ? 'external' : 'sibl' };
       } else if (nextClaim.external_policy_id) {
-        const result = await (supabase as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').eq('id', nextClaim.external_policy_id).maybeSingle();
+        const result = await (client as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').eq('id', nextClaim.external_policy_id).maybeSingle();
         if (result.data) nextPolicy = { ...(result.data as any), source: 'external' };
       }
       if (!active) return;
       setPolicy(nextPolicy);
       const insurerId = nextClaim.insurance_company_id || nextPolicy?.insurance_company_id;
       if (insurerId) {
-        const insurerResult = await supabase.from('insurance_companies').select('*').eq('id', insurerId).maybeSingle();
+        const insurerResult = await client.from('insurance_companies').select('*').eq('id', insurerId).maybeSingle();
         if (active) setInsurer(insurerResult.data);
       }
       if (active) setLoading(false);
+      } catch {
+        if (active) { setMessage('We could not load this claim for your customer account. Please try again.'); setLoading(false); }
+      }
     })();
     return () => { active = false; };
   }, [id]);
@@ -162,9 +174,22 @@ export default function ClaimDetailScreen() {
 
   async function openDocument(document: ClaimDocument) {
     setMessage('');
-    const { data, error } = await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 300);
-    if (error || !data?.signedUrl) return setMessage('We could not open this document. Please try again.');
-    await Linking.openURL(data.signedUrl);
+    try {
+      const identity = await getCustomerIdentity();
+      if (!identity) throw new Error('Customer sign-in required');
+      let url: string;
+      if (identity.provider === 'firebase') {
+        if (document.storage_bucket !== 'claim-documents' && document.storage_bucket !== 'customer-documents' && document.storage_bucket !== 'policy-documents') throw new Error('Unsupported bucket');
+        url = await getFirebaseCustomerDocumentUrl(document.storage_bucket, document.storage_path);
+      } else {
+        const { data, error } = await identity.data.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 300);
+        if (error || !data?.signedUrl) throw new Error('Document access failed');
+        url = data.signedUrl;
+      }
+      await Linking.openURL(url);
+    } catch {
+      setMessage('We could not open this document. Please try again.');
+    }
   }
   function openClaimNumberModal() {
     if (!claim || claim.insurer_claim_no || claimNumberSaving) return;
@@ -176,10 +201,16 @@ export default function ClaimDetailScreen() {
     const nextClaimNumber = claimNumberDraft.trim();
     if (!nextClaimNumber) { setClaimNumberError('Enter the claim number issued by the insurer.'); return; }
     setClaimNumberSaving(true); setClaimNumberError('');
-    const { error } = await supabase.from('claims').update({ insurer_claim_no: nextClaimNumber }).eq('id', claim.id);
-    setClaimNumberSaving(false);
-    if (error) { setClaimNumberError('We could not save the claim number. Please try again.'); return; }
-    setClaim((current) => current ? { ...current, insurer_claim_no: nextClaimNumber } : current); setClaimNumberModalVisible(false);
+    try {
+      const identity = await getCustomerIdentity();
+      if (!identity) throw new Error('Customer sign-in required');
+      const contexts = await getOperationalCustomerContexts();
+      if (!contexts.some((context) => context.customer_id === claim.customer_id)) throw new Error('Claim account unavailable');
+      const { error } = await identity.data.from('claims').update({ insurer_claim_no: nextClaimNumber }).eq('id', claim.id).eq('customer_id', claim.customer_id);
+      if (error) throw new Error('Claim number save failed');
+      setClaim((current) => current ? { ...current, insurer_claim_no: nextClaimNumber } : current); setClaimNumberModalVisible(false);
+    } catch { setClaimNumberError('We could not save the claim number. Please try again.'); }
+    finally { setClaimNumberSaving(false); }
   }
 
   return (
