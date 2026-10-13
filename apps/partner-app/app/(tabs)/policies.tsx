@@ -178,7 +178,7 @@ export default function PoliciesScreen() {
             accessibilityLabel={`Show ${metric.label}`}
             accessibilityState={{ selected: lifecycle === metric.filter && query.length === 0 }}
             onPress={() => selectSummary(metric.filter)}
-            style={({ pressed }) => [styles.summaryCard, pressed && styles.summaryCardPressed]}
+            style={({ pressed }) => [styles.summaryCard, (lifecycle === metric.filter && query.length === 0) && styles.summaryCardSelected, pressed && styles.summaryCardPressed]}
           >
             <View style={styles.summaryIcon}>
               <Ionicons name={metric.icon} size={19} color={metric.tint} />
@@ -517,6 +517,7 @@ const styles = StyleSheet.create({
   },
   summaryRow: { flexDirection: 'row', marginHorizontal: 12, marginTop: 9, gap: 4 },
   summaryCard: { flex: 1, minWidth: 0, minHeight: 86, alignItems: 'center', paddingVertical: 7, paddingHorizontal: 2, borderRadius: 9, backgroundColor: '#F6F9FF', borderWidth: 1, borderColor: '#E8EFFB', shadowColor: '#17448C', shadowOpacity: 0.06, shadowRadius: 4, elevation: 1 },
+  summaryCardSelected: { backgroundColor: '#E8F1FF', borderColor: '#2458C5', borderBottomWidth: 3 },
   summaryCardPressed: { backgroundColor: '#E8F1FF' },
   summaryIcon: { width: 27, height: 27, borderRadius: 8, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
   summaryValue: { marginTop: 3, color: '#153C89', fontSize: 17, lineHeight: 19, fontWeight: '900' },

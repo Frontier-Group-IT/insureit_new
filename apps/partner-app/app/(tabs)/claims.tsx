@@ -174,7 +174,7 @@ export default function ClaimsScreen() {
               accessibilityLabel={`Show ${metric.label}`}
               accessibilityState={{ selected: metric.filter === 'rejected' ? rejectedFilterNotice : !rejectedFilterNotice && state === metric.filter && !query }}
               onPress={() => selectSummary(metric.filter)}
-              style={({ pressed }) => [styles.summaryCard, pressed && styles.summaryCardPressed]}
+              style={({ pressed }) => [styles.summaryCard, (metric.filter !== 'rejected' && !rejectedFilterNotice && state === metric.filter && !query) && styles.summaryCardSelected, pressed && styles.summaryCardPressed]}
             >
               <View style={styles.summaryIcon}><Ionicons name={metric.icon} size={17} color="#153F88" /></View>
               <Text style={styles.summaryValue}>{metric.value == null ? '—' : metric.value.toLocaleString('en-IN')}</Text>
@@ -449,6 +449,7 @@ const styles = StyleSheet.create({
   banner: { marginTop: 8 },
   summaryRow: { flexDirection: 'row', gap: 3, marginTop: 8 },
   summaryCard: { flex: 1, minWidth: 0, alignItems: 'center', paddingVertical: 8, paddingHorizontal: 2, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E3ECF8', borderRadius: 9, elevation: 1 },
+  summaryCardSelected: { backgroundColor: '#E8F1FF', borderColor: '#2458C5', borderBottomWidth: 3 },
   summaryCardPressed: { backgroundColor: '#E8F1FF' },
   summaryIcon: { width: 27, height: 27, borderRadius: 9, backgroundColor: '#EDF4FF', alignItems: 'center', justifyContent: 'center' },
   summaryValue: { marginTop: 3, color: '#153F88', fontSize: 15, fontWeight: '800' },
