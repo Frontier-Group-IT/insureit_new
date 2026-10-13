@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { requireCustomerDataClient } from '@/lib/customer-data-client';
 
 export type ServiceEnquiryType = 'insurance_quote' | 'challan_assistance';
 export type ServiceEnquirySource = 'guest_login' | 'guest_signup' | 'customer_dashboard';
@@ -81,7 +82,8 @@ export async function submitCustomerServiceEnquiry(input: {
   details?: Record<string, unknown>;
   consent: ServiceEnquiryConsent;
 }) {
-  const { data, error } = await (supabase as any)
+  const customerClient = await requireCustomerDataClient();
+  const { data, error } = await (customerClient as any)
     .from('service_enquiries')
     .insert({
       enquiry_no: '',
@@ -108,7 +110,7 @@ export async function submitCustomerServiceEnquiry(input: {
     .select('id,enquiry_no,status')
     .single();
 
-  if (error || !data) throw new Error(error?.message || 'Could not submit your request. Please try again.');
+  if (error || !data) throw new Error('Could not submit your request. Please try again.');
   return data as { id: string; enquiry_no: string; status: string };
 }
 
