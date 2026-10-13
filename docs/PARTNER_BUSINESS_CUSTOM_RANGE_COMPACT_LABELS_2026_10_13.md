@@ -16,3 +16,9 @@ Branch: `fix/partner-business-custom-close-single-line-kpis-20261013`
 - On the same branch, `apps/partner-app/app/(tabs)/policies.tsx` and `claims.tsx` now apply `summaryCardSelected` based on their existing selected filter state, keeping the light-blue selected surface, navy border, and bottom accent after finger release. Existing transient press feedback remains.
 - Rejected Claims does not falsely show a selected rejected-only list; its unsupported-filter notice and All fallback remain intact.
 - No API, auth, RLS, database, APK, AAB or OTA change. PR, merge, CI and device verification still pending.
+
+## Same-date previous-month MTD comparison (2026-10-13)
+- Added dual authorized `partner_app_business_range_v2` reads for current month day 1 through today and previous month day 1 through the same day (clamped to the previous month's last day for shorter months). Uses existing `getPartnerBusinessRange` function with the same partner commercial access checks.
+- Four MTD KPI cards now use current-period premiums, policy issuance count, earned intermediary commission (only if available), and **customers added in period**, rather than lifetime customer count; percentage change compares the matching preceding-month period.
+- Zero previous baseline gives `New` or `—`, not a misleading +100%; missing/failed reads show `—` instead of full-month percentage. Other period selectors retain existing behavior. Pull-to-refresh and focus refresh both authorized period reads.
+- This is frontend-only; no SQL or production database modification. Tests/CI and installed-device verification required. No OTA/APK/AAB.
