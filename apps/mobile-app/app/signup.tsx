@@ -1,11 +1,13 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Link, useRouter } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import type { User } from '@supabase/supabase-js';
 import { useState } from 'react';
 import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AuthExperience, LoginPromptCard } from '@/components/auth-experience';
+import { FirebaseCustomerOtpForm } from '@/components/firebase-customer-otp-form';
+import { firebaseCustomerRolloutEnabled, selectCustomerAuthProvider } from '@/lib/customer-identity';
 import { AuthGlassPanel, AuthStatusMessage, SecureActionButton } from '@/components/first-look';
 import { OtpDotsInput } from '@/components/otp-dots-input';
 import { routeSignedInUser, sendPhoneSignupOtp, syncCustomerSignupDetails, verifyPhoneOtp } from '@/lib/auth';
@@ -21,6 +23,8 @@ const privacyHref = '/legal/privacy-policy' as Href;
 
 export default function SignupScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ legacyOtp?: string }>();
+  const firebaseMode = firebaseCustomerRolloutEnabled() && params.legacyOtp !== '1';
   const [fullName, setFullName] = useState('');
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
@@ -91,6 +95,7 @@ export default function SignupScreen() {
     setLoading(true);
     try {
       const data = await verifyPhoneOtp(fullPhone, otp);
+      if (data.user) await selectCustomerAuthProvider('supabase');
       if (!data.user) {
         setError('OTP verification did not return an active account.');
         return;
@@ -147,6 +152,8 @@ export default function SignupScreen() {
     setMessage('');
     setError('');
   }
+
+  if (firebaseMode) return <FirebaseCustomerOtpForm mode="signup" />;
 
   return (
     <AuthExperience
