@@ -342,13 +342,12 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
             <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">
               Policies · {business.periodShortLabel}
             </p>
-            <div className="mt-2 flex min-h-[96px] min-w-0 flex-1 items-center gap-2">
-              <div className="flex min-w-0 flex-[0.9] items-center justify-center">
-                <p className="portal-display text-center text-[clamp(18px,2vw,27px)] font-semibold leading-none text-[#10213D]">
-                  {business.policyCount.toLocaleString("en-IN")}
-                </p>
-              </div>
-              <div className="flex min-w-0 flex-[1.3] flex-col gap-1.5 border-l border-[#DDE5EF] pl-2">
+            <div className="mt-2 grid min-h-[96px] min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1">
+              <div aria-hidden="true" />
+              <p className="portal-display text-center text-[clamp(18px,2vw,27px)] font-semibold leading-none tabular-nums text-[#10213D]">
+                {business.policyCount.toLocaleString("en-IN")}
+              </p>
+              <div className="ml-auto flex w-full max-w-[140px] min-w-0 flex-col gap-1.5">
                 {policyBreakdown.map((item) => (
                   <div key={item.label} className="flex min-w-0 items-center justify-between gap-1">
                     <span className="min-w-0 truncate text-[clamp(6px,0.65vw,8px)] font-semibold uppercase text-[#65758B]" title={item.label}>{item.label}</span>
