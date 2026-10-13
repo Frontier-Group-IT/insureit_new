@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell, ChevronRight, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase";
@@ -8,6 +8,23 @@ import { CustomerAvatar } from "./customer-avatar";
 
 export function CustomerHeaderActions({ name, userId }: { name: string; userId: string }) {
   const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const dismissOutside = (event: PointerEvent) => {
+      if (event.target instanceof Node && !menuRef.current?.contains(event.target)) setOpen(false);
+    };
+    const dismissEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", dismissOutside);
+    document.addEventListener("keydown", dismissEscape);
+    return () => {
+      document.removeEventListener("pointerdown", dismissOutside);
+      document.removeEventListener("keydown", dismissEscape);
+    };
+  }, [open]);
   const initial = name.trim().charAt(0).toUpperCase() || "C";
 
   async function signOut() {
@@ -22,11 +39,10 @@ export function CustomerHeaderActions({ name, userId }: { name: string; userId: 
         <Bell className="h-5 w-5" />
       </Link>
       <span className="h-8 w-px bg-[#D2DAE7]" aria-hidden="true" />
-      <div className="relative">
+      <div ref={menuRef} className="relative">
         <button type="button" aria-label="Open customer profile menu" aria-expanded={open} onClick={() => setOpen(!open)} className="grid h-11 w-11 place-items-center rounded-full border-2 border-[#245A9A] bg-white text-base font-bold text-[#10213D]">{initial}</button>
         {open ? (
           <>
-            <button className="fixed inset-0 z-40 cursor-default" aria-label="Close profile menu" onClick={() => setOpen(false)} />
             <div className="absolute right-0 top-14 z-50 w-[min(320px,calc(100vw-24px))] rounded-3xl border border-[#DBE4F0] bg-white shadow-[0_20px_50px_rgba(15,32,57,0.17)]">
               <div className="flex items-center gap-3 border-b border-[#EDF1F6] px-4 py-4 hover:bg-[#F6F9FD]">
                 <CustomerAvatar userId={userId} />

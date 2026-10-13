@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search, CarFront } from "lucide-react";
 
 const manufacturerIcons: Record<string, string> = {
   honda: "honda", suzuki: "suzuki", yamaha: "yamaha", hero: "hero", bajaj: "bajaj",
@@ -42,12 +42,12 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
     </section>
     <section className="rounded-2xl border border-[#D8E1EC] bg-white p-3 shadow-[0_8px_25px_rgba(20,40,75,.04)] sm:p-4">
       <header className="mb-3 flex flex-wrap items-center gap-3">
-        <h2 className="shrink-0 text-[19px] font-black text-[#10213D]">Vehicle Register</h2>
-        <label className="flex min-w-[190px] max-w-[370px] flex-1 items-center gap-2 rounded-lg border border-[#D8E1EC] bg-white px-3 py-2.5 focus-within:border-[#4E95E9]">
+        <h2 className="flex shrink-0 items-center gap-2 text-[19px] font-black text-[#10213D]"><CarFront className="h-5 w-5 text-[#175CA8]" aria-hidden="true" />Vehicle Register</h2>
+        <label className="flex w-full min-w-0 flex-1 items-center gap-2 rounded-lg border sm:min-w-[220px] sm:max-w-[400px] border-[#D8E1EC] bg-white px-3 py-2.5 focus-within:border-[#4E95E9]">
           <Search className="h-4 w-4 shrink-0 text-[#73829A]" /><span className="sr-only">Search vehicles</span>
           <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search vehicles..." className="w-full min-w-0 border-0 bg-transparent p-0 text-[11px] outline-none" />
         </label>
-        <label className="ml-auto flex items-center gap-1.5 rounded-lg border border-[#D8E1EC] px-2.5 text-[11px] text-[#415775]"><SlidersHorizontal className="h-3.5 w-3.5"/><span className="sr-only">Vehicle status filter</span><select aria-label="Vehicle status filter" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} className="max-w-[150px] bg-transparent py-2 outline-none"><option value="all">All Status</option><option value="due">Due</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="expired">Expired</option></select></label>
+        <label className="ml-auto flex items-center text-[11px] text-[#415775]"><span className="sr-only">Vehicle status filter</span><select aria-label="Vehicle status filter" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} className="max-w-[150px] rounded-lg border border-[#D8E1EC] bg-white px-3 py-2 outline-none"><option value="all">All Status</option><option value="due">Due</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="expired">Expired</option></select></label>
       </header>
     {rows.length === 0 ? <div className="rounded-xl border bg-white p-8 text-center text-sm">No matching vehicles. Try another search or filter.</div> :
     <div className="overflow-x-auto rounded-xl border border-[#D8E1EC] bg-white">

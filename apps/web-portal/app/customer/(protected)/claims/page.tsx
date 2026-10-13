@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileText } from "lucide-react";
+import { FileText, ClipboardList } from "lucide-react";
 import { getStaticInsurerLogo } from "@/lib/insurer-logo";
 import { ManufacturerMark } from "../vehicles/customer-vehicles-register";
 import { CustomerClaimsSearch, CustomerClaimsStageFilter } from "./customer-claims-search";
@@ -65,7 +65,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
       </section>
       <section className="overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white shadow-[0_8px_30px_rgba(20,40,75,.04)]">
         <div className="flex flex-wrap items-center gap-2 border-b border-[#E6ECF4] p-3 sm:p-4 xl:flex-nowrap">
-          <h2 className="shrink-0 text-[17px] font-black text-[#10213D]">Claims Register</h2>
+          <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-black text-[#10213D]"><ClipboardList className="h-5 w-5 text-[#175CA8]" aria-hidden="true" />Claims Register</h2>
           <CustomerClaimsSearch initialQuery={params.q ?? ""} accountId={account.id} type={type} />
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <CustomerClaimsStageFilter value={stageFilter} stages={stages} accountId={account.id} type={type} query={params.q ?? ""} />

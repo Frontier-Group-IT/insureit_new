@@ -38,7 +38,7 @@ export default async function CustomerEChallanPage({
       </section>
       <div className="grid items-stretch gap-4 lg:grid-cols-[.72fr_1.28fr]">
         <aside className="rounded-2xl border border-[#DCE4EE] bg-white p-5 shadow-[0_8px_24px_rgba(28,50,82,.04)]">
-          <h2 className="text-[19px] font-black text-[#10213D]">How it works</h2>
+          <h2 className="flex items-center gap-2 text-[19px] font-black text-[#10213D]"><FileSearch className="h-5 w-5 text-[#175CA8]" aria-hidden="true" />How it works</h2>
           <ol className="mt-5 space-y-5">
             {[
               { title: "Enter vehicle details", description: "Provide your vehicle registration number and optional challan details.", Icon: CarFront },

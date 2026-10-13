@@ -53,7 +53,7 @@ export function CustomerDocumentVault({ customerId, documents }: { customerId: s
   return (
     <div className="space-y-4">
       <div className="grid gap-2 sm:grid-cols-[180px_1fr]">
-        <select value={type} onChange={(e) => setType(e.target.value)} className="h-10 rounded-xl border border-[#D8E1EC] bg-white px-3 text-[11px] font-bold text-[#35445B]">
+        <select aria-label="Document type" value={type} onChange={(e) => setType(e.target.value)} disabled={busy} className="relative z-10 h-10 w-full cursor-pointer appearance-auto rounded-xl border border-[#D8E1EC] bg-white px-3 text-[11px] font-bold text-[#35445B] outline-none focus:border-[#267AFF] focus:ring-2 focus:ring-[#267AFF]/20 disabled:cursor-not-allowed disabled:opacity-60">
           <option>Other</option><option>RC</option><option>Insurance</option><option>Permit</option><option>PUC</option><option>Fitness</option><option>Tax Receipt</option>
         </select>
         <label className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#9FB6D2] bg-[#F7FAFE] text-[10px] font-black text-[#174EA6]">

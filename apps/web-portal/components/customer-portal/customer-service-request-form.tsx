@@ -32,6 +32,7 @@ export function CustomerServiceRequestForm(props: Props) {
   const [vehicleId, setVehicleId] = useState("");
   const [vehicleNo, setVehicleNo] = useState("");
   const [newVehicle, setNewVehicle] = useState(false);
+  const [quoteVehicleChoice, setQuoteVehicleChoice] = useState<"registered" | "new" | null>(null);
   const [vehicleDetails, setVehicleDetails] = useState("");
   const [quoteNeed, setQuoteNeed] = useState("renewal");
   const [challanNo, setChallanNo] = useState("");
@@ -64,6 +65,7 @@ export function CustomerServiceRequestForm(props: Props) {
     let payload: Record<string, unknown>;
     if (props.mode === "insurance_quote") {
       if (!consent) return setError("Please accept the terms to continue.");
+      if (quoteVehicleChoice === null) return setError("Select Registered vehicle or Brand new vehicle.");
       if (newVehicle && vehicleDetails.trim().length < 3) return setError("Enter the vehicle make or model.");
       if (!newVehicle && vehicleNo.replace(/[^A-Za-z0-9]/g, "").length < 6) return setError("Enter a valid vehicle number.");
       const needLabel = { renewal: "Renewal", new_policy: "New policy", change_insurer: "Change insurer", other: "Other" }[quoteNeed] ?? "Quote";
@@ -156,17 +158,14 @@ export function CustomerServiceRequestForm(props: Props) {
   if (props.mode === "insurance_quote") {
     return (
       <div className="space-y-0">
-        <div className="grid gap-3 border-b border-[#E8EDF5] pb-3 lg:grid-cols-[190px_1fr]">
-          <div className="flex items-start gap-2"><CarFront className="mt-0.5 h-5 w-5 text-[#122B51]"/><div><h3 className="text-[12px] font-black text-[#10213D]">Vehicle</h3><p className="mt-1 text-[10px] text-[#657791]">Select the vehicle you want a quote for.</p></div></div>
-          <div className="space-y-2">
-            <div className="grid grid-cols-2 gap-2">
-              <button type="button" aria-pressed={!newVehicle} onClick={() => setNewVehicle(false)} className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-left transition ${!newVehicle ? "border-[#267AFF] bg-[#EDF5FF]" : "border-[#D7E2F0] hover:bg-[#F8FAFD]"}`}><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#E2EFFF] text-[#146AD3]"><CarFront className="h-4 w-4"/></span><span><strong className="block text-[10px] text-[#11284B]">Registered vehicle</strong><small className="text-[9px] text-[#71839A]">Select from your fleet</small></span></button>
-              <button type="button" aria-pressed={newVehicle} onClick={() => {setNewVehicle(true);setVehicleId("");setVehicleNo("");}} className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-left transition ${newVehicle ? "border-[#267AFF] bg-[#EDF5FF]" : "border-[#D7E2F0] hover:bg-[#F8FAFD]"}`}><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#F1F5FB] text-[#183C6B]"><CirclePlus className="h-4 w-4"/></span><span><strong className="block text-[10px] text-[#11284B]">Brand new vehicle</strong><small className="text-[9px] text-[#71839A]">Get a new policy</small></span></button>
-            </div>
+        <div className="border-b border-[#E8EDF5] pb-3">
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" aria-expanded={quoteVehicleChoice === "registered"} aria-pressed={quoteVehicleChoice === "registered"} onClick={() => {setQuoteVehicleChoice("registered");setNewVehicle(false);}} className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-left transition ${quoteVehicleChoice === "registered" ? "border-[#267AFF] bg-[#EDF5FF]" : "border-[#D7E2F0] hover:bg-[#F8FAFD]"}`}><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#E2EFFF] text-[#146AD3]"><CarFront className="h-4 w-4"/></span><span><strong className="block text-[10px] text-[#11284B]">Registered vehicle</strong><small className="text-[9px] text-[#71839A]">Select from your fleet</small></span></button>
+            <button type="button" aria-expanded={quoteVehicleChoice === "new"} aria-pressed={quoteVehicleChoice === "new"} onClick={() => {setQuoteVehicleChoice("new");setNewVehicle(true);setVehicleId("");setVehicleNo("");}} className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-left transition ${quoteVehicleChoice === "new" ? "border-[#267AFF] bg-[#EDF5FF]" : "border-[#D7E2F0] hover:bg-[#F8FAFD]"}`}><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#F1F5FB] text-[#183C6B]"><CirclePlus className="h-4 w-4"/></span><span><strong className="block text-[10px] text-[#11284B]">Brand new vehicle</strong><small className="text-[9px] text-[#71839A]">Get a new policy</small></span></button>
           </div>
         </div>
-        {!newVehicle && props.vehicles.length > 0 ? (
-          <div className="flex flex-col gap-2 border-b border-[#E8EDF5] py-3 lg:pl-[202px]">
+        {quoteVehicleChoice === "registered" && props.vehicles.length > 0 ? (
+          <div className="flex flex-col gap-2 border-b border-[#E8EDF5] py-3">
             <label htmlFor="insurance-quote-vehicle" className="text-[11px] font-bold text-[#142746]">Select your vehicle</label>
             <select
               id="insurance-quote-vehicle"
@@ -181,13 +180,13 @@ export function CustomerServiceRequestForm(props: Props) {
                 </option>
               ))}
             </select>
-            <button type="button" onClick={() => { setNewVehicle(true); setVehicleId(""); setVehicleNo(""); }}
+            <button type="button" onClick={() => { setQuoteVehicleChoice("new"); setNewVehicle(true); setVehicleId(""); setVehicleNo(""); }}
               className="inline-flex w-fit items-center gap-1.5 text-[11px] font-bold text-[#146AD3] hover:underline">
               <CirclePlus className="h-4 w-4" aria-hidden="true" /> Add another vehicle
             </button>
           </div>
         ) : null}
-        {newVehicle ? <label className="block border-b border-[#E8EDF5] py-2 text-[10px] font-bold text-[#61738B]">Vehicle make / model<input className={`${inputClass} mt-1`} value={vehicleDetails} onChange={event=>setVehicleDetails(event.target.value)} placeholder="Enter vehicle make / model"/></label> : !props.vehicles.length ? <label className="block border-b border-[#E8EDF5] py-2 text-[10px] font-bold text-[#61738B]">Vehicle registration number<input className={`${inputClass} mt-1`} value={vehicleNo} onChange={event=>setVehicleNo(event.target.value.toUpperCase())} placeholder="Enter registration number"/></label> : null}
+        {quoteVehicleChoice === "new" ? <label className="block border-b border-[#E8EDF5] py-2 text-[10px] font-bold text-[#61738B]">Vehicle make / model<input className={`${inputClass} mt-1`} value={vehicleDetails} onChange={event=>setVehicleDetails(event.target.value)} placeholder="Enter vehicle make / model"/></label> : quoteVehicleChoice === "registered" && !props.vehicles.length ? <label className="block border-b border-[#E8EDF5] py-2 text-[10px] font-bold text-[#61738B]">Vehicle registration number<input className={`${inputClass} mt-1`} value={vehicleNo} onChange={event=>setVehicleNo(event.target.value.toUpperCase())} placeholder="Enter registration number"/></label> : null}
         <div className="grid gap-2 border-b border-[#E8EDF5] py-3 lg:grid-cols-[190px_1fr]"><div className="flex items-start gap-2"><ClipboardList className="mt-0.5 h-5 w-5 text-[#122B51]"/><div><h3 className="text-[12px] font-black text-[#10213D]">Quote requirement</h3><p className="mt-1 text-[10px] text-[#657791]">Tell us what you need.</p></div></div><div className="flex flex-wrap gap-2">{[["renewal","Renewal"],["new_policy","New policy"],["change_insurer","Change insurer"],["other","Other"]].map(([key,label])=><button type="button" key={key} aria-pressed={quoteNeed===key} onClick={()=>setQuoteNeed(key)} className={`inline-flex min-h-8 items-center gap-2 rounded-full border px-3 text-[10px] font-bold ${quoteNeed===key ? "border-[#267AFF] bg-[#EDF5FF] text-[#095EC6]" : "border-[#D7E2F0] text-[#415775] hover:bg-[#F8FAFD]"}`}><span className={`grid h-3.5 w-3.5 place-items-center rounded-full border-2 ${quoteNeed===key ? "border-[#267AFF] bg-[#267AFF] shadow-[inset_0_0_0_2px_white]" : "border-[#A8B8CC]"}`}/>{label}</button>)}</div></div>
         <div className="grid gap-2 py-3 lg:grid-cols-[190px_1fr]"><div className="flex items-start gap-2"><MessageSquareText className="mt-0.5 h-5 w-5 text-[#122B51]"/><div><h3 className="text-[12px] font-black text-[#10213D]">Additional information</h3><p className="mt-1 text-[10px] text-[#657791]">Add any specific details (optional).</p></div></div><textarea className="min-h-14 w-full rounded-xl border border-[#D8E1EC] bg-white px-3 py-2 text-[11px] text-[#10213D] outline-none focus:border-[#8EACD1]" value={note} onChange={event=>setNote(event.target.value)} placeholder="Add a note (optional)"/></div>
         <div className="space-y-2 rounded-lg border border-[#DCE6F2] bg-[#F6F9FD] p-3"><label className="flex items-start gap-2 text-[10px] font-medium text-[#405473]"><input type="checkbox" checked={consent} onChange={event=>setConsent(event.target.checked)} className="mt-0.5 h-3.5 w-3.5 accent-[#1766C4]"/><span>I agree to the Terms of Use, Privacy Policy and authorize INSUREIT to contact me about this request.</span></label><label className="flex items-center gap-2 text-[10px] font-medium text-[#405473]"><input type="checkbox" checked={whatsapp} onChange={event=>setWhatsapp(event.target.checked)} className="h-3.5 w-3.5 accent-[#1766C4]"/>Send updates on WhatsApp</label></div>

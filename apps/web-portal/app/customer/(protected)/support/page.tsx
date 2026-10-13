@@ -91,7 +91,7 @@ export default async function CustomerSupportPage({
 
       <section id="support-activity">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div><p className="text-[10px] font-black uppercase tracking-[0.13em] text-[#718096]">Your activity</p><h2 className="mt-1 text-[16px] font-black text-[#10213D]">Requests & tickets</h2></div>
+          <div><p className="text-[10px] font-black uppercase tracking-[0.13em] text-[#718096]">Your activity</p><h2 className="mt-1 flex items-center gap-2 text-[16px] font-black text-[#10213D]"><TicketCheck className="h-5 w-5 text-[#175CA8]" aria-hidden="true" />Requests & tickets</h2></div>
           <form className="flex max-w-sm items-center gap-2 rounded-xl border border-[#D8E1EC] bg-white px-3 py-2">
             <Search className="h-4 w-4 text-[#73829A]" />
             <input type="hidden" name="account" value={account.id} />

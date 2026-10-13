@@ -336,33 +336,35 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
         </div>
       </div>
 
-      <div className={`grid border-t border-[#E7ECF2] bg-[linear-gradient(90deg,#FBFCFF,#F8FAFD,#FAFFFE)] ${headlineGrid(headline.length + 1)}`}>
-        <div className="px-4 py-4 sm:px-5">
-          <div className="grid grid-cols-[1fr_2fr] items-center gap-4">
-            <div className="min-w-0">
-              <p className="portal-display whitespace-normal break-words text-[25px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">
+      <div className="overflow-x-auto border-t border-[#E7ECF2]">
+        <div className="grid min-w-[880px] grid-cols-4 divide-x divide-[#E7ECF2]">
+          <div className="flex min-h-[124px] min-w-0 flex-col px-3 py-2.5">
+            <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">
+              Policies · {business.periodShortLabel}
+            </p>
+            <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] items-center">
+              <p className="portal-display min-w-0 text-center text-[27px] font-semibold leading-none text-[#10213D]">
                 {business.policyCount.toLocaleString("en-IN")}
               </p>
-              <p className="mt-2 whitespace-normal break-words text-[9px] font-black uppercase leading-relaxed tracking-[.08em] text-[#52657F]">
-                Policies · {business.periodShortLabel}
-              </p>
-            </div>
-            <div className="min-w-0 space-y-1.5">
-              {policyBreakdown.map((item) => (
-                <div key={item.label} className="flex items-center justify-between gap-3 text-[8px] leading-tight">
-                  <span className="font-bold uppercase tracking-[.05em] text-[#6D7B90]">{item.label}</span>
-                  <span className="portal-display text-[13px] font-semibold text-[#20314D]">{item.value.toLocaleString("en-IN")}</span>
-                </div>
-              ))}
+              <div className="flex flex-col gap-1.5 border-l border-[#DDE5EF] pl-3">
+                {policyBreakdown.map((item) => (
+                  <div key={item.label} className="flex min-w-0 items-center justify-between gap-2">
+                    <span className="truncate text-[8px] font-semibold uppercase text-[#65758B]" title={item.label}>{item.label}</span>
+                    <span className="portal-display shrink-0 text-[12px] font-semibold tabular-nums text-[#10213D]">{item.value.toLocaleString("en-IN")}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
+          {headline.map((item) => (
+            <div key={item.label} className="flex min-h-[124px] min-w-0 flex-col px-3 py-2.5">
+              <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">{item.label}</p>
+              <div className="flex min-h-0 flex-1 items-center justify-center">
+                <p className="portal-display break-words text-center text-[27px] font-semibold leading-tight text-[#10213D]">{item.value}</p>
+              </div>
+            </div>
+          ))}
         </div>
-        {headline.map((item) => (
-          <div key={item.label} className="border-t border-[#E5EAF1] px-4 py-4 sm:border-l sm:border-t-0 sm:px-5">
-            <p className="portal-display whitespace-normal break-words text-[25px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">{item.value}</p>
-            <p className="mt-2 whitespace-normal break-words text-[9px] font-black uppercase leading-relaxed tracking-[.08em] text-[#52657F]">{item.label}</p>
-          </div>
-        ))}
       </div>
 
       <details className="group border-t border-[#E7ECF2]">
