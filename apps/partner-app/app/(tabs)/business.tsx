@@ -241,7 +241,7 @@ export default function BusinessScreen() {
         refreshControl: (
           <RefreshControl
             refreshing={workspace.refreshing}
-            onRefresh={() => void Promise.all([workspace.refresh(), currentMtd.refresh(), previousMtd.refresh()])
+            onRefresh={() => void Promise.all([workspace.refresh(), currentMtd.refresh(), previousMtd.refresh()])}
             tintColor={partnerTheme.colors.brand}
             colors={[partnerTheme.colors.brand]}
           />
