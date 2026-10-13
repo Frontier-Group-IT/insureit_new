@@ -342,17 +342,17 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
             <p className="w-full self-start text-left text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">
               Policies · {business.periodShortLabel}
             </p>
-            <div className="mt-2 grid min-h-[96px] w-full min-w-0 flex-1 grid-cols-[44%_minmax(0,1fr)] items-center">
+            <div className="mt-1.5 grid min-h-[88px] w-full min-w-0 flex-1 grid-cols-[44%_56%] items-center">
               <div className="flex min-w-0 items-center justify-center">
                 <p className="portal-display text-center text-[clamp(18px,2vw,27px)] font-semibold leading-none tabular-nums text-[#10213D]">
                   {business.policyCount.toLocaleString("en-IN")}
                 </p>
               </div>
-              <div className="flex w-full min-w-0 flex-col gap-1.5 border-l border-[#DDE5EF] pl-3">
+              <div className="relative flex w-full min-w-0 flex-col gap-1.25 border-0 pl-4 pr-1 before:absolute before:inset-y-2 before:left-0 before:w-px before:bg-[#DDE5EF] before:content-[''] after:hidden">
                 {policyBreakdown.map((item) => (
-                  <div key={item.label} className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1">
+                  <div key={item.label} className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-0 after:hidden before:hidden">
                     <span className="min-w-0 truncate text-[clamp(6px,0.65vw,8px)] font-semibold uppercase text-[#65758B]" title={item.label}>{item.label}</span>
-                    <span className="portal-display justify-self-end text-right text-[clamp(9px,0.9vw,12px)] font-semibold tabular-nums text-[#10213D]">{item.value.toLocaleString("en-IN")}</span>
+                    <span className="portal-display justify-self-end border-0 text-right text-[clamp(9px,0.9vw,12px)] font-semibold tabular-nums text-[#10213D]">{item.value.toLocaleString("en-IN")}</span>
                   </div>
                 ))}
               </div>
