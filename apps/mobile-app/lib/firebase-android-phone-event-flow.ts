@@ -93,7 +93,8 @@ export class FirebaseAndroidPhoneEventFlow {
             // Only accept an actual already-authenticated matching Firebase
             // user with a signed ID token; never invent a credential.
             this.emit({ state: 'auto_verifying' });
-            void this.finishAlreadySignedIn(requestId).catch(fail);
+            this.verifying = this.finishAlreadySignedIn(requestId);
+            void this.verifying.catch(fail);
             succeed();
             return;
           }
