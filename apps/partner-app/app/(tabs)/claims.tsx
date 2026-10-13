@@ -46,6 +46,7 @@ export default function ClaimsScreen() {
   const [state, setState] = useState<PartnerClaimState>(savedClaimState);
   const [query, setQuery] = useState(savedClaimQuery);
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
+  const [rejectedFilterNotice, setRejectedFilterNotice] = useState(false);
   const debouncedSearch = useDebouncedValue(query.trim(), 350);
   useEffect(() => { setVisibleLimit(PAGE_SIZE); }, [state, debouncedSearch]);
 
@@ -79,6 +80,14 @@ export default function ClaimsScreen() {
   const refreshAll = useCallback(async () => {
     await Promise.all([summary.refresh(), collection.refresh()]);
   }, [collection, summary]);
+  const selectSummary = (filter: PartnerClaimState | 'rejected') => {
+    setQuery('');
+    setVisibleLimit(PAGE_SIZE);
+    // Rejected is not supported by the current authorized claim-list RPC.
+    // Return to All with a clear notice instead of displaying incorrect results.
+    setRejectedFilterNotice(filter === 'rejected');
+    setState(filter === 'rejected' ? 'all' : filter);
+  };
   const name = context?.identity.display_name || 'Partner';
 
   const header = (
@@ -154,19 +163,35 @@ export default function ClaimsScreen() {
 
         <View style={styles.summaryRow}>
           {([
-            { label: 'Total Claims', value: summary.data?.total_claims, icon: 'document-text-outline' as const },
-            { label: 'Settled Claims', value: summary.data?.completed_claims, icon: 'shield-checkmark' as const },
-            { label: 'In Progress', value: summary.data?.active_claims, icon: 'hourglass-outline' as const },
-            { label: 'Rejected Claims', value: undefined, icon: 'close-circle' as const },
+            { label: 'Total Claims', filter: 'all' as const, value: summary.data?.total_claims, icon: 'document-text-outline' as const },
+            { label: 'Settled Claims', filter: 'completed' as const, value: summary.data?.completed_claims, icon: 'shield-checkmark' as const },
+            { label: 'In Progress', filter: 'active' as const, value: summary.data?.active_claims, icon: 'hourglass-outline' as const },
+            { label: 'Rejected Claims', filter: 'rejected' as const, value: undefined, icon: 'close-circle' as const },
           ]).map((metric) => (
-            <View key={metric.label} style={styles.summaryCard}>
+            <Pressable
+              key={metric.label}
+              accessibilityRole="button"
+              accessibilityLabel={`Show ${metric.label}`}
+              accessibilityState={{ selected: metric.filter === 'rejected' ? rejectedFilterNotice : !rejectedFilterNotice && state === metric.filter && !query }}
+              onPress={() => selectSummary(metric.filter)}
+              style={({ pressed }) => [styles.summaryCard, pressed && styles.summaryCardPressed]}
+            >
               <View style={styles.summaryIcon}><Ionicons name={metric.icon} size={17} color="#153F88" /></View>
               <Text style={styles.summaryValue}>{metric.value == null ? '—' : metric.value.toLocaleString('en-IN')}</Text>
               <Text numberOfLines={2} style={styles.summaryLabel}>{metric.label}</Text>
               <Text style={styles.summaryChange}>—% vs last month</Text>
-            </View>
+            </Pressable>
           ))}
         </View>
+
+        {rejectedFilterNotice ? (
+          <View style={styles.banner}>
+            <PartnerBanner
+              tone="warning"
+              message="A rejected-only filter is not yet available. Showing all claims instead."
+            />
+          </View>
+        ) : null}
 
         {(collection.stale || summary.stale) ? (
           <View style={styles.banner}>
@@ -189,7 +214,7 @@ export default function ClaimsScreen() {
                   accessibilityRole="tab"
                   accessibilityLabel={count === null ? filter.label : `${filter.label} ${count}`}
                   accessibilityState={{ selected: active }}
-                  onPress={() => setState(filter.value)}
+                  onPress={() => { setRejectedFilterNotice(false); setState(filter.value); }}
                   style={[styles.tab, active && styles.tabActive]}
                 >
                   <View style={styles.tabLabelRow}>
@@ -424,6 +449,7 @@ const styles = StyleSheet.create({
   banner: { marginTop: 8 },
   summaryRow: { flexDirection: 'row', gap: 3, marginTop: 8 },
   summaryCard: { flex: 1, minWidth: 0, alignItems: 'center', paddingVertical: 8, paddingHorizontal: 2, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E3ECF8', borderRadius: 9, elevation: 1 },
+  summaryCardPressed: { backgroundColor: '#E8F1FF' },
   summaryIcon: { width: 27, height: 27, borderRadius: 9, backgroundColor: '#EDF4FF', alignItems: 'center', justifyContent: 'center' },
   summaryValue: { marginTop: 3, color: '#153F88', fontSize: 15, fontWeight: '800' },
   summaryLabel: { color: '#506481', fontSize: 7.5, fontWeight: '700', textAlign: 'center', minHeight: 18 },
