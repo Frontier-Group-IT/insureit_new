@@ -337,8 +337,8 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
       </div>
 
       <div className="border-t border-[#E7ECF2]">
-        <div className="flex w-full flex-nowrap divide-x divide-[#E7ECF2] bg-[#FAFCFE]">
-          <div className="flex min-w-0 flex-col items-start px-2 py-3 sm:px-3" style={{ width: commercial ? "30%" : "50%" }}>
+        <div className="flex w-full flex-nowrap bg-[#FAFCFE]">
+          <div className="flex min-w-0 flex-col items-start overflow-hidden px-2 py-3 sm:px-3" style={{ width: commercial ? "30%" : "50%" }}>
             <p className="w-full self-start text-left text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">
               Policies · {business.periodShortLabel}
             </p>
@@ -359,7 +359,7 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
             </div>
           </div>
           {headline.map((item, index) => (
-            <div key={item.label} className="flex min-w-0 flex-col px-2 py-3 sm:px-3" style={{ width: commercial ? ["27%", "23%", "20%"][index] : "50%" }}>
+            <div key={item.label} className="flex min-w-0 flex-col border-l border-[#E7ECF2] px-2 py-3 sm:px-3" style={{ width: commercial ? ["27%", "23%", "20%"][index] : "50%" }}>
               <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">{item.label}</p>
               <div className="flex min-h-[96px] min-w-0 flex-1 items-center justify-center">
                 <p className="portal-display min-w-0 break-words text-center text-[clamp(16px,2vw,27px)] font-semibold leading-tight text-[#10213D]">{item.value}</p>
