@@ -63,3 +63,14 @@ test('authenticated service enquiries use selected Customer data client; guest e
   assert.match(challan, /getProfile\(identity\.profileId, identity\.data\)/);
   assert.match(challan, /getCustomerForUser\(identity\.profileId, identity\.data\)/);
 });
+
+
+test('shared logout explicitly clears selected native Firebase Customer session', () => {
+  const auth = read('lib/auth.ts');
+  const identity = read('lib/customer-identity.ts');
+  assert.match(auth, /if \(await isFirebaseCustomerAuthSelected\(\)\)/);
+  assert.match(auth, /await signOutFirebaseCustomer\(\);/);
+  assert.ok(auth.indexOf('await signOutFirebaseCustomer()') < auth.indexOf('const currentSession = await getCurrentSession()'));
+  assert.match(identity, /await signOut\(getAuth\(\)\)/);
+  assert.match(identity, /AsyncStorage\.getItem\(modeKey\) === 'firebase'/);
+});
