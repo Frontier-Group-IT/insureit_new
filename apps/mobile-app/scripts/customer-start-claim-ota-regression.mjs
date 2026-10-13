@@ -12,7 +12,9 @@ const productionOtaWorkflow = await readFile(
   'utf8',
 );
 
-const draftInsertIndex = startClaim.indexOf("supabase.from('claims').insert({");
+const draftInsertIndex = startClaim.indexOf("identity.data.from('claims').insert({");
+assert.ok(startClaim.includes('const identity = await getCustomerIdentity()'), 'Start Claim must use the current verified Customer identity.');
+assert.ok(startClaim.includes('created_by: identity.profileId'), 'Managed claim drafts must use canonical customer profile UUID.');
 const draftStatusIndex = startClaim.indexOf("current_status: 'Draft'", draftInsertIndex);
 const draftIdSelectionIndex = startClaim.indexOf(".select('id').single()", draftInsertIndex);
 const createdClaimNavigationIndex = startClaim.indexOf('draftClaimId: draftClaim.id', draftInsertIndex);
@@ -65,11 +67,14 @@ assert.match(rootLayout, /isUpdatePending/, 'Root layout must detect a downloade
 assert.doesNotMatch(rootLayout, /Updates\.reloadAsync\(\)/, 'A downloaded OTA must not restart an active customer workflow or reset claim navigation.');
 assert.match(rootLayout, /activation deferred until next app launch/, 'Pending OTA activation must be explicitly deferred to the next app launch.');
 
-assert.equal(appConfig.version, '0.3.0', 'Customer OTA must remain compatible with production runtime 0.3.0.');
-assert.equal(appConfig.android?.versionCode, 9, 'Customer OTA must remain aligned with production Android versionCode 9.');
+assert.equal(appConfig.version, '0.3.1', 'Firebase migration candidate must stay scoped to the internal-testing 0.3.1 runtime.');
+assert.equal(appConfig.android?.versionCode, 10, 'Firebase migration candidate must stay on Android versionCode 10.');
 assert.equal(appConfig.runtimeVersion?.policy, 'appVersion', 'Customer runtimeVersion policy must remain appVersion.');
 assert.equal(easConfig.build?.production?.channel, 'production', 'Production APK/AAB must remain bound to Expo channel production.');
 assert.match(productionOtaWorkflow, /--channel production/, 'Customer production OTA workflow must publish to Expo channel production.');
-assert.match(productionOtaWorkflow, /github\.ref == 'refs\/heads\/main'/, 'Production OTA publication must remain restricted to main.');
+assert.match(productionOtaWorkflow, /github\.ref == 'refs\/heads\/main'/, 'Firebase OTA publication must remain restricted to main.');
+assert.match(productionOtaWorkflow, /workflow_dispatch:/, 'Firebase OTA must require explicit manual dispatch.');
+assert.doesNotMatch(productionOtaWorkflow, /^  push:/m, 'Firebase OTA must never publish automatically from a push.');
+assert.match(productionOtaWorkflow, /Expected app\/runtime 0\.3\.1/, 'Firebase OTA must reject other app runtimes.');
 
 console.log('Customer Start Claim / OTA activation / claim upload retry regression passed.');
