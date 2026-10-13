@@ -8,3 +8,6 @@ Branch: `fix/partner-business-custom-close-single-line-kpis-20261013`
 - All four Business Overview KPI labels now render on one line via `numberOfLines={1}` and `adjustsFontSizeToFit`, reduced horizontal padding and compact font sizing. Existing values, trends, navigation targets, backend calls and authorization unchanged.
 - Validation required: open each Custom selector, choose a valid From/To, apply and observe panel dismiss and updated data; simulate API failure and confirm panel remains open; test one-line labels on small-screen Android.
 - No SQL/database changes, PR, merge, OTA, APK or AAB.
+
+## Trend bar appearance follow-up
+- Removed the gray `#EEF3FA` background from `styles.barTrack` in `apps/partner-app/app/(tabs)/business.tsx` on this same branch. The blue premium bars, their scaled heights, labels, months, chart sizes, and compact-mode override remain unchanged. No PR, merge, OTA, APK or AAB was performed; CI and installed-device visual checks are still pending.
