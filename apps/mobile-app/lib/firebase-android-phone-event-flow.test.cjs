@@ -93,3 +93,19 @@ test('instant verification without a matching authenticated Firebase user never 
  assert.ok(statuses.some(s=>s.state==='error'));
  await assert.rejects(flow.verify('123456'), /missing-verification-id/);
 });
+
+test('instant verification with delayed Firebase user never demands a manual SMS verificationId',async()=>{
+ const observers=[];let resolveCurrent;
+ const current=new Promise(resolve=>{resolveCurrent=resolve;});
+ const flow=new FirebaseAndroidPhoneEventFlow({
+   verifyPhoneNumber:()=>({on:(_event,observer)=>observers.push(observer)}),
+   getCurrentVerifiedUser:()=>current,
+   signInWithPhoneCredential:async()=>{throw Error('should not sign in with invented SMS');},
+ });
+ const sent=flow.send(phone);
+ observers[0]({state:'verified',verificationId:null,code:null});
+ await sent;
+ const completion=flow.verify('');
+ resolveCurrent(user);
+ assert.equal((await completion).uid,'test-firebase-uid');
+});
