@@ -10,7 +10,16 @@
     },
     "production": {
       "channel": "production",
-      "autoIncrement": false
+      "autoIncrement": false,
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_ENABLED": "true",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ilzhsfqqjyppzzvfscmh.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj",
+        "EXPO_PUBLIC_PORTAL_URL": "https://portal.insureit.in"
+      }
     }
   }
 }
