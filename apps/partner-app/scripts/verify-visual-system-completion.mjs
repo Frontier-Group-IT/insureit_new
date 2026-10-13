@@ -108,7 +108,7 @@ for (const businessAsset of ['actions.quickRenewals', 'actions.quickClaims', 'ac
   requireText(business, `PartnerAssets.${businessAsset}`, `Business is missing ${businessAsset} artwork.`);
 }
 requireText(business, 'function BlueIcon(', 'Business must keep the shared blue generated-icon treatment.');
-requireText(business, '<PartnerBusinessOverviewIcon kind={icon} size={38} />', 'Business Overview KPI cards must use the professional shared KPI icon component.');
+requireText(business, '<PartnerBusinessOverviewIcon kind={icon} size={24} />', 'Business Overview KPI cards must use the professional shared KPI icon component.');
 for (const kind of ['premium', 'policies', 'commission', 'customers']) {
   requireText(business, `icon="${kind}"`, `Business Overview must map the ${kind} professional KPI icon.`);
   requireText(businessOverviewIcons, `${kind}:`, `Business Overview icon component is missing the ${kind} icon treatment.`);
@@ -132,7 +132,7 @@ requireText(business, 'getPartnerPayoutSummary()', 'Business must continue loadi
 requireText(business, "source={require('../../assets/partner/banners/claims-header-reference.jpg')}", 'Business header must use the same reference background as Claims and Policies.');
 requireText(business, "heroBackdrop: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%', opacity: 0.92 }", 'Business header backdrop must keep Claims/Policies crop and opacity.');
 requireText(business, "heroShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(1,42,95,0.10)' }", 'Business header must keep the Claims/Policies shade overlay.');
-requireText(business, "heroBanner: { height: 162", 'Business header height must match Claims and Policies.');
+requireText(business, "heroBanner: { height: 98", 'Business header must retain the compact reference height.');
 
 requireText(customers, 'PartnerAssets.emptyStates.noCustomers', 'Customers empty state must use the prepared no-customers artwork.');
 requireText(policies, 'PartnerAssets.emptyStates.noPolicies', 'Policies empty state must use the prepared no-policies artwork.');
