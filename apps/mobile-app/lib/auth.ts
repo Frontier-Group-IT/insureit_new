@@ -453,6 +453,15 @@ export async function signUp(email: string, password: string, fullName: string, 
 }
 
 export async function signOut(router: Router) {
+  // Customer Android can have a real Firebase native session with no Supabase
+  // Auth session. Clear that selected provider before any legacy account logic.
+  // Never fall back to a different Supabase account when Firebase logout fails.
+  const { isFirebaseCustomerAuthSelected, signOutFirebaseCustomer } = await import('./customer-identity');
+  if (await isFirebaseCustomerAuthSelected()) {
+    await signOutFirebaseCustomer();
+    router.replace('/login');
+    return;
+  }
   const currentSession = await getCurrentSession().catch(() => null);
   const currentUserId = currentSession?.user?.id ?? null;
   const rememberedCustomer = currentUserId ? await isRememberedCustomerUser(currentUserId).catch(() => false) : false;
