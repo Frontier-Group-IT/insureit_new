@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Bell, ChevronRight, LogOut, UserRound } from "lucide-react";
+import { Bell, ChevronRight, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase";
+import { CustomerAvatar } from "./customer-avatar";
 
-export function CustomerHeaderActions({ name }: { name: string }) {
+export function CustomerHeaderActions({ name, userId }: { name: string; userId: string }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -42,11 +43,11 @@ export function CustomerHeaderActions({ name }: { name: string }) {
         <button type="button" aria-label="Open customer profile menu" aria-expanded={open} onClick={() => setOpen(!open)} className="grid h-11 w-11 place-items-center rounded-full border-2 border-[#245A9A] bg-white text-base font-bold text-[#10213D]">{initial}</button>
         {open ? (
           <>
-            <div className="absolute right-0 top-14 z-50 w-[min(320px,calc(100vw-24px))] overflow-hidden rounded-3xl border border-[#DBE4F0] bg-white shadow-[0_20px_50px_rgba(15,32,57,0.17)]">
-              <Link href="/customer/profile" onClick={() => setOpen(false)} className="flex items-center gap-3 border-b border-[#EDF1F6] px-4 py-4 hover:bg-[#F6F9FD]">
-                <span className="grid h-11 w-11 place-items-center rounded-full bg-[#EDF3FF] text-[#1A4F9D]"><UserRound className="h-5 w-5" /></span>
-                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-[#142746]">{name}</span><span className="text-xs text-[#78869A]">View user details</span></span>
-              </Link>
+            <div className="absolute right-0 top-14 z-50 w-[min(320px,calc(100vw-24px))] rounded-3xl border border-[#DBE4F0] bg-white shadow-[0_20px_50px_rgba(15,32,57,0.17)]">
+              <div className="flex items-center gap-3 border-b border-[#EDF1F6] px-4 py-4 hover:bg-[#F6F9FD]">
+                <CustomerAvatar userId={userId} />
+                <Link href="/customer/profile" onClick={() => setOpen(false)} className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-[#142746]">{name}</span><span className="text-xs text-[#78869A]">View user details</span></Link>
+              </div>
               <Link href="/customer/profile" onClick={() => setOpen(false)} className="flex items-center justify-between px-5 py-4 text-sm font-semibold text-[#142746] hover:bg-[#F6F9FD]">Profile & account <ChevronRight className="h-4 w-4" /></Link>
               <button type="button" onClick={() => void signOut()} className="flex w-full items-center justify-between px-5 py-4 text-left text-sm font-semibold text-red-600 hover:bg-red-50">Logout <LogOut className="h-4 w-4" /></button>
             </div>
