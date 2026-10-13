@@ -102,6 +102,29 @@ export default function BusinessScreen() {
     };
   }, []);
 
+  // Compare MTD with the same elapsed calendar dates in the preceding month.
+  const comparisonDates = useMemo(() => previousMonthMtdRanges(new Date()), []);
+  const fetchCurrentMtd = useCallback(
+    () => getPartnerBusinessRange(comparisonDates.current.from, comparisonDates.current.to),
+    [comparisonDates],
+  );
+  const fetchPreviousMtd = useCallback(
+    () => getPartnerBusinessRange(comparisonDates.previous.from, comparisonDates.previous.to),
+    [comparisonDates],
+  );
+  const currentMtd = usePartnerQuery<PartnerBusinessRangeSummary>({
+    scopeKey: cacheScopeKey,
+    key: `business:mtd-current:${comparisonDates.current.to}`,
+    fetcher: fetchCurrentMtd,
+    staleTimeMs: 90_000,
+  });
+  const previousMtd = usePartnerQuery<PartnerBusinessRangeSummary>({
+    scopeKey: cacheScopeKey,
+    key: `business:mtd-previous:${comparisonDates.previous.to}`,
+    fetcher: fetchPreviousMtd,
+    staleTimeMs: 90_000,
+  });
+
   const workspace = usePartnerQuery({
     scopeKey: cacheScopeKey,
     key: 'business:workspace',
@@ -110,8 +133,8 @@ export default function BusinessScreen() {
   });
 
   useFocusEffect(useCallback(() => {
-    void workspace.ensureFresh();
-  }, [workspace.ensureFresh]));
+    void Promise.all([workspace.ensureFresh(), currentMtd.ensureFresh(), previousMtd.ensureFresh()]);
+  }, [workspace.ensureFresh, currentMtd.ensureFresh, previousMtd.ensureFresh]));
 
   const performance = workspace.data?.performance ?? null;
   const network = workspace.data?.network ?? null;
@@ -120,10 +143,12 @@ export default function BusinessScreen() {
   const payout = workspace.data?.payout ?? null;
   const topInsurers = workspace.data?.topInsurers ?? null;
 
-  const policiesChange = useMemo(() => {
-    if (!performance || !performance.policies_last_month) return null;
-    return ((performance.policies_this_month - performance.policies_last_month) / performance.policies_last_month) * 100;
-  }, [performance]);
+  const mtdReady = Boolean(currentMtd.data && previousMtd.data && !currentMtd.error && !previousMtd.error);
+  const mtdCurrent = mtdReady ? currentMtd.data : null;
+  const mtdPrevious = mtdReady ? previousMtd.data : null;
+  const mtdLabel = 'vs prev MTD';
+  const mtdChange = (current: number | string | null | undefined, previous: number | string | null | undefined) =>
+    mtdReady ? compareMtdValues(current, previous) : '—';
 
   const productMix = useMemo(() => {
     if (!performance) return [];
@@ -193,9 +218,7 @@ export default function BusinessScreen() {
 
   const overviewChangeLabel = overview
     ? changeText(Number(overview.premium_change_percent || 0), Number(overview.premium_previous_period || 0) > 0)
-    : performance
-      ? changeText(Number(performance.premium_change_percent || 0), Number(performance.premium_last_month || 0) > 0)
-      : '—';
+    : mtdChange(mtdCurrent?.premium, mtdPrevious?.premium);
 
   const trendData: TrendPoint[] = useMemo(() => {
     if (!performance) return [];
@@ -218,7 +241,7 @@ export default function BusinessScreen() {
         refreshControl: (
           <RefreshControl
             refreshing={workspace.refreshing}
-            onRefresh={() => void workspace.refresh()}
+            onRefresh={() => void Promise.all([workspace.refresh(), currentMtd.refresh(), previousMtd.refresh()])
             tintColor={partnerTheme.colors.brand}
             colors={[partnerTheme.colors.brand]}
           />
@@ -323,38 +346,39 @@ export default function BusinessScreen() {
           <View style={[styles.overviewGrid, compactScreen && styles.tightContainer]}>
             <OverviewCard
               icon="premium"
-              value={formatCompactCurrency(overview?.premium ?? performance.premium_this_month)}
+              value={overview ? formatCompactCurrency(overview.premium) : mtdCurrent ? formatCompactCurrency(mtdCurrent.premium) : '—'}
               label="Premium Generated"
               changeLabel={overviewChangeLabel}
-              compareLabel={overview ? 'vs previous period' : 'vs last month'}
+              compareLabel={overview ? 'vs previous period' : mtdLabel}
               onPress={() => router.push('/business-report')}
             />
             <OverviewCard
               icon="policies"
-              value={String(overview?.policies ?? performance.policies_this_month)}
+              value={overview ? String(overview.policies) : mtdCurrent ? String(mtdCurrent.policies) : '—'}
               label="Policies Sold"
-              changeLabel={overview ? `${overview.policies} in range` : policiesChange === null ? 'Current month' : changeText(policiesChange, true)}
-              compareLabel={overview ? optionLabel(OVERVIEW_OPTIONS, overviewRange) : 'vs last month'}
+              changeLabel={overview ? `${overview.policies} in range` : mtdChange(mtdCurrent?.policies, mtdPrevious?.policies)}
+              compareLabel={overview ? optionLabel(OVERVIEW_OPTIONS, overviewRange) : mtdLabel}
               onPress={() => router.push('/(tabs)/policies')}
             />
             <OverviewCard
               icon="commission"
-              value={overview?.commission_available
-                ? formatCompactCurrency(overview.commission_earned ?? 0)
-                : overview
-                  ? '—'
-                  : payout?.available ? formatCompactCurrency(payout.paid_amount) : '—'}
+              value={overview
+                ? overview.commission_available ? formatCompactCurrency(overview.commission_earned ?? 0) : '—'
+                : mtdCurrent?.commission_available ? formatCompactCurrency(mtdCurrent.commission_earned ?? 0) : '—'}
               label="Commission Earned"
-              changeLabel={overview ? (overview.commission_available ? 'Selected range' : 'Restricted') : payout?.available ? `${payout.paid_count} paid` : 'Restricted'}
-              compareLabel={overview ? optionLabel(OVERVIEW_OPTIONS, overviewRange) : 'vs last month'}
+              changeLabel={overview
+                ? (overview.commission_available ? 'Selected range' : 'Restricted')
+                : mtdCurrent && !mtdCurrent.commission_available ? 'Restricted'
+                  : mtdChange(mtdCurrent?.commission_earned, mtdPrevious?.commission_earned)}
+              compareLabel={overview ? optionLabel(OVERVIEW_OPTIONS, overviewRange) : mtdLabel}
               onPress={() => router.push('/business-report')}
             />
             <OverviewCard
               icon="customers"
-              value={String(overview?.customers ?? performance.total_customers)}
+              value={overview ? String(overview.customers) : mtdCurrent ? String(mtdCurrent.customers) : '—'}
               label="Customers"
-              changeLabel={overview ? 'Selected range' : 'Current portfolio'}
-              compareLabel={overview ? optionLabel(OVERVIEW_OPTIONS, overviewRange) : 'vs last month'}
+              changeLabel={overview ? 'Selected range' : mtdChange(mtdCurrent?.customers, mtdPrevious?.customers)}
+              compareLabel={overview ? optionLabel(OVERVIEW_OPTIONS, overviewRange) : mtdLabel}
               onPress={() => router.push('/customers')}
             />
           </View>
@@ -659,6 +683,28 @@ function productIcon(label: string, index: number): keyof typeof Ionicons.glyphM
   if (value.includes('travel')) return 'airplane';
   if (value.includes('home') || value.includes('property')) return 'home';
   return ['document-text', 'shield-checkmark', 'briefcase', 'layers'][index % 4] as keyof typeof Ionicons.glyphMap;
+}
+
+function previousMonthMtdRanges(today: Date) {
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const previousFrom = new Date(year, month - 1, 1);
+  const previousLastDay = new Date(year, month, 0).getDate();
+  const previousTo = new Date(year, month - 1, Math.min(today.getDate(), previousLastDay));
+  return {
+    current: { from: toIsoDate(new Date(year, month, 1)), to: toIsoDate(today) },
+    previous: { from: toIsoDate(previousFrom), to: toIsoDate(previousTo) },
+  };
+}
+
+function compareMtdValues(current: number | string | null | undefined, previous: number | string | null | undefined) {
+  if (current == null || previous == null) return '—';
+  const currentValue = Number(current);
+  const previousValue = Number(previous);
+  if (!Number.isFinite(currentValue) || !Number.isFinite(previousValue)) return '—';
+  if (previousValue === 0) return currentValue > 0 ? 'New' : '—';
+  const change = ((currentValue - previousValue) / previousValue) * 100;
+  return `${change >= 0 ? '+' : '-'}${Math.abs(change).toFixed(0)}%`;
 }
 
 function presetDateRange(value: OverviewRange | TrendRange) {
