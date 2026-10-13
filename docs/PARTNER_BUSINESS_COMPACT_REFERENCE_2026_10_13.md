@@ -7,6 +7,6 @@ Branch: `ui/partner-business-reference-compact-20261013`.
 - Compact native Business hero, search, KPI cards, trend chart, product mix, quick actions, and network areas toward the supplied single-screen reference.
 - On shorter devices (<800 logical px) use additional height reduction for hero/chart and containers.
 - Keep real live business figures, scope, actions, permissions and current bottom-tab navigation unchanged. No mock reference numbers.
-- The Top Insurers section is currently a static placeholder in `apps/partner-app/app/(tabs)/business.tsx`; this remains a **known incomplete item**, not claimed fixed.
-- Root data contract `partner_app_business_performance()` exposes `business_mix` and `trend`, but not insurer ranking. A separate scoped, safe database/RPC change and frontend rendering are required for real insurer logos/rankings. Do not synthesize rankings from product mix.
+- The Top Insurers section now renders a five-tile ranking from the independent `partner_app_top_insurers()` RPC, using the existing insurer logo component; it provides no-data and request-failure fallbacks.
+- New migration `supabase/migrations/20261013124500_partner_app_top_insurers.sql` adds an isolated read-only security-definer RPC mirroring the current Partner commercial scope and effective-premium calculation, for MTD top insurers. Rollback: `supabase/rollbacks/20261013124500_partner_app_top_insurers.sql`. Existing `partner_app_business_performance()` stays unchanged. **MIGRATION NOT APPLIED TO PRODUCTION.**
 - Device screenshot verification, UI interaction regression and CI pending. Do not create APK/AAB. Do not publish OTA without user instruction.
