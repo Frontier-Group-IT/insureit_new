@@ -50,7 +50,7 @@ function RootApplication() {
     // React Navigation emits this internal event on dispatch. It is diagnostic
     // only and optional across library versions; the state listener above remains
     // authoritative when the internal action event isn't implemented.
-    type DiagnosticActionEvent = { data?: { action?: { type?: string } } };
+    type DiagnosticActionEvent = { data?: { action?: { type?: string; payload?: { name?: string } } } };
     const actionObserver = navigationRef as unknown as {
       addListener?: (event: string, callback: (event: DiagnosticActionEvent) => void) => () => void;
     };
@@ -62,6 +62,7 @@ function RootApplication() {
           console.warn('[claim-navigation] navigator-dispatch', {
             type: event.data?.action?.type ?? 'unknown',
             activeRoute: current,
+            destination: event.data?.action?.payload?.name === 'customer/home' ? 'customer/home' : 'other-or-unknown',
           });
         }
       });
