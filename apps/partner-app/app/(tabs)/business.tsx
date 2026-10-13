@@ -750,7 +750,7 @@ const styles = StyleSheet.create({
   chart: { flex: 1, height: 91, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 6 },
   barColumn: { flex: 1, maxWidth: 54, height: '100%', alignItems: 'center', justifyContent: 'flex-end' },
   barValue: { position: 'absolute', left: -4, right: -4, height: 13, color: '#3156B8', textAlign: 'center', fontSize: 8, lineHeight: 12, fontWeight: '700' },
-  barTrack: { height: 72, width: '78%', justifyContent: 'flex-end', position: 'relative', borderTopLeftRadius: 7, borderTopRightRadius: 7, backgroundColor: '#EEF3FA' },
+  barTrack: { height: 72, width: '78%', justifyContent: 'flex-end', position: 'relative', borderTopLeftRadius: 7, borderTopRightRadius: 7 },
   bar: { width: '100%', borderTopLeftRadius: 7, borderTopRightRadius: 7, backgroundColor: '#2298E8' },
   barMonth: { marginTop: 5, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   productGrid: { flexDirection: 'row', gap: 5, borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
