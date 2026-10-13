@@ -341,22 +341,22 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
           <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">
             Policies · {business.periodShortLabel}
           </p>
-          <div className="flex min-h-0 flex-1 items-center justify-center gap-2">
-            <p className="portal-display min-w-0 flex-1 text-center text-[27px] font-semibold leading-none text-[#10213D]">
+          <div className="relative flex min-h-0 flex-1 items-center justify-center">
+            <p className="portal-display w-full text-center text-[27px] font-semibold leading-none text-[#10213D]">
               {business.policyCount.toLocaleString("en-IN")}
             </p>
-            <div className="flex shrink-0 flex-col gap-1 border-l border-[#E7ECF2] pl-2">
-              {policyBreakdown.map((item) => (
-                <div key={item.label} className="flex items-center justify-between gap-2 whitespace-nowrap">
-                  <span className="text-[7px] font-semibold uppercase text-[#65758B]">{item.label}</span>
-                  <span className="portal-display text-[12px] font-semibold tabular-nums text-[#10213D]">{item.value.toLocaleString("en-IN")}</span>
-                </div>
-              ))}
-            </div>
+          </div>
+          <div className="grid grid-cols-4 gap-1 border-t border-[#EEF2F6] pt-1.5">
+            {policyBreakdown.map((item) => (
+              <div key={item.label} className="min-w-0 text-center">
+                <p className="truncate text-[7px] font-semibold uppercase text-[#65758B]" title={item.label}>{item.label}</p>
+                <p className="portal-display text-[11px] font-semibold tabular-nums text-[#10213D]">{item.value.toLocaleString("en-IN")}</p>
+              </div>
+            ))}
           </div>
         </div>
-        {headline.map((item) => (
-          <div key={item.label} className="flex min-h-[112px] min-w-0 flex-col border-t border-[#E7ECF2] px-3 py-2.5 sm:border-t-0 sm:[&:nth-child(even)]:border-l lg:border-l">
+        {headline.map((item, index) => (
+          <div key={item.label} className={`flex min-h-[112px] min-w-0 flex-col border-t border-[#E7ECF2] px-3 py-2.5 sm:border-t-0 ${index % 2 === 0 ? "sm:border-l" : ""} lg:border-l`}>
             <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">{item.label}</p>
             <div className="flex min-h-0 flex-1 items-center justify-center">
               <p className="portal-display break-words text-center text-[27px] font-semibold leading-tight text-[#10213D]">{item.value}</p>
