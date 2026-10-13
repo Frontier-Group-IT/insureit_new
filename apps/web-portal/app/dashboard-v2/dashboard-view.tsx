@@ -336,30 +336,34 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
         </div>
       </div>
 
-      <div className="overflow-x-auto border-t border-[#E7ECF2]">
-        <div className="flex min-w-[880px] flex-nowrap divide-x divide-[#E7ECF2] bg-[#FAFCFE]">
-          <div className="min-w-0 shrink-0 px-4 py-3" style={{ width: commercial ? "25%" : "50%" }}>
+      <div className="border-t border-[#E7ECF2]">
+        <div className="flex w-full flex-nowrap divide-x divide-[#E7ECF2] bg-[#FAFCFE]">
+          <div className="flex min-w-0 flex-col px-2 py-3 sm:px-3" style={{ width: commercial ? "30%" : "50%" }}>
             <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">
               Policies · {business.periodShortLabel}
             </p>
-            <div className="mt-2 flex min-h-[88px] items-center gap-3">
-              <p className="portal-display min-w-0 flex-1 text-left text-[27px] font-semibold leading-none text-[#10213D]">
-                {business.policyCount.toLocaleString("en-IN")}
-              </p>
-              <div className="flex min-w-0 flex-[1.3] flex-col gap-1.5 border-l border-[#DDE5EF] pl-3">
+            <div className="mt-2 flex min-h-[96px] min-w-0 flex-1 items-center gap-2">
+              <div className="flex min-w-0 flex-[0.9] items-center justify-center">
+                <p className="portal-display text-center text-[clamp(18px,2vw,27px)] font-semibold leading-none text-[#10213D]">
+                  {business.policyCount.toLocaleString("en-IN")}
+                </p>
+              </div>
+              <div className="flex min-w-0 flex-[1.3] flex-col gap-1.5 border-l border-[#DDE5EF] pl-2">
                 {policyBreakdown.map((item) => (
-                  <div key={item.label} className="flex min-w-0 items-center justify-between gap-2">
-                    <span className="truncate text-[8px] font-semibold uppercase text-[#65758B]" title={item.label}>{item.label}</span>
-                    <span className="portal-display shrink-0 text-[12px] font-semibold tabular-nums text-[#10213D]">{item.value.toLocaleString("en-IN")}</span>
+                  <div key={item.label} className="flex min-w-0 items-center justify-between gap-1">
+                    <span className="min-w-0 truncate text-[clamp(6px,0.65vw,8px)] font-semibold uppercase text-[#65758B]" title={item.label}>{item.label}</span>
+                    <span className="portal-display shrink-0 text-[clamp(9px,0.9vw,12px)] font-semibold tabular-nums text-[#10213D]">{item.value.toLocaleString("en-IN")}</span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
-          {headline.map((item) => (
-            <div key={item.label} className="flex min-w-0 shrink-0 flex-col px-4 py-3" style={{ width: commercial ? "25%" : "50%" }}>
+          {headline.map((item, index) => (
+            <div key={item.label} className="flex min-w-0 flex-col px-2 py-3 sm:px-3" style={{ width: commercial ? ["27%", "23%", "20%"][index] : "50%" }}>
               <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">{item.label}</p>
-              <p className="portal-display mt-4 break-words text-left text-[27px] font-semibold leading-tight text-[#10213D]">{item.value}</p>
+              <div className="flex min-h-[96px] min-w-0 flex-1 items-center justify-center">
+                <p className="portal-display min-w-0 break-words text-center text-[clamp(16px,2vw,27px)] font-semibold leading-tight text-[#10213D]">{item.value}</p>
+              </div>
             </div>
           ))}
         </div>
