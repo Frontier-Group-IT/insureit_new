@@ -7,9 +7,10 @@ import { ActiveClaimPopup } from '@/components/active-claim-popup';
 import { ClaimActionBar } from '@/components/external-claim-ui';
 import { EmptyState, LoadingState, Message, Screen } from '@/components/ui';
 import { findActiveManagedClaim } from '@/lib/active-managed-claim';
-import { getCurrentSession, makeClaimNumber } from '@/lib/auth';
+import { makeClaimNumber } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
+import { requireCustomerDataClient } from '@/lib/customer-data-client';
 import { customerAccountTitle, getOperationalCustomerContexts, type CustomerAccountContext } from '@/lib/customer-context';
-import { supabase } from '@/lib/supabase';
 import { getInsurerLogoSource, getVehicleBrandLogoSource } from '@/lib/catalog-logos';
 import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
 import { palette } from '@/lib/theme';
@@ -68,13 +69,14 @@ export default function StartClaimScreen() {
     let active = true;
     void (async () => {
       try {
+        const client = await requireCustomerDataClient();
         const nextContexts = await getOperationalCustomerContexts();
         const ids = nextContexts.map((item) => item.customer_id);
         const [vehicleResult, siblResult, externalResult, insurerResult] = await Promise.all([
-          ids.length ? supabase.from('vehicles').select('*').in('customer_id', ids).order('vehicle_no') : Promise.resolve({ data: [] }),
-          ids.length ? supabase.from('policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').in('customer_id', ids) : Promise.resolve({ data: [] }),
+          ids.length ? client.from('vehicles').select('*').in('customer_id', ids).order('vehicle_no') : Promise.resolve({ data: [] }),
+          ids.length ? client.from('policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').in('customer_id', ids) : Promise.resolve({ data: [] }),
           ids.length ? (supabase as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').in('customer_id', ids) : Promise.resolve({ data: [] }),
-          supabase.from('insurance_companies').select('*').order('name'),
+          client.from('insurance_companies').select('*').order('name'),
         ]);
         if (!active) return;
         const nextVehicles = (vehicleResult.data ?? []) as Vehicle[];
@@ -153,20 +155,20 @@ export default function StartClaimScreen() {
         return;
       }
 
-      const session = await getCurrentSession();
-      if (!session?.user) {
+      const identity = await getCustomerIdentity();
+      if (!identity) {
         router.replace('/login');
         return;
       }
 
-      const { data: draftClaim, error: draftError } = await supabase.from('claims').insert({
+      const { data: draftClaim, error: draftError } = await identity.data.from('claims').insert({
         claim_no: makeClaimNumber(),
         customer_id: selectedPolicy.customer_id,
         vehicle_id: selectedVehicle.id,
         policy_id: selectedPolicy.id,
         insurance_company_id: selectedPolicy.insurance_company_id,
         current_status: 'Draft',
-        created_by: session.user.id,
+        created_by: identity.profileId,
       }).select('id').single();
 
       if (draftError || !draftClaim?.id) {
@@ -322,7 +324,8 @@ export default function StartClaimScreen() {
 }
 
 async function findActiveExternalPolicyClaim(externalPolicyId: string): Promise<SelfManagedClaimRow | null> {
-  const claimResult = await (supabase as any)
+  const client = await requireCustomerDataClient();
+  const claimResult = await (client as any)
     .from('claims')
     .select('id,current_status,created_at,claim_service_mode')
     .eq('external_policy_id', externalPolicyId)
@@ -340,7 +343,7 @@ async function findActiveExternalPolicyClaim(externalPolicyId: string): Promise<
 
   const selfManagedClaims = unsettledClaims.filter((claim) => claim.claim_service_mode !== 'broker_managed');
   const claimIds = selfManagedClaims.map((claim) => claim.id);
-  const milestoneResult = await (supabase as any)
+  const milestoneResult = await (client as any)
     .from('claim_milestones')
     .select('claim_id,milestone_key,milestone_status')
     .in('claim_id', claimIds);
