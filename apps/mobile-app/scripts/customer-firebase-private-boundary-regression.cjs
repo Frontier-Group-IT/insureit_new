@@ -8,6 +8,7 @@ const read = (name) => fs.readFileSync(path.join(mobile, name), 'utf8');
 
 const dataScreens = [
   'app/customer/claim-detail.tsx',
+  'app/customer/e-challan.tsx',
   'components/customer-motor-policy-detail-screen.tsx',
   'components/customer-life-health-policy-detail-screen.tsx',
   'components/customer-policy-detail-screen.tsx',
@@ -50,4 +51,15 @@ test('claim detail queries and claim-number mutation require canonical customer 
   assert.match(claim, /\.in\('customer_id', allowedIds\)/);
   assert.match(claim, /\.eq\('customer_id', claim\.customer_id\)/);
   assert.match(claim, /getFirebaseCustomerDocumentUrl\(/);
+});
+
+
+test('authenticated service enquiries use selected Customer data client; guest endpoints are unchanged', () => {
+  const service = read('lib/service-enquiries.ts');
+  assert.match(service, /const customerClient = await requireCustomerDataClient\(\)/);
+  assert.match(service, /\(customerClient as any\)\s*\.from\('service_enquiries'\)/);
+  assert.match(service, /supabase\.functions\.invoke\('guest-service-enquiry'/);
+  const challan = read('app/customer/e-challan.tsx');
+  assert.match(challan, /getProfile\(identity\.profileId, identity\.data\)/);
+  assert.match(challan, /getCustomerForUser\(identity\.profileId, identity\.data\)/);
 });
