@@ -126,7 +126,7 @@ export default function CustomerMotorPolicyDetailScreen() {
       const companyQuery = next.insurance_company_id
         ? client.from('insurance_companies').select('*').eq('id', next.insurance_company_id).maybeSingle()
         : Promise.resolve({ data: null });
-      const customerQuery = supabase
+      const customerQuery = client
         .from('customers')
         .select('company_name,contact_name,phone')
         .eq('id', next.customer_id)
