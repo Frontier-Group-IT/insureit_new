@@ -7,7 +7,14 @@ const Module = require('node:module');
 const file = path.join(__dirname, 'firebase-native-phone-flow.ts');
 const output = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS } }).outputText;
 const m = new Module(file + '.cjs', module);
-m.filename = file + '.cjs'; m.paths = module.paths; m._compile(output, m.filename);
+m.filename = file + '.cjs'; m.paths = module.paths; const errorFile = path.join(__dirname, 'firebase-otp-errors.ts');
+const errorJs = ts.transpileModule(fs.readFileSync(errorFile, 'utf8'), {
+  compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS },
+}).outputText;
+const errors = new Module(errorFile + '.cjs', module);
+errors.filename = errorFile + '.cjs'; errors.paths = module.paths; errors._compile(errorJs, errors.filename);
+m.require = (name) => name === './firebase-otp-errors' ? errors.exports : require(name);
+m._compile(output, m.filename);
 const { FirebasePhoneOtpFlow } = m.exports;
 const phone = '+919876543210';
 const auth = (userPhone = phone, token = 'fake-token') => ({
@@ -37,4 +44,32 @@ test('mismatched phone and missing token denied', async () => {
   const b = new FirebasePhoneOtpFlow(auth(phone, ''));
   await b.send(phone);
   await assert.rejects(() => b.verify('123456'), /ID token/);
+});
+
+test('an incorrect OTP preserves its confirmation and the next correct code succeeds', async () => {
+  let tries = 0;
+  const flow = new FirebasePhoneOtpFlow({
+    signInWithPhoneNumber: async () => ({
+      confirm: async (code) => {
+        tries++;
+        if (code === '000000') throw { code: 'auth/invalid-verification-code', message: 'NEVER_LOG_OTP_OR_PHONE' };
+        return { user: { uid: 'firebase-uid', phoneNumber: phone, getIdToken: async () => 'opaque-token' } };
+      },
+    }),
+  });
+  await flow.send(phone);
+  await assert.rejects(() => flow.verify('000000'), (e) =>
+    e.code === 'auth/invalid-verification-code' && e.retryableCode === true);
+  assert.equal((await flow.verify('123456')).uid, 'firebase-uid');
+  assert.equal(tries, 2);
+});
+test('expired native confirmation clears the pending challenge and requires a new SMS', async () => {
+  const flow = new FirebasePhoneOtpFlow({
+    signInWithPhoneNumber: async () => ({
+      confirm: async () => { throw { code: 'auth/session-expired' }; },
+    }),
+  });
+  await flow.send(phone);
+  await assert.rejects(() => flow.verify('123456'), (e) => e.code === 'auth/session-expired');
+  await assert.rejects(() => flow.verify('123456'), /Request OTP first/);
 });
