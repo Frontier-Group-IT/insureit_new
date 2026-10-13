@@ -27,4 +27,18 @@ assert.match(customerScreen, /traceStartClaimTouch\('fixed-header', event\)/, 'F
 assert.match(customerScreen, /traceStartClaimTouch\('scroll-body', event\)/, 'Scroll body must log touch coordinates.');
 assert.match(customerScreen, /router\.replace\('\/customer\/home'\)/, 'The diagnostic must precede the existing unmodified header navigation.');
 
+// V6 confirmed the *actual* CustomerFixedScreen brand caused 8/8 sampled
+// unexpected REPLACE-to-Home transitions, often from lower-screen taps.
+// The route-specific static logo must precede the interactive branch.
+assert.match(
+  customerScreen,
+  /\{pathname === '\/customer\/start-claim' \? \([\s\S]*<View pointerEvents="none" style=\{baseStyles\.fixedBrandStatic\}>[\s\S]*<BrandLogo width=\{132\} inverse \/>[\s\S]*<\/View>[\s\S]*\) : \([\s\S]*<Pressable[\s\S]*onPress=\{openDashboard\}/,
+  'Start Claim must render a noninteractive logo while other Customer pages retain the dashboard press handler.',
+);
+assert.match(
+  customerScreen,
+  /function openDashboard\(\) \{[\s\S]*router\.replace\('\/customer\/home'\)/,
+  'Other Customer pages must preserve the existing dashboard navigation.',
+);
+
 console.log('Effective CustomerFixedScreen Start Claim navigation-origin diagnostic regression passed.');
