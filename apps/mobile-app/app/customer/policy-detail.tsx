@@ -5,9 +5,9 @@ import CustomerLifeHealthPolicyDetailScreen from '@/components/customer-life-hea
 import CustomerMotorPolicyDetailScreen from '@/components/customer-motor-policy-detail-screen';
 import CustomerPolicyDetailScreen from '@/components/customer-policy-detail-screen';
 import { LoadingState, Screen } from '@/components/ui';
-import { getCurrentSession } from '@/lib/auth';
+import { getCustomerIdentity } from '@/lib/customer-identity';
 import { getOperationalCustomerContexts } from '@/lib/customer-context';
-import { supabase } from '@/lib/supabase';
+
 
 type DetailKind = 'life-health' | 'motor' | 'legacy';
 
@@ -20,8 +20,9 @@ export default function CustomerPolicyDetailRoute() {
     let active = true;
     void (async () => {
       if (!id) return;
-      const session = await getCurrentSession();
-      if (!session?.user) return router.replace('/login');
+      const identity = await getCustomerIdentity();
+      if (!identity) return router.replace('/login');
+      const client = identity.data;
       const contexts = await getOperationalCustomerContexts();
       const customerIds = contexts.map((context) => context.customer_id);
       if (!customerIds.length) {
@@ -33,7 +34,7 @@ export default function CustomerPolicyDetailRoute() {
       let policyProduct: string | null = null;
       if (source === 'external') {
         const row = (
-          await (supabase as any)
+          await (client as any)
             .from('external_policies')
             .select('policy_type')
             .eq('id', id)
@@ -43,7 +44,7 @@ export default function CustomerPolicyDetailRoute() {
         policyType = row?.policy_type ?? null;
       } else {
         const row = (
-          await supabase
+          await client
             .from('policies')
             .select('policy_type,policy_product')
             .eq('id', id)
@@ -54,7 +55,7 @@ export default function CustomerPolicyDetailRoute() {
         policyProduct = row?.policy_product ?? null;
         if (!policyType) {
           const externalRow = (
-            await (supabase as any)
+            await (client as any)
               .from('external_policies')
               .select('policy_type')
               .eq('id', id)
