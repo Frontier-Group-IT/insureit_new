@@ -24,6 +24,11 @@ export function firebaseCustomerRolloutEnabled(): boolean {
     process.env.EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_ENABLED === 'true';
 }
 
+/** Inspect the selected provider even when its Firebase ID token has expired. */
+export async function isFirebaseCustomerAuthSelected(): Promise<boolean> {
+  return firebaseCustomerRolloutEnabled() && await AsyncStorage.getItem(modeKey) === 'firebase';
+}
+
 export async function selectCustomerAuthProvider(provider: 'supabase' | 'firebase'): Promise<void> {
   if (provider === 'firebase' && !firebaseCustomerRolloutEnabled()) {
     throw new Error('Firebase customer sign-in is not enabled in this build.');
