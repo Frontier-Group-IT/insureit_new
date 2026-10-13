@@ -91,7 +91,7 @@ test('instant verification without a matching authenticated Firebase user never 
  const send=flow.send(phone);handlers[0]({state:'verified',code:null});
  await send;await tick();
  assert.ok(statuses.some(s=>s.state==='error'));
- await assert.rejects(flow.verify('123456'), /missing-verification-id/);
+ await assert.rejects(flow.verify('123456'), /auto-verification-incomplete/);
 });
 
 test('instant verification with delayed Firebase user never demands a manual SMS verificationId',async()=>{
