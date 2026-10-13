@@ -9,6 +9,7 @@ import {
   startFirebaseCustomerOtp,
 } from '@/lib/firebase-customer-auth';
 import { selectCustomerAuthProvider } from '@/lib/customer-identity';
+import { firebaseOtpFailure, firebaseOtpPublicMessage, recordFirebaseOtpStage } from '@/lib/firebase-otp-errors';
 
 /**
  * Explicitly gated Android-only Firebase OTP entry screen.
@@ -47,9 +48,12 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
       startFirebaseCustomerOtp();
       await sendFirebaseCustomerOtp('+91' + mobile);
       setSent(true);
-      setMessage('A verification code has been sent to your mobile number.');
-    } catch {
-      setError('Could not send the verification code. Please try again.');
+      setOtp('');
+      setMessage('Verification requested. Please check your SMS; delivery may take a minute.');
+    } catch (cause) {
+      const failure = firebaseOtpFailure('sms_request', cause);
+      recordFirebaseOtpStage(failure.stage, failure.code);
+      setError(firebaseOtpPublicMessage(failure) + ' (' + failure.code + ')');
     } finally {
       setBusy(false);
     }
@@ -75,8 +79,14 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
       // the canonical customer profile resolver both succeed.
       await selectCustomerAuthProvider('firebase');
       router.replace('/customer/home');
-    } catch {
-      setError('The code could not be verified or your account is not ready. Please try again.');
+    } catch (cause) {
+      const failure = firebaseOtpFailure('firebase_verification', cause);
+      recordFirebaseOtpStage(failure.stage, failure.code);
+      if (['auth/session-expired', 'auth/code-expired', 'auth/invalid-verification-id'].includes(failure.code)) {
+        setSent(false);
+        setOtp('');
+      }
+      setError(firebaseOtpPublicMessage(failure) + ' (' + failure.code + ')');
     } finally {
       setBusy(false);
     }
@@ -121,6 +131,9 @@ export function FirebaseCustomerOtpForm({ mode }: { mode: 'login' | 'signup' }) 
             maxLength={6} editable={!busy} style={styles.input} />
           <Pressable accessibilityRole="button" disabled={busy} onPress={editNumber}>
             <Text style={styles.link}>Change mobile number</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" disabled={busy} onPress={() => void send()}>
+            <Text style={styles.link}>Request a new code</Text>
           </Pressable>
         </>
       ) : null}
