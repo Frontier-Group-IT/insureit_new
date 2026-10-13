@@ -5,6 +5,7 @@ on:
       - 'apps/mobile-app/lib/firebase-*'
       - 'apps/mobile-app/lib/customer-otp-provider.ts'
       - 'apps/mobile-app/app/firebase-otp-test.tsx'
+      - 'apps/mobile-app/components/firebase-customer-otp-form.tsx'
       - 'pocs/customer-firebase-auth/**'
       - 'supabase/functions/customer-firebase-*/**'
       - '.github/workflows/verify-customer-firebase-otp.yml'
@@ -30,5 +31,5 @@ jobs:
             exit 0
           fi
           npm ci --ignore-scripts
-          node --test             apps/mobile-app/lib/firebase-otp-readiness.test.cjs             apps/mobile-app/lib/firebase-native-phone-flow.test.cjs             apps/mobile-app/lib/firebase-data-client.test.cjs             pocs/customer-firebase-auth/sql-draft.test.cjs             pocs/customer-firebase-auth/server-identity-binding.test.cjs             pocs/customer-firebase-auth/firebase-admin-verifier.test.cjs             pocs/customer-firebase-auth/firebase-binding-backend.test.cjs             pocs/customer-firebase-auth/supabase-identity-store.test.cjs             pocs/customer-firebase-auth/android-config.test.cjs             pocs/customer-firebase-auth/edge-binding-source.test.cjs             pocs/customer-firebase-auth/auth-uid-compatibility.test.cjs             pocs/customer-firebase-auth/signup-edge-source.test.cjs             pocs/customer-firebase-auth/doc-read-edge-source.test.cjs             pocs/customer-firebase-auth/mobile-document-client-source.test.cjs             apps/mobile-app/lib/firebase-android-auth-adapter.test.cjs
+          node --test             apps/mobile-app/lib/firebase-otp-readiness.test.cjs             apps/mobile-app/lib/firebase-otp-errors.test.cjs             apps/mobile-app/lib/firebase-native-phone-flow.test.cjs             apps/mobile-app/lib/firebase-data-client.test.cjs             pocs/customer-firebase-auth/sql-draft.test.cjs             pocs/customer-firebase-auth/server-identity-binding.test.cjs             pocs/customer-firebase-auth/firebase-admin-verifier.test.cjs             pocs/customer-firebase-auth/firebase-binding-backend.test.cjs             pocs/customer-firebase-auth/supabase-identity-store.test.cjs             pocs/customer-firebase-auth/android-config.test.cjs             pocs/customer-firebase-auth/edge-binding-source.test.cjs             pocs/customer-firebase-auth/auth-uid-compatibility.test.cjs             pocs/customer-firebase-auth/signup-edge-source.test.cjs             pocs/customer-firebase-auth/doc-read-edge-source.test.cjs             pocs/customer-firebase-auth/mobile-document-client-source.test.cjs             apps/mobile-app/lib/firebase-android-auth-adapter.test.cjs
           node --check pocs/customer-firebase-auth/staging-customer-isolation.mjs
