@@ -6,6 +6,7 @@ on:
       - feature/self-managed-claims
       - feature/self-managed-production-integration-v2
       - feature/self-managed-production-integration-v3
+      - feature/customer-firebase-current-main-20261013
     paths:
       - 'apps/mobile-app/**'
       - 'package.json'
@@ -82,6 +83,9 @@ jobs:
 
       - name: Mobile lint
         run: npm run lint:mobile
+
+      - name: Firebase Customer private-document boundary regression
+        run: node --test apps/mobile-app/scripts/customer-firebase-private-boundary-regression.cjs
 
       - name: Customer skeleton loading regression
         run: node apps/mobile-app/scripts/customer-skeleton-loading-regression.mjs
