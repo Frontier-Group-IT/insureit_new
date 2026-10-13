@@ -338,8 +338,8 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
 
       <div className="border-t border-[#E7ECF2]">
         <div className="flex w-full flex-nowrap divide-x divide-[#E7ECF2] bg-[#FAFCFE]">
-          <div className="flex min-w-0 flex-col px-2 py-3 sm:px-3" style={{ width: commercial ? "30%" : "50%" }}>
-            <p className="text-left text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">
+          <div className="flex min-w-0 flex-col items-start px-2 py-3 sm:px-3" style={{ width: commercial ? "30%" : "50%" }}>
+            <p className="w-full self-start text-left text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">
               Policies · {business.periodShortLabel}
             </p>
             <div className="mt-2 grid min-h-[96px] min-w-0 flex-1 grid-cols-[44%_minmax(0,1fr)] items-center">
