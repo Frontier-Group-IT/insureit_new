@@ -338,21 +338,21 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
 
       <div className="border-t border-[#E7ECF2]">
         <div className="flex w-full flex-nowrap divide-x divide-[#E7ECF2] bg-[#FAFCFE]">
-          <div className="flex min-w-0 flex-col px-2 py-3 sm:px-3" style={{ width: commercial ? "30%" : "50%" }}>
-            <p className="text-left text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">
+          <div className="flex min-w-0 flex-col items-start px-2 py-3 sm:px-3" style={{ width: commercial ? "30%" : "50%" }}>
+            <p className="w-full self-start text-left text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">
               Policies · {business.periodShortLabel}
             </p>
-            <div className="mt-2 grid min-h-[96px] min-w-0 flex-1 grid-cols-2 items-center">
+            <div className="mt-2 grid min-h-[96px] min-w-0 flex-1 grid-cols-[44%_minmax(0,1fr)] items-center">
               <div className="flex min-w-0 items-center justify-center">
                 <p className="portal-display text-center text-[clamp(18px,2vw,27px)] font-semibold leading-none tabular-nums text-[#10213D]">
                   {business.policyCount.toLocaleString("en-IN")}
                 </p>
               </div>
-              <div className="flex min-w-0 flex-col gap-1.5 border-l border-[#DDE5EF] pl-3">
+              <div className="flex w-full min-w-0 flex-col gap-1.5 border-l border-[#DDE5EF] pl-3">
                 {policyBreakdown.map((item) => (
-                  <div key={item.label} className="flex min-w-0 items-center justify-between gap-1">
+                  <div key={item.label} className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1">
                     <span className="min-w-0 truncate text-[clamp(6px,0.65vw,8px)] font-semibold uppercase text-[#65758B]" title={item.label}>{item.label}</span>
-                    <span className="portal-display shrink-0 text-[clamp(9px,0.9vw,12px)] font-semibold tabular-nums text-[#10213D]">{item.value.toLocaleString("en-IN")}</span>
+                    <span className="portal-display justify-self-end text-right text-[clamp(9px,0.9vw,12px)] font-semibold tabular-nums text-[#10213D]">{item.value.toLocaleString("en-IN")}</span>
                   </div>
                 ))}
               </div>
