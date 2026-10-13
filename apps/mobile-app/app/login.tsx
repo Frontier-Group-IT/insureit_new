@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AuthExperience, SignupPromptCard } from '@/components/auth-experience';
+import { FirebaseCustomerOtpForm } from '@/components/firebase-customer-otp-form';
+import { firebaseCustomerRolloutEnabled, getCustomerIdentity, selectCustomerAuthProvider } from '@/lib/customer-identity';
 import { AuthGlassPanel, AuthStatusMessage, SecureActionButton } from '@/components/first-look';
 import { OtpDotsInput } from '@/components/otp-dots-input';
 import { getCurrentSession, getProfile, getRestoredSession, routeSignedInUser, sendPhoneOtp, verifyPhoneOtp } from '@/lib/auth';
@@ -17,8 +19,11 @@ const privacyHref = '/legal/privacy-policy' as Href;
 
 export default function LoginScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ addAccount?: string }>();
+  const params = useLocalSearchParams<{ addAccount?: string; legacyOtp?: string }>();
   const addingAccount = params.addAccount === '1';
+  // Feature-gated Firebase on compatible Android internal-test binaries only.
+  // Saved-account switching and the explicit recovery route remain legacy.
+  const firebaseMode = firebaseCustomerRolloutEnabled() && !addingAccount && params.legacyOtp !== '1';
   const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -33,6 +38,21 @@ export default function LoginScreen() {
   useEffect(() => {
     let active = true;
     async function restoreExistingSession() {
+      if (firebaseMode) {
+        try {
+          const identity = await getCustomerIdentity();
+          if (!active) return;
+          if (identity?.provider === 'firebase') router.replace('/customer/home');
+          else if (identity?.provider === 'supabase' && identity.session?.user) {
+            await routeSignedInUser(identity.session.user, router);
+          }
+        } catch {
+          // Do not fall back to an unrelated Supabase employee session.
+        } finally {
+          if (active) setRestoringSession(false);
+        }
+        return;
+      }
       if (addingAccount) {
         const current = await getCurrentSession().catch(() => null);
         previousCustomerUserId.current = current?.user?.id ?? null;
@@ -53,7 +73,7 @@ export default function LoginScreen() {
     return () => {
       active = false;
     };
-  }, [addingAccount, router]);
+  }, [addingAccount, firebaseMode, router]);
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -67,6 +87,7 @@ export default function LoginScreen() {
   }, [inputPulse]);
 
   if (restoringSession) return null;
+  if (firebaseMode) return <FirebaseCustomerOtpForm mode="login" />;
 
   const normalizedMobile = normalizeMobile(mobile);
   const fullPhone = `${countryCode}${normalizedMobile}`;
@@ -111,6 +132,7 @@ export default function LoginScreen() {
     let candidateSessionInstalled = false;
     try {
       const data = await verifyPhoneOtp(fullPhone, otp);
+      if (data.user) await selectCustomerAuthProvider('supabase');
       candidateSessionInstalled = Boolean(addingAccount && data.session);
       if (!data.user) {
         throw new Error('OTP verification did not return an active account.');
