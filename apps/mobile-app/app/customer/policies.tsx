@@ -5,10 +5,10 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourceP
 
 import { AppSearchBar } from '@/components/design-system';
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
-import { getCurrentSession } from '@/lib/auth';
+
 import { getOperationalCustomerContexts } from '@/lib/customer-context';
 import { getInsurerLogoSource, getVehicleBrandLogoSource } from '@/lib/catalog-logos';
-import { supabase } from '@/lib/supabase';
+import { getCustomerIdentity } from '@/lib/customer-identity';
 import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
@@ -85,31 +85,32 @@ export default function PoliciesScreen() {
     let active = true;
 
     async function load() {
-      const session = await getCurrentSession();
-      if (!session?.user) return router.replace('/login');
+      const identity = await getCustomerIdentity();
+      if (!identity) return router.replace('/login');
+      const client = identity.data;
 
       const contexts = await getOperationalCustomerContexts();
       const ids = contexts.map((context) => context.customer_id);
       if (ids.length) {
         const [policyResult, externalPolicyResult, lifeHealthCaseResult, vehicleResult, companyResult] = await Promise.all([
-          (supabase as any)
+          (client as any)
             .from('policies')
             .select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,business_line,policy_product,policy_term,premium_amount,start_date,end_date,status,superseded_by_policy_id,life_health_policy_details!life_health_policy_details_policy_id_fkey(premium_paying_term,policy_duration,payment_frequency)')
             .in('customer_id', ids)
             .order('end_date', { ascending: true }),
-          (supabase as any)
+          (client as any)
             .from('external_policies')
             .select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date')
             .in('customer_id', ids)
             .order('end_date', { ascending: true }),
-          (supabase as any)
+          (client as any)
             .from('life_health_cases')
             .select('final_policy_id,premium_paying_term,policy_duration,payment_frequency,premium_amount,converted_at')
             .in('customer_id', ids)
             .not('final_policy_id', 'is', null)
             .order('converted_at', { ascending: false }),
-          supabase.from('vehicles').select('*').in('customer_id', ids),
-          supabase.from('insurance_companies').select('*'),
+          client.from('vehicles').select('*').in('customer_id', ids),
+          client.from('insurance_companies').select('*'),
         ]);
 
         if (!active) return;
