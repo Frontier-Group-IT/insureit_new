@@ -337,7 +337,7 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
       </div>
 
       <div className="overflow-x-auto border-t border-[#E7ECF2]">
-        <div className="grid min-w-[880px] grid-cols-4 divide-x divide-[#E7ECF2]">
+        <div className="grid min-w-[880px] divide-x divide-[#E7ECF2]" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gridAutoFlow: "row" }}>
           <div className="flex min-h-[124px] min-w-0 flex-col px-3 py-2.5">
             <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">
               Policies · {business.periodShortLabel}
