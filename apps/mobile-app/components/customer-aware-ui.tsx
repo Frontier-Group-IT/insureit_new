@@ -206,15 +206,24 @@ function CustomerFixedScreen({
             </Pressable>
           ) : null}
           <View style={baseStyles.fixedBrandSlot}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Open dashboard"
-              onPressIn={(event) => traceStartClaimTouch('fixed-header-logo-press-in', event)}
-              onPress={openDashboard}
-              style={baseStyles.fixedBrandPressable}
-            >
-              <BrandLogo width={132} inverse />
-            </Pressable>
+            {pathname === '/customer/start-claim' ? (
+              // V6 Android trace: 8/8 unwanted Home redirects came from the live
+              // fixed-header logo Pressable, including touches well below the header.
+              // Keep its appearance but remove the responder on Start Claim only.
+              <View pointerEvents="none" style={baseStyles.fixedBrandStatic}>
+                <BrandLogo width={132} inverse />
+              </View>
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Open dashboard"
+                onPressIn={(event) => traceStartClaimTouch('fixed-header-logo-press-in', event)}
+                onPress={openDashboard}
+                style={baseStyles.fixedBrandPressable}
+              >
+                <BrandLogo width={132} inverse />
+              </Pressable>
+            )}
           </View>
           <View style={baseStyles.customerBellShell}>
             <NotificationBell color="#FFFFFF" />
