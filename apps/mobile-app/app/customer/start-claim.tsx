@@ -75,7 +75,7 @@ export default function StartClaimScreen() {
         const [vehicleResult, siblResult, externalResult, insurerResult] = await Promise.all([
           ids.length ? client.from('vehicles').select('*').in('customer_id', ids).order('vehicle_no') : Promise.resolve({ data: [] }),
           ids.length ? client.from('policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').in('customer_id', ids) : Promise.resolve({ data: [] }),
-          ids.length ? (supabase as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').in('customer_id', ids) : Promise.resolve({ data: [] }),
+          ids.length ? (client as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').in('customer_id', ids) : Promise.resolve({ data: [] }),
           client.from('insurance_companies').select('*').order('name'),
         ]);
         if (!active) return;
