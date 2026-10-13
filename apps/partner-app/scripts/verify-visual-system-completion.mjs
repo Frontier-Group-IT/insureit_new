@@ -108,7 +108,7 @@ for (const businessAsset of ['actions.quickRenewals', 'actions.quickClaims', 'ac
   requireText(business, `PartnerAssets.${businessAsset}`, `Business is missing ${businessAsset} artwork.`);
 }
 requireText(business, 'function BlueIcon(', 'Business must keep the shared blue generated-icon treatment.');
-requireText(business, '<PartnerBusinessOverviewIcon kind={icon} size={38} />', 'Business Overview KPI cards must use the professional shared KPI icon component.');
+requireText(business, '<PartnerBusinessOverviewIcon kind={icon} size={24} />', 'Business Overview KPI cards must use the professional shared KPI icon component.');
 for (const kind of ['premium', 'policies', 'commission', 'customers']) {
   requireText(business, `icon="${kind}"`, `Business Overview must map the ${kind} professional KPI icon.`);
   requireText(businessOverviewIcons, `${kind}:`, `Business Overview icon component is missing the ${kind} icon treatment.`);
