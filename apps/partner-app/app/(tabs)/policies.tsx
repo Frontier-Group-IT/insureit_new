@@ -93,6 +93,11 @@ export default function PoliciesScreen() {
     await Promise.all([summary.refresh(), collection.refresh()]);
   }, [collection, summary]);
 
+  const selectSummary = (filter: PartnerPolicyLifecycle) => {
+    setQuery('');
+    setVisibleLimit(PAGE_SIZE);
+    setLifecycle(filter);
+  };
   const name = context?.identity.display_name || 'Partner';
 
   const header = (
@@ -162,19 +167,26 @@ export default function PoliciesScreen() {
 
       <View style={styles.summaryRow}>
         {([
-          { label: 'Total Policies', value: summary.data?.total_policies, icon: 'document-text' as const, tint: '#2559AD' },
-          { label: 'Active Policies', value: summary.data?.in_force_policies, icon: 'shield-checkmark' as const, tint: '#123B83' },
-          { label: 'Expiring Soon', value: summary.data?.expiring_30_days, icon: 'hourglass' as const, tint: '#2347A2' },
-          { label: 'Lapsed Policies', value: summary.data?.expired_policies, icon: 'close-circle' as const, tint: '#163B82' },
+          { label: 'Total Policies', filter: 'all' as const, value: summary.data?.total_policies, icon: 'document-text' as const, tint: '#2559AD' },
+          { label: 'Active Policies', filter: 'in_force' as const, value: summary.data?.in_force_policies, icon: 'shield-checkmark' as const, tint: '#123B83' },
+          { label: 'Expiring Soon', filter: 'expiring' as const, value: summary.data?.expiring_30_days, icon: 'hourglass' as const, tint: '#2347A2' },
+          { label: 'Lapsed Policies', filter: 'expired' as const, value: summary.data?.expired_policies, icon: 'close-circle' as const, tint: '#163B82' },
         ]).map((metric) => (
-          <View key={metric.label} style={styles.summaryCard}>
+          <Pressable
+            key={metric.label}
+            accessibilityRole="button"
+            accessibilityLabel={`Show ${metric.label}`}
+            accessibilityState={{ selected: lifecycle === metric.filter && query.length === 0 }}
+            onPress={() => selectSummary(metric.filter)}
+            style={({ pressed }) => [styles.summaryCard, pressed && styles.summaryCardPressed]}
+          >
             <View style={styles.summaryIcon}>
               <Ionicons name={metric.icon} size={19} color={metric.tint} />
             </View>
             <Text style={styles.summaryValue}>{metric.value === undefined ? '—' : metric.value.toLocaleString('en-IN')}</Text>
             <Text numberOfLines={2} style={styles.summaryLabel}>{metric.label}</Text>
             <Text style={styles.summaryPercent}>{formatPortfolioShare(metric.value, summary.data?.total_policies)}</Text>
-          </View>
+          </Pressable>
         ))}
       </View>
 
@@ -505,6 +517,7 @@ const styles = StyleSheet.create({
   },
   summaryRow: { flexDirection: 'row', marginHorizontal: 12, marginTop: 9, gap: 4 },
   summaryCard: { flex: 1, minWidth: 0, minHeight: 86, alignItems: 'center', paddingVertical: 7, paddingHorizontal: 2, borderRadius: 9, backgroundColor: '#F6F9FF', borderWidth: 1, borderColor: '#E8EFFB', shadowColor: '#17448C', shadowOpacity: 0.06, shadowRadius: 4, elevation: 1 },
+  summaryCardPressed: { backgroundColor: '#E8F1FF' },
   summaryIcon: { width: 27, height: 27, borderRadius: 8, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
   summaryValue: { marginTop: 3, color: '#153C89', fontSize: 17, lineHeight: 19, fontWeight: '900' },
   summaryLabel: { marginTop: 2, color: '#6077A0', fontSize: 7.5, lineHeight: 10, textAlign: 'center', fontWeight: '700' },
