@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { supabase } from './supabase';
+import { getCustomerIdentity } from './customer-identity';
+import { requireCustomerDataClient } from './customer-data-client';
 import type { PartnerType } from './types';
 
 const selectedCustomerKeyPrefix = 'insureit:selected-customer-id';
@@ -55,13 +56,15 @@ export type GroupAssociatedAccountDetail = {
 };
 
 export async function getAccessibleCustomerContexts(): Promise<CustomerAccountContext[]> {
-  const { data, error } = await supabase.rpc('get_accessible_customer_contexts');
+  const client = await requireCustomerDataClient();
+  const { data, error } = await client.rpc('get_accessible_customer_contexts');
   if (error) throw error;
   return (data ?? []) as CustomerAccountContext[];
 }
 
 export async function getGroupChildAccountOverview(groupCustomerId: string): Promise<GroupChildAccountOverview[]> {
-  const { data, error } = await (supabase.rpc as any)('get_group_child_account_overview', { p_group_customer_id: groupCustomerId });
+  const client = await requireCustomerDataClient();
+  const { data, error } = await (client.rpc as any)('get_group_child_account_overview', { p_group_customer_id: groupCustomerId });
   if (error) throw error;
   return (data ?? []) as GroupChildAccountOverview[];
 }
@@ -71,7 +74,8 @@ export async function getGroupAssociatedAccountDetail(input: {
   customerId?: string | null;
   applicationId?: string | null;
 }): Promise<GroupAssociatedAccountDetail | null> {
-  const { data, error } = await (supabase.rpc as any)('get_group_associated_account_detail', {
+  const client = await requireCustomerDataClient();
+  const { data, error } = await (client.rpc as any)('get_group_associated_account_detail', {
     p_group_customer_id: input.groupCustomerId,
     p_customer_id: input.customerId ?? null,
     p_application_id: input.applicationId ?? null,
@@ -187,8 +191,8 @@ function portfolioPriority(partnerType: PartnerType) {
 }
 
 async function selectedCustomerStorageKey() {
-  const { data } = await supabase.auth.getSession();
-  const userId = data.session?.user?.id;
+  const identity = await getCustomerIdentity();
+  const userId = identity?.profileId;
   if (!userId) return null;
   await AsyncStorage.removeItem(selectedCustomerKeyPrefix);
   return `${selectedCustomerKeyPrefix}:${userId}`;
