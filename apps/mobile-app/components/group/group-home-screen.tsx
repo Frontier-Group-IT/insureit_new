@@ -10,7 +10,7 @@ import { NotificationBell } from '@/components/realtime-notifications';
 import { LoadingState, UniversalBottomTabs } from '@/components/ui';
 import { buildComplianceRenewals } from '@/lib/compliance-renewals';
 import { customerAccountTitle, getAccessibleCustomerContexts, getGroupChildAccountOverview, membershipRoleLabel, partnerTypeLabel, type CustomerAccountContext, type GroupChildAccountOverview } from '@/lib/customer-context';
-import { supabase } from '@/lib/supabase';
+import { requireCustomerDataClient } from '@/lib/customer-data-client';
 import { palette } from '@/lib/theme';
 import type { Claim, CustomerOnboardingApplication, Policy, Profile, Vehicle } from '@/lib/types';
 
@@ -57,15 +57,16 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
           if (active) setData({ associated, vehicles: [], policies: [], claims: [] });
           return;
         }
+        const client = await requireCustomerDataClient();
         const [vehicleResult, policyResult, claimResult] = await Promise.all([
-          supabase.from('vehicles').select('*').in('customer_id', accountIds),
-          supabase.from('policies').select('*').in('customer_id', accountIds),
-          supabase.from('claims').select('*').in('customer_id', accountIds),
+          client.from('vehicles').select('*').in('customer_id', accountIds),
+          client.from('policies').select('*').in('customer_id', accountIds),
+          client.from('claims').select('*').in('customer_id', accountIds),
         ]);
         if (vehicleResult.error || policyResult.error || claimResult.error) throw vehicleResult.error ?? policyResult.error ?? claimResult.error;
         if (active) setData({ associated, vehicles: vehicleResult.data ?? [], policies: policyResult.data ?? [], claims: claimResult.data ?? [] });
       } catch (nextError) {
-        console.warn('Portfolio dashboard load failed', nextError);
+        console.warn('Portfolio dashboard load failed');
         if (active) setError('We could not load the portfolio overview. Please try again.');
       } finally {
         if (active) setLoading(false);
