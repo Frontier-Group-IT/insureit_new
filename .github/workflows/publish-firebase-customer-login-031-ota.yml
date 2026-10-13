@@ -74,3 +74,5 @@ jobs:
 # 2026-10-12 native phone event-flow cutover: no new APK/AAB, runtime 0.3.1 only.
 
 # 2026-10-13: publish completed native verifyPhoneNumber event-flow with instant-auth race regression.
+
+# 2026-10-13: retry after aligning fail-closed Android phone mismatch regression assertion.
