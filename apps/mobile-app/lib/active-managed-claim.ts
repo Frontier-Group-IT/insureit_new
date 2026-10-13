@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { requireCustomerDataClient } from '@/lib/customer-data-client';
 
 export type ActiveManagedClaim = {
   id: string;
@@ -9,7 +9,8 @@ export type ActiveManagedClaim = {
 const COMPLETED_MANAGED_CLAIM_STATUSES = new Set(['Settled', 'Closed', 'Claim Complete']);
 
 export async function findActiveManagedClaim(policyId: string): Promise<ActiveManagedClaim | null> {
-  const { data, error } = await (supabase as any)
+  const client = await requireCustomerDataClient();
+  const { data, error } = await (client as any)
     .from('claims')
     .select('id,current_status,created_at')
     .eq('policy_id', policyId)
