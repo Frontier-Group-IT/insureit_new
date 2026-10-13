@@ -676,7 +676,7 @@ function shortInsurerName(name: string) {
   if (normalized.includes('bajaj allianz')) return 'Bajaj Allianz';
   if (normalized.includes('tata aig')) return 'TATA AIG';
   if (normalized.includes('oriental')) return 'Oriental';
-  return name.replace(/\\b(insurance company|general insurance|assurance company|insurance co\\.?|limited|ltd\\.?)\\b/gi, '').replace(/\\s+/g, ' ').trim() || name;
+  return name.replace(/\b(insurance company|general insurance|assurance company|insurance co\.?|limited|ltd\.?)\b/gi, '').replace(/\s+/g, ' ').trim() || name;
 }
 function humanize(value: string) { return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 
