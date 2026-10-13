@@ -342,7 +342,7 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
             <p className="w-full self-start text-left text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">
               Policies · {business.periodShortLabel}
             </p>
-            <div className="mt-2 grid min-h-[96px] min-w-0 flex-1 grid-cols-[44%_minmax(0,1fr)] items-center">
+            <div className="mt-2 grid min-h-[96px] w-full min-w-0 flex-1 grid-cols-[44%_minmax(0,1fr)] items-center">
               <div className="flex min-w-0 items-center justify-center">
                 <p className="portal-display text-center text-[clamp(18px,2vw,27px)] font-semibold leading-none tabular-nums text-[#10213D]">
                   {business.policyCount.toLocaleString("en-IN")}
