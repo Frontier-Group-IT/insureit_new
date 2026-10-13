@@ -30,3 +30,15 @@ export async function getPartnerBusinessPerformance() {
   if (!data) throw new Error('Business performance is unavailable.');
   return data as PartnerBusinessPerformance;
 }
+
+export type PartnerTopInsurer = {
+  name: string;
+  policies: number;
+  premium: number | string;
+};
+
+export async function getPartnerTopInsurers(): Promise<PartnerTopInsurer[]> {
+  const { data, error } = await supabase.rpc('partner_app_top_insurers');
+  if (error) throw error;
+  return Array.isArray(data) ? data as PartnerTopInsurer[] : [];
+}
