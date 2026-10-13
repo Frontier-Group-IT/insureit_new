@@ -74,3 +74,15 @@ test('shared logout explicitly clears selected native Firebase Customer session'
   assert.match(identity, /await signOut\(getAuth\(\)\)/);
   assert.match(identity, /AsyncStorage\.getItem\(modeKey\) === 'firebase'/);
 });
+
+
+test('Customer Profile reads Firebase-scoped data and blocks unverified write/delete paths', () => {
+  const profile = read('app/customer/profile.tsx');
+  assert.match(profile, /getProfile\(identity\.profileId, client\)/);
+  assert.match(profile, /getCustomerForUser\(identity\.profileId, client\)/);
+  assert.match(profile, /getOnboardingApplicationForUser\(identity\.profileId, true, client\)/);
+  assert.match(profile, /getCustomerPrivateDocumentUrl\(/);
+  assert.doesNotMatch(profile, /\bgetCurrentSession\s*\(/);
+  assert.match(profile, /if \(identity\.provider === 'firebase'\)/);
+  assert.match(profile, /Document deletion is temporarily unavailable for Firebase accounts/);
+});
