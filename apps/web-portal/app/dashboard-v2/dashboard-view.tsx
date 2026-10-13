@@ -791,9 +791,9 @@ function MetricRail({ item, divided }: { item: RailMetric; divided: boolean }) {
     <Link
       prefetch={false}
       href={item.href}
-      className={`${divided ? "border-t md:border-l md:border-t-0" : ""} group flex h-[128px] min-w-0 flex-col overflow-hidden border-[#E3E9F0] transition hover:brightness-[0.98]`}
+      className={`${divided ? "border-t md:border-l md:border-t-0" : ""} group flex h-[108px] min-w-0 flex-col overflow-hidden border-[#E3E9F0] transition hover:brightness-[0.98]`}
     >
-      <div className="flex h-[60%] min-h-0 flex-col bg-white px-3 py-2">
+      <div className="flex h-[76px] min-h-0 flex-col bg-white px-3 py-2">
         {item.secondary ? (
           <>
             <p className="text-[9px] font-bold uppercase tracking-[.065em] text-[#53637A]">Claims</p>
@@ -817,7 +817,7 @@ function MetricRail({ item, divided }: { item: RailMetric; divided: boolean }) {
           </>
         )}
       </div>
-      <div className="flex h-[40%] min-h-0 items-center bg-[#142448] px-2.5 text-white">
+      <div className="flex h-[32px] min-h-0 items-center bg-[#142448] px-2.5 text-white">
         {item.secondary ? (
           <div className="grid w-full min-w-0 grid-cols-2 items-center gap-2">
             <span className="block min-w-0 truncate text-center text-[10px] font-semibold leading-tight" title={item.meta || undefined}>{item.meta || "—"}</span>
