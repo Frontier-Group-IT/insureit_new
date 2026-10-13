@@ -58,8 +58,8 @@ const checks = [
   ['Upload overlay renders a real percentage and progress bar when byte progress is available', appLoading.includes('progressPercent}%') && appLoading.includes('styles.progressTrack') && appLoading.includes('styles.progressFill') && appLoading.includes('uploadProgress(entries, nextLabel)')],
   ['Existing expo-image-picker dependency is reused', Boolean(packageJson.dependencies?.['expo-image-picker'])],
   ['Existing expo-image-picker native plugin remains configured', imagePickerPluginConfigured],
-  ['Customer runtime remains 0.3.0', appConfig.expo.version === '0.3.0'],
-  ['Customer Android versionCode remains 9', appConfig.expo.android?.versionCode === 9],
+  ['Firebase migration candidate retains the 0.3.1 runtime, isolated from live 0.3.0', appConfig.expo.version === '0.3.1'],
+  ['Firebase migration candidate remains Android versionCode 10', appConfig.expo.android?.versionCode === 10],
 ];
 
 const failed = checks.filter(([, ok]) => !ok);
