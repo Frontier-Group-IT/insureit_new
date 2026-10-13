@@ -1,7 +1,7 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { Image, type ImageSourcePropType, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Image, type ImageSourcePropType, Pressable, RefreshControl, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { PartnerBusinessRangeSummaryCard } from '@/components/partner-business-range-summary';
 import { PartnerScreen } from '@/components/partner-screen';
@@ -51,6 +51,8 @@ const TREND_OPTIONS: Array<{ value: TrendRange; label: string }> = [
 
 export default function BusinessScreen() {
   const router = useRouter();
+  const { height: screenHeight } = useWindowDimensions();
+  const compactScreen = screenHeight < 800;
   const { context, cacheScopeKey, avatarUri } = usePartnerSession();
   const [overviewRange, setOverviewRange] = useState<OverviewRange>('mtd');
   const [overviewMenuOpen, setOverviewMenuOpen] = useState(false);
@@ -230,7 +232,7 @@ export default function BusinessScreen() {
         />
       ) : (
         <>
-          <View style={styles.heroBanner}>
+          <View style={[styles.heroBanner, compactScreen && styles.heroBannerShort]}>
             <Image
               source={require('../../assets/partner/banners/claims-header-reference.jpg')}
               style={styles.heroBackdrop}
@@ -257,7 +259,7 @@ export default function BusinessScreen() {
             <View style={styles.heroCopy}><Text style={styles.heroTitle}>Business</Text></View>
           </View>
 
-          <View style={styles.searchRow}>
+          <View style={[styles.searchRow, compactScreen && styles.searchRowShort]}>
             <Pressable accessibilityRole="button" onPress={() => router.push('/search')} style={({ pressed }) => [styles.searchBox, pressed && styles.pressed]}>
               <Ionicons name="search-outline" size={21} color="#3156B8" />
               <Text numberOfLines={1} style={styles.searchText}>Search customer, vehicle number or policy number...</Text>
@@ -308,7 +310,7 @@ export default function BusinessScreen() {
           {overviewLoading ? <Text style={styles.inlineLoading}>Loading selected range…</Text> : null}
           {overviewError ? <View style={styles.feedback}><PartnerBanner tone="warning" message={overviewError} /></View> : null}
 
-          <View style={styles.overviewGrid}>
+          <View style={[styles.overviewGrid, compactScreen && styles.tightContainer]}>
             <OverviewCard
               icon="premium"
               value={formatCompactCurrency(overview?.premium ?? performance.premium_this_month)}
@@ -384,7 +386,7 @@ export default function BusinessScreen() {
           ) : null}
           {trendLoading ? <Text style={styles.inlineLoading}>Loading selected trend…</Text> : null}
           {trendError ? <View style={styles.feedback}><PartnerBanner tone="warning" message={trendError} /></View> : null}
-          <TrendChart data={trendData} emptyMessage={trendRange === 'custom' ? 'Apply a custom range to view its premium total.' : undefined} />
+          <TrendChart data={trendData} compact={compactScreen} emptyMessage={trendRange === 'custom' ? 'Apply a custom range to view its premium total.' : undefined} />
 
           <SectionHeader
             title="Business by Product"
@@ -400,7 +402,7 @@ export default function BusinessScreen() {
               </Pressable>
             )}
           />
-          <View style={styles.productGrid}>
+          <View style={[styles.productGrid, compactScreen && styles.tightContainer]}>
             {productMix.length ? productMix.map((item) => (
               <ProductTile key={item.label} icon={item.icon} label={humanize(item.label)} share={item.share} />
             )) : (
@@ -408,7 +410,7 @@ export default function BusinessScreen() {
             )}
           </View>
 
-          <SectionHeader title="Top Insurers" action={<Text style={styles.viewAll}>View All ›</Text>} />
+          <SectionHeader title="Top Insurers" action={<Pressable onPress={() => router.push('/business-report')}><Text style={styles.viewAll}>View All ›</Text></Pressable>} />
           <View style={styles.insurerCard}>
             <View style={styles.insurerEmptyIcon}><Ionicons name="business-outline" size={18} color="#3156B8" /></View>
             <View style={styles.insurerEmptyBody}>
@@ -418,7 +420,7 @@ export default function BusinessScreen() {
           </View>
 
           <SectionHeader title="Quick Actions" />
-          <View style={styles.quickGrid}>
+          <View style={[styles.quickGrid, compactScreen && styles.tightContainer]}>
             <QuickAction asset={PartnerAssets.actions.quickRenewals} label="Renewals" meta={`${renewals?.due_30_count ?? 0} due`} onPress={() => router.push('/renewals')} />
             <QuickAction asset={PartnerAssets.actions.quickClaims} label="Claims" meta={`${claims?.active_claims ?? 0} active`} onPress={() => router.push('/(tabs)/claims')} />
             <PayoutQuickAction payout={payout} onPress={() => router.push('/(tabs)/more')} />
@@ -426,9 +428,9 @@ export default function BusinessScreen() {
           </View>
 
           <SectionHeader title="My Network" action={<Pressable onPress={() => router.push('/network')}><Text style={styles.viewAll}>View All ›</Text></Pressable>} />
-          <View style={styles.networkGrid}>
+          <View style={[styles.networkGrid, compactScreen && styles.tightNetwork]}>
             <Pressable accessibilityRole="button" onPress={() => router.push('/network')} style={({ pressed }) => [styles.networkTile, pressed && styles.pressed]}>
-              <BlueIcon icon="people" badge="+" size={38} />
+              <BlueIcon icon="people" badge="+" size={27} />
               <View style={styles.networkBody}>
                 <Text style={styles.networkValue}>{network.total_partners}</Text>
                 <Text style={styles.networkLabel}>Partner Family</Text>
@@ -500,7 +502,7 @@ function OverviewCard({ icon, value, label, changeLabel, compareLabel = 'vs last
       onPress={onPress}
       style={({ pressed }) => [styles.overviewCard, pressed && onPress ? styles.pressed : null]}
     >
-      <PartnerBusinessOverviewIcon kind={icon} size={38} />
+      <PartnerBusinessOverviewIcon kind={icon} size={24} />
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={styles.overviewValue}>{value}</Text>
       <Text numberOfLines={2} style={styles.overviewLabel}>{label}</Text>
       <View style={styles.growthRow}>
@@ -519,28 +521,28 @@ function overviewTrend(changeLabel?: string): { icon: keyof typeof Ionicons.glyp
   return null;
 }
 
-function TrendChart({ data, emptyMessage }: { data: TrendPoint[]; emptyMessage?: string }) {
+function TrendChart({ data, emptyMessage, compact = false }: { data: TrendPoint[]; emptyMessage?: string; compact?: boolean }) {
   if (!data.length) {
     return <View style={styles.chartEmpty}><Text style={styles.emptyCompactText}>{emptyMessage || 'No trend data available.'}</Text></View>;
   }
   const max = Math.max(1, ...data.map((item) => Number(item.premium || 0)));
   return (
-    <View style={styles.chartCard}>
-      <View style={styles.chartYAxis}>
+    <View style={[styles.chartCard, compact && styles.chartCompact]}>
+      <View style={[styles.chartYAxis, compact && styles.chartYAxisCompact]}>
         <Text style={styles.axisText}>High</Text>
         <Text style={styles.axisText}>Mid</Text>
         <Text style={styles.axisText}>Low</Text>
         <Text style={styles.axisText}>0</Text>
       </View>
-      <View style={styles.chart}>
+      <View style={[styles.chart, compact && styles.chartPlotCompact]}>
         {data.slice(-6).map((item, index) => {
           const premium = Number(item.premium || 0);
-          const height = Math.max(4, Math.round((premium / max) * 96));
+          const height = Math.max(3, Math.round((premium / max) * (compact ? 52 : 70)));
           const label = item.month === 'MTD' ? 'MTD' : item.month === 'LAST' ? 'Last' : item.month === 'CUSTOM' ? 'Custom' : shortMonth(item.month);
           return (
             <View key={`${item.month}-${index}`} style={styles.barColumn}>
               <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={styles.barValue}>{formatCompactCurrency(premium)}</Text>
-              <View style={styles.barTrack}><View style={[styles.bar, { height }]} /></View>
+              <View style={[styles.barTrack, compact && styles.barTrackCompact]}><View style={[styles.bar, { height }]} /></View>
               <Text style={styles.barMonth}>{label}</Text>
             </View>
           );
@@ -553,7 +555,7 @@ function TrendChart({ data, emptyMessage }: { data: TrendPoint[]; emptyMessage?:
 function ProductTile({ icon, label, share }: { icon: keyof typeof Ionicons.glyphMap; label: string; share: number }) {
   return (
     <View style={styles.productTile}>
-      <BlueIcon icon={icon} size={40} />
+      <BlueIcon icon={icon} size={25} />
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={styles.productLabel}>{label}</Text>
       <Text style={styles.productShare}>{share}%</Text>
     </View>
@@ -583,7 +585,7 @@ function QuickAction({
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [styles.quickTile, pressed && styles.pressed]}>
       <View style={styles.quickIconWrap}>
-        {asset ? <Image source={asset} style={styles.quickIcon} resizeMode="contain" /> : icon ? <BlueIcon icon={icon} badge={iconBadge} size={40} /> : null}
+        {asset ? <Image source={asset} style={styles.quickIcon} resizeMode="contain" /> : icon ? <BlueIcon icon={icon} badge={iconBadge} size={28} /> : null}
       </View>
       <Text numberOfLines={1} style={styles.quickLabel}>{label}</Text>
       <Text numberOfLines={1} style={styles.quickMeta}>{meta}</Text>
@@ -638,10 +640,10 @@ function formatCacheTime(value: number | null) { if (!value) return 'earlier'; r
 function humanize(value: string) { return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 
 const styles = StyleSheet.create({
-  heroBanner: { height: 162, marginHorizontal: -16, marginTop: -14, overflow: 'hidden', backgroundColor: '#0752A2' },
+  heroBanner: { height: 98, marginHorizontal: -16, marginTop: -14, overflow: 'hidden', backgroundColor: '#0752A2' },
   heroBackdrop: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%', opacity: 0.92 },
   heroShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(1,42,95,0.10)' },
-  heroTopRow: { position: 'absolute', zIndex: 3, top: 30, left: 15, right: 15, minHeight: 35, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  heroTopRow: { position: 'absolute', zIndex: 3, top: 13, left: 15, right: 15, minHeight: 35, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   heroBrand: { flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: '60%' },
   heroLogo: { width: 30, height: 35, tintColor: '#FFFFFF' },
   heroBrandCopy: { justifyContent: 'center' },
@@ -652,19 +654,19 @@ const styles = StyleSheet.create({
   heroAvatarTouch: { borderRadius: 18 },
   heroAvatar: { width: 35, height: 35, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
   heroAvatarText: { color: '#144E98', fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
-  heroCopy: { position: 'absolute', zIndex: 3, left: 18, bottom: 24 },
-  heroTitle: { color: '#FFFFFF', fontSize: 20, lineHeight: 23, fontWeight: '800', letterSpacing: -0.2 },
-  searchRow: { zIndex: 5, marginTop: -10, marginBottom: 10, height: 49, flexDirection: 'row', alignItems: 'stretch', borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D9DFEA', overflow: 'hidden' },
-  searchBox: { flex: 1, height: 49, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 15, backgroundColor: '#FFFFFF' },
+  heroCopy: { position: 'absolute', zIndex: 3, left: 18, bottom: 12 },
+  heroTitle: { color: '#FFFFFF', fontSize: 15, lineHeight: 18, fontWeight: '800', letterSpacing: -0.2 },
+  searchRow: { zIndex: 5, marginTop: -8, marginBottom: 3, height: 34, flexDirection: 'row', alignItems: 'stretch', borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D9DFEA', overflow: 'hidden' },
+  searchBox: { flex: 1, height: 34, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 15, backgroundColor: '#FFFFFF' },
   searchText: { flex: 1, color: '#8B95A8', fontSize: 11.5, lineHeight: 16, fontWeight: '500' },
-  filterButton: { height: 49, minWidth: 76, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: '#D9DFEA' },
+  filterButton: { height: 34, minWidth: 60, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: '#D9DFEA' },
   filterText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: '700' },
   feedback: { marginBottom: 8 },
   selectorAnchor: { position: 'relative', zIndex: 20 },
-  sectionHeader: { minHeight: 32, marginTop: 12, marginBottom: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  sectionTitle: { color: partnerTheme.colors.inkMuted, fontSize: 10, lineHeight: 14, fontWeight: '600', letterSpacing: 0.7 },
+  sectionHeader: { minHeight: 18, marginTop: 5, marginBottom: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  sectionTitle: { color: '#15377D', fontSize: 9, lineHeight: 12, fontWeight: '600', letterSpacing: 0.7 },
   sectionActions: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  periodButton: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 6 },
+  periodButton: { minHeight: 20, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 6 },
   periodText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: '700' },
   smallSelect: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5, backgroundColor: '#F6F8FC' },
   smallSelectText: { color: '#3156B8', ...partnerTheme.typography.meta, fontWeight: '700' },
@@ -678,50 +680,58 @@ const styles = StyleSheet.create({
   rangeWrap: { marginBottom: 8 },
   inlineLoading: { marginBottom: 7, color: '#718198', ...partnerTheme.typography.caption },
   overviewGrid: { flexDirection: 'row', gap: 5, borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
-  overviewCard: { flex: 1, minHeight: 126, alignItems: 'center', justifyContent: 'center', borderRadius: 12, paddingHorizontal: 4, paddingVertical: 8, backgroundColor: '#F5F9FF' },
-  overviewValue: { width: '100%', marginTop: 7, color: '#112C69', textAlign: 'center', fontSize: 17, lineHeight: 22, fontWeight: '800' },
-  overviewLabel: { minHeight: 30, marginTop: 2, color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.caption },
-  growthRow: { marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 2 },
+  overviewCard: { flex: 1, minHeight: 78, alignItems: 'center', justifyContent: 'center', borderRadius: 12, paddingHorizontal: 4, paddingVertical: 8, backgroundColor: '#F5F9FF' },
+  overviewValue: { width: '100%', marginTop: 2, color: '#112C69', textAlign: 'center', fontSize: 12, lineHeight: 15, fontWeight: '800' },
+  overviewLabel: { minHeight: 18, marginTop: 0, color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.caption },
+  growthRow: { marginTop: 1, flexDirection: 'row', alignItems: 'center', gap: 2 },
   growthText: { maxWidth: 72, color: '#16A34A', ...partnerTheme.typography.meta, fontWeight: '800' },
   vsText: { marginTop: 1, maxWidth: 72, color: '#9AA7B8', textAlign: 'center', ...partnerTheme.typography.meta, fontWeight: '500' },
-  chartCard: { minHeight: 168, flexDirection: 'row', borderRadius: 16, padding: 12, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
+  chartCard: { minHeight: 110, flexDirection: 'row', borderRadius: 16, padding: 12, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
   chartEmpty: { minHeight: 120, alignItems: 'center', justifyContent: 'center', borderRadius: 16, padding: 12, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1' },
-  chartYAxis: { width: 30, height: 128, justifyContent: 'space-between', paddingVertical: 5 },
+  chartYAxis: { width: 23, height: 85, justifyContent: 'space-between', paddingVertical: 5 },
   axisText: { color: '#8795A9', ...partnerTheme.typography.meta },
-  chart: { flex: 1, height: 142, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 6 },
+  chart: { flex: 1, height: 91, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 6 },
   barColumn: { flex: 1, maxWidth: 54, height: '100%', alignItems: 'center', justifyContent: 'flex-end' },
   barValue: { width: '100%', minHeight: 16, color: '#3156B8', textAlign: 'center', ...partnerTheme.typography.meta, fontWeight: '700' },
-  barTrack: { height: 102, width: '78%', justifyContent: 'flex-end', overflow: 'hidden', borderTopLeftRadius: 7, borderTopRightRadius: 7, backgroundColor: '#EEF3FA' },
+  barTrack: { height: 72, width: '78%', justifyContent: 'flex-end', overflow: 'hidden', borderTopLeftRadius: 7, borderTopRightRadius: 7, backgroundColor: '#EEF3FA' },
   bar: { width: '100%', borderTopLeftRadius: 7, borderTopRightRadius: 7, backgroundColor: '#2298E8' },
   barMonth: { marginTop: 5, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   productGrid: { flexDirection: 'row', gap: 5, borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
-  productTile: { flex: 1, minWidth: 0, minHeight: 88, alignItems: 'center', justifyContent: 'center', borderRadius: 11, paddingVertical: 8, backgroundColor: '#F5F9FF' },
+  productTile: { flex: 1, minWidth: 0, minHeight: 58, alignItems: 'center', justifyContent: 'center', borderRadius: 11, paddingVertical: 8, backgroundColor: '#F5F9FF' },
   productIconWrap: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   productLabel: { width: '94%', marginTop: 3, color: '#14367B', textAlign: 'center', ...partnerTheme.typography.meta, fontWeight: '700' },
   productShare: { marginTop: 1, color: '#3156B8', ...partnerTheme.typography.meta, fontWeight: '800' },
   emptyCompact: { flex: 1, minHeight: 72, alignItems: 'center', justifyContent: 'center' },
   emptyCompactText: { color: '#8795A9', ...partnerTheme.typography.caption },
-  insurerCard: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 16, padding: 12, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
-  insurerEmptyIcon: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 11, backgroundColor: '#F1F6FF' },
+  insurerCard: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 16, padding: 12, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
+  insurerEmptyIcon: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center', borderRadius: 11, backgroundColor: '#F1F6FF' },
   insurerEmptyBody: { flex: 1 },
   insurerEmptyTitle: { color: '#14367B', ...partnerTheme.typography.cardTitle },
   insurerEmptyText: { marginTop: 2, color: '#8795A9', ...partnerTheme.typography.caption },
   quickGrid: { flexDirection: 'row', gap: 5, borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
-  quickTile: { flex: 1, minWidth: 0, minHeight: 88, alignItems: 'center', justifyContent: 'center', borderRadius: 11, paddingVertical: 8, backgroundColor: '#F5F9FF' },
-  quickIconWrap: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  quickIcon: { width: 36, height: 36 },
+  quickTile: { flex: 1, minWidth: 0, minHeight: 58, alignItems: 'center', justifyContent: 'center', borderRadius: 11, paddingVertical: 8, backgroundColor: '#F5F9FF' },
+  quickIconWrap: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
+  quickIcon: { width: 29, height: 29 },
   generatedIcon: { overflow: 'hidden', position: 'relative', alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8F5FF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D1E9FF', shadowColor: '#0A62B8', shadowOpacity: 0.14, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
   generatedIconGlow: { position: 'absolute', width: '72%', height: '72%', right: -5, top: -5, borderRadius: 20, backgroundColor: 'rgba(56,176,255,0.22)' },
   generatedIconBadge: { position: 'absolute', right: 2, bottom: 2, minWidth: 14, height: 14, paddingHorizontal: 2, borderRadius: 7, alignItems: 'center', justifyContent: 'center', backgroundColor: '#075BC8', borderWidth: 1, borderColor: '#FFFFFF' },
   generatedIconBadgeText: { color: '#FFFFFF', fontSize: 8, lineHeight: 10, fontWeight: '900' },
   quickLabel: { marginTop: 3, color: '#14367B', textAlign: 'center', ...partnerTheme.typography.meta, fontWeight: '800' },
   quickMeta: { marginTop: 1, color: '#718198', textAlign: 'center', ...partnerTheme.typography.meta, fontWeight: '500' },
-  networkGrid: { flexDirection: 'row', gap: 7, marginBottom: 8 },
-  networkTile: { flex: 1, minHeight: 78, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 16, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
-  networkIcon: { width: 38, height: 38 },
+  networkGrid: { flexDirection: 'row', gap: 5, marginBottom: 2 },
+  networkTile: { flex: 1, minHeight: 53, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 16, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
+  networkIcon: { width: 27, height: 27 },
   networkBody: { flex: 1, minWidth: 0 },
-  networkValue: { color: '#14367B', fontSize: 17, lineHeight: 22, fontWeight: '800' },
+  networkValue: { color: '#14367B', fontSize: 13, lineHeight: 16, fontWeight: '800' },
   networkLabel: { marginTop: 1, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption, fontWeight: '700' },
   networkMeta: { marginTop: 1, color: '#8795A9', ...partnerTheme.typography.meta },
+  heroBannerShort: { height: 72 },
+  searchRowShort: { marginBottom: 1 },
+  tightContainer: { padding: 3, gap: 3, borderRadius: 10 },
+  tightNetwork: { gap: 4 },
+  chartCompact: { minHeight: 86, padding: 5 },
+  chartYAxisCompact: { height: 70 },
+  chartPlotCompact: { height: 74 },
+  barTrackCompact: { height: 56 },
   pressed: { opacity: 0.75 },
 });
