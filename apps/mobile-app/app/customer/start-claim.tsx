@@ -251,7 +251,7 @@ export default function StartClaimScreen() {
             <EmptyState title="No vehicle found" body="Add a vehicle before starting a claim." />
           </>
         )}
-        <Text style={styles.helper}>Start typing to find a vehicle.</Text>
+        {!accountVehicles.length ? <Text style={styles.helper}>Start typing to find a vehicle.</Text> : null}
       </View>
 
       <View style={styles.section}>
@@ -426,29 +426,35 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
     });
   }
 
-  return <View style={styles.vehicleField}>
-    <Text style={styles.sectionLabel}>Vehicle number *</Text>
-    <View ref={anchorRef} collapsable={false} style={[styles.selectButton, open && styles.selectButtonHidden]}>
-      <View style={styles.selectVehicleLogoShell}>
-        <Image
-          accessible={false}
-          source={selectedVehicleBrandLogo ?? vehicleNumberIcon}
-          style={[styles.selectVehicleArtwork, selectedVehicleBrandLogo ? styles.selectVehicleBrandArtwork : undefined]}
-          resizeMode="contain"
-        />
+  return <>
+    {/* A single responder owns the whole selector (label, vehicle, icon, and helper).
+        Do not add a nested press handler or a large hitSlop: the V6 navigation bug
+        was caused by an unexpected header-logo responder capturing page touches. */}
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Select vehicle"
+      accessibilityHint="Opens the vehicle list"
+      accessibilityState={{ expanded: open }}
+      onPress={() => { console.warn('[claim-navigation] vehicle-selector-field-press'); toggleSelector(); }}
+      style={({ pressed }) => [styles.vehicleField, pressed && styles.vehicleFieldPressed]}
+    >
+      <Text style={styles.sectionLabel}>Vehicle number *</Text>
+      <View ref={anchorRef} collapsable={false} pointerEvents="none" style={[styles.selectButton, open && styles.selectButtonHidden]}>
+        <View style={styles.selectVehicleLogoShell}>
+          <Image
+            accessible={false}
+            source={selectedVehicleBrandLogo ?? vehicleNumberIcon}
+            style={[styles.selectVehicleArtwork, selectedVehicleBrandLogo ? styles.selectVehicleBrandArtwork : undefined]}
+            resizeMode="contain"
+          />
+        </View>
+        <View style={styles.selectCopy}><Text style={[styles.selectValue, !selectedVehicle && styles.placeholder]} numberOfLines={1}>{selectedVehicle ? selectedVehicle.vehicle_no : 'Select vehicle'}</Text>{selectedVehicle ? <Text style={styles.selectMeta} numberOfLines={1}>{[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ') || selectedVehicle.vehicle_type}</Text> : null}</View>
+        <View style={styles.vehicleSelectorTrigger} accessible={false}>
+          <MaterialCommunityIcons name="format-list-bulleted" size={20} color={palette.navy} />
+        </View>
       </View>
-      <View pointerEvents="none" style={styles.selectCopy}><Text style={[styles.selectValue, !selectedVehicle && styles.placeholder]} numberOfLines={1}>{selectedVehicle ? selectedVehicle.vehicle_no : 'Select vehicle'}</Text>{selectedVehicle ? <Text style={styles.selectMeta} numberOfLines={1}>{[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ') || selectedVehicle.vehicle_type}</Text> : null}</View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Open vehicle selector"
-        accessibilityState={{ expanded: open }}
-        hitSlop={8}
-        onPress={() => { console.warn('[claim-navigation] vehicle-selector-icon-press'); toggleSelector(); }}
-        style={({ pressed }) => [styles.vehicleSelectorTrigger, pressed && styles.vehicleSelectorTriggerPressed]}
-      >
-        <MaterialCommunityIcons name="format-list-bulleted" size={20} color={palette.navy} />
-      </Pressable>
-    </View>
+      <Text style={styles.helper}>Start typing to find a vehicle.</Text>
+    </Pressable>
 
     <Modal
       visible={open}
@@ -510,7 +516,7 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
         </View>
       </View>
     </Modal>
-  </View>;
+  </>;
 }
 
 function formatDate(value: string) { return new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
@@ -537,8 +543,8 @@ const styles = StyleSheet.create({
   chipText: { color: '#56657A', fontSize: 10.5, fontWeight: '800' },
   chipTextActive: { color: '#FFFFFF' },
   vehicleField: { gap: 6 },
+  vehicleFieldPressed: { opacity: 0.86 },
   vehicleSelectorTrigger: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', marginLeft: 'auto' },
-  vehicleSelectorTriggerPressed: { backgroundColor: '#EEF5FF' },
   selectButton: { minHeight: 64, borderRadius: 16, borderWidth: 1.5, borderColor: '#AFC9EC', backgroundColor: '#FFFFFF', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   selectButtonOpen: { borderColor: '#3F7FE5', backgroundColor: '#FBFDFF', shadowColor: '#145ED7', shadowOpacity: 0.09, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   selectButtonHidden: { opacity: 0 },
