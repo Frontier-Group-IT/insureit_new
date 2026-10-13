@@ -421,7 +421,7 @@ export default function BusinessScreen() {
               {topInsurers.slice(0, 5).map((insurer) => (
                 <View key={insurer.name} style={styles.insurerTile}>
                   <PartnerInsurerLogo name={insurer.name} style={styles.insurerLogo} />
-                  <Text numberOfLines={2} style={styles.insurerName}>{insurer.name}</Text>
+                  <Text numberOfLines={2} style={styles.insurerName}>{shortInsurerName(insurer.name)}</Text>
                   <Text numberOfLines={1} style={styles.insurerCount}>{insurer.policies} policies</Text>
                 </View>
               ))}
@@ -572,11 +572,21 @@ function TrendChart({ data, emptyMessage, compact = false }: { data: TrendPoint[
 function ProductTile({ icon, label, share }: { icon: keyof typeof Ionicons.glyphMap; label: string; share: number }) {
   return (
     <View style={styles.productTile}>
-      <BlueIcon icon={icon} size={25} />
+      {productAsset(icon, label) ? <Image source={productAsset(icon, label)!} style={styles.productIconAsset} resizeMode="contain" /> : <BlueIcon icon={icon} size={25} />}
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={styles.productLabel}>{label}</Text>
       <Text style={styles.productShare}>{share}%</Text>
     </View>
   );
+}
+
+function productAsset(icon: keyof typeof Ionicons.glyphMap, label: string): ImageSourcePropType | null {
+  const name = label.toLowerCase();
+  if (name.includes('motor') || name.includes('package') || icon === 'car-sport') return PartnerAssets.products.motorInsurance;
+  if (name.includes('health') || icon === 'medkit') return PartnerAssets.products.healthInsurance;
+  if (name.includes('life') || icon === 'people') return PartnerAssets.products.familyInsurance;
+  if (name.includes('home') || icon === 'home') return PartnerAssets.products.propertyTravelInsurance;
+  if (name.includes('travel') || icon === 'airplane') return PartnerAssets.products.propertyTravelInsurance;
+  return null;
 }
 
 function PayoutQuickAction({ payout, onPress }: { payout: PartnerPayoutSummary | null; onPress: () => void }) {
@@ -654,6 +664,20 @@ function changeText(value: number, hasPrevious: boolean) { if (!hasPrevious) ret
 function formatCompactCurrency(value: number | string) { const amount = Number(value || 0); if (!Number.isFinite(amount)) return '₹0'; if (Math.abs(amount) >= 10_000_000) return `₹${(amount / 10_000_000).toFixed(amount % 10_000_000 === 0 ? 0 : 1)}Cr`; if (Math.abs(amount) >= 100_000) return `₹${(amount / 100_000).toFixed(amount % 100_000 === 0 ? 0 : 1)}L`; if (Math.abs(amount) >= 1_000) return `₹${(amount / 1_000).toFixed(amount % 1_000 === 0 ? 0 : 1)}k`; return formatIndianCurrency(amount); }
 function shortMonth(value: string) { const [year, month] = value.split('-').map(Number); return new Intl.DateTimeFormat('en-IN', { month: 'short' }).format(new Date(year, month - 1, 1)); }
 function formatCacheTime(value: number | null) { if (!value) return 'earlier'; return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value)); }
+function shortInsurerName(name: string) {
+  const normalized = name.toLowerCase();
+  if (normalized.includes('icici lombard')) return 'ICICI Lombard';
+  if (normalized.includes('new india')) return 'The New India';
+  if (normalized.includes('united india')) return 'United India';
+  if (normalized.includes('royal sundaram')) return 'Royal Sundaram';
+  if (normalized.includes('pnb metlife')) return 'PNB MetLife';
+  if (normalized.includes('hdfc ergo')) return 'HDFC ERGO';
+  if (normalized.includes('sbi general')) return 'SBI General';
+  if (normalized.includes('bajaj allianz')) return 'Bajaj Allianz';
+  if (normalized.includes('tata aig')) return 'TATA AIG';
+  if (normalized.includes('oriental')) return 'Oriental';
+  return name.replace(/\b(insurance company|general insurance|assurance company|insurance co\.?|limited|ltd\.?)\b/gi, '').replace(/\s+/g, ' ').trim() || name;
+}
 function humanize(value: string) { return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 
 const styles = StyleSheet.create({
@@ -681,7 +705,7 @@ const styles = StyleSheet.create({
   feedback: { marginBottom: 8 },
   selectorAnchor: { position: 'relative', zIndex: 20 },
   sectionHeader: { minHeight: 18, marginTop: 5, marginBottom: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  sectionTitle: { color: '#15377D', fontSize: 9, lineHeight: 12, fontWeight: '600', letterSpacing: 0.7 },
+  sectionTitle: { color: '#15377D', fontSize: 9, lineHeight: 12, fontWeight: '800', letterSpacing: 0.35 },
   sectionActions: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   periodButton: { minHeight: 20, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 6 },
   periodText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: '700' },
@@ -703,7 +727,7 @@ const styles = StyleSheet.create({
   growthRow: { marginTop: 1, flexDirection: 'row', alignItems: 'center', gap: 2 },
   growthText: { maxWidth: 72, color: '#16A34A', ...partnerTheme.typography.meta, fontWeight: '800' },
   vsText: { marginTop: 1, maxWidth: 72, color: '#9AA7B8', textAlign: 'center', ...partnerTheme.typography.meta, fontWeight: '500' },
-  chartCard: { minHeight: 110, flexDirection: 'row', borderRadius: 16, padding: 12, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
+  chartCard: { minHeight: 110, flexDirection: 'row', borderRadius: 16, paddingHorizontal: 12, paddingTop: 17, paddingBottom: 8, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
   chartEmpty: { minHeight: 120, alignItems: 'center', justifyContent: 'center', borderRadius: 16, padding: 12, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1' },
   chartYAxis: { width: 23, height: 85, justifyContent: 'space-between', paddingVertical: 5 },
   axisText: { color: '#8795A9', ...partnerTheme.typography.meta },
@@ -716,6 +740,7 @@ const styles = StyleSheet.create({
   productGrid: { flexDirection: 'row', gap: 5, borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
   productTile: { flex: 1, minWidth: 0, minHeight: 58, alignItems: 'center', justifyContent: 'center', borderRadius: 11, paddingVertical: 8, backgroundColor: '#F5F9FF' },
   productIconWrap: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  productIconAsset: { width: 26, height: 26 },
   productLabel: { width: '94%', marginTop: 3, color: '#14367B', textAlign: 'center', ...partnerTheme.typography.meta, fontWeight: '700' },
   productShare: { marginTop: 1, color: '#3156B8', ...partnerTheme.typography.meta, fontWeight: '800' },
   emptyCompact: { flex: 1, minHeight: 72, alignItems: 'center', justifyContent: 'center' },
@@ -751,7 +776,7 @@ const styles = StyleSheet.create({
   searchRowShort: { marginBottom: 1 },
   tightContainer: { padding: 3, gap: 3, borderRadius: 10 },
   tightNetwork: { gap: 4 },
-  chartCompact: { minHeight: 86, padding: 5 },
+  chartCompact: { minHeight: 86, paddingHorizontal: 5, paddingTop: 12, paddingBottom: 4 },
   chartYAxisCompact: { height: 70 },
   chartPlotCompact: { height: 74 },
   barTrackCompact: { height: 56 },
