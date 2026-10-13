@@ -13,6 +13,7 @@ import {
 import {
   Keyboard,
   KeyboardAvoidingView,
+  type GestureResponderEvent,
   Platform,
   Pressable,
   ScrollView,
@@ -145,10 +146,36 @@ function CustomerFixedScreen({
     };
   }, []);
 
+  // This is the actual Customer screen wrapper for '@/components/ui' imports.
+  // Keep these logs limited to Start Claim and never include navigation params.
+  function traceStartClaimTouch(region: string, event: GestureResponderEvent) {
+    if (pathname !== '/customer/start-claim') return;
+    const { pageX, pageY } = event.nativeEvent;
+    console.warn('[claim-navigation] live-customer-screen-touch', {
+      region, x: Math.round(pageX), y: Math.round(pageY),
+    });
+  }
+
+  function openDashboard() {
+    if (pathname === '/customer/start-claim') {
+      console.warn('[claim-navigation] replace-caller', {
+        source: 'customer-fixed-screen-brand',
+        destination: '/customer/home',
+      });
+    }
+    router.replace('/customer/home');
+  }
+
   function openBack() {
     if (router.canGoBack()) {
       router.back();
       return;
+    }
+    if (pathname === '/customer/start-claim') {
+      console.warn('[claim-navigation] replace-caller', {
+        source: 'customer-fixed-screen-back-fallback',
+        destination: '/customer/home',
+      });
     }
     router.replace(customerBackTarget(pathname, params, customerContext) as never);
   }
@@ -164,7 +191,10 @@ function CustomerFixedScreen({
           style={[baseStyles.customerHeaderContentDimmer, { height: insets.top + 58 }]}
         />
 
-        <View style={[baseStyles.fixedBrandRow, baseStyles.customerFixedBrandRow, { top: insets.top }]}>
+        <View
+          style={[baseStyles.fixedBrandRow, baseStyles.customerFixedBrandRow, { top: insets.top }]}
+          onTouchStart={(event) => traceStartClaimTouch('fixed-header', event)}
+        >
           {showBackButton ? (
             <Pressable
               accessibilityRole="button"
@@ -179,7 +209,8 @@ function CustomerFixedScreen({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Open dashboard"
-              onPress={() => router.replace('/customer/home')}
+              onPressIn={(event) => traceStartClaimTouch('fixed-header-logo-press-in', event)}
+              onPress={openDashboard}
               style={baseStyles.fixedBrandPressable}
             >
               <BrandLogo width={132} inverse />
@@ -192,7 +223,10 @@ function CustomerFixedScreen({
         </View>
 
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={baseStyles.keyboard}>
-          <View style={[localStyles.fixedPageArea, { paddingTop: fixedTopPadding }]}>
+          <View
+            style={[localStyles.fixedPageArea, { paddingTop: fixedTopPadding }]}
+            onTouchStart={(event) => traceStartClaimTouch('fixed-page-content', event)}
+          >
             {showTitleHeader && !loadingOnly ? (
               <View style={baseStyles.header}>
                 <View style={baseStyles.headerTop}>
@@ -209,6 +243,7 @@ function CustomerFixedScreen({
           {split.floating}
 
           <ScrollView
+            onTouchStart={(event) => traceStartClaimTouch('scroll-body', event)}
             style={baseStyles.screen}
             contentContainerStyle={[
               baseStyles.screenContent,

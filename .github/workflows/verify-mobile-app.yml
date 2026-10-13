@@ -119,6 +119,9 @@ jobs:
       - name: Customer Start Claim OTA regression
         run: node apps/mobile-app/scripts/customer-start-claim-ota-regression.mjs
 
+      - name: Customer Start Claim real header navigation diagnostic regression
+        run: node apps/mobile-app/scripts/customer-start-claim-live-header-diagnostic-regression.mjs
+
       - name: Customer Start Claim manufacturer logo regression
         run: node apps/mobile-app/scripts/customer-start-claim-manufacturer-logo-regression.mjs
 
