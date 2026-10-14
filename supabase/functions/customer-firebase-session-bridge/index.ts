@@ -91,7 +91,7 @@ Deno.serve(async (request: Request) => {
 
     const [profileResult, authResult] = await Promise.all([
       db.from("profiles")
-        .select("id,role,is_active")
+        .select("id,phone,role,is_active")
         .eq("id", links[0].profile_id)
         .maybeSingle(),
       db.auth.admin.getUserById(links[0].profile_id),
