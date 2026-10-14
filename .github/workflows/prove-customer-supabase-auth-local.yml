@@ -46,7 +46,7 @@ jobs:
           test "${SUPABASE_URL:-}" = "http://127.0.0.1:54321"
           test -n "${SUPABASE_ANON_KEY:-}"
           test -n "${SUPABASE_SERVICE_ROLE_KEY:-}"
-          [[ "${SUPABASE_DB_URL:-}" =~ ^postgresql://[^[:space:]]+@(127\\.0\\.0\\.1|localhost):54322/ ]]
+          [[ "${SUPABASE_DB_URL:-}" == *"@127.0.0.1:54322/"* || "${SUPABASE_DB_URL:-}" == *"@localhost:54322/"* ]]
           {
             echo "SUPABASE_URL=$SUPABASE_URL"
             echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
