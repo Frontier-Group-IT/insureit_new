@@ -57,11 +57,11 @@ async function deleteUser(profileId: string, actorId: string): Promise<Permanent
     .select("id,full_name,role,employee_id")
     .eq("id", profileId)
     .maybeSingle<{ id: string; full_name: string; role: string; employee_id: string | null }>();
-  if (error || !target) return { status: "error", message: "The employee record could not be found." };
+  if (error || !target) return { status: "error", message: "The User Management record could not be found." };
   const targetKind = target.role === "customer" ? "customer account" : target.role === "intermediary" ? "intermediary account" : "employee";
   const profileBlockers = await blockers("profiles", profileId);
   const cleanupTables = target.role === "customer"
-    ? new Set(["customer_firebase_identity_links", "customer_onboarding_contacts"])
+    ? new Set(["customer_firebase_identity_links", "customer_onboarding_contacts", "customer_onboarding_applications"])
     : new Set<string>();
   const protectedProfileBlockers = profileBlockers.filter((item) => !cleanupTables.has(item.table));
 
@@ -84,6 +84,14 @@ async function deleteUser(profileId: string, actorId: string): Promise<Permanent
       .eq("linked_profile_id", profileId);
     if (onboardingContactError) {
       return { status: "error", message: "The customer onboarding profile link could not be detached safely." };
+    }
+
+    const { error: onboardingApplicationError } = await admin
+      .from("customer_onboarding_applications")
+      .update({ profile_id: null })
+      .eq("profile_id", profileId);
+    if (onboardingApplicationError) {
+      return { status: "error", message: "The customer onboarding history could not be preserved safely." };
     }
   }
 
