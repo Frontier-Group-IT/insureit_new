@@ -9,6 +9,9 @@ const vault = read('app/customer/upload-documents.tsx');
 const selfManaged = read('app/customer/self-managed-documents.tsx');
 const transport = read('lib/supabase.ts');
 
+assert.match(helper, /import \{ File \} from 'expo-file-system'/);
+assert.match(helper, /export async function readClaimDocumentBytes/);
+assert.match(helper, /await file.bytes\(\)/);
 assert.match(helper, /export function claimUploadCustomerError/);
 assert.match(helper, /export function logClaimUploadFailure/);
 assert.match(helper, /status === 413/);
@@ -19,6 +22,8 @@ for (const [screen, content] of [['claim intimation', claim], ['self managed vau
   assert.match(content, /claimUploadCustomerError/, screen);
   assert.match(content, /claimUploadFileReadMessage/, screen);
   assert.match(content, /logClaimUploadFailure/, screen);
+  assert.match(content, /readClaimDocumentBytes/, screen);
+  assert.doesNotMatch(content, /fetch\((?:file|pickedFile)\.uri\)/, screen);
   assert.doesNotMatch(content, /contentType: (file|pickedFile)\.mimeType \?\? 'application\/octet-stream'/, screen);
 }
 assert.match(transport, /if \(xhr\.status === 0\)/);

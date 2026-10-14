@@ -6,7 +6,7 @@ import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'rea
 import { matchesClaimIntimationDocument } from '@insureit/claim-journey';
 import { finalDocumentGroups, type FinalDocumentGroup, type RequiredDocument } from '@/lib/claim-documents';
 import { getCurrentSession } from '@/lib/auth';
-import { claimUploadCustomerError, logClaimUploadFailure, resolveClaimUploadDescriptor, claimUploadFileReadMessage } from '@/lib/claim-document-upload';
+import { readClaimDocumentBytes, claimUploadCustomerError, logClaimUploadFailure, resolveClaimUploadDescriptor, claimUploadFileReadMessage } from '@/lib/claim-document-upload';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { ClaimDocument } from '@/lib/types';
@@ -118,9 +118,7 @@ export function ExternalClaimDocumentTabs({
       const storagePath = `${customerId}/${claimId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${descriptor.storageExtension}`;
       let body: ArrayBuffer;
       try {
-        const response = await fetch(file.uri);
-        if (!response.ok) throw new Error('Local file read failed');
-        body = await response.arrayBuffer();
+        body = await readClaimDocumentBytes(file.uri);
         if (!body.byteLength) throw new Error('Empty local file');
       } catch (error) {
         logClaimUploadFailure('claim_intimation', 'local_read', error);
@@ -295,9 +293,7 @@ export function ExternalClaimDocumentTabs({
           const descriptor = resolveClaimUploadDescriptor({ name: file.name, mimeType: file.mimeType });
           if (!descriptor.ok) { failed += 1; continue; }
           storagePath = `${customerId}/${claimId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${descriptor.storageExtension}`;
-          const response = await fetch(file.uri);
-          if (!response.ok) throw new Error('Local file read failed');
-          const body = await response.arrayBuffer();
+          const body = await readClaimDocumentBytes(file.uri);
           if (!body.byteLength) throw new Error('Empty local file');
           if (body.byteLength > MAX_UPLOAD_SIZE_BYTES) {
             failed += 1;
