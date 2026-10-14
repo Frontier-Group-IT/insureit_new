@@ -13,7 +13,7 @@ assert.match(helper, /export function claimUploadCustomerError/);
 assert.match(helper, /export function logClaimUploadFailure/);
 assert.match(helper, /status === 413/);
 assert.match(helper, /status === 415/);
-assert.match(helper, /status.*'storage'.*classifyClaimUploadStorageError/);
+assert.match(helper, /step === 'storage' \? classifyClaimUploadStorageError\(error\)/);
 for (const [screen, content] of [['claim intimation', claim], ['self managed vault', selfManaged], ['customer vault', vault]]) {
   assert.match(content, /resolveClaimUploadDescriptor/, screen);
   assert.match(content, /claimUploadCustomerError/, screen);
