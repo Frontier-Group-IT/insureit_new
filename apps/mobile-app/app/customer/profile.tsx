@@ -1,3 +1,4 @@
+import { readClaimDocumentBytes } from '@/lib/claim-document-upload';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -229,8 +230,7 @@ export default function ProfileScreen() {
 
     setAvatarUploading(true);
     try {
-      const response = await fetch(asset.uri);
-      const body = await response.arrayBuffer();
+      const body = await readClaimDocumentBytes(asset.uri);
       if (body.byteLength > 5 * 1024 * 1024) {
         setMessage({ text: 'Please choose a profile photo below 5 MB.', type: 'error' });
         return;
@@ -306,8 +306,7 @@ export default function ProfileScreen() {
     try {
       const extension = asset.name.includes('.') ? asset.name.split('.').pop() : 'bin';
       const storagePath = `${customer.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-      const response = await fetch(asset.uri);
-      const body = await response.arrayBuffer();
+      const body = await readClaimDocumentBytes(asset.uri);
       if (body.byteLength > 5 * 1024 * 1024) {
         setMessage({ text: 'Please upload a document below 5 MB.', type: 'error' });
         return;
