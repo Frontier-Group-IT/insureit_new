@@ -11,6 +11,7 @@ import { ExternalClaimErrorPopup } from '@/components/external-claim-error-popup
 import { ClaimActionBar, ClaimChoice, ClaimFinancialSummary, ClaimFormSection, ClaimIdentityCard, ClaimInlineNote, ExternalClaimStageHeader } from '@/components/external-claim-ui';
 import { Screen, TextField } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
+import { readClaimDocumentBytes, resolveClaimUploadDescriptor, claimUploadCustomerError, claimUploadFileReadMessage, logClaimUploadFailure } from '@/lib/claim-document-upload';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestone, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
 import { stageBusinessDateOnly, validateStageChronology } from '@/lib/self-managed-claim-timeline';
 import { supabase } from '@/lib/supabase';
@@ -470,8 +471,7 @@ function DeliveryOrderDocuments({ claimId, customerId }: { claimId: string; cust
   async function uploadFile(documentType: string, file: DocumentPicker.DocumentPickerAsset) {
     const session = await getCurrentSession();
     if (!session?.user) return { ok: false, document: null as DeliveryOrderDocumentRecord | null };
-    const response = await fetch(file.uri);
-    const body = await response.arrayBuffer();
+    const body = await readClaimDocumentBytes(file.uri);
     if (body.byteLength > MAX_DELIVERY_ORDER_DOCUMENT_SIZE_BYTES) return { ok: false, document: null as DeliveryOrderDocumentRecord | null };
     const extension = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
     const storagePath = `${customerId}/${claimId}/delivery-order/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
@@ -600,8 +600,7 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
   async function uploadFile(documentType: string, file: DocumentPicker.DocumentPickerAsset) {
     const session = await getCurrentSession();
     if (!session?.user) return { ok: false, document: null as ApprovalDocumentRecord | null };
-    const response = await fetch(file.uri);
-    const body = await response.arrayBuffer();
+    const body = await readClaimDocumentBytes(file.uri);
     if (body.byteLength > MAX_APPROVAL_PDF_SIZE_BYTES) return { ok: false, document: null as ApprovalDocumentRecord | null };
     const extension = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
     const storagePath = `${customerId}/${claimId}/work-approval/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
@@ -862,8 +861,7 @@ function FinalBillUpload({ claimId }: { claimId: string }) {
     setUploading(true);
     let newStoragePath = '';
     try {
-      const response = await fetch(file.uri);
-      const body = await response.arrayBuffer();
+      const body = await readClaimDocumentBytes(file.uri);
       if (body.byteLength > MAX_FINAL_BILL_SIZE_BYTES) return setError('Selected bill file is too large. Please choose a smaller file.');
 
       newStoragePath = `${resolvedCustomerId}/${claimId}/billing/${Date.now()}-${Math.random().toString(36).slice(2)}.${normalizedExtension}`;
