@@ -65,7 +65,7 @@ assert.match(rootLayout, /isUpdatePending/, 'Root layout must detect a downloade
 assert.doesNotMatch(rootLayout, /Updates\.reloadAsync\(\)/, 'A downloaded OTA must not restart an active customer workflow or reset claim navigation.');
 assert.match(rootLayout, /activation deferred until next app launch/, 'Pending OTA activation must be explicitly deferred to the next app launch.');
 
-assert.equal(appConfig.version, '0.3.0', 'Customer OTA must remain compatible with production runtime 0.3.0.');
+assert.equal(appConfig.version, '0.3.2', 'Native Firebase OTP must use isolated app runtime 0.3.2, not the installed production 0.3.0.');
 assert.equal(appConfig.android?.versionCode, 11, 'Customer 0.3.2 native-only candidate must use new versionCode 11 without affecting production 0.3.0(9).');
 assert.equal(appConfig.runtimeVersion?.policy, 'appVersion', 'Customer runtimeVersion policy must remain appVersion.');
 assert.equal(easConfig.build?.production?.channel, 'production', 'Production APK/AAB must remain bound to Expo channel production.');
