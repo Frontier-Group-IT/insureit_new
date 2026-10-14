@@ -34,9 +34,7 @@ export default function CustomerSettingsPage() {
         <div className="pointer-events-none absolute -bottom-32 right-[12%] h-72 w-72 rounded-full border-[45px] border-[#80C7FF]/10" />
         <div className="relative flex min-h-[175px] items-center justify-between gap-4 px-5 py-6 sm:px-8">
           <div className="max-w-[560px]">
-            <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#A8C9F4]">Customer account</p>
-            <h1 className="mt-2 text-[clamp(27px,3.5vw,40px)] font-black leading-tight">Account <span className="text-[#369BFF]">Settings</span></h1>
-            <p className="mt-2 text-[12px] leading-6 text-[#E0EDFF]">Manage your profile, documents and account securely.</p>
+            <h1 className="text-[clamp(27px,3.5vw,40px)] font-black leading-tight">Account <span className="text-[#369BFF]">Settings</span></h1>
           </div>
           <span className="hidden h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-white sm:flex"><Settings className="h-10 w-10" aria-hidden="true" /></span>
         </div>
