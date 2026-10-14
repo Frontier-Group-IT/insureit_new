@@ -1,3 +1,13 @@
+## 2026-10-14 — PHONE-UNCONFIRMED VARIANT / GOTrue LOCAL PROOF #2: PASSED
+
+- **PASS** disposable local GitHub Actions [#38518695363](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/38518695363), source `bb9684ed4ab7180c121a844bf9e13868a1616209`. Workflow used synthetic phone-only users and reserved-domain test emails in ephemeral local Docker GoTrue, NO production connection/credentials/records.
+- **Three synthetic distinct Auth UUIDs** covered, including an unconfirmed-phone account. After `admin.updateUserById` added an email login identity to the **existing UUID**, it did not change the phone number or silently mark an unconfirmed phone confirmed. `admin.generateLink(type:'magiclink')`, `auth.verifyOtp(type:'magiclink',token_hash)`, `getUser`, `refreshSession` and separate account identity worked; replay denied.
+- Production read-only baseline stays **24 active Customer Auth identities with no Auth emails; 22 confirmed phone, 2 unconfirmed; 8 separate profile CONTACT emails; 2 approved Firebase links**. No production Auth user altered. The test supports API feasibility for both phone-confirmation cohorts; it **does not authorize alias migration** or confirm a native Firebase SMS token / production RLS or KYC claims behavior.
+- **Next gate:** security-review a service-controlled nondeliverable alias namespace with recovery/OTP protection, add durable per-identity rate limiting/replay audit, arrange a controlled production-only account-safe verification on explicit authorization, bind Firebase verified UID after phone uniqueness check, prove Android Firebase OTP → real Supabase session for both Customer cohorts, A/B/storage/claims/KYC/staff parity, then consider an explicitly approved 0.3.2 (11) AAB. PR #3132 DRAFT, not merged. **NO production changes, app config/runtime change, build, OTA or Play publish.**
+
+
+---
+
 ## 2026-10-14 — DISPOSABLE SUPABASE AUTH END-TO-END SESSION PROOF: PASSED
 
 - **PASS** GitHub Actions [#38518326907](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/38518326907), SHA `f5729eda473610a43255bf769c116d9338a18cd8`. Workflow step **"Prove same Auth UUID, supported one-use magiclink session, refresh, A/B isolation"** succeeded after all local Docker/CLI setup steps passed. No production Supabase keys, records, database, Auth users or Firebase secrets used; workflow expressly restricted to localhost 127.0.0.1, generated temporary local Auth users and used reserved-domain synthetic aliases.
