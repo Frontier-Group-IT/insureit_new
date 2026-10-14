@@ -1,3 +1,14 @@
+## 2026-10-14 — Requirement 1 complete: reconcile Firebase PR #3132 with latest main (NOT MERGED)
+
+- **Updated only feature branch** `feature/customer-firebase-otp-gateway-0-3-2-20261014`; manual two-parent merge commit `30aebd57a50aee2f1e10ed28d027d98bf2e7fa3a` has parents prior Firebase feature HEAD `27c313e8` and then-latest main `bdca73c916997aec674c9e2c9c53aef5f5d7e754`. This preserves both histories without force pushing or merging into production main.
+- At reconciliation, `main` had changed 29 files since the original merge base; only **two** intersected the Firebase branch: `AGENTS.md` and `.github/workflows/verify-mobile-app.yml`. Both manually reconciled: retained latest main Customer Web login notes AND all Firebase handoff notes; included main's **Customer all document upload readers** and **Customer claim document upload** regressions alongside all Firebase/Customer test steps.
+- The other **27 main-changed files were copied by exact Git blob SHA** to the Firebase branch, including Customer policy/KYC/claim document upload fixes, `apps/mobile-app/lib/supabase.ts`, Customer/Partner/Web fixes and updated regression scripts. Read-only tree verification confirmed **0 hash mismatches of 27**; protected Customer Start Claim header/navigation source and its existing CI regressions were not overwritten.
+- **Verification at reconciliation:** GitHub compare `behind_by=0`, PR `mergeable=true`, still **DRAFT / NOT MERGED**. Dedicated Firebase readiness CI on merge SHA passed. Full Mobile/Web/Partner/dependency workflow checks initiated. A later docs-only record commit may trigger new CI; evaluate results on the final head SHA, not older green checks.
+- **Not authorized by requirement 1:** production Auth/email alias writes, SQL migration, Edge deploy, real Firebase cutover, APK/AAB, OTA, Google Play publish, or PR merge. Android 0.3.2 (11) remains an unreleased feature candidate; live 0.3.0 (9) remains unchanged. Requirements 2–5 and security gates remain outstanding.
+- Review PR: https://github.com/Frontier-Group-IT/insureit_new/pull/3132
+
+---
+
 ## 2026-10-14 — PHONE-UNCONFIRMED VARIANT / GOTrue LOCAL PROOF #2: PASSED
 
 - **PASS** disposable local GitHub Actions [#38518695363](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/38518695363), source `bb9684ed4ab7180c121a844bf9e13868a1616209`. Workflow used synthetic phone-only users and reserved-domain test emails in ephemeral local Docker GoTrue, NO production connection/credentials/records.
