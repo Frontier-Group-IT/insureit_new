@@ -6,6 +6,7 @@ import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'rea
 import { matchesClaimIntimationDocument } from '@insureit/claim-journey';
 import { finalDocumentGroups, type FinalDocumentGroup, type RequiredDocument } from '@/lib/claim-documents';
 import { getCurrentSession } from '@/lib/auth';
+import { claimUploadCustomerError, logClaimUploadFailure, resolveClaimUploadDescriptor, claimUploadFileReadMessage } from '@/lib/claim-document-upload';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { ClaimDocument } from '@/lib/types';
@@ -112,20 +113,31 @@ export function ExternalClaimDocumentTabs({
         setMessage('Please sign in again before uploading.');
         return;
       }
-      const extension = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
-      const storagePath = `${customerId}/${claimId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-      const response = await fetch(file.uri);
-      const body = await response.arrayBuffer();
+      const descriptor = resolveClaimUploadDescriptor({ name: file.name, mimeType: file.mimeType });
+      if (!descriptor.ok) { setMessage(descriptor.message); return; }
+      const storagePath = `${customerId}/${claimId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${descriptor.storageExtension}`;
+      let body: ArrayBuffer;
+      try {
+        const response = await fetch(file.uri);
+        if (!response.ok) throw new Error('Local file read failed');
+        body = await response.arrayBuffer();
+        if (!body.byteLength) throw new Error('Empty local file');
+      } catch (error) {
+        logClaimUploadFailure('claim_intimation', 'local_read', error);
+        setMessage(claimUploadFileReadMessage(file.name));
+        return;
+      }
       if (body.byteLength > MAX_UPLOAD_SIZE_BYTES) {
         setMessage('Please choose a file smaller than 5 MB.');
         return;
       }
       const storageResult = await supabase.storage.from('claim-documents').upload(storagePath, body, {
-        contentType: file.mimeType ?? 'application/octet-stream',
+        contentType: descriptor.mimeType,
         upsert: false,
       });
       if (storageResult.error) {
-        setMessage('This document could not be uploaded.');
+        logClaimUploadFailure('claim_intimation', 'storage', storageResult.error);
+        setMessage(claimUploadCustomerError(storageResult.error));
         return;
       }
       const { data, error } = await supabase.from('claim_documents').insert({
@@ -140,13 +152,15 @@ export function ExternalClaimDocumentTabs({
         uploaded_by: session.user.id,
       }).select('*').single();
       if (error || !data) {
+        logClaimUploadFailure('claim_intimation', 'metadata', error);
         await supabase.storage.from('claim-documents').remove([storagePath]);
-        setMessage('This document could not be saved. Please try again.');
+        setMessage('The document reached storage but could not be attached to the claim. Please try again.');
         return;
       }
       setDocuments((current) => [data, ...current]);
-    } catch {
-      setMessage('This document could not be uploaded.');
+    } catch (error) {
+      logClaimUploadFailure('claim_intimation', 'storage', error);
+      setMessage(claimUploadCustomerError(error));
     } finally {
       setUploadingType('');
     }
