@@ -1,0 +1,55 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { test } from 'node:test';
+
+const client = readFileSync(new URL('../lib/customer-firebase-session-exchange.ts', import.meta.url), 'utf8');
+const edge = readFileSync(new URL('../../../supabase/functions/customer-firebase-session-bridge/index.ts', import.meta.url), 'utf8');
+const login = readFileSync(new URL('../app/login.tsx', import.meta.url), 'utf8');
+const signup = readFileSync(new URL('../app/signup.tsx', import.meta.url), 'utf8');
+const config = JSON.parse(readFileSync(new URL('../app.json', import.meta.url), 'utf8')).expo;
+
+test('new OTP-to-Supabase client is disabled unless Android + explicit feature flag', () => {
+  assert.match(client, /Platform\.OS === 'android'/);
+  assert.match(client, /EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_SESSION_BRIDGE_ENABLED === 'true'/);
+  assert.match(client, /if \(!firebaseOtpSessionGateEnabled\(\)\)/);
+  assert.doesNotMatch(login, /exchangeVerifiedFirebaseOtpForSupabaseSession/);
+  assert.doesNotMatch(signup, /exchangeVerifiedFirebaseOtpForSupabaseSession/);
+});
+
+test('one-use token exchange must establish a genuine existing Supabase Auth session', () => {
+  assert.match(client, /supabase\.auth\.verifyOtp\(\{/);
+  assert.match(client, /token_hash: candidate\.token_hash/);
+  assert.match(client, /type: 'magiclink'/);
+  assert.match(client, /session\.user\.id !== candidate\.profile_id/);
+  assert.match(client, /supabase\.auth\.getUser\(\)/);
+  assert.match(client, /verified\.user\.id !== candidate\.profile_id/);
+  assert.match(client, /\.select\('id,role,is_active'\)/);
+  assert.match(client, /profile\.role !== 'customer'/);
+  assert.doesNotMatch(client, /supabase\.auth\.setSession\(\{\s*access_token:\s*firebaseIdToken/);
+});
+
+test('account switching restores prior Supabase Customer identity on failed exchange', () => {
+  assert.match(client, /const previousSession = snapshotResult\.data\.session/);
+  assert.match(client, /restoreCustomerSessionSnapshot\(previousSession\)/);
+  assert.match(client, /scope: 'local'/);
+  assert.match(client, /if \(mayHaveInstalledSession\)/);
+});
+
+test('Edge protects identity and does not issue tokens when phone-only remains unprovisioned', () => {
+  assert.match(edge, /CUSTOMER_FIREBASE_SESSION_BRIDGE_ENABLED/);
+  assert.match(edge, /verifyIdToken\(bearer\[1\], true\)/);
+  assert.match(edge, /checkCustomerSessionEligibility/);
+  assert.match(edge, /session_identity_not_provisioned/);
+  assert.match(edge, /generated\.user\.id !== gate\.customerProfileId/);
+  assert.match(edge, /"cache-control": "no-store, private"/);
+  assert.doesNotMatch(edge, /auth\.admin\.updateUserById\s*\(/);
+});
+
+test('production 0.3.0 and native dependency boundary remain untouched', () => {
+  assert.equal(config.version, '0.3.0');
+  assert.equal(config.android.versionCode, 9);
+  assert.doesNotMatch(login, /@react-native-firebase/);
+  assert.doesNotMatch(signup, /@react-native-firebase/);
+  assert.match(login, /sendPhoneOtp\(fullPhone\)/);
+  assert.match(signup, /sendPhoneSignupOtp\(/);
+});
