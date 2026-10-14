@@ -11,6 +11,12 @@
 export const FIREBASE_CUSTOMER_PROJECT = 'insureit-customer-auth';
 
 const phonePattern = /^\+91[6-9]\d{9}$/;
+export function canonicalIndianPhone(value) {
+  if (typeof value !== 'string') return null;
+  const digits = value.replace(/[ +()-]/g, '');
+  if (!/^(91)?[6-9][0-9]{9}$/.test(digits)) return null;
+  return '+91' + digits.slice(-10);
+}
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function checkCustomerSessionEligibility({ firebase, link, profile, authUser, nowSeconds }) {
@@ -48,7 +54,7 @@ export function checkCustomerSessionEligibility({ firebase, link, profile, authU
   if (!authUser || authUser.id !== profile.id ||
     authUser.is_anonymous === true ||
     authUser.banned_until && Date.parse(authUser.banned_until) > Date.now() ||
-    authUser.phone !== phone) {
+    canonicalIndianPhone(authUser.phone) !== phone) {
     return fail('supabase_user_mismatch');
   }
 
