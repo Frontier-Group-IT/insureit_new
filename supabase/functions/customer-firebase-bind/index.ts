@@ -1,6 +1,7 @@
 import { cert, getApps, initializeApp } from "npm:firebase-admin@13.5.0/app";
 import { getAuth } from "npm:firebase-admin@13.5.0/auth";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { checkExistingCustomerPhoneBinding } from "../_shared/customer-firebase-bind-policy.mjs";
 
 /**
  * Firebase phone -> canonical preexisting INSUREIT profile.
@@ -74,6 +75,20 @@ Deno.serve(async (request: Request) => {
     );
     if (matches.length !== 1) return reply(409, { error: "customer_requires_review" });
     const profileId = matches[0].id as string;
+    // A stale or mis-entered profiles.phone may never claim a different
+    // Supabase auth.users identity. Verify the same canonical UUID/phone
+    // against the existing Auth account BEFORE even considering a link write.
+    const authLookup = await db.auth.admin.getUserById(profileId);
+    if (authLookup.error) throw new Error("Canonical Auth account lookup failed");
+    const bindable = checkExistingCustomerPhoneBinding({
+      verifiedPhone: decoded.phone_number,
+      profile: matches[0],
+      authUser: authLookup.data?.user,
+      nowSeconds: now,
+    });
+    if (!bindable.ok || bindable.profileId !== profileId) {
+      return reply(409, { error: "customer_requires_review" });
+    }
     const [uidLinks, profileLinks] = await Promise.all([
       db.from("customer_firebase_identity_links")
         .select("firebase_uid,profile_id,verified_phone_at_approval,is_approved,is_active")
