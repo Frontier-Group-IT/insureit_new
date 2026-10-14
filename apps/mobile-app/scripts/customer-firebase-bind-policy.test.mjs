@@ -1,0 +1,51 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { test } from 'node:test';
+import { checkExistingCustomerPhoneBinding } from '../../../supabase/functions/_shared/customer-firebase-bind-policy.mjs';
+
+const id = '11111111-1111-4111-8111-111111111111';
+const now = 1_800_000_000;
+function input() {
+  return {
+    verifiedPhone: '+919876543210',
+    nowSeconds: now,
+    profile: { id, role: 'customer', is_active: true, phone: '919876543210' },
+    authUser: { id, phone: '919876543210', is_anonymous: false },
+  };
+}
+function denied(mutate, reason) {
+  const arg = input(); mutate(arg);
+  const r = checkExistingCustomerPhoneBinding(arg);
+  assert.deepEqual(r, { ok: false, reason });
+}
+test('accept same canonical profile/Auth UUID and both Indian phone formats', () => {
+  assert.deepEqual(checkExistingCustomerPhoneBinding(input()), { ok: true, profileId: id });
+  const x = input(); x.authUser.phone = '+919876543210';
+  assert.deepEqual(checkExistingCustomerPhoneBinding(x), { ok: true, profileId: id });
+});
+test('deny stale profile phone and inactive/staff customer before any link insert', () => {
+  denied(a => { a.profile.phone = '919876543211'; }, 'profile_not_bindable');
+  denied(a => { a.profile.is_active = false; }, 'profile_not_bindable');
+  denied(a => { a.profile.role = 'manager'; }, 'profile_not_bindable');
+  denied(a => { a.profile.id = 'invalid'; }, 'profile_not_bindable');
+});
+test('deny UUID mismatch, different Auth phone, disabled/anonymous Auth identities', () => {
+  denied(a => { a.authUser.phone = '919876543211'; }, 'auth_account_not_bindable');
+  denied(a => { a.authUser.id = '22222222-2222-4222-8222-222222222222'; }, 'auth_account_not_bindable');
+  denied(a => { a.authUser.is_anonymous = true; }, 'auth_account_not_bindable');
+  denied(a => { a.authUser.banned_until = '2099-01-01T00:00:00Z'; }, 'auth_account_not_bindable');
+  denied(a => { a.authUser = null; }, 'auth_account_not_bindable');
+});
+test('verified Firebase phone proof cannot target another phone', () => {
+  denied(a => { a.verifiedPhone = '+919876543211'; }, 'profile_not_bindable');
+  denied(a => { a.verifiedPhone = '919876543210'; }, 'profile_not_bindable');
+  denied(a => { a.verifiedPhone = ''; }, 'profile_not_bindable');
+});
+test('live Firebase bind endpoint checks existing Auth identity BEFORE authorizing link insertion', () => {
+  const source=readFileSync(new URL('../../../supabase/functions/customer-firebase-bind/index.ts', import.meta.url), 'utf8');
+  const check=source.indexOf('checkExistingCustomerPhoneBinding({');
+  const write=source.indexOf('.insert({\n          firebase_project_id: PROJECT');
+  assert.ok(check >= 0 && write > check);
+  assert.match(source, /db\.auth\.admin\.getUserById\(profileId\)/);
+  assert.match(source, /verifyIdToken\(bearer\[1\], true\)/);
+});
