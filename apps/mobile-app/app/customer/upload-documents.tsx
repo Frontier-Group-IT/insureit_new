@@ -1,5 +1,6 @@
 ﻿import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+import { claimUploadCustomerError, claimUploadFileReadMessage, logClaimUploadFailure, resolveClaimUploadDescriptor } from '@/lib/claim-document-upload';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -196,8 +197,8 @@ export default function UploadDocumentsScreen() {
       for (const pickedFile of validFiles) {
         setFiles((current) => ({ ...current, [documentType]: pickedFile }));
         const uploaded = await uploadSingleDocument(documentType, pickedFile, session.user.id);
-        if (uploaded) uploadedRows.push(uploaded);
-        else failedNames.push(pickedFile.name);
+        if (uploaded.document) uploadedRows.push(uploaded.document);
+        else failedNames.push(uploaded.failure);
       }
 
       if (uploadedRows.length) {
@@ -210,7 +211,7 @@ export default function UploadDocumentsScreen() {
       if (failedCount || skippedCount) {
         const parts = [];
         if (uploadedRows.length) parts.push(`${uploadedRows.length} uploaded`);
-        if (failedCount) parts.push(`${failedCount} failed`);
+        if (failedCount) parts.push(`${failedCount} failed: ${failedNames[0]}`);
         if (skippedCount) parts.push(`${skippedCount} over 5 MB skipped`);
         setMessage(parts.join(' · '));
       } else {
@@ -226,22 +227,34 @@ export default function UploadDocumentsScreen() {
     }
   }
 
-  async function uploadSingleDocument(documentType: string, pickedFile: PickedFile, userId: string) {
-    if (!selectedClaim) return null;
+  async function uploadSingleDocument(documentType: string, pickedFile: PickedFile, userId: string): Promise<{ document: ClaimDocument | null; failure: string }> {
+    if (!selectedClaim) return { document: null, failure: 'Select a claim first.' };
 
     try {
-      const extension = pickedFile.name.includes('.') ? pickedFile.name.split('.').pop() : 'bin';
-      const storagePath = `${selectedClaim.customer_id}/${selectedClaim.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-      const response = await fetch(pickedFile.uri);
-      const body = await response.arrayBuffer();
+      const descriptor = resolveClaimUploadDescriptor({ name: pickedFile.name, mimeType: pickedFile.mimeType });
+      if (!descriptor.ok) return { document: null, failure: descriptor.message };
+      const storagePath = `${selectedClaim.customer_id}/${selectedClaim.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${descriptor.storageExtension}`;
+      let body: ArrayBuffer;
+      try {
+        const response = await fetch(pickedFile.uri);
+        if (!response.ok) throw new Error('Local file read failed');
+        body = await response.arrayBuffer();
+        if (!body.byteLength) throw new Error('Empty local file');
+      } catch (error) {
+        logClaimUploadFailure('customer_claim_document_vault', 'local_read', error);
+        return { document: null, failure: claimUploadFileReadMessage(pickedFile.name) };
+      }
 
-      if (body.byteLength > MAX_UPLOAD_SIZE_BYTES) return null;
+      if (body.byteLength > MAX_UPLOAD_SIZE_BYTES) return { document: null, failure: 'Document must be 5 MB or smaller.' };
 
       const uploadResult = await supabase.storage.from('claim-documents').upload(storagePath, body, {
-        contentType: pickedFile.mimeType ?? 'application/octet-stream',
+        contentType: descriptor.mimeType,
         upsert: false,
       });
-      if (uploadResult.error) return null;
+      if (uploadResult.error) {
+        logClaimUploadFailure('customer_claim_document_vault', 'storage', uploadResult.error);
+        return { document: null, failure: claimUploadCustomerError(uploadResult.error) };
+      }
 
       const { data, error } = await supabase.from('claim_documents').insert({
         claim_id: selectedClaim.id,
@@ -256,12 +269,14 @@ export default function UploadDocumentsScreen() {
       }).select('*').single();
 
       if (error || !data) {
+        logClaimUploadFailure('customer_claim_document_vault', 'metadata', error);
         await supabase.storage.from('claim-documents').remove([storagePath]);
-        return null;
+        return { document: null, failure: 'File reached storage but could not be attached to the claim.' };
       }
-      return data as ClaimDocument;
-    } catch {
-      return null;
+      return { document: data as ClaimDocument, failure: '' };
+    } catch (error) {
+      logClaimUploadFailure('customer_claim_document_vault', 'storage', error);
+      return { document: null, failure: claimUploadCustomerError(error) };
     }
   }
 
