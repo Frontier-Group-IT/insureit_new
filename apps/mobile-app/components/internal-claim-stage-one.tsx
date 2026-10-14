@@ -11,7 +11,7 @@ import { IncidentVoiceNote, type IncidentVoiceNoteFile } from '@/components/inci
 import { ClaimActionBar, ClaimFormSection } from '@/components/external-claim-ui';
 import { LoadingState, Screen, TextField } from '@/components/ui';
 import { getCurrentSession, makeClaimNumber } from '@/lib/auth';
-import {
+import { readClaimDocumentBytes,
   claimUploadFileReadMessage,
   claimUploadMetadataMessage,
   claimUploadStorageErrorStatus,
@@ -236,8 +236,7 @@ export default function InternalClaimStageOne() {
 
       let body: ArrayBuffer;
       try {
-        const response = await fetch(uploadUri);
-        body = await response.arrayBuffer();
+        body = await readClaimDocumentBytes(uploadUri);
       } catch {
         return { ok: false, message: claimUploadFileReadMessage(pickedFile.name) };
       }
