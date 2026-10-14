@@ -59,7 +59,7 @@ const checks = [
   ['Existing expo-image-picker dependency is reused', Boolean(packageJson.dependencies?.['expo-image-picker'])],
   ['Existing expo-image-picker native plugin remains configured', imagePickerPluginConfigured],
   ['Customer runtime remains 0.3.0', appConfig.expo.version === '0.3.0'],
-  ['Customer Android versionCode remains 9', appConfig.expo.android?.versionCode === 9],
+  ['Customer 0.3.2 candidate versionCode 11 is isolated from production versionCode 9', appConfig.expo.android?.versionCode === 11],
 ];
 
 const failed = checks.filter(([, ok]) => !ok);
