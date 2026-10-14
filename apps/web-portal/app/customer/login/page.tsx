@@ -4,16 +4,18 @@ import { BrandLockup } from "@/components/brand-lockup";
 import { CustomerLoginForm } from "./customer-login-form";
 
 /**
- * Premium Customer login. The source-of-truth design artwork is
- * docs/visual-references/INSUREIT_CUSTOMER_LOGIN_REFERENCE.md.
- * Hero photography must not be replaced with an unrelated third-party asset.
- * The approved local image is awaiting transfer into public/assets/customer-login.
+ * Premium Customer login using the approved repository-owned hero artwork.
+ * Background asset: /public/assets/CUSTOMERLOGIN.jpeg.
+ * Keep authentication and signup behavior separate from presentation changes.
  */
 export default function CustomerLoginPage() {
   return (
-    <main className="relative isolate min-h-screen overflow-hidden bg-[#071D3C]">
-      <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(ellipse_at_55%_64%,rgba(45,154,222,0.36),transparent_45%),linear-gradient(118deg,#061B3E_0%,#0C3867_48%,#DBEBFA_100%)]" />
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-30 [background:linear-gradient(129deg,transparent_35%,rgba(61,189,246,0.25)_35.1%,rgba(61,189,246,0.05)_47%,transparent_47.1%)]" />
+    <main
+      className="relative isolate min-h-screen overflow-hidden bg-[#071D3C] bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: "url('/assets/CUSTOMERLOGIN.jpeg')" }}
+    >
+      <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,19,45,0.62)_0%,rgba(5,36,72,0.18)_52%,rgba(228,240,253,0.72)_100%)]" />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_62%_46%,rgba(69,175,235,0.12),transparent_42%)]" />
 
       <div className="relative mx-auto grid min-h-screen w-full max-w-[1800px] lg:grid-cols-[minmax(0,1.08fr)_minmax(470px,0.92fr)]">
         <section className="relative flex min-h-[420px] flex-col justify-between overflow-hidden px-6 pb-8 pt-8 text-white sm:px-10 lg:min-h-screen lg:px-12 lg:pb-12 lg:pt-12">
@@ -48,7 +50,7 @@ export default function CustomerLoginPage() {
           </div>
         </section>
 
-        <section className="relative flex flex-col items-center justify-center bg-[linear-gradient(145deg,rgba(218,235,250,0.62),rgba(246,250,255,0.98))] px-4 py-10 sm:px-7 lg:min-h-screen lg:bg-[linear-gradient(120deg,rgba(228,240,253,0.35),#EFF7FF_85%)]">
+        <section className="relative flex flex-col items-center justify-center bg-[linear-gradient(145deg,rgba(218,235,250,0.72),rgba(246,250,255,0.96))] px-4 py-10 sm:px-7 lg:min-h-screen lg:bg-[linear-gradient(120deg,rgba(228,240,253,0.34),rgba(239,247,255,0.92)_85%)]">
           <div className="w-full max-w-[520px] rounded-[26px] border border-[#E0E9F4] bg-white px-5 py-8 shadow-[0_30px_90px_rgba(8,31,65,0.16)] sm:px-10 sm:py-10">
             <div className="flex justify-center"><BrandLockup size="default" /></div>
             <div className="mb-8 mt-9 text-center">
