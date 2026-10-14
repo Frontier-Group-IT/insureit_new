@@ -12,6 +12,8 @@ import { ClaimActionBar, ClaimFormSection } from '@/components/external-claim-ui
 import { LoadingState, Screen, TextField } from '@/components/ui';
 import { getCurrentSession, makeClaimNumber } from '@/lib/auth';
 import { readClaimDocumentBytes,
+  claimUploadCustomerError,
+  logClaimUploadFailure,
   claimUploadFileReadMessage,
   claimUploadMetadataMessage,
   claimUploadStorageErrorStatus,
@@ -246,6 +248,7 @@ export default function InternalClaimStageOne() {
       if (body.byteLength > maxUploadSizeBytes) return { ok: false, message: claimUploadTooLargeMessage(pickedFile.name, maxUploadSizeLabel) };
 
       let authRefreshAttempted = false;
+      let lastStorageError: unknown = null;
       for (let attempt = 1; attempt <= CLAIM_UPLOAD_MAX_ATTEMPTS; attempt += 1) {
         let uploadError: unknown = null;
         try {
@@ -255,6 +258,7 @@ export default function InternalClaimStageOne() {
           uploadError = error;
         }
 
+        lastStorageError = uploadError;
         if (!uploadError) {
           storageUploaded = true;
           break;
@@ -285,10 +289,11 @@ export default function InternalClaimStageOne() {
         await waitForClaimUploadRetry(attempt);
       }
 
-      if (!storageUploaded) return { ok: false, message: claimUploadStorageMessage(pickedFile.name, true) };
+      if (!storageUploaded) return { ok: false, message: claimUploadCustomerError(lastStorageError) };
 
       const { data: record, error } = await supabase.from('claim_documents').insert({ claim_id: targetClaimId, customer_id: customerId, document_type: documentType, file_name: uploadName, storage_bucket: storageBucket, storage_path: storagePath, mime_type: uploadMimeType, file_size: body.byteLength, uploaded_by: session.user.id }).select('id').single();
       if (error || !record?.id) {
+        logClaimUploadFailure('managed_claim_stage', 'metadata', error);
         await supabase.storage.from(storageBucket).remove([storagePath]);
         storageUploaded = false;
         return { ok: false, message: claimUploadMetadataMessage(pickedFile.name) };
@@ -298,9 +303,12 @@ export default function InternalClaimStageOne() {
         ok: true,
         document: { ...pickedFile, name: uploadName, mimeType: uploadMimeType, size: body.byteLength, documentId: record.id, storageBucket, storagePath },
       };
-    } catch {
-      if (storageUploaded && storagePath) await supabase.storage.from(storageBucket).remove([storagePath]);
-      return { ok: false, message: `${pickedFile.name || 'The selected document'} could not be uploaded. Please try again.` };
+    } catch (error) {
+      logClaimUploadFailure('managed_claim_stage', storageUploaded ? 'metadata' : 'storage', error);
+      if (storageUploaded && storagePath) {
+        try { await supabase.storage.from(storageBucket).remove([storagePath]); } catch { /* Cleanup must not mask the original failure. */ }
+      }
+      return { ok: false, message: storageUploaded ? claimUploadMetadataMessage(pickedFile.name) : claimUploadCustomerError(error) };
     } finally {
       if (isAccidentVideo) setVideoProcessingStatus('');
     }
