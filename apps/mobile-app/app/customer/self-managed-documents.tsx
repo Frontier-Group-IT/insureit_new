@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+import { readClaimDocumentBytes, claimUploadCustomerError, claimUploadFileReadMessage, logClaimUploadFailure, resolveClaimUploadDescriptor } from '@/lib/claim-document-upload';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -163,21 +164,30 @@ export default function SelfManagedDocumentsScreen() {
       const session = await getCurrentSession();
       if (!session?.user) return router.replace('/login');
 
-      const extension = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
-      const storagePath = `${claim.customer_id}/${claim.id}/self-managed/${milestoneKey}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-      const response = await fetch(file.uri);
-      const body = await response.arrayBuffer();
+      const descriptor = resolveClaimUploadDescriptor({ name: file.name, mimeType: file.mimeType });
+      if (!descriptor.ok) { setError(descriptor.message); return; }
+      const storagePath = `${claim.customer_id}/${claim.id}/self-managed/${milestoneKey}/${Date.now()}-${Math.random().toString(36).slice(2)}.${descriptor.storageExtension}`;
+      let body: ArrayBuffer;
+      try {
+        body = await readClaimDocumentBytes(file.uri);
+        if (!body.byteLength) throw new Error('Empty local file');
+      } catch (error) {
+        logClaimUploadFailure('self_managed_claim_documents', 'local_read', error);
+        setError(claimUploadFileReadMessage(file.name));
+        return;
+      }
       if (body.byteLength > MAX_UPLOAD_SIZE_BYTES) {
         setError(`${file.name} is larger than 5 MB. Please choose a smaller file.`);
         return;
       }
 
       const storageResult = await supabase.storage.from('claim-documents').upload(storagePath, body, {
-        contentType: file.mimeType ?? 'application/octet-stream',
+        contentType: descriptor.mimeType,
         upsert: false,
       });
       if (storageResult.error) {
-        setError('This file could not be uploaded.');
+        logClaimUploadFailure('self_managed_claim_documents', 'storage', storageResult.error);
+        setError(claimUploadCustomerError(storageResult.error));
         return;
       }
 
@@ -200,6 +210,7 @@ export default function SelfManagedDocumentsScreen() {
         .single();
 
       if (insertError || !data) {
+        logClaimUploadFailure('self_managed_claim_documents', 'metadata', insertError);
         await supabase.storage.from('claim-documents').remove([storagePath]);
         setError('The file uploaded, but its claim record could not be saved. Please try again.');
         return;
@@ -207,8 +218,9 @@ export default function SelfManagedDocumentsScreen() {
 
       setDocuments((current) => [data as DocumentRow, ...current]);
       setSuccess(`${definition.label} saved to ${stageLabel(milestoneKey)}.`);
-    } catch {
-      setError('This file could not be uploaded.');
+    } catch (error) {
+      logClaimUploadFailure('self_managed_claim_documents', 'storage', error);
+      setError(claimUploadCustomerError(error));
     } finally {
       setUploading('');
     }

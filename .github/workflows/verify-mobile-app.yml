@@ -108,6 +108,12 @@ jobs:
       - name: Customer secure multi-account regression
         run: node apps/mobile-app/scripts/customer-multi-account-security-regression.mjs
 
+      - name: Customer all document upload readers regression
+        run: node apps/mobile-app/scripts/customer-all-upload-readers-regression.mjs
+
+      - name: Customer claim document upload regression
+        run: node apps/mobile-app/scripts/customer-document-upload-regression.mjs
+
       - name: Customer KYC filesystem document reader regression
         run: node apps/mobile-app/scripts/customer-kyc-document-reader-regression.mjs
 

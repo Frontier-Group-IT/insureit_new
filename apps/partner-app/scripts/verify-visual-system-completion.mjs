@@ -53,9 +53,14 @@ for (const asset of ['policyChecklist', 'appsGrid', 'settings', 'supportVerified
   requireText(assets, `${asset}: require(`, `Partner asset registry must expose ${asset}.`);
 }
 
-requireText(home, 'source={PartnerAssets.actions.quickClaims} style={styles.pendingIcon}', 'Home Pending Tasks must use the exact reference claim clipboard/shield asset.');
-requireText(home, "${count} active ${count === 1 ? 'claim' : 'claims'}", 'Home Pending Tasks must keep the live count inline with the task title.');
-if (home.includes('pendingCount') || home.includes('pendingRowCount')) throw new Error('Home Pending Tasks must not add a separate red count treatment from the reference.');
+// Redesigned Home shows multiple live task rows while preserving the original
+// branded claim clipboard/shield artwork and retaining count/title association.
+requireText(home, "icon: PartnerAssets.actions.quickClaims", 'Home Pending Tasks must preserve the original claim clipboard/shield asset.');
+requireText(home, "label: 'Active claims'", 'Home Pending Tasks must retain a live active-claims task.');
+requireText(home, "count: data.service.active_claims", 'Home Pending Tasks must use the authorized live claim count.');
+requireText(home, "source={task.icon}", 'Home Pending Tasks must render their existing branded image assets.');
+requireText(home, "{task.count}", 'Home Pending Tasks must keep a live count beside each task.');
+if (home.includes('pendingRowCount')) throw new Error('Home Pending Tasks must not add an unscoped separate red count treatment.');
 
 for (const feature of [
   'policy intake', 'renewal', 'claim', 'customer', 'policies', 'search', 'support', 'settings', 'profile',
@@ -81,7 +86,8 @@ requireText(homeMetricIcons, 'styles.policyBadge', 'Policies Sold generated icon
 requireText(homeMetricIcons, 'styles.coinTop', 'Commission Earned generated icon must retain stacked coin treatment.');
 requireText(homeMetricIcons, "backgroundColor: '#EDF7FF'", 'Generated Home metric icons must keep the soft blue reference tile.');
 
-requireText(home, '<PartnerBusinessGrowthIcon size={64} />', 'Partner Home business card must use the shared reference-style growth icon.');
+requireText(home, '<MiniBusinessTrend values={trend.map((item) => Number(item.premium || 0))} />', 'Partner Home MTD card must retain its small month-wise bar trend.');
+if (home.includes('<PartnerBusinessGrowthIcon')) throw new Error('Partner Home MTD card must not show the removed large growth icon.');
 requireText(more, '<PartnerProfileMenuIcon kind={iconKind} size={38} />', 'Partner Profile/More menu rows must use the shared professional icon component.');
 for (const kind of [
   'search', 'policy-intake', 'renewals', 'customers',

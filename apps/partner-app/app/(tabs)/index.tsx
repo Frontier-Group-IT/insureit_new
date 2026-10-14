@@ -4,10 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
-import { StoryRail } from '@/components/story-rail';
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
-import { PartnerBusinessGrowthIcon } from '@/components/ui/partner-business-growth-icon';
 import { PartnerCommissionEarnedIcon, PartnerPoliciesSoldIcon } from '@/components/ui/partner-home-metric-icons';
 import { PartnerEnter } from '@/components/ui/partner-enter';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
@@ -15,7 +13,8 @@ import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerSkeleton } from '@/components/ui/partner-skeleton';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerBusinessRange, getPartnerHome, type PartnerHomeData } from '@/lib/home';
-import { getPartnerStories, type PartnerStory } from '@/lib/stories';
+import { getPartnerActivity, type PartnerActivityData } from '@/lib/engagement';
+import { getPartnerBusinessPerformance, type PartnerBusinessPerformance } from '@/lib/business';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { formatIndianCurrency } from '@/lib/format';
 import { PartnerAssets } from '@/lib/partner-assets';
@@ -37,12 +36,19 @@ export default function PartnerHomeScreen() {
   const [businessPeriod, setBusinessPeriod] = useState<BusinessPeriod>('mtd');
   const [periodOpen, setPeriodOpen] = useState(false);
 
-  const fetchHomeWorkspace = useCallback(async (): Promise<{ home: PartnerHomeData; stories: PartnerStory[] }> => {
-    const [homeResult, storiesResult] = await Promise.allSettled([getPartnerHome(), getPartnerStories()]);
+  const fetchHomeWorkspace = useCallback(async (): Promise<{
+    home: PartnerHomeData;
+    activity: PartnerActivityData | null;
+    performance: PartnerBusinessPerformance | null;
+  }> => {
+    const [homeResult, activityResult, performanceResult] = await Promise.allSettled([
+      getPartnerHome(), getPartnerActivity(3), getPartnerBusinessPerformance(),
+    ]);
     if (homeResult.status === 'rejected') throw homeResult.reason;
     return {
       home: homeResult.value,
-      stories: storiesResult.status === 'fulfilled' ? storiesResult.value.items : [],
+      activity: activityResult.status === 'fulfilled' ? activityResult.value : null,
+      performance: performanceResult.status === 'fulfilled' ? performanceResult.value : null,
     };
   }, []);
 
@@ -88,7 +94,8 @@ export default function PartnerHomeScreen() {
   if (!context) return null;
 
   const data = workspace.data?.home ?? null;
-  const stories = workspace.data?.stories ?? [];
+  const activity = workspace.data?.activity?.items ?? [];
+  const trend = workspace.data?.performance?.trend ?? [];
   const { identity } = context;
   const periodLabel = BUSINESS_PERIODS.find((item) => item.key === businessPeriod)?.label ?? 'MTD';
   const rangeData = business.data;
@@ -232,7 +239,7 @@ export default function PartnerHomeScreen() {
               <View style={styles.businessMainRow}>
                 <View style={styles.businessMainCopy}>
                   <Text style={styles.businessPremium}>{formatIndianCurrency(rangeData?.net_premium ?? 0)}</Text>
-                  <Text style={styles.businessCaption}>Net Premium</Text>
+                  <Text style={styles.businessCaption}>Business Generated (Net Premium)</Text>
                   {business.loading && !rangeData ? (
                     <Text style={styles.trendNeutral}>Updating business figures…</Text>
                   ) : business.error ? (
@@ -255,7 +262,9 @@ export default function PartnerHomeScreen() {
                   )}
                 </View>
 
-                <PartnerBusinessGrowthIcon size={64} />
+                <View style={styles.chartSide}>
+                  <MiniBusinessTrend values={trend.map((item) => Number(item.premium || 0))} />
+                </View>
               </View>
 
               <View style={styles.businessDivider} />
@@ -277,7 +286,12 @@ export default function PartnerHomeScreen() {
 
           <PartnerEnter delay={70}>
             <View style={styles.quickCard}>
-              <Text style={styles.sectionTitle}>Quick Actions</Text>
+              <View style={styles.sectionHeading}>
+                <Text style={styles.sectionTitle}>Quick Actions</Text>
+                <Pressable accessibilityRole="button" accessibilityLabel="View all quick actions" onPress={() => router.push('/(tabs)/more')}>
+                  <Text style={styles.sectionLink}>View All  ›</Text>
+                </Pressable>
+              </View>
               <View style={styles.quickGrid}>
                 <QuickAction
                   asset={PartnerAssets.actions.quickPolicyIntake}
@@ -304,28 +318,90 @@ export default function PartnerHomeScreen() {
           </PartnerEnter>
 
           <PartnerEnter delay={120}>
-            <PendingTasksCard data={data} onOpenClaims={() => router.push('/(tabs)/claims')} />
+            <PendingTasksCard
+              data={data}
+              onOpenRenewals={() => router.push('/renewals')}
+              onOpenClaims={() => router.push('/(tabs)/claims')}
+              onOpenIntakes={() => router.push('/policy-intakes')}
+              onViewAll={() => router.push('/activity')}
+            />
           </PartnerEnter>
 
-          {stories.length ? (
-            <PartnerEnter delay={170}>
-              <View style={styles.storiesWrap}>
-                <StoryRail stories={stories} />
+          <PartnerEnter delay={155}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`View renewals due soon, ${data.business.renewals_30_days} policies in 30 days`}
+              onPress={() => router.push('/renewals')}
+              style={({ pressed }) => [styles.renewalCard, pressed && styles.pressed]}
+            >
+              <Image source={PartnerAssets.actions.quickRenewals} style={styles.renewalIcon} resizeMode="contain" />
+              <View style={styles.renewalBody}>
+                <Text style={styles.renewalTitle}>Renewals Due Soon</Text>
+                <Text style={styles.renewalMessage}>
+                  {data.business.renewals_30_days} policies expiring within 30 days
+                </Text>
               </View>
-            </PartnerEnter>
-          ) : null}
+              <Text style={styles.sectionLink}>View Renewals  ›</Text>
+            </Pressable>
+          </PartnerEnter>
+
+          <PartnerEnter delay={185}>
+            <View style={styles.activityCard}>
+              <View style={styles.sectionHeading}>
+                <Text style={styles.sectionTitle}>Recent Activity</Text>
+                <Pressable accessibilityRole="button" accessibilityLabel="View all recent activity" onPress={() => router.push('/activity')}>
+                  <Text style={styles.sectionLink}>View All  ›</Text>
+                </Pressable>
+              </View>
+              {activity.length ? activity.slice(0, 3).map((item) => (
+                <Pressable
+                  key={`${item.kind}-${item.entity_id}-${item.event_at}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={item.title}
+                  onPress={() => router.push(item.route as never)}
+                  style={({ pressed }) => [styles.activityRow, pressed && styles.pressed]}
+                >
+                  <Image
+                    source={item.kind === 'claim' ? PartnerAssets.actions.quickClaims
+                      : item.kind === 'policy' ? PartnerAssets.actions.policies
+                      : PartnerAssets.actions.quickPolicyIntake}
+                    style={styles.activityIcon}
+                    resizeMode="contain"
+                  />
+                  <View style={styles.activityCopy}>
+                    <Text numberOfLines={1} style={styles.activityTitle}>{item.title}</Text>
+                    <Text numberOfLines={1} style={styles.activitySubtitle}>{item.subtitle}</Text>
+                  </View>
+                  <Text style={styles.activityDate}>{formatActivityTime(item.event_at)}</Text>
+                  <Ionicons name="chevron-forward" size={12} color="#6480A5" />
+                </Pressable>
+              )) : (
+                <Text style={styles.activityEmpty}>
+                  {workspace.data?.activity ? 'No recent activity recorded.' : 'Recent activity is unavailable.'}
+                </Text>
+              )}
+            </View>
+          </PartnerEnter>
         </>
       )}
     </PartnerScreen>
   );
 }
 
-function PendingTasksCard({ data, onOpenClaims }: { data: PartnerHomeData; onOpenClaims: () => void }) {
-  const claimTask = data.today.find((item) => item.kind === 'claim');
-  const count = claimTask?.count ?? data.service.active_claims;
-  const title = count > 0 ? `${count} active ${count === 1 ? 'claim' : 'claims'}` : 'No active claims';
-  const subtitle = count > 0 ? 'Keep an eye on service progress.' : 'Nothing needs your attention right now.';
-
+function PendingTasksCard({
+  data, onOpenRenewals, onOpenClaims, onOpenIntakes, onViewAll,
+}: {
+  data: PartnerHomeData;
+  onOpenRenewals: () => void;
+  onOpenClaims: () => void;
+  onOpenIntakes: () => void;
+  onViewAll: () => void;
+}) {
+  const tasks = [
+    { key: 'renewal', count: data.business.renewals_30_days, label: 'Renewals due', icon: PartnerAssets.actions.quickRenewals, open: onOpenRenewals },
+    { key: 'intakes', count: data.service.intakes_need_attention, label: 'Policy intakes needing attention', icon: PartnerAssets.actions.quickPolicyIntake, open: onOpenIntakes },
+    { key: 'claims', count: data.service.active_claims, label: 'Active claims', icon: PartnerAssets.actions.quickClaims, open: onOpenClaims },
+  ];
   return (
     <View style={styles.pendingCard}>
       <View style={styles.pendingHeadingRow}>
@@ -333,28 +409,49 @@ function PendingTasksCard({ data, onOpenClaims }: { data: PartnerHomeData; onOpe
           <Text style={styles.pendingTitle}>Pending Tasks</Text>
           <Text style={styles.pendingHint}>Keep up with important actions.</Text>
         </View>
-        <View style={styles.pendingDecor}>
+        <Pressable accessibilityRole="button" accessibilityLabel="View all pending tasks" onPress={onViewAll}>
+          <Text style={styles.sectionLink}>View All  ›</Text>
+        </Pressable>
+      </View>
+      <View style={styles.pendingList}>
+        <View style={styles.pendingDecor} pointerEvents="none">
           <Image source={PartnerAssets.emptyStates.incompleteDetails} style={styles.pendingDecorImage} resizeMode="contain" />
         </View>
+        {tasks.map((task) => (
+          <Pressable
+            key={task.key}
+            accessibilityRole="button"
+            accessibilityLabel={`${task.count} ${task.label}`}
+            onPress={task.open}
+            style={({ pressed }) => [styles.pendingTaskRow, pressed && styles.pressed]}
+          >
+            <Image source={task.icon} style={styles.pendingTaskIcon} resizeMode="contain" />
+            <Text style={styles.pendingTaskCount}>{task.count}</Text>
+            <Text numberOfLines={1} style={styles.pendingTaskLabel}>{task.label}</Text>
+            <Ionicons name="chevron-forward" size={13} color="#3156B8" />
+          </Pressable>
+        ))}
       </View>
-
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`${title}. ${subtitle}`}
-        onPress={onOpenClaims}
-        style={({ pressed }) => [styles.pendingRow, pressed && styles.pressed]}
-      >
-        <View style={styles.pendingIconBox}>
-          <Image source={PartnerAssets.actions.quickClaims} style={styles.pendingIcon} resizeMode="contain" />
-        </View>
-        <View style={styles.pendingCopy}>
-          <Text style={styles.pendingRowTitle}>{title}</Text>
-          <Text style={styles.pendingRowSubtitle}>{subtitle}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={16} color="#2C56A2" />
-      </Pressable>
     </View>
   );
+}
+
+function MiniBusinessTrend({ values }: { values: number[] }) {
+  const recent = values.slice(-6);
+  const max = Math.max(1, ...recent);
+  return (
+    <View style={styles.miniChart} accessibilityLabel="Recent premium trend">
+      {recent.length ? recent.map((value, index) => (
+        <View key={index} style={[styles.miniBar, { height: Math.max(4, Math.round(Math.max(0, value) / max * 43)) }]} />
+      )) : <Text style={styles.chartUnavailable}>Trend unavailable</Text>}
+    </View>
+  );
+}
+
+function formatActivityTime(value: string) {
+  const time = new Date(value);
+  if (Number.isNaN(time.getTime())) return '';
+  return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short' }).format(time);
 }
 
 function MetricCell({
@@ -508,11 +605,11 @@ const styles = StyleSheet.create({
   businessCard: {
     position: 'relative',
     zIndex: 4,
-    marginBottom: 10,
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 10,
-    borderRadius: 18,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingTop: 6,
+    paddingBottom: 6,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#DCE4EF',
@@ -523,7 +620,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   businessTopRow: {
-    minHeight: 28,
+    minHeight: 24,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -556,7 +653,7 @@ const styles = StyleSheet.create({
   viewReport: { minHeight: 30, flexDirection: 'row', alignItems: 'center', gap: 1 },
   viewReportText: { color: '#5F38CF', fontSize: 11, fontWeight: '800' },
   businessMainRow: {
-    marginTop: 4,
+    marginTop: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -565,18 +662,18 @@ const styles = StyleSheet.create({
   businessMainCopy: { flex: 1, minWidth: 0 },
   businessPremium: {
     color: '#182338',
-    fontSize: 29,
-    lineHeight: 34,
+    fontSize: 24,
+    lineHeight: 29,
     fontWeight: '800',
     letterSpacing: -0.7,
   },
   businessCaption: { marginTop: 1, color: '#4F5D71', fontSize: 10.5, fontWeight: '600' },
-  trend: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  trend: { marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 4 },
   trendText: { fontSize: 9.5, fontWeight: '700' },
-  trendNeutral: { marginTop: 8, color: '#8691A2', fontSize: 9.5, fontWeight: '600' },
-  rangeError: { marginTop: 8, color: partnerTheme.colors.danger, fontSize: 9.5, fontWeight: '600' },
-  businessDivider: { height: StyleSheet.hairlineWidth, marginTop: 12, backgroundColor: '#DCE4EF' },
-  businessBottomRow: { minHeight: 54, flexDirection: 'row', alignItems: 'center' },
+  trendNeutral: { marginTop: 3, color: '#8691A2', fontSize: 9.5, fontWeight: '600' },
+  rangeError: { marginTop: 3, color: partnerTheme.colors.danger, fontSize: 9.5, fontWeight: '600' },
+  businessDivider: { height: StyleSheet.hairlineWidth, marginTop: 6, backgroundColor: '#DCE4EF' },
+  businessBottomRow: { minHeight: 46, flexDirection: 'row', alignItems: 'center' },
   metricCell: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   metricDivider: { width: StyleSheet.hairlineWidth, height: 38, marginHorizontal: 12, backgroundColor: '#C9D4E2' },
   metricIconBox: {
@@ -595,7 +692,7 @@ const styles = StyleSheet.create({
   metricLabel: { marginTop: 1, color: '#7B8799', fontSize: 8.5, fontWeight: '600' },
 
   quickCard: {
-    marginBottom: 10,
+    marginBottom: 8,
     paddingHorizontal: 12,
     paddingTop: 12,
     paddingBottom: 10,
@@ -634,13 +731,13 @@ const styles = StyleSheet.create({
 
   pendingCard: {
     position: 'relative',
-    marginBottom: 6,
+    marginBottom: 8,
     paddingHorizontal: 12,
     paddingTop: 9,
     paddingBottom: 8,
     overflow: 'hidden',
     borderRadius: 15,
-    backgroundColor: '#E5F4FF',
+    backgroundColor: '#FFFFFF',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#D3EAFB',
   },
@@ -650,15 +747,15 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
   },
-  pendingHeadingCopy: { paddingRight: 72 },
+  pendingHeadingCopy: { flex: 1, paddingRight: 10 },
   pendingTitle: { color: '#17366C', fontSize: 13, lineHeight: 16, fontWeight: '800' },
   pendingHint: { marginTop: 1, color: '#68809B', fontSize: 9.5, lineHeight: 12, fontWeight: '500' },
   pendingDecor: {
     position: 'absolute',
     right: 1,
-    top: 15,
+    top: 5,
     width: 60,
-    height: 55,
+    height: 75,
     alignItems: 'center',
     justifyContent: 'center',
     opacity: 0.5,
@@ -684,5 +781,28 @@ const styles = StyleSheet.create({
   pendingRowTitle: { color: '#25344C', fontSize: 10.5, lineHeight: 13, fontWeight: '800' },
   pendingRowSubtitle: { marginTop: 1, color: '#728198', fontSize: 8.8, lineHeight: 11, fontWeight: '500' },
 
-  storiesWrap: { marginTop: 5, marginBottom: 4 },
+  sectionHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 },
+  sectionLink: { color: '#3156B8', fontSize: 9, fontWeight: '800' },
+  chartSide: { width: 132, alignItems: 'flex-end', justifyContent: 'center' },
+  miniChart: { height: 43, width: 130, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'flex-end', gap: 5, borderBottomWidth: 1, borderColor: '#E1EAF6' },
+  miniBar: { width: 14, borderTopLeftRadius: 3, borderTopRightRadius: 3, backgroundColor: '#A6C6ED' },
+  chartUnavailable: { fontSize: 8, color: '#7A8DAA', alignSelf: 'center' },
+  pendingList: { position: 'relative', marginTop: 5, padding: 5, paddingRight: 64, backgroundColor: '#EAF5FF', borderRadius: 10 },
+  pendingTaskRow: { flexDirection: 'row', alignItems: 'center', minHeight: 27, gap: 5 },
+  pendingTaskIcon: { width: 18, height: 18 },
+  pendingTaskCount: { color: '#153B80', fontSize: 10, fontWeight: '800', width: 23 },
+  pendingTaskLabel: { flex: 1, color: '#294872', fontSize: 9, fontWeight: '600' },
+  renewalCard: { marginBottom: 8, minHeight: 56, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 11, gap: 10, backgroundColor: '#FFFFFF', borderRadius: 13, borderWidth: 1, borderColor: '#E3EBF5' },
+  renewalIcon: { width: 34, height: 34 },
+  renewalBody: { flex: 1, minWidth: 0 },
+  renewalTitle: { color: '#17366C', fontSize: 11, fontWeight: '800' },
+  renewalMessage: { color: '#D34A54', fontSize: 9, marginTop: 2 },
+  activityCard: { marginBottom: 12, padding: 11, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E3EBF5', borderRadius: 14 },
+  activityRow: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 7, borderTopWidth: StyleSheet.hairlineWidth, borderColor: '#E9EFF6' },
+  activityIcon: { width: 26, height: 26 },
+  activityCopy: { flex: 1, minWidth: 0 },
+  activityTitle: { color: '#17366C', fontSize: 10, fontWeight: '800' },
+  activitySubtitle: { color: '#75869E', fontSize: 8.5, marginTop: 2 },
+  activityDate: { color: '#8A98AE', fontSize: 8 },
+  activityEmpty: { paddingVertical: 15, color: '#7B8DA7', fontSize: 10 },
 });

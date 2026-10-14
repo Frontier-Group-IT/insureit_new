@@ -384,9 +384,10 @@ function resetOptions() {
 }
 
 function authRedirectTo() {
-  const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (productionHost ? `https://${productionHost}` : null);
-  return siteUrl ? `${siteUrl}/auth/callback?next=/intermediary-portal` : undefined;
+  // Invitation links must use the canonical production origin, not a potentially
+  // stale Vercel deployment alias. Supabase Auth must allow this redirect URL.
+  const siteUrl = process.env.NEXT_PUBLIC_PORTAL_URL || "https://portal.insureit.in";
+  return `${siteUrl.endsWith("/") ? siteUrl.slice(0, -1) : siteUrl}/auth/callback?next=/intermediary-portal`;
 }
 
 function redirectAuthEmailError(returnPath: string, message: string): never {
