@@ -34,14 +34,8 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
       <section className="relative isolate overflow-hidden rounded-[22px] border border-[#D6E7FA] bg-[#DDEEFF] p-5 text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.06)] sm:p-7">
         <div className="pointer-events-none absolute inset-y-0 right-0 w-[75%] bg-[url('/assets/customerhome.jpeg')] bg-cover bg-center opacity-80"/>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EAF5FF] via-[#EAF5FF]/95 via-40% to-[#EAF5FF]/10"/>
-        <div className="relative max-w-[560px] space-y-3 py-2 sm:py-4">
-          <p className="text-[13px] font-medium text-[#54749B]">Welcome back</p>
-          <h1 className="text-[clamp(27px,3vw,38px)] font-bold tracking-tight">Good to see you, {account.contact_name?.split(" ")[0] || "Customer"}!</h1>
-          <p className="max-w-[350px] text-[14px] leading-relaxed text-[#4B6C94]">Your vehicles and insurance, all in one place.</p>
-          <div className="flex flex-wrap gap-2 pt-1">
-            <Link href={{pathname:"/customer/insurance-quote",query:accountQuery}} className="inline-flex items-center gap-2 rounded-xl bg-[#1769DC] px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-[#1058BD]">Get insurance quote <ArrowRight className="h-4 w-4"/></Link>
-            <Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="inline-flex items-center gap-2 rounded-xl border border-[#B6D2F2] bg-white/90 px-4 py-2.5 text-[13px] font-semibold text-[#1769DC] transition hover:bg-white">View my vehicles <Truck className="h-4 w-4"/></Link>
-          </div>
+        <div className="relative flex min-h-[155px] max-w-[560px] items-center py-2 sm:min-h-[185px] sm:py-4">
+          <h1 className="text-[clamp(27px,3vw,38px)] font-bold tracking-tight">Good morning, {account.contact_name?.split(" ")[0] || "Customer"}!</h1>
         </div>
       </section>
       <section aria-label="Fleet overview" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
