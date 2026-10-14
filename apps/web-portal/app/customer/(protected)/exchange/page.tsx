@@ -1,10 +1,8 @@
 import Link from "next/link";
-import { BadgeCheck, Gauge, MapPin, Search, Truck } from "lucide-react";
+import { BadgeCheck, Gauge, MapPin, Search, ShieldCheck, Truck } from "lucide-react";
 import {
   CustomerAccountTabs,
-  CustomerPageHeading,
   EmptyCustomerState,
-  StatusPill,
 } from "@/components/customer-portal/customer-phase1";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import {
@@ -24,10 +22,11 @@ export default async function CustomerExchangePage({
 }) {
   const params = searchParams ? await searchParams : {};
   const { account, accounts } = await resolveCustomerWebScope(params.account);
-  const category = categories.includes((params.category ?? "All") as (typeof categories)[number]) ? (params.category ?? "All") : "All";
+  const category = categories.includes((params.category ?? "All") as (typeof categories)[number])
+    ? (params.category ?? "All")
+    : "All";
   const query = params.q?.trim() ?? "";
-  // Keep transient marketplace failures inside Exchange so Customer navigation stays usable.
-  // Do not catch session/account authorization failures from resolveCustomerWebScope.
+
   let rows: Awaited<ReturnType<typeof loadCustomerExchangeFeed>> = [];
   let feedUnavailable = false;
   try {
@@ -41,16 +40,29 @@ export default async function CustomerExchangePage({
 
   return (
     <div className="space-y-5">
-      <CustomerPageHeading
-        eyebrow="Vehicle marketplace"
-        title="Exchange"
-        description="Browse verified commercial vehicle listings. Buying, bidding and selling actions remain in the Customer App during this web phase."
-      />
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/exchange" />
 
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <form className="flex max-w-xl flex-1 items-center gap-2 rounded-xl border border-[#D8E1EC] bg-white px-3 py-2.5">
-          <Search className="h-4 w-4 text-[#73829A]" />
+      <section className="overflow-hidden rounded-2xl border border-[#DCE6F2] bg-gradient-to-br from-white via-[#F9FCFF] to-[#EEF6FF] px-5 py-6 shadow-[0_10px_28px_rgba(28,50,82,.05)] sm:px-7 sm:py-7">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-[720px]">
+            <h1 className="text-[clamp(27px,3.5vw,40px)] font-black leading-tight text-[#10213D]">
+              Vehicle <span className="text-[#267AFF]">Exchange</span>
+            </h1>
+            <p className="mt-2 text-[12px] leading-6 text-[#647995]">
+              Browse commercial vehicles and find your next upgrade.
+            </p>
+          </div>
+
+          <div className="inline-flex max-w-max items-center gap-2 rounded-full border border-[#D8E5F3] bg-white/85 px-3 py-2 text-[9.5px] font-bold text-[#61738D]">
+            <ShieldCheck className="h-3.5 w-3.5 text-[#267AFF]" />
+            Transactions continue in the Customer App
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <form className="flex w-full items-center gap-2 rounded-xl border border-[#D8E1EC] bg-white px-3 py-2.5 shadow-[0_4px_14px_rgba(28,50,82,.03)]">
+          <Search className="h-4 w-4 shrink-0 text-[#73829A]" />
           <input type="hidden" name="account" value={account.id} />
           {category !== "All" ? <input type="hidden" name="category" value={category} /> : null}
           <input
@@ -59,21 +71,32 @@ export default async function CustomerExchangePage({
             placeholder="Search make, model, location or category"
             className="min-w-0 flex-1 bg-transparent text-[12px] font-semibold text-[#10213D] outline-none placeholder:text-[#9AA6B7]"
           />
-          <button className="rounded-lg bg-[#142746] px-3 py-1.5 text-[10px] font-black text-white">Search</button>
+          <button className="rounded-lg bg-[#142746] px-4 py-2 text-[10px] font-black text-white">Search</button>
         </form>
 
         <div className="flex flex-wrap gap-2">
           {categories.map((item) => (
             <Link
               key={item}
-              href={{ pathname: "/customer/exchange", query: { account: account.id, ...(query ? { q: query } : {}), ...(item !== "All" ? { category: item } : {}) } }}
-              className={`rounded-full border px-3 py-1.5 text-[10px] font-black ${category === item ? "border-[#142746] bg-[#142746] text-white" : "border-[#D8E1EC] bg-white text-[#64748B]"}`}
+              href={{
+                pathname: "/customer/exchange",
+                query: {
+                  account: account.id,
+                  ...(query ? { q: query } : {}),
+                  ...(item !== "All" ? { category: item } : {}),
+                },
+              }}
+              className={`rounded-full border px-3.5 py-2 text-[10px] font-black transition ${
+                category === item
+                  ? "border-[#142746] bg-[#142746] text-white"
+                  : "border-[#D8E1EC] bg-white text-[#64748B] hover:border-[#AFC5DE]"
+              }`}
             >
               {item}
             </Link>
           ))}
         </div>
-      </div>
+      </section>
 
       {feedUnavailable ? (
         <section role="alert" className="rounded-2xl border border-[#DCE4EE] bg-white p-6 text-center shadow-sm">
@@ -99,37 +122,74 @@ export default async function CustomerExchangePage({
       ) : rows.length === 0 ? (
         <EmptyCustomerState title="No Exchange listings found" body="Try another category or search term." />
       ) : (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {rows.map((row) => (
-            <Link
-              key={row.listing_id}
-              href={{ pathname: `/customer/exchange/${row.listing_id}`, query: { account: account.id } }}
-              className="overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white shadow-[0_8px_24px_rgba(28,50,82,0.04)] transition hover:-translate-y-0.5 hover:border-[#B9C9DB]"
-            >
-              <div className="flex h-32 items-center justify-center bg-[#F3F6FA]">
-                <Truck className="h-12 w-12 text-[#8190A6]" />
-              </div>
-              <div className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-[14px] font-black text-[#10213D]">{row.year ? `${row.year} ` : ""}{row.title}</p>
-                    <p className="mt-1 truncate text-[10.5px] font-semibold text-[#74839A]">{row.masked_registration}</p>
+        <section>
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <div>
+              <h2 className="text-[18px] font-black text-[#10213D]">Available Vehicles</h2>
+              <p className="mt-1 text-[10px] font-semibold text-[#71839A]">{rows.length} listing{rows.length === 1 ? "" : "s"} found</p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {rows.map((row) => {
+              const vehicleName = [row.make, row.model].filter(Boolean).join(" ") || row.title;
+              const location = [row.city, row.state].filter(Boolean).join(", ") || "Location on request";
+              const hasPrice = Number(row.asking_price || 0) > 0;
+              return (
+                <Link
+                  key={row.listing_id}
+                  href={{ pathname: `/customer/exchange/${row.listing_id}`, query: { account: account.id } }}
+                  className="group overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white shadow-[0_8px_24px_rgba(28,50,82,.04)] transition hover:-translate-y-0.5 hover:border-[#B9C9DB]"
+                >
+                  <div
+                    className="relative h-44 overflow-hidden bg-[#EEF3F8] bg-cover bg-center"
+                    style={row.cover_url ? { backgroundImage: `url("${row.cover_url}")` } : undefined}
+                  >
+                    {!row.cover_url ? (
+                      <div className="absolute inset-0 grid place-items-center">
+                        <Truck className="h-14 w-14 text-[#8D9AAD]" />
+                      </div>
+                    ) : null}
+
+                    <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#0B1D35]/70 to-transparent" />
+                    <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
+                      <span className="rounded-full bg-white/95 px-2.5 py-1 text-[9px] font-black text-[#31445F] shadow-sm">{row.category}</span>
+                      {row.documents_verified || row.owner_verified ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[#E9F8F0]/95 px-2.5 py-1 text-[9px] font-black text-[#0C7A52] shadow-sm">
+                          <BadgeCheck className="h-3 w-3" /> Verified
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-2 text-white">
+                      <div className="min-w-0">
+                        <p className="truncate text-[15px] font-black">{vehicleName}</p>
+                        <p className="mt-0.5 truncate text-[9.5px] font-bold text-white/80">{row.vehicle_type || row.masked_registration}</p>
+                      </div>
+                      <p className="shrink-0 text-[16px] font-black">
+                        {hasPrice ? formatCustomerCompactMoney(Number(row.asking_price)) : "Price on request"}
+                      </p>
+                    </div>
                   </div>
-                  {row.documents_verified ? <BadgeCheck className="h-5 w-5 shrink-0 text-[#0B7A54]" /> : null}
-                </div>
-                <p className="mt-3 text-[20px] font-black tracking-[-0.02em] text-[#10213D]">{formatCustomerCompactMoney(Number(row.asking_price || 0))}</p>
-                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[9.5px] font-bold text-[#758399]">
-                  <span className="inline-flex items-center gap-1"><Gauge className="h-3.5 w-3.5" />{row.odometer_km ? `${Number(row.odometer_km).toLocaleString("en-IN")} km` : "Odometer verified"}</span>
-                  <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{[row.city,row.state].filter(Boolean).join(", ") || "Location on request"}</span>
-                </div>
-                <div className="mt-3 flex items-center justify-between gap-2">
-                  <StatusPill tone={row.inspected ? "active" : "neutral"}>{row.inspected ? "Inspected" : "Inspection pending"}</StatusPill>
-                  <span className="text-[9px] font-black uppercase tracking-[0.08em] text-[#718096]">{row.selling_mode.replaceAll("_"," ")}</span>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+
+                  <div className="p-4">
+                    <div className="grid grid-cols-2 gap-2 rounded-xl bg-[#F7F9FC] p-3 text-[9.5px] font-bold text-[#65758C]">
+                      <span className="inline-flex min-w-0 items-center gap-1.5"><MapPin className="h-3.5 w-3.5 shrink-0 text-[#267AFF]" /><span className="truncate">{location}</span></span>
+                      <span className="inline-flex min-w-0 items-center gap-1.5"><Gauge className="h-3.5 w-3.5 shrink-0 text-[#267AFF]" /><span className="truncate">{row.odometer_km ? `${Number(row.odometer_km).toLocaleString("en-IN")} km` : "Usage unavailable"}</span></span>
+                      <span>Year: <strong className="text-[#30445E]">{row.year || "—"}</strong></span>
+                      <span>Mode: <strong className="capitalize text-[#30445E]">{row.selling_mode.replaceAll("_", " ")}</strong></span>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="text-[9.5px] font-bold text-[#71839A]">{row.inspected ? "Inspected listing" : "Inspection status pending"}</span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-black text-[#176BD4]">View details <span aria-hidden="true">→</span></span>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
       )}
     </div>
   );
