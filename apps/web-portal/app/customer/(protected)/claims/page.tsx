@@ -42,6 +42,8 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
   });
   const internalCount = enriched.filter((item) => !item.external).length;
   const externalCount = enriched.length - internalCount;
+  const completedCount = enriched.filter((item) => item.completed).length;
+  const openCount = enriched.filter((item) => !item.completed && item.claim.current_status !== "Rejected").length;
   const stages = INTERNAL_JOURNEY_STAGES.map((stage) => stage.label);
   const filtered = enriched.filter(({ claim, external, stage }) => {
     if (external !== (type === "external")) return false;
