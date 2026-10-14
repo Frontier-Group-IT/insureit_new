@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Bell, ChevronRight, LogOut } from "lucide-react";
+import { Bell, ChevronDown, ChevronRight, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { CustomerAvatar } from "./customer-avatar";
 
@@ -40,7 +40,7 @@ export function CustomerHeaderActions({ name, userId }: { name: string; userId: 
       </Link>
       <span className="h-8 w-px bg-[#D2DAE7]" aria-hidden="true" />
       <div ref={menuRef} className="relative">
-        <button type="button" aria-label="Open customer profile menu" aria-expanded={open} onClick={() => setOpen(!open)} className="grid h-11 w-11 place-items-center rounded-full border-2 border-[#245A9A] bg-white text-base font-bold text-[#10213D]">{initial}</button>
+        <button type="button" aria-label="Open customer profile menu" aria-expanded={open} onClick={() => setOpen(!open)} className="flex min-h-11 items-center gap-3 rounded-full text-[#10213D] transition hover:bg-white/25"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 border-[#245A9A] bg-white text-base font-bold">{initial}</span><span className="hidden max-w-[160px] truncate text-[12px] font-bold lg:inline">{name}</span><ChevronDown className="hidden h-4 w-4 lg:block" aria-hidden="true" /></button>
         {open ? (
           <>
             <div className="absolute right-0 top-14 z-50 w-[min(320px,calc(100vw-24px))] rounded-3xl border border-[#DBE4F0] bg-white shadow-[0_20px_50px_rgba(15,32,57,0.17)]">
