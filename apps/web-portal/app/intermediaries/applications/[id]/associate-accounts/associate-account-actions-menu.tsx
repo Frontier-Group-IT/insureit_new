@@ -348,6 +348,13 @@ function ResendInviteButton({
   const { pending } = useFormStatus();
   const storageKey = `associate-resend-cooldown:${associateId}`;
   const [remaining, setRemaining] = useState(0);
+  const submittedByPointerRef = useRef(false);
+
+  const recordResendAttempt = () => {
+    const cooldownUntil = Date.now() + RESEND_COOLDOWN_SECONDS * 1000;
+    window.localStorage.setItem(storageKey, String(cooldownUntil));
+    setRemaining(RESEND_COOLDOWN_SECONDS);
+  };
 
   useEffect(() => {
     const invitedUntil = invitedAt
@@ -381,11 +388,26 @@ function ResendInviteButton({
       role="menuitem"
       disabled={disabled}
       title={title}
-      onClick={() => {
-        if (disabled) return;
-        const cooldownUntil = Date.now() + RESEND_COOLDOWN_SECONDS * 1000;
-        window.localStorage.setItem(storageKey, String(cooldownUntil));
-        setRemaining(RESEND_COOLDOWN_SECONDS);
+      onPointerUp={(event) => {
+        if (disabled || event.button !== 0) return;
+        const target = document.elementFromPoint(event.clientX, event.clientY);
+        if (!target || !event.currentTarget.contains(target)) return;
+        // Submit before focus/scroll repositioning can cancel the subsequent click.
+        submittedByPointerRef.current = true;
+        recordResendAttempt();
+        event.currentTarget.form?.requestSubmit();
+      }}
+      onClick={(event) => {
+        if (submittedByPointerRef.current) {
+          event.preventDefault();
+          submittedByPointerRef.current = false;
+          return;
+        }
+        if (disabled) {
+          event.preventDefault();
+          return;
+        }
+        recordResendAttempt();
       }}
       className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-40"
     >
