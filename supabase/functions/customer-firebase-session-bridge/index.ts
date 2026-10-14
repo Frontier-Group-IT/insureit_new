@@ -2,6 +2,7 @@ import { cert, getApps, initializeApp } from "npm:firebase-admin@13.5.0/app";
 import { getAuth } from "npm:firebase-admin@13.5.0/auth";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { checkCustomerSessionEligibility, FIREBASE_CUSTOMER_PROJECT } from "../_shared/customer-firebase-session-policy.mjs";
+import { issueExistingCustomerSessionChallenge } from "../_shared/customer-firebase-session-challenge.mjs";
 
 /**
  * UNDEPLOYED PHASE-2 CANDIDATE: Firebase SMS OTP -> native Supabase Auth session.
@@ -114,23 +115,15 @@ Deno.serve(async (request: Request) => {
     // challenge. Email MUST preexist on this exact Auth UUID. generateLink
     // can create a new user for unknown emails, therefore NEVER accept a
     // client-provided email and NEVER call for an unprovisioned identity.
-    const { data: generated, error: linkError } = await db.auth.admin.generateLink({
-      type: "magiclink",
-      email: gate.verifiedExistingEmail,
-    });
-    const tokenHash = generated?.properties?.hashed_token;
-    if (linkError || !generated?.user || generated.user.id !== gate.customerProfileId ||
-      typeof tokenHash !== "string" || !tokenHash) {
-      // NEVER return a token for an unexpected or newly created UUID.
+    const challenge = await issueExistingCustomerSessionChallenge(db, gate);
+    if (!challenge.ok) {
       throw new Error("Supabase session challenge identity mismatch");
     }
-
-    // Client must exchange this one-use challenge using
-    // supabase.auth.verifyOtp({ type:'magiclink', token_hash }) then verify
-    // session.user.id === profile_id. Never log token or Firebase ID token.
+    // Client exchanges the one-use challenge with Supabase Auth, verifies
+    // getUser() and the canonical active Customer profile before using data.
     return response(200, "exchange_ready", {
-      token_hash: tokenHash,
-      profile_id: gate.customerProfileId,
+      token_hash: challenge.token_hash,
+      profile_id: challenge.profile_id,
     });
   } catch (error) {
     // Only exception class, never raw SMS, token hash, phone or token.
