@@ -174,6 +174,7 @@ export async function IntermediaryRegister({
       return {
         id: row.id,
         applicationId: row.application_id as string,
+        partnerRecordId: app?.partner_record_id ?? null,
         displayName: row.display_name,
         mobile: mobile10(row.mobile),
         partnerId,
@@ -205,7 +206,7 @@ export async function IntermediaryRegister({
     });
     return (
       <AppShell title={pageTitle}>
-        <PartnerRegisterClient rows={clientRows} initialSearch={search} initialStatus={accountStatus} success={success} error={error} loadError={Boolean(loadError)} />
+        <PartnerRegisterClient rows={clientRows} canPermanentDelete={profile.role === "it_super_user"} initialSearch={search} initialStatus={accountStatus} success={success} error={error} loadError={Boolean(loadError)} />
       </AppShell>
     );
   }

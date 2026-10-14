@@ -63,7 +63,7 @@ export default async function UsersPage({ searchParams }: { searchParams?: Promi
         </form>
       </section>
 
-      <UserManagementWorkspace users={users} managers={managers} initialQuery={params.q?.trim() ?? ""} initialRole={params.role ?? ""} initialStatus={params.status ?? ""} loadError={error ? "User records could not be loaded. Please refresh and try again." : null} />
+      <UserManagementWorkspace users={users} managers={managers} canPermanentDelete={profile?.role === "it_super_user"} initialQuery={params.q?.trim() ?? ""} initialRole={params.role ?? ""} initialStatus={params.status ?? ""} loadError={error ? "User records could not be loaded. Please refresh and try again." : null} />
     </AppShell>
   );
 }
