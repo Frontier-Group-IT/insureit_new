@@ -112,10 +112,13 @@ Deno.serve(async (request: Request) => {
     const verified = checkVerifiedFirebaseCustomerForSession(originalPrincipal);
     if (!verified.ok) return response(403, verified.reason);
 
-    // 2. Consume one atomic rate-limit slot BEFORE any Auth alias mutation
-    // or one-use challenge. Missing DB migration = deny, not bypass.
+    // 2. Atomically consume this particular recent Firebase SMS sign-in event
+    // before any Auth alias mutation or challenge. A refreshed Firebase ID
+    // token retains auth_time, so event replay must fail even after cooldown.
+    // Missing DB migration = deny, not bypass.
     const limit = await db.rpc("customer_firebase_session_exchange_consume", {
       p_firebase_uid: decoded.uid,
+      p_auth_time: decoded.auth_time,
       p_interval_seconds: 120,
     });
     if (limit.error) throw new Error("Session issuance limit unavailable");
