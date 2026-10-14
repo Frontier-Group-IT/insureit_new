@@ -20,7 +20,7 @@ export function canonicalIndianPhone(value) {
 }
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export function checkCustomerSessionEligibility({ firebase, link, profile, authUser, nowSeconds }) {
+export function checkVerifiedFirebaseCustomerForSession({ firebase, link, profile, authUser, nowSeconds }) {
   const fail = (reason) => Object.freeze({ ok: false, reason });
   if (!firebase || typeof nowSeconds !== 'number' || !Number.isFinite(nowSeconds)) {
     return fail('invalid_firebase_principal');
@@ -60,18 +60,24 @@ export function checkCustomerSessionEligibility({ firebase, link, profile, authU
     return fail('supabase_user_mismatch');
   }
 
-  // Never generate a magic link for a user-entered/contact email; only a
-  // pre-provisioned, non-deliverable system-owned alias on the EXISTING UUID.
-  // No alias is created here. A separate reviewed, manual-only process is
-  // required to provision an eligible phone-only Auth user.
-  if (!isApprovedAuthAlias(authUser.id, authUser.email) ||
-    !authUser.email_confirmed_at) {
-    return fail('session_identity_not_provisioned');
-  }
-
   return Object.freeze({
     ok: true,
     customerProfileId: profile.id,
+  });
+}
+
+/** Requires an approved deterministic, non-deliverable email login identity. */
+export function checkCustomerSessionEligibility(input) {
+  const verified = checkVerifiedFirebaseCustomerForSession(input);
+  if (!verified.ok) return verified;
+  const authUser = input.authUser;
+  if (!isApprovedAuthAlias(authUser.id, authUser.email) ||
+      !authUser.email_confirmed_at) {
+    return Object.freeze({ ok: false, reason: 'session_identity_not_provisioned' });
+  }
+  return Object.freeze({
+    ok: true,
+    customerProfileId: verified.customerProfileId,
     verifiedExistingEmail: authUser.email,
   });
 }
