@@ -3,6 +3,7 @@ name: Verify mobile app
 on:
   push:
     branches:
+      - feature/customer-firebase-otp-gateway-0-3-2-20261014
       - feature/self-managed-claims
       - feature/self-managed-production-integration-v2
       - feature/self-managed-production-integration-v3
