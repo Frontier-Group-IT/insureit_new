@@ -18,6 +18,9 @@ on:
       - 'supabase/functions/customer-firebase-*/**'
       - 'supabase/functions/_shared/customer-firebase-session-policy.mjs'
       - 'apps/mobile-app/scripts/customer-firebase-session-bridge-policy.test.mjs'
+      - 'apps/mobile-app/scripts/customer-firebase-bind-policy.test.mjs'
+      - 'supabase/functions/_shared/customer-firebase-bind-policy.mjs'
+      - 'supabase/migrations/20261014130000_customer_firebase_session_exchange_limit.sql'
       - 'apps/mobile-app/scripts/customer-firebase-session-exchange-regression.mjs'
       - 'apps/mobile-app/scripts/customer-firebase-session-challenge.test.mjs'
       - 'supabase/functions/_shared/customer-firebase-session-challenge.mjs'
@@ -37,7 +40,7 @@ jobs:
           node-version: '22'
           cache: npm
       - name: Verify Firebase OTP-only Supabase session gate (always runs)
-        run: node --test apps/mobile-app/scripts/customer-firebase-session-bridge-policy.test.mjs apps/mobile-app/scripts/customer-firebase-session-exchange-regression.mjs apps/mobile-app/scripts/customer-firebase-session-challenge.test.mjs
+        run: node --test apps/mobile-app/scripts/customer-firebase-session-bridge-policy.test.mjs apps/mobile-app/scripts/customer-firebase-session-exchange-regression.mjs apps/mobile-app/scripts/customer-firebase-session-challenge.test.mjs apps/mobile-app/scripts/customer-firebase-bind-policy.test.mjs
       - name: Verify Firebase test suite when feature branch is present
         shell: bash
         run: |
