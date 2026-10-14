@@ -20,7 +20,7 @@ function state() {
     link: { firebase_project_id: FIREBASE_CUSTOMER_PROJECT,
       firebase_uid: 'firebase-user-A', profile_id: id, is_approved: true,
       is_active: true, verified_phone_at_approval: '+919876543210' },
-    profile: { id, role: 'customer', is_active: true },
+    profile: { id, phone: '919876543210', role: 'customer', is_active: true },
     authUser: { id, phone: '+919876543210', email: 'verified@example.org',
       email_confirmed_at: '2026-10-10T00:00:00Z', is_anonymous: false },
   };
@@ -74,6 +74,10 @@ test('blocks inactive, unapproved or deleted links', () => {
   verify(({ link }) => { link.is_approved = false; }, 'identity_link_not_approved');
   verify(({ link }) => { link.is_active = false; }, 'identity_link_not_approved');
   verify(args => { args.link = null; }, 'identity_link_not_approved');
+});
+
+test('blocks stale phone changes on the Customer profile independently of auth.users', () => {
+  verify(({ profile }) => { profile.phone = '919812345678'; }, 'customer_unavailable');
 });
 
 test('blocks inactive or staff profile', () => {
