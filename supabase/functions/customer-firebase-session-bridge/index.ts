@@ -1,7 +1,8 @@
 import { cert, getApps, initializeApp } from "npm:firebase-admin@13.5.0/app";
 import { getAuth } from "npm:firebase-admin@13.5.0/auth";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
-import { checkCustomerSessionEligibility, FIREBASE_CUSTOMER_PROJECT } from "../_shared/customer-firebase-session-policy.mjs";
+import { checkCustomerSessionEligibility, checkVerifiedFirebaseCustomerForSession, FIREBASE_CUSTOMER_PROJECT } from "../_shared/customer-firebase-session-policy.mjs";
+import { ensureCustomerSupabaseSessionAlias } from "../_shared/customer-firebase-session-provision.mjs";
 import { issueExistingCustomerSessionChallenge } from "../_shared/customer-firebase-session-challenge.mjs";
 
 /**
@@ -100,26 +101,43 @@ Deno.serve(async (request: Request) => {
     if (profileResult.error || authResult.error) {
       throw new Error("Customer authentication lookup failed");
     }
-    const gate = checkCustomerSessionEligibility({
+    // 1. Verify the canonical identity *independently* of any Auth email.
+    const originalPrincipal = {
       firebase: decoded,
       link: links[0],
       profile: profileResult.data,
       authUser: authResult.data.user,
       nowSeconds,
-    });
-    if (!gate.ok) {
-      return response(gate.reason === "session_identity_not_provisioned" ? 409 : 403, gate.reason);
-    }
+    };
+    const verified = checkVerifiedFirebaseCustomerForSession(originalPrincipal);
+    if (!verified.ok) return response(403, verified.reason);
 
-    // Privileged Postgres transaction enforces at most one challenge per UID
-    // per 120 seconds. If its reviewed migration is not deployed, FAIL CLOSED.
-    // No in-memory or per-Edge-instance limiter can protect concurrent calls.
+    // 2. Consume one atomic rate-limit slot BEFORE any Auth alias mutation
+    // or one-use challenge. Missing DB migration = deny, not bypass.
     const limit = await db.rpc("customer_firebase_session_exchange_consume", {
       p_firebase_uid: decoded.uid,
       p_interval_seconds: 120,
     });
     if (limit.error) throw new Error("Session issuance limit unavailable");
     if (limit.data !== true) return response(429, "too_many_attempts");
+
+    // 3. Existing phone-only Customers may receive the deterministic
+    // non-deliverable alias on the SAME original Auth user UUID. This is
+    // explicitly disabled in every environment unless separately approved.
+    const provision = await ensureCustomerSupabaseSessionAlias({
+      db,
+      authUser: authResult.data.user,
+      customerProfileId: verified.customerProfileId,
+      enabled: Deno.env.get("CUSTOMER_FIREBASE_SESSION_ALIAS_JIT_ENABLED") === "true",
+    });
+    if (!provision.ok) return response(409, "session_identity_not_provisioned");
+
+    // 4. Demand the strict Auth-email policy again with the persisted state.
+    const gate = checkCustomerSessionEligibility({
+      ...originalPrincipal,
+      authUser: provision.authUser,
+    });
+    if (!gate.ok) return response(403, "customer_identity_unavailable");
 
     // Supabase Auth, NOT Firebase, issues the legitimate one-time sign-in
     // challenge. Email MUST preexist on this exact Auth UUID. generateLink
