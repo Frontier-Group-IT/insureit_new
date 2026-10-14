@@ -10,6 +10,8 @@ on:
       - 'supabase/functions/_shared/customer-firebase-session-policy.mjs'
       - 'apps/mobile-app/scripts/customer-firebase-session-bridge-policy.test.mjs'
       - 'apps/mobile-app/scripts/customer-firebase-session-exchange-regression.mjs'
+      - 'apps/mobile-app/scripts/customer-firebase-session-challenge.test.mjs'
+      - 'supabase/functions/_shared/customer-firebase-session-challenge.mjs'
       - 'apps/mobile-app/lib/customer-firebase-session-exchange.ts'
       - '.github/workflows/verify-customer-firebase-otp.yml'
   workflow_dispatch:
@@ -26,7 +28,7 @@ jobs:
           node-version: '22'
           cache: npm
       - name: Verify Firebase OTP-only Supabase session gate (always runs)
-        run: node --test apps/mobile-app/scripts/customer-firebase-session-bridge-policy.test.mjs apps/mobile-app/scripts/customer-firebase-session-exchange-regression.mjs
+        run: node --test apps/mobile-app/scripts/customer-firebase-session-bridge-policy.test.mjs apps/mobile-app/scripts/customer-firebase-session-exchange-regression.mjs apps/mobile-app/scripts/customer-firebase-session-challenge.test.mjs
       - name: Verify Firebase test suite when feature branch is present
         shell: bash
         run: |
