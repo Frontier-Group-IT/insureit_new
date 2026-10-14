@@ -59,6 +59,12 @@ test('blocks a phone number changed after mapping approval', () => {
   verify(({ firebase }) => { firebase.phone_number = '+919812345678'; }, 'identity_link_not_approved');
 });
 
+test('accepts existing Supabase 91-prefixed 12-digit phone without mutating the account', () => {
+  const input = state();
+  input.authUser.phone = '919876543210';
+  assert.equal(checkCustomerSessionEligibility(input).ok, true);
+});
+
 test('blocks a Supabase phone mismatch', () => {
   verify(({ authUser }) => { authUser.phone = '+919812345678'; }, 'supabase_user_mismatch');
 });
