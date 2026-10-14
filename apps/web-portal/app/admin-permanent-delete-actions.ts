@@ -32,7 +32,7 @@ function formatBlockers(items: Blocker[]) {
   if (!items.length) return "";
   const names = [...new Set(items.map((item) => item.table.replaceAll("_", " ")))].slice(0, 4);
   const suffix = items.length > names.length ? " and other protected records" : "";
-  return \`\${names.join(", ")}\${suffix}\`;
+  return `${names.join(", ")}${suffix}`;
 }
 
 async function deleteAuthBackedProfile(profileId: string) {
@@ -63,13 +63,13 @@ async function deleteUser(profileId: string, actorId: string): Promise<Permanent
 
   const profileBlockers = await blockers("profiles", profileId);
   if (profileBlockers.length) {
-    return { status: "error", message: \`Cannot permanently delete this employee because protected history exists in \${formatBlockers(profileBlockers)}. Deactivate the employee instead.\` };
+    return { status: "error", message: `Cannot permanently delete this employee because protected history exists in ${formatBlockers(profileBlockers)}. Deactivate the employee instead.` };
   }
 
   if (target.employee_id) {
     const employeeBlockers = await blockers("employees", target.employee_id);
     if (employeeBlockers.length) {
-      return { status: "error", message: \`Cannot permanently delete this employee because protected business history exists in \${formatBlockers(employeeBlockers)}. Deactivate the employee instead.\` };
+      return { status: "error", message: `Cannot permanently delete this employee because protected business history exists in ${formatBlockers(employeeBlockers)}. Deactivate the employee instead.` };
     }
   }
 
@@ -86,7 +86,7 @@ async function deleteUser(profileId: string, actorId: string): Promise<Permanent
   revalidatePath("/employees");
   revalidatePath("/organization");
   revalidatePath("/system/access-control");
-  return { status: "success", message: \`\${target.full_name} was permanently deleted.\` };
+  return { status: "success", message: `${target.full_name} was permanently deleted.` };
 }
 
 async function deleteBranch(partnerId: string): Promise<PermanentDeleteResult> {
@@ -101,7 +101,7 @@ async function deleteBranch(partnerId: string): Promise<PermanentDeleteResult> {
   const allBlockers = await blockers("partners", partnerId);
   const blocking = allBlockers.filter((item) => item.table !== "partner_branch_profiles");
   if (blocking.length) {
-    return { status: "error", message: \`Cannot permanently delete this branch because protected history exists in \${formatBlockers(blocking)}.\` };
+    return { status: "error", message: `Cannot permanently delete this branch because protected history exists in ${formatBlockers(blocking)}.` };
   }
 
   const { data: portal } = await admin
@@ -127,7 +127,7 @@ async function deleteBranch(partnerId: string): Promise<PermanentDeleteResult> {
 
   revalidatePath("/intermediaries/groups/branches");
   revalidatePath("/intermediaries/groups");
-  return { status: "success", message: \`\${branch.display_name} was permanently deleted.\` };
+  return { status: "success", message: `${branch.display_name} was permanently deleted.` };
 }
 
 async function deletePartner(intermediaryId: string, partnerRecordId?: string): Promise<PermanentDeleteResult> {
@@ -142,7 +142,7 @@ async function deletePartner(intermediaryId: string, partnerRecordId?: string): 
 
   const intermediaryBlockers = await blockers("intermediaries", intermediaryId);
   if (intermediaryBlockers.length) {
-    return { status: "error", message: \`Cannot permanently delete this partner because protected business history exists in \${formatBlockers(intermediaryBlockers)}.\` };
+    return { status: "error", message: `Cannot permanently delete this partner because protected business history exists in ${formatBlockers(intermediaryBlockers)}.` };
   }
 
   if (partnerRecordId) {
@@ -150,7 +150,7 @@ async function deletePartner(intermediaryId: string, partnerRecordId?: string): 
     const cleanupTables = new Set(["intermediary_onboarding_applications", "posp_misp_onboarding_profiles", "intermediary_group_memberships"]);
     const blocking = partnerBlockers.filter((item) => !cleanupTables.has(item.table));
     if (blocking.length) {
-      return { status: "error", message: \`Cannot permanently delete this partner because protected business history exists in \${formatBlockers(blocking)}.\` };
+      return { status: "error", message: `Cannot permanently delete this partner because protected business history exists in ${formatBlockers(blocking)}.` };
     }
 
     await admin.from("intermediary_group_memberships").delete().eq("partner_id", partnerRecordId);
@@ -168,7 +168,7 @@ async function deletePartner(intermediaryId: string, partnerRecordId?: string): 
 
   revalidatePath("/intermediaries/partner");
   revalidatePath("/intermediaries");
-  return { status: "success", message: \`\${intermediary.display_name} was permanently deleted.\` };
+  return { status: "success", message: `${intermediary.display_name} was permanently deleted.` };
 }
 
 export async function permanentDeleteEntity(
