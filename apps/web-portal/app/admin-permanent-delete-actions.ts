@@ -58,13 +58,39 @@ async function deleteUser(profileId: string, actorId: string): Promise<Permanent
     .eq("id", profileId)
     .maybeSingle<{ id: string; full_name: string; role: string; employee_id: string | null }>();
   if (error || !target) return { status: "error", message: "The employee record could not be found." };
-  if (target.role === "customer" || target.role === "intermediary") {
-    return { status: "error", message: "This record is not an employee portal user and cannot be deleted from User Management." };
+  const targetKind = target.role === "customer" ? "customer account" : target.role === "intermediary" ? "intermediary account" : "employee";
+
+  if (target.role === "customer") {
+    const { error: firebaseIdentityError } = await admin
+      .from("customer_firebase_identity_links")
+      .delete()
+      .eq("profile_id", profileId);
+    if (firebaseIdentityError) {
+      return { status: "error", message: "The customer login identity could not be detached safely." };
+    }
+
+    const { error: onboardingContactError } = await admin
+      .from("customer_onboarding_contacts")
+      .update({ linked_profile_id: null })
+      .eq("linked_profile_id", profileId);
+    if (onboardingContactError) {
+      return { status: "error", message: "The customer onboarding profile link could not be detached safely." };
+    }
+  }
+
+  if (target.role === "intermediary") {
+    const { error: portalAccountError } = await admin
+      .from("intermediary_portal_accounts")
+      .update({ auth_user_id: null })
+      .eq("auth_user_id", profileId);
+    if (portalAccountError) {
+      return { status: "error", message: "The intermediary portal login could not be detached safely." };
+    }
   }
 
   const profileBlockers = await blockers("profiles", profileId);
   if (profileBlockers.length) {
-    return { status: "error", message: `Cannot permanently delete this employee because protected history exists in ${formatBlockers(profileBlockers)}. Deactivate the employee instead.` };
+    return { status: "error", message: `Cannot permanently delete this ${targetKind} because protected history exists in ${formatBlockers(profileBlockers)}. Deactivate or disable access instead.` };
   }
 
   if (target.employee_id) {
@@ -85,9 +111,12 @@ async function deleteUser(profileId: string, actorId: string): Promise<Permanent
 
   revalidatePath("/users");
   revalidatePath("/employees");
+  revalidatePath("/customers");
+  revalidatePath("/intermediaries");
+  revalidatePath("/intermediaries/partner");
   revalidatePath("/organization");
   revalidatePath("/system/access-control");
-  return { status: "success", message: `${target.full_name} was permanently deleted.` };
+  return { status: "success", message: `${target.full_name} was permanently deleted from User Management.` };
 }
 
 async function deleteBranch(partnerId: string): Promise<PermanentDeleteResult> {
