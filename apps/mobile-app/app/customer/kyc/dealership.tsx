@@ -1,3 +1,4 @@
+import { readClaimDocumentBytes } from '@/lib/claim-document-upload';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
@@ -239,8 +240,7 @@ export default function DealershipKycScreen() {
 async function uploadDocument(applicationId: string, type: string, file: PickedFile) {
   const session = await getCurrentSession();
   if (!session?.user) throw new Error('Sign in again.');
-  const response = await fetch(file.uri);
-  const bytes = await response.arrayBuffer();
+  const bytes = await readClaimDocumentBytes(file.uri);
   const extension = file.mimeType === 'application/pdf' ? 'pdf' : file.mimeType === 'image/png' ? 'png' : 'jpg';
   const path = `${applicationId}/${type}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
   const upload = await supabase.storage.from('customer-documents').upload(path, bytes, { contentType: file.mimeType ?? 'application/octet-stream', upsert: false });
