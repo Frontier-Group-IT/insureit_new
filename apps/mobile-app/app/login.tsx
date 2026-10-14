@@ -247,6 +247,20 @@ export default function LoginScreen() {
             />
           </View>
 
+          {firebaseOtpOnly ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={loading}
+              onPress={() => {
+                resetCustomerFirebaseOtp();
+                router.replace('/login?legacyOtp=1' as Href);
+              }}
+              style={styles.resendButton}
+            >
+              <Text style={styles.resendText}>Use existing SMS verification instead</Text>
+            </Pressable>
+          ) : null}
+
           <Text style={styles.legalText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
             By continuing, you agree to our{' '}
             <Text style={styles.legalLink} onPress={() => router.push(termsHref)}>Terms & Conditions</Text>
