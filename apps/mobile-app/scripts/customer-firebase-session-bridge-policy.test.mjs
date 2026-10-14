@@ -6,6 +6,7 @@ import { checkCustomerSessionEligibility, FIREBASE_CUSTOMER_PROJECT } from '../.
 const id = '1e1e1e1e-1111-4111-8111-111111111111';
 const otherId = '2e2e2e2e-2222-4222-8222-222222222222';
 const now = 1_800_000_000;
+const alias = 'c-' + id + '@customer-login.insureit.invalid';
 function state() {
   return {
     nowSeconds: now,
@@ -21,7 +22,7 @@ function state() {
       firebase_uid: 'firebase-user-A', profile_id: id, is_approved: true,
       is_active: true, verified_phone_at_approval: '+919876543210' },
     profile: { id, phone: '919876543210', role: 'customer', is_active: true },
-    authUser: { id, phone: '+919876543210', email: 'verified@example.org',
+    authUser: { id, phone: '+919876543210', email: alias,
       email_confirmed_at: '2026-10-10T00:00:00Z', is_anonymous: false },
   };
 }
@@ -36,12 +37,16 @@ const verify = (change, reason) => {
 test('allows only an existing verified email identity with matching canonical UUID', () => {
   const input = state();
   assert.deepEqual(checkCustomerSessionEligibility(input), {
-    ok: true, customerProfileId: id, verifiedExistingEmail: 'verified@example.org',
+    ok: true, customerProfileId: id, verifiedExistingEmail: alias,
   });
 });
 
 test('blocks current phone-only customer (no silent email alias or new user)', () => {
   verify(({ authUser }) => { authUser.email = null; }, 'session_identity_not_provisioned');
+});
+
+test('rejects real contact/email addresses even when confirmed; only the fixed service-only alias is allowed', () => {
+  verify(({ authUser }) => { authUser.email = 'customer@example.com'; }, 'session_identity_not_provisioned');
 });
 
 test('blocks unconfirmed email', () => {
