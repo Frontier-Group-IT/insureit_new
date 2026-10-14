@@ -53,6 +53,9 @@ jobs:
       - name: Customer Firebase session gate policy regression (no live auth)
         run: node --test apps/mobile-app/scripts/customer-firebase-session-bridge-policy.test.mjs
 
+      - name: Firebase native phone OTP state, retry, expiry, privacy and adapter
+        run: node --test apps/mobile-app/lib/firebase-native-phone-flow.test.cjs apps/mobile-app/lib/firebase-otp-errors.test.cjs apps/mobile-app/lib/firebase-android-auth-adapter.test.cjs
+
       - name: Customer Firebase runtime challenge issuance security tests
         run: node --test apps/mobile-app/scripts/customer-firebase-session-challenge.test.mjs
 
