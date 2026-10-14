@@ -174,7 +174,7 @@ export default async function BranchRegisterPage() {
   return (
     <AppShell title="Branch Register" backHref="/intermediaries/groups">
       <div className="mx-auto max-w-[1480px]">
-        <BranchRegisterWorkspace rows={rows} canManage={Boolean(manager)} loadError={loadError} />
+        <BranchRegisterWorkspace rows={rows} canManage={Boolean(manager)} canPermanentDelete={profile.role === "it_super_user"} loadError={loadError} />
       </div>
     </AppShell>
   );

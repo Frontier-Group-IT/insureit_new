@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Building2, GitBranch, Plus, Store } from "lucide-react";
+import { PermanentDeleteButton } from "@/components/permanent-delete-button";
 import {
   BrokerRegisterShell,
   BrokerRegisterToolbar,
@@ -34,10 +35,12 @@ const PAGE_SIZE = 10;
 export function BranchRegisterWorkspace({
   rows,
   canManage,
+  canPermanentDelete,
   loadError,
 }: {
   rows: BranchRegisterRow[];
   canManage: boolean;
+  canPermanentDelete: boolean;
   loadError: boolean;
 }) {
   const [query, setQuery] = useState("");
@@ -142,7 +145,7 @@ export function BranchRegisterWorkspace({
       ) : null}
 
       <div className="mobile-card-list p-3 md:hidden">
-        {pageRows.map((branch) => <BranchMobileCard key={branch.id} branch={branch} />)}
+        {pageRows.map((branch) => <BranchMobileCard key={branch.id} branch={branch} canPermanentDelete={canPermanentDelete} />)}
         {!pageRows.length ? <RegisterEmpty title="No matching branches" description="Adjust the search, assignment view or Business Group filter." /> : null}
       </div>
 
@@ -155,7 +158,7 @@ export function BranchRegisterWorkspace({
               <th className="w-[190px] px-3 py-2.5">Business Group</th>
               <th className="w-[190px] px-3 py-2.5">Assigned Employee</th>
               <th className="w-[130px] px-3 py-2.5">Type</th>
-              <th className="w-[110px] px-3 py-2.5">Status</th>
+              <th className="w-[110px] px-3 py-2.5">Status</th>{canPermanentDelete ? <th className="w-[110px] px-3 py-2.5 text-center">Action</th> : null}
             </tr>
           </thead>
           <tbody className="divide-y divide-[#EEF2F6]">
@@ -192,7 +195,7 @@ export function BranchRegisterWorkspace({
                   ) : <span className="text-[#94A3B8]">—</span>}
                 </td>
                 <td className="px-3"><span className="capitalize text-[#475569]">{humanize(branch.branch_kind)}</span></td>
-                <td className="px-3"><StatusPill status={branch.branch_status} /></td>
+                <td className="px-3"><StatusPill status={branch.branch_status} /></td>{canPermanentDelete ? <td className="px-3 text-center"><PermanentDeleteButton kind="branch" id={branch.id} name={branch.branch_name} compact /></td> : null}
               </tr>
             ))}
           </tbody>
@@ -213,7 +216,7 @@ export function BranchRegisterWorkspace({
   );
 }
 
-function BranchMobileCard({ branch }: { branch: BranchRegisterRow }) {
+function BranchMobileCard({ branch, canPermanentDelete }: { branch: BranchRegisterRow; canPermanentDelete: boolean }) {
   return (
     <article className="mobile-record-card">
       <div className="flex items-start gap-3">
@@ -238,6 +241,7 @@ function BranchMobileCard({ branch }: { branch: BranchRegisterRow }) {
               <Info label="Employee" value={branch.employee_name ?? "—"} />
             </div>
           </div>
+          {canPermanentDelete ? <div className="mt-3"><PermanentDeleteButton kind="branch" id={branch.id} name={branch.branch_name} compact /></div> : null}
         </div>
       </div>
     </article>

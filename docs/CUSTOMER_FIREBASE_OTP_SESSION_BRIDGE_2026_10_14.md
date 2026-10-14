@@ -1,3 +1,13 @@
+## 2026-10-14 — Progress after Requirement 1: gated backend/security/native testing (STILL DRAFT)
+- Firebase-specific source work now includes atomic per-Firebase-UID AND per-auth_time single-use Supabase session throttle; migration `20261014130000_customer_firebase_session_exchange_limit.sql` uses service-role-only grants, refuses replay, stale/future events and concurrent attempts. Disposable **local-only SQL+GoTrue CI PASSED #38541053188**. No production migration applied.
+- Customer profile/legacy onboarding email assignments filter reserved `.invalid` Auth aliases instead of displaying them as customer contact details; Mobile CI guards the helper. Protected legacy Supabase/2Factor SMS login/signup fallback is an explicit option when Firebase internal test flag is enabled; production EAS still disables Firebase.
+- `customer-firebase-bind` now verifies the same existing Supabase Auth UUID and phone as the Customer profile before writing the immutable Firebase UID link; no longer assigns Firebase custom authenticated claims. This is source-only and does not modify the old deployed endpoint.
+- **Expo Android native prebuild CI PASSED #38542092602** with Firebase JSON `insureit-customer-auth`, Android application `com.insureit.mobile` and native plugin config. **No APK/AAB was built** and no installed-device Firebase SMS was verified.
+- Production read-only checks: 24 active Customers with 0 Auth email, 22 phone-confirmed and 2 unconfirmed; existing UID-link table UNIQUE by profile & UID, RLS ON and no anon/authenticated SELECT. Rate limiter function/table and NEW session-bridge Edge are **still absent** from production.
+- See `docs/CUSTOMER_FIREBASE_OTP_RELEASE_GATES_2026_10_14.md` for independent approvals: (A) additive SQL and disabled Edge deployments, (B) one protected consenting production canary Auth alias write after dry-run, (C) internal Android 0.3.2(11) AAB. None are approved by branch CI, and nothing is merged or deployed by this note.
+
+---
+
 ## 2026-10-14 — Requirement 1 complete: reconcile Firebase PR #3132 with latest main (NOT MERGED)
 
 - **Updated only feature branch** `feature/customer-firebase-otp-gateway-0-3-2-20261014`; manual two-parent merge commit `30aebd57a50aee2f1e10ed28d027d98bf2e7fa3a` has parents prior Firebase feature HEAD `27c313e8` and then-latest main `bdca73c916997aec674c9e2c9c53aef5f5d7e754`. This preserves both histories without force pushing or merging into production main.

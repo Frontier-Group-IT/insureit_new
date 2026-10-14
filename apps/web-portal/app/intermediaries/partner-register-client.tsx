@@ -7,10 +7,12 @@ import { FormSubmitButton } from "@/components/form-submit-button";
 import { FreshAccountReviewLink } from "./applications/account-review-back-link";
 import { createLinkedIntermediaryAccount } from "./applications/[id]/account-review-actions";
 import { WorkflowSuccessToast } from "./applications/workflow-success-toast";
+import { PermanentDeleteButton } from "@/components/permanent-delete-button";
 
 export type PartnerRegisterRow = {
   id: string;
   applicationId: string;
+  partnerRecordId: string | null;
   displayName: string;
   mobile: string;
   partnerId: string;
@@ -45,8 +47,10 @@ export function PartnerRegisterClient({
   success,
   error,
   loadError,
+  canPermanentDelete,
 }: {
   rows: PartnerRegisterRow[];
+  canPermanentDelete: boolean;
   initialSearch: string;
   initialStatus: string;
   success?: string;
@@ -161,7 +165,7 @@ export function PartnerRegisterClient({
           </div>
           {extraFilterCount ? <button type="button" onClick={clearExtraFilters} className="mb-0.5 h-8 rounded-lg px-2.5 text-[8.5px] font-bold text-[#526178] hover:bg-[#F1F5F9] hover:text-[#17365D]">Clear filters ({extraFilterCount})</button> : null}
         </div>
-        {loadError ? <div className="px-4 py-12 text-center text-[11px] text-red-700">The register could not be loaded. Please refresh the page and try again.</div> : pageRows.length ? <PartnerTable rows={pageRows} /> : <div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold">No records found</p><p className="mt-1 text-[10px] text-[#64748B]">Try changing the search, RM, onboarding date or status filter.</p></div>}
+        {loadError ? <div className="px-4 py-12 text-center text-[11px] text-red-700">The register could not be loaded. Please refresh the page and try again.</div> : pageRows.length ? <PartnerTable rows={pageRows} canPermanentDelete={canPermanentDelete} /> : <div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold">No records found</p><p className="mt-1 text-[10px] text-[#64748B]">Try changing the search, RM, onboarding date or status filter.</p></div>}
         {!loadError ? (
           <div className="flex flex-col gap-3 border-t border-[#E7ECF3] bg-white px-4 py-3.5 text-[10px] text-[#64748B] sm:flex-row sm:items-center sm:justify-between">
             <span>Showing {showingStart}–{showingEnd} of {totalRecords}</span>
@@ -181,7 +185,7 @@ function FilterButton({ label, count, active, onClick }: { label: string; count:
   return <button type="button" onClick={onClick} aria-pressed={active} className={`rounded-full px-2.5 py-1.5 transition-colors duration-150 ${active ? "bg-[#E7E7E7] text-[#17203A]" : "text-[#526178] hover:bg-[#E7E7E7] hover:text-[#17203A]"}`}>{label} <span className="ml-1">{count}</span></button>;
 }
 
-function PartnerTable({ rows }: { rows: PartnerRegisterRow[] }) {
+function PartnerTable({ rows, canPermanentDelete }: { rows: PartnerRegisterRow[]; canPermanentDelete: boolean }) {
   const money = (value: number | null) => value === null ? "—" : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
   return <div className="overflow-x-auto">
     <table className="w-full min-w-[1040px] table-fixed text-left text-[10.5px]">
@@ -205,7 +209,7 @@ function PartnerTable({ rows }: { rows: PartnerRegisterRow[] }) {
           <td className="px-3 py-3 text-right tabular-nums" title={row.customerCount === null ? "Customer attribution unavailable" : undefined}>{row.customerCount === null ? "—" : row.customerCount.toLocaleString("en-IN")}</td>
           <td className="px-3 py-3 text-right tabular-nums" title={row.netPremium === null ? "Net premium attribution unavailable" : undefined}>{money(row.netPremium)}</td>
           <td className="px-3 py-3 text-right tabular-nums" title={row.payout === null ? "Payout attribution unavailable" : undefined}>{money(row.payout)}</td>
-          <td className="px-3 py-3 text-center">{renderAction(row)}</td>
+          <td className="px-3 py-3 text-center"><div className="flex flex-col items-center gap-1.5">{renderAction(row)}{canPermanentDelete ? <PermanentDeleteButton kind="partner" id={row.id} relatedId={row.partnerRecordId ?? undefined} name={row.displayName} compact /> : null}</div></td>
         </tr>;
       })}</tbody>
     </table>
