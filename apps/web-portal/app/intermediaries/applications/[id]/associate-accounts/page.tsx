@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { requireScopedPospMispManager } from "@/lib/master-data-server";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
+import { canAccessIntermediary } from "@/lib/employee-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createPartnerAssociateAccount } from "./actions";
 import { AssociateAccountResultToast } from "./associate-account-result-toast";
@@ -70,7 +72,7 @@ export default async function PartnerAssociateAccountsPage({
 }) {
   const { id } = await params;
   const query = await searchParams;
-  await requireScopedPospMispManager(id);
+  const reviewer = await requireScopedPospMispManager(id);
   const admin = createSupabaseAdminClient();
 
   const [{ data: application }, { data: profile }, { data: intermediary }] = await Promise.all([
@@ -101,6 +103,9 @@ export default async function PartnerAssociateAccountsPage({
     .order("created_at", { ascending: false })
     .returns<Associate[]>();
   if (associatesError) throw new Error("Associate accounts could not be loaded.");
+
+  const canManageAssociates = (await hasEffectiveCapability(reviewer, "review_intermediary_application", "edit"))
+    && (await canAccessIntermediary(reviewer.id, reviewer.role, intermediary.id));
 
   const name = (profile.partner_type === "misp" ? profile.misp_name : profile.pos_name) ?? "Unnamed applicant";
   const phone = profile.partner_type === "misp" ? profile.dp_phone ?? profile.applicant_phone : profile.applicant_phone;
@@ -170,6 +175,11 @@ export default async function PartnerAssociateAccountsPage({
           <div className="border-b border-[#E7ECF3] px-5 py-4">
             <h2 className="text-[13px] font-semibold text-[#17203A]">Associate Accounts</h2>
           </div>
+          {!canManageAssociates ? (
+            <p role="status" className="mx-5 mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] text-amber-900">
+              This account can view associate accounts but cannot manage them. Ask an administrator for Intermediary Application Review edit permission and partner access.
+            </p>
+          ) : null}
           <form action={createPartnerAssociateAccount} className="p-5">
             <input type="hidden" name="application_id" value={id} />
             <input type="hidden" name="intermediary_id" value={intermediary.id} />
@@ -192,7 +202,7 @@ export default async function PartnerAssociateAccountsPage({
             <div className="mt-4 grid gap-3 xl:grid-cols-[2fr_1fr_1fr_1fr_auto] xl:items-end">
               <Field label="Address"><input name="address" className={inputClass} placeholder="Address" /></Field>
               <AssociateCityFields />
-              <FormSubmitButton label="Save" pendingLabel="Saving..." className="h-10 rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white hover:bg-[#102A4C]" />
+              {canManageAssociates ? <FormSubmitButton label="Save" pendingLabel="Saving..." className="h-10 rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white hover:bg-[#102A4C]" /> : null}
             </div>
           </form>
         </section>
@@ -226,12 +236,16 @@ export default async function PartnerAssociateAccountsPage({
                     <td className="px-3 py-3"><RolePill value={associate.role} /></td>
                     <td className="px-3 py-3"><StatusPill value={associate.status} /></td>
                     <td className="px-3 py-3 text-center">
-                      <AssociateAccountActionsMenu
-                        associate={associate}
-                        applicationId={id}
-                        intermediaryId={intermediary.id}
-                        returnPath={returnPath}
-                      />
+                      {canManageAssociates ? (
+                        <AssociateAccountActionsMenu
+                          associate={associate}
+                          applicationId={id}
+                          intermediaryId={intermediary.id}
+                          returnPath={returnPath}
+                        />
+                      ) : (
+                        <span className="text-[10px] text-[#94A3B8]" title="Edit access required">View only</span>
+                      )}
                     </td>
                   </tr>
                 ))}
