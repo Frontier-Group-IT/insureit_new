@@ -23,4 +23,8 @@ for (const name of ["setEditOpen(true)", "setStatusOpen(true)", "setDeleteOpen(t
   assert.ok(menu.includes(name), `Missing dialog transition: ${name}`);
 }
 assert.ok(page.includes("canManageAssociates ? ("), "Edit permission gate must remain");
+assert.match(menu, /onPointerDown=\\{\\(event\\) => \\{[\\s\\S]*?showDialog\\("edit"\\)/);
+assert.match(menu, /onPointerDown=\\{\\(event\\) => \\{[\\s\\S]*?showDialog\\("status"\\)/);
+assert.match(menu, /onPointerDown=\\{\\(event\\) => \\{[\\s\\S]*?showDialog\\("delete"\\)/);
+assert.match(menu, /onPointerUp=\\{\\(event\\) => \\{[\\s\\S]*?requestSubmit\\(\\)/);
 console.log("Associate action menu interaction contract: OK");
