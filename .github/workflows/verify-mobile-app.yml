@@ -63,6 +63,9 @@ jobs:
       - name: Customer Firebase runtime challenge issuance security tests
         run: node --test apps/mobile-app/scripts/customer-firebase-session-challenge.test.mjs
 
+      - name: Customer Firebase experimental login and signup preserve legacy OTP fallback
+        run: node --test apps/mobile-app/scripts/customer-firebase-otp-fallback-regression.mjs
+
       - name: Customer Firebase internal Auth alias never exposed as contact email
         run: node --test apps/mobile-app/lib/customer-contact-email.test.cjs
 
