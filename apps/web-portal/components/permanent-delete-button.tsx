@@ -81,7 +81,7 @@ export function PermanentDeleteButton({
             </p>
 
             {message ? (
-              <div className={\`mt-3 rounded-xl px-3 py-2 text-[10.5px] font-medium \${success ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}\`}>
+              <div className={`mt-3 rounded-xl px-3 py-2 text-[10.5px] font-medium ${success ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
                 {message}
               </div>
             ) : null}
