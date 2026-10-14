@@ -51,12 +51,13 @@ export function AssociateAccountActionsMenu({
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
-    function closeOnOutsideClick(event: MouseEvent) {
-      const target = event.target as Node;
+    function closeOnOutsideClick(event: PointerEvent) {
+      // The menu lives in a portal. Use the full event path so a press within
+      // portal content cannot be mistaken for an outside press.
+      const path = event.composedPath();
       if (
-        rootRef.current &&
-        !rootRef.current.contains(target) &&
-        !menuRef.current?.contains(target)
+        !path.includes(rootRef.current as EventTarget) &&
+        !path.includes(menuRef.current as EventTarget)
       ) {
         setOpen(false);
       }
@@ -69,10 +70,10 @@ export function AssociateAccountActionsMenu({
         setStatusOpen(false);
       }
     }
-    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("pointerdown", closeOnOutsideClick);
     document.addEventListener("keydown", closeOnEscape);
     return () => {
-      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
       document.removeEventListener("keydown", closeOnEscape);
     };
   }, []);
@@ -146,6 +147,11 @@ export function AssociateAccountActionsMenu({
                 role="menu"
                 style={{ top: menuPosition.top, left: menuPosition.left }}
                 className="fixed z-[200] w-44 overflow-hidden rounded-xl border border-[#DCE5EF] bg-white py-1.5 shadow-[0_18px_45px_rgba(15,23,42,.18)]"
+                onPointerDown={(event) => {
+                  // Prevent unrelated document/ancestor pointer handlers from
+                  // treating a menu action as an outside interaction.
+                  event.stopPropagation();
+                }}
               >
                 <button
                   type="button"
