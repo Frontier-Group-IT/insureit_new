@@ -86,7 +86,8 @@ requireText(homeMetricIcons, 'styles.policyBadge', 'Policies Sold generated icon
 requireText(homeMetricIcons, 'styles.coinTop', 'Commission Earned generated icon must retain stacked coin treatment.');
 requireText(homeMetricIcons, "backgroundColor: '#EDF7FF'", 'Generated Home metric icons must keep the soft blue reference tile.');
 
-requireText(home, '<PartnerBusinessGrowthIcon size={64} />', 'Partner Home business card must use the shared reference-style growth icon.');
+requireText(home, '<MiniBusinessTrend values={trend.map((item) => Number(item.premium || 0))} />', 'Partner Home MTD card must retain its small month-wise bar trend.');
+if (home.includes('<PartnerBusinessGrowthIcon')) throw new Error('Partner Home MTD card must not show the removed large growth icon.');
 requireText(more, '<PartnerProfileMenuIcon kind={iconKind} size={38} />', 'Partner Profile/More menu rows must use the shared professional icon component.');
 for (const kind of [
   'search', 'policy-intake', 'renewals', 'customers',
