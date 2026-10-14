@@ -9,6 +9,7 @@ import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import {
   buildExternalClaimProjection,
   isExternalCustomerClaim,
+  isCompletedCustomerClaim,
   loadCustomerClaimListContext,
 } from "@/lib/customer-web-phase2-data";
 
