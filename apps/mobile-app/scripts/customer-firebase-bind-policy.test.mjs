@@ -47,5 +47,8 @@ test('live Firebase bind endpoint checks existing Auth identity BEFORE authorizi
   const write=source.indexOf('.insert({\n          firebase_project_id: PROJECT');
   assert.ok(check >= 0 && write > check);
   assert.match(source, /db\.auth\.admin\.getUserById\(profileId\)/);
+  assert.equal(source.includes('setCustomUserClaims'), false);
+  assert.ok(source.includes('Firebase is SMS VERIFICATION ONLY'));
+
   assert.match(source, /verifyIdToken\(bearer\[1\], true\)/);
 });
