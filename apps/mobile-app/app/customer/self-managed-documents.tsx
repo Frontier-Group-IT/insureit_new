@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-import { claimUploadCustomerError, claimUploadFileReadMessage, logClaimUploadFailure, resolveClaimUploadDescriptor } from '@/lib/claim-document-upload';
+import { readClaimDocumentBytes, claimUploadCustomerError, claimUploadFileReadMessage, logClaimUploadFailure, resolveClaimUploadDescriptor } from '@/lib/claim-document-upload';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -169,9 +169,7 @@ export default function SelfManagedDocumentsScreen() {
       const storagePath = `${claim.customer_id}/${claim.id}/self-managed/${milestoneKey}/${Date.now()}-${Math.random().toString(36).slice(2)}.${descriptor.storageExtension}`;
       let body: ArrayBuffer;
       try {
-        const response = await fetch(file.uri);
-        if (!response.ok) throw new Error('Local file read failed');
-        body = await response.arrayBuffer();
+        body = await readClaimDocumentBytes(file.uri);
         if (!body.byteLength) throw new Error('Empty local file');
       } catch (error) {
         logClaimUploadFailure('self_managed_claim_documents', 'local_read', error);
