@@ -6,6 +6,7 @@
  */
 import assert from 'node:assert/strict';
 import { createClient } from '@supabase/supabase-js';
+import { customerAuthAlias } from '../../../supabase/functions/_shared/customer-firebase-session-alias.mjs';
 
 const url = process.env.SUPABASE_URL;
 const anonKey = process.env.SUPABASE_ANON_KEY;
@@ -95,9 +96,12 @@ try {
 
   // .example.org belongs to the reserved example domain and is used only in
   // the local disposable auth container. It is NOT a production alias plan.
-  const aliasA = 'synthetic-a@auth-proof.example.org';
-  const aliasB = 'synthetic-b@auth-proof.example.org';
-  const aliasC = 'synthetic-c@auth-proof.example.org';
+  const aliasA = customerAuthAlias(userA);
+  const aliasB = customerAuthAlias(userB);
+  const aliasC = customerAuthAlias(userC);
+  assert.ok(aliasA?.endsWith('.invalid'));
+  assert.ok(aliasB?.endsWith('.invalid'));
+  assert.ok(aliasC?.endsWith('.invalid'));
   const challengeA = await aliasAndChallenge(userA, aliasA);
   const challengeB = await aliasAndChallenge(userB, aliasB);
   const challengeC = await aliasAndChallenge(userC, aliasC);
