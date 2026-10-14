@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, CalendarClock, CarFront, ClipboardCheck, ClipboardList, FilePlus2, Headphones, ShieldPlus, ShieldCheck, FileText, RefreshCcw, ChevronRight, HeartPulse, Umbrella, Bike, Plane, Truck, HardHat, Boxes, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowRight, CalendarClock, CarFront, ShieldCheck, HeartPulse, Umbrella, Bike, Plane, Truck, HardHat, Boxes } from "lucide-react";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
 import { ManufacturerMark } from "../vehicles/customer-vehicles-register";
 import { customerPolicyTone, loadCustomerWebPolicies, loadCustomerWebVehicles, resolveCustomerWebScope } from "@/lib/customer-web-data";
@@ -103,7 +103,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
           </div>
         </div>
         <div className="rounded-2xl border border-[#E0E8F3] bg-white p-4">
-          <h2 className="mb-2 text-sm font-bold text-[#10284A]">Claims progress</h2>
+          <h2 className="mb-2 text-sm font-bold text-[#10284A]">Claims progress</h2><Link href={{pathname:"/customer/start-claim",query:accountQuery}} className="mb-2 inline-flex items-center gap-1 text-[10px] font-semibold text-[#176CD4]">Start New Claim <ArrowRight className="h-3 w-3"/></Link>
           <Link href={{pathname:"/customer/claims",query:accountQuery}} className="flex items-center justify-between text-xs text-[#155B9F]"><span>{openClaims.length} open claim{openClaims.length===1?"":"s"} · {claims.length} total</span><ArrowRight className="h-4 w-4"/></Link>
         </div>
       </section>
@@ -121,10 +121,6 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
           ].map(({title,description,href,icon:Icon,color,background})=><Link key={href} href={{pathname:href,query:accountQuery}} className="group flex min-w-0 flex-col gap-3 rounded-xl border border-[#E6EDF6] bg-[#FCFDFF] p-3.5 transition hover:-translate-y-0.5 hover:border-[#AAC9EF] hover:bg-white hover:shadow-md"><span className={`grid h-11 w-11 place-items-center rounded-xl ${background} ${color}`}><Icon className="h-5 w-5"/></span><span className="min-w-0"><strong className="block text-xs text-[#142C4D]">{title}</strong><small className="mt-1 block text-[10px] text-[#7186A0]">{description}</small></span><ChevronRight className={`ml-auto h-4 w-4 ${color} transition group-hover:translate-x-0.5`}/></Link>)}
         </div>
       </section>
-      <nav aria-label="Additional customer actions" className="sr-only">
-        <Link href={{pathname:"/customer/start-claim",query:accountQuery}}>Start New Claim</Link>
-        <Link href={{pathname:"/customer/claims",query:accountQuery}}>Track Existing Claims</Link>
-      </nav>
     </div>
   );
 }
