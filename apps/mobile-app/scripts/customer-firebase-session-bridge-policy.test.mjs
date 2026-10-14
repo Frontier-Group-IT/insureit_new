@@ -112,8 +112,13 @@ test('Edge candidate is off by default and cannot mutate/create Auth users', () 
   assert.match(source, /!== "true"/);
   assert.match(source, /verifyIdToken\(bearer\[1\], true\)/);
   assert.match(source, /auth\.admin\.getUserById/);
-  assert.match(source, /auth\.admin\.generateLink/);
-  assert.match(source, /generated\.user\.id !== gate\.customerProfileId/);
+  assert.match(source, /issueExistingCustomerSessionChallenge/);
+  const challenge = readFileSync(
+    new URL('../../../supabase/functions/_shared/customer-firebase-session-challenge.mjs', import.meta.url),
+    'utf8',
+  );
+  assert.match(challenge, /generateLink/);
+  assert.match(challenge, /data\?\.user\?\.id !== gate\.customerProfileId/);
   assert.doesNotMatch(source, /auth\.admin\.(?:createUser|updateUserById|deleteUser)\s*\(/);
   assert.doesNotMatch(source, /signInWithPassword|setSession\s*\(/);
 });
