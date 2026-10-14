@@ -292,19 +292,23 @@ export function ExternalClaimDocumentTabs({
       for (const file of result.assets) {
         let storagePath = '';
         try {
-          const extension = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
-          storagePath = `${customerId}/${claimId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+          const descriptor = resolveClaimUploadDescriptor({ name: file.name, mimeType: file.mimeType });
+          if (!descriptor.ok) { failed += 1; continue; }
+          storagePath = `${customerId}/${claimId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${descriptor.storageExtension}`;
           const response = await fetch(file.uri);
+          if (!response.ok) throw new Error('Local file read failed');
           const body = await response.arrayBuffer();
+          if (!body.byteLength) throw new Error('Empty local file');
           if (body.byteLength > MAX_UPLOAD_SIZE_BYTES) {
             failed += 1;
             continue;
           }
           const storageResult = await supabase.storage.from('claim-documents').upload(storagePath, body, {
-            contentType: file.mimeType ?? 'application/octet-stream',
+            contentType: descriptor.mimeType,
             upsert: false,
           });
           if (storageResult.error) {
+            logClaimUploadFailure('claim_intimation_bulk', 'storage', storageResult.error);
             failed += 1;
             continue;
           }
@@ -320,12 +324,14 @@ export function ExternalClaimDocumentTabs({
             uploaded_by: session.user.id,
           }).select('*').single();
           if (error || !data) {
+            logClaimUploadFailure('claim_intimation_bulk', 'metadata', error);
             await supabase.storage.from('claim-documents').remove([storagePath]);
             failed += 1;
             continue;
           }
           saved.push(data as ClaimDocument);
-        } catch {
+        } catch (error) {
+          logClaimUploadFailure('claim_intimation_bulk', 'local_read', error);
           if (storagePath) await supabase.storage.from('claim-documents').remove([storagePath]);
           failed += 1;
         }
