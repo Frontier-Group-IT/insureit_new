@@ -1,3 +1,4 @@
+import { readClaimDocumentBytes } from '@/lib/claim-document-upload';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams } from 'expo-router';
@@ -262,8 +263,7 @@ export default function InternalClaimStageOneTracker() {
         uploadedSize = resumableResult.size;
         storageCommitted = true;
       } else {
-        const response = await fetch(uri);
-        const body = await response.arrayBuffer();
+        const body = await readClaimDocumentBytes(uri);
         if (body.byteLength > MAX_UPLOAD_SIZE_BYTES) return null;
         const storageResult = await supabase.storage.from('claim-documents').upload(storagePath, body, { contentType: mimeType, upsert: false });
         if (storageResult.error) return null;
