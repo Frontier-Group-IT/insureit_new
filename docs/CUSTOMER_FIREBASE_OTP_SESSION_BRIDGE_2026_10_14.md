@@ -66,7 +66,7 @@ Prior to any real account update, verify and document:
 | Stage | Task | State |
 |---|---|---|
 | 1 | Fresh latest-main branch, architecture/handoff/AGENTS, baseline preserved | **DONE** |
-| 2A | Pure fail-closed verified phone / canonical UUID eligibility policy + undeployed email-only session-exchange prototype | **SOURCE ADDED; CI PENDING** |
+| 2A | Pure fail-closed verified phone / canonical UUID eligibility policy + undeployed email-only session-exchange prototype | **SOURCE ADDED; dedicated gate CI PASS #38515989947; full Mobile/Web CI pending** |
 | 2B | Supported session exchange for **phone-only** Customer identities, no duplicates, signed-token proof and controlled provisioning plan | **BLOCKED; UNPROVEN** |
 | 3 | Android Firebase native OTP + real Supabase-session login/signup, secure account vault/fallback, release flag off by default | **NOT STARTED** |
 | 4 | Full Android/claims/KYC/documents/multi-account and signed-token A/B security regression | **NOT STARTED** |
