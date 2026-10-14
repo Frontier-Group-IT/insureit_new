@@ -45,6 +45,12 @@ export function AssociateAccountActionsMenu({
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
+  const showDialog = (dialog: "edit" | "status" | "delete") => {
+    setOpen(false);
+    if (dialog === "edit") setEditOpen(true);
+    if (dialog === "status") setStatusOpen(true);
+    if (dialog === "delete") setDeleteOpen(true);
+  };
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -156,10 +162,11 @@ export function AssociateAccountActionsMenu({
                 <button
                   type="button"
                   role="menuitem"
-                  onClick={() => {
-                    setOpen(false);
-                    setEditOpen(true);
+                  onPointerDown={(event) => {
+                    // Apply the selection before browser focus/scroll can move a fixed menu.
+                    if (event.button === 0) showDialog("edit");
                   }}
+                  onClick={() => showDialog("edit")}
                   className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC]"
                 >
                   <Pencil className="h-3.5 w-3.5 text-[#64748B]" />
@@ -169,10 +176,11 @@ export function AssociateAccountActionsMenu({
                 <button
                   type="button"
                   role="menuitem"
-                  onClick={() => {
-                    setOpen(false);
-                    setStatusOpen(true);
+                  onPointerDown={(event) => {
+                    // Apply the selection before browser focus/scroll can move a fixed menu.
+                    if (event.button === 0) showDialog("status");
                   }}
+                  onClick={() => showDialog("status")}
                   className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC]"
                 >
                   <Ban className="h-3.5 w-3.5 text-[#64748B]" />
@@ -182,10 +190,11 @@ export function AssociateAccountActionsMenu({
                 <button
                   type="button"
                   role="menuitem"
-                  onClick={() => {
-                    setOpen(false);
-                    setDeleteOpen(true);
+                  onPointerDown={(event) => {
+                    // Apply the selection before browser focus/scroll can move a fixed menu.
+                    if (event.button === 0) showDialog("delete");
                   }}
+                  onClick={() => showDialog("delete")}
                   className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-rose-600 hover:bg-rose-50"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -339,6 +348,13 @@ function ResendInviteButton({
   const { pending } = useFormStatus();
   const storageKey = `associate-resend-cooldown:${associateId}`;
   const [remaining, setRemaining] = useState(0);
+  const submittedByPointerRef = useRef(false);
+
+  const recordResendAttempt = () => {
+    const cooldownUntil = Date.now() + RESEND_COOLDOWN_SECONDS * 1000;
+    window.localStorage.setItem(storageKey, String(cooldownUntil));
+    setRemaining(RESEND_COOLDOWN_SECONDS);
+  };
 
   useEffect(() => {
     const invitedUntil = invitedAt
@@ -372,11 +388,26 @@ function ResendInviteButton({
       role="menuitem"
       disabled={disabled}
       title={title}
-      onClick={() => {
-        if (disabled) return;
-        const cooldownUntil = Date.now() + RESEND_COOLDOWN_SECONDS * 1000;
-        window.localStorage.setItem(storageKey, String(cooldownUntil));
-        setRemaining(RESEND_COOLDOWN_SECONDS);
+      onPointerUp={(event) => {
+        if (disabled || event.button !== 0) return;
+        const target = document.elementFromPoint(event.clientX, event.clientY);
+        if (!target || !event.currentTarget.contains(target)) return;
+        // Submit before focus/scroll repositioning can cancel the subsequent click.
+        submittedByPointerRef.current = true;
+        recordResendAttempt();
+        event.currentTarget.form?.requestSubmit();
+      }}
+      onClick={(event) => {
+        if (submittedByPointerRef.current) {
+          event.preventDefault();
+          submittedByPointerRef.current = false;
+          return;
+        }
+        if (disabled) {
+          event.preventDefault();
+          return;
+        }
+        recordResendAttempt();
       }}
       className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-40"
     >

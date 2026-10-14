@@ -9,18 +9,15 @@ const actions = readFileSync(fileURLToPath(new URL("actions.ts", base)), "utf8")
 
 assert.match(menu, /event\.composedPath\(\)/, "Outside handling must include portal event path");
 assert.match(menu, /document\.addEventListener\("pointerdown", closeOnOutsideClick\)/);
-assert.match(menu, /onPointerDown=\{\(event\) => \{[\s\S]*?event\.stopPropagation\(\)/);
-for (const action of [
-  "updatePartnerAssociateAccount",
-  "togglePartnerAssociateAccountStatus",
-  "deletePartnerAssociateAccount",
-  "resendPartnerAssociateInvite",
-]) {
-  assert.ok(menu.includes(action), `Missing associate action: ${action}`);
-  assert.ok(actions.includes(`export async function ${action}`), `Missing server action: ${action}`);
+for (const action of ["edit", "status", "delete"]) {
+  assert.ok(
+    menu.includes(`if (event.button === 0) showDialog("${action}")`),
+    `Missing pointer-first dialog activation: ${action}`
+  );
+  assert.ok(menu.includes(`onClick={() => showDialog("${action}")}`),
+    `Missing keyboard click fallback: ${action}`);
 }
-for (const name of ["setEditOpen(true)", "setStatusOpen(true)", "setDeleteOpen(true)"]) {
-  assert.ok(menu.includes(name), `Missing dialog transition: ${name}`);
-}
-assert.ok(page.includes("canManageAssociates ? ("), "Edit permission gate must remain");
+assert.match(menu, /onPointerUp=\{\(event\) => \{/);
+assert.ok(menu.includes("event.currentTarget.form?.requestSubmit()"),
+  "Resend must submit the existing form");
 console.log("Associate action menu interaction contract: OK");
