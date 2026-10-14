@@ -6,7 +6,6 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
-import { PartnerBusinessGrowthIcon } from '@/components/ui/partner-business-growth-icon';
 import { PartnerCommissionEarnedIcon, PartnerPoliciesSoldIcon } from '@/components/ui/partner-home-metric-icons';
 import { PartnerEnter } from '@/components/ui/partner-enter';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
@@ -265,7 +264,6 @@ export default function PartnerHomeScreen() {
 
                 <View style={styles.chartSide}>
                   <MiniBusinessTrend values={trend.map((item) => Number(item.premium || 0))} />
-                  <PartnerBusinessGrowthIcon size={64} />
                 </View>
               </View>
 
@@ -609,9 +607,9 @@ const styles = StyleSheet.create({
     zIndex: 4,
     marginBottom: 8,
     paddingHorizontal: 12,
-    paddingTop: 9,
-    paddingBottom: 8,
-    borderRadius: 18,
+    paddingTop: 6,
+    paddingBottom: 6,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#DCE4EF',
@@ -622,7 +620,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   businessTopRow: {
-    minHeight: 28,
+    minHeight: 24,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -655,7 +653,7 @@ const styles = StyleSheet.create({
   viewReport: { minHeight: 30, flexDirection: 'row', alignItems: 'center', gap: 1 },
   viewReportText: { color: '#5F38CF', fontSize: 11, fontWeight: '800' },
   businessMainRow: {
-    marginTop: 4,
+    marginTop: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -670,12 +668,12 @@ const styles = StyleSheet.create({
     letterSpacing: -0.7,
   },
   businessCaption: { marginTop: 1, color: '#4F5D71', fontSize: 10.5, fontWeight: '600' },
-  trend: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  trend: { marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 4 },
   trendText: { fontSize: 9.5, fontWeight: '700' },
-  trendNeutral: { marginTop: 8, color: '#8691A2', fontSize: 9.5, fontWeight: '600' },
-  rangeError: { marginTop: 8, color: partnerTheme.colors.danger, fontSize: 9.5, fontWeight: '600' },
-  businessDivider: { height: StyleSheet.hairlineWidth, marginTop: 12, backgroundColor: '#DCE4EF' },
-  businessBottomRow: { minHeight: 54, flexDirection: 'row', alignItems: 'center' },
+  trendNeutral: { marginTop: 3, color: '#8691A2', fontSize: 9.5, fontWeight: '600' },
+  rangeError: { marginTop: 3, color: partnerTheme.colors.danger, fontSize: 9.5, fontWeight: '600' },
+  businessDivider: { height: StyleSheet.hairlineWidth, marginTop: 6, backgroundColor: '#DCE4EF' },
+  businessBottomRow: { minHeight: 46, flexDirection: 'row', alignItems: 'center' },
   metricCell: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   metricDivider: { width: StyleSheet.hairlineWidth, height: 38, marginHorizontal: 12, backgroundColor: '#C9D4E2' },
   metricIconBox: {
@@ -785,8 +783,8 @@ const styles = StyleSheet.create({
 
   sectionHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 },
   sectionLink: { color: '#3156B8', fontSize: 9, fontWeight: '800' },
-  chartSide: { width: 132, alignItems: 'flex-end', justifyContent: 'center', gap: 2 },
-  miniChart: { height: 52, width: 130, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'flex-end', gap: 5, borderBottomWidth: 1, borderColor: '#E1EAF6' },
+  chartSide: { width: 132, alignItems: 'flex-end', justifyContent: 'center' },
+  miniChart: { height: 43, width: 130, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'flex-end', gap: 5, borderBottomWidth: 1, borderColor: '#E1EAF6' },
   miniBar: { width: 14, borderTopLeftRadius: 3, borderTopRightRadius: 3, backgroundColor: '#A6C6ED' },
   chartUnavailable: { fontSize: 8, color: '#7A8DAA', alignSelf: 'center' },
   pendingList: { position: 'relative', marginTop: 5, padding: 5, paddingRight: 64, backgroundColor: '#EAF5FF', borderRadius: 10 },
