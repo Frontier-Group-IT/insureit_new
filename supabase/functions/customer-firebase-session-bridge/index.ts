@@ -46,6 +46,10 @@ function firebaseVerifier() {
 
 Deno.serve(async (request: Request) => {
   if (request.method !== "POST") return response(405, "method_not_allowed");
+  // Additional fail-closed deployment guard; never enabled by source alone.
+  if (Deno.env.get("CUSTOMER_FIREBASE_SESSION_BRIDGE_ENABLED") !== "true") {
+    return response(503, "session_bridge_disabled");
+  }
   // No user-selectable profile UUID, email or phone in the payload.
   const bearer = /^Bearer (\S+)$/.exec(request.headers.get("authorization") ?? "");
   if (!bearer || bearer[1].length > MAX_TOKEN) return response(401, "invalid_token");
