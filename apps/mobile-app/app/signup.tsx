@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Link, useRouter } from 'expo-router';
+import { Link, useRouter, useLocalSearchParams } from 'expo-router';
 import type { Href } from 'expo-router';
 import type { User } from '@supabase/supabase-js';
 import { useState } from 'react';
@@ -9,6 +9,9 @@ import { AuthExperience, LoginPromptCard } from '@/components/auth-experience';
 import { AuthGlassPanel, AuthStatusMessage, SecureActionButton } from '@/components/first-look';
 import { OtpDotsInput } from '@/components/otp-dots-input';
 import { routeSignedInUser, sendPhoneSignupOtp, syncCustomerSignupDetails, verifyPhoneOtp } from '@/lib/auth';
+import { firebaseOtpSessionGateEnabled } from '@/lib/customer-firebase-session-exchange';
+import { sendCustomerFirebasePhoneOtp, verifyCustomerFirebasePhoneOtp, resetCustomerFirebaseOtp } from '@/lib/customer-firebase-otp-session';
+import { FirebaseCustomerOtpError, firebaseOtpPublicMessage } from '@/lib/firebase-otp-errors';
 import {
   findExistingCustomerSignupAccounts,
   linkExistingCustomerSignupAccount,
@@ -21,6 +24,8 @@ const privacyHref = '/legal/privacy-policy' as Href;
 
 export default function SignupScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ legacyOtp?: string }>();
+  const firebaseOtpOnly = firebaseOtpSessionGateEnabled() && params.legacyOtp !== '1';
   const [fullName, setFullName] = useState('');
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
@@ -63,7 +68,8 @@ export default function SignupScreen() {
 
     setLoading(true);
     try {
-      await sendPhoneSignupOtp({
+      if (firebaseOtpOnly) await sendCustomerFirebasePhoneOtp(fullPhone);
+      else await sendPhoneSignupOtp({
         phone: fullPhone,
         fullName: trimmedName,
         email: trimmedEmail || undefined,
@@ -72,7 +78,8 @@ export default function SignupScreen() {
       setOtpSent(true);
       setMessage(`OTP sent to ${countryCode} ${formatMobile(normalizedMobile)}.`);
     } catch (nextError) {
-      setError(signupErrorMessage(nextError, 'send'));
+      setError(nextError instanceof FirebaseCustomerOtpError
+        ? firebaseOtpPublicMessage(nextError) : signupErrorMessage(nextError, 'send'));
     } finally {
       setLoading(false);
     }
@@ -90,7 +97,11 @@ export default function SignupScreen() {
 
     setLoading(true);
     try {
-      const data = await verifyPhoneOtp(fullPhone, otp);
+      const data = firebaseOtpOnly
+        ? await verifyCustomerFirebasePhoneOtp(fullPhone, otp, {
+            fullName: trimmedName, email: trimmedEmail || undefined,
+          })
+        : await verifyPhoneOtp(fullPhone, otp);
       if (!data.user) {
         setError('OTP verification did not return an active account.');
         return;
@@ -114,7 +125,8 @@ export default function SignupScreen() {
       });
       await routeSignedInUser(data.user, router, profile);
     } catch (nextError) {
-      setError(signupErrorMessage(nextError, 'verify'));
+      setError(nextError instanceof FirebaseCustomerOtpError
+        ? firebaseOtpPublicMessage(nextError) : signupErrorMessage(nextError, 'verify'));
     } finally {
       setLoading(false);
     }
@@ -142,6 +154,7 @@ export default function SignupScreen() {
 
   function editDetails() {
     if (loading) return;
+    if (firebaseOtpOnly) resetCustomerFirebaseOtp();
     setOtpSent(false);
     setOtp('');
     setMessage('');
