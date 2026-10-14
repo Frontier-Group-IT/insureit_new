@@ -1,8 +1,5 @@
-import { ShieldCheck } from "lucide-react";
-import {
-  CustomerAccountTabs,
-  StatusPill,
-} from "@/components/customer-portal/customer-phase1";
+import { BadgeCheck, ShieldCheck } from "lucide-react";
+import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
 import { CustomerProfileDocuments } from "@/components/customer-portal/customer-profile-documents";
 import { CustomerProfileEditor } from "@/components/customer-portal/customer-profile-editor";
 import { CustomerAvatar } from "@/components/customer-portal/customer-avatar";
@@ -10,7 +7,6 @@ import { getCustomerWebSession } from "@/lib/customer-web";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import {
   customerKycStatusLabel,
-  customerKycTone,
   loadCustomerProfile,
 } from "@/lib/customer-web-phase4-data";
 
@@ -41,7 +37,7 @@ export default async function CustomerProfilePage({
           </div>
           <div className="hidden shrink-0 items-center gap-3 rounded-2xl border border-white/30 bg-white/95 px-4 py-3 text-[#10213D] shadow-lg sm:flex">
             <span className="grid h-9 w-9 place-items-center rounded-full bg-[#DCF7E9] text-[#07865B]"><ShieldCheck className="h-5 w-5"/></span>
-            <div><p className="text-[12px] font-black">KYC: {customerKycStatusLabel(kyc?.status)}</p><p className="text-[10px] text-[#657791]">Current account verification status</p></div>
+            <div><p className="text-[12px] font-black">KYC: {customerKycStatusLabel(kyc?.status)}</p></div>
           </div>
         </div>
       </section>
@@ -49,10 +45,12 @@ export default async function CustomerProfilePage({
         <div className="flex min-w-0 items-center gap-4 pr-20 sm:pr-24">
           <CustomerAvatar userId={user.id} size="profile" />
           <div className="min-w-0">
-            <h2 className="break-words text-[19px] font-black text-[#10213D]">{customer.contact_name}</h2>
-            <p className="mt-1 text-[11px] font-semibold text-[#7286A8]">Customer ID: {customer.customer_code}</p>
-            <div className="mt-2"><StatusPill tone={customerKycTone(kyc?.status)}>{customerKycStatusLabel(kyc?.status)}</StatusPill></div>
-            {customer.company_name ? <p className="mt-1 text-[10px] text-[#8794A7]">{customer.company_name}</p> : null}
+            <div className="flex min-w-0 items-center gap-1.5">
+              <h2 className="break-words text-[19px] font-black text-[#10213D]">{customer.contact_name}</h2>
+              <BadgeCheck className="h-4.5 w-4.5 shrink-0 text-[#0B8A61]" aria-label="Verified customer" />
+            </div>
+            <p className="mt-0.5 text-[11px] font-bold text-[#7286A8]">{customer.customer_code}</p>
+            {customer.company_name ? <p className="mt-0.5 text-[10px] font-bold text-[#8794A7]">{customer.company_name}</p> : null}
           </div>
         </div>
         <CustomerProfileEditor
