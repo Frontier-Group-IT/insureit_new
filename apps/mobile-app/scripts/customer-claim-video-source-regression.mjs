@@ -58,7 +58,7 @@ const checks = [
   ['Upload overlay renders a real percentage and progress bar when byte progress is available', appLoading.includes('progressPercent}%') && appLoading.includes('styles.progressTrack') && appLoading.includes('styles.progressFill') && appLoading.includes('uploadProgress(entries, nextLabel)')],
   ['Existing expo-image-picker dependency is reused', Boolean(packageJson.dependencies?.['expo-image-picker'])],
   ['Existing expo-image-picker native plugin remains configured', imagePickerPluginConfigured],
-  ['Customer runtime remains 0.3.0', appConfig.expo.version === '0.3.0'],
+  ['Customer Firebase-native candidate stays on separate 0.3.2 runtime', appConfig.expo.version === '0.3.2'],
   ['Customer 0.3.2 candidate versionCode 11 is isolated from production versionCode 9', appConfig.expo.android?.versionCode === 11],
 ];
 
