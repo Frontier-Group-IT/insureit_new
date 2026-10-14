@@ -44,6 +44,7 @@ export function AssociateAccountActionsMenu({
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -65,6 +66,7 @@ export function AssociateAccountActionsMenu({
         setOpen(false);
         setEditOpen(false);
         setDeleteOpen(false);
+        setStatusOpen(false);
       }
     }
     document.addEventListener("mousedown", closeOnOutsideClick);
@@ -158,17 +160,18 @@ export function AssociateAccountActionsMenu({
                   Edit
                 </button>
 
-                <form action={togglePartnerAssociateAccountStatus}>
-                  {commonHidden}
-                  <button
-                    type="submit"
-                    role="menuitem"
-                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC]"
-                  >
-                    <Ban className="h-3.5 w-3.5 text-[#64748B]" />
-                    {associate.status === "disabled" ? "Enable" : "Disable"}
-                  </button>
-                </form>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setOpen(false);
+                    setStatusOpen(true);
+                  }}
+                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC]"
+                >
+                  <Ban className="h-3.5 w-3.5 text-[#64748B]" />
+                  {associate.status === "disabled" ? "Enable" : "Disable"}
+                </button>
 
                 <button
                   type="button"
@@ -252,6 +255,29 @@ export function AssociateAccountActionsMenu({
                 Cancel
               </button>
               <SaveChangesButton />
+            </div>
+          </form>
+        </Modal>
+      ) : null}
+
+      {statusOpen ? (
+        <Modal
+          title={associate.status === "disabled" ? "Enable Associate Account" : "Disable Associate Account"}
+          onClose={() => setStatusOpen(false)}
+        >
+          <form action={togglePartnerAssociateAccountStatus}>
+            {commonHidden}
+            <div className="space-y-2 px-5 py-4 text-[11px] text-[#334155]">
+              <p className="font-semibold">{associate.name}</p>
+              <p>{associate.status === "disabled"
+                ? "Enable this associate's portal access?"
+                : "Disable this associate's portal access? Their account and data will be preserved."}</p>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-[#E7ECF3] bg-[#FBFCFE] px-5 py-3">
+              <button type="button" onClick={() => setStatusOpen(false)} className="h-9 rounded-md border border-[#CBD5E1] px-4 text-[10.5px] font-semibold">
+                Cancel
+              </button>
+              <StatusSubmitButton enable={associate.status === "disabled"} />
             </div>
           </form>
         </Modal>
@@ -350,6 +376,15 @@ function ResendInviteButton({
     >
       <Send className="h-3.5 w-3.5 text-[#64748B]" />
       {pending ? "Sending..." : remaining > 0 ? `Resend in ${remaining}s` : "Resend Link"}
+    </button>
+  );
+}
+
+function StatusSubmitButton({ enable }: { enable: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" disabled={pending} className="h-9 rounded-md bg-[#17365D] px-4 text-[10.5px] font-semibold text-white disabled:opacity-60">
+      {pending ? "Updating..." : enable ? "Enable account" : "Disable account"}
     </button>
   );
 }
