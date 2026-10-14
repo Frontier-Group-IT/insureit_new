@@ -122,14 +122,10 @@ Deno.serve(async (request: Request) => {
         });
       if (insertError) return reply(409, { error: "customer_requires_review" });
     }
-    // Only grant the Firebase authenticated role AFTER the protected database
-    // mapping exists and is approved. Retain other Firebase custom claims.
-    const user = await firebase.getUser(decoded.uid);
-    await firebase.setCustomUserClaims(decoded.uid, {
-      ...(user.customClaims ?? {}),
-      role: "authenticated",
-    });
-    // Firebase client must force-refresh its ID token after role claim assignment.
+    // Firebase is SMS VERIFICATION ONLY. Do NOT add Firebase custom role
+    // claims or grant access to Supabase data/storage using Firebase JWTs.
+    // The client still force-refreshes its Firebase token before presenting it
+    // to the independent, revocation-checking Supabase session bridge.
     return reply(200, { status: "linked", requiresTokenRefresh: true });
   } catch (error) {
     console.error("customer-firebase-binding failed", error instanceof Error ? error.name : "unknown");
