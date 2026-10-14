@@ -53,7 +53,7 @@ export function checkCustomerSessionEligibility({ firebase, link, profile, authU
   // policy and by the current multi-account session vault. No new UUIDs.
   if (!authUser || authUser.id !== profile.id ||
     authUser.is_anonymous === true ||
-    authUser.banned_until && Date.parse(authUser.banned_until) > Date.now() ||
+    authUser.banned_until && Date.parse(authUser.banned_until) > nowSeconds * 1000 ||
     canonicalIndianPhone(authUser.phone) !== phone) {
     return fail('supabase_user_mismatch');
   }
