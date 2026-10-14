@@ -30,9 +30,7 @@ export default async function CustomerEChallanPage({
         <div className="absolute inset-0 bg-gradient-to-r from-[#06162F] via-[#08254C]/95 via-45% to-transparent" />
         <div className="relative flex min-h-[180px] items-center px-5 py-5 sm:min-h-[220px] sm:px-8">
           <div className="max-w-[57%]">
-            <p className="text-[10px] font-extrabold uppercase tracking-[.14em] text-[#9DCFFF]">E-Challan assistance</p>
-            <h1 className="mt-2 text-[clamp(23px,3vw,38px)] font-black leading-tight">Check and manage your <span className="text-[#369BFF]">E-Challan</span> easily.</h1>
-            <p className="mt-2 max-w-[430px] text-[11px] leading-5 text-[#E0EEFF]">Share your vehicle and challan details. INSUREIT will help you with the next steps.</p>
+            <h1 className="text-[clamp(23px,3vw,38px)] font-black leading-tight">Check and manage your <span className="text-[#369BFF]">E-Challan</span> easily.</h1>
           </div>
         </div>
       </section>
