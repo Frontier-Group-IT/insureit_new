@@ -1,6 +1,6 @@
 ﻿import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-import { claimUploadCustomerError, claimUploadFileReadMessage, logClaimUploadFailure, resolveClaimUploadDescriptor } from '@/lib/claim-document-upload';
+import { readClaimDocumentBytes, claimUploadCustomerError, claimUploadFileReadMessage, logClaimUploadFailure, resolveClaimUploadDescriptor } from '@/lib/claim-document-upload';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -236,9 +236,7 @@ export default function UploadDocumentsScreen() {
       const storagePath = `${selectedClaim.customer_id}/${selectedClaim.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${descriptor.storageExtension}`;
       let body: ArrayBuffer;
       try {
-        const response = await fetch(pickedFile.uri);
-        if (!response.ok) throw new Error('Local file read failed');
-        body = await response.arrayBuffer();
+        body = await readClaimDocumentBytes(pickedFile.uri);
         if (!body.byteLength) throw new Error('Empty local file');
       } catch (error) {
         logClaimUploadFailure('customer_claim_document_vault', 'local_read', error);
