@@ -46,8 +46,8 @@ test('Edge protects identity and does not issue tokens when phone-only remains u
 });
 
 test('production 0.3.0 and native dependency boundary remain untouched', () => {
-  assert.equal(config.version, '0.3.0');
-  assert.equal(config.android.versionCode, 9);
+  assert.equal(config.version, '0.3.2');
+  assert.equal(config.android.versionCode, 11);
   assert.doesNotMatch(login, /@react-native-firebase/);
   assert.doesNotMatch(signup, /@react-native-firebase/);
   assert.match(login, /sendPhoneOtp\(fullPhone\)/);
