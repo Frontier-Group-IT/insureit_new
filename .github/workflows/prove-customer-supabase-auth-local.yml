@@ -6,6 +6,9 @@ on:
       - feature/customer-firebase-otp-gateway-0-3-2-20261014
     paths:
       - 'apps/mobile-app/scripts/customer-firebase-supabase-local-integration.mjs'
+      - 'apps/mobile-app/scripts/customer-firebase-session-limit-local-integration.mjs'
+      - 'supabase/migrations/20261014130000_customer_firebase_session_exchange_limit.sql'
+      - 'supabase/functions/customer-firebase-session-bridge/index.ts'
       - '.github/workflows/prove-customer-supabase-auth-local.yml'
   workflow_dispatch:
 
@@ -38,14 +41,26 @@ jobs:
           eval "$(supabase status -o env \
             --override-name api.url=SUPABASE_URL \
             --override-name auth.anon_key=SUPABASE_ANON_KEY \
-            --override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY)"
+            --override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY \
+            --override-name db.url=SUPABASE_DB_URL)"
           test "${SUPABASE_URL:-}" = "http://127.0.0.1:54321"
           test -n "${SUPABASE_ANON_KEY:-}"
           test -n "${SUPABASE_SERVICE_ROLE_KEY:-}"
+          [[ "${SUPABASE_DB_URL:-}" =~ ^postgresql://[^[:space:]]+@(127\\.0\\.0\\.1|localhost):54322/ ]]
           {
             echo "SUPABASE_URL=$SUPABASE_URL"
             echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
             echo "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY"
+            echo "SUPABASE_DB_URL=$SUPABASE_DB_URL"
           } >> "$GITHUB_ENV"
       - name: Prove same Auth UUID, supported one-use magiclink session, refresh, A/B isolation
         run: node apps/mobile-app/scripts/customer-firebase-supabase-local-integration.mjs
+
+      - name: Apply ONLY the unpublished session throttle to ephemeral local DB
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261014130000_customer_firebase_session_exchange_limit.sql
+      - name: Prove Firebase phone event replay denial, concurrency and RLS
+        run: node apps/mobile-app/scripts/customer-firebase-session-limit-local-integration.mjs
