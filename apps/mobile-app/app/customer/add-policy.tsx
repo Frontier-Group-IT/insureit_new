@@ -1,3 +1,4 @@
+import { readClaimDocumentBytes } from '@/lib/claim-document-upload';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -525,7 +526,7 @@ async function uploadPolicyCopy(customerId: string, externalPolicyId: string, fi
   const extension = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
   const storagePath = `${customerId}/policy-copy/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
   try {
-    const body = await (await fetch(file.uri)).arrayBuffer();
+    const body = await readClaimDocumentBytes(file.uri);
     const uploadResult = await supabase.storage.from('customer-documents').upload(storagePath, body, { contentType: file.mimeType ?? 'application/octet-stream', upsert: false });
     if (uploadResult.error) return uploadResult.error.message;
     const recordResult = await supabase.from('customer_documents').insert({ customer_id: customerId, external_policy_id: externalPolicyId, document_type: 'policy_copy', file_name: file.name, storage_bucket: 'customer-documents', storage_path: storagePath, mime_type: file.mimeType, file_size: file.size, uploaded_by: userId });
