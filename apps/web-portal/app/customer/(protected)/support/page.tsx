@@ -41,9 +41,7 @@ export default async function CustomerSupportPage({
         <div className="pointer-events-none absolute bottom-[-70px] right-[8%] h-52 w-52 rounded-full border-[28px] border-[#52AEFF]/20" />
         <div className="relative flex min-h-[195px] items-center justify-between gap-5 px-6 py-7 sm:px-9">
           <div className="max-w-[590px]">
-            <p className="text-[10px] font-extrabold uppercase tracking-[.15em] text-[#72B9FF]">INSUREIT Care Desk</p>
-            <h1 className="mt-3 text-[clamp(25px,3.3vw,40px)] font-black leading-tight">We’re here to <span className="text-[#369BFF]">help you.</span></h1>
-            <p className="mt-2 max-w-[530px] text-[12px] leading-6 text-[#E0EDFF]">Get support for your insurance, vehicle, challan or any other INSUREIT service. Raise a ticket and our team will assist you.</p>
+            <h1 className="text-[clamp(25px,3.3vw,40px)] font-black leading-tight">We’re here to <span className="text-[#369BFF]">help you.</span></h1>
           </div>
           <div className="hidden shrink-0 flex-col gap-2 sm:flex">
             <span className="rounded-full bg-white/90 px-4 py-2 text-[10px] font-bold text-[#123A6B]"><ShieldCheck className="mr-2 inline h-4 w-4 text-[#1778E8]"/>Quick support</span>
@@ -55,13 +53,13 @@ export default async function CustomerSupportPage({
 
       <div className="grid gap-3 md:grid-cols-3">
         <Link href={{pathname:"/customer/insurance-quote",query:{account:account.id}}} className="flex items-center gap-3 rounded-2xl border border-[#E0E9F4] bg-white p-4 shadow-[0_6px_20px_rgba(28,50,82,.04)] hover:border-[#9EBCE4]">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#E4F1FF] text-[#1778E8]"><ShieldCheck className="h-6 w-6"/></span><span className="min-w-0 flex-1"><strong className="block text-[12px] font-black text-[#10213D]">Insurance Quote Support</strong><span className="mt-1 block text-[10px] leading-4 text-[#647995]">Renewal, new policy or insurer change.</span></span><ArrowRight className="h-4 w-4 shrink-0 text-[#1778E8]"/>
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#EAF4FF] to-[#D6E9FF] text-[#1268C8] ring-1 ring-inset ring-[#C5DCF6]"><ShieldCheck className="h-6 w-6" strokeWidth={1.9}/></span><span className="min-w-0 flex-1"><strong className="block text-[12px] font-black text-[#10213D]">Insurance Quote Support</strong><span className="mt-1 block text-[10px] leading-4 text-[#647995]">Renewal, new policy or insurer change.</span></span><ArrowRight className="h-4 w-4 shrink-0 text-[#1778E8]"/>
         </Link>
         <Link href={{pathname:"/customer/e-challan",query:{account:account.id}}} className="flex items-center gap-3 rounded-2xl border border-[#E0E9F4] bg-white p-4 shadow-[0_6px_20px_rgba(28,50,82,.04)] hover:border-[#9EBCE4]">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#E4F1FF] text-[#1778E8]"><CarFront className="h-6 w-6"/></span><span className="min-w-0 flex-1"><strong className="block text-[12px] font-black text-[#10213D]">Challan Assistance</strong><span className="mt-1 block text-[10px] leading-4 text-[#647995]">Send vehicle and challan details.</span></span><ArrowRight className="h-4 w-4 shrink-0 text-[#1778E8]"/>
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#EFF8FF] to-[#DDEFFF] text-[#1268C8] ring-1 ring-inset ring-[#C9E0F6]"><CarFront className="h-6 w-6" strokeWidth={1.9}/></span><span className="min-w-0 flex-1"><strong className="block text-[12px] font-black text-[#10213D]">Challan Assistance</strong><span className="mt-1 block text-[10px] leading-4 text-[#647995]">Send vehicle and challan details.</span></span><ArrowRight className="h-4 w-4 shrink-0 text-[#1778E8]"/>
         </Link>
         <a href="tel:+916264911014" className="flex items-center gap-3 rounded-2xl border border-[#E0E9F4] bg-white p-4 shadow-[0_6px_20px_rgba(28,50,82,.04)] hover:border-[#9EBCE4]">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#E4F1FF] text-[#1778E8]"><Headphones className="h-6 w-6"/></span><span className="min-w-0 flex-1"><strong className="block text-[12px] font-black text-[#10213D]">General Support</strong><span className="mt-1 block text-[10px] leading-4 text-[#647995]">Call us for urgent help and questions.</span></span><ArrowRight className="h-4 w-4 shrink-0 text-[#1778E8]"/>
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#EEF2FF] to-[#DEE7FF] text-[#315BC7] ring-1 ring-inset ring-[#CBD5F1]"><Headphones className="h-6 w-6" strokeWidth={1.9}/></span><span className="min-w-0 flex-1"><strong className="block text-[12px] font-black text-[#10213D]">General Support</strong><span className="mt-1 block text-[10px] leading-4 text-[#647995]">Call us for urgent help and questions.</span></span><ArrowRight className="h-4 w-4 shrink-0 text-[#1778E8]"/>
         </a>
       </div>
 
@@ -90,10 +88,10 @@ export default async function CustomerSupportPage({
       </div>
 
       <section id="support-activity">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div><p className="text-[10px] font-black uppercase tracking-[0.13em] text-[#718096]">Your activity</p><h2 className="mt-1 flex items-center gap-2 text-[16px] font-black text-[#10213D]"><TicketCheck className="h-5 w-5 text-[#175CA8]" aria-hidden="true" />Requests & tickets</h2></div>
-          <form className="flex max-w-sm items-center gap-2 rounded-xl border border-[#D8E1EC] bg-white px-3 py-2">
-            <Search className="h-4 w-4 text-[#73829A]" />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-start sm:gap-5">
+          <div className="shrink-0"><p className="text-[10px] font-black uppercase tracking-[0.13em] text-[#718096]">Your activity</p><h2 className="mt-1 flex items-center gap-2 text-[16px] font-black text-[#10213D]"><TicketCheck className="h-5 w-5 text-[#175CA8]" aria-hidden="true" />Requests & tickets</h2></div>
+          <form className="flex w-full items-center gap-2 rounded-xl border border-[#D8E1EC] bg-white px-3 py-2 sm:w-[430px] md:w-[520px]">
+            <Search className="h-4 w-4 shrink-0 text-[#73829A]" />
             <input type="hidden" name="account" value={account.id} />
             <input name="q" defaultValue={params.q ?? ""} placeholder="Search requests" className="min-w-0 flex-1 bg-transparent text-[11px] font-semibold text-[#10213D] outline-none" />
           </form>
