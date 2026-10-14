@@ -59,6 +59,15 @@ async function deleteUser(profileId: string, actorId: string): Promise<Permanent
     .maybeSingle<{ id: string; full_name: string; role: string; employee_id: string | null }>();
   if (error || !target) return { status: "error", message: "The employee record could not be found." };
   const targetKind = target.role === "customer" ? "customer account" : target.role === "intermediary" ? "intermediary account" : "employee";
+  const profileBlockers = await blockers("profiles", profileId);
+  const cleanupTables = target.role === "customer"
+    ? new Set(["customer_firebase_identity_links", "customer_onboarding_contacts"])
+    : new Set<string>();
+  const protectedProfileBlockers = profileBlockers.filter((item) => !cleanupTables.has(item.table));
+
+  if (protectedProfileBlockers.length) {
+    return { status: "error", message: `Cannot permanently delete this ${targetKind} because protected history exists in ${formatBlockers(protectedProfileBlockers)}. Deactivate or disable access instead.` };
+  }
 
   if (target.role === "customer") {
     const { error: firebaseIdentityError } = await admin
@@ -86,11 +95,6 @@ async function deleteUser(profileId: string, actorId: string): Promise<Permanent
     if (portalAccountError) {
       return { status: "error", message: "The intermediary portal login could not be detached safely." };
     }
-  }
-
-  const profileBlockers = await blockers("profiles", profileId);
-  if (profileBlockers.length) {
-    return { status: "error", message: `Cannot permanently delete this ${targetKind} because protected history exists in ${formatBlockers(profileBlockers)}. Deactivate or disable access instead.` };
   }
 
   if (target.employee_id) {
