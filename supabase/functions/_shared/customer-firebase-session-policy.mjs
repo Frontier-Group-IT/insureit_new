@@ -45,7 +45,8 @@ export function checkCustomerSessionEligibility({ firebase, link, profile, authU
   }
 
   if (!profile || profile.id !== link.profile_id ||
-    profile.role !== 'customer' || profile.is_active !== true) {
+    profile.role !== 'customer' || profile.is_active !== true ||
+    canonicalIndianPhone(profile.phone) !== phone) {
     return fail('customer_unavailable');
   }
 
