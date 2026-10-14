@@ -138,3 +138,30 @@ export function claimUploadMetadataMessage(name: string) {
   const label = name.trim() || 'The selected file';
   return `${label} was uploaded, but could not be attached to the claim. Please try again.`;
 }
+
+/**
+ * Customer-safe classification of actual Storage failures. Do not surface
+ * internal object paths, SQL details, JWTs or raw backend error messages.
+ */
+export function claimUploadCustomerError(error: unknown): string {
+  const status = claimUploadStorageErrorStatus(error);
+  const message = storageErrorMessage(error);
+  if (status === 413 || /payload too large|entity too large|exceeds.*size|file.*too large/.test(message)) {
+    return 'This document exceeds the storage upload limit. Please choose a smaller file.';
+  }
+  if (status === 415 || /mime type|mimetype|content.type|not allowed|unsupported media/.test(message)) {
+    return 'This document format is not accepted. Please choose a PDF or supported image.';
+  }
+  const kind = classifyClaimUploadStorageError(error);
+  if (kind === 'auth') return 'Your document upload permission or login session needs verification. Please sign in again; if this continues, contact support.';
+  if (kind === 'transient') return 'The upload was interrupted by a network or server issue. Please retry.';
+  if (kind === 'already_exists') return 'A file with this name was already stored. Please retry.';
+  return 'Secure storage rejected the upload. Please contact support if this continues.';
+}
+
+export function logClaimUploadFailure(area: string, step: 'local_read' | 'storage' | 'metadata', error: unknown) {
+  const status = claimUploadStorageErrorStatus(error);
+  const category = step === 'storage' ? classifyClaimUploadStorageError(error) : step;
+  // Never log file names, document bytes, object paths, customer IDs or tokens.
+  console.warn('[customer-document-upload] operation failed', { area, step, category, status });
+}

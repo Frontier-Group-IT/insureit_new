@@ -122,6 +122,12 @@ function xhrFetch(
     }
 
     xhr.onload = () => {
+      // A status of zero is a failed native transport, not a valid HTTP Response.
+      // Without this guard the Response constructor throws an unrelated RangeError.
+      if (xhr.status === 0) {
+        reject(new TypeError('Network request failed (no HTTP response)'));
+        return;
+      }
       const responseHeaders = parseResponseHeaders(xhr.getAllResponseHeaders());
       const body = [101, 204, 205, 304].includes(xhr.status) ? null : xhr.responseText;
       if (onUploadProgress && xhr.status >= 200 && xhr.status < 300) onUploadProgress(1);
