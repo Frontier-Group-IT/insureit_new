@@ -45,7 +45,7 @@ export async function verifyCustomerFirebasePhoneOtp(
     const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
     const publicKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
     if (!supabaseUrl || !publicKey) throw Error('Customer backend is unavailable.');
-    const base = supabaseUrl.replace(/\\/$/, '');
+    const base = supabaseUrl.replace(/\/$/, '');
     async function invokeFirebaseFunction(name: string, token: string, body: object): Promise<Response> {
       return fetch(`${base}/functions/v1/${name}`, {
         method: 'POST',
