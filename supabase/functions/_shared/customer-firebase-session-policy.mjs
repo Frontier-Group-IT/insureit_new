@@ -1,3 +1,4 @@
+import { isApprovedAuthAlias } from './customer-firebase-session-alias.mjs';
 /**
  * Deny-by-default authorization policy for the PROPOSED Firebase SMS ->
  * preexisting Supabase Auth session bridge.
@@ -59,11 +60,11 @@ export function checkCustomerSessionEligibility({ firebase, link, profile, authU
     return fail('supabase_user_mismatch');
   }
 
-  // The standard Admin generateLink('magiclink') API needs an existing
-  // verified Supabase Auth email identity. All 24 active INSUREIT Customer
-  // accounts presently have none. Never make one implicitly in this request.
-  if (typeof authUser.email !== 'string' ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(authUser.email) ||
+  // Never generate a magic link for a user-entered/contact email; only a
+  // pre-provisioned, non-deliverable system-owned alias on the EXISTING UUID.
+  // No alias is created here. A separate reviewed, manual-only process is
+  // required to provision an eligible phone-only Auth user.
+  if (!isApprovedAuthAlias(authUser.id, authUser.email) ||
     !authUser.email_confirmed_at) {
     return fail('session_identity_not_provisioned');
   }
