@@ -181,7 +181,7 @@ export default async function CustomerPoliciesPage({
             </table>
           </div>
           <div className="divide-y divide-[#E7EDF5] lg:hidden">
-            {sourceFilteredRows.map((policy) => {
+            {visibleRows.map((policy) => {
               const status = customerPolicyTone(policy.end_date);
               const logo = getStaticInsurerLogo(policy.insurer_name);
               return (
