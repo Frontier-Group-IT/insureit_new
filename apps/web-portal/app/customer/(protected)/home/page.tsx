@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, CalendarClock, CarFront, ClipboardCheck, ClipboardList, FilePlus2, Headphones, ShieldPlus, ShieldCheck, FileText, RefreshCcw, ChevronRight } from "lucide-react";
+import { AlertTriangle, ArrowRight, CalendarClock, CarFront, ClipboardCheck, ClipboardList, FilePlus2, Headphones, ShieldPlus, ShieldCheck, FileText, RefreshCcw, ChevronRight, HeartPulse, Umbrella, Bike, Plane, Truck, HardHat, Boxes, Sparkles } from "lucide-react";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
 import { ManufacturerMark } from "../vehicles/customer-vehicles-register";
 import { customerPolicyTone, loadCustomerWebPolicies, loadCustomerWebVehicles, resolveCustomerWebScope } from "@/lib/customer-web-data";
@@ -31,36 +31,35 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
   return (
     <div className="space-y-4 pb-6">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/home" />
-      <section className="relative isolate overflow-hidden rounded-[22px] bg-[linear-gradient(112deg,#071B3B_0%,#103B73_65%,#2584CF_100%)] p-5 text-white shadow-[0_14px_36px_rgba(17,54,104,.16)] sm:p-7">
-        <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[#76C8FF]/20 blur-3xl"/>
-        <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(340px,.75fr)] lg:items-center">
-          <div className="space-y-4">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-semibold tracking-wide text-[#D8EEFF]"><ShieldCheck className="h-3.5 w-3.5"/> YOUR INSURANCE, SIMPLIFIED</span>
-            <div>
-              <h1 className="text-[clamp(27px,3vw,39px)] font-extrabold tracking-tight">Welcome back, {account.contact_name?.split(" ")[0] || "Customer"}!</h1>
-              <p className="mt-2 max-w-lg text-[13px] text-[#D9EAFD]">Stay covered, renew on time and manage your vehicles with ease.</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Link href={{pathname:"/customer/insurance-quote",query:accountQuery}} className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-[#104B88] shadow-sm transition hover:bg-[#E8F4FF]">Get insurance quote <ArrowRight className="h-4 w-4"/></Link>
-              <Link href={{pathname:"/customer/renewals",query:accountQuery}} className="inline-flex items-center gap-2 rounded-xl border border-white/35 bg-white/10 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-white/20">Renew a policy <RefreshCcw className="h-4 w-4"/></Link>
-            </div>
-          </div>
-          <div className="space-y-3">
-            <div className="flex justify-end"><Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#E3F2FF] hover:text-white">View my fleet <ArrowRight className="h-4 w-4"/></Link></div>
-            <div className="grid grid-cols-2 gap-3">
-              <Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="rounded-2xl border border-white/25 bg-white/15 p-4 shadow-lg backdrop-blur-sm transition hover:bg-white/25"><span className="mb-3 grid h-10 w-10 place-items-center rounded-xl bg-[#2C82D4]"><CarFront className="h-5 w-5 text-white"/></span><strong className="block text-2xl font-extrabold">{covered} / {vehicles.length}</strong><span className="mt-1 block text-[11px] text-[#E0EFFF]">Vehicles covered</span></Link>
-              <Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="rounded-2xl border border-white/25 bg-white/15 p-4 shadow-lg backdrop-blur-sm transition hover:bg-white/25"><span className="mb-3 grid h-10 w-10 place-items-center rounded-xl bg-[#138E87]"><ShieldCheck className="h-5 w-5 text-white"/></span><strong className="block text-2xl font-extrabold">{coverage}%</strong><span className="mt-1 block text-[11px] text-[#E0EFFF]">Fleet protection</span></Link>
-            </div>
+      <section className="relative isolate overflow-hidden rounded-2xl border border-[#DDEBFA] bg-[linear-gradient(100deg,#F1F8FF_0%,#E8F4FF_55%,#D3EBFF_100%)] px-4 pb-4 pt-4 sm:px-6 sm:pt-5">
+        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[57%] bg-[url('/customer-fleet-banner.svg')] bg-contain bg-right-bottom bg-no-repeat opacity-95 md:block"/>
+        <div className="relative z-10 max-w-[750px]">
+          <p className="text-[9px] font-extrabold uppercase tracking-[.26em] text-[#236EE6]">MY PROTECTION HUB</p>
+          <h1 className="mt-1 text-[clamp(26px,3.2vw,42px)] font-black leading-tight tracking-tight text-[#0A1C3D]">Drive with complete <span className="text-[#1266E9]">peace of mind</span></h1>
+          <p className="mt-1 text-[11px] text-[#45617E]">Insure your commercial vehicles, manage policies, track claims and get instant support — all in one place.</p>
+          <div className="mt-4 grid max-w-[365px] grid-cols-2 gap-2">
+            <Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="flex items-center gap-2 rounded-xl border border-white bg-white/90 p-2.5 shadow-sm"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#DFEDFF]"><CarFront className="h-5 w-5 text-[#1368E8]"/></span><span><strong className="block text-base font-black text-[#10244D]">{covered} / {vehicles.length}</strong><small className="block text-[9px] text-[#58708B]">Vehicles covered</small></span><ArrowRight className="ml-auto h-4 w-4 text-[#2264CF]"/></Link>
+            <Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="flex items-center gap-2 rounded-xl border border-white bg-white/90 p-2.5 shadow-sm"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#DDF9ED]"><ShieldCheck className="h-5 w-5 text-[#079765]"/></span><span><strong className="block text-base font-black text-[#10244D]">{coverage}%</strong><small className="block text-[9px] text-[#58708B]">Fleet protection</small></span><ArrowRight className="ml-auto h-4 w-4 text-[#2264CF]"/></Link>
           </div>
         </div>
       </section>
-      <nav aria-label="Quick actions" className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+      <nav aria-label="Insurance categories" className="grid grid-cols-2 gap-2 md:grid-cols-4">
         {[
-          {title:"Insure a Vehicle",desc:"Get an insurance quote",href:"/customer/insurance-quote",icon:ShieldPlus,background:"bg-[#EAF3FF]",color:"text-[#176CD4]"},
-          {title:"Start New Claim",desc:"Report an incident",href:"/customer/start-claim",icon:FilePlus2,background:"bg-[#E9F9F1]",color:"text-[#07865F]"},
-          {title:"Track Existing Claims",desc:`${openClaims.length} claim${openClaims.length===1?"":"s"} in progress`,href:"/customer/claims",icon:ClipboardCheck,background:"bg-[#FFF4E8]",color:"text-[#C46A13]"},
-          {title:"View My Vehicles",desc:"Manage your fleet",href:"/customer/vehicles",icon:CarFront,background:"bg-[#F2EDFF]",color:"text-[#7444CE]"},
-        ].map(({title,desc,href,icon:Icon,background,color})=><Link key={href} href={href === "/customer/start-claim" ? { pathname: "/customer/start-claim", query: accountQuery } : href === "/customer/claims" ? { pathname: "/customer/claims", query: accountQuery } : { pathname: href, query: accountQuery }} className="flex min-w-0 items-center gap-2 rounded-xl border border-[#E3EAF3] bg-white p-3 shadow-sm transition hover:border-[#BBD2EC] hover:shadow-md"><span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${background} ${color}`}><Icon className="h-5 w-5"/></span><span className="min-w-0 flex-1"><strong className="block truncate text-[11px] text-[#10284A]">{title}</strong><small className="block truncate text-[10px] text-[#7186A0]">{desc}</small></span><ArrowRight className={`h-4 w-4 shrink-0 ${color}`}/></Link>)}
+          {title:"Vehicle Insurance",description:"Get the best coverage for your car, bike or fleet.",tag:"Get a quote",href:"/customer/insurance-quote",icon:CarFront,accent:"text-[#1268E9]",tint:"bg-[#EAF3FF]",art:"🚙"},
+          {title:"Health Insurance",description:"Explore protection for you and your family.",tag:"Explore plans",href:"/customer/support",icon:HeartPulse,accent:"text-[#F14478]",tint:"bg-[#FFF0F5]",art:"👨‍👩‍👧"},
+          {title:"Term Life Insurance",description:"Help secure your family's future.",tag:"Enquire now",href:"/customer/support",icon:Umbrella,accent:"text-[#089F72]",tint:"bg-[#E8FAF1]",art:"👨‍👩‍👦"},
+          {title:"Two Wheeler Insurance",description:"Quick coverage enquiries for your bike.",tag:"Get a quote",href:"/customer/insurance-quote",icon:Bike,accent:"text-[#7A3EF0]",tint:"bg-[#F2ECFF]",art:"🏍️"},
+          {title:"Travel Insurance",description:"Ask about cover for your next journey.",tag:"Enquire now",href:"/customer/support",icon:Plane,accent:"text-[#F27B25]",tint:"bg-[#FFF0E5]",art:"✈️"},
+          {title:"Commercial Vehicle",description:"Insurance solutions for your business fleet.",tag:"Customized plans",href:"/customer/insurance-quote",icon:Truck,accent:"text-[#136DE8]",tint:"bg-[#E8F3FF]",art:"🚚"},
+          {title:"Earthmoving & Machinery",description:"Specialized cover for heavy equipment.",tag:"Tailored coverage",href:"/customer/support",icon:HardHat,accent:"text-[#E99412]",tint:"bg-[#FFF5DF]",art:"🚜"},
+          {title:"Other Insurance",description:"Explore more insurance solutions.",tag:"View options",href:"/customer/support",icon:Boxes,accent:"text-[#7546EA]",tint:"bg-[#F2ECFF]",art:"🛡️"},
+        ].map(({title,description,tag,href,icon:Icon,accent,tint,art})=><Link key={title} href={{pathname:href,query:accountQuery}} className="group relative flex min-h-[148px] flex-col overflow-hidden rounded-xl border border-[#E3EAF5] bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-[#B8D2F5] hover:shadow-md sm:min-h-[165px]">
+          <span className={`absolute -bottom-12 -right-12 h-36 w-36 rounded-full ${tint}`}/>
+          <span aria-hidden="true" className="pointer-events-none absolute bottom-1 right-2 text-[54px] leading-none opacity-90 drop-shadow-sm sm:text-[68px]">{art}</span>
+          <span className="relative z-10 flex items-start gap-2"><span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${tint} ${accent}`}><Icon className="h-5 w-5"/></span><span className="min-w-0"><strong className="block text-[11px] font-extrabold leading-snug text-[#132548]">{title}</strong><small className="mt-0.5 block max-w-[155px] text-[9px] leading-snug text-[#667D99]">{description}</small></span></span>
+          <span className={`relative z-10 mt-3 w-fit rounded-full ${tint} px-2 py-1 text-[9px] font-semibold ${accent}`}>{tag}</span>
+          <span className="relative z-10 mt-auto grid h-7 w-7 place-items-center rounded-full border border-[#DCE6F4] bg-white text-[#2158B2]"><ArrowRight className="h-3.5 w-3.5"/></span>
+        </Link>)}
       </nav>
       <div className="grid gap-4 lg:grid-cols-[.8fr_1.2fr]">
         <section className="rounded-2xl border border-[#E0E8F3] bg-white p-4">
@@ -122,16 +121,10 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
           ].map(({title,description,href,icon:Icon,color,background})=><Link key={href} href={{pathname:href,query:accountQuery}} className="group flex min-w-0 flex-col gap-3 rounded-xl border border-[#E6EDF6] bg-[#FCFDFF] p-3.5 transition hover:-translate-y-0.5 hover:border-[#AAC9EF] hover:bg-white hover:shadow-md"><span className={`grid h-11 w-11 place-items-center rounded-xl ${background} ${color}`}><Icon className="h-5 w-5"/></span><span className="min-w-0"><strong className="block text-xs text-[#142C4D]">{title}</strong><small className="mt-1 block text-[10px] text-[#7186A0]">{description}</small></span><ChevronRight className={`ml-auto h-4 w-4 ${color} transition group-hover:translate-x-0.5`}/></Link>)}
         </div>
       </section>
-      <div className="grid gap-3 lg:grid-cols-2">
-        <section className="min-w-0 rounded-xl border border-[#E0E8F3] bg-white p-3">
-          <div className="mb-3 flex items-center justify-between"><h2 className="flex items-center gap-2 text-[14px] font-black text-[#10284A]"><ShieldCheck className="h-4 w-4 text-[#1672DC]"/>My Policies</h2><Link href={{pathname:"/customer/policies",query:accountQuery}} className="text-[10px] font-bold text-[#176CD4]">View all →</Link></div>
-          <div className="overflow-x-auto"><table className="w-full min-w-[410px] text-left text-[10px]"><thead className="bg-[#F1F6FC] text-[#637B9A]"><tr><th className="p-2">Policy Number</th><th className="p-2">Vehicle</th><th className="p-2">Insurer</th><th className="p-2">Status</th></tr></thead><tbody>{latestPolicies.map(policy=><tr key={policy.id} className="border-b border-[#EEF2F8]"><td className="p-2 font-bold"><Link href={{pathname:`/customer/policies/${policy.id}`,query:{...accountQuery,source:policy.source}}}>{policy.policy_no||"—"}</Link></td><td className="p-2">{policy.vehicle_no||"—"}</td><td className="p-2">{policy.insurer_name||"—"}</td><td className="p-2"><span className="rounded-full bg-[#EEF5FF] px-2 py-1">{customerPolicyTone(policy.end_date).tone}</span></td></tr>)}</tbody></table>{latestPolicies.length===0?<p className="p-3 text-xs text-[#7186A0]">No policies found.</p>:null}</div>
-        </section>
-        <section className="min-w-0 rounded-xl border border-[#E0E8F3] bg-white p-3">
-          <div className="mb-3 flex items-center justify-between"><h2 className="flex items-center gap-2 text-[14px] font-black text-[#10284A]"><ClipboardList className="h-4 w-4 text-[#1672DC]"/>My Claims</h2><Link href={{pathname:"/customer/claims",query:accountQuery}} className="text-[10px] font-bold text-[#176CD4]">View all →</Link></div>
-          <div className="overflow-x-auto"><table className="w-full min-w-[340px] text-left text-[10px]"><thead className="bg-[#F1F6FC] text-[#637B9A]"><tr><th className="p-2">Claim Number</th><th className="p-2">Status</th><th className="p-2">Action</th></tr></thead><tbody>{latestClaims.map(claim=><tr key={claim.id} className="border-b border-[#EEF2F8]"><td className="p-2 font-bold">{claim.claim_no||claim.id.slice(0,8)}</td><td className="p-2">{claim.current_status||"Submitted"}</td><td className="p-2"><Link href={{pathname:"/customer/claims",query:accountQuery}} className="font-bold text-[#176CD4]">View →</Link></td></tr>)}</tbody></table>{latestClaims.length===0?<p className="p-3 text-xs text-[#7186A0]">No claims found.</p>:null}</div>
-        </section>
-      </div>
+      <nav aria-label="Additional customer actions" className="sr-only">
+        <Link href={{pathname:"/customer/start-claim",query:accountQuery}}>Start New Claim</Link>
+        <Link href={{pathname:"/customer/claims",query:accountQuery}}>Track Existing Claims</Link>
+      </nav>
     </div>
   );
 }
