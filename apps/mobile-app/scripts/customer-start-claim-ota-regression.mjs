@@ -66,7 +66,7 @@ assert.doesNotMatch(rootLayout, /Updates\.reloadAsync\(\)/, 'A downloaded OTA mu
 assert.match(rootLayout, /activation deferred until next app launch/, 'Pending OTA activation must be explicitly deferred to the next app launch.');
 
 assert.equal(appConfig.version, '0.3.0', 'Customer OTA must remain compatible with production runtime 0.3.0.');
-assert.equal(appConfig.android?.versionCode, 9, 'Customer OTA must remain aligned with production Android versionCode 9.');
+assert.equal(appConfig.android?.versionCode, 11, 'Customer 0.3.2 native-only candidate must use new versionCode 11 without affecting production 0.3.0(9).');
 assert.equal(appConfig.runtimeVersion?.policy, 'appVersion', 'Customer runtimeVersion policy must remain appVersion.');
 assert.equal(easConfig.build?.production?.channel, 'production', 'Production APK/AAB must remain bound to Expo channel production.');
 assert.match(productionOtaWorkflow, /--channel production/, 'Customer production OTA workflow must publish to Expo channel production.');
