@@ -21,9 +21,9 @@ const makeUserClient = () => createClient(url, anonKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 const cleanup = [];
-async function seed(phone) {
+async function seed(phone, phone_confirm = true) {
   const { data, error } = await admin.auth.admin.createUser({
-    phone, phone_confirm: true,
+    phone, phone_confirm,
   });
   if (error || !data?.user?.id) throw error ?? Error('Could not seed local phone user');
   cleanup.push(data.user.id);
@@ -85,17 +85,30 @@ try {
   // Real GoTrue-compatible responses, not mocked challenge/session methods.
   const userA = await seed('+919876543210');
   const userB = await seed('+919876543211');
+  const userC = await seed('+919876543212', false);
+  const beforeC = await admin.auth.admin.getUserById(userC);
+  if (beforeC.error) throw beforeC.error;
+  assert.equal(beforeC.data.user.phone_confirmed_at || null, null,
+    'Unconfirmed synthetic Supabase phone must start without confirmation');
   assert.notEqual(userA, userB);
+  assert.notEqual(userC, userB);
 
   // .example.org belongs to the reserved example domain and is used only in
   // the local disposable auth container. It is NOT a production alias plan.
   const aliasA = 'synthetic-a@auth-proof.example.org';
   const aliasB = 'synthetic-b@auth-proof.example.org';
+  const aliasC = 'synthetic-c@auth-proof.example.org';
   const challengeA = await aliasAndChallenge(userA, aliasA);
   const challengeB = await aliasAndChallenge(userB, aliasB);
+  const challengeC = await aliasAndChallenge(userC, aliasC);
   assert.notEqual(challengeA, challengeB);
   await verifySession(userA, challengeA);
   await verifySession(userB, challengeB);
+  await verifySession(userC, challengeC);
+  const afterC = await admin.auth.admin.getUserById(userC);
+  if (afterC.error) throw afterC.error;
+  assert.equal(afterC.data.user.phone_confirmed_at || null, null,
+    'Provisioning must not silently mark an originally unconfirmed phone confirmed');
 
   const replay = await makeUserClient().auth.verifyOtp({
     type: 'magiclink', token_hash: challengeA,
@@ -109,7 +122,7 @@ try {
   assert.equal(foundA.data.user.id, userA);
   assert.equal(foundB.data.user.id, userB);
 
-  console.info('PASS: local-only phone Auth UUID retained, Supabase magiclink exchange, refresh, replay denial and two-account separation');
+  console.info('PASS: local-only original Auth UUIDs retained, both confirmed and unconfirmed phone variants, refresh, replay denial and account separation');
 } finally {
   await Promise.all(cleanup.map(id => admin.auth.admin.deleteUser(id).catch(() => undefined)));
 }
