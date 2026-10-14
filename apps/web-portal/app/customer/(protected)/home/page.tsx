@@ -33,24 +33,22 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/home" />
       <section className="relative isolate overflow-hidden rounded-[22px] bg-[linear-gradient(112deg,#071B3B_0%,#103B73_65%,#2584CF_100%)] p-5 text-white shadow-[0_14px_36px_rgba(17,54,104,.16)] sm:p-7">
         <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[#76C8FF]/20 blur-3xl"/>
-        <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(340px,.75fr)] lg:items-center">
-          <div className="space-y-4">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-semibold tracking-wide text-[#D8EEFF]"><ShieldCheck className="h-3.5 w-3.5"/> YOUR INSURANCE, SIMPLIFIED</span>
-            <div>
-              <h1 className="text-[clamp(27px,3vw,39px)] font-extrabold tracking-tight">Welcome back, {account.contact_name?.split(" ")[0] || "Customer"}!</h1>
-              <p className="mt-2 max-w-lg text-[13px] text-[#D9EAFD]">Stay covered, renew on time and manage your vehicles with ease.</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Link href={{pathname:"/customer/insurance-quote",query:accountQuery}} className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-[#104B88] shadow-sm transition hover:bg-[#E8F4FF]">Get insurance quote <ArrowRight className="h-4 w-4"/></Link>
-              <Link href={{pathname:"/customer/renewals",query:accountQuery}} className="inline-flex items-center gap-2 rounded-xl border border-white/35 bg-white/10 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-white/20">Renew a policy <RefreshCcw className="h-4 w-4"/></Link>
-            </div>
+        <div className="relative space-y-4">
+          <h1 className="text-[clamp(27px,3vw,39px)] font-extrabold tracking-tight">Welcome back, {account.contact_name?.split(" ")[0] || "Customer"}!</h1>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            <Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="group inline-flex flex-col gap-0.5 hover:opacity-85">
+              <strong className="text-2xl font-extrabold leading-tight">{covered} / {vehicles.length}</strong>
+              <span className="text-[11px] text-[#D9EAFD]">Vehicles covered</span>
+            </Link>
+            <div aria-hidden="true" className="h-9 w-px bg-white/30"/>
+            <Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="group inline-flex flex-col gap-0.5 hover:opacity-85">
+              <strong className="text-2xl font-extrabold leading-tight">{coverage}%</strong>
+              <span className="text-[11px] text-[#D9EAFD]">Fleet protection</span>
+            </Link>
           </div>
-          <div className="space-y-3">
-            <div className="flex justify-end"><Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#E3F2FF] hover:text-white">View my fleet <ArrowRight className="h-4 w-4"/></Link></div>
-            <div className="grid grid-cols-2 gap-3">
-              <Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="rounded-2xl border border-white/25 bg-white/15 p-4 shadow-lg backdrop-blur-sm transition hover:bg-white/25"><span className="mb-3 grid h-10 w-10 place-items-center rounded-xl bg-[#2C82D4]"><CarFront className="h-5 w-5 text-white"/></span><strong className="block text-2xl font-extrabold">{covered} / {vehicles.length}</strong><span className="mt-1 block text-[11px] text-[#E0EFFF]">Vehicles covered</span></Link>
-              <Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="rounded-2xl border border-white/25 bg-white/15 p-4 shadow-lg backdrop-blur-sm transition hover:bg-white/25"><span className="mb-3 grid h-10 w-10 place-items-center rounded-xl bg-[#138E87]"><ShieldCheck className="h-5 w-5 text-white"/></span><strong className="block text-2xl font-extrabold">{coverage}%</strong><span className="mt-1 block text-[11px] text-[#E0EFFF]">Fleet protection</span></Link>
-            </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href={{pathname:"/customer/insurance-quote",query:accountQuery}} className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-[#104B88] shadow-sm transition hover:bg-[#E8F4FF]">Get insurance quote <ArrowRight className="h-4 w-4"/></Link>
+            <Link href={{pathname:"/customer/renewals",query:accountQuery}} className="inline-flex items-center gap-2 rounded-xl border border-white/35 bg-white/10 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-white/20">Renew a policy <RefreshCcw className="h-4 w-4"/></Link>
           </div>
         </div>
       </section>
