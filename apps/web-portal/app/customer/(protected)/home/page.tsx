@@ -31,7 +31,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
   return (
     <div className="space-y-4 pb-6">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/home" />
-      <section className="relative isolate overflow-hidden rounded-[22px] bg-[#071B3B] bg-[linear-gradient(90deg,rgba(5,23,53,.92)_0%,rgba(8,37,78,.76)_52%,rgba(8,45,93,.46)_100%),url("/assets/customerhome.jpeg")] bg-cover bg-center bg-no-repeat p-5 text-white shadow-[0_14px_36px_rgba(17,54,104,.16)] sm:p-7">
+      <section className="relative isolate overflow-hidden rounded-[22px] bg-[#071B3B] bg-cover bg-center bg-no-repeat p-5 text-white shadow-[0_14px_36px_rgba(17,54,104,.16)] sm:p-7" style={{ backgroundImage: "linear-gradient(90deg, rgba(5,23,53,.92) 0%, rgba(8,37,78,.76) 52%, rgba(8,45,93,.46) 100%), url('/assets/customerhome.jpeg')" }}>
         <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[#76C8FF]/20 blur-3xl"/>
         <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(340px,.75fr)] lg:items-center">
           <div className="space-y-4">
