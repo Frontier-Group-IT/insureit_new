@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, CalendarClock, CarFront, ShieldCheck, HeartPulse, Umbrella, Bike, Plane, Truck, HardHat, Boxes } from "lucide-react";
+import { AlertTriangle, ArrowRight, CalendarClock, CarFront, ShieldCheck, HeartPulse, Umbrella, Bike, Plane, Truck, HardHat, Boxes, RefreshCcw, FileText, ChevronRight } from "lucide-react";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
 import { ManufacturerMark } from "../vehicles/customer-vehicles-register";
 import { customerPolicyTone, loadCustomerWebPolicies, loadCustomerWebVehicles, resolveCustomerWebScope } from "@/lib/customer-web-data";
