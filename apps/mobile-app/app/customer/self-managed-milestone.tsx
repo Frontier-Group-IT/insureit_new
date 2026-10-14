@@ -473,10 +473,14 @@ function DeliveryOrderDocuments({ claimId, customerId }: { claimId: string; cust
     if (!session?.user) return { ok: false, document: null as DeliveryOrderDocumentRecord | null };
     const body = await readClaimDocumentBytes(file.uri);
     if (body.byteLength > MAX_DELIVERY_ORDER_DOCUMENT_SIZE_BYTES) return { ok: false, document: null as DeliveryOrderDocumentRecord | null };
-    const extension = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
-    const storagePath = `${customerId}/${claimId}/delivery-order/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-    const uploadResult = await supabase.storage.from('claim-documents').upload(storagePath, body, { contentType: file.mimeType ?? 'application/octet-stream', upsert: false });
-    if (uploadResult.error) return { ok: false, document: null as DeliveryOrderDocumentRecord | null };
+    const descriptor = resolveClaimUploadDescriptor({ name: file.name, mimeType: file.mimeType });
+    if (!descriptor.ok) return { ok: false, document: null as DeliveryOrderDocumentRecord | null, message: descriptor.message };
+    const storagePath = `${customerId}/${claimId}/delivery-order/${Date.now()}-${Math.random().toString(36).slice(2)}.${descriptor.storageExtension}`;
+    const uploadResult = await supabase.storage.from('claim-documents').upload(storagePath, body, { contentType: descriptor.mimeType, upsert: false });
+    if (uploadResult.error) {
+      logClaimUploadFailure('delivery_order', 'storage', uploadResult.error);
+      return { ok: false, document: null as DeliveryOrderDocumentRecord | null, message: claimUploadCustomerError(uploadResult.error) };
+    }
     const { data, error: insertError } = await supabase.from('claim_documents').insert({
       claim_id: claimId, customer_id: customerId, document_type: documentType, file_name: file.name,
       storage_bucket: 'claim-documents', storage_path: storagePath, mime_type: file.mimeType ?? null,
@@ -508,7 +512,7 @@ function DeliveryOrderDocuments({ claimId, customerId }: { claimId: string; cust
     setUploading(true);
     try {
       const uploaded = await uploadFile(documentType, file);
-      if (!uploaded.ok || !uploaded.document) return setError(`${file.name} could not be uploaded. Please try again.`);
+      if (!uploaded.ok || !uploaded.document) return setError(uploaded.message ?? `${file.name} could not be uploaded. Please try again.`);
       if (previous) await removeDocument(previous);
       setDocuments((current) => [uploaded.document!, ...current.filter((item) => item.id !== previous?.id)]);
       setSuccess(`${documentType} ${previous ? 'replaced' : 'uploaded'} successfully.`);
@@ -602,13 +606,17 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
     if (!session?.user) return { ok: false, document: null as ApprovalDocumentRecord | null };
     const body = await readClaimDocumentBytes(file.uri);
     if (body.byteLength > MAX_APPROVAL_PDF_SIZE_BYTES) return { ok: false, document: null as ApprovalDocumentRecord | null };
-    const extension = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
-    const storagePath = `${customerId}/${claimId}/work-approval/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+    const descriptor = resolveClaimUploadDescriptor({ name: file.name, mimeType: file.mimeType });
+    if (!descriptor.ok) return { ok: false, document: null as ApprovalDocumentRecord | null, message: descriptor.message };
+    const storagePath = `${customerId}/${claimId}/work-approval/${Date.now()}-${Math.random().toString(36).slice(2)}.${descriptor.storageExtension}`;
     const uploadResult = await supabase.storage.from('claim-documents').upload(storagePath, body, {
-      contentType: file.mimeType ?? 'application/octet-stream',
+      contentType: descriptor.mimeType,
       upsert: false,
     });
-    if (uploadResult.error) return { ok: false, document: null as ApprovalDocumentRecord | null };
+    if (uploadResult.error) {
+      logClaimUploadFailure('work_approval', 'storage', uploadResult.error);
+      return { ok: false, document: null as ApprovalDocumentRecord | null, message: claimUploadCustomerError(uploadResult.error) };
+    }
     const { data, error: insertError } = await supabase.from('claim_documents').insert({
       claim_id: claimId,
       customer_id: customerId,
@@ -662,8 +670,9 @@ function WorkApprovalPdfUpload({ claimId, customerId }: { claimId: string; custo
       if (previous) await removeRows([previous]);
       setDocuments((current) => [uploaded.document!, ...current.filter((item) => item.id !== previous?.id)]);
       setSuccess(`${key === 'insurer' ? 'Insurer Approval Letter' : 'Surveyor Approval / Report'} ${previous ? 'replaced' : 'uploaded'} successfully.`);
-    } catch {
-      setError(`${file.name} could not be uploaded. Please try again.`);
+    } catch (error) {
+      logClaimUploadFailure('work_approval', 'local_read', error);
+      setError(claimUploadFileReadMessage(file.name));
     } finally {
       setUploading(false);
     }
@@ -866,7 +875,7 @@ function FinalBillUpload({ claimId }: { claimId: string }) {
 
       newStoragePath = `${resolvedCustomerId}/${claimId}/billing/${Date.now()}-${Math.random().toString(36).slice(2)}.${normalizedExtension}`;
       const uploadResult = await supabase.storage.from('claim-documents').upload(newStoragePath, body, { contentType, upsert: false });
-      if (uploadResult.error) return setError('The bill could not be uploaded. Please try again.');
+      if (uploadResult.error) { logClaimUploadFailure('final_bill', 'storage', uploadResult.error); return setError(claimUploadCustomerError(uploadResult.error)); }
 
       const { data: inserted, error: insertError } = await supabase.from('claim_documents').insert({
         claim_id: claimId,
