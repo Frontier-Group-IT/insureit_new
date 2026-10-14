@@ -10,7 +10,24 @@
     },
     "production": {
       "channel": "production",
-      "autoIncrement": false
+      "autoIncrement": false,
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_SESSION_BRIDGE_ENABLED": "false"
+      }
+    },
+    "firebase-internal-test": {
+      "distribution": "internal",
+      "channel": "firebase-internal",
+      "autoIncrement": false,
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_SESSION_BRIDGE_ENABLED": "true"
+      }
     }
   }
 }
