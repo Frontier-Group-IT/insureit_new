@@ -1,5 +1,14 @@
 name: Verify Customer Firebase OTP Readiness
 on:
+  push:
+    branches:
+      - feature/customer-firebase-otp-gateway-0-3-2-20261014
+    paths:
+      - 'apps/mobile-app/**'
+      - 'supabase/functions/customer-firebase-*/**'
+      - 'supabase/functions/_shared/customer-firebase-*.mjs'
+      - 'package-lock.json'
+      - '.github/workflows/verify-customer-firebase-otp.yml'
   pull_request:
     paths:
       - 'apps/mobile-app/lib/firebase-*'
