@@ -7,7 +7,7 @@ import { ArrowLeft, ChevronRight, Compass } from "lucide-react";
 const labels: Record<string, string> = {
   home: "Home",
   vehicles: "Vehicles",
-  policies: "Policies",
+  policies: "My Policies",
   renewals: "Renewals",
   claims: "Claims",
   exchange: "Exchange",
