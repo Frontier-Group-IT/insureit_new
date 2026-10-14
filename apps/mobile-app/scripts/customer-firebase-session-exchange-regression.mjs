@@ -39,8 +39,8 @@ test('Edge protects identity and does not issue tokens when phone-only remains u
   assert.match(edge, /CUSTOMER_FIREBASE_SESSION_BRIDGE_ENABLED/);
   assert.match(edge, /verifyIdToken\(bearer\[1\], true\)/);
   assert.match(edge, /checkCustomerSessionEligibility/);
+  assert.match(edge, /issueExistingCustomerSessionChallenge/);
   assert.match(edge, /session_identity_not_provisioned/);
-  assert.match(edge, /generated\.user\.id !== gate\.customerProfileId/);
   assert.match(edge, /"cache-control": "no-store, private"/);
   assert.doesNotMatch(edge, /auth\.admin\.updateUserById\s*\(/);
 });
