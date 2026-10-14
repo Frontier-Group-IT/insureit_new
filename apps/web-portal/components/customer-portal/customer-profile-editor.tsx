@@ -80,26 +80,26 @@ export function CustomerProfileEditor({
             {message ? <p className="mt-2 text-right text-[10px] font-bold text-[#0B7A54]">{message}</p> : null}
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="flex min-w-0 gap-3 rounded-xl bg-[#F6F9FD] p-3">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#E4F0FF] text-[#176BD4]"><Phone className="h-4 w-4" /></span>
-              <div className="min-w-0"><p className="text-[10px] text-[#71839A]">Mobile Number</p><p className="mt-1 break-all text-[11px] font-black text-[#10213D]">{phone || "—"}</p></div>
+          <div className="mt-4 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="flex min-w-0 items-center gap-2.5 rounded-xl bg-[#F6F9FD] px-3 py-2.5">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#E4F0FF] text-[#176BD4]"><Phone className="h-3.5 w-3.5" /></span>
+              <div className="min-w-0"><p className="text-[9.5px] font-bold text-[#71839A]">Mobile Number</p><p className="mt-0.5 break-all text-[11px] font-black text-[#10213D]">{phone || "—"}</p></div>
             </div>
-            <div className="flex min-w-0 gap-3 rounded-xl bg-[#F6F9FD] p-3">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#E4F0FF] text-[#176BD4]"><Mail className="h-4 w-4" /></span>
-              <div className="min-w-0"><p className="text-[10px] text-[#71839A]">Email Address</p><p className="mt-1 break-all text-[11px] font-black text-[#10213D]">{email || "—"}</p></div>
+            <div className="flex min-w-0 items-center gap-2.5 rounded-xl bg-[#F6F9FD] px-3 py-2.5">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#E4F0FF] text-[#176BD4]"><Mail className="h-3.5 w-3.5" /></span>
+              <div className="min-w-0"><p className="text-[9.5px] font-bold text-[#71839A]">Email Address</p><p className="mt-0.5 break-all text-[11px] font-black text-[#10213D]">{email || "—"}</p></div>
             </div>
-            <div className="flex min-w-0 gap-3 rounded-xl bg-[#F6F9FD] p-3">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#E4F0FF] text-[#176BD4]"><MapPin className="h-4 w-4" /></span>
+            <div className="flex min-w-0 items-start gap-2.5 rounded-xl bg-[#F6F9FD] px-3 py-2.5">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#E4F0FF] text-[#176BD4]"><MapPin className="h-3.5 w-3.5" /></span>
               <div className="min-w-0">
-                <p className="text-[10px] text-[#71839A]">Location</p>
-                <p className="mt-1 text-[11px] font-black text-[#10213D]">{[city, state].filter(Boolean).join(", ") || "—"}</p>
-                {address ? <p className="mt-1 text-[10px] leading-4 text-[#71839A]">{address}{postalCode ? ` · ${postalCode}` : ""}</p> : null}
+                <p className="text-[9.5px] font-bold text-[#71839A]">Location</p>
+                <p className="mt-0.5 text-[11px] font-black text-[#10213D]">{[city, state].filter(Boolean).join(", ") || "—"}</p>
+                {address ? <p className="mt-0.5 text-[9.5px] font-bold leading-4 text-[#71839A]">{address}{postalCode ? ` · ${postalCode}` : ""}</p> : null}
               </div>
             </div>
-            <div className="flex min-w-0 gap-3 rounded-xl bg-[#F6F9FD] p-3">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#E4F0FF] text-[#176BD4]"><FileText className="h-4 w-4" /></span>
-              <div className="min-w-0"><p className="text-[10px] text-[#71839A]">Total Documents</p><p className="mt-1 text-[11px] font-black text-[#10213D]">{documentsCount}</p></div>
+            <div className="flex min-w-0 items-center gap-2.5 rounded-xl bg-[#F6F9FD] px-3 py-2.5">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#E4F0FF] text-[#176BD4]"><FileText className="h-3.5 w-3.5" /></span>
+              <div className="min-w-0"><p className="text-[9.5px] font-bold text-[#71839A]">Total Documents</p><p className="mt-0.5 text-[11px] font-black text-[#10213D]">{documentsCount}</p></div>
             </div>
           </div>
         </>
