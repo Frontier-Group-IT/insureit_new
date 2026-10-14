@@ -111,6 +111,16 @@ Deno.serve(async (request: Request) => {
       return response(gate.reason === "session_identity_not_provisioned" ? 409 : 403, gate.reason);
     }
 
+    // Privileged Postgres transaction enforces at most one challenge per UID
+    // per 120 seconds. If its reviewed migration is not deployed, FAIL CLOSED.
+    // No in-memory or per-Edge-instance limiter can protect concurrent calls.
+    const limit = await db.rpc("customer_firebase_session_exchange_consume", {
+      p_firebase_uid: decoded.uid,
+      p_interval_seconds: 120,
+    });
+    if (limit.error) throw new Error("Session issuance limit unavailable");
+    if (limit.data !== true) return response(429, "too_many_attempts");
+
     // Supabase Auth, NOT Firebase, issues the legitimate one-time sign-in
     // challenge. Email MUST preexist on this exact Auth UUID. generateLink
     // can create a new user for unknown emails, therefore NEVER accept a
