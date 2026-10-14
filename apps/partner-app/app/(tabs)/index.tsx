@@ -265,7 +265,7 @@ export default function PartnerHomeScreen() {
 
                 <View style={styles.chartSide}>
                   <MiniBusinessTrend values={trend.map((item) => Number(item.premium || 0))} />
-                  <PartnerBusinessGrowthIcon size={30} />
+                  <PartnerBusinessGrowthIcon size={64} />
                 </View>
               </View>
 
