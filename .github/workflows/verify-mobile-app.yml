@@ -53,6 +53,9 @@ jobs:
       - name: Customer Firebase session gate policy regression (no live auth)
         run: node --test apps/mobile-app/scripts/customer-firebase-session-bridge-policy.test.mjs
 
+      - name: Customer Firebase session-exchange client safety regression
+        run: node --test apps/mobile-app/scripts/customer-firebase-session-exchange-regression.mjs
+
       - name: Detect generated lockfile changes
         id: lockfile
         shell: bash
