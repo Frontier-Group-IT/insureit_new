@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 const read = (path) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const screens = [
   ['Work Approval / claim action documents', 'components/internal-claim-stage-one.tsx', 1],
+  ['Actual self-managed Work Approval, Assessment and Final Bill', 'app/customer/self-managed-milestone.tsx', 3],
   ['Spot Intimation / stage tracker', 'components/internal-claim-stage-one-tracker.tsx', 1],
   ['Self-managed claim stages', 'app/customer/self-managed-claim.tsx', 1],
   ['Claim Intimation single + multi', 'components/external-claim-document-tabs.tsx', 2],
@@ -20,6 +21,10 @@ for (const [area, path, minimumCalls] of screens) {
   assert.ok(calls.length >= minimumCalls, area + ' must read picker bytes via Expo FileSystem');
   assert.doesNotMatch(content, /fetch\((?:file|asset|pickedFile|uploadUri|uri)\.uri\)|fetch\(uploadUri\)|fetch\(uri\)/, area);
 }
+const actualWorkApproval = read('app/customer/self-managed-milestone.tsx');
+assert.match(actualWorkApproval, /function WorkApprovalPdfUpload/);
+assert.match(actualWorkApproval, /logClaimUploadFailure\('work_approval', 'storage'/);
+assert.doesNotMatch(actualWorkApproval, /fetch\(file\.uri\)/);
 const kyc = read('app/customer/kyc/individual.tsx');
 assert.match(kyc, /readPreparedCustomerDocument\(file\.uri\)/);
 const helper = read('lib/claim-document-upload.ts');
