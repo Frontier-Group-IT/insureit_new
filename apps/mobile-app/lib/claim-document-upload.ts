@@ -1,3 +1,5 @@
+import { File } from 'expo-file-system';
+
 export type ClaimUploadDescriptor =
   | { ok: true; mimeType: string; storageExtension: string }
   | { ok: false; message: string };
@@ -164,4 +166,13 @@ export function logClaimUploadFailure(area: string, step: 'local_read' | 'storag
   const category = step === 'storage' ? classifyClaimUploadStorageError(error) : step;
   // Never log file names, document bytes, object paths, customer IDs or tokens.
   console.warn('[customer-document-upload] operation failed', { area, step, category, status });
+}
+
+/** Read the DocumentPicker cached file using the already-installed native Expo FileSystem API. */
+export async function readClaimDocumentBytes(uri: string): Promise<ArrayBuffer> {
+  const file = new File(uri);
+  if (!file.exists) throw new Error('Document picker file is unavailable');
+  const bytes = await file.bytes();
+  if (!bytes.byteLength) throw new Error('Document picker file is empty');
+  return new Uint8Array(bytes).buffer;
 }
