@@ -76,6 +76,7 @@ The private-agent rollout is deliberately isolated from the working Sarvam manag
 The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` remains the compact rule/index surface.
 
 ### Latest implementation ledger
+- **2026-10-14 — Customer document upload failure hardening:** branch `fix/customer-document-upload-diagnostics-20261014`; normalizes document MIME types, separates local read/storage/metadata errors, adds privacy-safe diagnostics, and guards native Storage XHR status 0. **IMPLEMENTED ON BRANCH; PR/CI/DEVICE VERIFICATION/MERGE/OTA PENDING.** No DB/RLS/APK/AAB. Details: `docs/CUSTOMER_DOCUMENT_UPLOAD_FIX_2026_10_14.md`.
 - **2026-10-12 — Customer Home permanent Start Claim:** branch `fix/customer-home-permanent-start-claim-20261012`; keeps Start New Claim visible irrespective of open claims and separates Track Existing Claims, preserving scoped navigation. CI regression added. **BRANCH IMPLEMENTED; PR/CI/MERGE/DEPLOY/REAL-BROWSER VERIFICATION PENDING.** No DB/RLS/native changes. See `docs/CUSTOMER_HOME_START_CLAIM_2026_10_12.md`.
 
 - **2026-10-12 — Customer Home action-first redesign:** branch `ui/customer-action-first-home-20261012`; replaces redundant KPIs and misleading support buttons with protection hero, scoped uncovered vehicle/renewal tasks, claim progress and services. **IMPLEMENTED ON BRANCH; PR/CI/MERGE/DEPLOY/REAL-BROWSER VERIFICATION PENDING.** No schema/RLS/APK/AAB. See `docs/CUSTOMER_ACTION_FIRST_HOME_2026_10_12.md`.
