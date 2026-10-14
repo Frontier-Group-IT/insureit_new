@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { checkCustomerSessionEligibility, FIREBASE_CUSTOMER_PROJECT } from '../../../supabase/functions/_shared/customer-firebase-session-policy.mjs';
 
@@ -96,4 +97,19 @@ test('blocks anonymous, banned and missing auth users', () => {
   verify(({ authUser }) => { authUser.is_anonymous = true; }, 'supabase_user_mismatch');
   verify(({ authUser }) => { authUser.banned_until = '2099-01-01T00:00:00Z'; }, 'supabase_user_mismatch');
   verify(input => { input.authUser = null; }, 'supabase_user_mismatch');
+});
+
+test('Edge candidate is off by default and cannot mutate/create Auth users', () => {
+  const source = readFileSync(
+    new URL('../../../supabase/functions/customer-firebase-session-bridge/index.ts', import.meta.url),
+    'utf8',
+  );
+  assert.match(source, /CUSTOMER_FIREBASE_SESSION_BRIDGE_ENABLED/);
+  assert.match(source, /!== "true"/);
+  assert.match(source, /verifyIdToken\(bearer\[1\], true\)/);
+  assert.match(source, /auth\.admin\.getUserById/);
+  assert.match(source, /auth\.admin\.generateLink/);
+  assert.match(source, /generated\.user\.id !== gate\.customerProfileId/);
+  assert.doesNotMatch(source, /auth\.admin\.(?:createUser|updateUserById|deleteUser)\s*\(/);
+  assert.doesNotMatch(source, /signInWithPassword|setSession\s*\(/);
 });
