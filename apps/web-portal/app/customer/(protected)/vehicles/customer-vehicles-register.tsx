@@ -62,7 +62,7 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
         <span className="grid h-7 w-7 place-items-center rounded-full border border-[#E1EAF5] text-[#176CE7]"><ChevronRight className="h-4 w-4"/></span>
       </button>)}
     </section>
-    {uninsuredCount>0?<section className="flex items-center justify-between gap-3 rounded-2xl border border-[#F3D8DC] bg-[#FFF7F8] px-4 py-3">\n      <div className="flex min-w-0 items-center gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#FFF0F1] text-[#C2414D]"><ShieldX className="h-5 w-5"/></span><div><strong className="block text-[13px] text-[#7E2430]">{uninsuredCount} vehicle{uninsuredCount===1?"":"s"} need{uninsuredCount===1?"s":""} insurance attention</strong><span className="text-[12px] text-[#9B5660]">Review vehicles without active cover.</span></div></div>\n      <button type="button" onClick={()=>{setStatusFilter("uninsured");setPage(1);}} className="shrink-0 rounded-lg bg-white px-3 py-2 text-[12px] font-semibold text-[#C2414D] shadow-sm">Review</button>\n    </section>:null}\n    <section className="rounded-2xl border border-[#DFE9F5] bg-white p-3 shadow-sm sm:p-4">
+    <section className="rounded-2xl border border-[#DFE9F5] bg-white p-3 shadow-sm sm:p-4">
       <header className="mb-3 flex flex-wrap items-center gap-2">
         <h2 className="mr-auto flex items-center gap-2 text-[17px] font-bold text-[#102B54]"><CarFront className="h-6 w-6 text-[#176CE7]"/>Vehicle Register</h2>
         <label className="flex w-full items-center gap-2 rounded-lg border border-[#DCE7F5] bg-[#FAFCFF] px-3 py-2 focus-within:border-[#4E95E9] sm:ml-auto sm:w-[320px] lg:w-[370px]">
