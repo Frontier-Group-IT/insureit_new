@@ -38,13 +38,14 @@ function formatBlockers(items: Blocker[]) {
 async function deleteAuthBackedProfile(profileId: string) {
   const admin = createSupabaseAdminClient();
   const { data: authLookup } = await admin.auth.admin.getUserById(profileId);
+
+  const { error: profileError } = await admin.from("profiles").delete().eq("id", profileId);
+  if (profileError) throw new Error("The portal profile could not be permanently removed.");
+
   if (authLookup?.user) {
-    const { error } = await admin.auth.admin.deleteUser(profileId);
-    if (error) throw new Error("The portal login could not be permanently removed.");
-    return;
+    const { error: authError } = await admin.auth.admin.deleteUser(profileId);
+    if (authError) throw new Error("The portal profile was removed, but the authentication user could not be removed. Retry the deletion from IT administration.");
   }
-  const { error } = await admin.from("profiles").delete().eq("id", profileId);
-  if (error) throw new Error("The portal profile could not be permanently removed.");
 }
 
 async function deleteUser(profileId: string, actorId: string): Promise<PermanentDeleteResult> {
@@ -145,6 +146,19 @@ async function deletePartner(intermediaryId: string, partnerRecordId?: string): 
     return { status: "error", message: `Cannot permanently delete this partner because protected business history exists in ${formatBlockers(intermediaryBlockers)}.` };
   }
 
+  const { data: portalAccounts } = await admin
+    .from("intermediary_portal_accounts")
+    .select("auth_user_id")
+    .eq("intermediary_id", intermediaryId)
+    .returns<Array<{ auth_user_id: string }>>();
+
+  for (const portalAccount of portalAccounts ?? []) {
+    const profileBlockers = await blockers("profiles", portalAccount.auth_user_id);
+    if (profileBlockers.length) {
+      return { status: "error", message: "This partner has a portal login referenced by protected history. Disable the login instead of deleting the partner." };
+    }
+  }
+
   if (partnerRecordId) {
     const partnerBlockers = await blockers("partners", partnerRecordId);
     const cleanupTables = new Set(["intermediary_onboarding_applications", "posp_misp_onboarding_profiles", "intermediary_group_memberships"]);
@@ -159,6 +173,10 @@ async function deletePartner(intermediaryId: string, partnerRecordId?: string): 
 
     const { error: partnerDeleteError } = await admin.from("partners").delete().eq("id", partnerRecordId);
     if (partnerDeleteError) return { status: "error", message: "The partner remains linked to protected business records and cannot be permanently deleted." };
+  }
+
+  for (const portalAccount of portalAccounts ?? []) {
+    await deleteAuthBackedProfile(portalAccount.auth_user_id);
   }
 
   const { error: intermediaryDeleteError } = await admin.from("intermediaries").delete().eq("id", intermediaryId);
