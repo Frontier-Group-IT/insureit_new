@@ -50,6 +50,9 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Customer Firebase session gate policy regression (no live auth)
+        run: node --test apps/mobile-app/scripts/customer-firebase-session-bridge-policy.test.mjs
+
       - name: Detect generated lockfile changes
         id: lockfile
         shell: bash
