@@ -44,10 +44,17 @@ export async function createBusinessGroup(formData: FormData) {
   const profile = await requireIntermediaryGroupManager();
   const groupName = text(formData, "group_name");
   const loginEmail = text(formData, "login_email").toLowerCase();
+  const dedicated = text(formData, "onboarding_surface") === "dedicated";
+  const adminName = text(formData, "admin_name");
+  const address = text(formData, "address");
+  const city = text(formData, "city");
+  const state = text(formData, "state");
+  const postalCode = text(formData, "postal_code");
   const phone = text(formData, "phone");
   const partnerIds = ids(formData, "partner_id");
 
   if (!groupName) return fail("Group name is required.");
+  if (dedicated && (!adminName || !address || !city || !state || !/^[0-9]{6}$/.test(postalCode) || text(formData,"admin_role") !== "group_admin")) return redirect(`/intermediaries/groups/new?error=${encodeURIComponent("Complete administrator, address and PIN details.")}`);
   if (!email(loginEmail)) return fail("Enter a valid Group email address.");
   if (!phoneNumber(phone)) return fail("Enter a valid Group phone number.");
   if (partnerIds.length && !(await canAccessPartners(profile, partnerIds))) {
@@ -74,7 +81,7 @@ export async function createBusinessGroup(formData: FormData) {
   const inviteOptions = siteUrl
     ? {
         redirectTo: `${siteUrl}/auth/callback?next=/intermediary-portal`,
-        data: { full_name: groupName, role: "intermediary", portal_account_type: "group" },
+        data: { full_name: adminName || groupName, role: "intermediary", portal_account_type: "group" },
       }
     : { data: { full_name: groupName, role: "intermediary", portal_account_type: "group" } };
 
@@ -87,7 +94,7 @@ export async function createBusinessGroup(formData: FormData) {
   const now = new Date().toISOString();
   const { error: profileError } = await admin.from("profiles").upsert({
     id: profileId,
-    full_name: groupName,
+    full_name: adminName || groupName,
     role: "intermediary",
     email: loginEmail,
     phone,
@@ -115,6 +122,12 @@ export async function createBusinessGroup(formData: FormData) {
     return fail(`Business Group created, but login access could not be linked: ${mappingError.message}`);
   }
 
+  if (dedicated) {
+    const { error: contactError } = await admin.from("group_administrator_contacts").upsert({group_id:groupId,profile_id:profileId,admin_name:adminName,admin_email:loginEmail,admin_mobile:phone,address,city,state,postal_code:postalCode,updated_by:profile.id},{onConflict:"group_id"});
+    if (contactError) return redirect(`/intermediaries/groups/${groupId}?warning=${encodeURIComponent("Group created and invitation sent, but administrator address could not be saved. Please review.")}`);
+    revalidatePath(`/intermediaries/groups/${groupId}`);
+    redirect(`/intermediaries/groups/${groupId}?success=group_created`);
+  }
   done("business_group_created_invited");
 }
 
