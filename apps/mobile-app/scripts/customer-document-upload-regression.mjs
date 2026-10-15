@@ -8,6 +8,7 @@ const claim = read('components/external-claim-document-tabs.tsx');
 const vault = read('app/customer/upload-documents.tsx');
 const selfManaged = read('app/customer/self-managed-documents.tsx');
 const transport = read('lib/supabase.ts');
+const workApprovalUpload = read('components/internal-claim-stage-one.tsx');
 
 assert.match(helper, /import \{ File \} from 'expo-file-system'/);
 assert.match(helper, /export async function readClaimDocumentBytes/);
@@ -29,4 +30,8 @@ for (const [screen, content] of [['claim intimation', claim], ['self managed vau
 assert.match(transport, /if \(xhr\.status === 0\)/);
 assert.match(claim, /'metadata', error/);
 assert.match(selfManaged, /'metadata', insertError/);
+assert.match(workApprovalUpload, /lastStorageError = uploadError/);
+assert.match(workApprovalUpload, /claimUploadCustomerError\(lastStorageError\)/);
+assert.match(workApprovalUpload, /logClaimUploadFailure\('managed_claim_stage'/);
+assert.doesNotMatch(workApprovalUpload, /could not be uploaded\. Please try again\.\x60/);
 console.log('Customer document upload regression contracts passed.');
