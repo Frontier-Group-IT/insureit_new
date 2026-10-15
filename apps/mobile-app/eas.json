@@ -19,7 +19,7 @@
       }
     },
     "firebase-internal-test": {
-      "distribution": "internal",
+      "distribution": "store",
       "channel": "firebase-internal",
       "autoIncrement": false,
       "android": {
