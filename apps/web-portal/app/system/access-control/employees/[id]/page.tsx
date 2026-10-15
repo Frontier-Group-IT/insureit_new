@@ -135,21 +135,55 @@ function Roles({ role, roleV2 }: { role: AppRole; roleV2: (typeof roleMatrixV2)[
 }
 
 function Permissions({ profile, role, overrides, modules, activeModule }: { profile: ProfileRow; role: AppRole; overrides: Map<string, OverrideRow>; modules: string[]; activeModule: string }) {
-  return <>
-    <Card>
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"><div><h2 className="text-[15px] font-semibold text-[#17203A]">Permissions</h2><p className="mt-1 text-[10.5px] text-[#64748B]">Live employee overrides. Settings inherit from the assigned role unless a custom access level or scope is saved.</p></div><div className="flex flex-wrap gap-2">{modules.map((module) => <Link key={module} href={`?view=permissions&module=${encodeURIComponent(module)}`} className={`rounded-full px-3 py-1.5 text-[9px] font-semibold ${activeModule === module ? "bg-[#172554] text-white" : "bg-[#F1F5F9] text-[#475569]"}`}>{module}</Link>)}</div></div>
-      <div className="mt-3 space-y-2">{permissionDefinitions.filter((item) => item.module === activeModule).map((item) => { const current = overrides.get(item.capability); const inherited = rolePermissionAccess(role, item.capability); const returnTo = `/system/access-control/employees/${profile.id}?view=permissions&module=${encodeURIComponent(activeModule)}`; return <form key={item.capability} action={saveEmployeePermissionOverride} className="grid gap-3 rounded-xl border border-[#E2E8F0] bg-[#FAFCFF] p-3 xl:grid-cols-[minmax(280px,1fr)_150px_170px_minmax(210px,1fr)_150px_110px] xl:items-end">
-        <input type="hidden" name="profile_id" value={profile.id} /><input type="hidden" name="capability" value={item.capability} /><input type="hidden" name="return_to" value={returnTo} />
-        <div><div className="flex flex-wrap items-center gap-2"><h3 className="text-[11px] font-semibold text-[#17203A]">{item.label}</h3><Risk value={item.risk} /></div><p className="mt-1 text-[9px] leading-4 text-[#64748B]">{item.description}</p><p className="mt-1 text-[8.5px] font-medium text-[#4F46E5]">Role default: {inherited}</p></div>
-        <Field label="Access"><select name="access_level" defaultValue={current?.access_level ?? "inherit"} className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10px]"><option value="inherit">Inherit role</option><option value="none">No access</option><option value="view">View only</option><option value="edit">View & edit</option><option value="approve">Approve / critical</option></select></Field>
-        <Field label="Data scope"><select name="scope_type" defaultValue={current?.scope_type ?? "inherit"} className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10px]"><option value="inherit">Inherit role</option><option value="self">Own records</option><option value="hierarchy">Reporting hierarchy</option><option value="organization">Entire organisation</option></select></Field>
-        <Field label="Reason"><input name="reason" defaultValue={current?.reason ?? ""} placeholder="Why is this access needed?" className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10px]" /></Field>
-        <Field label="Expires"><input name="expires_at" type="datetime-local" defaultValue={toLocalInput(current?.expires_at)} className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10px]" /></Field>
-        <FormSubmitButton label="Save" pendingLabel="Saving…" className="inline-flex h-10 items-center justify-center rounded-xl bg-[#172554] px-4 text-[10px] font-semibold text-white" />
-      </form>; })}</div>
-    </Card>
-    <Card><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-[15px] font-semibold text-[#17203A]">Reset custom access</h2><p className="mt-1 text-[10px] text-[#64748B]">Remove every employee-specific override and return fully to role defaults.</p></div><form action={resetEmployeePermissionOverrides} className="flex flex-wrap gap-2"><input type="hidden" name="profile_id" value={profile.id} /><input name="reason" placeholder="Reason for reset" className="h-10 rounded-xl border border-[#CBD5E1] px-3 text-[10px]" /><FormSubmitButton label="Reset overrides" pendingLabel="Resetting…" className="inline-flex h-10 items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 text-[10px] font-semibold text-red-700" /></form></div></Card>
-  </>;
+  const modulePermissions = permissionDefinitions.filter((item) => item.module === activeModule);
+  return <div className="space-y-3">
+    <section className="rounded-xl border border-[#DCE4EF] bg-white p-3 shadow-sm sm:p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div><h2 className="text-[15px] font-bold text-[#17203A]">Permissions</h2><p className="mt-1 text-[11px] text-[#64748B]">Manage employee access by module. Role defaults apply unless overridden.</p></div>
+        <span className="rounded-lg bg-[#EDF3FB] px-3 py-1.5 text-[10px] font-semibold text-[#17365D]">{overrides.size} custom permission{overrides.size === 1 ? "" : "s"}</span>
+      </div>
+      <div className="mt-3 rounded-lg border border-[#E2E8F0] bg-[#FAFCFF] p-3">
+        <h3 className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[#64748B]">Select module</h3>
+        <nav aria-label="Permission modules" className="flex flex-wrap gap-1.5">
+          {modules.map((module) => <Link key={module} href={`?view=permissions&module=${encodeURIComponent(module)}`} aria-current={activeModule === module ? "page" : undefined} className={`rounded-lg border px-3 py-2 text-[10px] font-semibold transition ${activeModule === module ? "border-[#17365D] bg-[#17365D] text-white" : "border-[#E3EAF3] bg-white text-[#475569] hover:bg-[#EDF3FA]"}`}>{module}</Link>)}
+        </nav>
+      </div>
+    </section>
+    <section className="overflow-hidden rounded-xl border border-[#DCE4EF] bg-white shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E2E8F0] bg-[#F8FAFD] px-4 py-3">
+        <h3 className="text-[13px] font-bold text-[#17365D]">{activeModule} permissions</h3>
+        <span className="text-[10px] text-[#71839C]">{modulePermissions.length} permission{modulePermissions.length === 1 ? "" : "s"}</span>
+      </div>
+      <div className="space-y-2 p-3 sm:p-4">
+        {modulePermissions.map((item) => {
+          const current = overrides.get(item.capability);
+          const inherited = rolePermissionAccess(role, item.capability);
+          const returnTo = `/system/access-control/employees/${profile.id}?view=permissions&module=${encodeURIComponent(activeModule)}`;
+          return <form key={item.capability} action={saveEmployeePermissionOverride} className="rounded-lg border border-[#E2E8F0] bg-[#FCFDFF] p-3">
+            <input type="hidden" name="profile_id" value={profile.id} /><input type="hidden" name="capability" value={item.capability} /><input type="hidden" name="return_to" value={returnTo} />
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+              <div><div className="flex items-center gap-2"><h4 className="text-[12px] font-semibold text-[#17203A]">{item.label}</h4><Risk value={item.risk} /></div><p className="mt-1 text-[10px] text-[#64748B]">{item.description}</p><p className="mt-1 text-[9px] font-medium text-[#4F46E5]">Role default: {inherited}</p></div>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1.5fr_1fr_auto] xl:items-end">
+              <Field label="Access level"><select name="access_level" defaultValue={current?.access_level ?? "inherit"} className="h-9 w-full rounded-lg border border-[#CBD5E1] bg-white px-2 text-[11px]"><option value="inherit">Inherit role</option><option value="none">No access</option><option value="view">View only</option><option value="edit">View & edit</option><option value="approve">Approve / critical</option></select></Field>
+              <Field label="Data scope"><select name="scope_type" defaultValue={current?.scope_type ?? "inherit"} className="h-9 w-full rounded-lg border border-[#CBD5E1] bg-white px-2 text-[11px]"><option value="inherit">Inherit role</option><option value="self">Own records</option><option value="hierarchy">Reporting hierarchy</option><option value="organization">Entire organisation</option></select></Field>
+              <Field label="Reason"><input name="reason" defaultValue={current?.reason ?? ""} placeholder="Why is this access needed?" className="h-9 w-full rounded-lg border border-[#CBD5E1] bg-white px-2 text-[11px]" /></Field>
+              <Field label="Expires"><input name="expires_at" type="datetime-local" defaultValue={toLocalInput(current?.expires_at)} className="h-9 w-full rounded-lg border border-[#CBD5E1] bg-white px-2 text-[11px]" /></Field>
+              <FormSubmitButton label="Save" pendingLabel="Saving…" className="inline-flex h-9 items-center justify-center rounded-lg bg-[#17365D] px-4 text-[11px] font-semibold text-white" />
+            </div>
+          </form>;
+        })}
+      </div>
+    </section>
+    <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#E2E8F0] bg-white p-3 sm:p-4">
+      <div><h3 className="text-[13px] font-bold text-[#17203A]">Reset custom access</h3><p className="mt-1 text-[10px] text-[#64748B]">Remove all employee overrides and restore role defaults.</p></div>
+      <form action={resetEmployeePermissionOverrides} className="flex flex-wrap items-center gap-2">
+        <input type="hidden" name="profile_id" value={profile.id} />
+        <input name="reason" placeholder="Reason for reset" aria-label="Reason for reset" className="h-9 rounded-lg border border-[#CBD5E1] px-3 text-[11px]" />
+        <FormSubmitButton label="Reset overrides" pendingLabel="Resetting…" className="inline-flex h-9 items-center justify-center rounded-lg border border-red-200 bg-red-50 px-4 text-[11px] font-semibold text-red-700" />
+      </form>
+    </section>
+  </div>;
 }
 
 function DataScope({ role, overrides }: { role: AppRole; overrides: OverrideRow[] }) {
