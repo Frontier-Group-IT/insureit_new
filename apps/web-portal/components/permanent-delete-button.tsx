@@ -3,7 +3,9 @@
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { Trash2, TriangleAlert, X } from "lucide-react";
-import { permanentDeleteEntity, type PermanentDeleteKind } from "@/app/admin-permanent-delete-actions";
+
+type PermanentDeleteKind = "user" | "branch" | "partner";
+type PermanentDeleteResult = { status: "success" | "error"; message: string };
 
 export function PermanentDeleteButton({
   kind,
@@ -76,7 +78,16 @@ export function PermanentDeleteButton({
     setMessage(null);
     startTransition(async () => {
       try {
-        const result = await permanentDeleteEntity(kind, id, relatedId);
+        const response = await fetch("/api/admin/permanent-delete", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kind, id, relatedId }),
+        });
+        const result = await response.json().catch(() => null) as PermanentDeleteResult | null;
+        if (!result || (result.status !== "success" && result.status !== "error")) {
+          throw new Error("Invalid delete response");
+        }
         setMessage(result.message);
         setSuccess(result.status === "success");
         if (result.status === "success") {
@@ -89,7 +100,7 @@ export function PermanentDeleteButton({
     });
   }
 
-  const entityLabel = kind === "user" ? "employee" : kind;
+  const entityLabel = kind === "user" ? "user" : kind;
 
   return (
     <>
