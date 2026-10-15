@@ -45,6 +45,7 @@ export async function createBusinessGroup(formData: FormData) {
   const groupName = text(formData, "group_name");
   const loginEmail = text(formData, "login_email").toLowerCase();
   const dedicated = text(formData, "onboarding_surface") === "dedicated";
+  const createFail = (message: string): never => redirect(`${dedicated ? "/intermediaries/groups/new" : returnPath}?error=${encodeURIComponent(message)}`);
   const adminName = text(formData, "admin_name");
   const address = text(formData, "address");
   const city = text(formData, "city");
@@ -53,12 +54,12 @@ export async function createBusinessGroup(formData: FormData) {
   const phone = text(formData, "phone");
   const partnerIds = ids(formData, "partner_id");
 
-  if (!groupName) return fail("Group name is required.");
-  if (dedicated && (!adminName || !address || !city || !state || !/^[0-9]{6}$/.test(postalCode) || text(formData,"admin_role") !== "group_admin")) return redirect(`/intermediaries/groups/new?error=${encodeURIComponent("Complete administrator, address and PIN details.")}`);
-  if (!email(loginEmail)) return fail("Enter a valid Group email address.");
-  if (!phoneNumber(phone)) return fail("Enter a valid Group phone number.");
+  if (!groupName) return createFail("Group name is required.");
+  if (dedicated && (!adminName || !address || !city || !state || !/^[0-9]{6}$/.test(postalCode) || text(formData,"admin_role") !== "group_admin")) return createFail("Complete administrator, address and PIN details.");
+  if (!email(loginEmail)) return createFail("Enter a valid Group email address.");
+  if (!phoneNumber(phone)) return createFail("Enter a valid Group phone number.");
   if (partnerIds.length && !(await canAccessPartners(profile, partnerIds))) {
-    return fail("One or more selected Partners are outside your permitted hierarchy.");
+    return createFail("One or more selected Partners are outside your permitted hierarchy.");
   }
 
   const admin = createSupabaseAdminClient();
@@ -66,7 +67,7 @@ export async function createBusinessGroup(formData: FormData) {
     admin.from("portal_access_identities").select("profile_id").ilike("login_email", loginEmail).maybeSingle(),
     admin.from("profiles").select("id").ilike("email", loginEmail).maybeSingle(),
   ]);
-  if (existingEmail || existingProfileEmail) return fail("That email is already assigned to a portal user.");
+  if (existingEmail || existingProfileEmail) return createFail("That email is already assigned to a portal user.");
 
   const { data: groupId, error } = await admin.rpc("service_create_business_intermediary_group", {
     p_group_name: groupName,
@@ -74,7 +75,7 @@ export async function createBusinessGroup(formData: FormData) {
     p_partner_ids: partnerIds,
     p_actor_profile_id: profile.id,
   });
-  if (error || !groupId) return fail(groupError(error?.message ?? "Business Group could not be created."));
+  if (error || !groupId) return createFail(groupError(error?.message ?? "Business Group could not be created."));
 
   const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (productionHost ? `https://${productionHost}` : null);
@@ -87,7 +88,7 @@ export async function createBusinessGroup(formData: FormData) {
 
   const { data: invite, error: inviteError } = await admin.auth.admin.inviteUserByEmail(loginEmail, inviteOptions);
   if (inviteError || !invite.user?.id) {
-    return fail(`Business Group created, but the login invitation could not be sent: ${inviteError?.message ?? "unknown error"}`);
+    return createFail(`Business Group created, but the login invitation could not be sent: ${inviteError?.message ?? "unknown error"}`);
   }
 
   const profileId = invite.user.id;
@@ -103,7 +104,7 @@ export async function createBusinessGroup(formData: FormData) {
   }, { onConflict: "id" });
   if (profileError) {
     await admin.auth.admin.deleteUser(profileId);
-    return fail(`Business Group created, but the portal profile could not be prepared: ${profileError.message}`);
+    return createFail(`Business Group created, but the portal profile could not be prepared: ${profileError.message}`);
   }
 
   const { error: mappingError } = await admin.from("portal_access_identities").insert({
@@ -119,7 +120,7 @@ export async function createBusinessGroup(formData: FormData) {
   if (mappingError) {
     await admin.from("profiles").delete().eq("id", profileId);
     await admin.auth.admin.deleteUser(profileId);
-    return fail(`Business Group created, but login access could not be linked: ${mappingError.message}`);
+    return createFail(`Business Group created, but login access could not be linked: ${mappingError.message}`);
   }
 
   if (dedicated) {
