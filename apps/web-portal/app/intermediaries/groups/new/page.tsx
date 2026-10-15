@@ -32,8 +32,8 @@ export default async function NewBusinessGroup({searchParams}:{searchParams:Prom
    </section>
    <section className="overflow-hidden rounded-2xl border border-[#DFE5EE] bg-white">
     <h2 className="border-b border-[#E5EAF1] px-5 py-4 text-sm font-semibold"><span className="mr-3 rounded-lg bg-[#17365D] px-3 py-2 text-white">02</span> Address</h2>
-    <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3">
-     <label className="text-xs font-medium sm:col-span-2 xl:col-span-3">Address *<input name="address" required className={input}/></label>
+    <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-4">
+     <label className="text-xs font-medium sm:col-span-2 xl:col-span-1">Address *<input name="address" required className={input}/></label>
      <label className="text-xs font-medium">City *<input name="city" required className={input}/></label>
      <label className="text-xs font-medium">State *<input name="state" required className={input}/></label>
      <label className="text-xs font-medium">PIN Code *<input name="postal_code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required className={input}/></label>
