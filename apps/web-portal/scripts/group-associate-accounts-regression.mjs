@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 const root=path.resolve(process.cwd());
 const read=(p)=>fs.readFileSync(path.join(root,p),"utf8");
 const schema=read("../../supabase/migrations/20261015080033_group_associate_accounts.sql");
-const rollback=read("../../supabase/rollbacks/20261015130000_group_associate_accounts.sql");
+const rollback=read("../../supabase/rollbacks/20261015080033_group_associate_accounts.sql");
 const actions=read("app/intermediaries/groups/[id]/associate-accounts/actions.ts");
 const access=read("app/intermediaries/groups/group-associate-access.ts");
 const partnerRoute=read("app/partner/group-associates/page.tsx");
