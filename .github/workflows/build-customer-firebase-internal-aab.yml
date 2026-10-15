@@ -1,0 +1,138 @@
+name: Build Customer Firebase internal AAB (manual approval only)
+on:
+  workflow_dispatch:
+    inputs:
+      approval:
+        description: 'Type APPROVE_CUSTOMER_FIREBASE_INTERNAL_AAB_0_3_2_11 after explicit owner authorization'
+        required: true
+        type: string
+      source_sha:
+        description: 'Exact 40-char reviewed PR #3132 head SHA; must be current'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: customer-firebase-internal-aab
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN_CUSTOMER || secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+    steps:
+      - name: Require owner approval input before any build
+        shell: bash
+        env:
+          APPROVAL: ${{ inputs.approval }}
+          REVIEWED_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          [ "$APPROVAL" = "APPROVE_CUSTOMER_FIREBASE_INTERNAL_AAB_0_3_2_11" ] || {
+            echo "Refusing build: specific single-AAB approval missing." >&2; exit 1;
+          }
+          [[ "$REVIEWED_SHA" =~ ^[a-f0-9]{40}$ ]] || {
+            echo "Refusing build: exact reviewed commit SHA required." >&2; exit 1;
+          }
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 0
+
+      - name: Enforce reviewed PR head includes latest main
+        shell: bash
+        env:
+          REVIEWED_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          git fetch origin main feature/customer-firebase-otp-gateway-0-3-2-20261014
+          [ "$(git rev-parse HEAD)" = "$REVIEWED_SHA" ] || exit 1
+          [ "$(git rev-parse origin/feature/customer-firebase-otp-gateway-0-3-2-20261014)" = "$REVIEWED_SHA" ] || {
+            echo "PR head moved; require a newly reviewed source SHA." >&2; exit 1;
+          }
+          git merge-base --is-ancestor origin/main HEAD || {
+            echo "PR is behind current main. Reconcile and rerun CI before building." >&2; exit 1;
+          }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Validate Customer-only Firebase native configuration and internal AAB profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const app = require('./apps/mobile-app/app.json').expo;
+          const google = require('./apps/mobile-app/google-services.json');
+          const eas = require('./apps/mobile-app/eas.json');
+          if(app.android?.package !== 'com.insureit.mobile' || app.version !== '0.3.2' ||
+             app.android?.versionCode !== 11 || app.runtimeVersion?.policy !== 'appVersion' ||
+             google.project_info?.project_id !== 'insureit-customer-auth' ||
+             !google.client?.some(c => c.client_info?.android_client_info?.package_name === app.android.package) ||
+             eas.build?.production?.env?.EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_SESSION_BRIDGE_ENABLED !== 'false' ||
+             eas.build?.['firebase-internal-test']?.env?.EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_SESSION_BRIDGE_ENABLED !== 'true' ||
+             eas.build?.['firebase-internal-test']?.android?.buildType !== 'app-bundle' ||
+             eas.build?.['firebase-internal-test']?.distribution !== 'store') {
+            throw new Error('Customer Firebase internal AAB identity or feature-gate checks failed.');
+          }
+          console.log('Customer Android 0.3.2(11) native configuration approved for internal testing ONLY');
+          NODE
+
+      - name: Require configured Expo credentials (never output secret values)
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "${EXPO_TOKEN:-}" ] || { echo "Customer Expo token missing" >&2; exit 1; }
+          [ -n "${EXPO_PUBLIC_SUPABASE_URL:-}" ] || { echo "Backend URL missing" >&2; exit 1; }
+          [ -n "${EXPO_PUBLIC_SUPABASE_ANON_KEY:-}" ] || { echo "Publishable/anon key missing" >&2; exit 1; }
+
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Customer mobile typecheck and lint
+        run: |
+          npm run typecheck:mobile
+          npm run lint:mobile
+
+      - name: Validate linked EAS Customer project
+        working-directory: apps/mobile-app
+        run: |
+          npx eas-cli whoami
+          npx eas-cli project:info --non-interactive
+
+      - name: Build exactly one Firebase-enabled Android App Bundle (NO APK or publish)
+        working-directory: apps/mobile-app
+        run: |
+          set -euo pipefail
+          npx eas-cli build --platform android --profile firebase-internal-test --non-interactive --wait --json > customer-firebase-internal-aab.json
+          test -s customer-firebase-internal-aab.json
+          echo 'EAS internal Android AAB job returned successfully; no Google Play submission.'
+
+      - name: Retain remote build reference
+        uses: actions/upload-artifact@v4
+        with:
+          name: customer-firebase-internal-aab-build-reference
+          path: apps/mobile-app/customer-firebase-internal-aab.json
+          retention-days: 7
+
+      - name: Human-readable approval and distribution note
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## INSUREIT Customer Firebase internal AAB'
+            echo '- This job requires explicit approval and reviewed exact PR SHA.'
+            echo '- Target: com.insureit.mobile 0.3.2 (11), firebase-internal-test.'
+            echo '- AAB is NOT an APK and must be delivered through Play Internal Testing.'
+            echo '- No OTA, Google Play submission, PR merge or production cutover is performed.'
+          } >> "$GITHUB_STEP_SUMMARY"
