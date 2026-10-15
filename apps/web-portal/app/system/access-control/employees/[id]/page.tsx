@@ -199,9 +199,45 @@ function DataScope({ role, overrides }: { role: AppRole; overrides: OverrideRow[
 
 function PortalAccess({ employee, profile, role }: { employee: EmployeeRow; profile: ProfileRow; role: AppRole }) {
   const aligned = employee.employment_status === "active" ? profile.is_active : !profile.is_active;
-  return <div className="grid gap-3 xl:grid-cols-[1fr_1fr]">
-    <Card><div className="flex items-start justify-between gap-3"><div><h2 className="text-[15px] font-semibold text-[#17203A]">Portal account</h2><p className="mt-1 text-[10px] text-[#64748B]">Authentication and profile state.</p></div><StatusBadge value={profile.is_active ? "Active" : "Inactive"} /></div><div className="mt-3 grid gap-2 sm:grid-cols-2"><Detail label="Login email" value={profile.email ?? employee.email ?? "Not recorded"} /><Detail label="Portal role" value={roleLabels[role]} /><Detail label="Employee status" value={titleCase(employee.employment_status)} /><Detail label="State alignment" value={aligned ? "Aligned" : "Review required"} /></div></Card>
-    <Card><h2 className="text-[15px] font-semibold text-[#17203A]">Governed lifecycle</h2><p className="mt-1 text-[10px] leading-4 text-[#64748B]">Invitations, suspension, restoration and offboarding use the centralized employee portal governance service. Access Control does not maintain a second mutation path.</p><div className="mt-4 flex flex-wrap gap-2"><Link href={`/employees/${employee.id}`} className="inline-flex h-9 items-center rounded-xl bg-[#172554] px-4 text-[10px] font-semibold text-white">Open employee record</Link><Link href="/users" className="inline-flex h-9 items-center rounded-xl border border-[#CBD5E1] bg-white px-4 text-[10px] font-semibold text-[#334155]">Open User Management</Link></div><p className="mt-4 rounded-xl bg-[#F8FAFC] px-3 py-2 text-[8.5px] leading-4 text-[#64748B]">Protected-role safeguards, self-suspension protection and final Super Admin / IT Super User protection remain enforced by the server-side governance layer.</p></Card>
+  const status = profile.is_active ? "Active" : "Inactive";
+  return <div className="space-y-3">
+    <section aria-label="Portal access summary" className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      {[
+        { label: "Portal status", value: status, good: profile.is_active },
+        { label: "Employee status", value: titleCase(employee.employment_status), good: employee.employment_status === "active" },
+        { label: "Portal role", value: roleLabels[role], good: null },
+        { label: "State alignment", value: aligned ? "Aligned" : "Review required", good: aligned },
+      ].map(item => <div key={item.label} className="rounded-lg border border-[#DFE7F2] bg-white px-3 py-3 shadow-sm">
+        <p className="text-[9px] font-semibold uppercase tracking-wide text-[#64748B]">{item.label}</p>
+        <p className={`mt-1 text-[12px] font-bold ${item.good === null ? "text-[#17365D]" : item.good ? "text-emerald-700" : "text-amber-700"}`}>{item.value}</p>
+      </div>)}
+    </section>
+    <section className="overflow-hidden rounded-xl border border-[#DFE7F2] bg-white shadow-sm">
+      <div className="flex items-center justify-between gap-3 border-b border-[#E2E8F0] px-4 py-3">
+        <h2 className="text-[14px] font-bold text-[#17203A]">Portal account details</h2>
+        <StatusBadge value={status} />
+      </div>
+      <dl className="grid gap-x-4 px-4 sm:grid-cols-2">
+        {[
+          { label: "Login email", value: profile.email ?? employee.email ?? "Not recorded" },
+          { label: "Assigned portal role", value: roleLabels[role] },
+          { label: "Employee status", value: titleCase(employee.employment_status) },
+          { label: "State alignment", value: aligned ? "Aligned" : "Review required" },
+        ].map(item => <div key={item.label} className="flex min-w-0 flex-wrap items-baseline justify-between gap-2 border-b border-[#EDF2F7] py-3">
+          <dt className="text-[10px] font-medium text-[#64748B]">{item.label}</dt>
+          <dd className="min-w-0 break-words text-[11px] font-semibold text-[#24345A]">{item.value}</dd>
+        </div>)}
+      </dl>
+    </section>
+    <section className="rounded-xl border border-[#DFE7F2] bg-white p-4 shadow-sm">
+      <h2 className="text-[14px] font-bold text-[#17203A]">Employee lifecycle management</h2>
+      <p className="mt-1 text-[11px] text-[#64748B]">Invitations, suspension, restoration and offboarding are managed through the central employee portal governance service.</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Link href={`/employees/${employee.id}`} className="inline-flex h-9 items-center rounded-lg bg-[#17365D] px-4 text-[11px] font-semibold text-white hover:bg-[#234B78]">Open employee record</Link>
+        <Link href="/users" className="inline-flex h-9 items-center rounded-lg border border-[#CBD5E1] bg-white px-4 text-[11px] font-semibold text-[#334155] hover:bg-[#F8FAFD]">Open User Management</Link>
+      </div>
+      <p className="mt-3 border-t border-[#EDF2F7] pt-3 text-[10px] text-[#64748B]">Protected-role safeguards, self-suspension protection and final Super Admin / IT Super User protection remain enforced by the server-side governance layer.</p>
+    </section>
   </div>;
 }
 
