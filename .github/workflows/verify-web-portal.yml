@@ -67,6 +67,8 @@ jobs:
         run: node scripts/intermediary-iib-registration-finalization-regression.mjs
       - name: Policy intake workflow regression
         run: npm run policy-intake:workflow-regression
+      - name: Life Health payment mode validation regression
+        run: node scripts/life-health-payment-mode-validation-regression.mjs
       - name: Life Health native onboarding architecture regression
         run: npm run policy-onboarding:life-health-native-regression
       - name: Sales Executive policy access regression
