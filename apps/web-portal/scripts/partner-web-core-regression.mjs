@@ -227,7 +227,7 @@ assert(operationsVehicleWorkspace.includes('from "@/lib/vehicle-brand-logo"'), "
 assert(operationsVehicleWorkspace.includes("getVehicleBrandLogo(vehicle.make)"), "Operations Vehicle column must resolve manufacturer logo from vehicle.make");
 assert(operationsVehicleWorkspace.includes("Vehicle manufacturer"), "Operations Vehicle manufacturer logo must keep accessible fallback alt text");
 assert(operationsVehicleWorkspace.includes('max-h-[22px] max-w-[26px]'), "Operations Vehicle manufacturer logos must use the compact Tata-sized footprint");
-assert(operationsVehicleWorkspace.includes('>Vehicle</th>') && operationsVehicleWorkspace.includes('py-2 text-center">Vehicle</th>'), "Operations Vehicle table Vehicle header must be centered");
+assert(operationsVehicleWorkspace.includes('>Vehicle</th>') && operationsVehicleWorkspace.includes('py-2 text-left">Vehicle</th>'), "Operations Vehicle table Vehicle header must be left aligned");
 assert(operationsVehicleWorkspace.includes('py-2 text-center">Customer</th>'), "Operations Vehicle table Customer header must be centered");
 assert(operationsVehicleWorkspace.includes('py-2 text-center">Make / model</th>'), "Operations Vehicle table Make / model header must be centered");
 assert(operationsVehicleWorkspace.includes('py-2 text-center">Registration</th>'), "Operations Vehicle table Registration header must be centered");
