@@ -1,0 +1,52 @@
+name: Read-only Customer Firebase EAS AAB status (no build)
+on:
+  push:
+    branches:
+      - agent/eas-customer-firebase-status-20261015
+    paths:
+      - '.github/workflows/customer-firebase-eas-readonly-status-20261015.yml'
+permissions:
+  contents: read
+jobs:
+  read-eas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN_CUSTOMER || secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: c39255804bd7cd30e38661cce4bb0b97abb833e7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install locked dependencies, no app build
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: READ ONLY list Firebase internal-test Android AABs in Expo
+        shell: bash
+        working-directory: apps/mobile-app
+        run: |
+          set -euo pipefail
+          test -n "$EXPO_TOKEN"
+          npx eas-cli build:list --platform android --limit 15 --json --non-interactive > /tmp/customer-firebase-builds.json
+          node <<'NODE'
+          const fs=require('fs');
+          const payload=JSON.parse(fs.readFileSync('/tmp/customer-firebase-builds.json','utf8'));
+          const builds=Array.isArray(payload)?payload:(payload.builds||payload.items||[]);
+          if(!Array.isArray(builds))throw Error('Unexpected EAS build list format');
+          const results=builds.filter(b=> b.buildProfile==='firebase-internal-test' || b.buildProfileName==='firebase-internal-test' || b.channel==='firebase-internal');
+          console.log('Read-only EAS internal AAB candidates: '+results.length);
+          for(const b of results.slice(0,7)) {
+            console.log(JSON.stringify({
+              id:b.id,
+              status:b.status,
+              profile:b.buildProfile||b.buildProfileName,
+              gitCommitHash:b.gitCommitHash,
+              createdAt:b.createdAt,
+              buildUrl:b.artifacts?.buildUrl||null,
+              logsUrl:b.logsUrl||null,
+            }));
+          }
+          NODE
