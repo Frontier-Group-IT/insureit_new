@@ -20,6 +20,8 @@ function humanize(value: string) {
 export default async function PartnerProfilePage() {
   const { identity, scope } = await getPartnerWebSession();
   const intermediary = identity.actor_kind === "intermediary" ? identity : null;
+  const isGroupPortal = scope.scope_mode === "hierarchy" && scope.group_ids.length === 1;
+  const isGroupAssociate = isGroupPortal && (identity as unknown as {account_subtype?:string}).account_subtype === "group_associate";
 
   const details = [
     {
@@ -52,6 +54,13 @@ export default async function PartnerProfilePage() {
   return (
     <PartnerPortalShell title="Profile">
       <div className="space-y-3">
+        {isGroupPortal ? (
+          <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#DCE6F1] bg-white px-4 py-3">
+            <div><p className="text-xs font-semibold text-[#172846]">{isGroupAssociate ? "Group Associate Account" : "Primary Group Account"}</p>
+              <p className="mt-1 text-[10px] text-[#64748B]">{identity.display_name} · Group Administrator</p></div>
+            <Link className="rounded-xl bg-[#17365D] px-4 py-2 text-xs font-semibold text-white" href="/partner/group-associates">Manage Associate Accounts</Link>
+          </section>
+        ) : null}
         <section className="overflow-hidden rounded-xl bg-gradient-to-r from-[#032E65] via-[#00437E] to-[#0053A1] text-white shadow-[0_8px_24px_rgba(18,70,125,0.16)]">
           <div className="flex items-center gap-2.5 px-4 py-2.5 sm:px-5">
             <Building2 className="h-5 w-5 shrink-0 text-white" />
