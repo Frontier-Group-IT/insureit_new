@@ -1,0 +1,52 @@
+name: Insureit Read-only Playwright Smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tests/playwright/**'
+      - '.github/workflows/insureit-playwright-readonly-smoke.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: readonly-playwright-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  public-login:
+    name: Public login - desktop and mobile Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: tests/playwright
+    env:
+      CI: 'true'
+      SMOKE_BASE_URL: https://portal.insureit.in
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated Playwright dependency
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Install Chromium and Linux dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Run read-only browser smoke
+        run: npm test
+      - name: Upload HTML, JUnit and failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: insureit-public-login-smoke-${{ github.run_id }}
+          path: |
+            tests/playwright/playwright-report/
+            tests/playwright/test-results/
+          retention-days: 7
+          if-no-files-found: warn
