@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { requireGroupAssociateManager } from "../../group-associate-access";
-import { createGroupAssociate, manageGroupAssociate } from "./actions";
+import { createGroupAssociate } from "./actions";
+import { AssociateControls } from "./associate-controls";
 export const dynamic="force-dynamic";
 export default async function GroupAssociatesPage({params,searchParams}:{params:Promise<{id:string}>,searchParams:Promise<{success?:string,error?:string}>}){
  const {id}=await params;const q=await searchParams;
@@ -46,10 +47,7 @@ export default async function GroupAssociatesPage({params,searchParams}:{params:
       <td className="p-3">{a.name}</td><td className="p-3">{a.phone_number}</td><td className="p-3">{a.email}</td><td className="p-3">{a.designation}</td>
       <td className="p-3">{[a.address,a.city,a.state,a.postal_code].filter(Boolean).join(", ")||"–"}</td>
       <td className="p-3"><span className="rounded-full border px-2 py-1">Group Administrator</span></td><td className="p-3">{a.status}</td>
-      <td className="p-3"><form action={manageGroupAssociate} className="flex items-center gap-1"><input type="hidden" name="group_id" value={id}/><input type="hidden" name="associate_id" value={a.id}/>
-       <select name="operation" className="rounded border p-1"><option value="resend">Resend Link</option><option value={a.status==="disabled"?"enable":"disable"}>{a.status==="disabled"?"Enable":"Disable"}</option></select>
-       <button className="rounded border px-2 py-1">Apply</button>
-      </form></td>
+      <td className="p-3"><AssociateControls groupId={id} associate={a}/></td>
     </tr>)}</tbody></table>
    </section>
   </main>
