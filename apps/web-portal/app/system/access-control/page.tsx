@@ -199,9 +199,6 @@ function RolesWorkspace() {
         <h2 className="text-[14px] font-bold text-[#17203A]">Roles</h2>
         <span className="rounded-full bg-[#EEF2F7] px-2 py-0.5 text-[8px] font-bold text-[#64748B]">{roleMatrixV2.length}</span>
       </div>
-      <Link href="/employees" className="inline-flex h-9 items-center justify-center rounded-lg bg-[#17365D] px-4 text-[9.5px] font-bold text-white shadow-[0_6px_16px_rgba(23,54,93,.16)] transition hover:bg-[#102C4D]">
-        User Management
-      </Link>
     </div>
 
     <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
