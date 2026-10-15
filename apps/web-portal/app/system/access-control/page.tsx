@@ -148,8 +148,27 @@ function PermissionsWorkspace() {
 
 function ReviewsWorkspace({ items }: { items: ReviewItem[] }) {
   return <Card className="!rounded-xl !border-[#DCE4EF] !bg-white !p-0 !shadow-sm !backdrop-blur-none">
-    <div className="border-b border-[#E2E8F0] px-4 py-3"><h2 className="text-[14px] font-semibold text-[#17203A]">Access Reviews</h2><p className="mt-0.5 text-[9.5px] text-[#64748B]">{items.length} items requiring review</p></div>
-    {items.length ? <div className="overflow-x-auto"><table className="w-full min-w-[800px] text-left text-[10px]"><thead><tr className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[8px] uppercase tracking-[.05em] text-[#94A3B8]"><th className="px-4 py-2.5">Employee</th><th className="px-4 py-2.5">Review item</th><th className="px-4 py-2.5">Risk</th><th className="px-4 py-2.5 text-right">Action</th></tr></thead><tbody className="divide-y divide-[#EDF2F7]">{items.map((item) => <tr key={item.key} className="hover:bg-[#FAFCFF]"><td className="px-4 py-3 font-semibold text-[#17203A]">{item.employeeName}</td><td className="px-4 py-3"><p className="font-medium text-[#334155]">{item.title}</p><p className="mt-0.5 text-[8.5px] text-[#94A3B8]">{item.detail}</p></td><td className="px-4 py-3"><Risk value={item.risk} /></td><td className="px-4 py-3 text-right">{item.profileId ? <Link href={`/system/access-control/employees/${item.profileId}`} className="inline-flex h-8 items-center rounded-lg border border-[#CBD5E1] bg-white px-3 text-[9px] font-semibold text-[#334155]">Review</Link> : null}</td></tr>)}</tbody></table></div> : <div className="p-4"><EmptyState text="No access review items are currently open." /></div>}
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E2E8F0] px-4 py-3">
+      <div><h2 className="text-[14px] font-semibold text-[#17203A]">Access Reviews</h2><p className="mt-0.5 text-[9.5px] text-[#64748B]">{items.length} items requiring review</p></div>
+    </div>
+    {items.length ? <div className="overflow-x-auto">
+      <table className="w-full min-w-[900px] text-left text-[10px]">
+        <thead><tr className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[8px] uppercase tracking-[.05em] text-[#94A3B8]">
+          <th className="px-4 py-2.5">Employee</th>
+          <th className="px-4 py-2.5">Review item</th>
+          <th className="px-4 py-2.5">Detail</th>
+          <th className="px-4 py-2.5">Risk</th>
+          <th className="px-4 py-2.5 text-right">Action</th>
+        </tr></thead>
+        <tbody className="divide-y divide-[#EDF2F7]">{items.map((item) => <tr key={item.key} className="hover:bg-[#FAFCFF]">
+          <td className="px-4 py-3 font-semibold text-[#17203A]">{item.employeeName}</td>
+          <td className="px-4 py-3 font-medium text-[#334155]">{item.title}</td>
+          <td className="px-4 py-3 text-[9px] text-[#64748B]">{item.detail}</td>
+          <td className="px-4 py-3"><Risk value={item.risk} /></td>
+          <td className="px-4 py-3 text-right">{item.profileId ? <Link href={`/system/access-control/employees/${item.profileId}`} className="inline-flex h-8 items-center rounded-lg border border-[#CBD5E1] bg-white px-3 text-[9px] font-semibold text-[#334155] transition hover:border-[#94A3B8] hover:bg-[#F8FAFC]">Review</Link> : null}</td>
+        </tr>)}</tbody>
+      </table>
+    </div> : <div className="p-4"><EmptyState text="No access review items are currently open." /></div>}
   </Card>;
 }
 
