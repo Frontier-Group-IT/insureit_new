@@ -104,4 +104,50 @@ revoke all on function public.partner_portal_access_context_before_group_associa
 grant execute on function public.partner_portal_access_context_before_group_associates() to service_role;
 revoke all on function public.partner_portal_access_context() from public,anon;
 grant execute on function public.partner_portal_access_context() to authenticated,service_role;
+-- Ensure the canonical activation entrypoint recognizes invited Group associates.
+alter function public.partner_app_activate_current_account() rename to partner_app_activate_current_account_before_group_associates;
+create function public.partner_app_activate_current_account()
+returns jsonb language plpgsql security definer set search_path=public,auth as $$
+declare v_account public.group_portal_associate_accounts%rowtype; v_now timestamptz:=now();
+begin
+ select * into v_account from public.group_portal_associate_accounts where auth_user_id=auth.uid() for update;
+ if found then
+  if v_account.status='disabled' then
+   raise exception 'Group associate account disabled' using errcode='28000';
+  end if;
+  if not exists(select 1 from public.profiles where id=auth.uid() and is_active=true) then
+   raise exception 'Group associate profile inactive' using errcode='28000';
+  end if;
+  if not exists(select 1 from public.intermediary_groups where id=v_account.group_id and status='active') then
+   raise exception 'Business Group inactive' using errcode='28000';
+  end if;
+  if v_account.status='invited' then
+   update public.group_portal_associate_accounts set status='active',activated_at=coalesce(activated_at,v_now),updated_at=v_now where id=v_account.id;
+   insert into public.group_portal_associate_audit(group_id,associate_id,actor_id,event_type)
+   values(v_account.group_id,v_account.id,auth.uid(),'activated');
+  end if;
+  return public.partner_app_current_identity();
+ end if;
+ return public.partner_app_activate_current_account_before_group_associates();
+end;
+$$;
+revoke all on function public.partner_app_activate_current_account_before_group_associates() from public,anon,authenticated;
+grant execute on function public.partner_app_activate_current_account_before_group_associates() to service_role;
+revoke all on function public.partner_app_activate_current_account() from public,anon;
+grant execute on function public.partner_app_activate_current_account() to authenticated,service_role;
+
+-- Retarget SQL-language convenience functions at the new wrapper functions.
+create or replace function public.partner_portal_current_identity()
+returns jsonb language sql stable security definer set search_path=public,auth as $$
+ select public.partner_app_current_identity();
+$$;
+revoke all on function public.partner_portal_current_identity() from public,anon;
+grant execute on function public.partner_portal_current_identity() to authenticated,service_role;
+
+create or replace function public.partner_portal_scoped_partner_ids()
+returns uuid[] language sql stable security definer set search_path=public as $$
+ select coalesce((select c.scoped_partner_ids from public.partner_portal_access_context() c limit 1),'{}'::uuid[]);
+$$;
+revoke all on function public.partner_portal_scoped_partner_ids() from public,anon;
+grant execute on function public.partner_portal_scoped_partner_ids() to authenticated,service_role;
 commit;
