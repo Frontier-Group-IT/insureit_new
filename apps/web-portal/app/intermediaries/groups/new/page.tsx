@@ -23,7 +23,7 @@ export default async function NewBusinessGroup({searchParams}:{searchParams:Prom
    <input type="hidden" name="onboarding_surface" value="dedicated"/>
    <section className="overflow-hidden rounded-2xl border border-[#DFE5EE] bg-white">
     <h2 className="border-b border-[#E5EAF1] px-5 py-4 text-sm font-semibold"><span className="mr-3 rounded-lg bg-[#17365D] px-3 py-2 text-white">01</span> Group & administrator</h2>
-    <div className="grid gap-4 p-5 md:grid-cols-2">
+    <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-4">
      <label className="text-xs font-medium">Group Name *<input name="group_name" required maxLength={80} className={input}/></label>
      <label className="text-xs font-medium">Admin Name *<input name="admin_name" required maxLength={120} className={input}/></label>
      <label className="text-xs font-medium">Admin Email *<input type="email" name="login_email" required className={input}/></label>
@@ -32,8 +32,8 @@ export default async function NewBusinessGroup({searchParams}:{searchParams:Prom
    </section>
    <section className="overflow-hidden rounded-2xl border border-[#DFE5EE] bg-white">
     <h2 className="border-b border-[#E5EAF1] px-5 py-4 text-sm font-semibold"><span className="mr-3 rounded-lg bg-[#17365D] px-3 py-2 text-white">02</span> Address</h2>
-    <div className="grid gap-4 p-5 md:grid-cols-3">
-     <label className="text-xs font-medium md:col-span-3">Address *<input name="address" required className={input}/></label>
+    <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3">
+     <label className="text-xs font-medium sm:col-span-2 xl:col-span-3">Address *<input name="address" required className={input}/></label>
      <label className="text-xs font-medium">City *<input name="city" required className={input}/></label>
      <label className="text-xs font-medium">State *<input name="state" required className={input}/></label>
      <label className="text-xs font-medium">PIN Code *<input name="postal_code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required className={input}/></label>
@@ -41,13 +41,12 @@ export default async function NewBusinessGroup({searchParams}:{searchParams:Prom
    </section>
    <section className="overflow-hidden rounded-2xl border border-[#DFE5EE] bg-white">
     <h2 className="border-b border-[#E5EAF1] px-5 py-4 text-sm font-semibold"><span className="mr-3 rounded-lg bg-[#17365D] px-3 py-2 text-white">03</span> Account access</h2>
-    <div className="grid gap-4 p-5 md:grid-cols-2">
+    <div className="grid gap-4 p-5">
      <label className="text-xs font-medium">Role<input value="Group Administrator" readOnly disabled className={input+" bg-[#F3F6FA] font-semibold"}/><input type="hidden" name="admin_role" value="group_admin"/></label>
-     <div className="flex items-center text-xs text-[#59708B]">The administrator will receive a secure password setup invitation by email.</div>
     </div>
    </section>
-   <div className="flex justify-end gap-3">
-    <Link className="rounded-xl border px-5 py-3 text-xs font-semibold" href="/intermediaries/groups">Cancel</Link>
+   <div className="flex justify-end gap-3 rounded-2xl border border-[#DFE5EE] bg-white px-5 py-4 shadow-sm">
+    <Link className="rounded-xl border border-[#DDE5EF] bg-white px-5 py-3 text-xs font-semibold" href="/intermediaries/groups">Cancel</Link>
     <button className="rounded-xl bg-[#17365D] px-7 py-3 text-xs font-semibold text-white">Save Group</button>
    </div>
   </form>
