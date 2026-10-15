@@ -141,3 +141,24 @@ test('same verified Firebase phone cannot authorize a separate IT Super User Aut
   assert.equal(checkCustomerSessionEligibility({ ...customer, authUser: staff }).reason, 'supabase_user_mismatch');
   assert.equal(checkCustomerSessionEligibility({ ...customer, link: { ...customer.link, profile_id: otherId } }).reason, 'customer_unavailable');
 });
+
+
+test('shared phone never substitutes an approved Customer UID mapping with a staff mapping', () => {
+  const input = state();
+  const staffIdentity = { ...input, link: { ...input.link, profile_id: otherId },
+    profile: { ...input.profile, id: otherId, role: 'it_super_user' },
+    authUser: { ...input.authUser, id: otherId, email: 'staff@example.com' } };
+  assert.equal(checkCustomerSessionEligibility(staffIdentity).reason, 'customer_unavailable');
+  const mismatchedUid = { ...input, firebase: { ...input.firebase, uid: 'firebase-user-for-staff' } };
+  assert.equal(checkCustomerSessionEligibility(mismatchedUid).reason, 'identity_link_not_approved');
+  const mismatchedApprovedNumber = { ...input, link: { ...input.link,
+    verified_phone_at_approval: '+919812345678' } };
+  assert.equal(checkCustomerSessionEligibility(mismatchedApprovedNumber).reason, 'identity_link_not_approved');
+});
+
+test('unprovisioned Customer remains denied despite valid Firebase phone and approval', () => {
+  const input = state();
+  input.authUser.email = null;
+  input.authUser.email_confirmed_at = null;
+  assert.equal(checkCustomerSessionEligibility(input).reason, 'session_identity_not_provisioned');
+});
