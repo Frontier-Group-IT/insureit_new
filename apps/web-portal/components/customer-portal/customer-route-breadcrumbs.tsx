@@ -53,7 +53,7 @@ export function CustomerRouteBreadcrumbs() {
   const router = useRouter();
   const items = routeItems(pathname);
   const visibleItems = items.length > 4 ? [items[0], { label: "…" }, ...items.slice(-2)] : items;
-  const pillClass = "relative inline-flex h-9 max-w-[220px] min-w-0 items-center rounded-xl border border-white/80 bg-[#D9E5F4]/50 px-3 text-xs font-semibold text-[#203F64] before:absolute before:bottom-1.5 before:left-0 before:top-1.5 before:w-[3px] before:rounded-r-full before:bg-[#2F91FF]/85 sm:px-4 sm:text-[13px]";
+  const pillClass = "relative inline-flex h-9 max-w-[220px] min-w-0 items-center rounded-xl border border-[#E2E8F0] bg-[#F2F6FC] px-3 text-xs font-semibold text-[#203F64] before:absolute before:bottom-1.5 before:left-0 before:top-1.5 before:w-[3px] before:rounded-r-full before:bg-[#2F91FF]/85 sm:px-4 sm:text-[13px]";
 
   return (
     <div data-customer-route-breadcrumbs="true" className="flex min-w-0 items-center gap-2 sm:gap-3">
@@ -64,12 +64,12 @@ export function CustomerRouteBreadcrumbs() {
           else router.push("/customer/home");
         }}
         aria-label="Go back"
-        className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[#BFCDE0]/55 bg-[#B9CCE4]/40 text-[#35557C] transition hover:bg-[#B4C8E0]/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A96E8]/20"
+        className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[#E2E8F0] bg-[#F7F9FC] text-[#35557C] transition hover:bg-[#EDF3FA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A96E8]/20"
       >
         <ArrowLeft className="h-4 w-4" />
       </button>
-      <span className="hidden h-7 w-px bg-[#526C91]/35 sm:block" aria-hidden="true" />
-      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/80 bg-white/50 text-[#456486]" aria-hidden="true">
+      <span className="hidden h-7 w-px bg-[#D5DDE8] sm:block" aria-hidden="true" />
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[#E2E8F0] bg-[#F7F9FC] text-[#456486]" aria-hidden="true">
         <Compass className="h-4 w-4" />
       </span>
       <nav aria-label="Customer page path" className="flex min-w-0 items-center gap-1.5 overflow-hidden sm:gap-2">
@@ -78,12 +78,12 @@ export function CustomerRouteBreadcrumbs() {
           return (
             <div key={`${item.label}-${index}`} className="flex min-w-0 items-center gap-1.5 sm:gap-2">
               {index > 0 ? (
-                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white/40 text-[#7C8FA8]" aria-hidden="true">
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#F2F6FC] text-[#7C8FA8]" aria-hidden="true">
                   <ChevronRight className="h-3.5 w-3.5" />
                 </span>
               ) : null}
               {item.href && !current ? (
-                <Link href={item.href} prefetch={false} className={`${pillClass} transition hover:bg-[#D2E1F1]/75`}>
+                <Link href={item.href} prefetch={false} className={`${pillClass} transition hover:bg-[#E7F0FC]`}>
                   <span className="truncate">{item.label}</span>
                 </Link>
               ) : (

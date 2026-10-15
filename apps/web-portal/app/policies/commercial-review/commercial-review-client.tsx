@@ -33,6 +33,7 @@ export type CommercialReviewRow = {
   intermediaryType: string | null;
   intermediaryCode: string | null;
   odPremium: number;
+  netPremium: number;
   tpCpaPremium: number;
   projectedOdPercent: number;
   projectedTpPercent: number;
@@ -334,7 +335,7 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
               <td className="max-w-[190px] px-2 py-2"><div className="truncate font-semibold text-[#26364F]" title={row.intermediaryName}>{row.intermediaryName}</div><div className="truncate text-[7px] text-[#98A2B3]">{[row.intermediaryType, row.intermediaryCode].filter(Boolean).join(" · ") || "—"}</div></td>
               <td className="min-w-[125px] px-2 py-2"><div className="font-semibold text-[#344054]">{row.vehicleClass === "NON_MOTOR" ? "Non-Motor" : row.vehicleClass ?? "—"}</div>{row.vehicleClass && row.vehicleClass !== "NON_MOTOR" ? <div className="mt-0.5 truncate text-[7px] text-[#98A2B3]">{vehicleClassLabels[row.vehicleClass] ?? row.vehicleClass}</div> : null}</td>
               <td className="whitespace-nowrap px-2 py-2">{date(row.issuanceDate)}</td>
-              <MoneyCell value={row.odPremium} /><MoneyCell value={row.tpCpaPremium} />
+              <MoneyCell value={row.vehicleClass === "NON_MOTOR" ? row.netPremium : row.odPremium} /><MoneyCell value={row.tpCpaPremium} />
               <EditableNumber editing={isEditing} value={isEditing ? edit.od : od.toFixed(2)} onChange={(value) => setEdit((state) => ({ ...state, od: value }))} onEnter={() => saveRow(row, true)} suffix="%" />
               <EditableNumber editing={isEditing} value={isEditing ? edit.tp : tp.toFixed(2)} onChange={(value) => setEdit((state) => ({ ...state, tp: value }))} onEnter={() => saveRow(row, true)} suffix="%" />
               {side === "insurer" ? <EditableNumber editing={isEditing} value={isEditing ? edit.scheme : String(row.schemeAmount)} onChange={(value) => setEdit((state) => ({ ...state, scheme: value }))} onEnter={() => saveRow(row, true)} moneyValue /> : null}

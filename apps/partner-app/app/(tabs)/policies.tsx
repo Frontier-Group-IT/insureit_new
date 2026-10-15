@@ -33,14 +33,6 @@ import { usePartnerNetwork } from '@/providers/partner-network-provider';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 const PAGE_SIZE = 10;
-const filters: Array<{ value: PartnerPolicyLifecycle; label: string }> = [
-  { value: 'all', label: 'All' },
-  { value: 'in_force', label: 'Active' },
-  { value: 'expiring', label: 'Expiring Soon' },
-  { value: 'expired', label: 'Lapsed' },
-  { value: 'upcoming', label: 'Upcoming' },
-];
-
 let savedPolicyQuery = '';
 let savedPolicyLifecycle: PartnerPolicyLifecycle = 'all';
 
@@ -171,6 +163,7 @@ export default function PoliciesScreen() {
           { label: 'Active Policies', filter: 'in_force' as const, value: summary.data?.in_force_policies, icon: 'shield-checkmark' as const, tint: '#123B83' },
           { label: 'Expiring Soon', filter: 'expiring' as const, value: summary.data?.expiring_30_days, icon: 'hourglass' as const, tint: '#2347A2' },
           { label: 'Lapsed Policies', filter: 'expired' as const, value: summary.data?.expired_policies, icon: 'close-circle' as const, tint: '#163B82' },
+          { label: 'Upcoming', filter: 'upcoming' as const, value: summary.data?.upcoming_policies, icon: 'calendar' as const, tint: '#3156B8' },
         ]).map((metric) => (
           <Pressable
             key={metric.label}
@@ -216,31 +209,7 @@ export default function PoliciesScreen() {
         </View>
       ) : null}
 
-      <View style={styles.tabsRow}>
-        <View style={styles.tabsScroller}>
-          {filters.map((filter) => {
-            const active = lifecycle === filter.value;
-            const count = policyFilterCount(summary.data, filter.value);
-            return (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={`${filter.label}${count === null ? '' : ` ${count}`}`}
-                key={filter.value}
-                onPress={() => setLifecycle(filter.value)}
-                style={({ pressed }) => [styles.tabButton, active && styles.tabButtonActive, pressed && styles.pressed]}
-              >
-                <View style={styles.tabLabelRow}>
-                  <Text style={[styles.tabText, active && styles.tabTextActive]}>{filter.label}</Text>
-                  {count === null ? null : (
-                    <Text style={[styles.tabCount, active && styles.tabCountActive]}>({count})</Text>
-                  )}
-                </View>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
+
 
       {collection.error && collection.rows.length && !collection.stale ? (
         <View style={styles.feedback}>
@@ -369,15 +338,6 @@ function formatPortfolioShare(count: number | undefined, total: number | undefin
   return `${formatted}% of total`;
 }
 
-function policyFilterCount(summary: PartnerPolicySummary | null, lifecycle: PartnerPolicyLifecycle) {
-  if (!summary) return null;
-  if (lifecycle === 'in_force') return summary.in_force_policies;
-  if (lifecycle === 'expiring') return summary.expiring_30_days;
-  if (lifecycle === 'expired') return summary.expired_policies;
-  if (lifecycle === 'upcoming') return summary.upcoming_policies;
-  return summary.total_policies;
-}
-
 function policyStatus(value: PartnerPolicyRow['lifecycle_status']) {
   if (value === 'expired') {
     return { label: 'Lapsed', foreground: '#D04C4C', background: '#FDECEC' };
@@ -417,7 +377,7 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 108, backgroundColor: '#FFFFFF' },
   contentEmpty: { flexGrow: 1 },
   hero: {
-    height: 162,
+    height: 98,
     overflow: 'hidden',
     backgroundColor: '#0752A2',
   },
@@ -434,19 +394,20 @@ const styles = StyleSheet.create({
   heroTopRow: {
     zIndex: 3,
     position: 'absolute',
-    top: 30,
+    top: 13,
     left: 15,
     right: 15,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 35,
   },
   heroBrand: { flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: '60%' },
   heroLogo: { width: 30, height: 35, tintColor: '#FFFFFF' },
   heroBrandCopy: { justifyContent: 'center' },
   heroBrandInsureit: { color: '#FFFFFF', fontSize: 14, lineHeight: 16, fontWeight: '800', letterSpacing: -0.08 },
   heroBrandPartner: { color: '#F5AB2E', fontSize: 14, lineHeight: 16, fontWeight: '800', letterSpacing: -0.08 },
-  heroActions: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  heroActions: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 7 },
   heroIconButton: {
     width: 33,
     height: 33,
@@ -479,7 +440,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 18,
     right: 15,
-    bottom: 22,
+    bottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -487,8 +448,8 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     color: '#FFFFFF',
-    fontSize: 20,
-    lineHeight: 23,
+    fontSize: 15,
+    lineHeight: 18,
     fontWeight: '800',
     letterSpacing: -0.2,
   },
@@ -511,11 +472,11 @@ const styles = StyleSheet.create({
   },
   intakeHeaderText: { color: '#0B2E63', fontSize: 9.5, lineHeight: 12, fontWeight: '800' },
   searchRow: {
-    marginTop: -14,
+    marginTop: -8,
     marginHorizontal: 12,
     zIndex: 4,
   },
-  summaryRow: { flexDirection: 'row', marginHorizontal: 12, marginTop: 9, gap: 4 },
+  summaryRow: { flexDirection: 'row', marginHorizontal: 12, marginTop: 9, gap: 3 },
   summaryCard: { flex: 1, minWidth: 0, minHeight: 86, alignItems: 'center', paddingVertical: 7, paddingHorizontal: 2, borderRadius: 9, backgroundColor: '#F6F9FF', borderWidth: 1, borderColor: '#E8EFFB', shadowColor: '#17448C', shadowOpacity: 0.06, shadowRadius: 4, elevation: 1 },
   summaryCardSelected: { backgroundColor: '#E8F1FF', borderColor: '#2458C5', borderBottomWidth: 3 },
   summaryCardPressed: { backgroundColor: '#E8F1FF' },

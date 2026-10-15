@@ -57,6 +57,10 @@ jobs:
         run: node scripts/sidebar-state-stability-regression.mjs
       - name: Collapsed sidebar direct-link regression
         run: node scripts/collapsed-sidebar-direct-links-regression.mjs
+      - name: Associate Accounts portal menu interaction regression
+        run: node scripts/associate-actions-menu-interaction-regression.mjs
+      - name: Group Associate Accounts security and UI regression
+        run: node scripts/group-associate-accounts-regression.mjs
       - name: Intermediary optional surname and IIB live-name regression
         run: node scripts/intermediary-optional-surname-iib-regression.mjs
       - name: Partner Register business metrics migration contract regression
@@ -65,6 +69,8 @@ jobs:
         run: node scripts/intermediary-iib-registration-finalization-regression.mjs
       - name: Policy intake workflow regression
         run: npm run policy-intake:workflow-regression
+      - name: Life Health payment mode validation regression
+        run: node scripts/life-health-payment-mode-validation-regression.mjs
       - name: Life Health native onboarding architecture regression
         run: npm run policy-onboarding:life-health-native-regression
       - name: Sales Executive policy access regression

@@ -6,6 +6,10 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const PAYMENT_FREQUENCIES = new Set(["Monthly", "Quarterly", "Half Yearly", "Annually", "One Time"]);
 const PAYMENT_MODES = new Set(["Cash", "Cheque", "NEFT/RTGS", "UPI", "Credit/Debit Card", "Net Banking"]);
+const normalizePaymentMode = (value: string) => {
+  const normalized = value.trim().replace(/\s+/g, " ").toLowerCase();
+  return [...PAYMENT_MODES].find(mode => mode.toLowerCase() === normalized) ?? "";
+};
 const clean = (value: FormDataEntryValue | null) => String(value ?? "").trim();
 const numberValue = (value: string) => { const parsed = Number(value.replace(/,/g, "")); return Number.isFinite(parsed) ? parsed : null; };
 
@@ -20,7 +24,7 @@ export async function updateLifeHealthCaseDetails(formData: FormData) {
   const premium = numberValue(clean(formData.get("premiumAmount")));
   const sourcingDate = clean(formData.get("sourcingDate"));
   const paymentFrequency = clean(formData.get("paymentFrequency"));
-  const paymentMode = clean(formData.get("paymentMode"));
+  const paymentMode = normalizePaymentMode(clean(formData.get("paymentMode")));
 
   if (!caseId) return { ok: false as const, error: "Case reference is missing." };
   if (!customerName) return { ok: false as const, error: "Enter the customer name." };

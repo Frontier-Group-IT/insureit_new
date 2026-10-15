@@ -45,18 +45,25 @@ export function AssociateAccountActionsMenu({
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
+  const showDialog = (dialog: "edit" | "status" | "delete") => {
+    setOpen(false);
+    if (dialog === "edit") setEditOpen(true);
+    if (dialog === "status") setStatusOpen(true);
+    if (dialog === "delete") setDeleteOpen(true);
+  };
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
-    function closeOnOutsideClick(event: MouseEvent) {
-      const target = event.target as Node;
+    function closeOnOutsideClick(event: PointerEvent) {
+      // The menu lives in a portal. Use the full event path so a press within
+      // portal content cannot be mistaken for an outside press.
+      const path = event.composedPath();
       if (
-        rootRef.current &&
-        !rootRef.current.contains(target) &&
-        !menuRef.current?.contains(target)
+        !path.includes(rootRef.current as EventTarget) &&
+        !path.includes(menuRef.current as EventTarget)
       ) {
         setOpen(false);
       }
@@ -69,10 +76,10 @@ export function AssociateAccountActionsMenu({
         setStatusOpen(false);
       }
     }
-    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("pointerdown", closeOnOutsideClick);
     document.addEventListener("keydown", closeOnEscape);
     return () => {
-      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
       document.removeEventListener("keydown", closeOnEscape);
     };
   }, []);
@@ -146,14 +153,20 @@ export function AssociateAccountActionsMenu({
                 role="menu"
                 style={{ top: menuPosition.top, left: menuPosition.left }}
                 className="fixed z-[200] w-44 overflow-hidden rounded-xl border border-[#DCE5EF] bg-white py-1.5 shadow-[0_18px_45px_rgba(15,23,42,.18)]"
+                onPointerDown={(event) => {
+                  // Prevent unrelated document/ancestor pointer handlers from
+                  // treating a menu action as an outside interaction.
+                  event.stopPropagation();
+                }}
               >
                 <button
                   type="button"
                   role="menuitem"
-                  onClick={() => {
-                    setOpen(false);
-                    setEditOpen(true);
+                  onPointerDown={(event) => {
+                    // Apply the selection before browser focus/scroll can move a fixed menu.
+                    if (event.button === 0) showDialog("edit");
                   }}
+                  onClick={() => showDialog("edit")}
                   className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC]"
                 >
                   <Pencil className="h-3.5 w-3.5 text-[#64748B]" />
@@ -163,10 +176,11 @@ export function AssociateAccountActionsMenu({
                 <button
                   type="button"
                   role="menuitem"
-                  onClick={() => {
-                    setOpen(false);
-                    setStatusOpen(true);
+                  onPointerDown={(event) => {
+                    // Apply the selection before browser focus/scroll can move a fixed menu.
+                    if (event.button === 0) showDialog("status");
                   }}
+                  onClick={() => showDialog("status")}
                   className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC]"
                 >
                   <Ban className="h-3.5 w-3.5 text-[#64748B]" />
@@ -176,10 +190,11 @@ export function AssociateAccountActionsMenu({
                 <button
                   type="button"
                   role="menuitem"
-                  onClick={() => {
-                    setOpen(false);
-                    setDeleteOpen(true);
+                  onPointerDown={(event) => {
+                    // Apply the selection before browser focus/scroll can move a fixed menu.
+                    if (event.button === 0) showDialog("delete");
                   }}
+                  onClick={() => showDialog("delete")}
                   className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-rose-600 hover:bg-rose-50"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -333,6 +348,13 @@ function ResendInviteButton({
   const { pending } = useFormStatus();
   const storageKey = `associate-resend-cooldown:${associateId}`;
   const [remaining, setRemaining] = useState(0);
+  const submittedByPointerRef = useRef(false);
+
+  const recordResendAttempt = () => {
+    const cooldownUntil = Date.now() + RESEND_COOLDOWN_SECONDS * 1000;
+    window.localStorage.setItem(storageKey, String(cooldownUntil));
+    setRemaining(RESEND_COOLDOWN_SECONDS);
+  };
 
   useEffect(() => {
     const invitedUntil = invitedAt
@@ -366,11 +388,26 @@ function ResendInviteButton({
       role="menuitem"
       disabled={disabled}
       title={title}
-      onClick={() => {
-        if (disabled) return;
-        const cooldownUntil = Date.now() + RESEND_COOLDOWN_SECONDS * 1000;
-        window.localStorage.setItem(storageKey, String(cooldownUntil));
-        setRemaining(RESEND_COOLDOWN_SECONDS);
+      onPointerUp={(event) => {
+        if (disabled || event.button !== 0) return;
+        const target = document.elementFromPoint(event.clientX, event.clientY);
+        if (!target || !event.currentTarget.contains(target)) return;
+        // Submit before focus/scroll repositioning can cancel the subsequent click.
+        submittedByPointerRef.current = true;
+        recordResendAttempt();
+        event.currentTarget.form?.requestSubmit();
+      }}
+      onClick={(event) => {
+        if (submittedByPointerRef.current) {
+          event.preventDefault();
+          submittedByPointerRef.current = false;
+          return;
+        }
+        if (disabled) {
+          event.preventDefault();
+          return;
+        }
+        recordResendAttempt();
       }}
       className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-40"
     >

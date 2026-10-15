@@ -11,7 +11,7 @@ export default async function CustomerProtectedLayout({ children }: { children: 
   return (
     <div className="customer-compact min-h-screen bg-[#F6F8FB] text-[#10213D]">
       <CustomerSidebarShell>
-        <header className="sticky top-0 z-40 border-b border-[#476184]/35 bg-[linear-gradient(110deg,rgba(188,203,224,0.88),rgba(203,215,232,0.82),rgba(230,236,245,0.72))] shadow-[0_12px_36px_rgba(18,40,75,0.14)] backdrop-blur-2xl">
+        <header className="sticky top-0 z-40 border-b border-[#E5EAF2] bg-white shadow-[0_4px_18px_rgba(18,40,75,0.06)]">
           <div className="flex min-h-[66px] items-center justify-between gap-2 px-3 sm:px-5 lg:px-7">
             <div className="min-w-0 flex-1"><CustomerRouteBreadcrumbs /></div>
             <CustomerHeaderActions name={profile.full_name || "Customer"} userId={user.id} />

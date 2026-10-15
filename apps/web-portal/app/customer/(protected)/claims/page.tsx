@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileText, ClipboardList } from "lucide-react";
+import { FileText, ClipboardList, ShieldCheck, Clock3, ArrowRight, Plus, CheckCircle2, CircleDot } from "lucide-react";
 import { getStaticInsurerLogo } from "@/lib/insurer-logo";
 import { ManufacturerMark } from "../vehicles/customer-vehicles-register";
 import { CustomerClaimsSearch, CustomerClaimsStageFilter } from "./customer-claims-search";
@@ -9,6 +9,7 @@ import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import {
   buildExternalClaimProjection,
   isExternalCustomerClaim,
+  isCompletedCustomerClaim,
   loadCustomerClaimListContext,
 } from "@/lib/customer-web-phase2-data";
 
@@ -27,13 +28,23 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
   const stageFilter = params.stage ?? "";
   const enriched = claims.map((claim) => {
     const external = isExternalCustomerClaim(claim);
-    const stage = external
-      ? buildExternalClaimProjection(milestones_by_claim.get(claim.id) ?? []).current_stage.label
-      : projectInternalClaim(claim.current_status).stageLabel;
-    return { claim, external, stage: stage || claim.current_status };
+    const milestones = milestones_by_claim.get(claim.id) ?? [];
+    const externalProjection = external ? buildExternalClaimProjection(milestones) : null;
+    const internalProjection = external ? null : projectInternalClaim(claim.current_status);
+    const stage = externalProjection?.current_stage.label || internalProjection?.stageLabel || claim.current_status;
+    const progress = externalProjection?.progress ?? internalProjection?.progress ?? 0;
+    const completed = isCompletedCustomerClaim(claim, milestones);
+    const nextAction = completed
+      ? "Claim journey completed"
+      : externalProjection
+        ? `Next: ${externalProjection.current_stage.label}`
+        : internalProjection?.customerMessage || `Next: ${stage}`;
+    return { claim, external, stage, progress, completed, nextAction };
   });
   const internalCount = enriched.filter((item) => !item.external).length;
   const externalCount = enriched.length - internalCount;
+  const completedCount = enriched.filter((item) => item.completed).length;
+  const openCount = enriched.filter((item) => !item.completed && item.claim.current_status !== "Rejected").length;
   const stages = INTERNAL_JOURNEY_STAGES.map((stage) => stage.label);
   const filtered = enriched.filter(({ claim, external, stage }) => {
     if (external !== (type === "external")) return false;
@@ -50,57 +61,82 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
     pathname: "/customer/claims",
     query: { account: account.id, type, ...(params.q ? { q: params.q } : {}), ...(stageFilter ? { stage: stageFilter } : {}), ...changes },
   });
-  const cell = "px-3 py-3 text-[11px] text-[#1B355B]";
+  const journeyLabels = ["Submitted", "Survey", "Documents", "Assessment", "Settlement"];
   return (
-    <div className="space-y-3 pb-6">
+    <div className="space-y-4 pb-6">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/claims" />
-      <section className="relative isolate overflow-hidden rounded-2xl bg-[#061B3B] text-white">
-        <div className="absolute inset-y-0 right-0 w-[67%] bg-[url('/customer-insurance-quote-vehicles.svg')] bg-cover bg-center opacity-80" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#06162F] via-[#08254C]/95 via-45% to-transparent" />
-        <div className="relative flex min-h-[165px] items-center px-5 py-5 sm:min-h-[205px] sm:px-8">
-          <div className="max-w-[58%]">
-            <h1 className="text-[clamp(23px,3vw,38px)] font-black leading-tight">Your <span className="text-[#369BFF]">Claim</span> Portfolio</h1>
+
+      <section className="relative isolate overflow-hidden rounded-2xl border border-[#D6E7FA] bg-[#DDEEFF] text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.05)]">
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-[62%] bg-[url('/customer-insurance-quote-vehicles.svg')] bg-contain bg-right-bottom bg-no-repeat opacity-55" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EEF7FF] via-[#EEF7FF]/96 via-47% to-transparent" />
+        <div className="relative flex min-h-[170px] items-center px-5 py-6 sm:px-7">
+          <div className="max-w-[520px]">
+            <h1 className="text-[clamp(28px,3.2vw,40px)] font-bold tracking-tight">Claims</h1>
           </div>
         </div>
       </section>
-      <section className="overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white shadow-[0_8px_30px_rgba(20,40,75,.04)]">
-        <div className="flex flex-wrap items-center gap-2 border-b border-[#E6ECF4] p-3 sm:p-4 xl:flex-nowrap">
-          <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-black text-[#10213D]"><ClipboardList className="h-5 w-5 text-[#175CA8]" aria-hidden="true" />Claims Register</h2>
+
+      <section aria-label="Claim overview" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {[
+          {label:"Total claims",value:claims.length,detail:"Across your account",icon:ClipboardList,tint:"bg-[#EAF3FF] text-[#1769DC]"},
+          {label:"Open",value:openCount,detail:"Still in progress",icon:Clock3,tint:"bg-[#FFF7E8] text-[#B66A16]"},
+          {label:"Settled / completed",value:completedCount,detail:"Journey completed",icon:ShieldCheck,tint:"bg-[#E5F7EE] text-[#087A57]"},
+        ].map(({label,value,detail,icon:Icon,tint})=><div key={label} className="flex min-w-0 items-center gap-3 rounded-2xl border border-[#E1EAF5] bg-white p-4">
+          <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${tint}`}><Icon className="h-5 w-5"/></span>
+          <span className="min-w-0"><span className="block text-[12px] font-medium text-[#60799B]">{label}</span><strong className="block text-[28px] font-bold leading-tight tabular-nums text-[#102B54]">{value}</strong><small className="block text-[12px] text-[#7890AD]">{detail}</small></span>
+        </div>)}
+      </section>
+
+      <section className="overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white">
+        <div className="flex flex-wrap items-center gap-2 border-b border-[#E6ECF4] p-4 xl:flex-nowrap">
+          <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><ClipboardList className="h-5 w-5 text-[#1769DC]"/>Claims Register</h2>
           <CustomerClaimsSearch initialQuery={params.q ?? ""} accountId={account.id} type={type} />
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <CustomerClaimsStageFilter value={stageFilter} stages={stages} accountId={account.id} type={type} query={params.q ?? ""} />
-            <div className="flex rounded-lg border border-[#DCE4EE] bg-[#F8FAFD] p-0.5 text-[11px] font-semibold">
-              {(["internal", "external"] as const).map(key => <Link key={key} href={href({type:key,stage:"",page:"1"})} className={`rounded-md px-3 py-2 ${type === key ? "bg-[#E4EFFD] text-[#124788]" : "text-[#64748B]"}`}>
-                {key === "internal" ? "Internal claims" : "External claims"} <span className="ml-1 rounded-full bg-[#D9E8FA] px-1.5 py-0.5">{key === "internal" ? internalCount : externalCount}</span>
+            <div className="flex rounded-lg border border-[#DCE4EE] bg-[#F8FAFD] p-0.5 text-[12px] font-semibold">
+              {(["internal", "external"] as const).map(key => <Link key={key} href={href({type:key,stage:"",page:"1"})} className={`rounded-md px-3 py-2 ${type === key ? "bg-[#E7F0FD] text-[#124788]" : "text-[#64748B]"}`}>
+                {key === "internal" ? "Internal" : "External"} <span className="ml-1 rounded-full bg-[#D9E8FA] px-1.5 py-0.5">{key === "internal" ? internalCount : externalCount}</span>
               </Link>)}
             </div>
+            <Link href={{ pathname: "/customer/start-claim", query: { account: account.id } }} className="inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-[#1769DC] px-3 py-2.5 text-[12px] font-semibold text-white hover:bg-[#1058BD]"><Plus className="h-4 w-4"/>Start a new claim</Link>
           </div>
         </div>
-        {rows.length ? (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1050px] border-collapse text-left">
-              <thead className="bg-[#F1F5FA] text-[10px] uppercase text-[#687991]">
-                <tr>{["Claim / Control No.", "Vehicle / Asset", "Insurer", "Policy No.", "Claim type", "Incident date", "Stage", "Status"].map((heading) =>
-                  <th key={heading} className="whitespace-nowrap px-3 py-3 font-semibold">{heading}</th>)}</tr>
-              </thead>
-              <tbody className="divide-y divide-[#E2E9F3]">
-                {rows.map(({ claim, stage }) => (
-                  <tr key={claim.id} className="group relative hover:bg-[#F6F9FE] focus-within:bg-[#EFF6FF]">
-                    <td className={cell}><Link href={{pathname:`/customer/claims/${claim.id}`,query:{account:account.id}}} aria-label={`View claim ${claim.claim_no || claim.id}`} className="font-bold text-[#16375C] after:absolute after:inset-0 after:cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#267AFF] focus-visible:outline-offset-2">{claim.insurer_claim_no || claim.claim_no || "—"}</Link><p className="mt-1 text-[9px] text-[#7B8CA4]">{claim.claim_no && claim.insurer_claim_no ? claim.claim_no : "—"}</p></td>
-                    <td className={cell}><p className="font-bold text-[#164B91]">{claim.vehicle_no || "—"}</p><div className="mt-1 flex items-center gap-1" title={[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" ")}><ManufacturerMark make={claim.vehicle_make || ""} /></div></td>
-                    <td className={cell}>{getStaticInsurerLogo(claim.insurer_name) ? <img src={getStaticInsurerLogo(claim.insurer_name)!} alt={claim.insurer_name || "Insurer"} title={claim.insurer_name || "Insurer"} className="h-7 w-7 object-contain" /> : <span title={claim.insurer_name || "Insurer unavailable"} aria-label={claim.insurer_name || "Insurer unavailable"} className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[#EDF2F8] text-[#506786]"><FileText className="h-4 w-4" /></span>}</td>
-                    <td className={cell}>{claim.policy_no || "—"}</td>
-                    <td className={cell}>—</td>
-                    <td className={cell}>{claim.accident_at ? new Date(claim.accident_at).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : "—"}</td>
-                    <td className={cell}>{stage}</td>
-                    <td className={cell}><span className="rounded-full border border-[#D9E5F3] bg-[#F2F7FD] px-2 py-1 text-[10px] font-semibold text-[#315B89]">{claim.current_status || "—"}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : <div className="py-8"><EmptyCustomerState title="No matching claims" body="Change the claim type, search or stage filter." /></div>}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E2E9F3] px-5 py-4 text-[11px] text-[#536681]">
+
+        {rows.length ? <div className="space-y-3 p-4">
+          {rows.map(({ claim, stage, progress, completed, nextAction }) => {
+            const logo = getStaticInsurerLogo(claim.insurer_name);
+            const activeStep = Math.min(journeyLabels.length - 1, Math.floor((Math.max(0, Math.min(100, progress)) / 100) * journeyLabels.length));
+            return <article key={claim.id} className="rounded-2xl border border-[#E2EAF4] bg-white p-4 transition hover:border-[#B8D0EE]">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-center">
+                <div className="flex min-w-0 items-center gap-3 xl:w-[24%]">
+                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#F1F6FC]"><ManufacturerMark make={claim.vehicle_make || ""}/></span>
+                  <div className="min-w-0"><span className="block text-[11px] uppercase tracking-wide text-[#8496AE]">Vehicle</span><strong className="block truncate text-[14px] text-[#15375F]">{claim.vehicle_no || "—"}</strong><span className="block truncate text-[12px] text-[#607B9F]">{[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" ") || "—"}</span></div>
+                </div>
+                <div className="grid flex-1 gap-3 sm:grid-cols-3">
+                  <div><span className="block text-[11px] uppercase tracking-wide text-[#8496AE]">Claim number</span><strong className="block text-[13px] text-[#263F67]">{claim.insurer_claim_no || claim.claim_no || "—"}</strong></div>
+                  <div><span className="block text-[11px] uppercase tracking-wide text-[#8496AE]">Insurer</span><div className="mt-1 flex items-center gap-2">{logo?<img src={logo} alt={claim.insurer_name || "Insurer"} className="h-7 w-7 object-contain"/>:<FileText className="h-5 w-5 text-[#607B9F]"/>}<span className="text-[13px] font-semibold text-[#263F67]">{claim.insurer_name || "—"}</span></div></div>
+                  <div><span className="block text-[11px] uppercase tracking-wide text-[#8496AE]">Current stage</span><strong className="block text-[13px] text-[#263F67]">{stage || "—"}</strong><span className="mt-1 inline-flex rounded-full bg-[#F1F6FC] px-2 py-1 text-[11px] font-semibold text-[#315B89]">{claim.current_status || "—"}</span></div>
+                </div>
+                <Link href={{pathname:`/customer/claims/${claim.id}`,query:{account:account.id}}} className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#EAF3FF] px-3 py-2 text-[12px] font-semibold text-[#1769DC] hover:bg-[#DCEBFF]">View claim <ArrowRight className="h-3.5 w-3.5"/></Link>
+              </div>
+
+              <div className="mt-4 border-t border-[#EDF2F7] pt-4">
+                <div className="mb-2 flex items-center justify-between gap-3"><span className="text-[12px] font-semibold text-[#385778]">Claim journey</span><span className="text-[12px] text-[#607B9F]">{completed ? "Completed" : nextAction}</span></div>
+                <div className="grid grid-cols-5 gap-1.5">
+                  {journeyLabels.map((label,index)=>{
+                    const reached = completed || index <= activeStep;
+                    return <div key={label} className="min-w-0">
+                      <div className={`h-1.5 rounded-full ${reached?"bg-[#1769DC]":"bg-[#DCE7F4]"}`}/>
+                      <div className="mt-1 flex items-center gap-1"><span className={`shrink-0 ${reached?"text-[#1769DC]":"text-[#A5B4C7]"}`}>{reached?<CheckCircle2 className="h-3.5 w-3.5"/>:<CircleDot className="h-3.5 w-3.5"/>}</span><span className="truncate text-[10px] font-medium text-[#6B7F98]">{label}</span></div>
+                    </div>;
+                  })}
+                </div>
+              </div>
+            </article>;
+          })}
+        </div>:<div className="py-8"><EmptyCustomerState title="No matching claims" body="Change the claim type, search or stage filter." /></div>}
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E2E9F3] px-5 py-4 text-[12px] text-[#536681]">
           <span>Showing {filtered.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}</span>
           <div className="flex items-center gap-3">
             {page > 1 ? <Link href={href({ page: String(page - 1) })} className="rounded-lg border px-3 py-2">Previous</Link> : <span className="rounded-lg border px-3 py-2 opacity-40">Previous</span>}

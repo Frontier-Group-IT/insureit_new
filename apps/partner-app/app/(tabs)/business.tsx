@@ -608,25 +608,13 @@ function TrendChart({ data, emptyMessage, compact = false }: { data: TrendPoint[
 function ProductTile({ icon, label, share }: { icon: keyof typeof Ionicons.glyphMap; label: string; share: number }) {
   return (
     <View style={styles.productTile}>
-      {icon === 'car-sport' || label.toLowerCase().includes('package') || label.toLowerCase().includes('life')
-        ? <BlueIcon icon={icon} size={25} />
-        : productAsset(icon, label)
-          ? <Image source={productAsset(icon, label)!} style={styles.productIconAsset} resizeMode="contain" />
-          : <BlueIcon icon={icon} size={25} />}
+      <View style={styles.productIconWrap}>
+        <Ionicons name={icon} size={23} color="#123B83" />
+      </View>
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={styles.productLabel}>{label}</Text>
       <Text style={styles.productShare}>{share}%</Text>
     </View>
   );
-}
-
-function productAsset(icon: keyof typeof Ionicons.glyphMap, label: string): ImageSourcePropType | null {
-  const name = label.toLowerCase();
-  if (name.includes('motor') || name.includes('package') || icon === 'car-sport') return PartnerAssets.products.motorInsurance;
-  if (name.includes('health') || icon === 'medkit') return PartnerAssets.products.healthInsurance;
-  if (name.includes('life') || icon === 'people') return PartnerAssets.products.familyInsurance;
-  if (name.includes('home') || icon === 'home') return PartnerAssets.products.propertyTravelInsurance;
-  if (name.includes('travel') || icon === 'airplane') return PartnerAssets.products.propertyTravelInsurance;
-  return null;
 }
 
 function PayoutQuickAction({ payout, onPress }: { payout: PartnerPayoutSummary | null; onPress: () => void }) {
@@ -676,13 +664,16 @@ function BlueIcon({ icon, badge, size = 40 }: { icon: keyof typeof Ionicons.glyp
 
 function productIcon(label: string, index: number): keyof typeof Ionicons.glyphMap {
   const value = label.toLowerCase();
-  if (value.includes('third')) return 'shield-checkmark';
   if (value.includes('motor') || value.includes('package')) return 'car-sport';
-  if (value.includes('health')) return 'medkit';
+  if (value.includes('health')) return 'heart';
   if (value.includes('life') || value.includes('family')) return 'people';
-  if (value.includes('travel')) return 'airplane';
   if (value.includes('home') || value.includes('property')) return 'home';
-  return ['document-text', 'shield-checkmark', 'briefcase', 'layers'][index % 4] as keyof typeof Ionicons.glyphMap;
+  if (value.includes('travel')) return 'airplane';
+  if (value.includes('engineering')) return 'construct';
+  if (value.includes('third')) return 'shield-checkmark';
+  if (value.includes('saod') || value.includes('standalone od')) return 'car-sport';
+  if (value.includes('bundled')) return 'layers';
+  return ['briefcase', 'shield-checkmark', 'document-text', 'layers'][index % 4] as keyof typeof Ionicons.glyphMap;
 }
 
 function previousMonthMtdRanges(today: Date) {
@@ -801,8 +792,7 @@ const styles = StyleSheet.create({
   barMonth: { marginTop: 5, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   productGrid: { flexDirection: 'row', gap: 5, borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
   productTile: { flex: 1, minWidth: 0, minHeight: 58, alignItems: 'center', justifyContent: 'center', borderRadius: 11, paddingVertical: 8, backgroundColor: '#F5F9FF' },
-  productIconWrap: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  productIconAsset: { width: 26, height: 26 },
+  productIconWrap: { width: 30, height: 25, alignItems: 'center', justifyContent: 'center' },
   productLabel: { width: '94%', marginTop: 3, color: '#14367B', textAlign: 'center', ...partnerTheme.typography.meta, fontWeight: '700' },
   productShare: { marginTop: 1, color: '#3156B8', ...partnerTheme.typography.meta, fontWeight: '800' },
   emptyCompact: { flex: 1, minHeight: 72, alignItems: 'center', justifyContent: 'center' },
