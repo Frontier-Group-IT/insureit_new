@@ -2,13 +2,13 @@
 import { useState } from "react";
 import { manageGroupAssociate,updateGroupAssociate } from "./actions";
 type Associate={id:string;name:string;phone_number:string;email:string;designation:string;address:string|null;city:string|null;state:string|null;postal_code:string|null;status:string};
-export function AssociateControls({groupId,associate}:{groupId:string;associate:Associate}){
+export function AssociateControls({groupId,associate,surface}:{groupId:string;associate:Associate;surface?:"partner"|"operations"}){
  const [editing,setEditing]=useState(false);
  const [pendingDelete,setPendingDelete]=useState(false);
  return <div className="flex items-center gap-2">
   <button type="button" className="rounded border px-2 py-1" onClick={()=>setEditing(true)}>Edit</button>
   <form action={manageGroupAssociate} onSubmit={e=>{if(pendingDelete&&!window.confirm(`Permanently delete ${associate.name}'s account?`))e.preventDefault()}}>
-   <input type="hidden" name="group_id" value={groupId}/><input type="hidden" name="associate_id" value={associate.id}/>
+   <input type="hidden" name="group_id" value={groupId}/><input type="hidden" name="portal_surface" value={surface==="partner"?"partner":"operations"}/><input type="hidden" name="associate_id" value={associate.id}/>
    <select className="rounded border p-1" name="operation" onChange={e=>setPendingDelete(e.target.value==="delete")}>
     <option value="resend">Resend Link</option>
     <option value={associate.status==="disabled"?"enable":"disable"}>{associate.status==="disabled"?"Enable":"Disable"}</option>
