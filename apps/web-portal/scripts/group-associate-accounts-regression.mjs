@@ -21,7 +21,7 @@ assert.match(schema,/partner_app_current_identity_before_group_associates\(\)/);
 assert.match(schema,/partner_portal_access_context_before_group_associates\(\)/);
 assert.match(schema,/group_portal_associate_audit/);
 assert.doesNotMatch(schema,/drop table public\.portal_access_identities/);
-assert.match(rollback,/Refusing rollback: Group Associate accounts still exist/);
+assert.match(rollback,/Group Associate accounts exist; deprovision through approved process/);
 assert.match(actions,/requireGroupAssociateManager\(groupId\)/);
 assert.match(actions,/\.eq\("group_id",groupId\)/);
 assert.match(actions,/if\(actor\.actorId===associate\.auth_user_id\)/);
