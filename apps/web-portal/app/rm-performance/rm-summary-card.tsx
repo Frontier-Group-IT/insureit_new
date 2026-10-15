@@ -8,6 +8,19 @@ type RmRow = { employeeId: string | null; name: string; contributionPercent: num
 
 export function RmSummaryCard({ row, periodLabel, periodShortLabel }: { row: RmRow; periodLabel: string; periodShortLabel: string }) {
   const [open, setOpen] = useState(false);
+  const [otherOpen, setOtherOpen] = useState(false);
+  const rankedSources = [...row.sources].sort((a, b) => b.mtdNetPremium - a.mtdNetPremium || b.mtdPolicies - a.mtdPolicies || a.label.localeCompare(b.label));
+  const topSources = rankedSources.slice(0, 3);
+  const otherSources = rankedSources.slice(3);
+  const otherTotal = otherSources.reduce<Source>((total, source) => ({
+    key: "other",
+    label: "Other",
+    todayPolicies: total.todayPolicies + source.todayPolicies,
+    todayNetPremium: total.todayNetPremium + source.todayNetPremium,
+    mtdPolicies: total.mtdPolicies + source.mtdPolicies,
+    mtdNetPremium: total.mtdNetPremium + source.mtdNetPremium,
+  }), { key: "other", label: "Other", todayPolicies: 0, todayNetPremium: 0, mtdPolicies: 0, mtdNetPremium: 0 });
+
   return (
     <article className={"overflow-hidden rounded-xl bg-white transition-colors " + (open ? "border-2 border-[#C5D1DF] shadow-[0_3px_12px_rgba(31,54,87,.06)]" : "border border-[#E5EAF0]")}>
       <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} className={"w-full px-4 py-2 text-left transition-colors " + (open ? "border-b border-[#DDE4EC] bg-[#F9FAFC]" : "bg-white hover:bg-[#FAFBFD]")}>
@@ -19,7 +32,44 @@ export function RmSummaryCard({ row, periodLabel, periodShortLabel }: { row: RmR
           <div className="flex justify-end"><span className={"grid h-7 w-7 place-items-center rounded-full border transition " + (open ? "rotate-180 border-[#17365D] bg-[#17365D] text-white" : "border-[#E0E6ED] bg-white text-[#52647D]")}><ChevronDown className="h-3.5 w-3.5" /></span></div>
         </div>
       </button>
-      {open ? <div className="border-t border-[#E2E7ED] bg-[#FBFCFE] px-4 py-3"><div className="mb-2 flex items-center justify-between"><p className="text-[10px] font-black uppercase tracking-[.12em] text-[#566477]">Source Breakdown</p><span className="text-[10px] font-semibold text-[#69778A]">{row.sources.length} source{row.sources.length === 1 ? "" : "s"}</span></div>{row.sources.length ? <div className="grid overflow-hidden rounded-xl border border-[#D7E0E9] bg-white sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">{row.sources.map((source, index) => <SourceItem key={source.key} source={source} last={index === row.sources.length - 1} periodShortLabel={periodShortLabel} />)}</div> : <div className="border-t border-dashed border-[#E1E6EC] py-3 text-[11px] font-medium text-[#6D798B]">No source business recorded.</div>}</div> : null}
+      {open ? (
+        <div className="border-t border-[#E2E7ED] bg-[#FBFCFE] px-4 py-3">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-[10px] font-black uppercase tracking-[.12em] text-[#566477]">Source Breakdown</p>
+            <span className="text-[10px] font-semibold text-[#69778A]">{row.sources.length} source{row.sources.length === 1 ? "" : "s"}</span>
+          </div>
+
+          {row.sources.length ? (
+            <>
+              <div className="grid overflow-hidden rounded-xl border border-[#D7E0E9] bg-white sm:grid-cols-2 xl:grid-cols-4">
+                {topSources.map((source, index) => <SourceItem key={source.key} source={source} last={!otherSources.length && index === topSources.length - 1} periodShortLabel={periodShortLabel} />)}
+                {otherSources.length ? (
+                  <OtherSourceItem
+                    source={otherTotal}
+                    sourceCount={otherSources.length}
+                    open={otherOpen}
+                    onToggle={() => setOtherOpen((value) => !value)}
+                    periodShortLabel={periodShortLabel}
+                  />
+                ) : null}
+              </div>
+
+              {otherSources.length && otherOpen ? (
+                <div className="mt-2.5 overflow-hidden rounded-xl border border-[#D7E0E9] bg-white">
+                  <div className="border-b border-[#E7EDF3] bg-[#F8FAFC] px-3.5 py-2">
+                    <p className="text-[8.5px] font-black uppercase tracking-[.1em] text-[#617087]">Other Sources</p>
+                  </div>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {otherSources.map((source, index) => <SourceItem key={source.key} source={source} last={index === otherSources.length - 1} periodShortLabel={periodShortLabel} />)}
+                  </div>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <div className="border-t border-dashed border-[#E1E6EC] py-3 text-[11px] font-medium text-[#6D798B]">No source business recorded.</div>
+          )}
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -31,6 +81,27 @@ function MetricGroup({ label, policies, net }: { label: string; policies: number
 function SourceItem({ source, last, periodShortLabel }: { source: Source; last: boolean; periodShortLabel: string }) {
   return <div className={"min-w-0 px-3.5 py-3 " + (!last ? "border-b border-[#EDF0F4] sm:border-r xl:border-b-0" : "")}><p className="truncate text-[11px] font-black text-[#2D405A]" title={source.label}>{source.label}</p><div className="mt-2.5 grid grid-cols-2 gap-2.5"><div><p className="text-[9px] font-black uppercase tracking-[.07em] text-[#657286]">Today</p><p className="mt-1 truncate text-[11px] font-bold text-[#334861]">{money(source.todayNetPremium)}</p><p className="mt-1 text-[9.5px] font-medium text-[#6F7C8E]">{number(source.todayPolicies)} policies</p></div><div className="border-l border-[#EDF0F4] pl-2.5"><p className="text-[9px] font-black uppercase tracking-[.07em] text-[#657286]">{periodShortLabel}</p><p className="mt-1 truncate text-[11px] font-black text-[#17365D]">{money(source.mtdNetPremium)}</p><p className="mt-1 text-[9.5px] font-medium text-[#6F7C8E]">{number(source.mtdPolicies)} policies</p></div></div></div>;
 }
+
+function OtherSourceItem({ source, sourceCount, open, onToggle, periodShortLabel }: { source: Source; sourceCount: number; open: boolean; onToggle: () => void; periodShortLabel: string }) {
+  return (
+    <button type="button" onClick={onToggle} aria-expanded={open} className={"min-w-0 border-b border-[#EDF0F4] bg-[#F7FAFD] px-3.5 py-3 text-left transition hover:bg-[#F1F6FB] sm:border-l xl:border-b-0 " + (open ? "bg-[#EDF4FB]" : "")}>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-[11px] font-black text-[#17365D]">Other</p>
+          <p className="mt-0.5 text-[8.5px] font-bold text-[#6A7A90]">{sourceCount} sources</p>
+        </div>
+        <span className={"grid h-6 w-6 shrink-0 place-items-center rounded-full border border-[#D7E0E9] bg-white text-[#52647D] transition " + (open ? "rotate-180" : "")}>
+          <ChevronDown className="h-3 w-3" />
+        </span>
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-2.5">
+        <div><p className="text-[9px] font-black uppercase tracking-[.07em] text-[#657286]">Today</p><p className="mt-1 truncate text-[11px] font-bold text-[#334861]">{money(source.todayNetPremium)}</p><p className="mt-1 text-[9.5px] font-medium text-[#6F7C8E]">{number(source.todayPolicies)} policies</p></div>
+        <div className="border-l border-[#E1E7EE] pl-2.5"><p className="text-[9px] font-black uppercase tracking-[.07em] text-[#657286]">{periodShortLabel}</p><p className="mt-1 truncate text-[11px] font-black text-[#17365D]">{money(source.mtdNetPremium)}</p><p className="mt-1 text-[9.5px] font-medium text-[#6F7C8E]">{number(source.mtdPolicies)} policies</p></div>
+      </div>
+    </button>
+  );
+}
+
 
 function money(value: number) { return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0); }
 function number(value: number) { return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value || 0); }
