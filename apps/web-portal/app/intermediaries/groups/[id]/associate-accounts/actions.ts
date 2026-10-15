@@ -8,9 +8,11 @@ const str=(f:FormData,k:string)=>String(f.get(k)??"").trim();
 const emailValid=(s:string)=>/^\S+@\S+\.\S+$/.test(s);
 const validUuid=(s:string)=>/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(s);
 const pathFor=(id:string)=>`${root}/${id}/associate-accounts`;
-function finish(id:string,message:string,error=false):never{
+function finishResult(id:string,message:string,error=false,portal=false):never{
  revalidatePath(pathFor(id));
- redirect(`${pathFor(id)}?${error?"error":"success"}=${encodeURIComponent(message)}`);
+ const target=portal?"/partner/group-associates":pathFor(id);
+ revalidatePath(target);
+ redirect(`${target}?${error?"error":"success"}=${encodeURIComponent(message)}`);
 }
 async function context(f:FormData){
  const groupId=str(f,"group_id");
@@ -23,6 +25,7 @@ async function log(admin:ReturnType<typeof createSupabaseAdminClient>,groupId:st
  if(error)console.error("Group associate audit failure",error.code);
 }
 export async function createGroupAssociate(f:FormData){
+ const finish=(id:string,message:string,error=false):never=>finishResult(id,message,error,str(f,"portal_surface")==="partner");
  const {groupId,actor,admin}=await context(f);
  const name=str(f,"name"),phone=str(f,"phone").replace(/[^0-9+]/g,""),email=str(f,"email").toLowerCase(),designation=str(f,"designation");
  if(!name||!designation||!emailValid(email)||!/^\+?[0-9]{7,15}$/.test(phone)||str(f,"role")!=="group_admin")finish(groupId,"Enter valid name, phone, email, designation and role.",true);
@@ -54,6 +57,7 @@ export async function createGroupAssociate(f:FormData){
  finish(groupId,"Associate created. Activation email sent.");
 }
 export async function manageGroupAssociate(f:FormData){
+ const finish=(id:string,message:string,error=false):never=>finishResult(id,message,error,str(f,"portal_surface")==="partner");
  const {groupId,actor,admin}=await context(f);
  const associateId=str(f,"associate_id"),operation=str(f,"operation");
  if(!validUuid(associateId))finish(groupId,"Invalid associate account.",true);
@@ -89,6 +93,7 @@ export async function manageGroupAssociate(f:FormData){
  finish(groupId,"Unsupported action.",true);
 }
 export async function updateGroupAssociate(f:FormData){
+ const finish=(id:string,message:string,error=false):never=>finishResult(id,message,error,str(f,"portal_surface")==="partner");
  const {groupId,actor,admin}=await context(f);
  const associateId=str(f,"associate_id"),name=str(f,"name"),designation=str(f,"designation"),phone=str(f,"phone").replace(/[^0-9+]/g,"");
  if(!validUuid(associateId)||!name||!designation||!/^\+?[0-9]{7,15}$/.test(phone))finish(groupId,"Check required fields.",true);
