@@ -7,8 +7,13 @@ import { requireGroupAssociateManager } from "../../group-associate-access";
 import { createGroupAssociate } from "./actions";
 import { AssociateControls } from "./associate-controls";
 export const dynamic="force-dynamic";
-export default async function GroupAssociatesPage({params,searchParams}:{params:Promise<{id:string}>,searchParams:Promise<{success?:string,error?:string}>,surface?: "partner"|"operations"}){
- const {id}=await params;const q=await searchParams;
+type Query={success?:string,error?:string};
+export default async function GroupAssociatesPage({params,searchParams}:{params:Promise<{id:string}>;searchParams:Promise<Query>}){
+ const {id}=await params;
+ return renderGroupAssociates({id,query:await searchParams,surface:"operations"});
+}
+export async function renderGroupAssociates({id,query:q,surface}:{id:string;query:Query;surface:"partner"|"operations"}){
+
  await requireGroupAssociateManager(id);
  const admin=createSupabaseAdminClient();
  const [{data:group},{data:associates}]=await Promise.all([
