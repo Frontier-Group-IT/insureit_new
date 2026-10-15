@@ -20,14 +20,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 95
     env:
-      SOURCE_SHA: 07fbefd6dcb40851b759ce10a0b92d90d23d909f
+      SOURCE_SHA: c39255804bd7cd30e38661cce4bb0b97abb833e7
+      REVIEWED_MAIN_SHA: a37098d9fb436be09abd2f29269e4a1a2cd25132
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN_CUSTOMER || secrets.EXPO_TOKEN }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout approved immutable Customer source (NOT main)
         uses: actions/checkout@v4
         with:
-          ref: 07fbefd6dcb40851b759ce10a0b92d90d23d909f
+          ref: c39255804bd7cd30e38661cce4bb0b97abb833e7
           fetch-depth: 0
 
       - name: Enforce one approved source and main ancestry
@@ -39,9 +40,16 @@ jobs:
           test "$(git rev-parse origin/feature/customer-firebase-otp-gateway-0-3-2-20261014)" = "$SOURCE_SHA" || {
             echo "Refusing build: migration source moved since owner-approved build." >&2; exit 1;
           }
-          git merge-base --is-ancestor origin/main "$SOURCE_SHA" || {
-            echo "Refusing build: latest main not included in reviewed source." >&2; exit 1;
+          git merge-base --is-ancestor "$REVIEWED_MAIN_SHA" "$SOURCE_SHA" || {
+            echo "Refusing build: approved main baseline not included in reviewed source." >&2; exit 1;
           }
+          # Main may change for unrelated portal work while CI runs.
+          # Reject only later changes to Customer mobile or Firebase components.
+          new_sensitive="$(git diff --name-only "$REVIEWED_MAIN_SHA" origin/main -- apps/mobile-app supabase/functions/customer-firebase-bind supabase/functions/customer-firebase-session-bridge supabase/functions/customer-firebase-signup .github/workflows/build-customer-firebase-internal-aab.yml)"
+          if [ -n "$new_sensitive" ]; then
+            echo "Refusing build: new Customer/Firebase changes landed on main since review." >&2
+            exit 1
+          fi
 
       - name: Wait for five required source-SHA GitHub checks (fail closed)
         shell: bash
@@ -143,7 +151,7 @@ jobs:
         run: |
           {
             echo '## Single authorized Customer Firebase internal AAB'
-            echo 'Source: 07fbefd6dcb40851b759ce10a0b92d90d23d909f'
+            echo 'Source: c39255804bd7cd30e38661cce4bb0b97abb833e7'
             echo 'App: com.insureit.mobile 0.3.2 (11)'
             echo 'EAS: firebase-internal-test, App Bundle, Play Internal Testing target only'
             echo 'No APK, no PR merge, no OTA, no Google Play upload'
