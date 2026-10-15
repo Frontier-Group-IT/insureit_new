@@ -28,7 +28,7 @@ export default async function GroupAssociatesPage({params,searchParams}:{params:
    <section className="rounded-2xl border border-[#DCE5EF] bg-white">
     <h2 className="border-b p-4 text-sm font-semibold">Create Group Associate Account</h2>
     <form action={createGroupAssociate} className="grid gap-3 p-5 md:grid-cols-4">
-      <input type="hidden" name="group_id" value={id}/>
+      <input type="hidden" name="group_id" value={id}/><input type="hidden" name="portal_surface" value={surface==="partner"?"partner":"operations"}/>
       <label className="text-xs">Name *<input className={input} name="name" required/></label>
       <label className="text-xs">Phone Number *<input className={input} name="phone" required inputMode="tel"/></label>
       <label className="text-xs">Email *<input className={input} name="email" type="email" required/></label>
@@ -48,7 +48,7 @@ export default async function GroupAssociatesPage({params,searchParams}:{params:
       <td className="p-3">{a.name}</td><td className="p-3">{a.phone_number}</td><td className="p-3">{a.email}</td><td className="p-3">{a.designation}</td>
       <td className="p-3">{[a.address,a.city,a.state,a.postal_code].filter(Boolean).join(", ")||"–"}</td>
       <td className="p-3"><span className="rounded-full border px-2 py-1">Group Administrator</span></td><td className="p-3">{a.status}</td>
-      <td className="p-3"><AssociateControls groupId={id} associate={a}/></td>
+      <td className="p-3"><AssociateControls groupId={id} associate={a} surface={surface}/></td>
     </tr>)}</tbody></table>
    </section>
   </main>);
