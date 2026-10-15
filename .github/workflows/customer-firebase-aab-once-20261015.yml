@@ -1,0 +1,150 @@
+name: One-time owner-approved INSUREIT Customer Firebase AAB 0.3.2 (11)
+on:
+  push:
+    branches:
+      - agent/customer-firebase-aab-approved-once-20261015
+    paths:
+      - '.github/workflows/customer-firebase-aab-once-20261015.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: owner-approved-customer-firebase-aab-20261015
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: ${{ github.event.head_commit.message == 'ci(customer): owner-approved one-time Firebase internal AAB 0.3.2 (11)' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 95
+    env:
+      SOURCE_SHA: 07fbefd6dcb40851b759ce10a0b92d90d23d909f
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN_CUSTOMER || secrets.EXPO_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout approved immutable Customer source (NOT main)
+        uses: actions/checkout@v4
+        with:
+          ref: 07fbefd6dcb40851b759ce10a0b92d90d23d909f
+          fetch-depth: 0
+
+      - name: Enforce one approved source and main ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          git fetch origin main feature/customer-firebase-otp-gateway-0-3-2-20261014
+          test "$(git rev-parse origin/feature/customer-firebase-otp-gateway-0-3-2-20261014)" = "$SOURCE_SHA" || {
+            echo "Refusing build: migration source moved since owner-approved build." >&2; exit 1;
+          }
+          git merge-base --is-ancestor origin/main "$SOURCE_SHA" || {
+            echo "Refusing build: latest main not included in reviewed source." >&2; exit 1;
+          }
+
+      - name: Wait for five required source-SHA GitHub checks (fail closed)
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os, time
+          from urllib.request import Request, urlopen
+          required = {
+              'Verify Customer Firebase OTP Readiness',
+              'Verify mobile app',
+              'Verify web portal',
+              'Verify Partner app',
+              'INSUREIT dependency assurance evidence',
+          }
+          url = ('https://api.github.com/repos/' + os.environ['GITHUB_REPOSITORY']
+                 + '/actions/runs?per_page=100&head_sha=' + os.environ['SOURCE_SHA'])
+          headers = {'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                     'Accept': 'application/vnd.github+json',
+                     'X-GitHub-Api-Version': '2022-11-28'}
+          for attempt in range(40):
+              with urlopen(Request(url, headers=headers), timeout=25) as res:
+                  runs = json.load(res)['workflow_runs']
+              passed = {r['name'] for r in runs if r['conclusion'] == 'success'}
+              failed = {r['name'] for r in runs if r['conclusion'] in ('failure','timed_out','action_required')}
+              if required <= passed:
+                  print('All five exact-source CI checks passed: '+', '.join(sorted(required)))
+                  break
+              if failed & (required - passed):
+                  raise SystemExit('Required CI failed: '+', '.join(sorted(failed & required)))
+              print('Waiting for remaining CI: '+', '.join(sorted(required-passed)), flush=True)
+              time.sleep(30)
+          else:
+              raise SystemExit('CI not green within 20 minutes; no EAS build launched')
+          PY
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Validate exact internal AAB with canonical production public Supabase project
+        shell: bash
+        run: |
+          node <<'NODE'
+          const app=require('./apps/mobile-app/app.json').expo;
+          const eas=require('./apps/mobile-app/eas.json');
+          const g=require('./apps/mobile-app/google-services.json');
+          const cfg=eas.build['firebase-internal-test'];
+          if (app.version!=='0.3.2'||app.android?.versionCode!==11||
+              app.android?.package!=='com.insureit.mobile'||
+              app.extra?.eas?.projectId!=='aadcb7a5-072b-4bf9-bc81-c52fabdd5caa'||
+              g.project_info?.project_id!=='insureit-customer-auth'||
+              cfg.distribution!=='store'||cfg.android?.buildType!=='app-bundle'||
+              cfg.env?.EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_SESSION_BRIDGE_ENABLED!=='true'||
+              eas.build.production?.env?.EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_SESSION_BRIDGE_ENABLED!=='false'||
+              cfg.env?.EXPO_PUBLIC_SUPABASE_URL!=='https://ilzhsfqqjyppzzvfscmh.supabase.co'||
+              cfg.env?.EXPO_PUBLIC_SUPABASE_ANON_KEY!=='sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj') {
+            throw Error('Refusing build: internal AAB identity, Firebase gate or public Supabase configuration mismatched');
+          }
+          console.log('PASS: one approved native Customer AAB 0.3.2(11); production unchanged');
+          NODE
+          test -n "$EXPO_TOKEN" || {
+            echo "Expo token absent; no build started" >&2; exit 1;
+          }
+
+      - name: Install locked dependencies and verify Customer app
+        run: |
+          npm ci --no-audit --no-fund
+          npm run typecheck:mobile
+          npm run lint:mobile
+
+      - name: Verify connected Expo account and Customer EAS project
+        working-directory: apps/mobile-app
+        shell: bash
+        run: |
+          npx eas-cli whoami
+          npx eas-cli project:info --non-interactive
+
+      - name: BUILD ONE approved Android App Bundle via Expo EAS (NO APK or Play publication)
+        working-directory: apps/mobile-app
+        shell: bash
+        timeout-minutes: 65
+        run: |
+          set -euo pipefail
+          npx eas-cli build --platform android --profile firebase-internal-test --non-interactive --wait --json > customer-firebase-internal-aab.json
+          test -s customer-firebase-internal-aab.json
+          echo 'One Customer Android AAB build completed in EAS; no Google Play upload or release.'
+
+      - name: Save build reference (not the binary)
+        uses: actions/upload-artifact@v4
+        with:
+          name: approved-once-customer-firebase-aab-reference
+          path: apps/mobile-app/customer-firebase-internal-aab.json
+          retention-days: 7
+
+      - name: Final job summary
+        if: always()
+        run: |
+          {
+            echo '## Single authorized Customer Firebase internal AAB'
+            echo 'Source: 07fbefd6dcb40851b759ce10a0b92d90d23d909f'
+            echo 'App: com.insureit.mobile 0.3.2 (11)'
+            echo 'EAS: firebase-internal-test, App Bundle, Play Internal Testing target only'
+            echo 'No APK, no PR merge, no OTA, no Google Play upload'
+          } >> "$GITHUB_STEP_SUMMARY"
