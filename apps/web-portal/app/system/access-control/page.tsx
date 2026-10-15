@@ -1,7 +1,7 @@
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AppShell, Card, PageHeader } from "@/components/shell";
+import { AppShell, Card } from "@/components/shell";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { appRoles, isAppRole, roleLabels, type AppRole } from "@/lib/roles";
@@ -70,12 +70,17 @@ export default async function AccessControlPage({ searchParams }: { searchParams
   const auditEvents = buildAuditEvents(permissionAudit ?? [], lifecycleAudit ?? [], employeeMap, profileMap).slice(0, 50);
 
   return <AppShell title="Access Control">
-    <div className="mx-auto max-w-[1500px] space-y-4 pb-8">
-      <PageHeader title="Access Control" />
+    <div className="mx-auto max-w-[1500px] space-y-3 pb-8">
+      <section className="flex flex-wrap items-end justify-between gap-3 border-b border-[#DCE4EF] pb-3">
+        <div>
+          <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-[#10284A]">Access Control</h1>
+          <p className="mt-1 text-[10.5px] text-[#64748B]">Manage users, roles, permissions, reviews and access history.</p>
+        </div>
+      </section>
       {params.success ? <Notice tone="success" text={params.success} /> : null}
       {params.error ? <Notice tone="error" text={params.error} /> : null}
 
-      <nav className="flex flex-wrap gap-2 rounded-2xl border border-[#DCE4EF] bg-white p-2 shadow-sm">
+      <nav className="flex flex-wrap items-center gap-1 border-b border-[#DCE4EF] bg-white px-1 py-1">
         <WorkspaceTab current={view} value="users" label="Users" count={allUsers.length} />
         <WorkspaceTab current={view} value="roles" label="Roles" count={roleMatrixV2.length} />
         <WorkspaceTab current={view} value="permissions" label="Permissions" count={permissionCatalogueV2.length} />
@@ -122,15 +127,37 @@ function RolesWorkspace() {
 
 function PermissionsWorkspace() {
   const modules = Array.from(new Set(permissionCatalogueV2.map((permission) => permission.module)));
-  return <Card><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-[15px] font-semibold text-[#17203A]">Permissions</h2><p className="mt-1 text-[10px] text-[#64748B]">{permissionCatalogueV2.length} V2 permissions · read only during migration</p></div><ShadowBadge>Shadow catalogue</ShadowBadge></div><div className="mt-4 space-y-4">{modules.map((module) => <section key={module} className="rounded-2xl border border-[#E2E8F0] bg-[#FAFCFF] p-4"><h3 className="text-[11px] font-semibold uppercase tracking-[.04em] text-[#334155]">{module}</h3><div className="mt-3 overflow-x-auto"><table className="w-full min-w-[820px] text-left text-[9.5px]"><thead><tr className="border-b border-[#E2E8F0] text-[8px] uppercase tracking-[.04em] text-[#94A3B8]"><th className="pb-2">Permission</th><th className="pb-2">Access</th><th className="pb-2">Scopes</th><th className="pb-2">Risk</th></tr></thead><tbody className="divide-y divide-[#EDF2F7]">{permissionCatalogueV2.filter((permission) => permission.module === module).map((permission) => <tr key={permission.key}><td className="py-2.5 pr-4"><p className="font-semibold text-[#24345A]">{permission.label}</p><p className="mt-0.5 font-mono text-[7.5px] text-[#94A3B8]">{permission.key}</p></td><td className="py-2.5 pr-4 text-[#475569]">{permission.allowedAccess.join(" / ")}</td><td className="py-2.5 pr-4 text-[#64748B]">{permission.scopeRequired ? permission.allowedScopes.map(scopeLabel).join(", ") : "Not scoped"}</td><td className="py-2.5"><Risk value={permission.risk} /></td></tr>)}</tbody></table></div></section>)}</div></Card>;
+  return <Card className="!rounded-xl !border-[#DCE4EF] !bg-white !p-0 !shadow-sm !backdrop-blur-none">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E2E8F0] px-4 py-3">
+      <div><h2 className="text-[14px] font-semibold text-[#17203A]">Permissions</h2><p className="mt-0.5 text-[9.5px] text-[#64748B]">{permissionCatalogueV2.length} V2 permissions · read only during migration</p></div>
+      <ShadowBadge>Shadow catalogue</ShadowBadge>
+    </div>
+    <div className="divide-y divide-[#E2E8F0]">
+      {modules.map((module) => <section key={module}>
+        <div className="bg-[#F8FAFC] px-4 py-2 text-[9px] font-bold uppercase tracking-[.06em] text-[#475569]">{module}</div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px] text-left text-[10px]">
+            <thead><tr className="border-b border-[#E2E8F0] bg-white text-[8px] uppercase tracking-[.05em] text-[#94A3B8]"><th className="px-4 py-2">Permission</th><th className="px-4 py-2">Access</th><th className="px-4 py-2">Scopes</th><th className="px-4 py-2">Risk</th></tr></thead>
+            <tbody className="divide-y divide-[#EDF2F7]">{permissionCatalogueV2.filter((permission) => permission.module === module).map((permission) => <tr key={permission.key} className="hover:bg-[#FAFCFF]"><td className="px-4 py-2.5"><p className="font-semibold text-[#24345A]">{permission.label}</p><p className="mt-0.5 font-mono text-[7.5px] text-[#94A3B8]">{permission.key}</p></td><td className="px-4 py-2.5 text-[#475569]">{permission.allowedAccess.join(" / ")}</td><td className="px-4 py-2.5 text-[#64748B]">{permission.scopeRequired ? permission.allowedScopes.map(scopeLabel).join(", ") : "Not scoped"}</td><td className="px-4 py-2.5"><Risk value={permission.risk} /></td></tr>)}</tbody>
+          </table>
+        </div>
+      </section>)}
+    </div>
+  </Card>;
 }
 
 function ReviewsWorkspace({ items }: { items: ReviewItem[] }) {
-  return <Card><div><h2 className="text-[15px] font-semibold text-[#17203A]">Access Reviews</h2><p className="mt-1 text-[10px] text-[#64748B]">{items.length} items requiring review</p></div><div className="mt-4 space-y-2">{items.length ? items.map((item) => <div key={item.key} className="flex flex-col gap-3 rounded-2xl border border-[#E2E8F0] bg-[#FAFCFF] p-4 md:flex-row md:items-center md:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold text-[#17203A]">{item.employeeName}</p><Risk value={item.risk} /></div><p className="mt-1 text-[9.5px] text-[#64748B]">{item.title}</p><p className="mt-0.5 text-[8.5px] text-[#94A3B8]">{item.detail}</p></div>{item.profileId ? <Link href={`/system/access-control/employees/${item.profileId}`} className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-[#CBD5E1] bg-white px-4 text-[9.5px] font-semibold text-[#334155]">Review</Link> : null}</div>) : <EmptyState text="No access review items are currently open." />}</div></Card>;
+  return <Card className="!rounded-xl !border-[#DCE4EF] !bg-white !p-0 !shadow-sm !backdrop-blur-none">
+    <div className="border-b border-[#E2E8F0] px-4 py-3"><h2 className="text-[14px] font-semibold text-[#17203A]">Access Reviews</h2><p className="mt-0.5 text-[9.5px] text-[#64748B]">{items.length} items requiring review</p></div>
+    {items.length ? <div className="overflow-x-auto"><table className="w-full min-w-[800px] text-left text-[10px]"><thead><tr className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[8px] uppercase tracking-[.05em] text-[#94A3B8]"><th className="px-4 py-2.5">Employee</th><th className="px-4 py-2.5">Review item</th><th className="px-4 py-2.5">Risk</th><th className="px-4 py-2.5 text-right">Action</th></tr></thead><tbody className="divide-y divide-[#EDF2F7]">{items.map((item) => <tr key={item.key} className="hover:bg-[#FAFCFF]"><td className="px-4 py-3 font-semibold text-[#17203A]">{item.employeeName}</td><td className="px-4 py-3"><p className="font-medium text-[#334155]">{item.title}</p><p className="mt-0.5 text-[8.5px] text-[#94A3B8]">{item.detail}</p></td><td className="px-4 py-3"><Risk value={item.risk} /></td><td className="px-4 py-3 text-right">{item.profileId ? <Link href={`/system/access-control/employees/${item.profileId}`} className="inline-flex h-8 items-center rounded-lg border border-[#CBD5E1] bg-white px-3 text-[9px] font-semibold text-[#334155]">Review</Link> : null}</td></tr>)}</tbody></table></div> : <div className="p-4"><EmptyState text="No access review items are currently open." /></div>}
+  </Card>;
 }
 
 function AuditWorkspace({ events }: { events: AuditEvent[] }) {
-  return <Card><div><h2 className="text-[15px] font-semibold text-[#17203A]">Audit Log</h2><p className="mt-1 text-[10px] text-[#64748B]">Permission and portal lifecycle events</p></div><div className="mt-4 space-y-2">{events.length ? events.map((event) => <div key={event.key} className="grid gap-2 rounded-xl border border-[#E2E8F0] px-3 py-3 lg:grid-cols-[180px_1fr_220px] lg:items-center"><div><p className="text-[9.5px] font-semibold text-[#334155]">{event.actor}</p><p className="mt-0.5 text-[8px] text-[#94A3B8]">{event.type}</p></div><div><p className="text-[10px] font-semibold text-[#24345A]">{event.title}</p><p className="mt-0.5 text-[8.5px] text-[#64748B]">{event.detail}</p></div><span className="text-[8.5px] text-[#94A3B8] lg:text-right">{formatDate(event.createdAt)}</span></div>) : <EmptyState text="No access events have been recorded yet." />}</div></Card>;
+  return <Card className="!rounded-xl !border-[#DCE4EF] !bg-white !p-0 !shadow-sm !backdrop-blur-none">
+    <div className="border-b border-[#E2E8F0] px-4 py-3"><h2 className="text-[14px] font-semibold text-[#17203A]">Audit Log</h2><p className="mt-0.5 text-[9.5px] text-[#64748B]">Permission and portal lifecycle events</p></div>
+    {events.length ? <div className="overflow-x-auto"><table className="w-full min-w-[850px] text-left text-[10px]"><thead><tr className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[8px] uppercase tracking-[.05em] text-[#94A3B8]"><th className="px-4 py-2.5">Actor</th><th className="px-4 py-2.5">Type</th><th className="px-4 py-2.5">Event</th><th className="px-4 py-2.5 text-right">Date & time</th></tr></thead><tbody className="divide-y divide-[#EDF2F7]">{events.map((event) => <tr key={event.key} className="hover:bg-[#FAFCFF]"><td className="px-4 py-3 font-semibold text-[#334155]">{event.actor}</td><td className="px-4 py-3 text-[#64748B]">{event.type}</td><td className="px-4 py-3"><p className="font-semibold text-[#24345A]">{event.title}</p><p className="mt-0.5 text-[8.5px] text-[#64748B]">{event.detail}</p></td><td className="px-4 py-3 text-right text-[8.5px] text-[#94A3B8]">{formatDate(event.createdAt)}</td></tr>)}</tbody></table></div> : <div className="p-4"><EmptyState text="No access events have been recorded yet." /></div>}
+  </Card>;
 }
 
 function buildReviewItems(users: UserRow[], now: Date, thirtyDaysFromNow: Date) {
@@ -155,8 +182,8 @@ function buildAuditEvents(permissionRows: PermissionAuditRow[], lifecycleRows: L
   return [...permissionEvents, ...lifecycleEvents].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
-function WorkspaceTab({ current, value, label, count }: { current: WorkspaceView; value: WorkspaceView; label: string; count: number }) { const active = current === value; return <Link href={`/system/access-control?view=${value}`} className={`inline-flex h-10 items-center gap-2 rounded-xl px-4 text-[10px] font-semibold transition ${active ? "bg-[#172554] text-white shadow-sm" : "text-[#475569] hover:bg-[#F1F5F9]"}`}>{label}<span className={`rounded-full px-2 py-0.5 text-[8px] ${active ? "bg-white/15 text-white" : "bg-[#EEF2F7] text-[#64748B]"}`}>{count}</span></Link>; }
-function Metric({ label, value }: { label: string; value: number }) { return <div className="rounded-2xl border border-white/75 bg-white/90 p-4 shadow-sm"><p className="text-2xl font-semibold text-[#172554]">{value}</p><p className="mt-1 text-[8.5px] font-semibold uppercase tracking-[.05em] text-[#64748B]">{label}</p></div>; }
+function WorkspaceTab({ current, value, label, count }: { current: WorkspaceView; value: WorkspaceView; label: string; count: number }) { const active = current === value; return <Link href={`/system/access-control?view=${value}`} className={`inline-flex h-9 items-center gap-2 rounded-lg px-3 text-[9.5px] font-semibold transition ${active ? "bg-[#172554] text-white" : "text-[#475569] hover:bg-[#F1F5F9]"}`}>{label}<span className={`rounded-full px-1.5 py-0.5 text-[7.5px] ${active ? "bg-white/15 text-white" : "bg-[#EEF2F7] text-[#64748B]"}`}>{count}</span></Link>; }
+function Metric({ label, value }: { label: string; value: number }) { return <div className="rounded-xl border border-[#DCE4EF] bg-white px-4 py-3"><p className="text-xl font-semibold text-[#172554]">{value}</p><p className="mt-0.5 text-[8px] font-semibold uppercase tracking-[.05em] text-[#64748B]">{label}</p></div>; }
 function MiniStat({ label, value }: { label: string; value: string }) { return <div><p className="text-[8px] uppercase tracking-[.04em] text-[#94A3B8]">{label}</p><p className="mt-1 text-[9.5px] font-semibold text-[#334155]">{value}</p></div>; }
 function Badge({ children }: { children: React.ReactNode }) { return <span className="inline-flex rounded-full bg-[#EEF2FF] px-2.5 py-1 text-[9px] font-semibold text-[#4338CA]">{children}</span>; }
 function ShadowBadge({ children }: { children: React.ReactNode }) { return <span className="rounded-full border border-[#C7D2FE] bg-[#EEF2FF] px-3 py-1 text-[8.5px] font-semibold text-[#4338CA]">{children}</span>; }
