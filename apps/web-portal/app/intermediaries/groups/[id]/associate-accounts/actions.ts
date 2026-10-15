@@ -28,7 +28,8 @@ export async function createGroupAssociate(f:FormData){
  const finish=(id:string,message:string,error=false):never=>finishResult(id,message,error,str(f,"portal_surface")==="partner");
  const {groupId,actor,admin}=await context(f);
  const name=str(f,"name"),phone=str(f,"phone").replace(/[^0-9+]/g,""),email=str(f,"email").toLowerCase(),designation=str(f,"designation");
- if(!name||!designation||!emailValid(email)||!/^\+?[0-9]{7,15}$/.test(phone)||str(f,"role")!=="group_admin")finish(groupId,"Enter valid name, phone, email, designation and role.",true);
+ const role=str(f,"role");
+ if(!name||!designation||!emailValid(email)||!/^\+?[0-9]{7,15}$/.test(phone)||!["insurance_head","claim_head","bodyshop_manager"].includes(role))finish(groupId,"Enter valid details and choose an available role.",true);
  const [{data:authProfile},{data:primary},{data:associate},{data:partnerLogin},{data:groupLogin}]=await Promise.all([
   admin.from("profiles").select("id").ilike("email",email).limit(1),
   admin.from("portal_access_identities").select("id").ilike("login_email",email).limit(1),
@@ -40,7 +41,7 @@ export async function createGroupAssociate(f:FormData){
  if(authProfile?.length||primary?.length||associate?.length||partnerLogin?.length)finish(groupId,"Email is already linked to an existing portal account.",true);
  const {data:invite,error:invErr}=await admin.auth.admin.inviteUserByEmail(email,{
   redirectTo:`${(process.env.NEXT_PUBLIC_PORTAL_URL||"https://portal.insureit.in").replace(/\/$/,"")}/auth/callback?next=/intermediary-portal`,
-  data:{full_name:name,role:"intermediary",portal_account_type:"group_associate",group_id:groupId,group_associate_role:"group_admin"}
+  data:{full_name:name,role:"intermediary",portal_account_type:"group_associate",group_id:groupId,group_associate_role:role}
  });
  if(invErr||!invite.user?.id)return finish(groupId,"Unable to send activation email. Check Auth email configuration and rate limit.",true);
  const authId=invite.user.id,now=new Date().toISOString();
@@ -49,7 +50,7 @@ export async function createGroupAssociate(f:FormData){
  const {data:newAccount,error:accountError}=await admin.from("group_portal_associate_accounts").insert({
   group_id:groupId,auth_user_id:authId,name,phone_number:phone,email,designation,
   address:str(f,"address")||null,city:str(f,"city")||null,state:str(f,"state")||null,
-  postal_code:str(f,"postal_code")||null,role:"group_admin",status:"invited",invited_at:now,
+  postal_code:str(f,"postal_code")||null,role,status:"invited",invited_at:now,
   created_by:actor.actorId,updated_by:actor.actorId
  }).select("id").single();
  if(accountError||!newAccount){await admin.auth.admin.deleteUser(authId);return finish(groupId,"Unable to link associate to Group. No access was granted.",true)}
