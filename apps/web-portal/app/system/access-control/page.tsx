@@ -1,7 +1,7 @@
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AppShell, Card, PageHeader } from "@/components/shell";
+import { AppShell, Card } from "@/components/shell";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { appRoles, isAppRole, roleLabels, type AppRole } from "@/lib/roles";
@@ -70,12 +70,22 @@ export default async function AccessControlPage({ searchParams }: { searchParams
   const auditEvents = buildAuditEvents(permissionAudit ?? [], lifecycleAudit ?? [], employeeMap, profileMap).slice(0, 50);
 
   return <AppShell title="Access Control">
-    <div className="mx-auto max-w-[1500px] space-y-4 pb-8">
-      <PageHeader title="Access Control" />
+    <div className="mx-auto max-w-[1500px] space-y-3 pb-6">
+      <section className="flex min-h-[68px] items-center justify-between rounded-2xl border border-[#DCE4EF] bg-white px-5 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
+        <div className="min-w-0">
+          <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-[#64748B]">System administration</p>
+          <h1 className="mt-1 text-[20px] font-bold tracking-[-0.02em] text-[#17203A]">Access Control</h1>
+        </div>
+        <div className="hidden rounded-xl border border-[#DCE4EF] bg-[#F8FAFC] px-3 py-2 text-right sm:block">
+          <p className="text-[8px] font-bold uppercase tracking-[0.08em] text-[#94A3B8]">Directory</p>
+          <p className="mt-0.5 text-[11px] font-bold text-[#17365D]">{allUsers.length} users</p>
+        </div>
+      </section>
+
       {params.success ? <Notice tone="success" text={params.success} /> : null}
       {params.error ? <Notice tone="error" text={params.error} /> : null}
 
-      <nav className="flex flex-wrap gap-2 rounded-2xl border border-[#DCE4EF] bg-white p-2 shadow-sm">
+      <nav className="flex flex-wrap items-center gap-1 rounded-xl border border-[#DCE4EF] bg-white p-1.5 shadow-[0_4px_14px_rgba(15,23,42,0.04)]">
         <WorkspaceTab current={view} value="users" label="Users" count={allUsers.length} />
         <WorkspaceTab current={view} value="roles" label="Roles" count={roleMatrixV2.length} />
         <WorkspaceTab current={view} value="permissions" label="Permissions" count={permissionCatalogueV2.length} />
@@ -94,43 +104,74 @@ export default async function AccessControlPage({ searchParams }: { searchParams
 
 function UsersWorkspace({ users, params, roleFilter, metrics }: { users: UserRow[]; params: { q?: string; role?: string }; roleFilter: AppRole | ""; metrics: { active: number; noPortal: number; disabled: number; custom: number; privileged: number; expiring: number } }) {
   return <>
-    <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-      <Metric label="Active users" value={metrics.active} /><Metric label="Without portal" value={metrics.noPortal} /><Metric label="Disabled" value={metrics.disabled} /><Metric label="Custom access" value={metrics.custom} /><Metric label="Privileged users" value={metrics.privileged} /><Metric label="Expiring access" value={metrics.expiring} />
+    <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <Metric label="Active users" value={metrics.active} tone="green" /><Metric label="Without portal" value={metrics.noPortal} tone="slate" /><Metric label="Disabled" value={metrics.disabled} tone="amber" /><Metric label="Custom access" value={metrics.custom} tone="blue" /><Metric label="Privileged users" value={metrics.privileged} tone="violet" /><Metric label="Expiring access" value={metrics.expiring} tone="red" />
     </section>
     <Card>
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div><h2 className="text-[15px] font-semibold text-[#17203A]">Users</h2><p className="mt-1 text-[10px] text-[#64748B]">{users.length} employee records</p></div>
-        <form className="flex flex-wrap gap-2">
+      <div className="flex flex-col gap-2 border-b border-[#E8EEF5] pb-3 lg:flex-row lg:items-center lg:justify-between">
+        <div><h2 className="text-[14px] font-bold text-[#17203A]">Users</h2><p className="mt-0.5 text-[9px] text-[#64748B]">{users.length} employee records</p></div>
+        <form className="flex flex-1 flex-wrap justify-end gap-2 lg:max-w-[690px]">
           <input type="hidden" name="view" value="users" />
-          <input name="q" defaultValue={params.q ?? ""} placeholder="Search employee, role or location" className="h-10 w-64 rounded-xl border border-[#D8E1EC] bg-white px-3 text-[10.5px] outline-none focus:border-[#94A3B8]" />
-          <select name="role" defaultValue={roleFilter} className="h-10 rounded-xl border border-[#D8E1EC] bg-white px-3 text-[10.5px]"><option value="">All roles</option>{appRoles.filter((role) => !["customer", "intermediary"].includes(role)).map((role) => <option key={role} value={role}>{roleLabels[role]}</option>)}</select>
-          <button className="h-10 rounded-xl bg-[#172554] px-4 text-[10.5px] font-semibold text-white">Apply</button>
+          <input name="q" defaultValue={params.q ?? ""} placeholder="Search employee, role or location" className="h-9 min-w-[220px] flex-1 rounded-lg border border-[#D8E1EC] bg-white px-3 text-[10px] outline-none transition focus:border-[#94A3B8] lg:max-w-[330px]" />
+          <select name="role" defaultValue={roleFilter} className="h-9 min-w-[145px] rounded-lg border border-[#D8E1EC] bg-white px-3 text-[10px]"><option value="">All roles</option>{appRoles.filter((role) => !["customer", "intermediary"].includes(role)).map((role) => <option key={role} value={role}>{roleLabels[role]}</option>)}</select>
+          <button className="h-9 rounded-lg bg-[#17365D] px-4 text-[10px] font-bold text-white shadow-[0_6px_16px_rgba(23,54,93,.16)]">Apply</button>
         </form>
       </div>
-      <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[1120px] text-left text-[10.5px]"><thead><tr className="border-y border-[#E2E8F0] bg-[#F8FAFC] text-[8.5px] uppercase tracking-[.05em] text-[#64748B]"><th className="px-3 py-3">Employee</th><th className="px-3 py-3">Portal</th><th className="px-3 py-3">Primary role</th><th className="px-3 py-3">Scope</th><th className="px-3 py-3">Custom access</th><th className="px-3 py-3">Risk</th><th className="px-3 py-3 text-right">Action</th></tr></thead><tbody className="divide-y divide-[#EDF2F7]">{users.map(({ employee, profile, overrides }) => {
+      <div className="mt-3 overflow-x-auto"><table className="w-full min-w-[1120px] table-fixed text-left text-[10px] text-[#252944]"><thead className="sticky top-0 z-10"><tr className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[8px] font-bold uppercase tracking-[.06em] text-[#64748B]"><th className="w-[235px] px-3 py-2">Employee</th><th className="w-[110px] px-3 py-2 text-center">Portal</th><th className="w-[150px] px-3 py-2 text-center">Primary role</th><th className="w-[165px] px-3 py-2 text-center">Scope</th><th className="w-[135px] px-3 py-2 text-center">Custom access</th><th className="w-[105px] px-3 py-2 text-center">Risk</th><th className="w-[100px] px-3 py-2 text-right">Action</th></tr></thead><tbody className="divide-y divide-[#EEF2F6]">{users.map(({ employee, profile, overrides }) => {
         const role = profile && isAppRole(profile.role) ? profile.role : null;
         const activeOverrides = overrides.filter(isCurrentOverride);
-        return <tr key={employee.id} className="hover:bg-[#FAFCFF]"><td className="px-3 py-3"><p className="font-semibold text-[#0F2A55]">{employee.full_name}</p><p className="mt-0.5 text-[9px] text-[#64748B]">{employee.employee_code} · {employee.designation}</p><p className="mt-0.5 text-[8.5px] text-[#94A3B8]">{employee.department ?? "-"} · {employee.location ?? "No location"}</p></td><td className="px-3 py-3"><PortalStatus employee={employee} profile={profile} /></td><td className="px-3 py-3">{role ? <Badge>{roleLabels[role]}</Badge> : <span className="text-[#94A3B8]">Not assigned</span>}</td><td className="px-3 py-3 text-[#475569]">{role ? defaultScope(role) : "—"}</td><td className="px-3 py-3"><span className={activeOverrides.length ? "font-semibold text-[#4F46E5]" : "text-[#94A3B8]"}>{activeOverrides.length} custom</span></td><td className="px-3 py-3"><Risk value={userRisk(employee, profile, activeOverrides)} /></td><td className="px-3 py-3 text-right">{profile ? <Link href={`/system/access-control/employees/${profile.id}`} className="inline-flex h-9 items-center rounded-xl bg-[#172554] px-4 text-[10px] font-semibold text-white">Manage</Link> : <Link href="/employees" className="inline-flex h-9 items-center rounded-xl border border-[#CBD5E1] bg-white px-4 text-[10px] font-semibold text-[#334155]">Employee</Link>}</td></tr>;
+        return <tr key={employee.id} className="h-[54px] transition hover:bg-[#FAFCFF]"><td className="px-3 py-2"><p className="truncate font-bold text-[#0F2A55]">{employee.full_name}</p><p className="mt-0.5 truncate text-[8.5px] text-[#64748B]">{employee.employee_code} · {employee.designation}</p><p className="mt-0.5 truncate text-[8px] text-[#94A3B8]">{employee.department ?? "-"} · {employee.location ?? "No location"}</p></td><td className="px-3 py-2 text-center"><PortalStatus employee={employee} profile={profile} /></td><td className="px-3 py-2 text-center">{role ? <Badge>{roleLabels[role]}</Badge> : <span className="text-[#94A3B8]">Not assigned</span>}</td><td className="px-3 py-2 text-center text-[#475569]">{role ? defaultScope(role) : "—"}</td><td className="px-3 py-2 text-center"><span className={activeOverrides.length ? "font-semibold text-[#4F46E5]" : "text-[#94A3B8]"}>{activeOverrides.length} custom</span></td><td className="px-3 py-2 text-center"><Risk value={userRisk(employee, profile, activeOverrides)} /></td><td className="px-3 py-2 text-right">{profile ? <Link href={`/system/access-control/employees/${profile.id}`} className="inline-flex h-8 items-center rounded-lg bg-[#17365D] px-3 text-[9px] font-bold text-white">Manage</Link> : <Link href="/employees" className="inline-flex h-8 items-center rounded-lg border border-[#CBD5E1] bg-white px-3 text-[9px] font-bold text-[#334155]">Employee</Link>}</td></tr>;
       })}</tbody></table></div>
     </Card>
   </>;
 }
 
 function RolesWorkspace() {
-  return <Card><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-[15px] font-semibold text-[#17203A]">Roles</h2><p className="mt-1 text-[10px] text-[#64748B]">V2 role model · read only during migration</p></div><ShadowBadge>Shadow model</ShadowBadge></div><div className="mt-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-3">{roleMatrixV2.map((role) => <div key={role.code} className="rounded-2xl border border-[#E2E8F0] bg-[#FAFCFF] p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="text-[12px] font-semibold text-[#17203A]">{role.label}</h3><p className="mt-1 text-[9px] leading-4 text-[#64748B]">{role.purpose}</p></div><RoleStatus status={role.status} /></div><div className="mt-4 grid grid-cols-3 gap-2 border-t border-[#E2E8F0] pt-3"><MiniStat label="Permissions" value={String(role.grants.length)} /><MiniStat label="Scope" value={scopeLabel(role.defaultScope)} /><MiniStat label="Assignable" value={role.assignable ? "Yes" : "No"} /></div></div>)}</div></Card>;
+  return <Card>
+    <div className="flex flex-col gap-2 border-b border-[#E8EEF5] pb-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <div className="flex items-center gap-2">
+          <h2 className="text-[14px] font-bold text-[#17203A]">Roles</h2>
+          <span className="rounded-full bg-[#EEF2F7] px-2 py-0.5 text-[8px] font-bold text-[#64748B]">{roleMatrixV2.length}</span>
+        </div>
+        <p className="mt-0.5 text-[9px] text-[#64748B]">Role catalogue and default access scope</p>
+      </div>
+      <ShadowBadge>Shadow model</ShadowBadge>
+    </div>
+
+    <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+      {roleMatrixV2.map((role) => (
+        <article key={role.code} className="group rounded-xl border border-[#E2E8F0] bg-white p-3 shadow-[0_3px_10px_rgba(15,23,42,0.025)] transition hover:border-[#C9D6E5] hover:bg-[#FCFDFE]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="truncate text-[11.5px] font-bold text-[#17203A]">{role.label}</h3>
+              <p className="mt-1 line-clamp-2 min-h-[30px] text-[8.5px] leading-[15px] text-[#64748B]">{role.purpose}</p>
+            </div>
+            <RoleStatus status={role.status} />
+          </div>
+
+          <div className="mt-3 grid grid-cols-3 overflow-hidden rounded-lg border border-[#E6ECF3] bg-[#F8FAFC]">
+            <RoleStat label="Permissions" value={String(role.grants.length)} />
+            <RoleStat label="Scope" value={scopeLabel(role.defaultScope)} bordered />
+            <RoleStat label="Assignable" value={role.assignable ? "Yes" : "No"} bordered />
+          </div>
+        </article>
+      ))}
+    </div>
+  </Card>;
 }
 
 function PermissionsWorkspace() {
   const modules = Array.from(new Set(permissionCatalogueV2.map((permission) => permission.module)));
-  return <Card><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-[15px] font-semibold text-[#17203A]">Permissions</h2><p className="mt-1 text-[10px] text-[#64748B]">{permissionCatalogueV2.length} V2 permissions · read only during migration</p></div><ShadowBadge>Shadow catalogue</ShadowBadge></div><div className="mt-4 space-y-4">{modules.map((module) => <section key={module} className="rounded-2xl border border-[#E2E8F0] bg-[#FAFCFF] p-4"><h3 className="text-[11px] font-semibold uppercase tracking-[.04em] text-[#334155]">{module}</h3><div className="mt-3 overflow-x-auto"><table className="w-full min-w-[820px] text-left text-[9.5px]"><thead><tr className="border-b border-[#E2E8F0] text-[8px] uppercase tracking-[.04em] text-[#94A3B8]"><th className="pb-2">Permission</th><th className="pb-2">Access</th><th className="pb-2">Scopes</th><th className="pb-2">Risk</th></tr></thead><tbody className="divide-y divide-[#EDF2F7]">{permissionCatalogueV2.filter((permission) => permission.module === module).map((permission) => <tr key={permission.key}><td className="py-2.5 pr-4"><p className="font-semibold text-[#24345A]">{permission.label}</p><p className="mt-0.5 font-mono text-[7.5px] text-[#94A3B8]">{permission.key}</p></td><td className="py-2.5 pr-4 text-[#475569]">{permission.allowedAccess.join(" / ")}</td><td className="py-2.5 pr-4 text-[#64748B]">{permission.scopeRequired ? permission.allowedScopes.map(scopeLabel).join(", ") : "Not scoped"}</td><td className="py-2.5"><Risk value={permission.risk} /></td></tr>)}</tbody></table></div></section>)}</div></Card>;
+  return <Card><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-[15px] font-semibold text-[#17203A]">Permissions</h2><p className="mt-1 text-[10px] text-[#64748B]">{permissionCatalogueV2.length} V2 permissions · read only during migration</p></div><ShadowBadge>Shadow catalogue</ShadowBadge></div><div className="mt-3 space-y-3">{modules.map((module) => <section key={module} className="rounded-xl border border-[#E2E8F0] bg-[#FAFCFF] p-3"><h3 className="text-[11px] font-semibold uppercase tracking-[.04em] text-[#334155]">{module}</h3><div className="mt-3 overflow-x-auto"><table className="w-full min-w-[820px] text-left text-[9.5px]"><thead><tr className="border-b border-[#E2E8F0] text-[8px] uppercase tracking-[.04em] text-[#94A3B8]"><th className="pb-2">Permission</th><th className="pb-2">Access</th><th className="pb-2">Scopes</th><th className="pb-2">Risk</th></tr></thead><tbody className="divide-y divide-[#EDF2F7]">{permissionCatalogueV2.filter((permission) => permission.module === module).map((permission) => <tr key={permission.key}><td className="py-2.5 pr-4"><p className="font-semibold text-[#24345A]">{permission.label}</p><p className="mt-0.5 font-mono text-[7.5px] text-[#94A3B8]">{permission.key}</p></td><td className="py-2.5 pr-4 text-[#475569]">{permission.allowedAccess.join(" / ")}</td><td className="py-2.5 pr-4 text-[#64748B]">{permission.scopeRequired ? permission.allowedScopes.map(scopeLabel).join(", ") : "Not scoped"}</td><td className="py-2.5"><Risk value={permission.risk} /></td></tr>)}</tbody></table></div></section>)}</div></Card>;
 }
 
 function ReviewsWorkspace({ items }: { items: ReviewItem[] }) {
-  return <Card><div><h2 className="text-[15px] font-semibold text-[#17203A]">Access Reviews</h2><p className="mt-1 text-[10px] text-[#64748B]">{items.length} items requiring review</p></div><div className="mt-4 space-y-2">{items.length ? items.map((item) => <div key={item.key} className="flex flex-col gap-3 rounded-2xl border border-[#E2E8F0] bg-[#FAFCFF] p-4 md:flex-row md:items-center md:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold text-[#17203A]">{item.employeeName}</p><Risk value={item.risk} /></div><p className="mt-1 text-[9.5px] text-[#64748B]">{item.title}</p><p className="mt-0.5 text-[8.5px] text-[#94A3B8]">{item.detail}</p></div>{item.profileId ? <Link href={`/system/access-control/employees/${item.profileId}`} className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-[#CBD5E1] bg-white px-4 text-[9.5px] font-semibold text-[#334155]">Review</Link> : null}</div>) : <EmptyState text="No access review items are currently open." />}</div></Card>;
+  return <Card><div><h2 className="text-[15px] font-semibold text-[#17203A]">Access Reviews</h2><p className="mt-1 text-[10px] text-[#64748B]">{items.length} items requiring review</p></div><div className="mt-3 space-y-2">{items.length ? items.map((item) => <div key={item.key} className="flex flex-col gap-3 rounded-xl border border-[#E2E8F0] bg-[#FAFCFF] p-3 md:flex-row md:items-center md:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold text-[#17203A]">{item.employeeName}</p><Risk value={item.risk} /></div><p className="mt-1 text-[9.5px] text-[#64748B]">{item.title}</p><p className="mt-0.5 text-[8.5px] text-[#94A3B8]">{item.detail}</p></div>{item.profileId ? <Link href={`/system/access-control/employees/${item.profileId}`} className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-[#CBD5E1] bg-white px-4 text-[9.5px] font-semibold text-[#334155]">Review</Link> : null}</div>) : <EmptyState text="No access review items are currently open." />}</div></Card>;
 }
 
 function AuditWorkspace({ events }: { events: AuditEvent[] }) {
-  return <Card><div><h2 className="text-[15px] font-semibold text-[#17203A]">Audit Log</h2><p className="mt-1 text-[10px] text-[#64748B]">Permission and portal lifecycle events</p></div><div className="mt-4 space-y-2">{events.length ? events.map((event) => <div key={event.key} className="grid gap-2 rounded-xl border border-[#E2E8F0] px-3 py-3 lg:grid-cols-[180px_1fr_220px] lg:items-center"><div><p className="text-[9.5px] font-semibold text-[#334155]">{event.actor}</p><p className="mt-0.5 text-[8px] text-[#94A3B8]">{event.type}</p></div><div><p className="text-[10px] font-semibold text-[#24345A]">{event.title}</p><p className="mt-0.5 text-[8.5px] text-[#64748B]">{event.detail}</p></div><span className="text-[8.5px] text-[#94A3B8] lg:text-right">{formatDate(event.createdAt)}</span></div>) : <EmptyState text="No access events have been recorded yet." />}</div></Card>;
+  return <Card><div><h2 className="text-[15px] font-semibold text-[#17203A]">Audit Log</h2><p className="mt-1 text-[10px] text-[#64748B]">Permission and portal lifecycle events</p></div><div className="mt-3 space-y-2">{events.length ? events.map((event) => <div key={event.key} className="grid gap-2 rounded-xl border border-[#E2E8F0] px-3 py-3 lg:grid-cols-[180px_1fr_220px] lg:items-center"><div><p className="text-[9.5px] font-semibold text-[#334155]">{event.actor}</p><p className="mt-0.5 text-[8px] text-[#94A3B8]">{event.type}</p></div><div><p className="text-[10px] font-semibold text-[#24345A]">{event.title}</p><p className="mt-0.5 text-[8.5px] text-[#64748B]">{event.detail}</p></div><span className="text-[8.5px] text-[#94A3B8] lg:text-right">{formatDate(event.createdAt)}</span></div>) : <EmptyState text="No access events have been recorded yet." />}</div></Card>;
 }
 
 function buildReviewItems(users: UserRow[], now: Date, thirtyDaysFromNow: Date) {
@@ -155,8 +196,9 @@ function buildAuditEvents(permissionRows: PermissionAuditRow[], lifecycleRows: L
   return [...permissionEvents, ...lifecycleEvents].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
-function WorkspaceTab({ current, value, label, count }: { current: WorkspaceView; value: WorkspaceView; label: string; count: number }) { const active = current === value; return <Link href={`/system/access-control?view=${value}`} className={`inline-flex h-10 items-center gap-2 rounded-xl px-4 text-[10px] font-semibold transition ${active ? "bg-[#172554] text-white shadow-sm" : "text-[#475569] hover:bg-[#F1F5F9]"}`}>{label}<span className={`rounded-full px-2 py-0.5 text-[8px] ${active ? "bg-white/15 text-white" : "bg-[#EEF2F7] text-[#64748B]"}`}>{count}</span></Link>; }
-function Metric({ label, value }: { label: string; value: number }) { return <div className="rounded-2xl border border-white/75 bg-white/90 p-4 shadow-sm"><p className="text-2xl font-semibold text-[#172554]">{value}</p><p className="mt-1 text-[8.5px] font-semibold uppercase tracking-[.05em] text-[#64748B]">{label}</p></div>; }
+function WorkspaceTab({ current, value, label, count }: { current: WorkspaceView; value: WorkspaceView; label: string; count: number }) { const active = current === value; return <Link href={`/system/access-control?view=${value}`} className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-[9.5px] font-bold transition ${active ? "bg-[#17365D] text-white shadow-[0_4px_10px_rgba(23,54,93,.16)]" : "text-[#475569] hover:bg-[#F1F5F9]"}`}>{label}<span className={`rounded-full px-1.5 py-0.5 text-[7.5px] ${active ? "bg-white/15 text-white" : "bg-[#EEF2F7] text-[#64748B]"}`}>{count}</span></Link>; }
+function Metric({ label, value, tone }: { label: string; value: number; tone: "green" | "slate" | "amber" | "blue" | "violet" | "red" }) { const toneClass = tone === "green" ? "border-emerald-100 bg-emerald-50/35" : tone === "amber" ? "border-amber-100 bg-amber-50/35" : tone === "blue" ? "border-blue-100 bg-blue-50/35" : tone === "violet" ? "border-violet-100 bg-violet-50/35" : tone === "red" ? "border-red-100 bg-red-50/35" : "border-slate-200 bg-white"; return <div className={`min-h-[72px] rounded-xl border px-3 py-2.5 shadow-[0_4px_12px_rgba(15,23,42,0.035)] ${toneClass}`}><p className="text-[20px] font-bold leading-none text-[#172554]">{value}</p><p className="mt-2 text-[7.5px] font-bold uppercase tracking-[.06em] text-[#64748B]">{label}</p></div>; }
+function RoleStat({ label, value, bordered = false }: { label: string; value: string; bordered?: boolean }) { return <div className={`min-w-0 px-2.5 py-2 ${bordered ? "border-l border-[#E6ECF3]" : ""}`}><p className="text-[7px] font-bold uppercase tracking-[.05em] text-[#94A3B8]">{label}</p><p className="mt-1 truncate text-[9px] font-bold text-[#334155]">{value}</p></div>; }
 function MiniStat({ label, value }: { label: string; value: string }) { return <div><p className="text-[8px] uppercase tracking-[.04em] text-[#94A3B8]">{label}</p><p className="mt-1 text-[9.5px] font-semibold text-[#334155]">{value}</p></div>; }
 function Badge({ children }: { children: React.ReactNode }) { return <span className="inline-flex rounded-full bg-[#EEF2FF] px-2.5 py-1 text-[9px] font-semibold text-[#4338CA]">{children}</span>; }
 function ShadowBadge({ children }: { children: React.ReactNode }) { return <span className="rounded-full border border-[#C7D2FE] bg-[#EEF2FF] px-3 py-1 text-[8.5px] font-semibold text-[#4338CA]">{children}</span>; }
