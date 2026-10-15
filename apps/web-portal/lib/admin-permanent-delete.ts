@@ -92,6 +92,14 @@ async function deleteUser(profileId: string, actorId: string): Promise<Permanent
       return { status: "error", message: "The customer onboarding history could not be preserved safely." };
     }
 
+    const { error: membershipProfileError } = await admin
+      .from("customer_memberships")
+      .update({ profile_id: null })
+      .eq("profile_id", profileId);
+    if (membershipProfileError) {
+      return { status: "error", message: "The customer membership link could not be preserved safely." };
+    }
+
     const { error: membershipCreatorError } = await admin
       .from("customer_memberships")
       .update({ created_by: null })
