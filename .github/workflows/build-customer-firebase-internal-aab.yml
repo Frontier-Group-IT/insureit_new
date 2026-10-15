@@ -81,7 +81,8 @@ jobs:
              !google.client?.some(c => c.client_info?.android_client_info?.package_name === app.android.package) ||
              eas.build?.production?.env?.EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_SESSION_BRIDGE_ENABLED !== 'false' ||
              eas.build?.['firebase-internal-test']?.env?.EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_SESSION_BRIDGE_ENABLED !== 'true' ||
-             eas.build?.['firebase-internal-test']?.android?.buildType !== 'app-bundle') {
+             eas.build?.['firebase-internal-test']?.android?.buildType !== 'app-bundle' ||
+             eas.build?.['firebase-internal-test']?.distribution !== 'store') {
             throw new Error('Customer Firebase internal AAB identity or feature-gate checks failed.');
           }
           console.log('Customer Android 0.3.2(11) native configuration approved for internal testing ONLY');
