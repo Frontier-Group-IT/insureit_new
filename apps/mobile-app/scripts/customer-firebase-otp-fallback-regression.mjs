@@ -12,6 +12,8 @@ const config = JSON.parse(src('../eas.json'));
 test('production Android build cannot enable experimental Firebase OTP login', () => {
   assert.equal(config.build.production.env.EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_SESSION_BRIDGE_ENABLED, 'false');
   assert.equal(config.build['firebase-internal-test'].env.EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_SESSION_BRIDGE_ENABLED, 'true');
+  assert.equal(config.build['firebase-internal-test'].android.buildType, 'app-bundle');
+  assert.equal(config.build['firebase-internal-test'].distribution, 'store');
 });
 
 for (const [screen, source] of [['login',login],['signup',signup]]) {
