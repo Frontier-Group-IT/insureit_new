@@ -9,7 +9,7 @@ begin
  end if;
 end $$;
 
--- Restore original Auth activation entrypoint and its prior privilege contract.
+-- Remove dependent convenience wrappers inside the same transaction before\n-- restoring the original function identities. Both wrappers are recreated below.\ndrop function public.partner_portal_current_identity();\ndrop function public.partner_portal_scoped_partner_ids();\n\n-- Restore original Auth activation entrypoint and its prior privilege contract.
 drop function public.partner_app_activate_current_account();
 alter function public.partner_app_activate_current_account_before_group_associates()
   rename to partner_app_activate_current_account;
@@ -31,7 +31,7 @@ grant execute on function public.partner_portal_access_context() to authenticate
 
 -- Retarget convenience wrappers so they do not retain dependencies on renamed
 -- function OIDs from the Group Associate version.
-create or replace function public.partner_portal_current_identity()
+create function public.partner_portal_current_identity()
 returns jsonb language sql stable security definer
 set search_path=public,auth as $$
  select public.partner_app_current_identity();
@@ -39,7 +39,7 @@ $$;
 revoke all on function public.partner_portal_current_identity() from public,anon;
 grant execute on function public.partner_portal_current_identity() to authenticated,service_role;
 
-create or replace function public.partner_portal_scoped_partner_ids()
+create function public.partner_portal_scoped_partner_ids()
 returns uuid[] language sql stable security definer
 set search_path=public as $$
  select coalesce((select c.scoped_partner_ids from public.partner_portal_access_context() c limit 1),'{}'::uuid[]);
