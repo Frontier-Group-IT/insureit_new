@@ -246,7 +246,7 @@ export function BusinessGroupWorkspace({
                   <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#EAF0FF] text-[#315FEA]"><Layers3 className="h-4.5 w-4.5" /></span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="truncate text-[11px] font-bold text-[#1C3858]">{group.group_name}</h2>
+                      <Link href={`/intermediaries/groups/${group.id}`} className="truncate text-[11px] font-bold text-[#1C3858] hover:text-[#315FEA] hover:underline">{group.group_name}</Link>
                       {group.group_mode === "legacy_employee" ? <span className="rounded-full bg-[#FFF4D9] px-2 py-0.5 text-[6.5px] font-bold uppercase tracking-[0.05em] text-[#A76600]">Legacy employee-linked</span> : <span className="rounded-full bg-[#EAF8EF] px-2 py-0.5 text-[6.5px] font-bold uppercase tracking-[0.05em] text-[#267A49]">Business hierarchy</span>}
                     </div>
                     <p className="mt-0.5 text-[8px] text-[#7A899A]">{group.group_code} · {members.length} Partner{members.length === 1 ? "" : "s"} · {branchCount} Branch{branchCount === 1 ? "" : "es"}</p>

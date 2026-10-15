@@ -59,6 +59,8 @@ jobs:
         run: node scripts/collapsed-sidebar-direct-links-regression.mjs
       - name: Associate Accounts portal menu interaction regression
         run: node scripts/associate-actions-menu-interaction-regression.mjs
+      - name: Group Associate Accounts security and UI regression
+        run: node scripts/group-associate-accounts-regression.mjs
       - name: Intermediary optional surname and IIB live-name regression
         run: node scripts/intermediary-optional-surname-iib-regression.mjs
       - name: Partner Register business metrics migration contract regression
