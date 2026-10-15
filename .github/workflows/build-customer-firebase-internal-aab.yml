@@ -24,8 +24,10 @@ jobs:
     timeout-minutes: 60
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN_CUSTOMER || secrets.EXPO_TOKEN }}
-      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
-      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+      # Both values are PUBLIC client configuration (not credentials).
+      # Production project/active publishable key independently verified in Supabase.
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || vars.EXPO_PUBLIC_SUPABASE_URL || 'https://ilzhsfqqjyppzzvfscmh.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || vars.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
     steps:
       - name: Require owner approval input before any build
         shell: bash
