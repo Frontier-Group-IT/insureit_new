@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppShell, Card } from "@/components/shell";
 import { FormSubmitButton } from "@/components/form-submit-button";
+import { AccessHistoryTable } from "./access-history-table";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { isAppRole, roleLabels, type AppRole } from "@/lib/roles";
@@ -85,7 +86,7 @@ export default async function EmployeePermissionPage({ params, searchParams }: {
       {view === "permissions" ? <Permissions profile={profile} role={role} overrides={overrideMap} modules={modules} activeModule={activeModule} /> : null}
       {view === "scope" ? <DataScope role={role} overrides={activeOverrides} /> : null}
       {view === "portal" ? <PortalAccess employee={employee} profile={profile} role={role} /> : null}
-      {view === "history" ? <History events={history} /> : null}
+      {view === "history" ? <AccessHistoryTable events={history} /> : null}
     </div>
   </AppShell>;
 }
@@ -154,22 +155,91 @@ function Permissions({ profile, role, overrides, modules, activeModule }: { prof
 
 function DataScope({ role, overrides }: { role: AppRole; overrides: OverrideRow[] }) {
   const scoped = overrides.filter((row) => row.scope_type !== "inherit");
-  return <div className="grid gap-3 xl:grid-cols-[.8fr_1.2fr]">
-    <Card><h2 className="text-[15px] font-semibold text-[#17203A]">Default scope</h2><p className="mt-1 text-[10px] text-[#64748B]">Inherited from the assigned role.</p><div className="mt-4 rounded-xl border border-[#E2E8F0] bg-[#FAFCFF] p-3"><p className="text-[18px] font-semibold text-[#172554]">{scopeLabel(defaultScope(role))}</p><p className="mt-2 text-[9px] leading-4 text-[#64748B]">Individual permission overrides can narrow or broaden scope where explicitly configured.</p></div></Card>
-    <Card><div className="flex items-center justify-between gap-3"><div><h2 className="text-[15px] font-semibold text-[#17203A]">Scope exceptions</h2><p className="mt-1 text-[10px] text-[#64748B]">Permission-specific data boundaries currently overriding the role.</p></div><Badge>{scoped.length} exceptions</Badge></div><div className="mt-3 space-y-2">{scoped.length ? scoped.map((row) => <div key={row.capability} className="flex flex-col gap-2 rounded-lg border border-[#E2E8F0] px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[10px] font-semibold text-[#24345A]">{friendlyCapability(row.capability)}</p><p className="mt-0.5 text-[8.5px] text-[#64748B]">{row.reason}</p></div><span className="rounded-full bg-[#F1F5F9] px-2.5 py-1 text-[8.5px] font-semibold text-[#475569]">{scopeLabel(row.scope_type)}</span></div>) : <p className="text-[10px] text-[#94A3B8]">No scope exceptions. All permissions use the role default.</p>}</div></Card>
+  return <div className="space-y-3">
+    <section aria-label="Data scope summary" className="grid gap-3 sm:grid-cols-2">
+      <div className="rounded-xl border border-[#DFE7F2] bg-white px-4 py-3 shadow-sm">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">Default scope</p>
+        <p className="mt-1 text-[16px] font-bold text-[#17365D]">{scopeLabel(defaultScope(role))}</p>
+        <p className="mt-1 text-[10px] text-[#71839C]">Inherited from the assigned role</p>
+      </div>
+      <div className="rounded-xl border border-[#DFE7F2] bg-white px-4 py-3 shadow-sm">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">Scope exceptions</p>
+        <p className="mt-1 text-[20px] font-bold leading-tight text-[#17365D] tabular-nums">{scoped.length}</p>
+        <p className="mt-1 text-[10px] text-[#71839C]">Permission-specific scope overrides</p>
+      </div>
+    </section>
+    <section aria-label="Scope exceptions" className="overflow-hidden rounded-xl border border-[#DFE7F2] bg-white shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E2E8F0] px-4 py-3">
+        <div>
+          <h2 className="text-[14px] font-bold text-[#17203A]">Scope exceptions</h2>
+          <p className="mt-0.5 text-[10px] text-[#64748B]">Permission-specific data boundaries currently overriding the role.</p>
+        </div>
+        <Badge>{scoped.length} exceptions</Badge>
+      </div>
+      <div className="w-full overflow-x-auto">
+        <table className="w-full min-w-[660px] text-left">
+          <thead className="bg-[#F8FAFD] text-[10px] font-bold uppercase tracking-wide text-[#64748B]">
+            <tr>
+              <th scope="col" className="w-[38%] border-b border-[#E2E8F0] px-4 py-3">Permission</th>
+              <th scope="col" className="w-[34%] border-b border-[#E2E8F0] px-4 py-3">Reason</th>
+              <th scope="col" className="border-b border-[#E2E8F0] px-4 py-3">Data scope</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#E9EEF5] text-[11px] text-[#334155]">
+            {scoped.length ? scoped.map((row) => <tr key={row.capability} className="transition-colors hover:bg-[#F8FBFF]">
+              <td className="px-4 py-3 font-semibold text-[#24345A]">{friendlyCapability(row.capability)}</td>
+              <td className="px-4 py-3 text-[#64748B]">{row.reason || "—"}</td>
+              <td className="px-4 py-3"><span className="inline-flex rounded-lg bg-[#F1F5F9] px-2.5 py-1 text-[10px] font-medium text-[#475569]">{scopeLabel(row.scope_type)}</span></td>
+            </tr>) : <tr><td colSpan={3} className="px-4 py-8 text-center text-[11px] text-[#94A3B8]">No scope exceptions. All permissions use the role default.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </section>
   </div>;
 }
 
 function PortalAccess({ employee, profile, role }: { employee: EmployeeRow; profile: ProfileRow; role: AppRole }) {
   const aligned = employee.employment_status === "active" ? profile.is_active : !profile.is_active;
-  return <div className="grid gap-3 xl:grid-cols-[1fr_1fr]">
-    <Card><div className="flex items-start justify-between gap-3"><div><h2 className="text-[15px] font-semibold text-[#17203A]">Portal account</h2><p className="mt-1 text-[10px] text-[#64748B]">Authentication and profile state.</p></div><StatusBadge value={profile.is_active ? "Active" : "Inactive"} /></div><div className="mt-3 grid gap-2 sm:grid-cols-2"><Detail label="Login email" value={profile.email ?? employee.email ?? "Not recorded"} /><Detail label="Portal role" value={roleLabels[role]} /><Detail label="Employee status" value={titleCase(employee.employment_status)} /><Detail label="State alignment" value={aligned ? "Aligned" : "Review required"} /></div></Card>
-    <Card><h2 className="text-[15px] font-semibold text-[#17203A]">Governed lifecycle</h2><p className="mt-1 text-[10px] leading-4 text-[#64748B]">Invitations, suspension, restoration and offboarding use the centralized employee portal governance service. Access Control does not maintain a second mutation path.</p><div className="mt-4 flex flex-wrap gap-2"><Link href={`/employees/${employee.id}`} className="inline-flex h-9 items-center rounded-xl bg-[#172554] px-4 text-[10px] font-semibold text-white">Open employee record</Link><Link href="/users" className="inline-flex h-9 items-center rounded-xl border border-[#CBD5E1] bg-white px-4 text-[10px] font-semibold text-[#334155]">Open User Management</Link></div><p className="mt-4 rounded-xl bg-[#F8FAFC] px-3 py-2 text-[8.5px] leading-4 text-[#64748B]">Protected-role safeguards, self-suspension protection and final Super Admin / IT Super User protection remain enforced by the server-side governance layer.</p></Card>
+  const status = profile.is_active ? "Active" : "Inactive";
+  return <div className="space-y-3">
+    <section aria-label="Portal access summary" className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      {[
+        { label: "Portal status", value: status, good: profile.is_active },
+        { label: "Employee status", value: titleCase(employee.employment_status), good: employee.employment_status === "active" },
+        { label: "Portal role", value: roleLabels[role], good: null },
+        { label: "State alignment", value: aligned ? "Aligned" : "Review required", good: aligned },
+      ].map(item => <div key={item.label} className="rounded-lg border border-[#DFE7F2] bg-white px-3 py-3 shadow-sm">
+        <p className="text-[9px] font-semibold uppercase tracking-wide text-[#64748B]">{item.label}</p>
+        <p className={`mt-1 text-[12px] font-bold ${item.good === null ? "text-[#17365D]" : item.good ? "text-emerald-700" : "text-amber-700"}`}>{item.value}</p>
+      </div>)}
+    </section>
+    <section className="overflow-hidden rounded-xl border border-[#DFE7F2] bg-white shadow-sm">
+      <div className="flex items-center justify-between gap-3 border-b border-[#E2E8F0] px-4 py-3">
+        <h2 className="text-[14px] font-bold text-[#17203A]">Portal account details</h2>
+        <StatusBadge value={status} />
+      </div>
+      <dl className="grid gap-x-4 px-4 sm:grid-cols-2">
+        {[
+          { label: "Login email", value: profile.email ?? employee.email ?? "Not recorded" },
+          { label: "Assigned portal role", value: roleLabels[role] },
+          { label: "Employee status", value: titleCase(employee.employment_status) },
+          { label: "State alignment", value: aligned ? "Aligned" : "Review required" },
+        ].map(item => <div key={item.label} className="flex min-w-0 flex-wrap items-baseline justify-between gap-2 border-b border-[#EDF2F7] py-3">
+          <dt className="text-[10px] font-medium text-[#64748B]">{item.label}</dt>
+          <dd className="min-w-0 break-words text-[11px] font-semibold text-[#24345A]">{item.value}</dd>
+        </div>)}
+      </dl>
+    </section>
+    <section className="rounded-xl border border-[#DFE7F2] bg-white p-4 shadow-sm">
+      <h2 className="text-[14px] font-bold text-[#17203A]">Employee lifecycle management</h2>
+      <p className="mt-1 text-[11px] text-[#64748B]">Invitations, suspension, restoration and offboarding are managed through the central employee portal governance service.</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Link href={`/employees/${employee.id}`} className="inline-flex h-9 items-center rounded-lg bg-[#17365D] px-4 text-[11px] font-semibold text-white hover:bg-[#234B78]">Open employee record</Link>
+        <Link href="/users" className="inline-flex h-9 items-center rounded-lg border border-[#CBD5E1] bg-white px-4 text-[11px] font-semibold text-[#334155] hover:bg-[#F8FAFD]">Open User Management</Link>
+      </div>
+      <p className="mt-3 border-t border-[#EDF2F7] pt-3 text-[10px] text-[#64748B]">Protected-role safeguards, self-suspension protection and final Super Admin / IT Super User protection remain enforced by the server-side governance layer.</p>
+    </section>
   </div>;
-}
-
-function History({ events }: { events: Array<{ id: string; type: "permission" | "lifecycle"; title: string; detail: string; created_at: string }> }) {
-  return <Card><h2 className="text-[15px] font-semibold text-[#17203A]">Access history</h2><p className="mt-1 text-[10px] text-[#64748B]">Permission changes and portal lifecycle events in one timeline.</p><div className="mt-3 space-y-2">{events.length ? events.map((event) => <div key={`${event.type}-${event.id}`} className="rounded-lg border border-[#E2E8F0] px-3 py-2.5"><div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-2"><span className={`rounded-full px-2 py-1 text-[7.5px] font-bold uppercase ${event.type === "permission" ? "bg-indigo-50 text-indigo-700" : "bg-emerald-50 text-emerald-700"}`}>{event.type}</span><p className="text-[10px] font-semibold text-[#24345A]">{event.title}</p></div><span className="text-[8.5px] text-[#94A3B8]">{formatDate(event.created_at)}</span></div><p className="mt-1 text-[8.5px] text-[#64748B]">{event.detail}</p></div>) : <p className="text-[10px] text-[#94A3B8]">No access events recorded.</p>}</div></Card>;
 }
 
 function buildHistory(permissionAudit: AuditRow[], lifecycleAudit: LifecycleAuditRow[]) {
@@ -202,5 +272,4 @@ function defaultScope(role: AppRole) { return ["super_admin", "admin", "it_super
 function scopeLabel(value: string) { return ({ inherit: "Inherit role", self: "Own records", hierarchy: "Reporting hierarchy", organization: "Entire organisation" } as Record<string, string>)[value] ?? titleCase(value); }
 function titleCase(value: string) { return value.replaceAll("_", " ").replace(/\b\w/g, (match) => match.toUpperCase()); }
 function isCurrentOverride(row: OverrideRow) { return !row.expires_at || new Date(row.expires_at) > new Date(); }
-function formatDate(value: string) { return new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" }).format(new Date(value)); }
 function toLocalInput(value: string | null | undefined) { if (!value) return ""; const date = new Date(value); if (Number.isNaN(date.getTime())) return ""; const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000); return local.toISOString().slice(0, 16); }
