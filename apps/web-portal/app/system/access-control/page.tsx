@@ -142,11 +142,16 @@ function UsersWorkspace({
           </div>
           <UserRegisterFilters initialQuery={params.q ?? ""} initialRole={roleFilter} roles={roleOptions} />
         </div>
-        {metricFilter !== "all" ? (
-          <Link href={clearMetricHref(params)} className="inline-flex h-8 shrink-0 items-center rounded-lg border border-[#D8E1EC] bg-white px-3 text-[9px] font-bold text-[#475569] hover:bg-[#F8FAFC]">
-            Clear summary filter
+        <div className="flex shrink-0 items-center gap-2">
+          {metricFilter !== "all" ? (
+            <Link href={clearMetricHref(params)} className="inline-flex h-8 items-center rounded-lg border border-[#D8E1EC] bg-white px-3 text-[9px] font-bold text-[#475569] hover:bg-[#F8FAFC]">
+              Clear summary filter
+            </Link>
+          ) : null}
+          <Link href="/users" className="inline-flex h-8 items-center rounded-lg bg-[#17365D] px-3 text-[9px] font-bold text-white shadow-[0_4px_10px_rgba(23,54,93,.16)] transition hover:bg-[#102A4A]">
+            User Management
           </Link>
-        ) : null}
+        </div>
       </div>
 
       <div className="mt-3 overflow-x-auto">
