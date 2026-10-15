@@ -42,7 +42,7 @@ export async function createGroupAssociate(f:FormData){
   redirectTo:`${(process.env.NEXT_PUBLIC_PORTAL_URL||"https://portal.insureit.in").replace(/\/$/,"")}/auth/callback?next=/intermediary-portal`,
   data:{full_name:name,role:"intermediary",portal_account_type:"group_associate",group_id:groupId,group_associate_role:"group_admin"}
  });
- if(invErr||!invite.user?.id)finish(groupId,"Unable to send activation email. Check Auth email configuration and rate limit.",true);
+ if(invErr||!invite.user?.id)return finish(groupId,"Unable to send activation email. Check Auth email configuration and rate limit.",true);
  const authId=invite.user.id,now=new Date().toISOString();
  const {error:profileError}=await admin.from("profiles").upsert({id:authId,full_name:name,role:"intermediary",email,phone,is_active:true,updated_at:now},{onConflict:"id"});
  if(profileError){await admin.auth.admin.deleteUser(authId);finish(groupId,"Unable to create the associate profile.",true)}
@@ -52,7 +52,7 @@ export async function createGroupAssociate(f:FormData){
   postal_code:str(f,"postal_code")||null,role:"group_admin",status:"invited",invited_at:now,
   created_by:actor.actorId,updated_by:actor.actorId
  }).select("id").single();
- if(accountError||!newAccount){await admin.auth.admin.deleteUser(authId);finish(groupId,"Unable to link associate to Group. No access was granted.",true)}
+ if(accountError||!newAccount){await admin.auth.admin.deleteUser(authId);return finish(groupId,"Unable to link associate to Group. No access was granted.",true)}
  await log(admin,groupId,actor.actorId,newAccount.id,"invited");
  finish(groupId,"Associate created. Activation email sent.");
 }
@@ -63,7 +63,7 @@ export async function manageGroupAssociate(f:FormData){
  if(!validUuid(associateId))finish(groupId,"Invalid associate account.",true);
  const {data:associate}=await admin.from("group_portal_associate_accounts")
  .select("id,auth_user_id,email,status,invited_at,name").eq("id",associateId).eq("group_id",groupId).maybeSingle();
- if(!associate)finish(groupId,"Associate account not found in this Group.",true);
+ if(!associate)return finish(groupId,"Associate account not found in this Group.",true);
  // The primary Group login is not stored in this table and can never be targeted.
  if(operation==="resend"){
   if(associate.status==="disabled")finish(groupId,"Enable the associate before resending the link.",true);
@@ -98,7 +98,7 @@ export async function updateGroupAssociate(f:FormData){
  const associateId=str(f,"associate_id"),name=str(f,"name"),designation=str(f,"designation"),phone=str(f,"phone").replace(/[^0-9+]/g,"");
  if(!validUuid(associateId)||!name||!designation||!/^\+?[0-9]{7,15}$/.test(phone))finish(groupId,"Check required fields.",true);
  const {data:a}=await admin.from("group_portal_associate_accounts").select("auth_user_id").eq("id",associateId).eq("group_id",groupId).maybeSingle();
- if(!a)finish(groupId,"Group associate not found.",true);
+ if(!a)return finish(groupId,"Group associate not found.",true);
  const {error}=await admin.from("group_portal_associate_accounts").update({name,phone_number:phone,designation,address:str(f,"address")||null,city:str(f,"city")||null,state:str(f,"state")||null,postal_code:str(f,"postal_code")||null,updated_by:actor.actorId}).eq("id",associateId).eq("group_id",groupId);
  if(error)finish(groupId,"Unable to save associate details.",true);
  await admin.from("profiles").update({full_name:name,phone}).eq("id",a.auth_user_id);
