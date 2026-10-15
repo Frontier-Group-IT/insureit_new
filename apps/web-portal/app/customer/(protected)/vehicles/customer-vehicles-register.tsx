@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { Search, CarFront, ShieldCheck, ShieldX, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, CarFront, ShieldCheck, ShieldX, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 
 const manufacturerIcons: Record<string, string> = {
   honda: "honda", suzuki: "suzuki", yamaha: "yamaha", hero: "hero", bajaj: "bajaj",
@@ -23,6 +24,7 @@ export function ManufacturerMark({ make }: { make: string }) {
 
 export type VehicleItem = { id: string; number: string; make: string; model: string; type: string; chassis: string; engine: string; policy: string | null; status: "due" | "active" | "inactive" | "expired" };
 export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }: { accountId: string; items: VehicleItem[]; initialQuery?: string }) {
+  const router = useRouter();
   const [query, setQuery] = useState(initialQuery);
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
@@ -37,7 +39,7 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
   const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
   const currentPage = Math.min(page, pageCount);
   const visibleRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-  const detailHref = (id: string) => ({ pathname: `/customer/vehicles/${id}`, query: { account: accountId } });
+  const openVehicle = (id: string) => router.push(`/customer/vehicles/${encodeURIComponent(id)}?account=${encodeURIComponent(accountId)}`);
   return <div className="space-y-3">
     <section className="relative isolate overflow-hidden rounded-2xl border border-[#D6E7FA] bg-[#DDEEFF] text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.05)]">
       <div className="pointer-events-none absolute inset-y-0 right-0 w-[66%] bg-[url('/customer-insurance-quote-vehicles.svg')] bg-contain bg-right-bottom bg-no-repeat opacity-70" />
@@ -67,23 +69,36 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
           <Search className="h-4 w-4 shrink-0 text-[#7D95B7]"/><span className="sr-only">Search vehicles</span>
           <input type="search" value={query} onChange={e=>{setQuery(e.target.value);setPage(1);}} placeholder="Search by vehicle number, make, model or chassis..." className="w-full min-w-0 bg-transparent text-[13px] outline-none"/>
         </label>
-        <select aria-label="Vehicle status filter" value={statusFilter} onChange={e=>{setStatusFilter(e.target.value);setPage(1);}} className="rounded-lg border border-[#DCE7F5] bg-white px-3 py-2 text-[13px] text-[#263F67]"><option value="all">All Status</option><option value="insured">Insured</option><option value="uninsured">Uninsured</option><option value="due">Due</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="expired">Expired</option></select>
+        <select aria-label="Vehicle status filter" value={statusFilter === "insured" || statusFilter === "uninsured" ? "all" : statusFilter} onChange={e=>{setStatusFilter(e.target.value);setPage(1);}} className="rounded-lg border border-[#DCE7F5] bg-white px-3 py-2 text-[13px] text-[#263F67]"><option value="all">All Status</option><option value="due">Due</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="expired">Expired</option></select>
+        <Link href={{ pathname: "/customer/add-vehicle", query: { account: accountId } }} className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#1769DC] px-3 py-2.5 text-[12px] font-semibold text-white transition hover:bg-[#1058BD]"><Plus className="h-4 w-4"/>Add Vehicle</Link>
       </header>
-      <div className="space-y-2">
-        {visibleRows.length===0?<div className="rounded-xl border border-[#E2EAF5] p-8 text-center text-sm text-[#637B9B]">No matching vehicles. Try another search or filter.</div>:visibleRows.map(v=>{
-          const insured=v.status==="active"||v.status==="due";
-          return <div key={v.id} className="flex flex-col gap-3 rounded-xl border border-[#E2EAF5] bg-white p-3 transition hover:border-[#B7D0F5] hover:bg-[#FCFDFF] lg:flex-row lg:items-center">
-            <div className="flex min-w-0 items-center gap-3 lg:w-[31%]">
-              <div className="grid h-[62px] w-[70px] shrink-0 place-items-center rounded-xl bg-[#EEF5FF] text-[#2B77D6]"><CarFront className="h-8 w-8"/></div>
-              <div className="min-w-0 flex-1"><span className="block text-[11px] font-semibold uppercase text-[#8196B3]">Vehicle no.</span><Link href={detailHref(v.id)} className="block truncate text-[14px] font-bold text-[#15376B] hover:text-[#176CE7]">{v.number}</Link><span className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${insured?"bg-[#E4FAEF] text-[#079968]":"bg-[#FFF0F1] text-[#E53454]"}`}>{insured?<ShieldCheck className="h-3 w-3"/>:<ShieldX className="h-3 w-3"/>}{insured?"Insured":"Not insured"}</span></div>
-            </div>
-            <div className="flex min-w-0 items-center gap-2 lg:w-[19%] lg:border-l lg:border-[#E7EEF8] lg:pl-3"><ManufacturerMark make={v.make}/><div className="min-w-0"><span className="block text-[11px] uppercase text-[#8196B3]">Make / model</span><strong className="block text-[13px] text-[#142C56]">{v.make||"—"}</strong><span className="block break-words text-[12px] text-[#607CA4]">{v.model||"—"}</span></div></div>
-            <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 text-[12px] sm:grid-cols-4 lg:border-l lg:border-[#E7EEF8] lg:pl-3">
-              {[["Type",v.type],["Chassis no.",v.chassis],["Engine no.",v.engine],["Active policy",v.policy]].map(([label,value])=><div key={label} className="min-w-0"><span className="block text-[11px] uppercase text-[#8196B3]">{label}</span><span className="block break-all font-semibold text-[#264572]">{value||"—"}</span></div>)}
-            </div>
-            <Link href={detailHref(v.id)} className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#EAF3FF] px-3 py-2 text-[12px] font-semibold text-[#1769DC] hover:bg-[#DCEBFF]">View details <ArrowRight className="h-3.5 w-3.5"/></Link>
-          </div>;
-        })}
+      <div className="w-full overflow-x-auto rounded-xl border border-[#E2EAF5]">
+        <table className="w-full min-w-[1040px] border-collapse text-left">
+          <thead className="bg-[#F4F7FB] text-[11px] font-semibold uppercase tracking-wide text-[#7188A8]">
+            <tr>
+              {["Vehicle", "Make / Model", "Type", "Chassis No.", "Engine No.", "Active Policy", "Status"].map(heading =>
+                <th key={heading} scope="col" className="border-b border-[#E2EAF5] px-3 py-3">{heading}</th>
+              )}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#E2EAF5]">
+            {visibleRows.length===0 ? <tr><td colSpan={7} className="p-8 text-center text-sm text-[#637B9B]">No matching vehicles. Try another search or filter.</td></tr> : visibleRows.map(v => {
+              const insured = v.status === "active" || v.status === "due";
+              return <tr key={v.id} role="link" tabIndex={0} aria-label={`View details for vehicle ${v.number}`}
+                onClick={() => openVehicle(v.id)}
+                onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openVehicle(v.id); } }}
+                className="cursor-pointer bg-white transition-colors hover:bg-[#F2F7FF] focus-visible:bg-[#EAF3FF] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#1769DC]">
+                <td className="px-3 py-3"><span className="flex items-center gap-2"><CarFront className="h-5 w-5 shrink-0 text-[#176CE7]"/><strong className="whitespace-nowrap text-[13px] text-[#15376B]">{v.number}</strong></span></td>
+                <td className="px-3 py-3"><span className="flex items-center gap-2"><ManufacturerMark make={v.make}/><span className="min-w-0"><strong className="block text-[12px] text-[#142C56]">{v.make||"—"}</strong><span className="block max-w-[220px] truncate text-[11px] text-[#607CA4]">{v.model||"—"}</span></span></span></td>
+                <td className="px-3 py-3 text-[12px] font-medium text-[#264572]">{v.type||"—"}</td>
+                <td className="px-3 py-3 text-[12px] text-[#264572]">{v.chassis||"—"}</td>
+                <td className="px-3 py-3 text-[12px] text-[#264572]">{v.engine||"—"}</td>
+                <td className="px-3 py-3 text-[12px] text-[#264572]">{v.policy||"—"}</td>
+                <td className="px-3 py-3"><span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-1 text-[11px] font-semibold ${insured?"bg-[#E4FAEF] text-[#079968]":"bg-[#FFF0F1] text-[#E53454]"}`}>{insured?<ShieldCheck className="h-3 w-3"/>:<ShieldX className="h-3 w-3"/>}{insured?"Insured":"Not insured"}</span></td>
+              </tr>;
+            })}
+          </tbody>
+        </table>
       </div>
       <footer className="mt-3 flex items-center justify-between gap-2"><p className="text-[10px] text-[#7790B0]">Showing {rows.length===0?0:(currentPage-1)*pageSize+1}–{Math.min(currentPage*pageSize,rows.length)} of {rows.length} vehicles</p><div className="flex items-center gap-2"><button type="button" aria-label="Previous page" disabled={currentPage===1} onClick={()=>setPage(p=>Math.max(1,p-1))} className="grid h-7 w-7 place-items-center rounded-full border border-[#DCE7F5] text-[#176CE7] disabled:opacity-35"><ChevronLeft className="h-4 w-4"/></button><span className="grid h-7 min-w-7 place-items-center rounded-full bg-[#176CE7] px-1 text-[11px] font-bold text-white">{currentPage} / {pageCount}</span><button type="button" aria-label="Next page" disabled={currentPage===pageCount} onClick={()=>setPage(p=>Math.min(pageCount,p+1))} className="grid h-7 w-7 place-items-center rounded-full border border-[#DCE7F5] text-[#176CE7] disabled:opacity-35"><ChevronRight className="h-4 w-4"/></button></div></footer>
     </section>
