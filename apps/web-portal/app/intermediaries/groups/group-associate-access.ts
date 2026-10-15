@@ -21,7 +21,7 @@ export async function requireGroupAssociateManager(groupId:string){
  if(!user?.id||!profile?.id||!profile.is_active)redirect("/access-denied");
  const [{data:primary},{data:associate}]=await Promise.all([
    admin.from("portal_access_identities").select("profile_id").eq("profile_id",user.id).eq("entity_type","group").eq("entity_id",groupId).eq("status","active").maybeSingle(),
-   admin.from("group_portal_associate_accounts").select("id").eq("auth_user_id",user.id).eq("group_id",groupId).eq("status","active").maybeSingle()
+   admin.from("group_portal_associate_accounts").select("id").eq("role","group_admin").eq("auth_user_id",user.id).eq("group_id",groupId).eq("status","active").maybeSingle()
  ]);
  if(!primary&&!associate)redirect("/access-denied");
  return {actorId:user.id,isOperations:false};
