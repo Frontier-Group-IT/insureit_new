@@ -22,7 +22,6 @@ import {
   assignBusinessGroupMembers,
   assignPartnerBranch,
   convertLegacyGroupToBusiness,
-  createBusinessGroup,
   removeBusinessGroupMembers,
   removePartnerBranch,
   renameBusinessGroup,
@@ -90,7 +89,6 @@ export function BusinessGroupWorkspace({
   loadError: boolean;
 }) {
   const [query, setQuery] = useState("");
-  const [createOpen, setCreateOpen] = useState(false);
   const [branchOpen, setBranchOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set<string>());
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
@@ -185,9 +183,7 @@ export function BusinessGroupWorkspace({
               <Link href="/intermediaries/groups/login-access" className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-3 text-[8px] font-bold text-white shadow-sm transition hover:bg-white/15">
                 <UsersRound className="h-3.5 w-3.5" /> Login Access
               </Link>
-              <button type="button" onClick={() => setCreateOpen(true)} disabled={!hierarchyReady} className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#5B8BFF] bg-[#315FEA] px-3.5 text-[8px] font-bold text-white shadow-[0_8px_18px_rgba(0,0,0,.18)] transition hover:bg-[#3B6CF4] disabled:cursor-not-allowed disabled:opacity-45">
-                <Plus className="h-3.5 w-3.5" /> Create Group
-              </button>
+              <Link href="/intermediaries/groups/new" aria-disabled={!hierarchyReady} className={`inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#5B8BFF] bg-[#315FEA] px-3.5 text-[8px] font-bold text-white ${!hierarchyReady?"pointer-events-none opacity-45":""}`}><Plus className="h-3.5 w-3.5" /> Create Group</Link>
             </div>
           ) : null}
         </div>
@@ -323,25 +319,6 @@ export function BusinessGroupWorkspace({
             </div>
           </div>
         </details>
-      ) : null}
-
-      {createOpen ? (
-        <Modal title="Create Business Group" onClose={() => setCreateOpen(false)}>
-          <form action={createBusinessGroup} className="space-y-3">
-            <Field label="Group name"><input name="group_name" required maxLength={80} autoComplete="organization" className={inputClass} /></Field>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Group email"><input name="login_email" type="email" required autoComplete="email" className={inputClass} /></Field>
-              <Field label="Phone number"><input name="phone" type="tel" required inputMode="tel" autoComplete="tel" className={inputClass} /></Field>
-            </div>
-            <Field label="Description"><input name="description" className={inputClass} /></Field>
-            <Field label="Initial Partner (optional)"><select name="partner_id" defaultValue="" className={inputClass}><option value="">Create empty Group</option>{ungroupedRoots.map((partner) => <option key={partner.id} value={partner.id}>{partner.display_name} · {partner.partner_code}</option>)}</select></Field>
-            <p className="rounded-xl bg-[#F5F8FF] px-3 py-2 text-[7.8px] leading-4 text-[#61738A]">A secure password-setup invitation will be emailed to the Group contact. The admin never creates or sees the Group password. No Employee owner will be created; existing Employee assignments on the selected Partner remain unchanged.</p>
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setCreateOpen(false)} className="h-9 rounded-lg border border-[#D7E0EA] bg-white px-4 text-[8.5px] font-bold text-[#5D6F82]">Cancel</button>
-              <FormSubmitButton label="Create Group" pendingLabel="Creating & sending invite…" className="inline-flex h-9 items-center rounded-lg bg-[#315FEA] px-4 text-[8.5px] font-bold text-white" />
-            </div>
-          </form>
-        </Modal>
       ) : null}
 
       {branchOpen ? (
