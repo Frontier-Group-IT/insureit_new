@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CarFront, CheckCircle2, ChevronDown, Plus, Search, Users } from "lucide-react";
+import { ArrowRight, CheckCircle2, FileText, Headphones, ImageIcon, MapPin, Plus, Radio, ShieldAlert } from "lucide-react";
 import type { CustomerPolicyRow, CustomerVehicleRow } from "@/lib/customer-web-data";
 import { prepareCustomerClaim } from "@/app/customer/(protected)/start-claim/actions";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
@@ -18,65 +18,143 @@ export function CustomerStartClaimSelector({
   existingClaims: ClaimIdentity[];
   initialVehicleId?: string;
 }) {
-  const [vehicleId, setVehicleId] = useState(initialVehicleId && vehicles.some((v) => v.id === initialVehicleId) ? initialVehicleId : vehicles[0]?.id || "");
-  const [query, setQuery] = useState("");
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const vehicle = vehicles.find((v) => v.id === vehicleId);
-  const vehiclePolicies = useMemo(() => policies.filter((p) => p.vehicle_id === vehicleId).sort((a, b) => b.end_date.localeCompare(a.end_date)), [policies, vehicleId]);
+  const [vehicleId, setVehicleId] = useState(
+    initialVehicleId && vehicles.some((vehicle) => vehicle.id === initialVehicleId)
+      ? initialVehicleId
+      : vehicles[0]?.id || "",
+  );
+
+  const vehicle = vehicles.find((item) => item.id === vehicleId);
+  const vehiclePolicies = useMemo(
+    () => policies.filter((policy) => policy.vehicle_id === vehicleId).sort((a, b) => b.end_date.localeCompare(a.end_date)),
+    [policies, vehicleId],
+  );
   const today = new Date().toISOString().slice(0, 10);
-  const policy = vehiclePolicies.find((p) => p.start_date <= today && p.end_date >= today) ?? vehiclePolicies[0];
-  const existingClaim = policy ? existingClaims.find((c) => (policy.source === "external" ? c.external_policy_id === policy.id : c.policy_id === policy.id) && !["Settled", "Closed", "Claim Complete", "Rejected"].includes(c.current_status)) : undefined;
-  const filtered = vehicles.filter((v) => [v.vehicle_no, v.make, v.model, v.chassis_no].some((s) => (s || "").toLowerCase().includes(query.toLowerCase()))).slice(0, 30);
-  const vehicleLabel = (v: CustomerVehicleRow) => v.registration_status === "unregistered" || !v.vehicle_no ? `NEW-${v.chassis_no || "PENDING"}` : v.vehicle_no;
-  const eligibility = policy ? (policy.start_date <= today && policy.end_date >= today ? "Active cover" : "Policy outside coverage dates") : "No policy linked";
+  const policy = vehiclePolicies.find((item) => item.start_date <= today && item.end_date >= today) ?? vehiclePolicies[0];
+  const hasActivePolicy = Boolean(policy && policy.start_date <= today && policy.end_date >= today);
+  const existingClaim = policy
+    ? existingClaims.find((claim) =>
+        (policy.source === "external" ? claim.external_policy_id === policy.id : claim.policy_id === policy.id) &&
+        !["Settled", "Closed", "Claim Complete", "Rejected"].includes(claim.current_status),
+      )
+    : undefined;
+
+  const vehicleLabel = (item: CustomerVehicleRow) =>
+    item.registration_status === "unregistered" || !item.vehicle_no
+      ? `NEW-${item.chassis_no || "PENDING"}`
+      : item.vehicle_no;
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl border border-[#DAE7F5] bg-gradient-to-r from-[#F4FAFF] to-[#E8F3FF] p-5 sm:p-8">
-        <div className="grid items-center gap-3 sm:grid-cols-[1fr_auto]">
-          <div><p className="text-[11px] font-extrabold uppercase tracking-widest text-[#1959B1]">Start a claim</p>
-            <h1 className="mt-1 text-2xl font-black text-[#10274B] sm:text-3xl">Select the vehicle</h1>
-            <p className="mt-2 max-w-md text-xs leading-5 text-[#697A93]">Choose the vehicle involved and we’ll use its linked insurance policy.</p>
+    <div className="space-y-4">
+      <section className="relative isolate overflow-hidden rounded-2xl border border-[#D6E7FA] bg-[#EAF4FF] px-5 py-6 text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.05)] sm:px-7 sm:py-8">
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-[45%] bg-[url('/assets/customer-claim/start-claim-hero.webp')] bg-contain bg-right-center bg-no-repeat opacity-95" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EEF7FF] via-[#EEF7FF]/96 via-52% to-transparent" />
+        <div className="relative flex min-h-[105px] items-center sm:min-h-[125px]">
+          <h1 className="text-[clamp(28px,3.3vw,42px)] font-bold tracking-tight">Start a Claim</h1>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-[#E1EAF5] bg-white p-4 sm:p-5">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-[18px] font-bold text-[#102B54]">Select your vehicle</h2>
+            <p className="mt-1 text-[13px] text-[#7186A0]">Choose the vehicle involved in the incident to proceed with your claim.</p>
           </div>
-          <img src="/assets/customer-claim/start-claim-hero.webp" alt="Vehicle, shield and claim checklist" className="mx-auto w-full max-w-[300px] object-contain" />
+          <div className="flex flex-wrap gap-2">
+            <Link href={{ pathname: "/customer/add-vehicle", query: { account: accountId } }} className="inline-flex items-center gap-1.5 rounded-xl border border-[#D3E1F2] bg-white px-3 py-2 text-[12px] font-semibold text-[#1769DC] hover:bg-[#F7FBFF]">
+              <Plus className="h-4 w-4" /> Add vehicle
+            </Link>
+            <Link href={{ pathname: "/customer/support", query: { account: accountId } }} className="inline-flex items-center gap-1.5 rounded-xl border border-[#D3E1F2] bg-white px-3 py-2 text-[12px] font-semibold text-[#1769DC] hover:bg-[#F7FBFF]">
+              <Headphones className="h-4 w-4" /> Need help?
+            </Link>
+          </div>
         </div>
+
+        {vehicles.length ? (
+          <div className="grid gap-3 md:grid-cols-2">
+            {vehicles.map((item) => {
+              const selected = item.id === vehicleId;
+              return (
+                <button
+                  type="button"
+                  key={item.id}
+                  onClick={() => setVehicleId(item.id)}
+                  className={`flex min-w-0 items-center gap-3 rounded-xl border p-3 text-left transition ${selected ? "border-[#2D7FF0] bg-[#F2F8FF] shadow-[0_0_0_1px_rgba(45,127,240,.08)]" : "border-[#DDE7F3] bg-white hover:border-[#BBD2EF] hover:bg-[#FBFDFF]"}`}
+                  aria-pressed={selected}
+                >
+                  <span className="grid h-14 w-20 shrink-0 place-items-center rounded-lg bg-[#F3F7FC]">
+                    <CustomerClaimLogo value={item.make} size={54} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <strong className="block truncate text-[14px] text-[#17345D]">{vehicleLabel(item)}</strong>
+                    <span className="mt-1 block truncate text-[12px] text-[#6F83A0]">{[item.make, item.model].filter(Boolean).join(" · ") || "Vehicle details unavailable"}</span>
+                  </span>
+                  <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 ${selected ? "border-[#1769DC]" : "border-[#AEBFD5]"}`}>
+                    {selected ? <span className="h-2.5 w-2.5 rounded-full bg-[#1769DC]" /> : null}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-[#C9D9EB] bg-[#FBFDFF] p-7 text-center text-[13px] text-[#7186A0]">
+            No vehicles are linked to this account yet.
+          </div>
+        )}
+
+        {vehicle && !hasActivePolicy ? (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#F2D7DA] bg-[#FFF7F8] px-3 py-2.5">
+            <span className="flex items-center gap-2 text-[12px] font-medium text-[#A43B49]">
+              <ShieldAlert className="h-4 w-4" />
+              No active policy found for the selected vehicle.
+            </span>
+            <Link href={{ pathname: "/customer/add-policy", query: { account: accountId, vehicle: vehicleId } }} className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#1769DC]">
+              <Plus className="h-4 w-4" /> Add policy
+            </Link>
+          </div>
+        ) : null}
       </section>
 
-      <section className="space-y-3">
-        <label htmlFor="claim-vehicle-search" className="block text-sm font-black text-[#142D52]">Vehicle number *</label>
-        <div className="relative">
-          <button type="button" aria-expanded={pickerOpen} onClick={() => setPickerOpen(!pickerOpen)} className="flex min-h-[76px] w-full items-center gap-3 rounded-2xl border border-[#AEC8E7] bg-white p-3 text-left shadow-sm">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#EDF5FF] text-[#174EA6]"><CustomerClaimLogo value={vehicle?.make} size={44}/></span>
-            <span className="min-w-0 flex-1"><span className="block truncate text-sm font-black text-[#142746]">{vehicle ? vehicleLabel(vehicle) : "Select a vehicle"}</span><span className="block truncate text-[11px] text-[#74849C]">{vehicle ? [vehicle.make, vehicle.model].filter(Boolean).join(" · ") : "Choose from your linked vehicles"}</span></span>
-            <ChevronDown className="h-5 w-5 shrink-0 text-[#244F87]"/>
-          </button>
-          {pickerOpen && (
-            <div className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-xl border border-[#C7D8ED] bg-white shadow-xl">
-              <div className="flex items-center gap-2 border-b p-3"><Search className="h-4 w-4 text-[#7586A1]"/><input id="claim-vehicle-search" autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search vehicle number, make or chassis" className="w-full text-sm outline-none"/></div>
-              <div className="max-h-64 overflow-y-auto">
-                {filtered.map((v) => <button type="button" key={v.id} onClick={() => { setVehicleId(v.id); setPickerOpen(false); setQuery(""); }} className="flex w-full items-center gap-3 border-b px-4 py-3 text-left hover:bg-[#F0F6FD]"><CarFront className="h-5 w-5 text-[#215CB4]"/><span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold">{vehicleLabel(v)}</span><span className="block truncate text-xs text-[#74849C]">{[v.make,v.model].filter(Boolean).join(" · ")}</span></span>{v.id === vehicleId && <CheckCircle2 className="h-4 w-4 text-emerald-600"/>}</button>)}
-                {!filtered.length && <p className="p-4 text-sm text-[#75849B]">No matching vehicles.</p>}
-              </div>
-            </div>
-          )}
+      <section className="rounded-2xl border border-[#DDEBFA] bg-[#EAF4FF] p-4 sm:p-5">
+        <div className="mb-4">
+          <h2 className="text-[18px] font-bold text-[#102B54]">What happens next?</h2>
+          <p className="mt-1 text-[13px] text-[#7186A0]">A simple and guided process to get your claim started.</p>
         </div>
-        <div className="flex items-center justify-between gap-2"><p className="text-[11px] text-[#75839A]">Choose a linked vehicle to display its insurance details.</p><Link href={{ pathname: "/customer/add-vehicle", query: { account: accountId } }} className="inline-flex items-center gap-1 text-xs font-bold text-[#174EA6]"><Plus className="h-4 w-4"/> Add vehicle</Link></div>
-      </section>
-
-      <section>
-        <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-base font-black text-[#132B4F]">Policy details</h2><Link href={{ pathname:"/customer/add-policy", query: { account:accountId, vehicle: vehicleId } }} className="inline-flex items-center gap-1 rounded-xl border border-[#CEDFF3] bg-white px-3 py-2 text-xs font-bold text-[#174EA6]"><Plus className="h-4 w-4"/> Add policy</Link></div>
-        {policy ? <div className="rounded-3xl bg-[#0B3884] p-5 text-white shadow-lg">
-          <div className="flex items-center justify-between gap-3"><span className="text-[10px] font-extrabold uppercase tracking-widest text-white/75">{policy.source === "external" ? "Self-tracked claim" : "INSUREIT-managed claim"}</span><span className="rounded-full bg-white/15 px-3 py-1 text-[10px] font-bold">{eligibility}</span></div>
-          <div className="mt-4 flex items-center gap-4"><span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-white text-[#164EA0]"><CustomerClaimLogo value={policy.insurer_name} kind="insurer" size={46}/></span><div className="min-w-0"><p className="truncate text-lg font-black tracking-wide">{policy.source === "external" ? policy.policy_no.replace(/(.)(.)/g, "$1•") : policy.policy_no}</p><p className="mt-1 text-xs text-white/80">{policy.insurer_name || "Insurance company"} · {policy.policy_type}</p><p className="mt-1 text-[11px] text-white/75">{policy.start_date} – {policy.end_date}</p></div></div>
-        </div> : <div className="rounded-2xl border border-dashed border-[#C9D9EB] bg-white p-8 text-center text-sm text-[#74839A]">No insurance policy is linked to this vehicle.</div>}
+        <div className="grid gap-3 lg:grid-cols-3">
+          {[
+            {step:"1",title:"Provide incident details",description:"Tell us what happened, including date, time and location.",icon:FileText},
+            {step:"2",title:"Upload documents & photos",description:"Share relevant documents and photos of the incident.",icon:ImageIcon},
+            {step:"3",title:"Track your claim",description:"Follow the status of your claim as it progresses.",icon:MapPin},
+          ].map(({step,title,description,icon:Icon},index)=><div key={title} className="relative flex items-start gap-3 rounded-xl bg-white/70 p-3">
+            <span className="relative grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white text-[#1769DC] shadow-sm">
+              <Icon className="h-5 w-5"/>
+              <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-[#DDEBFF] text-[10px] font-bold text-[#1769DC]">{step}</span>
+            </span>
+            <span className="min-w-0 flex-1"><strong className="block text-[13px] text-[#17345D]">{title}</strong><span className="mt-1 block text-[12px] leading-relaxed text-[#6F83A0]">{description}</span></span>
+            {index<2?<ArrowRight className="mt-3 hidden h-4 w-4 text-[#6784AA] lg:block"/>:null}
+          </div>)}
+        </div>
       </section>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <Link href={{ pathname:"/customer/support", query: { account:accountId } }} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-[#B6CAE3] bg-white px-4 text-sm font-black text-[#2057A0]"><Users className="h-5 w-5"/> Get Assistance</Link>
-        {existingClaim ? <Link href={{ pathname:`/customer/claims/${existingClaim.id}`, query:{account:accountId} }} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-[#0B3884] px-4 text-sm font-black text-white">Continue existing claim <ArrowRight className="h-5 w-5"/></Link>
-        : <form action={prepareCustomerClaim} className="flex"><input type="hidden" name="account" value={accountId}/><input type="hidden" name="vehicle" value={vehicleId}/><input type="hidden" name="policy" value={policy?.id || ""}/><button type="submit" disabled={!policy || !vehicle} className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#0B3884] px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50">Start Claim <ArrowRight className="h-5 w-5"/></button></form>}
+        <Link href={{ pathname: "/customer/support", query: { account: accountId } }} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#B9CCE4] bg-white px-4 text-[13px] font-semibold text-[#2057A0]">
+          <Headphones className="h-5 w-5" /> Get Assistance
+        </Link>
+        {existingClaim ? (
+          <Link href={{ pathname: `/customer/claims/${existingClaim.id}`, query: { account: accountId } }} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#0B3884] px-4 text-[13px] font-semibold text-white">
+            Continue existing claim <ArrowRight className="h-5 w-5"/>
+          </Link>
+        ) : (
+          <form action={prepareCustomerClaim} className="flex">
+            <input type="hidden" name="account" value={accountId}/>
+            <input type="hidden" name="vehicle" value={vehicleId}/>
+            <input type="hidden" name="policy" value={policy?.id || ""}/>
+            <button type="submit" disabled={!policy || !vehicle || !hasActivePolicy} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#0B3884] px-4 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+              Continue to Claim <ArrowRight className="h-5 w-5"/>
+            </button>
+          </form>
+        )}
       </div>
-      <img src="/assets/customer-claim/start-claim-footer-scene.webp" alt="" className="mx-auto w-full max-w-[600px] object-contain" /><p className="text-center text-xs text-[#72819A]">Starting a claim prepares an account-scoped draft. Complete Spot Intimation before submitting incident details.</p>
     </div>
   );
 }
