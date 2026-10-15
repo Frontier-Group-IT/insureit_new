@@ -72,7 +72,6 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
         <div className="relative flex min-h-[170px] items-center px-5 py-6 sm:px-7">
           <div className="max-w-[520px]">
             <h1 className="text-[clamp(28px,3.2vw,40px)] font-bold tracking-tight">Claims</h1>
-            <p className="mt-2 text-[14px] leading-relaxed text-[#4B6C94]">Track your claims and see what happens next.</p>
           </div>
         </div>
       </section>
@@ -88,11 +87,6 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
         </div>)}
       </section>
 
-      <section className="flex flex-wrap items-center gap-2">
-        <Link href={{ pathname: "/customer/start-claim", query: { account: account.id } }} className="inline-flex items-center gap-2 rounded-xl bg-[#1769DC] px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-[#1058BD]"><Plus className="h-4 w-4"/>Start a new claim</Link>
-        <Link href={{ pathname: "/customer/claims", query: { account: account.id, type } }} className="inline-flex items-center gap-2 rounded-xl border border-[#BFD3EC] bg-white px-4 py-2.5 text-[13px] font-semibold text-[#1769DC] hover:bg-[#F7FBFF]">Track existing claims <ArrowRight className="h-4 w-4"/></Link>
-      </section>
-
       <section className="overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white">
         <div className="flex flex-wrap items-center gap-2 border-b border-[#E6ECF4] p-4 xl:flex-nowrap">
           <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><ClipboardList className="h-5 w-5 text-[#1769DC]"/>Claims Register</h2>
@@ -104,6 +98,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
                 {key === "internal" ? "Internal" : "External"} <span className="ml-1 rounded-full bg-[#D9E8FA] px-1.5 py-0.5">{key === "internal" ? internalCount : externalCount}</span>
               </Link>)}
             </div>
+            <Link href={{ pathname: "/customer/start-claim", query: { account: account.id } }} className="inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-[#1769DC] px-3 py-2.5 text-[12px] font-semibold text-white hover:bg-[#1058BD]"><Plus className="h-4 w-4"/>Start a new claim</Link>
           </div>
         </div>
 
