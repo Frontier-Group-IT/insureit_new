@@ -46,15 +46,13 @@ test('no alias writes with feature disabled',async()=>{
   assert.equal(r.ok,false);assert.equal(r.reason,'alias_provision_disabled');
   assert.equal(mock.calls.length,0);
 });
-test('only an unprovisioned Auth user on the exact UUID can receive a system alias',async()=>{
+test('even enabled JIT cannot mutate unprovisioned Auth identity',async()=>{
   const mock=mockedDb();
   const r=await ensureCustomerSupabaseSessionAlias({
     db:mock.db,authUser:user(),customerProfileId:id,enabled:true,
   });
-  assert.equal(r.ok,true);assert.equal(r.authUser.id,id);
-  assert.equal(r.authUser.phone_confirmed_at,null);
-  assert.deepEqual(mock.calls,[{uuid:id,payload:{email:alias,email_confirm:true}}]);
-  assert.equal(checkCustomerSessionEligibility(ready(r.authUser)).ok,true);
+  assert.equal(r.ok,false);assert.equal(r.reason,'manual_alias_required');
+  assert.equal(mock.calls.length,0);
 });
 test('user-provided Auth email is never overwritten',async()=>{
   const mock=mockedDb();
@@ -64,7 +62,7 @@ test('user-provided Auth email is never overwritten',async()=>{
   assert.equal(r.reason,'existing_auth_email_not_system_owned');
   assert.equal(mock.calls.length,0);
 });
-test('wrong-UUID request or unexpected alias POST-WRITE fails closed',async()=>{
+test('wrong UUID and enabled JIT both fail closed without Auth writes',async()=>{
   const mock=mockedDb('other@example.com');
   const x=await ensureCustomerSupabaseSessionAlias({db:mock.db,authUser:user(),
     customerProfileId:'22222222-2222-4222-8222-222222222222',enabled:true});
@@ -72,7 +70,8 @@ test('wrong-UUID request or unexpected alias POST-WRITE fails closed',async()=>{
   assert.equal(mock.calls.length,0);
   const y=await ensureCustomerSupabaseSessionAlias({db:mock.db,authUser:user(),
     customerProfileId:id,enabled:true});
-  assert.equal(y.reason,'auth_alias_postwrite_invariant_failed');
+  assert.equal(y.reason,'manual_alias_required');
+  assert.equal(mock.calls.length,0);
 });
 test('already provisioned alias does not issue a redundant admin write',async()=>{
   const mock=mockedDb();
