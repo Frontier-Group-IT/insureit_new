@@ -59,3 +59,14 @@ After all previous gates have real evidence, reconcile with latest `main` again,
 - **Build approval C:** later explicitly authorize the one Android AAB (0.3.2 build 11) for Internal Testing only. Do not approve a Play Production release at this stage.
 
 **Current result:** nothing in this document authorizes merging, applying production SQL, modifying Auth user email/phone, activating an Edge function, OTA, APK/AAB or Play release on its own.
+
+
+## 2026-10-15 addendum — production Gate 2 achieved with approved no-backup exception; Gate 3 restricted
+
+- Owner explicitly approved *limited additive-only Gate 2* without an existing full backup. Project `ilzhsfqqjyppzzvfscmh`. Production migration recorded `20261015061234_customer_firebase_session_exchange_limit_20261015_gate2`; RLS ON; ordinary anon/authenticated table/RPC access denied; service-role RPC allowed; zero rate limiter rows at last read-only check.
+- New `customer-firebase-session-bridge` Edge function deployed as version 1, with `verify_jwt=false` due in-function Firebase Admin verification and source guard requiring `CUSTOMER_FIREBASE_SESSION_BRIDGE_ENABLED === 'true'`. **Runtime environment flag and HTTP 503 response remain unverified**. Production historical bind/signup Edge functions were not overwritten.
+- Owner confirmed Firebase Phone provider is enabled and Android signing SHA-1/SHA-256 registered, but they were not independently verified from Firebase console by this agent.
+- The nominated Customer telephone (record suffix **1014** only) maps to **one active Customer** and **one active IT Super User**, two separate canonical Supabase UUIDs. The Customer has confirmed phone, no Auth email; staff has Auth email; **neither has a Firebase UID link for this phone**. Alias collision check is clear. Preserve cross-role deny; never derive a target identity by phone alone. Owner confirmed physical access to SMS device.
+- Added shared-phone cross-role regression in commit `e5af1f82`. **New CI is not yet confirmed**; latest `main` continues moving, so final PR-head reconciliation/CI still required. Keep PR draft and no auto APK/AAB or OTA.
+- **Gate 3 HARD STOP:** no signed, revocation-checked Firebase ID token/UID mapping for the nominated Customer, no protected recoverable Auth-state snapshot, and no independently demonstrated prevention of alternate email OTP/magic-link/recovery for the reserved Auth aliases. **Do not provision aliases or activate bridge.** The owner has not separately approved the exact alias Auth write. A bridge returning 503 on live POST still needs verification from a DNS-capable environment.
+- After link verification and secure backup/recovery of the single target Auth identity, present exact proposed UID binding and alias mutation for a separate written approval. Never touch the IT Super User Auth identity and never treat shared SMS phone ownership as permission to do so.
