@@ -8,6 +8,7 @@ import { appRoles, isAppRole, roleLabels, type AppRole } from "@/lib/roles";
 import { permissionDefinitions } from "@/lib/permission-management";
 import { permissionCatalogueV2 } from "@/lib/access-control-catalogue-v2";
 import { roleMatrixV2 } from "@/lib/access-control-role-matrix-v2";
+import { UserRegisterFilters } from "./user-register-filters";
 
 type ProfileRow = { id: string; role: string; is_active: boolean; employee_id: string | null; email: string | null };
 type EmployeeRow = { id: string; employee_code: string; full_name: string; designation: string; department: string | null; location: string | null; employment_status: string };
@@ -15,6 +16,7 @@ type OverrideRow = { profile_id: string; capability: string; access_level: strin
 type PermissionAuditRow = { id: string; changed_by_profile_id: string | null; target_profile_id: string | null; capability: string; previous_access: string | null; new_access: string; reason: string; created_at: string };
 type LifecycleAuditRow = { id: string; actor_id: string | null; action: string; record_id: string | null; created_at: string };
 type WorkspaceView = "users" | "roles" | "permissions" | "reviews" | "audit";
+type UserMetricFilter = "all" | "active" | "no_portal" | "disabled" | "custom" | "privileged" | "expiring";
 type UserRow = { employee: EmployeeRow; profile: ProfileRow | null; overrides: OverrideRow[] };
 type ReviewItem = { key: string; employeeName: string; profileId: string | null; title: string; detail: string; risk: string };
 type AuditEvent = { key: string; actor: string; type: string; title: string; detail: string; createdAt: string };
@@ -22,7 +24,7 @@ type AuditEvent = { key: string; actor: string; type: string; title: string; det
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function AccessControlPage({ searchParams }: { searchParams: Promise<{ view?: string; q?: string; role?: string; success?: string; error?: string }> }) {
+export default async function AccessControlPage({ searchParams }: { searchParams: Promise<{ view?: string; q?: string; role?: string; status?: string; success?: string; error?: string }> }) {
   const viewer = (await getAuthenticatedProfile(await getServerAccessToken())).profile;
   if (!viewer?.id || !(await hasEffectiveCapability(viewer, "manage_system", "approve"))) redirect("/access-denied");
 
@@ -30,6 +32,7 @@ export default async function AccessControlPage({ searchParams }: { searchParams
   const view = normalizeView(params.view);
   const q = params.q?.trim().toLowerCase() ?? "";
   const roleFilter = isAppRole(params.role) ? params.role : "";
+  const metricFilter = normalizeMetricFilter(params.status);
   const admin = createSupabaseAdminClient();
   const now = new Date();
   const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -52,8 +55,9 @@ export default async function AccessControlPage({ searchParams }: { searchParams
     const profile = employeeProfileMap.get(employee.id) ?? null;
     return { employee, profile, overrides: profile ? overrideByProfile.get(profile.id) ?? [] : [] };
   });
-  const users = allUsers.filter(({ employee, profile }) => {
+  const users = allUsers.filter(({ employee, profile, overrides: rows }) => {
     if (roleFilter && profile?.role !== roleFilter) return false;
+    if (!matchesMetricFilter(metricFilter, employee, profile, rows, now, thirtyDaysFromNow)) return false;
     if (!q) return true;
     return [employee.full_name, employee.employee_code, employee.designation, employee.department, employee.location, profile?.role, profile?.email].some((value) => value?.toLowerCase().includes(q));
   });
@@ -93,7 +97,7 @@ export default async function AccessControlPage({ searchParams }: { searchParams
         <WorkspaceTab current={view} value="audit" label="Audit Log" count={auditEvents.length} />
       </nav>
 
-      {view === "users" ? <UsersWorkspace users={users} params={params} roleFilter={roleFilter} metrics={metrics} /> : null}
+      {view === "users" ? <UsersWorkspace users={users} params={params} roleFilter={roleFilter} metricFilter={metricFilter} metrics={metrics} /> : null}
       {view === "roles" ? <RolesWorkspace /> : null}
       {view === "permissions" ? <PermissionsWorkspace /> : null}
       {view === "reviews" ? <ReviewsWorkspace items={reviewItems} /> : null}
@@ -102,26 +106,88 @@ export default async function AccessControlPage({ searchParams }: { searchParams
   </AppShell>;
 }
 
-function UsersWorkspace({ users, params, roleFilter, metrics }: { users: UserRow[]; params: { q?: string; role?: string }; roleFilter: AppRole | ""; metrics: { active: number; noPortal: number; disabled: number; custom: number; privileged: number; expiring: number } }) {
+function UsersWorkspace({
+  users,
+  params,
+  roleFilter,
+  metricFilter,
+  metrics,
+}: {
+  users: UserRow[];
+  params: { q?: string; role?: string; status?: string };
+  roleFilter: AppRole | "";
+  metricFilter: UserMetricFilter;
+  metrics: { active: number; noPortal: number; disabled: number; custom: number; privileged: number; expiring: number };
+}) {
+  const roleOptions = appRoles
+    .filter((role) => !["customer", "intermediary"].includes(role))
+    .map((role) => ({ value: role, label: roleLabels[role] }));
+
   return <>
     <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-      <Metric label="Active users" value={metrics.active} tone="green" /><Metric label="Without portal" value={metrics.noPortal} tone="slate" /><Metric label="Disabled" value={metrics.disabled} tone="amber" /><Metric label="Custom access" value={metrics.custom} tone="blue" /><Metric label="Privileged users" value={metrics.privileged} tone="violet" /><Metric label="Expiring access" value={metrics.expiring} tone="red" />
+      <Metric label="Active users" value={metrics.active} tone="green" filter="active" active={metricFilter === "active"} params={params} />
+      <Metric label="Without portal" value={metrics.noPortal} tone="slate" filter="no_portal" active={metricFilter === "no_portal"} params={params} />
+      <Metric label="Disabled" value={metrics.disabled} tone="amber" filter="disabled" active={metricFilter === "disabled"} params={params} />
+      <Metric label="Custom access" value={metrics.custom} tone="blue" filter="custom" active={metricFilter === "custom"} params={params} />
+      <Metric label="Privileged users" value={metrics.privileged} tone="violet" filter="privileged" active={metricFilter === "privileged"} params={params} />
+      <Metric label="Expiring access" value={metrics.expiring} tone="red" filter="expiring" active={metricFilter === "expiring"} params={params} />
     </section>
+
     <Card>
       <div className="flex flex-col gap-2 border-b border-[#E8EEF5] pb-3 lg:flex-row lg:items-center lg:justify-between">
-        <div><h2 className="text-[14px] font-bold text-[#17203A]">Users</h2><p className="mt-0.5 text-[9px] text-[#64748B]">{users.length} employee records</p></div>
-        <form className="flex flex-1 flex-wrap justify-end gap-2 lg:max-w-[690px]">
-          <input type="hidden" name="view" value="users" />
-          <input name="q" defaultValue={params.q ?? ""} placeholder="Search employee, role or location" className="h-9 min-w-[220px] flex-1 rounded-lg border border-[#D8E1EC] bg-white px-3 text-[10px] outline-none transition focus:border-[#94A3B8] lg:max-w-[330px]" />
-          <select name="role" defaultValue={roleFilter} className="h-9 min-w-[145px] rounded-lg border border-[#D8E1EC] bg-white px-3 text-[10px]"><option value="">All roles</option>{appRoles.filter((role) => !["customer", "intermediary"].includes(role)).map((role) => <option key={role} value={role}>{roleLabels[role]}</option>)}</select>
-          <button className="h-9 rounded-lg bg-[#17365D] px-4 text-[10px] font-bold text-white shadow-[0_6px_16px_rgba(23,54,93,.16)]">Apply</button>
-        </form>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+          <div className="shrink-0">
+            <h2 className="text-[14px] font-bold text-[#17203A]">Users</h2>
+            <p className="mt-0.5 text-[9px] text-[#64748B]">{users.length} employee records</p>
+          </div>
+          <UserRegisterFilters initialQuery={params.q ?? ""} initialRole={roleFilter} roles={roleOptions} />
+        </div>
+        {metricFilter !== "all" ? (
+          <Link href={clearMetricHref(params)} className="inline-flex h-8 shrink-0 items-center rounded-lg border border-[#D8E1EC] bg-white px-3 text-[9px] font-bold text-[#475569] hover:bg-[#F8FAFC]">
+            Clear summary filter
+          </Link>
+        ) : null}
       </div>
-      <div className="mt-3 overflow-x-auto"><table className="w-full min-w-[1120px] table-fixed text-left text-[10px] text-[#252944]"><thead className="sticky top-0 z-10"><tr className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[8px] font-bold uppercase tracking-[.06em] text-[#64748B]"><th className="w-[235px] px-3 py-2">Employee</th><th className="w-[110px] px-3 py-2 text-center">Portal</th><th className="w-[150px] px-3 py-2 text-center">Primary role</th><th className="w-[165px] px-3 py-2 text-center">Scope</th><th className="w-[135px] px-3 py-2 text-center">Custom access</th><th className="w-[105px] px-3 py-2 text-center">Risk</th><th className="w-[100px] px-3 py-2 text-right">Action</th></tr></thead><tbody className="divide-y divide-[#EEF2F6]">{users.map(({ employee, profile, overrides }) => {
-        const role = profile && isAppRole(profile.role) ? profile.role : null;
-        const activeOverrides = overrides.filter(isCurrentOverride);
-        return <tr key={employee.id} className="h-[54px] transition hover:bg-[#FAFCFF]"><td className="px-3 py-2"><p className="truncate font-bold text-[#0F2A55]">{employee.full_name}</p><p className="mt-0.5 truncate text-[8.5px] text-[#64748B]">{employee.employee_code} · {employee.designation}</p><p className="mt-0.5 truncate text-[8px] text-[#94A3B8]">{employee.department ?? "-"} · {employee.location ?? "No location"}</p></td><td className="px-3 py-2 text-center"><PortalStatus employee={employee} profile={profile} /></td><td className="px-3 py-2 text-center">{role ? <Badge>{roleLabels[role]}</Badge> : <span className="text-[#94A3B8]">Not assigned</span>}</td><td className="px-3 py-2 text-center text-[#475569]">{role ? defaultScope(role) : "—"}</td><td className="px-3 py-2 text-center"><span className={activeOverrides.length ? "font-semibold text-[#4F46E5]" : "text-[#94A3B8]"}>{activeOverrides.length} custom</span></td><td className="px-3 py-2 text-center"><Risk value={userRisk(employee, profile, activeOverrides)} /></td><td className="px-3 py-2 text-right">{profile ? <Link href={`/system/access-control/employees/${profile.id}`} className="inline-flex h-8 items-center rounded-lg bg-[#17365D] px-3 text-[9px] font-bold text-white">Manage</Link> : <Link href="/employees" className="inline-flex h-8 items-center rounded-lg border border-[#CBD5E1] bg-white px-3 text-[9px] font-bold text-[#334155]">Employee</Link>}</td></tr>;
-      })}</tbody></table></div>
+
+      <div className="mt-3 overflow-x-auto">
+        <table className="w-full min-w-[1120px] table-fixed text-left text-[10px] text-[#252944]">
+          <thead className="sticky top-0 z-10">
+            <tr className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[8px] font-bold uppercase tracking-[.06em] text-[#64748B]">
+              <th className="w-[235px] px-3 py-2">Employee</th>
+              <th className="w-[110px] px-3 py-2 text-center">Portal</th>
+              <th className="w-[150px] px-3 py-2 text-center">Primary role</th>
+              <th className="w-[165px] px-3 py-2 text-center">Scope</th>
+              <th className="w-[135px] px-3 py-2 text-center">Custom access</th>
+              <th className="w-[105px] px-3 py-2 text-center">Risk</th>
+              <th className="w-[100px] px-3 py-2 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#EEF2F6]">
+            {users.map(({ employee, profile, overrides }) => {
+              const role = profile && isAppRole(profile.role) ? profile.role : null;
+              const activeOverrides = overrides.filter(isCurrentOverride);
+              const destination = profile ? `/system/access-control/employees/${profile.id}` : "/employees";
+              return (
+                <tr key={employee.id} className="h-[54px] cursor-pointer transition hover:bg-[#F7FAFD]">
+                  <td className="px-0">
+                    <Link href={destination} className="block px-3 py-2">
+                      <p className="truncate font-bold text-[#0F2A55]">{employee.full_name}</p>
+                      <p className="mt-0.5 truncate text-[8.5px] text-[#64748B]">{employee.employee_code} · {employee.designation}</p>
+                      <p className="mt-0.5 truncate text-[8px] text-[#94A3B8]">{employee.department ?? "-"} · {employee.location ?? "No location"}</p>
+                    </Link>
+                  </td>
+                  <td className="px-0 text-center"><Link href={destination} className="flex h-[54px] items-center justify-center px-3"><PortalStatus employee={employee} profile={profile} /></Link></td>
+                  <td className="px-0 text-center"><Link href={destination} className="flex h-[54px] items-center justify-center px-3">{role ? <Badge>{roleLabels[role]}</Badge> : <span className="text-[#94A3B8]">Not assigned</span>}</Link></td>
+                  <td className="px-0 text-center text-[#475569]"><Link href={destination} className="flex h-[54px] items-center justify-center px-3">{role ? defaultScope(role) : "—"}</Link></td>
+                  <td className="px-0 text-center"><Link href={destination} className="flex h-[54px] items-center justify-center px-3"><span className={activeOverrides.length ? "font-semibold text-[#4F46E5]" : "text-[#94A3B8]"}>{activeOverrides.length} custom</span></Link></td>
+                  <td className="px-0 text-center"><Link href={destination} className="flex h-[54px] items-center justify-center px-3"><Risk value={userRisk(employee, profile, activeOverrides)} /></Link></td>
+                  <td className="px-3 py-2 text-right"><Link href={destination} className="inline-flex h-8 items-center rounded-lg bg-[#17365D] px-3 text-[9px] font-bold text-white">{profile ? "Manage" : "Employee"}</Link></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </Card>
   </>;
 }
@@ -197,7 +263,24 @@ function buildAuditEvents(permissionRows: PermissionAuditRow[], lifecycleRows: L
 }
 
 function WorkspaceTab({ current, value, label, count }: { current: WorkspaceView; value: WorkspaceView; label: string; count: number }) { const active = current === value; return <Link href={`/system/access-control?view=${value}`} className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-[9.5px] font-bold transition ${active ? "bg-[#17365D] text-white shadow-[0_4px_10px_rgba(23,54,93,.16)]" : "text-[#475569] hover:bg-[#F1F5F9]"}`}>{label}<span className={`rounded-full px-1.5 py-0.5 text-[7.5px] ${active ? "bg-white/15 text-white" : "bg-[#EEF2F7] text-[#64748B]"}`}>{count}</span></Link>; }
-function Metric({ label, value, tone }: { label: string; value: number; tone: "green" | "slate" | "amber" | "blue" | "violet" | "red" }) { const toneClass = tone === "green" ? "border-emerald-100 bg-emerald-50/35" : tone === "amber" ? "border-amber-100 bg-amber-50/35" : tone === "blue" ? "border-blue-100 bg-blue-50/35" : tone === "violet" ? "border-violet-100 bg-violet-50/35" : tone === "red" ? "border-red-100 bg-red-50/35" : "border-slate-200 bg-white"; return <div className={`min-h-[72px] rounded-xl border px-3 py-2.5 shadow-[0_4px_12px_rgba(15,23,42,0.035)] ${toneClass}`}><p className="text-[20px] font-bold leading-none text-[#172554]">{value}</p><p className="mt-2 text-[7.5px] font-bold uppercase tracking-[.06em] text-[#64748B]">{label}</p></div>; }
+function Metric({
+  label,
+  value,
+  tone,
+  filter,
+  active,
+  params,
+}: {
+  label: string;
+  value: number;
+  tone: "green" | "slate" | "amber" | "blue" | "violet" | "red";
+  filter: Exclude<UserMetricFilter, "all">;
+  active: boolean;
+  params: { q?: string; role?: string; status?: string };
+}) {
+  const toneClass = tone === "green" ? "border-emerald-100 bg-emerald-50/35" : tone === "amber" ? "border-amber-100 bg-amber-50/35" : tone === "blue" ? "border-blue-100 bg-blue-50/35" : tone === "violet" ? "border-violet-100 bg-violet-50/35" : tone === "red" ? "border-red-100 bg-red-50/35" : "border-slate-200 bg-white";
+  return <Link href={metricHref(filter, active, params)} aria-current={active ? "page" : undefined} className={`min-h-[72px] rounded-xl border px-3 py-2.5 shadow-[0_4px_12px_rgba(15,23,42,0.035)] transition hover:-translate-y-0.5 hover:shadow-[0_8px_18px_rgba(15,23,42,0.07)] ${toneClass} ${active ? "ring-2 ring-[#17365D]/20" : ""}`}><p className="text-[20px] font-bold leading-none text-[#172554]">{value}</p><p className="mt-2 text-[7.5px] font-bold uppercase tracking-[.06em] text-[#64748B]">{label}</p></Link>;
+}
 function RoleStat({ label, value, bordered = false }: { label: string; value: string; bordered?: boolean }) { return <div className={`min-w-0 px-2.5 py-2 ${bordered ? "border-l border-[#E6ECF3]" : ""}`}><p className="text-[7px] font-bold uppercase tracking-[.05em] text-[#94A3B8]">{label}</p><p className="mt-1 truncate text-[9px] font-bold text-[#334155]">{value}</p></div>; }
 function MiniStat({ label, value }: { label: string; value: string }) { return <div><p className="text-[8px] uppercase tracking-[.04em] text-[#94A3B8]">{label}</p><p className="mt-1 text-[9.5px] font-semibold text-[#334155]">{value}</p></div>; }
 function Badge({ children }: { children: React.ReactNode }) { return <span className="inline-flex rounded-full bg-[#EEF2FF] px-2.5 py-1 text-[9px] font-semibold text-[#4338CA]">{children}</span>; }
@@ -208,6 +291,31 @@ function PortalStatus({ employee, profile }: { employee: EmployeeRow; profile: P
 function StatusBadge({ tone, children }: { tone: "success" | "warning" | "danger" | "neutral"; children: React.ReactNode }) { const style = tone === "success" ? "bg-emerald-50 text-emerald-700" : tone === "warning" ? "bg-amber-50 text-amber-700" : tone === "danger" ? "bg-red-50 text-red-700" : "bg-slate-100 text-slate-600"; return <span className={`inline-flex rounded-full px-2.5 py-1 text-[8.5px] font-semibold ${style}`}>{children}</span>; }
 function RoleStatus({ status }: { status: string }) { const style = status === "protected" ? "bg-violet-50 text-violet-700" : status === "compatibility" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"; return <span className={`shrink-0 rounded-full px-2 py-1 text-[7.5px] font-bold uppercase ${style}`}>{status}</span>; }
 function Risk({ value }: { value: string }) { const style = value === "critical" ? "bg-red-50 text-red-700" : value === "high" ? "bg-amber-50 text-amber-700" : value === "sensitive" ? "bg-blue-50 text-blue-700" : "bg-slate-100 text-slate-600"; return <span className={`shrink-0 rounded-full px-2 py-1 text-[7.5px] font-bold uppercase ${style}`}>{value}</span>; }
+function normalizeMetricFilter(value: string | undefined): UserMetricFilter {
+  return value === "active" || value === "no_portal" || value === "disabled" || value === "custom" || value === "privileged" || value === "expiring" ? value : "all";
+}
+function matchesMetricFilter(filter: UserMetricFilter, employee: EmployeeRow, profile: ProfileRow | null, overrides: OverrideRow[], now: Date, limit: Date) {
+  if (filter === "active") return employee.employment_status === "active" && Boolean(profile?.is_active);
+  if (filter === "no_portal") return !profile;
+  if (filter === "disabled") return Boolean(profile && !profile.is_active);
+  if (filter === "custom") return overrides.some(isCurrentOverride);
+  if (filter === "privileged") return Boolean(profile?.is_active && ["super_admin", "admin", "it_super_user"].includes(profile.role));
+  if (filter === "expiring") return overrides.some((row) => isExpiring(row, now, limit));
+  return true;
+}
+function metricHref(filter: Exclude<UserMetricFilter, "all">, active: boolean, params: { q?: string; role?: string }) {
+  const query = new URLSearchParams({ view: "users" });
+  if (params.q) query.set("q", params.q);
+  if (params.role) query.set("role", params.role);
+  if (!active) query.set("status", filter);
+  return `/system/access-control?${query.toString()}`;
+}
+function clearMetricHref(params: { q?: string; role?: string }) {
+  const query = new URLSearchParams({ view: "users" });
+  if (params.q) query.set("q", params.q);
+  if (params.role) query.set("role", params.role);
+  return `/system/access-control?${query.toString()}`;
+}
 function normalizeView(value: string | undefined): WorkspaceView { return value === "roles" || value === "permissions" || value === "reviews" || value === "audit" ? value : "users"; }
 function isCurrentOverride(row: OverrideRow) { return !row.expires_at || new Date(row.expires_at).getTime() > Date.now(); }
 function isExpiring(row: OverrideRow, now: Date, limit: Date) { if (!row.expires_at) return false; const expiry = new Date(row.expires_at); return expiry > now && expiry <= limit; }
