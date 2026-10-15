@@ -42,7 +42,7 @@ export async function renderGroupAssociates({id,query:q,surface}:{id:string;quer
       <label className="text-xs">City<input className={input} name="city"/></label>
       <label className="text-xs">State<input className={input} name="state"/></label>
       <label className="text-xs">PIN Code<input className={input} name="postal_code"/></label>
-      <label className="text-xs">Role<select className={input} name="role" defaultValue="group_admin"><option value="group_admin">Group Administrator</option></select></label>
+      <label className="text-xs">Role *<select className={input} name="role" defaultValue="insurance_head" required><option value="group_admin" disabled>Group Administrator (Primary)</option><option value="insurance_head">Insurance Head</option><option value="claim_head">Claim Head</option><option value="bodyshop_manager">Bodyshop Manager</option></select></label>
       <div className="flex items-end justify-end md:col-span-2"><button className="h-10 rounded-xl bg-[#17365D] px-5 text-xs font-semibold text-white">Save & Send Activation Email</button></div>
     </form>
    </section>
@@ -52,7 +52,7 @@ export async function renderGroupAssociates({id,query:q,surface}:{id:string;quer
     <tbody>{(associates??[]).map(a=><tr key={a.id} className="border-t">
       <td className="p-3">{a.name}</td><td className="p-3">{a.phone_number}</td><td className="p-3">{a.email}</td><td className="p-3">{a.designation}</td>
       <td className="p-3">{[a.address,a.city,a.state,a.postal_code].filter(Boolean).join(", ")||"–"}</td>
-      <td className="p-3"><span className="rounded-full border px-2 py-1">Group Administrator</span></td><td className="p-3">{a.status}</td>
+      <td className="p-3"><span className="rounded-full border px-2 py-1">{{group_admin:"Group Administrator",insurance_head:"Insurance Head",claim_head:"Claim Head",bodyshop_manager:"Bodyshop Manager"}[a.role as "group_admin"|"insurance_head"|"claim_head"|"bodyshop_manager"]||a.role}</span></td><td className="p-3">{a.status}</td>
       <td className="p-3"><AssociateControls groupId={id} associate={a} surface={surface}/></td>
     </tr>)}</tbody></table>
    </section>
