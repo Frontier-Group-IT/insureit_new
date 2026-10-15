@@ -175,7 +175,24 @@ function ReviewsWorkspace({ items }: { items: ReviewItem[] }) {
 function AuditWorkspace({ events }: { events: AuditEvent[] }) {
   return <Card className="!rounded-xl !border-[#DCE4EF] !bg-white !p-0 !shadow-sm !backdrop-blur-none">
     <div className="border-b border-[#E2E8F0] px-4 py-3"><h2 className="text-[14px] font-semibold text-[#17203A]">Audit Log</h2><p className="mt-0.5 text-[9.5px] text-[#64748B]">Permission and portal lifecycle events</p></div>
-    {events.length ? <div className="overflow-x-auto"><table className="w-full min-w-[850px] text-left text-[10px]"><thead><tr className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[8px] uppercase tracking-[.05em] text-[#94A3B8]"><th className="px-4 py-2.5">Actor</th><th className="px-4 py-2.5">Type</th><th className="px-4 py-2.5">Event</th><th className="px-4 py-2.5 text-right">Date & time</th></tr></thead><tbody className="divide-y divide-[#EDF2F7]">{events.map((event) => <tr key={event.key} className="hover:bg-[#FAFCFF]"><td className="px-4 py-3 font-semibold text-[#334155]">{event.actor}</td><td className="px-4 py-3 text-[#64748B]">{event.type}</td><td className="px-4 py-3"><p className="font-semibold text-[#24345A]">{event.title}</p><p className="mt-0.5 text-[8.5px] text-[#64748B]">{event.detail}</p></td><td className="px-4 py-3 text-right text-[8.5px] text-[#94A3B8]">{formatDate(event.createdAt)}</td></tr>)}</tbody></table></div> : <div className="p-4"><EmptyState text="No access events have been recorded yet." /></div>}
+    {events.length ? <div className="overflow-x-auto">
+      <table className="w-full min-w-[980px] text-left text-[10px]">
+        <thead><tr className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[8px] uppercase tracking-[.05em] text-[#94A3B8]">
+          <th className="px-4 py-2.5">Actor</th>
+          <th className="px-4 py-2.5">Type</th>
+          <th className="px-4 py-2.5">Event</th>
+          <th className="px-4 py-2.5">Detail</th>
+          <th className="px-4 py-2.5 text-right">Date & time</th>
+        </tr></thead>
+        <tbody className="divide-y divide-[#EDF2F7]">{events.map((event) => <tr key={event.key} className="hover:bg-[#FAFCFF]">
+          <td className="px-4 py-3 font-semibold text-[#334155]">{event.actor}</td>
+          <td className="px-4 py-3 text-[#64748B]">{event.type}</td>
+          <td className="px-4 py-3 font-semibold text-[#24345A]">{event.title}</td>
+          <td className="px-4 py-3 text-[9px] text-[#64748B]">{event.detail}</td>
+          <td className="px-4 py-3 text-right text-[8.5px] whitespace-nowrap text-[#94A3B8]">{formatDate(event.createdAt)}</td>
+        </tr>)}</tbody>
+      </table>
+    </div> : <div className="p-4"><EmptyState text="No access events have been recorded yet." /></div>}
   </Card>;
 }
 
