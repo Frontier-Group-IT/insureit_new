@@ -31,12 +31,6 @@ import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 const PAGE_SIZE = 10;
-const filters: Array<{ value: PartnerClaimState; label: string }> = [
-  { value: 'all', label: 'All' },
-  { value: 'active', label: 'In Progress' },
-  { value: 'completed', label: 'Settled' },
-];
-
 let savedClaimQuery = '';
 let savedClaimState: PartnerClaimState = 'all';
 
@@ -203,31 +197,7 @@ export default function ClaimsScreen() {
           </View>
         ) : null}
 
-        <View style={styles.controls}>
-          <View style={styles.tabs}>
-            {filters.map((filter) => {
-              const active = filter.value === state;
-              const count = claimFilterCount(summary.data, filter.value);
-              return (
-                <Pressable
-                  key={filter.value}
-                  accessibilityRole="tab"
-                  accessibilityLabel={count === null ? filter.label : `${filter.label} ${count}`}
-                  accessibilityState={{ selected: active }}
-                  onPress={() => { setRejectedFilterNotice(false); setState(filter.value); }}
-                  style={[styles.tab, active && styles.tabActive]}
-                >
-                  <View style={styles.tabLabelRow}>
-                    <Text style={[styles.tabText, active && styles.tabTextActive]}>{filter.label}</Text>
-                    {count !== null ? (
-                      <Text style={[styles.tabCount, active && styles.tabCountActive]}>({count})</Text>
-                    ) : null}
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
+
 
         {collection.error && collection.rows.length && !collection.stale ? (
           <View style={styles.inlineBanner}>
@@ -356,14 +326,6 @@ function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void
   );
 }
 
-function claimFilterCount(summary: PartnerClaimSummary | null, state: PartnerClaimState) {
-  if (!summary) return null;
-  if (state === 'active') return summary.active_claims;
-  if (state === 'completed') return summary.completed_claims;
-  if (state === 'assistance') return summary.assistance_requested;
-  return summary.total_claims;
-}
-
 function claimModeLabel(value: string | null) {
   const normalized = (value || '').toLowerCase();
   if (normalized.includes('external')) return 'External';
@@ -386,25 +348,26 @@ const styles = StyleSheet.create({
   content: { flexGrow: 1, paddingBottom: 104, backgroundColor: '#FFFFFF' },
   pressed: { opacity: 0.76 },
 
-  hero: { height: 162, overflow: 'hidden', backgroundColor: '#0752A2' },
+  hero: { height: 98, overflow: 'hidden', backgroundColor: '#0752A2' },
   heroBackdrop: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%', opacity: 0.92 },
   heroShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(1,42,95,0.10)' },
   heroTopRow: {
     zIndex: 3,
     position: 'absolute',
-    top: 30,
+    top: 13,
     left: 15,
     right: 15,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 35,
   },
   heroBrand: { flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: '60%' },
   heroLogo: { width: 30, height: 35, tintColor: '#FFFFFF' },
   heroBrandCopy: { justifyContent: 'center' },
   heroBrandInsureit: { color: '#FFFFFF', fontSize: 14, lineHeight: 16, fontWeight: '800' },
   heroBrandPartner: { color: '#F5AB2E', fontSize: 14, lineHeight: 16, fontWeight: '800' },
-  heroActions: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  heroActions: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 7 },
   heroIconButton: {
     width: 33,
     height: 33,
@@ -425,10 +388,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   heroAvatarText: { color: partnerTheme.colors.brandStrong, fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
-  heroCopy: { zIndex: 3, position: 'absolute', left: 18, bottom: 24 },
-  heroTitle: { color: '#FFFFFF', fontSize: 20, lineHeight: 23, fontWeight: '800', letterSpacing: -0.2 },
+  heroCopy: { zIndex: 3, position: 'absolute', left: 18, bottom: 12 },
+  heroTitle: { color: '#FFFFFF', fontSize: 15, lineHeight: 18, fontWeight: '800', letterSpacing: -0.2 },
 
-  body: { marginTop: -13, paddingHorizontal: 10, zIndex: 5, backgroundColor: '#FFFFFF' },
+  body: { marginTop: -8, paddingHorizontal: 10, zIndex: 5, backgroundColor: '#FFFFFF' },
   searchShell: {
     height: 40,
     flexDirection: 'row',
