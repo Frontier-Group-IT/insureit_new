@@ -27,3 +27,12 @@ for (const [screen, source] of [['login',login],['signup',signup]]) {
     assert.match(source, /verifyPhoneOtp\(/);
   });
 }
+
+
+test('Firebase Customer login never automatically binds a phone UID via the legacy production endpoint', () => {
+  const sessionSource = src('../lib/customer-firebase-otp-session.ts');
+  assert.doesNotMatch(sessionSource, /invokeFirebaseFunction\(['"]customer-firebase-bind['"]/);
+  assert.match(sessionSource, /exchangeVerifiedFirebaseOtpForSupabaseSession\(refreshedFirebaseIdToken\)/);
+  assert.match(sessionSource, /firebaseUser\.uid !== verified\.uid/);
+  assert.match(sessionSource, /firebaseUser\.phoneNumber !== phone/);
+});
