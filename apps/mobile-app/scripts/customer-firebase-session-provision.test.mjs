@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
 import { customerAuthAlias, isApprovedAuthAlias } from '../../../supabase/functions/_shared/customer-firebase-session-alias.mjs';
 import { ensureCustomerSupabaseSessionAlias } from '../../../supabase/functions/_shared/customer-firebase-session-provision.mjs';
 import { checkVerifiedFirebaseCustomerForSession, checkCustomerSessionEligibility } from '../../../supabase/functions/_shared/customer-firebase-session-policy.mjs';
@@ -79,4 +80,14 @@ test('already provisioned alias does not issue a redundant admin write',async()=
   const r=await ensureCustomerSupabaseSessionAlias({db:mock.db,authUser:u,
     customerProfileId:id,enabled:false});
   assert.equal(r.ok,true);assert.equal(mock.calls.length,0);
+});
+
+test('manual canary alias must rotate the existing password with separate approval', () => {
+  const manual = readFileSync(new URL('../../../scripts/customer-firebase-auth-alias-provision.mjs', import.meta.url),'utf8');
+  const runtime = readFileSync(new URL('../../../supabase/functions/_shared/customer-firebase-session-provision.mjs', import.meta.url),'utf8');
+  assert.match(manual, /CUSTOMER_AUTH_PASSWORD_ROTATION_APPROVED/);
+  assert.match(manual, /randomBytes\(48\)/);
+  assert.match(manual, /password: neverDisclosePassword/);
+  assert.match(runtime, /manual_alias_required/);
+  assert.doesNotMatch(runtime, /updateUserById|createUser|generateLink/);
 });
