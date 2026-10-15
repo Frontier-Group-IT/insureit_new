@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppShell, Card } from "@/components/shell";
 import { FormSubmitButton } from "@/components/form-submit-button";
+import { AccessHistoryTable } from "./access-history-table";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { isAppRole, roleLabels, type AppRole } from "@/lib/roles";
@@ -85,7 +86,7 @@ export default async function EmployeePermissionPage({ params, searchParams }: {
       {view === "permissions" ? <Permissions profile={profile} role={role} overrides={overrideMap} modules={modules} activeModule={activeModule} /> : null}
       {view === "scope" ? <DataScope role={role} overrides={activeOverrides} /> : null}
       {view === "portal" ? <PortalAccess employee={employee} profile={profile} role={role} /> : null}
-      {view === "history" ? <History events={history} /> : null}
+      {view === "history" ? <AccessHistoryTable events={history} /> : null}
     </div>
   </AppShell>;
 }
@@ -241,10 +242,6 @@ function PortalAccess({ employee, profile, role }: { employee: EmployeeRow; prof
   </div>;
 }
 
-function History({ events }: { events: Array<{ id: string; type: "permission" | "lifecycle"; title: string; detail: string; created_at: string }> }) {
-  return <Card><h2 className="text-[15px] font-semibold text-[#17203A]">Access history</h2><p className="mt-1 text-[10px] text-[#64748B]">Permission changes and portal lifecycle events in one timeline.</p><div className="mt-3 space-y-2">{events.length ? events.map((event) => <div key={`${event.type}-${event.id}`} className="rounded-lg border border-[#E2E8F0] px-3 py-2.5"><div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-2"><span className={`rounded-full px-2 py-1 text-[7.5px] font-bold uppercase ${event.type === "permission" ? "bg-indigo-50 text-indigo-700" : "bg-emerald-50 text-emerald-700"}`}>{event.type}</span><p className="text-[10px] font-semibold text-[#24345A]">{event.title}</p></div><span className="text-[8.5px] text-[#94A3B8]">{formatDate(event.created_at)}</span></div><p className="mt-1 text-[8.5px] text-[#64748B]">{event.detail}</p></div>) : <p className="text-[10px] text-[#94A3B8]">No access events recorded.</p>}</div></Card>;
-}
-
 function buildHistory(permissionAudit: AuditRow[], lifecycleAudit: LifecycleAuditRow[]) {
   return [
     ...permissionAudit.map((row) => ({ id: row.id, type: "permission" as const, title: `${friendlyCapability(row.capability)}: ${row.previous_access ?? "inherit"} → ${row.new_access}`, detail: `${scopeLabel(row.previous_scope ?? "inherit")} → ${scopeLabel(row.new_scope ?? "inherit")} · ${row.reason}`, created_at: row.created_at })),
@@ -275,5 +272,4 @@ function defaultScope(role: AppRole) { return ["super_admin", "admin", "it_super
 function scopeLabel(value: string) { return ({ inherit: "Inherit role", self: "Own records", hierarchy: "Reporting hierarchy", organization: "Entire organisation" } as Record<string, string>)[value] ?? titleCase(value); }
 function titleCase(value: string) { return value.replaceAll("_", " ").replace(/\b\w/g, (match) => match.toUpperCase()); }
 function isCurrentOverride(row: OverrideRow) { return !row.expires_at || new Date(row.expires_at) > new Date(); }
-function formatDate(value: string) { return new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" }).format(new Date(value)); }
 function toLocalInput(value: string | null | undefined) { if (!value) return ""; const date = new Date(value); if (Number.isNaN(date.getTime())) return ""; const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000); return local.toISOString().slice(0, 16); }
