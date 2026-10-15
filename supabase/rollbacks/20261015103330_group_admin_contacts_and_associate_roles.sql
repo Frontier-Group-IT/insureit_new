@@ -13,7 +13,7 @@ alter table public.group_portal_associate_accounts add constraint group_portal_a
 drop table public.group_administrator_contacts;
 -- Restore previous Group Associate identity output (administrator-only contract).
 create or replace function public.partner_app_current_identity()
-returns jsonb language plpgsql stable security definer set search_path=public,auth as $
+returns jsonb language plpgsql stable security definer set search_path=public,auth as $$
 declare v_group uuid; v_code text; v_name text; v_email text; v_name_person text;
 begin
  v_group:=public.group_associate_active_group_id();
@@ -29,7 +29,7 @@ begin
  end if;
  return public.partner_app_current_identity_before_group_associates();
 end;
-$;
+$$;
 revoke all on function public.partner_app_current_identity() from public,anon;
 grant execute on function public.partner_app_current_identity() to authenticated,service_role;
 commit;
