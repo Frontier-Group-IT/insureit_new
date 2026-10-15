@@ -127,3 +127,17 @@ test('Edge candidate is off by default and cannot mutate/create Auth users', () 
   assert.doesNotMatch(source, /auth\.admin\.(?:createUser|updateUserById|deleteUser)\s*\(/);
   assert.doesNotMatch(source, /signInWithPassword|setSession\s*\(/);
 });
+
+test('same verified Firebase phone cannot authorize a separate IT Super User Auth identity', () => {
+  const customer = state();
+  const staff = {
+    ...customer.authUser,
+    id: otherId,
+    email: 'staff@example.com',
+    email_confirmed_at: '2026-10-10T00:00:00Z',
+  };
+  const otherRole = { ...customer.profile, id: otherId, role: 'it_super_user' };
+  assert.equal(checkCustomerSessionEligibility({ ...customer, profile: otherRole, authUser: staff }).reason, 'customer_unavailable');
+  assert.equal(checkCustomerSessionEligibility({ ...customer, authUser: staff }).reason, 'supabase_user_mismatch');
+  assert.equal(checkCustomerSessionEligibility({ ...customer, link: { ...customer.link, profile_id: otherId } }).reason, 'customer_unavailable');
+});
