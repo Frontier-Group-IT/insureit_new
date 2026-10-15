@@ -154,9 +154,46 @@ function Permissions({ profile, role, overrides, modules, activeModule }: { prof
 
 function DataScope({ role, overrides }: { role: AppRole; overrides: OverrideRow[] }) {
   const scoped = overrides.filter((row) => row.scope_type !== "inherit");
-  return <div className="grid gap-3 xl:grid-cols-[.8fr_1.2fr]">
-    <Card><h2 className="text-[15px] font-semibold text-[#17203A]">Default scope</h2><p className="mt-1 text-[10px] text-[#64748B]">Inherited from the assigned role.</p><div className="mt-4 rounded-xl border border-[#E2E8F0] bg-[#FAFCFF] p-3"><p className="text-[18px] font-semibold text-[#172554]">{scopeLabel(defaultScope(role))}</p><p className="mt-2 text-[9px] leading-4 text-[#64748B]">Individual permission overrides can narrow or broaden scope where explicitly configured.</p></div></Card>
-    <Card><div className="flex items-center justify-between gap-3"><div><h2 className="text-[15px] font-semibold text-[#17203A]">Scope exceptions</h2><p className="mt-1 text-[10px] text-[#64748B]">Permission-specific data boundaries currently overriding the role.</p></div><Badge>{scoped.length} exceptions</Badge></div><div className="mt-3 space-y-2">{scoped.length ? scoped.map((row) => <div key={row.capability} className="flex flex-col gap-2 rounded-lg border border-[#E2E8F0] px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[10px] font-semibold text-[#24345A]">{friendlyCapability(row.capability)}</p><p className="mt-0.5 text-[8.5px] text-[#64748B]">{row.reason}</p></div><span className="rounded-full bg-[#F1F5F9] px-2.5 py-1 text-[8.5px] font-semibold text-[#475569]">{scopeLabel(row.scope_type)}</span></div>) : <p className="text-[10px] text-[#94A3B8]">No scope exceptions. All permissions use the role default.</p>}</div></Card>
+  return <div className="space-y-3">
+    <section aria-label="Data scope summary" className="grid gap-3 sm:grid-cols-2">
+      <div className="rounded-xl border border-[#DFE7F2] bg-white px-4 py-3 shadow-sm">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">Default scope</p>
+        <p className="mt-1 text-[16px] font-bold text-[#17365D]">{scopeLabel(defaultScope(role))}</p>
+        <p className="mt-1 text-[10px] text-[#71839C]">Inherited from the assigned role</p>
+      </div>
+      <div className="rounded-xl border border-[#DFE7F2] bg-white px-4 py-3 shadow-sm">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">Scope exceptions</p>
+        <p className="mt-1 text-[20px] font-bold leading-tight text-[#17365D] tabular-nums">{scoped.length}</p>
+        <p className="mt-1 text-[10px] text-[#71839C]">Permission-specific scope overrides</p>
+      </div>
+    </section>
+    <section aria-label="Scope exceptions" className="overflow-hidden rounded-xl border border-[#DFE7F2] bg-white shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E2E8F0] px-4 py-3">
+        <div>
+          <h2 className="text-[14px] font-bold text-[#17203A]">Scope exceptions</h2>
+          <p className="mt-0.5 text-[10px] text-[#64748B]">Permission-specific data boundaries currently overriding the role.</p>
+        </div>
+        <Badge>{scoped.length} exceptions</Badge>
+      </div>
+      <div className="w-full overflow-x-auto">
+        <table className="w-full min-w-[660px] text-left">
+          <thead className="bg-[#F8FAFD] text-[10px] font-bold uppercase tracking-wide text-[#64748B]">
+            <tr>
+              <th scope="col" className="w-[38%] border-b border-[#E2E8F0] px-4 py-3">Permission</th>
+              <th scope="col" className="w-[34%] border-b border-[#E2E8F0] px-4 py-3">Reason</th>
+              <th scope="col" className="border-b border-[#E2E8F0] px-4 py-3">Data scope</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#E9EEF5] text-[11px] text-[#334155]">
+            {scoped.length ? scoped.map((row) => <tr key={row.capability} className="transition-colors hover:bg-[#F8FBFF]">
+              <td className="px-4 py-3 font-semibold text-[#24345A]">{friendlyCapability(row.capability)}</td>
+              <td className="px-4 py-3 text-[#64748B]">{row.reason || "—"}</td>
+              <td className="px-4 py-3"><span className="inline-flex rounded-lg bg-[#F1F5F9] px-2.5 py-1 text-[10px] font-medium text-[#475569]">{scopeLabel(row.scope_type)}</span></td>
+            </tr>) : <tr><td colSpan={3} className="px-4 py-8 text-center text-[11px] text-[#94A3B8]">No scope exceptions. All permissions use the role default.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </section>
   </div>;
 }
 
