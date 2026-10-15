@@ -26,9 +26,14 @@ const sections = [
       "We do not sell personal information. Information may be shared only where reasonably necessary with insurers, authorised insurance intermediaries and service partners, surveyors, garages or repairers, claim service providers, technology and cloud providers, authorised staff, professional advisers, and legal, regulatory, judicial, or government authorities. Technology providers used to operate INSUREIT may include Supabase for authentication, database and storage services, Expo for app delivery and notifications, and Vercel for web hosting.",
   },
   {
+    title: "Business records and submitted documents",
+    body:
+      "Authorised users may create, access, or upload customer and lead records, insurance and renewal documents, claim information, and related evidence for legitimate insurance workflows. These records can contain personal information about customers and other individuals, not only the signed-in Partner. Access is governed by assigned business roles and permissions; users should submit information only when authorised to do so.",
+  },
+  {
     title: "Device features and permissions",
     body:
-      "The INSUREIT Partner app may request access to device features only when a feature needs them, for example notifications or selecting a document from the device. Permissions can be managed from device settings. If biometric unlock is enabled, biometric verification is performed by the device operating system; INSUREIT does not receive or store the user's fingerprint, face template, or other biometric template.",
+      "The INSUREIT Partner app may request access to device features only when a feature needs them, including notifications, document selection, and optional device-based biometric unlock. Permissions can be managed from device settings. If biometric unlock is enabled, biometric verification is performed by the device operating system; INSUREIT does not receive or store the user's fingerprint, face template, or other biometric template.",
   },
   {
     title: "Security and retention",
@@ -44,18 +49,25 @@ const sections = [
 
 export default function PrivacyPolicyPage() {
   return (
-    <main className="min-h-screen bg-[#F4F9FF] px-4 py-8 text-[#17202F] sm:px-6 sm:py-12">
-      <article className="mx-auto max-w-4xl overflow-hidden rounded-[30px] border border-[#D7E6F5] bg-white shadow-[0_24px_70px_rgba(11,55,105,0.12)]">
-        <header className="border-b border-[#E4ECF5] bg-gradient-to-br from-[#071D49] via-[#0A3474] to-[#0B63CE] px-6 py-8 text-white sm:px-10 sm:py-10">
+    <main className="min-h-screen bg-[#F4F9FF] px-3 py-5 text-[#17202F] sm:px-6 sm:py-12">
+      <article className="mx-auto max-w-4xl overflow-hidden rounded-2xl sm:rounded-[30px] border border-[#D7E6F5] bg-white shadow-[0_24px_70px_rgba(11,55,105,0.12)]">
+        <header className="border-b border-[#E4ECF5] bg-gradient-to-br from-[#071D49] via-[#0A3474] to-[#0B63CE] px-5 py-7 text-white sm:px-10 sm:py-10">
           <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#B9D8FF]">INSUREIT Partner</p>
           <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Privacy Policy</h1>
           <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-[#D8E9FF]">
             How we collect, use, protect, retain, and share information when you use the INSUREIT Partner app and related services.
           </p>
-          <p className="mt-5 text-xs font-bold text-[#B9D8FF]">Effective 30 September 2026</p>
+          <p className="mt-5 text-xs font-bold text-[#B9D8FF]">Effective 30 September 2026 · Updated 15 October 2026</p>
         </header>
 
-        <div className="px-6 py-7 sm:px-10 sm:py-9">
+        <nav aria-label="Privacy policy sections" className="flex flex-wrap gap-2 border-b border-[#E4ECF5] bg-[#F8FBFF] px-5 py-4 sm:px-10">
+          <a href="#data-collected" className="rounded-full border border-[#CADDEE] bg-white px-3 py-2 text-xs font-bold text-[#123C73]">Data collected</a>
+          <a href="#device-permissions" className="rounded-full border border-[#CADDEE] bg-white px-3 py-2 text-xs font-bold text-[#123C73]">Permissions</a>
+          <a href="#privacy-rights" className="rounded-full border border-[#CADDEE] bg-white px-3 py-2 text-xs font-bold text-[#123C73]">Your rights</a>
+          <a href="#data-requests" className="rounded-full border border-[#CADDEE] bg-white px-3 py-2 text-xs font-bold text-[#123C73]">Contact &amp; deletion</a>
+        </nav>
+
+        <div className="px-5 py-7 sm:px-10 sm:py-9">
           <section className="rounded-2xl border border-[#DCE8F4] bg-[#F8FBFF] p-5 text-sm leading-6 text-[#46566B]">
             <p><strong>Sankalp Insurance Brokers Private Limited</strong> operates the INSUREIT platform.</p>
             <p className="mt-2">CIN: U66220HR2025PTC137800</p>
@@ -71,9 +83,9 @@ export default function PrivacyPolicyPage() {
           <section className="mt-6 rounded-2xl border border-[#CFE1F5] bg-[#F6FAFF] p-5">
             <h2 className="text-base font-extrabold text-[#071D49]">This policy applies to INSUREIT Partner</h2>
             <p className="mt-2 text-sm leading-6 text-[#46566B]">
-              This Privacy Policy specifically covers the <strong>INSUREIT Partner</strong> Android application
-              (package <strong>com.insureit.partner</strong>) and also applies to related INSUREIT web and service
-              workflows used with that app. It is publicly available without requiring an INSUREIT login.
+              This Privacy Policy covers the <strong>INSUREIT Partner Android and iOS applications</strong>
+              (application identifier <strong>com.insureit.partner</strong> on both platforms), together with
+              related INSUREIT web portals and service workflows. Anyone can read this policy without signing in.
             </p>
           </section>
 
@@ -85,13 +97,13 @@ export default function PrivacyPolicyPage() {
 
           <div className="mt-7 space-y-7">
             {sections.map((section) => (
-              <section key={section.title} className="border-b border-[#E9EFF6] pb-7 last:border-b-0 last:pb-0">
+              <section key={section.title} id={section.title === "Information we collect" ? "data-collected" : section.title === "Device features and permissions" ? "device-permissions" : section.title === "Your rights and choices" ? "privacy-rights" : undefined} className="scroll-mt-6 border-b border-[#E9EFF6] pb-7 last:border-b-0 last:pb-0">
                 <h2 className="text-lg font-black text-[#071D49]">{section.title}</h2>
                 <p className="mt-2 text-sm leading-7 text-[#46566B]">{section.body}</p>
               </section>
             ))}
 
-            <section className="border-b border-[#E9EFF6] pb-7">
+            <section id="data-requests" className="scroll-mt-6 rounded-2xl border border-[#CFE1F5] bg-[#F6FAFF] p-5">
               <h2 className="text-lg font-black text-[#071D49]">Account and data requests</h2>
               <p className="mt-2 text-sm leading-7 text-[#46566B]">
                 For privacy, correction, or deletion requests, email{" "}
