@@ -52,3 +52,44 @@ jobs:
           npm ci --ignore-scripts
           node --test             apps/mobile-app/lib/firebase-otp-readiness.test.cjs             apps/mobile-app/lib/firebase-native-phone-flow.test.cjs             apps/mobile-app/lib/firebase-data-client.test.cjs             pocs/customer-firebase-auth/sql-draft.test.cjs             pocs/customer-firebase-auth/server-identity-binding.test.cjs             pocs/customer-firebase-auth/firebase-admin-verifier.test.cjs             pocs/customer-firebase-auth/firebase-binding-backend.test.cjs             pocs/customer-firebase-auth/supabase-identity-store.test.cjs             pocs/customer-firebase-auth/android-config.test.cjs             pocs/customer-firebase-auth/edge-binding-source.test.cjs             pocs/customer-firebase-auth/auth-uid-compatibility.test.cjs             pocs/customer-firebase-auth/signup-edge-source.test.cjs             pocs/customer-firebase-auth/doc-read-edge-source.test.cjs             pocs/customer-firebase-auth/mobile-document-client-source.test.cjs             apps/mobile-app/lib/firebase-android-auth-adapter.test.cjs
           node --check pocs/customer-firebase-auth/staging-customer-isolation.mjs
+
+
+  production-fail-closed-smoke:
+    name: Production Edge fail-closed smoke (no credentials or writes)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify disabled bridge and unauthenticated bind from GitHub runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from urllib.request import Request, urlopen
+          from urllib.error import HTTPError
+          base = 'https://ilzhsfqqjyppzzvfscmh.supabase.co/functions/v1/'
+          checks = [
+            ('customer-firebase-session-bridge', 503, 'session_bridge_disabled'),
+            ('customer-firebase-bind', 401, 'invalid_token'),
+          ]
+          for name, expected_status, expected_code in checks:
+              # No Authorization header, Firebase token, Supabase key, OTP,
+              # customer identifier, or user payload is used. No DB writes.
+              request = Request(base + name, data=b'{}', method='POST',
+                                headers={'Content-Type': 'application/json'})
+              try:
+                  with urlopen(request, timeout=20) as response:
+                      status = response.status
+                      body = response.read(1024)
+              except HTTPError as exc:
+                  status = exc.code
+                  body = exc.read(1024)
+              try:
+                  code = json.loads(body).get('code') or json.loads(body).get('error')
+              except (ValueError, AttributeError):
+                  code = '<invalid-json>'
+              assert status == expected_status and code == expected_code, (
+                  f'{name}: expected {expected_status}/{expected_code}, '
+                  f'received {status}/{code}')
+              print(f'{name}: expected fail-closed {status}/{code} verified')
+          PY
