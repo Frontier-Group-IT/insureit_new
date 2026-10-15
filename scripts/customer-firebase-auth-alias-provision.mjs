@@ -13,8 +13,10 @@
  * Production write additionally REQUIRES:
  *   --apply
  *   CUSTOMER_AUTH_ALIAS_WRITE_APPROVED=YES_SINGLE_CUSTOMER_UUID_APPROVED
+ *   CUSTOMER_AUTH_PASSWORD_ROTATION_APPROVED=YES_SINGLE_CUSTOMER_PASSWORD_ROTATION_APPROVED
  * and independent verified production Auth backup/recovery protocol.
  */
+import { randomBytes } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { customerAuthAlias } from '../supabase/functions/_shared/customer-firebase-session-alias.mjs';
 import { canonicalIndianPhone } from '../supabase/functions/_shared/customer-firebase-session-policy.mjs';
@@ -24,10 +26,12 @@ const target = process.env.CUSTOMER_AUTH_TARGET_UUID;
 const alias = customerAuthAlias(target);
 const url = process.env.SUPABASE_URL;
 const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const passwordRotationApproved = process.env.CUSTOMER_AUTH_PASSWORD_ROTATION_APPROVED ===
+  'YES_SINGLE_CUSTOMER_PASSWORD_ROTATION_APPROVED';
 const reviewed = process.env.CUSTOMER_AUTH_ALIAS_WRITE_APPROVED ===
   'YES_SINGLE_CUSTOMER_UUID_APPROVED';
 if (!alias || !url || !/^https:\/\/[^/]+\.supabase\.co\/?$/.test(url) ||
-    !serviceRole || (apply && !reviewed)) {
+    !serviceRole || (apply && (!reviewed || !passwordRotationApproved))) {
   throw new Error('Refusing operation: missing allowed target/config or individual written approval');
 }
 const db = createClient(url, serviceRole, { auth: {
@@ -65,8 +69,13 @@ if (!apply) {
 }
 const beforePhoneConfirmed = user.phone_confirmed_at ?? null;
 const beforePhone = user.phone;
+// Existing phone-only Auth accounts contain a password hash. A deterministic
+// reserved email alias must NOT expose that preexisting password as an
+// alternate sign-in route. Rotate to an unshared cryptographically random
+// credential only with separate explicit owner approval and protected restore.
+const neverDisclosePassword = randomBytes(48).toString('base64url');
 const updated = await db.auth.admin.updateUserById(target, {
-  email: alias, email_confirm: true,
+  email: alias, email_confirm: true, password: neverDisclosePassword,
 });
 if (updated.error || updated.data?.user?.id !== target) {
   throw new Error('Manual Auth identity update failed: inspect before any retry');
@@ -79,4 +88,4 @@ if (checked.error || checked.data?.user?.id !== target ||
     (checked.data.user.phone_confirmed_at ?? null) !== beforePhoneConfirmed) {
   throw Error('POST-WRITE INVARIANT FAILURE: halt rollout, investigate this UUID immediately');
 }
-console.info('SINGLE AUTH UUID updated and independently rechecked; phone and verification preserved.');
+console.info('SINGLE AUTH UUID updated; email alias, phone and verification rechecked. Password rotation requested; verify server-side Auth history separately.');
