@@ -41,14 +41,14 @@ test('verified Firebase phone proof cannot target another phone', () => {
   denied(a => { a.verifiedPhone = '919876543210'; }, 'profile_not_bindable');
   denied(a => { a.verifiedPhone = ''; }, 'profile_not_bindable');
 });
-test('live Firebase bind endpoint checks existing Auth identity BEFORE authorizing link insertion', () => {
+test('Firebase bind endpoint is approval-only and never issues Firebase authorization claims', () => {
   const source=readFileSync(new URL('../../../supabase/functions/customer-firebase-bind/index.ts', import.meta.url), 'utf8');
-  const check=source.indexOf('checkExistingCustomerPhoneBinding({');
-  const write=source.indexOf('.insert({\n          firebase_project_id: PROJECT');
-  assert.ok(check >= 0 && write > check);
+  assert.match(source, /checkExistingCustomerPhoneBinding\(\{/);
   assert.match(source, /db\.auth\.admin\.getUserById\(profileId\)/);
-  assert.equal(source.includes('setCustomUserClaims'), false);
-  assert.ok(source.includes('Firebase is SMS VERIFICATION ONLY'));
-
   assert.match(source, /verifyIdToken\(bearer\[1\], true\)/);
+  assert.match(source, /existing\.length !== 1/);
+  assert.match(source, /identity_requires_approval/);
+  assert.doesNotMatch(source, /\.insert\s*\(/);
+  assert.doesNotMatch(source, /setCustomUserClaims/);
+  assert.match(source, /Firebase is SMS VERIFICATION ONLY/);
 });
