@@ -195,14 +195,13 @@ function UsersWorkspace({
 function RolesWorkspace() {
   return <Card>
     <div className="flex flex-col gap-2 border-b border-[#E8EEF5] pb-3 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <div className="flex items-center gap-2">
-          <h2 className="text-[14px] font-bold text-[#17203A]">Roles</h2>
-          <span className="rounded-full bg-[#EEF2F7] px-2 py-0.5 text-[8px] font-bold text-[#64748B]">{roleMatrixV2.length}</span>
-        </div>
-        <p className="mt-0.5 text-[9px] text-[#64748B]">Role catalogue and default access scope</p>
+      <div className="flex items-center gap-2">
+        <h2 className="text-[14px] font-bold text-[#17203A]">Roles</h2>
+        <span className="rounded-full bg-[#EEF2F7] px-2 py-0.5 text-[8px] font-bold text-[#64748B]">{roleMatrixV2.length}</span>
       </div>
-      <ShadowBadge>Shadow model</ShadowBadge>
+      <Link href="/employees" className="inline-flex h-9 items-center justify-center rounded-lg bg-[#17365D] px-4 text-[9.5px] font-bold text-white shadow-[0_6px_16px_rgba(23,54,93,.16)] transition hover:bg-[#102C4D]">
+        User Management
+      </Link>
     </div>
 
     <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
