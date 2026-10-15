@@ -52,3 +52,13 @@ test('Firebase bind endpoint is approval-only and never issues Firebase authoriz
   assert.doesNotMatch(source, /setCustomUserClaims/);
   assert.match(source, /Firebase is SMS VERIFICATION ONLY/);
 });
+
+
+test('approved-only binder is read-only even when an active profile matches the Firebase phone', () => {
+  const source=readFileSync(new URL('../../../supabase/functions/customer-firebase-bind/index.ts', import.meta.url),'utf8');
+  assert.match(source, /existing\.length !== 1/);
+  assert.match(source, /existing\[0\]\.firebase_uid !== decoded\.uid/);
+  assert.match(source, /existing\[0\]\.profile_id !== profileId/);
+  assert.match(source, /!existing\[0\]\.is_approved \|\| !existing\[0\]\.is_active/);
+  assert.doesNotMatch(source, /\.insert\s*\(|\.upsert\s*\(|\.update\s*\(|setCustomUserClaims/);
+});
