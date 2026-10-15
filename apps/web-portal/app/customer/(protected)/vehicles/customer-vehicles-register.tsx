@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Search, CarFront, ShieldCheck, ShieldX, ArrowRight, ChevronLeft, ChevronRight, ArrowDownUp } from "lucide-react";
+import { Search, CarFront, ShieldCheck, ShieldX, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 
 const manufacturerIcons: Record<string, string> = {
   honda: "honda", suzuki: "suzuki", yamaha: "yamaha", hero: "hero", bajaj: "bajaj",
@@ -25,7 +25,6 @@ export type VehicleItem = { id: string; number: string; make: string; model: str
 export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }: { accountId: string; items: VehicleItem[]; initialQuery?: string }) {
   const [query, setQuery] = useState(initialQuery);
   const [statusFilter, setStatusFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("number");
   const [page, setPage] = useState(1);
   const pageSize = 6;
   const insuredCount = items.filter(v => v.status === "active" || v.status === "due").length;
@@ -33,8 +32,8 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     const filtered = items.filter(v => (statusFilter === "all" || (statusFilter === "insured" ? v.status === "active" || v.status === "due" : statusFilter === "uninsured" ? v.status === "inactive" || v.status === "expired" : v.status === statusFilter)) && (!q || [v.number, v.make, v.model, v.chassis, v.engine, v.type, v.policy ?? ""].some(x => x.toLowerCase().includes(q))));
-    return filtered.sort((a,b) => sortBy === "make" ? (a.make + a.model).localeCompare(b.make + b.model) : sortBy === "status" ? a.status.localeCompare(b.status) : a.number.localeCompare(b.number));
-  }, [items, query, statusFilter, sortBy]);
+    return filtered.sort((a,b) => a.number.localeCompare(b.number));
+  }, [items, query, statusFilter]);
   const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
   const currentPage = Math.min(page, pageCount);
   const visibleRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -46,7 +45,6 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
       <div className="relative flex min-h-[175px] items-center px-5 py-6 sm:px-7">
         <div className="max-w-[500px]">
           <h1 className="text-[clamp(28px,3.2vw,40px)] font-bold tracking-tight">My <span className="text-[#1769DC]">Vehicles</span></h1>
-          <p className="mt-2 text-[14px] leading-relaxed text-[#4B6C94]">Manage your insured and uninsured vehicles in one place.</p>
         </div>
       </div>
     </section>
@@ -70,7 +68,6 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
           <input type="search" value={query} onChange={e=>{setQuery(e.target.value);setPage(1);}} placeholder="Search by vehicle number, make, model or chassis..." className="w-full min-w-0 bg-transparent text-[13px] outline-none"/>
         </label>
         <select aria-label="Vehicle status filter" value={statusFilter} onChange={e=>{setStatusFilter(e.target.value);setPage(1);}} className="rounded-lg border border-[#DCE7F5] bg-white px-3 py-2 text-[13px] text-[#263F67]"><option value="all">All Status</option><option value="insured">Insured</option><option value="uninsured">Uninsured</option><option value="due">Due</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="expired">Expired</option></select>
-        <label className="flex items-center gap-1 rounded-lg border border-[#DCE7F5] px-2 text-[#41618D]"><ArrowDownUp className="h-3.5 w-3.5"/><select aria-label="Sort vehicles by" value={sortBy} onChange={e=>{setSortBy(e.target.value);setPage(1);}} className="bg-white py-2 text-[13px] outline-none"><option value="number">Sort by number</option><option value="make">Sort by make</option><option value="status">Sort by status</option></select></label>
       </header>
       <div className="space-y-2">
         {visibleRows.length===0?<div className="rounded-xl border border-[#E2EAF5] p-8 text-center text-sm text-[#637B9B]">No matching vehicles. Try another search or filter.</div>:visibleRows.map(v=>{
