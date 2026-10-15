@@ -19,6 +19,10 @@ const readOnlyField=`${field} bg-[#F8FAFC] text-[#64748B]`;
 const label="mb-1.5 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.055em] text-[#475467]";
 const frequencies=["Monthly","Quarterly","Half Yearly","Annually","One Time"];
 const modes=["Cheque","NEFT/RTGS","UPI","Credit/Debit Card","Net Banking"];
+const normalizeCasePaymentMode=(value:string)=>{
+  const normalized=value.trim().replace(/\s+/g," ").toLowerCase();
+  return [...modes,"Cash"].find(mode=>mode.toLowerCase()===normalized)??"";
+};
 const validIso=(value:string)=>/^\d{4}-\d{2}-\d{2}$/.test(value);
 const activityDate=(value:string)=>{const date=new Date(value);return Number.isNaN(date.getTime())?"—":date.toLocaleString("en-IN",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})};
 
@@ -72,7 +76,7 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
   const router=useRouter(),isIssued=Boolean(caseData.finalPolicyId),docMap=useMemo(()=>new Map(documents.map(d=>[d.document_type,d])),[documents]);
   const[uploading,startUpload]=useTransition(),[converting,startConvert]=useTransition();
   const[error,setError]=useState<string|null>(null),[copy,setCopy]=useState<File|null>(null),[activityOpen,setActivityOpen]=useState(false),[remarksOpen,setRemarksOpen]=useState(false),[uploadingType,setUploadingType]=useState<string|null>(null);
-  const[form,setForm]=useState({customerName:caseData.customerName,customerPhone:caseData.customerPhone,customerAddress:caseData.customerAddress,insurerId:caseData.insurerId,productName:caseData.productName,proposalNumber:caseData.proposalNumber,ppt:caseData.ppt,pd:caseData.pd,paymentFrequency:canonicalPaymentFrequency(caseData.paymentFrequency),paymentMode:caseData.paymentMode,premiumAmount:String(caseData.premiumAmount||""),sourcingDate:caseData.sourcingDate,remarks:caseData.remarks});
+  const[form,setForm]=useState({customerName:caseData.customerName,customerPhone:caseData.customerPhone,customerAddress:caseData.customerAddress,insurerId:caseData.insurerId,productName:caseData.productName,proposalNumber:caseData.proposalNumber,ppt:caseData.ppt,pd:caseData.pd,paymentFrequency:canonicalPaymentFrequency(caseData.paymentFrequency),paymentMode:normalizeCasePaymentMode(caseData.paymentMode),premiumAmount:String(caseData.premiumAmount||""),sourcingDate:caseData.sourcingDate,remarks:caseData.remarks});
   const[issue,setIssue]=useState<IssueState>({policyNumber:"",issuanceDate:"",startDate:"",endDate:"",pptEndDate:"",nextInstallmentDate:"",finalPremium:String(caseData.premiumAmount||""),sumInsured:""});
   const[overrides,setOverrides]=useState<OverrideState>({endDate:false,pptEndDate:false,nextInstallmentDate:false});
   const set=(k:string,v:string)=>setForm(x=>({...x,[k]:v}));
@@ -125,7 +129,7 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
 
     <Section number="04" title="Premium & payment" contentClassName="md:grid-cols-2 xl:grid-cols-3">
       <FieldWrap title="Premium amount" required><input className={field} value={form.premiumAmount} onChange={e=>set("premiumAmount",e.target.value.replace(/[^0-9.]/g,""))} inputMode="decimal"/></FieldWrap>
-      <FieldWrap title="Payment mode" required><select className={field} value={form.paymentMode} onChange={e=>set("paymentMode",e.target.value)}>{legacyCash?<option value="Cash" disabled>Cash (legacy case)</option>:null}{modes.map(v=><option key={v}>{v}</option>)}</select></FieldWrap>
+      <FieldWrap title="Payment mode" required><select className={field} value={form.paymentMode} onChange={e=>set("paymentMode",e.target.value)}><option value="" disabled>Select payment mode</option>{legacyCash?<option value="Cash" disabled>Cash (legacy case)</option>:null}{modes.map(v=><option key={v} value={v}>{v}</option>)}</select></FieldWrap>
       <FieldWrap title="Remarks"><input className={field} value={form.remarks} onChange={e=>set("remarks",e.target.value)} placeholder="Optional servicing / underwriting note"/></FieldWrap>
     </Section>
 
