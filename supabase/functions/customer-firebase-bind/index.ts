@@ -111,21 +111,19 @@ Deno.serve(async (request: Request) => {
     if (existing.some((l) => !l.is_approved || !l.is_active)) {
       return reply(409, { error: "identity_requires_approval" });
     }
-    if (existing.length === 0) {
-      const { error: insertError } = await db.from("customer_firebase_identity_links")
-        .insert({
-          firebase_project_id: PROJECT, firebase_uid: decoded.uid,
-          profile_id: profileId,
-          verified_phone_at_approval: decoded.phone_number,
-          is_approved: true, is_active: true,
-          approved_at: new Date().toISOString(),
-        });
-      if (insertError) return reply(409, { error: "customer_requires_review" });
+    // Existing Customer binding is approval-only: SMS possession alone must
+    // never automatically approve a Firebase UID for a Customer Auth UUID.
+    // This is particularly important if Customer and staff share the number.
+    if (existing.length !== 1 || existing[0].profile_id !== profileId ||
+        existing[0].firebase_uid !== decoded.uid ||
+        !existing[0].is_approved || !existing[0].is_active) {
+      return reply(409, { error: "identity_requires_approval" });
     }
     // Firebase is SMS VERIFICATION ONLY. Do NOT add Firebase custom role
     // claims or grant access to Supabase data/storage using Firebase JWTs.
-    // The client still force-refreshes its Firebase token before presenting it
-    // to the independent, revocation-checking Supabase session bridge.
+    // The client may use the independent, revocation-checking Supabase
+    // session bridge only after the existing immutable link has been approved.
+    // Never issue Firebase custom role claims or Supabase sessions here.
     return reply(200, { status: "linked", requiresTokenRefresh: true });
   } catch (error) {
     console.error("customer-firebase-binding failed", error instanceof Error ? error.name : "unknown");
