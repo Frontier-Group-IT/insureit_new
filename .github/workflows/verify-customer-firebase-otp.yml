@@ -40,7 +40,7 @@ jobs:
           node-version: '22'
           cache: npm
       - name: Verify Firebase OTP-only Supabase session gate (always runs)
-        run: node --test apps/mobile-app/scripts/customer-firebase-session-bridge-policy.test.mjs apps/mobile-app/scripts/customer-firebase-session-exchange-regression.mjs apps/mobile-app/scripts/customer-firebase-session-challenge.test.mjs apps/mobile-app/scripts/customer-firebase-bind-policy.test.mjs
+        run: node --test apps/mobile-app/scripts/customer-firebase-session-bridge-policy.test.mjs apps/mobile-app/scripts/customer-firebase-session-exchange-regression.mjs apps/mobile-app/scripts/customer-firebase-session-challenge.test.mjs apps/mobile-app/scripts/customer-firebase-bind-policy.test.mjs apps/mobile-app/scripts/customer-firebase-session-provision.test.mjs
       - name: Verify Firebase test suite when feature branch is present
         shell: bash
         run: |
