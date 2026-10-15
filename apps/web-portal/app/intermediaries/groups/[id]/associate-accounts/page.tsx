@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell";
+import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { requireGroupAssociateManager } from "../../group-associate-access";
 import { createGroupAssociate } from "./actions";
 import { AssociateControls } from "./associate-controls";
 export const dynamic="force-dynamic";
-export default async function GroupAssociatesPage({params,searchParams}:{params:Promise<{id:string}>,searchParams:Promise<{success?:string,error?:string}>}){
+export default async function GroupAssociatesPage({params,searchParams}:{params:Promise<{id:string}>,searchParams:Promise<{success?:string,error?:string}>,surface?: "partner"|"operations"}){
  const {id}=await params;const q=await searchParams;
  await requireGroupAssociateManager(id);
  const admin=createSupabaseAdminClient();
@@ -16,7 +17,7 @@ export default async function GroupAssociatesPage({params,searchParams}:{params:
  ]);
  if(!group)notFound();
  const input="h-10 w-full rounded-xl border border-[#D8DEE9] px-3 text-xs outline-none focus:border-blue-500";
- return <AppShell title="Group Associate Accounts" backHref={`/intermediaries/groups/${id}`}>
+ const content=(
   <main className="mx-auto max-w-[1480px] space-y-4">
    <header className="flex items-center justify-between rounded-2xl bg-[#0D2C5C] p-5 text-white">
     <div><h1 className="text-xl font-semibold">Associate Accounts Review</h1><p className="text-sm">{group.group_name} · {group.group_code}</p></div>
@@ -50,6 +51,8 @@ export default async function GroupAssociatesPage({params,searchParams}:{params:
       <td className="p-3"><AssociateControls groupId={id} associate={a}/></td>
     </tr>)}</tbody></table>
    </section>
-  </main>
- </AppShell>;
+  </main>);
+ return surface==="partner"
+ ? <PartnerPortalShell title="Group Associate Accounts">{content}</PartnerPortalShell>
+ : <AppShell title="Group Associate Accounts" backHref={`/intermediaries/groups/${id}`}>{content}</AppShell>;
 }
