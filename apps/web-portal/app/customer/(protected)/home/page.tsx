@@ -109,26 +109,6 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
           </div>}
         </section>
       </div>
-      <section className="grid gap-3 lg:grid-cols-3">
-        <div className="rounded-2xl border border-[#E0E8F3] bg-white p-4">
-          <h2 className="mb-2 text-sm font-bold text-[#10284A]">Your next steps</h2>
-          <div className="flex flex-wrap gap-2">
-            <Link href={{pathname:"/customer/insurance-quote",query:accountQuery}} className="rounded-lg bg-[#EDF5FF] px-3 py-2 text-xs font-semibold text-[#155B9F]">Get a quote</Link>
-            <Link href={{pathname:"/customer/renewals",query:accountQuery}} className="rounded-lg bg-[#EDF5FF] px-3 py-2 text-xs font-semibold text-[#155B9F]">Renew policies</Link>
-          </div>
-        </div>
-        <div className="rounded-2xl border border-[#E0E8F3] bg-white p-4">
-          <h2 className="mb-2 text-sm font-bold text-[#10284A]">Everyday services</h2>
-          <div className="flex flex-wrap gap-2">
-            <Link href={{pathname:"/customer/exchange",query:accountQuery}} className="rounded-lg bg-[#F1F6FC] px-3 py-2 text-xs font-semibold text-[#155B9F]">Vehicle exchange</Link>
-            <Link href={{pathname:"/customer/support",query:accountQuery}} className="rounded-lg bg-[#F1F6FC] px-3 py-2 text-xs font-semibold text-[#155B9F]">Get support</Link>
-          </div>
-        </div>
-        <div className="rounded-2xl border border-[#E0E8F3] bg-white p-4">
-          <h2 className="mb-2 text-sm font-bold text-[#10284A]">Claims progress</h2>
-          <Link href={{pathname:"/customer/claims",query:accountQuery}} className="flex items-center justify-between text-xs text-[#155B9F]"><span>{openClaims.length} open claim{openClaims.length===1?"":"s"} · {claims.length} total</span><ArrowRight className="h-4 w-4"/></Link>
-        </div>
-      </section>
       <section className="rounded-2xl border border-[#E1EAF5] bg-white p-4 sm:p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div><h2 className="text-[17px] font-bold text-[#102B54]">Explore insurance & services</h2><p className="mt-1 text-[11px] text-[#7186A0]">Everything you need to stay protected, in one place.</p></div>

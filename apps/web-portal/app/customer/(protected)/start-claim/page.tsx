@@ -15,7 +15,7 @@ export default async function CustomerStartClaimPage({ searchParams }: { searchP
     loadCustomerClaims(account.id),
   ]);
   return (
-    <div className="mx-auto max-w-[1100px] space-y-5">
+    <div className="w-full space-y-5">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/start-claim" />
       <CustomerStartClaimSelector
         accountId={account.id}
