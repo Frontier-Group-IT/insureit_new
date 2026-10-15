@@ -76,12 +76,11 @@ export async function verifyCustomerFirebasePhoneOtp(
       }
     }
 
-    const linked = await invokeFirebaseFunction('customer-firebase-bind', verified.idToken, {});
-    if (!linked.ok) throw Error('Verified phone could not be linked to an active customer.');
-    const linkedResult: { status?: string; requiresTokenRefresh?: boolean } = await linked.json();
-    if (linkedResult.status !== 'linked' || linkedResult.requiresTokenRefresh !== true) {
-      throw Error('Verified customer identity is not active.');
-    }
+    // DO NOT call the historical customer-firebase-bind endpoint during login.
+    // The signed Firebase UID must already be independently approved for the
+    // exact existing Customer Auth UUID before the strict session bridge can
+    // mint a Supabase Auth challenge. Shared phones must NEVER auto-select or
+    // auto-create identities; an unapproved UID fails closed in the bridge.
     const { getAuth } = await import('@react-native-firebase/auth');
     const firebaseUser = getAuth().currentUser;
     if (!firebaseUser || firebaseUser.uid !== verified.uid ||
