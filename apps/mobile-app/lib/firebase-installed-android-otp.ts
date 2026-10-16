@@ -6,7 +6,7 @@
  * be activated via OTA in existing installations.
  */
 import { Platform } from 'react-native';
-import { getAuth, signInWithPhoneNumber } from '@react-native-firebase/auth';
+import { getAuth, signInWithPhoneNumber, signOut } from '@react-native-firebase/auth';
 import { createAndroidFirebasePhoneAuth } from './firebase-android-auth-adapter';
 import { FirebasePhoneOtpFlow } from './firebase-native-phone-flow';
 
@@ -17,5 +17,13 @@ export function createInstalledAndroidFirebaseOtpFlow(): FirebasePhoneOtpFlow {
   const nativeAuth = getAuth();
   return new FirebasePhoneOtpFlow(createAndroidFirebasePhoneAuth({
     signInWithPhoneNumber: (phone) => signInWithPhoneNumber(nativeAuth, phone),
+    // AuthStateChanged can sign in the Firebase user automatically on Android
+    // before manual confirmation consumes the verification ID.
+    getAutoVerifiedUser: async () => nativeAuth.currentUser,
+    // Ignore pre-existing Firebase state. Only an SMS verified AFTER this
+    // request can be adopted. Does not touch the Supabase Auth session.
+    clearPreviousFirebaseUser: async () => {
+      if (nativeAuth.currentUser) await signOut(nativeAuth);
+    },
   }));
 }
