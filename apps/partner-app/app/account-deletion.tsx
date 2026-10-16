@@ -26,7 +26,7 @@ export default function AccountDeletionScreen() {
         .finally(() => setBusy(false));
     } }],
   );
-  const active = request?.status === 'requested' || request?.status === 'under_review';
+  const active = request?.status === 'requested' || request?.status === 'under_review' || request?.status === 'fulfilling';
   return <PartnerScreen eyebrow="PRIVACY" title="Account deletion" onBack={() => router.back()}>
     <ScrollView contentContainerStyle={styles.body}>
       <Text style={styles.heading}>Your account, your choice</Text>
