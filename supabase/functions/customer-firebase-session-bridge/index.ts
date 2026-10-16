@@ -122,18 +122,6 @@ Deno.serve(async (request: Request) => {
     const verified = checkVerifiedFirebaseCustomerForSession(originalPrincipal);
     if (!verified.ok) return response(403, verified.reason);
 
-    // 2. Atomically consume this particular recent Firebase SMS sign-in event
-    // before any Auth alias mutation or challenge. A refreshed Firebase ID
-    // token retains auth_time, so event replay must fail even after cooldown.
-    // Missing DB migration = deny, not bypass.
-    const limit = await db.rpc("customer_firebase_session_exchange_consume", {
-      p_firebase_uid: decoded.uid,
-      p_auth_time: decoded.auth_time,
-      p_interval_seconds: 120,
-    });
-    if (limit.error) throw new Error("Session issuance limit unavailable");
-    if (limit.data !== true) return response(429, "too_many_attempts");
-
     // 3. Existing phone-only Customers may receive the deterministic
     // non-deliverable alias on the SAME original Auth user UUID. This is
     // explicitly disabled in every environment unless separately approved.
@@ -145,7 +133,27 @@ Deno.serve(async (request: Request) => {
       verifiedPhone: decoded.phone_number,
       explicitCanaryApproval: true,
     });
-    if (!provision.ok) return response(409, "session_identity_not_provisioned");
+    if (!provision.ok) {
+      // Only fixed internal denial reasons; never log phone, UID, email, OTP or token.
+      console.warn("customer-firebase-canary-provision-denied", provision.reason);
+      return response(409, "session_identity_not_provisioned");
+    }
+
+    // Consume the signed phone event only AFTER a verified pre-existing Auth
+    // identity is ready, so failed first-time provisioning does not burn the
+    // whole SMS event. Replay remains blocked before challenge issuance.
+    // Atomically consume this recent Firebase sign-in event before any challenge. A refreshed Firebase ID
+    // token retains auth_time, so event replay must fail even after cooldown.
+    // Missing DB migration = deny, not bypass.
+    const limit = await db.rpc("customer_firebase_session_exchange_consume", {
+      p_firebase_uid: decoded.uid,
+      p_auth_time: decoded.auth_time,
+      p_interval_seconds: 120,
+    });
+    if (limit.error) throw new Error("Session issuance limit unavailable");
+    if (limit.data !== true) return response(429, "too_many_attempts");
+
+
 
     // 4. Demand the strict Auth-email policy again with the persisted state.
     const gate = checkCustomerSessionEligibility({
