@@ -100,7 +100,7 @@ export function PartnerSearchField({
     <View style={[styles.wrap, containerStyle, focused && styles.focused]}>
       <Ionicons
         name="search-outline"
-        size={18}
+        size={21}
         color={focused ? partnerTheme.colors.brand : '#3156B8'}
       />
       <View style={styles.inputShell}>
@@ -141,12 +141,12 @@ export function PartnerSearchField({
 
 const styles = StyleSheet.create({
   wrap: {
-    minHeight: 44,
+    height: 44,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 9,
+    gap: 10,
     borderRadius: 16,
-    paddingLeft: 14,
+    paddingLeft: 15,
     paddingRight: 4,
     backgroundColor: '#FFFFFF',
     borderWidth: StyleSheet.hairlineWidth,
@@ -159,12 +159,12 @@ const styles = StyleSheet.create({
   inputShell: {
     flex: 1,
     minWidth: 0,
-    minHeight: 42,
+    height: 44,
     justifyContent: 'center',
   },
   input: {
     flex: 1,
-    minHeight: 42,
+    height: 44,
     color: partnerTheme.colors.ink,
     paddingVertical: 0,
     fontSize: 11.5,
@@ -180,6 +180,7 @@ const styles = StyleSheet.create({
   },
   placeholderOverlay: {
     ...StyleSheet.absoluteFillObject,
+    height: '100%',
   },
   placeholderText: {
     color: '#8B95A8',
