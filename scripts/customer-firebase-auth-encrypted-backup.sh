@@ -13,6 +13,9 @@ chmod 700 "$INSUREIT_BACKUP_DIR"
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 out="$INSUREIT_BACKUP_DIR/insureit-auth-$timestamp.dump.age"
 if [[ -e "$out" ]]; then echo 'Refusing overwrite' >&2; exit 1; fi
+completed=false
+cleanup() { if [[ "$completed" != true ]]; then rm -f -- "$out" "$out.sha256"; fi; }
+trap cleanup EXIT
 # Stream the full Auth schema through encryption; no plaintext dump on disk.
 # The private decryption key must be retained separately and NEVER passed to CI.
 pg_dump --dbname="$INSUREIT_BACKUP_DB_URL" --format=custom --no-owner --no-acl --schema=auth \
@@ -20,5 +23,6 @@ pg_dump --dbname="$INSUREIT_BACKUP_DB_URL" --format=custom --no-owner --no-acl -
 chmod 600 "$out"
 sha256sum "$out" > "$out.sha256"
 chmod 600 "$out.sha256"
+completed=true
 echo 'ENCRYPTED AUTH BACKUP WRITTEN. Restore rehearsal and independent offsite retention are REQUIRED before any Auth mutation.'
 echo 'Never commit/upload the .age file or the decryption key to GitHub or chat.'
