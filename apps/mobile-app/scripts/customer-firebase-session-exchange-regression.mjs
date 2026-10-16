@@ -35,8 +35,9 @@ test('account switching restores prior Supabase Customer identity on failed exch
   assert.match(client, /if \(mayHaveInstalledSession\)/);
 });
 
-test('Edge protects identity and does not issue tokens when phone-only remains unprovisioned', () => {
-  assert.match(edge, /CUSTOMER_FIREBASE_SESSION_BRIDGE_ENABLED/);
+test('Edge restricts provisioning to verified and immutable two-Customer canary', () => {
+  assert.match(edge, /checkCustomerFirebaseCanary/);
+  assert.match(edge, /provisionDisposableFirebaseCanaryAlias/);
   assert.match(edge, /verifyIdToken\(bearer\[1\], true\)/);
   assert.match(edge, /checkCustomerSessionEligibility/);
   assert.match(edge, /issueExistingCustomerSessionChallenge/);
