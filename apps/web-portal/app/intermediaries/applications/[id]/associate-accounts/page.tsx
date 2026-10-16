@@ -175,7 +175,7 @@ export default async function PartnerAssociateAccountsPage({
         </section>
 
         <AccountTabs initialTab={query.tab === "branch" ? "branch" : "associate"} branchForm={branchSections.form} branchRegister={branchSections.register} associateForm={<>
-        <section className="rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
+        <section className="bg-white">
           <div className="border-b border-[#E7ECF3] px-5 py-4">
             <h2 className="text-[13px] font-semibold text-[#17203A]">Associate Accounts</h2>
           </div>
