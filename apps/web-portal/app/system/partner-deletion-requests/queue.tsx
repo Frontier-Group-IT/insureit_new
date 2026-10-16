@@ -11,6 +11,8 @@ export function PartnerDeletionQueue({ initial }: { initial: Item[] }) {
   const [busy,setBusy] = useState(false);
   const [message,setMessage] = useState("");
   const [note,setNote] = useState("");
+  const [confirmation,setConfirmation] = useState("");
+  const [retentionApproved,setRetentionApproved] = useState(false);
   const inspect = async (id: string) => {
     setSelected(id); setPreflight(null); setMessage(""); setBusy(true);
     try {
@@ -35,6 +37,19 @@ export function PartnerDeletionQueue({ initial }: { initial: Item[] }) {
       setMessage("Request status updated. No identity data was deleted.");
     } catch(e) { setMessage(e instanceof Error ? e.message : "Action failed"); }
     finally { setBusy(false); }
+  };
+  const fulfill = async (id: string) => {
+    if (confirmation !== "DELETE LOGIN IDENTITY" || !retentionApproved) return;
+    if (!window.confirm("Permanently delete ONLY the eligible login identity? This cannot be undone.")) return;
+    setBusy(true); setMessage("");
+    try {
+      const response = await fetch("/api/admin/partner-deletion-requests/fulfill", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id,confirmation,retentionConfirmed:retentionApproved}) });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Execution unavailable");
+      setItems(old => old.map(x => x.id === id ? {...x,status:"fulfilled"} : x));
+      setMessage("Identity deletion completed and notification submitted. Verify audit evidence.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Execution failed"); }
+    finally { setBusy(false); setConfirmation(""); setRetentionApproved(false); }
   };
   return <div className="space-y-3">
     {message && <p role="status" className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">{message}</p>}
@@ -65,6 +80,13 @@ export function PartnerDeletionQueue({ initial }: { initial: Item[] }) {
             <label className="block text-xs font-medium">Reason if request cannot be fulfilled as asked</label>
             <textarea aria-label="Decline reason" value={note} onChange={e => setNote(e.target.value)} maxLength={500} className="w-full rounded-lg border border-slate-300 p-2 text-sm" rows={2}/>
             <button type="button" disabled={busy || note.trim().length < 10} onClick={() => void act(x.id,"decline")} className="rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 disabled:opacity-50">Decline with explanation</button>
+            <div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-3">
+              <p className="text-xs font-semibold text-amber-900">Restricted identity-only fulfillment — server disabled by default</p>
+              <p className="text-xs text-amber-800">Only eligible isolated primary Partner logins may qualify. Shared or referenced identities must be remediated separately. Test with a disposable account before enabling.</p>
+              <label className="flex items-start gap-2 text-xs"><input type="checkbox" checked={retentionApproved} onChange={e=>setRetentionApproved(e.target.checked)}/>I independently verified identity ownership, legal retention and dependency safety.</label>
+              <input aria-label="Deletion confirmation" placeholder="Type DELETE LOGIN IDENTITY" value={confirmation} onChange={e=>setConfirmation(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-sm"/>
+              <button type="button" disabled={busy || !retentionApproved || confirmation !== "DELETE LOGIN IDENTITY"} onClick={()=>void fulfill(x.id)} className="rounded-lg border border-red-600 px-3 py-2 text-sm font-semibold text-red-800 disabled:opacity-40">Execute verified login deletion</button>
+            </div>
           </div>}
         </>}
       </div>}
