@@ -1,6 +1,6 @@
 import { getCurrentSession } from '@/lib/partner-session';
 const portalUrl = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '');
-export type AccountDeletionRequest = { id: string; status: 'requested' | 'under_review' | 'fulfilled' | 'declined'; requested_at: string; completed_at?: string | null };
+export type AccountDeletionRequest = { id: string; status: 'requested' | 'under_review' | 'fulfilling' | 'fulfilled' | 'declined'; requested_at: string; completed_at?: string | null };
 async function call(method: 'GET' | 'POST') {
   const session = await getCurrentSession();
   if (!session?.access_token) throw new Error('Sign in again to request account deletion.');
