@@ -65,3 +65,20 @@ test('test-stage regression preserves protected Start Claim header and full-fiel
   assert.ok(selector.includes('VehicleDropdown') || selector.includes('vehicle'));
   assert.ok(header.includes('CustomerFixedScreen'));
 });
+
+test('different native verification expiry codes display distinct safe diagnostic labels', () => {
+  const cases=['auth/code-expired','auth/session-expired','auth/invalid-verification-id'];
+  for(const code of cases){
+    const e=firebaseOtpFailure('firebase_verification',{code,message:'DO_NOT_LEAK_SENSITIVE_OTP'});
+    const message=firebaseOtpPublicMessage(e);
+    assert.ok(message.includes(code), 'safe allowlisted code should be visible: '+code);
+    assert.ok(!message.includes('DO_NOT_LEAK'));
+  }
+  const logged=[];
+  const original=console.info;
+  console.info=(...args)=>logged.push(args);
+  try {recordFirebaseOtpStage('firebase_verification','auto_verified');}
+  finally {console.info=original;}
+  assert.equal(logged.length,1);
+  assert.ok(JSON.stringify(logged).includes('auto_verified'));
+});
