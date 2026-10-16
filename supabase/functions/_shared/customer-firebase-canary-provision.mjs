@@ -5,7 +5,8 @@ import { checkCustomerFirebaseCanary } from './customer-firebase-canary-gate.mjs
  * Only the two disposable, owner-authorized Customer Auth UUIDs.
  * This operation can invalidate the old Customer password; no staff record is
  * modified. Call only after Admin Firebase signature/revocation verification,
- * approved immutable UID linkage and successful one-use SMS rate limiter.
+ * approved immutable UID linkage. The bridge consumes the one-use SMS event
+ * only after the same-UUID Auth identity is ready, before issuing a challenge.
  */
 export async function provisionDisposableFirebaseCanaryAlias({
  db, profile, authUser, link, verifiedPhone, explicitCanaryApproval
