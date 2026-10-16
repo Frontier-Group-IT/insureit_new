@@ -20,7 +20,7 @@ test('rotate only matching Customer UUID and preserve phone confirmation',async(
  const db={auth:{admin:{
    updateUserById:async(target,payload)=>{
      count++;assert.equal(target,id);assert.equal(payload.email,alias);
-     assert.match(payload.password,/^[a-f0-9]{96}$/);
+     assert.match(payload.password,/^[a-f0-9]{64}$/);
      return {data:{user:{...authUser,...payload,email_confirmed_at:'2026-10-16T00:00:00Z'}},error:null};
    },
    getUserById:async()=>({data:{user:{...authUser,email:alias,email_confirmed_at:'2026-10-16T00:00:00Z'}},error:null}),
