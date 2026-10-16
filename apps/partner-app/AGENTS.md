@@ -1,5 +1,8 @@
 # INSUREIT Partner — Agent Instructions
 
+- **2026-10-16 — Partner iOS account deletion request:** branch `feat/partner-account-deletion-request-ios-20261016` adds Settings → in-app deletion request with authenticated server queue and reversible SQL migration. Auth users and all business records are preserved. **REQUEST INTAKE ONLY; ADMIN FULFILLMENT, MIGRATION, PR, MERGE, DEPLOYMENT, OTA, DEVICE TEST PENDING.** See `docs/PARTNER_ACCOUNT_DELETION_IOS_APP_REVIEW_2026_10_16.md`. No native build/APK/IPA.
+
+
 Read `../../docs/PARTNER_APP_HANDOFF_2026_09_13.md`, `../../docs/PARTNER_APP_HOME_REFINEMENT_2026_09_13.md` and `../../docs/PARTNER_APP_PRODUCTION_REFINEMENT_MASTER_PLAN.md` before Partner work.
 
 ## Current installed-build rules
