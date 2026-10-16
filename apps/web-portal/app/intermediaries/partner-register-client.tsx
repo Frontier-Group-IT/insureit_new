@@ -130,6 +130,7 @@ export function PartnerRegisterClient({
       {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10.5px] font-medium text-red-700">The requested action could not be completed. Please try again. If the problem continues, contact the system administrator.</div> : null}
       <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
         <IntermediaryTabs active="partner" embedded />
+        {canPermanentDelete ? <PartnerDeletePanel rows={rows} embedded /> : null}
         <div className="grid items-center gap-5 border-b border-[#E7ECF3] bg-[#FAFBFD] px-5 py-3.5 lg:grid-cols-[auto_minmax(280px,460px)_1fr]">
           <h2 className="whitespace-nowrap text-[12.5px] font-semibold text-[#17203A]">Partner Register</h2>
           <form onSubmit={(event) => event.preventDefault()} className="relative min-w-0 max-w-[460px]">
@@ -176,8 +177,6 @@ export function PartnerRegisterClient({
           </div>
         ) : null}
       </section>
-
-      {canPermanentDelete ? <PartnerDeletePanel rows={rows} /> : null}
     </div>
   );
 }
@@ -237,13 +236,13 @@ function Status({ value, tone = "default" }: { value: string; tone?: "default" |
   return <span className={`inline-flex rounded-md border px-2 py-1 text-[8.5px] font-semibold ${cls}`}>{value}</span>;
 }
 
-function PartnerDeletePanel({ rows }: { rows: PartnerRegisterRow[] }) {
+function PartnerDeletePanel({ rows, embedded = false }: { rows: PartnerRegisterRow[]; embedded?: boolean }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState("");
   const choices = useMemo(() => rows.filter((row) => [row.displayName, row.partnerId, row.mobile, row.id].join(" ").toLowerCase().includes(query.trim().toLowerCase())), [rows, query]);
   const selected = rows.find((row) => row.id === selectedId) ?? null;
-  return <section className="overflow-hidden rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 via-white to-amber-50 shadow-sm">
+  return <section className={embedded ? "border-b border-red-100 bg-gradient-to-r from-red-50 via-white to-amber-50" : "overflow-hidden rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 via-white to-amber-50 shadow-sm"}>
     <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} className="flex w-full items-center gap-3 border-b border-red-100 px-5 py-3 text-left">
       <span className="grid h-10 w-10 place-items-center rounded-xl bg-red-100 text-red-600"><AlertTriangle className="h-5 w-5" /></span>
       <span className="min-w-0 flex-1"><span className="block text-[11px] font-bold uppercase tracking-wide text-red-700">IT Super User Only</span><span className="block text-[13px] font-semibold text-[#17203A]">Delete Partner Master Record</span></span>
