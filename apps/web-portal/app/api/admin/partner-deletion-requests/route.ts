@@ -23,6 +23,9 @@ export async function GET() {
   return response({ requests: data ?? [] });
 }
 export async function PATCH(request: Request) {
+  const origin = request.headers.get("origin");
+  const expectedOrigin = new URL(request.url).origin;
+  if (!origin || origin !== expectedOrigin) return response({ error: "Same-origin request required." }, 403);
   const actor = await requireSuperUser();
   if (!actor) return response({ error: "Access denied." }, 403);
   const body = await request.json().catch(() => null) as { id?: unknown; action?: unknown; note?: unknown } | null;
