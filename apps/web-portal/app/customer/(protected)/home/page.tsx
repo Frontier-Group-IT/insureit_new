@@ -31,20 +31,36 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
   return (
     <div className="space-y-4 pb-6">
       <style>{`
-        @keyframes customerHomeBreathe {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.018); }
-        }
-        .customer-home-breathe { animation: customerHomeBreathe 4.8s ease-in-out infinite; transform-origin: center; }
+        @keyframes customerHomeEnter { from { opacity: 0; transform: translateY(34px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes customerCardEnter { from { opacity: 0; transform: translateY(24px) scale(.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes customerHomeBreathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
+        .customer-home-enter { animation: customerHomeEnter 850ms cubic-bezier(.22,.72,.25,1) both; }
+        .customer-home-breathe { position: relative; transform-origin: center; animation: customerCardEnter 680ms cubic-bezier(.22,.72,.25,1) backwards; transition: transform 300ms ease, box-shadow 300ms ease; }
+        .customer-home-breathe:nth-child(1) { animation-delay: 160ms; }
+        .customer-home-breathe:nth-child(2) { animation-delay: 270ms; }
+        .customer-home-breathe:nth-child(3) { animation-delay: 380ms; }
+        .customer-home-breathe:nth-child(4) { animation-delay: 490ms; }
+        .customer-home-breathe .customer-home-icon-breathe { animation: customerHomeBreathe 5.6s ease-in-out 1.2s infinite; transform-origin: center; }
+        @media (hover: hover) { .customer-home-breathe:hover { z-index: 3; transform: scale(1.08); box-shadow: 0 12px 26px rgba(20,58,100,.13); } }
+        .customer-home-breathe:focus-visible { z-index: 3; transform: scale(1.08); outline: 2px solid #1769DC; outline-offset: -2px; }
         @keyframes customerHeroZoom { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
         .customer-home-hero-image { animation: customerHeroZoom 11s ease-in-out infinite; transform-origin: 75% center; }
-        .customer-home-quick-action { position: relative; transform-origin: center; transition: transform 300ms ease, box-shadow 300ms ease, background-color 300ms ease; }
+        .customer-home-quick-action { position: relative; transform-origin: center; transition: transform 300ms ease, box-shadow 300ms ease, background-color 300ms ease; animation: customerCardEnter 650ms cubic-bezier(.22,.72,.25,1) backwards; }
+        .customer-home-quick-action:nth-child(1) { animation-delay: 560ms; }
+        .customer-home-quick-action:nth-child(2) { animation-delay: 650ms; }
+        .customer-home-quick-action:nth-child(3) { animation-delay: 740ms; }
+        .customer-home-quick-action:nth-child(4) { animation-delay: 830ms; }
+        .customer-home-quick-action:nth-child(5) { animation-delay: 920ms; }
+        .customer-home-quick-action:nth-child(6) { animation-delay: 1010ms; }
         @media (hover: hover) { .customer-home-quick-action:hover { z-index: 2; transform: scale(1.08); box-shadow: 0 12px 26px rgba(20,58,100,.14); } }
         .customer-home-quick-action:focus-visible { z-index: 2; transform: scale(1.08); box-shadow: 0 12px 26px rgba(20,58,100,.14); outline: 2px solid #1769DC; outline-offset: 2px; }
-        @media (prefers-reduced-motion: reduce) { .customer-home-breathe, .customer-home-hero-image { animation: none; } .customer-home-quick-action, .customer-home-quick-action:focus-visible, .customer-home-quick-action:hover { transition: none; transform: none; } }
+        @media (prefers-reduced-motion: reduce) {
+          .customer-home-enter, .customer-home-breathe, .customer-home-breathe .customer-home-icon-breathe, .customer-home-hero-image, .customer-home-quick-action { animation: none !important; }
+          .customer-home-breathe, .customer-home-breathe:hover, .customer-home-breathe:focus-visible, .customer-home-quick-action, .customer-home-quick-action:focus-visible, .customer-home-quick-action:hover { transition: none; transform: none; }
+        }
       `}</style>
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/home" />
-      <section className="relative isolate overflow-hidden rounded-[22px] border border-[#D6E7FA] bg-[#DDEEFF] p-5 text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.06)] sm:p-7">
+      <section className="customer-home-enter relative isolate overflow-hidden rounded-[22px] border border-[#D6E7FA] bg-[#DDEEFF] p-5 text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.06)] sm:p-7">
         <div className="customer-home-hero-image pointer-events-none absolute inset-y-0 right-0 w-[75%] bg-[url('/assets/customerhome.jpeg')] bg-cover bg-center opacity-80"/>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EAF5FF] via-[#EAF5FF]/95 via-40% to-[#EAF5FF]/10"/>
         <div className="relative flex min-h-[155px] max-w-[560px] items-center py-2 sm:min-h-[185px] sm:py-4">
@@ -59,7 +75,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
             {label:"Uninsured vehicles",value:uncoveredVehicles.length,detail:"Need protection",icon:ShieldX,color:"text-[#C2414D]",background:"bg-[#FFF0F1]",href:"/customer/vehicles"},
             {label:"Fleet coverage",value:`${coverage}%`,detail:"Vehicles protected",icon:ShieldPlus,color:"text-[#1769DC]",background:"bg-[#EAF3FF]",href:"/customer/vehicles"},
           ].map(({label,value,detail,icon:Icon,color,background,href},index)=><Link key={label} href={{pathname:href,query:accountQuery}} className={`customer-home-breathe flex min-w-0 items-center gap-3 p-4 transition duration-200 hover:bg-[#F8FBFF] sm:p-5 ${index===0?"hover:z-10 hover:shadow-[0_8px_22px_rgba(20,58,100,.10)]":""} ${index%2===0?"":"border-l border-[#E6EDF6]"} ${index>=2?"border-t border-[#E6EDF6] lg:border-t-0":""} ${index>0?"lg:border-l lg:border-[#E6EDF6]":""}`}>
-            <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${background} ${color}`}><Icon className="h-5 w-5"/></span>
+            <span className={`customer-home-icon-breathe grid h-11 w-11 shrink-0 place-items-center rounded-xl ${background} ${color}`}><Icon className="h-5 w-5"/></span>
             <span className="min-w-0"><span className="block text-[12px] font-medium text-[#60799B]">{label}</span><strong className="block text-[28px] font-bold leading-tight tabular-nums text-[#102B54]">{value}</strong><small className="block text-[12px] text-[#7890AD]">{detail}</small></span>
           </Link>)}
         </div>
