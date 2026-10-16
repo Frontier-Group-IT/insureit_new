@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getIntermediaryGroupManager, getIntermediaryGroupEmployeeScope } from "@/lib/intermediary-group-access";
 import { FormSubmitButton } from "@/components/form-submit-button";
