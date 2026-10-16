@@ -1,0 +1,36 @@
+name: Read Customer Firebase internal EAS channel (no publish)
+on:
+  push:
+    branches:
+      - agent/customer-firebase-internal-channel-readonly-20261016
+    paths:
+      - '.github/workflows/read-firebase-internal-eas-channel-once.yml'
+permissions:
+  contents: read
+jobs:
+  inspect-channel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN_CUSTOMER || secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: b312f0afd8ba18cfb670624e0d1bc013433321d1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install locked dependencies without running project scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Inspect internal channel READ ONLY (no OTA, AAB or login)
+        working-directory: apps/mobile-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${EXPO_TOKEN:-}" || { echo "Expo token missing"; exit 1; }
+          echo 'Target Firebase internal test channel:'
+          npx eas-cli channel:view firebase-internal --json --non-interactive
+          echo 'Expo current identity:'
+          npx eas-cli whoami
