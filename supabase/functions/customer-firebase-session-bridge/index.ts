@@ -2,7 +2,6 @@ import { cert, getApps, initializeApp } from "npm:firebase-admin@13.5.0/app";
 import { getAuth } from "npm:firebase-admin@13.5.0/auth";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { checkCustomerSessionEligibility, checkVerifiedFirebaseCustomerForSession, FIREBASE_CUSTOMER_PROJECT } from "../_shared/customer-firebase-session-policy.mjs";
-import { ensureCustomerSupabaseSessionAlias } from "../_shared/customer-firebase-session-provision.mjs";
 import { issueExistingCustomerSessionChallenge } from "../_shared/customer-firebase-session-challenge.mjs";
 import { checkCustomerFirebaseCanary } from "../_shared/customer-firebase-canary-gate.mjs";
 import { provisionDisposableFirebaseCanaryAlias } from "../_shared/customer-firebase-canary-provision.mjs";
