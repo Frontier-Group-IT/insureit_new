@@ -1,1 +1,1 @@
-Partner production OTA trigger — 2026-10-15 PR #3165 and PR #3166 merged: standardized Business by Product icons; compacted Policies/Claims headers; removed duplicate filter rows; added Upcoming policy summary card. OTA only, no APK/AAB.
+Partner production OTA trigger — 2026-10-16 PR #3195 merged: unified 44px hero-overlap search across Business, Policies and Claims; added integrated Policy/Claims filters; added vertical rotating placeholders. OTA only, no APK/AAB. Source merge e9c0737a25de146f5b3d0049784da19ab06e3741.
