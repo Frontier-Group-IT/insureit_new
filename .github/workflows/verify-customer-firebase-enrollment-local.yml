@@ -63,6 +63,7 @@ jobs:
             firebase_uid text not null,
             profile_id uuid not null references public.profiles(id),
             verified_phone_at_approval text not null,
+            approved_at timestamptz,
             is_approved boolean not null,
             is_active boolean not null,
             primary key(firebase_project_id,firebase_uid),
