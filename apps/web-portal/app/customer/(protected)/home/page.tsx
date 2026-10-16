@@ -31,10 +31,6 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
   return (
     <div className="space-y-4 pb-6">
       <style>{`
-        @keyframes customerHomeBreathe {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.018); }
-        }
         @keyframes customerHomeEnter { from { opacity: 0; transform: translateY(34px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
         @keyframes customerCardEnter { from { opacity: 0; transform: translateY(24px) scale(.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
         @keyframes customerHomeBreathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
