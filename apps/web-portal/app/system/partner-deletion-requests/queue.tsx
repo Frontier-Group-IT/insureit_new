@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 type Item = { id: string; auth_user_id: string; actor_kind: string; actor_id: string; intermediary_id: string | null; status: string; requested_at: string; updated_at: string; completed_at: string | null; resolution_note: string | null };
-type Preflight = { safe_to_auto_delete: boolean; profile_dependencies: unknown[]; partner_portal_accounts: unknown[]; associate_accounts: unknown[]; profile: unknown; required_checks: string[] };
+type Preflight = { safe_to_auto_delete: boolean; profile_dependencies: unknown[]; partner_portal_accounts: unknown[]; associate_accounts: unknown[]; profile: unknown; group_associate_account_count: number; learning_attempt_count: number; auth_delete_cascade_risks: string[]; required_checks: string[] };
 export function PartnerDeletionQueue({ initial }: { initial: Item[] }) {
   const [items,setItems] = useState(initial);
   const [selected,setSelected] = useState<string | null>(null);
@@ -57,6 +57,8 @@ export function PartnerDeletionQueue({ initial }: { initial: Item[] }) {
             <div className="rounded-lg bg-slate-50 p-3">Partner logins: {preflight.partner_portal_accounts.length}</div>
             <div className="rounded-lg bg-slate-50 p-3">Associate logins: {preflight.associate_accounts.length}</div>
           </div>
+          <p className="text-xs font-semibold text-red-700">Auth deletion can cascade to: {preflight.auth_delete_cascade_risks.join(", ")}</p>
+          <p className="text-xs text-slate-600">Group associate logins: {preflight.group_associate_account_count}; learning attempts: {preflight.learning_attempt_count}. Do not run generic Auth deletion.</p>
           <ul className="list-disc space-y-1 pl-5 text-xs text-slate-600">{preflight.required_checks.map(c => <li key={c}>{c}</li>)}</ul>
           {x.status === "requested" && <button type="button" disabled={busy} onClick={() => void act(x.id,"start_review")} className="rounded-lg bg-blue-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Start review</button>}
           {x.status === "under_review" && <div className="space-y-2">
