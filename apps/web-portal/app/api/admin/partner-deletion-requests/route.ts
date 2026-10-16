@@ -17,7 +17,7 @@ export async function GET() {
   if (!actor) return response({ error: "Access denied." }, 403);
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin.from("partner_account_deletion_requests")
-    .select("id,actor_kind,status,requested_at,updated_at,completed_at")
+    .select("id,auth_user_id,actor_kind,actor_id,intermediary_id,status,requested_at,updated_at,completed_at,resolution_note")
     .order("requested_at", { ascending: false }).limit(100);
   if (error) return response({ error: "Unable to load privacy requests." }, 503);
   return response({ requests: data ?? [] });
