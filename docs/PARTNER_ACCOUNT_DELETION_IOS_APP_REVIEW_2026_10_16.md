@@ -30,6 +30,15 @@ Implementation in branch `feat/partner-account-deletion-request-ios-20261016`. N
 
 Before allowing live requests, designate a reviewer and secure way to acknowledge and notify requesters. Establish a verified procedure to detach eligible Auth identity data without cascading into partner, policy, claim, accounting or audit histories. A user may have both employee and intermediary credentials; review all login types and dependent foreign keys. The user-facing feature must not be described to Apple as automatically deleting all account data.
 
+## Fulfillment safeguards — 16 October follow-up
+
+- New additive migration `20261016153000_partner_deletion_fulfillment_safeguards.sql` adds optional verification, approval, notification and fulfillment-reference fields and a service-role-only append-only event table.
+- Database trigger rejects changing request status to `fulfilled` unless identity verification, retention review, authorization, completion communication and an external fulfillment reference are recorded. These metadata fields alone do not prove Auth deletion and must never be used to bypass actual execution evidence.
+- **No automated Auth deletion endpoint has been enabled**: safety preflight always returns `safe_to_auto_delete: false`. Deleting `auth.users` can cascade into portal associate accounts and attached data; account disabling alone is not deletion. A bespoke identity detachment strategy with live schema inspection is needed before implementing deletion.
+- Administrator must send requester confirmation only after verified completion; no SMTP provider is connected to this workflow. The current `notification_sent_at` field is reserved for future verified delivery receipts.
+- Both migrations are unapplied; earlier migration already defines `fulfilled` enum/status value for future use, but UI has no transition to fulfilled.
+- Do not merge/deploy these as evidence of end-to-end compliance until the fulfillment executor, test fixtures, notification transport, and approval procedure exist.
+
 ## Operations prerequisite — before public launch
 
 1. Verify current production database migration status and relations/read-only. Run migration only with separate approval and backup strategy.
