@@ -176,7 +176,7 @@ export default async function PartnerAssociateAccountsPage({
 
         <AccountTabs initialTab={query.tab === "branch" ? "branch" : "associate"} branchForm={branchSections.form} branchRegister={branchSections.register} associateForm={<>
         <section className="bg-white">
-          <div className="border-b border-[#E7ECF3] px-5 py-4">
+          <div className="border-b border-[#E7ECF3] px-5 py-3">
             <h2 className="text-[13px] font-semibold text-[#17203A]">Associate Accounts</h2>
           </div>
           {!canManageAssociates ? (
@@ -184,7 +184,7 @@ export default async function PartnerAssociateAccountsPage({
               This account can view associate accounts but cannot manage them. Ask an administrator for Intermediary Application Review edit permission and partner access.
             </p>
           ) : null}
-          <form action={createPartnerAssociateAccount} className="p-5">
+          <form action={createPartnerAssociateAccount} className="space-y-3 px-5 py-3">
             <input type="hidden" name="application_id" value={id} />
             <input type="hidden" name="intermediary_id" value={intermediary.id} />
             <input type="hidden" name="return_path" value={returnPath} />
@@ -203,10 +203,10 @@ export default async function PartnerAssociateAccountsPage({
                 </select>
               </Field>
             </div>
-            <div className="mt-4 grid gap-3 xl:grid-cols-[2fr_1fr_1fr_1fr_auto] xl:items-end">
+            <div className="grid items-end gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_auto]">
               <Field label="Address"><input name="address" className={inputClass} placeholder="Address" /></Field>
               <AssociateCityFields />
-              {canManageAssociates ? <FormSubmitButton label="Save" pendingLabel="Saving..." className="h-10 rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white hover:bg-[#102A4C]" /> : null}
+              {canManageAssociates ? <FormSubmitButton label="Save" pendingLabel="Saving..." className="h-9 rounded-lg bg-[#17365D] px-5 text-[10px] font-bold text-white hover:bg-[#102A4C]" /> : null}
             </div>
           </form>
         </section>
@@ -267,10 +267,10 @@ export default async function PartnerAssociateAccountsPage({
   );
 }
 
-const inputClass = "h-10 w-full rounded-xl border border-[#D8DEE9] bg-white px-3 text-[11px] text-[#17203A] outline-none focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]";
+const inputClass = "h-9 w-full rounded-lg border border-[#D8DEE9] bg-white px-3 text-[11px] text-[#17203A] outline-none focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]";
 
 function Field({ label, children, required = false }: { label: string; children: React.ReactNode; required?: boolean }) {
-  return <label><span className="mb-1.5 block text-[8.5px] font-bold uppercase tracking-wide text-[#64748B]">{label}{required ? <span className="text-red-600"> *</span> : null}</span>{children}</label>;
+  return <label><span className="mb-1 block text-[8.5px] font-bold uppercase tracking-wide text-[#64748B]">{label}{required ? <span className="text-red-600"> *</span> : null}</span>{children}</label>;
 }
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return <section className="rounded-2xl border border-[#DCE5EF] bg-white p-5 shadow-sm"><h2 className="mb-4 text-[13px] font-semibold text-[#17203A]">{title}</h2>{children}</section>;
