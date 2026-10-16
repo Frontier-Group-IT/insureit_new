@@ -1,0 +1,112 @@
+name: Customer Firebase 0.3.2 Android INTERNAL OTA (manual only)
+on:
+  workflow_dispatch:
+    inputs:
+      approval:
+        description: 'Separate explicit user authorization'
+        required: true
+        type: string
+      source_sha:
+        description: 'Reviewed exact PR #3132 source SHA'
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: customer-firebase-internal-android-ota
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN_CUSTOMER || secrets.EXPO_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+      EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_SESSION_BRIDGE_ENABLED: 'true'
+      EXPO_PUBLIC_SUPABASE_URL: https://ilzhsfqqjyppzzvfscmh.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj
+      APPROVAL: ${{ inputs.approval }}
+      SOURCE_SHA: ${{ inputs.source_sha }}
+    steps:
+      - name: Require distinct owner approval and immutable reviewed commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ "$APPROVAL" = 'APPROVE_CUSTOMER_FIREBASE_INTERNAL_OTA_0_3_2' ] || exit 1
+          [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 0
+      - name: Require current feature HEAD, latest main ancestry and app runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ "$(git rev-parse HEAD)" = "$SOURCE_SHA" ] || exit 1
+          git fetch origin main feature/customer-firebase-otp-gateway-0-3-2-20261014
+          [ "$(git rev-parse origin/feature/customer-firebase-otp-gateway-0-3-2-20261014)" = "$SOURCE_SHA" ] || exit 1
+          git merge-base --is-ancestor origin/main "$SOURCE_SHA" || exit 1
+          node <<'NODE'
+          const fs=require('fs');
+          const app=require('./apps/mobile-app/app.json').expo;
+          const eas=require('./apps/mobile-app/eas.json');
+          const flow=fs.readFileSync('./apps/mobile-app/lib/firebase-native-phone-flow.ts','utf8');
+          if(app.version!=='0.3.2'||app.android?.versionCode!==11||
+             app.android?.package!=='com.insureit.mobile'||app.runtimeVersion?.policy!=='appVersion'||
+             eas.build['firebase-internal-test']?.channel!=='firebase-internal'||
+             eas.build['firebase-internal-test']?.env?.EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_SESSION_BRIDGE_ENABLED!=='true'||
+             eas.build.production?.env?.EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_SESSION_BRIDGE_ENABLED!=='false'||
+             !flow.includes('getAutoVerifiedUser')||!flow.includes('clearPreviousFirebaseUser')||
+             !flow.includes('auto_verified')) throw Error('Internal Firebase fix/runtime mismatch');
+          NODE
+      - name: Fail closed unless 5 required checks passed on same reviewed source
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json,os
+          from urllib.request import Request,urlopen
+          url='https://api.github.com/repos/'+os.environ['GITHUB_REPOSITORY']+'/actions/runs?per_page=100&head_sha='+os.environ['SOURCE_SHA']
+          with urlopen(Request(url,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN']}),timeout=30) as res:
+              runs=json.load(res)['workflow_runs']
+          green={r['name'] for r in runs if r['conclusion']=='success'}
+          required={'Verify Customer Firebase OTP Readiness','Verify mobile app','Verify web portal','Verify Partner app','INSUREIT dependency assurance evidence'}
+          missing=required-green
+          if missing:raise SystemExit('CI missing: '+','.join(sorted(missing)))
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install and rerun Firebase regression tests
+        run: |
+          npm ci --no-audit --no-fund
+          node --test apps/mobile-app/lib/firebase-native-phone-flow.test.cjs apps/mobile-app/lib/firebase-otp-errors.test.cjs apps/mobile-app/lib/firebase-android-auth-adapter.test.cjs
+          npm run typecheck:mobile
+      - name: Confirm EAS firebase-internal channel mapping; never production
+        working-directory: apps/mobile-app
+        run: |
+          set -euo pipefail
+          test -n "$EXPO_TOKEN"
+          npx eas-cli channel:view firebase-internal --json --non-interactive > /tmp/internal-channel.json
+          node <<'NODE'
+          const c=require('/tmp/internal-channel.json');const ch=c.currentPage||c;
+          if(ch.name!=='firebase-internal'||ch.isPaused||
+             !ch.updateBranches?.some(b=>b.name==='firebase-internal'))throw Error('Unexpected OTA target');
+          NODE
+      - name: Publish JS ONLY to Android firebase-internal (no APK/AAB/Play)
+        working-directory: apps/mobile-app
+        run: |
+          set -euo pipefail
+          npx eas-cli update --branch firebase-internal --platform android \
+            --message "Internal Customer Firebase auto-verification fix from reviewed commit" \
+            --non-interactive --json > android-firebase-ota.json
+          test -s android-firebase-ota.json
+      - name: Save OTA result
+        uses: actions/upload-artifact@v4
+        with:
+          name: firebase-internal-android-ota-reference
+          path: apps/mobile-app/android-firebase-ota.json
+          retention-days: 7

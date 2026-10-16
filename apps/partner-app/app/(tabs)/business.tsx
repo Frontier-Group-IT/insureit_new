@@ -10,6 +10,7 @@ import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerBusinessOverviewIcon, type PartnerBusinessOverviewIconKind } from '@/components/ui/partner-business-overview-icons';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
+import { PartnerRotatingSearchPlaceholder } from '@/components/ui/partner-search-field';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { getPartnerBusinessPerformance, getPartnerTopInsurers, type PartnerTopInsurer, type PartnerBusinessPerformance } from '@/lib/business';
 import { getPartnerClaimSummary, type PartnerClaimSummary } from '@/lib/claims';
@@ -290,7 +291,10 @@ export default function BusinessScreen() {
           <View style={[styles.searchRow, compactScreen && styles.searchRowShort]}>
             <Pressable accessibilityRole="button" onPress={() => router.push('/search')} style={({ pressed }) => [styles.searchBox, pressed && styles.pressed]}>
               <Ionicons name="search-outline" size={21} color="#3156B8" />
-              <Text numberOfLines={1} style={styles.searchText}>Search customer, vehicle number or policy number...</Text>
+              <PartnerRotatingSearchPlaceholder
+                placeholders={['Search customer...', 'Search vehicle number...', 'Search policy number...']}
+                textStyle={styles.searchText}
+              />
             </Pressable>
             <Pressable accessibilityRole="button" accessibilityLabel="Open business custom range" onPress={() => void selectOverviewRange('custom')} style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}>
               <Ionicons name="filter-outline" size={18} color="#3156B8" />
@@ -750,10 +754,10 @@ const styles = StyleSheet.create({
   heroAvatarText: { color: '#144E98', fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
   heroCopy: { position: 'absolute', zIndex: 3, left: 18, bottom: 12 },
   heroTitle: { color: '#FFFFFF', fontSize: 15, lineHeight: 18, fontWeight: '800', letterSpacing: -0.2 },
-  searchRow: { zIndex: 5, marginTop: -8, marginBottom: 3, height: 34, flexDirection: 'row', alignItems: 'stretch', borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D9DFEA', overflow: 'hidden' },
-  searchBox: { flex: 1, height: 34, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 15, backgroundColor: '#FFFFFF' },
+  searchRow: { zIndex: 5, marginTop: -10, marginBottom: 3, height: 44, flexDirection: 'row', alignItems: 'stretch', borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D9DFEA', overflow: 'hidden', shadowColor: '#173B6C', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 3 },
+  searchBox: { flex: 1, height: 44, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 15, backgroundColor: '#FFFFFF' },
   searchText: { flex: 1, color: '#8B95A8', fontSize: 11.5, lineHeight: 16, fontWeight: '500' },
-  filterButton: { height: 34, minWidth: 60, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: '#D9DFEA' },
+  filterButton: { height: 44, minWidth: 68, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: '#D9DFEA' },
   filterText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: '700' },
   feedback: { marginBottom: 8 },
   selectorAnchor: { position: 'relative', zIndex: 20 },
