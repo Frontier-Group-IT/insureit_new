@@ -17,7 +17,7 @@ try {
  const created=await admin.auth.admin.createUser({phone:'+919876543210',phone_confirm:true});
  if(created.error) throw created.error; id=created.data.user.id;
  const operator='22222222-2222-4222-8222-222222222222';
- sql(`insert into public.profiles(id,role,is_active,phone) values ('${id}','customer',true,'919876543210')`);
+ sql(`insert into public.profiles(id,role,is_active,phone) values ('${id}','customer',true,'919876543210'),('${operator}','it_super_user',true,'919999999999')`);
  const args={p_profile_id:id,p_firebase_uid:'local-fixture-uid',p_verified_phone:'+919876543210',p_operator_id:operator,p_evidence_digest:'a'.repeat(64)};
  const unauth=await ordinary.rpc('customer_firebase_enroll_approved',args);
  assert.ok(unauth.error,'anon must not enroll');
@@ -36,7 +36,7 @@ try {
  console.info('PASS: real local PostgREST RPC, atomic approved link + one audit, idempotent retry, anon and conflict rejection; no production data');
 } finally {
  if(id) {
-  sql(`delete from public.customer_firebase_migration_audit where customer_profile_id='${id}';delete from public.customer_firebase_identity_links where profile_id='${id}';delete from public.profiles where id='${id}'`);
+  sql(`delete from public.customer_firebase_migration_audit where customer_profile_id='${id}';delete from public.customer_firebase_identity_links where profile_id='${id}';delete from public.profiles where id in ('${id}','22222222-2222-4222-8222-222222222222')`);
   await admin.auth.admin.deleteUser(id).catch(()=>undefined);
  }
 }
