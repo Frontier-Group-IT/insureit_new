@@ -22,3 +22,16 @@ test('Android native adapter requires installed SDK Auth instance',()=>{
  assert.throws(()=>createAndroidFirebasePhoneAuth(null),/unavailable/);
  assert.throws(()=>createAndroidFirebasePhoneAuth({}),/unavailable/);
 });
+
+test('Android native adapter exposes fresh auto-verification and stale user clearing',async()=>{
+  let signed={uid:'prior',phoneNumber:'+919876543210',getIdToken:async()=> 'prior'};
+  let clears=0;
+  const provider=createAndroidFirebasePhoneAuth({
+    signInWithPhoneNumber:async()=>({confirm:async()=>{throw Error('unused');}}),
+    clearPreviousFirebaseUser:async()=>{clears++;signed=null;},
+    getAutoVerifiedUser:async()=>signed,
+  });
+  await provider.clearPreviousFirebaseUser();
+  assert.equal(clears,1);
+  assert.equal(await provider.getAutoVerifiedUser(),null);
+});
