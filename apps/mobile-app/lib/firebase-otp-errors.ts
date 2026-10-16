@@ -66,7 +66,7 @@ export function firebaseOtpHttpFailure(stage: FirebaseOtpStage, status: number):
 export function recordFirebaseOtpStage(stage: FirebaseOtpStage, code: string = 'started') {
   // Static stage and allowlisted code only: no phone, OTP, token, UID,
   // arbitrary SDK text or server response body.
-  if (code === 'started' || code === 'ok' || knownFirebaseCodes.has(code) ||
+  if (code === 'started' || code === 'ok' || code === 'auto_verified' || knownFirebaseCodes.has(code) ||
       /^customer\/(?:unauthorized|forbidden|conflict|rate-limited|server-unavailable|rejected|identity-unavailable)$/.test(code)) {
     console.info('[customer-firebase-otp]', { stage, code });
   }
@@ -76,9 +76,11 @@ export function firebaseOtpPublicMessage(error: FirebaseCustomerOtpError): strin
   switch (error.code) {
     case 'auth/invalid-verification-code': return 'Incorrect verification code. Please check the latest SMS and try again.';
     case 'auth/code-expired':
+      return 'Firebase reports the SMS code has expired (auth/code-expired). Request a new code.';
     case 'auth/session-expired':
+      return 'Firebase verification session expired (auth/session-expired). Request a fresh SMS.';
     case 'auth/invalid-verification-id':
-      return 'This verification code has expired. Request a new code.';
+      return 'Firebase verification session is invalid (auth/invalid-verification-id). Request a fresh SMS.';
     case 'auth/too-many-requests':
     case 'auth/quota-exceeded':
     case 'customer/rate-limited':
