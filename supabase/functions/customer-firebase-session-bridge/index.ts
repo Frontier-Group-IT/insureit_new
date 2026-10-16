@@ -168,7 +168,8 @@ Deno.serve(async (request: Request) => {
     // client-provided email and NEVER call for an unprovisioned identity.
     const challenge = await issueExistingCustomerSessionChallenge(db, gate);
     if (!challenge.ok) {
-      throw new Error("Supabase session challenge identity mismatch");
+      console.warn("customer-firebase-challenge-denied", challenge.reason);
+      return response(503, "session_challenge_unavailable");
     }
     // Client exchanges the one-use challenge with Supabase Auth, verifies
     // getUser() and the canonical active Customer profile before using data.
