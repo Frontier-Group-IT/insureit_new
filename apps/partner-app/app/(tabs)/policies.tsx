@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
@@ -36,6 +37,14 @@ const PAGE_SIZE = 10;
 let savedPolicyQuery = '';
 let savedPolicyLifecycle: PartnerPolicyLifecycle = 'all';
 
+const POLICY_FILTER_OPTIONS: Array<{ value: PartnerPolicyLifecycle; label: string }> = [
+  { value: 'all', label: 'All Policies' },
+  { value: 'in_force', label: 'Active' },
+  { value: 'expiring', label: 'Expiring Soon' },
+  { value: 'expired', label: 'Lapsed' },
+  { value: 'upcoming', label: 'Upcoming' },
+];
+
 export default function PoliciesScreen() {
   const router = useRouter();
   const { cacheScopeKey, context, avatarUri } = usePartnerSession();
@@ -43,6 +52,7 @@ export default function PoliciesScreen() {
   const [lifecycle, setLifecycle] = useState<PartnerPolicyLifecycle>(savedPolicyLifecycle);
   const [query, setQuery] = useState(savedPolicyQuery);
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const debouncedSearch = useDebouncedValue(query.trim(), 350);
 
   useEffect(() => { setVisibleLimit(PAGE_SIZE); }, [lifecycle, debouncedSearch]);
@@ -154,7 +164,48 @@ export default function PoliciesScreen() {
           onChangeText={setQuery}
           onClear={() => setQuery('')}
           placeholder="Search customer, vehicle number or policy number..."
+          placeholders={['Search customer...', 'Search vehicle number...', 'Search policy number...']}
+          containerStyle={styles.searchField}
         />
+        <PartnerAnchoredDropdown
+          visible={filterMenuOpen}
+          onDismiss={() => setFilterMenuOpen(false)}
+          align="right"
+          menuWidth={170}
+          menu={(
+            <View style={styles.filterMenu}>
+              {POLICY_FILTER_OPTIONS.map((option) => {
+                const active = lifecycle === option.value;
+                return (
+                  <Pressable
+                    key={option.value}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    onPress={() => {
+                      setFilterMenuOpen(false);
+                      selectSummary(option.value);
+                    }}
+                    style={({ pressed }) => [styles.filterOption, active && styles.filterOptionActive, pressed && styles.pressed]}
+                  >
+                    <Text style={[styles.filterOptionText, active && styles.filterOptionTextActive]}>{option.label}</Text>
+                    {active ? <Ionicons name="checkmark" size={15} color="#3156B8" /> : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Filter policies"
+            accessibilityState={{ expanded: filterMenuOpen }}
+            onPress={() => setFilterMenuOpen((open) => !open)}
+            style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}
+          >
+            <Ionicons name="filter-outline" size={18} color="#3156B8" />
+            <Text style={styles.filterText}>Filter</Text>
+          </Pressable>
+        </PartnerAnchoredDropdown>
       </View>
 
       <View style={styles.summaryRow}>
@@ -472,10 +523,66 @@ const styles = StyleSheet.create({
   },
   intakeHeaderText: { color: '#0B2E63', fontSize: 9.5, lineHeight: 12, fontWeight: '800' },
   searchRow: {
-    marginTop: -8,
+    zIndex: 5,
+    marginTop: -10,
     marginHorizontal: 12,
-    zIndex: 4,
+    height: 44,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#D9DFEA',
+    overflow: 'hidden',
+    shadowColor: '#173B6C',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
+  searchField: {
+    flex: 1,
+    minHeight: 44,
+    borderWidth: 0,
+    borderRadius: 0,
+    backgroundColor: '#FFFFFF',
+  },
+  filterButton: {
+    height: 44,
+    minWidth: 68,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    backgroundColor: '#FFFFFF',
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderLeftColor: '#D9DFEA',
+  },
+  filterText: { color: '#3156B8', fontSize: 10, lineHeight: 13, fontWeight: '800' },
+  filterMenu: {
+    overflow: 'hidden',
+    borderRadius: 12,
+    paddingVertical: 4,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#DDE6F1',
+    shadowColor: '#102449',
+    shadowOpacity: 0.14,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 8,
+  },
+  filterOption: {
+    minHeight: 38,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+  },
+  filterOptionActive: { backgroundColor: '#F0F5FF' },
+  filterOptionText: { color: '#506079', fontSize: 10, lineHeight: 13, fontWeight: '600' },
+  filterOptionTextActive: { color: '#3156B8', fontWeight: '800' },
   summaryRow: { flexDirection: 'row', marginHorizontal: 12, marginTop: 9, gap: 3 },
   summaryCard: { flex: 1, minWidth: 0, minHeight: 86, alignItems: 'center', paddingVertical: 7, paddingHorizontal: 2, borderRadius: 9, backgroundColor: '#F6F9FF', borderWidth: 1, borderColor: '#E8EFFB', shadowColor: '#17448C', shadowOpacity: 0.06, shadowRadius: 4, elevation: 1 },
   summaryCardSelected: { backgroundColor: '#E8F1FF', borderColor: '#2458C5', borderBottomWidth: 3 },
