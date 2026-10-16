@@ -73,3 +73,71 @@ test('expired native confirmation clears the pending challenge and requires a ne
   await assert.rejects(() => flow.verify('123456'), (e) => e.code === 'auth/session-expired');
   await assert.rejects(() => flow.verify('123456'), /Request OTP first/);
 });
+
+
+test('native Android automatically verified SMS is accepted without reusing the consumed confirmation code', async () => {
+  let priorUser={uid:'stale-uid',phoneNumber:phone,getIdToken:async()=> 'stale-token'};
+  let cleared=0, calls=0;
+  const fresh={uid:'fresh-uid',phoneNumber:phone,getIdToken:async()=> 'signed-firebase-token'};
+  const flow=new FirebasePhoneOtpFlow({
+    clearPreviousFirebaseUser:async()=>{cleared++;priorUser=null;},
+    signInWithPhoneNumber:async()=> {
+      priorUser=fresh; // Android's SMS Retriever automatically signed in.
+      return {confirm:async()=>{calls++;throw {code:'auth/session-expired'};}};
+    },
+    getAutoVerifiedUser:async()=>priorUser,
+  });
+  await flow.send(phone);
+  assert.equal(cleared,1);
+  const verified=await flow.verify('123456');
+  assert.deepEqual(verified,{uid:'fresh-uid',phoneNumber:phone,idToken:'signed-firebase-token'});
+  assert.equal(calls,0,'must not consume an already-verified Firebase OTP a second time');
+});
+
+test('native auto verification arriving during manual confirmation recovers a consumed SMS session',async()=>{
+  let user=null;
+  const fresh={uid:'auto-uid',phoneNumber:phone,getIdToken:async()=> 'fresh-token'};
+  const flow=new FirebasePhoneOtpFlow({
+    clearPreviousFirebaseUser:async()=>{user=null;},
+    getAutoVerifiedUser:async()=>user,
+    signInWithPhoneNumber:async()=>({
+      confirm:async()=>{user=fresh;throw {code:'auth/session-expired'};},
+    }),
+  });
+  await flow.send(phone);
+  assert.equal((await flow.verify('123456')).uid,'auto-uid');
+});
+
+test('cached Firebase user is cleared and cannot bypass real verification',async()=>{
+  let user={uid:'old-user',phoneNumber:phone,getIdToken:async()=> 'old-token'};
+  let sends=0;
+  const flow=new FirebasePhoneOtpFlow({
+    clearPreviousFirebaseUser:async()=>{user=null;},
+    getAutoVerifiedUser:async()=>user,
+    signInWithPhoneNumber:async()=>{sends++;return {confirm:async()=>{throw {code:'auth/session-expired'};}};},
+  });
+  await flow.send(phone);
+  await assert.rejects(()=>flow.verify('123456'),e=>e.code==='auth/session-expired');
+  assert.equal(sends,1);
+  await assert.rejects(()=>flow.verify('123456'),/Request OTP first/);
+});
+test('auto verification for another phone or unknown uid is refused',async()=>{
+  const other={uid:'other-uid',phoneNumber:'+919876543211',getIdToken:async()=> 'other-token'};
+  const flow=new FirebasePhoneOtpFlow({
+    clearPreviousFirebaseUser:async()=>{},
+    getAutoVerifiedUser:async()=>other,
+    signInWithPhoneNumber:async()=>({confirm:async()=>{throw {code:'auth/session-expired'};}}),
+  });
+  await flow.send(phone);
+  await assert.rejects(()=>flow.verify('123456'),e=>e.code==='auth/session-expired');
+});
+test('if stale Firebase user cannot be cleared, no new SMS challenge is started',async()=>{
+  let called=false;
+  const flow=new FirebasePhoneOtpFlow({
+    clearPreviousFirebaseUser:async()=>{throw {code:'auth/unknown'};},
+    getAutoVerifiedUser:async()=>null,
+    signInWithPhoneNumber:async()=>{called=true;return {confirm:async()=>null};},
+  });
+  await assert.rejects(()=>flow.send(phone),e=>e.code==='auth/unknown');
+  assert.equal(called,false);
+});
