@@ -38,16 +38,18 @@ export async function PartnerBranchSections({applicationId}:{applicationId:strin
  const labelClass="grid gap-1 text-[10px] font-semibold text-[#526178]";
  const field=(label:string,name:string,type="text")=><label className={labelClass} key={name}>{label} *<input name={name} type={type} required className={fieldClass}/></label>;
  return {
-  form:<section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
-    <div className="border-b border-[#E7ECF3] px-5 py-4"><h2 className="text-[13px] font-semibold text-[#17203A]">Branch Onboarding</h2></div>
+  form:<section className="bg-white">
+    <div className="border-b border-[#E7ECF3] px-5 py-3"><h2 className="text-[13px] font-semibold text-[#17203A]">Branch Onboarding</h2></div>
     {!canCreate?<Message>You can view Branches for this Partner, but your account does not have permission to create Branches.</Message>:
-    <form action={createBranchProfile} className="space-y-4 p-5">
+    <form action={createBranchProfile} className="space-y-3 px-5 py-3">
       <input type="hidden" name="parent_partner_id" value={partner.id}/>
       <input type="hidden" name="return_application_id" value={applicationId}/>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">{field("Branch Name","branch_name")}{field("Phone Number","phone","tel")}{field("Email ID","email","email")}{field("Contact Name","contact_name")}</div>
-      <label className={labelClass}>Address *<textarea name="address" required rows={2} maxLength={500} className={`${fieldClass} h-auto py-2`}/></label>
-      <label className={labelClass}>Parent Partner<input className={`${fieldClass} bg-[#F8FAFC]`} readOnly value={`${partner.display_name} · ${partner.partner_code}`}/></label>
-      <div className="flex justify-end"><FormSubmitButton label="Save" pendingLabel="Saving…"/></div>
+      <div className="grid items-end gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_auto]">
+        <label className={labelClass}>Address *<input name="address" required maxLength={500} className={fieldClass} placeholder="Enter branch address"/></label>
+        <label className={labelClass}>Parent Partner<input className={`${fieldClass} bg-[#F8FAFC]`} readOnly value={`${partner.display_name} · ${partner.partner_code}`}/></label>
+        <div className="flex justify-end"><FormSubmitButton label="Save" pendingLabel="Saving…"/></div>
+      </div>
     </form>}
   </section>,
   register:<section aria-label="Branch Register"><BranchRegisterWorkspace rows={rows} canManage={canCreate} canPermanentDelete={manager?.role==="it_super_user"} loadError={loadError} embedded/></section>
