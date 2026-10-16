@@ -29,12 +29,14 @@ export async function GET(request: Request) {
     p_target_id: item.auth_user_id,
   });
   if (blockerError) return respond({ error: "Unable to complete dependency review." }, 503);
-  const [{ data: portal, error: portalError }, { data: associate, error: associateError }, { data: employee, error: employeeError }] = await Promise.all([
+  const [{ data: portal, error: portalError }, { data: associate, error: associateError }, { data: employee, error: employeeError }, { data: groupAssociate, error: groupError }, { count: learningCount, error: learningError }] = await Promise.all([
     admin.from("intermediary_portal_accounts").select("id,status,intermediary_id").eq("auth_user_id", item.auth_user_id),
     admin.from("partner_portal_associate_accounts").select("id,status,intermediary_id").eq("auth_user_id", item.auth_user_id),
     admin.from("profiles").select("id,role,employee_id,is_active").eq("id", item.auth_user_id),
+    admin.from("group_portal_associate_accounts").select("id").eq("auth_user_id", item.auth_user_id),
+    admin.from("partner_learning_attempts").select("id", { count: "exact", head: true }).eq("auth_user_id", item.auth_user_id),
   ]);
-  if (portalError || associateError || employeeError) return respond({ error: "Unable to complete identity review." }, 503);
+  if (portalError || associateError || employeeError || groupError || learningError) return respond({ error: "Unable to complete identity review." }, 503);
   return respond({
     request: { id: item.id, status: item.status, actor_kind: item.actor_kind },
     preflight_only: true,
@@ -42,9 +44,13 @@ export async function GET(request: Request) {
     profile_dependencies: blockers ?? [],
     partner_portal_accounts: portal ?? [],
     associate_accounts: associate ?? [],
+    group_associate_account_count: groupAssociate?.length ?? 0,
+    learning_attempt_count: learningCount ?? 0,
+    auth_delete_cascade_risks: ["profiles", "partner_portal_associate_accounts", "group_portal_associate_accounts", "partner_learning_attempts"],
     profile: employee?.[0] ?? null,
     required_checks: [
       "Verify identity and any shared Operations/employee login.",
+      "Review Auth delete cascading relationships: profiles, partner/group associates and learning attempts.",
       "Review foreign-key dependencies and legally retained records.",
       "Confirm retention, anonymization and profile/photo cleanup.",
       "Disable login and revoke tokens through separately approved fulfillment procedure.",
