@@ -40,7 +40,7 @@ export async function PartnerBranchSections({applicationId}:{applicationId:strin
  return {
   form:<section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
     <div className="border-b border-[#E7ECF3] px-5 py-4"><h2 className="text-[13px] font-semibold text-[#17203A]">Branch Onboarding</h2></div>
-    {!canCreate?<Message>You can view this Partner's Branches, but your account does not have permission to create Branches.</Message>:
+    {!canCreate?<Message>You can view Branches for this Partner, but your account does not have permission to create Branches.</Message>:
     <form action={createBranchProfile} className="space-y-4 p-5">
       <input type="hidden" name="parent_partner_id" value={partner.id}/>
       <input type="hidden" name="return_application_id" value={applicationId}/>
