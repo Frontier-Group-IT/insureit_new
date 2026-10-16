@@ -10,7 +10,9 @@ create table if not exists public.partner_account_deletion_requests (
  requested_at timestamptz not null default now(),
  updated_at timestamptz not null default now(),
  completed_at timestamptz,
- resolution_note text
+ resolution_note text,
+ reviewed_by uuid,
+ reviewed_at timestamptz
 );
 create unique index if not exists partner_account_deletion_open_unique
  on public.partner_account_deletion_requests(auth_user_id)
