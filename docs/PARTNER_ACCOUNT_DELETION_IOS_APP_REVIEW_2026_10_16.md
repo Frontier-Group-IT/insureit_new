@@ -49,6 +49,12 @@ The linked INSUREIT production Supabase project `ilzhsfqqjyppzzvfscmh` was check
 - Consequently direct profile/Auth deletion may be blocked or cause unwanted cascades. Disabling access alone is not adequate deletion, while bulk detachment without lawful retention mapping is unsafe. Do not run `auth.admin.deleteUser` until live FK and shared-login dependency checks plus approved cleanup steps are satisfied.
 - Data above is schema aggregate only, not proof of counts for any specific user.
 
+## Auth user cascade assessment (production, read-only)
+
+Live PostgreSQL `pg_constraint` inspection confirmed `auth.users` ON DELETE CASCADE on `profiles`, `partner_portal_associate_accounts`, `group_portal_associate_accounts`, `partner_learning_attempts`, in addition to Supabase Auth internals. `intermediary_portal_accounts` reference is SET NULL. This means even when profile blocker queries return no protected references, directly deleting Auth may silently destroy associate and learning records that carry business/audit value. The IT preflight now checks group associate account and learning attempt counts and lists the cascade risks. **safe_to_auto_delete remains false**. No Auth executor is enabled until targeted preserved-data identity detachment and full FK audit can be performed safely and verified with disposable test users.
+
+Acceptance gates for executor: (1) prove all cascade dependencies for requested identity, (2) reject shared employee/other portal access without approved scope, (3) preserve and anonymize business history without FK mutation that causes cascade, (4) execute with idempotent review and independent IT approval, (5) read-back that Auth access was revoked and login impossible, (6) ensure no data loss, (7) send and confirm requester notification. No source-only code or check can substitute for test identity and real deployed end-to-end evidence.
+
 ## Operations prerequisite — before public launch
 
 1. Verify current production database migration status and relations/read-only. Run migration only with separate approval and backup strategy.
