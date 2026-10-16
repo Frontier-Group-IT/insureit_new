@@ -37,11 +37,13 @@ export function BranchRegisterWorkspace({
   canManage,
   canPermanentDelete,
   loadError,
+  embedded = false,
 }: {
   rows: BranchRegisterRow[];
   canManage: boolean;
   canPermanentDelete: boolean;
   loadError: boolean;
+  embedded?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewKey>("all");
@@ -106,7 +108,7 @@ export function BranchRegisterWorkspace({
         onQueryChange={(value) => { setQuery(value); setPage(1); }}
         searchPlaceholder="Search branch, code, parent Partner, Group or employee"
         activeViewLabel={`${filteredRows.length} in current view`}
-        action={canManage ? (
+        action={canManage && !embedded ? (
           <Link
             prefetch={false}
             href="/intermediaries/groups/branches/new"
@@ -129,13 +131,13 @@ export function BranchRegisterWorkspace({
           <option value="all">All groups</option>
           {groupOptions.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
         </RegisterSelect>
-        <Link
+        {!embedded ? <Link
           prefetch={false}
           href="/intermediaries/groups"
           className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10.5px] font-semibold text-[#334155]"
         >
           <GitBranch className="h-4 w-4" /> Business Groups
-        </Link>
+        </Link> : null}
       </BrokerRegisterToolbar>
 
       {loadError ? (
