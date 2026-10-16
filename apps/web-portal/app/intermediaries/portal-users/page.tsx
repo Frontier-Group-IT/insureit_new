@@ -1,3 +1,4 @@
+import { IntermediaryTabs } from "../intermediary-tabs";
 import { AppShell } from "@/components/shell";
 import { requirePospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -70,6 +71,7 @@ export default async function IntermediaryPortalUsersPage({
 
   return (
     <AppShell title="Intermediary Portal Users">
+      <IntermediaryTabs active="users" />
       <IntermediaryPortalUsersWorkspace rows={allRows} initialQuery={q} initialStatus={statusFilter} success={query.success} error={query.error} loadError={Boolean(loadError)} />
     </AppShell>
   );
