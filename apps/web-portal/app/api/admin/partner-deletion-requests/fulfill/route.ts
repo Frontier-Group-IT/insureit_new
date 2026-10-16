@@ -53,7 +53,8 @@ export async function POST(request: Request) {
   const { error: detachError } = await admin.from("intermediary_portal_accounts")
     .update({auth_user_id:null,status:"disabled"}).eq("id",row.actor_id).eq("auth_user_id",row.auth_user_id).select("id").single();
   if (detachError) return reply({ error:"Identity suspended, but could not detach portal account. Contact IT." },503);
-  const { error: authDeleteError } = await admin.auth.admin.deleteUser(row.auth_user_id);
+  // Soft-delete preserves the auth.users primary key, preventing cascades into historical business records.
+  const { error: authDeleteError } = await admin.auth.admin.deleteUser(row.auth_user_id, true);
   if (authDeleteError) return reply({ error:"Portal access detached and identity suspended; Auth deletion needs manual recovery." },503);
 
   // Any notify failure stays under_review, requiring manual notification retry.
@@ -67,7 +68,7 @@ export async function POST(request: Request) {
     const { error: completedError } = await admin.from("partner_account_deletion_requests").update({
       status:"fulfilled",completed_at:now,updated_at:now,identity_verified_at:now,retention_reviewed_at:now,
       fulfillment_authorized_by:profile.id,fulfillment_authorized_at:now,notification_sent_at:now,fulfillment_reference:email.id,
-      resolution_note:"Eligible primary intermediary Auth identity deleted; portal record retained disabled; completion email accepted by provider.",
+      resolution_note:"Primary intermediary Auth identity soft-deleted (irreversible), portal login disabled, business FK history preserved; completion email accepted by provider.",
     }).eq("id",row.id).eq("status","under_review");
     if (completedError) return reply({ error:"Identity deleted and notification accepted, but request audit finalization requires IT reconciliation." },503);
     return reply({ ok:true,request_id:row.id,status:"fulfilled" });
