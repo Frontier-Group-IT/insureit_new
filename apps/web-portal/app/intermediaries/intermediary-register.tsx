@@ -1,3 +1,4 @@
+import { IntermediaryTabs } from "./intermediary-tabs";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { compactDarkActionClassName, compactPrimaryActionClassName, compactSecondaryActionClassName } from "@/components/action-styles";
@@ -206,6 +207,7 @@ export async function IntermediaryRegister({
     });
     return (
       <AppShell title={pageTitle}>
+        <IntermediaryTabs active="partner" />
         <PartnerRegisterClient rows={clientRows} canPermanentDelete={profile.role === "it_super_user"} initialSearch={search} initialStatus={accountStatus} success={success} error={error} loadError={Boolean(loadError)} />
       </AppShell>
     );
