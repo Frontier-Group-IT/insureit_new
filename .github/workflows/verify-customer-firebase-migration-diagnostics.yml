@@ -1,0 +1,25 @@
+name: Verify Customer Firebase migration diagnostics
+on:
+  pull_request:
+    branches:
+      - main
+      - feature/customer-firebase-otp-gateway-0-3-2-20261014
+    paths:
+      - 'apps/mobile-app/lib/customer-firebase-session-diagnostics.mjs'
+      - 'apps/mobile-app/lib/customer-firebase-session-diagnostics.d.mts'
+      - 'apps/mobile-app/lib/customer-firebase-session-exchange.ts'
+      - 'apps/mobile-app/scripts/customer-firebase-session-diagnostics.test.mjs'
+      - '.github/workflows/verify-customer-firebase-migration-diagnostics.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run Firebase session failure-classifier tests (no backend or secrets)
+        run: node --test apps/mobile-app/scripts/customer-firebase-session-diagnostics.test.mjs
