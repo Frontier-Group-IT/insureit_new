@@ -24,12 +24,19 @@ export async function issueExistingCustomerSessionChallenge(db, gate) {
     type: 'magiclink',
     email: gate.verifiedExistingEmail,
   });
-  if (error || data?.user?.id !== gate.customerProfileId ||
-      data?.user?.email?.toLowerCase() !== gate.verifiedExistingEmail.toLowerCase() ||
-      typeof data?.properties?.hashed_token !== 'string' ||
+  // Fixed-code diagnostics only: never log the email, token hash, UID, or raw
+  // provider error. Continue to deny on every unexpected response shape.
+  if (error) return { ok: false, reason: 'challenge_provider_rejected' };
+  if (data?.user?.id !== gate.customerProfileId) {
+    return { ok: false, reason: 'challenge_uuid_mismatch' };
+  }
+  if (typeof data?.user?.email !== 'string' ||
+      data.user.email.toLowerCase() !== gate.verifiedExistingEmail.toLowerCase()) {
+    return { ok: false, reason: 'challenge_email_mismatch' };
+  }
+  if (typeof data?.properties?.hashed_token !== 'string' ||
       !hexHash.test(data.properties.hashed_token)) {
-    // No secret or email is returned on a mismatch.
-    return { ok: false, reason: 'challenge_user_mismatch' };
+    return { ok: false, reason: 'challenge_hash_format_mismatch' };
   }
   return {
     ok: true,
