@@ -31,3 +31,11 @@ Owner approved only two disposable Customer test accounts: suffix 1634 (approved
 
 ## Additional migration blockers
 A disposable strong hash-restore rehearsal failed due to protected auth schema permissions; do not claim verified production backup. The owner approved changing credentials for only two disposable Customer identities. General customer password or email-alias migration is not approved. Audit SQL is prepared but not applied to production. RLS, multi-user isolation, real signed-device and refresh-session acceptance remain mandatory.
+
+
+## Latest status — diagnostic Edge v5 deployed
+- After unit tests were updated (commit 9d29fd62), the Edge bridge now logs a **fixed** sanitized reason for rejected challenge responses (no email, phone, UID, OTP, Firebase token or one-use hash). Bridge edit succeeded in commit 8ce0ddddf3734c2d7fc271fc17f52dde37cef605 after earlier connector blocks.
+- CI `Verify Customer Firebase OTP Readiness` and `Verify Customer Firebase migration diagnostics` both **passed** on commit 8ce0dddd; Mobile/Web/disposable integration jobs were still running when v5 deployed. Independent production deployment done via connected Supabase tool.
+- **Production Edge v5 ACTIVE** and independently read back. Source contains two-customer canary gate, 64-character random password and `customer-firebase-challenge-denied` fixed-code diagnostic logging. Deployed bundle includes all five shared dependencies.
+- No Android OTP was tested after v5 yet, so **exact challenge rejection reason remains unknown**. Request one fresh attempt for Customer 1634 and inspect `function_logs` for `customer-firebase-challenge-denied <code>`. Never print returned token hash or relax user UUID/email mapping. After identifying mismatch, verify actual GoTrue behavior and correct surgically.
+- PR #3199 remains draft and stacked. No main merge, APK/AAB, OTA or global 2Factor removal.
