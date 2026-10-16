@@ -10,7 +10,7 @@ set search_path = '' as $$
 declare
  v_profile public.profiles%rowtype;
  v_auth_phone text;
- v_auth_role text;
+ v_operator_allowed boolean;
  v_exists public.customer_firebase_identity_links%rowtype;
  v_count integer;
 begin
@@ -20,6 +20,8 @@ begin
     p_operator_id is null or p_evidence_digest !~ '^[a-f0-9]{64}$' then
    raise exception 'invalid_enrollment_request';
  end if;
+ select exists (select 1 from public.profiles op where op.id=p_operator_id and op.role='it_super_user' and op.is_active=true) into v_operator_allowed;
+ if v_operator_allowed is distinct from true then raise exception 'operator_not_authorized'; end if;
  -- Serialize enrollment for the same customer AND same Firebase UID.
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('firebase-customer:'||p_profile_id::text,0));
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('firebase-uid:'||p_firebase_uid,0));
