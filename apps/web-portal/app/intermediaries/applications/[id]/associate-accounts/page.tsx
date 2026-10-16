@@ -1,3 +1,5 @@
+import { AccountTabs } from "./account-tabs";
+import { PartnerBranchSections } from "./partner-branch-sections";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell";
@@ -68,7 +70,7 @@ export default async function PartnerAssociateAccountsPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ success?: string; error?: string; associate_error?: string; retry_after?: string }>;
+  searchParams: Promise<{ success?: string; error?: string; associate_error?: string; retry_after?: string; tab?: string }>;
 }) {
   const { id } = await params;
   const query = await searchParams;
@@ -113,6 +115,7 @@ export default async function PartnerAssociateAccountsPage({
   const dob = profile.partner_type === "misp" ? profile.dp_date_of_birth : profile.date_of_birth;
   const partnerId = profile.partner_id && !profile.partner_id.startsWith("PENDING-") ? profile.partner_id : intermediary.intermediary_code;
   const returnPath = `/intermediaries/applications/${id}/associate-accounts`;
+  const branchSections = await PartnerBranchSections({ applicationId: id });
 
   return (
     <AppShell title="Partner Associate Accounts" backHref={`/intermediaries/applications/${id}`}>
@@ -171,6 +174,7 @@ export default async function PartnerAssociateAccountsPage({
           </Card>
         </section>
 
+        <AccountTabs initialTab={query.tab === "branch" ? "branch" : "associate"} branchForm={branchSections.form} branchRegister={branchSections.register} associateForm={<>
         <section className="rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
           <div className="border-b border-[#E7ECF3] px-5 py-4">
             <h2 className="text-[13px] font-semibold text-[#17203A]">Associate Accounts</h2>
@@ -207,6 +211,7 @@ export default async function PartnerAssociateAccountsPage({
           </form>
         </section>
 
+        </>} associateRegister={<>
         <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
           <div className="border-b border-[#E7ECF3] px-5 py-4">
             <h2 className="text-[13px] font-semibold text-[#17203A]">Associate Accounts Register</h2>
@@ -256,6 +261,7 @@ export default async function PartnerAssociateAccountsPage({
             </table>
           </div>
         </section>
+        </>} />
       </div>
     </AppShell>
   );
