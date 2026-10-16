@@ -24,7 +24,7 @@ export async function provisionDisposableFirebaseCanaryAlias({
    return deny('auth_admin_unavailable');
  // Random, unshared password prevents the original phone-password credential
  // from becoming a deterministic email-password credential.
- const credential=Array.from(crypto.getRandomValues(new Uint8Array(48)),
+ const credential=Array.from(crypto.getRandomValues(new Uint8Array(32)),
    byte=>byte.toString(16).padStart(2,'0')).join('');
  const update=await db.auth.admin.updateUserById(id,{
    email:alias,email_confirm:true,password:credential,
