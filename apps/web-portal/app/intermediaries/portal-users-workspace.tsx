@@ -11,11 +11,11 @@ type StatusFilter = "all" | "active" | "inactive";
 
 const PORTAL_USERS_PAGE_SIZE = 10;
 
-export function IntermediaryPortalUsersWorkspace({ rows, extraRows, initialQuery, initialStatus, success, error, loadError }: { rows: PortalUserRow[]; extraRows: AdditionalPortalAccount[]; initialQuery: string; initialStatus: StatusFilter; success?: string; error?: string; loadError: boolean }) {
+export function IntermediaryPortalUsersWorkspace({ rows, extraRows, initialQuery, initialType, initialStatus, success, error, loadError }: { rows: PortalUserRow[]; extraRows: AdditionalPortalAccount[]; initialQuery: string; initialType: string; initialStatus: StatusFilter; success?: string; error?: string; loadError: boolean }) {
   const [query, setQuery] = useState(initialQuery);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(initialStatus);
   const [currentPage, setCurrentPage] = useState(1);
-  const [accountType, setAccountType] = useState("all");
+  const [accountType, setAccountType] = useState(initialType);
   const normalizedQuery=query.trim().toLowerCase();
   const allItems = useMemo(() => [
     ...rows.map(row=>({kind:"partner" as const,key:`partner:${row.intermediary.id}`,row,type:"Partner",status:resolvedStatus(row),
