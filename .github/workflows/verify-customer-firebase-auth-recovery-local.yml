@@ -9,6 +9,9 @@ on:
       - '.github/workflows/verify-customer-firebase-auth-recovery-local.yml'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 
