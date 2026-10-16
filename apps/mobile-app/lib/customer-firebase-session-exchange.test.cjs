@@ -64,6 +64,7 @@ function harness(opts = {}) {
     if (name === 'react-native') return { Platform: { OS: opts.platform ?? 'android' } };
     if (name === './supabase') return { supabase: sdk };
     if (name === './customer-account-vault') return { restoreCustomerSessionSnapshot };
+    if (name === './customer-firebase-session-diagnostics.mjs') return { classifyFirebaseBridgeFailure: () => 'bridge_unavailable' };
     throw new Error('Unexpected dependency ' + name);
   };
   loaded._compile(compiled, loaded.filename);
