@@ -5,7 +5,7 @@ create table if not exists public.partner_account_deletion_requests (
  actor_kind text not null check (actor_kind in ('employee','intermediary')),
  actor_id uuid not null,
  intermediary_id uuid,
- status text not null default 'requested' check (status in ('requested','under_review','fulfilled','declined')),
+ status text not null default 'requested' check (status in ('requested','under_review','fulfilling','fulfilled','declined')),
  reason text,
  requested_at timestamptz not null default now(),
  updated_at timestamptz not null default now(),
@@ -16,7 +16,7 @@ create table if not exists public.partner_account_deletion_requests (
 );
 create unique index if not exists partner_account_deletion_open_unique
  on public.partner_account_deletion_requests(auth_user_id)
- where status in ('requested','under_review');
+ where status in ('requested','under_review','fulfilling');
 create index if not exists partner_account_deletion_requested_idx
  on public.partner_account_deletion_requests(requested_at desc);
 alter table public.partner_account_deletion_requests enable row level security;
