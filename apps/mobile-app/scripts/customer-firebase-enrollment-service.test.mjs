@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { prepareVerifiedEnrollment } from '../../../supabase/functions/_shared/customer-firebase-enrollment-service.mjs';
+import { prepareVerifiedEnrollment, commitVerifiedEnrollment } from '../../../supabase/functions/_shared/customer-firebase-enrollment-service.mjs';
 const id='11111111-1111-4111-8111-111111111111',uid='uid-1', now=1800000000;
 const profile={id,role:'customer',is_active:true,phone:'919876543210'};
 const authUser={id,phone:'919876543210'};
@@ -32,4 +32,27 @@ test('reject mapping query outage or wrong phone',async()=>{
  const b=setup({verified:{...token,phone_number:'+919999999999'}});
  const mismatch=await prepareVerifiedEnrollment({firebaseAdmin:b.firebaseAdmin,idToken:'x'.repeat(128),customer:{profile,authUser},db:b.db,authorization,nowSeconds:now});
  assert.equal(mismatch.ok,false);
+});
+
+test('explicit service-only executor refuses mutation without independent operator proof',async()=>{
+ const s=setup();
+ s.db.rpc=async()=>{throw Error('must never write');};
+ const r=await commitVerifiedEnrollment({firebaseAdmin:s.firebaseAdmin,idToken:'x'.repeat(128),
+ customer:{profile,authUser},db:s.db,authorization,nowSeconds:now,apply:true});
+ assert.equal(r.reason,'privileged_operator_and_evidence_required');
+});
+test('approved server operator may commit through exactly one atomic RPC',async()=>{
+ const s=setup();let calls=0;
+ s.db.rpc=async(name,args)=>{
+   calls++;
+   assert.equal(name,'customer_firebase_enroll_approved');
+   assert.equal(args.p_profile_id,id);
+   assert.equal(args.p_firebase_uid,uid);
+   return {data:'enrolled',error:null};
+ };
+ const r=await commitVerifiedEnrollment({firebaseAdmin:s.firebaseAdmin,idToken:'x'.repeat(128),
+ customer:{profile,authUser},db:s.db,authorization:{...authorization,firebaseUid:uid,verifiedPhone:firebase.phone_number},
+ operator:{verifiedPrivilegedStaff:true,id:'22222222-2222-4222-8222-222222222222'},
+ evidenceDigest:'a'.repeat(64),nowSeconds:now,apply:true});
+ assert.equal(r.action,'enrolled');assert.equal(calls,1);
 });
