@@ -55,6 +55,15 @@ Live PostgreSQL `pg_constraint` inspection confirmed `auth.users` ON DELETE CASC
 
 Acceptance gates for executor: (1) prove all cascade dependencies for requested identity, (2) reject shared employee/other portal access without approved scope, (3) preserve and anonymize business history without FK mutation that causes cascade, (4) execute with idempotent review and independent IT approval, (5) read-back that Auth access was revoked and login impossible, (6) ensure no data loss, (7) send and confirm requester notification. No source-only code or check can substitute for test identity and real deployed end-to-end evidence.
 
+## Guarded identity-only executor (NOT production-enabled)
+
+- `POST /api/admin/partner-deletion-requests/fulfill` is implemented for a narrow cohort of isolated primary intermediary logins. Requires IT Super User, exact confirmation, retention affirmation, `under_review` request, exact portal linkage, no profile, partner/group associates, learning attempts or profile blockers. It suspends the Auth login, detaches/disables only the portal-account login reference, deletes Auth identity and uses the existing Resend email provider for completion notice; then records fulfillment only after successful delivery acceptance.
+- Fail-closed release kill switch: `PARTNER_DELETION_EXECUTION_ENABLED` MUST equal `true`. It is intentionally unset by default. This destructive executor has **not** been tested against an isolated disposable identity, and additional Auth foreign-key dependencies remain possible. NEVER enable on production before full dependency proof, disposable-account end-to-end tests, retained-data comparison and explicit live release approval.
+- A partial failure after suspend/detach/delete requires manual recovery; the route returns an error and leaves request in `under_review`. This is not transactionally atomic across Supabase Auth, PostgREST, Resend. Do not claim end-to-end verification from CI.
+- The administrative review page now surfaces a multi-step confirmation. It will report disabled state before any destructive write until the kill switch is explicitly enabled.
+- Technical verification must cover blocked shared and linked identities, retry after partial failure, provider outage, status transitions, no data loss, token revocation and failed login on a disposable account. Verify policy intake/history totals before and after.
+- No database migration, production server deploy, configuration enablement or OTA has occurred.
+
 ## Operations prerequisite — before public launch
 
 1. Verify current production database migration status and relations/read-only. Run migration only with separate approval and backup strategy.
