@@ -14,6 +14,13 @@ export type NativePhoneConfirmation = {
 };
 export type NativeFirebasePhoneAuth = {
   signInWithPhoneNumber: (phone: string) => Promise<NativePhoneConfirmation>;
+  /**
+   * Android may sign in automatically after receiving a Firebase SMS.
+   * Discard ANY previous Firebase auth user before starting a new challenge
+   * so this getter can only detect a fresh native auto-verification.
+   */
+  clearPreviousFirebaseUser?: () => Promise<void>;
+  getAutoVerifiedUser?: () => Promise<Awaited<ReturnType<NativePhoneConfirmation['confirm']>>['user'] | null>;
 };
 export type VerifiedFirebasePhone = Readonly<{
   uid: string;
@@ -32,6 +39,9 @@ export class FirebasePhoneOtpFlow {
     this.pendingPhone = null;
     recordFirebaseOtpStage('sms_request');
     try {
+      // Never accept a cached Firebase identity from a previous SMS/session as
+      // this verification. Supabase accounts and sessions are unaffected.
+      await this.nativeAuth.clearPreviousFirebaseUser?.();
       const confirmation = await this.nativeAuth.signInWithPhoneNumber(phone);
       this.pending = confirmation;
       this.pendingPhone = phone;
@@ -51,13 +61,43 @@ export class FirebasePhoneOtpFlow {
     const phone = this.pendingPhone;
     recordFirebaseOtpStage('firebase_verification');
     let result: Awaited<ReturnType<NativePhoneConfirmation['confirm']>>;
+
+    // On Android, Firebase/Play Services can complete SMS verification before
+    // the user submits the code. The native confirmation may then reject the
+    // already-consumed verificationId with auth/session-expired. We only accept
+    // a native authenticated user for the EXACT just-requested phone. The
+    // adapter signs out any previous Firebase user before starting each SMS.
+    const freshAutoVerified = async () => {
+      const user = await this.nativeAuth.getAutoVerifiedUser?.();
+      return user?.uid && user.phoneNumber === phone ? user : null;
+    };
     try {
-      result = await confirmation.confirm(code);
+      const autoUser = await freshAutoVerified();
+      if (autoUser) {
+        recordFirebaseOtpStage('firebase_verification', 'auto_verified');
+        result = { user: autoUser };
+      } else {
+        try {
+          result = await confirmation.confirm(code);
+        } catch (cause) {
+          const failure = firebaseOtpFailure('firebase_verification', cause);
+          // Android auto verification may race with manual confirmation.
+          // Never recover an invalid code or arbitrary Firebase SDK failure.
+          const consumed = ['auth/session-expired', 'auth/code-expired',
+            'auth/invalid-verification-id'].includes(failure.code);
+          const verifiedUser = consumed ? await freshAutoVerified() : null;
+          if (verifiedUser) {
+            recordFirebaseOtpStage('firebase_verification', 'auto_verified');
+            result = { user: verifiedUser };
+          } else {
+            if (!failure.retryableCode) this.reset();
+            recordFirebaseOtpStage(failure.stage, failure.code);
+            throw failure;
+          }
+        }
+      }
     } catch (cause) {
       const failure = firebaseOtpFailure('firebase_verification', cause);
-      // Incorrect code can be retried on the same confirmation handle; expired
-      // or unusable sessions must request a new SMS. Do not throw away the
-      // confirmation before we know whether the code was incorrect.
       if (!failure.retryableCode) this.reset();
       recordFirebaseOtpStage(failure.stage, failure.code);
       throw failure;
