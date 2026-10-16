@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
   searchRow: {
     zIndex: 5,
     marginTop: -10,
-    marginHorizontal: 12,
+    marginHorizontal: 16,
     height: 44,
     flexDirection: 'row',
     alignItems: 'stretch',
@@ -559,7 +559,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: StyleSheet.hairlineWidth,
     borderLeftColor: '#D9DFEA',
   },
-  filterText: { color: '#3156B8', fontSize: 10, lineHeight: 13, fontWeight: '800' },
+  filterText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: '700' },
   filterMenu: {
     overflow: 'hidden',
     borderRadius: 12,
