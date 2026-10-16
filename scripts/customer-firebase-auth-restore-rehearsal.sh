@@ -5,11 +5,10 @@ umask 077
 : "${INSUREIT_BACKUP_FILE:?Encrypted Auth .dump.age file required}"
 : "${INSUREIT_BACKUP_AGE_IDENTITY:?Path to local age private key (never CI)}"
 : "${INSUREIT_RESTORE_TEST_DB_URL:?Connection to empty disposable PostgreSQL database}"
-case "$INSUREIT_RESTORE_TEST_DB_URL" in
-  *ilzhsfqqjyppzzvfscmh*|*db.*.supabase.co*|*pooler.supabase.com*)
-    echo 'Refusing managed/production-looking restore destination' >&2; exit 1 ;;
-esac
-[[ "$INSUREIT_RESTORE_TEST_DB_URL" == postgres* ]] || exit 1
+# Only loopback-targeted disposable infrastructure is supported by this script.
+[[ "$INSUREIT_RESTORE_TEST_DB_URL" == postgres* && ( "$INSUREIT_RESTORE_TEST_DB_URL" == *'@127.0.0.1:'* || "$INSUREIT_RESTORE_TEST_DB_URL" == *'@localhost:'* ) ]] || {
+ echo 'Refusing restore outside local disposable Postgres' >&2; exit 1;
+}
 [[ -f "$INSUREIT_BACKUP_FILE" && -f "$INSUREIT_BACKUP_AGE_IDENTITY" ]] || exit 1
 for cmd in age pg_restore psql sha256sum; do command -v "$cmd" >/dev/null || exit 1; done
 sha256sum -c "$INSUREIT_BACKUP_FILE.sha256"
