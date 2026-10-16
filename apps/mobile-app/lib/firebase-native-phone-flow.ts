@@ -90,8 +90,6 @@ export class FirebasePhoneOtpFlow {
             recordFirebaseOtpStage('firebase_verification', 'auto_verified');
             result = { user: verifiedUser };
           } else {
-            if (!failure.retryableCode) this.reset();
-            recordFirebaseOtpStage(failure.stage, failure.code);
             throw failure;
           }
         }
