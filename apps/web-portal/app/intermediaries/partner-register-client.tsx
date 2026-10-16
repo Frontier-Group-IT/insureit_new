@@ -128,42 +128,32 @@ export function PartnerRegisterClient({
     <div className="mx-auto max-w-[1480px] space-y-4 pb-6">
       {success ? <WorkflowSuccessToast message={successMessage} durationMs={4000} /> : null}
       {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10.5px] font-medium text-red-700">The requested action could not be completed. Please try again. If the problem continues, contact the system administrator.</div> : null}
+      {canPermanentDelete ? <PartnerDeletePanel rows={rows} /> : null}
       <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
         <IntermediaryTabs active="partner" embedded />
-        {canPermanentDelete ? <PartnerDeletePanel rows={rows} embedded /> : null}
-        <div className="grid items-center gap-5 border-b border-[#E7ECF3] bg-[#FAFBFD] px-5 py-3.5 lg:grid-cols-[auto_minmax(280px,460px)_1fr]">
-          <h2 className="whitespace-nowrap text-[12.5px] font-semibold text-[#17203A]">Partner Register</h2>
-          <form onSubmit={(event) => event.preventDefault()} className="relative min-w-0 max-w-[460px]">
+        <div className="flex flex-wrap items-center gap-2 border-b border-[#E7ECF3] bg-[#FAFBFD] px-5 py-3">
+          <h2 className="mr-1 whitespace-nowrap text-[12.5px] font-semibold text-[#17203A]">Partner Register</h2>
+          <form onSubmit={(event) => event.preventDefault()} className="relative min-w-[240px] flex-1 lg:max-w-[380px]">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94A3B8]" />
             <input value={search} onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }} placeholder="Search partner name, mobile, email or ID" className="h-9 w-full rounded-lg border border-[#D8E1EC] bg-white pl-9 pr-3 text-[10.5px] text-[#17203A] outline-none placeholder:text-[#94A3B8] focus:border-[#315FEA] focus:ring-2 focus:ring-[#E6ECFF]" />
           </form>
-          <div className="flex flex-wrap items-center justify-end gap-1.5 whitespace-nowrap text-[9.5px] font-semibold">
-
+          <select aria-label="Assigned RM" value={rmFilter} onChange={(event) => { setRmFilter(event.target.value); setCurrentPage(1); }} className="h-9 min-w-[150px] rounded-lg border border-[#D8E1EC] bg-white px-2.5 text-[9.5px] font-semibold text-[#26374F] outline-none focus:border-[#315FEA]">
+            <option value="">All RMs</option>
+            {rmOptions.map((rm) => <option key={rm} value={rm}>{rm}</option>)}
+          </select>
+          <PartnerDateRangeFilter
+            fromDate={dateFrom}
+            toDate={dateTo}
+            onFromDateChange={(value) => { setDateFrom(value); setCurrentPage(1); }}
+            onToDateChange={(value) => { setDateTo(value); setCurrentPage(1); }}
+            onClear={() => { setDateFrom(""); setDateTo(""); setCurrentPage(1); }}
+          />
+          {extraFilterCount ? <button type="button" onClick={clearExtraFilters} className="h-9 rounded-lg px-2.5 text-[8.5px] font-bold text-[#526178] hover:bg-[#F1F5F9] hover:text-[#17365D]">Clear filters ({extraFilterCount})</button> : null}
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5 whitespace-nowrap text-[9.5px] font-semibold">
             <FilterButton label="All" count={scopedRows.length} active={selectedFilter === "all"} onClick={() => selectFilter("all")} />
             <FilterButton label="Active" count={counts.active} active={selectedFilter === "active"} onClick={() => selectFilter("active")} />
             <FilterButton label="Onboarding" count={counts.onboarding} active={selectedFilter === "onboarding"} onClick={() => selectFilter("onboarding")} />
           </div>
-        </div>
-        <div className="flex flex-wrap items-end gap-2 border-b border-[#E7ECF3] bg-white px-5 py-2.5">
-          <label className="min-w-[190px]">
-            <span className="mb-1 block text-[7.5px] font-bold uppercase tracking-[.08em] text-[#8190A4]">Assigned RM</span>
-            <select value={rmFilter} onChange={(event) => { setRmFilter(event.target.value); setCurrentPage(1); }} className="h-8 w-full rounded-lg border border-[#D8E1EC] bg-white px-2.5 text-[9.5px] font-semibold text-[#26374F] outline-none focus:border-[#315FEA]">
-              <option value="">All RMs</option>
-              {rmOptions.map((rm) => <option key={rm} value={rm}>{rm}</option>)}
-            </select>
-          </label>
-          <div className="flex items-end gap-2">
-            <div className="pb-2 text-[#8090A5]" title="Onboarding date"><CalendarDays className="h-3.5 w-3.5" /></div>
-            <label>
-              <span className="mb-1 block text-[7.5px] font-bold uppercase tracking-[.08em] text-[#8190A4]">Onboarding from</span>
-              <input type="date" value={dateFrom} max={dateTo || undefined} onChange={(event) => { setDateFrom(event.target.value); setCurrentPage(1); }} className="h-8 rounded-lg border border-[#D8E1EC] bg-white px-2.5 text-[9.5px] font-medium text-[#26374F] outline-none focus:border-[#315FEA]" />
-            </label>
-            <label>
-              <span className="mb-1 block text-[7.5px] font-bold uppercase tracking-[.08em] text-[#8190A4]">Onboarding to</span>
-              <input type="date" value={dateTo} min={dateFrom || undefined} onChange={(event) => { setDateTo(event.target.value); setCurrentPage(1); }} className="h-8 rounded-lg border border-[#D8E1EC] bg-white px-2.5 text-[9.5px] font-medium text-[#26374F] outline-none focus:border-[#315FEA]" />
-            </label>
-          </div>
-          {extraFilterCount ? <button type="button" onClick={clearExtraFilters} className="mb-0.5 h-8 rounded-lg px-2.5 text-[8.5px] font-bold text-[#526178] hover:bg-[#F1F5F9] hover:text-[#17365D]">Clear filters ({extraFilterCount})</button> : null}
         </div>
         {loadError ? <div className="px-4 py-12 text-center text-[11px] text-red-700">The register could not be loaded. Please refresh the page and try again.</div> : pageRows.length ? <PartnerTable rows={pageRows} /> : <div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold">No records found</p><p className="mt-1 text-[10px] text-[#64748B]">Try changing the search, RM, onboarding date or status filter.</p></div>}
         {!loadError ? (
@@ -179,6 +169,44 @@ export function PartnerRegisterClient({
       </section>
     </div>
   );
+}
+
+function PartnerDateRangeFilter({
+  fromDate,
+  toDate,
+  onFromDateChange,
+  onToDateChange,
+  onClear,
+}: {
+  fromDate: string;
+  toDate: string;
+  onFromDateChange: (value: string) => void;
+  onToDateChange: (value: string) => void;
+  onClear: () => void;
+}) {
+  const label = fromDate || toDate
+    ? `${fromDate ? shortDate(fromDate) : "Any"} – ${toDate ? shortDate(toDate) : "Any"}`
+    : "Date Range";
+  return <details className="group relative">
+    <summary className="flex h-9 min-w-[160px] cursor-pointer list-none items-center justify-between gap-2 rounded-lg border border-[#D8E1EC] bg-white px-2.5 text-[9.5px] font-semibold text-[#26374F] outline-none transition hover:border-[#AFC0D4] focus-visible:ring-2 focus-visible:ring-[#315FEA]/10 [&::-webkit-details-marker]:hidden">
+      <span className="flex min-w-0 items-center gap-2"><CalendarDays className="h-3.5 w-3.5 shrink-0 text-[#8090A5]" /><span className="truncate">{label}</span></span>
+      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[#8090A5] transition group-open:rotate-180" />
+    </summary>
+    <div className="absolute right-0 top-10 z-40 w-[292px] rounded-xl border border-[#D7E0EA] bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,.16)]">
+      <div className="grid grid-cols-2 gap-2">
+        <label><span className="mb-1 block text-[8px] font-bold text-[#7C899B]">From</span><input type="date" value={fromDate} max={toDate || undefined} onChange={(event) => onFromDateChange(event.target.value)} className="h-9 w-full rounded-lg border border-[#D7E0EA] px-2 text-[9.5px] font-semibold text-[#334155] outline-none focus:border-[#17365D]" /></label>
+        <label><span className="mb-1 block text-[8px] font-bold text-[#7C899B]">To</span><input type="date" value={toDate} min={fromDate || undefined} onChange={(event) => onToDateChange(event.target.value)} className="h-9 w-full rounded-lg border border-[#D7E0EA] px-2 text-[9.5px] font-semibold text-[#334155] outline-none focus:border-[#17365D]" /></label>
+      </div>
+      <div className="mt-2 flex justify-end">
+        <button type="button" onClick={(event) => { onClear(); event.currentTarget.closest("details")?.removeAttribute("open"); }} className="rounded-lg px-2.5 py-1.5 text-[9px] font-bold text-[#64748B] hover:bg-[#F8FAFC]">Clear dates</button>
+      </div>
+    </div>
+  </details>;
+}
+
+function shortDate(value: string) {
+  const [year, month, day] = value.split("-");
+  return year && month && day ? `${day}/${month}/${year.slice(-2)}` : value;
 }
 
 function FilterButton({ label, count, active, onClick }: { label: string; count: number; active: boolean; onClick: () => void }) {
