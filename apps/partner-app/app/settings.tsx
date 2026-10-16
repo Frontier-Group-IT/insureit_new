@@ -126,8 +126,8 @@ export default function SettingsScreen() {
           icon="shield-checkmark-outline"
           title="Privacy Policy"
           onPress={() => void Linking.openURL('https://portal.insureit.in/privacy-policy')}
-          last
         />
+        <SettingsLink icon="person-remove-outline" title="Request account deletion" onPress={() => router.push('/account-deletion')} last />
       </View>
 
       <PartnerSectionHeader title="App information" />
