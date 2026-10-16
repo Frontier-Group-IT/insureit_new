@@ -21,9 +21,9 @@ try {
  const args={p_profile_id:id,p_firebase_uid:'local-fixture-uid',p_verified_phone:'+919876543210',p_operator_id:operator,p_evidence_digest:'a'.repeat(64)};
  const unauth=await ordinary.rpc('customer_firebase_enroll_approved',args);
  assert.ok(unauth.error,'anon must not enroll');
- const first=await admin.rpc('customer_firebase_enroll_approved',args);
- if(first.error) throw Error('local enrollment failed '+first.error.code+' '+first.error.message);
- assert.equal(first.data,'enrolled');
+ const concurrent=await Promise.all([admin.rpc('customer_firebase_enroll_approved',args),admin.rpc('customer_firebase_enroll_approved',args)]);
+ for (const one of concurrent) if(one.error) throw Error('local enrollment failed '+one.error.code+' '+one.error.message);
+ assert.deepEqual(concurrent.map(x=>x.data).sort(),['already_approved','enrolled']);
  const again=await admin.rpc('customer_firebase_enroll_approved',args);
  assert.equal(again.error,null);assert.equal(again.data,'already_approved');
  assert.equal(sql(`select count(*) from public.customer_firebase_identity_links where profile_id='${id}'`),'1');
