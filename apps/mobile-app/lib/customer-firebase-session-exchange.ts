@@ -12,6 +12,7 @@
 import type { Session } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 import { restoreCustomerSessionSnapshot } from './customer-account-vault';
+import { classifyFirebaseBridgeFailure } from './customer-firebase-session-diagnostics.mjs';
 import { supabase } from './supabase';
 
 type SessionChallenge = Readonly<{
@@ -67,7 +68,20 @@ export async function exchangeVerifiedFirebaseOtpForSupabaseSession(
       },
       body: '{}',
     });
-    if (!response.ok) throw new Error('Customer phone identity is not ready for this login method.');
+    if (!response.ok) {
+      // Log only a fixed error category and HTTP status, never the response body,
+      // Firebase UID, phone number, OTP or token.
+      let backendCode: unknown = null;
+      try {
+        const payload: unknown = await response.json();
+        if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+          backendCode = (payload as Record<string, unknown>).code;
+        }
+      } catch { /* non-JSON backend response */ }
+      const category = classifyFirebaseBridgeFailure(response.status, backendCode);
+      console.warn('[customer-firebase-session] handoff rejected', category, response.status);
+      throw new Error('Customer phone identity is not ready for this login method.');
+    }
     const candidate: unknown = await response.json();
     if (!validChallenge(candidate)) {
       throw new Error('Invalid Customer login session challenge.');
