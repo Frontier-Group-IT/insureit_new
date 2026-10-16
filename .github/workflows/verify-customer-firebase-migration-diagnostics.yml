@@ -13,6 +13,8 @@ on:
       - 'supabase/functions/_shared/customer-firebase-enrollment-service.mjs'
       - 'supabase/functions/_shared/customer-firebase-canary-gate.mjs'
       - 'apps/mobile-app/scripts/customer-firebase-canary-gate.test.mjs'
+      - 'apps/mobile-app/scripts/customer-firebase-canary-provision.test.mjs'
+      - 'supabase/functions/_shared/customer-firebase-canary-provision.mjs'
       - 'apps/mobile-app/scripts/customer-firebase-enrollment-service.test.mjs apps/mobile-app/scripts/customer-firebase-enrollment-sql-contract.test.mjs apps/mobile-app/scripts/customer-firebase-canary-gate.test.mjs'
       - 'apps/mobile-app/scripts/customer-firebase-enrollment-sql-contract.test.mjs'
       - 'supabase/migrations/20261016162000_customer_firebase_enrollment_atomic.sql'
