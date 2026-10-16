@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, Search } from "lucide-react";
+import { AlertTriangle, CalendarDays, ChevronDown, Search } from "lucide-react";
+import { IntermediaryTabs } from "./intermediary-tabs";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { FreshAccountReviewLink } from "./applications/account-review-back-link";
 import { createLinkedIntermediaryAccount } from "./applications/[id]/account-review-actions";
@@ -128,6 +129,7 @@ export function PartnerRegisterClient({
       {success ? <WorkflowSuccessToast message={successMessage} durationMs={4000} /> : null}
       {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10.5px] font-medium text-red-700">The requested action could not be completed. Please try again. If the problem continues, contact the system administrator.</div> : null}
       <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
+        <IntermediaryTabs active="partner" embedded />
         <div className="grid items-center gap-5 border-b border-[#E7ECF3] bg-[#FAFBFD] px-5 py-3.5 lg:grid-cols-[auto_minmax(280px,460px)_1fr]">
           <h2 className="whitespace-nowrap text-[12.5px] font-semibold text-[#17203A]">Partner Register</h2>
           <form onSubmit={(event) => event.preventDefault()} className="relative min-w-0 max-w-[460px]">
@@ -162,7 +164,7 @@ export function PartnerRegisterClient({
           </div>
           {extraFilterCount ? <button type="button" onClick={clearExtraFilters} className="mb-0.5 h-8 rounded-lg px-2.5 text-[8.5px] font-bold text-[#526178] hover:bg-[#F1F5F9] hover:text-[#17365D]">Clear filters ({extraFilterCount})</button> : null}
         </div>
-        {loadError ? <div className="px-4 py-12 text-center text-[11px] text-red-700">The register could not be loaded. Please refresh the page and try again.</div> : pageRows.length ? <PartnerTable rows={pageRows} canPermanentDelete={canPermanentDelete} /> : <div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold">No records found</p><p className="mt-1 text-[10px] text-[#64748B]">Try changing the search, RM, onboarding date or status filter.</p></div>}
+        {loadError ? <div className="px-4 py-12 text-center text-[11px] text-red-700">The register could not be loaded. Please refresh the page and try again.</div> : pageRows.length ? <PartnerTable rows={pageRows} /> : <div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold">No records found</p><p className="mt-1 text-[10px] text-[#64748B]">Try changing the search, RM, onboarding date or status filter.</p></div>}
         {!loadError ? (
           <div className="flex flex-col gap-3 border-t border-[#E7ECF3] bg-white px-4 py-3.5 text-[10px] text-[#64748B] sm:flex-row sm:items-center sm:justify-between">
             <span>Showing {showingStart}–{showingEnd} of {totalRecords}</span>
@@ -174,6 +176,8 @@ export function PartnerRegisterClient({
           </div>
         ) : null}
       </section>
+
+      {canPermanentDelete ? <PartnerDeletePanel rows={rows} /> : null}
     </div>
   );
 }
@@ -182,7 +186,7 @@ function FilterButton({ label, count, active, onClick }: { label: string; count:
   return <button type="button" onClick={onClick} aria-pressed={active} className={`rounded-full px-2.5 py-1.5 transition-colors duration-150 ${active ? "bg-[#E7E7E7] text-[#17203A]" : "text-[#526178] hover:bg-[#E7E7E7] hover:text-[#17203A]"}`}>{label} <span className="ml-1">{count}</span></button>;
 }
 
-function PartnerTable({ rows, canPermanentDelete }: { rows: PartnerRegisterRow[]; canPermanentDelete: boolean }) {
+function PartnerTable({ rows }: { rows: PartnerRegisterRow[] }) {
   const money = (value: number | null) => value === null ? "—" : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
   return <div className="overflow-x-auto">
     <table className="w-full min-w-[1040px] table-fixed text-left text-[10.5px]">
@@ -206,7 +210,7 @@ function PartnerTable({ rows, canPermanentDelete }: { rows: PartnerRegisterRow[]
           <td className="px-3 py-3 text-right tabular-nums" title={row.customerCount === null ? "Customer attribution unavailable" : undefined}>{row.customerCount === null ? "—" : row.customerCount.toLocaleString("en-IN")}</td>
           <td className="px-3 py-3 text-right tabular-nums" title={row.netPremium === null ? "Net premium attribution unavailable" : undefined}>{money(row.netPremium)}</td>
           <td className="px-3 py-3 text-right tabular-nums" title={row.payout === null ? "Payout attribution unavailable" : undefined}>{money(row.payout)}</td>
-          <td className="px-3 py-3 text-center"><div className="flex flex-col items-center gap-1.5">{renderAction(row)}{canPermanentDelete ? <PermanentDeleteButton kind="partner" id={row.id} relatedId={row.partnerRecordId ?? undefined} name={row.displayName} compact /> : null}</div></td>
+          <td className="px-3 py-3 text-center"><div className="flex flex-col items-center gap-1.5">{renderAction(row)}</div></td>
         </tr>;
       })}</tbody>
     </table>
@@ -231,4 +235,32 @@ function Status({ value, tone = "default" }: { value: string; tone?: "default" |
   const normalized = value.toLowerCase();
   const cls = tone === "linked" ? normalized.includes("active") ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-violet-200 bg-violet-50 text-violet-700" : tone === "portal" ? "border-sky-200 bg-sky-50 text-sky-700" : tone === "account" ? normalized.includes("active") ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700" : "border-slate-200 bg-slate-50 text-slate-700";
   return <span className={`inline-flex rounded-md border px-2 py-1 text-[8.5px] font-semibold ${cls}`}>{value}</span>;
+}
+
+function PartnerDeletePanel({ rows }: { rows: PartnerRegisterRow[] }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState("");
+  const choices = useMemo(() => rows.filter((row) => [row.displayName, row.partnerId, row.mobile, row.id].join(" ").toLowerCase().includes(query.trim().toLowerCase())), [rows, query]);
+  const selected = rows.find((row) => row.id === selectedId) ?? null;
+  return <section className="overflow-hidden rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 via-white to-amber-50 shadow-sm">
+    <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} className="flex w-full items-center gap-3 border-b border-red-100 px-5 py-3 text-left">
+      <span className="grid h-10 w-10 place-items-center rounded-xl bg-red-100 text-red-600"><AlertTriangle className="h-5 w-5" /></span>
+      <span className="min-w-0 flex-1"><span className="block text-[11px] font-bold uppercase tracking-wide text-red-700">IT Super User Only</span><span className="block text-[13px] font-semibold text-[#17203A]">Delete Partner Master Record</span></span>
+      <span className="flex items-center gap-2 text-[10px] font-semibold text-red-700">{open ? "Collapse" : "Expand"}<ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} /></span>
+    </button>
+    {open ? <div className="grid items-end gap-3 px-5 py-4 lg:grid-cols-[minmax(150px,1fr)_minmax(200px,1.3fr)_minmax(280px,1.7fr)_auto]">
+      <p className="text-[10.5px] leading-relaxed text-[#64748B]">Permanent deletion is blocked when the Partner has protected business records or dependent relationships.</p>
+      <label className="grid gap-1 text-[9px] font-bold uppercase text-[#64748B]">Find Record
+        <input value={query} onChange={(event) => { setQuery(event.target.value); setSelectedId(""); }} placeholder="Search Partner name, code or mobile" className="h-10 rounded-xl border border-[#D8E1EC] bg-white px-3 text-[11px] font-normal normal-case outline-none focus:border-[#315B9A]" />
+      </label>
+      <label className="grid gap-1 text-[9px] font-bold uppercase text-[#64748B]">Select Exact Record
+        <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)} className="h-10 rounded-xl border border-[#D8E1EC] bg-white px-3 text-[11px] font-normal normal-case text-[#17203A]">
+          <option value="">Choose a Partner</option>
+          {choices.map((row) => <option key={row.id} value={row.id}>{row.displayName} · {row.partnerId} · {row.mobile}</option>)}
+        </select>
+      </label>
+      <div className="min-w-[130px]">{selected ? <PermanentDeleteButton kind="partner" id={selected.id} relatedId={selected.partnerRecordId ?? undefined} name={selected.displayName} label="Delete Partner" /> : <button type="button" disabled className="h-10 w-full rounded-xl bg-red-300 px-4 text-[11px] font-bold text-white opacity-60">Delete Partner</button>}</div>
+    </div> : null}
+  </section>;
 }
