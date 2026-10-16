@@ -39,6 +39,16 @@ Before allowing live requests, designate a reviewer and secure way to acknowledg
 - Both migrations are unapplied; earlier migration already defines `fulfilled` enum/status value for future use, but UI has no transition to fulfilled.
 - Do not merge/deploy these as evidence of end-to-end compliance until the fulfillment executor, test fixtures, notification transport, and approval procedure exist.
 
+## Production schema evidence (READ ONLY, 16 October 2026)
+
+The linked INSUREIT production Supabase project `ilzhsfqqjyppzzvfscmh` was checked with read-only information_schema queries; **no customer rows, auth identities or secrets were retrieved**. Important foreign-key shape:
+
+- `profiles` has **25 RESTRICT**, **25 NO ACTION**, **9 CASCADE**, **82 SET NULL** referencing foreign keys in public schema.
+- `intermediary_portal_accounts` has **1 RESTRICT** reference (policy intake requests) and **2 SET NULL** references.
+- `partner_portal_associate_accounts` has **1 SET NULL** reference.
+- Consequently direct profile/Auth deletion may be blocked or cause unwanted cascades. Disabling access alone is not adequate deletion, while bulk detachment without lawful retention mapping is unsafe. Do not run `auth.admin.deleteUser` until live FK and shared-login dependency checks plus approved cleanup steps are satisfied.
+- Data above is schema aggregate only, not proof of counts for any specific user.
+
 ## Operations prerequisite — before public launch
 
 1. Verify current production database migration status and relations/read-only. Run migration only with separate approval and backup strategy.
