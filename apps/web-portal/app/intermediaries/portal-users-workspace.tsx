@@ -86,7 +86,7 @@ export function IntermediaryPortalUsersWorkspace({ rows, extraRows, initialQuery
                   <td className="px-3 py-3"><span className="rounded-lg bg-[#EEF4FA] px-2 py-1 text-[9px] font-semibold text-[#17365D]">{row.type}</span></td>
                   <td className="px-3 py-3">{row.email??"Email not recorded"}</td><td className="px-3 py-3"><Status value={row.status}/></td>
                   <td className="px-3 py-3">—</td><td className="px-3 py-3">{row.context}</td>
-                  <td className="px-3 py-3 text-right"><Link href={row.manageHref} className="rounded-lg border border-[#CBD5E1] px-3 py-2 text-[9px] font-semibold text-[#17365D] hover:bg-[#F1F5F9]">Manage</Link></td>
+                  <td className="px-3 py-3 text-right"><Link prefetch={false} href={row.manageHref} className="rounded-lg border border-[#CBD5E1] px-3 py-2 text-[9px] font-semibold text-[#17365D] hover:bg-[#F1F5F9]">Manage</Link></td>
                 </tr>;
               }
               const { intermediary, account }=item.row;
@@ -96,7 +96,7 @@ export function IntermediaryPortalUsersWorkspace({ rows, extraRows, initialQuery
                 <td className="px-3 py-3">{account?.email??intermediary.email??"Email not recorded"}</td>
                 <td className="px-3 py-3"><Status value={resolvedStatus(item.row)}/></td>
                 <td className="px-3 py-3">{formatDateTime(account?.invited_at)}</td>
-                <td className="px-3 py-3">{intermediary.application_id?<Link href={`/intermediaries/applications/${intermediary.application_id}`} className="font-semibold text-[#4F46E5] hover:underline">Open account</Link>:"Direct partner"}</td>
+                <td className="px-3 py-3">{intermediary.application_id?<Link prefetch={false} href={`/intermediaries/applications/${intermediary.application_id}`} className="font-semibold text-[#4F46E5] hover:underline">Open account</Link>:"Direct partner"}</td>
                 <td className="px-3 py-3 text-right"><PortalAction row={item.row}/></td>
               </tr>;
             })}</tbody>
