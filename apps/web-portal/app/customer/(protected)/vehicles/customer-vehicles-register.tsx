@@ -15,11 +15,15 @@ export function ManufacturerMark({ make }: { make: string }) {
   const key = make.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
   const brand = manufacturerIcons[key];
   const [failed, setFailed] = useState(false);
+  const initials = make ? make.slice(0, 2).toUpperCase() : "—";
   // The Simple Icons v15 CDN does not provide a reliable TVS asset.
   // Use a clear local TVS wordmark rather than silently falling back to initials.
-  if (key === "tvs" || key === "tvsmotorcompany") return <span role="img" aria-label="TVS Motor" title="TVS Motor" className="inline-flex h-6 w-9 shrink-0 items-center justify-center rounded bg-white text-[13px] font-black italic tracking-[-.08em] text-[#D92131]">TVS</span>;
-  if (!brand || failed) return <span aria-label={make || "Unknown manufacturer"} title={make || "Unknown manufacturer"} className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#EDF3FA] text-[9px] font-bold text-[#426083]">{make ? make.slice(0, 2).toUpperCase() : "—"}</span>;
-  return <img src={`https://cdn.jsdelivr.net/npm/simple-icons@v15/icons/${brand}.svg`} alt={`${make} logo`} title={make} width={24} height={24} loading="lazy" onError={() => setFailed(true)} className={`h-6 w-6 shrink-0 object-contain ${key === "suzuki" ? "brightness-0 saturate-100 [filter:invert(17%)_sepia(99%)_saturate(2195%)_hue-rotate(199deg)_brightness(91%)_contrast(96%)]" : ""}`} />;
+  if (key === "tvs" || key === "tvsmotorcompany") return <span role="img" aria-label="TVS Motor" title="TVS Motor" className="inline-flex h-7 w-10 shrink-0 items-center justify-center rounded bg-white text-[13px] font-black italic tracking-[-.08em] text-[#D92131]">TVS</span>;
+  if (!brand || failed) return <span aria-label={make || "Unknown manufacturer"} title={make || "Unknown manufacturer"} className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md bg-[#EDF3FA] px-1 text-[9px] font-bold text-[#426083]">{initials}</span>;
+  return <span className="relative inline-flex h-7 w-7 shrink-0 items-center justify-center" title={make}>
+    <span aria-hidden="true" className="absolute inset-0 grid place-items-center rounded-md bg-[#EDF3FA] text-[8px] font-bold text-[#426083]">{initials}</span>
+    <img src={`https://cdn.jsdelivr.net/npm/simple-icons@v15/icons/${brand}.svg`} alt={`${make} logo`} width={28} height={28} loading="lazy" onError={() => setFailed(true)} className={`relative z-10 h-7 w-7 rounded-sm bg-white object-contain p-0.5 ${key === "suzuki" ? "brightness-0 saturate-100 [filter:invert(17%)_sepia(99%)_saturate(2195%)_hue-rotate(199deg)_brightness(91%)_contrast(96%)]" : ""}`} />
+  </span>;
 }
 
 export type VehicleItem = { id: string; number: string; make: string; model: string; type: string; chassis: string; engine: string; policy: string | null; status: "due" | "active" | "inactive" | "expired" };
