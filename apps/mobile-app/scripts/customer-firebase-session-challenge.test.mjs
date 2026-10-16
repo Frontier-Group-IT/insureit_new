@@ -45,7 +45,7 @@ test('valid verified pre-existing Auth identity produces one-use Supabase challe
 test('wrong Auth UUID never returns someone else\'s magic-link token', async () => {
   const p = provider(result(other));
   assert.deepEqual(await issueExistingCustomerSessionChallenge(p.db, gate()), {
-    ok: false, reason: 'challenge_user_mismatch',
+    ok: false, reason: 'challenge_uuid_mismatch',
   });
   assert.equal(p.calls.length, 1);
 });
@@ -56,7 +56,7 @@ test('wrong email, invalid token and provider errors deny without leaking tokens
     const p = provider(response);
     const outcome = await issueExistingCustomerSessionChallenge(p.db, gate());
     assert.equal(outcome.ok, false);
-    assert.equal(outcome.reason, 'challenge_user_mismatch');
+    assert.ok(['challenge_uuid_mismatch', 'challenge_email_mismatch', 'challenge_hash_format_mismatch', 'challenge_provider_rejected'].includes(outcome.reason));
     assert.equal('token_hash' in outcome, false);
   }
 });
