@@ -14,6 +14,10 @@ Implementation in branch `feat/partner-account-deletion-request-ios-20261016`. N
 - Users are informed that eligible personal information will be removed upon verified fulfillment, while appropriate historical insurance/claim/finance/regulatory records may remain subject to legitimate retention requirements.
 - No Auth users, Partner organization records, insurance policies, claims, customers, audit, login profiles or storage objects are deleted by this change.
 
+## IT-only operational review queue
+
+`GET /api/admin/partner-deletion-requests` shows latest 100 records to logged-in IT Super Users only, including identity references and statuses. `PATCH` supports `start_review` (requested → under_review) and `decline` (under_review → declined, mandatory reason), and records reviewer ID and review timestamp. It intentionally offers **no fulfilled transition or user deletion**. Privacy administrator must arrange secure identity handling and request acknowledgement, plus real deletion fulfillment before launch. This API has no admin UI yet.
+
 ## Operations prerequisite — before public launch
 
 1. Verify current production database migration status and relations/read-only. Run migration only with separate approval and backup strategy.
