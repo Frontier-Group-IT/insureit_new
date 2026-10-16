@@ -1,11 +1,8 @@
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { redirect } from "next/navigation";
-import { createProfileRecord } from "@/app/actions";
-import { FormSubmitButton } from "@/components/form-submit-button";
 import { AppShell } from "@/components/shell";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
-import { appRoles, designationOptions, roleLabels } from "@/lib/roles";
 import { UserManagementWorkspace, type ProfileRow } from "./user-management-workspace";
 
 type ProfileRecord = Omit<ProfileRow, "direct_reports">;
@@ -38,40 +35,21 @@ export default async function UsersPage({ searchParams }: { searchParams?: Promi
   const managers = profiles
     .filter((item) => item.is_active)
     .map((item) => ({ id: item.id, full_name: item.full_name, role: item.role }));
-  const employeeRoles = appRoles.filter((item) => item !== "customer");
-
   return (
     <AppShell title="User Management">
-      <div className="mb-6">
-        <h1 className="text-2xl font-black text-navy-900">User Management</h1>
-        <p className="mt-2 max-w-3xl text-sm text-slate-600">Create login users securely, manage profile records, assign roles/reporting managers, and use safe deactivation.</p>
-      </div>
-
-      <section className="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-soft">
-        <h2 className="text-lg font-bold text-navy-900">Create user</h2>
-        <form action={createProfileRecord} className="mt-4 grid gap-3 md:grid-cols-3">
-          <Input name="email" label="Email" required />
-          <Input name="password" label="Temporary password" type="password" required />
-          <Input name="full_name" label="Full name" required />
-          <Input name="phone" label="Phone" />
-          <Input name="employee_code" label="Employee code" />
-          <Select name="role" label="Role" options={employeeRoles.map((item) => [item, roleLabels[item]])} required />
-          <Select name="reporting_manager_id" label="Reporting manager" options={managers.map((item) => [item.id, `${item.full_name} (${roleLabels[item.role as keyof typeof roleLabels] ?? item.role})`])} />
-          <Input name="department" label="Department" />
-          <Select name="designation" label="Designation" options={designationOptions.map((item) => [item, item])} />
-          <FormSubmitButton label="Create profile" pendingLabel="Creating" className="inline-flex items-center justify-center rounded-2xl bg-navy-900 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-70 md:col-span-3" />
-        </form>
-      </section>
-
+      <div className="mx-auto max-w-[1500px] space-y-3 pb-6">
+        <section className="flex min-h-[68px] items-center justify-between rounded-2xl border border-[#DCE4EF] bg-white px-5 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
+          <div>
+            <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-[#64748B]">System administration</p>
+            <h1 className="mt-1 text-[20px] font-bold tracking-[-0.02em] text-[#17203A]">User Management</h1>
+          </div>
+          <div className="rounded-xl border border-[#DCE4EF] bg-[#F8FAFC] px-3 py-2 text-right">
+            <p className="text-[8px] font-bold uppercase text-[#94A3B8]">Directory</p>
+            <p className="mt-0.5 text-[11px] font-bold text-[#17365D]">{users.length} users</p>
+          </div>
+        </section>
       <UserManagementWorkspace users={users} managers={managers} canPermanentDelete={profile?.role === "it_super_user"} initialQuery={params.q?.trim() ?? ""} initialRole={params.role ?? ""} initialStatus={params.status ?? ""} loadError={error ? "User records could not be loaded. Please refresh and try again." : null} />
+      </div>
     </AppShell>
   );
-}
-
-function Input({ label, ...props }: { label: string; name: string; required?: boolean; type?: string }) {
-  return <label className="grid gap-1 text-xs font-bold text-slate-600">{label}<input {...props} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-normal text-slate-900" /></label>;
-}
-
-function Select({ label, options, ...props }: { label: string; name: string; required?: boolean; options: [string, string][] }) {
-  return <label className="grid gap-1 text-xs font-bold text-slate-600">{label}<select {...props} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-normal text-slate-900"><option value="">Select</option>{options.map(([value, labelText]) => <option key={value} value={value}>{labelText}</option>)}</select></label>;
 }

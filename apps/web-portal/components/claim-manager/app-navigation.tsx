@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BarChart3, BadgeCheck, ChevronRight, ClipboardList, FileCheck2, FileInput, FlaskConical, Gauge, Landmark, LayoutGrid, Plus, Settings, ShieldCheck, Sparkles, Store, Upload, UserCog, UserPlus, UsersRound } from "lucide-react";
+import { BarChart3, BadgeCheck, ChevronRight, ClipboardList, FileCheck2, FileInput, FlaskConical, Gauge, Landmark, LayoutGrid, Plus, Settings, ShieldCheck, Sparkles, Store, Upload, UserPlus, UsersRound } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { BrandLockup } from "@/components/brand-lockup";
 import { internalLaunchHome, isIntermediaryOnlyLaunch } from "@/lib/launch-scope";
@@ -33,7 +33,7 @@ export const navigationSections:NavigationSection[]=[
  {key:"claims",label:"Claims",icon:ShieldCheck,tint:"from-[#ff6f61] to-[#ff9f68]",capability:"view_claims",items:[{href:"/claims",label:"All Claims",icon:ClipboardList,capability:"view_claims"}]},
  {key:"distribution",label:"Intermediaries",icon:Sparkles,tint:"from-[#17c7c9] to-[#6759ff]",capability:"view_intermediaries",items:[
   {kind:"group",key:"intermediary-onboarding",label:"Onboarding",icon:FileCheck2,capability:"view_intermediaries",items:[{href:"/customers/posp-misp",label:"Pending Applications",icon:FileCheck2,capability:"view_intermediaries"}]},
-  {kind:"group",key:"partners",label:"Partners",icon:UsersRound,capability:"view_intermediaries",items:[{href:"/intermediaries/partner",label:"All Partners",icon:UsersRound,capability:"view_intermediaries"},{href:"/intermediaries/portal-users",label:"Portal Users",icon:UserCog,capability:"review_intermediary_application"}]},
+  {kind:"group",key:"partners",label:"Partners",icon:UsersRound,capability:"view_intermediaries",items:[{href:"/intermediaries/partner",label:"All Partners",icon:UsersRound,capability:"view_intermediaries"}]},
   {kind:"group",key:"posp",label:"POSP",icon:UsersRound,capability:"view_intermediaries",items:[{href:"/intermediaries/posp",label:"All POSP",icon:UsersRound,capability:"view_intermediaries"},{href:"/intermediaries/posp/new",label:"Add POSP",icon:UserPlus,capability:"create_intermediary_application"},{href:"/customers/posp-misp/existing/new?partner_type=posp",label:"Add Existing POSP",icon:UserPlus,capability:"create_intermediary_application"}]},
   {kind:"group",key:"misp",label:"MISP",icon:UsersRound,capability:"view_intermediaries",items:[{href:"/intermediaries/misp",label:"All MISP",icon:UsersRound,capability:"view_intermediaries"},{href:"/intermediaries/misp/new",label:"Add MISP",icon:UserPlus,capability:"create_intermediary_application"},{href:"/customers/posp-misp/existing/new?partner_type=misp",label:"Add Existing MISP",icon:UserPlus,capability:"create_intermediary_application"}]}
  ]},
