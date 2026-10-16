@@ -8,6 +8,12 @@
 import type { NativeFirebasePhoneAuth } from './firebase-native-phone-flow';
 
 export type ReactNativeFirebaseAuthModule = {
+  clearPreviousFirebaseUser?: () => Promise<void>;
+  getAutoVerifiedUser?: () => Promise<{
+    uid: string;
+    phoneNumber: string | null;
+    getIdToken: (forceRefresh?: boolean) => Promise<string>;
+  } | null>;
   signInWithPhoneNumber: (phone: string) => Promise<{
     confirm: (code: string) => Promise<{
       user: {
@@ -31,5 +37,7 @@ export function createAndroidFirebasePhoneAuth(
   }
   return {
     signInWithPhoneNumber: (phone) => sdkAuth.signInWithPhoneNumber(phone),
+    clearPreviousFirebaseUser: sdkAuth.clearPreviousFirebaseUser,
+    getAutoVerifiedUser: sdkAuth.getAutoVerifiedUser,
   };
 }
