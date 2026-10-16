@@ -24,6 +24,12 @@ Implementation in branch `feat/partner-account-deletion-request-ios-20261016`. N
 
 **Verification matrix before production:** anonymous user => 403; regular Partner user => 403; IT Super User + invalid UUID => 400; nonexistent request => 404; admin + valid request => scoped read-only inspection; database error => 503; ensure no writes. Test subordinate/associate accounts and cases with attached business history. Do not use a real user for destructive QA.
 
+## Administrator review interface
+
+`/system/partner-deletion-requests` is a server-authorized IT Super User workspace with the most recent 100 requests, read-only dependency inspection and explicit `requested -> under_review -> declined` handling. The PATCH endpoint enforces same-origin requests. Neither the UI nor the API offers a `fulfilled` transition or Auth deletion. The permanent-delete facility elsewhere in the portal must **not** be used as a substitute for reviewed privacy fulfillment.
+
+Before allowing live requests, designate a reviewer and secure way to acknowledge and notify requesters. Establish a verified procedure to detach eligible Auth identity data without cascading into partner, policy, claim, accounting or audit histories. A user may have both employee and intermediary credentials; review all login types and dependent foreign keys. The user-facing feature must not be described to Apple as automatically deleting all account data.
+
 ## Operations prerequisite — before public launch
 
 1. Verify current production database migration status and relations/read-only. Run migration only with separate approval and backup strategy.
