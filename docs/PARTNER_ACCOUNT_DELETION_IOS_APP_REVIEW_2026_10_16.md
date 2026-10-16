@@ -18,6 +18,12 @@ Implementation in branch `feat/partner-account-deletion-request-ios-20261016`. N
 
 `GET /api/admin/partner-deletion-requests` shows latest 100 records to logged-in IT Super Users only, including identity references and statuses. `PATCH` supports `start_review` (requested → under_review) and `decline` (under_review → declined, mandatory reason), and records reviewer ID and review timestamp. It intentionally offers **no fulfilled transition or user deletion**. Privacy administrator must arrange secure identity handling and request acknowledgement, plus real deletion fulfillment before launch. This API has no admin UI yet.
 
+## Read-only deletion safety preflight
+
+`GET /api/admin/partner-deletion-requests/preflight?id=<request-uuid>` is limited to IT Super Users. It inspects the pending request’s Auth-linked portal accounts, associate accounts, profile/employee references and the existing `admin_hard_delete_blockers` function without writing data. It ALWAYS reports `safe_to_auto_delete: false`; a zero-blocker result is not permission to delete. No automatic fulfillment endpoint exists. The profile identity may be shared with Operations login, and partner business records must remain intact.
+
+**Verification matrix before production:** anonymous user => 403; regular Partner user => 403; IT Super User + invalid UUID => 400; nonexistent request => 404; admin + valid request => scoped read-only inspection; database error => 503; ensure no writes. Test subordinate/associate accounts and cases with attached business history. Do not use a real user for destructive QA.
+
 ## Operations prerequisite — before public launch
 
 1. Verify current production database migration status and relations/read-only. Run migration only with separate approval and backup strategy.
