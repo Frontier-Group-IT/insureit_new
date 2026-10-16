@@ -45,7 +45,8 @@ try {
       "delete from auth.identities where user_id='"+userId+"'; "+
       "update auth.users u set email=s.email,encrypted_password=s.encrypted_password,email_confirmed_at=s.email_confirmed_at,updated_at=now() "+
       "from auth._firebase_recovery_user s where u.id=s.id and u.id='"+userId+"'; "+
-      "insert into auth.identities select * from auth._firebase_recovery_identities; commit;");
+      "insert into auth.identities (provider_id,user_id,identity_data,provider,last_sign_in_at,created_at,updated_at,id) "+
+      "select provider_id,user_id,identity_data,provider,last_sign_in_at,created_at,updated_at,id from auth._firebase_recovery_identities; commit;");
  const proof=await client().auth.signInWithPassword({email:identity,password:initialPassword});
  assert.equal(proof.error,null);assert.equal(proof.data.user.id,userId);
  const after=await admin.auth.admin.getUserById(userId);
