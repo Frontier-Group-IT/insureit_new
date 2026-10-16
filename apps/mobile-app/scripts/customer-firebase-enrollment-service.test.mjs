@@ -51,7 +51,7 @@ test('approved server operator may commit through exactly one atomic RPC',async(
    return {data:'enrolled',error:null};
  };
  const r=await commitVerifiedEnrollment({firebaseAdmin:s.firebaseAdmin,idToken:'x'.repeat(128),
- customer:{profile,authUser},db:s.db,authorization:{...authorization,firebaseUid:uid,verifiedPhone:firebase.phone_number},
+ customer:{profile,authUser},db:s.db,authorization:{...authorization,firebaseUid:uid,verifiedPhone:token.phone_number},
  operator:{verifiedPrivilegedStaff:true,id:'22222222-2222-4222-8222-222222222222'},
  evidenceDigest:'a'.repeat(64),nowSeconds:now,apply:true});
  assert.equal(r.action,'enrolled');assert.equal(calls,1);
