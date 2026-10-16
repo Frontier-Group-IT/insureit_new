@@ -4,6 +4,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { checkCustomerSessionEligibility, checkVerifiedFirebaseCustomerForSession, FIREBASE_CUSTOMER_PROJECT } from "../_shared/customer-firebase-session-policy.mjs";
 import { ensureCustomerSupabaseSessionAlias } from "../_shared/customer-firebase-session-provision.mjs";
 import { issueExistingCustomerSessionChallenge } from "../_shared/customer-firebase-session-challenge.mjs";
+import { checkCustomerFirebaseCanary } from "../_shared/customer-firebase-canary-gate.mjs";
 
 /**
  * UNDEPLOYED PHASE-2 CANDIDATE: Firebase SMS OTP -> native Supabase Auth session.
@@ -101,6 +102,15 @@ Deno.serve(async (request: Request) => {
     if (profileResult.error || authResult.error) {
       throw new Error("Customer authentication lookup failed");
     }
+    // Deny everyone outside the two owner-approved canonical Customer UUIDs.
+    // Staff sharing either mobile number are NEVER eligible.
+    if (!checkCustomerFirebaseCanary({
+      profile: profileResult.data,
+      authUser: authResult.data.user,
+      link: links[0],
+      phone: decoded.phone_number,
+    }).ok) return response(403, "outside_approved_canary");
+
     // 1. Verify the canonical identity *independently* of any Auth email.
     const originalPrincipal = {
       firebase: decoded,
