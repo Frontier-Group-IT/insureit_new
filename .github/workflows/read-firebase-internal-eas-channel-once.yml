@@ -34,3 +34,5 @@ jobs:
           npx eas-cli channel:view firebase-internal --json --non-interactive
           echo 'Expo current identity:'
           npx eas-cli whoami
+          echo 'Post-release production channel mapping (read only):'
+          npx eas-cli channel:view production --json --non-interactive
