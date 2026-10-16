@@ -36,11 +36,16 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
           50% { transform: scale(1.018); }
         }
         .customer-home-breathe { animation: customerHomeBreathe 4.8s ease-in-out infinite; transform-origin: center; }
-        @media (prefers-reduced-motion: reduce) { .customer-home-breathe { animation: none; } }
+        @keyframes customerHeroZoom { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+        .customer-home-hero-image { animation: customerHeroZoom 11s ease-in-out infinite; transform-origin: 75% center; }
+        .customer-home-quick-action { position: relative; transform-origin: center; transition: transform 300ms ease, box-shadow 300ms ease, background-color 300ms ease; }
+        @media (hover: hover) { .customer-home-quick-action:hover { z-index: 2; transform: scale(1.08); box-shadow: 0 12px 26px rgba(20,58,100,.14); } }
+        .customer-home-quick-action:focus-visible { z-index: 2; transform: scale(1.08); box-shadow: 0 12px 26px rgba(20,58,100,.14); outline: 2px solid #1769DC; outline-offset: 2px; }
+        @media (prefers-reduced-motion: reduce) { .customer-home-breathe, .customer-home-hero-image { animation: none; } .customer-home-quick-action, .customer-home-quick-action:focus-visible, .customer-home-quick-action:hover { transition: none; transform: none; } }
       `}</style>
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/home" />
       <section className="relative isolate overflow-hidden rounded-[22px] border border-[#D6E7FA] bg-[#DDEEFF] p-5 text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.06)] sm:p-7">
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-[75%] bg-[url('/assets/customerhome.jpeg')] bg-cover bg-center opacity-80"/>
+        <div className="customer-home-hero-image pointer-events-none absolute inset-y-0 right-0 w-[75%] bg-[url('/assets/customerhome.jpeg')] bg-cover bg-center opacity-80"/>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EAF5FF] via-[#EAF5FF]/95 via-40% to-[#EAF5FF]/10"/>
         <div className="relative flex min-h-[155px] max-w-[560px] items-center py-2 sm:min-h-[185px] sm:py-4">
           <h1 className="text-[clamp(27px,3vw,38px)] font-bold tracking-tight">Good morning, {account.contact_name?.split(" ")[0] || "Customer"}!</h1>
@@ -69,7 +74,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
             {title:"My vehicles",href:"/customer/vehicles",icon:Truck,background:"bg-[#E7F8EF]",color:"text-[#087A57]"},
             {title:"Vehicle exchange",href:"/customer/exchange",icon:ArrowLeftRight,background:"bg-[#F1ECFF]",color:"text-[#7546CE]"},
             {title:"Support",href:"/customer/support",icon:Headset,background:"bg-[#EAF3FF]",color:"text-[#1769DC]"},
-          ].map(({title,href,icon:Icon,background,color})=><Link key={href} href={href === "/customer/start-claim" ? { pathname: "/customer/start-claim", query: accountQuery } : { pathname: href, query: accountQuery }} className="customer-home-breathe group flex min-w-0 flex-col items-center gap-2 rounded-xl px-2 py-3 text-center transition hover:bg-[#F3F8FE]"><span className={`grid h-11 w-11 place-items-center rounded-xl ${background} ${color}`}><Icon className="h-[22px] w-[22px] stroke-[2]"/></span><span className="text-[12px] font-semibold text-[#244771]">{title}</span></Link>)}
+          ].map(({title,href,icon:Icon,background,color})=><Link key={href} href={href === "/customer/start-claim" ? { pathname: "/customer/start-claim", query: accountQuery } : { pathname: href, query: accountQuery }} className="customer-home-quick-action group flex min-w-0 flex-col items-center gap-2 rounded-xl px-2 py-3 text-center hover:bg-[#F3F8FE]"><span className={`grid h-11 w-11 place-items-center rounded-xl ${background} ${color}`}><Icon className="h-[22px] w-[22px] stroke-[2]"/></span><span className="text-[12px] font-semibold text-[#244771]">{title}</span></Link>)}
         </nav>
         <Link href={{ pathname: "/customer/claims", query: accountQuery }} className="mt-3 inline-flex items-center gap-1 text-[12px] font-semibold text-[#1769DC]">Track Existing Claims <ArrowRight className="h-4 w-4"/></Link>
       </section>
