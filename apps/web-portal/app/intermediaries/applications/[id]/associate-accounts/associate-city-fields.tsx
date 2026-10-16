@@ -92,7 +92,7 @@ const CITY_OPTIONS: CityOption[] = [
 ];
 
 const inputClass =
-  "h-10 w-full rounded-xl border border-[#D8DEE9] bg-white px-3 text-[11px] text-[#17203A] outline-none focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]";
+  "h-9 w-full rounded-lg border border-[#D8DEE9] bg-white px-3 text-[11px] text-[#17203A] outline-none focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]";
 
 export function AssociateCityFields({
   defaultCity = "",
@@ -153,7 +153,7 @@ export function AssociateCityFields({
   return (
     <>
       <label className="relative">
-        <span className="mb-1.5 block text-[8.5px] font-bold uppercase tracking-wide text-[#64748B]">
+        <span className="mb-1 block text-[8.5px] font-bold uppercase tracking-wide text-[#64748B]">
           City
         </span>
         <input
@@ -218,7 +218,7 @@ export function AssociateCityFields({
       </label>
 
       <label>
-        <span className="mb-1.5 block text-[8.5px] font-bold uppercase tracking-wide text-[#64748B]">
+        <span className="mb-1 block text-[8.5px] font-bold uppercase tracking-wide text-[#64748B]">
           State
         </span>
         <input
@@ -233,7 +233,7 @@ export function AssociateCityFields({
       </label>
 
       <label>
-        <span className="mb-1.5 block text-[8.5px] font-bold uppercase tracking-wide text-[#64748B]">
+        <span className="mb-1 block text-[8.5px] font-bold uppercase tracking-wide text-[#64748B]">
           PIN Code
         </span>
         <input
