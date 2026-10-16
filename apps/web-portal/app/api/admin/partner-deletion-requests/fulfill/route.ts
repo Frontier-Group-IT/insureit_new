@@ -20,6 +20,7 @@ export async function POST(request: Request) {
   if (!profile?.id || profile.role !== "it_super_user") return reply({ error: "Access denied." }, 403);
   const input = await request.json().catch(() => null) as { id?: unknown; confirmation?: unknown; retentionConfirmed?: unknown } | null;
   if (!input || typeof input.id !== "string" || !UUID.test(input.id) || input.confirmation !== "DELETE LOGIN IDENTITY" || input.retentionConfirmed !== true) return reply({ error: "Request ID, exact confirmation and retention approval required." }, 400);
+  if (process.env.PARTNER_DELETION_EXECUTION_ENABLED !== "true") return reply({ error:"Identity deletion execution is disabled until test verification and explicit rollout." },503);
   const admin = createSupabaseAdminClient();
   const { data: row, error: rowError } = await admin.from("partner_account_deletion_requests")
     .select("id,auth_user_id,actor_kind,actor_id,intermediary_id,status").eq("id", input.id).maybeSingle();
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
   const { error: banError } = await admin.auth.admin.updateUserById(row.auth_user_id,{ ban_duration:"876000h" });
   if (banError) return reply({ error:"Unable to suspend identity; no deletion performed." },503);
   const { error: detachError } = await admin.from("intermediary_portal_accounts")
-    .update({auth_user_id:null,status:"disabled"}).eq("id",row.actor_id).eq("auth_user_id",row.auth_user_id);
+    .update({auth_user_id:null,status:"disabled"}).eq("id",row.actor_id).eq("auth_user_id",row.auth_user_id).select("id").single();
   if (detachError) return reply({ error:"Identity suspended, but could not detach portal account. Contact IT." },503);
   const { error: authDeleteError } = await admin.auth.admin.deleteUser(row.auth_user_id);
   if (authDeleteError) return reply({ error:"Portal access detached and identity suspended; Auth deletion needs manual recovery." },503);
