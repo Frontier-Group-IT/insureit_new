@@ -70,6 +70,10 @@ Based on official Supabase SDK guidance, the guarded executor now uses `auth.adm
 
 The executable path remains restricted to isolated primary intermediary identities and guarded by the default-off environment switch and exact administrator confirmation. Do not claim all Partner/employee deletion modes are covered. A disposable test identity and real notification inbox must be used to verify login denial, data-retention equality and email receipt before enabling general use.
 
+## Atomic fulfillment and failed-state handling
+
+`fulfilling` is a database-tracked, single-flight status: only one IT administrator can atomically transition from `under_review` to `fulfilling`. The partial unique index includes `fulfilling`, so a user cannot submit a duplicate request during execution. If any subsequent operation fails, the request intentionally remains `fulfilling` for manual reconciliation, and the execution endpoint rejects retry until an authorized operator investigates the exact completed step. `partner_account_deletion_events` captures approval, identity revocation and finalization events; delivery service response ID is stored for audit. Notification provider acceptance is not proof of receipt, and a non-atomic cross-service failure requires explicit reconciliation.
+
 ## Operations prerequisite — before public launch
 
 1. Verify current production database migration status and relations/read-only. Run migration only with separate approval and backup strategy.
