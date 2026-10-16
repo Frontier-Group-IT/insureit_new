@@ -57,7 +57,8 @@ begin
  (customer_profile_id,action,operator_id,evidence_digest)
  values (p_profile_id,'enrollment_approved',p_operator_id,p_evidence_digest);
  return 'enrolled';
-end $$;
+end;
+$;
 revoke all on function public.customer_firebase_enroll_approved(uuid,text,text,uuid,text) from public,anon,authenticated;
 grant execute on function public.customer_firebase_enroll_approved(uuid,text,text,uuid,text) to service_role;
 commit;
