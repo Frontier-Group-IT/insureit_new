@@ -39,3 +39,40 @@ export async function prepareVerifiedEnrollment({ firebaseAdmin, idToken, custom
   // operator operation and must be atomic and auditable before activation.
   return {ok:true,action:decision.action,profileId:decision.profileId};
 }
+
+/**
+ * Service-only, explicit operator execution. The caller MUST supply a trusted
+ * independently authenticated operator approval; this function is not an HTTP
+ * endpoint and never accepts public-client requests.
+ */
+export async function commitVerifiedEnrollment({ firebaseAdmin, idToken, customer, db,
+    authorization, operator, evidenceDigest, nowSeconds, apply=false }) {
+  if (apply !== true) return {ok:false,reason:'dry_run_only'};
+  if (!operator || operator.verifiedPrivilegedStaff !== true ||
+      typeof operator.id !== 'string' || !/^[0-9a-f-]{36}$/i.test(operator.id) ||
+      typeof evidenceDigest !== 'string' || !/^[a-f0-9]{64}$/.test(evidenceDigest)) {
+    return {ok:false,reason:'privileged_operator_and_evidence_required'};
+  }
+  const checked=await prepareVerifiedEnrollment({
+    firebaseAdmin,idToken,customer,db,authorization,nowSeconds
+  });
+  if (!checked.ok || checked.action !== 'manual_approval_required') return checked;
+  // Service-only Postgres function holds locks, checks both accounts/phones and
+  // writes approved mapping + audit in a single transaction.
+  const refreshed=await firebaseAdmin.verifyIdToken(idToken,true).catch(()=>null);
+  if (!refreshed || refreshed.uid !== authorization.firebaseUid ||
+      refreshed.phone_number !== authorization.verifiedPhone) {
+    return {ok:false,reason:'verified_identity_changed'};
+  }
+  const result=await db.rpc('customer_firebase_enroll_approved',{
+    p_profile_id:checked.profileId,
+    p_firebase_uid:refreshed.uid,
+    p_verified_phone:refreshed.phone_number,
+    p_operator_id:operator.id,
+    p_evidence_digest:evidenceDigest,
+  });
+  if (result.error) return {ok:false,reason:'atomic_enrollment_rejected'};
+  return result.data === 'enrolled'
+    ? {ok:true,action:'enrolled'}
+    : {ok:false,reason:'enrollment_result_unexpected'};
+}
