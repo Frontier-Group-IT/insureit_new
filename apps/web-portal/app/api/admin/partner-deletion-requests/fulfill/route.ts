@@ -52,6 +52,12 @@ export async function POST(request: Request) {
     .eq("id",row.id).eq("status","under_review").select("id").maybeSingle();
   if (claimError || !claimed) return reply({ error:"Request already claimed, changed, or could not be reserved. No deletion performed." },409);
 
+  const { error: claimAuditError } = await admin.from("partner_account_deletion_events").insert({
+    request_id:row.id, actor_profile_id:profile.id, action:"fulfillment_authorized",
+    details:{ mode:"auth_soft_delete", actor_kind:row.actor_kind },
+  });
+  if (claimAuditError) return reply({ error:"Claim reserved, but audit write failed. IT reconciliation required; no identity deletion performed." },503);
+
   // Freeze the login before any irreversible operation. A failed delete leaves
   // a suspended identity for manual investigation rather than an active account.
   const { error: banError } = await admin.auth.admin.updateUserById(row.auth_user_id,{ ban_duration:"876000h" });
@@ -62,6 +68,11 @@ export async function POST(request: Request) {
   // Soft-delete preserves the auth.users primary key, preventing cascades into historical business records.
   const { error: authDeleteError } = await admin.auth.admin.deleteUser(row.auth_user_id, true);
   if (authDeleteError) return reply({ error:"Portal access detached and identity suspended; Auth deletion needs manual recovery." },503);
+  const { error: identityEventError } = await admin.from("partner_account_deletion_events").insert({
+    request_id:row.id, actor_profile_id:profile.id, action:"identity_revoked",
+    details:{ mode:"auth_soft_delete", portal_account_id:row.actor_id },
+  });
+  if (identityEventError) return reply({ error:"Identity soft-deleted but audit event failed. IT reconciliation required." },503);
 
   // Any notify failure stays under_review, requiring manual notification retry.
   try {
@@ -77,6 +88,8 @@ export async function POST(request: Request) {
       resolution_note:"Primary intermediary Auth identity soft-deleted (irreversible), portal login disabled, business FK history preserved; completion email accepted by provider.",
     }).eq("id",row.id).eq("status","fulfilling");
     if (completedError) return reply({ error:"Identity deleted and notification accepted, but request audit finalization requires IT reconciliation." },503);
+    await admin.from("partner_account_deletion_events").insert({ request_id:row.id, actor_profile_id:profile.id,
+      action:"fulfilled", details:{ notification_id:email.id } });
     return reply({ ok:true,request_id:row.id,status:"fulfilled" });
   } catch {
     return reply({ error:"Identity deleted but completion notification failed. IT must retry notification and reconcile request status." },503);
