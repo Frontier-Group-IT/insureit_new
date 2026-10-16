@@ -50,7 +50,7 @@ export async function PartnerBranchSections({applicationId}:{applicationId:strin
       <div className="flex justify-end"><FormSubmitButton label="Save" pendingLabel="Saving…"/></div>
     </form>}
   </section>,
-  register:<section aria-label="Branch Register"><BranchRegisterWorkspace rows={rows} canManage={canCreate} canPermanentDelete={manager?.role==="it_super_user"} loadError={loadError}/></section>
+  register:<section aria-label="Branch Register"><BranchRegisterWorkspace rows={rows} canManage={canCreate} canPermanentDelete={manager?.role==="it_super_user"} loadError={loadError} embedded/></section>
  };
 }
 function Message({children}:{children:React.ReactNode}) {return <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] text-amber-900">{children}</div>;}
