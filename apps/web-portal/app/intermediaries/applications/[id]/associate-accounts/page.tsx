@@ -121,12 +121,12 @@ export default async function PartnerAssociateAccountsPage({
     <AppShell title="Partner Associate Accounts" backHref={`/intermediaries/applications/${id}`}>
       <div className="mx-auto max-w-[1480px] space-y-4 pb-8">
         {query.success ? (
-          <AssociateAccountResultToast tone="success" message={successMessage(query.success)} />
+          <AssociateAccountResultToast tone="success" message={query.success === "branch_created" ? "Branch created successfully and portal invitation sent." : successMessage(query.success)} />
         ) : null}
         {query.associate_error || query.error ? (
           <AssociateAccountResultToast
             tone="error"
-            message={errorMessage(query.associate_error ?? query.error ?? "", query.retry_after)}
+            message={query.error === "branch_parent_mismatch" ? "The Branch parent does not match this Partner. No Branch was created." : errorMessage(query.associate_error ?? query.error ?? "", query.retry_after)}
             acknowledge={isAssociateEmailInUse(query.associate_error ?? query.error ?? "")}
           />
         ) : null}
