@@ -5,6 +5,7 @@ import { checkCustomerSessionEligibility, checkVerifiedFirebaseCustomerForSessio
 import { ensureCustomerSupabaseSessionAlias } from "../_shared/customer-firebase-session-provision.mjs";
 import { issueExistingCustomerSessionChallenge } from "../_shared/customer-firebase-session-challenge.mjs";
 import { checkCustomerFirebaseCanary } from "../_shared/customer-firebase-canary-gate.mjs";
+import { provisionDisposableFirebaseCanaryAlias } from "../_shared/customer-firebase-canary-provision.mjs";
 
 /**
  * UNDEPLOYED PHASE-2 CANDIDATE: Firebase SMS OTP -> native Supabase Auth session.
@@ -49,10 +50,8 @@ function firebaseVerifier() {
 
 Deno.serve(async (request: Request) => {
   if (request.method !== "POST") return response(405, "method_not_allowed");
-  // Additional fail-closed deployment guard; never enabled by source alone.
-  if (Deno.env.get("CUSTOMER_FIREBASE_SESSION_BRIDGE_ENABLED") !== "true") {
-    return response(503, "session_bridge_disabled");
-  }
+  // The global bridge remains disabled. Only exact owner-authorized disposable
+  // Customer identities may pass the later server-verified canary gate.
   // No user-selectable profile UUID, email or phone in the payload.
   const bearer = /^Bearer (\S+)$/.exec(request.headers.get("authorization") ?? "");
   if (!bearer || bearer[1].length > MAX_TOKEN) return response(401, "invalid_token");
@@ -111,6 +110,8 @@ Deno.serve(async (request: Request) => {
       phone: decoded.phone_number,
     }).ok) return response(403, "outside_approved_canary");
 
+    // Global rollout stays disabled even if a stale deployment flag is true.
+    // Only the two exact Customer UUIDs are eligible for this canary.
     // 1. Verify the canonical identity *independently* of any Auth email.
     const originalPrincipal = {
       firebase: decoded,
@@ -137,11 +138,13 @@ Deno.serve(async (request: Request) => {
     // 3. Existing phone-only Customers may receive the deterministic
     // non-deliverable alias on the SAME original Auth user UUID. This is
     // explicitly disabled in every environment unless separately approved.
-    const provision = await ensureCustomerSupabaseSessionAlias({
+    const provision = await provisionDisposableFirebaseCanaryAlias({
       db,
+      profile: profileResult.data,
       authUser: authResult.data.user,
-      customerProfileId: verified.customerProfileId,
-      enabled: Deno.env.get("CUSTOMER_FIREBASE_SESSION_ALIAS_JIT_ENABLED") === "true",
+      link: links[0],
+      verifiedPhone: decoded.phone_number,
+      explicitCanaryApproval: true,
     });
     if (!provision.ok) return response(409, "session_identity_not_provisioned");
 
