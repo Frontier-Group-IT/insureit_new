@@ -42,7 +42,7 @@ export async function POST(request: Request) {
   const admin = createSupabaseAdminClient();
   const { data: existing, error: existingError } = await admin.from("partner_account_deletion_requests")
     .select("id,status,requested_at").eq("auth_user_id", auth.userId)
-    .in("status", ["requested","under_review"]).limit(1);
+    .in("status", ["requested","under_review","fulfilling"]).limit(1);
   if (existingError) return reply({ error: "Unable to verify existing requests." }, 503);
   if (existing?.length) return reply({ request: existing[0], already_requested: true });
   const { data, error } = await admin.from("partner_account_deletion_requests").insert({
