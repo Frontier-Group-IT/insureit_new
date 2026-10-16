@@ -10,6 +10,8 @@ on:
       - 'apps/mobile-app/lib/customer-firebase-session-exchange.ts'
       - 'apps/mobile-app/scripts/customer-firebase-migration-preflight.test.mjs'
       - 'supabase/functions/_shared/customer-firebase-migration-preflight.mjs'
+      - 'supabase/functions/_shared/customer-firebase-enrollment-service.mjs'
+      - 'apps/mobile-app/scripts/customer-firebase-enrollment-service.test.mjs'
       - 'scripts/customer-firebase-auth-alias-provision.mjs'
       - 'apps/mobile-app/scripts/customer-firebase-session-diagnostics.test.mjs'
       - '.github/workflows/verify-customer-firebase-migration-diagnostics.yml'
@@ -25,4 +27,4 @@ jobs:
         with:
           node-version: '22'
       - name: Run Firebase session failure-classifier tests (no backend or secrets)
-        run: node --test apps/mobile-app/scripts/customer-firebase-session-diagnostics.test.mjs apps/mobile-app/scripts/customer-firebase-migration-preflight.test.mjs
+        run: node --test apps/mobile-app/scripts/customer-firebase-session-diagnostics.test.mjs apps/mobile-app/scripts/customer-firebase-migration-preflight.test.mjs apps/mobile-app/scripts/customer-firebase-enrollment-service.test.mjs
