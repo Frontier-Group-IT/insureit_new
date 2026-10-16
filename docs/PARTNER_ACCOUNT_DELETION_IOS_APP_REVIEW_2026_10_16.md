@@ -64,6 +64,12 @@ Acceptance gates for executor: (1) prove all cascade dependencies for requested 
 - Technical verification must cover blocked shared and linked identities, retry after partial failure, provider outage, status transitions, no data loss, token revocation and failed login on a disposable account. Verify policy intake/history totals before and after.
 - No database migration, production server deploy, configuration enablement or OTA has occurred.
 
+## Auth retention-safe soft deletion update
+
+Based on official Supabase SDK guidance, the guarded executor now uses `auth.admin.deleteUser(userId, true)`, its **irreversible soft-delete option**. Unlike a hard delete, it preserves the `auth.users` primary key instead of cascading to business-related foreign keys, while preventing account reuse. The primary portal account is disabled and detached first to deny backend identity checks even if an existing access JWT remains temporarily unexpired. This reduces deletion risk but **does not by itself erase personal data in public.profiles, file storage or business records**. Such data requires verified individualized retention review and eligible erasure/anonymization.
+
+The executable path remains restricted to isolated primary intermediary identities and guarded by the default-off environment switch and exact administrator confirmation. Do not claim all Partner/employee deletion modes are covered. A disposable test identity and real notification inbox must be used to verify login denial, data-retention equality and email receipt before enabling general use.
+
 ## Operations prerequisite — before public launch
 
 1. Verify current production database migration status and relations/read-only. Run migration only with separate approval and backup strategy.
