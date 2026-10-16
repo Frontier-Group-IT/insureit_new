@@ -142,11 +142,16 @@ function UsersWorkspace({
           </div>
           <UserRegisterFilters initialQuery={params.q ?? ""} initialRole={roleFilter} roles={roleOptions} />
         </div>
-        {metricFilter !== "all" ? (
-          <Link href={clearMetricHref(params)} className="inline-flex h-8 shrink-0 items-center rounded-lg border border-[#D8E1EC] bg-white px-3 text-[9px] font-bold text-[#475569] hover:bg-[#F8FAFC]">
-            Clear summary filter
+        <div className="flex shrink-0 items-center gap-2">
+          {metricFilter !== "all" ? (
+            <Link href={clearMetricHref(params)} className="inline-flex h-8 items-center rounded-lg border border-[#D8E1EC] bg-white px-3 text-[9px] font-bold text-[#475569] hover:bg-[#F8FAFC]">
+              Clear summary filter
+            </Link>
+          ) : null}
+          <Link href="/users" className="inline-flex h-8 items-center rounded-lg bg-[#17365D] px-3 text-[9px] font-bold text-white shadow-[0_4px_10px_rgba(23,54,93,.16)] transition hover:bg-[#102A4A]">
+            User Management
           </Link>
-        ) : null}
+        </div>
       </div>
 
       <div className="mt-3 overflow-x-auto">
@@ -199,9 +204,6 @@ function RolesWorkspace() {
         <h2 className="text-[14px] font-bold text-[#17203A]">Roles</h2>
         <span className="rounded-full bg-[#EEF2F7] px-2 py-0.5 text-[8px] font-bold text-[#64748B]">{roleMatrixV2.length}</span>
       </div>
-      <Link href="/employees" className="inline-flex h-9 items-center justify-center rounded-lg bg-[#17365D] px-4 text-[9.5px] font-bold text-white shadow-[0_6px_16px_rgba(23,54,93,.16)] transition hover:bg-[#102C4D]">
-        User Management
-      </Link>
     </div>
 
     <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
@@ -228,15 +230,57 @@ function RolesWorkspace() {
 
 function PermissionsWorkspace() {
   const modules = Array.from(new Set(permissionCatalogueV2.map((permission) => permission.module)));
-  return <Card><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-[15px] font-semibold text-[#17203A]">Permissions</h2><p className="mt-1 text-[10px] text-[#64748B]">{permissionCatalogueV2.length} V2 permissions · read only during migration</p></div><ShadowBadge>Shadow catalogue</ShadowBadge></div><div className="mt-3 space-y-3">{modules.map((module) => <section key={module} className="rounded-xl border border-[#E2E8F0] bg-[#FAFCFF] p-3"><h3 className="text-[11px] font-semibold uppercase tracking-[.04em] text-[#334155]">{module}</h3><div className="mt-3 overflow-x-auto"><table className="w-full min-w-[820px] text-left text-[9.5px]"><thead><tr className="border-b border-[#E2E8F0] text-[8px] uppercase tracking-[.04em] text-[#94A3B8]"><th className="pb-2">Permission</th><th className="pb-2">Access</th><th className="pb-2">Scopes</th><th className="pb-2">Risk</th></tr></thead><tbody className="divide-y divide-[#EDF2F7]">{permissionCatalogueV2.filter((permission) => permission.module === module).map((permission) => <tr key={permission.key}><td className="py-2.5 pr-4"><p className="font-semibold text-[#24345A]">{permission.label}</p><p className="mt-0.5 font-mono text-[7.5px] text-[#94A3B8]">{permission.key}</p></td><td className="py-2.5 pr-4 text-[#475569]">{permission.allowedAccess.join(" / ")}</td><td className="py-2.5 pr-4 text-[#64748B]">{permission.scopeRequired ? permission.allowedScopes.map(scopeLabel).join(", ") : "Not scoped"}</td><td className="py-2.5"><Risk value={permission.risk} /></td></tr>)}</tbody></table></div></section>)}</div></Card>;
+  return <Card className="!rounded-xl !border-[#DCE4EF] !bg-white !p-0 !shadow-sm !backdrop-blur-none">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E2E8F0] px-4 py-3">
+      <div><h2 className="text-[14px] font-semibold text-[#17203A]">Permissions</h2><p className="mt-0.5 text-[9.5px] text-[#64748B]">{permissionCatalogueV2.length} V2 permissions · read only during migration</p></div>
+      <ShadowBadge>Shadow catalogue</ShadowBadge>
+    </div>
+    <div className="divide-y divide-[#E2E8F0]">
+      {modules.map((module) => <section key={module}>
+        <div className="bg-[#F8FAFC] px-4 py-2 text-[9px] font-bold uppercase tracking-[.06em] text-[#475569]">{module}</div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px] text-left text-[10px]">
+            <thead><tr className="border-b border-[#E2E8F0] bg-white text-[8px] uppercase tracking-[.05em] text-[#94A3B8]"><th className="px-4 py-2">Permission</th><th className="px-4 py-2">Access</th><th className="px-4 py-2">Scopes</th><th className="px-4 py-2">Risk</th></tr></thead>
+            <tbody className="divide-y divide-[#EDF2F7]">{permissionCatalogueV2.filter((permission) => permission.module === module).map((permission) => <tr key={permission.key} className="hover:bg-[#FAFCFF]"><td className="px-4 py-2.5"><p className="font-semibold text-[#24345A]">{permission.label}</p><p className="mt-0.5 font-mono text-[7.5px] text-[#94A3B8]">{permission.key}</p></td><td className="px-4 py-2.5 text-[#475569]">{permission.allowedAccess.join(" / ")}</td><td className="px-4 py-2.5 text-[#64748B]">{permission.scopeRequired ? permission.allowedScopes.map(scopeLabel).join(", ") : "Not scoped"}</td><td className="px-4 py-2.5"><Risk value={permission.risk} /></td></tr>)}</tbody>
+          </table>
+        </div>
+      </section>)}
+    </div>
+  </Card>;
 }
 
 function ReviewsWorkspace({ items }: { items: ReviewItem[] }) {
-  return <Card><div><h2 className="text-[15px] font-semibold text-[#17203A]">Access Reviews</h2><p className="mt-1 text-[10px] text-[#64748B]">{items.length} items requiring review</p></div><div className="mt-3 space-y-2">{items.length ? items.map((item) => <div key={item.key} className="flex flex-col gap-3 rounded-xl border border-[#E2E8F0] bg-[#FAFCFF] p-3 md:flex-row md:items-center md:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold text-[#17203A]">{item.employeeName}</p><Risk value={item.risk} /></div><p className="mt-1 text-[9.5px] text-[#64748B]">{item.title}</p><p className="mt-0.5 text-[8.5px] text-[#94A3B8]">{item.detail}</p></div>{item.profileId ? <Link href={`/system/access-control/employees/${item.profileId}`} className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-[#CBD5E1] bg-white px-4 text-[9.5px] font-semibold text-[#334155]">Review</Link> : null}</div>) : <EmptyState text="No access review items are currently open." />}</div></Card>;
+  return <Card className="!rounded-xl !border-[#DCE4EF] !bg-white !p-0 !shadow-sm !backdrop-blur-none">
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E2E8F0] px-4 py-3">
+      <div><h2 className="text-[14px] font-semibold text-[#17203A]">Access Reviews</h2><p className="mt-0.5 text-[9.5px] text-[#64748B]">{items.length} items requiring review</p></div>
+    </div>
+    {items.length ? <div className="overflow-x-auto">
+      <table className="w-full min-w-[900px] text-left text-[10px]">
+        <thead><tr className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[8px] uppercase tracking-[.05em] text-[#94A3B8]">
+          <th className="px-4 py-2.5">Employee</th><th className="px-4 py-2.5">Review item</th><th className="px-4 py-2.5">Detail</th><th className="px-4 py-2.5">Risk</th><th className="px-4 py-2.5 text-right">Action</th>
+        </tr></thead>
+        <tbody className="divide-y divide-[#EDF2F7]">{items.map((item) => <tr key={item.key} className="hover:bg-[#FAFCFF]">
+          <td className="px-4 py-3 font-semibold text-[#17203A]">{item.employeeName}</td><td className="px-4 py-3 font-medium text-[#334155]">{item.title}</td><td className="px-4 py-3 text-[9px] text-[#64748B]">{item.detail}</td><td className="px-4 py-3"><Risk value={item.risk} /></td><td className="px-4 py-3 text-right">{item.profileId ? <Link href={`/system/access-control/employees/${item.profileId}`} className="inline-flex h-8 items-center rounded-lg border border-[#CBD5E1] bg-white px-3 text-[9px] font-semibold text-[#334155] transition hover:border-[#94A3B8] hover:bg-[#F8FAFC]">Review</Link> : null}</td>
+        </tr>)}</tbody>
+      </table>
+    </div> : <div className="p-4"><EmptyState text="No access review items are currently open." /></div>}
+  </Card>;
 }
 
 function AuditWorkspace({ events }: { events: AuditEvent[] }) {
-  return <Card><div><h2 className="text-[15px] font-semibold text-[#17203A]">Audit Log</h2><p className="mt-1 text-[10px] text-[#64748B]">Permission and portal lifecycle events</p></div><div className="mt-3 space-y-2">{events.length ? events.map((event) => <div key={event.key} className="grid gap-2 rounded-xl border border-[#E2E8F0] px-3 py-3 lg:grid-cols-[180px_1fr_220px] lg:items-center"><div><p className="text-[9.5px] font-semibold text-[#334155]">{event.actor}</p><p className="mt-0.5 text-[8px] text-[#94A3B8]">{event.type}</p></div><div><p className="text-[10px] font-semibold text-[#24345A]">{event.title}</p><p className="mt-0.5 text-[8.5px] text-[#64748B]">{event.detail}</p></div><span className="text-[8.5px] text-[#94A3B8] lg:text-right">{formatDate(event.createdAt)}</span></div>) : <EmptyState text="No access events have been recorded yet." />}</div></Card>;
+  return <Card className="!rounded-xl !border-[#DCE4EF] !bg-white !p-0 !shadow-sm !backdrop-blur-none">
+    <div className="border-b border-[#E2E8F0] px-4 py-3"><h2 className="text-[14px] font-semibold text-[#17203A]">Audit Log</h2><p className="mt-0.5 text-[9.5px] text-[#64748B]">Permission and portal lifecycle events</p></div>
+    {events.length ? <div className="overflow-x-auto">
+      <table className="w-full min-w-[980px] text-left text-[10px]">
+        <thead><tr className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[8px] uppercase tracking-[.05em] text-[#94A3B8]">
+          <th className="px-4 py-2.5">Actor</th><th className="px-4 py-2.5">Type</th><th className="px-4 py-2.5">Event</th><th className="px-4 py-2.5">Detail</th><th className="px-4 py-2.5 text-right">Date & time</th>
+        </tr></thead>
+        <tbody className="divide-y divide-[#EDF2F7]">{events.map((event) => <tr key={event.key} className="hover:bg-[#FAFCFF]">
+          <td className="px-4 py-3 font-semibold text-[#334155]">{event.actor}</td><td className="px-4 py-3 text-[#64748B]">{event.type}</td><td className="px-4 py-3 font-semibold text-[#24345A]">{event.title}</td><td className="px-4 py-3 text-[9px] text-[#64748B]">{event.detail}</td><td className="px-4 py-3 text-right text-[8.5px] whitespace-nowrap text-[#94A3B8]">{formatDate(event.createdAt)}</td>
+        </tr>)}</tbody>
+      </table>
+    </div> : <div className="p-4"><EmptyState text="No access events have been recorded yet." /></div>}
+  </Card>;
 }
 
 function buildReviewItems(users: UserRow[], now: Date, thirtyDaysFromNow: Date) {

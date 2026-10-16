@@ -33,7 +33,7 @@ assert.match(access,/\.eq\("status","active"\)/);
 assert.match(access,/\.eq\("group_id",groupId\)/);
 assert.match(partnerRoute,/getPartnerWebSession/);
 assert.match(partnerRoute,/scope\.scope_mode!=="hierarchy"/);
-assert.match(register,/Save & Send Activation Email/);
+assert.match(register,/Save Details/);
 assert.match(controls,/window\.confirm/);
 assert.match(controls,/updateGroupAssociate/);
 console.log("Group Associate security and UI wiring regression passed");
