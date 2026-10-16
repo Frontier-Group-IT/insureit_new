@@ -177,7 +177,8 @@ export function PartnerRegisterClient({
         ) : null}
       </section>
 
-      {canPermanentDelete ? <PartnerDeletePanel rows={rows} /> : null}    </div>
+      {canPermanentDelete ? <PartnerDeletePanel rows={rows} /> : null}
+    </div>
   );
 }
 
