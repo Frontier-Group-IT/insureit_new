@@ -46,6 +46,12 @@ export async function POST(request: Request) {
   if (userError || !user?.user?.email) return reply({ error:"Verified identity and notification email required." },409);
   if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) return reply({ error:"Completion notification provider must be configured." },503);
 
+  // Atomic claim: only one administrator may execute any given request.
+  const { data: claimed, error: claimError } = await admin.from("partner_account_deletion_requests")
+    .update({ status:"fulfilling", updated_at:new Date().toISOString(), fulfillment_authorized_by:profile.id, fulfillment_authorized_at:new Date().toISOString(), retention_reviewed_at:new Date().toISOString(), identity_verified_at:new Date().toISOString() })
+    .eq("id",row.id).eq("status","under_review").select("id").maybeSingle();
+  if (claimError || !claimed) return reply({ error:"Request already claimed, changed, or could not be reserved. No deletion performed." },409);
+
   // Freeze the login before any irreversible operation. A failed delete leaves
   // a suspended identity for manual investigation rather than an active account.
   const { error: banError } = await admin.auth.admin.updateUserById(row.auth_user_id,{ ban_duration:"876000h" });
@@ -69,7 +75,7 @@ export async function POST(request: Request) {
       status:"fulfilled",completed_at:now,updated_at:now,identity_verified_at:now,retention_reviewed_at:now,
       fulfillment_authorized_by:profile.id,fulfillment_authorized_at:now,notification_sent_at:now,fulfillment_reference:email.id,
       resolution_note:"Primary intermediary Auth identity soft-deleted (irreversible), portal login disabled, business FK history preserved; completion email accepted by provider.",
-    }).eq("id",row.id).eq("status","under_review");
+    }).eq("id",row.id).eq("status","fulfilling");
     if (completedError) return reply({ error:"Identity deleted and notification accepted, but request audit finalization requires IT reconciliation." },503);
     return reply({ ok:true,request_id:row.id,status:"fulfilled" });
   } catch {
