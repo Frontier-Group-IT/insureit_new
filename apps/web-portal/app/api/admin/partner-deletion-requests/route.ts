@@ -40,7 +40,7 @@ export async function PATCH(request: Request) {
   const admin = createSupabaseAdminClient();
   const nextStatus = body.action === "start_review" ? "under_review" : "declined";
   const { data, error } = await admin.from("partner_account_deletion_requests")
-    .update({ status: nextStatus, updated_at: new Date().toISOString(),
+    .update({ status: nextStatus, updated_at: new Date().toISOString(), reviewed_by: actor, reviewed_at: new Date().toISOString(),
       ...(body.action === "decline" ? { resolution_note: note } : {}) })
     .eq("id", body.id).eq("status", body.action === "start_review" ? "requested" : "under_review")
     .select("id,status,updated_at").maybeSingle();
