@@ -30,6 +30,14 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
   const latestClaims = claims.slice(0, 4);
   return (
     <div className="space-y-4 pb-6">
+      <style>{`
+        @keyframes customerHomeBreathe {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.018); }
+        }
+        .customer-home-breathe { animation: customerHomeBreathe 4.8s ease-in-out infinite; transform-origin: center; }
+        @media (prefers-reduced-motion: reduce) { .customer-home-breathe { animation: none; } }
+      `}</style>
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/home" />
       <section className="relative isolate overflow-hidden rounded-[22px] border border-[#D6E7FA] bg-[#DDEEFF] p-5 text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.06)] sm:p-7">
         <div className="pointer-events-none absolute inset-y-0 right-0 w-[75%] bg-[url('/assets/customerhome.jpeg')] bg-cover bg-center opacity-80"/>
@@ -45,7 +53,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
             {label:"Insured vehicles",value:covered,detail:"With active cover",icon:ShieldCheck,color:"text-[#087A57]",background:"bg-[#E5F7EE]",href:"/customer/vehicles"},
             {label:"Uninsured vehicles",value:uncoveredVehicles.length,detail:"Need protection",icon:ShieldX,color:"text-[#C2414D]",background:"bg-[#FFF0F1]",href:"/customer/vehicles"},
             {label:"Fleet coverage",value:`${coverage}%`,detail:"Vehicles protected",icon:ShieldPlus,color:"text-[#1769DC]",background:"bg-[#EAF3FF]",href:"/customer/vehicles"},
-          ].map(({label,value,detail,icon:Icon,color,background,href},index)=><Link key={label} href={{pathname:href,query:accountQuery}} className={`flex min-w-0 items-center gap-3 p-4 transition duration-200 hover:bg-[#F8FBFF] sm:p-5 ${index===0?"hover:scale-[1.02] hover:z-10 hover:shadow-[0_8px_22px_rgba(20,58,100,.10)]":""} ${index%2===0?"":"border-l border-[#E6EDF6]"} ${index>=2?"border-t border-[#E6EDF6] lg:border-t-0":""} ${index>0?"lg:border-l lg:border-[#E6EDF6]":""}`}>
+          ].map(({label,value,detail,icon:Icon,color,background,href},index)=><Link key={label} href={{pathname:href,query:accountQuery}} className={`customer-home-breathe flex min-w-0 items-center gap-3 p-4 transition duration-200 hover:bg-[#F8FBFF] sm:p-5 ${index===0?"hover:z-10 hover:shadow-[0_8px_22px_rgba(20,58,100,.10)]":""} ${index%2===0?"":"border-l border-[#E6EDF6]"} ${index>=2?"border-t border-[#E6EDF6] lg:border-t-0":""} ${index>0?"lg:border-l lg:border-[#E6EDF6]":""}`}>
             <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${background} ${color}`}><Icon className="h-5 w-5"/></span>
             <span className="min-w-0"><span className="block text-[12px] font-medium text-[#60799B]">{label}</span><strong className="block text-[28px] font-bold leading-tight tabular-nums text-[#102B54]">{value}</strong><small className="block text-[12px] text-[#7890AD]">{detail}</small></span>
           </Link>)}
@@ -61,16 +69,16 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
             {title:"My vehicles",href:"/customer/vehicles",icon:Truck,background:"bg-[#E7F8EF]",color:"text-[#087A57]"},
             {title:"Vehicle exchange",href:"/customer/exchange",icon:ArrowLeftRight,background:"bg-[#F1ECFF]",color:"text-[#7546CE]"},
             {title:"Support",href:"/customer/support",icon:Headset,background:"bg-[#EAF3FF]",color:"text-[#1769DC]"},
-          ].map(({title,href,icon:Icon,background,color})=><Link key={href} href={href === "/customer/start-claim" ? { pathname: "/customer/start-claim", query: accountQuery } : { pathname: href, query: accountQuery }} className="group flex min-w-0 flex-col items-center gap-2 rounded-xl px-2 py-3 text-center transition hover:bg-[#F3F8FE]"><span className={`grid h-11 w-11 place-items-center rounded-xl ${background} ${color}`}><Icon className="h-[22px] w-[22px] stroke-[2]"/></span><span className="text-[12px] font-semibold text-[#244771]">{title}</span></Link>)}
+          ].map(({title,href,icon:Icon,background,color})=><Link key={href} href={href === "/customer/start-claim" ? { pathname: "/customer/start-claim", query: accountQuery } : { pathname: href, query: accountQuery }} className="customer-home-breathe group flex min-w-0 flex-col items-center gap-2 rounded-xl px-2 py-3 text-center transition hover:bg-[#F3F8FE]"><span className={`grid h-11 w-11 place-items-center rounded-xl ${background} ${color}`}><Icon className="h-[22px] w-[22px] stroke-[2]"/></span><span className="text-[12px] font-semibold text-[#244771]">{title}</span></Link>)}
         </nav>
         <Link href={{ pathname: "/customer/claims", query: accountQuery }} className="mt-3 inline-flex items-center gap-1 text-[12px] font-semibold text-[#1769DC]">Track Existing Claims <ArrowRight className="h-4 w-4"/></Link>
       </section>
       <div className="grid gap-4 lg:grid-cols-[.9fr_1.1fr]">
         <section className="overflow-hidden rounded-2xl border border-[#E0E8F3] bg-white">
-          <div className="flex items-center justify-between gap-2 border-b border-[#E6EDF6] px-4 py-3"><h2 className="flex items-center gap-2 text-[17px] font-bold text-[#102B54]"><AlertTriangle className="h-4 w-4 text-red-500"/>Needs your attention</h2><Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="text-[12px] font-semibold text-[#1769DC]">View all →</Link></div>
+          <div className="flex items-center justify-between gap-2 border-b border-[#E6EDF6] px-4 py-3"><h2 className="flex items-center gap-2 text-[17px] font-bold text-[#102B54]"><AlertTriangle className="h-4 w-4 text-red-500"/>Needs your attention</h2><Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="text-[12px] font-semibold text-[#1769DC]">View all</Link></div>
           {attentionCount === 0?<p className="m-4 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700">No urgent insurance actions.</p>:<div className="overflow-x-auto">
             <table className="w-full min-w-[520px] text-left">
-              <thead className="bg-[#F7FAFE] text-[11px] font-semibold uppercase tracking-wide text-[#7186A0]"><tr><th className="px-4 py-2.5">Vehicle / Policy</th><th className="px-4 py-2.5">Issue</th><th className="px-4 py-2.5">Status</th></tr></thead>
+              <thead className="bg-[#F7FAFE] text-center text-[11px] font-semibold uppercase tracking-wide text-[#7186A0]"><tr><th className="px-4 py-2.5">Vehicle / Policy</th><th className="px-4 py-2.5">Issue</th><th className="px-4 py-2.5">Status</th></tr></thead>
               <tbody className="divide-y divide-[#EDF2F7]">
                 {uncoveredVehicles.slice(0, 3).map(vehicle=>{ const href={pathname:`/customer/vehicles/${vehicle.id}`,query:accountQuery}; return <tr key={vehicle.id} className="cursor-pointer transition hover:bg-[#FFF9F7]">
                   <td className="p-0"><Link href={href} className="block px-4 py-3 font-semibold text-[13px] text-[#15345E]">{vehicle.vehicle_no || (vehicle.chassis_no ? `New-${vehicle.chassis_no}` : "Unregistered vehicle")}</Link></td>
@@ -88,10 +96,10 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
         </section>
 
         <section className="min-w-0 overflow-hidden rounded-2xl border border-[#E0E8F3] bg-white">
-          <div className="flex items-center justify-between border-b border-[#E6EDF6] px-4 py-3"><h2 className="flex items-center gap-2 text-[17px] font-bold text-[#102B54]"><CarFront className="h-4 w-4 text-[#1672DC]"/>My Vehicles</h2><Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="text-[12px] font-semibold text-[#1769DC]">View all →</Link></div>
+          <div className="flex items-center justify-between border-b border-[#E6EDF6] px-4 py-3"><h2 className="flex items-center gap-2 text-[17px] font-bold text-[#102B54]"><CarFront className="h-4 w-4 text-[#1672DC]"/>My Vehicles</h2><Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="text-[12px] font-semibold text-[#1769DC]">View all</Link></div>
           {vehicles.length===0?<p className="p-4 text-xs text-[#7186A0]">No vehicles found.</p>:<div className="overflow-x-auto">
             <table className="w-full min-w-[620px] text-left">
-              <thead className="bg-[#F7FAFE] text-[11px] font-semibold uppercase tracking-wide text-[#7186A0]"><tr><th className="px-4 py-2.5">Vehicle</th><th className="px-4 py-2.5">Make / Model</th><th className="px-4 py-2.5">Insurance status</th></tr></thead>
+              <thead className="bg-[#F7FAFE] text-center text-[11px] font-semibold uppercase tracking-wide text-[#7186A0]"><tr><th className="px-4 py-2.5">Vehicle</th><th className="px-4 py-2.5">Make / Model</th><th className="px-4 py-2.5">Insurance status</th></tr></thead>
               <tbody className="divide-y divide-[#EDF2F7]">
                 {vehicles.slice(0,3).map(vehicle=>{
                   const insured=coveredIds.has(vehicle.id);
@@ -123,12 +131,12 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
       </section>
       <div className="grid gap-3 lg:grid-cols-2">
         <section className="min-w-0 rounded-xl border border-[#E0E8F3] bg-white p-3">
-          <div className="mb-3 flex items-center justify-between"><h2 className="flex items-center gap-2 text-[14px] font-black text-[#10284A]"><ShieldCheck className="h-4 w-4 text-[#1672DC]"/>My Policies</h2><Link href={{pathname:"/customer/policies",query:accountQuery}} className="text-[10px] font-bold text-[#176CD4]">View all →</Link></div>
-          <div className="overflow-x-auto"><table className="w-full min-w-[410px] text-left text-[10px]"><thead className="bg-[#F1F6FC] text-[#637B9A]"><tr><th className="p-2">Policy Number</th><th className="p-2">Vehicle</th><th className="p-2">Insurer</th><th className="p-2">Status</th></tr></thead><tbody>{latestPolicies.map(policy=><tr key={policy.id} className="border-b border-[#EEF2F8]"><td className="p-2 font-bold"><Link href={{pathname:`/customer/policies/${policy.id}`,query:{...accountQuery,source:policy.source}}}>{policy.policy_no||"—"}</Link></td><td className="p-2">{policy.vehicle_no||"—"}</td><td className="p-2">{policy.insurer_name||"—"}</td><td className="p-2"><span className="rounded-full bg-[#EEF5FF] px-2 py-1">{customerPolicyTone(policy.end_date).tone}</span></td></tr>)}</tbody></table>{latestPolicies.length===0?<p className="p-3 text-xs text-[#7186A0]">No policies found.</p>:null}</div>
+          <div className="mb-3 flex items-center justify-between"><h2 className="flex items-center gap-2 text-[14px] font-black text-[#10284A]"><ShieldCheck className="h-4 w-4 text-[#1672DC]"/>My Policies</h2><Link href={{pathname:"/customer/policies",query:accountQuery}} className="text-[10px] font-bold text-[#176CD4]">View all</Link></div>
+          <div className="overflow-x-auto"><table className="w-full min-w-[410px] text-left text-[10px]"><thead className="bg-[#F1F6FC] text-center text-[#637B9A]"><tr><th className="p-2">Policy Number</th><th className="p-2">Vehicle</th><th className="p-2">Insurer</th><th className="p-2">Status</th></tr></thead><tbody>{latestPolicies.map(policy=><tr key={policy.id} className="border-b border-[#EEF2F8]"><td className="p-2 font-bold"><Link href={{pathname:`/customer/policies/${policy.id}`,query:{...accountQuery,source:policy.source}}}>{policy.policy_no||"—"}</Link></td><td className="p-2">{policy.vehicle_no||"—"}</td><td className="p-2">{policy.insurer_name||"—"}</td><td className="p-2"><span className="rounded-full bg-[#EEF5FF] px-2 py-1">{customerPolicyTone(policy.end_date).tone}</span></td></tr>)}</tbody></table>{latestPolicies.length===0?<p className="p-3 text-xs text-[#7186A0]">No policies found.</p>:null}</div>
         </section>
         <section className="min-w-0 rounded-xl border border-[#E0E8F3] bg-white p-3">
-          <div className="mb-3 flex items-center justify-between"><h2 className="flex items-center gap-2 text-[14px] font-black text-[#10284A]"><ClipboardList className="h-4 w-4 text-[#1672DC]"/>My Claims</h2><Link href={{pathname:"/customer/claims",query:accountQuery}} className="text-[10px] font-bold text-[#176CD4]">View all →</Link></div>
-          <div className="overflow-x-auto"><table className="w-full min-w-[340px] text-left text-[10px]"><thead className="bg-[#F1F6FC] text-[#637B9A]"><tr><th className="p-2">Claim Number</th><th className="p-2">Status</th></tr></thead><tbody>{latestClaims.map(claim=>{ const href={pathname:"/customer/claims",query:accountQuery}; return <tr key={claim.id} className="cursor-pointer border-b border-[#EEF2F8] transition hover:bg-[#F8FBFF]"><td className="p-0 font-bold"><Link href={href} className="block p-2">{claim.claim_no||claim.id.slice(0,8)}</Link></td><td className="p-0"><Link href={href} className="block p-2">{claim.current_status||"Submitted"}</Link></td></tr>;})}</tbody></table>{latestClaims.length===0?<p className="p-3 text-xs text-[#7186A0]">No claims found.</p>:null}</div>
+          <div className="mb-3 flex items-center justify-between"><h2 className="flex items-center gap-2 text-[14px] font-black text-[#10284A]"><ClipboardList className="h-4 w-4 text-[#1672DC]"/>My Claims</h2><Link href={{pathname:"/customer/claims",query:accountQuery}} className="text-[10px] font-bold text-[#176CD4]">View all</Link></div>
+          <div className="overflow-x-auto"><table className="w-full min-w-[340px] text-left text-[10px]"><thead className="bg-[#F1F6FC] text-center text-[#637B9A]"><tr><th className="p-2">Claim Number</th><th className="p-2">Status</th></tr></thead><tbody>{latestClaims.map(claim=>{ const href={pathname:"/customer/claims",query:accountQuery}; return <tr key={claim.id} className="cursor-pointer border-b border-[#EEF2F8] transition hover:bg-[#F8FBFF]"><td className="p-0 font-bold"><Link href={href} className="block p-2">{claim.claim_no||claim.id.slice(0,8)}</Link></td><td className="p-0"><Link href={href} className="block p-2">{claim.current_status||"Submitted"}</Link></td></tr>;})}</tbody></table>{latestClaims.length===0?<p className="p-3 text-xs text-[#7186A0]">No claims found.</p>:null}</div>
         </section>
       </div>
     </div>
