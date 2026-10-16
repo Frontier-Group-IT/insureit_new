@@ -19,6 +19,13 @@ export async function createBranchProfile(formData: FormData) {
   const contactName = text(formData, "contact_name");
   const address = text(formData, "address");
   const parentPartnerId = text(formData, "parent_partner_id");
+  const returnApplicationId = text(formData, "return_application_id");
+  const returnPath = returnApplicationId && /^[0-9a-f-]{36}$/i.test(returnApplicationId) ? `/intermediaries/applications/${returnApplicationId}/associate-accounts?tab=branch` : "";
+  if (returnPath) {
+    const admin = createSupabaseAdminClient();
+    const { data: mapped } = await admin.from("partners").select("id").eq("id",parentPartnerId).eq("source_application_id",returnApplicationId).eq("partner_status","active_partner").is("parent_partner_id",null).maybeSingle();
+    if (!mapped) redirect(`${returnPath}&error=branch_parent_mismatch`);
+  }
 
   if (!branchName || !phone || !email || !contactName || !address || !parentPartnerId) {
     return fail("All Branch onboarding fields are required.");
@@ -101,6 +108,10 @@ export async function createBranchProfile(formData: FormData) {
   revalidatePath("/intermediaries/groups/branches");
   revalidatePath("/intermediaries/groups/branches/new");
   revalidatePath("/intermediaries/groups/login-access");
+  if (returnPath) {
+    revalidatePath(`/intermediaries/applications/${returnApplicationId}/associate-accounts`);
+    redirect(`${returnPath}&success=branch_created`);
+  }
   redirect("/intermediaries/groups?success=branch_created");
 }
 
