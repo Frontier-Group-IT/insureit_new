@@ -16,7 +16,11 @@ const dbUrl=process.env.SUPABASE_DB_URL;
 if (!dbUrl || !/@(127\.0\.0\.1|localhost):54322\//.test(dbUrl)) throw Error('Localhost DB only');
 function psql(sql) {
  const run=spawnSync('psql',[dbUrl,'-v','ON_ERROR_STOP=1','-Atqc',sql],{encoding:'utf8'});
- if(run.status!==0) throw Error('Disposable Auth restore SQL failed');
+ if(run.status!==0) {
+  const stage=sql.startsWith('create table')?'snapshot':sql.startsWith('begin;')?'restore':'cleanup';
+  const detail=(run.stderr??'').split('\n').find(line=>line.includes('ERROR:'))?.replace(/\b[0-9a-f]{8}-[0-9a-f-]{27,}\b/ig,'[synthetic-id]') ?? 'unknown SQL error';
+  throw Error('Disposable Auth '+stage+' SQL failed: '+detail.slice(0,240));
+ }
  return run.stdout.trim();
 }
 let userId;
