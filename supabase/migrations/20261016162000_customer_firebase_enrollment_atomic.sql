@@ -51,8 +51,8 @@ begin
    return 'already_approved';
  end if;
  insert into public.customer_firebase_identity_links
- (firebase_project_id,firebase_uid,profile_id,verified_phone_at_approval,is_approved,is_active)
- values ('insureit-customer-auth',p_firebase_uid,p_profile_id,p_verified_phone,true,true);
+ (firebase_project_id,firebase_uid,profile_id,verified_phone_at_approval,approved_at,is_approved,is_active)
+ values ('insureit-customer-auth',p_firebase_uid,p_profile_id,p_verified_phone,now(),true,true);
  insert into public.customer_firebase_migration_audit
  (customer_profile_id,action,operator_id,evidence_digest)
  values (p_profile_id,'enrollment_approved',p_operator_id,p_evidence_digest);
