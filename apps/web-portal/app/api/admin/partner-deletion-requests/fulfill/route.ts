@@ -9,7 +9,7 @@ const reply = (body: Record<string,unknown>, status = 200) => NextResponse.json(
 
 /**
  * Deliberately limited to an isolated PRIMARY INTERMEDIARY login with no
- * profile, associate, learning or business ownership dependency. Never run
+ * shared, associate, learning or business ownership dependency. Never run
  * generic profile deletion, and never delete a partner business entity.
  * This is an irreversible operation. Use only with approved test identities
  * until end-to-end verified in a controlled environment.
@@ -31,12 +31,12 @@ export async function POST(request: Request) {
     admin.from("intermediary_portal_accounts").select("id,status,intermediary_id").eq("auth_user_id",row.auth_user_id),
     admin.from("partner_portal_associate_accounts").select("id").eq("auth_user_id",row.auth_user_id),
     admin.from("group_portal_associate_accounts").select("id").eq("auth_user_id",row.auth_user_id),
-    admin.from("profiles").select("id").eq("id",row.auth_user_id),
+    admin.from("profiles").select("id,role,employee_id").eq("id",row.auth_user_id),
     admin.from("partner_learning_attempts").select("id",{head:true,count:"exact"}).eq("auth_user_id",row.auth_user_id),
     admin.rpc("admin_hard_delete_blockers",{p_target_table:"profiles",p_target_id:row.auth_user_id}),
   ]);
   if (pe || ae || ge || pre || le || be) return reply({ error:"Dependency preflight unavailable: no changes made." },503);
-  if (profiles?.length || associates?.length || groups?.length || learning || (Array.isArray(blockers) && blockers.length) ||
+  if (profiles?.length !== 1 || profiles[0].role !== "intermediary" || profiles[0].employee_id || associates?.length || groups?.length || learning || (Array.isArray(blockers) && blockers.length) ||
     portals?.length !== 1 || portals[0].id !== row.actor_id || portals[0].intermediary_id !== row.intermediary_id) {
     return reply({ error:"Shared identity or protected data detected. Manual retention remediation is required; nothing was deleted." },409);
   }
@@ -68,6 +68,12 @@ export async function POST(request: Request) {
   // Soft-delete preserves the auth.users primary key, preventing cascades into historical business records.
   const { error: authDeleteError } = await admin.auth.admin.deleteUser(row.auth_user_id, true);
   if (authDeleteError) return reply({ error:"Portal access detached and identity suspended; Auth deletion needs manual recovery." },503);
+  // Preserve the profile FK identity but remove redundant personal contact details.
+  // Only this isolated intermediary profile is eligible for this branch.
+  const { error: profileMaskError } = await admin.from("profiles").update({
+    full_name:"Deleted Partner Account", email:null, is_active:false, updated_at:new Date().toISOString(),
+  }).eq("id",row.auth_user_id).eq("role","intermediary");
+  if (profileMaskError) return reply({ error:"Auth identity deleted but profile minimization failed. IT reconciliation required." },503);
   const { error: identityEventError } = await admin.from("partner_account_deletion_events").insert({
     request_id:row.id, actor_profile_id:profile.id, action:"identity_revoked",
     details:{ mode:"auth_soft_delete", portal_account_id:row.actor_id },
