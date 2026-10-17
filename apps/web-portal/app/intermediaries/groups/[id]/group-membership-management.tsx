@@ -9,9 +9,13 @@ export async function GroupMembershipManagement({id,groupMode,groupName,partners
  if(!manager) return null;
  const admin=createSupabaseAdminClient();
  const scope=await getIntermediaryGroupEmployeeScope(manager);
- const candidates=scope.mode==="organization" ? await admin.from("partners").select("id,partner_code,display_name").is("parent_partner_id",null).eq("partner_status","active_partner").order("display_name").limit(500) : {data:[]};
+ const [candidates,occupied] = scope.mode==="organization" ? await Promise.all([
+  admin.from("partners").select("id,partner_code,display_name").is("parent_partner_id",null).eq("partner_status","active_partner").order("display_name").limit(500),
+  admin.from("intermediary_group_memberships").select("partner_id").is("effective_to",null)
+ ]) : [{data:[]},{data:[]}];
  const assigned=new Set(partners.map(p=>p.id));
- const choices=(candidates.data??[]).filter(p=>!assigned.has(p.id));
+ const occupiedIds=new Set((occupied.data??[]).map(p=>p.partner_id));
+ const choices=(candidates.data??[]).filter(p=>!assigned.has(p.id)&&!occupiedIds.has(p.id));
  return <details className="rounded-2xl border border-[#DCE5EF] bg-white">
   <summary className="cursor-pointer px-5 py-4 text-[12px] font-semibold text-[#17365D]">Group Management — Partners and settings</summary>
   <div className="space-y-4 border-t border-[#E7ECF3] p-4">
