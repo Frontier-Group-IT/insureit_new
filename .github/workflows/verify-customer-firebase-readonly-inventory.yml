@@ -1,0 +1,96 @@
+name: Verify Firebase Customer read-only inventory
+on:
+  push:
+    branches:
+      - feat/customer-firebase-second-canary-preflight-20261017
+    paths:
+      - 'scripts/customer-firebase-second-canary-readonly-inventory.sql'
+      - '.github/workflows/verify-customer-firebase-readonly-inventory.yml'
+  pull_request:
+    paths:
+      - 'scripts/customer-firebase-second-canary-readonly-inventory.sql'
+      - '.github/workflows/verify-customer-firebase-readonly-inventory.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  aggregate-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: fixture-only
+          POSTGRES_DB: firebase_audit
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d firebase_audit"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: fixture-only
+      PGDATABASE: firebase_audit
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install disposable PostgreSQL fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -q <<'SQL'
+          create schema auth;
+          create function public.customer_canonical_indian_phone(v text)
+          returns text language sql immutable as $$
+            select case
+            when regexp_replace(coalesce(v,''),'[^0-9]','','g') ~ '^(91)?[6-9][0-9]{9}$'
+            then '+91'||right(regexp_replace(coalesce(v,''),'[^0-9]','','g'),10)
+            else null end
+          $$;
+          create table public.profiles(
+            id uuid primary key,role text,is_active boolean,phone text);
+          create table auth.users(
+            id uuid primary key,phone text,email text,
+            email_confirmed_at timestamptz, phone_confirmed_at timestamptz,
+            banned_until timestamptz,is_anonymous boolean default false);
+          create table public.customer_firebase_identity_links(
+            profile_id uuid,firebase_project_id text,firebase_uid text,
+            is_active boolean,is_approved boolean,approved_at timestamptz,
+            verified_phone_at_approval text);
+          insert into public.profiles values
+          ('11111111-1111-4111-8111-111111111111','customer',true,'919876543210'),
+          ('22222222-2222-4222-8222-222222222222','customer',true,'919111111111'),
+          ('33333333-3333-4333-8333-333333333333','customer',true,'919222222222'),
+          ('44444444-4444-4444-8444-444444444444','customer',true,'919333333333'),
+          ('55555555-5555-4555-8555-555555555555','it_super_user',true,'919111111111');
+          insert into auth.users(id,phone,email,email_confirmed_at,phone_confirmed_at,banned_until) values
+          ('11111111-1111-4111-8111-111111111111','919876543210',null,null,now(),null),
+          ('22222222-2222-4222-8222-222222222222','919111111111',null,null,now(),null),
+          ('33333333-3333-4333-8333-333333333333','919222222222','c-approved@auth.invalid',now(),now(),null),
+          ('44444444-4444-4444-8444-444444444444','919333333333',null,null,now(),now()+interval '2 days'),
+          ('55555555-5555-4555-8555-555555555555','919111111111',null,null,now(),null);
+          insert into public.customer_firebase_identity_links values
+          ('33333333-3333-4333-8333-333333333333','insureit-customer-auth','synthetic-uid',true,true,now(),'+919222222222');
+          SQL
+      - name: Execute the real aggregate-only inventory SQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          file='scripts/customer-firebase-second-canary-readonly-inventory.sql'
+          grep -qi 'BEGIN TRANSACTION READ ONLY' "$file"
+          grep -qi '^ROLLBACK;' "$file"
+          if grep -Eiq '^(INSERT|UPDATE|DELETE|ALTER|DROP|CREATE|TRUNCATE|GRANT|REVOKE|COPY)[[:space:]]' "$file"; then
+            echo 'Inventory must contain read-only SQL' >&2
+            exit 1
+          fi
+          result="$(psql -X -v ON_ERROR_STOP=1 -qAt -F '|' -f "$file" | tail -n1)"
+          test "$result" = '4|3|1|2|1|1|0|1' || {
+            echo "Unexpected aggregate cohort result: $result" >&2
+            exit 1
+          }
+          echo 'PASS: read-only inventory gives aggregate counts and isolates shared phones, missing links/aliases and banned Auth identities.'
