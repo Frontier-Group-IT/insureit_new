@@ -150,18 +150,20 @@ export function InternalExchangeListingWorkspace() {
     void loadCustomers();
   }, []);
 
-  async function requestJson(url: string, init?: RequestInit) {
+  async function requestJson<T extends Record<string, unknown>>(url: string, init?: RequestInit): Promise<T> {
     const response = await fetch(url, { ...init, credentials: "same-origin", cache: "no-store" });
-    const body = await response.json().catch(() => ({})) as Record<string, any>;
-    if (!response.ok) throw new Error(String(body.error || "Exchange request could not be completed."));
+    const body = await response.json().catch(() => ({})) as T & { error?: unknown };
+    if (!response.ok) {
+      throw new Error(typeof body.error === "string" ? body.error : "Exchange request could not be completed.");
+    }
     return body;
   }
 
   async function loadCustomers() {
     setLoadingCustomers(true);
     try {
-      const body = await requestJson("/api/exchange/listings/internal");
-      setCustomers((body.customers ?? []) as Customer[]);
+      const body = await requestJson<{ customers: Customer[] }>("/api/exchange/listings/internal");
+      setCustomers(body.customers ?? []);
     } catch (error) {
       setMessage({ type: "error", text: error instanceof Error ? error.message : "Customers could not be loaded." });
     } finally {
@@ -181,8 +183,8 @@ export function InternalExchangeListingWorkspace() {
     setMessage(null);
     setLoadingVehicles(true);
     try {
-      const body = await requestJson(`/api/exchange/listings/internal?customerId=${encodeURIComponent(customer.id)}`);
-      setVehicles((body.vehicles ?? []) as Vehicle[]);
+      const body = await requestJson<{ vehicles: Vehicle[] }>(`/api/exchange/listings/internal?customerId=${encodeURIComponent(customer.id)}`);
+      setVehicles(body.vehicles ?? []);
     } catch (error) {
       setMessage({ type: "error", text: error instanceof Error ? error.message : "Customer fleet could not be loaded." });
     } finally {
@@ -238,7 +240,7 @@ export function InternalExchangeListingWorkspace() {
     setBusy(true);
     setMessage(null);
     try {
-      const body = await requestJson("/api/exchange/listings/internal", {
+      const body = await requestJson<{ data: { id: string; listing_no: string; status: string } }>("/api/exchange/listings/internal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -294,7 +296,7 @@ export function InternalExchangeListingWorkspace() {
       form.set("listingId", id);
       form.set("label", label);
       form.set("file", file);
-      const body = await requestJson("/api/exchange/listings/internal/media", { method: "POST", body: form });
+      const body = await requestJson<{ data: { url: string | null } }>("/api/exchange/listings/internal/media", { method: "POST", body: form });
       setPhotos((current) => ({ ...current, [label]: { uploaded: true, url: body.data.url ?? null } }));
     } catch (error) {
       setMessage({ type: "error", text: error instanceof Error ? error.message : "Photo could not be uploaded." });
@@ -311,7 +313,7 @@ export function InternalExchangeListingWorkspace() {
     setBusy(true);
     setMessage(null);
     try {
-      const body = await requestJson("/api/exchange/listings/internal", {
+      const body = await requestJson<{ data: { listing_no: string; status: string } }>("/api/exchange/listings/internal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "submit", listingId }),
