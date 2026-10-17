@@ -47,3 +47,7 @@ No verified recipient-held key, no encrypted archive and checksum, no independen
 - **Supabase backup docs:** https://supabase.com/docs/guides/platform/backups — managed daily backups depend on project plan; do not assume this project has an active downloadable backup.
 
 **Next:** owner performs steps 2–8 on trusted isolated infrastructure and returns only the non-sensitive signed pass/fail attestation. Then an approved Customer A/B Android data and Storage isolation test can start, keeping 2Factor fallback active.
+
+## Verified script workflow (synthetic only)
+
+GitHub Actions [#39015931911](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/39015931911) **SUCCEEDED** against source commit `86ac2ba4`. The PostgreSQL 17 runner created synthetic `auth.users`, `auth.identities` and pre-existing `auth.schema_migrations`; backed up with owner-style age encryption and portable SHA256; restored UUID, identity and synthetic credential field while **not duplicating migration history**; and confirmed the wrong key, corrupted checksum, nonempty destination and remote URL were denied. No private production data or real Auth secrets were involved. The target production-schema guard is independently checked against the read-only live baseline above, but the actual matching-GoTrue restore remains **NOT DONE**.
