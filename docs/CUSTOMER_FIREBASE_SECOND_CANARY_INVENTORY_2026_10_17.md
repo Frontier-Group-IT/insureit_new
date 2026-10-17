@@ -61,3 +61,24 @@ The handler returns only coarse stages (`reviewed_existing_session_manual_test_c
 5. After authenticated operator review and owner authorization, provision same-UUID Auth alias/approved UID through reviewed, auditable tooling only, then conduct genuine Android sign-in, exact UUID/vehicle/policy/claim/Storage isolation and refresh tests.
 6. Expand from limited, separately approved Customer cohorts only after documented real-device and RLS acceptance. Preserve staff and 2Factor login; no OTA/APK/AAB without release approval.
 
+
+## 2026-10-17 — production dormant review infrastructure DEPLOYED with owner go-ahead
+
+**Later status supersedes the preceding source-only/no-deployment statements in this document.** Owner approved continuation; the precise scope deliberately excludes all credential changes and Customer enrollments. Applied via connected Supabase migration tool to production project `ilzhsfqqjyppzzvfscmh`:
+
+1. Migration history `20261017111218 customer_firebase_review_guard_auth_phone_conflict_20261017`: deployed prepared `supabase/migrations/20261017120000_customer_firebase_operator_review_and_collisions.sql`, **including the security patch** to check BOTH `public.profiles` and otherwise unseen `auth.users` principals with the same canonical phone. This counts each principal once and conservatively requires a second IT reviewer for Auth-only phone conflicts.
+2. Migration history `20261017111230 customer_firebase_default_off_rollout_control_20261017`: deployed `supabase/migrations/20261017150000_customer_firebase_rollout_controls.sql` with **`enabled=false` and `paused=true`**.
+
+Verified live read-only after migration: `customer_firebase_enrollment_reviews` has RLS enabled and **0 rows**; anon SELECT and authenticated INSERT denied; only `service_role` has restricted journal INSERT; anonymous and authenticated roles cannot execute collision RPC; production `customer_firebase_phone_collision_counts` code contains `matching_auth_only_principals` and reports **6 shared phone / 18 unshared across 24 active Customers**. Existing approved Firebase links remain **2**. This is an authorization-infrastructure release, not migration of existing identities.
+
+**New Edge endpoint deployed** `customer-firebase-operator-preview` **v1**, with `verify_jwt=true`, all five source files in its dependency graph, and an early guard requiring server-side environment variable `CUSTOMER_FIREBASE_OPERATOR_PREVIEW_ENABLED=true` (no environment-setting action was performed). If disabled, its code responds `operator_preview_disabled`. When enabled in a separately approved release, it uses an independently verified IT Super User Supabase bearer and Firebase Admin-verified signed fresh token, exact Customer UUID and latest reviewed ownership/consent. No Customer Auth write, UID approval, public session or SMS action exists in this endpoint.
+
+**Critical live service unchanged:** `customer-firebase-session-bridge` still ACTIVE **v7**; 2Factor/other logins unchanged. **UNAPPLIED:** reviewed UID-enrollment write RPC `20261017160000`, atomic enroll and migration-audit DDL, Firebase-to-Supabase helper `20261017180000`. No PR merge, OTA/APK/AAB, bulk activation, or approved reviewer record was created.
+
+**Remaining independent release gates:**
+- owner-held protected Auth backup and restore for **any** existing Auth alias/credential change;
+- a consenting actual Customer selected by its original exact UUID after independent ownership proof, and 2 separate active IT reviewers for shared numbers such as Customer ending 1014;
+- a trusted audit-writer that actually verifies operator sessions and proof before writing review rows (service-role journal INSERT alone is not user authentication);
+- limited reviewed enrollment RPC + cohort-mode integration, independently audited RLS/Storage A/B and Android signed token expiry/refresh/revocation tests.
+
+**Rollback strategy:** keep rollout `enabled=false,paused=true`; disable or undeploy only the new operator-preview function if necessary. For journal rollback, the repository's `supabase/rollback/20261017120000_customer_firebase_operator_review_and_collisions_down.sql` freezes the journal without destroying decisions. Do not drop current production Customer profiles/UID links or reset Auth credentials.
