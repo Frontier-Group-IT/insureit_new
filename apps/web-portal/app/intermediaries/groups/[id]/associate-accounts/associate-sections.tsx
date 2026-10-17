@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { GroupPartnerRow } from "./group-partner-data";
 import { GroupRegisterTabs } from "./group-register-tabs";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -6,7 +7,7 @@ import { createGroupAssociate } from "./actions";
 import { AssociateControls } from "./associate-controls";
 
 type Query = {success?:string; error?:string};
-export async function GroupAssociateSections({id,query:q={},surface="operations",partners=[]}:{id:string;query?:Query;surface?:"operations"|"partner";partners?:GroupPartnerRow[]}) {
+export async function GroupAssociateSections({id,query:q={},surface="operations",partners=[],headerPartnerAssignment}:{id:string;query?:Query;surface?:"operations"|"partner";partners?:GroupPartnerRow[];headerPartnerAssignment?:ReactNode}) {
  await requireGroupAssociateManager(id);
  const admin = createSupabaseAdminClient();
  const {data:associates} = await admin.from("group_portal_associate_accounts").select("id,name,phone_number,email,designation,address,city,state,postal_code,role,status").eq("group_id",id).order("created_at",{ascending:false});
@@ -14,8 +15,9 @@ export async function GroupAssociateSections({id,query:q={},surface="operations"
  return <div className="space-y-4">
    {q.error?<p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{q.error}</p>:null}
    {q.success?<p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{q.success}</p>:null}
-   <details open={Boolean(q.error)} className="rounded-2xl border border-[#DCE5EF] bg-white">
-    <summary className="cursor-pointer border-b p-4 text-sm font-semibold">Create Group Associate Account <span className="float-right text-[11px] text-[#64748B]">Add Group <span aria-hidden="true">▾</span></span></summary>
+   <div className="relative rounded-2xl border border-[#DCE5EF] bg-white">
+   <details open={Boolean(q.error)} className="group">
+    <summary className="cursor-pointer p-4 text-sm font-semibold lg:pr-[430px]">Create Group Associate Account</summary>
     <form action={createGroupAssociate} className="grid gap-3 p-5 md:grid-cols-4">
       <input type="hidden" name="group_id" value={id}/><input type="hidden" name="portal_surface" value={surface==="partner"?"partner":"operations"}/>
       <label className="text-xs">Name *<input className={input} name="name" required/></label>
@@ -30,6 +32,8 @@ export async function GroupAssociateSections({id,query:q={},surface="operations"
       <div className="flex items-end justify-end md:col-span-2"><button className="h-10 rounded-xl bg-[#17365D] px-5 text-xs font-semibold text-white">Save Details</button></div>
     </form>
    </details>
+   {headerPartnerAssignment ? <div className="border-t border-[#E7ECF3] px-4 py-2 lg:absolute lg:right-4 lg:top-1 lg:w-[395px] lg:border-0 lg:p-0">{headerPartnerAssignment}</div> : null}
+   </div>
    <GroupRegisterTabs partners={partners} associates={<section className="overflow-x-auto bg-white">
     <h2 className="border-b p-4 text-sm font-semibold">Associate Accounts Register</h2>
     <table className="w-full min-w-[1060px] text-left text-xs"><thead className="bg-slate-50"><tr>{["Name","Phone Number","Email","Designation","Address","Role","Status","Action"].map(h=><th key={h} className="p-3">{h}</th>)}</tr></thead>
