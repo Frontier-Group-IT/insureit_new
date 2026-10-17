@@ -156,7 +156,8 @@ export async function prepareReviewedCustomerEnrollment({
   if (![reviewTime,consentTime,proofTime,expiryTime].every(Number.isFinite) ||
       reviewTime > nowSeconds*1000 || consentTime > nowSeconds*1000 ||
       proofTime > nowSeconds*1000 || expiryTime <= nowSeconds*1000 ||
-      reviewTime > expiryTime) {
+      consentTime > reviewTime || proofTime > reviewTime ||
+      reviewTime > expiryTime || expiryTime - reviewTime > 14*24*60*60*1000) {
     return deny('operator_review_expired');
   }
   // Shared phone accounts need a SECOND independent, distinct active reviewer.
@@ -193,6 +194,8 @@ export async function prepareReviewedCustomerEnrollment({
   if (!review.recovery_verified_at || !review.cohort_approved_at ||
       !Number.isFinite(Date.parse(review.recovery_verified_at)) ||
       !Number.isFinite(Date.parse(review.cohort_approved_at)) ||
+      Date.parse(review.recovery_verified_at) > reviewTime ||
+      Date.parse(review.cohort_approved_at) > reviewTime ||
       Date.parse(review.cohort_approved_at) > nowSeconds*1000) {
     return deny('limited_cohort_release_not_approved');
   }
