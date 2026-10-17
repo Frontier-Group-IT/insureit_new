@@ -1,6 +1,12 @@
 name: Rehearse Firebase Customer Auth recovery in disposable GoTrue
 
 on:
+  push:
+    branches:
+      - feat/customer-firebase-auth-recovery-and-cohorts-20261017
+    paths:
+      - 'apps/mobile-app/scripts/customer-firebase-auth-recovery-local-integration.mjs'
+      - '.github/workflows/verify-customer-firebase-auth-recovery-local.yml'
   pull_request:
     branches:
       - feature/customer-firebase-otp-gateway-0-3-2-20261014
@@ -53,5 +59,23 @@ jobs:
             echo "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY"
             echo "SUPABASE_DB_URL=$SUPABASE_DB_URL"
           } >> "$GITHUB_ENV"
+      - name: Grant synthetic PostgreSQL role Auth access in disposable Docker only
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$SUPABASE_URL" = 'http://127.0.0.1:54321'
+          [[ "$SUPABASE_DB_URL" == *'@127.0.0.1:54322/'* || "$SUPABASE_DB_URL" == *'@localhost:54322/'* ]]
+          # Supabase CLI's local postgres connection may not own GoTrue's
+          # protected Auth tables. Grant only inside this disposable runner.
+          mapfile -t databases < <(docker ps --filter 'publish=54322' --format '{{.ID}}')
+          test "${#databases[@]}" -eq 1 || {
+            echo 'Expected one disposable loopback-only database container.' >&2; exit 1;
+          }
+          docker exec -i -e PGPASSWORD=postgres "${databases[0]}" psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+          grant usage, create on schema auth to postgres;
+          grant select, insert, update, delete on all tables in schema auth to postgres;
+          SQL
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -Atqc \
+            'select count(*)>=0 from auth.users' | grep -qx t
       - name: Rehearse original login restoration for synthetic known-password user
         run: node apps/mobile-app/scripts/customer-firebase-auth-recovery-local-integration.mjs
