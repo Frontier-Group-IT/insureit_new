@@ -47,12 +47,12 @@ export default function BusinessReportScreen() {
       ) : (
         <>
           <View style={styles.summaryGrid}>
-            <ReportCard icon="cash-outline" label="MTD Premium" value={formatIndianCurrency(report.data.premium_this_month)} />
+            <ReportCard icon="cash-outline" label="MTD Net Premium" value={formatIndianCurrency(report.data.premium_this_month)} />
             <ReportCard icon="document-text-outline" label="MTD Policies" value={String(report.data.policies_this_month)} />
             <ReportCard icon="people-outline" label="Customers" value={String(report.data.total_customers)} />
           </View>
 
-          <Text style={styles.sectionTitle}>Last 6 Months</Text>
+          <Text style={styles.sectionTitle}>Last 6 Months · Net Premium</Text>
           <View style={styles.reportCard}>
             {report.data.trend.slice(-6).map((item) => (
               <View key={item.month} style={styles.row}>
@@ -65,7 +65,7 @@ export default function BusinessReportScreen() {
             ))}
           </View>
 
-          <Text style={styles.sectionTitle}>Business by Product</Text>
+          <Text style={styles.sectionTitle}>Business by Product · Net Premium</Text>
           <View style={styles.reportCard}>
             {report.data.business_mix.length ? report.data.business_mix.map((item) => (
               <View key={item.label} style={styles.row}>
