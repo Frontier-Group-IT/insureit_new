@@ -1,0 +1,40 @@
+name: Verify Firebase second Customer canary preflight
+on:
+  push:
+    branches:
+      - feat/customer-firebase-second-canary-preflight-20261017
+    paths:
+      - 'supabase/functions/_shared/customer-firebase-second-canary-preflight.mjs'
+      - 'apps/mobile-app/scripts/customer-firebase-second-canary-preflight.test.mjs'
+      - '.github/workflows/verify-customer-firebase-second-canary-preflight.yml'
+  pull_request:
+    paths:
+      - 'supabase/functions/_shared/customer-firebase-second-canary-preflight.mjs'
+      - 'apps/mobile-app/scripts/customer-firebase-second-canary-preflight.test.mjs'
+      - '.github/workflows/verify-customer-firebase-second-canary-preflight.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  safe-triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate source and regression tests
+        run: |
+          node --check supabase/functions/_shared/customer-firebase-second-canary-preflight.mjs
+          node --check apps/mobile-app/scripts/customer-firebase-second-canary-preflight.test.mjs
+          node --test apps/mobile-app/scripts/customer-firebase-second-canary-preflight.test.mjs
+      - name: Require planner to remain pure and unexposed
+        shell: bash
+        run: |
+          set -euo pipefail
+          file='supabase/functions/_shared/customer-firebase-second-canary-preflight.mjs'
+          if grep -Ei 'Deno\.serve\(|updateUserById\(|createUser\(|\.insert\(|\.update\(|\.upsert\(|sendOtp\(|generateLink\(' "$file"; then
+            echo 'Canary preflight must not perform any Auth mutation or expose an endpoint' >&2
+            exit 1
+          fi
