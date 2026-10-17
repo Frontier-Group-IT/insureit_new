@@ -1,0 +1,54 @@
+name: Verify Firebase reviewed operator preview
+on:
+  push:
+    branches:
+      - feat/customer-firebase-second-canary-preflight-20261017
+    paths:
+      - 'supabase/functions/_shared/customer-firebase-operator-preview.mjs'
+      - 'supabase/functions/customer-firebase-operator-preview/index.ts'
+      - 'apps/mobile-app/scripts/customer-firebase-operator-preview.test.mjs'
+      - '.github/workflows/verify-customer-firebase-operator-preview.yml'
+  pull_request:
+    paths:
+      - 'supabase/functions/_shared/customer-firebase-operator-preview.mjs'
+      - 'supabase/functions/customer-firebase-operator-preview/index.ts'
+      - 'apps/mobile-app/scripts/customer-firebase-operator-preview.test.mjs'
+      - '.github/workflows/verify-customer-firebase-operator-preview.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  security-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Assert no account mutation or deployment enablement
+        shell: bash
+        run: |
+          set -euo pipefail
+          file='supabase/functions/_shared/customer-firebase-operator-preview.mjs'
+          entry='supabase/functions/customer-firebase-operator-preview/index.ts'
+          grep -q 'featureEnabled=false' "$file"
+          grep -q 'CUSTOMER_FIREBASE_OPERATOR_PREVIEW_ENABLED' "$entry"
+          if grep -E 'updateUserById\(|createUser\(|\.insert\(|\.upsert\(|\.update\(|\.delete\(|auth\.admin\.generateLink\(|sendOtp\(' "$file" "$entry"; then
+            echo 'Read-only operator preview may not write data or Auth accounts' >&2
+            exit 1
+          fi
+      - name: Run focused independent identity and authorization regressions
+        shell: bash
+        run: |
+          node --check supabase/functions/_shared/customer-firebase-operator-preview.mjs
+          node --check apps/mobile-app/scripts/customer-firebase-operator-preview.test.mjs
+          node --test apps/mobile-app/scripts/customer-firebase-operator-preview.test.mjs
+          node --test apps/mobile-app/scripts/customer-firebase-reviewed-enrollment.test.mjs
+          node --test apps/mobile-app/scripts/customer-firebase-reviewed-execution.test.mjs
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Typecheck undeployed Edge entrypoint
+        shell: bash
+        run: deno check --node-modules-dir=auto supabase/functions/customer-firebase-operator-preview/index.ts
