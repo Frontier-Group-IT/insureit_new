@@ -101,6 +101,15 @@ if (accountsRole.grants.length !== 1 || !accountsGrants.has("reports.view|view|o
   fail("Accounts must receive only organization-wide finance/report visibility in the V2 shadow matrix");
 }
 
+const exchangeCreateRoleCodes = roleMatrixV2
+  .filter((role) => role.grants.some((grant) => grant.permission === "exchange.listings.create" && (grant.access === "edit" || grant.access === "approve")))
+  .map((role) => role.code)
+  .sort();
+const expectedExchangeCreateRoleCodes = ["it_super_user", "sales_operations_head", "super_admin"].sort();
+if (JSON.stringify(exchangeCreateRoleCodes) !== JSON.stringify(expectedExchangeCreateRoleCodes)) {
+  fail(`Exchange listing creation must remain limited to ${expectedExchangeCreateRoleCodes.join(", ")}; got ${exchangeCreateRoleCodes.join(", ")}`);
+}
+
 const exchangeReviewRoleCodes = roleMatrixV2
   .filter((role) => role.grants.some((grant) => grant.permission === "exchange.listings.review" && grant.access === "approve"))
   .map((role) => role.code)
@@ -147,6 +156,7 @@ const applicationOnlyPermissionKeys = new Set([
   "policy_intakes.finalize",
   "policies.ocr_training.review",
   "policies.ocr_training.approve",
+  "exchange.listings.create",
   "exchange.listings.review",
 ]);
 const applicationOnlyRoleCodes = new Set(["accounts", "sales_executive"]);
