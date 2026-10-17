@@ -10,6 +10,7 @@ on:
       - 'supabase/migrations/2026101716*.sql'
       - 'supabase/rollback/2026101716*.sql'
       - 'apps/mobile-app/scripts/customer-firebase-cohort-*'
+      - 'apps/mobile-app/scripts/customer-firebase-reviewed-execution.test.mjs'
       - '.github/workflows/verify-customer-firebase-recovery-and-cohorts.yml'
   pull_request:
     paths:
@@ -19,6 +20,7 @@ on:
       - 'supabase/migrations/2026101716*.sql'
       - 'supabase/rollback/2026101716*.sql'
       - 'apps/mobile-app/scripts/customer-firebase-cohort-*'
+      - 'apps/mobile-app/scripts/customer-firebase-reviewed-execution.test.mjs'
       - '.github/workflows/verify-customer-firebase-recovery-and-cohorts.yml'
   workflow_dispatch:
 
@@ -55,10 +57,12 @@ jobs:
           node --check supabase/functions/_shared/customer-firebase-cohort-resolution.mjs
           node --check supabase/functions/_shared/customer-firebase-reviewed-execution.mjs
           node --check apps/mobile-app/scripts/customer-firebase-cohort-resolution.test.mjs
+          node --check apps/mobile-app/scripts/customer-firebase-reviewed-execution.test.mjs
           bash -n apps/mobile-app/scripts/customer-firebase-cohort-sql-local.sh
       - name: Test closed cohort and canonical Customer identity checks
         run: |
           node --test apps/mobile-app/scripts/customer-firebase-cohort-resolution.test.mjs
+          node --test apps/mobile-app/scripts/customer-firebase-reviewed-execution.test.mjs
           node --test apps/mobile-app/scripts/customer-firebase-reviewed-enrollment.test.mjs
       - name: Prove atomic reviewed enroll and idempotent/revoked denial in local Postgres
         run: bash apps/mobile-app/scripts/customer-firebase-cohort-sql-local.sh
