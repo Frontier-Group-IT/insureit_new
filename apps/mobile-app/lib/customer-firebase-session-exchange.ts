@@ -22,7 +22,10 @@ type SessionChallenge = Readonly<{
 }>;
 
 const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const hashRe = /^[a-f0-9]{64}$/i;
+// Match the bounded hash contract in the deployed Supabase Edge bridge.
+// The bridge already validates the exact original Customer UUID and email;
+// Supabase Auth verifies that the one-use hash is genuine and unused.
+const hashRe = /^[a-f0-9]{32,128}$/i;
 
 export function firebaseOtpSessionGateEnabled(): boolean {
   return Platform.OS === 'android' &&
