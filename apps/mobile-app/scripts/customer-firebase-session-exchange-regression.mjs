@@ -28,6 +28,45 @@ test('one-use token exchange must establish a genuine existing Supabase Auth ses
   assert.doesNotMatch(client, /supabase\.auth\.setSession\(\{\s*access_token:\s*firebaseIdToken/);
 });
 
+test('mobile and Edge share bounded one-use challenge validation; no fixed 64-only client guard', () => {
+  const backend = readFileSync(new URL('../../../supabase/functions/_shared/customer-firebase-session-challenge.mjs', import.meta.url), 'utf8');
+  const clientRegexSource = client.match(/const hashRe = \/(\^\[a-f0-9\]\{32,128\}\$)\/i;/)?.[1];
+  const backendRegexSource = backend.match(/const hexHash = \/(\^\[a-f0-9\]\{32,128\}\$)\/i;/)?.[1];
+  assert.equal(clientRegexSource, '^[a-f0-9]{32,128}
+  assert.match(client, /const previousSession = snapshotResult\.data\.session/);
+  assert.match(client, /restoreCustomerSessionSnapshot\(previousSession\)/);
+  assert.match(client, /scope: 'local'/);
+  assert.match(client, /if \(mayHaveInstalledSession\)/);
+});
+
+test('Edge restricts provisioning to verified and immutable two-Customer canary', () => {
+  assert.match(edge, /checkCustomerFirebaseCanary/);
+  assert.match(edge, /provisionDisposableFirebaseCanaryAlias/);
+  assert.match(edge, /verifyIdToken\(bearer\[1\], true\)/);
+  assert.match(edge, /checkCustomerSessionEligibility/);
+  assert.match(edge, /issueExistingCustomerSessionChallenge/);
+  assert.match(edge, /session_identity_not_provisioned/);
+  assert.match(edge, /"cache-control": "no-store, private"/);
+  assert.doesNotMatch(edge, /auth\.admin\.updateUserById\s*\(/);
+});
+
+test('production 0.3.0 and native dependency boundary remain untouched', () => {
+  assert.equal(config.version, '0.3.2');
+  assert.equal(config.android.versionCode, 11);
+  assert.doesNotMatch(login, /@react-native-firebase/);
+  assert.doesNotMatch(signup, /@react-native-firebase/);
+  assert.match(login, /sendPhoneOtp\(fullPhone\)/);
+  assert.match(signup, /sendPhoneSignupOtp\(/);
+});
+);
+  assert.equal(backendRegexSource, clientRegexSource);
+  const check = new RegExp(clientRegexSource, 'i');
+  for (const n of [32, 40, 64, 96, 128]) assert.equal(check.test('a'.repeat(n)), true);
+  for (const value of ['', 'a'.repeat(31), 'a'.repeat(129), 'g'.repeat(40)]) assert.equal(check.test(value), false);
+  assert.match(client, /if \(!validChallenge\(candidate\)\)/);
+  assert.match(client, /session\.user\.id !== candidate\.profile_id/);
+});
+
 test('account switching restores prior Supabase Customer identity on failed exchange', () => {
   assert.match(client, /const previousSession = snapshotResult\.data\.session/);
   assert.match(client, /restoreCustomerSessionSnapshot\(previousSession\)/);
