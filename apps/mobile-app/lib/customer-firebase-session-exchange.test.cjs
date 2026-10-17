@@ -29,7 +29,7 @@ function harness(opts = {}) {
       getSession: async () => ({ data: { session: active }, error: null }),
       verifyOtp: async (args) => {
         calls.verifyOtp++;
-        assert.deepEqual(args, { token_hash: hash, type: 'magiclink' });
+        assert.deepEqual(args, { token_hash: opts.hash ?? hash, type: 'magiclink' });
         active = candidate;
         return { data: { user: candidate.user, session: candidate }, error: null };
       },
@@ -74,7 +74,7 @@ function harness(opts = {}) {
     flags: () => loaded.exports.firebaseOtpSessionGateEnabled(),
     mockFetch: async () => {
       calls.fetch++;
-      const payload = opts.payload ?? { code: 'exchange_ready', token_hash: hash, profile_id: expectedId };
+      const payload = opts.payload ?? { code: 'exchange_ready', token_hash: opts.hash ?? hash, profile_id: expectedId };
       return { ok: opts.responseOk ?? true, json: async () => payload };
     },
   };
@@ -110,6 +110,15 @@ test('success: a real Supabase Auth session is verified, never a Firebase sessio
     assert.equal(h.calls.verifyOtp, 1);
     assert.equal(h.calls.getUser, 1);
     assert.equal(h.calls.restored, 0);
+  });
+});
+
+test('success: accepts verified 40-hex one-use challenge without relaxing Customer UUID', async () => {
+  const h = harness({ hash: 'b'.repeat(40) });
+  await withEnvironment(h, async () => {
+    const session = await h.run();
+    assert.equal(session.user.id, idB);
+    assert.equal(h.calls.verifyOtp, 1);
   });
 });
 
