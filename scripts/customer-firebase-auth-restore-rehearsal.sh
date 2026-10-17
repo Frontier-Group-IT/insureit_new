@@ -29,11 +29,20 @@ archive_name="$(basename "$INSUREIT_BACKUP_FILE")"
 (cd "$archive_dir" && sha256sum -c --status "$archive_name.sha256") || {
   echo 'ERROR: encrypted archive checksum verification failed' >&2; exit 1;
 }
-# Validate actual TCP server address, not just text within the URL.
-server_ip="$(psql "$INSUREIT_RESTORE_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -Atqc \
-  'select inet_server_addr()')"
-[[ "$server_ip" == '127.0.0.1' || "$server_ip" == '::1' ]] || {
-  echo 'ERROR: restore connection is not loopback' >&2; exit 1;
+# Validate the parsed destination hostname; Docker port forwarding can make
+# inet_server_addr() non-loopback even for 127.0.0.1 client connections.
+command -v python3 >/dev/null || { echo 'ERROR: missing python3' >&2; exit 1; }
+restore_host="$(INSUREIT_RESTORE_TEST_DB_URL="$INSUREIT_RESTORE_TEST_DB_URL" python3 - <<'PY'
+import os
+import urllib.parse
+url = urllib.parse.urlsplit(os.environ["INSUREIT_RESTORE_TEST_DB_URL"])
+if url.scheme not in {"postgres", "postgresql"} or not url.hostname or not url.port:
+    raise SystemExit(2)
+print(url.hostname.lower())
+PY
+)"
+[[ "$restore_host" == '127.0.0.1' || "$restore_host" == 'localhost' || "$restore_host" == '::1' ]] || {
+  echo 'ERROR: restore destination host is not loopback' >&2; exit 1;
 }
 # Never import into an Auth database with existing users or identities.
 existing="$(psql "$INSUREIT_RESTORE_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -Atqc \
