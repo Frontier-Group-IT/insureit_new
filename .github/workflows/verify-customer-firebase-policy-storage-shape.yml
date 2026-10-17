@@ -1,0 +1,45 @@
+name: Verify Firebase Customer policy and Storage shapes
+on:
+  push:
+    branches:
+      - feat/customer-firebase-rls-session-isolation-20261017
+    paths:
+      - 'apps/mobile-app/scripts/customer-firebase-policy-storage-shape-local.sh'
+      - '.github/workflows/verify-customer-firebase-policy-storage-shape.yml'
+  pull_request:
+    paths:
+      - 'apps/mobile-app/scripts/customer-firebase-policy-storage-shape-local.sh'
+      - '.github/workflows/verify-customer-firebase-policy-storage-shape.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-policy-shapes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: rls_fixture
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d rls_fixture"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 15
+    env:
+      RLS_TEST_DATABASE_URL: postgresql://postgres:disposable-only@127.0.0.1:5432/rls_fixture
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate local-only test script
+        shell: bash
+        run: |
+          bash -n apps/mobile-app/scripts/customer-firebase-policy-storage-shape-local.sh
+          grep -q 'Refusing non-loopback target' apps/mobile-app/scripts/customer-firebase-policy-storage-shape-local.sh
+      - name: Test Customer A/B policy and Storage paths without production access
+        shell: bash
+        run: bash apps/mobile-app/scripts/customer-firebase-policy-storage-shape-local.sh
