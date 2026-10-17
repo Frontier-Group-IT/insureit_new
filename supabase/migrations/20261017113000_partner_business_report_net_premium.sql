@@ -44,6 +44,7 @@ begin
     select
       p.*,
       coalesce(ppd.net_premium,p.premium_amount,0) as effective_premium,
+      coalesce(ppd.gross_premium,p.premium_amount,0) as effective_gross_premium,
       coalesce(p.issuance_date,p.created_at::date) as event_date,
       i.id as scoped_intermediary_id
     from public.policies p
@@ -72,7 +73,7 @@ begin
   totals as (
     select
       count(*)::int as total_policies,
-      coalesce(sum(effective_premium),0) as lifetime_gross_premium,
+      coalesce(sum(effective_gross_premium),0) as lifetime_gross_premium,
       count(*) filter(where event_date>=v_month_start and event_date<v_next_month_start)::int as policies_this_month,
       coalesce(sum(effective_premium) filter(where event_date>=v_month_start and event_date<v_next_month_start),0) as premium_this_month,
       count(*) filter(where event_date>=v_prev_month_start and event_date<v_month_start)::int as policies_last_month,
