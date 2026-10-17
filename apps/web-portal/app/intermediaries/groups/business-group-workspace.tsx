@@ -185,30 +185,6 @@ export function BusinessGroupWorkspace({
         </div>
       </section>
 
-      {ungroupedRoots.length ? (
-        <details className="group overflow-hidden rounded-[22px] border border-[#F0DFC0] bg-[#FFFCF6]">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
-            <div>
-              <h2 className="text-[11px] font-bold text-[#76541E]">Ungrouped root Partners</h2>
-              <p className="mt-1 text-[8px] text-[#9A7B4B]">{ungroupedRoots.length} available for Group assignment.</p>
-            </div>
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[#E8D8BC] bg-white text-[#8A6A35] shadow-sm">
-              <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
-            </span>
-          </summary>
-          <div className="border-t border-[#F0DFC0] px-4 pb-4 pt-3">
-            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-              {ungroupedRoots.map((partner) => (
-                <div key={partner.id} className="rounded-xl border border-[#F0E3CC] bg-white px-3 py-2.5">
-                  <p className="truncate text-[9px] font-bold text-[#3A4E65]">{partner.display_name}</p>
-                  <p className="mt-0.5 text-[7.5px] text-[#8794A3]">{partner.partner_code}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </details>
-      ) : null}
-
       {branchOpen ? (
         <Modal title="Assign Branch" onClose={() => setBranchOpen(false)}>
           <form action={assignPartnerBranch} className="space-y-3">
