@@ -3,7 +3,7 @@
 ## Status
 **IMPLEMENTED ON BRANCH ONLY. NOT MERGED, DEPLOYED, OR APPLIED TO PRODUCTION.**
 
-Branch: `feat/internal-exchange-listing-20261017`
+Branch: `feat/internal-exchange-listing-20261017-v2`
 
 ## Requirement
 Add an internal website **Exchange → Listing** workflow matching the customer app sell/list journey. Access is limited to:
