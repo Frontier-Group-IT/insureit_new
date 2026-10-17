@@ -127,7 +127,6 @@ export function BusinessGroupWorkspace({
     return map;
   }, [partners]);
 
-  const ungroupedRoots = rootPartners.filter((partner) => !membershipByPartner.has(partner.id));
   const branchCandidates = partners.filter(
     (partner) => partner.is_branch_profile && !partner.parent_partner_id && !membershipByPartner.has(partner.id),
   );
