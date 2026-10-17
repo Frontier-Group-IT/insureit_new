@@ -165,7 +165,7 @@ export async function saveInternalExchangeDraft(input: {
     review_notes: null,
   };
 
-  let listing: any = null;
+  let listing: { id: string; listing_no: string; status: string } | null = null;
   if (input.listingId) {
     const { data: current } = await admin
       .from("exchange_listings")
