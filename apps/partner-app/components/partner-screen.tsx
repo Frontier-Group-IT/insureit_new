@@ -1,4 +1,4 @@
-import type { PropsWithChildren, ReactNode } from 'react';
+import { useCallback, useState, type PropsWithChildren, type ReactNode } from 'react';
 import {
   Image,
   Pressable,
@@ -11,11 +11,12 @@ import {
   View,
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerTopBar } from '@/components/ui/partner-top-bar';
+import { getPartnerUnreadActivityCount } from '@/lib/engagement';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerNetwork } from '@/providers/partner-network-provider';
 import { usePartnerSearch } from '@/providers/partner-search-provider';
@@ -57,6 +58,24 @@ export function PartnerScreen({
   const heroSearchValue = heroSearch?.value ?? sharedSearch.query;
   const setHeroSearchValue = heroSearch?.onChangeText ?? sharedSearch.setQuery;
   const hasHeroSearchValue = heroSearchValue.trim().length > 0;
+  const [unreadActivityCount, setUnreadActivityCount] = useState(0);
+
+  useFocusEffect(useCallback(() => {
+    if (!isHomeHero) return undefined;
+
+    let cancelled = false;
+    void getPartnerUnreadActivityCount(100)
+      .then((count) => {
+        if (!cancelled) setUnreadActivityCount(count);
+      })
+      .catch(() => {
+        if (!cancelled) setUnreadActivityCount(0);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isHomeHero]));
 
   const submitHomeSearch = () => {
     if (heroSearch?.onSubmit) {
@@ -116,11 +135,18 @@ export function PartnerScreen({
                 <View style={styles.homeHeroActions}>
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="View recent activity"
+                    accessibilityLabel={unreadActivityCount ? `View recent activity, ${unreadActivityCount} unread` : 'View recent activity'}
                     onPress={() => router.push('/activity')}
                     style={({ pressed }) => [styles.homeHeroIconButton, pressed && styles.homeSearchPressed]}
                   >
                     <Feather name="bell" size={20} color="#FFFFFF" />
+                    {unreadActivityCount > 0 ? (
+                      <View style={styles.homeHeroBellBadge}>
+                        <Text style={styles.homeHeroBellBadgeText}>
+                          {unreadActivityCount > 99 ? '99+' : unreadActivityCount}
+                        </Text>
+                      </View>
+                    ) : null}
                   </Pressable>
                   <Pressable
                     accessibilityRole="button"
@@ -297,6 +323,26 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(4,33,78,0.72)',
     borderWidth: 1.25,
     borderColor: '#FFFFFF',
+  },
+  homeHeroBellBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -6,
+    minWidth: 17,
+    height: 17,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E53935',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  homeHeroBellBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: '900',
   },
   homeHeroAvatar: {
     width: 35,
