@@ -68,9 +68,13 @@ using(bucket_id='policy-documents' and exists(select 1
 create policy storage_claim_member on storage.objects for select to authenticated
 using(bucket_id='claim-documents' and exists(select 1 from public.claim_documents d
  where d.storage_path=name and public.can_access_customer(d.customer_id)));
+create policy storage_claim_owner on storage.objects for select to authenticated
+using(bucket_id='claim-documents' and exists(select 1 from public.claim_documents d
+ where d.storage_path=name and public.can_access_customer(auth.uid(),d.customer_id)));
 grant usage on schema public,auth,storage to authenticated,anon;
 grant select on public.customers,public.vehicles,public.policies,public.claims,
-public.customer_onboarding_applications,storage.objects to authenticated,anon;
+public.customer_onboarding_applications,public.policy_documents,public.claim_documents,
+storage.objects to authenticated,anon;
 insert into public.customers values
 ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111'),
 ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','22222222-2222-4222-8222-222222222222');
@@ -107,7 +111,7 @@ counts() {
  local uid="$1" role="$2"
  psql "$RLS_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -Atqc "
  set role $role;
- select set_config('request.jwt.claim.sub','$uid',false);
+ select set_config('request.jwt.claim.sub',case when '$role'='anon' then '' else '$uid' end,false);
  select (select count(*) from public.customers)::text||'|'||
  (select count(*) from public.vehicles)||'|'||
  (select count(*) from public.policies)||'|'||
