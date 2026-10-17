@@ -4,15 +4,19 @@ import { AppShell } from "@/components/shell";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { requireGroupAssociateManager } from "../../group-associate-access";
 import { saveGroupReviewDetails } from "./save-action";
+import { GroupMembershipManagement } from "../group-membership-management";
 export const dynamic="force-dynamic";
 export default async function EditGroupPage({params}:{params:Promise<{id:string}>}){
  const {id}=await params;await requireGroupAssociateManager(id);
  const admin=createSupabaseAdminClient();
  const [{data:group},{data:contact}]=await Promise.all([
-  admin.from("intermediary_groups").select("group_name,description,group_code").eq("id",id).maybeSingle(),
+  admin.from("intermediary_groups").select("group_name,description,group_code,group_mode").eq("id",id).maybeSingle(),
   admin.from("group_administrator_contacts").select("admin_name,admin_mobile,address,city,state,postal_code").eq("group_id",id).maybeSingle()
  ]);
  if(!group)notFound();
+ const {data:memberships}=await admin.from("intermediary_group_memberships").select("partner_id").eq("group_id",id).is("effective_to",null);
+ const partnerIds=(memberships??[]).map(m=>m.partner_id);
+ const {data:partners}=partnerIds.length?await admin.from("partners").select("id,partner_code,display_name").in("id",partnerIds):{data:[]};
  const input="mt-1 h-10 w-full rounded-xl border border-[#DCE5EF] px-3 text-sm";
  return <AppShell title="Edit Group" backHref={`/intermediaries/groups/${id}`}>
  <main className="mx-auto max-w-[1100px] space-y-4">
@@ -32,5 +36,6 @@ export default async function EditGroupPage({params}:{params:Promise<{id:string}
    </div>
    <div className="flex justify-end gap-3"><Link href={`/intermediaries/groups/${id}`} className="rounded-lg border px-5 py-2">Cancel</Link><button className="rounded-lg bg-[#17365D] px-5 py-2 text-white">Save Changes</button></div>
   </form>
+  <GroupMembershipManagement id={id} groupMode={group.group_mode} groupName={group.group_name} partners={partners??[]} />
  </main></AppShell>;
 }
