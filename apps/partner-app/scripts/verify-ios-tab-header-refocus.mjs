@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+const read=(relative)=>readFileSync(fileURLToPath(new URL(relative,import.meta.url)),'utf8');
+const screen=read('../components/partner-screen.tsx');
+const home=read('../app/(tabs)/index.tsx');
+const business=read('../app/(tabs)/business.tsx');
+const policies=read('../app/(tabs)/policies.tsx');
+const claims=read('../app/(tabs)/claims.tsx');
+assert.match(screen,/resetScrollOnFocus\s*=\s*false/);
+assert.match(screen,/Platform\.OS !== 'ios' \|\| !resetScrollOnFocus/);
+assert.match(screen,/scrollRef\.current\?\.scrollTo\(\{ y: 0, animated: false \}\)/);
+assert.match(screen,/cancelAnimationFrame\(frame\)/);
+assert.match(home,/<PartnerScreen\s+resetScrollOnFocus/);
+assert.match(business,/<PartnerScreen\s+resetScrollOnFocus/);
+assert.doesNotMatch(policies,/resetScrollOnFocus/);
+assert.doesNotMatch(claims,/resetScrollOnFocus/);
+console.log('iOS Home/Business tab refocus header regression: OK');
