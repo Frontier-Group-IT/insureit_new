@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Pencil, UsersRound, Building2, CalendarDays, UserRoundCog, Check } from "lucide-react";
 import { GroupAssociateSections } from "./associate-accounts/associate-sections";
+import { loadGroupPartnerRegisterRows } from "./associate-accounts/group-partner-data";
 import { AppShell } from "@/components/shell";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { requireGroupAssociateManager } from "../group-associate-access";
@@ -18,6 +19,7 @@ export default async function GroupDetailsPage({params,searchParams}:{params:Pro
  if(!group)notFound();
  const ids=(memberships??[]).map(m=>m.partner_id);
  const {data:partners}=ids.length?await admin.from("partners").select("id,partner_code,display_name,source_application_id").in("id",ids):{data:[]};
+ const partnerRegisterRows=await loadGroupPartnerRegisterRows(admin,partners??[]);
  const q=await searchParams;
 
  return <AppShell title="Group Details" backHref="/intermediaries/groups">
@@ -26,7 +28,7 @@ export default async function GroupDetailsPage({params,searchParams}:{params:Pro
     <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
      <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-full bg-white text-blue-700"><Building2 className="h-5 w-5"/></span>
       <h1 className="text-[18px] font-bold tracking-tight">{group.group_name}</h1>
-      <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${group.status === "active" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>{group.status === "active" ? <Check className="h-3.5 w-3.5" aria-label="Active" /> : group.status}</span>
+      <span className={group.status === "active" ? "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800" : "inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-900"}>{group.status === "active" ? <Check className="h-3.5 w-3.5" aria-label="Active" /> : group.status}</span>
      </div>
      <Link href={`/intermediaries/groups/${id}/edit`} aria-label="Edit Group details" className="grid h-10 w-10 place-items-center rounded-xl border border-white/40 bg-white/10 hover:bg-white/20"><Pencil className="h-4 w-4"/></Link>
     </div>
@@ -41,7 +43,7 @@ export default async function GroupDetailsPage({params,searchParams}:{params:Pro
    </header>
    {q.warning?<div role="alert" className="rounded-xl border border-orange-200 bg-orange-50 px-5 py-3 text-xs text-orange-700">{q.warning}</div>:null}
    {q.success?<div className="rounded-xl border border-green-200 bg-green-50 px-5 py-3 text-xs text-green-700">Group saved. Review administrator details and invitation status.</div>:null}
-   <GroupAssociateSections id={id} query={{success:q.success,error:q.error}} surface="operations" partners={partners??[]} />
+   <GroupAssociateSections id={id} query={{success:q.success,error:q.error}} surface="operations" partners={partnerRegisterRows} />
 
 
   </main>

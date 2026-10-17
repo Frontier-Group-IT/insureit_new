@@ -1,3 +1,4 @@
+import type { GroupPartnerRow } from "./group-partner-data";
 import { GroupRegisterTabs } from "./group-register-tabs";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { requireGroupAssociateManager } from "../../group-associate-access";
@@ -5,7 +6,7 @@ import { createGroupAssociate } from "./actions";
 import { AssociateControls } from "./associate-controls";
 
 type Query = {success?:string; error?:string};
-export async function GroupAssociateSections({id,query:q={},surface="operations",partners=[]}:{id:string;query?:Query;surface?:"operations"|"partner";partners?:Array<{id:string;partner_code:string;display_name:string;source_application_id:string|null}>}) {
+export async function GroupAssociateSections({id,query:q={},surface="operations",partners=[]}:{id:string;query?:Query;surface?:"operations"|"partner";partners?:GroupPartnerRow[]}) {
  await requireGroupAssociateManager(id);
  const admin = createSupabaseAdminClient();
  const {data:associates} = await admin.from("group_portal_associate_accounts").select("id,name,phone_number,email,designation,address,city,state,postal_code,role,status").eq("group_id",id).order("created_at",{ascending:false});
