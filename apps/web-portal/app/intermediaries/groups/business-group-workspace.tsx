@@ -9,12 +9,9 @@ import {
   ChevronDown,
   ChevronRight,
   GitBranch,
-  Layers3,
   Pencil,
   Plus,
   Search,
-  Store,
-  UsersRound,
   X,
 } from "lucide-react";
 import { FormSubmitButton } from "@/components/form-submit-button";
@@ -296,10 +293,6 @@ function PartnerTreeRow({ partner, branches, group, canManage }: { partner: Busi
       ) : null}
     </div>
   );
-}
-
-function Metric({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
-  return <div className="flex items-center justify-between gap-2 rounded-lg border border-[#E2E9F2] bg-white px-3 py-2"><div className="flex min-w-0 items-center gap-2 text-[#315FEA]">{icon}<span className="truncate text-[9px] font-semibold text-[#64748B]">{label}</span></div><span className="text-[15px] font-bold tabular-nums text-[#17365D]">{value}</span></div>;
 }
 
 function SuccessToast({ text }: { text: string }) {
