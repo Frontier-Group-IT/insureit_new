@@ -65,9 +65,6 @@ export function IntermediaryPortalUsersWorkspace({ rows, extraRows, initialQuery
         </form>
         <select aria-label="Account type" value={accountType} onChange={e=>{setAccountType(e.target.value);setCurrentPage(1);}} className="h-9 rounded-lg border border-[#CBD5E1] bg-white px-2 text-[10px]"><option value="all">All account types</option>{["Partner","Group","Branch","Group Associate","Partner Associate"].map(type=><option key={type} value={type}>{type}</option>)}</select>
         <div className="flex-1" />
-        <Link href="/intermediaries/groups/login-access" className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg border border-[#BFD0E4] bg-white px-3 text-[9.5px] font-bold text-[#1769DC] transition hover:border-[#8FB4E5] hover:bg-[#EFF6FF]">
-          Login Access
-        </Link>
         <nav className="flex w-fit shrink-0 items-center rounded-xl border border-[#DCE5EF] bg-white p-1" aria-label="Filter intermediary user accounts">
           {([
             ["all", "All", searchedRows.length],
