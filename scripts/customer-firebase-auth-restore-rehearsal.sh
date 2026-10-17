@@ -50,15 +50,40 @@ existing="$(psql "$INSUREIT_RESTORE_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -Atqc \
 [[ "$existing" == '0|0' ]] || {
   echo 'ERROR: refusing restore into nonempty Auth identities' >&2; exit 1;
 }
-# Validate that decryption produces a readable pg_dump archive.
+# Require a matching target GoTrue migration history. The CI synthetic fixture
+# is the only exception (it still requires the loopback+disposable acknowledgement).
+if [[ "${INSUREIT_BACKUP_DISPOSABLE_LOCAL_TEST:-}" != 'YES_SYNTHETIC_ONLY' ]]; then
+  go_true_version="$(psql "$INSUREIT_RESTORE_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -Atqc \
+    "select count(*)::text || '|' || coalesce(max(version::text),'') from auth.schema_migrations")"
+  auth_table_count="$(psql "$INSUREIT_RESTORE_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -Atqc \
+    "select count(*) from information_schema.tables where table_schema='auth' and table_type='BASE TABLE'")"
+  [[ "$go_true_version" == '82|20260831180000' && "$auth_table_count" == '27' ]] || {
+    echo 'ERROR: local GoTrue schema/migrations do not match inspected production baseline' >&2
+    exit 1
+  }
+fi
+# The encrypted archive retains the ENTIRE source Auth schema, including GoTrue
+# migration bookkeeping. In a matching target these migrations ALREADY EXIST.
+# Build a temporary archive TOC (object names only, NO user rows/credentials),
+# and omit only the pre-seeded migration-history TABLE DATA during import.
+toc="$(mktemp)"
+trap 'rm -f -- "$toc"' EXIT
 age -d -i "$INSUREIT_BACKUP_AGE_IDENTITY" "$INSUREIT_BACKUP_FILE" \
-  | pg_restore --list >/dev/null
+  | pg_restore --list > "$toc"
+grep -Eq ' TABLE DATA auth users ' "$toc" || {
+  echo 'ERROR: archive missing auth.users table data' >&2; exit 1;
+}
+grep -Eq ' TABLE DATA auth identities ' "$toc" || {
+  echo 'ERROR: archive missing auth.identities table data' >&2; exit 1;
+}
+sed -i '/ TABLE DATA auth schema_migrations /s/^/;/' "$toc"
 # Data-only archives can list auth.identities before auth.users. Disable
 # FK triggers ONLY for this single disposable restore transaction; pg_restore
 # re-enables them before commit. This must NEVER be used against production.
 age -d -i "$INSUREIT_BACKUP_AGE_IDENTITY" "$INSUREIT_BACKUP_FILE" \
   | pg_restore --exit-on-error --single-transaction --no-owner --no-acl \
-      --disable-triggers --data-only --dbname="$INSUREIT_RESTORE_TEST_DB_URL"
+      --disable-triggers --data-only --use-list="$toc" \
+      --dbname="$INSUREIT_RESTORE_TEST_DB_URL"
 # Verify that the restored GoTrue identities exist without printing records.
 restored="$(psql "$INSUREIT_RESTORE_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -Atqc \
   'select count(*) from auth.users')"
