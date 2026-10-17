@@ -114,8 +114,12 @@ create trigger trg_customer_firebase_reviews_immutable
 before update or delete on public.customer_firebase_enrollment_reviews
 for each row execute function public.customer_firebase_review_append_only();
 
--- Restricted server collision count. Normalizes both plain and +91 prefixes
--- and counts ALL profiles, including inactive; no phones/UUIDs are returned.
+-- Restricted server collision count. Includes all profiles (even inactive)
+-- AND extra Auth principals with the same phone. A Supabase Auth user WITHOUT a
+-- matching public profile must NEVER silently pass the no-shared-phone gate.
+-- Counts each principal once, even if both profiles + auth.users match.
+-- Auth-only collisions are conservatively classified as non-Customer.
+-- No phones, UUIDs or names are returned.
 create or replace function public.customer_firebase_phone_collision_counts(
   p_customer_id uuid
 )
@@ -138,15 +142,34 @@ begin
   end if;
   v_phone := right(v_phone_digits,10);
   return query
+  with matching_profile_principals as (
+    select p.id, p.role::text as principal_role
+    from public.profiles p
+    where p.id <> p_customer_id
+      and pg_catalog.regexp_replace(coalesce(p.phone,''),'[^0-9]','','g')
+        ~ '^(91)?[6-9][0-9]{9}$'
+      and right(pg_catalog.regexp_replace(coalesce(p.phone,''),'[^0-9]','','g'),10)
+        = v_phone
+  ), matching_auth_only_principals as (
+    select u.id, null::text as principal_role
+    from auth.users u
+    where u.id <> p_customer_id
+      and pg_catalog.regexp_replace(coalesce(u.phone,''),'[^0-9]','','g')
+        ~ '^(91)?[6-9][0-9]{9}$'
+      and right(pg_catalog.regexp_replace(coalesce(u.phone,''),'[^0-9]','','g'),10)
+        = v_phone
+      and not exists (
+        select 1 from matching_profile_principals p where p.id=u.id
+      )
+  ), all_shared_principals as (
+    select id,principal_role from matching_profile_principals
+    union all
+    select id,principal_role from matching_auth_only_principals
+  )
   select
-    count(*) filter (where role is distinct from 'customer')::integer,
-    count(*) filter (where role = 'customer')::integer
-  from public.profiles p
-  where p.id <> p_customer_id
-    and pg_catalog.regexp_replace(coalesce(p.phone,''),'[^0-9]','','g')
-      ~ '^(91)?[6-9][0-9]{9}$'
-    and right(pg_catalog.regexp_replace(coalesce(p.phone,''),'[^0-9]','','g'),10)
-      = v_phone;
+    count(*) filter (where principal_role is distinct from 'customer')::integer,
+    count(*) filter (where principal_role = 'customer')::integer
+  from all_shared_principals;
 end;
 $body$;
 
