@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { IntermediaryTabs } from "../intermediary-tabs";
 import {
   Archive,
   Building2,
@@ -158,28 +159,13 @@ export function BusinessGroupWorkspace({
 
   return (
     <div className="mx-auto max-w-[1540px] space-y-4 pb-24">
-      <section className="overflow-hidden rounded-[20px] border border-[#173B6C] bg-[linear-gradient(135deg,#0F3B72_0%,#0B2F5F_55%,#08274F_100%)] shadow-[0_16px_40px_rgba(7,29,73,.20)]">
-        <div className="flex flex-col gap-3 px-4 py-3 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/10 text-white ring-1 ring-white/20">
-              <Layers3 className="h-5 w-5" />
-            </span>
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <h1 className="text-[18px] font-bold tracking-[-0.025em] text-white">Business Groups</h1>
-              <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[7px] font-bold uppercase tracking-[0.06em] text-[#DCE9FF]">Group → Partner → Branch</span>
-            </div>
-          </div>
-          {canManage ? (
-            <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-              <Link href="/intermediaries/groups/login-access" className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-3 text-[8px] font-bold text-white shadow-sm transition hover:bg-white/15">
-                <UsersRound className="h-3.5 w-3.5" /> Login Access
-              </Link>
-              <Link href="/intermediaries/groups/new" aria-disabled={!hierarchyReady} className={`inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#5B8BFF] bg-[#315FEA] px-3.5 text-[8px] font-bold text-white ${!hierarchyReady?"pointer-events-none opacity-45":""}`}><Plus className="h-3.5 w-3.5" /> Create Group</Link>
-            </div>
-          ) : null}
+      <section className="overflow-hidden rounded-2xl border border-[#DCE5F1] bg-white shadow-sm">
+        <IntermediaryTabs active="group" embedded />
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <h1 className="text-[15px] font-bold text-[#17365D]">Business Groups</h1>
+          {canManage ? <Link href="/intermediaries/groups/new" aria-disabled={!hierarchyReady} className={`inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#315FEA] px-3 text-[10px] font-bold text-white ${!hierarchyReady?"pointer-events-none opacity-45":""}`}><Plus className="h-3.5 w-3.5" /> Create Group</Link> : null}
         </div>
-
-        <div className="grid border-t border-white/12 bg-white/[0.03] sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 border-t border-[#E7ECF3] bg-[#FAFBFD] p-2 lg:grid-cols-4">
           <Metric label="Groups" value={groups.length} icon={<Layers3 className="h-4 w-4" />} />
           <Metric label="Root Partners" value={rootPartners.length} icon={<Building2 className="h-4 w-4" />} />
           <Metric label="Branches" value={partners.filter((partner) => partner.is_branch_profile).length} icon={<Store className="h-4 w-4" />} />
@@ -200,7 +186,10 @@ export function BusinessGroupWorkspace({
           </div>
         </div>
 
-        <div className="space-y-3 p-4">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] table-fixed text-left text-[11px]">
+            <thead className="bg-[#F8FAFC] text-[9px] font-bold uppercase tracking-wide text-[#64748B]"><tr><th className="w-[43%] px-4 py-3">Group Name / Code</th><th className="w-[25%] px-3 py-3">Type</th><th className="w-[14%] px-3 py-3 text-center">Partners</th><th className="w-[14%] px-3 py-3 text-center">Branches</th><th className="w-[4%] px-2 py-3" aria-label="Expand" /></tr></thead>
+            <tbody className="divide-y divide-[#E7ECF3]">
           {visibleGroups.length ? visibleGroups.map((group) => {
             const memberIds = memberships.filter((membership) => membership.group_id === group.id).map((membership) => membership.partner_id);
             const members = rootPartners.filter((partner) => memberIds.includes(partner.id));
@@ -209,48 +198,18 @@ export function BusinessGroupWorkspace({
             const editing = editingGroupId === group.id;
 
             return (
-              <article key={group.id} className="overflow-hidden rounded-2xl border border-[#DCE5F1] bg-white">
-                <div
-                  role="button"
-                  tabIndex={0}
-                  aria-expanded={expanded}
-                  onClick={(event) => {
-                    if ((event.target as HTMLElement).closest("button, a, input, select, textarea, form")) return;
-                    toggleGroup(group.id);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.currentTarget !== event.target) return;
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      toggleGroup(group.id);
-                    }
-                  }}
-                  className="flex cursor-pointer flex-wrap items-center gap-3 bg-[linear-gradient(90deg,#F8FBFF,#F3F7FF_60%,#FCFDFF)] px-4 py-3 transition hover:bg-[#F1F6FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#7D94E6]"
-                >
-                  <button type="button" onClick={() => toggleGroup(group.id)} className="grid h-8 w-8 place-items-center rounded-lg bg-white text-[#516A85] ring-1 ring-[#E1E7EF]">
-                    {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  </button>
-                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#EAF0FF] text-[#315FEA]"><Layers3 className="h-4.5 w-4.5" /></span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Link href={`/intermediaries/groups/${group.id}`} className="truncate text-[11px] font-bold text-[#1C3858] hover:text-[#315FEA] hover:underline">{group.group_name}</Link>
-                      {group.group_mode === "legacy_employee" ? <span className="rounded-full bg-[#FFF4D9] px-2 py-0.5 text-[6.5px] font-bold uppercase tracking-[0.05em] text-[#A76600]">Legacy employee-linked</span> : <span className="rounded-full bg-[#EAF8EF] px-2 py-0.5 text-[6.5px] font-bold uppercase tracking-[0.05em] text-[#267A49]">Business hierarchy</span>}
-                    </div>
-                    <p className="mt-0.5 text-[8px] text-[#7A899A]">{group.group_code} · {members.length} Partner{members.length === 1 ? "" : "s"} · {branchCount} Branch{branchCount === 1 ? "" : "es"}</p>
+              <Fragment key={group.id}>
+                <tr role="button" tabIndex={0} aria-expanded={expanded} aria-label={`${group.group_name}, ${members.length} partners, ${branchCount} branches`} onClick={() => toggleGroup(group.id)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggleGroup(group.id); } }} className={`cursor-pointer transition-colors hover:bg-[#F1F6FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#7D94E6] ${expanded ? "bg-[#F2F6FC]" : "bg-white"}`}>
+                  <td className="px-4 py-2.5"><p className="truncate font-semibold text-[#17365D]">{group.group_name}</p><p className="text-[9px] text-[#8190A4]">{group.group_code}</p></td>
+                  <td className="px-3 py-2.5"><span className={`rounded-md px-2 py-1 text-[9px] font-semibold ${group.group_mode === "legacy_employee" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>{group.group_mode === "legacy_employee" ? "Legacy employee-linked" : "Business hierarchy"}</span></td>
+                  <td className="px-3 py-2.5 text-center font-semibold">{members.length}</td>
+                  <td className="px-3 py-2.5 text-center font-semibold">{branchCount}</td>
+                  <td className="px-2 py-2.5 text-[#64748B]">{expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</td>
+                </tr>
+                {expanded ? <tr><td colSpan={5} className="bg-[#FBFCFF] px-4 py-3">
+                  <div className="mb-3 flex items-center justify-between gap-2"><Link href={`/intermediaries/groups/${group.id}`} className="text-[10px] font-semibold text-[#315FEA] hover:underline">Group details</Link>
+                    {canManage && hierarchyReady ? <div className="flex items-center gap-2">{group.group_mode === "legacy_employee" ? <form action={convertLegacyGroupToBusiness}><input type="hidden" name="group_id" value={group.id}/><FormSubmitButton label="Convert safely" pendingLabel="Converting…" className="h-8 rounded-lg border border-amber-200 bg-amber-50 px-3 text-[9px] font-semibold text-amber-700"/></form> : null}<button type="button" onClick={() => setEditingGroupId(editing ? null : group.id)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#D7E0EA] bg-white px-3 text-[9px] font-semibold text-[#5A6F86]"><Pencil className="h-3.5 w-3.5"/> Edit Group</button></div> : null}
                   </div>
-                  {canManage && hierarchyReady ? (
-                    <div className="flex flex-wrap items-center gap-2">
-                      {group.group_mode === "legacy_employee" ? (
-                        <form action={convertLegacyGroupToBusiness}>
-                          <input type="hidden" name="group_id" value={group.id} />
-                          <FormSubmitButton label="Convert safely" pendingLabel="Converting…" className="inline-flex h-8 items-center rounded-lg border border-[#F0D79B] bg-[#FFF9EB] px-3 text-[8px] font-bold text-[#A76600] hover:bg-[#FFF3D5]" />
-                        </form>
-                      ) : null}
-                      <button type="button" onClick={() => setEditingGroupId(editing ? null : group.id)} className="grid h-8 w-8 place-items-center rounded-lg border border-[#D7E0EA] bg-white text-[#5A6F86] hover:bg-[#F5F8FC]" title="Edit Group"><Pencil className="h-3.5 w-3.5" /></button>
-                    </div>
-                  ) : null}
-                </div>
-
                 {editing ? (
                   <div className="border-t border-[#EDF1F6] bg-[#FBFCFE] p-3">
                     <form action={renameBusinessGroup} className="flex flex-col gap-2 lg:flex-row lg:items-end">
@@ -262,8 +221,7 @@ export function BusinessGroupWorkspace({
                   </div>
                 ) : null}
 
-                {expanded ? (
-                  <div className="space-y-2 border-t border-[#EDF1F6] p-3">
+                <div className="space-y-2 border-t border-[#EDF1F6] p-3">
                     {members.length ? members.map((partner) => <PartnerTreeRow key={partner.id} partner={partner} branches={branchesByParent.get(partner.id) ?? []} group={group} canManage={canManage && hierarchyReady && group.group_mode === "business"} />) : <div className="rounded-xl border border-dashed border-[#D9E2EC] bg-[#FBFCFE] px-4 py-6 text-center text-[8.5px] text-[#7C8A9C]">No Partners are assigned to this Group yet.</div>}
 
                     {canManage && hierarchyReady && group.group_mode === "business" && ungroupedRoots.length ? (
@@ -280,11 +238,13 @@ export function BusinessGroupWorkspace({
                         <FormSubmitButton label="Archive empty Group" pendingLabel="Archiving…" className="inline-flex h-8 items-center gap-2 rounded-lg border border-red-200 bg-white px-3 text-[8px] font-bold text-red-700 hover:bg-red-50" />
                       </form>
                     ) : null}
-                  </div>
-                ) : null}
-              </article>
+                </div>
+                </td></tr> : null}
+              </Fragment>
             );
-          }) : <div className="rounded-2xl border border-dashed border-[#D9E2EC] bg-[#FBFCFE] px-4 py-10 text-center text-[9px] text-[#7C8A9C]">No Groups match the current search.</div>}
+          }) : <tr><td colSpan={5} className="px-4 py-10 text-center text-[11px] text-[#7C8A9C]">No Groups match the current search.</td></tr>}
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -351,7 +311,7 @@ function PartnerTreeRow({ partner, branches, group, canManage }: { partner: Busi
 }
 
 function Metric({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
-  return <div className="flex min-h-[82px] items-center gap-3 border-b border-white/10 px-5 py-3.5 last:border-b-0 sm:[&:nth-child(odd)]:border-r sm:[&:nth-child(odd)]:border-r-white/10 xl:border-b-0 xl:border-r xl:border-r-white/10 xl:last:border-r-0"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-[#D7E6FA] ring-1 ring-white/20">{icon}</span><div className="min-w-0"><p className="text-[7px] font-bold uppercase tracking-[0.06em] text-[#BFD0E6]">{label}</p><p className="mt-1 text-[15px] font-bold leading-none text-white">{value}</p></div></div>;
+  return <div className="flex items-center justify-between gap-2 rounded-lg border border-[#E2E9F2] bg-white px-3 py-2"><div className="flex min-w-0 items-center gap-2 text-[#315FEA]">{icon}<span className="truncate text-[9px] font-semibold text-[#64748B]">{label}</span></div><span className="text-[15px] font-bold tabular-nums text-[#17365D]">{value}</span></div>;
 }
 
 function SuccessToast({ text }: { text: string }) {
