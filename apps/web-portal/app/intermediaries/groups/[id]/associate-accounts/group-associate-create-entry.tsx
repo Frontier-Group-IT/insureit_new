@@ -11,7 +11,7 @@ export function GroupAssociateCreateEntry({hasRecords,form,error}:{hasRecords:bo
  return <>
   {hasRecords?<div className="flex justify-end border-t border-[#E7ECF3] px-4 py-3">{button}</div>:
    <div className="flex flex-col items-center justify-center gap-2 px-4 py-6 text-center">
-    <Image src="/illustrations/group-associate-no-results.svg" alt="" width={235} height={187}/>
+    <Image src="/illustrations/group-associate-no-results.png" alt="" width={235} height={187}/>
     <p className="text-[15px] font-bold text-[#5D6470]">No Result Found</p>
     <p className="mb-2 text-[11px] text-[#8190A4]">No Associate Accounts have been created for this Group.</p>
     {button}
