@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, CalendarClock, CarFront, ClipboardCheck, ClipboardList, FilePlus2, Headphones, ShieldPlus, ShieldCheck, FileText, RefreshCcw, ArrowLeftRight, Truck, CalendarDays, ClipboardPlus, ShieldX, Headset, Wrench } from "lucide-react";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
+import { CustomerHomeScrollMotion } from "./customer-home-scroll-motion";
 import { ManufacturerMark } from "../vehicles/customer-vehicles-register";
 import { customerPolicyTone, loadCustomerWebPolicies, loadCustomerWebVehicles, resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { isCompletedCustomerClaim, loadCustomerClaimListContext } from "@/lib/customer-web-phase2-data";
@@ -29,7 +30,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
   const latestPolicies = policies.slice(0, 4);
   const latestClaims = claims.slice(0, 4);
   return (
-    <div className="space-y-4 pb-6">
+    <div data-customer-home className="space-y-4 pb-6">
       <style>{`
         @keyframes customerHomeEnter { from { opacity: 0; transform: translateY(34px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
         @keyframes customerCardEnter { from { opacity: 0; transform: translateY(24px) scale(.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -58,7 +59,17 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
           .customer-home-enter, .customer-home-breathe, .customer-home-breathe .customer-home-icon-breathe, .customer-home-hero-image, .customer-home-quick-action { animation: none !important; }
           .customer-home-breathe, .customer-home-breathe:hover, .customer-home-breathe:focus-visible, .customer-home-quick-action, .customer-home-quick-action:focus-visible, .customer-home-quick-action:hover { transition: none; transform: none; }
         }
+        .customer-home-motion-ready [data-home-reveal] { transition: opacity 700ms cubic-bezier(.22,.72,.25,1), transform 700ms cubic-bezier(.22,.72,.25,1), box-shadow 300ms ease, border-color 300ms ease; }
+        .customer-home-motion-ready [data-home-reveal]:not(.customer-home-visible) { opacity: 0; transform: translateY(30px); }
+        .customer-home-motion-ready [data-home-reveal].customer-home-visible { opacity: 1; transform: translateY(0); }
+        .customer-home-motion-ready .customer-home-explore-card:nth-child(2) { transition-delay: 100ms; }
+        .customer-home-motion-ready .customer-home-explore-card:nth-child(3) { transition-delay: 200ms; }
+        .customer-home-motion-ready .customer-home-explore-card:nth-child(4) { transition-delay: 300ms; }
+        @media (hover: hover) { .customer-home-explore-card.customer-home-visible:hover { position: relative; z-index: 2; transform: scale(1.08); box-shadow: 0 12px 26px rgba(20,58,100,.14); transition-delay: 0ms; } }
+        .customer-home-explore-card:focus-visible { position: relative; z-index: 2; transform: scale(1.08) !important; box-shadow: 0 12px 26px rgba(20,58,100,.14); outline: 2px solid #1769DC; outline-offset: 2px; transition-delay: 0ms; }
+        @media (prefers-reduced-motion: reduce) { .customer-home-motion-ready [data-home-reveal], .customer-home-explore-card, .customer-home-explore-card:focus-visible { transition: none !important; opacity: 1 !important; transform: none !important; } }
       `}</style>
+      <CustomerHomeScrollMotion />
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/home" />
       <section className="customer-home-enter relative isolate overflow-hidden rounded-[22px] border border-[#D6E7FA] bg-[#DDEEFF] p-5 text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.06)] sm:p-7">
         <div className="customer-home-hero-image pointer-events-none absolute inset-y-0 right-0 w-[75%] bg-[url('/assets/customerhome.jpeg')] bg-cover bg-center opacity-80"/>
@@ -95,7 +106,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
         <Link href={{ pathname: "/customer/claims", query: accountQuery }} className="mt-3 inline-flex items-center gap-1 text-[12px] font-semibold text-[#1769DC]">Track Existing Claims <ArrowRight className="h-4 w-4"/></Link>
       </section>
       <div className="grid gap-4 lg:grid-cols-[.9fr_1.1fr]">
-        <section className="overflow-hidden rounded-2xl border border-[#E0E8F3] bg-white">
+        <section data-home-reveal className="overflow-hidden rounded-2xl border border-[#E0E8F3] bg-white">
           <div className="flex items-center justify-between gap-2 border-b border-[#E6EDF6] px-4 py-3"><h2 className="flex items-center gap-2 text-[17px] font-bold text-[#102B54]"><AlertTriangle className="h-4 w-4 text-red-500"/>Needs your attention</h2><Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="text-[12px] font-semibold text-[#1769DC]">View all</Link></div>
           {attentionCount === 0?<p className="m-4 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700">No urgent insurance actions.</p>:<div className="overflow-x-auto">
             <table className="w-full min-w-[520px] text-left">
@@ -116,7 +127,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
           </div>}
         </section>
 
-        <section className="min-w-0 overflow-hidden rounded-2xl border border-[#E0E8F3] bg-white">
+        <section data-home-reveal className="min-w-0 overflow-hidden rounded-2xl border border-[#E0E8F3] bg-white">
           <div className="flex items-center justify-between border-b border-[#E6EDF6] px-4 py-3"><h2 className="flex items-center gap-2 text-[17px] font-bold text-[#102B54]"><CarFront className="h-4 w-4 text-[#1672DC]"/>My Vehicles</h2><Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="text-[12px] font-semibold text-[#1769DC]">View all</Link></div>
           {vehicles.length===0?<p className="p-4 text-xs text-[#7186A0]">No vehicles found.</p>:<div className="overflow-x-auto">
             <table className="w-full min-w-[620px] text-left">
@@ -136,7 +147,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
           </div>}
         </section>
       </div>
-      <section className="rounded-2xl border border-[#E1EAF5] bg-white p-4 sm:p-5">
+      <section data-home-reveal className="rounded-2xl border border-[#E1EAF5] bg-white p-4 sm:p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div><h2 className="text-[17px] font-bold text-[#102B54]">Explore insurance & services</h2><p className="mt-1 text-[11px] text-[#7186A0]">Everything you need to stay protected, in one place.</p></div>
           <Link href={{pathname:"/customer/support",query:accountQuery}} className="inline-flex items-center gap-1 text-[11px] font-bold text-[#176CD4]">Need help? <ArrowRight className="h-3.5 w-3.5"/></Link>
@@ -147,15 +158,15 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
             {title:"Policy renewal",description:"Review upcoming renewals",href:"/customer/renewals",icon:RefreshCcw,color:"text-[#16856B]",background:"bg-[#E7F8F1]"},
             {title:"My policy documents",description:"Access your policies",href:"/customer/policies",icon:FileText,color:"text-[#8C5BD7]",background:"bg-[#F3EDFF]"},
             {title:"Vehicle services",description:"Exchange and other services",href:"/customer/exchange",icon:Wrench,color:"text-[#C77823]",background:"bg-[#FFF3E5]"},
-          ].map(({title,description,href,icon:Icon,color,background})=><Link key={href} href={{pathname:href,query:accountQuery}} className="group flex min-w-0 flex-col gap-3 rounded-xl border border-[#E6EDF6] bg-[#FCFDFF] p-3.5 transition hover:-translate-y-0.5 hover:border-[#AAC9EF] hover:bg-white hover:shadow-md"><span className={`grid h-11 w-11 place-items-center rounded-xl ${background} ${color}`}><Icon className="h-5 w-5"/></span><span className="min-w-0"><strong className="block text-xs text-[#142C4D]">{title}</strong><small className="mt-1 block text-[12px] text-[#7186A0]">{description}</small></span></Link>)}
+          ].map(({title,description,href,icon:Icon,color,background})=><Link data-home-reveal key={href} href={{pathname:href,query:accountQuery}} className="customer-home-explore-card group flex min-w-0 flex-col gap-3 rounded-xl border border-[#E6EDF6] bg-[#FCFDFF] p-3.5 hover:border-[#AAC9EF] hover:bg-white"><span className={`grid h-11 w-11 place-items-center rounded-xl ${background} ${color}`}><Icon className="h-5 w-5"/></span><span className="min-w-0"><strong className="block text-xs text-[#142C4D]">{title}</strong><small className="mt-1 block text-[12px] text-[#7186A0]">{description}</small></span></Link>)}
         </div>
       </section>
       <div className="grid gap-3 lg:grid-cols-2">
-        <section className="min-w-0 rounded-xl border border-[#E0E8F3] bg-white p-3">
+        <section data-home-reveal className="min-w-0 rounded-xl border border-[#E0E8F3] bg-white p-3">
           <div className="mb-3 flex items-center justify-between"><h2 className="flex items-center gap-2 text-[14px] font-black text-[#10284A]"><ShieldCheck className="h-4 w-4 text-[#1672DC]"/>My Policies</h2><Link href={{pathname:"/customer/policies",query:accountQuery}} className="text-[10px] font-bold text-[#176CD4]">View all</Link></div>
           <div className="overflow-x-auto"><table className="w-full min-w-[410px] text-left text-[10px]"><thead className="bg-[#F1F6FC] text-center text-[#637B9A]"><tr><th className="p-2">Policy Number</th><th className="p-2">Vehicle</th><th className="p-2">Insurer</th><th className="p-2">Status</th></tr></thead><tbody>{latestPolicies.map(policy=><tr key={policy.id} className="border-b border-[#EEF2F8]"><td className="p-2 font-bold"><Link href={{pathname:`/customer/policies/${policy.id}`,query:{...accountQuery,source:policy.source}}}>{policy.policy_no||"—"}</Link></td><td className="p-2">{policy.vehicle_no||"—"}</td><td className="p-2">{policy.insurer_name||"—"}</td><td className="p-2"><span className="rounded-full bg-[#EEF5FF] px-2 py-1">{customerPolicyTone(policy.end_date).tone}</span></td></tr>)}</tbody></table>{latestPolicies.length===0?<p className="p-3 text-xs text-[#7186A0]">No policies found.</p>:null}</div>
         </section>
-        <section className="min-w-0 rounded-xl border border-[#E0E8F3] bg-white p-3">
+        <section data-home-reveal className="min-w-0 rounded-xl border border-[#E0E8F3] bg-white p-3">
           <div className="mb-3 flex items-center justify-between"><h2 className="flex items-center gap-2 text-[14px] font-black text-[#10284A]"><ClipboardList className="h-4 w-4 text-[#1672DC]"/>My Claims</h2><Link href={{pathname:"/customer/claims",query:accountQuery}} className="text-[10px] font-bold text-[#176CD4]">View all</Link></div>
           <div className="overflow-x-auto"><table className="w-full min-w-[340px] text-left text-[10px]"><thead className="bg-[#F1F6FC] text-center text-[#637B9A]"><tr><th className="p-2">Claim Number</th><th className="p-2">Status</th></tr></thead><tbody>{latestClaims.map(claim=>{ const href={pathname:"/customer/claims",query:accountQuery}; return <tr key={claim.id} className="cursor-pointer border-b border-[#EEF2F8] transition hover:bg-[#F8FBFF]"><td className="p-0 font-bold"><Link href={href} className="block p-2">{claim.claim_no||claim.id.slice(0,8)}</Link></td><td className="p-0"><Link href={href} className="block p-2">{claim.current_status||"Submitted"}</Link></td></tr>;})}</tbody></table>{latestClaims.length===0?<p className="p-3 text-xs text-[#7186A0]">No claims found.</p>:null}</div>
         </section>
