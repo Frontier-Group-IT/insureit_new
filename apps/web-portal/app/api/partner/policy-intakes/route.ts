@@ -17,6 +17,9 @@ type EmployeeIdentity = { actor_kind: "employee"; profile_id: string };
 type LegacyPartnerIdentity = {
   actor_kind: "intermediary";
   portal_account_id: string;
+  profile_id?: string;
+  auth_user_id?: string;
+  portal_account_source?: "associate";
   intermediary_id: string;
   portal_access_type?: undefined;
 };
@@ -581,6 +584,11 @@ function isLegacyPartnerIdentity(identity: PartnerIdentity): identity is LegacyP
 function submittedByProfileId(identity: PartnerIdentity) {
   if (identity.actor_kind === "employee") return identity.profile_id;
   if (isExplicitPortalIdentity(identity)) return identity.profile_id || identity.auth_user_id;
+  // Partner Associate IDs belong to partner_portal_associate_accounts, not intermediary_portal_accounts.
+  // Attribute their intakes and documents to their existing authenticated profile instead.
+  if (identity.portal_account_source === "associate" && identity.profile_id && identity.profile_id === identity.auth_user_id) {
+    return identity.profile_id;
+  }
   return null;
 }
 
