@@ -56,7 +56,7 @@ test('wrong email, invalid token and provider errors deny without leaking tokens
     const p = provider(response);
     const outcome = await issueExistingCustomerSessionChallenge(p.db, gate());
     assert.equal(outcome.ok, false);
-    assert.ok(['challenge_uuid_mismatch', 'challenge_email_mismatch', 'challenge_hash_format_mismatch', 'challenge_provider_rejected'].includes(outcome.reason));
+    assert.ok(['challenge_uuid_mismatch', 'challenge_email_mismatch', 'challenge_hash_wrong_length', 'challenge_hash_absent', 'challenge_hash_wrong_encoding', 'challenge_provider_rejected'].includes(outcome.reason));
     assert.equal('token_hash' in outcome, false);
   }
 });
