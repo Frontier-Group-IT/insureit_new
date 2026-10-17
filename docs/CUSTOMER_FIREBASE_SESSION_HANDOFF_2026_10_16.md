@@ -1,5 +1,16 @@
 # Firebase Customer OTP migration — handoff, 16 October 2026
 
+## 2026-10-17 — General Customer rollout implementation (PHASE A, source-only)
+- Owner requested a scalable Firebase Customer onboarding approach rather than fixing test Customers individually. Full plan and read-only production aggregate audit saved at docs/CUSTOMER_FIREBASE_ALL_CUSTOMERS_ROLLOUT_PLAN_2026_10_17.md.
+- Separate branch feat/customer-firebase-general-rollout-preflight-20261017, stacked on existing draft diagnostic PR #3199. It is NOT a production cutover and does not replace the deployed Edge v7 or the two exact Customer UUID canary.
+- Production read-only baseline: 29 Customer profiles, 23 active, 0 missing matching Auth users, 21 active without approved Firebase link, 22 active without Auth alias, 6 active sharing phone with non-Customer profile, 2 unconfirmed original Auth phones. These categories overlap; no per-account PII was exported.
+- Added pure, read-only all-Customer readiness classifier at supabase/functions/_shared/customer-firebase-general-rollout-plan.mjs: flags duplicate staff/Customer phone, active Customer/UUID/phone mismatch, unapproved/conflicting links, real Auth email preservation, unprovisioned Auth alias and independent ownership proof. Anonymous roll-up only, no writes or credentials.
+- Added unwired default-canary future gate at supabase/functions/_shared/customer-firebase-general-rollout-gate.mjs. For future approved cohorts, it requires a matching exact original Customer UUID plus an independent restricted operator audit, credential recovery and shared-phone review; NEVER obtain these audit claims from public-client JSON. Production Edge code is unchanged.
+- Added synthetic pure-data regression tests and no-write GitHub Actions guard. CI run (first 2026-10-17 branch run) PASS at ccd69897. The new plan/logic cannot enroll Customers by itself and MUST NOT be misrepresented as a complete general release.
+- NEXT: review this branch as draft PR; implement a trusted server-side independent proof and consent service, verify protected Auth backup and local restore (prior attempt FAILED), review and separately approve atomic migrations, operator audit, source-held cohort flags and safe production evaluation. Preserve staff identities and 2Factor fallback. No APK, AAB, OTA, live Auth mutation, or main merge without separate approval.
+
+
+
 ## 2026-10-17 — OWNER-APPROVED FIREBASE INTERNAL ANDROID OTA PUBLISHED
 
 **Latest status supersedes older v4-v7 pre-OTA notes below.** 2026-10-17T04:57:01Z production Edge v7 returned HTTP 200 for actual Customer Android Firebase OTP session bridge, but Android UI still showed generic login error. Inspection found the installed Customer app's `apps/mobile-app/lib/customer-firebase-session-exchange.ts` rejects all challenges except 64-character hexadecimal hashes, while backend v7 accepts valid bounded 32-128 hex format. The Android client rejects the challenge locally before it calls Supabase `verifyOtp`. Source fix on draft PR #3199 remains committed; no global rollout.
