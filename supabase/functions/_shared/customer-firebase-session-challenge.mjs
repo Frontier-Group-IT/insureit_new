@@ -36,7 +36,7 @@ export async function issueExistingCustomerSessionChallenge(db, gate) {
   }
   if (typeof data?.properties?.hashed_token !== 'string' ||
       (data.properties.hashed_token.length !== 64 || !hexHash.test(data.properties.hashed_token))) {
-    return { ok: false, reason: 'challenge_hash_format_mismatch' };
+    return { ok: false, reason: typeof data?.properties?.hashed_token !== 'string' ? 'challenge_hash_absent' : data.properties.hashed_token.length !== 64 ? 'challenge_hash_wrong_length' : 'challenge_hash_wrong_encoding' };
   }
   return {
     ok: true,
