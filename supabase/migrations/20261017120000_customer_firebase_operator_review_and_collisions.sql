@@ -40,6 +40,64 @@ revoke all on sequence public.customer_firebase_enrollment_reviews_id_seq from p
 grant select, insert on public.customer_firebase_enrollment_reviews to service_role;
 grant usage, select on sequence public.customer_firebase_enrollment_reviews_id_seq to service_role;
 
+-- Validate reviewers independently in the database as a second defensive gate.
+-- This is not a substitute for server-side verified operator session proof.
+create or replace function public.customer_firebase_review_insert_guard()
+returns trigger language plpgsql security invoker set search_path = '' as $body$
+declare
+  v_staff_count integer;
+  v_other_customer_count integer;
+begin
+  if auth.role() is distinct from 'service_role' then
+    raise exception 'service_role_required';
+  end if;
+  if not exists (
+    select 1 from public.profiles
+    where id = new.customer_profile_id and role = 'customer' and is_active is true
+  ) then
+    raise exception 'canonical_customer_not_active';
+  end if;
+  if new.reviewer_id = new.customer_profile_id or not exists (
+    select 1 from public.profiles
+    where id = new.reviewer_id and role = 'it_super_user' and is_active is true
+  ) then
+    raise exception 'privileged_review_required';
+  end if;
+  if new.second_reviewer_id is not null and
+    (new.second_reviewer_id = new.customer_profile_id or not exists (
+      select 1 from public.profiles
+      where id = new.second_reviewer_id and role = 'it_super_user'
+        and is_active is true
+    )) then
+    raise exception 'independent_second_reviewer_required';
+  end if;
+  if new.consent_at > new.reviewed_at or
+      new.ownership_verified_at > new.reviewed_at or
+      new.recovery_verified_at > new.reviewed_at or
+      new.cohort_approved_at > new.reviewed_at then
+    raise exception 'future_dated_review_evidence';
+  end if;
+  if new.decision = 'approved' then
+    select c.non_customer_count,c.other_customer_count
+    into v_staff_count,v_other_customer_count
+    from public.customer_firebase_phone_collision_counts(new.customer_profile_id) c;
+    if v_staff_count > 0 or v_other_customer_count > 0 then
+      if new.second_reviewer_id is null then
+        raise exception 'shared_phone_second_reviewer_required';
+      end if;
+    end if;
+  end if;
+  return new;
+end;
+$body$;
+revoke all on function public.customer_firebase_review_insert_guard()
+  from public, anon, authenticated;
+drop trigger if exists trg_customer_firebase_review_insert_guard
+  on public.customer_firebase_enrollment_reviews;
+create trigger trg_customer_firebase_review_insert_guard
+before insert on public.customer_firebase_enrollment_reviews
+for each row execute function public.customer_firebase_review_insert_guard();
+
 -- Every review is immutable, including service-role DML. New decisions (such
 -- as REVOCATION) are appended and override prior approval by descending id.
 create or replace function public.customer_firebase_review_append_only()
@@ -81,7 +139,7 @@ begin
   v_phone := right(v_phone_digits,10);
   return query
   select
-    count(*) filter (where role <> 'customer')::integer,
+    count(*) filter (where role is distinct from 'customer')::integer,
     count(*) filter (where role = 'customer')::integer
   from public.profiles p
   where p.id <> p_customer_id
