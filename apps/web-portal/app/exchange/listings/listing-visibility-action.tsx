@@ -16,6 +16,7 @@ export function ExchangeListingVisibilityAction({ listing }: { listing: Listing 
  const [pending,startTransition]=useTransition();
  const [error,setError]=useState<string|null>(null);
  const [enabled,setEnabled]=useState(listing.enabled);
+ useEffect(()=>{setEnabled(listing.enabled)},[listing.enabled]);
  const [pos,setPos]=useState<{top:number;left:number}|null>(null);
  const buttonRef=useRef<HTMLButtonElement>(null);
  const menuRef=useRef<HTMLDivElement>(null);
@@ -42,7 +43,7 @@ export function ExchangeListingVisibilityAction({ listing }: { listing: Listing 
      try {
        if(decision==="delete") await permanentlyDeleteExchangeListing(listing.id);
        else {await setExchangeListingVisibility(listing.id,decision==="enable");setEnabled(decision==="enable")}
-       setConfirm(null);router.refresh();
+       setConfirm(null);setOpen(false);router.refresh();
      } catch(e){setError(e instanceof Error?e.message:"Unable to complete listing action.")}
    });
  }
@@ -55,7 +56,7 @@ export function ExchangeListingVisibilityAction({ listing }: { listing: Listing 
          title:String(form.get("title")??""),askingPrice:Number(form.get("askingPrice")),odometerKm:odometer===""?null:Number(odometer),
          city:String(form.get("city")??""),state:String(form.get("state")??"")
        });
-       setEditing(false);router.refresh();
+       setEditing(false);setOpen(false);router.refresh();
      } catch(e){setError(e instanceof Error?e.message:"Unable to save listing.")}
    });
  }
@@ -64,11 +65,12 @@ export function ExchangeListingVisibilityAction({ listing }: { listing: Listing 
   <div ref={rootRef} className="inline-flex">
    <button ref={buttonRef} type="button" onClick={()=>setOpen(v=>!v)} aria-label={`Actions for ${listing.listingNo}`} aria-haspopup="menu" aria-expanded={open} className="grid h-8 w-8 place-items-center rounded-lg border border-[#E0E7F0] bg-white text-[#334155] hover:bg-[#F1F5FA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#6675F5]"><MoreVertical className="h-4 w-4"/></button>
    {open&&pos?createPortal(<div ref={menuRef} role="menu" style={pos} className="fixed z-[240] w-44 rounded-xl border border-[#E0E7F0] bg-white py-1.5 shadow-[0_16px_40px_rgba(15,23,42,.2)]">
-    <button type="button" role="menuitem" onClick={()=>{setOpen(false);setEditing(true)}} className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[11px] text-[#334155] hover:bg-slate-50"><Pencil className="h-4 w-4"/>Edit</button>
-    <button type="button" role="menuitem" onClick={()=>{setOpen(false);setConfirm(enabled?"disable":"enable")}} className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[11px] text-[#334155] hover:bg-slate-50">{enabled?<Ban className="h-4 w-4"/>:<CheckCircle2 className="h-4 w-4"/>}{enabled?"Disable":"Enable"}</button>
-    <button type="button" role="menuitem" onClick={()=>{setOpen(false);setConfirm("delete")}} className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[11px] font-medium text-rose-600 hover:bg-rose-50"><Trash2 className="h-4 w-4"/>Delete</button>
+    <button type="button" role="menuitem" onClick={(event)=>{event.stopPropagation();setError(null);setOpen(false);setEditing(true)}} className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[11px] text-[#334155] hover:bg-slate-50"><Pencil className="h-4 w-4"/>Edit</button>
+    <button type="button" role="menuitem" onClick={(event)=>{event.stopPropagation();setError(null);setOpen(false);setConfirm(enabled?"disable":"enable")}} className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[11px] text-[#334155] hover:bg-slate-50">{enabled?<Ban className="h-4 w-4"/>:<CheckCircle2 className="h-4 w-4"/>}{enabled?"Disable":"Enable"}</button>
+    <button type="button" role="menuitem" onClick={(event)=>{event.stopPropagation();setError(null);setOpen(false);setConfirm("delete")}} className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[11px] font-medium text-rose-600 hover:bg-rose-50"><Trash2 className="h-4 w-4"/>Delete</button>
    </div>,document.body):null}
   </div>
+  {error&&!confirm&&!editing?<p role="alert" className="mt-1 max-w-[220px] text-xs text-rose-700">{error}</p>:null}
   {confirm?<div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-950/40 p-4" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}>
     <div role="alertdialog" aria-modal="true" aria-labelledby="listing-action-title" aria-describedby="listing-action-description" className="w-full max-w-[355px] rounded-2xl border bg-white p-4 shadow-2xl">
      <div className="flex items-center justify-between gap-3"><h3 id="listing-action-title" className="text-sm font-bold text-[#17365D]">{confirm==="delete"?"Delete listing permanently?":confirm==="disable"?"Disable listing?":"Enable listing?"}</h3><button type="button" aria-label="Close" disabled={pending} onClick={close}><X className="h-4 w-4 text-slate-500"/></button></div>
