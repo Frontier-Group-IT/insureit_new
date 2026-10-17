@@ -31,6 +31,14 @@ export async function getPartnerBusinessPerformance() {
   return data as PartnerBusinessPerformance;
 }
 
+/** Net-premium totals, trend and product mix for the Business Report screen. */
+export async function getPartnerBusinessReportNet() {
+  const { data, error } = await supabase.rpc('partner_app_business_report_net');
+  if (error) throw error;
+  if (!data) throw new Error('Net premium Business Report is unavailable.');
+  return data as PartnerBusinessPerformance;
+}
+
 export type PartnerTopInsurer = {
   name: string;
   policies: number;
