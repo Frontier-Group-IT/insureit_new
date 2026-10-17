@@ -1,0 +1,72 @@
+name: Verify Customer Firebase recovery-safe cohort design
+on:
+  push:
+    branches:
+      - feat/customer-firebase-auth-recovery-and-cohorts-20261017
+    paths:
+      - 'supabase/functions/_shared/customer-firebase-cohort-resolution.mjs'
+      - 'supabase/functions/_shared/customer-firebase-reviewed-execution.mjs'
+      - 'supabase/migrations/2026101715*.sql'
+      - 'supabase/migrations/2026101716*.sql'
+      - 'supabase/rollback/2026101716*.sql'
+      - 'apps/mobile-app/scripts/customer-firebase-cohort-*'
+      - '.github/workflows/verify-customer-firebase-recovery-and-cohorts.yml'
+  pull_request:
+    paths:
+      - 'supabase/functions/_shared/customer-firebase-cohort-resolution.mjs'
+      - 'supabase/functions/_shared/customer-firebase-reviewed-execution.mjs'
+      - 'supabase/migrations/2026101715*.sql'
+      - 'supabase/migrations/2026101716*.sql'
+      - 'supabase/rollback/2026101716*.sql'
+      - 'apps/mobile-app/scripts/customer-firebase-cohort-*'
+      - '.github/workflows/verify-customer-firebase-recovery-and-cohorts.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: review_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: synthetic-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d review_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 15
+    env:
+      REVIEW_TEST_DATABASE_URL: postgresql://postgres:synthetic-only@127.0.0.1:5432/review_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax and no unintended runtime entrypoints
+        run: |
+          node --check supabase/functions/_shared/customer-firebase-cohort-resolution.mjs
+          node --check supabase/functions/_shared/customer-firebase-reviewed-execution.mjs
+          node --check apps/mobile-app/scripts/customer-firebase-cohort-resolution.test.mjs
+          bash -n apps/mobile-app/scripts/customer-firebase-cohort-sql-local.sh
+      - name: Test closed cohort and canonical Customer identity checks
+        run: |
+          node --test apps/mobile-app/scripts/customer-firebase-cohort-resolution.test.mjs
+          node --test apps/mobile-app/scripts/customer-firebase-reviewed-enrollment.test.mjs
+      - name: Prove atomic reviewed enroll and idempotent/revoked denial in local Postgres
+        run: bash apps/mobile-app/scripts/customer-firebase-cohort-sql-local.sh
+      - name: Enforce no unreviewed Customer Auth writes or public Edge endpoints
+        run: |
+          if grep -Ei 'Deno\.serve\(|updateUserById\(|createUser\(|\.insert\(|\.update\(|\.upsert\(|supabase\.auth\.setSession\(' \
+            supabase/functions/_shared/customer-firebase-cohort-resolution.mjs \
+            supabase/functions/_shared/customer-firebase-reviewed-execution.mjs; then
+            echo "No direct Auth/UID writes are permitted outside reviewed atomic RPC" >&2
+            exit 1
+          fi
