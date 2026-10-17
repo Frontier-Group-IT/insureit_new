@@ -75,6 +75,8 @@ begin
     v_review.expires_at <= now() or v_review.reviewed_at > now() or
     v_review.expires_at > v_review.reviewed_at + interval '14 days' or
     v_review.consent_at is null or v_review.ownership_verified_at is null or
+    v_review.recovery_verified_at is null or
+    v_review.recovery_verified_at > v_review.reviewed_at or
     v_review.consent_at > v_review.reviewed_at or
     v_review.ownership_verified_at > v_review.reviewed_at then
     raise exception 'independent_review_not_approved';
