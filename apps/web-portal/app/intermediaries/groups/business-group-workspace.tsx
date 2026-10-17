@@ -188,7 +188,7 @@ export function BusinessGroupWorkspace({
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] table-fixed text-left text-[11px]">
-            <thead className="bg-[#F8FAFC] text-[9px] font-bold uppercase tracking-wide text-[#64748B]"><tr><th className="w-[43%] px-4 py-3">Group Name / Code</th><th className="w-[25%] px-3 py-3">Type</th><th className="w-[14%] px-3 py-3 text-center">Partners</th><th className="w-[14%] px-3 py-3 text-center">Branches</th><th className="w-[4%] px-2 py-3" aria-label="Expand" /></tr></thead>
+            <thead className="bg-[#F8FAFC] text-[9px] font-bold uppercase tracking-wide text-[#64748B]"><tr><th className="w-[47%] px-4 py-3">Group Name / Code</th><th className="w-[25%] px-3 py-3">Type</th><th className="w-[14%] px-3 py-3 text-center">Partners</th><th className="w-[14%] px-3 py-3 text-center">Branches</th></tr></thead>
             <tbody className="divide-y divide-[#E7ECF3]">
           {visibleGroups.length ? visibleGroups.map((group) => {
             const memberIds = memberships.filter((membership) => membership.group_id === group.id).map((membership) => membership.partner_id);
@@ -200,13 +200,12 @@ export function BusinessGroupWorkspace({
             return (
               <Fragment key={group.id}>
                 <tr role="button" tabIndex={0} aria-expanded={expanded} aria-label={`${group.group_name}, ${members.length} partners, ${branchCount} branches`} onClick={() => toggleGroup(group.id)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggleGroup(group.id); } }} className={`cursor-pointer transition-colors hover:bg-[#F1F6FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#7D94E6] ${expanded ? "bg-[#F2F6FC]" : "bg-white"}`}>
-                  <td className="px-4 py-2.5"><p className="truncate font-semibold text-[#17365D]">{group.group_name}</p><p className="text-[9px] text-[#8190A4]">{group.group_code}</p></td>
+                  <td className="px-4 py-2.5"><div className="flex items-center gap-2">{expanded ? <ChevronDown className="h-4 w-4 shrink-0 text-[#64748B]" /> : <ChevronRight className="h-4 w-4 shrink-0 text-[#64748B]" />}<div className="min-w-0"><p className="truncate font-semibold text-[#17365D]">{group.group_name}</p><p className="text-[9px] text-[#8190A4]">{group.group_code}</p></div></div></td>
                   <td className="px-3 py-2.5"><span className={`rounded-md px-2 py-1 text-[9px] font-semibold ${group.group_mode === "legacy_employee" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>{group.group_mode === "legacy_employee" ? "Legacy employee-linked" : "Business hierarchy"}</span></td>
                   <td className="px-3 py-2.5 text-center font-semibold">{members.length}</td>
                   <td className="px-3 py-2.5 text-center font-semibold">{branchCount}</td>
-                  <td className="px-2 py-2.5 text-[#64748B]">{expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</td>
                 </tr>
-                {expanded ? <tr><td colSpan={5} className="bg-[#FBFCFF] px-4 py-3">
+                {expanded ? <tr><td colSpan={4} className="bg-[#FBFCFF] px-4 py-3">
                   <div className="mb-3 flex items-center justify-between gap-2"><Link href={`/intermediaries/groups/${group.id}`} className="text-[10px] font-semibold text-[#315FEA] hover:underline">Group details</Link>
                     {canManage && hierarchyReady ? <div className="flex items-center gap-2">{group.group_mode === "legacy_employee" ? <form action={convertLegacyGroupToBusiness}><input type="hidden" name="group_id" value={group.id}/><FormSubmitButton label="Convert safely" pendingLabel="Converting…" className="h-8 rounded-lg border border-amber-200 bg-amber-50 px-3 text-[9px] font-semibold text-amber-700"/></form> : null}<button type="button" onClick={() => setEditingGroupId(editing ? null : group.id)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#D7E0EA] bg-white px-3 text-[9px] font-semibold text-[#5A6F86]"><Pencil className="h-3.5 w-3.5"/> Edit Group</button></div> : null}
                   </div>
@@ -242,7 +241,7 @@ export function BusinessGroupWorkspace({
                 </td></tr> : null}
               </Fragment>
             );
-          }) : <tr><td colSpan={5} className="px-4 py-10 text-center text-[11px] text-[#7C8A9C]">No Groups match the current search.</td></tr>}
+          }) : <tr><td colSpan={4} className="px-4 py-10 text-center text-[11px] text-[#7C8A9C]">No Groups match the current search.</td></tr>}
             </tbody>
           </table>
         </div>
