@@ -35,7 +35,7 @@ export async function issueExistingCustomerSessionChallenge(db, gate) {
     return { ok: false, reason: 'challenge_email_mismatch' };
   }
   if (typeof data?.properties?.hashed_token !== 'string' ||
-      !hexHash.test(data.properties.hashed_token)) {
+      (data.properties.hashed_token.length !== 64 || !hexHash.test(data.properties.hashed_token))) {
     return { ok: false, reason: 'challenge_hash_format_mismatch' };
   }
   return {
