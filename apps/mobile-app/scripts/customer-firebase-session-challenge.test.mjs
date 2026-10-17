@@ -61,6 +61,18 @@ test('wrong email, invalid token and provider errors deny without leaking tokens
   }
 });
 
+test('bounds alternate hashed-token lengths without weakening user checks', async () => {
+  for (const n of [32,40,64,96,128]) {
+    const token='a'.repeat(n);
+    assert.equal((await issueExistingCustomerSessionChallenge(provider(result(uuid,email,token)).db,gate())).ok,true);
+  }
+  for (const token of ['a'.repeat(31),'a'.repeat(129),'z'.repeat(40),'']) {
+    const answer=await issueExistingCustomerSessionChallenge(provider(result(uuid,email,token)).db,gate());
+    assert.equal(answer.ok,false);
+    assert.equal('token_hash' in answer,false);
+  }
+});
+
 test('missing provider must fail closed', async () => {
   assert.deepEqual(await issueExistingCustomerSessionChallenge({}, gate()), {
     ok: false, reason: 'challenge_provider_unavailable',
