@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
+import { IntermediaryTabs } from "./intermediary-tabs";
 import { createIntermediaryPortalLogin } from "./portal-account-actions";
 import { resendIntermediaryPortalInvite } from "./resend-portal-invite-action";
 import type { AdditionalPortalAccount, PortalUserRow } from "./portal-users/page";
@@ -56,6 +57,7 @@ export function IntermediaryPortalUsersWorkspace({ rows, extraRows, initialQuery
     {successMessage ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10.5px] font-semibold text-emerald-700">{successMessage}</div> : null}
     {errorMessage ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10.5px] font-medium text-red-700">{errorMessage}</div> : null}
     <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
+      <IntermediaryTabs active="users" embedded />
       <div className="flex flex-col gap-3 border-b bg-[#F8FAFC] px-4 py-3 lg:flex-row lg:items-center">
         <div className="shrink-0"><h2 className="text-[12px] font-semibold text-[#0F172A]">Portal Users</h2></div>
         <form onSubmit={(event) => event.preventDefault()} className="w-full lg:max-w-[460px]">
@@ -63,6 +65,9 @@ export function IntermediaryPortalUsersWorkspace({ rows, extraRows, initialQuery
         </form>
         <select aria-label="Account type" value={accountType} onChange={e=>{setAccountType(e.target.value);setCurrentPage(1);}} className="h-9 rounded-lg border border-[#CBD5E1] bg-white px-2 text-[10px]"><option value="all">All account types</option>{["Partner","Group","Branch","Group Associate","Partner Associate"].map(type=><option key={type} value={type}>{type}</option>)}</select>
         <div className="flex-1" />
+        <Link href="/intermediaries/groups/login-access" className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg border border-[#BFD0E4] bg-white px-3 text-[9.5px] font-bold text-[#1769DC] transition hover:border-[#8FB4E5] hover:bg-[#EFF6FF]">
+          Login Access
+        </Link>
         <nav className="flex w-fit shrink-0 items-center rounded-xl border border-[#DCE5EF] bg-white p-1" aria-label="Filter intermediary user accounts">
           {([
             ["all", "All", searchedRows.length],

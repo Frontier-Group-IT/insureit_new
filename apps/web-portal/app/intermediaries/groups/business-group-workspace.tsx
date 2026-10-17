@@ -9,12 +9,9 @@ import {
   ChevronDown,
   ChevronRight,
   GitBranch,
-  Layers3,
   Pencil,
   Plus,
   Search,
-  Store,
-  UsersRound,
   X,
 } from "lucide-react";
 import { FormSubmitButton } from "@/components/form-submit-button";
@@ -159,31 +156,20 @@ export function BusinessGroupWorkspace({
 
   return (
     <div className="mx-auto max-w-[1540px] space-y-4 pb-24">
-      <section className="overflow-hidden rounded-2xl border border-[#DCE5F1] bg-white shadow-sm">
-        <IntermediaryTabs active="group" embedded />
-        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <h1 className="text-[15px] font-bold text-[#17365D]">Business Groups</h1>
-          {canManage ? <Link href="/intermediaries/groups/new" aria-disabled={!hierarchyReady} className={`inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#315FEA] px-3 text-[10px] font-bold text-white ${!hierarchyReady?"pointer-events-none opacity-45":""}`}><Plus className="h-3.5 w-3.5" /> Create Group</Link> : null}
-        </div>
-        <div className="grid grid-cols-2 gap-2 border-t border-[#E7ECF3] bg-[#FAFBFD] p-2 lg:grid-cols-4">
-          <Metric label="Groups" value={groups.length} icon={<Layers3 className="h-4 w-4" />} />
-          <Metric label="Root Partners" value={rootPartners.length} icon={<Building2 className="h-4 w-4" />} />
-          <Metric label="Branches" value={partners.filter((partner) => partner.is_branch_profile).length} icon={<Store className="h-4 w-4" />} />
-          <Metric label="Ungrouped Partners" value={ungroupedRoots.length} icon={<UsersRound className="h-4 w-4" />} />
-        </div>
-      </section>
-
       {!hierarchyReady ? <Notice tone="warning" text="Hierarchy migration is not applied yet. The page remains read-only and compatible with the current live schema until the migration is applied through the protected database workflow." /> : null}
       {showSuccess && success ? <SuccessToast text={successMessages[success] ?? "Action completed."} /> : null}
       {error ? <Notice tone="error" text={decodeURIComponent(error)} /> : null}
       {loadError ? <Notice tone="error" text="Some hierarchy data could not be loaded. No changes were made; refresh before editing." /> : null}
 
-      <section className="overflow-hidden rounded-[22px] border border-[#DCE5F1] bg-white shadow-[0_14px_40px_rgba(24,59,102,.06)]">
-        <div className="border-b border-[#E7ECF3] bg-[#FAFCFF] p-4">
-          <div className="relative max-w-2xl">
+      <section className="overflow-hidden rounded-2xl border border-[#DCE5F1] bg-white shadow-sm">
+        <IntermediaryTabs active="group" embedded />
+        <div className="flex flex-wrap items-center gap-3 border-b border-[#E7ECF3] bg-[#FAFCFF] px-4 py-3">
+          <h2 className="shrink-0 text-[13px] font-bold text-[#17365D]">Group Register</h2>
+          <div className="relative min-w-[260px] flex-1 lg:max-w-2xl">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B9AAF]" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search Group, Partner or Branch" className="h-10 w-full rounded-xl border border-[#D7E0EA] bg-white pl-10 pr-3 text-[10px] text-[#1E344F] shadow-sm outline-none focus:border-[#7D94E6] focus:ring-2 focus:ring-[#E8EDFF]" />
           </div>
+          {canManage ? <Link href="/intermediaries/groups/new" aria-disabled={!hierarchyReady} className={`ml-auto inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#315FEA] px-3 text-[10px] font-bold text-white ${!hierarchyReady?"pointer-events-none opacity-45":""}`}><Plus className="h-3.5 w-3.5" /> Create Group</Link> : null}
         </div>
 
         <div className="overflow-x-auto">
@@ -307,10 +293,6 @@ function PartnerTreeRow({ partner, branches, group, canManage }: { partner: Busi
       ) : null}
     </div>
   );
-}
-
-function Metric({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
-  return <div className="flex items-center justify-between gap-2 rounded-lg border border-[#E2E9F2] bg-white px-3 py-2"><div className="flex min-w-0 items-center gap-2 text-[#315FEA]">{icon}<span className="truncate text-[9px] font-semibold text-[#64748B]">{label}</span></div><span className="text-[15px] font-bold tabular-nums text-[#17365D]">{value}</span></div>;
 }
 
 function SuccessToast({ text }: { text: string }) {
