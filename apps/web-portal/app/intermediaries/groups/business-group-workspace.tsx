@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { IntermediaryTabs } from "../intermediary-tabs";
 import {
   Archive,
@@ -88,8 +88,6 @@ export function BusinessGroupWorkspace({
 }) {
   const [query, setQuery] = useState("");
   const [branchOpen, setBranchOpen] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set<string>());
-  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(Boolean(success));
 
   useEffect(() => {
@@ -145,14 +143,6 @@ export function BusinessGroupWorkspace({
     });
   });
 
-  function toggleGroup(groupId: string) {
-    setExpandedGroups((current) => {
-      const next = new Set(current);
-      if (next.has(groupId)) next.delete(groupId);
-      else next.add(groupId);
-      return next;
-    });
-  }
 
   return (
     <div className="mx-auto max-w-[1540px] space-y-4 pb-24">
@@ -180,52 +170,14 @@ export function BusinessGroupWorkspace({
             const memberIds = memberships.filter((membership) => membership.group_id === group.id).map((membership) => membership.partner_id);
             const members = rootPartners.filter((partner) => memberIds.includes(partner.id));
             const branchCount = members.reduce((count, partner) => count + (branchesByParent.get(partner.id)?.length ?? 0), 0);
-            const expanded = expandedGroups.has(group.id);
-            const editing = editingGroupId === group.id;
 
             return (
-              <Fragment key={group.id}>
-                <tr role="button" tabIndex={0} aria-expanded={expanded} aria-label={`${group.group_name}, ${members.length} partners, ${branchCount} branches`} onClick={() => toggleGroup(group.id)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggleGroup(group.id); } }} className={`cursor-pointer transition-colors hover:bg-[#F1F6FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#7D94E6] ${expanded ? "bg-[#F2F6FC]" : "bg-white"}`}>
-                  <td className="px-4 py-2.5"><div className="flex items-center gap-2">{expanded ? <ChevronDown className="h-4 w-4 shrink-0 text-[#64748B]" /> : <ChevronRight className="h-4 w-4 shrink-0 text-[#64748B]" />}<div className="min-w-0"><p className="truncate font-semibold text-[#17365D]">{group.group_name}</p><p className="text-[9px] text-[#8190A4]">{group.group_code}</p></div></div></td>
-                  <td className="px-3 py-2.5"><span className={`rounded-md px-2 py-1 text-[9px] font-semibold ${group.group_mode === "legacy_employee" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>{group.group_mode === "legacy_employee" ? "Legacy employee-linked" : "Business hierarchy"}</span></td>
-                  <td className="px-3 py-2.5 text-center font-semibold">{members.length}</td>
-                  <td className="px-3 py-2.5 text-center font-semibold">{branchCount}</td>
-                </tr>
-                {expanded ? <tr><td colSpan={4} className="bg-[#FBFCFF] px-4 py-3">
-                  <div className="mb-3 flex items-center justify-between gap-2"><Link href={`/intermediaries/groups/${group.id}`} className="text-[10px] font-semibold text-[#315FEA] hover:underline">Group details</Link>
-                    {canManage && hierarchyReady ? <div className="flex items-center gap-2">{group.group_mode === "legacy_employee" ? <form action={convertLegacyGroupToBusiness}><input type="hidden" name="group_id" value={group.id}/><FormSubmitButton label="Convert safely" pendingLabel="Converting…" className="h-8 rounded-lg border border-amber-200 bg-amber-50 px-3 text-[9px] font-semibold text-amber-700"/></form> : null}<button type="button" onClick={() => setEditingGroupId(editing ? null : group.id)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#D7E0EA] bg-white px-3 text-[9px] font-semibold text-[#5A6F86]"><Pencil className="h-3.5 w-3.5"/> Edit Group</button></div> : null}
-                  </div>
-                {editing ? (
-                  <div className="border-t border-[#EDF1F6] bg-[#FBFCFE] p-3">
-                    <form action={renameBusinessGroup} className="flex flex-col gap-2 lg:flex-row lg:items-end">
-                      <input type="hidden" name="group_id" value={group.id} />
-                      <Field label="Group name"><input name="group_name" defaultValue={group.group_name} required maxLength={80} className={inputClass} /></Field>
-                      <Field label="Description"><input name="description" defaultValue={group.description ?? ""} className={inputClass} /></Field>
-                      <FormSubmitButton label="Save" pendingLabel="Saving…" className="inline-flex h-9 items-center justify-center rounded-lg bg-[#315FEA] px-4 text-[8.5px] font-bold text-white" />
-                    </form>
-                  </div>
-                ) : null}
-
-                <div className="space-y-2 border-t border-[#EDF1F6] p-3">
-                    {members.length ? members.map((partner) => <PartnerTreeRow key={partner.id} partner={partner} branches={branchesByParent.get(partner.id) ?? []} group={group} canManage={canManage && hierarchyReady && group.group_mode === "business"} />) : <div className="rounded-xl border border-dashed border-[#D9E2EC] bg-[#FBFCFE] px-4 py-6 text-center text-[8.5px] text-[#7C8A9C]">No Partners are assigned to this Group yet.</div>}
-
-                    {canManage && hierarchyReady && group.group_mode === "business" && ungroupedRoots.length ? (
-                      <form action={assignBusinessGroupMembers} className="mt-2 flex flex-col gap-2 rounded-xl border border-[#E2E8F1] bg-[#FBFCFE] p-3 sm:flex-row sm:items-end">
-                        <input type="hidden" name="group_id" value={group.id} />
-                        <Field label="Add / move Partner"><select name="partner_id" required defaultValue="" className={inputClass}><option value="">Select ungrouped Partner</option>{ungroupedRoots.map((partner) => <option key={partner.id} value={partner.id}>{partner.display_name} · {partner.partner_code}</option>)}</select></Field>
-                        <FormSubmitButton label="Add to Group" pendingLabel="Adding…" className="inline-flex h-9 items-center justify-center rounded-lg border border-[#CCD7E4] bg-white px-4 text-[8.5px] font-bold text-[#3156B8] hover:bg-[#F5F8FF]" />
-                      </form>
-                    ) : null}
-
-                    {canManage && hierarchyReady && members.length === 0 ? (
-                      <form action={archiveBusinessGroup} className="pt-1">
-                        <input type="hidden" name="group_id" value={group.id} />
-                        <FormSubmitButton label="Archive empty Group" pendingLabel="Archiving…" className="inline-flex h-8 items-center gap-2 rounded-lg border border-red-200 bg-white px-3 text-[8px] font-bold text-red-700 hover:bg-red-50" />
-                      </form>
-                    ) : null}
-                </div>
-                </td></tr> : null}
-              </Fragment>
+              <tr key={group.id} role="link" tabIndex={0} aria-label={`Open ${group.group_name} group details`} onClick={() => window.location.assign(`/intermediaries/groups/${group.id}`)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); window.location.assign(`/intermediaries/groups/${group.id}`); } }} className="cursor-pointer bg-white transition-colors hover:bg-[#F1F6FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#7D94E6]">
+                <td className="px-4 py-2.5"><p className="truncate font-semibold text-[#17365D]">{group.group_name}</p><p className="text-[9px] text-[#8190A4]">{group.group_code}</p></td>
+                <td className="px-3 py-2.5"><span className={`rounded-md px-2 py-1 text-[9px] font-semibold ${group.group_mode === "legacy_employee" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>{group.group_mode === "legacy_employee" ? "Legacy employee-linked" : "Business hierarchy"}</span></td>
+                <td className="px-3 py-2.5 text-center font-semibold">{members.length}</td>
+                <td className="px-3 py-2.5 text-center font-semibold">{branchCount}</td>
+              </tr>
             );
           }) : <tr><td colSpan={4} className="px-4 py-10 text-center text-[11px] text-[#7C8A9C]">No Groups match the current search.</td></tr>}
             </tbody>
