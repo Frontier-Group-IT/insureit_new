@@ -24,7 +24,7 @@ async function digest(){
 const proof=async()=>({id:7,customer_profile_id:id,uid_digest:await digest(),
   decision:'approved',reviewer_id:reviewer,second_reviewer_id:null,
   evidence_digest:'a'.repeat(64),consent_at:iso(now-200),ownership_verified_at:iso(now-180),
-  reviewed_at:iso(now-120),expires_at:iso(now+1000),
+  reviewed_at:iso(now-60),expires_at:iso(now+1000),
   recovery_verified_at:iso(now-110),cohort_approved_at:iso(now-100)});
 
 function harness(options={}){
