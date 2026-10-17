@@ -53,6 +53,7 @@ export type PartnerSupport = {
 
 export type PartnerActivityData = {
   generated_at: string;
+  unread_count: number;
   attention: {
     kind: string;
     title: string;
@@ -64,6 +65,8 @@ export type PartnerActivityData = {
     kind: 'policy' | 'claim' | 'intake' | 'learn';
     entity_id: string;
     event_at: string;
+    event_key: string;
+    is_read: boolean;
     title: string;
     subtitle: string;
     meta: string;
@@ -135,4 +138,9 @@ export async function getPartnerActivity(limit = 40) {
   const { data, error } = await supabase.rpc('partner_app_activity', { p_limit: limit });
   if (error) throw error;
   return data as PartnerActivityData;
+}
+
+export async function markPartnerActivityRead(eventKey: string) {
+  const { error } = await supabase.rpc('partner_app_mark_activity_read', { p_event_key: eventKey });
+  if (error) throw error;
 }
