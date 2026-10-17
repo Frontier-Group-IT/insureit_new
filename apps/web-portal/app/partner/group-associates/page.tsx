@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getPartnerWebSession } from "@/lib/partner-web";
-import { renderGroupAssociates } from "@/app/intermediaries/groups/[id]/associate-accounts/page";
+import { renderGroupAssociates } from "@/app/intermediaries/groups/[id]/associate-accounts/route-content";
 export const dynamic="force-dynamic";
 export default async function GroupPortalAssociates({searchParams}:{searchParams:Promise<{success?:string,error?:string}>}){
  const {identity,scope}=await getPartnerWebSession();
