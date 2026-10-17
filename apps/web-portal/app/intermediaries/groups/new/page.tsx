@@ -40,15 +40,14 @@ export default async function NewBusinessGroup({searchParams}:{searchParams:Prom
     </div>
    </section>
    <section className="overflow-hidden rounded-2xl border border-[#DFE5EE] bg-white">
-    <h2 className="border-b border-[#E5EAF1] px-5 py-4 text-sm font-semibold"><span className="mr-3 rounded-lg bg-[#17365D] px-3 py-2 text-white">03</span> Account access</h2>
-    <div className="grid gap-4 p-5">
-     <label className="text-xs font-medium">Role<input value="Group Administrator" readOnly disabled className={input+" bg-[#F3F6FA] font-semibold"}/><input type="hidden" name="admin_role" value="group_admin"/></label>
+    <div className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
+     <label className="min-w-0 flex-1 text-xs font-medium md:max-w-[520px]">Role<input value="Group Administrator" readOnly disabled className={input+" bg-[#F3F6FA] font-semibold"}/><input type="hidden" name="admin_role" value="group_admin"/></label>
+     <div className="flex shrink-0 justify-end gap-3">
+      <Link className="rounded-xl border border-[#DDE5EF] bg-white px-5 py-3 text-xs font-semibold" href="/intermediaries/groups">Cancel</Link>
+      <button className="rounded-xl bg-[#17365D] px-7 py-3 text-xs font-semibold text-white">Save Group</button>
+     </div>
     </div>
    </section>
-   <div className="flex justify-end gap-3 rounded-2xl border border-[#DFE5EE] bg-white px-5 py-4 shadow-sm">
-    <Link className="rounded-xl border border-[#DDE5EF] bg-white px-5 py-3 text-xs font-semibold" href="/intermediaries/groups">Cancel</Link>
-    <button className="rounded-xl bg-[#17365D] px-7 py-3 text-xs font-semibold text-white">Save Group</button>
-   </div>
   </form>
  </main></AppShell>;
 }
