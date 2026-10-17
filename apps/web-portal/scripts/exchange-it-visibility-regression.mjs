@@ -10,10 +10,18 @@ const migration = read("../../../supabase/migrations/20261017120000_exchange_it_
 
 assert.ok(page.includes('String(profile.role) === "it_super_user"'));
 assert.ok(page.includes('canToggleVisibility ? <th className="px-4 py-3">Action</th> : null'));
-assert.ok(page.includes('<ExchangeListingVisibilityAction listingId={row.id} enabled={row.is_enabled} />'));
+assert.ok(page.includes('<ExchangeListingVisibilityAction listing={{ id: row.id, listingNo: row.listing_no, enabled: row.is_enabled'));
 assert.ok(action.includes('String(profile.role) !== "it_super_user"'));
 assert.ok(action.includes('.update({ is_enabled: enabled'));
-assert.ok(badge.includes('setExchangeListingVisibility(listingId, next)'));
+assert.ok(badge.includes('setExchangeListingVisibility(listing.id,decision==="enable")'));
+assert.ok(badge.includes('role="menu"'));
+assert.ok(badge.includes('role="alertdialog"'));
+assert.ok(badge.includes('Delete Permanently'));
+assert.ok(badge.includes('Cancel'));
+assert.ok(badge.includes('permanentlyDeleteExchangeListing(listing.id)'));
+assert.ok(action.includes('const listingUuid'));
+assert.ok(action.includes('Only IT Super User can manage Exchange listing actions'));
+assert.ok(action.includes('"exchange_bids","exchange_contact_requests","exchange_deals"'));
 assert.ok(migration.includes('is_enabled boolean not null default true'));
 assert.ok(migration.includes("where l.status = ''live'' and l.is_enabled = true"));
 assert.ok(migration.includes('if not v_listing.is_enabled and not public.exchange_is_staff() then'));
