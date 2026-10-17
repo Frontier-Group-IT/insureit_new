@@ -11,7 +11,13 @@ type Query = {success?:string; error?:string};
 export async function GroupAssociateSections({id,query:q={},surface="operations",partners=[],headerPartnerAssignment}:{id:string;query?:Query;surface?:"operations"|"partner";partners?:GroupPartnerRow[];headerPartnerAssignment?:ReactNode}) {
  await requireGroupAssociateManager(id);
  const admin = createSupabaseAdminClient();
- const {data:associates} = await admin.from("group_portal_associate_accounts").select("id,name,phone_number,email,designation,address,city,state,postal_code,role,status").eq("group_id",id).order("created_at",{ascending:false});
+ const [{data:associates},{data:groupAdmin},{data:group}] = await Promise.all([
+  admin.from("group_portal_associate_accounts").select("id,name,phone_number,email,designation,address,city,state,postal_code,role,status").eq("group_id",id).order("created_at",{ascending:false}),
+  admin.from("group_administrator_contacts").select("admin_name,admin_email,admin_mobile,address,city,state,postal_code").eq("group_id",id).maybeSingle(),
+  admin.from("intermediary_groups").select("status").eq("id",id).maybeSingle()
+ ]);
+ const hasPrimaryAdmin=Boolean(groupAdmin);
+ const hasRegisterRecords=hasPrimaryAdmin||Boolean(associates?.length);
  return <div className="space-y-4">
    {q.error?<p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{q.error}</p>:null}
    {q.success?<p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{q.success}</p>:null}
@@ -24,14 +30,23 @@ export async function GroupAssociateSections({id,query:q={},surface="operations"
    </div> : null}
    <GroupRegisterTabs partners={partners} addPartner={surface==="operations"?headerPartnerAssignment:null} associates={<section className="overflow-x-auto bg-white">
     <h2 className="border-b p-4 text-sm font-semibold">Associate Accounts Register</h2>
-    {(associates??[]).length ? <table className="w-full min-w-[1060px] text-left text-xs"><thead className="bg-slate-50"><tr>{["Name","Phone Number","Email","Designation","Address","Role","Status","Action"].map(h=><th key={h} className="p-3">{h}</th>)}</tr></thead>
-    <tbody>{(associates??[]).map(a=><tr key={a.id} className="border-t">
+    {hasRegisterRecords ? <table className="w-full min-w-[1060px] text-left text-xs"><thead className="bg-slate-50"><tr>{["Name","Phone Number","Email","Designation","Address","Role","Status","Action"].map(h=><th key={h} className="p-3">{h}</th>)}</tr></thead>
+    <tbody>{groupAdmin ? <tr className="border-t bg-[#F8FBFF]">
+      <td className="p-3 font-semibold">{groupAdmin.admin_name?.trim()||"—"}</td>
+      <td className="p-3">{groupAdmin.admin_mobile?.trim()||"—"}</td>
+      <td className="p-3">{groupAdmin.admin_email?.trim()||"—"}</td>
+      <td className="p-3">Group Administrator</td>
+      <td className="p-3">{[groupAdmin.address,groupAdmin.city,groupAdmin.state,groupAdmin.postal_code].filter(Boolean).join(", ")||"—"}</td>
+      <td className="p-3"><span className="rounded-full border px-2 py-1">Group Administrator</span></td>
+      <td className="p-3">{group?.status==="active"?"Group Active":"Group "+(group?.status??"—")}</td>
+      <td className="p-3 text-[10px] text-[#64748B]">Group profile</td>
+    </tr> : null}{(associates??[]).map(a=><tr key={a.id} className="border-t">
       <td className="p-3">{a.name}</td><td className="p-3">{a.phone_number}</td><td className="p-3">{a.email}</td><td className="p-3">{a.designation}</td>
       <td className="p-3">{[a.address,a.city,a.state,a.postal_code].filter(Boolean).join(", ")||"–"}</td>
       <td className="p-3"><span className="rounded-full border px-2 py-1">{{group_admin:"Group Administrator",insurance_head:"Insurance Head",claim_head:"Claim Head",bodyshop_manager:"Bodyshop Manager"}[a.role as "group_admin"|"insurance_head"|"claim_head"|"bodyshop_manager"]||a.role}</span></td><td className="p-3">{a.status}</td>
       <td className="p-3"><AssociateControls groupId={id} associate={a} surface={surface}/></td>
     </tr>)}</tbody></table> : null}
-    <GroupAssociateCreateEntry hasRecords={Boolean(associates?.length)} error={q.error} form={<AssociateCreateForm groupId={id} surface={surface}/>}/>
+    <GroupAssociateCreateEntry hasRecords={hasRegisterRecords} error={q.error} form={<AssociateCreateForm groupId={id} surface={surface}/>}/>
    </section>} />
  </div>;
 }
