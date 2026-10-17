@@ -42,3 +42,22 @@ Live existing approved links: only two, and both phones have an active non-Custo
 ## Release decision
 
 **Ready for repeated aggregate preflight; NOT ready for live second canary or all-Customer activation.** PR #3232 remains source-only draft. No migrations, merge, deployment, OTA/APK/AAB, automatic OTPs, or production Auth writes were performed by this audit.
+
+## 2026-10-17 — Trusted operator preview implementation, NOT DEPLOYED
+
+New source-only function `supabase/functions/customer-firebase-operator-preview/index.ts` and pure handler `supabase/functions/_shared/customer-firebase-operator-preview.mjs` create an **operator-only, read-only** pathway to evaluate ONE expressly chosen existing Customer UUID. The function is disabled unless a server-side environment flag `CUSTOMER_FIREBASE_OPERATOR_PREVIEW_ENABLED=true` is set. **No such flag was changed or endpoint deployed in production**.
+
+Once separately approved for deployment, the caller would need a genuine authenticated Supabase IT Super User bearer token plus a short-lived, signed/revocation-checked Firebase phone ID token in a bounded POST JSON body. It calls the existing reviewed enrollment resolver, which demands exact original Auth/Customer UUID, canonical phone, immutable UID uniqueness, independently registered ownership and consent in the latest restricted review journal, and an independent second active IT reviewer for staff/shared-phone conflicts. A missing verified Auth alias is surfaced as a **protected-recovery-required** state, never silently provisioned.
+
+The handler returns only coarse stages (`reviewed_existing_session_manual_test_candidate`, `approved_link_write_still_pending`, `protected_auth_recovery_required`, or generic denial). It does not return Customer IDs, phones, Auth details, Firebase UIDs or tokens; does not grant credentials, enroll users, update Auth, send OTP or create a Supabase session; and is not a substitute for real Android testing.
+
+**Live dependency verified READ-ONLY:** current production project has no `customer_firebase_enrollment_reviews` audit journal, no `customer_firebase_rollout_control` table and no reviewed-enrollment RPC. Existing prepared migrations remain unapplied. Therefore the preview would **fail closed** until a separately reviewed rollout of the authorization infrastructure. No production DDL, data write or Edge deployment has occurred. No unshared existing Customer can be provisioned solely from the 18-row aggregate; independent explicit ownership/consent and protected Auth recovery are still required for accounts whose original Auth email is missing.
+
+### Owner action and release order
+1. Owner-controlled protected Auth backup + verified matching-GoTrue restore and original-login/UUID recovery attestation (draft PR #3220) before email alias/credential mutation.
+2. Obtain an exact eligible Customer UUID and independently verified Customer ownership/consent via an approved private operator process. Do not select a real user automatically or collect an OTP in ChatGPT/GitHub.
+3. Independently security-review and apply the prepared journal/collision/enrollment control migrations with controlled rollback, before enabling any operator preview.
+4. Approve deployment of the disabled-by-default operator preview with `verify_jwt=true`; test only with real approved IT Super User and consenting Customer. This does **not** turn on public enrollment or the full Firebase bridge.
+5. After authenticated operator review and owner authorization, provision same-UUID Auth alias/approved UID through reviewed, auditable tooling only, then conduct genuine Android sign-in, exact UUID/vehicle/policy/claim/Storage isolation and refresh tests.
+6. Expand from limited, separately approved Customer cohorts only after documented real-device and RLS acceptance. Preserve staff and 2Factor login; no OTA/APK/AAB without release approval.
+
