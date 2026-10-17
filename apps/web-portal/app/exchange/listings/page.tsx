@@ -273,7 +273,7 @@ export default async function ExchangeListingReviewPage({ searchParams }: PagePr
                       </td>
                       {canToggleVisibility ? (
                         <td className="px-4 py-4">
-                          <ExchangeListingVisibilityAction listingId={row.id} enabled={row.is_enabled} />
+                          <ExchangeListingVisibilityAction listing={{ id: row.id, listingNo: row.listing_no, enabled: row.is_enabled, title: row.title, askingPrice: Number(row.asking_price), odometerKm: row.odometer_km, city: row.city, state: row.state }} />
                         </td>
                       ) : null}
                     </tr>
