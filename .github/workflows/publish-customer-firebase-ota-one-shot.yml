@@ -1,0 +1,118 @@
+name: Publish one-shot Customer Firebase canary Android OTA
+on:
+  push:
+    branches:
+      - release/customer-firebase-otp-hash-canary-ota-20261017
+    paths:
+      - '.github/workflows/publish-customer-firebase-ota-one-shot.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: insureit-customer-firebase-internal-ota
+  cancel-in-progress: false
+
+jobs:
+  publish-android-canary:
+    name: Guarded Android firebase-internal OTA only
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN_CUSTOMER || secrets.EXPO_TOKEN }
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ilzhsfqqjyppzzvfscmh.supabase.co' }
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }
+      EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_SESSION_BRIDGE_ENABLED: 'true'
+      EXPO_PUBLIC_PORTAL_URL: 'https://portal.insureit.in'
+    steps:
+      - name: Checkout isolated and pinned canary source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Fail closed unless only the 0.3.2 Android challenge guard changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/release/customer-firebase-otp-hash-canary-ota-20261017'
+          node <<'NODE'
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const { execFileSync } = require('node:child_process');
+          const base = '8e08a73d0c037b08c3035a2ee136c9b107a48460';
+          execFileSync('git', ['merge-base', '--is-ancestor', base, 'HEAD']);
+          const changes = execFileSync('git', ['diff', '--name-only', base, 'HEAD'], {encoding:'utf8'}).trim().split('\n').sort();
+          assert.deepEqual(changes, [
+            '.github/workflows/publish-customer-firebase-ota-one-shot.yml',
+            'apps/mobile-app/lib/customer-firebase-session-exchange.test.cjs',
+            'apps/mobile-app/lib/customer-firebase-session-exchange.ts'
+          ].sort(), 'Unexpected source changes: REFUSE OTA');
+          const file = 'apps/mobile-app/lib/customer-firebase-session-exchange.ts';
+          const original = execFileSync('git', ['show', base + ':' + file], {encoding:'utf8'});
+          const expected = original.replace('const hashRe = /^[a-f0-9]{64}$/i;', 'const hashRe = /^[a-f0-9]{32,128}$/i;');
+          assert.notEqual(original, expected);
+          assert.equal(fs.readFileSync(file,'utf8'), expected, 'Only the reviewed one-line runtime change is permitted');
+          const app = JSON.parse(fs.readFileSync('apps/mobile-app/app.json','utf8')).expo;
+          const eas = JSON.parse(fs.readFileSync('apps/mobile-app/eas.json','utf8'));
+          assert.equal(app.version, '0.3.2');
+          assert.equal(app.android.versionCode, 11);
+          assert.equal(app.android.package, 'com.insureit.mobile');
+          assert.equal(app.runtimeVersion.policy, 'appVersion');
+          assert.equal(app.extra.eas.projectId, 'aadcb7a5-072b-4bf9-bc81-c52fabdd5caa');
+          assert.equal(eas.build['firebase-internal-test'].channel, 'firebase-internal');
+          assert.equal(eas.build['firebase-internal-test'].env.EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_SESSION_BRIDGE_ENABLED,'true');
+          assert.equal(eas.build.production.env.EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_SESSION_BRIDGE_ENABLED,'false');
+          if(process.env.EXPO_PUBLIC_SUPABASE_URL !== 'https://ilzhsfqqjyppzzvfscmh.supabase.co') throw Error('Wrong Supabase backend');
+          if(process.env.EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_SESSION_BRIDGE_ENABLED !== 'true') throw Error('Customer canary must be enabled');
+          console.log('Canary scope, sole runtime change, native app version and dedicated channel verified.');
+          NODE
+          test -n "$EXPO_TOKEN" || { echo "::error::No Expo publishing token configured"; exit 1; }
+
+      - name: Install dependencies without changing lockfile
+        run: npm ci --no-audit --no-fund
+      - name: Verify Android Supabase session exchange and recovery cases
+        run: node --test apps/mobile-app/lib/customer-firebase-session-exchange.test.cjs
+      - name: Mobile TypeScript check
+        run: npm run typecheck:mobile
+      - name: Mobile lint
+        run: npm run lint:mobile
+      - name: Confirm Expo account, project and existing Firebase-only channel
+        working-directory: apps/mobile-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx eas-cli whoami
+          npx eas-cli project:info --non-interactive
+          npx eas-cli channel:view firebase-internal --json --non-interactive > "$RUNNER_TEMP/firebase-internal-channel.json"
+          test -s "$RUNNER_TEMP/firebase-internal-channel.json"
+          echo 'Existing dedicated firebase-internal Expo channel was verified.'
+
+      - name: Publish JavaScript OTA to firebase-internal Android only
+        working-directory: apps/mobile-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx eas-cli update \
+            --channel firebase-internal \
+            --platform android \
+            --message 'Customer Firebase canary Android hash-validation-only OTA 8e08a73d0c037b08c3035a2ee136c9b107a48460' \
+            --non-interactive \
+            --json > "$RUNNER_TEMP/firebase-canary-update.json"
+          test -s "$RUNNER_TEMP/firebase-canary-update.json"
+          echo 'Expo reported Android-only OTA publishing success. No APK/AAB was built.'
+          {
+            echo '## Customer Firebase Android canary OTA'
+            echo ''
+            echo '- Expo channel: firebase-internal (not production/preview)'
+            echo '- Android runtime: 0.3.2; native versionCode 11'
+            echo '- Baseline: 8e08a73d0c037b08c3035a2ee136c9b107a48460'
+            echo '- Change: only bounded challenge hash validation'
+            echo '- Build: no APK, AAB, IPA, or native changes'
+            echo '- Existing 2Factor flow and Supabase Customer UUID gates unchanged'
+            echo '- Device test remains required; an OTA may need app restart/reload'
+          } >> "$GITHUB_STEP_SUMMARY"
