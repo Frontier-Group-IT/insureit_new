@@ -32,7 +32,7 @@ language sql immutable as $$
 $$;
 -- Existing production helper placeholder, replaced by the reviewed migration.
 create function public.customer_firebase_profile_id() returns uuid
-language sql stable as $select null::uuid$;
+language sql stable as 'select null::uuid';
 -- Existing production policy relationship helper; tested with the proposed
 -- Supabase UUID session helper, not a Firebase JWT used as a data credential.
 create function public.customer_firebase_can_read_customer(v uuid) returns boolean
