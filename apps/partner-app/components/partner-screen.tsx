@@ -1,6 +1,7 @@
-import { useCallback, useState, type PropsWithChildren, type ReactNode } from 'react';
+import { useCallback, useRef, useState, type PropsWithChildren, type ReactNode } from 'react';
 import {
   Image,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -33,6 +34,7 @@ export function PartnerScreen({
   children,
   scrollProps,
   heroSearch,
+  resetScrollOnFocus = false,
 }: PropsWithChildren<{
   title: string;
   eyebrow?: string;
@@ -43,6 +45,8 @@ export function PartnerScreen({
   action?: ReactNode;
   hideTopBar?: boolean;
   scrollProps?: Omit<ScrollViewProps, 'contentContainerStyle'>;
+  /** Home/Business only: avoid retained iOS pull-to-refresh negative scroll offsets. */
+  resetScrollOnFocus?: boolean;
   heroSearch?: {
     value: string;
     onChangeText: (value: string) => void;
@@ -59,6 +63,8 @@ export function PartnerScreen({
   const setHeroSearchValue = heroSearch?.onChangeText ?? sharedSearch.setQuery;
   const hasHeroSearchValue = heroSearchValue.trim().length > 0;
   const [unreadActivityCount, setUnreadActivityCount] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+  const latestScrollY = useRef(0);
 
   useFocusEffect(useCallback(() => {
     if (!isHomeHero) return undefined;
@@ -76,6 +82,22 @@ export function PartnerScreen({
       cancelled = true;
     };
   }, [isHomeHero]));
+
+  useFocusEffect(useCallback(() => {
+    if (Platform.OS !== 'ios' || !resetScrollOnFocus) return undefined;
+
+    // Do not reset a valid scroll position when returning from another tab.
+    // Only fix an overscrolled (negative) native offset left by pull-to-refresh.
+    const repairNegativeOffset = () => {
+      if (latestScrollY.current < -2) {
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
+        latestScrollY.current = 0;
+      }
+    };
+    repairNegativeOffset();
+    const frame = requestAnimationFrame(repairNegativeOffset);
+    return () => cancelAnimationFrame(frame);
+  }, [resetScrollOnFocus]));
 
   const submitHomeSearch = () => {
     if (heroSearch?.onSubmit) {
@@ -102,7 +124,13 @@ export function PartnerScreen({
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
+        ref={scrollRef}
         {...scrollProps}
+        scrollEventThrottle={scrollProps?.scrollEventThrottle ?? 16}
+        onScroll={(event) => {
+          latestScrollY.current = event.nativeEvent.contentOffset.y;
+          scrollProps?.onScroll?.(event);
+        }}
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustContentInsets={false}
         automaticallyAdjustsScrollIndicatorInsets={false}
