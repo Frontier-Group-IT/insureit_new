@@ -2,7 +2,7 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { GroupPartnerRow } from "./group-partner-data";
-export function GroupRegisterTabs({associates,partners}:{associates:ReactNode;partners:GroupPartnerRow[]}) {
+export function GroupRegisterTabs({associates,partners,addPartner}:{associates:ReactNode;partners:GroupPartnerRow[];addPartner?:ReactNode}) {
  const [tab,setTab]=useState<"associate"|"partner">("associate");
  const money=(v:number|null)=>v===null?"—":new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:0}).format(v);
  return <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white">
@@ -12,7 +12,7 @@ export function GroupRegisterTabs({associates,partners}:{associates:ReactNode;pa
   </nav>
   <div role="tabpanel" hidden={tab!=="associate"}>{associates}</div>
   <div role="tabpanel" hidden={tab!=="partner"}>
-   <h2 className="border-b px-4 py-3 text-[12px] font-semibold text-[#17365D]">Partner Register</h2>
+   <div className="flex items-center justify-between gap-3 border-b px-4 py-3"><h2 className="text-[12px] font-semibold text-[#17365D]">Partner Register</h2>{addPartner}</div>
    <div className="overflow-x-auto"><table className="w-full min-w-[1000px] table-fixed text-left text-[10.5px]">
     <thead className="border-b bg-[#F8FAFC] text-[8.5px] uppercase text-[#64748B]"><tr>
       <th className="w-[24%] px-4 py-3">Partner Name</th><th className="w-[14%] px-3 py-3">Mobile Number</th><th className="w-[17%] px-3 py-3">Assigned RM</th><th className="w-[13%] px-3 py-3">Status</th><th className="w-[10%] px-3 py-3 text-right">Customers</th><th className="w-[11%] px-3 py-3 text-right">Net Premium</th><th className="w-[11%] px-3 py-3 text-right">Payout</th>
