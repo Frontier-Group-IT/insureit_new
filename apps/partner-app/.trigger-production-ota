@@ -1,1 +1,1 @@
-Partner production OTA trigger — 2026-10-16 PR #3198 merged: Policies and Claims search boxes now match Business visual geometry exactly; no backend changes. OTA only, no APK/AAB. Source merge 2bd0dfae2c16ae22b8f91a2e4f511d93943a5292.
+Partner production OTA trigger — 2026-10-17: Activity unread badge + universal search + Unread/Read/All filters with persistent read receipts. OTA only; no APK/AAB. Source main current.
