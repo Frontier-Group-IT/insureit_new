@@ -102,6 +102,7 @@ export default function PartnerHomeScreen() {
 
   return (
     <PartnerScreen
+      resetScrollOnFocus
       eyebrow="INSUREIT PARTNER"
       title={greeting(identity.display_name)}
       action={
