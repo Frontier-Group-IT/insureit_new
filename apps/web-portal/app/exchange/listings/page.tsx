@@ -5,6 +5,7 @@ import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shel
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { ExchangeReviewPanel } from "./review-panel";
+import { ExchangeListingVisibilityAction } from "./listing-visibility-action";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -19,6 +20,7 @@ type ListingRow = {
   seller_customer_id: string;
   vehicle_id: string;
   status: string;
+  is_enabled: boolean;
   selling_mode: string;
   title: string;
   category: string;
@@ -73,6 +75,7 @@ export default async function ExchangeListingReviewPage({ searchParams }: PagePr
   const profile = await requireCapability("review_exchange_listings", "approve");
   if (!allowedReviewRoles.has(String(profile.role))) redirect("/access-denied");
 
+  const canToggleVisibility = String(profile.role) === "it_super_user";
   const params = await searchParams;
   const activeStatus = params.status === "all" || reviewStatuses.includes(params.status as ReviewStatus)
     ? params.status
@@ -82,7 +85,7 @@ export default async function ExchangeListingReviewPage({ searchParams }: PagePr
   const admin = createSupabaseAdminClient();
   const { data: listingData, error } = await admin
     .from("exchange_listings")
-    .select("id,listing_no,seller_customer_id,vehicle_id,status,selling_mode,title,category,city,state,odometer_km,asking_price,owner_verification_status,document_verification_status,inspection_status,inspection_score,submitted_at,reviewed_at,review_notes,published_at,created_at")
+    .select("id,listing_no,seller_customer_id,vehicle_id,status,is_enabled,selling_mode,title,category,city,state,odometer_km,asking_price,owner_verification_status,document_verification_status,inspection_status,inspection_score,submitted_at,reviewed_at,review_notes,published_at,created_at")
     .in("status", ["pending_review", "live", "rejected"])
     .order("submitted_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
@@ -192,6 +195,7 @@ export default async function ExchangeListingReviewPage({ searchParams }: PagePr
                   <th className="px-4 py-3">Evidence</th>
                   <th className="px-4 py-3">Submitted</th>
                   <th className="px-4 py-3">Review</th>
+                  {canToggleVisibility ? <th className="px-4 py-3">Action</th> : null}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EDF1F5]">
@@ -267,11 +271,16 @@ export default async function ExchangeListingReviewPage({ searchParams }: PagePr
                           </div>
                         )}
                       </td>
+                      {canToggleVisibility ? (
+                        <td className="px-4 py-4">
+                          <ExchangeListingVisibilityAction listingId={row.id} enabled={row.is_enabled} />
+                        </td>
+                      ) : null}
                     </tr>
                   );
                 })}
                 {!filtered.length ? (
-                  <tr><td colSpan={6} className="px-5 py-14 text-center"><Clock3 className="mx-auto h-6 w-6 text-[#A1ABBA]" /><p className="mt-2 text-xs font-bold text-[#778297]">No listings in this view.</p></td></tr>
+                  <tr><td colSpan={canToggleVisibility ? 7 : 6} className="px-5 py-14 text-center"><Clock3 className="mx-auto h-6 w-6 text-[#A1ABBA]" /><p className="mt-2 text-xs font-bold text-[#778297]">No listings in this view.</p></td></tr>
                 ) : null}
               </tbody>
             </table>

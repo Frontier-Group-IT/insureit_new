@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient } from "@/lib/auth-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { requireCapability } from "@/lib/master-data-server";
 
 const allowedReviewRoles = new Set(["super_admin", "it_super_user", "sales_head", "sales_operations_head"]);
@@ -45,4 +46,32 @@ export async function reviewExchangeListing(formData: FormData) {
   if (error) throw new Error(error.message || "Exchange listing review could not be completed.");
 
   revalidatePath("/exchange/listings");
+}
+
+/**
+ * Visibility is a distinct IT-only publication override.
+ * Normal review roles cannot change it, even by invoking this action directly.
+ */
+export async function setExchangeListingVisibility(listingId: string, enabled: boolean) {
+  const profile = await requireCapability("review_exchange_listings", "approve");
+  if (String(profile.role) !== "it_super_user") {
+    throw new Error("Only IT Super User can change Exchange listing visibility.");
+  }
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(listingId)
+    || typeof enabled !== "boolean") {
+    throw new Error("Invalid Exchange listing visibility request.");
+  }
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
+    .from("exchange_listings")
+    .update({ is_enabled: enabled, updated_at: new Date().toISOString() })
+    .eq("id", listingId)
+    .in("status", ["pending_review", "live", "rejected"])
+    .select("id")
+    .maybeSingle();
+  if (error || !data) throw new Error(error?.message || "Listing not found or unavailable.");
+  revalidatePath("/exchange/listings");
+  revalidatePath("/customer/exchange");
+  revalidatePath(`/customer/exchange/${listingId}`);
+  return { ok: true };
 }

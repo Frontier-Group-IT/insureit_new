@@ -57,6 +57,8 @@ jobs:
         run: node scripts/sidebar-state-stability-regression.mjs
       - name: Collapsed sidebar direct-link regression
         run: node scripts/collapsed-sidebar-direct-links-regression.mjs
+      - name: Exchange IT visibility regression
+        run: node scripts/exchange-it-visibility-regression.mjs
       - name: Associate Accounts portal menu interaction regression
         run: node scripts/associate-actions-menu-interaction-regression.mjs
       - name: Group Associate Accounts security and UI regression
