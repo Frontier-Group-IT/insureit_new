@@ -67,13 +67,14 @@ export async function setExchangeListingVisibility(listingId: string, enabled: b
     .update({ is_enabled: enabled, updated_at: new Date().toISOString() })
     .eq("id", listingId)
     .in("status", ["pending_review", "live", "rejected"])
-    .select("id")
+    .select("id,is_enabled")
     .maybeSingle();
   if (error || !data) throw new Error(error?.message || "Listing not found or unavailable.");
   revalidatePath("/exchange/listings");
   revalidatePath("/customer/exchange");
   revalidatePath(`/customer/exchange/${listingId}`);
-  return { ok: true };
+  if (data.is_enabled !== enabled) throw new Error("Listing visibility change was not confirmed by the database.");
+  return { ok: true, enabled: data.is_enabled };
 }
 
 
