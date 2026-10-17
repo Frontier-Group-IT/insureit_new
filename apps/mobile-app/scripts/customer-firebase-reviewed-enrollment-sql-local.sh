@@ -56,7 +56,7 @@ SQL
 
 if psql "$REVIEW_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 >/dev/null 2>&1 <<'SQL'
 set request.jwt.claim.role='service_role';
-update public.customer_firebase_enrollment_reviews set decision='revoked' where id=1;
+update public.customer_firebase_enrollment_reviews set decision='revoked' where customer_profile_id='11111111-1111-4111-8111-111111111111';
 SQL
 then echo "ERROR: audit UPDATE unexpectedly succeeded" >&2; exit 1
 fi
