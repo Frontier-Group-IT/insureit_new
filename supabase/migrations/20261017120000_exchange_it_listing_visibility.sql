@@ -34,7 +34,10 @@ begin
   -- views; retain internal staff detail access for moderation.
   v_detail := replace(v_detail,
     'if v_listing.status not in (''live'',''deal_in_progress'',''sold'')',
-    'if not v_listing.is_enabled and not public.exchange_is_staff() then\n    raise exception ''Listing is not available.'' using errcode=''42501'';\n  end if;\n\n  if v_listing.status not in (''live'',''deal_in_progress'',''sold'')');
+    'if not v_listing.is_enabled and not public.exchange_is_staff() then' || chr(10) ||
+    '    raise exception ''Listing is not available.'' using errcode=''42501'';' || chr(10) ||
+    '  end if;' || chr(10) || chr(10) ||
+    '  if v_listing.status not in (''live'',''deal_in_progress'',''sold'')');
   if v_detail = pg_get_functiondef('public.exchange_listing_detail(uuid)'::regprocedure) then
     raise exception 'Exchange detail visibility condition not found';
   end if;
