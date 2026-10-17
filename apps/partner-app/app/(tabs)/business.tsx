@@ -236,6 +236,7 @@ export default function BusinessScreen() {
 
   return (
     <PartnerScreen
+      resetScrollOnFocus
       title=""
       hideTopBar
       scrollProps={{
