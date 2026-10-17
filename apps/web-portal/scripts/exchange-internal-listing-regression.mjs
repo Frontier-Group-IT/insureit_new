@@ -31,6 +31,10 @@ expect(files.service.includes('guidedPhotoLabels = ["Front", "Rear", "Left", "Ri
 expect(files.service.includes('created_via: "operations_web"'), "Internal listing actions are audit-labelled");
 expect(files.service.includes('status: "pending_review"'), "Internal submission enters existing Listing Review queue");
 expect(files.media.includes('uploadInternalExchangePhoto'), "Photo upload goes through protected server route");
+expect(files.workspace.includes('placeholder="Search customer"'), "Customer selector uses compact search placeholder");
+expect(files.workspace.includes('customerDropdownOpen && customerQuery.trim()'), "Customer suggestions appear only after typing");
+expect(files.workspace.includes('No matching customer found.'), "Customer autocomplete has an empty-search result state");
+expect(files.workspace.includes('md:grid-cols-2 xl:grid-cols-3'), "Fleet expands after removing permanent customer-list column");
 expect(files.workspace.includes('Submit for review'), "Desktop wizard includes governed submission");
 expect(files.workspace.includes('Resume') && files.workspace.includes('editable_listing'), "Draft/rejected/paused listing resume is supported");
 expect(!files.service.includes('exchange_upsert_listing_draft'), "Internal flow does not weaken or impersonate customer-scoped draft RPC");
