@@ -1,12 +1,19 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerInsurerLogoSource } from '@/lib/catalog-logos';
-import { getPartnerActivity, type PartnerActivityData } from '@/lib/engagement';
+import {
+  getPartnerActivity,
+  getPartnerActivityReadKeys,
+  markPartnerActivityRead,
+  partnerActivityEventKey,
+  type PartnerActivityData,
+  type PartnerActivityItem,
+} from '@/lib/engagement';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 
@@ -15,12 +22,23 @@ export default function ActivityScreen() {
   const [data, setData] = useState<PartnerActivityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
+  const [activityFilter, setActivityFilter] = useState<'unread' | 'read' | 'all'>('unread');
+  const [readKeys, setReadKeys] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      setData(await getPartnerActivity(40));
+      const nextData = await getPartnerActivity(100);
+      const nextReadKeys = await getPartnerActivityReadKeys(nextData.items);
+      setData(nextData);
+      setReadKeys(nextReadKeys);
+      const unreadCount = nextData.items.reduce(
+        (count, item) => count + (nextReadKeys.has(partnerActivityEventKey(item)) ? 0 : 1),
+        0,
+      );
+      setActivityFilter(unreadCount > 0 ? 'unread' : 'all');
     } catch {
       setData(null);
       setError('Recent activity could not be loaded.');
@@ -32,6 +50,59 @@ export default function ActivityScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const counts = useMemo(() => {
+    const all = data?.items.length ?? 0;
+    const read = data?.items.reduce(
+      (count, item) => count + (readKeys.has(partnerActivityEventKey(item)) ? 1 : 0),
+      0,
+    ) ?? 0;
+    return { all, read, unread: Math.max(0, all - read) };
+  }, [data, readKeys]);
+
+  const filteredItems = useMemo(() => {
+    if (!data) return [];
+    const normalizedQuery = query.trim().toLowerCase();
+
+    return data.items.filter((item) => {
+      const isRead = readKeys.has(partnerActivityEventKey(item));
+      if (activityFilter === 'unread' && isRead) return false;
+      if (activityFilter === 'read' && !isRead) return false;
+      if (!normalizedQuery) return true;
+
+      const searchable = [
+        labelFor(item.kind),
+        item.title,
+        item.subtitle,
+        item.meta,
+        item.kind,
+      ].join(' ').toLowerCase();
+
+      return searchable.includes(normalizedQuery);
+    });
+  }, [activityFilter, data, query, readKeys]);
+
+  function openActivity(item: PartnerActivityItem) {
+    const key = partnerActivityEventKey(item);
+    const wasRead = readKeys.has(key);
+
+    if (!wasRead) {
+      setReadKeys((current) => {
+        const next = new Set(current);
+        next.add(key);
+        return next;
+      });
+      void markPartnerActivityRead(item).catch(() => {
+        setReadKeys((current) => {
+          const next = new Set(current);
+          next.delete(key);
+          return next;
+        });
+      });
+    }
+
+    router.push(item.route as never);
+  }
 
   return (
     <PartnerScreen title="What changed" hideTopBar>
@@ -98,14 +169,64 @@ export default function ActivityScreen() {
             <Text style={styles.today}> · Today</Text>
           </View>
 
-          {data.items.length ? (
+          <View style={styles.searchWrap}>
+            <Ionicons name="search-outline" size={20} color="#61728A" />
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search all activity..."
+              placeholderTextColor="#8390A4"
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="search"
+              style={styles.searchInput}
+              accessibilityLabel="Search all activity"
+            />
+            {query ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Clear activity search"
+                hitSlop={8}
+                onPress={() => setQuery('')}
+                style={styles.searchClear}
+              >
+                <Ionicons name="close-circle-outline" size={18} color="#96A1B2" />
+              </Pressable>
+            ) : null}
+          </View>
+
+          <View style={styles.filterTabs}>
+            {([
+              ['unread', 'Unread', counts.unread],
+              ['read', 'Read', counts.read],
+              ['all', 'All', counts.all],
+            ] as const).map(([key, label, count]) => {
+              const active = activityFilter === key;
+              return (
+                <Pressable
+                  key={key}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  onPress={() => setActivityFilter(key)}
+                  style={[styles.filterTab, active && styles.filterTabActive]}
+                >
+                  <Text style={[styles.filterTabText, active && styles.filterTabTextActive]}>
+                    {label} ({count})
+                  </Text>
+                  {active ? <View style={styles.filterIndicator} /> : null}
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {filteredItems.length ? (
             <View style={styles.activityList}>
-              {data.items.map((item) => {
+              {filteredItems.map((item) => {
                 const insurerLogo = getPartnerInsurerLogoSource(item.meta);
                 return (
                   <Pressable
                     key={`${item.kind}-${item.entity_id}-${item.event_at}`}
-                    onPress={() => router.push(item.route as never)}
+                    onPress={() => openActivity(item)}
                     style={styles.itemCard}
                   >
                     <View style={styles.logoTile}>
@@ -134,8 +255,8 @@ export default function ActivityScreen() {
             <PartnerStateView
               state="empty"
               asset={PartnerAssets.status.announcement}
-              title="No recent activity"
-              message="New policy, claim, intake and learning events will appear here when they are recorded."
+              title={query ? "No matching activity" : activityFilter === "unread" ? "No unread activity" : activityFilter === "read" ? "No read activity" : "No recent activity"}
+              message={query ? "Try another search term or activity filter." : activityFilter === "unread" ? "You are caught up. New activity will appear here." : "New policy, claim, intake and learning events will appear here when they are recorded."}
             />
           )}
         </>}
@@ -294,6 +415,70 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     flexDirection: 'row',
     alignItems: 'baseline',
+  },
+  searchWrap: {
+    height: 43,
+    marginBottom: 7,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#D4DCE7',
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    minWidth: 0,
+    height: 41,
+    paddingVertical: 0,
+    color: '#17213E',
+    fontSize: 11.5,
+    fontWeight: '600',
+  },
+  searchClear: {
+    width: 24,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterTabs: {
+    height: 42,
+    marginBottom: 8,
+    overflow: 'hidden',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#D4DCE7',
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+  },
+  filterTab: {
+    position: 'relative',
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  filterTabActive: {
+    backgroundColor: '#EEF4FD',
+  },
+  filterTabText: {
+    color: '#778399',
+    fontSize: 10.5,
+    fontWeight: '800',
+  },
+  filterTabTextActive: {
+    color: '#163F73',
+    fontWeight: '900',
+  },
+  filterIndicator: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 3,
+    backgroundColor: '#3478C5',
   },
   today: {
     color: '#8390AA',
