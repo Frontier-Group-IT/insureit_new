@@ -31,13 +31,13 @@ archive_name="$(basename "$INSUREIT_BACKUP_FILE")"
 }
 # Validate actual TCP server address, not just text within the URL.
 server_ip="$(psql "$INSUREIT_RESTORE_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -Atqc \
-  'select coalesce(inet_server_addr()::text,'''')')"
+  'select inet_server_addr()')"
 [[ "$server_ip" == '127.0.0.1' || "$server_ip" == '::1' ]] || {
   echo 'ERROR: restore connection is not loopback' >&2; exit 1;
 }
 # Never import into an Auth database with existing users or identities.
 existing="$(psql "$INSUREIT_RESTORE_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -Atqc \
-  'select (select count(*) from auth.users)::text || ''|'' || (select count(*) from auth.identities)::text')"
+  "select (select count(*) from auth.users)::text || '|' || (select count(*) from auth.identities)::text")"
 [[ "$existing" == '0|0' ]] || {
   echo 'ERROR: refusing restore into nonempty Auth identities' >&2; exit 1;
 }
@@ -49,8 +49,11 @@ age -d -i "$INSUREIT_BACKUP_AGE_IDENTITY" "$INSUREIT_BACKUP_FILE" \
   | pg_restore --exit-on-error --single-transaction --no-owner --no-acl \
       --data-only --dbname="$INSUREIT_RESTORE_TEST_DB_URL"
 # Verify that the restored GoTrue identities exist without printing records.
-psql "$INSUREIT_RESTORE_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -Atqc \
-  'select count(*) from auth.users' >/dev/null
+restored="$(psql "$INSUREIT_RESTORE_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -Atqc \
+  'select count(*) from auth.users')"
+[[ "$restored" =~ ^[1-9][0-9]*$ ]] || {
+  echo 'ERROR: no Auth user records were restored' >&2; exit 1;
+}
 echo 'PASS: encrypted archive decrypted and imported into empty local Auth schema.'
 echo 'NOT YET VERIFIED: original login, refresh/session, exact UUID, identity linkage,'
 echo 'matching GoTrue migration version and complete recovery. Review these separately.'
