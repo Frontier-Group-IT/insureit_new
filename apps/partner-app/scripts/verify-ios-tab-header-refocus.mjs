@@ -10,6 +10,8 @@ const claims=read('../app/(tabs)/claims.tsx');
 assert.match(screen,/resetScrollOnFocus\s*=\s*false/);
 assert.match(screen,/Platform\.OS !== 'ios' \|\| !resetScrollOnFocus/);
 assert.match(screen,/scrollRef\.current\?\.scrollTo\(\{ y: 0, animated: false \}\)/);
+assert.match(screen,/latestScrollY\\.current < -2/);
+assert.match(screen,/scrollProps\\?\\.onScroll\\?\\.\\(event\\)/);
 assert.match(screen,/cancelAnimationFrame\(frame\)/);
 assert.match(home,/<PartnerScreen\s+resetScrollOnFocus/);
 assert.match(business,/<PartnerScreen\s+resetScrollOnFocus/);
