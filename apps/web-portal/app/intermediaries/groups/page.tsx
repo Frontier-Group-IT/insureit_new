@@ -1,4 +1,3 @@
-import { IntermediaryTabs } from "../intermediary-tabs";
 import { AppShell } from "@/components/shell";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import {
@@ -229,7 +228,6 @@ async function renderBusinessWorkspace({
 
   return (
     <AppShell title="Intermediary Groups" backHref="/intermediaries">
-      <IntermediaryTabs active="group" />
       <BusinessGroupWorkspace
         groups={groups}
         partners={partners}
@@ -356,7 +354,6 @@ async function renderLegacyWorkspace({
 
   return (
     <AppShell title="Intermediary Groups" backHref="/intermediaries">
-      <IntermediaryTabs active="group" />
       <SingleEmployeeAccordion>
         <div className={`${styles.referenceUi} ${panelStyles.scope}`}>
           <IntermediaryGroupWorkspace
