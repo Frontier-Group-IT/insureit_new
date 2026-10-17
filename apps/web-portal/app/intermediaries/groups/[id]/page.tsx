@@ -7,7 +7,7 @@ import { AppShell } from "@/components/shell";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { requireGroupAssociateManager } from "../group-associate-access";
 export const dynamic="force-dynamic";
-export default async function GroupDetailsPage({params,searchParams}:{params:Promise<{id:string}>,searchParams:Promise<{warning?:string;success?:string}>}) {
+export default async function GroupDetailsPage({params,searchParams}:{params:Promise<{id:string}>,searchParams:Promise<{warning?:string;success?:string;error?:string}>}) {
  const {id}=await params;
  await requireGroupAssociateManager(id);
  const admin=createSupabaseAdminClient();
@@ -42,7 +42,7 @@ export default async function GroupDetailsPage({params,searchParams}:{params:Pro
    </header>
    {q.warning?<div role="alert" className="rounded-xl border border-orange-200 bg-orange-50 px-5 py-3 text-xs text-orange-700">{q.warning}</div>:null}
    {q.success?<div className="rounded-xl border border-green-200 bg-green-50 px-5 py-3 text-xs text-green-700">Group saved. Review administrator details and invitation status.</div>:null}
-   <GroupAssociateSections id={id} query={{success:q.success}} surface="operations" />
+   <GroupAssociateSections id={id} query={{success:q.success,error:q.error}} surface="operations" />
    <GroupMembershipManagement id={id} groupMode={group.group_mode} groupName={group.group_name} partners={partners??[]} />
 
   </main>
