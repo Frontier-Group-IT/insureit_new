@@ -161,9 +161,11 @@ export async function assignBusinessGroupMembers(formData: FormData) {
   const profile = await requireIntermediaryGroupManager();
   const groupId = text(formData, "group_id");
   const partnerIds = ids(formData, "partner_id");
-  if (!groupId || !partnerIds.length) return fail("Choose a Group and at least one Partner.");
-  if (!(await requireGroupMutationAccess(profile, groupId))) return fail("The selected Group is outside your permitted hierarchy.");
-  if (!(await canAccessPartners(profile, partnerIds))) return fail("One or more selected Partners are outside your permitted hierarchy.");
+  const detailPath = text(formData, "return_group_id") === groupId && /^[0-9a-f-]{36}$/i.test(groupId) ? `/intermediaries/groups/${groupId}` : null;
+  const assignmentFail = (message: string): never => detailPath ? redirect(`${detailPath}?error=${encodeURIComponent(message)}`) : fail(message);
+  if (!groupId || !partnerIds.length) return assignmentFail("Choose a Group and at least one Partner.");
+  if (!(await requireGroupMutationAccess(profile, groupId))) return assignmentFail("The selected Group is outside your permitted hierarchy.");
+  if (!(await canAccessPartners(profile, partnerIds))) return assignmentFail("One or more selected Partners are outside your permitted hierarchy.");
 
   const admin = createSupabaseAdminClient();
   const { error } = await admin.rpc("service_assign_business_intermediary_group_members", {
@@ -172,7 +174,11 @@ export async function assignBusinessGroupMembers(formData: FormData) {
     p_actor_profile_id: profile.id,
     p_reason: text(formData, "reason") || null,
   });
-  if (error) return fail(groupError(error.message));
+  if (error) return assignmentFail(groupError(error.message));
+  if (detailPath) {
+    revalidatePath(detailPath);
+    redirect(`${detailPath}?success=business_members_moved`);
+  }
   done("business_members_moved");
 }
 
