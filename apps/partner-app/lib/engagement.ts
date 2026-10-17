@@ -78,42 +78,23 @@ export type PartnerActivityData = {
 export type PartnerActivityItem = PartnerActivityData['items'][number];
 
 export function partnerActivityEventKey(item: PartnerActivityItem) {
-  return [item.kind, item.entity_id, item.event_at].join(':');
+  return item.event_key || [item.kind, item.entity_id, item.event_at].join(':');
 }
 
 export async function getPartnerActivityReadKeys(items: PartnerActivityItem[]) {
-  const eventKeys = Array.from(new Set(items.map(partnerActivityEventKey)));
-  if (!eventKeys.length) return new Set<string>();
-
-  const { data, error } = await supabase
-    .from('partner_activity_read_receipts')
-    .select('event_key')
-    .in('event_key', eventKeys);
-
-  if (error) throw error;
-  return new Set((data ?? []).map((row) => String(row.event_key)));
+  return new Set(items.filter((item) => item.is_read).map(partnerActivityEventKey));
 }
 
 export async function markPartnerActivityRead(item: PartnerActivityItem) {
-  const { data: authData, error: authError } = await supabase.auth.getUser();
-  if (authError || !authData.user?.id) throw authError ?? new Error('Partner session is unavailable.');
-
-  const { error } = await supabase
-    .from('partner_activity_read_receipts')
-    .upsert({
-      auth_user_id: authData.user.id,
-      event_key: partnerActivityEventKey(item),
-      read_at: new Date().toISOString(),
-    }, { onConflict: 'auth_user_id,event_key' });
-
+  const { error } = await supabase.rpc('partner_app_mark_activity_read', {
+    p_event_key: partnerActivityEventKey(item),
+  });
   if (error) throw error;
 }
 
 export async function getPartnerUnreadActivityCount(limit = 100) {
   const activity = await getPartnerActivity(limit);
-  if (!activity.items.length) return 0;
-  const readKeys = await getPartnerActivityReadKeys(activity.items);
-  return activity.items.reduce((count, item) => count + (readKeys.has(partnerActivityEventKey(item)) ? 0 : 1), 0);
+  return Math.max(0, Number(activity.unread_count || 0));
 }
 
 export async function getPartnerWeeklyStory() {
@@ -138,9 +119,4 @@ export async function getPartnerActivity(limit = 40) {
   const { data, error } = await supabase.rpc('partner_app_activity', { p_limit: limit });
   if (error) throw error;
   return data as PartnerActivityData;
-}
-
-export async function markPartnerActivityRead(eventKey: string) {
-  const { error } = await supabase.rpc('partner_app_mark_activity_read', { p_event_key: eventKey });
-  if (error) throw error;
 }
