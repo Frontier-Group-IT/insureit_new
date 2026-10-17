@@ -84,6 +84,9 @@ export function PartnerScreen({
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
         {...scrollProps}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
+        automaticallyAdjustsScrollIndicatorInsets={false}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps={scrollProps?.keyboardShouldPersistTaps ?? 'handled'}
