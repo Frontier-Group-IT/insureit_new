@@ -71,7 +71,7 @@ jobs:
           test "${#databases[@]}" -eq 1 || {
             echo 'Expected one disposable loopback-only database container.' >&2; exit 1;
           }
-          docker exec "${databases[0]}" psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+          docker exec -i "${databases[0]}" psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 <<'SQL'
           grant usage, create on schema auth to postgres;
           grant select, insert, update, delete on all tables in schema auth to postgres;
           SQL
