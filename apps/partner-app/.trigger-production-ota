@@ -1,1 +1,3 @@
-Partner production OTA trigger — 2026-10-17: Activity unread badge + universal search + Unread/Read/All filters with persistent read receipts. OTA only; no APK/AAB. Source main current.
+Partner production OTA trigger
+commit=0f55fc6b56527a3db985dcfaeb6ac65c10492d6d
+reason=partner-activity-unread-bell-badge
