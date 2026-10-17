@@ -39,7 +39,19 @@ async function limitedJson(req){
   }catch{return null;}finally{reader.releaseLock();}
 }
 
-/** Response is coarse and never claims that live enrollment occurred. */
+/**
+ * Response is coarse and never claims that live enrollment occurred.
+ * Explicit JS param contract keeps Deno's TS checker from losing untyped
+ * fields in destructured defaulted parameters.
+ * @param {{
+ *   request?: Request,
+ *   db?: any,
+ *   firebaseAdmin?: any,
+ *   nowSeconds?: number,
+ *   featureEnabled?: boolean,
+ *   review?: typeof prepareReviewedCustomerEnrollment
+ * }} [options]
+ */
 export async function handleCustomerFirebaseOperatorPreview({
   request,db,firebaseAdmin,nowSeconds,featureEnabled=false,
   review=prepareReviewedCustomerEnrollment,
