@@ -15,14 +15,14 @@ export async function GroupAssociateSections({id,query:q={},surface="operations"
  return <div className="space-y-4">
    {q.error?<p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{q.error}</p>:null}
    {q.success?<p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{q.success}</p>:null}
-   <div className="relative rounded-2xl border border-[#DCE5EF] bg-white">
+   {surface==="partner" ? <div className="relative rounded-2xl border border-[#DCE5EF] bg-white">
    <details open={Boolean(q.error)} className="group">
     <summary className="cursor-pointer p-4 text-sm font-semibold lg:pr-[430px]">Create Group Associate Account</summary>
     <AssociateCreateForm groupId={id} surface={surface}/>
    </details>
    {headerPartnerAssignment ? <div className="border-t border-[#E7ECF3] px-4 py-2 lg:absolute lg:right-4 lg:top-1 lg:w-[395px] lg:border-0 lg:p-0">{headerPartnerAssignment}</div> : null}
-   </div>
-   <GroupRegisterTabs partners={partners} associates={<section className="overflow-x-auto bg-white">
+   </div> : null}
+   <GroupRegisterTabs partners={partners} addPartner={surface==="operations"?headerPartnerAssignment:null} associates={<section className="overflow-x-auto bg-white">
     <h2 className="border-b p-4 text-sm font-semibold">Associate Accounts Register</h2>
     {(associates??[]).length ? <table className="w-full min-w-[1060px] text-left text-xs"><thead className="bg-slate-50"><tr>{["Name","Phone Number","Email","Designation","Address","Role","Status","Action"].map(h=><th key={h} className="p-3">{h}</th>)}</tr></thead>
     <tbody>{(associates??[]).map(a=><tr key={a.id} className="border-t">
