@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { BadgeCheck, Camera, Check, ChevronLeft, ChevronRight, Loader2, Search, Store, Truck, Upload, UserRound } from "lucide-react";
+import { BadgeCheck, Camera, Check, ChevronLeft, ChevronRight, Loader2, Search, Store, Truck, Upload, X } from "lucide-react";
 
 type Customer = {
   id: string;
@@ -133,6 +133,7 @@ function money(value: string | number) {
 export function InternalExchangeListingWorkspace() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerQuery, setCustomerQuery] = useState("");
+  const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
@@ -173,6 +174,8 @@ export function InternalExchangeListingWorkspace() {
 
   async function chooseCustomer(customer: Customer) {
     setSelectedCustomer(customer);
+    setCustomerQuery(`${customerName(customer)}${customer.phone ? ` · ${customer.phone}` : ""}`);
+    setCustomerDropdownOpen(false);
     setSelectedVehicle(null);
     setVehicles([]);
     setListingId(null);
@@ -212,16 +215,44 @@ export function InternalExchangeListingWorkspace() {
 
   const filteredCustomers = useMemo(() => {
     const q = customerQuery.trim().toLowerCase();
-    if (!q) return customers.slice(0, 80);
+    if (!q) return [];
     return customers.filter((item) => [
-      item.customer_code,
       item.company_name,
       item.contact_name,
       item.phone,
-      item.city,
-      item.state,
-    ].filter(Boolean).join(" ").toLowerCase().includes(q)).slice(0, 80);
+      item.customer_code,
+    ].filter(Boolean).join(" ").toLowerCase().includes(q)).slice(0, 30);
   }, [customerQuery, customers]);
+
+  function updateCustomerQuery(value: string) {
+    setCustomerQuery(value);
+    setCustomerDropdownOpen(Boolean(value.trim()));
+    if (selectedCustomer) {
+      const selectedLabel = `${customerName(selectedCustomer)}${selectedCustomer.phone ? ` · ${selectedCustomer.phone}` : ""}`;
+      if (value !== selectedLabel) {
+        setSelectedCustomer(null);
+        setSelectedVehicle(null);
+        setVehicles([]);
+        setListingId(null);
+        setListingNo(null);
+        setDraft(blankDraft);
+        setPhotos({});
+      }
+    }
+  }
+
+  function clearCustomerSelection() {
+    setCustomerQuery("");
+    setCustomerDropdownOpen(false);
+    setSelectedCustomer(null);
+    setSelectedVehicle(null);
+    setVehicles([]);
+    setListingId(null);
+    setListingNo(null);
+    setDraft(blankDraft);
+    setPhotos({});
+    setMessage(null);
+  }
 
   function validateDetails() {
     if (!selectedCustomer || !selectedVehicle) return "Select a customer and vehicle.";
@@ -354,27 +385,68 @@ export function InternalExchangeListingWorkspace() {
       {message ? <div className={`rounded-xl border px-4 py-3 text-[10px] font-bold ${message.type === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-rose-200 bg-rose-50 text-rose-700"}`}>{message.text}</div> : null}
 
       {step === 0 ? (
-        <section className="grid gap-4 xl:grid-cols-[420px_1fr]">
+        <section className="space-y-4">
           <div className="rounded-[22px] border border-[#E3E8F0] bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-2"><UserRound className="h-4 w-4 text-[#3156B8]" /><h2 className="text-[14px] font-black text-[#17213E]">Select customer</h2></div>
-            <div className="relative mt-3">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B95A6]" />
-              <input value={customerQuery} onChange={(event) => setCustomerQuery(event.target.value)} placeholder="Search name, mobile, customer code..." className="h-10 w-full rounded-xl border border-[#DDE3EC] bg-[#F8FAFC] pl-9 pr-3 text-[10.5px] font-semibold outline-none focus:border-[#3156B8]" />
-            </div>
-            <div className="mt-3 max-h-[480px] space-y-1.5 overflow-y-auto pr-1">
-              {loadingCustomers ? <Loading label="Loading customers..." /> : filteredCustomers.map((customer) => (
-                <button key={customer.id} type="button" onClick={() => void chooseCustomer(customer)} className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${selectedCustomer?.id === customer.id ? "border-[#3156B8] bg-[#EFF4FF]" : "border-[#E5EAF1] hover:bg-[#F8FAFC]"}`}>
-                  <p className="truncate text-[10.5px] font-black text-[#17213E]">{customerName(customer)}</p>
-                  <p className="mt-1 text-[9px] font-semibold text-[#728096]">{customer.customer_code || "No code"} · {customer.phone || "No mobile"}</p>
-                </button>
-              ))}
+            <div className="max-w-[560px]">
+              <label htmlFor="exchange-customer-search" className="text-[10px] font-black text-[#34425C]">
+                Customer <span className="text-[#D92D20]">*</span>
+              </label>
+              <div className="relative mt-1.5">
+                <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-[#8B95A6]" />
+                <input
+                  id="exchange-customer-search"
+                  value={customerQuery}
+                  onChange={(event) => updateCustomerQuery(event.target.value)}
+                  onFocus={() => {
+                    if (customerQuery.trim() && !selectedCustomer) setCustomerDropdownOpen(true);
+                  }}
+                  onBlur={() => window.setTimeout(() => setCustomerDropdownOpen(false), 120)}
+                  placeholder="Search customer"
+                  autoComplete="off"
+                  className="h-11 w-full rounded-xl border border-[#C9D3E1] bg-white pl-9 pr-10 text-[11px] font-semibold text-[#17213E] outline-none transition placeholder:text-[#8A95A8] focus:border-[#7C73FF] focus:ring-2 focus:ring-[#7C73FF]/20"
+                />
+                {customerQuery ? (
+                  <button
+                    type="button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={clearCustomerSelection}
+                    aria-label="Clear customer"
+                    className="absolute right-2.5 top-1/2 z-10 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-lg text-[#8A95A8] hover:bg-[#F1F4F8] hover:text-[#34425C]"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
+
+                {customerDropdownOpen && customerQuery.trim() ? (
+                  <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-[300px] overflow-y-auto rounded-xl border border-[#D5DCE7] bg-white p-1.5 shadow-[0_18px_48px_rgba(25,39,73,0.18)]">
+                    {loadingCustomers ? (
+                      <div className="px-3 py-5 text-center text-[10px] font-semibold text-[#718096]">Loading customers...</div>
+                    ) : filteredCustomers.length ? (
+                      filteredCustomers.map((customer) => (
+                        <button
+                          key={customer.id}
+                          type="button"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => void chooseCustomer(customer)}
+                          className="flex w-full items-center gap-1 rounded-lg px-3 py-2.5 text-left transition hover:bg-[#EEF3FF] focus:bg-[#EEF3FF] focus:outline-none"
+                        >
+                          <span className="truncate text-[10.5px] font-bold text-[#214D91]">{customerName(customer)}</span>
+                          {customer.phone ? <span className="shrink-0 text-[10px] font-semibold text-[#415675]">· {customer.phone}</span> : null}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-3 py-5 text-center text-[10px] font-semibold text-[#718096]">No matching customer found.</div>
+                    )}
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
 
           <div className="rounded-[22px] border border-[#E3E8F0] bg-white p-4 shadow-sm">
             <div className="flex items-center gap-2"><Truck className="h-4 w-4 text-[#3156B8]" /><h2 className="text-[14px] font-black text-[#17213E]">Select from customer fleet</h2></div>
-            {!selectedCustomer ? <Empty text="Select a customer to load their fleet." /> : loadingVehicles ? <Loading label="Loading fleet..." /> : (
-              <div className="mt-3 grid gap-2 md:grid-cols-2">
+            {!selectedCustomer ? <Empty text="Search and select a customer to load their fleet." /> : loadingVehicles ? <Loading label="Loading fleet..." /> : (
+              <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                 {vehicles.map((vehicle) => {
                   const active = selectedVehicle?.id === vehicle.id;
                   return (
