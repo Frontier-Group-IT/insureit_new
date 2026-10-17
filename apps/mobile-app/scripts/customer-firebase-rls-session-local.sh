@@ -93,10 +93,29 @@ assert_count() {
   }
 }
 assert_count "$A" "$ISS" authenticated 2
+# Legacy Firebase JWT: the deployed pre-request hook historically resolves the
+# exact approved Firebase UID before rewriting request.jwt.claim.sub. Preserve
+# this branch while migration is draft (synthetic JWT claims only, not signature proof).
+legacy_firebase_resolver() {
+  psql "$RLS_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -Atqc "
+    set role authenticated;
+    select set_config('request.jwt.claims',
+      '{\"iss\":\"https://securetoken.google.com/insureit-customer-auth\",\"aud\":\"insureit-customer-auth\",\"role\":\"authenticated\",\"sub\":\"$1\",\"phone_number\":\"$2\"}',false);
+    select coalesce(public.customer_firebase_profile_id()::text,'denied');" | tail -n 1
+}
+[[ "$(legacy_firebase_resolver firebase-A +919876543210)" == "$A" ]] || {
+  echo 'Legacy approved Firebase UID must still resolve original Customer UUID' >&2; exit 1;
+}
+[[ "$(legacy_firebase_resolver unknown-uid +919876543210)" == denied ]] || {
+  echo 'Unknown Firebase UID must fail closed' >&2; exit 1;
+}
+[[ "$(legacy_firebase_resolver firebase-A +919000000000)" == denied ]] || {
+  echo 'Mismatched Firebase phone must fail closed' >&2; exit 1;
+}
 assert_count "$B" "$ISS" authenticated 1
 # Staff sharing Customer A's phone gets NO Customer A records.
 assert_count "$STAFF" "$ISS" authenticated 0
-# Firebase JWT issuer must NEVER access PostgREST as a Supabase session.
+# A Firebase issuer without a valid approved UID/phone must fail closed.
 assert_count "$A" 'https://securetoken.google.com/insureit-customer-auth' authenticated 0
 assert_count "$A" "$ISS" anon 0
 psql "$RLS_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -qc "
