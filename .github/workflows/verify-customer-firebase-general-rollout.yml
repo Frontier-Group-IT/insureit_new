@@ -1,0 +1,49 @@
+name: Verify safe general Customer Firebase migration plan
+on:
+  push:
+    branches:
+      - feat/customer-firebase-general-rollout-preflight-20261017
+    paths:
+      - 'supabase/functions/_shared/customer-firebase-general-rollout-*.mjs'
+      - 'apps/mobile-app/scripts/customer-firebase-general-rollout.test.mjs'
+      - 'docs/CUSTOMER_FIREBASE_ALL_CUSTOMERS_ROLLOUT_PLAN_2026_10_17.md'
+      - '.github/workflows/verify-customer-firebase-general-rollout.yml'
+  pull_request:
+    paths:
+      - 'supabase/functions/_shared/customer-firebase-general-rollout-*.mjs'
+      - 'apps/mobile-app/scripts/customer-firebase-general-rollout.test.mjs'
+      - '.github/workflows/verify-customer-firebase-general-rollout.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate read-only general Customer enrollment planner syntax
+        run: |
+          node --check supabase/functions/_shared/customer-firebase-general-rollout-plan.mjs
+          node --check supabase/functions/_shared/customer-firebase-general-rollout-gate.mjs
+          node --check apps/mobile-app/scripts/customer-firebase-general-rollout.test.mjs
+      - name: Verify all-Customer enrollment safety, staff collision and no-login bypass
+        run: |
+          node --test apps/mobile-app/scripts/customer-firebase-general-rollout.test.mjs
+          node --test apps/mobile-app/scripts/customer-firebase-migration-preflight.test.mjs
+          node --test apps/mobile-app/scripts/customer-firebase-enrollment-service.test.mjs
+      - name: Enforce no production activation or Auth-write APIs in general planner
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -Ei 'updateUserById\(|createUser\(|\.insert\(|\.update\(|\.upsert\(|Deno\.serve\(|supabase\.auth\.setSession\(' \
+              supabase/functions/_shared/customer-firebase-general-rollout-plan.mjs \
+              supabase/functions/_shared/customer-firebase-general-rollout-gate.mjs; then
+            echo 'General migration preflight must remain pure and non-mutating.' >&2
+            exit 1
+          fi

@@ -1,0 +1,81 @@
+# INSUREIT Customer Firebase OTP — all-Customer rollout plan
+**17 October 2026 | IMPLEMENTATION IN PROGRESS | separate branch | no production rollout approval**
+
+## 1. Decision and objective
+Replace per-account canary provisioning with **one reusable Customer-only enrollment and sign-in process**, for existing and future Customer users. Firebase Android Phone Auth verifies possession of an Indian mobile number; the existing Supabase Auth identity is still the canonical, refreshable authentication principal. Do not let Firebase sign-in create a replacement Supabase Auth user, bypass RLS, or access Customer data using a Firebase JWT. Keep staff authentication and 2Factor fallback working.
+
+The first owner-authorized live Customer ending **1634** signed in successfully after Android-only Expo OTA; Supabase recorded the bridge 200, Auth /verify 200, login under the **original Customer UUID**, and authenticated Customer-profile GET 200. Owner verified the login persisted on app restart. This proves the initial canary, **not** expiry-based token refresh, account separation or a general production-ready migration. Customer ending **1014** currently has no approved Firebase UID link and no Auth alias; its number is shared with an active IT Super User. Its latest 401 requires separate diagnosis; do NOT auto-link based on phone possession.
+
+## 2. Production baseline — read-only, 2026-10-17
+Connected Supabase project: `ilzhsfqqjyppzzvfscmh`. Query grouped Customer profiles, the matching Auth IDs, and existing link status. **Aggregate only, no customer names, UID values or phone lists exported.**
+
+| Metric | Count |
+| --- | ---: |
+| Customer profiles, including inactive | 29 |
+| Active Customer profiles | 23 |
+| Customer profiles missing matching Auth record | 0 |
+| Active Customers with an approved UID link AND confirmed Auth alias | 1 |
+| Active Customers without an approved Firebase UID link | 21 |
+| Active Customers without an Auth email identity | 22 |
+| Active Customers sharing a phone with at least one non-Customer profile | 6 |
+| Active Customers with unconfirmed original Supabase Auth phone | 2 |
+
+Categories overlap. **Do not sum categories to estimate migration work.** Counts can change and are not approval to migrate users. Original Customer 1634 was the one confirmed end-to-end canary. Current production Edge Function `customer-firebase-session-bridge` **v7** is limited to two exact Customer UUIDs. Feature PR #3132 and diagnostic PR #3199 are unmerged; the isolated OTA to channel `firebase-internal`, runtime `0.3.2`, did not affect production channel.
+
+## 3. Non-negotiable invariants
+1. **Identity:** `profiles.id = auth.users.id = session.user.id` for the same original Customer. Preserve customers, policies, vehicles, claims, memberships, KYC, documents, RLS and Storage ownership. Do not create a new Auth UUID to work around login.
+2. **Firebase:** Firebase Admin verifies signed ID token, expiry, revocation, project, issuer, SMS phone provider and recent `auth_time`; never use the JWT as a Supabase data-session credential. Require one-use exchange, rate limits and never log OTP, raw JWT, hashed challenge, Firebase UID or private keys.
+3. **Eligibility:** Only active canonical Customer profiles. Staff, IT Super Users and partners cannot be selected by a phone number. Do not auto-enroll on OTP possession alone; existing data requires independent ownership evidence and consent.
+4. **Immutable mapping:** One Firebase UID maps to one exact Customer UUID in `insureit-customer-auth`. Never silently rebind a UID or migrate it between users. Conflicts fail closed and need operator review.
+5. **Shared phone:** If one mobile belongs to Customer and staff or more than one Customer, require independent Customer account proof and audited operator review. A Customer-app context is not by itself account ownership proof. Preserve staff account access.
+6. **Auth email/credential recovery:** A deterministic reserved `.invalid` alias must never replace real user email, act as a customer contact address, or be created without recoverable encrypted Auth backup, independently tested restoration, approved credential rotation and recovery-risk review. Existing phone-confirmed state must remain unchanged.
+7. **No rollout from a test:** Feature flags and explicit audited cohorts, safe fallback, reversible changes, observability and sign-off gates. No production migration, mass alias writes, UID approval, feature-flag opening, PR merge, OTA/APK/AAB or removal of 2Factor without later owner approval.
+
+## 4. General enrollment and login architecture
+```text
+Android Firebase SMS OTP verified on-device
+ -> Firebase Admin verifies ID token + auth_time + revocation
+ -> Find canonical existing Customer by both profile AND Auth phone
+ -> Check role, active status, uniqueness, banned/anonymous status
+ -> Check staff/Customer phone collisions, previous UID mappings
+ -> Existing approved immutable UID link + safe Auth identity?
+      YES -> issue one-use Supabase magic-link hash for EXACT existing UUID
+             -> Android verifyOtp -> getUser -> active Customer profile -> RLS
+      NO  -> collect independent account ownership proof + consent
+             -> suspicious/shared phone, UID collisions => operator review
+             -> audited atomic UID approval for verified Customer only
+             -> protected Auth alias recovery/migration gate
+             -> enable this Customer's approved cohort only after tests
+ -> Customer session remains original UUID, with prior-session rollback
+```
+New Customer signup is a **separate** explicit consent/profile workflow. Do not silently create an existing Customer or a new Auth record when an unmatched Firebase phone appears. Support an account-recovery path for recycled numbers.
+
+## 5. Implementation phases and checks
+### Phase A — implement now, **safe and source-only**
+- Read-only production aggregate audit with no PII export. Put snapshot and overlap warning here.
+- Build a deterministic, pure batch migration classifier for all existing Customers. Identify: ready linked identity, missing Firebase UID approval, missing Auth alias, shared staff/Customer phone, duplicate/conflict, inactive/absent Auth, real pre-existing Auth email, and alias recovery requirements. Expose only anonymous counts in summary.
+- Build an **unwired default-deny** policy for future approved-Customer cohorts. Never replace the live two-UUID gate yet.
+- Test staff collisions, mismatched Auth UUID/phone, unapproved/conflicting links, missing recovery, no public-client-asserted approvals, and preservation of previously approved same-UUID sessions.
+- Open a reversible draft PR stacked on #3199. CI must pass. **No production writes or deployment in Phase A.**
+
+### Phase B — controlled server-side enrollment (separate review)
+- Design independently verified Customer evidence, consent and trusted IT Super User authorization. Obtain signed/revocation-checked Firebase identity, then use approved server-owned evidence—not client booleans—to drive enrollment.
+- Review prepared migrations `20261016150000_customer_firebase_migration_audit.sql` and `20261016162000_customer_firebase_enrollment_atomic.sql`, correct concurrency/audit/rollback conditions, validate in disposable local DB. They remain **NOT APPLIED** to production.
+- Service-only atomic UID mapping and immutable audit. Include idempotent re-review, conflict denial, staff separation and an operator-visible exception queue without exposing tokens.
+- Perform genuine encrypted Auth backup and **restoration rehearsal** with approved environment. Previous local strong-hash restoration attempt failed (auth schema access), so this gate remains blocked. No bulk Auth alias mutation until it passes.
+
+### Phase C — cohort-gated live testing (requires authorization)
+- Under explicit approval, select a handful of non-shared Customers with independently established ownership plus at least one reviewed shared-phone Customer; preserve original UUIDs and counts.
+- Introduce server-configured rollout cohorts backed by restricted approval/audit records, with emergency kill switch and rollback; **default remains existing two-UUID canary** until approved.
+- Verify one-use exchange, replay/throttle, fresh OTP, active/disabled Customer, wrong UID, shared staff, revoked token, session refresh after token expiry, account switching A↔B, Customer-specific RLS/Storage and claim/policy/vehicle access.
+- Perform staged rollout (e.g. 5% / 25% / remaining), observe errors and rollback triggers. Phased percentages are proposed gates, not scheduled actions.
+
+### Phase D — final production release (separate approval)
+- Approve native app/runtime channel compatibility and targeted OTA/AAB only where needed. Preserve all existing Customer and Partner functionality.
+- Enable new Customer signups and recovery under the audited architecture; retire 2Factor only after all existing eligible Customers are migrated and fallback success is proven.
+
+## 6. Stop conditions
+Stop and require security review when no trustworthy Auth backup/recovery, any Customer/staff phone ambiguity lacks independent proof, UID conflicts or recycled phone indicators appear, immutable UUID/session/RLS mismatch occurs, a customer has a real Auth email requiring migration, the Firebase token cannot be verified or has stale auth_time, token replay succeeds, or Auth link provisioning fails. Never remediate by disabling RLS or changing staff accounts.
+
+## 7. Agent continuation
+Read `AGENTS.md`, `docs/CUSTOMER_FIREBASE_SESSION_HANDOFF_2026_10_16.md`, this plan, PR #3199 and #3132. Source branch for Phase A: `feat/customer-firebase-general-rollout-preflight-20261017`. Follow `docs/CUSTOMER_FIREBASE_BACKUP_RECOVERY_PLAN_2026_10_16.md` for the actual production recovery blocker. Review CI status on the exact latest SHA before any next action. Do not apply migrations/deploy a function or publish a mobile OTA during Phase A.
