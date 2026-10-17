@@ -64,6 +64,7 @@ export function PartnerScreen({
   const hasHeroSearchValue = heroSearchValue.trim().length > 0;
   const [unreadActivityCount, setUnreadActivityCount] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
+  const latestScrollY = useRef(0);
 
   useFocusEffect(useCallback(() => {
     if (!isHomeHero) return undefined;
@@ -85,13 +86,16 @@ export function PartnerScreen({
   useFocusEffect(useCallback(() => {
     if (Platform.OS !== 'ios' || !resetScrollOnFocus) return undefined;
 
-    // Tab screens remain mounted in Expo Router. If the native ScrollView
-    // retains a negative pull-to-refresh offset, it leaves blank space
-    // above the hero when the tab is revisited.
-    scrollRef.current?.scrollTo({ y: 0, animated: false });
-    const frame = requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({ y: 0, animated: false });
-    });
+    // Do not reset a valid scroll position when returning from another tab.
+    // Only fix an overscrolled (negative) native offset left by pull-to-refresh.
+    const repairNegativeOffset = () => {
+      if (latestScrollY.current < -2) {
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
+        latestScrollY.current = 0;
+      }
+    };
+    repairNegativeOffset();
+    const frame = requestAnimationFrame(repairNegativeOffset);
     return () => cancelAnimationFrame(frame);
   }, [resetScrollOnFocus]));
 
@@ -122,6 +126,11 @@ export function PartnerScreen({
       <ScrollView
         ref={scrollRef}
         {...scrollProps}
+        scrollEventThrottle={scrollProps?.scrollEventThrottle ?? 16}
+        onScroll={(event) => {
+          latestScrollY.current = event.nativeEvent.contentOffset.y;
+          scrollProps?.onScroll?.(event);
+        }}
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustContentInsets={false}
         automaticallyAdjustsScrollIndicatorInsets={false}
