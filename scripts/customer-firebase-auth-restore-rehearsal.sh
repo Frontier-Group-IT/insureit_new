@@ -53,16 +53,25 @@ existing="$(psql "$INSUREIT_RESTORE_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -Atqc \
 # Validate that decryption produces a readable pg_dump archive.
 age -d -i "$INSUREIT_BACKUP_AGE_IDENTITY" "$INSUREIT_BACKUP_FILE" \
   | pg_restore --list >/dev/null
-# Restore within one DB transaction; any failure aborts the import.
+# Data-only archives can list auth.identities before auth.users. Disable
+# FK triggers ONLY for this single disposable restore transaction; pg_restore
+# re-enables them before commit. This must NEVER be used against production.
 age -d -i "$INSUREIT_BACKUP_AGE_IDENTITY" "$INSUREIT_BACKUP_FILE" \
   | pg_restore --exit-on-error --single-transaction --no-owner --no-acl \
-      --data-only --dbname="$INSUREIT_RESTORE_TEST_DB_URL"
+      --disable-triggers --data-only --dbname="$INSUREIT_RESTORE_TEST_DB_URL"
 # Verify that the restored GoTrue identities exist without printing records.
 restored="$(psql "$INSUREIT_RESTORE_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -Atqc \
   'select count(*) from auth.users')"
 [[ "$restored" =~ ^[1-9][0-9]*$ ]] || {
   echo 'ERROR: no Auth user records were restored' >&2; exit 1;
 }
-echo 'PASS: encrypted archive decrypted and imported into empty local Auth schema.'
+# Since FK triggers were disabled during import, independently verify the primary
+# user-to-identity relationship before claiming even a technical restore pass.
+orphan_identities="$(psql "$INSUREIT_RESTORE_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -Atqc \
+  'select count(*) from auth.identities i left join auth.users u on u.id=i.user_id where u.id is null')"
+[[ "$orphan_identities" == '0' ]] || {
+  echo 'ERROR: orphaned Auth identities detected after isolated restore' >&2; exit 1;
+}
+echo 'PASS: encrypted archive imported into isolated Auth; user-identity references checked.'
 echo 'NOT YET VERIFIED: original login, refresh/session, exact UUID, identity linkage,'
 echo 'matching GoTrue migration version and complete recovery. Review these separately.'
