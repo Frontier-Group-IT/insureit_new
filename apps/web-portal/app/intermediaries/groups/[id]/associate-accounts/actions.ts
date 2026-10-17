@@ -10,7 +10,8 @@ const validUuid=(s:string)=>/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a
 const pathFor=(id:string)=>`${root}/${id}/associate-accounts`;
 function finishResult(id:string,message:string,error=false,portal=false):never{
  revalidatePath(pathFor(id));
- const target=portal?"/partner/group-associates":pathFor(id);
+ const target=portal?"/partner/group-associates":`${root}/${id}`;
+ revalidatePath(`${root}/${id}`);
  revalidatePath(target);
  redirect(`${target}?${error?"error":"success"}=${encodeURIComponent(message)}`);
 }
