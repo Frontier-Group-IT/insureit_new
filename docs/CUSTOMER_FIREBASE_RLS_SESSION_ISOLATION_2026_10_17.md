@@ -36,3 +36,9 @@ Read-only production storage.objects policy metadata shows bucket-specific Custo
 
 ## Next agent
 Read AGENTS.md, docs/CUSTOMER_FIREBASE_ALL_CUSTOMERS_ROLLOUT_PLAN_2026_10_17.md, docs/CUSTOMER_FIREBASE_SESSION_HANDOFF_2026_10_16.md, docs/CUSTOMER_FIREBASE_BACKUP_RECOVERY_PLAN_2026_10_16.md and this report. Branch feat/customer-firebase-rls-session-isolation-20261017 stacks on draft PR #3215. Check current branch SHA and both CI runs, open a draft PR targeting #3215 branch and note no deployment. The migration and rollback are source-only.
+
+
+## Verified GitHub CI, 2026-10-17
+- Disposable PostgreSQL 17 role/RLS helper test: **PASS**, GitHub Actions run 39011274956. Synthetic Customer A policy+vehicle analogues, Customer B claim analogue, shared-phone staff denied, stale/revoked/duplicate link denied, Firebase-issued JWT rejected as data token, data-preserving rollback. Initial failed fixture runs were due to missing helper stub and bad stub quoting, fixed; final source of script passed.
+- Disposable real Supabase GoTrue + synthetic RLS: **PASS**, GitHub Actions run 39011229049. Local login sessions minted for two synthetic Auth UUIDs, explicit Supabase auth.refreshSession() retained the first UUID, A->B->A session switching altered RLS-visible rows as expected, getUser confirmed original account on restoration. CI logged only a fixed success message; no JWT or credentials shared. This test is NOT production Customer isolation and NOT automatic refresh after an actual expiration.
+- The production Supabase helper remains unchanged; the corrective migration is UNAPPLIED, and Storage policies have not been rewritten or end-to-end tested for two genuine authorized Customers with records.
