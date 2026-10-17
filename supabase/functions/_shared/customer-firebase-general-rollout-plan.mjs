@@ -13,6 +13,7 @@ export const GENERAL_CUSTOMER_ROLLOUT_STAGES = Object.freeze([
   'missing_or_wrong_auth_identity',
   'phone_identity_mismatch',
   'phone_inventory_unavailable',
+  'inspection_time_unavailable',
   'firebase_link_inventory_unavailable',
   'firebase_uid_conflict',
   'firebase_link_requires_review',
@@ -35,8 +36,9 @@ const result = (stage, flags = []) => Object.freeze({
  * discovered by a separately verified Firebase Admin token).
  */
 export function classifyCustomerFirebaseReadiness({
-  profile, authUser, links, relatedProfiles,
+  profile, authUser, links, relatedProfiles, nowSeconds,
 } = {}) {
+  if (!Number.isSafeInteger(nowSeconds)) return result('inspection_time_unavailable');
   if (!profile || typeof profile.id !== 'string' || !UUID.test(profile.id) ||
       profile.role !== 'customer' || profile.is_active !== true) {
     return result('inactive_or_invalid_customer');
@@ -44,7 +46,7 @@ export function classifyCustomerFirebaseReadiness({
   if (!authUser || authUser.id !== profile.id || authUser.is_anonymous === true ||
       (typeof authUser.banned_until === 'string' &&
        Number.isFinite(Date.parse(authUser.banned_until)) &&
-       Date.parse(authUser.banned_until) > Date.now())) {
+       Date.parse(authUser.banned_until) > nowSeconds * 1000)) {
     return result('missing_or_wrong_auth_identity');
   }
   const phone = canonicalIndianPhone(profile.phone);
@@ -90,7 +92,8 @@ export function classifyCustomerFirebaseReadiness({
 }
 
 /** Anonymous totals only; no phone, Auth UUID, Firebase UID or customer records. */
-export function summarizeCustomerFirebaseRollout(records, relatedProfiles) {
+export function summarizeCustomerFirebaseRollout(records, relatedProfiles, nowSeconds) {
+  if (!Number.isSafeInteger(nowSeconds)) return Object.freeze({ok:false,reason:'inspection_time_required'});
   if (!Array.isArray(records) || !Array.isArray(relatedProfiles)) {
     return Object.freeze({ok:false,reason:'complete_inventory_required'});
   }
@@ -102,7 +105,7 @@ export function summarizeCustomerFirebaseRollout(records, relatedProfiles) {
       return Object.freeze({ok:false,reason:'duplicate_or_invalid_customer_inventory'});
     }
     seen.add(record.profile.id);
-    const decision = classifyCustomerFirebaseReadiness({...record,relatedProfiles});
+    const decision = classifyCustomerFirebaseReadiness({...record,relatedProfiles,nowSeconds});
     counts[decision.stage]++;
     for (const flag of decision.flags) flags[flag]++;
   }
