@@ -1,0 +1,1 @@
+export declare function classifyFirebaseBridgeFailure(status: number, code: unknown): 'bridge_disabled' | 'bridge_unavailable' | 'identity_link_missing' | 'auth_identity_not_ready' | 'replay_or_rate_limit' | 'verified_identity_invalid' | 'identity_check_failed' | 'unexpected_response';

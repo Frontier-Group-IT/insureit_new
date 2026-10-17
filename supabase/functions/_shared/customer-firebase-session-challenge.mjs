@@ -7,7 +7,7 @@
  * email belongs to the EXACT existing approved Supabase Auth UUID.
  * This function also checks the returned UUID before releasing the token.
  */
-const hexHash = /^[a-f0-9]{64}$/i;
+const hexHash = /^[a-f0-9]{32,128}$/i;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function issueExistingCustomerSessionChallenge(db, gate) {
@@ -24,12 +24,19 @@ export async function issueExistingCustomerSessionChallenge(db, gate) {
     type: 'magiclink',
     email: gate.verifiedExistingEmail,
   });
-  if (error || data?.user?.id !== gate.customerProfileId ||
-      data?.user?.email?.toLowerCase() !== gate.verifiedExistingEmail.toLowerCase() ||
-      typeof data?.properties?.hashed_token !== 'string' ||
-      !hexHash.test(data.properties.hashed_token)) {
-    // No secret or email is returned on a mismatch.
-    return { ok: false, reason: 'challenge_user_mismatch' };
+  // Fixed-code diagnostics only: never log the email, token hash, UID, or raw
+  // provider error. Continue to deny on every unexpected response shape.
+  if (error) return { ok: false, reason: 'challenge_provider_rejected' };
+  if (data?.user?.id !== gate.customerProfileId) {
+    return { ok: false, reason: 'challenge_uuid_mismatch' };
+  }
+  if (typeof data?.user?.email !== 'string' ||
+      data.user.email.toLowerCase() !== gate.verifiedExistingEmail.toLowerCase()) {
+    return { ok: false, reason: 'challenge_email_mismatch' };
+  }
+  if (typeof data?.properties?.hashed_token !== 'string' ||
+      ((data.properties.hashed_token.length < 32 || data.properties.hashed_token.length > 128) || !hexHash.test(data.properties.hashed_token))) {
+    return { ok: false, reason: typeof data?.properties?.hashed_token !== 'string' ? 'challenge_hash_absent' : data.properties.hashed_token.length !== 64 ? 'challenge_hash_wrong_length' : 'challenge_hash_wrong_encoding' };
   }
   return {
     ok: true,

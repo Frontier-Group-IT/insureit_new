@@ -45,7 +45,7 @@ test('valid verified pre-existing Auth identity produces one-use Supabase challe
 test('wrong Auth UUID never returns someone else\'s magic-link token', async () => {
   const p = provider(result(other));
   assert.deepEqual(await issueExistingCustomerSessionChallenge(p.db, gate()), {
-    ok: false, reason: 'challenge_user_mismatch',
+    ok: false, reason: 'challenge_uuid_mismatch',
   });
   assert.equal(p.calls.length, 1);
 });
@@ -56,8 +56,20 @@ test('wrong email, invalid token and provider errors deny without leaking tokens
     const p = provider(response);
     const outcome = await issueExistingCustomerSessionChallenge(p.db, gate());
     assert.equal(outcome.ok, false);
-    assert.equal(outcome.reason, 'challenge_user_mismatch');
+    assert.ok(['challenge_uuid_mismatch', 'challenge_email_mismatch', 'challenge_hash_wrong_length', 'challenge_hash_absent', 'challenge_hash_wrong_encoding', 'challenge_provider_rejected'].includes(outcome.reason));
     assert.equal('token_hash' in outcome, false);
+  }
+});
+
+test('bounds alternate hashed-token lengths without weakening user checks', async () => {
+  for (const n of [32,40,64,96,128]) {
+    const token='a'.repeat(n);
+    assert.equal((await issueExistingCustomerSessionChallenge(provider(result(uuid,email,token)).db,gate())).ok,true);
+  }
+  for (const token of ['a'.repeat(31),'a'.repeat(129),'z'.repeat(40),'']) {
+    const answer=await issueExistingCustomerSessionChallenge(provider(result(uuid,email,token)).db,gate());
+    assert.equal(answer.ok,false);
+    assert.equal('token_hash' in answer,false);
   }
 });
 

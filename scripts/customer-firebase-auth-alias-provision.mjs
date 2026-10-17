@@ -20,6 +20,7 @@ import { randomBytes } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { customerAuthAlias } from '../supabase/functions/_shared/customer-firebase-session-alias.mjs';
 import { canonicalIndianPhone } from '../supabase/functions/_shared/customer-firebase-session-policy.mjs';
+import { assessCustomerAuthAliasMigration } from '../supabase/functions/_shared/customer-firebase-migration-preflight.mjs';
 
 const apply = process.argv.includes('--apply');
 const target = process.env.CUSTOMER_AUTH_TARGET_UUID;
@@ -63,9 +64,28 @@ if (user.email?.toLowerCase() === alias && user.email_confirmed_at) {
   console.info('NO CHANGE: approved Customer Auth UUID already uses the exact verified alias');
   process.exit(0);
 }
+const recovery = {
+  targetUuid: target,
+  recoverableSnapshotVerified: process.env.CUSTOMER_AUTH_RECOVERY_SNAPSHOT_VERIFIED === 'YES',
+  outOfBandEncryptedStorageVerified: process.env.CUSTOMER_AUTH_RECOVERY_ENCRYPTED_OFFSITE === 'YES',
+  rollbackProcedureRehearsed: process.env.CUSTOMER_AUTH_ROLLBACK_REHEARSED === 'YES',
+  credentialRotationApproved: passwordRotationApproved,
+  emailRecoveryAndPasswordSignInRiskAccepted: process.env.CUSTOMER_AUTH_ALIAS_RECOVERY_RISK_REVIEWED === 'YES',
+};
+const decision = assessCustomerAuthAliasMigration({
+  profile, authUser: user,
+  approvedLink: links[0], recovery,
+});
 if (!apply) {
-  console.info('DRY RUN ONLY: one approved active Customer Auth UUID eligible; no records changed.');
+  console.info('DRY RUN ONLY: no Auth records changed; migration prerequisite:', decision.reason ?? decision.action);
   process.exit(0);
+}
+if (!decision.ok || decision.action !== 'manual_single_customer_canary_only') {
+  throw Error('BLOCKED: protected recovery/credential gate incomplete; no Auth records changed');
+}
+// An explicit per-run UUID confirmation prevents an accidental batch or wrong-target update.
+if (process.env.CUSTOMER_AUTH_WRITE_CONFIRM_UUID !== target) {
+  throw Error('BLOCKED: per-customer target confirmation missing');
 }
 const beforePhoneConfirmed = user.phone_confirmed_at ?? null;
 const beforePhone = user.phone;

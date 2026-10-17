@@ -2,8 +2,9 @@ import { cert, getApps, initializeApp } from "npm:firebase-admin@13.5.0/app";
 import { getAuth } from "npm:firebase-admin@13.5.0/auth";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { checkCustomerSessionEligibility, checkVerifiedFirebaseCustomerForSession, FIREBASE_CUSTOMER_PROJECT } from "../_shared/customer-firebase-session-policy.mjs";
-import { ensureCustomerSupabaseSessionAlias } from "../_shared/customer-firebase-session-provision.mjs";
 import { issueExistingCustomerSessionChallenge } from "../_shared/customer-firebase-session-challenge.mjs";
+import { checkCustomerFirebaseCanary } from "../_shared/customer-firebase-canary-gate.mjs";
+import { provisionDisposableFirebaseCanaryAlias } from "../_shared/customer-firebase-canary-provision.mjs";
 
 /**
  * UNDEPLOYED PHASE-2 CANDIDATE: Firebase SMS OTP -> native Supabase Auth session.
@@ -48,10 +49,8 @@ function firebaseVerifier() {
 
 Deno.serve(async (request: Request) => {
   if (request.method !== "POST") return response(405, "method_not_allowed");
-  // Additional fail-closed deployment guard; never enabled by source alone.
-  if (Deno.env.get("CUSTOMER_FIREBASE_SESSION_BRIDGE_ENABLED") !== "true") {
-    return response(503, "session_bridge_disabled");
-  }
+  // The global bridge remains disabled. Only exact owner-authorized disposable
+  // Customer identities may pass the later server-verified canary gate.
   // No user-selectable profile UUID, email or phone in the payload.
   const bearer = /^Bearer (\S+)$/.exec(request.headers.get("authorization") ?? "");
   if (!bearer || bearer[1].length > MAX_TOKEN) return response(401, "invalid_token");
@@ -101,6 +100,17 @@ Deno.serve(async (request: Request) => {
     if (profileResult.error || authResult.error) {
       throw new Error("Customer authentication lookup failed");
     }
+    // Deny everyone outside the two owner-approved canonical Customer UUIDs.
+    // Staff sharing either mobile number are NEVER eligible.
+    if (!checkCustomerFirebaseCanary({
+      profile: profileResult.data,
+      authUser: authResult.data.user,
+      link: links[0],
+      phone: decoded.phone_number,
+    }).ok) return response(403, "outside_approved_canary");
+
+    // Global rollout stays disabled even if a stale deployment flag is true.
+    // Only the two exact Customer UUIDs are eligible for this canary.
     // 1. Verify the canonical identity *independently* of any Auth email.
     const originalPrincipal = {
       firebase: decoded,
@@ -112,8 +122,27 @@ Deno.serve(async (request: Request) => {
     const verified = checkVerifiedFirebaseCustomerForSession(originalPrincipal);
     if (!verified.ok) return response(403, verified.reason);
 
-    // 2. Atomically consume this particular recent Firebase SMS sign-in event
-    // before any Auth alias mutation or challenge. A refreshed Firebase ID
+    // 3. Existing phone-only Customers may receive the deterministic
+    // non-deliverable alias on the SAME original Auth user UUID. This is
+    // explicitly disabled in every environment unless separately approved.
+    const provision = await provisionDisposableFirebaseCanaryAlias({
+      db,
+      profile: profileResult.data,
+      authUser: authResult.data.user,
+      link: links[0],
+      verifiedPhone: decoded.phone_number,
+      explicitCanaryApproval: true,
+    });
+    if (!provision.ok) {
+      // Only fixed internal denial reasons; never log phone, UID, email, OTP or token.
+      console.warn("customer-firebase-canary-provision-denied", provision.reason);
+      return response(409, "session_identity_not_provisioned");
+    }
+
+    // Consume the signed phone event only AFTER a verified pre-existing Auth
+    // identity is ready, so failed first-time provisioning does not burn the
+    // whole SMS event. Replay remains blocked before challenge issuance.
+    // Atomically consume this recent Firebase sign-in event before any challenge. A refreshed Firebase ID
     // token retains auth_time, so event replay must fail even after cooldown.
     // Missing DB migration = deny, not bypass.
     const limit = await db.rpc("customer_firebase_session_exchange_consume", {
@@ -124,16 +153,7 @@ Deno.serve(async (request: Request) => {
     if (limit.error) throw new Error("Session issuance limit unavailable");
     if (limit.data !== true) return response(429, "too_many_attempts");
 
-    // 3. Existing phone-only Customers may receive the deterministic
-    // non-deliverable alias on the SAME original Auth user UUID. This is
-    // explicitly disabled in every environment unless separately approved.
-    const provision = await ensureCustomerSupabaseSessionAlias({
-      db,
-      authUser: authResult.data.user,
-      customerProfileId: verified.customerProfileId,
-      enabled: Deno.env.get("CUSTOMER_FIREBASE_SESSION_ALIAS_JIT_ENABLED") === "true",
-    });
-    if (!provision.ok) return response(409, "session_identity_not_provisioned");
+
 
     // 4. Demand the strict Auth-email policy again with the persisted state.
     const gate = checkCustomerSessionEligibility({
@@ -148,7 +168,8 @@ Deno.serve(async (request: Request) => {
     // client-provided email and NEVER call for an unprovisioned identity.
     const challenge = await issueExistingCustomerSessionChallenge(db, gate);
     if (!challenge.ok) {
-      throw new Error("Supabase session challenge identity mismatch");
+      console.warn("customer-firebase-challenge-denied", challenge.reason);
+      return response(503, "session_challenge_unavailable");
     }
     // Client exchanges the one-use challenge with Supabase Auth, verifies
     // getUser() and the canonical active Customer profile before using data.

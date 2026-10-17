@@ -108,13 +108,14 @@ test('blocks anonymous, banned and missing auth users', () => {
   verify(input => { input.authUser = null; }, 'supabase_user_mismatch');
 });
 
-test('Edge candidate is off by default and cannot mutate/create Auth users', () => {
+test('Edge allows only exact two-Customer canary and never directly creates Auth users', () => {
   const source = readFileSync(
     new URL('../../../supabase/functions/customer-firebase-session-bridge/index.ts', import.meta.url),
     'utf8',
   );
-  assert.match(source, /CUSTOMER_FIREBASE_SESSION_BRIDGE_ENABLED/);
-  assert.match(source, /!== "true"/);
+  assert.match(source, /checkCustomerFirebaseCanary/);
+  assert.match(source, /provisionDisposableFirebaseCanaryAlias/);
+  assert.match(source, /outside_approved_canary/);
   assert.match(source, /verifyIdToken\(bearer\[1\], true\)/);
   assert.match(source, /auth\.admin\.getUserById/);
   assert.match(source, /issueExistingCustomerSessionChallenge/);

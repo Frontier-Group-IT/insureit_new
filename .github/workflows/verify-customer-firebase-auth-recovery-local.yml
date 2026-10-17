@@ -1,0 +1,57 @@
+name: Rehearse Firebase Customer Auth recovery in disposable GoTrue
+
+on:
+  pull_request:
+    branches:
+      - feature/customer-firebase-otp-gateway-0-3-2-20261014
+    paths:
+      - 'apps/mobile-app/scripts/customer-firebase-auth-recovery-local-integration.mjs'
+      - '.github/workflows/verify-customer-firebase-auth-recovery-local.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+
+jobs:
+  prove:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.84.2
+      - name: Install package lock dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Start ONLY an ephemeral local Supabase auth stack (NEVER production)
+        shell: bash
+        run: |
+          set -euo pipefail
+          dir="$(mktemp -d)"
+          cd "$dir"
+          supabase init
+          supabase start --exclude studio,mail,analytics,realtime,storage,functions,pooler
+          eval "$(supabase status -o env \
+            --override-name api.url=SUPABASE_URL \
+            --override-name auth.anon_key=SUPABASE_ANON_KEY \
+            --override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY \
+            --override-name db.url=SUPABASE_DB_URL)"
+          test "${SUPABASE_URL:-}" = "http://127.0.0.1:54321"
+          test -n "${SUPABASE_ANON_KEY:-}"
+          test -n "${SUPABASE_SERVICE_ROLE_KEY:-}"
+          [[ "${SUPABASE_DB_URL:-}" == *"@127.0.0.1:54322/"* || "${SUPABASE_DB_URL:-}" == *"@localhost:54322/"* ]]
+          {
+            echo "SUPABASE_URL=$SUPABASE_URL"
+            echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY"
+            echo "SUPABASE_DB_URL=$SUPABASE_DB_URL"
+          } >> "$GITHUB_ENV"
+      - name: Rehearse original login restoration for synthetic known-password user
+        run: node apps/mobile-app/scripts/customer-firebase-auth-recovery-local-integration.mjs

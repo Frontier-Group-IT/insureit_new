@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Verify disabled bridge and unauthenticated bind from GitHub runner
+      - name: Verify unauthenticated canary bridge and bind are denied from GitHub runner
         shell: bash
         run: |
           set -euo pipefail
@@ -69,7 +69,7 @@ jobs:
           from urllib.error import HTTPError
           base = 'https://ilzhsfqqjyppzzvfscmh.supabase.co/functions/v1/'
           checks = [
-            ('customer-firebase-session-bridge', 503, 'session_bridge_disabled'),
+            ('customer-firebase-session-bridge', 401, 'invalid_token'),
             ('customer-firebase-bind', 401, 'invalid_token'),
           ]
           for name, expected_status, expected_code in checks:

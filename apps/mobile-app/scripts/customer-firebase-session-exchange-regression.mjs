@@ -28,6 +28,19 @@ test('one-use token exchange must establish a genuine existing Supabase Auth ses
   assert.doesNotMatch(client, /supabase\.auth\.setSession\(\{\s*access_token:\s*firebaseIdToken/);
 });
 
+test('Android and Edge use the same bounded one-use hash validation', () => {
+  const backend = readFileSync(new URL('../../../supabase/functions/_shared/customer-firebase-session-challenge.mjs', import.meta.url), 'utf8');
+  const clientPattern = client.match(/const hashRe = \/(.+)\/i;/)?.[1];
+  const edgePattern = backend.match(/const hexHash = \/(.+)\/i;/)?.[1];
+  assert.equal(clientPattern, '^[a-f0-9]{32,128}$');
+  assert.equal(edgePattern, clientPattern);
+  const validator = new RegExp(clientPattern, 'i');
+  for (const size of [32, 40, 64, 96, 128]) assert.equal(validator.test('a'.repeat(size)), true);
+  for (const candidate of ['', 'a'.repeat(31), 'a'.repeat(129), 'z'.repeat(40)]) assert.equal(validator.test(candidate), false);
+  assert.match(client, /if \(!validChallenge\(candidate\)\)/);
+  assert.match(client, /session\.user\.id !== candidate\.profile_id/);
+});
+
 test('account switching restores prior Supabase Customer identity on failed exchange', () => {
   assert.match(client, /const previousSession = snapshotResult\.data\.session/);
   assert.match(client, /restoreCustomerSessionSnapshot\(previousSession\)/);
@@ -35,8 +48,9 @@ test('account switching restores prior Supabase Customer identity on failed exch
   assert.match(client, /if \(mayHaveInstalledSession\)/);
 });
 
-test('Edge protects identity and does not issue tokens when phone-only remains unprovisioned', () => {
-  assert.match(edge, /CUSTOMER_FIREBASE_SESSION_BRIDGE_ENABLED/);
+test('Edge restricts provisioning to verified and immutable two-Customer canary', () => {
+  assert.match(edge, /checkCustomerFirebaseCanary/);
+  assert.match(edge, /provisionDisposableFirebaseCanaryAlias/);
   assert.match(edge, /verifyIdToken\(bearer\[1\], true\)/);
   assert.match(edge, /checkCustomerSessionEligibility/);
   assert.match(edge, /issueExistingCustomerSessionChallenge/);
