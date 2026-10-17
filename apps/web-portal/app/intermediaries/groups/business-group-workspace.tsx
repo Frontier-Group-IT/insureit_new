@@ -171,15 +171,6 @@ export function BusinessGroupWorkspace({
           </div>
           {canManage ? (
             <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-              <Link href="/intermediaries/groups/branches" className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-3 text-[8px] font-bold text-white shadow-sm transition hover:bg-white/15">
-                <Store className="h-3.5 w-3.5" /> Branch Register
-              </Link>
-              <Link href="/intermediaries/groups/branches/new" aria-disabled={!hierarchyReady} className={`inline-flex h-8 items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-3 text-[8px] font-bold text-white shadow-sm transition hover:bg-white/15 ${!hierarchyReady ? "pointer-events-none opacity-45" : ""}`}>
-                <Plus className="h-3.5 w-3.5" /> Add Branch
-              </Link>
-              <button type="button" onClick={() => setBranchOpen(true)} disabled={!hierarchyReady} className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-3 text-[8px] font-bold text-white shadow-sm transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-45">
-                <GitBranch className="h-3.5 w-3.5" /> Assign Branch
-              </button>
               <Link href="/intermediaries/groups/login-access" className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-3 text-[8px] font-bold text-white shadow-sm transition hover:bg-white/15">
                 <UsersRound className="h-3.5 w-3.5" /> Login Access
               </Link>
