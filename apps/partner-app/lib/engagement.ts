@@ -53,7 +53,6 @@ export type PartnerSupport = {
 
 export type PartnerActivityData = {
   generated_at: string;
-  unread_count: number;
   attention: {
     kind: string;
     title: string;
@@ -65,8 +64,6 @@ export type PartnerActivityData = {
     kind: 'policy' | 'claim' | 'intake' | 'learn';
     entity_id: string;
     event_at: string;
-    event_key: string;
-    is_read: boolean;
     title: string;
     subtitle: string;
     meta: string;
@@ -78,23 +75,42 @@ export type PartnerActivityData = {
 export type PartnerActivityItem = PartnerActivityData['items'][number];
 
 export function partnerActivityEventKey(item: PartnerActivityItem) {
-  return item.event_key || [item.kind, item.entity_id, item.event_at].join(':');
+  return [item.kind, item.entity_id, item.event_at].join(':');
 }
 
 export async function getPartnerActivityReadKeys(items: PartnerActivityItem[]) {
-  return new Set(items.filter((item) => item.is_read).map(partnerActivityEventKey));
+  const eventKeys = Array.from(new Set(items.map(partnerActivityEventKey)));
+  if (!eventKeys.length) return new Set<string>();
+
+  const { data, error } = await supabase
+    .from('partner_activity_read_receipts')
+    .select('event_key')
+    .in('event_key', eventKeys);
+
+  if (error) throw error;
+  return new Set((data ?? []).map((row) => String(row.event_key)));
 }
 
 export async function markPartnerActivityRead(item: PartnerActivityItem) {
-  const { error } = await supabase.rpc('partner_app_mark_activity_read', {
-    p_event_key: partnerActivityEventKey(item),
-  });
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user?.id) throw authError ?? new Error('Partner session is unavailable.');
+
+  const { error } = await supabase
+    .from('partner_activity_read_receipts')
+    .upsert({
+      auth_user_id: authData.user.id,
+      event_key: partnerActivityEventKey(item),
+      read_at: new Date().toISOString(),
+    }, { onConflict: 'auth_user_id,event_key' });
+
   if (error) throw error;
 }
 
 export async function getPartnerUnreadActivityCount(limit = 100) {
   const activity = await getPartnerActivity(limit);
-  return Math.max(0, Number(activity.unread_count || 0));
+  if (!activity.items.length) return 0;
+  const readKeys = await getPartnerActivityReadKeys(activity.items);
+  return activity.items.reduce((count, item) => count + (readKeys.has(partnerActivityEventKey(item)) ? 0 : 1), 0);
 }
 
 export async function getPartnerWeeklyStory() {
