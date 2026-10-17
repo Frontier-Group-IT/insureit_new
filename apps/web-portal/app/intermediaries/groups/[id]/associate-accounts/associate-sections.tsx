@@ -31,7 +31,7 @@ export async function GroupAssociateSections({id,query:q={},surface="operations"
    <GroupRegisterTabs partners={partners} addPartner={surface==="operations"?headerPartnerAssignment:null} associates={<section className="overflow-x-auto bg-white">
     <h2 className="border-b p-4 text-sm font-semibold">Associate Accounts Register</h2>
     {hasRegisterRecords ? <table className="w-full min-w-[1060px] text-left text-xs"><thead className="bg-slate-50"><tr>{["Name","Phone Number","Email","Designation","Address","Role","Status","Action"].map(h=><th key={h} className="p-3">{h}</th>)}</tr></thead>
-    <tbody>{hasPrimaryAdmin ? <tr className="border-t bg-[#F8FBFF]">
+    <tbody>{groupAdmin ? <tr className="border-t bg-[#F8FBFF]">
       <td className="p-3 font-semibold">{groupAdmin.admin_name?.trim()||"—"}</td>
       <td className="p-3">{groupAdmin.admin_mobile?.trim()||"—"}</td>
       <td className="p-3">{groupAdmin.admin_email?.trim()||"—"}</td>
