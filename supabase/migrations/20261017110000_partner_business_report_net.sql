@@ -145,7 +145,7 @@ begin
 
   return v_result;
 end;
-$function$
+$function$;
 
 revoke all on function public.partner_app_business_report_net() from public,anon;
 grant execute on function public.partner_app_business_report_net() to authenticated,service_role;
