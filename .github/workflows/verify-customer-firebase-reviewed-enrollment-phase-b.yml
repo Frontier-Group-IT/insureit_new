@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feat/customer-firebase-reviewed-enrollment-phase-b-20261017
+      - feat/customer-firebase-second-canary-preflight-20261017
     paths:
       - 'supabase/functions/_shared/customer-firebase-reviewed-enrollment.mjs'
       - 'supabase/migrations/20261017120000_customer_firebase_operator_review_and_collisions.sql'
