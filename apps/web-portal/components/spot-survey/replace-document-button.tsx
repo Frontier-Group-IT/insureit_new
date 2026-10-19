@@ -56,7 +56,19 @@ export function ReplaceDocumentButton({ claimId, documentId, documentType, label
         return;
       }
     }
-    setSelectedFiles(files);
+    setSelectedFiles((previous) => {
+      if (isReplaceAction) return files;
+      const next = [...previous];
+      for (const file of files) {
+        const duplicate = next.some((existing) =>
+          existing.name === file.name &&
+          existing.size === file.size &&
+          existing.lastModified === file.lastModified
+        );
+        if (!duplicate) next.push(file);
+      }
+      return next;
+    });
   };
 
   const modal = open && typeof document !== "undefined" ? createPortal(
@@ -154,7 +166,10 @@ export function ReplaceDocumentButton({ claimId, documentId, documentType, label
               accept={acceptedFileTypes}
               className="hidden"
               multiple={!isReplaceAction}
-              onChange={(event) => selectFiles(Array.from(event.target.files ?? []))}
+              onChange={(event) => {
+                selectFiles(Array.from(event.target.files ?? []));
+                event.target.value = "";
+              }}
             />
             <span>
               <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#EAF3FF] text-[30px] text-[#174EA6]">☁</span>
