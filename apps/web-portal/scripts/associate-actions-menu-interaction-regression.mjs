@@ -19,6 +19,7 @@ assert.doesNotMatch(menu, /onPointerUp=\{\(event\) => \{/,
   "Resend must not submit before native click completes");
 assert.doesNotMatch(menu, /event\.currentTarget\.form\?\.requestSubmit\(\)/,
   "Resend must use its native form submission without duplicate requests");
-assert.match(menu, /<form action=\{resendPartnerAssociateInvite\}>/);
+assert.match(menu, /<form action=\{resendPartnerAssociateInvite\} onSubmit=/);
+assert.match(menu, /associate-resend-cooldown/, "Resend cooldown must be recorded on submit");
 assert.match(menu, /type="submit"/);
 console.log("Associate action menu interaction contract: OK");
