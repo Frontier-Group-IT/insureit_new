@@ -189,7 +189,7 @@ export function AssociateAccountActionsMenu({
                   Delete
                 </button>
 
-                <form action={resendPartnerAssociateInvite}>
+                <form action={resendPartnerAssociateInvite} onSubmit={() => window.localStorage.setItem(`associate-resend-cooldown:${associate.id}`, String(Date.now() + RESEND_COOLDOWN_SECONDS * 1000))}>
                   {commonHidden}
                   <ResendInviteButton
                     associateId={associate.id}
@@ -231,7 +231,7 @@ export function AssociateAccountActionsMenu({
                 </Field>
                 <Field label="Role" required>
                   <select name="role" required defaultValue={associate.role} className={inputClass}>
-                    <option value="admin" disabled>Admin</option>
+                    <option value="admin" disabled={associate.role !== "admin"}>Admin</option>
                     <option value="claim_head">Claim Head</option>
                     <option value="insurance_head">Insurance Head</option>
                     <option value="bodyshop_manager">Bodyshop Manager</option>
@@ -314,12 +314,6 @@ function ResendInviteButton({
   const storageKey = `associate-resend-cooldown:${associateId}`;
   const [remaining, setRemaining] = useState(0);
 
-  const recordResendAttempt = () => {
-    const cooldownUntil = Date.now() + RESEND_COOLDOWN_SECONDS * 1000;
-    window.localStorage.setItem(storageKey, String(cooldownUntil));
-    setRemaining(RESEND_COOLDOWN_SECONDS);
-  };
-
   useEffect(() => {
     const invitedUntil = invitedAt
       ? new Date(invitedAt).getTime() + RESEND_COOLDOWN_SECONDS * 1000
@@ -352,14 +346,6 @@ function ResendInviteButton({
       role="menuitem"
       disabled={disabled}
       title={title}
-      onClick={(event) => {
-        if (disabled) {
-          event.preventDefault();
-          return;
-        }
-        // Let the native submit event complete before the menu is dismissed.
-        recordResendAttempt();
-      }}
       className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-40"
     >
       <Send className="h-3.5 w-3.5 text-[#64748B]" />
