@@ -17,9 +17,8 @@ function isClaimsHeadPortalPath(pathname: string) {
   return pathname === "/claims" || pathname.startsWith("/claims/") ||
     pathname === "/claim-documents" || pathname.startsWith("/claim-documents/") ||
     pathname === "/reports/claims" || pathname === "/reports/export/claims" ||
-    pathname === "/tasks" || pathname.startsWith("/tasks/") ||
     pathname === "/notifications" || pathname.startsWith("/notifications/") ||
-    pathname === "/dashboard" || pathname === "/access-denied";
+    pathname === "/access-denied";
 }
 
 const canonicalPortalHost = "portal.insureit.in";
