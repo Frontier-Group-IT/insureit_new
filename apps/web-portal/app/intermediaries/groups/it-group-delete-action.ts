@@ -47,10 +47,22 @@ export async function removePartnersBeforeGroupDelete(groupId:string,partnerIds:
  if(error) return {ok:false,message:"Unable to verify the group's active partners."};
  const activeSet=new Set((active??[]).map(r=>r.partner_id));
  if(partnerIds.some(id=>!activeSet.has(id))) return {ok:false,message:"Partner selection changed. Refresh the list before removing partners."};
- // The existing function closes membership intervals and preserves their history.
- const {data:count,error:removeError}=await admin.rpc("service_remove_intermediary_group_members",{p_partner_ids:partnerIds,p_actor_profile_id:profile.id,p_reason:"Removed by IT Super User before Group deletion"});
+ // Scope the change to this group. The legacy partner-ID-only RPC can close
+ // memberships in OTHER groups, so it must not be used here.
+ const {data:removed,error:removeError}=await admin.from("intermediary_group_memberships")
+   .update({
+     effective_to:new Date().toISOString(),
+     removed_by:profile.id,
+     change_reason:"Removed by IT Super User from selected Group",
+     updated_at:new Date().toISOString(),
+   })
+   .eq("group_id",groupId)
+   .in("partner_id",partnerIds)
+   .is("effective_to",null)
+   .select("id");
  if(removeError) return {ok:false,message:"Could not remove partners. No group deletion was attempted."};
+ const count=removed?.length??0;
  revalidatePath("/intermediaries/groups");
  revalidatePath(`/intermediaries/groups/${groupId}`);
- return {ok:true,message:`${count??partnerIds.length} partner membership(s) removed. Historical membership records are retained and may still prevent permanent deletion.`};
+ return {ok:true,message:`${count} partner membership(s) removed from this Group only. Partner accounts, other groups and historical memberships are preserved. Historical links may still block permanent Group deletion.`};
 }
