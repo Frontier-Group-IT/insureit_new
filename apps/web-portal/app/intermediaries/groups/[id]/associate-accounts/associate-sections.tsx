@@ -11,14 +11,32 @@ type Query = {success?:string; error?:string};
 export async function GroupAssociateSections({id,query:q={},surface="operations",partners=[],headerPartnerAssignment}:{id:string;query?:Query;surface?:"operations"|"partner";partners?:GroupPartnerRow[];headerPartnerAssignment?:ReactNode}) {
  await requireGroupAssociateManager(id);
  const admin = createSupabaseAdminClient();
- const [{data:associates},{data:groupAdmin},{data:group}] = await Promise.all([
+ const [associatesResult, contactResult, groupResult, identityResult] = await Promise.all([
   admin.from("group_portal_associate_accounts").select("id,name,phone_number,email,designation,address,city,state,postal_code,role,status").eq("group_id",id).order("created_at",{ascending:false}),
   admin.from("group_administrator_contacts").select("admin_name,admin_email,admin_mobile,address,city,state,postal_code").eq("group_id",id).maybeSingle(),
-  admin.from("intermediary_groups").select("status").eq("id",id).maybeSingle()
+  admin.from("intermediary_groups").select("status").eq("id",id).maybeSingle(),
+  admin.from("portal_access_identities").select("profile_id,login_email").eq("entity_type","group").eq("entity_id",id).eq("status","active").limit(1).maybeSingle()
  ]);
+ const associates=associatesResult.data;
+ const group=groupResult.data;
+ // A Group Administrator is created as a group login identity, NOT as a
+ // group_portal_associate_accounts record. Always render it separately first.
+ // Fall back to that identity when a legacy group lacks a contact row.
+ const identity=identityResult.data;
+ const {data:identityProfile,error:profileError}=identity?.profile_id && !contactResult.data
+   ? await admin.from("profiles").select("full_name,email,phone").eq("id",identity.profile_id).maybeSingle()
+   : {data:null,error:null};
+ const groupAdmin=contactResult.data ?? (identity ? {
+   admin_name:identityProfile?.full_name ?? "",
+   admin_email:identity.login_email ?? identityProfile?.email ?? "",
+   admin_mobile:identityProfile?.phone ?? "",
+   address:null,city:null,state:null,postal_code:null,
+ } : null);
+ const loadError=associatesResult.error || contactResult.error || groupResult.error || identityResult.error || profileError;
  const hasPrimaryAdmin=Boolean(groupAdmin);
  const hasRegisterRecords=hasPrimaryAdmin||Boolean(associates?.length);
  return <div className="space-y-4">
+   {loadError?<p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">Associate Accounts could not be loaded completely. Please retry; the register may be incomplete.</p>:null}
    {q.error?<p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{q.error}</p>:null}
    {q.success?<p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{q.success}</p>:null}
    {surface==="partner" ? <div className="relative rounded-2xl border border-[#DCE5EF] bg-white">
@@ -46,7 +64,7 @@ export async function GroupAssociateSections({id,query:q={},surface="operations"
       <td className="p-3"><span className="rounded-full border px-2 py-1">{{group_admin:"Group Administrator",insurance_head:"Insurance Head",claim_head:"Claim Head",bodyshop_manager:"Bodyshop Manager"}[a.role as "group_admin"|"insurance_head"|"claim_head"|"bodyshop_manager"]||a.role}</span></td><td className="p-3">{a.status}</td>
       <td className="p-3"><AssociateControls groupId={id} associate={a} surface={surface}/></td>
     </tr>)}</tbody></table> : null}
-    <GroupAssociateCreateEntry hasRecords={hasRegisterRecords} error={q.error} form={<AssociateCreateForm groupId={id} surface={surface}/>}/>
+    {!loadError ? <GroupAssociateCreateEntry hasRecords={hasRegisterRecords} error={q.error} form={<AssociateCreateForm groupId={id} surface={surface}/>}/> : null}
    </section>} />
  </div>;
 }
