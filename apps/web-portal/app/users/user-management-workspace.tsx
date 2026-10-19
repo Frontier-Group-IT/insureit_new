@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { createProfileRecord, setProfileActive, updateProfileRecord } from "@/app/actions";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { StatusBadge } from "@/components/ui";
@@ -30,12 +31,20 @@ function Selection({label,name,children,defaultValue,required=false}: {label:str
  return <label className="grid gap-1 text-[10px] font-semibold text-[#475569]">{label}<select name={name} defaultValue={defaultValue} required={required} className={inputClass}>{children}</select></label>;
 }
 function Dialog({title,children,onClose}: {title:string;children:ReactNode;onClose:()=>void}) {
- return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#071D49]/55 p-3" onMouseDown={(e)=>{if(e.target===e.currentTarget)onClose();}}>
-   <section role="dialog" aria-modal="true" aria-label={title} className="max-h-[90vh] w-full max-w-[760px] overflow-y-auto rounded-2xl border border-[#DCE4EF] bg-white p-5 shadow-2xl">
-     <div className="mb-4 flex items-center justify-between border-b border-[#E8EEF5] pb-3"><h2 className="text-[16px] font-bold text-[#17203A]">{title}</h2><button type="button" onClick={onClose} aria-label="Close dialog" className="rounded-lg border border-[#DCE4EF] px-3 py-1 text-sm">×</button></div>
-     {children}
+ useEffect(()=>{
+  const previous=document.body.style.overflow;
+  document.body.style.overflow="hidden";
+  return ()=>{document.body.style.overflow=previous;};
+ },[]);
+ return createPortal(
+  <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-y-auto bg-[#071D49]/55 p-3 sm:p-5" onMouseDown={(e)=>{if(e.target===e.currentTarget)onClose();}}>
+   <section role="dialog" aria-modal="true" aria-label={title} className="max-h-[calc(100dvh-24px)] w-full max-w-[760px] overflow-y-auto rounded-2xl border border-[#DCE4EF] bg-white p-5 shadow-2xl sm:max-h-[calc(100dvh-40px)]">
+    <div className="mb-4 flex items-center justify-between border-b border-[#E8EEF5] pb-3"><h2 className="text-[16px] font-bold text-[#17203A]">{title}</h2><button type="button" onClick={onClose} aria-label="Close dialog" className="rounded-lg border border-[#DCE4EF] px-3 py-1 text-sm">×</button></div>
+    {children}
    </section>
- </div>;
+  </div>,
+  document.body
+ );
 }
 
 export function UserManagementWorkspace({users,managers,canPermanentDelete,initialQuery,initialRole,initialStatus,loadError}: {users:ProfileRow[];managers:{id:string;full_name:string;role:string}[];canPermanentDelete:boolean;initialQuery:string;initialRole:string;initialStatus:string;loadError:string|null}) {
