@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Pencil, UsersRound, Building2, CalendarDays, UserRoundCog, Check } from "lucide-react";
 import { GroupAssociateSections } from "./associate-accounts/associate-sections";
+import { GroupSuccessFeedback } from "./group-success-feedback";
 import { GroupHeaderPartnerAssignment } from "./associate-accounts/header-partner-assignment";
 import { loadGroupPartnerRegisterRows } from "./associate-accounts/group-partner-data";
 import { AppShell } from "@/components/shell";
@@ -43,8 +44,8 @@ export default async function GroupDetailsPage({params,searchParams}:{params:Pro
     </div>
    </header>
    {q.warning?<div role="alert" className="rounded-xl border border-orange-200 bg-orange-50 px-5 py-3 text-xs text-orange-700">{q.warning}</div>:null}
-   {q.success==="business_members_moved"?<div role="status" className="rounded-xl border border-green-200 bg-green-50 px-5 py-3 text-xs text-green-700">Partner added to Group successfully.</div>:q.success?<div className="rounded-xl border border-green-200 bg-green-50 px-5 py-3 text-xs text-green-700">Group saved. Review administrator details and invitation status.</div>:null}
-   <GroupAssociateSections id={id} query={{success:q.success,error:q.error}} surface="operations" partners={partnerRegisterRows} headerPartnerAssignment={<GroupHeaderPartnerAssignment groupId={id}/>} />
+   <GroupSuccessFeedback success={q.success} />
+   <GroupAssociateSections id={id} query={{error:q.error}} surface="operations" partners={partnerRegisterRows} headerPartnerAssignment={<GroupHeaderPartnerAssignment groupId={id}/>} />
 
 
   </main>
