@@ -153,7 +153,7 @@ export async function updatePartnerAssociateAccount(formData: FormData) {
 
   if (!name || !phone || !designation || !role) redirect(`${context.returnPath}?error=associate_account_invalid`);
   if (!/^\+?[0-9]{7,15}$/.test(phone)) redirect(`${context.returnPath}?error=associate_phone_invalid`);
-  if (role === "admin" || !allowedRoles.has(role)) redirect(`${context.returnPath}?error=associate_role_blocked`);
+  if (role !== context.associate.role && (role === "admin" || !allowedRoles.has(role))) redirect(`${context.returnPath}?error=associate_role_blocked`);
 
   const admin = createSupabaseAdminClient();
   const now = new Date().toISOString();
