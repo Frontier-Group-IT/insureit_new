@@ -211,6 +211,17 @@ const sqlGrants = new Set(
     return `${match[1]}|${match[2]}|${match[3]}|${scope}`;
   }),
 );
+// Claims Head is intentionally narrowed by an additive shadow migration;
+// historical Phase 4 seed stays immutable for reproducible upgrades.
+const claimsHeadShadowMigration = readFileSync(resolve(process.cwd(), "../../supabase/migrations/20261019171500_claims_head_shadow_rbac_least_privilege.sql"), "utf8");
+const revokedClaimsHeadPermissions = ["dashboard.view", "tasks.view", "tasks.create", "tasks.assign", "tasks.edit"];
+for (const permission of revokedClaimsHeadPermissions) {
+  if (!claimsHeadShadowMigration.includes("'"+permission+"'")) fail("Claims Head shadow revocation missing "+permission);
+}
+for (const grant of [...sqlGrants]) {
+  const parts = grant.split("|");
+  if (parts[0] === "claims_head" && revokedClaimsHeadPermissions.includes(parts[1])) sqlGrants.delete(grant);
+}
 const matrixGrants = new Set(
   roleMatrixV2.flatMap((role) =>
     applicationOnlyRoleCodes.has(role.code)
