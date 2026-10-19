@@ -9,7 +9,7 @@ assert.match(source,/Array\.from\(event\.dataTransfer\.files\)/);
 assert.match(source,/for \(const \[index, file\] of files\.entries\(\)\)/);
 assert.match(source,/prepareClaimDocumentUpload\(claimId, documentType/);
 assert.match(source,/finalizeClaimDocumentUpload\(claimId,documentType/);
-assert.match(source,/verification/ig);
+assert.match(source,/isReplaceAction \? documentId : undefined/);
 assert.match(source,/isReplaceAction && files\.length !== 1/);
 assert.match(source,/selectedFiles\.map\(\(file,index\)/);
 console.log("Claim multi-file upload regression: OK");
