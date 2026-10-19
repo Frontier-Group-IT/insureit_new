@@ -48,7 +48,7 @@ export default function ClaimDetailScreen() {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .filter((item) => {
         if (item.kind === 'created') return true;
-        const key = item.title.trim().replace(/\\s+/g, ' ').toLocaleLowerCase('en');
+        const key = item.title.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en');
         if (!key || seen.has(key)) return false;
         seen.add(key);
         return true;
