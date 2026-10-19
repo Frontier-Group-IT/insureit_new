@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+const source = readFileSync(fileURLToPath(new URL('../app/claim/[id].tsx', import.meta.url)), 'utf8');
+assert.match(source, /for \(const item of data\.status_history\)/);
+assert.match(source, /for \(const item of data\.stages\)/);
+assert.match(source, /new Map<string, TimelineItem>\(\)/);
+assert.match(source, /item\.title\.trim\(\)\.replace/);
+assert.match(source, /uniqueMilestones\.set\(key, item\)/);
+assert.match(source, /Array\.from\(uniqueMilestones\.values\(\)\)\.sort/);
+assert.match(source, /__claim_created__/);
+console.log('Claim journey unique milestone regression passed');
