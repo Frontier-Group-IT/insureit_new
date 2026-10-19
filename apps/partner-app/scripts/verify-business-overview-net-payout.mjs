@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {fileURLToPath} from 'node:url';
+const source=readFileSync(fileURLToPath(new URL('../app/(tabs)/business.tsx',import.meta.url)),'utf8');
+assert.match(source,/mtdCurrent\.net_premium/);
+assert.match(source,/mtdPrevious\?\.net_premium/);
+assert.match(source,/overview\.net_premium/);
+assert.match(source,/label="Net Premium"/);
+assert.match(source,/label="Partner Payout"/);
+assert.match(source,/overview\.commission_available/);
+assert.match(source,/mtdCurrent\?\.commission_available/);
+assert.doesNotMatch(source,/label="Commission Earned"/);
+console.log('Business Overview net premium/payout contract OK');
