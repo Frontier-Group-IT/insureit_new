@@ -1,6 +1,7 @@
 "use client";
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import type { GroupPartnerRow } from "./group-partner-data";
 export function GroupRegisterTabs({associates,partners,addPartner}:{associates:ReactNode;partners:GroupPartnerRow[];addPartner?:ReactNode}) {
  const [tab,setTab]=useState<"associate"|"partner">("associate");
@@ -13,7 +14,12 @@ export function GroupRegisterTabs({associates,partners,addPartner}:{associates:R
   <div role="tabpanel" hidden={tab!=="associate"}>{associates}</div>
   <div role="tabpanel" hidden={tab!=="partner"}>
    <div className="flex items-center justify-between gap-3 border-b px-4 py-3"><h2 className="text-[12px] font-semibold text-[#17365D]">Partner Register</h2>{addPartner}</div>
-   <div className="overflow-x-auto"><table className="w-full min-w-[1000px] table-fixed text-left text-[10.5px]">
+   {!partners.length ? (
+    <div className="flex flex-col items-center justify-center gap-2 px-4 py-6 text-center">
+      <Image src="/illustrations/group-associate-no-results.png" alt="No Result Found" width={215} height={197}/>
+      <p className="mb-2 text-[11px] text-[#8190A4]">No Partners have been assigned to this Group.</p>
+    </div>
+   ) : <div className="overflow-x-auto"><table className="w-full min-w-[1000px] table-fixed text-left text-[10.5px]">
     <thead className="border-b bg-[#F8FAFC] text-[8.5px] uppercase text-[#64748B]"><tr>
       <th className="w-[24%] px-4 py-3">Partner Name</th><th className="w-[14%] px-3 py-3">Mobile Number</th><th className="w-[17%] px-3 py-3">Assigned RM</th><th className="w-[13%] px-3 py-3">Status</th><th className="w-[10%] px-3 py-3 text-right">Customers</th><th className="w-[11%] px-3 py-3 text-right">Net Premium</th><th className="w-[11%] px-3 py-3 text-right">Payout</th>
     </tr></thead>
@@ -25,8 +31,7 @@ export function GroupRegisterTabs({associates,partners,addPartner}:{associates:R
      <td className="px-3 py-3 text-right tabular-nums">{money(p.netPremium)}</td>
      <td className="px-3 py-3 text-right tabular-nums">{money(p.payout)}</td>
     </tr>)}
-    {!partners.length?<tr><td colSpan={7} className="p-8 text-center text-[#64748B]">No Partners are assigned to this Group.</td></tr>:null}
-    </tbody></table></div>
+    </tbody></table></div>}
   </div>
  </section>;
 }
