@@ -64,6 +64,7 @@ export type PartnerBusinessRangeSummary = {
   policies: number;
   commission_available?: boolean;
   commission_earned?: number | string | null;
+  projected_retention?: number | string | null;
   customers: number;
   renewals: number;
   claims: number;
@@ -76,5 +77,11 @@ export async function getPartnerBusinessRange(fromDate: string, toDate: string) 
   });
   if (error) throw error;
   if (!data) throw new Error('Business summary is unavailable for this date range.');
-  return data as PartnerBusinessRangeSummary;
+  const { data: retention, error: retentionError } = await supabase.rpc('partner_app_projected_retention_range', {
+    p_from_date: fromDate,
+    p_to_date: toDate,
+  });
+  if (retentionError) throw retentionError;
+  return { ...(data as PartnerBusinessRangeSummary), projected_retention: retention as number | string };
+
 }
