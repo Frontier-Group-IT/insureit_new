@@ -14,7 +14,11 @@ assert.match(action,/it_delete_unlinked_intermediary_group/);
 assert.match(action,/getGroupDeletePartners/);
 assert.match(action,/removePartnersBeforeGroupDelete/);
 assert.match(action,/\.eq\("group_id",groupId\)\.is\("effective_to",null\)/);
-assert.match(action,/service_remove_intermediary_group_members/);
+assert.doesNotMatch(action,/admin\.rpc\("service_remove_intermediary_group_members"/);
+assert.match(action,/\.update\(\{/);
+assert.match(action,/\.eq\("group_id",groupId\)/);
+assert.match(action,/\.in\("partner_id",partnerIds\)/);
+assert.match(action,/\.is\("effective_to",null\)/);
 assert.match(panel,/Remove Partners from Group/);
 assert.match(panel,/!checked\|\|partners\.length>0/);
 
