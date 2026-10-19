@@ -59,6 +59,8 @@ jobs:
         run: node scripts/collapsed-sidebar-direct-links-regression.mjs
       - name: Exchange IT visibility regression
         run: node scripts/exchange-it-visibility-regression.mjs
+      - name: Associate deletion confirmation regression
+        run: node scripts/associate-delete-confirmation-regression.mjs
       - name: Associate Accounts portal menu interaction regression
         run: node scripts/associate-actions-menu-interaction-regression.mjs
       - name: User Management viewport modal regression
