@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal, useFormStatus } from "react-dom";
-import { Ban, MoreVertical, Pencil, Send, Trash2, X } from "lucide-react";
+import { AlertTriangle, Ban, MoreVertical, Pencil, Send, Trash2, X } from "lucide-react";
 
 import {
   deletePartnerAssociateAccount,
@@ -287,34 +287,11 @@ export function AssociateAccountActionsMenu({
       ) : null}
 
       {deleteOpen ? (
-        <Modal title="Delete Associate Account" onClose={() => setDeleteOpen(false)}>
-          <form action={deletePartnerAssociateAccount}>
-            {commonHidden}
-            <div className="space-y-3 px-5 py-4">
-              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
-                <p className="text-[11px] font-semibold text-rose-700">
-                  Permanently delete {associate.name}?
-                </p>
-                <p className="mt-1 text-[10px] leading-5 text-rose-600">
-                  This removes the associate login and account permanently. This action cannot be undone.
-                </p>
-              </div>
-              <div className="rounded-xl border border-[#D8DEE9] bg-[#F8FAFC] px-4 py-3 text-[10.5px] font-medium text-[#334155]">
-                {associate.email}
-              </div>
-            </div>
-            <div className="flex items-center justify-end gap-2 border-t border-[#E7ECF3] bg-[#FBFCFE] px-5 py-3">
-              <button
-                type="button"
-                onClick={() => setDeleteOpen(false)}
-                className="inline-flex h-9 items-center justify-center rounded-md border border-[#CBD5E1] bg-white px-4 text-[10.5px] font-semibold text-[#334155] transition hover:bg-[#F8FAFC]"
-              >
-                Cancel
-              </button>
-              <DeletePermanentlyButton />
-            </div>
-          </form>
-        </Modal>
+        <DeleteAssociateConfirmation
+          associateName={associate.name}
+          onClose={() => setDeleteOpen(false)}
+          hiddenFields={commonHidden}
+        />
       ) : null}
 
     </>
@@ -423,10 +400,57 @@ function DeletePermanentlyButton() {
       type="submit"
       disabled={pending}
       aria-disabled={pending}
-      className="inline-flex h-9 min-w-[138px] items-center justify-center rounded-md border border-rose-600 bg-rose-600 px-4 text-[10.5px] font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-wait disabled:border-rose-300 disabled:bg-rose-300"
+      className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-red-600 px-3 text-[11px] font-semibold text-white transition hover:bg-red-700 disabled:cursor-wait disabled:bg-red-300"
     >
-      {pending ? "Deleting..." : "Delete Permanently"}
+      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />{pending ? "Deleting..." : "Delete permanently"}
     </button>
+  );
+}
+
+function DeleteAssociateConfirmation({
+  associateName,
+  onClose,
+  hiddenFields,
+}: {
+  associateName: string;
+  onClose: () => void;
+  hiddenFields: React.ReactNode;
+}) {
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="associate-delete-confirm-title"
+      className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-950/35 p-4"
+    >
+      <div className="w-full max-w-[420px] overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_rgba(15,23,42,.22)]">
+        <div className="flex items-start gap-3 px-5 pt-5">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-rose-50 text-rose-600">
+            <AlertTriangle className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h3 id="associate-delete-confirm-title" className="text-[14px] font-bold text-[#17203A]">
+              Permanently delete associate account?
+            </h3>
+            <p className="mt-1 break-words text-[11px] font-medium text-[#64748B]">{associateName}</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close delete confirmation" className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[#94A3B8] hover:bg-slate-100">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <p className="px-5 pb-4 pt-3 text-[11px] leading-5 text-[#64748B]">
+          This action cannot be undone. The associate account and any removable login access will be permanently deleted. Protected business history may prevent deletion.
+        </p>
+        <form action={deletePartnerAssociateAccount} className="flex gap-2 border-t border-[#E7ECF3] px-5 py-3">
+          {hiddenFields}
+          <button type="button" onClick={onClose} className="inline-flex h-10 flex-1 items-center justify-center rounded-xl border border-[#D8DEE9] bg-white text-[11px] font-semibold text-[#334155] hover:bg-slate-50">
+            Cancel
+          </button>
+          <DeletePermanentlyButton />
+        </form>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
