@@ -1,0 +1,15 @@
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+import {fileURLToPath} from "node:url";
+const source=readFileSync(fileURLToPath(new URL("../app/users/user-management-workspace.tsx",import.meta.url)),"utf8");
+assert.match(source,/import \{ createPortal \} from "react-dom"/);
+assert.match(source,/return createPortal\(/);
+assert.match(source,/document\.body\s*\)/);
+assert.match(source,/document\.body\.style\.overflow="hidden"/);
+assert.match(source,/document\.body\.style\.overflow=previous/);
+assert.match(source,/max-h-\[calc\(100dvh-24px\)\]/);
+assert.match(source,/fixed inset-0 z-\[1000\]/);
+assert.match(source,/onMouseDown=\{\(e\)=>\{if\(e\.target===e\.currentTarget\)onClose\(\);\}\}/);
+assert.match(source,/editingUser&&<Dialog/);
+assert.match(source,/createOpen&&<Dialog/);
+console.log("User Management viewport modal contract passed");
