@@ -41,7 +41,18 @@ export default function ClaimDetailScreen() {
     const items: TimelineItem[] = [{ key: 'created', title: 'Claim recorded', date: data.claim.created_at, kind: 'created' }];
     for (const item of data.status_history) items.push({ key: `status-${item.id}`, title: humanize(item.to_status || 'Status updated'), date: item.created_at, kind: 'status' });
     for (const item of data.stages) items.push({ key: `stage-${item.id}`, title: humanize(item.stage), date: item.created_at, kind: 'stage' });
-    return items.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    // Status history and stage rows often represent the same milestone.
+    // Keep the earliest occurrence of each named milestone; preserve raw history.
+    const seen = new Set<string>();
+    return items
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .filter((item) => {
+        if (item.kind === 'created') return true;
+        const key = item.title.trim().replace(/\\s+/g, ' ').toLocaleLowerCase('en');
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
   }, [data]);
 
   return (
