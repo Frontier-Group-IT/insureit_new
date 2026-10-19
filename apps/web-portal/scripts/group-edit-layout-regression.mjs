@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+const source=readFileSync(fileURLToPath(new URL("../app/intermediaries/groups/[id]/edit/page.tsx",import.meta.url)),"utf8");
+assert.doesNotMatch(source,/GroupMembershipManagement/);
+assert.doesNotMatch(source,/intermediary_group_memberships/);
+assert.match(source,/name="postal_code"/);
+assert.match(source,/className="text-xs">Description<input/);
+assert.doesNotMatch(source,/sm:col-span-2">Description/);
+assert.match(source,/action=\{saveGroupReviewDetails\}/);
+assert.match(source,/Save Changes/);
+console.log("Edit Group compact layout regression passed");
