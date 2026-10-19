@@ -87,6 +87,8 @@ jobs:
         run: npm run policy-onboarding:life-health-native-regression
       - name: Sales Executive policy access regression
         run: node --experimental-strip-types scripts/sales-executive-policy-access-regression.mjs
+      - name: Claims Head least-privilege regression
+        run: node --experimental-strip-types scripts/claims-head-least-privilege-regression.mjs
       - name: Policy Intake Policy Register quick-link regression
         run: node scripts/policy-intake-policy-register-links-regression.mjs
       - name: Partner web core security regression
