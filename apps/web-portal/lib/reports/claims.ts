@@ -19,8 +19,8 @@ export type ClaimsRow={id:string;claim_no:string;status:string;service_mode:stri
 export async function loadClaimsReport(profile:ViewerProfile,query:ClaimsQuery,pageSize=25){
   const filters=resolveClaimsFilters(query);
   const [customerIds,scope]=await Promise.all([
-    getAccessibleCustomerIds(profile.id,profile.role,"view_reports"),
-    getEmployeeAccessScope(profile.id,profile.role,"view_reports")
+    getAccessibleCustomerIds(profile.id,profile.role,profile.role==="claims_head"?"view_claims":"view_reports"),
+    getEmployeeAccessScope(profile.id,profile.role,profile.role==="claims_head"?"view_claims":"view_reports")
   ]);
   if(customerIds!==null&&customerIds.length===0)return{report:emptyClaimsReport(filters.page),filters,scopeMode:scope.mode};
   const admin=createSupabaseAdminClient();
