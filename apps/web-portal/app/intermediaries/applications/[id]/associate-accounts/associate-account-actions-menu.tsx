@@ -162,10 +162,6 @@ export function AssociateAccountActionsMenu({
                 <button
                   type="button"
                   role="menuitem"
-                  onPointerDown={(event) => {
-                    // Apply the selection before browser focus/scroll can move a fixed menu.
-                    if (event.button === 0) showDialog("edit");
-                  }}
                   onClick={() => showDialog("edit")}
                   className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC]"
                 >
@@ -176,10 +172,6 @@ export function AssociateAccountActionsMenu({
                 <button
                   type="button"
                   role="menuitem"
-                  onPointerDown={(event) => {
-                    // Apply the selection before browser focus/scroll can move a fixed menu.
-                    if (event.button === 0) showDialog("status");
-                  }}
                   onClick={() => showDialog("status")}
                   className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC]"
                 >
@@ -190,10 +182,6 @@ export function AssociateAccountActionsMenu({
                 <button
                   type="button"
                   role="menuitem"
-                  onPointerDown={(event) => {
-                    // Apply the selection before browser focus/scroll can move a fixed menu.
-                    if (event.button === 0) showDialog("delete");
-                  }}
                   onClick={() => showDialog("delete")}
                   className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-rose-600 hover:bg-rose-50"
                 >
@@ -348,7 +336,6 @@ function ResendInviteButton({
   const { pending } = useFormStatus();
   const storageKey = `associate-resend-cooldown:${associateId}`;
   const [remaining, setRemaining] = useState(0);
-  const submittedByPointerRef = useRef(false);
 
   const recordResendAttempt = () => {
     const cooldownUntil = Date.now() + RESEND_COOLDOWN_SECONDS * 1000;
@@ -388,25 +375,12 @@ function ResendInviteButton({
       role="menuitem"
       disabled={disabled}
       title={title}
-      onPointerUp={(event) => {
-        if (disabled || event.button !== 0) return;
-        const target = document.elementFromPoint(event.clientX, event.clientY);
-        if (!target || !event.currentTarget.contains(target)) return;
-        // Submit before focus/scroll repositioning can cancel the subsequent click.
-        submittedByPointerRef.current = true;
-        recordResendAttempt();
-        event.currentTarget.form?.requestSubmit();
-      }}
       onClick={(event) => {
-        if (submittedByPointerRef.current) {
-          event.preventDefault();
-          submittedByPointerRef.current = false;
-          return;
-        }
         if (disabled) {
           event.preventDefault();
           return;
         }
+        // Let the native submit event complete before the menu is dismissed.
         recordResendAttempt();
       }}
       className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-40"
