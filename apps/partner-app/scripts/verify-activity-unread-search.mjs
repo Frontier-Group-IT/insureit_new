@@ -5,6 +5,7 @@ const read = (path) => fs.readFileSync(new URL(path, root), "utf8");
 
 const activity = read("app/activity.tsx");
 const screen = read("components/partner-screen.tsx");
+const policies = read("app/(tabs)/policies.tsx");
 const engagement = read("lib/engagement.ts");
 const migration = fs.readFileSync(
   new URL("../../../supabase/migrations/20261017150500_partner_activity_read_receipts.sql", import.meta.url),
@@ -34,6 +35,10 @@ expect(activity.includes("['all', 'All', counts.all]"), "Activity page includes 
 expect(activity.includes("markPartnerActivityRead(item)"), "Opening an unread activity marks it read");
 expect(screen.includes("homeHeroBellBadge"), "Partner header bell renders an unread badge");
 expect(screen.includes("unreadActivityCount > 99 ? '99+' : unreadActivityCount"), "Bell badge safely caps large counts");
+expect(policies.includes("getPartnerUnreadActivityCount(100)"), "Policies header loads persisted unread activity count");
+expect(policies.includes("useFocusEffect"), "Policies header refreshes unread count on focus");
+expect(policies.includes("unreadActivityCount > 99 ? \"99+\" : unreadActivityCount"), "Policies bell caps unread count at 99+");
+expect(policies.includes("styles.unreadBadge"), "Policies bell displays red unread badge");
 expect(!screen.includes("setBadgeCountAsync"), "Feature does not alter the OS application icon badge");
 
 if (!process.exitCode) console.log("Partner activity unread/search regression passed.");
