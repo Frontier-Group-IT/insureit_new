@@ -163,13 +163,17 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
     signedUrl: `/claim-documents/${document.id}/open`
   }));
   const policyDocument = claim.policy_id
-    ? (await admin.from("policy_documents").select("id,file_name").eq("policy_id", claim.policy_id).eq("document_type", "policy_copy").order("created_at", { ascending: false }).limit(1).maybeSingle<{ id: string; file_name: string }>()).data
+    ? (await admin.from("policy_documents").select("id,file_name,storage_bucket,storage_path").eq("policy_id", claim.policy_id).eq("document_type", "policy_copy").order("created_at", { ascending: false }).limit(1).maybeSingle<{ id: string; file_name: string; storage_bucket: string; storage_path: string }>()).data
     : externalPolicy
       ? (await admin.from("customer_documents").select("id,file_name").eq("customer_id", claim.customer_id).eq("external_policy_id", externalPolicy.id).eq("document_type", "policy_copy").order("created_at", { ascending: false }).limit(1).maybeSingle<{ id: string; file_name: string }>()).data
         ?? (externalPolicy.document_storage_path
           ? (await admin.from("customer_documents").select("id,file_name").eq("customer_id", claim.customer_id).eq("storage_path", externalPolicy.document_storage_path).eq("document_type", "policy_copy").maybeSingle<{ id: string; file_name: string }>()).data
           : null)
       : null;
+  const hasLinkedClaimPolicyCopy = Boolean(claim.policy_id && policyDocument && (documents??[]).some(document =>
+    document.storage_bucket === ("storage_bucket" in policyDocument ? policyDocument.storage_bucket : null)
+    && document.storage_path === ("storage_path" in policyDocument ? policyDocument.storage_path : null)
+  ));
   const policyCopy = policyDocument
     ? {
         fileName: policyDocument.file_name,
@@ -312,7 +316,7 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
           accidentAt={claim.accident_at}
           spotIntimationAt={effectiveClaimWithSpotIntimation.spotIntimationAt}
           spotDetails={effectiveSpotDetails}
-          spotContent={<SpotSurveyWorkspace claim={{ ...effectiveClaimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} showContext={false} showSpotDetails={false} />}
+          spotContent={<SpotSurveyWorkspace claim={{ ...effectiveClaimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} showContext={false} showSpotDetails={false} canReusePolicyCopy={Boolean(claim.policy_id && policyDocument && !hasLinkedClaimPolicyCopy && claim.policy_service_source !== "external")} />}
           claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} allowStageAdvance={canAdvanceClaimIntimation} />}
           initialStageKey={requestedStage}
           externalCustomerMilestones={externalCustomerMilestones?.map((milestone) => ({ key: milestone.milestone_key, status: milestone.milestone_status }))}

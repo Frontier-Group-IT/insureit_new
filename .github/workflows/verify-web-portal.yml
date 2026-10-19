@@ -63,6 +63,8 @@ jobs:
         run: node scripts/associate-actions-menu-interaction-regression.mjs
       - name: User Management viewport modal regression
         run: node scripts/user-management-modal-viewport-regression.mjs
+      - name: Claim linked policy copy reuse regression
+        run: node scripts/claim-policy-copy-reuse-regression.mjs
       - name: IT Group safe-delete regression
         run: node scripts/it-group-delete-regression.mjs
       - name: Edit Group compact layout regression

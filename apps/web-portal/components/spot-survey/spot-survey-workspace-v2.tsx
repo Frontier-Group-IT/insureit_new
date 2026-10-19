@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { BulkDocumentVerificationGroup, type BulkDocumentGroupItem } from "./bulk-document-verification-group";
+import { ReusePolicyCopyButton } from "./reuse-policy-copy-button";
 import { SurveyDoneButton } from "./survey-done-button";
 import { SurveyorDeputationForm } from "./surveyor-deputation-form";
 import { FinalizeInitialDocumentVerificationButton } from "./finalize-initial-document-verification-button";
@@ -86,7 +87,7 @@ export function SpotClaimHeader({ claim }: { claim: SpotSurveyClaim }) {
   return <InfoStrip claim={claim} />;
 }
 
-export function SpotSurveyWorkspace({ claim, documents, verifications = [], surveyorDetails = null, showContext = true, showSpotDetails = true }: { claim: SpotSurveyClaim; documents: SpotSurveyDocument[]; verifications?: SpotSurveyVerification[]; surveyorDetails?: SurveyorDetails | null; showContext?: boolean; showSpotDetails?: boolean }) {
+export function SpotSurveyWorkspace({ claim, documents, verifications = [], surveyorDetails = null, showContext = true, showSpotDetails = true, canReusePolicyCopy = false }: { claim: SpotSurveyClaim; documents: SpotSurveyDocument[]; verifications?: SpotSurveyVerification[]; surveyorDetails?: SurveyorDetails | null; showContext?: boolean; showSpotDetails?: boolean; canReusePolicyCopy?: boolean }) {
   const items = buildDocumentItems(documents);
   const unclassifiedAttachments = documents.filter(isUnclassifiedSpotAttachment);
   const verifiedCount = items.filter((item) => isItemVerified(item, verifications)).length;
@@ -110,7 +111,7 @@ export function SpotSurveyWorkspace({ claim, documents, verifications = [], surv
           </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((item) => <BulkDocumentVerificationGroup key={item.key} item={item} claim={claim} verifications={verifications} />)}
+          {items.map((item) => <div key={item.key} className="space-y-1.5"><BulkDocumentVerificationGroup item={item} claim={claim} verifications={verifications} />{item.key === "insurance" && canReusePolicyCopy ? <ReusePolicyCopyButton claimId={claim.id} /> : null}</div>)}
         </div>
         {allDocumentsVerified ? (
           claim.current_status === "Surveyor Appointed" ? <SurveyorAssignedNotice claimId={claim.id} details={surveyorDetails} /> :
