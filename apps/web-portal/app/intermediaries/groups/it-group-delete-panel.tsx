@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { AlertTriangle, ChevronDown, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { deleteUnlinkedGroup, getGroupDeletePartners, removePartnersBeforeGroupDelete } from "./it-group-delete-action";
+import { deleteUnlinkedGroup, archiveGroupAfterPartnerRemoval, getGroupDeletePartners, removePartnersBeforeGroupDelete } from "./it-group-delete-action";
 
 export function ItGroupDeletePanel({groups}:{groups:{id:string;name:string;code:string}[]}) {
   const router=useRouter();
@@ -31,6 +31,14 @@ export function ItGroupDeletePanel({groups}:{groups:{id:string;name:string;code:
       setMessage(result.message);
       const next=await getGroupDeletePartners(selected.id);
       if(next.ok){setPartners(next.partners);setChecked(true);}
+    });
+  };
+  const archiveWithHistory=()=>{
+    if(!selected || confirmText!==selected.name || pending || !checked || partners.length) return;
+    startTransition(async()=>{
+      const result=await archiveGroupAfterPartnerRemoval(selected.id);
+      setMessage(result.message);
+      if(result.ok){setSelectedId("");setConfirmText("");setChecked(false);router.refresh();}
     });
   };
   const confirm=()=>{
@@ -69,7 +77,11 @@ export function ItGroupDeletePanel({groups}:{groups:{id:string;name:string;code:
         <p className="text-[11px] text-amber-800">This unassigns partners; it does not delete the partner records. Membership history remains preserved.</p>
         <button type="button" disabled={pending||confirmText!==selected.name} onClick={removePartners} className="rounded-lg bg-amber-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">{pending?"Removing…":"Remove Partners from Group"}</button>
       </div>:null}
+      {selected&&checked&&!partners.length?<div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+        If permanent deletion fails because historical memberships or audit records must be retained, choose <strong>Archive Group — Preserve History</strong> instead. This removes the Group from the active register without deleting its historical records.
+      </div>:null}
       {message?<p role="status" className="text-xs text-slate-700">{message}</p>:null}
+      <button type="button" disabled={!selected||confirmText!==selected.name||pending||!checked||partners.length>0} onClick={archiveWithHistory} className="mr-2 mb-2 rounded-lg border border-amber-600 bg-white px-3 py-2 text-xs font-bold text-amber-800 disabled:opacity-40">{pending?"Checking…":"Archive Group — Preserve History"}</button>
       <button type="button" disabled={!selected||confirmText!==selected.name||pending||!checked||partners.length>0} onClick={confirm} className="inline-flex h-9 items-center gap-2 rounded-lg bg-red-600 px-4 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"><Trash2 className="h-4 w-4"/>{pending?"Checking…":"Permanently Delete Group"}</button>
     </div>:null}
   </section>;
