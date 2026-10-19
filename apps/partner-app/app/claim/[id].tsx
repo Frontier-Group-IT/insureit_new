@@ -41,7 +41,18 @@ export default function ClaimDetailScreen() {
     const items: TimelineItem[] = [{ key: 'created', title: 'Claim recorded', date: data.claim.created_at, kind: 'created' }];
     for (const item of data.status_history) items.push({ key: `status-${item.id}`, title: humanize(item.to_status || 'Status updated'), date: item.created_at, kind: 'status' });
     for (const item of data.stages) items.push({ key: `stage-${item.id}`, title: humanize(item.stage), date: item.created_at, kind: 'stage' });
-    return items.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    // A milestone can be recorded both as a status update and as a claim stage.
+    // Keep its latest occurrence in the UI; never modify audit/history records.
+    const uniqueMilestones = new Map<string, TimelineItem>();
+    for (const item of items) {
+      const normalized = item.title.trim().replace(/\\s+/g, ' ').toLocaleLowerCase('en');
+      const key = item.kind === 'created' ? '__claim_created__' : normalized;
+      const previous = uniqueMilestones.get(key);
+      if (!previous || new Date(item.date).getTime() >= new Date(previous.date).getTime()) {
+        uniqueMilestones.set(key, item);
+      }
+    }
+    return Array.from(uniqueMilestones.values()).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [data]);
 
   return (
