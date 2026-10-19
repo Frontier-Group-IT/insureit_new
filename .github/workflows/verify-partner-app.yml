@@ -51,6 +51,9 @@ jobs:
             exit 1
           fi
 
+      - name: Claim journey duplicate milestone regression
+        run: node apps/partner-app/scripts/verify-claim-journey-unique-milestones.mjs
+
       - name: Verify Partner release identity
         shell: bash
         run: |
