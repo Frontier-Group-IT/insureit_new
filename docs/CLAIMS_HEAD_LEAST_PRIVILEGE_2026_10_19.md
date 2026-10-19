@@ -29,3 +29,24 @@ Connected Supabase accounts exposed projects `ilzhsfqqjyppzzvfscmh` (has role/pe
 
 ## Rollback
 Revert branch commits or close draft PR. No database rollback required for current changes.
+
+
+## Production inspection (read-only, confirmed)
+Project: `ilzhsfqqjyppzzvfscmh`.
+- Zero `profiles.role = 'claims_head'` users.
+- Zero Claims Head role or employee override rows.
+- `can_update_claim_status()` supports the role by name if no effective deny.
+- `can_manage_claims_organization()` does NOT grant organization-wide editing to Claims Head by default: only IT Super User or explicit `manage_claims` organization override. This is a **blocker** before live claim edits.
+- No DB mutation performed.
+
+## Additional branch changes
+- General Tasks and shared Dashboard are no longer reachable through the Claims Head middleware route allowlist because neither is verified claims-only.
+- Claims Head-specific sidebar exposes only All Claims, Add Claim and Claims Reports, not Service Enquiries or general business reports.
+- Claims reporting queries use the same `view_claims` record scope for Claims Head; other roles retain prior report scope.
+- Claims-specific CSV export remains separately gated by `view_reports`. Verify response routes and report RPC before merge.
+
+## Remaining gate
+1. Design reviewable DB migration (not applied) to align `can_manage_claims_organization()`, claims RLS and scoped workflow permissions.
+2. Enforce claims-only authorization for APIs and any links outside protected route middleware. Audit claim mutation actions and related storage.
+3. Add role regression tests and run CI/typecheck. No checks verified at latest commit.
+4. Decide how to expose genuine Claims Tasks and a Claims Dashboard if required; general modules remain blocked.
