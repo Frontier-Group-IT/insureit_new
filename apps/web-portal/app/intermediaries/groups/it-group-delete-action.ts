@@ -20,3 +20,49 @@ export async function deleteUnlinkedGroup(groupId: string): Promise<{ok:boolean;
   revalidatePath("/intermediaries/groups");
   return {ok:true,message:"Group deleted successfully."};
 }
+
+export async function getGroupDeletePartners(groupId:string) {
+ const token=await getServerAccessToken();
+ const {profile}=await getAuthenticatedProfile(token);
+ if(!profile?.id || profile.role!=="it_super_user") return {ok:false,partners:[],message:"Only IT Super User can manage group deletion."};
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(groupId)) return {ok:false,partners:[],message:"Invalid group."};
+ const admin=createSupabaseAdminClient();
+ const {data:members,error}=await admin.from("intermediary_group_memberships").select("partner_id").eq("group_id",groupId).is("effective_to",null);
+ if(error) return {ok:false,partners:[],message:"Could not load group members."};
+ const ids=[...new Set((members??[]).map(m=>m.partner_id))];
+ if(!ids.length) return {ok:true,partners:[],message:""};
+ const {data:partners,error:partnerError}=await admin.from("partners").select("id,display_name,partner_code").in("id",ids);
+ if(partnerError) return {ok:false,partners:[],message:"Could not load partner names."};
+ return {ok:true,partners:ids.map(id=>({id,name:partners?.find(p=>p.id===id)?.display_name??id,code:partners?.find(p=>p.id===id)?.partner_code??""})),message:""};
+}
+
+export async function removePartnersBeforeGroupDelete(groupId:string,partnerIds:string[]) {
+ const token=await getServerAccessToken();
+ const {profile}=await getAuthenticatedProfile(token);
+ if(!profile?.id || profile.role!=="it_super_user") return {ok:false,message:"Only IT Super User can remove partners before group deletion."};
+ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+ if(!uuid.test(groupId)||!partnerIds.length||partnerIds.length>200||partnerIds.some(id=>!uuid.test(id))) return {ok:false,message:"Invalid group or partner selection."};
+ const admin=createSupabaseAdminClient();
+ const {data:active,error}=await admin.from("intermediary_group_memberships").select("partner_id").eq("group_id",groupId).is("effective_to",null);
+ if(error) return {ok:false,message:"Unable to verify the group's active partners."};
+ const activeSet=new Set((active??[]).map(r=>r.partner_id));
+ if(partnerIds.some(id=>!activeSet.has(id))) return {ok:false,message:"Partner selection changed. Refresh the list before removing partners."};
+ // Scope the change to this group. The legacy partner-ID-only RPC can close
+ // memberships in OTHER groups, so it must not be used here.
+ const {data:removed,error:removeError}=await admin.from("intermediary_group_memberships")
+   .update({
+     effective_to:new Date().toISOString(),
+     removed_by:profile.id,
+     change_reason:"Removed by IT Super User from selected Group",
+     updated_at:new Date().toISOString(),
+   })
+   .eq("group_id",groupId)
+   .in("partner_id",partnerIds)
+   .is("effective_to",null)
+   .select("id");
+ if(removeError) return {ok:false,message:"Could not remove partners. No group deletion was attempted."};
+ const count=removed?.length??0;
+ revalidatePath("/intermediaries/groups");
+ revalidatePath(`/intermediaries/groups/${groupId}`);
+ return {ok:true,message:`${count} partner membership(s) removed from this Group only. Partner accounts, other groups and historical memberships are preserved. Historical links may still block permanent Group deletion.`};
+}
