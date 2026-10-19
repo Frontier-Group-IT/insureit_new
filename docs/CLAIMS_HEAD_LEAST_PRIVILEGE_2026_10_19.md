@@ -55,3 +55,9 @@ Project: `ilzhsfqqjyppzzvfscmh`.
 - CI run 39243668789 failed TypeScript because Claims Head sidebar filtering inferred nullable navigation sections. Fix committed; rerun pending.
 - Added additive, reversible SQL migration `20261019170000_claims_head_organization_claim_updates.sql` to grant default organization-wide claim UPDATE via `can_manage_claims_organization()` only to Claims Head, preserving explicit employee and role overrides. Migration **NOT APPLIED** to production.
 - The migration is not authorization completeness: claims workflows, claim-stage RLS, direct API routes, task scoping, report exports and audit protection still require tests. Do not merge until all security regression gates pass.
+
+## Next safety iteration
+- Claims Head organization-wide employee scope is now restricted to `view_claims` and `manage_claims`, not unrelated capabilities; claim report loader explicitly passes `view_claims` for this role.
+- Added `apps/web-portal/scripts/claims-head-least-privilege-regression.mjs` and dedicated GitHub verification job step. Checks role baseline, V2 claim grants, route allowlist, sidebar, claim-only scope and reversible SQL contract.
+- Fixed TS2322 / TS2677 nullable navigation type inference using explicit `NavigationSection[]` accumulation. Prior CI failure documented; new run pending.
+- No live Claims Head profile currently exists, so real-user UAT must wait for an authorized test account. Do not create or assign one without approval.
