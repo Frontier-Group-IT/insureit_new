@@ -61,6 +61,8 @@ jobs:
         run: node scripts/exchange-it-visibility-regression.mjs
       - name: Associate Accounts portal menu interaction regression
         run: node scripts/associate-actions-menu-interaction-regression.mjs
+      - name: IT Group safe-delete regression
+        run: node scripts/it-group-delete-regression.mjs
       - name: Edit Group compact layout regression
         run: node scripts/group-edit-layout-regression.mjs
       - name: Group Associate Accounts security and UI regression
