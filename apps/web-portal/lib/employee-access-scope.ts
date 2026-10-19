@@ -6,6 +6,8 @@ import { cache } from "react";
 
 const organizationWideRoles: AppRole[] = [
   "super_admin", "admin", "it_super_user", "manager", "director", "sales_operations_head", "backoffice_executive", "accounts",
+  // Claims Head owns the organization-wide claim register and workflows; this does not grant access to non-claims modules.
+  "claims_head",
 ];
 const hierarchyRoles: AppRole[] = ["sales_head", "zonal_head", "asm", "sales_manager"];
 
