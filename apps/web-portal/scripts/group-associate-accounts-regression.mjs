@@ -44,6 +44,15 @@ assert.match(sections,/AssociateCreateForm/);
 assert.match(sections,/group_administrator_contacts/);
 assert.match(sections,/admin_name,admin_email,admin_mobile,address,city,state,postal_code/);
 assert.match(sections,/Group Administrator/);
+assert.match(sections,/portal_access_identities/);
+assert.match(sections,/\.eq\("entity_id",id\)/);
+assert.match(sections,/contactResult\.data \?\?/);
+assert.match(sections,/identityProfile\?\.full_name/);
+assert.match(sections,/const loadError=/);
+assert.match(sections,/Associate Accounts could not be loaded completely/);
+assert.match(sections,/!loadError \? <GroupAssociateCreateEntry/);
+assert.ok(sections.indexOf('{groupAdmin ? <tr') < sections.indexOf('(associates??[]).map'), "Group Administrator must render as first row");
+
 assert.match(sections,/Group profile/);
 assert.match(sections,/hasRegisterRecords/);
 assert.match(sections,/GroupAssociateCreateEntry/);
