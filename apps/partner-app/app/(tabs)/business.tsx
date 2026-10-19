@@ -352,7 +352,7 @@ export default function BusinessScreen() {
             <OverviewCard
               icon="premium"
               value={overview ? formatCompactCurrency(overview.net_premium) : mtdCurrent ? formatCompactCurrency(mtdCurrent.net_premium) : '—'}
-              label="Net Premium Generated"
+              label="Net Premium"
               changeLabel={overviewChangeLabel}
               compareLabel={overview ? 'vs previous period' : mtdLabel}
               onPress={() => router.push('/business-report')}
@@ -376,7 +376,7 @@ export default function BusinessScreen() {
                 : mtdCurrent && !mtdCurrent.commission_available ? 'Restricted'
                   : mtdChange(mtdCurrent?.commission_earned, mtdPrevious?.commission_earned)}
               compareLabel={overview ? optionLabel(OVERVIEW_OPTIONS, overviewRange) : mtdLabel}
-              onPress={() => router.push('/payout')}
+              onPress={() => router.push('/business-report')}
             />
             <OverviewCard
               icon="customers"
