@@ -5,8 +5,8 @@ import { roleCapabilities } from "../lib/roles.ts";
 import { roleMatrixV2 } from "../lib/access-control-role-matrix-v2.ts";
 
 const read = (file) => readFileSync(resolve(process.cwd(), file), "utf8");
-const expected = ["view_dashboard","view_claims","manage_claims","view_tasks","manage_tasks","view_reports","view_notifications"];
-assert.deepEqual(roleCapabilities.claims_head, expected, "Do not change legacy capability defaults without migration");
+const expected = ["view_claims","manage_claims","view_reports","view_notifications"];
+assert.deepEqual(roleCapabilities.claims_head, expected, "Claims Head must not inherit dashboard or unrelated task capabilities");
 const target = roleMatrixV2.find(r => r.code === "claims_head");
 assert.equal(target?.defaultScope, "organization");
 for (const name of ["claims.view","claims.edit","claims.verify_documents","claims.assign_surveyor","claims.change_stage"]) {
