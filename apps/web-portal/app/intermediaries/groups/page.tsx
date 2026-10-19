@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/shell";
+import { ItGroupDeletePanel } from "./it-group-delete-panel";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import {
   getIntermediaryGroupEmployeeScope,
@@ -228,6 +229,7 @@ async function renderBusinessWorkspace({
 
   return (
     <AppShell title="Intermediary Groups" backHref="/intermediaries">
+      {profile.role === "it_super_user" && !loadError ? <ItGroupDeletePanel groups={groups.map(g => ({id:g.id,name:g.group_name,code:g.group_code}))}/> : null}
       <BusinessGroupWorkspace
         groups={groups}
         partners={partners}
