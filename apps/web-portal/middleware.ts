@@ -10,6 +10,18 @@ type RefreshedSession = { access_token: string; refresh_token: string; expires_i
 const cookieOptions = { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/" };
 const accountsHome = "/accounts";
 const salesExecutiveHome = "/policies";
+const claimsHeadHome = "/claims";
+
+function isClaimsHeadPortalPath(pathname: string) {
+  // Restricted module routing is an additional boundary; server actions and RLS must still authorize the record.
+  return pathname === "/claims" || pathname.startsWith("/claims/") ||
+    pathname === "/claim-documents" || pathname.startsWith("/claim-documents/") ||
+    pathname === "/reports/claims" || pathname === "/reports/export/claims" ||
+    pathname === "/tasks" || pathname.startsWith("/tasks/") ||
+    pathname === "/notifications" || pathname.startsWith("/notifications/") ||
+    pathname === "/dashboard" || pathname === "/access-denied";
+}
+
 const canonicalPortalHost = "portal.insureit.in";
 
 function isSalesExecutivePortalPath(pathname: string) {
@@ -170,6 +182,7 @@ export async function middleware(request: NextRequest) {
     if (check.status === "customer") return redirect(request, "/customer/home", refreshedSession, check.role);
     if (check.status === "authorized" && check.role === "accounts") return redirect(request, accountsHome, refreshedSession, check.role);
     if (check.status === "authorized" && check.role === "sales_executive") return redirect(request, salesExecutiveHome, refreshedSession, check.role);
+    if (check.status === "authorized" && check.role === "claims_head") return redirect(request, claimsHeadHome, refreshedSession, check.role);
     return continueRequest(request, refreshedSession, check.role);
   }
 
@@ -178,6 +191,7 @@ export async function middleware(request: NextRequest) {
     if (check.status === "authorized") {
       if (check.role === "accounts") return redirect(request, accountsHome, refreshedSession, check.role);
       if (check.role === "sales_executive") return redirect(request, salesExecutiveHome, refreshedSession, check.role);
+      if (check.role === "claims_head") return redirect(request, claimsHeadHome, refreshedSession, check.role);
       return redirect(request, check.role === "intermediary" ? "/partner" : internalLaunchHome, refreshedSession, check.role);
     }
     if (check.status === "forbidden") return redirect(request, "/access-denied", refreshedSession, check.role);
@@ -217,6 +231,9 @@ export async function middleware(request: NextRequest) {
     }
     if (check.role === "sales_executive" && !isSalesExecutivePortalPath(pathname)) {
       return redirect(request, salesExecutiveHome, refreshedSession, check.role);
+    }
+    if (check.role === "claims_head" && !isClaimsHeadPortalPath(pathname)) {
+      return redirect(request, claimsHeadHome, refreshedSession, check.role);
     }
     if (check.role === "intermediary" && !pathname.startsWith("/partner") && !pathname.startsWith("/intermediary-portal")) {
       return redirect(request, "/partner", refreshedSession, check.role);
