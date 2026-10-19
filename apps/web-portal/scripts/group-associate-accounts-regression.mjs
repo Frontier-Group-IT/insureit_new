@@ -13,6 +13,7 @@ const sections=read("app/intermediaries/groups/[id]/associate-accounts/associate
 const routeContent=read("app/intermediaries/groups/[id]/associate-accounts/route-content.tsx");
 const sharedForm=read("app/intermediaries/groups/[id]/associate-accounts/associate-create-form.tsx");
 const createEntry=read("app/intermediaries/groups/[id]/associate-accounts/group-associate-create-entry.tsx");
+const groupTabs=read("app/intermediaries/groups/[id]/associate-accounts/group-register-tabs.tsx");
 const details=read("app/intermediaries/groups/[id]/page.tsx");
 const successFeedback=read("app/intermediaries/groups/[id]/group-success-feedback.tsx");
 const controls=read("app/intermediaries/groups/[id]/associate-accounts/associate-controls.tsx");
@@ -60,6 +61,10 @@ assert.match(sections,/GroupAssociateCreateEntry/);
 assert.match(sharedForm,/Save Details/);
 assert.match(sharedForm,/createGroupAssociate/);
 assert.match(createEntry,/No Result Found/);
+assert.match(groupTabs,/!partners\.length \? \(/);
+assert.match(groupTabs,/group-associate-no-results\.png/);
+assert.match(groupTabs,/No Partners have been assigned to this Group/);
+assert.doesNotMatch(groupTabs,/colSpan=\{7\}/);
 assert.match(createEntry,/Create Associate/);
 assert.match(sections,/AssociateControls/);
 assert.match(details,/GroupAssociateSections/);
