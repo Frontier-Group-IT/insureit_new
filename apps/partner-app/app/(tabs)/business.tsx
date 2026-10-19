@@ -218,8 +218,8 @@ export default function BusinessScreen() {
     : overviewPreset;
 
   const overviewChangeLabel = overview
-    ? changeText(Number(overview.premium_change_percent || 0), Number(overview.premium_previous_period || 0) > 0)
-    : mtdChange(mtdCurrent?.premium, mtdPrevious?.premium);
+    ? 'Net premium in selected range'
+    : mtdChange(mtdCurrent?.net_premium, mtdPrevious?.net_premium);
 
   const trendData: TrendPoint[] = useMemo(() => {
     if (!performance) return [];
@@ -351,8 +351,8 @@ export default function BusinessScreen() {
           <View style={[styles.overviewGrid, compactScreen && styles.tightContainer]}>
             <OverviewCard
               icon="premium"
-              value={overview ? formatCompactCurrency(overview.premium) : mtdCurrent ? formatCompactCurrency(mtdCurrent.premium) : '—'}
-              label="Premium Generated"
+              value={overview ? formatCompactCurrency(overview.net_premium) : mtdCurrent ? formatCompactCurrency(mtdCurrent.net_premium) : '—'}
+              label="Net Premium Generated"
               changeLabel={overviewChangeLabel}
               compareLabel={overview ? 'vs previous period' : mtdLabel}
               onPress={() => router.push('/business-report')}
@@ -370,13 +370,13 @@ export default function BusinessScreen() {
               value={overview
                 ? overview.commission_available ? formatCompactCurrency(overview.commission_earned ?? 0) : '—'
                 : mtdCurrent?.commission_available ? formatCompactCurrency(mtdCurrent.commission_earned ?? 0) : '—'}
-              label="Commission Earned"
+              label="Partner Payout"
               changeLabel={overview
                 ? (overview.commission_available ? 'Selected range' : 'Restricted')
                 : mtdCurrent && !mtdCurrent.commission_available ? 'Restricted'
                   : mtdChange(mtdCurrent?.commission_earned, mtdPrevious?.commission_earned)}
               compareLabel={overview ? optionLabel(OVERVIEW_OPTIONS, overviewRange) : mtdLabel}
-              onPress={() => router.push('/business-report')}
+              onPress={() => router.push('/payout')}
             />
             <OverviewCard
               icon="customers"
