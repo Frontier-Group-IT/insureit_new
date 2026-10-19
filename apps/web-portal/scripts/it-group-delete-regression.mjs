@@ -11,6 +11,13 @@ assert.match(panel,/IT SUPER USER ONLY/);
 assert.match(panel,/confirmText!==selected\.name/);
 assert.match(action,/profile\.role !== "it_super_user"/);
 assert.match(action,/it_delete_unlinked_intermediary_group/);
+assert.match(action,/getGroupDeletePartners/);
+assert.match(action,/removePartnersBeforeGroupDelete/);
+assert.match(action,/\.eq\("group_id",groupId\)\.is\("effective_to",null\)/);
+assert.match(action,/service_remove_intermediary_group_members/);
+assert.match(panel,/Remove Partners from Group/);
+assert.match(panel,/!checked\|\|partners\.length>0/);
+
 assert.match(sql,/auth\.role\(\) <> 'service_role'/);
 assert.match(sql,/from public\.intermediary_group_memberships/);
 assert.match(sql,/from public\.group_portal_associate_accounts/);
