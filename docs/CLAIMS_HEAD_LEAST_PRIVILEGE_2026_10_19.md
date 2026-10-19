@@ -50,3 +50,8 @@ Project: `ilzhsfqqjyppzzvfscmh`.
 2. Enforce claims-only authorization for APIs and any links outside protected route middleware. Audit claim mutation actions and related storage.
 3. Add role regression tests and run CI/typecheck. No checks verified at latest commit.
 4. Decide how to expose genuine Claims Tasks and a Claims Dashboard if required; general modules remain blocked.
+
+## 2026-10-19 follow-up
+- CI run 39243668789 failed TypeScript because Claims Head sidebar filtering inferred nullable navigation sections. Fix committed; rerun pending.
+- Added additive, reversible SQL migration `20261019170000_claims_head_organization_claim_updates.sql` to grant default organization-wide claim UPDATE via `can_manage_claims_organization()` only to Claims Head, preserving explicit employee and role overrides. Migration **NOT APPLIED** to production.
+- The migration is not authorization completeness: claims workflows, claim-stage RLS, direct API routes, task scoping, report exports and audit protection still require tests. Do not merge until all security regression gates pass.
