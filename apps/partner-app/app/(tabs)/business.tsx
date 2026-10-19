@@ -368,13 +368,12 @@ export default function BusinessScreen() {
             <OverviewCard
               icon="commission"
               value={overview
-                ? overview.commission_available ? formatCompactCurrency(overview.commission_earned ?? 0) : '—'
-                : mtdCurrent?.commission_available ? formatCompactCurrency(mtdCurrent.commission_earned ?? 0) : '—'}
-              label="Partner Payout"
+                ? overview.projected_retention != null ? formatCompactCurrency(overview.projected_retention) : '—'
+                : mtdCurrent?.projected_retention != null ? formatCompactCurrency(mtdCurrent.projected_retention) : '—'}
+              label="Projected Retention"
               changeLabel={overview
-                ? (overview.commission_available ? 'Selected range' : 'Restricted')
-                : mtdCurrent && !mtdCurrent.commission_available ? 'Restricted'
-                  : mtdChange(mtdCurrent?.commission_earned, mtdPrevious?.commission_earned)}
+                ? 'Selected range'
+                : mtdChange(mtdCurrent?.projected_retention, mtdPrevious?.projected_retention)}
               compareLabel={overview ? optionLabel(OVERVIEW_OPTIONS, overviewRange) : mtdLabel}
               onPress={() => router.push('/business-report')}
             />
