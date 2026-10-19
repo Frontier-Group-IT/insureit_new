@@ -10,14 +10,15 @@ const actions = readFileSync(fileURLToPath(new URL("actions.ts", base)), "utf8")
 assert.match(menu, /event\.composedPath\(\)/, "Outside handling must include portal event path");
 assert.match(menu, /document\.addEventListener\("pointerdown", closeOnOutsideClick\)/);
 for (const action of ["edit", "status", "delete"]) {
-  assert.ok(
-    menu.includes(`if (event.button === 0) showDialog("${action}")`),
-    `Missing pointer-first dialog activation: ${action}`
-  );
   assert.ok(menu.includes(`onClick={() => showDialog("${action}")}`),
-    `Missing keyboard click fallback: ${action}`);
+    `Missing completed-click action activation: ${action}`);
+  assert.ok(!menu.includes(`if (event.button === 0) showDialog("${action}")`),
+    `Premature pointerdown unmount could suppress click: ${action}`);
 }
-assert.match(menu, /onPointerUp=\{\(event\) => \{/);
-assert.ok(menu.includes("event.currentTarget.form?.requestSubmit()"),
-  "Resend must submit the existing form");
+assert.doesNotMatch(menu, /onPointerUp=\{\(event\) => \{/,
+  "Resend must not submit before native click completes");
+assert.doesNotMatch(menu, /event\.currentTarget\.form\?\.requestSubmit\(\)/,
+  "Resend must use its native form submission without duplicate requests");
+assert.match(menu, /<form action=\{resendPartnerAssociateInvite\}>/);
+assert.match(menu, /type="submit"/);
 console.log("Associate action menu interaction contract: OK");
