@@ -30,3 +30,9 @@ assert.match(sql,/from public\.portal_access_identities/);
 assert.match(sql,/revoke all on function/);
 assert.match(sql,/grant execute on function.*service_role/);
 console.log("IT Group safe-delete contract passed");
+
+assert.match(action,/archiveGroupAfterPartnerRemoval/);
+assert.match(action,/service_archive_intermediary_group/);
+assert.match(action,/\.eq\("status","active"\)/);
+assert.match(panel,/Archive Group — Preserve History/);
+assert.match(panel,/archiveWithHistory/);

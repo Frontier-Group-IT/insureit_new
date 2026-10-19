@@ -21,6 +21,31 @@ export async function deleteUnlinkedGroup(groupId: string): Promise<{ok:boolean;
   return {ok:true,message:"Group deleted successfully."};
 }
 
+/**
+ * Preserve historical foreign keys by archiving an empty group.
+ * This is not a physical deletion. It removes the group from the active register.
+ */
+export async function archiveGroupAfterPartnerRemoval(groupId:string):Promise<{ok:boolean;message:string}> {
+ const token=await getServerAccessToken();
+ const {profile}=await getAuthenticatedProfile(token);
+ if(!profile?.id||profile.role!=="it_super_user") return {ok:false,message:"Only IT Super User can remove a group from the active register."};
+ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+ if(!uuid.test(groupId)) return {ok:false,message:"Invalid group."};
+ const admin=createSupabaseAdminClient();
+ const {data:members,error:membersError}=await admin.from("intermediary_group_memberships").select("id").eq("group_id",groupId).is("effective_to",null).limit(1);
+ if(membersError) return {ok:false,message:"Could not verify the group's memberships."};
+ if(members?.length) return {ok:false,message:"Remove all active partners from this Group before proceeding."};
+ // Do not leave active access to an archived group.
+ const {data:identities,error:identityError}=await admin.from("portal_access_identities").select("id").eq("entity_type","group").eq("entity_id",groupId).eq("status","active").limit(1);
+ if(identityError) return {ok:false,message:"Could not verify Group login identities."};
+ if(identities?.length) return {ok:false,message:"Group has an active login identity. Deactivate or reassign the Group login before archiving."};
+ const {error}=await admin.rpc("service_archive_intermediary_group",{p_group_id:groupId,p_actor_profile_id:profile.id});
+ if(error) return {ok:false,message:"Could not archive Group. No partner, policy, claim or audit data was changed."};
+ revalidatePath("/intermediaries/groups");
+ revalidatePath(`/intermediaries/groups/${groupId}`);
+ return {ok:true,message:"Group archived and removed from active Group Register. Historical records remain preserved."};
+}
+
 export async function getGroupDeletePartners(groupId:string) {
  const token=await getServerAccessToken();
  const {profile}=await getAuthenticatedProfile(token);
