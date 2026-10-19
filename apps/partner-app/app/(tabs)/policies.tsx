@@ -1,5 +1,5 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   FlatList,
@@ -27,6 +27,7 @@ import {
 } from '@/lib/policies';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
+import { getPartnerUnreadActivityCount } from '@/lib/engagement';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { usePartnerPageQuery } from '@/lib/use-partner-page-query';
 import { usePartnerQuery } from '@/lib/use-partner-query';
@@ -53,6 +54,16 @@ export default function PoliciesScreen() {
   const [query, setQuery] = useState(savedPolicyQuery);
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+  const [unreadActivityCount, setUnreadActivityCount] = useState(0);
+
+  useFocusEffect(useCallback(() => {
+    let cancelled = false;
+    setUnreadActivityCount(0);
+    void getPartnerUnreadActivityCount(100)
+      .then((count) => { if (!cancelled) setUnreadActivityCount(count); })
+      .catch(() => { if (!cancelled) setUnreadActivityCount(0); });
+    return () => { cancelled = true; };
+  }, [cacheScopeKey]));
   const debouncedSearch = useDebouncedValue(query.trim(), 350);
 
   useEffect(() => { setVisibleLimit(PAGE_SIZE); }, [lifecycle, debouncedSearch]);
@@ -128,11 +139,12 @@ export default function PoliciesScreen() {
           <View style={styles.heroActions}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="View recent activity"
+              accessibilityLabel={unreadActivityCount ? `View recent activity, ${unreadActivityCount} unread` : "View recent activity"}
               onPress={() => router.push('/activity')}
               style={({ pressed }) => [styles.heroIconButton, pressed && styles.pressed]}
             >
               <Feather name="bell" size={20} color="#FFFFFF" />
+              {unreadActivityCount > 0 ? <View style={styles.unreadBadge}><Text style={styles.unreadBadgeText}>{unreadActivityCount > 99 ? "99+" : unreadActivityCount}</Text></View> : null}
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -459,6 +471,12 @@ const styles = StyleSheet.create({
   heroBrandInsureit: { color: '#FFFFFF', fontSize: 14, lineHeight: 16, fontWeight: '800', letterSpacing: -0.08 },
   heroBrandPartner: { color: '#F5AB2E', fontSize: 14, lineHeight: 16, fontWeight: '800', letterSpacing: -0.08 },
   heroActions: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  unreadBadge: {
+    position: 'absolute', top: -8, right: -9, minWidth: 21, height: 21,
+    paddingHorizontal: 4, borderRadius: 11, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#E53445', borderWidth: 1.5, borderColor: '#FFFFFF',
+  },
+  unreadBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '900' },
   heroIconButton: {
     width: 33,
     height: 33,
