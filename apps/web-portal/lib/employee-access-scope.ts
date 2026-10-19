@@ -6,8 +6,6 @@ import { cache } from "react";
 
 const organizationWideRoles: AppRole[] = [
   "super_admin", "admin", "it_super_user", "manager", "director", "sales_operations_head", "backoffice_executive", "accounts",
-  // Claims Head owns the organization-wide claim register and workflows; this does not grant access to non-claims modules.
-  "claims_head",
 ];
 const hierarchyRoles: AppRole[] = ["sales_head", "zonal_head", "asm", "sales_manager"];
 
@@ -34,7 +32,10 @@ export type EmployeeAccessScope = {
 
 export const getEmployeeAccessScope = cache(async (profileId: string, role: string | null | undefined, capability?: Capability): Promise<EmployeeAccessScope> => {
   const admin = createSupabaseAdminClient();
-  let requestedMode: EmployeeAccessScope["mode"] = organizationWideRoles.includes(role as AppRole)
+  // Claims Head receives organization-wide scope only for claim-specific capabilities.
+  // Other modules must not inherit a broad organization-level scope from the job title.
+  const claimsHeadClaimScope = role === "claims_head" && (capability === "view_claims" || capability === "manage_claims");
+  let requestedMode: EmployeeAccessScope["mode"] = claimsHeadClaimScope || organizationWideRoles.includes(role as AppRole)
     ? "organization"
     : hierarchyRoles.includes(role as AppRole)
       ? "hierarchy"
