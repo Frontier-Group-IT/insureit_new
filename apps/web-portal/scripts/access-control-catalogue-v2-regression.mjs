@@ -166,7 +166,7 @@ const applicationOnlyPermissionKeys = new Set([
 ]);
 const applicationOnlyRoleCodes = new Set(["accounts", "sales_executive", "it_user"]);
 const itUserShadowSql = readFileSync(
-  resolve(process.cwd(), "../../supabase/migrations/20261020231500_it_user_v2_shadow_role.sql"),
+  resolve(process.cwd(), "../../supabase/release-sql/20261020_it_user_v2_shadow_role_optional.sql"),
   "utf8",
 );
 if (!itUserShadowSql.includes("('it_user','IT User'") || !itUserShadowSql.includes("IT User operational role parity")) {
