@@ -35,7 +35,7 @@ export default function ClaimTrackerScreen() {
       <View style={styles.header}>
         <View style={styles.headerOrbLarge} />
         <View style={styles.headerOrbSmall} />
-        <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.back()} style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.back()} style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.8 }]}>
           <Ionicons name="arrow-back" size={21} color="#FFFFFF" />
         </Pressable>
         <View style={styles.headerIcon}><Image source={PartnerAssets.navigation.claims} style={styles.headerIconImage} resizeMode="contain" /></View>
