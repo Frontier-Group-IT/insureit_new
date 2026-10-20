@@ -48,6 +48,7 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
   const permissions = await getEffectivePermissionAccessMap(profile);
   if (accessRank[permissions.view_tasks ?? "none"] < accessRank.view) redirect("/dashboard");
   const canEdit = accessRank[permissions.view_tasks ?? "none"] >= accessRank.edit;
+  const rmScopeId = profile.role === "relationship_manager" ? profile.id : null;
 
   const supabase = await createServerSupabaseClient();
   const status = ["open", "in_progress", "resolved", "closed"].includes(params.status ?? "") ? params.status! : "";
@@ -65,6 +66,7 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
   // Server-side filters and exact counts avoid the previous 200-record cutoff.
   const countFor = async (types: string[], rowStatus?: string) => {
     let builder = supabase.from("service_enquiries").select("id", { count: "exact", head: true }).in("service_type", types);
+    if (rmScopeId) builder = builder.eq("assigned_to", rmScopeId);
     if (rowStatus) builder = builder.eq("status", rowStatus);
     const result = await builder;
     return result.count ?? 0;
@@ -89,6 +91,7 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
 
   const columns = "id,enquiry_no,service_type,source,customer_id,guest_name,guest_phone,guest_email,vehicle_no,claim_id,category,priority,subject,description,details,status,consent_accepted,consent_accepted_at,consent_version,whatsapp_opt_in,created_at,customers(contact_name,phone,email,customer_code),vehicles(vehicle_no)";
   let builder = supabase.from("service_enquiries").select(columns, { count: "exact" }).in("service_type", selectedServiceTypes);
+  if (rmScopeId) builder = builder.eq("assigned_to", rmScopeId);
   if (status) builder = builder.eq("status", status);
   if (query) {
     const safe = query.replace(/[%,().]/g, " ").trim();
