@@ -14,13 +14,11 @@ export async function resetUserTemporaryPassword(
   const fail = (message: string): PasswordResetState => ({ ok: false, message, temporaryPassword: null });
   const { profile } = await getAuthenticatedProfile(await getServerAccessToken());
   if (!profile || profile.role !== "it_super_user" || !profile.is_active) return fail("Only an active IT Super User can reset passwords.");
-  if (targetUserId === profile.id) return fail("Use your own password recovery flow for your account.");
+
   if (formData.get("confirm") !== "RESET") return fail("Enter RESET to confirm the credential change.");
   const supabase = createSupabaseAdminClient();
-  const { data: target, error: lookupError } = await supabase.from("profiles")
-    .select("id, role, is_active").eq("id", targetUserId).maybeSingle();
-  if (lookupError || !target) return fail("Target portal account not found.");
-  if (target.role === "it_super_user") return fail("IT Super User passwords cannot be reset from another user account.");
+  const { data: target, error: lookupError } = await supabase.auth.admin.getUserById(targetUserId);
+  if (lookupError || !target.user) return fail("Auth account not found.");
 
   // A unique, unpredictable temporary credential prevents cross-account access
   // inherent in a universal shared password.
