@@ -70,7 +70,7 @@ export default async function DashboardV2Page({ searchParams }: { searchParams: 
 
   const [data, business] = await Promise.all([
     getDashboardCurrentData(profile, access, base),
-    getDashboardBusinessData(profile, query, commercial, accountsCapability && commercial),
+    getDashboardBusinessData(profile, query, commercial, profile?.role !== "relationship_manager" && accountsCapability && commercial),
   ]);
 
   return (
