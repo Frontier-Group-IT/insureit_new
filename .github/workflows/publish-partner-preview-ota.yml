@@ -6,7 +6,12 @@ on:
     branches:
       - main
     paths:
-      - 'apps/partner-app/.trigger-preview-ota'
+      - 'apps/partner-app/**'
+      - '.github/workflows/publish-partner-preview-ota.yml'
+
+concurrency:
+  group: publish-partner-preview-ota
+  cancel-in-progress: false
 
 permissions:
   contents: read
