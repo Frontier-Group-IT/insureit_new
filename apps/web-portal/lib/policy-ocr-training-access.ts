@@ -7,7 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export async function requirePolicyOcrTrainingOperator() {
   const { profile } = await getAuthenticatedProfile(await getServerAccessToken());
-  if (!profile?.id || profile.role !== "it_super_user") redirect("/access-denied");
+  if (!profile?.id || !["it_super_user","it_user"].includes(profile.role)) redirect("/access-denied");
 
   const [canReview, canApprove] = await Promise.all([
     hasEffectiveCapability(profile, "review_policy_ocr_training", "edit"),
@@ -22,7 +22,7 @@ export async function requirePolicyOcrTrainingViewer() {
   const { profile } = await getAuthenticatedProfile(await getServerAccessToken());
   if (!profile?.id || profile.is_active === false) redirect("/access-denied");
 
-  const isOperator = profile.role === "it_super_user" && (await Promise.all([
+  const isOperator = ["it_super_user","it_user"].includes(profile.role) && (await Promise.all([
     hasEffectiveCapability(profile, "review_policy_ocr_training", "edit"),
     hasEffectiveCapability(profile, "approve_policy_ocr_training", "approve"),
   ])).some(Boolean);
