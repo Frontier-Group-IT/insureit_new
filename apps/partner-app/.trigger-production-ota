@@ -1,3 +1,3 @@
 Partner production OTA trigger
-commit=6484f8659402f6f825cf451fb2529c7cb121cf1d
-reason=restore-original-claim-details-header-pr-3266
+commit=9db9ccfe5106fdd0e1e204467850bb7edd1d6bf6
+reason=partner-claim-stages-two-three-pr-3270
