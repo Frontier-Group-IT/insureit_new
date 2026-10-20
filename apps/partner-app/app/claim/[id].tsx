@@ -1,263 +1,90 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Image, type ImageSourcePropType, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import { getPartnerClaimDetail, type PartnerClaimDetail } from '@/lib/claims';
-import { formatIndianCurrency } from '@/lib/format';
 import { PartnerAssets } from '@/lib/partner-assets';
+import { PartnerStateView } from '@/components/ui/partner-state-view';
+import { CLAIM_STAGES, getClaimTrackerState, formatClaimDate } from '@/lib/claim-tracker';
 
-type TimelineItem = { key: string; title: string; date: string; kind: 'created' | 'status' | 'stage' };
-type OverviewIcon = keyof typeof Ionicons.glyphMap;
-
-export default function ClaimDetailScreen() {
+export default function ClaimTrackerScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [data, setData] = useState<PartnerClaimDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [overviewExpanded, setOverviewExpanded] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(true);
+  const [journeyOpen, setJourneyOpen] = useState(true);
+  const [documentsOpen, setDocumentsOpen] = useState(false);
 
   const load = useCallback(async () => {
-    if (!id) return;
+    if (!id) { setError('Claim ID is missing.'); setLoading(false); return; }
     setLoading(true);
-    setError('');
-    try {
-      setData(await getPartnerClaimDetail(id));
-    } catch {
-      setError('This claim could not be loaded in your Partner scope.');
-    } finally {
-      setLoading(false);
-    }
+    try { setData(await getPartnerClaimDetail(id)); setError(''); }
+    catch { setError('This claim could not be loaded in your Partner scope.'); }
+    finally { setLoading(false); }
   }, [id]);
-
   useEffect(() => { void load(); }, [load]);
 
-  const timeline = useMemo<TimelineItem[]>(() => {
-    if (!data) return [];
-    const items: TimelineItem[] = [{ key: 'created', title: 'Claim recorded', date: data.claim.created_at, kind: 'created' }];
-    for (const item of data.status_history) items.push({ key: `status-${item.id}`, title: humanize(item.to_status || 'Status updated'), date: item.created_at, kind: 'status' });
-    for (const item of data.stages) items.push({ key: `stage-${item.id}`, title: humanize(item.stage), date: item.created_at, kind: 'stage' });
-    // Status history and stage rows often represent the same milestone.
-    // Keep the earliest occurrence of each named milestone; preserve raw history.
-    const seen = new Set<string>();
-    return items
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .filter((item) => {
-        if (item.kind === 'created') return true;
-        const key = item.title.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en');
-        if (!key || seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-  }, [data]);
-
+  const tracker = data ? getClaimTrackerState(data) : null;
+  const openStage = (key: string) => router.push({ pathname: '/claim/stage', params: { id, key } } as never);
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <View style={styles.headerOrbLarge} />
-        <View style={styles.headerOrbSmall} />
-        <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.back()} style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
-          <Ionicons name="arrow-back" size={21} color="#FFFFFF" />
-        </Pressable>
-        <View style={styles.headerIcon}><Image source={PartnerAssets.navigation.claims} style={styles.headerIconImage} resizeMode="contain" /></View>
-        <View style={styles.headerCopy}><Text style={styles.headerTitle}>Claim Details</Text></View>
+        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Back" style={styles.back}><Ionicons name="chevron-back" size={23} color="#FFF" /></Pressable>
+        <View style={styles.brand}><Ionicons name="shield-checkmark-outline" size={26} color="#FFF" /><View><Text style={styles.brandName}>insureit</Text><Text style={styles.brandTag}>YOUR SAFETY, OUR PROMISE</Text></View></View>
+        <Pressable accessibilityRole="button" accessibilityLabel="Notifications" onPress={() => router.push('/activity' as never)} style={styles.bell}><Ionicons name="notifications-outline" size={22} color="#FFF" /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Profile" onPress={() => router.push('/profile' as never)} style={styles.avatar}><Ionicons name="person-outline" size={19} color="#FFF" /></Pressable>
       </View>
-
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {loading ? (
-          <View style={styles.stateWrap}><PartnerStateView state="loading" title="Loading claim journey" /></View>
-        ) : error || !data ? (
-          <View style={styles.stateWrap}><PartnerStateView state="error" title="Claim unavailable" message={error || 'This claim could not be loaded.'} actionLabel="Try again" onAction={() => void load()} /></View>
-        ) : (
-          <>
-            <View style={[styles.card, styles.statusCard]}>
-              <View style={styles.statusTopRow}>
-                <View style={styles.statusIconWrap}>
-                  <Image source={getPartnerManufacturerLogoSource(data.vehicle.make) ?? claimHeroArtwork(data.claim.current_status)} style={styles.statusArtwork} resizeMode="contain" />
-                </View>
-                <View style={styles.statusCopy}>
-                  <Text numberOfLines={1} style={styles.statusTitle}>{data.customer.name}</Text>
-                  <Text numberOfLines={1} style={styles.statusMeta}>Control No. {data.claim.claim_no || 'Not recorded'}</Text>
-                </View>
-                <View style={[styles.activeChip, isCompletedClaimStatus(data.claim.current_status) && styles.completeChip]}>
-                  <Text style={[styles.activeChipText, isCompletedClaimStatus(data.claim.current_status) && styles.completeChipText]}>
-                    {humanize(data.claim.current_status || 'Status not recorded')}
-                  </Text>
-                </View>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        <Text style={styles.title}>Claim Tracker</Text>
+        {loading ? <PartnerStateView state="loading" title="Loading claim tracker" /> : error || !data || !tracker
+          ? <PartnerStateView state="error" title="Claim unavailable" message={error || 'Please retry.'} actionLabel="Retry" onAction={() => void load()} />
+          : <>
+            <View style={styles.hero}>
+              <View style={styles.heroTop}>
+                <View style={styles.logo}><Image source={getPartnerManufacturerLogoSource(data.vehicle.make) ?? PartnerAssets.navigation.claims} style={styles.logoImage} resizeMode="contain" /></View>
+                <View style={styles.heroMain}><Text style={styles.stageEyebrow}>{tracker.current.label}</Text><Text numberOfLines={1} style={styles.vehicle}>{data.vehicle.vehicle_no || 'Vehicle not recorded'}</Text><Text style={styles.heroControl}>{data.claim.claim_no || 'Control number pending'}</Text></View>
+                <View style={styles.ring}><Text style={styles.ringText}>{tracker.progress}%</Text></View>
               </View>
-              <View style={styles.statusFooter}>
-                <View style={styles.summaryMetaRow}>
-                  <View style={styles.summaryMetaCard}>
-                    <View style={styles.summaryMetaIcon}><Ionicons name="construct-outline" size={14} color="#2574E8" /></View>
-                    <Text numberOfLines={1} style={styles.summaryMetaValue}>{humanize(data.claim.claim_service_mode || 'service mode not recorded')}</Text>
-                  </View>
-                  <View style={styles.summaryMetaCard}>
-                    <View style={styles.summaryMetaIcon}><Ionicons name="car-sport-outline" size={14} color="#2574E8" /></View>
-                    <Text numberOfLines={1} style={styles.summaryMetaValue}>{data.vehicle.vehicle_no || 'Vehicle not recorded'}</Text>
-                  </View>
-                </View>
-              </View>
+              <View style={styles.heroDivider}/>
+              <View style={styles.heroMiddle}><View><Text style={styles.heroMinor}>INCIDENT</Text><Text style={styles.heroDate}>{formatClaimDate(data.claim.accident_at)}</Text></View><Pressable accessibilityRole="button" accessibilityState={{ expanded: detailsOpen }} onPress={() => setDetailsOpen(v => !v)} style={styles.toggle}><Text style={styles.toggleText}>Claim details</Text><Ionicons name={detailsOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#FFF"/></Pressable></View>
+              {detailsOpen && <View style={styles.details}>
+                <Field label="Control No." value={data.claim.claim_no}/>
+                <Field label="Claim No." value={data.claim.insurer_claim_no}/>
+                <Field label="Manufacturer" value={data.vehicle.make}/>
+                <Field label="Insured Person" value={data.customer.name}/>
+                <Field label="Policy" value={data.policy.policy_no}/>
+                <Field label="Insurer" value={data.insurer.name}/>
+                <Field label="Service Mode" value={data.claim.claim_service_mode?.replaceAll('_', ' ')}/>
+                <Field label="Current Status" value={data.claim.current_status}/>
+                <Field label="Accident Location" value={data.claim.accident_location}/>
+                <Field label="Assistance" value={data.claim.assistance_status?.replaceAll('_', ' ')}/>
+              </View>}
             </View>
-
-            <View style={styles.card}>
-              <View style={styles.sectionTitleRow}>
-                <ReferenceSectionIcon name="people" />
-                <Text style={styles.sectionTitle}>Insured Person</Text>
-              </View>
-              <Pressable accessibilityRole="button" accessibilityLabel={`Open customer ${data.customer.name}`} onPress={() => router.push(`/customer/${data.customer.id}` as never)} style={({ pressed }) => [styles.personRow, pressed && styles.pressed]}>
-                <View style={styles.personAvatar}><Ionicons name="person-outline" size={22} color="#176FD1" /></View>
-                <View style={styles.personCopy}>
-                  <Text style={styles.personName}>{data.customer.name}</Text>
-                  <Text style={styles.personMeta}>{data.vehicle.vehicle_no || data.policy.policy_no || 'Customer record'}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color="#7C8CA5" />
-              </Pressable>
+            <View style={styles.panel}>
+              <Pressable accessibilityRole="button" accessibilityState={{ expanded: journeyOpen }} onPress={() => setJourneyOpen(v => !v)} style={styles.panelHeader}><Ionicons name="git-branch-outline" color="#12336C" size={24}/><View style={styles.panelCopy}><Text style={styles.panelTitle}>Claim Journey</Text><Text style={styles.panelSubtitle}>{tracker.progress}% complete • {tracker.current.label}</Text></View><Ionicons name={journeyOpen ? 'chevron-up' : 'chevron-down'} color="#526987" size={17}/></Pressable>
+              {journeyOpen && <View style={styles.stageList}>{CLAIM_STAGES.map((stage, index) => {const done=index<tracker.index, current=index===tracker.index;return <Pressable key={stage.key} accessibilityRole="button" accessibilityLabel={`Open ${stage.label} details`} onPress={() => openStage(stage.key)} style={[styles.stageRow,current && styles.currentRow]}><View style={styles.rail}><View style={[styles.dot,done && styles.doneDot,current && styles.currentDot]}>{done ? <Ionicons name="checkmark" size={10} color="#FFF"/> : current ? <View style={styles.innerDot}/> : <Ionicons name="eye-outline" size={11} color="#A8B2C1"/>}</View>{index<8 && <View style={styles.line}/>}</View><View style={styles.stageCopy}><Text style={styles.stageName}>{stage.label}</Text><Text style={[styles.stageStatus,current && styles.currentStatus]}>{done ? 'Completed' : current ? tracker.substage : 'Upcoming'}</Text></View><Ionicons name="chevron-forward" color="#607C9E" size={16}/></Pressable>})}</View>}
             </View>
-
-            <View style={styles.card}>
-              <View style={styles.sectionTitleRow}>
-                <ReferenceSectionIcon name="clipboard" />
-                <Text style={styles.sectionTitle}>Claim Overview</Text>
-                <View style={styles.sectionSpacer} />
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={overviewExpanded ? 'Show fewer claim overview details' : 'View all claim overview details'}
-                  accessibilityState={{ expanded: overviewExpanded }}
-                  onPress={() => setOverviewExpanded((value) => !value)}
-                  style={({ pressed }) => [styles.viewAllButton, pressed && styles.pressed]}
-                >
-                  <Text style={styles.viewAll}>{overviewExpanded ? 'Show Less' : 'View All'}</Text>
-                  <Ionicons name={overviewExpanded ? 'chevron-up' : 'chevron-forward'} size={13} color="#5538ED" />
-                </Pressable>
-              </View>
-              <View style={styles.overviewGrid}>
-                <OverviewTile icon="document-text" label="Insurer Claim No." value={data.claim.insurer_claim_no || 'Not recorded'} />
-                <OverviewTile icon="shield-checkmark" label="Policy" value={data.policy.policy_no || 'External policy'} />
-                <OverviewTile icon="calendar" label="Accident Date" value={formatDateTime(data.claim.accident_at)} />
-                <OverviewTile icon="location" label="Location" value={data.claim.accident_location || 'Not recorded'} />
-                <OverviewTile icon="headset" label="Assistance" value={humanize(data.claim.assistance_status || 'not requested')} />
-                <OverviewTile icon="time" label="Last Updated" value={formatDateTime(data.claim.updated_at)} />
-                {overviewExpanded ? (
-                  <>
-                    <OverviewTile icon="checkmark-done-circle" label="Claim No." value={data.claim.claim_no || 'Not recorded'} />
-                    <OverviewTile icon="construct" label="Service Mode" value={humanize(data.claim.claim_service_mode || 'not recorded')} />
-                    <OverviewTile icon="car-sport" label="Vehicle" value={data.vehicle.vehicle_no || 'Not recorded'} />
-                    <OverviewTile icon="business" label="Insurer" value={data.insurer.name || 'Not recorded'} />
-                  </>
-                ) : null}
-              </View>
-            </View>
-
-            <View style={styles.card}>
-              <View style={styles.sectionTitleRow}><SectionIcon asset={PartnerAssets.actions.payoutRefresh} /><Text style={styles.sectionTitle}>Financial Snapshot</Text></View>
-              <View style={styles.amountRow}><Amount label="Estimated Loss" value={data.claim.estimated_loss} /><Amount label="Approved" value={data.claim.approved_amount} highlighted /><Amount label="Settled" value={data.claim.settlement_amount} /></View>
-            </View>
-
-            <View style={styles.card}>
-              <View style={styles.sectionTitleRow}><SectionIcon asset={PartnerAssets.status.journey} /><View><Text style={styles.sectionTitle}>Journey</Text><Text style={styles.sectionMeta}>{timeline.length} recorded events</Text></View></View>
-              {timeline.length ? (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.journeyScroll}>
-                  {timeline.map((item, index) => (
-                    <View key={item.key} style={styles.journeyStep}>
-                      <View style={styles.journeyRailRow}><View style={[styles.journeyDot, index === timeline.length - 1 && styles.journeyDotLatest]} />{index < timeline.length - 1 ? <View style={styles.journeyConnector} /> : null}</View>
-                      <View style={styles.journeyEventCard}>
-                        <View style={[styles.journeyIconWrap, index === timeline.length - 1 && styles.journeyIconLatest]}>
-                          <Ionicons name={timelineIcon(item)} size={18} color={index === timeline.length - 1 ? '#6541F4' : '#176FD1'} />
-                        </View>
-                        <Text style={styles.journeyDate}>{formatDateTime(item.date)}</Text>
-                        <Text style={styles.journeyTitle}>{item.title}</Text>
-                        <Text style={styles.journeyKind}>{item.kind === 'status' ? 'Status update' : item.kind === 'stage' ? 'Claim stage' : 'Claim created'}</Text>
-                      </View>
-                    </View>
-                  ))}
-                </ScrollView>
-              ) : <Text style={styles.emptyJourney}>Recorded claim stages and status updates will appear here.</Text>}
-            </View>
-          </>
-        )}
+            <View style={styles.panel}><Pressable accessibilityRole="button" accessibilityState={{ expanded: documentsOpen }} onPress={() => setDocumentsOpen(v => !v)} style={styles.panelHeader}><Image source={PartnerAssets.navigation.claims} resizeMode="contain" style={styles.documentsIcon}/><View style={styles.panelCopy}><Text style={styles.panelTitle}>Documents</Text><Text style={styles.panelSubtitle}>Claim documents</Text></View><Ionicons name={documentsOpen ? 'chevron-up' : 'chevron-down'} size={18} color="#526987"/></Pressable>{documentsOpen && <View style={styles.documentBody}><Text style={styles.documentNote}>Document inventory is not available in the current Partner claim-detail service. No documents have been changed.</Text></View>}</View>
+          </>}
       </ScrollView>
-
-      <View style={styles.bottomNav}>
-        <NavItem icon="home-outline" label="Home" onPress={() => router.push('/(tabs)' as never)} />
-        <NavItem icon="briefcase-outline" label="Business" onPress={() => router.push('/(tabs)/business' as never)} />
-        <NavItem icon="document-text-outline" label="Policies" onPress={() => router.push('/(tabs)/policies' as never)} />
-        <NavItem icon="shield-checkmark" label="Claims" active onPress={() => router.push('/(tabs)/claims' as never)} />
-        <NavItem icon="grid-outline" label="More" onPress={() => router.push('/(tabs)/more' as never)} />
+      <View style={styles.nav}>
+        <Nav label="Home" icon="home" onPress={() => router.push('/(tabs)' as never)}/>
+        <Nav label="Business" icon="briefcase-outline" onPress={() => router.push('/(tabs)/business' as never)}/>
+        <Nav label="Policies" icon="document-text-outline" onPress={() => router.push('/(tabs)/policies' as never)}/>
+        <Nav label="Claims" icon="shield-checkmark" active onPress={() => router.push('/(tabs)/claims' as never)}/>
+        <Nav label="More" icon="grid-outline" onPress={() => router.push('/(tabs)/more' as never)}/>
       </View>
     </SafeAreaView>
   );
 }
-
-function ReferenceSectionIcon({ name }: { name: 'people' | 'clipboard' }) {
-  return <View style={styles.sectionTitleIcon}><Ionicons name={name} size={18} color="#176FD1" /></View>;
-}
-
-function SectionIcon({ asset }: { asset: ImageSourcePropType }) {
-  return <View style={styles.sectionTitleIcon}><Image source={asset} style={styles.sectionTitleImage} resizeMode="contain" /></View>;
-}
-
-function OverviewTile({ icon, label, value }: { icon: OverviewIcon; label: string; value: string }) {
-  return <View style={styles.overviewTile}><View style={styles.overviewIcon}><Ionicons name={icon} size={17} color="#176FD1" /></View><View style={styles.overviewCopy}><Text style={styles.overviewLabel}>{label}</Text><Text style={styles.overviewValue}>{value}</Text></View></View>;
-}
-
-function Amount({ label, value, highlighted = false }: { label: string; value: number | string | null; highlighted?: boolean }) {
-  return <View style={[styles.amount, highlighted && styles.amountHighlighted]}><Text style={styles.amountValue}>{value == null ? '—' : formatIndianCurrency(value)}</Text><Text style={styles.amountLabel}>{label}</Text></View>;
-}
-
-function NavItem({ icon, label, active = false, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; active?: boolean; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [styles.navItem, pressed && styles.pressed]}><View style={[styles.navIconWrap, active && styles.navIconWrapActive]}><Ionicons name={icon} size={19} color={active ? '#633DF1' : '#6C7D97'} /></View><Text style={[styles.navLabel, active && styles.navLabelActive]}>{label}</Text></Pressable>;
-}
-
-function timelineIcon(item: TimelineItem): keyof typeof Ionicons.glyphMap {
-  const normalized = item.title.toLowerCase();
-  if (item.kind === 'created') return 'document-text-outline';
-  if (normalized.includes('surveyor') || normalized.includes('appointed') || normalized.includes('assigned')) return 'person-add-outline';
-  if (normalized.includes('document') || normalized.includes('upload') || normalized.includes('submitted')) return 'cloud-upload-outline';
-  if (normalized.includes('approve') || normalized.includes('verified')) return 'checkmark-circle-outline';
-  if (normalized.includes('settled') || normalized.includes('complete') || normalized.includes('closed')) return 'shield-checkmark-outline';
-  if (normalized.includes('payment') || normalized.includes('amount')) return 'wallet-outline';
-  if (normalized.includes('inspection') || normalized.includes('survey')) return 'search-outline';
-  return item.kind === 'stage' ? 'git-branch-outline' : 'refresh-circle-outline';
-}
-
-function claimHeroArtwork(value: string | null): ImageSourcePropType {
-  const normalized = (value || '').toLowerCase();
-  if (normalized.includes('complete') || normalized.includes('settled') || normalized.includes('closed')) return PartnerAssets.status.verified;
-  if (normalized.includes('pending') || normalized.includes('attention')) return PartnerAssets.status.claimAttention;
-  return PartnerAssets.navigation.claims;
-}
-
-function isCompletedClaimStatus(value: string | null) {
-  return (value || '').trim().toLowerCase().includes('complete');
-}
-
-function humanize(value: string) { return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()); }
-function formatDateTime(value: string | null) { if (!value) return 'Not recorded'; const date = new Date(value); if (Number.isNaN(date.getTime())) return value; return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: '2-digit', hour: 'numeric', minute: '2-digit' }).format(date); }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F5F7FB' },
-  header: { height: 50, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', backgroundColor: '#0860C8' },
-  headerOrbLarge: { position: 'absolute', right: -40, top: -45, width: 150, height: 120, borderRadius: 80, backgroundColor: '#0C74DF', opacity: 0.9 },
-  headerOrbSmall: { position: 'absolute', right: 48, top: -18, width: 70, height: 70, borderRadius: 35, backgroundColor: '#0A68D3', opacity: 0.75 },
-  backButton: { width: 32, height: 36, alignItems: 'center', justifyContent: 'center', marginRight: 5 },
-  headerIcon: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: 'rgba(255,255,255,0.18)' },
-  headerIconImage: { width: 22, height: 22 },
-  headerCopy: { flex: 1, justifyContent: 'center' }, headerTitle: { color: '#FFFFFF', fontSize: 15, lineHeight: 18, fontWeight: '800' },
-  scroll: { flex: 1 }, content: { paddingHorizontal: 10, paddingTop: 8, paddingBottom: 12, gap: 8 }, stateWrap: { paddingTop: 24 },
-  card: { borderRadius: 12, padding: 10, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E4E9F2' }, statusCard: { paddingTop: 9, paddingBottom: 8 },
-  statusTopRow: { flexDirection: 'row', alignItems: 'center' }, statusIconWrap: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: '#F1F4FF' }, statusArtwork: { width: 31, height: 31 },
-  statusCopy: { flex: 1, minWidth: 0 }, statusTitle: { color: '#1A2B45', fontSize: 15, lineHeight: 19, fontWeight: '800' },
-  activeChip: { alignSelf: 'flex-start', borderRadius: 9, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: '#EEF6FF' }, activeChipText: { color: '#3677BE', fontSize: 8, lineHeight: 10, fontWeight: '700' }, completeChip: { backgroundColor: '#EAF8EF' }, completeChipText: { color: '#238A4A' }, statusMeta: { marginTop: 2, color: '#7A879A', fontSize: 9, lineHeight: 12 },
-  statusFooter: { marginTop: 7, paddingTop: 6, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDF0F5' }, statusFooterText: { color: '#687A94', fontSize: 9, lineHeight: 12 }, summaryMetaRow: { marginTop: 6, flexDirection: 'row', gap: 6 }, summaryMetaCard: { flex: 1, minWidth: 0, minHeight: 32, paddingHorizontal: 7, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F8FAFD', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E5EAF2' }, summaryMetaIcon: { width: 24, height: 24, borderRadius: 7, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EDF6FF' }, summaryMetaValue: { flex: 1, color: '#52647F', fontSize: 9, lineHeight: 12, fontWeight: '600' },
-  sectionTitleRow: { minHeight: 24, flexDirection: 'row', alignItems: 'center' }, sectionTitleIcon: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginRight: 7, backgroundColor: '#EDF6FF' }, sectionTitleImage: { width: 20, height: 20 }, sectionTitle: { color: '#1D2C45', fontSize: 12, lineHeight: 15, fontWeight: '800' }, sectionMeta: { marginTop: 1, color: '#8A97A9', fontSize: 8, lineHeight: 10 }, sectionSpacer: { flex: 1 }, viewAllButton: { minHeight: 28, paddingLeft: 8, flexDirection: 'row', alignItems: 'center', gap: 2 }, viewAll: { color: '#5538ED', fontSize: 9, lineHeight: 11, fontWeight: '700' },
-  personRow: { minHeight: 52, marginTop: 6, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 4 }, personAvatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: '#EDF5FF' }, personCopy: { flex: 1 }, personName: { color: '#20324D', fontSize: 11, lineHeight: 14, fontWeight: '800' }, personMeta: { marginTop: 2, color: '#7A8799', fontSize: 9, lineHeight: 12 },
-  overviewGrid: { marginTop: 6, flexDirection: 'row', flexWrap: 'wrap', gap: 5 }, overviewTile: { width: '49%', minHeight: 56, paddingHorizontal: 7, paddingVertical: 8, borderRadius: 9, flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#FAFBFD', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E7EBF2' }, overviewIcon: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center', marginRight: 6, backgroundColor: '#EAF4FF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D5E9FF' }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { color: '#8A96A8', fontSize: 8.5, lineHeight: 11 }, overviewValue: { marginTop: 2, color: '#26364F', fontSize: 10, lineHeight: 13, fontWeight: '700' },
-  amountRow: { marginTop: 7, flexDirection: 'row', overflow: 'hidden', borderRadius: 9, backgroundColor: '#F5F7FF' }, amount: { flex: 1, minHeight: 50, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: '#DDE4EF' }, amountHighlighted: { backgroundColor: '#F3FBF7' }, amountValue: { color: '#24324B', fontSize: 11, lineHeight: 14, fontWeight: '800' }, amountLabel: { marginTop: 3, color: '#7B8798', fontSize: 8.5, lineHeight: 11, textAlign: 'center' },
-  journeyScroll: { paddingTop: 8, paddingBottom: 2, paddingRight: 8 }, journeyStep: { width: 164, marginRight: 4 }, journeyRailRow: { height: 14, flexDirection: 'row', alignItems: 'center' }, journeyDot: { width: 7, height: 7, borderRadius: 4, marginLeft: 17, backgroundColor: '#3D79E6' }, journeyDotLatest: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#6541F4' }, journeyConnector: { flex: 1, height: 1, marginLeft: 4, backgroundColor: '#D4DEEE' },
-  journeyEventCard: { width: 154, minHeight: 104, padding: 9, borderRadius: 10, backgroundColor: '#FBFCFE', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E6EAF1' }, journeyIconWrap: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center', marginBottom: 5, backgroundColor: '#EEF6FF' }, journeyIconLatest: { backgroundColor: '#F2EEFF' }, journeyDate: { color: '#5575C7', fontSize: 8.5, lineHeight: 11, fontWeight: '600' }, journeyTitle: { marginTop: 2, color: '#25344E', fontSize: 10.5, lineHeight: 13, fontWeight: '800' }, journeyKind: { marginTop: 2, color: '#8B96A8', fontSize: 8.5, lineHeight: 11 }, emptyJourney: { marginTop: 8, color: '#7C8A9F', fontSize: 9.5, lineHeight: 13 },
-  bottomNav: { height: 60, flexDirection: 'row', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DDE3EC', backgroundColor: '#FFFFFF' }, navItem: { flex: 1, alignItems: 'center', justifyContent: 'center' }, navIconWrap: { minWidth: 34, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }, navIconWrapActive: { backgroundColor: '#EEE9FF' }, navLabel: { marginTop: 1, color: '#6C7D97', fontSize: 8, lineHeight: 10, fontWeight: '600' }, navLabelActive: { color: '#633DF1', fontWeight: '800' }, pressed: { opacity: 0.7 },
+function Field({ label, value }: { label: string; value: string | null | undefined }) {return <View style={styles.field}><Text style={styles.fieldLabel}>{label}</Text><Text style={styles.fieldValue}>{value || 'Not recorded'}</Text></View>}
+function Nav({label,icon,onPress,active=false}:{label:string;icon:keyof typeof Ionicons.glyphMap;onPress:()=>void;active?:boolean}) {return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.navItem}><View style={[styles.navIcon,active && styles.navActive]}><Ionicons name={icon} size={19} color={active?'#102F6C':'#7386A4'}/></View><Text style={[styles.navText,active && styles.navTextActive]}>{label}</Text></Pressable>}
+const styles=StyleSheet.create({
+root:{flex:1,backgroundColor:'#EDF6FE'},header:{height:74,backgroundColor:'#081F4C',paddingHorizontal:13,flexDirection:'row',alignItems:'center',gap:10},back:{width:39,height:39,borderRadius:20,borderWidth:1,borderColor:'#586A8A',alignItems:'center',justifyContent:'center'},brand:{flex:1,flexDirection:'row',alignItems:'center',gap:7},brandName:{color:'#FFF',fontSize:19,fontWeight:'900'},brandTag:{color:'#FFF',fontSize:5,fontWeight:'700',letterSpacing:.4},bell:{padding:8},avatar:{width:40,height:40,borderWidth:1.5,borderColor:'#FFF',borderRadius:22,alignItems:'center',justifyContent:'center'},
+scroll:{flex:1},content:{paddingHorizontal:13,paddingTop:22,paddingBottom:30,gap:12},title:{color:'#0D2857',fontSize:24,fontWeight:'900',marginBottom:5},hero:{backgroundColor:'#07347E',borderRadius:18,padding:12,shadowColor:'#142E58',shadowOpacity:.18,shadowRadius:6,elevation:4},heroTop:{flexDirection:'row',alignItems:'center',gap:8},logo:{width:43,height:43,borderRadius:9,backgroundColor:'#FFF',alignItems:'center',justifyContent:'center'},logoImage:{width:36,height:36},heroMain:{flex:1},stageEyebrow:{color:'#BCD1EF',fontSize:9,fontWeight:'700'},vehicle:{color:'#FFF',fontSize:21,fontWeight:'900',marginTop:2},heroControl:{color:'#D9E7FA',fontSize:10,fontWeight:'700'},ring:{width:45,height:45,borderRadius:25,borderWidth:4,borderColor:'#527BAC',justifyContent:'center',alignItems:'center'},ringText:{color:'#FFF',fontWeight:'800',fontSize:12},heroDivider:{height:1,backgroundColor:'#6481AF',marginVertical:12},heroMiddle:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},heroMinor:{fontSize:9,color:'#B8C9E5',fontWeight:'700'},heroDate:{color:'#FFF',fontSize:11,fontWeight:'800',marginTop:3},toggle:{flexDirection:'row',alignItems:'center',gap:6,backgroundColor:'#2E528C',borderRadius:10,borderWidth:1,borderColor:'#6483B0',padding:10},toggleText:{color:'#FFF',fontSize:10,fontWeight:'700'},details:{marginTop:10,backgroundColor:'#FFF',borderRadius:13,padding:11,flexDirection:'row',flexWrap:'wrap',rowGap:10},field:{width:'50%',paddingHorizontal:2},fieldLabel:{fontSize:9,color:'#7B889E',fontWeight:'600'},fieldValue:{fontSize:10.5,color:'#162C50',fontWeight:'800',marginTop:3},
+panel:{borderRadius:18,borderColor:'#CFDDEC',borderWidth:1,overflow:'hidden',backgroundColor:'#F7FAFF'},panelHeader:{minHeight:62,flexDirection:'row',gap:11,paddingHorizontal:13,paddingVertical:10,alignItems:'center'},panelCopy:{flex:1},panelTitle:{fontSize:13,fontWeight:'900',color:'#10294D'},panelSubtitle:{fontSize:9,color:'#8793A4',fontWeight:'600',marginTop:3},stageList:{backgroundColor:'#FFF',paddingHorizontal:6,paddingBottom:4},stageRow:{minHeight:58,flexDirection:'row',alignItems:'center',paddingRight:10,borderBottomWidth:1,borderBottomColor:'#ECF1F6',gap:8},currentRow:{backgroundColor:'#EBF5FE',borderWidth:1,borderColor:'#D5E4F5',borderRadius:9},rail:{alignItems:'center',width:20,height:53,justifyContent:'flex-start',paddingTop:15},dot:{width:18,height:18,borderRadius:10,borderWidth:1,borderColor:'#E0E6EE',backgroundColor:'#F4F6F9',alignItems:'center',justifyContent:'center'},doneDot:{backgroundColor:'#2F78D8'},currentDot:{backgroundColor:'#1455B0',borderColor:'#1455B0'},innerDot:{backgroundColor:'#FFF',height:7,width:7,borderRadius:4},line:{width:1,height:19,backgroundColor:'#E3E8EE',marginTop:3},stageCopy:{flex:1},stageName:{fontSize:11,fontWeight:'900',color:'#10284B'},stageStatus:{fontSize:9,fontWeight:'700',color:'#8D99A9',marginTop:3},currentStatus:{color:'#1153A2'},documentsIcon:{width:26,height:29},documentBody:{padding:15,borderTopWidth:1,borderColor:'#D6E1EF'},documentNote:{fontSize:11,lineHeight:17,color:'#61748D'},nav:{height:61,backgroundColor:'#081F4C',flexDirection:'row',alignItems:'center',justifyContent:'space-around',paddingHorizontal:7,borderTopLeftRadius:18,borderTopRightRadius:18},navItem:{alignItems:'center',flex:1,gap:2},navIcon:{width:35,height:33,borderRadius:12,backgroundColor:'#183461',justifyContent:'center',alignItems:'center'},navActive:{backgroundColor:'#FFF'},navText:{color:'#CEDAEE',fontSize:9,fontWeight:'700'},navTextActive:{color:'#FFF'}
 });
