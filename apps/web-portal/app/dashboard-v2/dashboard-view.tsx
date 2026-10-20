@@ -20,7 +20,6 @@ type Props = {
   business: DashboardBusinessData;
   canCreatePolicy: boolean;
   canCreatePolicyIntake: boolean;
-  isRelationshipManager: boolean;
 };
 
 type AttentionSignal = {
@@ -46,7 +45,7 @@ type RailMetric = {
   icon: string;
 };
 
-export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, canCreatePolicyIntake, isRelationshipManager }: Props) {
+export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, canCreatePolicyIntake }: Props) {
   const attention = buildAttention(data, access, business);
   const rail = buildMetricRail(data, access, business);
   const renewalTotal = data.renewals
@@ -76,7 +75,7 @@ export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, 
           <span className="mr-1 text-[8.5px] font-semibold text-[#7A879A]">
             Updated {formatHeaderTime(data.generatedAt)}
           </span>
-          {access.viewReports && !isRelationshipManager ? (
+          {access.viewReports ? (
             <Link
               prefetch={false}
               href="/rm-performance"
@@ -122,7 +121,7 @@ export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, 
 
       {access.viewPolicies ? <BusinessPerformance business={business} /> : null}
 
-      {!isRelationshipManager && business.commercial ? <CommercialOperations business={business} canOpenControl={access.viewAccounts} /> : null}
+      {business.commercial ? <CommercialOperations business={business} canOpenControl={access.viewAccounts} /> : null}
 
       {showHealth ? <PortfolioHealth data={data} renewalTotal={renewalTotal} /> : null}
 
