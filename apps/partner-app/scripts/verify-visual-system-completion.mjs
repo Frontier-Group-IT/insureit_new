@@ -213,7 +213,7 @@ for (const oldGlyph of ['document-text-outline', 'car-outline', 'shield-outline'
 
 for (const detailAsset of ['navigation.claims']) requireText(claimDetail, `PartnerAssets.${detailAsset}`, `Claim tracker is missing ${detailAsset} artwork.`);
 requireText(claimDetail, 'getPartnerManufacturerLogoSource', 'Claim tracker must resolve linked manufacturer artwork.');
-requireText(claimDetail, 'Claim Tracker', 'Claim tracker heading must match the approved redesign.');
+requireText(claimDetail, 'const [detailsOpen, setDetailsOpen] = useState(false)', 'Claim details must begin collapsed.');
 requireText(claimDetail, 'CLAIM_STAGES.map', 'Claim journey must render the nine milestone rows.');
 requireText(claimDetail, 'setDetailsOpen', 'Claim details accordion must remain interactive.');
 requireText(claimDetail, 'setJourneyOpen', 'Claim Journey accordion must remain interactive.');
