@@ -12,7 +12,7 @@ const DOCUMENTS = [
   { title: 'RC Copy', icon: 'file-document-outline', color: '#07A56D' },
   { title: 'Insurance Copy', icon: 'shield-check-outline', color: '#1677DE' },
   { title: 'Driver Licence', icon: 'card-account-details-outline', color: '#8B42DE' },
-  { title: 'GR / Load Bill', icon: 'file-truck-outline', color: '#ED9811' },
+  { title: 'GR / Load Bill', icon: 'truck-outline', color: '#ED9811' },
   { title: 'Accident Photo', icon: 'camera-outline', color: '#DE1592' },
   { title: 'Accident Video', icon: 'video-outline', color: '#EF2442' },
 ] as const;
