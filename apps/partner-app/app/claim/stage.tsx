@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getPartnerClaimDetail, type PartnerClaimDetail } from '@/lib/claims';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
+import { PartnerSpotIntimation } from '@/components/partner-spot-intimation';
 import { CLAIM_STAGES, formatClaimDate, getClaimTrackerState, getStageHistory, type ClaimStageKey } from '@/lib/claim-tracker';
 
 export default function PartnerClaimStageScreen() {
@@ -28,6 +29,7 @@ export default function PartnerClaimStageScreen() {
   const current = data && stage ? getClaimTrackerState(data) : null;
   const stageIndex = stage ? CLAIM_STAGES.findIndex(item => item.key === stage.key) : -1;
   const stageState = current ? stageIndex < current.completed ? 'Completed' : stageIndex === current.index ? 'Current stage' : 'Upcoming' : '';
+  if (!loading && !error && data && stage?.key === 'spot_intimation') return <PartnerSpotIntimation data={data} />;
   return <SafeAreaView style={styles.root} edges={['top','bottom']}>
     <View style={styles.header}><Pressable accessibilityRole="button" accessibilityLabel="Back to Claim Tracker" onPress={() => router.back()} style={styles.back}><Ionicons name="chevron-back" color="#FFF" size={24}/></Pressable><View><Text style={styles.headerTitle}>{stage?.label || 'Claim Stage'}</Text><Text style={styles.headerSubtitle}>Claim Tracker</Text></View></View>
     <ScrollView contentContainerStyle={styles.body}>
