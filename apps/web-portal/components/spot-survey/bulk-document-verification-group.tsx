@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { Camera, Check, ContactRound, FileText, Mic, ShieldCheck, Truck, Video } from "lucide-react";
+import { Camera, ContactRound, FileText, Mic, ShieldCheck, Trash2, Truck, Video } from "lucide-react";
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { ClaimDocumentCollapsedStatus } from "@/components/claim-manager/claim-document-collapsed-status";
-import { DocumentVerificationDetailsButton } from "./document-verification-details-button";
 import { ReplaceDocumentButton } from "./replace-document-button";
 import { RequestReuploadButton } from "./request-reupload-button";
 import { VerificationActionButton } from "./verification-action-button";
+import { deleteVerifiedSpotSurveyDocument } from "@/app/claims/[id]/spot-survey-actions";
+import { useRouter } from "next/navigation";
 
 type DocumentRow = {
   id: string;
@@ -67,6 +68,9 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
   }, [selectableKey]);
 
   const selectedDocumentIds = selectableIds.filter((id) => selectedIds.has(id));
+  const selectedDocumentId = selectedDocumentIds[0] ?? null;
+  const selectedVerification = selectedDocumentId ? verifications.find((verification) => verification.document_id === selectedDocumentId && verification.details) : undefined;
+  const groupPrefillVerification = selectedVerification ?? verifications.find((verification) => item.documents.some((document) => document.id === verification.document_id) && verification.details && verification.is_valid);
   const verifiedFileCount = item.documents.filter((document) => isDocumentVerified(document, verifications)).length;
   const pendingFileCount = item.documents.length - verifiedFileCount;
   const allVerified = item.documents.length > 0 && verifiedFileCount === item.documents.length;
@@ -122,9 +126,10 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
               incidentDate={claim.accident_at}
               policyStartDate={claim.policies?.start_date}
               policyEndDate={claim.policies?.end_date}
-              disabled={selectedDocumentIds.length === 0}
+              disabled={false}
               variant="header"
               attention={selectableIds.length > 0}
+              prefillDetails={groupPrefillVerification?.details ?? null}
             />
           )}
         </div>
@@ -148,12 +153,7 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
                   verified={verified}
                   rejected={rejected}
                   selected={selected}
-                  onSelectedChange={(checked) => setSelectedIds((previous) => {
-                    const next = new Set(previous);
-                    if (checked) next.add(document.id);
-                    else next.delete(document.id);
-                    return next;
-                  })}
+                  onSelect={() => setSelectedIds(new Set([document.id]))}
                 />
               );
             })}
@@ -172,42 +172,60 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
   );
 }
 
-function DocumentFileRow({ item, claim, document, verification, verified, rejected, selected, onSelectedChange }: { item: BulkDocumentGroupItem; claim: ClaimContext; document: DocumentRow; verification?: VerificationRow; verified: boolean; rejected: boolean; selected: boolean; onSelectedChange: (checked: boolean) => void }) {
+function DocumentFileRow({ item, claim, document, verification, verified, rejected, selected, onSelect }: { item: BulkDocumentGroupItem; claim: ClaimContext; document: DocumentRow; verification?: VerificationRow; verified: boolean; rejected: boolean; selected: boolean; onSelect: () => void }) {
+  const router = useRouter();
+  const [deletePending, setDeletePending] = useState(false);
   const normalizedDocumentType = document.document_type?.toLowerCase() ?? "";
   const legacyAdditionalUpload = isLegacyAdditionalUpload(document);
   const documentStatus = legacyAdditionalUpload || normalizedDocumentType.includes("intimation attachment") ? "pending" : document.verification_status ?? "pending";
   const selectable = !verified && !rejected;
 
   return (
-    <div className="grid grid-cols-[24px_32px_1fr] items-start gap-2 rounded-lg border border-[#E2EAF4] bg-white/80 p-2">
-      <div className="grid min-h-8 place-items-center">
-        {verified ? (
-          <span className="grid h-5 w-5 place-items-center rounded border border-green-300 bg-green-50 text-green-700" aria-label="Verified file"><Check aria-hidden="true" size={14} strokeWidth={2.6} /></span>
-        ) : (
-          <label className={`grid h-5 w-5 place-items-center rounded border transition ${selectable ? selected ? "cursor-pointer border-[#174EA6] bg-[#174EA6] text-white" : "cursor-pointer border-[#AFC0D5] bg-white text-transparent hover:border-[#174EA6]" : "cursor-not-allowed border-slate-200 bg-slate-100 text-transparent"}`}>
-            <input
-              type="checkbox"
-              className="sr-only"
-              checked={selected}
-              disabled={!selectable}
-              onChange={(event) => onSelectedChange(event.target.checked)}
-              aria-label={`Select ${document.file_name} for verification`}
-            />
-            <Check aria-hidden="true" size={13} strokeWidth={2.6} />
-          </label>
-        )}
-      </div>
-      <div className="grid h-8 w-8 place-items-center"><DocumentTypeHeaderIcon itemKey={item.key} /></div>
+    <div className={`grid grid-cols-[32px_1fr] items-start gap-2 rounded-lg border p-2 transition ${verified ? "border-green-200 bg-green-50/75" : selected ? "border-[#8CB6FF] bg-[#F3F7FF]" : "border-[#E2EAF4] bg-white/80"}`}>
+      {selectable ? (
+        <button
+          type="button"
+          onClick={onSelect}
+          aria-pressed={selected}
+          aria-label={`Select ${document.file_name} for verification`}
+          title="Select document for verification"
+          className={`grid h-8 w-8 place-items-center rounded-md border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/30 ${selected ? "border-[#174EA6] bg-[#EAF2FF]" : "border-transparent bg-transparent hover:border-[#B9D2FF] hover:bg-[#F4F8FF]"}`}
+        >
+          <DocumentTypeHeaderIcon itemKey={item.key} />
+        </button>
+      ) : (
+        <div className="grid h-8 w-8 place-items-center"><DocumentTypeHeaderIcon itemKey={item.key} /></div>
+      )}
       <div className="min-w-0">
         <p className="flex min-h-8 items-center truncate text-[11px] font-semibold text-[#071D49]">{document.file_name}</p>
         <div className="mt-1 flex flex-wrap items-center gap-1">
           <span className="rounded bg-[#F4F7FC] px-1.5 py-0.5 text-[9px] font-semibold text-[#526178]">{item.documentType}</span>
           {document.signedUrl ? <Link href={document.signedUrl} target="_blank" className="rounded bg-[#EAF7F0] px-1.5 py-0.5 text-[9px] font-semibold text-[#00875A]">Preview</Link> : null}
-          <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${verified ? "bg-green-50 text-green-700" : rejected ? "bg-amber-50 text-amber-700" : "bg-[#F4F7FC] text-[#526178]"}`}>{verified ? "Verified" : statusLabel(documentStatus)}</span>
+          <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${verified ? "bg-green-100 text-green-700" : rejected ? "bg-amber-50 text-amber-700" : "bg-[#F4F7FC] text-[#526178]"}`}>{verified ? "Verified" : statusLabel(documentStatus)}</span>
         </div>
         {rejected ? <p className="mt-1 text-[9px] font-semibold text-amber-700">{document.rejection_reason ?? "Customer reupload requested."}</p> : null}
         <div className={`mt-2 grid gap-1.5 ${verified ? "grid-cols-3" : "grid-cols-2"}`}>
-          {verified ? <DocumentVerificationDetailsButton document={document} verification={verification ?? fallbackVerification(claim, item, document)} title={item.title} /> : null}
+          {verified ? (
+            <button
+              type="button"
+              disabled={deletePending}
+              onClick={() => {
+                if (!window.confirm(`Delete verified document "${document.file_name}"? This will remove it from this claim.`)) return;
+                setDeletePending(true);
+                void (async () => {
+                  const result = await deleteVerifiedSpotSurveyDocument(claim.id, document.id);
+                  if (!result.ok) window.alert(result.message ?? "Document could not be deleted.");
+                  else router.refresh();
+                  setDeletePending(false);
+                })();
+              }}
+              aria-label="Delete verified document"
+              title="Delete verified document"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30 disabled:opacity-50"
+            >
+              <Trash2 aria-hidden="true" size={16} strokeWidth={2} />
+            </button>
+          ) : null}
           <RequestReuploadButton claimId={claim.id} documentId={document.id} documentTitle={item.title} />
           <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentId={document.id} documentType={item.documentType} label={item.title} actionLabel="Replace" />
         </div>
