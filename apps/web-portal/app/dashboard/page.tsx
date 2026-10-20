@@ -79,6 +79,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         business={business}
         canCreatePolicy={createPolicies || editPolicies}
         canCreatePolicyIntake={createPolicyIntakes}
+        isRelationshipManager={isRelationshipManager}
       />
       <DashboardRegisterSync proposalPending={proposalSummary?.pending ?? 0} />
     </ClaimManagerShell>
