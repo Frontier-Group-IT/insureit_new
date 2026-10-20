@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { ResolveDependencies } from "./resolve-dependencies";
 import { useRouter } from "next/navigation";
 import { removeAuthDirectoryIdentity, type IdentityRemovalMode } from "./identity-removal-actions";
 
@@ -30,5 +31,6 @@ export function IdentityRemoval({id,name}:{id:string;name:string}) {
   <label className="block">Type {expected} to confirm<input className="mt-1 block w-full rounded border p-2" value={confirmation} onChange={e=>setConfirmation(e.target.value)} /></label>
   <button type="button" onClick={submit} disabled={pending||confirmation!==expected} className="rounded bg-red-700 px-3 py-2 font-semibold text-white disabled:opacity-40">{pending?"Working…":mode==="complete"?"Permanently delete identity":"Disable login"}</button>
   {message&&<p role="status">{message}</p>}
+  <ResolveDependencies userId={id}/>
  </section>;
 }
