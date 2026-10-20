@@ -13,7 +13,7 @@ const allowedScope = new Set<PermissionScope>(["inherit", "self", "hierarchy", "
 
 async function requirePermissionAdministrator() {
   const { profile } = await getAuthenticatedProfile(await getServerAccessToken());
-  if (!profile?.id || !(await hasEffectiveCapability(profile, "manage_system", "approve"))) redirect("/access-denied");
+  if (!profile?.id || profile.role === "it_user" || !(await hasEffectiveCapability(profile, "manage_system", "approve"))) redirect("/access-denied");
   return profile;
 }
 function safeReturnPath(value: string) { return value.startsWith("/system/access-control") ? value : "/system/access-control"; }
