@@ -20,6 +20,7 @@ type Props = {
   business: DashboardBusinessData;
   canCreatePolicy: boolean;
   canCreatePolicyIntake: boolean;
+  isRelationshipManager: boolean;
 };
 
 type AttentionSignal = {
@@ -45,7 +46,7 @@ type RailMetric = {
   icon: string;
 };
 
-export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, canCreatePolicyIntake }: Props) {
+export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, canCreatePolicyIntake, isRelationshipManager }: Props) {
   const attention = buildAttention(data, access, business);
   const rail = buildMetricRail(data, access, business);
   const renewalTotal = data.renewals
@@ -75,7 +76,7 @@ export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, 
           <span className="mr-1 text-[8.5px] font-semibold text-[#7A879A]">
             Updated {formatHeaderTime(data.generatedAt)}
           </span>
-          {access.viewReports ? (
+          {access.viewReports && !isRelationshipManager ? (
             <Link
               prefetch={false}
               href="/rm-performance"
