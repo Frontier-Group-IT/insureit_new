@@ -367,13 +367,15 @@ export default function BusinessScreen() {
             />
             <OverviewCard
               icon="commission"
-              value={overview
-                ? overview.projected_retention != null ? formatCompactCurrency(overview.projected_retention) : '—'
-                : mtdCurrent?.projected_retention != null ? formatCompactCurrency(mtdCurrent.projected_retention) : '—'}
-              label="Projected Retention"
+              value={context?.identity.actor_kind === 'employee'
+                ? (overview?.projected_retention != null ? formatCompactCurrency(overview.projected_retention) : !overview && mtdCurrent?.projected_retention != null ? formatCompactCurrency(mtdCurrent.projected_retention) : '—')
+                : (overview?.scoped_payout != null ? formatCompactCurrency(overview.scoped_payout) : !overview && mtdCurrent?.scoped_payout != null ? formatCompactCurrency(mtdCurrent.scoped_payout) : '—')}
+              label={context?.identity.actor_kind === 'employee' ? 'Projected Retention' : 'Payout'}
               changeLabel={overview
                 ? 'Selected range'
-                : mtdChange(mtdCurrent?.projected_retention, mtdPrevious?.projected_retention)}
+                : context?.identity.actor_kind === 'employee'
+                  ? mtdChange(mtdCurrent?.projected_retention, mtdPrevious?.projected_retention)
+                  : mtdChange(mtdCurrent?.scoped_payout, mtdPrevious?.scoped_payout)}
               compareLabel={overview ? optionLabel(OVERVIEW_OPTIONS, overviewRange) : mtdLabel}
               onPress={() => router.push('/business-report')}
             />
