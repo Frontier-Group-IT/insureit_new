@@ -23,18 +23,23 @@ export async function GroupAssociateSections({id,query:q={},surface="operations"
  // group_portal_associate_accounts record. Always render it separately first.
  // Fall back to that identity when a legacy group lacks a contact row.
  const identity=identityResult.data;
- const {data:identityProfile,error:profileError}=identity?.profile_id && !contactResult.data
+ const {data:identityProfile,error:profileError}=identity?.profile_id
    ? await admin.from("profiles").select("full_name,email,phone").eq("id",identity.profile_id).maybeSingle()
    : {data:null,error:null};
- const groupAdmin=contactResult.data ?? (identity ? {
-   admin_name:identityProfile?.full_name ?? "",
-   admin_email:identity.login_email ?? identityProfile?.email ?? "",
-   admin_mobile:identityProfile?.phone ?? "",
-   address:null,city:null,state:null,postal_code:null,
- } : null);
+ // The group contact is authoritative where populated; its linked login
+ // profile fills missing fields without creating a duplicate Associate account.
+ const contact=contactResult.data;
+ const firstNonBlank=(...values:(string|null|undefined)[])=>values.find(value=>typeof value==="string"&&value.trim())?.trim()??"";
+ const groupAdmin={
+   admin_name:firstNonBlank(contact?.admin_name,identityProfile?.full_name),
+   admin_email:firstNonBlank(contact?.admin_email,identity?.login_email,identityProfile?.email),
+   admin_mobile:firstNonBlank(contact?.admin_mobile,identityProfile?.phone),
+   address:contact?.address??null,city:contact?.city??null,state:contact?.state??null,postal_code:contact?.postal_code??null,
+ };
  const loadError=associatesResult.error || contactResult.error || groupResult.error || identityResult.error || profileError;
- const hasPrimaryAdmin=Boolean(groupAdmin);
- const hasRegisterRecords=hasPrimaryAdmin||Boolean(associates?.length);
+ // Every Group has a Group Administrator profile row, even before its
+ // contact information has been completed. Missing values render as dashes.
+ const hasRegisterRecords=Boolean(group)||Boolean(associates?.length);
  return <div className="space-y-4">
    {loadError?<p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">Associate Accounts could not be loaded completely. Please retry; the register may be incomplete.</p>:null}
    {q.error?<p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{q.error}</p>:null}
