@@ -26,6 +26,11 @@ type CustomerRow = {
   claims: { count: number }[];
 };
 
+function maskCustomerPhone(phone: string): string {
+  const digits = (phone ?? "").replace(/\D/g, "");
+  return digits ? `XXXXXX${digits.slice(-4)}` : "—";
+}
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -49,7 +54,7 @@ export default async function CustomersPage() {
     });
     return (
       <AppShell title="Customers">
-        {profile.role === "backoffice_executive" ? <div className="mx-auto max-w-[1480px]"><BackofficeCustomerRegister rows={[]} /></div> : <><DealershipEntryActivator /><div className="mx-auto max-w-[1480px]"><CustomerWorkspace rows={[]} /></div></>}
+        {profile.role === "backoffice_executive" ? <div className="mx-auto max-w-[1480px]"><BackofficeCustomerRegister rows={[]} /></div> : <><DealershipEntryActivator /><div className="mx-auto max-w-[1480px]"><CustomerWorkspace rows={[]} isRelationshipManager={profile.role === "relationship_manager"} /></div></>}
       </AppShell>
     );
   }
@@ -71,6 +76,10 @@ export default async function CustomersPage() {
     total_ms: finishedAt - startedAt,
   });
   const rows: CustomerRow[] = customersResult.data ?? [];
+  const isRelationshipManager = profile.role === "relationship_manager";
+  const visibleRows = isRelationshipManager
+    ? rows.map((customer) => ({ ...customer, phone: maskCustomerPhone(customer.phone) }))
+    : rows;
 
   return (
     <AppShell title="Customers">
@@ -92,7 +101,7 @@ export default async function CustomersPage() {
         ) : profile.role === "backoffice_executive" ? (
           <BackofficeCustomerRegister rows={rows} />
         ) : (
-          <CustomerWorkspace rows={rows} />
+          <CustomerWorkspace rows={visibleRows} isRelationshipManager={isRelationshipManager} />
         )}
       </div>
     </AppShell>
