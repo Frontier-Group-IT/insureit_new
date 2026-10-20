@@ -199,6 +199,56 @@ export async function verifySpotSurveyDocument(formData: FormData): Promise<Acti
   }
 }
 
+export async function deleteVerifiedSpotSurveyDocument(claimId: string, documentId: string): Promise<ActionResult> {
+  try {
+    if (!claimId.trim() || !documentId.trim()) throw new Error("Missing claim or document id.");
+    const { profile, claim, supabase } = await context(claimId);
+    const { data: document, error: documentError } = await supabase
+      .from("claim_documents")
+      .select("id, document_type, file_name, storage_bucket, storage_path, verification_status")
+      .eq("claim_id", claimId)
+      .eq("id", documentId)
+      .maybeSingle<{ id: string; document_type: string; file_name: string; storage_bucket: string; storage_path: string; verification_status: string }>();
+    if (documentError || !document) throw new Error(documentError?.message ?? "Document not found.");
+    if (document.verification_status !== "verified") throw new Error("Only verified documents can be deleted from this action.");
+
+    // Preserve verification history while detaching it from the document row that is being removed.
+    const { error: verificationDetachError } = await supabase
+      .from("claim_document_verifications")
+      .update({ document_id: null })
+      .eq("claim_id", claimId)
+      .eq("document_id", documentId);
+    if (verificationDetachError) throw new Error(verificationDetachError.message);
+
+    const { error: deleteError } = await supabase
+      .from("claim_documents")
+      .delete()
+      .eq("claim_id", claimId)
+      .eq("id", documentId)
+      .eq("verification_status", "verified");
+    if (deleteError) throw new Error(deleteError.message);
+
+    if (document.storage_bucket && document.storage_path) {
+      const { error: storageError } = await supabase.storage.from(document.storage_bucket).remove([document.storage_path]);
+      if (storageError) console.error("Verified claim document storage cleanup failed", storageError);
+    }
+
+    await supabase.from("claim_status_history").insert({
+      claim_id: claimId,
+      from_status: claim.current_status,
+      to_status: claim.current_status,
+      notes: `Verified ${document.document_type} document "${document.file_name}" deleted by claim manager.`,
+      changed_by: profile.id,
+    });
+
+    revalidateClaimPaths(claimId);
+    return { ok: true, message: "Verified document deleted." };
+  } catch (error) {
+    console.error("deleteVerifiedSpotSurveyDocument failed", error);
+    return { ok: false, message: error instanceof Error ? error.message : "Verified document could not be deleted." };
+  }
+}
+
 export async function finalizeInitialDocumentVerification(claimId: string): Promise<ActionResult> {
   try {
     if (!claimId.trim()) throw new Error("Missing claim id.");

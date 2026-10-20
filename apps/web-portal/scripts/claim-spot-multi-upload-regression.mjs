@@ -21,9 +21,11 @@ assert.match(workspace, /Spot Intimation Date & Time/, "Claim header must show t
 assert.match(workspace, /const spotAt = claim\.spotIntimationAt \?\? claim\.created_at;/, "Spot intimation display must prefer the persisted stage timestamp.");
 assert.match(workspace, /BulkDocumentVerificationGroup/, "Spot document categories must render through grouped verification.");
 assert.match(workspace, /item\.documents\.length > 0 && item\.documents\.every/, "A category is verified only when every current file is verified.");
-assert.match(bulkVerificationGroup, /type="checkbox"/, "Pending files must expose selection.");
-assert.match(bulkVerificationGroup, /documentIds=\{selectedDocumentIds\}/, "Verify must receive only selected file ids.");
-assert.match(bulkVerificationGroup, /disabled=\{selectedDocumentIds\.length === 0\}/, "Verify remains disabled without a selection.");
+assert.doesNotMatch(bulkVerificationGroup, /type="checkbox"/, "Stage 1 pending files must use the document icon rather than checkbox selection.");
+assert.match(bulkVerificationGroup, /documentIds=\{selectedDocumentIds\}/, "Verify must receive only the icon-selected file ids.");
+assert.match(bulkVerificationGroup, /disabled=\{false\}/, "Stage 1 Verify must remain clickable so an empty selection can show a warning.");
+assert.match(bulkVerificationGroup, /aria-label=\{`Select \$\{document\.file_name\} for verification`\}/, "The existing document icon must select the exact pending file.");
+assert.match(verificationAction, /Please select a document to verify by clicking the document icon beside its file name\./, "Empty Stage 1 verification must show the document-selection warning.");
 assert.match(bulkVerificationGroup, /document\.verification_status !== "rejected"/, "Rejected files cannot be selected before replacement.");
 assert.match(bulkVerificationGroup, /documentId=\{document\.id\}[\s\S]*?actionLabel="Replace"/, "Replace must target the exact row.");
 assert.match(bulkVerificationGroup, /actionLabel="Upload" iconOnly/, "Populated categories retain Upload New.");

@@ -10,8 +10,11 @@ const claimWorkflowAccess = await readFile(new URL("../lib/claim-workflow-access
 const claimPage = await readFile(new URL("../app/claims/[id]/page.tsx", import.meta.url), "utf8");
 const claimWorkflow = await readFile(new URL("../lib/claim-workflow.ts", import.meta.url), "utf8");
 
+assert.doesNotMatch(stage1Group, /type="checkbox"/, "Stage 1 pending files must use document-icon selection instead of checkboxes.");
+assert.match(stage1Group, /aria-label=.*Select .*document\.file_name.*verification/, "Stage 1 existing document icon must select the exact file.");
+assert.match(stage3Group, /type="checkbox"/, "Stage 3 retains checkbox selection for pending files.");
+
 for (const source of [stage1Group, stage3Group]) {
-  assert.match(source, /type="checkbox"/, "Document cards must expose checkbox selection for pending files.");
   assert.match(source, /documentIds=\{selectedDocumentIds\}/, "Verify must receive the selected files as one group.");
   assert.match(source, /variant="header"/, "Verify must stay in the compact document-card header.");
   assert.match(source, /actionLabel="Upload" iconOnly/, "Populated document cards must keep the icon-only Upload New action.");

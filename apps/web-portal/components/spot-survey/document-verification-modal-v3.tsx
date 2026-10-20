@@ -22,19 +22,36 @@ const rcRows = [
   { dateName: "national_permit_valid_upto", statusName: "national_permit_status", label: "National Permit Valid Upto", optional: true }
 ];
 
-export function DocumentVerificationModalButton({ claimId, documentId, modalType, incidentDate, policyStartDate, policyEndDate }: { claimId: string; documentId: string; modalType: ModalType; incidentDate?: string | null; policyStartDate?: string | null; policyEndDate?: string | null }) {
+export function DocumentVerificationModalButton({ claimId, documentId, modalType, incidentDate, policyStartDate, policyEndDate, initialDetails = null }: { claimId: string; documentId: string; modalType: ModalType; incidentDate?: string | null; policyStartDate?: string | null; policyEndDate?: string | null; initialDetails?: Record<string, unknown> | null }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<Result | null>(null);
   const [saved, setSaved] = useState(false);
-  const [spot, setSpot] = useState<SpotState>({ axleStatus: "", overturned: "" });
-  const [rcDates, setRcDates] = useState<Record<string, string>>({});
-  const policyStart = toDateOnly(policyStartDate) ?? "";
-  const policyEnd = toDateOnly(policyEndDate) ?? "";
-  const [insurance, setInsurance] = useState<InsuranceState>({ start: policyStart, end: policyEnd, ncb: "", policy: "", gvw: "" });
-  const [dl, setDl] = useState<DlState>({ validUpto: "", inbound: "", validForLossVehicle: "" });
-  const [gr, setGr] = useState<GrState>({ gvw: "", unladen: "", load: "" });
+  const [spot, setSpot] = useState<SpotState>({
+    axleStatus: detailText(initialDetails, "spot_axle_status"),
+    overturned: detailText(initialDetails, "spot_overturned"),
+  });
+  const [rcDates, setRcDates] = useState<Record<string, string>>(() => Object.fromEntries(rcRows.map((row) => [row.dateName, detailText(initialDetails, row.dateName)]).filter(([, value]) => Boolean(value))));
+  const policyStart = detailText(initialDetails, "insurance_start_date") || toDateOnly(policyStartDate) || "";
+  const policyEnd = detailText(initialDetails, "insurance_end_date") || toDateOnly(policyEndDate) || "";
+  const [insurance, setInsurance] = useState<InsuranceState>({
+    start: policyStart,
+    end: policyEnd,
+    ncb: detailText(initialDetails, "ncb_verified"),
+    policy: detailText(initialDetails, "policy_type_check"),
+    gvw: detailText(initialDetails, "gvw_kg"),
+  });
+  const [dl, setDl] = useState<DlState>({
+    validUpto: detailText(initialDetails, "licence_valid_upto"),
+    inbound: detailText(initialDetails, "dl_inbound"),
+    validForLossVehicle: detailText(initialDetails, "dl_valid_for_loss_vehicle"),
+  });
+  const [gr, setGr] = useState<GrState>({
+    gvw: detailText(initialDetails, "gr_gvw_kg"),
+    unladen: detailText(initialDetails, "unladen_weight_kg"),
+    load: detailText(initialDetails, "load_weight_kg"),
+  });
   const incident = toDateOnly(incidentDate);
 
   const spotComplete = Boolean(spot.axleStatus && spot.overturned);
@@ -145,3 +162,8 @@ function toDateOnly(value?: string | null) { if (!value) return null; const pars
 function formatDisplayDate(value?: string | null) { if (!value) return ""; const isoDate = toDateOnly(value); if (!isoDate) return value; const [year, month, day] = isoDate.split("-"); return `${day}/${month}/${year}`; }
 function toNumber(value: string) { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : 0; }
 function getGrValues(values: GrState) { const gvw = toNumber(values.gvw); const unladen = toNumber(values.unladen); const load = toNumber(values.load); return { gvw, unladen, load, difference: gvw - unladen - load }; }
+
+function detailText(details: Record<string, unknown> | null | undefined, key: string) {
+  const value = details?.[key];
+  return typeof value === "string" || typeof value === "number" ? String(value) : "";
+}
