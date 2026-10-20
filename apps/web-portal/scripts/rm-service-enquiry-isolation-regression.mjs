@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+const read = (path) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8');
+const page = read('../app/service-enquiries/page.tsx');
+const actions = read('../app/service-enquiries/actions.ts');
+const migration = read('../../../supabase/migrations/20261020131500_rm_service_enquiry_ownership.sql');
+assert.match(page, /profile\.role === "relationship_manager"/);
+assert.match(page, /builder = builder\.eq\("assigned_to", rmScopeId\)/);
+assert.match(actions, /update = update\.eq\("assigned_to", profile\.id\)/);
+assert.match(migration, /relationship_manager' and assigned_to=auth\.uid\(\)/);
+for (const policy of ['service enquiries customer select own','service enquiries operations update','service enquiry messages members select','service enquiry messages members create','service enquiry attachments members select']) assert.ok(migration.includes(policy), policy);
+assert.doesNotMatch(migration, /relationship_manager'\s*,\s*'super_admin'/);
+console.log('RM service enquiry isolation source contracts passed');
