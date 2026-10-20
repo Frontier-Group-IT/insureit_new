@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 
-const allowedReviewRoles = new Set(["super_admin", "it_super_user", "sales_head", "sales_operations_head"]);
+const allowedReviewRoles = new Set(["super_admin", "it_super_user", "it_user", "sales_head", "sales_operations_head"]);
 
 export async function POST(request: NextRequest) {
   try {
