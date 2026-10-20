@@ -180,7 +180,7 @@ function PolicyPeriodFilter({
   );
 }
 
-export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[]; sourceOptions?: SourceOption[] }) {
+export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManager = false }: { rows: PolicyRow[]; sourceOptions?: SourceOption[]; isRelationshipManager?: boolean }) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewKey>("all");
   const [timeScope, setTimeScope] = useState<TimeScope>("mtd");
@@ -204,14 +204,14 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
       if (saved.timeScope === "mtd" || saved.timeScope === "all") setTimeScope(saved.timeScope);
       if (saved.business === "all" || saved.business === "Motor" || saved.business === "Non Motor" || saved.business === "Life" || saved.business === "Health") setBusiness(saved.business);
       if (typeof saved.source === "string") setSource(saved.source);
-      if (typeof saved.rm === "string") setRm(saved.rm);
+      if (!isRelationshipManager && typeof saved.rm === "string") setRm(saved.rm);
       if (typeof saved.fromDate === "string") setFromDate(saved.fromDate);
       if (typeof saved.toDate === "string") setToDate(saved.toDate);
       if (typeof saved.page === "number" && Number.isFinite(saved.page) && saved.page > 0) setPage(Math.floor(saved.page));
     } catch {
       window.sessionStorage.removeItem(POLICY_REGISTER_RETURN_STATE_KEY);
     }
-  }, []);
+  }, [isRelationshipManager]);
 
   const enriched = useMemo(() => rows.map((row) => ({ ...row, status: policyStatus(row.end_date), daysLeft: daysUntil(row.end_date) })), [rows]);
   const rms = useMemo(() => Array.from(new Set(rows.map((row) => row.rm_name?.trim()).filter((item): item is string => Boolean(item)))).sort((a, b) => a.localeCompare(b)), [rows]);
@@ -245,13 +245,13 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
     const haystack = [row.policy_no, row.business_line, row.policy_type, row.policy_product, row.insurance_companies?.name, row.rm_name, row.vehicles?.vehicle_no, row.vehicles?.chassis_no, row.vehicles?.engine_no, row.customers?.company_name, row.customers?.contact_name, row.intermediary_type, row.intermediary_code, row.source_name, policyCategory(row), riskAssetPrimary(row), riskAssetSecondary(row)].filter(Boolean).join(" ").toLowerCase();
     const matchesBusiness = business === "all" || policyBusinessLine(row) === business;
     const matchesSource = source === "all" || policySourceKey(row) === source;
-    const matchesRm = rm === "all" || row.rm_name?.trim() === rm;
+    const matchesRm = isRelationshipManager || rm === "all" || row.rm_name?.trim() === rm;
     const businessDate = policyBusinessDate(row);
     const matchesFromDate = !fromDate || businessDate >= fromDate;
     const matchesToDate = !toDate || businessDate <= toDate;
     const matchesQuery = !query.trim() || haystack.includes(query.trim().toLowerCase());
     return matchesBusiness && matchesSource && matchesRm && matchesFromDate && matchesToDate && matchesQuery;
-  }), [business, enriched, fromDate, query, rm, source, toDate]);
+  }), [business, enriched, fromDate, isRelationshipManager, query, rm, source, toDate]);
 
   const mtdFiltered = useMemo(() => controlFiltered.filter((row) => {
     const businessDate = policyBusinessDate(row);
@@ -397,12 +397,14 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
               {visibleSourceOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </RegisterSelect>
           </div>
+          {!isRelationshipManager ? (
           <div className="[&>label]:block [&>label]:w-full [&_select]:min-w-[180px] [&_select]:w-full">
             <RegisterSelect value={rm} onChange={(value) => { setRm(value); if (value === "all") setSource("all"); setPage(1); }} label="Relationship manager">
               <option value="all">All RMs</option>
               {rms.map((item) => <option key={item} value={item}>{item}</option>)}
             </RegisterSelect>
           </div>
+          ) : null}
           <PolicyDateRangeFilter
             fromDate={fromDate}
             toDate={toDate}

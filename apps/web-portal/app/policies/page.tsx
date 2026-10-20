@@ -226,7 +226,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
   return <AppShell title="Policies">
     {profile.role === "it_super_user" && !error ? <ItSuperUserDeletePanel entity="policy" title="Delete policy master record" records={rows.map((policy) => ({ id: policy.id, label: policy.policy_no, detail: [policy.vehicles?.vehicle_no, policy.customers?.contact_name, policy.insurance_companies?.name].filter(Boolean).join(" • ") }))} /> : null}
     <PolicyIntakePolicyRegisterLinksPortal summary={policyIntakeSummary} />
-    {error ? <RegisterError /> : <PolicyWorkspace rows={workspaceRows} sourceOptions={sourceOptions} />}
+    {error ? <RegisterError /> : <PolicyWorkspace rows={workspaceRows} sourceOptions={sourceOptions} isRelationshipManager={profile.role === "relationship_manager"} />}
   </AppShell>;
 }
 function RegisterError() { return <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3"><p className="text-[11px] font-semibold text-red-700">The policy register is temporarily unavailable.</p><p className="mt-1 text-[9.5px] text-[#64748B]">Please refresh the page or try again shortly.</p></div>; }
