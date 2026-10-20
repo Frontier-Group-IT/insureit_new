@@ -405,7 +405,11 @@ export async function setProfileActive(id: string, isActive: boolean) {
   const supabase = await createServerSupabaseClient();
   const updatedBy = await requireUserManager();
   const {data:protectedTarget}=await createSupabaseAdminClient().from("profiles").select("role").eq("id",id).maybeSingle();
-  if(protectedTarget?.role==="it_super_user" || protectedTarget?.role==="it_user") throw new Error("IT administrator activation is protected; use the primary IT Super User management workflow.");
+  if(protectedTarget?.role==="it_super_user") throw new Error("The primary IT Super User cannot be deactivated through User Management.");
+  if(protectedTarget?.role==="it_user") {
+    const {profile: actor}=await getAuthenticatedProfile(await getServerAccessToken());
+    if(actor?.id!=="dd3a036f-2cca-4a1e-b639-21fc1cc807ef") throw new Error("Only the primary IT Super User can change an IT User's status.");
+  }
   const { error } = await supabase.from("profiles").update({ is_active: isActive, updated_by: updatedBy }).eq("id", id);
 
   if (error) {
