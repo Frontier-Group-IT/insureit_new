@@ -9,6 +9,7 @@ import { PartnerSpotIntimation } from '@/components/partner-spot-intimation';
 import { PartnerClaimReferenceStage } from '@/components/partner-claim-reference-stages';
 import { PartnerWorkApproval } from '@/components/partner-work-approval';
 import { PartnerVehicleDelivery } from '@/components/partner-vehicle-delivery';
+import { PartnerPaymentEncashment } from '@/components/partner-payment-encashment';
 import { CLAIM_STAGES, formatClaimDate, getClaimTrackerState, getStageHistory, type ClaimStageKey } from '@/lib/claim-tracker';
 
 export default function PartnerClaimStageScreen() {
@@ -36,6 +37,7 @@ export default function PartnerClaimStageScreen() {
   if (!loading && !error && data && (stage?.key === 'spot_status' || stage?.key === 'claim_intimation')) return <PartnerClaimReferenceStage data={data} stage={stage.key} />;
   if (!loading && !error && data && stage?.key === 'work_approval') return <PartnerWorkApproval data={data} />;
   if (!loading && !error && data && stage?.key === 'vehicle_delivery') return <PartnerVehicleDelivery data={data} />;
+  if (!loading && !error && data && stage?.key === 'payment_encashment') return <PartnerPaymentEncashment data={data} />;
   return <SafeAreaView style={styles.root} edges={['top','bottom']}>
     <View style={styles.header}><Pressable accessibilityRole="button" accessibilityLabel="Back to Claim Tracker" onPress={() => router.back()} style={styles.back}><Ionicons name="chevron-back" color="#FFF" size={24}/></Pressable><View><Text style={styles.headerTitle}>{stage?.label || 'Claim Stage'}</Text><Text style={styles.headerSubtitle}>Claim Tracker</Text></View></View>
     <ScrollView contentContainerStyle={styles.body}>
