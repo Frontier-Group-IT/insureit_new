@@ -290,7 +290,7 @@ async function assertProtectedItRoleChange(targetId: string | null, requestedRol
   const {data:target,error}=await admin.from("profiles").select("role").eq("id",targetId).maybeSingle();
   if(error)throw new Error("Could not verify the target role.");
   if(target?.role==="it_super_user" && targetId==="dd3a036f-2cca-4a1e-b639-21fc1cc807ef")throw new Error("The protected IT Super User account cannot be edited through User Management.");
-  if((requestedRole==="it_user" || target?.role==="it_user" || target?.role==="it_super_user") && actor.role!=="it_super_user")throw new Error("Only the primary IT Super User can manage IT User identities.");
+  if((requestedRole==="it_user" || target?.role==="it_user" || target?.role==="it_super_user") && actor.id!=="dd3a036f-2cca-4a1e-b639-21fc1cc807ef")throw new Error("Only the primary IT Super User can manage IT User identities.");
 }
 
 export async function createProfileRecord(formData: FormData) {
