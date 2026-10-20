@@ -147,22 +147,27 @@ expectAll('app/(tabs)/index.tsx', [
   [/comparisonLabel="previous month"/, 'Partner Home MTD trend copy must explicitly say previous month'],
 ]);
 
-// Partner claim detail presentation contract.
+// Partner claim tracker presentation contract (nine-stage reference design).
 expectAll('app/claim/[id].tsx', [
-  [/getPartnerManufacturerLogoSource\(data\.vehicle\.make\)/, 'claim summary must resolve the linked vehicle manufacturer logo'],
-  [/<Text numberOfLines=\{1\} style=\{styles\.statusTitle\}>\{data\.customer\.name\}<\/Text>/, 'claim summary heading must show customer name'],
-  [/activeChipText[\s\S]*\{humanize\(data\.claim\.current_status/, 'claim status badge must show the current workflow status'],
-  [/summaryMetaRow[\s\S]*summaryMetaCard[\s\S]*claim_service_mode[\s\S]*summaryMetaCard[\s\S]*data\.vehicle\.vehicle_no/, 'service mode and vehicle number must render as equal summary cards'],
-  [/styles\.personAvatar[\s\S]*name="person-outline"/, 'insured-person row must use the clean profile icon'],
-  [/accessibilityLabel=\{overviewExpanded \? 'Show fewer claim overview details' : 'View all claim overview details'\}/, 'Claim Overview View All must be an accessible interactive control'],
-  [/setOverviewExpanded\(\(value\) => !value\)/, 'Claim Overview View All must expand and collapse additional details'],
+  [/getPartnerManufacturerLogoSource\(data\.vehicle\.make\)/, 'claim hero must retain the linked manufacturer logo'],
+  [/Claim Tracker/, 'claim details must use the Claim Tracker heading'],
+  [/setDetailsOpen\(v => !v\)/, 'claim details must expand and collapse'],
+  [/setJourneyOpen\(v => !v\)/, 'claim journey must expand and collapse'],
+  [/setDocumentsOpen\(v => !v\)/, 'claim documents must expand and collapse'],
+  [/CLAIM_STAGES\.map/, 'claim journey must display the canonical nine stages'],
+  [/pathname: '\/claim\/stage'/, 'stage rows must open the partner-scoped stage detail route'],
+  [/data\.claim\.current_status/, 'claim details must retain current workflow status'],
+  [/data\.customer\.name/, 'claim details must retain customer identity'],
 ]);
-expect('app/claim/[id].tsx', /^(?![\s\S]*CURRENT STATUS)[\s\S]*$/, 'claim summary must not restore the CURRENT STATUS eyebrow');
-expect('app/claim/[id].tsx', /^(?![\s\S]*>SERVICE<)[\s\S]*$/, 'claim detail header must not restore the SERVICE eyebrow');
-expectAll('app/claim/[id].tsx', [
-  [/Control No\. \{data\.claim\.claim_no/, 'claim control number must render directly below the customer heading'],
-  [/isCompletedClaimStatus\(data\.claim\.current_status\)[\s\S]*completeChip/, 'completed claim status badge must use the green success treatment'],
-  [/function timelineIcon\(item: TimelineItem\)[\s\S]*document-text-outline[\s\S]*person-add-outline[\s\S]*shield-checkmark-outline/, 'claim journey must use clear event-specific professional icons'],
+expectAll('app/claim/stage.tsx', [
+  [/getPartnerClaimDetail\(id\)/, 'stage details must use the authorized partner claim-detail service'],
+  [/getStageHistory\(data, stage\.key/, 'stage detail must show relevant recorded history'],
+  [/CLAIM_STAGES\.find/, 'stage detail must resolve the requested stage key'],
+]);
+expectAll('lib/claim-tracker.ts', [
+  [/spot_intimation/, 'claim tracker must include spot intimation'],
+  [/payment_encashment/, 'claim tracker must include payment encashment'],
+  [/getClaimTrackerState/, 'claim tracker must project the workflow status'],
 ]);
 expectAll('lib/claims.ts', [
   [/partner_app_customer_detail/, 'claim detail must enrich vehicle make through the existing scoped customer-detail RPC'],

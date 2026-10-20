@@ -211,18 +211,15 @@ requireText(customerDetail, 'getPartnerCustomerDetail(id)', 'Customer detail mus
 requireText(customerDetail, 'initials(data.customer.customer_name)', 'Customer detail must retain real-customer initials for identity.');
 for (const oldGlyph of ['document-text-outline', 'car-outline', 'shield-outline']) if (customerDetail.includes(`name="${oldGlyph}"`)) throw new Error(`Customer detail feature rows must not regress to ${oldGlyph}.`);
 
-for (const detailAsset of ['navigation.claims', 'actions.payoutRefresh', 'status.journey', 'status.claimAttention', 'status.verified']) requireText(claimDetail, `PartnerAssets.${detailAsset}`, `Claim detail is missing ${detailAsset} artwork.`);
-requireText(claimDetail, 'getPartnerManufacturerLogoSource', 'Claim detail summary must resolve manufacturer artwork from the linked vehicle make.');
-requireText(claimDetail, '<ReferenceSectionIcon name="people" />', 'Claim detail Insured Person header must use the reference blue group icon.');
-requireText(claimDetail, '<ReferenceSectionIcon name="clipboard" />', 'Claim detail Claim Overview header must use the reference blue clipboard icon.');
-requireText(claimDetail, '<SectionIcon asset={PartnerAssets.actions.payoutRefresh} />', 'Claim detail Financial Snapshot must keep professional payout artwork.');
-requireText(claimDetail, '<SectionIcon asset={PartnerAssets.status.journey} />', 'Claim detail Journey must keep professional journey artwork.');
-requireText(claimDetail, 'name="person-outline"', 'Claim detail insured-person row must use the approved clean profile icon.');
-requireText(claimDetail, 'summaryMetaIcon', 'Claim detail summary metadata must keep clear icon containers.');
-requireText(claimDetail, 'getPartnerClaimDetail(id)', 'Claim detail must preserve the existing scoped data service.');
-requireText(claimDetail, 'function timelineIcon(item: TimelineItem)', 'Claim detail must keep semantic journey icon mapping.');
-for (const journeyIcon of ['document-text-outline', 'person-add-outline', 'cloud-upload-outline', 'checkmark-circle-outline', 'shield-checkmark-outline']) requireText(claimDetail, journeyIcon, `Claim detail journey is missing ${journeyIcon} semantic icon coverage.`);
-if (claimDetail.includes('styles.dotLatest') || claimDetail.includes('styles.innerDot')) throw new Error('Claim detail must not regress to dot-only journey identity.');
+for (const detailAsset of ['navigation.claims']) requireText(claimDetail, `PartnerAssets.${detailAsset}`, `Claim tracker is missing ${detailAsset} artwork.`);
+requireText(claimDetail, 'getPartnerManufacturerLogoSource', 'Claim tracker must resolve linked manufacturer artwork.');
+requireText(claimDetail, 'Claim Tracker', 'Claim tracker heading must match the approved redesign.');
+requireText(claimDetail, 'CLAIM_STAGES.map', 'Claim journey must render the nine milestone rows.');
+requireText(claimDetail, 'setDetailsOpen', 'Claim details accordion must remain interactive.');
+requireText(claimDetail, 'setJourneyOpen', 'Claim Journey accordion must remain interactive.');
+requireText(claimDetail, 'setDocumentsOpen', 'Documents accordion must remain interactive.');
+requireText(claimDetail, 'getPartnerClaimDetail(id)', 'Claim tracker must preserve the existing scoped data service.');
+requireText(claimDetail, 'pathname: \'/claim/stage\'', 'Stage rows must navigate to their dedicated view.');
 
 requireText(search, 'PartnerAssets.emptyStates.noSearchResults', 'Universal Search must use the prepared no-results artwork.');
 for (const featureAsset of ['navigation.customers', 'navigation.policies', 'navigation.claims']) requireText(search, `PartnerAssets.${featureAsset}`, `Universal Search is missing ${featureAsset} result artwork.`);
