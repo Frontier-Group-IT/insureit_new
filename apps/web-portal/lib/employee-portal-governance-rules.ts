@@ -23,6 +23,18 @@ const portalManagerRoles: readonly AppRole[] = ["super_admin", "admin", "it_supe
 export function evaluateEmployeePortalGovernanceGuard(
   input: EmployeePortalGovernanceGuardInput,
 ): EmployeePortalGovernanceGuardResult {
+  // The original primary IT account is the only authority for IT identity lifecycle actions.
+  const primaryItId = "dd3a036f-2cca-4a1e-b639-21fc1cc807ef";
+  if (input.assigningRole === "it_super_user") {
+    return { allowed: false, reason: "IT Super User is a protected sole-owner role and cannot be assigned through the portal." };
+  }
+  if (input.targetProfileId === primaryItId && (input.operation === "suspend" || input.operation === "change_role")) {
+    return { allowed: false, reason: "The primary IT Super User account is protected from portal role and status changes." };
+  }
+  if ((input.targetRole === "it_user" || input.targetRole === "it_super_user" || input.assigningRole === "it_user") && input.actorProfileId !== primaryItId) {
+    return { allowed: false, reason: "Only the primary IT Super User can manage IT administrator identities." };
+  }
+
   if ((input.operation === "suspend" || input.operation === "restore") && !input.targetProfileId) {
     return { allowed: true };
   }
