@@ -1,3 +1,3 @@
 Partner production OTA trigger
-commit=5f78165488694b8e15f30b9c0a1626ef4c86a492
-reason=partner-work-approval-reference-pr-3273
+source_main=dd4f594cbaa6a791da0b95e4f055b5c6655a425d
+reason=user-requested-partner-production-publish-2026-10-20
