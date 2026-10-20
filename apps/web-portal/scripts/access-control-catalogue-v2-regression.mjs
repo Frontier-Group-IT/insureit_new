@@ -164,7 +164,17 @@ const applicationOnlyPermissionKeys = new Set([
   "exchange.listings.create",
   "exchange.listings.review",
 ]);
-const applicationOnlyRoleCodes = new Set(["accounts", "sales_executive"]);
+const applicationOnlyRoleCodes = new Set(["accounts", "sales_executive", "it_user"]);
+const itUserShadowSql = readFileSync(
+  resolve(process.cwd(), "../../supabase/migrations/20261020231500_it_user_v2_shadow_role.sql"),
+  "utf8",
+);
+if (!itUserShadowSql.includes("('it_user','IT User'") || !itUserShadowSql.includes("IT User operational role parity")) {
+  fail("IT User additive V2 role and grant migration is missing");
+}
+for (const protectedPermission of ["admin.portal_users.manage","admin.roles.manage","admin.permissions.manage","system.integrations.configure"]) {
+  if (!itUserShadowSql.includes("'"+protectedPermission+"'")) fail("IT User shadow role must explicitly exclude "+protectedPermission);
+}
 if (/access_(permissions|roles|role_permissions)_v2/.test(ocrQueueMigrationSql)) {
   fail("OCR queue migration must remain independent from the optional Access Control V2 database schema");
 }
