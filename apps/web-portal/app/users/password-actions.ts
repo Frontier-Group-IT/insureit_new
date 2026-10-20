@@ -22,13 +22,14 @@ export async function resetUserTemporaryPassword(
 
   // A unique, unpredictable temporary credential prevents cross-account access
   // inherent in a universal shared password.
-  const temporaryPassword = randomBytes(18).toString("base64url");
+  const supplied = formData.get("password");
+  const temporaryPassword = typeof supplied === "string" && supplied.length >= 8 && supplied.length <= 72 ? supplied : randomBytes(18).toString("base64url");
   const { error } = await supabase.auth.admin.updateUserById(targetUserId, { password: temporaryPassword });
   if (error) return fail("Password reset failed. No password was displayed.");
 
   const { error: auditError } = await supabase.from("audit_logs").insert({
     actor_id: profile.id,
-    action: "it_super_user_temporary_password_reset",
+    action: "it_super_user_password_reset",
     table_name: "auth.users",
     record_id: targetUserId,
     new_data: { credential_type: "temporary", password_logged: false }
