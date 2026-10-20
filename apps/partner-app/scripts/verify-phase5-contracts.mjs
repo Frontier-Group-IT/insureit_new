@@ -150,7 +150,7 @@ expectAll('app/(tabs)/index.tsx', [
 // Partner claim tracker presentation contract (nine-stage reference design).
 expectAll('app/claim/[id].tsx', [
   [/getPartnerManufacturerLogoSource\(data\.vehicle\.make\)/, 'claim hero must retain the linked manufacturer logo'],
-  [/Claim Tracker/, 'claim details must use the Claim Tracker heading'],
+  [/useState\(false\)/, 'claim details must be collapsed by default'],
   [/setDetailsOpen\(v => !v\)/, 'claim details must expand and collapse'],
   [/setJourneyOpen\(v => !v\)/, 'claim journey must expand and collapse'],
   [/setDocumentsOpen\(v => !v\)/, 'claim documents must expand and collapse'],
