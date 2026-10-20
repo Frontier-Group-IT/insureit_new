@@ -47,7 +47,7 @@ const partnerOptions = [
   { value: "group", label: "Group", description: "Multiple linked entities under one group", available: true }
 ];
 
-export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
+export function CustomerWorkspace({ rows, isRelationshipManager }: { rows: CustomerRow[]; isRelationshipManager: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
@@ -148,7 +148,7 @@ export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
         <BrokerRegisterToolbar
           query={query}
           onQueryChange={(value) => { setQuery(value); setPage(1); }}
-          searchPlaceholder="Search customer, code, trade name, mobile or city"
+          searchPlaceholder={isRelationshipManager ? "Search customer, code, trade name or city" : "Search customer, code, trade name, mobile or city"}
           activeViewLabel={`${filteredRows.length} in current view`}
           action={<button type="button" onClick={openPartnerModal} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-3 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.22)]"><Plus className="h-4 w-4" />Add Customer</button>}
         >
@@ -176,7 +176,7 @@ export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
         ) : null}
 
         <div className="mobile-card-list p-3 md:hidden">
-          {pageRows.map((customer) => <CustomerMobileCard key={customer.id} customer={customer} selected={selectedIds.has(customer.id)} onToggle={() => toggleRow(customer.id)} />)}
+          {pageRows.map((customer) => <CustomerMobileCard key={customer.id} customer={customer} isRelationshipManager={isRelationshipManager} selected={selectedIds.has(customer.id)} onToggle={() => toggleRow(customer.id)} />)}
           {!pageRows.length ? <RegisterEmpty title="No matching customers" description="Adjust the search or saved view." /> : null}
         </div>
 
@@ -220,7 +220,7 @@ export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
   );
 }
 
-function CustomerMobileCard({ customer, selected, onToggle }: { customer: CustomerRow; selected: boolean; onToggle: () => void }) {
+function CustomerMobileCard({ customer, isRelationshipManager, selected, onToggle }: { customer: CustomerRow; isRelationshipManager: boolean; selected: boolean; onToggle: () => void }) {
   return (
     <article className={`mobile-record-card ${selected ? "border-[#8b7fff] bg-[#f7f5ff]" : ""}`}>
       <div className="flex items-start gap-3">
@@ -234,7 +234,11 @@ function CustomerMobileCard({ customer, selected, onToggle }: { customer: Custom
             <CustomerStatus status={customer.onboarding_status} />
           </div>
           <div className="mt-3 grid gap-2 text-[12px] text-[#53627A]">
-            <a href={`tel:${customer.phone}`} className="flex min-h-10 items-center gap-2 rounded-xl bg-[#f7f9fc] px-3"><Phone className="h-4 w-4 text-[#17365D]" /><span className="font-semibold tabular-nums">{customer.phone}</span></a>
+            {isRelationshipManager ? (
+              <div className="flex min-h-10 items-center gap-2 rounded-xl bg-[#f7f9fc] px-3"><Phone className="h-4 w-4 text-[#17365D]" /><span className="font-semibold tabular-nums">{customer.phone}</span></div>
+            ) : (
+              <a href={`tel:${customer.phone}`} className="flex min-h-10 items-center gap-2 rounded-xl bg-[#f7f9fc] px-3"><Phone className="h-4 w-4 text-[#17365D]" /><span className="font-semibold tabular-nums">{customer.phone}</span></a>
+            )}
             <div className="grid grid-cols-2 gap-2">
               <span className="flex min-h-10 items-center gap-2 rounded-xl bg-[#f7f9fc] px-3"><MapPin className="h-4 w-4 text-[#0E7490]" /><span className="truncate">{customer.city ?? "Location not set"}</span></span>
               <span className="flex min-h-10 items-center gap-2 rounded-xl bg-[#f7f9fc] px-3"><Truck className="h-4 w-4 text-[#B45309]" /><span>{vehicleCount(customer)} vehicles</span></span>

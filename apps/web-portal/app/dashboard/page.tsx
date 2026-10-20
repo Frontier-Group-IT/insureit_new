@@ -45,7 +45,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const commercial = canAccessPolicyCommercials(profile);
   const isRelationshipManager = profile?.role === "relationship_manager";
   const dashboardCommercialAccess = commercial || isRelationshipManager;
-  const dashboardCommercialOperationsAccess = (accountsCapability && commercial) || isRelationshipManager;
+  const dashboardCommercialOperationsAccess = !isRelationshipManager && accountsCapability && commercial;
   const access: DashboardAccess = {
     viewPolicies,
     viewVehicles,
@@ -79,6 +79,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         business={business}
         canCreatePolicy={createPolicies || editPolicies}
         canCreatePolicyIntake={createPolicyIntakes}
+        isRelationshipManager={isRelationshipManager}
       />
       <DashboardRegisterSync proposalPending={proposalSummary?.pending ?? 0} />
     </ClaimManagerShell>

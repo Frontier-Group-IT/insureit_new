@@ -53,6 +53,7 @@ export default async function DashboardV2Page({ searchParams }: { searchParams: 
   ]);
 
   const commercial = canAccessPolicyCommercials(profile);
+  const isRelationshipManager = profile?.role === "relationship_manager";
   const access: DashboardAccess = {
     viewPolicies,
     viewVehicles,
@@ -70,7 +71,7 @@ export default async function DashboardV2Page({ searchParams }: { searchParams: 
 
   const [data, business] = await Promise.all([
     getDashboardCurrentData(profile, access, base),
-    getDashboardBusinessData(profile, query, commercial, accountsCapability && commercial),
+    getDashboardBusinessData(profile, query, commercial, !isRelationshipManager && accountsCapability && commercial),
   ]);
 
   return (
@@ -82,6 +83,7 @@ export default async function DashboardV2Page({ searchParams }: { searchParams: 
           business={business}
           canCreatePolicy={createPolicies || editPolicies}
           canCreatePolicyIntake={createPolicyIntakes}
+          isRelationshipManager={profile?.role === "relationship_manager"}
         />
       </div>
     </ClaimManagerShell>
