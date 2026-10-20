@@ -59,7 +59,7 @@ expect(
   "final IT super user cannot be suspended",
   { ...base, actorRole: "super_admin", operation: "suspend", targetProfileId: "target-it", targetRole: "it_super_user", activeTargetRoleCount: 1 },
   false,
-  "final active IT Super User",
+  "Only the primary IT Super User",
 );
 
 expect(
@@ -85,13 +85,14 @@ expect(
   "normal user management cannot create IT super user",
   { ...base, actorRole: "super_admin", operation: "invite", assigningRole: "it_super_user", targetHasExistingProfile: false },
   false,
-  "protected technical role",
+  "protected sole-owner role",
 );
 
 expect(
-  "existing IT super user may be reinvited by IT administrator",
+  "existing IT super user may not be reinvited through normal governance",
   { ...base, actorRole: "it_super_user", operation: "invite", assigningRole: "it_super_user", targetHasExistingProfile: true, targetProfileId: "target-it", targetRole: "it_super_user" },
-  true,
+  false,
+  "protected sole-owner role",
 );
 
 expect(
@@ -123,19 +124,21 @@ expect(
   "ordinary admin cannot assign IT super user through role change",
   { ...base, actorRole: "admin", operation: "change_role", targetProfileId: "target-user", targetRole: "admin", assigningRole: "it_super_user" },
   false,
-  "Only a Super Admin or IT Super User",
+  "protected sole-owner role",
 );
 
 expect(
-  "super admin may assign IT super user through role change",
+  "super admin cannot assign the sole IT super user role",
   { ...base, actorRole: "super_admin", operation: "change_role", targetProfileId: "target-user", targetRole: "admin", assigningRole: "it_super_user" },
-  true,
+  false,
+  "protected sole-owner role",
 );
 
 expect(
-  "IT super user may assign another IT super user through role change",
+  "IT super user cannot assign a second IT super user",
   { ...base, actorRole: "it_super_user", operation: "change_role", targetProfileId: "target-user", targetRole: "admin", assigningRole: "it_super_user" },
-  true,
+  false,
+  "protected sole-owner role",
 );
 
 expect(
@@ -149,6 +152,24 @@ expect(
   "one of multiple super admins may be moved to another role",
   { ...base, actorRole: "it_super_user", operation: "change_role", targetProfileId: "target-sa", targetRole: "super_admin", assigningRole: "admin", activeTargetRoleCount: 2 },
   true,
+);
+
+expect(
+  "ordinary administrator cannot change IT User role",
+  { ...base, operation:"change_role",targetProfileId:"target-user",targetRole:"it_user",assigningRole:"manager" },
+  false,
+  "Only the primary IT Super User",
+);
+expect(
+  "primary IT Super User may change IT User role",
+  { ...base, actorRole:"it_super_user",actorProfileId:"dd3a036f-2cca-4a1e-b639-21fc1cc807ef",operation:"change_role",targetProfileId:"target-user",targetRole:"it_user",assigningRole:"manager",activeTargetRoleCount:4 },
+  true,
+);
+expect(
+  "cannot change primary IT owner",
+  { ...base,actorRole:"it_super_user",actorProfileId:"dd3a036f-2cca-4a1e-b639-21fc1cc807ef",operation:"change_role",targetProfileId:"dd3a036f-2cca-4a1e-b639-21fc1cc807ef",targetRole:"it_super_user",assigningRole:"it_user" },
+  false,
+  "primary IT Super User account is protected",
 );
 
 const governanceSource = readFileSync(
