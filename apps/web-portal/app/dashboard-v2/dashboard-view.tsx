@@ -122,7 +122,7 @@ export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, 
 
       {access.viewPolicies ? <BusinessPerformance business={business} /> : null}
 
-      {business.commercial ? <CommercialOperations business={business} canOpenControl={access.viewAccounts} /> : null}
+      {!isRelationshipManager && business.commercial ? <CommercialOperations business={business} canOpenControl={access.viewAccounts} /> : null}
 
       {showHealth ? <PortfolioHealth data={data} renewalTotal={renewalTotal} /> : null}
 
