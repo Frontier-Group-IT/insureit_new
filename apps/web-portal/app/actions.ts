@@ -8,6 +8,7 @@ import { claimStatuses, finalDocumentTypes, isClaimStatus, managerTransitions, m
 import { createServerSupabaseClient, getServerAccessToken, getAuthenticatedProfile } from "@/lib/auth-server";
 import { canManageUsers, canUpdateClaimStage, canVerifyClaimDocuments, isAppRole } from "@/lib/roles";
 import { validateInternalSpotIntimation } from "@/lib/internal-spot-intimation";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 function textValue(formData: FormData, name: string) {
   const value = formData.get(name);
