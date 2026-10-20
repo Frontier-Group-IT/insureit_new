@@ -19,7 +19,10 @@ export async function updateServiceEnquiryStatus(formData: FormData) {
   if (accessRank[permissions.view_tasks ?? "none"] < accessRank.edit) return;
 
   const supabase = await createServerSupabaseClient();
-  const { error } = await supabase.from("service_enquiries").update({ status }).eq("id", id);
+  let update = supabase.from("service_enquiries").update({ status }).eq("id", id);
+  if (profile.role === "relationship_manager") update = update.eq("assigned_to", profile.id);
+  const { data: updated, error } = await update.select("id");
+  if (!error && (!updated || updated.length === 0)) throw new Error("Ticket is not assigned to your account.");
   if (error) throw new Error("Service enquiry status could not be updated.");
 
   revalidatePath("/service-enquiries");
