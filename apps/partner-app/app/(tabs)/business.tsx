@@ -12,7 +12,7 @@ import { PartnerBusinessOverviewIcon, type PartnerBusinessOverviewIconKind } fro
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerRotatingSearchPlaceholder } from '@/components/ui/partner-search-field';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
-import { getPartnerBusinessPerformance, getPartnerTopInsurers, type PartnerTopInsurer, type PartnerBusinessPerformance } from '@/lib/business';
+import { getPartnerBusinessPerformance, getPartnerBusinessReportNet, getPartnerTopInsurers, type PartnerTopInsurer, type PartnerBusinessPerformance } from '@/lib/business';
 import { getPartnerClaimSummary, type PartnerClaimSummary } from '@/lib/claims';
 import { formatIndianCurrency } from '@/lib/format';
 import { getPartnerBusinessRange, type PartnerBusinessRangeSummary } from '@/lib/home';
@@ -126,6 +126,15 @@ export default function BusinessScreen() {
     staleTimeMs: 90_000,
   });
 
+  // Reuse the net-premium report's scoped monthly trend; never relabel gross values as net.
+  const fetchNetTrend = useCallback(() => getPartnerBusinessReportNet(), []);
+  const netTrend = usePartnerQuery<PartnerBusinessPerformance>({
+    scopeKey: cacheScopeKey,
+    key: 'business:monthly-net-trend:v1',
+    fetcher: fetchNetTrend,
+    staleTimeMs: 90_000,
+  });
+
   const workspace = usePartnerQuery({
     scopeKey: cacheScopeKey,
     key: 'business:workspace',
@@ -134,8 +143,8 @@ export default function BusinessScreen() {
   });
 
   useFocusEffect(useCallback(() => {
-    void Promise.all([workspace.ensureFresh(), currentMtd.ensureFresh(), previousMtd.ensureFresh()]);
-  }, [workspace.ensureFresh, currentMtd.ensureFresh, previousMtd.ensureFresh]));
+    void Promise.all([workspace.ensureFresh(), currentMtd.ensureFresh(), previousMtd.ensureFresh(), netTrend.ensureFresh()]);
+  }, [workspace.ensureFresh, currentMtd.ensureFresh, previousMtd.ensureFresh, netTrend.ensureFresh]));
 
   const performance = workspace.data?.performance ?? null;
   const network = workspace.data?.network ?? null;
@@ -222,17 +231,16 @@ export default function BusinessScreen() {
     : mtdChange(mtdCurrent?.net_premium, mtdPrevious?.net_premium);
 
   const trendData: TrendPoint[] = useMemo(() => {
-    if (!performance) return [];
-    if (trendRange === 'last_6_months') return performance.trend.slice(-6);
+    if (trendRange === 'last_6_months') return netTrend.data?.trend.slice(-6) ?? [];
     if (trendPreset) {
       return [{
         month: trendRange === 'mtd' ? 'MTD' : trendRange === 'last_month' ? 'LAST' : 'CUSTOM',
-        premium: trendPreset.premium,
+        premium: trendPreset.net_premium,
         policies: trendPreset.policies,
       }];
     }
     return [];
-  }, [performance, trendPreset, trendRange]);
+  }, [netTrend.data, trendPreset, trendRange]);
 
   return (
     <PartnerScreen
@@ -243,7 +251,7 @@ export default function BusinessScreen() {
         refreshControl: (
           <RefreshControl
             refreshing={workspace.refreshing}
-            onRefresh={() => void Promise.all([workspace.refresh(), currentMtd.refresh(), previousMtd.refresh()])}
+            onRefresh={() => void Promise.all([workspace.refresh(), currentMtd.refresh(), previousMtd.refresh(), netTrend.refresh()])}
             tintColor={partnerTheme.colors.brand}
             colors={[partnerTheme.colors.brand]}
           />
@@ -429,7 +437,16 @@ export default function BusinessScreen() {
           ) : null}
           {trendLoading ? <Text style={styles.inlineLoading}>Loading selected trend…</Text> : null}
           {trendError ? <View style={styles.feedback}><PartnerBanner tone="warning" message={trendError} /></View> : null}
-          <TrendChart data={trendData} compact={compactScreen} emptyMessage={trendRange === 'custom' ? 'Apply a custom range to view its premium total.' : undefined} />
+          {trendRange === 'last_6_months' && netTrend.error ? (
+            <View style={styles.feedback}><PartnerBanner tone="warning" message="Monthly net premium is unavailable. Please retry; gross values will not be shown as net." /></View>
+          ) : null}
+          <TrendChart
+            data={trendData}
+            compact={compactScreen}
+            emptyMessage={trendRange === 'last_6_months'
+              ? (netTrend.loading ? 'Loading monthly net premium…' : 'No monthly net premium data available.')
+              : trendRange === 'custom' ? 'Apply a custom range to view its net premium total.' : undefined}
+          />
 
           <SectionHeader
             title="Business by Product"
