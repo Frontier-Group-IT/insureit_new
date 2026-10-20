@@ -42,6 +42,7 @@ export default function RootLayout() {
                     <Stack.Screen name="customer/[id]" />
                     <Stack.Screen name="policy/[id]" />
                     <Stack.Screen name="claim/[id]" />
+                    <Stack.Screen name="claim/stage" />
                     <Stack.Screen name="policy-intakes" />
                     <Stack.Screen name="policy-intake-new" />
                     <Stack.Screen name="policy-intakes/[id]" />
