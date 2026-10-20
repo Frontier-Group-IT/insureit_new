@@ -1,0 +1,56 @@
+name: Verify Customer Firebase Android native configuration (no build)
+
+on:
+  push:
+    branches:
+      - feature/customer-firebase-otp-gateway-0-3-2-20261014
+    paths:
+      - 'apps/mobile-app/app.json'
+      - 'apps/mobile-app/google-services.json'
+      - 'apps/mobile-app/package.json'
+      - 'apps/mobile-app/eas.json'
+      - 'apps/mobile-app/lib/firebase-installed-android-otp.ts'
+      - 'apps/mobile-app/lib/customer-firebase-otp-session.ts'
+      - 'apps/mobile-app/lib/customer-firebase-session-exchange.ts'
+      - 'supabase/functions/_shared/customer-firebase-session-provision.mjs'
+      - 'package-lock.json'
+      - '.github/workflows/verify-customer-firebase-android-native.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android-native-config:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-public-anon-key
+      CI: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Validate Firebase project, Android package and production flag
+        run: |
+          node -e "const fs=require('fs'); const p='apps/mobile-app/'; const app=require('./'+p+'app.json').expo; const f=require('./'+p+'google-services.json'); const eas=require('./'+p+'eas.json'); if(app.android.package!=='com.insureit.mobile'||app.android.versionCode!==11||f.project_info.project_id!=='insureit-customer-auth'||!f.client.some(c=>c.client_info.android_client_info.package_name===app.android.package)||eas.build.production.env.EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_SESSION_BRIDGE_ENABLED!=='false'||eas.build['firebase-internal-test'].env.EXPO_PUBLIC_CUSTOMER_FIREBASE_OTP_SESSION_BRIDGE_ENABLED!=='true'||eas.build['firebase-internal-test'].android.buildType!=='app-bundle'||eas.build['firebase-internal-test'].distribution!=='store')process.exit(1);"
+      - name: Generate disposable Android native configuration (NO Gradle build)
+        working-directory: apps/mobile-app
+        run: npx expo prebuild --platform android --no-install --clean
+      - name: Validate Firebase Android resources and autolinked build configuration
+        shell: bash
+        working-directory: apps/mobile-app
+        run: |
+          set -euo pipefail
+          test -f android/app/google-services.json
+          grep -q 'insureit-customer-auth' android/app/google-services.json
+          test -f android/app/build.gradle
+          grep -R --include='*.gradle' -q 'google-services' android
+          test -f android/app/src/main/AndroidManifest.xml
+          grep -q 'com.insureit.mobile' android/app/build.gradle
+          echo 'PASS: generated Android native config only; no APK, AAB or OTA command executed.'

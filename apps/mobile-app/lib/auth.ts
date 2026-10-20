@@ -4,6 +4,7 @@ import * as Linking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { supabase } from './supabase';
+import { customerContactEmail } from './customer-contact-email';
 import type { AppRole, Customer, CustomerOnboardingApplication, CustomerOnboardingDocument, Json, PartnerType, Profile } from './types';
 import { isSalesHierarchyRole, isStaffRole } from './roles';
 import { clearSelectedCustomerContext, clearSelectedCustomerContextForUser } from './customer-context';
@@ -230,7 +231,7 @@ export async function startCustomerOnboarding(user: User, partnerType: PartnerTy
         current_step: partnerChanged ? 1 : existing.current_step,
         draft_data: partnerChanged ? {} : existing.draft_data,
         applicant_phone: user.phone ?? existing.applicant_phone,
-        applicant_email: user.email ?? existing.applicant_email,
+        applicant_email: customerContactEmail(user.email) ?? customerContactEmail(existing.applicant_email),
       })
       .eq('id', existing.id)
       .select('*')
@@ -249,7 +250,7 @@ export async function startCustomerOnboarding(user: User, partnerType: PartnerTy
       status: 'in_progress',
       current_step: 1,
       applicant_phone: user.phone ?? null,
-      applicant_email: user.email ?? null,
+      applicant_email: customerContactEmail(user.email),
     })
     .select('*')
     .single();
@@ -371,7 +372,7 @@ async function ensureCustomerSignupProfile(
   const metadata = user.user_metadata ?? {};
   const fullName = details?.fullName?.trim() || metadata.full_name?.trim() || 'New user';
   const phone = details?.phone?.trim() || user.phone || metadata.phone || '';
-  const email = details?.email?.trim() || user.email || metadata.email || null;
+  const email = customerContactEmail(details?.email) || customerContactEmail(metadata.email) || customerContactEmail(user.email);
 
   const { data, error } = await supabase
     .rpc('ensure_customer_signup_profile', {

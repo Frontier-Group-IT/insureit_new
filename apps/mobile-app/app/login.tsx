@@ -10,6 +10,9 @@ import { OtpDotsInput } from '@/components/otp-dots-input';
 import { getCurrentSession, getProfile, getRestoredSession, routeSignedInUser, sendPhoneOtp, verifyPhoneOtp } from '@/lib/auth';
 import { rememberCustomerAccount, removeRememberedCustomerAccount, switchToRememberedCustomerAccount } from '@/lib/customer-account-vault';
 import { supabase } from '@/lib/supabase';
+import { firebaseOtpSessionGateEnabled } from '@/lib/customer-firebase-session-exchange';
+import { sendCustomerFirebasePhoneOtp, verifyCustomerFirebasePhoneOtp, resetCustomerFirebaseOtp } from '@/lib/customer-firebase-otp-session';
+import { FirebaseCustomerOtpError, firebaseOtpPublicMessage } from '@/lib/firebase-otp-errors';
 
 const countryCode = '+91';
 const termsHref = '/legal/terms-of-use' as Href;
@@ -17,8 +20,9 @@ const privacyHref = '/legal/privacy-policy' as Href;
 
 export default function LoginScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ addAccount?: string }>();
+  const params = useLocalSearchParams<{ addAccount?: string; legacyOtp?: string }>();
   const addingAccount = params.addAccount === '1';
+  const firebaseOtpOnly = firebaseOtpSessionGateEnabled() && params.legacyOtp !== '1';
   const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -85,11 +89,13 @@ export default function LoginScreen() {
     }
     setLoading(true);
     try {
-      await sendPhoneOtp(fullPhone);
+      if (firebaseOtpOnly) await sendCustomerFirebasePhoneOtp(fullPhone);
+      else await sendPhoneOtp(fullPhone);
       setOtpSent(true);
       setMessage(`OTP sent to ${countryCode} ${formatMobile(normalizedMobile)}.`);
     } catch (nextError) {
-      setError(phoneAuthErrorMessage(nextError, 'send'));
+      setError(nextError instanceof FirebaseCustomerOtpError
+        ? firebaseOtpPublicMessage(nextError) : phoneAuthErrorMessage(nextError, 'send'));
     } finally {
       setLoading(false);
     }
@@ -110,7 +116,9 @@ export default function LoginScreen() {
     setLoading(true);
     let candidateSessionInstalled = false;
     try {
-      const data = await verifyPhoneOtp(fullPhone, otp);
+      const data = firebaseOtpOnly
+        ? await verifyCustomerFirebasePhoneOtp(fullPhone, otp)
+        : await verifyPhoneOtp(fullPhone, otp);
       candidateSessionInstalled = Boolean(addingAccount && data.session);
       if (!data.user) {
         throw new Error('OTP verification did not return an active account.');
@@ -156,7 +164,8 @@ export default function LoginScreen() {
           await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
         }
       }
-      setError(phoneAuthErrorMessage(nextError, 'verify'));
+      setError(nextError instanceof FirebaseCustomerOtpError
+        ? firebaseOtpPublicMessage(nextError) : phoneAuthErrorMessage(nextError, 'verify'));
     } finally {
       setLoading(false);
     }
@@ -164,6 +173,7 @@ export default function LoginScreen() {
 
   function editMobile() {
     if (loading) return;
+    if (firebaseOtpOnly) resetCustomerFirebaseOtp();
     setOtpSent(false);
     setOtp('');
     setMessage('');
@@ -236,6 +246,20 @@ export default function LoginScreen() {
               onPress={otpSent ? verifyOtp : requestOtp}
             />
           </View>
+
+          {firebaseOtpOnly ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={loading}
+              onPress={() => {
+                resetCustomerFirebaseOtp();
+                router.replace('/login?legacyOtp=1' as Href);
+              }}
+              style={styles.resendButton}
+            >
+              <Text style={styles.resendText}>Use existing SMS verification instead</Text>
+            </Pressable>
+          ) : null}
 
           <Text style={styles.legalText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
             By continuing, you agree to our{' '}
