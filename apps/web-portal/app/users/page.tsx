@@ -43,10 +43,10 @@ export default async function UsersPage({ searchParams }: { searchParams?: Promi
             <p className="text-[8px] font-bold uppercase tracking-[0.14em] text-[#64748B]">System administration</p>
             <h1 className="mt-1 text-[20px] font-bold tracking-[-0.02em] text-[#17203A]">User Management</h1>
           </div>
-          <div className="rounded-xl border border-[#DCE4EF] bg-[#F8FAFC] px-3 py-2 text-right">
+          <div className="flex items-center gap-2">{profile?.role === "it_super_user" && <a href="/users/auth-directory" className="rounded-lg bg-[#17365D] px-3 py-2 text-xs font-semibold text-white">Auth Password Management</a>}<div className="rounded-xl border border-[#DCE4EF] bg-[#F8FAFC] px-3 py-2 text-right">
             <p className="text-[8px] font-bold uppercase text-[#94A3B8]">Directory</p>
             <p className="mt-0.5 text-[11px] font-bold text-[#17365D]">{users.length} users</p>
-          </div>
+          </div></div>
         </section>
       <UserManagementWorkspace users={users} managers={managers} canPermanentDelete={profile?.role === "it_super_user"} initialQuery={params.q?.trim() ?? ""} initialRole={params.role ?? ""} initialStatus={params.status ?? ""} loadError={error ? "User records could not be loaded. Please refresh and try again." : null} />
       </div>
