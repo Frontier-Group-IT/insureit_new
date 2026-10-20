@@ -494,7 +494,7 @@ export const roleMatrixV2: readonly RoleDefinitionV2[] = [
     status: "active",
     assignable: true,
     defaultScope: "organization",
-    grants: allTechnicalGrants.filter(entry => !["admin.portal_users.manage","admin.roles.manage","admin.permissions.manage"].includes(entry.permission)),
+    grants: allTechnicalGrants.filter(entry => !["admin.portal_users.manage","admin.roles.manage","admin.permissions.manage","system.integrations.configure"].includes(entry.permission)),
   },
   {
     code: "manager",
