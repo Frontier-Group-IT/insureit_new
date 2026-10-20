@@ -6,6 +6,7 @@ import { createProfileRecord, setProfileActive, updateProfileRecord } from "@/ap
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { StatusBadge } from "@/components/ui";
 import { PermanentDeleteButton } from "@/components/permanent-delete-button";
+import { AdminPasswordReset } from "./admin-password-reset";
 import { appRoles, designationOptions, roleLabels } from "@/lib/roles";
 
 export type ProfileRow = {
@@ -110,6 +111,7 @@ function ManageUser({user,managers,canPermanentDelete,onClose}:{user:ProfileRow;
    <input type="hidden" name="is_active" value={user.is_active?"true":"false"}/>
    <div className="flex justify-end gap-2 sm:col-span-2 md:col-span-3"><button type="button" onClick={onClose} className="rounded-lg border border-[#DCE4EF] px-4 py-2 text-xs">Cancel</button><FormSubmitButton label="Save" pendingLabel="Saving" className="rounded-lg bg-[#17365D] px-4 py-2 text-xs font-bold text-white disabled:opacity-60"/></div>
   </form>
+  {canPermanentDelete && <AdminPasswordReset userId={user.id} />}
   <div className="flex flex-wrap items-center gap-2 border-t border-[#E8EEF5] pt-3"><form action={toggleAction}><FormSubmitButton label={user.is_active?"Deactivate":"Reactivate"} pendingLabel="Updating" className="rounded-lg border border-[#CBD5E1] px-4 py-2 text-xs font-bold text-[#17365D]"/></form>{canPermanentDelete&&<PermanentDeleteButton kind="user" id={user.id} name={user.full_name}/>}</div>
  </div>;
 }
