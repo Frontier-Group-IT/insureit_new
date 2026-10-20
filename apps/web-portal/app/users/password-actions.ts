@@ -26,7 +26,7 @@ export async function resetUserTemporaryPassword(
   const temporaryPassword = typeof supplied === "string" && supplied.length >= 8 && supplied.length <= 72 ? supplied : randomBytes(18).toString("base64url");
   const updatedEmailValue = formData.get("corrected_email");
   const correctedEmail = typeof updatedEmailValue === "string" ? updatedEmailValue.trim().toLowerCase() : "";
-  if (correctedEmail && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(correctedEmail)) return fail("Enter a valid corrected email address.");
+  if (correctedEmail && (!correctedEmail.includes("@") || correctedEmail.includes(" ") || !correctedEmail.split("@")[1]?.includes("."))) return fail("Enter a valid corrected email address.");
   // Privileged IT reset confirms only this selected Auth identity; normal signup remains unchanged.
   const { error } = await supabase.auth.admin.updateUserById(targetUserId, {
     password: temporaryPassword,
