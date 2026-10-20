@@ -123,6 +123,11 @@ export function resolveEffectivePermissionV2(
   const activeAssignments = input.assignments.filter((assignment) => assignmentIsCurrent(assignment, now));
   const activeRoles = activeAssignments.map((assignment) => roleByCode.get(assignment.roleCode)).filter((role): role is RoleDefinitionV2 => Boolean(role));
 
+  const reservedIdentityPermissions = new Set<PermissionKeyV2>(["admin.portal_users.manage","admin.roles.manage","admin.permissions.manage","system.integrations.configure"]);
+  if (activeRoles.some(role => role.code === "it_user") && !activeRoles.some(role => role.code === "it_super_user") && reservedIdentityPermissions.has(input.permission)) {
+    return noAccess(input.permission, "no_grant", "Primary IT administrator authority is required for this permission.", ["it_user"]);
+  }
+
   const protectedItRole = activeRoles.find((role) => role.code === "it_super_user" && role.status === "protected");
   if (protectedItRole) {
     const protectedGrant = protectedItRole.grants.find((grant) => grant.permission === input.permission);
