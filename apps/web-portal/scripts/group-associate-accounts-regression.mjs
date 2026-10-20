@@ -48,7 +48,11 @@ assert.match(sections,/admin_name,admin_email,admin_mobile,address,city,state,po
 assert.match(sections,/Group Administrator/);
 assert.match(sections,/portal_access_identities/);
 assert.match(sections,/\.eq\("entity_id",id\)/);
-assert.match(sections,/contactResult\.data \?\?/);
+assert.match(sections,/const contact=contactResult\.data/);
+assert.match(sections,/firstNonBlank\(contact\?\.admin_name,identityProfile\?\.full_name\)/);
+assert.match(sections,/firstNonBlank\(contact\?\.admin_email,identity\?\.login_email,identityProfile\?\.email\)/);
+assert.match(sections,/firstNonBlank\(contact\?\.admin_mobile,identityProfile\?\.phone\)/);
+assert.match(sections,/const hasRegisterRecords=Boolean\(group\)/);
 assert.match(sections,/identityProfile\?\.full_name/);
 assert.match(sections,/const loadError=/);
 assert.match(sections,/Associate Accounts could not be loaded completely/);
