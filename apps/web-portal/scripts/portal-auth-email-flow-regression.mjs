@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const [login, invite, forgot, reset, shell] = await Promise.all([
+const [login, invite, forgot, reset, shell, recoveryApi, eligibilitySql] = await Promise.all([
   readFile(new URL("../app/login/page.tsx", import.meta.url), "utf8"),
   readFile(new URL("../app/invite/page.tsx", import.meta.url), "utf8"),
   readFile(new URL("../app/forgot-password/page.tsx", import.meta.url), "utf8"),
   readFile(new URL("../app/reset-password/page.tsx", import.meta.url), "utf8"),
   readFile(new URL("../components/auth-portal-shell.tsx", import.meta.url), "utf8"),
+  readFile(new URL("../app/api/auth/password-recovery/route.ts", import.meta.url), "utf8"),
+  readFile(new URL("../../../supabase/migrations/20261020135000_portal_password_recovery_eligibility.sql", import.meta.url), "utf8"),
 ]);
 
 for (const [name, source] of [["login", login], ["invite", invite], ["forgot", forgot], ["reset", reset]]) {
@@ -15,8 +17,11 @@ for (const [name, source] of [["login", login], ["invite", invite], ["forgot", f
 
 assert.match(invite, /error_description/, "Invite page must render Supabase redirect errors server-side.");
 assert.match(invite, /This invitation link cannot be used/, "Invite page must provide a stable expired/invalid link state.");
-assert.match(forgot, /resetPasswordForEmail/, "Forgot-password must continue using Supabase recovery email.");
-assert.match(forgot, /redirectTo: `\$\{window\.location\.origin\}\/reset-password`/, "Recovery email must return to the reset-password route.");
+assert.match(forgot, /fetch\("\/api\/auth\/password-recovery"/, "Forgot-password must use server-side portal eligibility.");
+assert.match(recoveryApi, /admin\.auth\.resetPasswordForEmail/, "Recovery API must continue using Supabase Auth recovery.");
+assert.match(recoveryApi, /new URL\("\/reset-password", request\.url\)/, "Recovery email must return to the reset-password route.");
+assert.match(eligibilitySql, /revoke all on function public\.portal_password_recovery_eligibility/, "Eligibility function must not be callable publicly.");
+assert.match(eligibilitySql, /grant execute on function public\.portal_password_recovery_eligibility\(text\) to service_role/, "Eligibility function must remain service-role-only.");
 
 assert.match(reset, /onAuthStateChange/, "Reset-password must observe Supabase recovery auth events.");
 assert.match(reset, /PASSWORD_RECOVERY/, "Reset-password must require a recovery auth event when applicable.");
