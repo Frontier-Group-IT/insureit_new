@@ -1,3 +1,3 @@
 Partner production OTA trigger
-commit=fd780430f46209cd241695e3faf11a78c1d537a5
-reason=role-specific-business-retention-payout
+commit=d76836c6382b4183524588dbd5653cb6a8b7ff34
+reason=partner-claim-tracker-nine-stages-pr-3265
