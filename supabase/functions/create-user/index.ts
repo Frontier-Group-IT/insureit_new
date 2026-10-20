@@ -24,6 +24,7 @@ const appRoles = new Set([
   "agent",
   "customer",
   "it_super_user",
+  "it_user",
 ]);
 
 const userManagementRoles = new Set(["it_super_user", "admin", "super_admin"]);
@@ -113,6 +114,14 @@ Deno.serve(async (request) => {
 
   if (!email || !password || !fullName || !role || !appRoles.has(role)) {
     return jsonResponse({ error: "Email, password, full name, and valid role are required." }, 400);
+  }
+
+  // Portal-level primary administrator ownership: never create another IT Super User.
+  if (role === "it_super_user") {
+    return jsonResponse({ error: "The sole IT Super User account cannot be duplicated." }, 403);
+  }
+  if (role === "it_user" && (callerRole !== "it_super_user" || callerProfile.id !== "dd3a036f-2cca-4a1e-b639-21fc1cc807ef")) {
+    return jsonResponse({ error: "Only the primary IT Super User can create an IT User." }, 403);
   }
 
   if (password.length < 6) {
