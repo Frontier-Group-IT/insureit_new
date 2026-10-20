@@ -487,6 +487,16 @@ export const roleMatrixV2: readonly RoleDefinitionV2[] = [
     grants: allTechnicalGrants,
   },
   {
+    code: "it_user",
+    label: "IT User",
+    purpose: "Technical operational access without ownership of primary administrator accounts, roles or permission delegation.",
+    category: "technical",
+    status: "active",
+    assignable: true,
+    defaultScope: "organization",
+    grants: allTechnicalGrants.filter(entry => !["admin.portal_users.manage","admin.roles.manage","admin.permissions.manage"].includes(entry.permission)),
+  },
+  {
     code: "manager",
     label: "Manager (Legacy Compatibility)",
     purpose: "Legacy broad-access role retained temporarily because existing TypeScript and database rules reference it. Do not assign to new employees.",
