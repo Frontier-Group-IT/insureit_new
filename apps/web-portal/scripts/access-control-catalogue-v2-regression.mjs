@@ -105,7 +105,7 @@ const exchangeCreateRoleCodes = roleMatrixV2
   .filter((role) => role.grants.some((grant) => grant.permission === "exchange.listings.create" && (grant.access === "edit" || grant.access === "approve")))
   .map((role) => role.code)
   .sort();
-const expectedExchangeCreateRoleCodes = ["it_super_user", "sales_operations_head", "super_admin"].sort();
+const expectedExchangeCreateRoleCodes = ["it_super_user", "it_user", "sales_operations_head", "super_admin"].sort();
 if (JSON.stringify(exchangeCreateRoleCodes) !== JSON.stringify(expectedExchangeCreateRoleCodes)) {
   fail(`Exchange listing creation must remain limited to ${expectedExchangeCreateRoleCodes.join(", ")}; got ${exchangeCreateRoleCodes.join(", ")}`);
 }
@@ -114,11 +114,16 @@ const exchangeReviewRoleCodes = roleMatrixV2
   .filter((role) => role.grants.some((grant) => grant.permission === "exchange.listings.review" && grant.access === "approve"))
   .map((role) => role.code)
   .sort();
-const expectedExchangeReviewRoleCodes = ["it_super_user", "sales_head", "sales_operations_head", "super_admin"].sort();
+const expectedExchangeReviewRoleCodes = ["it_super_user", "it_user", "sales_head", "sales_operations_head", "super_admin"].sort();
 if (JSON.stringify(exchangeReviewRoleCodes) !== JSON.stringify(expectedExchangeReviewRoleCodes)) {
   fail(`Exchange listing review must remain limited to ${expectedExchangeReviewRoleCodes.join(", ")}; got ${exchangeReviewRoleCodes.join(", ")}`);
 }
 
+const itUser = roleMatrixV2.find(role => role.code === "it_user");
+if (!itUser || !itUser.assignable || itUser.status !== "active") fail("IT User must be an active assignable technical role");
+for (const restricted of ["admin.portal_users.manage","admin.roles.manage","admin.permissions.manage"]) {
+  if (itUser.grants.some(grant => grant.permission === restricted)) fail(`IT User must not possess ${restricted}`);
+}
 const itSuperUser = roleMatrixV2.find((role) => role.code === "it_super_user");
 if (!itSuperUser || itSuperUser.status !== "protected" || itSuperUser.assignable) {
   fail("IT Super User must remain protected and non-assignable");
@@ -159,7 +164,17 @@ const applicationOnlyPermissionKeys = new Set([
   "exchange.listings.create",
   "exchange.listings.review",
 ]);
-const applicationOnlyRoleCodes = new Set(["accounts", "sales_executive"]);
+const applicationOnlyRoleCodes = new Set(["accounts", "sales_executive", "it_user"]);
+const itUserShadowSql = readFileSync(
+  resolve(process.cwd(), "../../supabase/release-sql/20261020_it_user_v2_shadow_role_optional.sql"),
+  "utf8",
+);
+if (!itUserShadowSql.includes("('it_user','IT User'") || !itUserShadowSql.includes("IT User operational role parity")) {
+  fail("IT User additive V2 role and grant migration is missing");
+}
+for (const protectedPermission of ["admin.portal_users.manage","admin.roles.manage","admin.permissions.manage","system.integrations.configure"]) {
+  if (!itUserShadowSql.includes("'"+protectedPermission+"'")) fail("IT User shadow role must explicitly exclude "+protectedPermission);
+}
 if (/access_(permissions|roles|role_permissions)_v2/.test(ocrQueueMigrationSql)) {
   fail("OCR queue migration must remain independent from the optional Access Control V2 database schema");
 }

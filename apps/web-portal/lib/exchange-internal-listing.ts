@@ -2,7 +2,7 @@ import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-const allowedRoles = new Set(["it_super_user", "super_admin", "sales_operations_head"]);
+const allowedRoles = new Set(["it_super_user", "it_user", "super_admin", "sales_operations_head"]);
 const guidedPhotoLabels = ["Front", "Rear", "Left", "Right", "Cabin", "Odometer"] as const;
 const activeStatuses = ["pending_review", "live", "paused", "deal_in_progress"];
 const editableStatuses = ["draft", "rejected", "paused"];

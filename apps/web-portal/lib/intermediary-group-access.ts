@@ -7,7 +7,7 @@ import type { AppRole, Capability } from "@/lib/roles";
 const groupManagerRoles = new Set<AppRole>([
   "super_admin",
   "admin",
-  "it_super_user",
+  "it_super_user", "it_user",
   "manager",
   "sales_operations_head",
   "sales_head",
@@ -21,7 +21,7 @@ const groupManagerRoles = new Set<AppRole>([
 const groupTransferRoles = new Set<AppRole>([
   "super_admin",
   "admin",
-  "it_super_user",
+  "it_super_user", "it_user",
   "manager",
   "sales_operations_head",
   "sales_head",

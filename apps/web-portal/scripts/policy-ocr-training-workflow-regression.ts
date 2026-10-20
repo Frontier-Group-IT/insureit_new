@@ -212,7 +212,7 @@ const trainingAccess = readFileSync("lib/policy-ocr-training-access.ts", "utf8")
 const workerActions = readFileSync("app/policies/policy-ocr-actions.ts", "utf8");
 assert.match(trainingAccess, /review_policy_ocr_training/);
 assert.match(trainingAccess, /approve_policy_ocr_training/);
-assert.match(trainingAccess, /profile\.role !== "it_super_user"/);
+assert.match(trainingAccess, /it_super_user.*it_user/);
 assert.match(workerActions, /google_ocr_configuration_missing/);
 assert.match(workerActions, /google_oidc_subject_token_missing/);
 assert.match(workerActions, /Automated comparison reference from saved Section 02 and Section 03 data/);

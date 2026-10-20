@@ -26,7 +26,7 @@ export const revalidate = 0;
 
 export default async function AccessControlPage({ searchParams }: { searchParams: Promise<{ view?: string; q?: string; role?: string; status?: string; success?: string; error?: string }> }) {
   const viewer = (await getAuthenticatedProfile(await getServerAccessToken())).profile;
-  if (!viewer?.id || !(await hasEffectiveCapability(viewer, "manage_system", "approve"))) redirect("/access-denied");
+  if (!viewer?.id || viewer.role === "it_user" || !(await hasEffectiveCapability(viewer, "manage_system", "approve"))) redirect("/access-denied");
 
   const params = await searchParams;
   const view = normalizeView(params.view);

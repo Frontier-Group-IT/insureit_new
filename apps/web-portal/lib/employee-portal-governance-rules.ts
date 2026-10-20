@@ -23,6 +23,18 @@ const portalManagerRoles: readonly AppRole[] = ["super_admin", "admin", "it_supe
 export function evaluateEmployeePortalGovernanceGuard(
   input: EmployeePortalGovernanceGuardInput,
 ): EmployeePortalGovernanceGuardResult {
+  // The original primary IT account is the only authority for IT identity lifecycle actions.
+  const primaryItId = "dd3a036f-2cca-4a1e-b639-21fc1cc807ef";
+  if (input.assigningRole === "it_super_user") {
+    return { allowed: false, reason: "IT Super User is a protected sole-owner role and cannot be assigned through the portal." };
+  }
+  if (input.targetProfileId === primaryItId && (input.operation === "suspend" || input.operation === "change_role")) {
+    return { allowed: false, reason: "The primary IT Super User account is protected from portal role and status changes." };
+  }
+  if ((input.targetRole === "it_user" || input.targetRole === "it_super_user" || input.assigningRole === "it_user") && input.actorProfileId !== primaryItId) {
+    return { allowed: false, reason: "Only the primary IT Super User can manage IT administrator identities." };
+  }
+
   if ((input.operation === "suspend" || input.operation === "restore") && !input.targetProfileId) {
     return { allowed: true };
   }
@@ -54,12 +66,6 @@ export function evaluateEmployeePortalGovernanceGuard(
     return { allowed: false, reason: "You do not have permission to manage employee portal access." };
   }
 
-  if (input.operation === "change_role" && input.assigningRole === "it_super_user") {
-    if (input.actorRole !== "super_admin" && input.actorRole !== "it_super_user") {
-      return { allowed: false, reason: "Only a Super Admin or IT Super User can assign IT Super User access." };
-    }
-  }
-
   if (input.operation === "change_role" && input.assigningRole === "super_admin") {
     if (input.actorRole !== "super_admin" && input.actorRole !== "it_super_user") {
       return { allowed: false, reason: "Only a Super Admin or IT Super User can assign Super Admin access." };
@@ -76,10 +82,6 @@ export function evaluateEmployeePortalGovernanceGuard(
   ) {
     const label = input.targetRole === "super_admin" ? "Super Admin" : "IT Super User";
     return { allowed: false, reason: `The final active ${label} account cannot be moved to another role.` };
-  }
-
-  if (input.operation === "invite" && input.assigningRole === "it_super_user" && !input.targetHasExistingProfile) {
-    return { allowed: false, reason: "IT Super User is a protected technical role and cannot be assigned through normal user management." };
   }
 
   if (input.operation === "invite" && input.assigningRole === "super_admin") {
