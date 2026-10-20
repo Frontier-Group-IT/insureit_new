@@ -24,7 +24,15 @@ export async function resetUserTemporaryPassword(
   // inherent in a universal shared password.
   const supplied = formData.get("password");
   const temporaryPassword = typeof supplied === "string" && supplied.length >= 8 && supplied.length <= 72 ? supplied : randomBytes(18).toString("base64url");
-  const { error } = await supabase.auth.admin.updateUserById(targetUserId, { password: temporaryPassword });
+  const updatedEmailValue = formData.get("corrected_email");
+  const correctedEmail = typeof updatedEmailValue === "string" ? updatedEmailValue.trim().toLowerCase() : "";
+  if (correctedEmail && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(correctedEmail)) return fail("Enter a valid corrected email address.");
+  // Privileged IT reset confirms only this selected Auth identity; normal signup remains unchanged.
+  const { error } = await supabase.auth.admin.updateUserById(targetUserId, {
+    password: temporaryPassword,
+    email_confirm: true,
+    ...(correctedEmail ? { email: correctedEmail } : {})
+  });
   if (error) return fail("Password reset failed. No password was displayed.");
 
   const { error: auditError } = await supabase.from("audit_logs").insert({
@@ -32,12 +40,12 @@ export async function resetUserTemporaryPassword(
     action: "it_super_user_password_reset",
     table_name: "auth.users",
     record_id: targetUserId,
-    new_data: { credential_type: "temporary", password_logged: false }
+    new_data: { credential_type: "temporary", password_logged: false, email_confirmed_by_it: true, email_corrected: Boolean(correctedEmail) }
   });
   if (auditError) {
     // Do not expose a successful credential reset without an audit trail.
     // The password may have changed already; warn explicitly instead.
     return { ok: true, message: "Password changed, but audit logging failed. Contact IT to reconcile the audit record.", temporaryPassword };
   }
-  return { ok: true, message: "Temporary password issued. Copy it now and have the user replace it after your account checks.", temporaryPassword };
+  return { ok: true, message: "Password reset and email confirmation completed. Use the corrected email to sign in if it was changed. Copy the password now.", temporaryPassword };
 }
