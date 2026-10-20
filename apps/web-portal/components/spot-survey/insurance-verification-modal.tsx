@@ -17,12 +17,14 @@ export function InsuranceVerificationModalButton({
   incidentDate,
   policyStartDate,
   policyEndDate,
+  initialDetails = null,
 }: {
   claimId: string;
   documentId: string;
   incidentDate?: string | null;
   policyStartDate?: string | null;
   policyEndDate?: string | null;
+  initialDetails?: Record<string, unknown> | null;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -32,14 +34,14 @@ export function InsuranceVerificationModalButton({
   const [capacity, setCapacity] = useState<InsuranceVerificationCapacity | null>(null);
   const [capacityLoading, setCapacityLoading] = useState(false);
   const [capacityError, setCapacityError] = useState("");
-  const policyStart = toDateOnly(policyStartDate) ?? "";
-  const policyEnd = toDateOnly(policyEndDate) ?? "";
+  const policyStart = detailText(initialDetails, "insurance_start_date") || toDateOnly(policyStartDate) || "";
+  const policyEnd = detailText(initialDetails, "insurance_end_date") || toDateOnly(policyEndDate) || "";
   const [insurance, setInsurance] = useState<InsuranceState>({
     start: policyStart,
     end: policyEnd,
-    ncb: "",
-    policy: "",
-    capacity: "",
+    ncb: detailText(initialDetails, "ncb_verified"),
+    policy: detailText(initialDetails, "policy_type_check"),
+    capacity: detailText(initialDetails, "vehicle_capacity_value") || detailText(initialDetails, "gvw_kg"),
   });
   const incident = toDateOnly(incidentDate);
 
@@ -282,4 +284,10 @@ function formatDisplayDate(value?: string | null) {
   if (!isoDate) return value;
   const [year, month, day] = isoDate.split("-");
   return `${day}/${month}/${year}`;
+}
+
+
+function detailText(details: Record<string, unknown> | null | undefined, key: string) {
+  const value = details?.[key];
+  return typeof value === "string" || typeof value === "number" ? String(value) : "";
 }
