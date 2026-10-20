@@ -280,6 +280,18 @@ async function requireUserManager() {
   return profile?.id ?? null;
 }
 
+async function assertProtectedItRoleChange(targetId: string | null, requestedRole: string) {
+  const {profile: actor}=await getAuthenticatedProfile(await getServerAccessToken());
+  if(!actor?.id)throw new Error("Authentication required.");
+  const admin=createSupabaseAdminClient();
+  if(requestedRole==="it_super_user")throw new Error("The IT Super User role is reserved for the protected primary administrator.");
+  if(!targetId)return;
+  const {data:target,error}=await admin.from("profiles").select("role").eq("id",targetId).maybeSingle();
+  if(error)throw new Error("Could not verify the target role.");
+  if(target?.role==="it_super_user" && targetId==="dd3a036f-2cca-4a1e-b639-21fc1cc807ef")throw new Error("The protected IT Super User account cannot be edited through User Management.");
+  if((requestedRole==="it_user" || target?.role==="it_user" || target?.role==="it_super_user") && actor.role!=="it_super_user")throw new Error("Only the primary IT Super User can manage IT User identities.");
+}
+
 export async function createProfileRecord(formData: FormData) {
   const supabase = await createServerSupabaseClient();
   await requireUserManager();
@@ -292,6 +304,7 @@ export async function createProfileRecord(formData: FormData) {
     throw new Error("Email, password, name, and valid role are required.");
   }
 
+  await assertProtectedItRoleChange(null,role);
   const { error } = await supabase.functions.invoke("create-user", {
     body: {
       email,
@@ -327,6 +340,7 @@ export async function createProfileForExistingAuthUser(formData: FormData) {
     throw new Error("Existing Auth user ID, name, and valid role are required.");
   }
 
+  await assertProtectedItRoleChange(null,role);
   const { error } = await supabase.from("profiles").insert({
     id,
     full_name: fullName,
@@ -361,6 +375,7 @@ export async function updateProfileRecord(id: string, formData: FormData) {
     throw new Error("Name and valid role are required.");
   }
 
+  await assertProtectedItRoleChange(id,role);
   const { error } = await supabase
     .from("profiles")
     .update({
@@ -388,6 +403,8 @@ export async function updateProfileRecord(id: string, formData: FormData) {
 export async function setProfileActive(id: string, isActive: boolean) {
   const supabase = await createServerSupabaseClient();
   const updatedBy = await requireUserManager();
+  const {data:protectedTarget}=await createSupabaseAdminClient().from("profiles").select("role").eq("id",id).maybeSingle();
+  if(protectedTarget?.role==="it_super_user" || protectedTarget?.role==="it_user") throw new Error("IT administrator activation is protected; use the primary IT Super User management workflow.");
   const { error } = await supabase.from("profiles").update({ is_active: isActive, updated_by: updatedBy }).eq("id", id);
 
   if (error) {
