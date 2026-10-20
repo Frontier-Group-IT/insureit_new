@@ -151,6 +151,7 @@ function ProfessionalIcon({ src, alt = "", size = 24 }: { src: string; alt?: str
 }
 
 async function getPartnerWebNetPremiumThisMonth() {
+  await getPartnerWebSession();
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase.rpc("partner_web_net_premium_this_month");
   if (error || data === null) throw new Error(error?.message ?? "Partner net premium is unavailable.");
@@ -158,6 +159,7 @@ async function getPartnerWebNetPremiumThisMonth() {
 }
 
 async function getPartnerWebClaimOutstanding() {
+  await getPartnerWebSession();
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase.rpc("partner_web_claim_outstanding");
   if (error || data === null) throw new Error(error?.message ?? "Partner claim outstanding is unavailable.");
