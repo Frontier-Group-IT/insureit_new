@@ -129,10 +129,31 @@ export default function StartClaimScreen() {
   }
 
   async function continueClaim() {
-    if (!selectedVehicle || !selectedPolicy || checkingActiveClaim) return;
+    if (!selectedVehicle || checkingActiveClaim) return;
     setMessage('');
     setCheckingActiveClaim(true);
     try {
+      if (!selectedPolicy) {
+        const session = await getCurrentSession();
+        if (!session?.user) { router.replace('/login'); return; }
+        const { data: existing, error: existingError } = await supabase.from('claims')
+          .select('id,current_status').eq('customer_id', selectedVehicle.customer_id)
+          .eq('vehicle_id', selectedVehicle.id).is('policy_id', null).is('external_policy_id', null)
+          .not('current_status', 'in', '("Settled","Closed","Claim Complete","Rejected")').limit(1).maybeSingle();
+        if (existingError) throw existingError;
+        if (existing?.id) {
+          router.push({ pathname: '/customer/claim-detail', params: { id: existing.id } } as any);
+          return;
+        }
+        const { data: draft, error: createError } = await supabase.from('claims').insert({
+          claim_no: makeClaimNumber(), customer_id: selectedVehicle.customer_id,
+          vehicle_id: selectedVehicle.id, policy_id: null, external_policy_id: null,
+          insurance_company_id: null, current_status: 'Draft', created_by: session.user.id,
+        }).select('id').single();
+        if (createError || !draft?.id) throw createError ?? new Error('Claim draft creation failed');
+        router.push({ pathname: '/customer/claim-detail', params: { id: draft.id } } as any);
+        return;
+      }
       if (selectedPolicy.source === 'external') {
         const existingClaim = await findActiveExternalPolicyClaim(selectedPolicy.id);
         if (existingClaim) {
@@ -298,12 +319,12 @@ export default function StartClaimScreen() {
             </View>
           </Pressable>
         ) : (
-          <View style={styles.noPolicy}><MaterialCommunityIcons name="shield-alert-outline" size={26} color="#B7791F" /><View style={styles.noPolicyCopy}><Text style={styles.noPolicyTitle}>No policy recorded for this vehicle</Text><Text style={styles.noPolicyText}>Add the policy details before starting a claim.</Text></View></View>
+          <View style={styles.noPolicy}><MaterialCommunityIcons name="shield-alert-outline" size={26} color="#B7791F" /><View style={styles.noPolicyCopy}><Text style={styles.noPolicyTitle}>No policy recorded for this vehicle</Text><Text style={styles.noPolicyText}>You can register a claim without a policy. Coverage will be verified separately.</Text></View></View>
         )}
       </View>
 
       <ClaimActionBar
-        primaryDisabled={!selectedPolicy || checkingActiveClaim}
+        primaryDisabled={!selectedVehicle || checkingActiveClaim}
         primaryLabel={checkingActiveClaim ? 'Checking...' : 'Start Claim'}
         primaryIcon="arrow-right"
         onPrimary={() => void continueClaim()}
