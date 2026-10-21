@@ -36,12 +36,6 @@ export default async function CustomerSupportPage({
       .some((value) => value?.toLowerCase().includes(query)),
   );
 
-  const summary = {
-    open: activity.filter((item) => item.status === "open").length,
-    inProgress: activity.filter((item) => item.status === "in_progress").length,
-    resolved: activity.filter((item) => item.status === "resolved" || item.status === "closed").length,
-  };
-
   return (
     <div className="space-y-5">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/support" />
@@ -53,9 +47,6 @@ export default async function CustomerSupportPage({
           <h1 className="text-[clamp(27px,3.5vw,40px)] font-black leading-tight text-[#10213D]">
             How can we <span className="text-[#267AFF]">help?</span>
           </h1>
-          <p className="mt-2 text-[12px] leading-6 text-[#647995]">
-            Choose the quickest way to reach us, or raise a support ticket and track it here.
-          </p>
         </div>
 
         <div className="mt-5 grid gap-3 md:grid-cols-3">
@@ -83,29 +74,13 @@ export default async function CustomerSupportPage({
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h2 className="text-[19px] font-black text-[#10213D]">My Support Requests</h2>
-            <p className="mt-1 text-[10.5px] font-semibold text-[#71839A]">Track your latest support tickets, quotes and challan requests.</p>
           </div>
 
-          <form className="flex w-full items-center gap-2 rounded-xl border border-[#D8E1EC] bg-white px-3 py-2.5 lg:w-[430px]">
+          <form className="flex w-full items-center gap-2 rounded-xl bg-white px-3 py-2.5 shadow-[0_0_0_1px_#D8E1EC] focus-within:shadow-[0_0_0_2px_#176BD4] lg:w-[430px]">
             <Search className="h-4 w-4 shrink-0 text-[#73829A]" />
             <input type="hidden" name="account" value={account.id} />
             <input name="q" defaultValue={params.q ?? ""} placeholder="Search requests" className="min-w-0 flex-1 bg-transparent text-[11px] font-semibold text-[#10213D] outline-none" />
           </form>
-        </div>
-
-        <div className="grid gap-2.5 sm:grid-cols-3">
-          <div className="rounded-xl border border-[#E0E7F0] bg-white px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-[.08em] text-[#71839A]">Open</p>
-            <p className="mt-1 text-[22px] font-black tabular-nums text-[#C77822]">{summary.open}</p>
-          </div>
-          <div className="rounded-xl border border-[#E0E7F0] bg-white px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-[.08em] text-[#71839A]">In progress</p>
-            <p className="mt-1 text-[22px] font-black tabular-nums text-[#176BD4]">{summary.inProgress}</p>
-          </div>
-          <div className="rounded-xl border border-[#E0E7F0] bg-white px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-[.08em] text-[#71839A]">Resolved</p>
-            <p className="mt-1 text-[22px] font-black tabular-nums text-[#138A5B]">{summary.resolved}</p>
-          </div>
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white shadow-[0_8px_24px_rgba(28,50,82,.04)]">
@@ -139,7 +114,6 @@ export default async function CustomerSupportPage({
       <section id="raise-support-ticket" className="scroll-mt-24 rounded-2xl border border-[#DCE4EE] bg-white p-4 shadow-[0_8px_24px_rgba(28,50,82,.04)] sm:p-5">
         <div className="mb-4">
           <h2 className="text-[17px] font-black text-[#10213D]">Raise a Support Ticket</h2>
-          <p className="mt-1 text-[10.5px] font-semibold text-[#71839A]">Tell us what you need and our team will get back to you.</p>
         </div>
         <CustomerServiceRequestForm
           mode="support_ticket"
