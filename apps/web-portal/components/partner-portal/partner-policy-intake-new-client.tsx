@@ -18,6 +18,7 @@ import {
   submitPartnerPolicyIntakeWeb,
   validatePolicyIntakeFile,
   type IntakeProgress,
+  type PartnerIntakePolicyType,
   type PartnerPolicyIntakeSource,
 } from "@/lib/partner-policy-intakes-client";
 
@@ -34,6 +35,8 @@ export function PartnerPolicyIntakeNewClient({ externalRenewal }: { externalRene
   const [sources, setSources] = useState<PartnerPolicyIntakeSource[]>([]);
   const [sourceId, setSourceId] = useState("");
   const [mobile, setMobile] = useState(externalRenewal?.mobile ?? "");
+  const [policyType, setPolicyType] = useState<PartnerIntakePolicyType>("motor");
+  const proposalForm = policyType === "life" || policyType === "health";
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -64,7 +67,7 @@ export function PartnerPolicyIntakeNewClient({ externalRenewal }: { externalRene
   const selectedSource = useMemo(() => sources.find((source) => source.id === sourceId) ?? null, [sourceId, sources]);
   const cleanMobile = mobile.replace(/\D/g, "").slice(-10);
   const validMobile = /^[6-9][0-9]{9}$/.test(cleanMobile);
-  const canSubmit = Boolean(file && sourceId && validMobile && !submitting);
+  const canSubmit = Boolean((file || proposalForm) && sourceId && validMobile && !submitting);
 
   function chooseFile(nextFile?: File) {
     setError("");
@@ -80,7 +83,7 @@ export function PartnerPolicyIntakeNewClient({ externalRenewal }: { externalRene
   }
 
   async function submit() {
-    if (!file || !canSubmit) return;
+    if (!canSubmit) return;
     setSubmitting(true);
     setProgress({ stage: "preparing" });
     setError("");
@@ -88,6 +91,7 @@ export function PartnerPolicyIntakeNewClient({ externalRenewal }: { externalRene
       const result = await submitPartnerPolicyIntakeWeb({
         leadSourceId: sourceId,
         customerMobile: cleanMobile,
+        policyType,
         file,
         onProgress: setProgress,
       });
@@ -156,6 +160,31 @@ export function PartnerPolicyIntakeNewClient({ externalRenewal }: { externalRene
             </label>
 
             <label className="block">
+              <span className="mb-2 block text-[9.5px] font-black uppercase tracking-[0.1em] text-[#526883]">Policy Type</span>
+              <span className="relative block">
+                <select
+                  name="policy_type"
+                  value={policyType}
+                  onChange={(event) => {
+                    setPolicyType(event.target.value as PartnerIntakePolicyType);
+                    setFile(null);
+                    setError("");
+                    if (fileRef.current) fileRef.current.value = "";
+                  }}
+                  disabled={submitting}
+                  required
+                  className="h-[54px] w-full appearance-none rounded-[17px] border border-[#D3DDEA] bg-white px-4 pr-11 text-[11.5px] font-semibold text-[#1D3B61] outline-none transition focus:border-[#5A7AC7] focus:ring-2 focus:ring-[#5A7AC7]/10 disabled:opacity-60"
+                >
+                  <option value="motor">Motor</option>
+                  <option value="non_motor">Non-Motor</option>
+                  <option value="life">Life</option>
+                  <option value="health">Health</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#173B68]" />
+              </span>
+            </label>
+
+            <label className="block">
               <span className="mb-2 block text-[9.5px] font-black uppercase tracking-[0.1em] text-[#526883]">Customer Mobile</span>
               <input
                 type="tel"
@@ -170,7 +199,7 @@ export function PartnerPolicyIntakeNewClient({ externalRenewal }: { externalRene
             </label>
 
             <div>
-              <p className="mb-2 text-[9.5px] font-black uppercase tracking-[0.1em] text-[#526883]">Policy Copy</p>
+              <p className="mb-2 text-[9.5px] font-black uppercase tracking-[0.1em] text-[#526883]">{proposalForm ? "Proposal Form (Optional)" : "Policy Copy"}</p>
               <input
                 ref={fileRef}
                 type="file"
@@ -187,7 +216,7 @@ export function PartnerPolicyIntakeNewClient({ externalRenewal }: { externalRene
                 <span className="grid h-12 w-12 place-items-center rounded-[16px] bg-[#E9F7F5] text-[#13958B]">
                   <CloudUpload className="h-5 w-5" strokeWidth={2} />
                 </span>
-                <span className="mt-3 max-w-full truncate text-[11.5px] font-extrabold text-[#1B3C64]">{file ? file.name : "Upload policy PDF or image"}</span>
+                <span className="mt-3 max-w-full truncate text-[11.5px] font-extrabold text-[#1B3C64]">{file ? file.name : proposalForm ? "Upload proposal PDF or image (optional)" : "Upload policy PDF or image"}</span>
                 <span className="mt-1.5 flex items-center gap-1.5 text-[9.5px] font-medium text-[#7E8CA0]">
                   <FileText className="h-3.5 w-3.5" />
                   {file ? Math.max(1, Math.round(file.size / 1024)) + " KB selected" : "Camera or file · max 15 MB"}
@@ -210,7 +239,7 @@ export function PartnerPolicyIntakeNewClient({ externalRenewal }: { externalRene
 
           <div className="mt-4 flex gap-3 rounded-[16px] bg-[#F5F8FC] px-4 py-3.5 text-[#7A8799]">
             <CircleCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#0AA47F]" />
-            <p className="text-[9.5px] font-medium leading-5">Your policy copy and sales details are saved first. The request is accepted immediately while policy and vehicle details are fetched in the background.</p>
+            <p className="text-[9.5px] font-medium leading-5">{proposalForm ? "Life and Health proposal forms are optional. The request goes to Operations for review, without document OCR." : "Your policy copy and sales details are saved first. The request is accepted immediately while policy and vehicle details are fetched in the background."}</p>
           </div>
         </div>
       </section>
