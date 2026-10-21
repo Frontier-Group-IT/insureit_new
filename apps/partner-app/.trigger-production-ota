@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=86164213a2af92587035d7db4f9bc825588052e1
-reason=pending-tasks-PT2-background-pr-3310
+source_main=1d1709206ac342fd45167e31ec5baa58734267fc
+reason=add-claim-ui-pr-3317
