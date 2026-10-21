@@ -10,6 +10,7 @@ import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerProfileMenuIcon, type PartnerProfileMenuIconKind } from '@/components/ui/partner-profile-menu-icon';
 import { partnerTheme } from '@/lib/theme';
+import { signedInPersonName, signedInPersonRole } from '@/lib/signed-in-person';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 const moreHeaderArt = require('../../assets/figma-dashboard/hero-banner.jpg');
@@ -35,9 +36,7 @@ export default function MoreScreen() {
     }
   }
 
-  const identityLabel = context.identity.actor_kind === 'employee'
-    ? humanize(context.identity.role)
-    : humanize(context.identity.intermediary_type);
+  const identityLabel = signedInPersonRole(context.identity);
 
   return (
     <PartnerScreen title="" hideTopBar>
@@ -75,7 +74,7 @@ export default function MoreScreen() {
               style={({ pressed }) => [styles.heroAvatarTouch, pressed && styles.pressed]}
             >
               <PartnerProfileAvatar
-                name={context.identity.display_name}
+                name={signedInPersonName(context.identity)}
                 uri={avatarUri}
                 size={35}
                 backgroundColor="#FFFFFF"
@@ -98,7 +97,7 @@ export default function MoreScreen() {
         style={({ pressed }) => [styles.profileCard, pressed && styles.pressed]}
       >
         <PartnerProfileAvatar
-          name={context.identity.display_name}
+          name={signedInPersonName(context.identity)}
           uri={avatarUri}
           size={50}
           backgroundColor={partnerTheme.colors.brand}
@@ -106,7 +105,7 @@ export default function MoreScreen() {
           style={styles.avatar}
         />
         <View style={styles.profileBody}>
-          <Text numberOfLines={1} style={styles.profileName}>{context.identity.display_name}</Text>
+          <Text numberOfLines={1} style={styles.profileName}>{signedInPersonName(context.identity)}</Text>
           <Text style={styles.profileMeta}>{identityLabel}</Text>
         </View>
         <View style={styles.profileAction}>
