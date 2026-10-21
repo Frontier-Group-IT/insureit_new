@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { CalendarClock, FileText, Search, ShieldCheck, CarFront, Clock3, AlertTriangle, ArrowRight, CalendarDays, ChevronDown, ChevronUp } from "lucide-react";
+import { CalendarClock, FileText, Search, ShieldCheck, CarFront, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 
 export type RenewalRegisterItem = {
   id: string; title: string; key: string; vehicleId: string; vehicleNo: string;
@@ -21,16 +21,14 @@ export function CustomerRenewalsRegister({ accountId, items, categories }: {
   accountId: string; items: RenewalRegisterItem[]; categories: RenewalCategory[];
 }) {
   const [query, setQuery] = useState("");
-  const [expandedCategories, setExpandedCategories] = useState<string[]>(["insurance_policy"]);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const visible = useMemo(() => {
     const term = query.trim().toLowerCase();
     return items.filter(item => !term || [item.title, item.vehicleNo, item.reference, item.status, item.expiry]
       .some(value => value.toLowerCase().includes(term)));
   }, [items, query]);
 
-  const dueSoonTotal = items.filter(item => item.daysUntil >= 0 && item.daysUntil <= 7).length;
   const expiredTotal = items.filter(item => item.daysUntil < 0).length;
-  const laterTotal = items.filter(item => item.daysUntil > 7).length;
   const due45Total = items.filter(item => item.daysUntil >= 0 && item.daysUntil <= 45).length;
   const categoryGroups = categories.map(category => {
     const records = visible.filter(item => item.key === category.key);
@@ -61,46 +59,32 @@ export function CustomerRenewalsRegister({ accountId, items, categories }: {
       <div className="relative flex min-h-[170px] items-center px-5 py-6 sm:px-7">
         <div className="max-w-[540px]">
           <h1 className="text-[clamp(28px,3.2vw,40px)] font-bold tracking-tight">Renewals</h1>
-          <p className="mt-2 text-[14px] leading-relaxed text-[#4B6C94]">Policies and documents that need your attention.</p>
         </div>
       </div>
-    </section>
-
-    <section aria-label="Renewal overview" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-      {[
-        {label:"Due soon",value:dueSoonTotal,detail:"Within 7 days",icon:Clock3,tint:"bg-[#FFF7E8] text-[#B66A16]"},
-        {label:"Expired",value:expiredTotal,detail:"Past expiry date",icon:AlertTriangle,tint:"bg-[#FFF0F1] text-[#C2414D]"},
-        {label:"Later",value:laterTotal,detail:"More than 7 days away",icon:CalendarDays,tint:"bg-[#EAF3FF] text-[#1769DC]"},
-      ].map(({label,value,detail,icon:Icon,tint})=><div key={label} className="flex min-w-0 items-center gap-3 rounded-2xl border border-[#E1EAF5] bg-white p-4">
-        <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${tint}`}><Icon className="h-5 w-5"/></span>
-        <span className="min-w-0"><span className="block text-[12px] font-medium text-[#60799B]">{label}</span><strong className="block text-[28px] font-bold leading-tight tabular-nums text-[#102B54]">{value}</strong><small className="block text-[12px] text-[#7890AD]">{detail}</small></span>
-      </div>)}
     </section>
 
     <section aria-label="Renewal Register" className="space-y-3 rounded-2xl border border-[#D8E1EC] bg-[#F7FAFE] p-3 sm:p-4">
       <div className="rounded-2xl bg-[#0C234D] px-4 py-3 text-white shadow-sm sm:px-5">
         <div className="flex items-center justify-between gap-3">
-          <div><h2 className="text-[17px] font-bold">Pending Renewals</h2>
-            <p className="mt-0.5 text-[12px] text-[#CEDCF1]">Compliance documents due within 45 days.</p>
-          </div>
-          <div className="min-w-[58px] rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-center">
-            <strong className="block text-[22px] leading-none tabular-nums">{due45Total + expiredTotal}</strong>
-            <span className="text-[10px] text-[#D8E5F7]">pending</span>
+          <h2 className="text-[17px] font-bold">Pending Renewals</h2>
+          <div className="inline-flex shrink-0 items-baseline gap-1.5 rounded-xl border border-white/15 bg-white/10 px-3 py-2">
+            <strong className="text-[18px] leading-none tabular-nums">{due45Total + expiredTotal}</strong>
+            <span className="text-[12px] text-[#D8E5F7]">pending</span>
           </div>
         </div>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="flex items-center gap-2 text-[15px] font-bold text-[#102B54]"><CalendarClock className="h-5 w-5 text-[#1769DC]"/>Renewal Register</h3>
-        <div className="flex items-center gap-4 text-[11px] font-semibold text-[#61738D]">
+      <div className="flex flex-wrap items-center gap-3">
+        <h3 className="flex shrink-0 items-center gap-2 text-[15px] font-bold text-[#102B54]"><CalendarClock className="h-5 w-5 text-[#1769DC]"/>Renewal Register</h3>
+        <label className="flex w-full min-w-0 items-center gap-2 rounded-xl border border-[#D8E1EC] bg-white px-3 py-2.5 sm:w-[290px]">
+          <Search className="h-4 w-4 shrink-0 text-[#73829A]"/>
+          <span className="sr-only">Search renewals</span>
+          <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search vehicle, document or reference..." className="w-full min-w-0 border-0 bg-transparent p-0 text-[13px] outline-none focus:outline-none focus:ring-0"/>
+        </label>
+        <div className="ml-auto flex items-center gap-4 text-[11px] font-semibold text-[#61738D]">
           <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#C38A20]"/>Due</span>
           <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#D34545]"/>Expired</span>
         </div>
       </div>
-      <label className="flex w-full items-center gap-2 rounded-xl border border-[#D8E1EC] bg-white px-3 py-2.5 focus-within:border-[#4E95E9]">
-        <Search className="h-4 w-4 shrink-0 text-[#73829A]"/>
-        <span className="sr-only">Search renewals</span>
-        <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search vehicle, document or reference..." className="w-full min-w-0 border-0 bg-transparent p-0 text-[13px] outline-none"/>
-      </label>
       <div className="space-y-2">
         {categoryGroups.map(category => {
           const expanded = query.trim() ? true : expandedCategories.includes(category.key);
