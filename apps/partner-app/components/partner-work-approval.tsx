@@ -1,3 +1,4 @@
+import { PartnerClaimStageDraft } from '@/components/partner-claim-stage-draft';
 import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -100,6 +101,7 @@ export function PartnerWorkApproval({ data }: { data: PartnerClaimDetail }) {
           <FieldLabel text="Surveyor Email (Optional)" />
           <TextInput editable={false} value="" keyboardType="email-address" autoCapitalize="none" style={styles.textInput} />
         </View>
+      <PartnerClaimStageDraft data={data} stage={"work_approval"} />
       </ScrollView>
 
       <View style={styles.actions}>
