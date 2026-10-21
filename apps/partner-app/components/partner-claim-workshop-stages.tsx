@@ -1,3 +1,4 @@
+import { PartnerClaimStageDraft } from '@/components/partner-claim-stage-draft';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View, type ImageStyle } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -78,7 +79,8 @@ export function PartnerClaimWorkshopStage({ data, stage }: { data: PartnerClaimD
         <Pressable accessibilityRole="button" onPress={() => Alert.alert('Get Assistance', 'Please contact your claims desk for help with this stage.')} style={styles.assistance}><MaterialCommunityIcons name="account-voice" color="#093876" size={20}/><Text style={styles.assistanceText}>Get Assistance</Text></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel="Continue to Claim Tracker" onPress={() => router.back()} style={styles.continue}><Text style={styles.continueText}>Continue</Text><Ionicons name="arrow-forward" color="#FFF" size={21}/></Pressable>
       </View>
-    </ScrollView>
+    <PartnerClaimStageDraft data={data} stage={stage} />
+      </ScrollView>
   </SafeAreaView>;
 }
 const styles=StyleSheet.create({
