@@ -222,7 +222,7 @@ export default function ClaimsScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Add Claim"
-          onPress={() => router.push('/claim/new' as never)}
+          onPress={() => router.push('/claim/select-vehicle' as never)}
           style={({ pressed }) => [styles.addClaimButton, pressed && styles.addClaimButtonPressed]}
         >
           <Ionicons name="add-circle-outline" size={19} color="#FFFFFF" />
