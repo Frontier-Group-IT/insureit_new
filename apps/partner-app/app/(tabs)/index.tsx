@@ -172,8 +172,7 @@ export default function PartnerHomeScreen() {
             </View>
           ) : null}
 
-          <PartnerEnter delay={20}>
-            <View style={styles.businessCard}>
+          <View style={styles.businessCard}>
               <View style={styles.businessTopRow}>
                 <View style={styles.periodWrap}>
                   <PartnerAnchoredDropdown
@@ -291,8 +290,7 @@ export default function PartnerHomeScreen() {
                   label={identity.actor_kind === 'employee' ? 'Projected Retention' : 'Commission Earned'}
                 />
               </View>
-            </View>
-          </PartnerEnter>
+          </View>
 
           <PartnerEnter delay={70}>
             <View style={styles.quickCard}>
