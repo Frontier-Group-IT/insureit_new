@@ -1,3 +1,4 @@
+import * as DocumentPicker from 'expo-document-picker';
 import { useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -6,16 +7,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import { PartnerAssets } from '@/lib/partner-assets';
-import { savePartnerClaimSpot, type PartnerClaimDetail } from '@/lib/claims';
+import { savePartnerClaimSpot, uploadPartnerClaimDocument, listPartnerClaimDocuments, type PartnerClaimDocument, type PartnerClaimDetail } from '@/lib/claims';
 import { formatClaimDate } from '@/lib/claim-tracker';
 
 const DOCUMENTS = [
-  { title: 'RC Copy', icon: 'file-document-outline', color: '#07A56D' },
-  { title: 'Insurance Copy', icon: 'shield-check-outline', color: '#1677DE' },
-  { title: 'Driver Licence', icon: 'card-account-details-outline', color: '#8B42DE' },
-  { title: 'GR / Load Bill', icon: 'truck-outline', color: '#ED9811' },
-  { title: 'Accident Photo', icon: 'camera-outline', color: '#DE1592' },
-  { title: 'Accident Video', icon: 'video-outline', color: '#EF2442' },
+  { kind: 'rc', title: 'RC Copy', icon: 'file-document-outline', color: '#07A56D' },
+  { kind: 'insurance', title: 'Insurance Copy', icon: 'shield-check-outline', color: '#1677DE' },
+  { kind: 'licence', title: 'Driver Licence', icon: 'card-account-details-outline', color: '#8B42DE' },
+  { kind: 'gr_load', title: 'GR / Load Bill', icon: 'truck-outline', color: '#ED9811' },
+  { kind: 'accident_photo', title: 'Accident Photo', icon: 'camera-outline', color: '#DE1592' },
+  { kind: 'accident_video', title: 'Accident Video', icon: 'video-outline', color: '#EF2442' },
 ] as const;
 
 export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
@@ -26,6 +27,27 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
   const [phone, setPhone] = useState('');
   const [location, setLocation] = useState(data.claim.accident_location || '');
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploaded, setUploaded] = useState<PartnerClaimDocument[]>([]);
+  const loadDocuments = async () => {
+    try { setUploaded(await listPartnerClaimDocuments(data.claim.id)); }
+    catch { /* Never confuse a failed inventory fetch with an empty server list. */ }
+  };
+  const pickAndUpload = async (kind: string) => {
+    if (uploading) return;
+    try {
+      const types=kind==='accident_video'?['video/mp4','video/quicktime','video/webm']:kind==='voice_note'?['audio/m4a','audio/mp4','audio/aac','audio/webm']:['application/pdf','image/jpeg','image/png','image/webp'];
+      const picked=await DocumentPicker.getDocumentAsync({type:types,multiple:false,copyToCacheDirectory:true});
+      if(picked.canceled || !picked.assets?.length)return;
+      setUploading(true);
+      const asset=picked.assets[0];
+      await uploadPartnerClaimDocument(data.claim.id,kind,asset);
+      await loadDocuments();
+      Alert.alert('Uploaded','Document added to this claim.');
+    } catch(e){Alert.alert('Upload failed',e instanceof Error?e.message:'Please retry.');}
+    finally{setUploading(false);}
+  };
+
   const save = async () => {
     if (saving) return;
     const accident = new Date(incidentAt);
@@ -78,11 +100,11 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
           </View> : <Text style={styles.restricted}>This stage is not editable in its current status.</Text>}
         </View>
         <View style={styles.card}>
-          <View style={styles.docsHeading}><Text style={styles.sectionTitle}>Upload claim documents</Text><View style={styles.optional}><Text style={styles.optionalText}>View only</Text></View></View>
-          <View style={styles.tiles}>{DOCUMENTS.map(item=><View key={item.title} accessible accessibilityLabel={`${item.title}, document availability not provided`} style={styles.tile}><View style={[styles.documentIcon,{backgroundColor:item.color}]}><MaterialCommunityIcons name={item.icon} color="#FFF" size={24}/></View><Text style={styles.tileTitle}>{item.title}</Text><Text style={styles.tileSub}>Unavailable</Text></View>)}</View>
-          <View style={styles.bulk}><Ionicons name="documents-outline" size={27} color="#245CB0"/><View style={styles.bulkText}><Text style={styles.bulkTitle}>Upload multiple documents</Text><Text style={styles.bulkHint}>Partner document uploads require authorized access</Text></View><Ionicons name="add-circle-outline" size={25} color="#8EA3C4"/></View>
+          <View style={styles.docsHeading}><Text style={styles.sectionTitle}>Upload claim documents</Text><View style={styles.optional}><Text style={styles.optionalText}>{uploading ? "Uploading…" : "Optional now"}</Text></View></View>
+          <View style={styles.tiles}>{DOCUMENTS.map(item=><Pressable key={item.kind} accessibilityRole="button" accessibilityLabel={`Upload ${item.title}`} disabled={uploading} onPress={()=>void pickAndUpload(item.kind)} style={styles.tile}><View style={[styles.documentIcon,{backgroundColor:item.color}]}><MaterialCommunityIcons name={item.icon} color="#FFF" size={24}/></View><Text style={styles.tileTitle}>{item.title}</Text><Text style={styles.tileSub}>{uploaded.filter(x=>x.category===item.kind).length ? "Uploaded" : "Tap to upload"}</Text></Pressable>)}</View>
+          <Pressable accessibilityRole="button" accessibilityLabel="Upload multiple claim documents" disabled={uploading} onPress={()=>void pickAndUpload("gr_load")} style={styles.bulk}><Ionicons name="documents-outline" size={27} color="#245CB0"/><View style={styles.bulkText}><Text style={styles.bulkTitle}>Upload multiple documents</Text><Text style={styles.bulkHint}>Tap to select another document</Text></View><Ionicons name="add-circle-outline" size={25} color="#8EA3C4"/></Pressable>
         </View>
-        <View style={styles.voice}><View style={styles.voiceTop}><View style={styles.mic}><Ionicons name="mic-outline" size={27} color="#1A56A3"/></View><View style={styles.headingCopy}><Text style={styles.sectionTitle}>Incident Voice Note</Text><Text style={styles.subtitle}>Describe what happened in your own words. Maximum recording time is 2 minutes.</Text></View></View><View style={styles.disabledRecording}><Ionicons name="mic-outline" size={18} color="#FFF"/><Text style={styles.disabledText}>Recording unavailable for Partner access</Text></View></View>
+        <View style={styles.voice}><View style={styles.voiceTop}><View style={styles.mic}><Ionicons name="mic-outline" size={27} color="#1A56A3"/></View><View style={styles.headingCopy}><Text style={styles.sectionTitle}>Incident Voice Note</Text><Text style={styles.subtitle}>Describe what happened in your own words. Maximum recording time is 2 minutes.</Text></View></View><Pressable accessibilityRole="button" onPress={()=>void pickAndUpload("voice_note")} disabled={uploading} style={styles.disabledRecording}><Ionicons name="mic-outline" size={18} color="#FFF"/><Text style={styles.disabledText}>Attach voice note</Text></Pressable></View>
       </ScrollView>
       <View style={styles.nav}><Nav title="Home" icon="home" onPress={() => router.push('/(tabs)' as never)}/><Nav title="Business" icon="briefcase-outline" onPress={() => router.push('/(tabs)/business' as never)}/><Nav title="Policies" icon="document-text-outline" onPress={() => router.push('/(tabs)/policies' as never)}/><Nav title="Claims" icon="shield-checkmark-outline" onPress={() => router.push('/(tabs)/claims' as never)}/><Nav title="More" icon="grid-outline" onPress={() => router.push('/(tabs)/more' as never)}/></View>
     </SafeAreaView>
