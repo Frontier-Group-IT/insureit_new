@@ -26,7 +26,7 @@ export default async function CustomerEChallanPage({
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/e-challan" />
 
       <section className="relative isolate overflow-hidden rounded-2xl bg-[#061B3B] text-white">
-        <div className="absolute inset-y-0 right-0 w-[67%] bg-[url('/customer-insurance-quote-vehicles.svg')] bg-cover bg-center opacity-80" />
+        <div className="absolute inset-y-0 right-0 w-[67%] bg-[url('/assets/PT2.jpeg')] bg-cover bg-center opacity-80" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#06162F] via-[#08254C]/95 via-45% to-transparent" />
         <div className="relative flex min-h-[180px] items-center px-5 py-5 sm:min-h-[220px] sm:px-8">
           <div className="max-w-[57%]">
