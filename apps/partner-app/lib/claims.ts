@@ -60,7 +60,11 @@ export async function listPartnerClaims({
   return (data ?? []) as PartnerClaimRow[];
 }
 
+export type PartnerClaimDocument = { id: string; name: string; category: string | null };
+
 export type PartnerClaimDetail = {
+  /** Null means the scoped API has not supplied document inventory. */
+  documents: PartnerClaimDocument[] | null;
   claim: {
     id: string;
     claim_no: string | null;
@@ -112,7 +116,14 @@ export async function getPartnerClaimDetail(claimId: string) {
   if (error) throw error;
   if (!data) throw new Error('Claim detail is unavailable.');
 
-  const detail = data as PartnerClaimDetail;
+  // Documents must come from the same claim-authorized RPC, never a global storage listing.
+  // Do not treat an absent inventory as an empty upload set.
+  const payload = data as PartnerClaimDetail & { documents?: unknown };
+  const documents: PartnerClaimDocument[] | null = Array.isArray(payload.documents)
+    ? payload.documents.filter(item => Boolean(item) && typeof item === 'object' && typeof item.id === 'string' && typeof item.name === 'string')
+      .map(item => ({ id: String(item.id), name: String(item.name), category: typeof item.category === 'string' ? item.category : null }))
+    : null;
+  const detail: PartnerClaimDetail = { ...payload, documents };
   if (!detail.vehicle?.id || !detail.customer?.id) return detail;
 
   const { data: customerDetail } = await supabase.rpc('partner_app_customer_detail', {
