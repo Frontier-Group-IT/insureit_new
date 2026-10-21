@@ -61,10 +61,9 @@ export function AssociateAccountActionsMenu({
       // The menu lives in a portal. Use the full event path so a press within
       // portal content cannot be mistaken for an outside press.
       const path = event.composedPath();
-      if (
-        !path.includes(rootRef.current as EventTarget) &&
-        !path.includes(menuRef.current as EventTarget)
-      ) {
+      const withinTrigger = rootRef.current?.contains(event.target as Node) || path.includes(rootRef.current as EventTarget);
+      const withinMenu = menuRef.current?.contains(event.target as Node) || path.includes(menuRef.current as EventTarget);
+      if (!withinTrigger && !withinMenu) {
         setOpen(false);
       }
     }
@@ -152,7 +151,8 @@ export function AssociateAccountActionsMenu({
                 ref={menuRef}
                 role="menu"
                 style={{ top: menuPosition.top, left: menuPosition.left }}
-                className="fixed z-[200] w-44 overflow-hidden rounded-xl border border-[#DCE5EF] bg-white py-1.5 shadow-[0_18px_45px_rgba(15,23,42,.18)]"
+                className="fixed z-[9999] pointer-events-auto w-44 overflow-hidden rounded-xl border border-[#DCE5EF] bg-white py-1.5 shadow-[0_18px_45px_rgba(15,23,42,.18)]"
+                onClick={(event) => event.stopPropagation()}
                 onPointerDown={(event) => {
                   // Prevent unrelated document/ancestor pointer handlers from
                   // treating a menu action as an outside interaction.
@@ -407,7 +407,7 @@ function DeleteAssociateConfirmation({
       role="dialog"
       aria-modal="true"
       aria-labelledby="associate-delete-confirm-title"
-      className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-950/35 p-4"
+      className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/35 p-4"
     >
       <div className="w-full max-w-[420px] overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_rgba(15,23,42,.22)]">
         <div className="flex items-start gap-3 px-5 pt-5">
@@ -453,7 +453,7 @@ function Modal({
 }) {
   return createPortal(
     <div
-      className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-[1px]"
+      className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-[1px]"
       role="dialog"
       aria-modal="true"
       aria-label={title}
