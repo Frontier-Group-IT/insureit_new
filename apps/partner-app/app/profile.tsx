@@ -10,6 +10,7 @@ import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { PARTNER_PROFILE_PHOTO_BUCKET, partnerProfilePhotoPath } from '@/lib/partner-profile-photo';
 import { supabase } from '@/lib/supabase';
 import { partnerTheme } from '@/lib/theme';
+import { signedInOrganizationName, signedInPersonName, signedInPersonRole } from '@/lib/signed-in-person';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 export default function ProfileScreen() {
@@ -23,9 +24,8 @@ export default function ProfileScreen() {
   if (!context) return null;
 
   const { identity } = context;
-  const roleLabel = identity.actor_kind === 'employee'
-    ? humanize(identity.role)
-    : humanize(identity.intermediary_type);
+  const roleLabel = signedInPersonRole(identity);
+  const organizationName = signedInOrganizationName(identity);
 
   async function logout() {
     if (signingOut) return;
@@ -123,7 +123,7 @@ export default function ProfileScreen() {
             {avatarUri ? (
               <Image source={{ uri: avatarUri }} style={styles.avatarImage} resizeMode="cover" />
             ) : (
-              <Text style={styles.avatarText}>{initials(identity.display_name)}</Text>
+              <Text style={styles.avatarText}>{initials(signedInPersonName(identity))}</Text>
             )}
           </View>
           <Pressable
@@ -141,7 +141,7 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.heroBody}>
-          <Text numberOfLines={1} style={styles.name}>{identity.display_name}</Text>
+          <Text numberOfLines={1} style={styles.name}>{signedInPersonName(identity)}</Text>
           <View style={styles.rolePill}>
             <Text numberOfLines={1} style={styles.roleText}>{roleLabel}</Text>
           </View>
@@ -202,15 +202,15 @@ export default function ProfileScreen() {
               icon="people-outline"
               iconBackground="#EAF9F0"
               iconColor="#11A86B"
-              label="Intermediary type"
-              value={humanize(identity.intermediary_type)}
+              label="Role"
+              value={roleLabel}
             />
             <Detail
               icon="business-outline"
               iconBackground="#EEF5FF"
               iconColor="#0C6FE8"
-              label="Partner family"
-              value={identity.partner_name}
+              label="Organization"
+              value={organizationName || 'Not recorded'}
             />
             <Detail
               icon="pricetag-outline"
