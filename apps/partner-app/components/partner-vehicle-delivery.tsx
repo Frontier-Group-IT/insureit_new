@@ -1,3 +1,4 @@
+import { PartnerClaimStageDraft } from '@/components/partner-claim-stage-draft';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -50,7 +51,8 @@ export function PartnerVehicleDelivery({ data }: { data: PartnerClaimDetail }) {
         <Pressable accessibilityRole="button" accessibilityLabel="Get Assistance" onPress={() => Alert.alert('Get Assistance', 'Please contact your claims desk for vehicle delivery assistance.')} style={styles.secondary}><MaterialCommunityIcons name="account-voice" size={17} color="#0B3E88"/><Text style={styles.secondaryText}>Get Assistance</Text></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel="Continue to Claim Tracker" onPress={() => router.back()} style={styles.primary}><Text style={styles.primaryText}>Continue</Text><Ionicons name="arrow-forward" size={18} color="#FFF"/></Pressable>
       </View>
-    </ScrollView>
+    <PartnerClaimStageDraft data={data} stage={"vehicle_delivery"} />
+      </ScrollView>
     <View style={styles.nav}>
       <Nav label="Home" icon="home-outline" onPress={() => router.push('/(tabs)' as never)}/>
       <Nav label="Business" icon="briefcase-outline" onPress={() => router.push('/(tabs)/business' as never)}/>

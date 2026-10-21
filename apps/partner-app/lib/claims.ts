@@ -123,7 +123,14 @@ export async function getPartnerClaimDetail(claimId: string) {
     ? payload.documents.filter(item => Boolean(item) && typeof item === 'object' && typeof item.id === 'string' && typeof item.name === 'string')
       .map(item => ({ id: String(item.id), name: String(item.name), category: typeof item.category === 'string' ? item.category : null }))
     : null;
-  const detail: PartnerClaimDetail = { ...payload, documents };
+  // Scoped document inventory is a separate Partner-authorized RPC.
+  // Fail closed rather than presenting missing information as an empty list.
+  const { data: inventory, error: inventoryError } = await supabase.rpc('partner_app_claim_documents', { p_claim_id: claimId });
+  const scopedDocuments: PartnerClaimDocument[] | null = inventoryError || !Array.isArray(inventory)
+    ? null
+    : inventory.filter(item => item && typeof item.id === 'string' && typeof item.name === 'string')
+      .map(item => ({ id: item.id as string, name: item.name as string, category: typeof item.category === 'string' ? item.category : null }));
+  const detail: PartnerClaimDetail = { ...payload, documents: scopedDocuments ?? documents };
   if (!detail.vehicle?.id || !detail.customer?.id) return detail;
 
   const { data: customerDetail } = await supabase.rpc('partner_app_customer_detail', {
@@ -162,4 +169,28 @@ export async function savePartnerClaimSpot(claimId: string, incidentAt: string, 
   });
   if (error) throw error;
   if (data !== true) throw new Error('Claim details were not saved');
+}
+
+/** Save a Partner-scoped draft for a later claim stage without changing approval/status. */
+export async function savePartnerStageDraft(claimId: string, stageKey: string, details: Record<string,string>) {
+  const { data, error } = await supabase.rpc('partner_app_save_claim_stage_draft', {
+    p_claim_id: claimId, p_stage_key: stageKey, p_details: details,
+  });
+  if (error) throw error;
+  if (typeof data !== 'string' || !data) throw new Error('Stage draft was not saved');
+  return data;
+}
+
+export async function getPartnerStageDraft(claimId: string, stageKey: string) {
+  const {data,error}=await supabase.rpc('partner_app_get_claim_stage_draft', {p_claim_id:claimId,p_stage_key:stageKey});
+  if(error) throw error;
+  return data && typeof data==='object' && !Array.isArray(data) ? data as Record<string,string> : {};
+}
+
+/** Completes a currently eligible Partner stage using the same managed-claim transition trigger as Operations. */
+export async function completePartnerClaimStage(claimId: string, stageKey: string, details: Record<string,string>) {
+  const {data,error}=await supabase.rpc('partner_app_complete_claim_stage',{p_claim_id:claimId,p_stage_key:stageKey,p_details:details});
+  if(error) throw error;
+  if(typeof data!=='string'||!data) throw new Error('The claim stage could not be completed');
+  return data;
 }

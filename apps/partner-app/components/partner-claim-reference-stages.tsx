@@ -1,3 +1,4 @@
+import { PartnerClaimStageDraft } from '@/components/partner-claim-stage-draft';
 import { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -90,7 +91,8 @@ export function PartnerClaimReferenceStage({data, stage}:{data:PartnerClaimDetai
           <View style={styles.documentGrid}>{DOCUMENTS[documentTab].map(item=><View key={item.label} style={styles.documentTile}><View style={[styles.documentIcon,{backgroundColor:item.color}]}><MaterialCommunityIcons name={item.icon} color="#FFF" size={25}/></View><Text style={styles.documentName}>{item.label}</Text><Text style={styles.documentDescription}>{item.detail}</Text><View style={styles.uploadDisabled}><Ionicons name="cloud-upload-outline" size={15} color="#D9E2F3"/><Text style={styles.uploadDisabledText}>Upload</Text></View></View>)}</View>
           <View style={styles.additional}><MaterialCommunityIcons name="file-document-multiple-outline" size={28} color="#7C91BB"/><View style={styles.additionalCopy}><Text style={styles.additionalTitle}>Additional uploads locked</Text><Text style={styles.additionalHint}>The claims desk will open uploads when these documents are required.</Text></View><Ionicons name="chevron-forward" size={16} color="#7790B0"/></View></View>
       </>}
-    </ScrollView>
+    <PartnerClaimStageDraft data={data} stage={stage} />
+      </ScrollView>
     <View style={styles.nav}><Nav label="Home" icon="home" onPress={()=>router.push('/(tabs)' as never)}/><Nav label="Business" icon="briefcase-outline" onPress={()=>router.push('/(tabs)/business' as never)}/><Nav label="Policies" icon="document-text-outline" onPress={()=>router.push('/(tabs)/policies' as never)}/><Nav label="Claims" icon="shield-checkmark-outline" onPress={()=>router.push('/(tabs)/claims' as never)}/><Nav label="More" icon="grid-outline" onPress={()=>router.push('/(tabs)/more' as never)}/></View>
   </SafeAreaView>;
 }

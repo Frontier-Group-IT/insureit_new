@@ -1,3 +1,4 @@
+import { PartnerClaimStageDraft } from '@/components/partner-claim-stage-draft';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -48,7 +49,8 @@ export function PartnerPaymentEncashment({ data }: { data: PartnerClaimDetail })
         <Pressable accessibilityRole="button" accessibilityLabel="Get Assistance" onPress={() => Alert.alert('Get Assistance', 'Please contact your claims desk for settlement assistance.')} style={styles.assist}><MaterialCommunityIcons name="account-voice" size={17} color="#164A90"/><Text style={styles.assistText}>Get Assistance</Text></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel="Back to Claim" onPress={() => router.back()} style={styles.primary}><Text style={styles.primaryText}>Back to Claim</Text><Ionicons name="checkmark" color="#FFF" size={17}/></Pressable>
       </View>
-    </ScrollView>
+    <PartnerClaimStageDraft data={data} stage={"payment_encashment"} />
+      </ScrollView>
     <View style={styles.nav}><Nav label="Home" icon="home" onPress={() => router.push('/(tabs)' as never)}/><Nav label="Business" icon="briefcase-outline" onPress={() => router.push('/(tabs)/business' as never)}/><Nav label="Policies" icon="document-text-outline" onPress={() => router.push('/(tabs)/policies' as never)}/><Nav label="Claims" icon="shield-checkmark-outline" onPress={() => router.push('/(tabs)/claims' as never)}/><Nav label="More" icon="grid-outline" onPress={() => router.push('/(tabs)/more' as never)}/></View>
   </SafeAreaView>;
 }
