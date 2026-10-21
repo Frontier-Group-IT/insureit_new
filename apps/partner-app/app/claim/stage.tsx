@@ -9,6 +9,7 @@ import { PartnerSpotIntimation } from '@/components/partner-spot-intimation';
 import { PartnerClaimReferenceStage } from '@/components/partner-claim-reference-stages';
 import { PartnerWorkApproval } from '@/components/partner-work-approval';
 import { PartnerVehicleDelivery } from '@/components/partner-vehicle-delivery';
+import { PartnerClaimWorkshopStage } from '@/components/partner-claim-workshop-stages';
 import { PartnerPaymentEncashment } from '@/components/partner-payment-encashment';
 import { CLAIM_STAGES, formatClaimDate, getClaimTrackerState, getStageHistory, type ClaimStageKey } from '@/lib/claim-tracker';
 
@@ -36,6 +37,7 @@ export default function PartnerClaimStageScreen() {
   if (!loading && !error && data && stage?.key === 'spot_intimation') return <PartnerSpotIntimation data={data} />;
   if (!loading && !error && data && (stage?.key === 'spot_status' || stage?.key === 'claim_intimation')) return <PartnerClaimReferenceStage data={data} stage={stage.key} />;
   if (!loading && !error && data && stage?.key === 'work_approval') return <PartnerWorkApproval data={data} />;
+  if (!loading && !error && data && (stage?.key === 'repair_ri' || stage?.key === 'billing' || stage?.key === 'delivery_order')) return <PartnerClaimWorkshopStage data={data} stage={stage.key} />;
   if (!loading && !error && data && stage?.key === 'vehicle_delivery') return <PartnerVehicleDelivery data={data} />;
   if (!loading && !error && data && stage?.key === 'payment_encashment') return <PartnerPaymentEncashment data={data} />;
   return <SafeAreaView style={styles.root} edges={['top','bottom']}>
