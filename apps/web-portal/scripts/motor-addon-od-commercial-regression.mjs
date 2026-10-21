@@ -12,7 +12,7 @@ assert.match(sql,/total_projected_payin = coalesce\(pi.total_projected_payin,0\)
 assert.match(sql,/tds_amount = round/);
 assert.match(sql,/od_payout_amount = coalesce\(po.od_payout_amount,0\) \+/);
 assert.match(sql,/gross_payout = coalesce\(po.gross_payout,0\) \+/);
-assert.match(sql,/payout_basis,'\) <> 'FIXED_AMOUNT'/);
+assert.ok(sql.includes("po.payout_basis,'') <> 'FIXED_AMOUNT'"));
 assert.match(sql,/PERFORM public.set_motor_policy_addon_premium_v1\(v_id,v_amount\)/);
 function projected(od,addon,pct){return Math.round((od+addon)*pct)/100}
 assert.equal(projected(4675.17,10539.73,25),3803.73);
