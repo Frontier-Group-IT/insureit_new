@@ -386,13 +386,7 @@ export default function PartnerHomeScreen() {
                   onPress={() => router.push(item.route as never)}
                   style={({ pressed }) => [styles.activityRow, pressed && styles.pressed]}
                 >
-                  <Image
-                    source={item.kind === 'claim' ? PartnerAssets.actions.quickClaims
-                      : item.kind === 'policy' ? PartnerAssets.actions.policies
-                      : PartnerAssets.actions.quickPolicyIntake}
-                    style={styles.activityIcon}
-                    resizeMode="contain"
-                  />
+                  <Ionicons name="document-text" size={25} color="#087DD6" style={styles.activityIcon} />
                   <View style={styles.activityCopy}>
                     <Text numberOfLines={1} style={styles.activityTitle}>{item.title}</Text>
                     <Text numberOfLines={1} style={styles.activitySubtitle}>{item.subtitle}</Text>
