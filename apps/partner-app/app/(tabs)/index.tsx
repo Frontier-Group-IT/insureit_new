@@ -432,7 +432,7 @@ function PendingTasksCard({
       <View style={styles.pendingHeadingRow}>
         <View style={styles.pendingHeadingCopy}>
           <Text style={styles.pendingTitle}>Pending Tasks</Text>
-          <Text style={styles.pendingHint}>Keep up with important actions{'\n'}to avoid policy lapses.</Text>
+          <Text style={styles.pendingHint}>Keep up with important actions.</Text>
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel="View all pending tasks" onPress={onViewAll}>
           <Text style={styles.sectionLink}>View All  ›</Text>
