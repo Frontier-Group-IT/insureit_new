@@ -23,12 +23,22 @@ Deno.serve(async request=>{
     const claimId=String(body.claim_id||'');
     const kind=String(body.kind||'');
     const action=String(body.action||'');
-    if(!/^[a-f0-9-]{36}$/i.test(claimId)||!allowed[kind])return reply({error:'Invalid claim or document category'},400);
+    if(!/^[a-f0-9-]{36}$/i.test(claimId)||(action!=='view'&&!allowed[kind]))return reply({error:'Invalid claim or document category'},400);
     const {data:scope,error:scopeError}=await userDb.rpc('partner_app_claim_in_scope',{p_claim_id:claimId});
     if(scopeError||scope!==true)return reply({error:'Claim not authorized for this Partner'},403);
     const admin=createClient(url,service,{auth:{persistSession:false}});
     const {data:claim,error:claimError}=await admin.from('claims').select('id,customer_id,current_status').eq('id',claimId).single();
     if(claimError||!claim)return reply({error:'Claim unavailable'},404);
+    if(action==='view'){
+      const documentId=String(body.document_id||'');
+      if(!/^[a-f0-9-]{36}$/i.test(documentId))return reply({error:'Invalid document'},400);
+      const {data:document,error:docError}=await admin.from('claim_documents').select('id,claim_id,customer_id,storage_bucket,storage_path')
+        .eq('id',documentId).eq('claim_id',claimId).eq('customer_id',claim.customer_id).maybeSingle();
+      if(docError||!document||document.storage_bucket!==bucket)return reply({error:'Document not available'},404);
+      const {data:signed,error:signedError}=await admin.storage.from(bucket).createSignedUrl(document.storage_path,5*60);
+      if(signedError||!signed?.signedUrl)return reply({error:'Document access could not be prepared'},500);
+      return reply({url:signed.signedUrl});
+    }
     if(['Settled','Closed','Claim Complete','Rejected'].includes(claim.current_status))return reply({error:'Claim is closed'},409);
     const name=String(body.name||'').slice(0,150);
     const mime=String(body.mime||'').toLowerCase();
