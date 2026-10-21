@@ -311,33 +311,34 @@ export default function PartnerHomeScreen() {
                   <Text style={styles.sectionLink}>View All  ›</Text>
                 </Pressable>
               </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.quickGrid}
-                directionalLockEnabled
-              >
-                <QuickAction
-                  asset={PartnerAssets.actions.quickPolicyIntake}
-                  label="Policy Intake"
-                  onPress={() => router.push('/policy-intake-new')}
-                />
-                <QuickAction
-                  asset={PartnerAssets.actions.quickRenewals}
-                  label="Renewals"
-                  onPress={() => router.push('/renewals')}
-                />
-                <QuickAction
-                  asset={PartnerAssets.actions.quickClaims}
-                  label="Claims"
-                  onPress={() => router.push('/(tabs)/claims')}
-                />
-                <QuickAction
-                  asset={PartnerAssets.actions.quickCustomers}
-                  label="Customers"
-                  onPress={() => router.push('/customers')}
-                />
-              </ScrollView>
+              <QuickActionsCarousel
+                actions={[
+                  {
+                    key: 'policy-intake',
+                    asset: PartnerAssets.actions.quickPolicyIntake,
+                    label: 'Policy Intake',
+                    onPress: () => router.push('/policy-intake-new'),
+                  },
+                  {
+                    key: 'renewals',
+                    asset: PartnerAssets.actions.quickRenewals,
+                    label: 'Renewals',
+                    onPress: () => router.push('/renewals'),
+                  },
+                  {
+                    key: 'claims',
+                    asset: PartnerAssets.actions.quickClaims,
+                    label: 'Claims',
+                    onPress: () => router.push('/(tabs)/claims'),
+                  },
+                  {
+                    key: 'customers',
+                    asset: PartnerAssets.actions.quickCustomers,
+                    label: 'Customers',
+                    onPress: () => router.push('/customers'),
+                  },
+                ]}
+              />
             </View>
           </PartnerEnter>
 
@@ -551,6 +552,78 @@ function QuickAction({ asset, label, onPress }: { asset: number; label: string; 
     </Pressable>
   );
 }
+
+function QuickActionsCarousel({
+  actions,
+}: {
+  actions: Array<{ key: string; asset: number; label: string; onPress: () => void }>;
+}) {
+  const scrollRef = useRef<ScrollView>(null);
+  const offsetRef = useRef(0);
+  const loopWidthRef = useRef(0);
+  const draggingRef = useRef(false);
+  const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (draggingRef.current || loopWidthRef.current <= 0) return;
+      const next = offsetRef.current + 0.75;
+      offsetRef.current = next >= loopWidthRef.current ? next - loopWidthRef.current : next;
+      scrollRef.current?.scrollTo({ x: offsetRef.current, animated: false });
+    }, 24);
+
+    return () => {
+      clearInterval(timer);
+      if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    };
+  }, []);
+
+  const pauseForTouch = () => {
+    draggingRef.current = true;
+    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+  };
+
+  const resumeAfterTouch = () => {
+    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    resumeTimerRef.current = setTimeout(() => {
+      draggingRef.current = false;
+    }, 1200);
+  };
+
+  return (
+    <ScrollView
+      ref={scrollRef}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.quickGrid}
+      directionalLockEnabled
+      scrollEventThrottle={16}
+      onContentSizeChange={(width) => {
+        loopWidthRef.current = width / 2;
+      }}
+      onScroll={(event) => {
+        offsetRef.current = event.nativeEvent.contentOffset.x;
+        if (loopWidthRef.current > 0 && offsetRef.current >= loopWidthRef.current) {
+          offsetRef.current -= loopWidthRef.current;
+          scrollRef.current?.scrollTo({ x: offsetRef.current, animated: false });
+        }
+      }}
+      onScrollBeginDrag={pauseForTouch}
+      onScrollEndDrag={resumeAfterTouch}
+      onMomentumScrollEnd={resumeAfterTouch}
+    >
+      {[...actions, ...actions].map((action, index) => (
+        <QuickAction
+          key={`${action.key}-${index}`}
+          asset={action.asset}
+          label={action.label}
+          onPress={action.onPress}
+        />
+      ))}
+    </ScrollView>
+  );
+}
+
 
 function Trend({ value, hasPrevious, comparisonLabel = 'previous period' }: { value: number; hasPrevious: boolean; comparisonLabel?: string }) {
   if (!hasPrevious) return <Text style={styles.trendNeutral}>First recorded comparison period</Text>;
