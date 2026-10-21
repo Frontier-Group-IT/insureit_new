@@ -40,6 +40,7 @@ export function PartnerIncidentVoiceRecorder({ claimId, onUploaded }: { claimId:
   const start=async()=>{
     if(uploading||status.isRecording)return;
     setMessage('');
+    if(playerStatus.playing)player.pause();
     try {
       const permission=await requestRecordingPermissionsAsync();
       if(!permission.granted){setMessage('Please allow microphone access to record an incident voice note.');return;}
@@ -84,6 +85,9 @@ export function PartnerIncidentVoiceRecorder({ claimId, onUploaded }: { claimId:
         </Pressable>
         <Pressable accessibilityRole="button" onPress={()=>{player.pause();setUri(null);setMessage('');}} style={styles.subButton}>
           <Ionicons name="trash-outline" size={19} color="#B42318"/><Text style={[styles.subText,{color:'#B42318'}]}>Delete</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={()=>void start()} style={styles.subButton}>
+          <Ionicons name="mic-outline" size={19} color="#0B4E9D"/><Text style={styles.subText}>Re-record</Text>
         </Pressable>
       </View>
       <Pressable onPress={()=>void upload()} disabled={uploading} accessibilityRole="button" style={[styles.button,uploading&&{opacity:.6}]}>
