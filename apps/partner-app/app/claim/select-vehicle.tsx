@@ -7,6 +7,7 @@ import { listPartnerCustomers, getPartnerCustomerDetail, type PartnerCustomerDet
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import { PartnerAssets } from '@/lib/partner-assets';
+import { createPartnerClaim } from '@/lib/claims';
 
 type Account = { customer_id: string; customer_name: string };
 type Choice = { customer: Account; vehicle: PartnerCustomerDetail['vehicles'][number]; policy: PartnerCustomerDetail['policies'][number] | null };
@@ -17,6 +18,7 @@ export default function PartnerClaimVehicleSelector() {
   const [selected, setSelected] = useState<string>('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [busy, setBusy] = useState(true);
+  const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
   const load = useCallback(async () => {
     setBusy(true); setError('');
@@ -44,6 +46,16 @@ export default function PartnerClaimVehicleSelector() {
   const shown = useMemo(() => choices.filter(c => [c.vehicle.vehicle_no,c.vehicle.make,c.vehicle.model,c.customer.customer_name].some(v => (v||'').toLowerCase().includes(search.toLowerCase()))), [choices,search]);
   const choice = choices.find(x => `${x.customer.customer_id}:${x.vehicle.vehicle_id}` === selected);
   const choose = (row: Choice) => { setSelected(`${row.customer.customer_id}:${row.vehicle.vehicle_id}`); setDropdownOpen(false); setSearch(''); };
+  const startClaim = async () => {
+    if (!choice || creating) return;
+    setCreating(true);
+    try {
+      const claimId = await createPartnerClaim(choice.customer.customer_id, choice.vehicle.vehicle_id, choice.policy?.policy_id ?? null);
+      router.replace({ pathname: '/claim/stage', params: { id: claimId, key: 'spot_intimation' } } as never);
+    } catch (reason) {
+      Alert.alert('Claim could not be started', reason instanceof Error ? reason.message : 'Please try again or contact the claims desk.');
+    } finally { setCreating(false); }
+  };
   return <SafeAreaView style={styles.root} edges={['top','bottom']}>
     <View style={styles.header}><Pressable accessibilityRole="button" accessibilityLabel="Back to claims" onPress={() => router.back()} style={styles.back}><Ionicons name="arrow-back" color="#FFF" size={24}/></Pressable><View style={styles.headerIcon}><Ionicons name="car-sport-outline" color="#FFF" size={20}/></View><Text style={styles.headerTitle}>Select Vehicle</Text></View>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -67,10 +79,10 @@ export default function PartnerClaimVehicleSelector() {
         </View> : null}
       </View>
       <View style={styles.policyTitle}><Text style={styles.heading}>Policy details</Text></View>
-      {choice?.policy ? <View style={styles.policy}><PartnerInsurerLogo name={choice.policy.insurer_name || ''} fallback={PartnerAssets.navigation.claims} style={styles.logoImage}/><View style={styles.vehicleText}><Text style={styles.policyNo}>{choice.policy.policy_no || 'Policy number pending'}</Text><Text style={styles.policyCaption}>{choice.policy.insurer_name || 'Insurer not recorded'}</Text><Text style={styles.policyCaption}>Expiry: {choice.policy.end_date || 'Not recorded'}</Text></View></View> : <Text style={styles.hint}>No linked policy found. Claim eligibility requires server verification.</Text>}
+      {choice?.policy ? <View style={styles.policy}><PartnerInsurerLogo name={choice.policy.insurer_name || ''} fallback={PartnerAssets.navigation.claims} style={styles.logoImage}/><View style={styles.vehicleText}><Text style={styles.policyNo}>{choice.policy.policy_no || 'Policy number pending'}</Text><Text style={styles.policyCaption}>{choice.policy.insurer_name || 'Insurer not recorded'}</Text><Text style={styles.policyCaption}>Expiry: {choice.policy.end_date || 'Not recorded'}</Text></View></View> : <Text style={styles.hint}>No linked policy found. You can register the claim; coverage will be verified separately.</Text>}
       <View style={styles.actions}>
         <Pressable onPress={() => Alert.alert('Get Assistance','Please contact your claims desk for support.')} style={styles.secondary}><Text style={styles.secondaryText}>Get Assistance</Text></Pressable>
-        <Pressable disabled={!choice} onPress={() => Alert.alert('Claim creation pending', 'Vehicle selection is available. Secure Partner-scoped claim creation must be enabled before proceeding to Stage 1. No claim has been created.')} style={[styles.primary,!choice && styles.disabled]}><Text style={styles.primaryText}>Start Claim</Text><Ionicons name="arrow-forward" color="#FFF" size={19}/></Pressable>
+        <Pressable disabled={!choice || creating} onPress={() => void startClaim()} style={[styles.primary,(!choice || creating) && styles.disabled]}><Text style={styles.primaryText}>{creating ? "Starting…" : "Start Claim"}</Text><Ionicons name="arrow-forward" color="#FFF" size={19}/></Pressable>
       </View>
     </ScrollView>
   </SafeAreaView>;
