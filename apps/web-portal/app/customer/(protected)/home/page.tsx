@@ -72,8 +72,8 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
       <CustomerHomeScrollMotion />
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/home" />
       <section className="customer-home-enter relative isolate overflow-hidden rounded-[22px] border border-[#D6E7FA] bg-[#DDEEFF] p-5 text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.06)] sm:p-7">
-        <div className="customer-home-hero-image pointer-events-none absolute inset-y-0 right-0 w-[75%] bg-[url('/assets/home.jpeg')] bg-cover bg-center opacity-80"/>
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EAF5FF] via-[#EAF5FF]/95 via-40% to-[#EAF5FF]/10"/>
+        <div className="customer-home-hero-image pointer-events-none absolute inset-0 bg-[url('/assets/home.jpeg')] bg-cover bg-center opacity-95"/>
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EAF5FF]/85 via-[#EAF5FF]/45 via-40% to-transparent"/>
         <div className="relative flex min-h-[155px] max-w-[560px] items-center py-2 sm:min-h-[185px] sm:py-4">
           <h1 className="text-[clamp(27px,3vw,38px)] font-bold tracking-tight">Good morning, {account.contact_name?.split(" ")[0] || "Customer"}!</h1>
         </div>

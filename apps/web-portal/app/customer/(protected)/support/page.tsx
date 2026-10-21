@@ -41,8 +41,8 @@ export default async function CustomerSupportPage({
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/support" />
 
       <section className="relative isolate overflow-hidden rounded-2xl border border-[#DCE6F2] bg-[#EAF4FF] px-5 py-6 shadow-[0_10px_28px_rgba(28,50,82,.05)] sm:px-7 sm:py-7">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[url('/assets/support%20(2).jpeg')] bg-cover bg-center opacity-65" />
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F7FBFF] via-[#F7FBFF]/95 via-45% to-transparent" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[url('/assets/support%20(2).jpeg')] bg-cover bg-center opacity-95" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F7FBFF]/85 via-[#F7FBFF]/45 via-45% to-transparent" />
         <div className="relative max-w-[720px]">
           <h1 className="text-[clamp(27px,3.5vw,40px)] font-black leading-tight text-[#10213D]">
             How can we <span className="text-[#267AFF]">help?</span>
