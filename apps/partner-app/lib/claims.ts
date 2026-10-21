@@ -180,3 +180,9 @@ export async function savePartnerStageDraft(claimId: string, stageKey: string, d
   if (typeof data !== 'string' || !data) throw new Error('Stage draft was not saved');
   return data;
 }
+
+export async function getPartnerStageDraft(claimId: string, stageKey: string) {
+  const {data,error}=await supabase.rpc('partner_app_get_claim_stage_draft', {p_claim_id:claimId,p_stage_key:stageKey});
+  if(error) throw error;
+  return data && typeof data==='object' && !Array.isArray(data) ? data as Record<string,string> : {};
+}
