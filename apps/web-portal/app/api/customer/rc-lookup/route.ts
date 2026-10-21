@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getAuthenticatedProfile } from "@/lib/auth";
+import { getServerAccessToken } from "@/lib/auth-server";
 import { lookupAuthbridgeRc, normalizeVehicleRegistrationNumber } from "@/lib/authbridge-rc-api";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { normalizeFetchedVehicleManufacturer } from "@/lib/vehicle-manufacturer-resolution";
@@ -47,7 +48,7 @@ type CacheRow = {
 export async function POST(request: Request) {
   const authorization = request.headers.get("authorization") ?? "";
   const accessToken = authorization.replace(/^Bearer\s+/i, "").trim();
-  const auth = await getAuthenticatedProfile(accessToken);
+  const auth = await getAuthenticatedProfile(accessToken || (await getServerAccessToken()) || undefined);
   if (!auth.user || !auth.profile?.is_active || auth.profile.role !== "customer") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
