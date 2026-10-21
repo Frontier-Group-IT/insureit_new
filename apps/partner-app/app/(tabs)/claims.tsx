@@ -219,6 +219,17 @@ export default function ClaimsScreen() {
           ))}
         </View>
 
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Add Claim"
+          onPress={() => router.push('/claim/new' as never)}
+          style={({ pressed }) => [styles.addClaimButton, pressed && styles.addClaimButtonPressed]}
+        >
+          <Ionicons name="add-circle-outline" size={19} color="#FFFFFF" />
+          <Text style={styles.addClaimButtonText}>Add Claim</Text>
+          <Ionicons name="arrow-forward" size={17} color="#FFFFFF" />
+        </Pressable>
+
         {rejectedFilterNotice ? (
           <View style={styles.banner}>
             <PartnerBanner
@@ -494,6 +505,9 @@ const styles = StyleSheet.create({
   filterOptionText: { color: '#506079', fontSize: 10, lineHeight: 13, fontWeight: '600' },
   filterOptionTextActive: { color: '#3156B8', fontWeight: '800' },
   banner: { marginTop: 8 },
+  addClaimButton: { marginTop: 10, height: 43, borderRadius: 9, backgroundColor: '#4B26E8', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
+  addClaimButtonPressed: { opacity: 0.8 },
+  addClaimButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
   summaryRow: { flexDirection: 'row', gap: 3, marginTop: 8 },
   summaryCard: { flex: 1, minWidth: 0, alignItems: 'center', paddingVertical: 8, paddingHorizontal: 2, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E3ECF8', borderRadius: 9, elevation: 1 },
   summaryCardSelected: { backgroundColor: '#E8F1FF', borderColor: '#2458C5', borderBottomWidth: 3 },
