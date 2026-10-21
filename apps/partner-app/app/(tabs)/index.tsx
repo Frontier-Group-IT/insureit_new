@@ -1,4 +1,4 @@
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useRef, useState, useEffect, type ReactNode } from 'react';
 import { Animated, Image, ImageBackground, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -36,6 +36,7 @@ export default function PartnerHomeScreen() {
   const { context, cacheScopeKey, avatarUri } = usePartnerSession();
   const [businessPeriod, setBusinessPeriod] = useState<BusinessPeriod>('mtd');
   const [periodOpen, setPeriodOpen] = useState(false);
+  const homeScrollY = useRef(new Animated.Value(0)).current;
 
   const fetchHomeWorkspace = useCallback(async (): Promise<{
     home: PartnerHomeData;
@@ -104,6 +105,7 @@ export default function PartnerHomeScreen() {
   return (
     <PartnerScreen
       resetScrollOnFocus
+      homeMotionScrollY={homeScrollY}
       eyebrow="INSUREIT PARTNER"
       title={greeting(signedInPersonName(identity))}
       action={
@@ -334,7 +336,7 @@ export default function PartnerHomeScreen() {
               accessibilityRole="button"
               accessibilityLabel={`View renewals due soon, ${data.business.renewals_30_days} policies in 30 days`}
               onPress={() => router.push('/renewals')}
-              style={({ pressed }) => [styles.renewalCard, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.renewalCard, pressed && styles.pressed, pressed && { transform: [{ scale: 0.96 }] }]}
             >
               <Image source={PartnerAssets.actions.quickRenewals} style={styles.renewalIcon} resizeMode="contain" />
               <View style={styles.renewalBody}>
@@ -423,7 +425,7 @@ function PendingTasksCard({
             accessibilityRole="button"
             accessibilityLabel={`${task.count} ${task.label}`}
             onPress={task.open}
-            style={({ pressed }) => [styles.pendingTaskRow, pressed && styles.pressed]}
+            style={({ pressed }) => [styles.pendingTaskRow, pressed && styles.pressed, pressed && { transform: [{ scale: 0.96 }] }]}
           >
             <Image source={task.icon} style={styles.pendingTaskIcon} resizeMode="contain" />
             <Text style={styles.pendingTaskCount}>{task.count}</Text>
@@ -439,10 +441,24 @@ function PendingTasksCard({
 function MiniBusinessTrend({ values }: { values: number[] }) {
   const recent = values.slice(-6);
   const max = Math.max(1, ...recent);
+  // Restart only when data changes, not on every Home tab refocus.
+  const signature = recent.join(',');
+  const rise = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    rise.setValue(0);
+    const animation = Animated.timing(rise, {
+      toValue: 1, duration: 320, useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [rise, signature]);
   return (
     <View style={styles.miniChart} accessibilityLabel="Recent premium trend">
       {recent.length ? recent.map((value, index) => (
-        <View key={index} style={[styles.miniBar, { height: Math.max(4, Math.round(Math.max(0, value) / max * 43)) }]} />
+        <Animated.View key={index} style={[styles.miniBar, {
+          height: Math.max(4, Math.round(Math.max(0, value) / max * 43)),
+          transform: [{ scaleY: rise }],
+        }]} />
       )) : <Text style={styles.chartUnavailable}>Trend unavailable</Text>}
     </View>
   );
