@@ -98,7 +98,7 @@ export function CustomerStartClaimSelector({
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#F2D7DA] bg-[#FFF7F8] px-3 py-2.5">
             <span className="flex items-center gap-2 text-[12px] font-medium text-[#A43B49]">
               <ShieldAlert className="h-4 w-4" />
-              No active policy found for the selected vehicle.
+              No active policy found. You can still register a claim; coverage will be reviewed separately.
             </span>
             <Link href={{ pathname: "/customer/add-policy", query: { account: accountId, vehicle: vehicleId } }} className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#1769DC]">
               <Plus className="h-4 w-4" /> Add policy
@@ -141,7 +141,7 @@ export function CustomerStartClaimSelector({
             <input type="hidden" name="account" value={accountId}/>
             <input type="hidden" name="vehicle" value={vehicleId}/>
             <input type="hidden" name="policy" value={policy?.id || ""}/>
-            <button type="submit" disabled={!policy || !vehicle || !hasActivePolicy} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#0B3884] px-4 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+            <button type="submit" disabled={!vehicle} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#0B3884] px-4 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
               Continue to Claim <ArrowRight className="h-5 w-5"/>
             </button>
           </form>

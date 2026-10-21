@@ -125,7 +125,7 @@ export default function InternalClaimStageOne() {
         if (row && ids.includes(row.customer_id)) {
           const draftVehicle = nextVehicles.find((item) => item.id === row.vehicle_id) ?? null;
           const draftPolicy = nextPolicies.find((item) => item.id === row.policy_id) ?? null;
-          if (draftVehicle && draftPolicy && draftPolicy.vehicle_id === draftVehicle.id) {
+          if (draftVehicle && (!row.policy_id || (draftPolicy && draftPolicy.vehicle_id === draftVehicle.id))) {
             setDraftClaim({ id: row.id, customerId: row.customer_id, controlNo: row.claim_no });
             setSelectedCustomerId(row.customer_id);
             setSelectedVehicleId(row.vehicle_id);
@@ -172,8 +172,8 @@ export default function InternalClaimStageOne() {
 
   async function ensureDraftClaim(): Promise<DraftClaim | null> {
     if (draftClaim) return draftClaim;
-    if (!selectedVehicle || !selectedPolicy || !selectedContext) {
-      setMessage('Vehicle and policy details must be available before uploading documents.');
+    if (!selectedVehicle || !selectedContext) {
+      setMessage('Vehicle details must be available before uploading documents.');
       return null;
     }
     const session = await getCurrentSession();
@@ -182,8 +182,8 @@ export default function InternalClaimStageOne() {
       claim_no: makeClaimNumber(),
       customer_id: selectedContext.customer_id,
       vehicle_id: selectedVehicle.id,
-      policy_id: selectedPolicy.id,
-      insurance_company_id: selectedPolicy.insurance_company_id,
+      policy_id: selectedPolicy?.id ?? null,
+      insurance_company_id: selectedPolicy?.insurance_company_id ?? null,
       current_status: 'Draft',
       created_by: session.user.id,
     }).select('id, customer_id, claim_no, created_at').single();
@@ -444,7 +444,7 @@ export default function InternalClaimStageOne() {
   }
 
   async function submit(options?: { allowExpiredPolicy?: boolean }) {
-    if (!selectedVehicle || !selectedPolicy || !selectedContext || saving || uploadingDocuments || voiceRecording) return;
+    if (!selectedVehicle || !selectedContext || saving || uploadingDocuments || voiceRecording) return;
     setMessage('');
     setValidationMessage('');
     const missingMandatoryFields = [!incidentDate ? 'Accident Date' : '', !incidentTime ? 'Accident Time' : '', !intimationDate ? 'Spot Intimation Date' : '', !intimationTime ? 'Spot Intimation Time' : '', !driver.trim() ? 'Driver Name' : '', !phone.trim() ? 'Driver Number' : '', !location.trim() ? 'Location' : ''].filter(Boolean);
@@ -456,7 +456,7 @@ export default function InternalClaimStageOne() {
     if (incidentAt.getTime() > Date.now()) return setValidationMessage('Accident Date / Time cannot be in the future.');
     if (spotIntimationAt.getTime() > Date.now()) return setValidationMessage('Spot Intimation Date / Time cannot be in the future.');
     if (spotIntimationAt.getTime() < incidentAt.getTime()) return setValidationMessage('Spot Intimation Date / Time cannot be earlier than Accident Date / Time.');
-    const policyExpiredBeforeIncident = isIncidentAfterPolicyExpiry(selectedPolicy, incidentAt);
+    const policyExpiredBeforeIncident = selectedPolicy ? isIncidentAfterPolicyExpiry(selectedPolicy, incidentAt) : false;
     if (policyExpiredBeforeIncident && !options?.allowExpiredPolicy && !expiryWarningAcknowledged) { setExpiryWarningOpen(true); return; }
 
     setSaving(true);
@@ -466,13 +466,13 @@ export default function InternalClaimStageOne() {
       const payload = {
         customer_id: selectedContext.customer_id,
         vehicle_id: selectedVehicle.id,
-        policy_id: selectedPolicy.id,
-        insurance_company_id: selectedPolicy.insurance_company_id,
+        policy_id: selectedPolicy?.id ?? null,
+        insurance_company_id: selectedPolicy?.insurance_company_id ?? null,
         current_status: 'Initial Documents Pending' as const,
         accident_at: incidentAt.toISOString(),
         spot_intimation_at: spotIntimationAt.toISOString(),
         accident_location: location.trim() || null,
-        accident_description: [driver.trim() ? `Driver: ${driver.trim()}` : '', phone.trim() ? `Driver phone: ${phone.trim()}` : '', policyExpiredBeforeIncident ? `Policy expiry warning: Policy expired on ${formatDate(selectedPolicy.end_date)} before incident date ${formatDate(incidentAt.toISOString())}.` : ''].filter(Boolean).join('\n') || null,
+        accident_description: [driver.trim() ? `Driver: ${driver.trim()}` : '', phone.trim() ? `Driver phone: ${phone.trim()}` : '', policyExpiredBeforeIncident && selectedPolicy ? `Policy expiry warning: Policy expired on ${formatDate(selectedPolicy.end_date)} before incident date ${formatDate(incidentAt.toISOString())}.` : '', !selectedPolicy ? 'Policy status: not recorded; coverage verification required.' : ''].filter(Boolean).join('\n') || null,
         estimated_loss: null,
         created_by: session.user.id,
       };
@@ -504,7 +504,7 @@ export default function InternalClaimStageOne() {
 
   return (
     <Screen title="Spot Intimation" showTitleHeader={false}>
-      {selectedPolicy && selectedVehicle ? <InternalSpotIntimationIdentityCard claimNo="New claim" insurerName={selectedInsurer?.name ?? 'Insurance company'} vehicleNo={selectedVehicle.vehicle_no} policyNo={selectedPolicy.policy_no} vehicleMeta={[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ')} /> : null}
+      {selectedVehicle ? <InternalSpotIntimationIdentityCard claimNo="New claim" insurerName={selectedInsurer?.name ?? 'Insurance not verified'} vehicleNo={selectedVehicle.vehicle_no} policyNo={selectedPolicy?.policy_no ?? 'Not recorded'} vehicleMeta={[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ')} /> : null}
       <ExternalClaimErrorPopup visible={Boolean(message)} message={message} title="Something went wrong" onClose={() => setMessage('')} />
 
       <ClaimFormSection title="Incident Details" subtitle="Accident date, time and first insurer intimation" iconImage={require('../assets/claims/claim-intimation.png')}>
@@ -542,7 +542,7 @@ export default function InternalClaimStageOne() {
       </View>
 
       <IncidentVoiceNote value={voiceNote} saved={false} busy={saving || uploadingDocuments} onChange={setVoiceNote} onRecordingChange={setVoiceRecording} />
-      <ClaimActionBar primaryDisabled={saving || uploadingDocuments || voiceRecording || !selectedPolicy} primaryIcon="arrow-right" primaryLabel={voiceRecording ? 'Stop recording first' : uploadingDocuments ? 'Uploading documents…' : saving ? 'Saving...' : 'Save Details'} onPrimary={() => void submit()} onAssistance={() => router.push('/customer/support')} />
+      <ClaimActionBar primaryDisabled={saving || uploadingDocuments || voiceRecording || !selectedVehicle} primaryIcon="arrow-right" primaryLabel={voiceRecording ? 'Stop recording first' : uploadingDocuments ? 'Uploading documents…' : saving ? 'Saving...' : 'Save Details'} onPrimary={() => void submit()} onAssistance={() => router.push('/customer/support')} />
 
       <Modal visible={Boolean(createdClaimSuccess)} transparent animationType="fade" statusBarTranslucent onRequestClose={() => undefined}><View style={styles.controlSuccessBackdrop}><View accessibilityRole="alert" style={styles.controlSuccessCard}><View style={styles.controlSuccessIcon}><MaterialCommunityIcons name="check" size={18} color="#FFFFFF" /></View><Text style={styles.controlSuccessTitle}>Control No. Created</Text><Pressable accessibilityRole="button" accessibilityLabel="Open claim using generated control number" onPress={() => { const target = createdClaimSuccess; if (!target) return; setCreatedClaimSuccess(null); router.replace({ pathname: '/customer/internal-spot-status', params: { id: target.id } }); }} style={({ pressed }) => [styles.controlSuccessNumber, pressed && styles.controlSuccessNumberPressed]}><View style={styles.controlSuccessNumberCopy}><Text style={styles.controlSuccessNumberLabel}>CONTROL NO.</Text><Text style={styles.controlSuccessNumberValue}>{createdClaimSuccess?.controlNo ?? ''}</Text></View><View style={styles.controlSuccessOk}><Text style={styles.controlSuccessOkText}>OK</Text></View></Pressable></View></View></Modal>
       <Modal visible={expiryWarningOpen} transparent animationType="fade" onRequestClose={() => setExpiryWarningOpen(false)}><View style={styles.validationBackdrop}><View accessibilityRole="alert" style={styles.validationCard}><View style={styles.deleteConfirmIcon}><MaterialCommunityIcons name="shield-alert-outline" size={20} color="#B42318" /></View><Text style={styles.validationTitle}>Policy expired before incident date</Text><Text style={styles.validationBody}>The selected policy expired on {formatDate(selectedPolicy?.end_date)}. You can still continue, but this claim may need extra insurer review.</Text><View style={styles.deleteConfirmActions}><Pressable accessibilityRole="button" onPress={() => setExpiryWarningOpen(false)} style={styles.deleteCancelButton}><Text style={styles.deleteCancelText}>Review Date</Text></Pressable><Pressable accessibilityRole="button" onPress={() => { setExpiryWarningOpen(false); setExpiryWarningAcknowledged(true); void submit({ allowExpiredPolicy: true }); }} style={styles.deleteConfirmButton}><Text style={styles.deleteConfirmText}>Continue</Text></Pressable></View></View></View></Modal>
