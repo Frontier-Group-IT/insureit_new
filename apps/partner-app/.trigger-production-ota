@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=d81af9e6fe4ffec04b5ae14e3b2753d93ec3afe4
-reason=top-insurers-overview-date-range-pr-3293
+source_main=c28cdfee08cbea4f1c35f487af450ad9886512f3
+reason=compact-claim-stage-headers-pr-3296
