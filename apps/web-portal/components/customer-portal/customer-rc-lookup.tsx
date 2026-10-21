@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Search, LoaderCircle } from "lucide-react";
-import { createClient } from "@/lib/supabase";
 
 type Details = {
   registrationNumber?:string; registrationDate?:string|null; manufacturer?:string|null;
@@ -22,10 +21,15 @@ export function CustomerRcLookup() {
     if(!/^[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{1,4}$/.test(clean)) {setNotice("Enter a complete registration number.");return;}
     setBusy(true);setNotice("");
     try {
-      const {data:{session}}=await createClient().auth.getSession();
-      if(!session?.access_token)throw Error("Sign in again to fetch vehicle details.");
-      const response=await fetch("/api/customer/rc-lookup",{method:"POST",headers:{"Authorization":"Bearer "+session.access_token,"Content-Type":"application/json"},body:JSON.stringify({registrationNumber:clean})});
-      const payload=await response.json() as {status?:string;details?:Details;error?:string};
+      // Customer Portal sessions live in secure cookies. Let the API verify the
+      // authenticated customer rather than relying on a second browser session.
+      const response=await fetch("/api/customer/rc-lookup",{method:"POST",credentials:"same-origin",redirect:"manual",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({registrationNumber:clean})});
+      const contentType=response.headers.get("content-type")||"";
+      if(response.status===401||response.status===403||response.type==="opaqueredirect"||response.status>=300&&response.status<400)throw Error("Your session has expired. Please sign in again to fetch RC details.");
+      if(!contentType.toLowerCase().includes("application/json"))throw Error("Vehicle details service is temporarily unavailable. Please try again later or enter details manually.");
+      let payload: {status?:string;details?:Details;error?:string};
+      try { payload=await response.json() as typeof payload; }
+      catch { throw Error("Vehicle details service returned an invalid response. Please try again or enter details manually."); }
       if(!response.ok||payload.status!=="success"||!payload.details)throw Error(payload.error||"RC details unavailable. Enter details manually.");
       const root=document.getElementById("customer-add-vehicle-form");
       const d=payload.details;
