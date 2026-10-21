@@ -124,6 +124,8 @@ export async function getPartnerClaimDetail(claimId: string) {
       .map(item => ({ id: String(item.id), name: String(item.name), category: typeof item.category === 'string' ? item.category : null }))
     : null;
   const detail: PartnerClaimDetail = { ...payload, documents };
+  try { detail.documents = await listPartnerClaimDocuments(claimId); }
+  catch { /* Keep inventory unknown; scoped RPC may be unavailable before deployment. */ }
   if (!detail.vehicle?.id || !detail.customer?.id) return detail;
 
   const { data: customerDetail } = await supabase.rpc('partner_app_customer_detail', {
@@ -162,4 +164,56 @@ export async function savePartnerClaimSpot(claimId: string, incidentAt: string, 
   });
   if (error) throw error;
   if (data !== true) throw new Error('Claim details were not saved');
+}
+
+export async function savePartnerStageDraft(claimId: string, stage: string, fields: Record<string, string>) {
+  const { data, error } = await supabase.rpc('partner_app_save_claim_stage_draft', {
+    p_claim_id: claimId, p_milestone_key: stage, p_fields: fields,
+  });
+  if (error) throw error;
+  if (!data) throw new Error('Claim stage draft was not saved.');
+  return data as string;
+}
+
+export async function listPartnerClaimDocuments(claimId: string): Promise<PartnerClaimDocument[]> {
+  const { data, error } = await supabase.rpc('partner_app_claim_document_list',{p_claim_id:claimId});
+  if(error) throw error;
+  return Array.isArray(data) ? data.map((x:{id:string;name:string;category:string|null})=>({id:x.id,name:x.name,category:x.category})) : [];
+}
+
+export async function uploadPartnerClaimDocument(claimId: string, kind: string, asset: { uri: string; name: string; size?: number; mimeType?: string }, milestoneKey = 'spot_intimation') {
+  const mime=asset.mimeType || (asset.name.toLowerCase().endsWith('.pdf')?'application/pdf':'');
+  if(!mime||!asset.size||asset.size<=0) throw new Error('Document type or size is unavailable.');
+  const meta={claim_id:claimId,kind,name:asset.name,size:asset.size,mime,milestone_key:milestoneKey};
+  const {data:prepared,error:prepareError}=await supabase.functions.invoke('partner-claim-upload',{body:{...meta,action:'prepare'}});
+  if(prepareError||!prepared?.path||!prepared?.token) throw new Error(prepared?.error || prepareError?.message || 'Unable to prepare upload');
+  const response=await fetch(asset.uri);
+  if(!response.ok)throw new Error('Could not read selected document');
+  // ArrayBuffer is more reliable than the React Native Blob polyfill for Supabase uploads.
+  const content=await response.arrayBuffer();
+  if(content.byteLength!==asset.size)throw new Error('Selected file size changed while preparing upload.');
+  const {error:uploadError}=await supabase.storage.from('claim-documents').uploadToSignedUrl(prepared.path,prepared.token,content,{contentType:mime});
+  if(uploadError)throw uploadError;
+  const {data:completed,error:finalizeError}=await supabase.functions.invoke('partner-claim-upload',{body:{...meta,action:'finalize',path:prepared.path}});
+  if(finalizeError||!completed?.document_id)throw new Error(completed?.error || finalizeError?.message || 'File uploaded; record finalization pending.');
+  return completed.document_id as string;
+}
+
+export async function openPartnerClaimDocument(claimId: string, documentId: string) {
+  const { data, error } = await supabase.functions.invoke('partner-claim-upload',{
+    body:{ action:'view', claim_id:claimId, document_id:documentId },
+  });
+  if(error || typeof data?.url!=='string' || !data.url.startsWith('https://')) {
+    throw new Error(data?.error || error?.message || 'Could not open this claim document.');
+  }
+  return data.url as string;
+}
+
+export async function completePartnerClaimStage(claimId: string, stage: string, fields: Record<string,string>) {
+  const { data, error } = await supabase.rpc('partner_app_complete_claim_stage',{
+    p_claim_id: claimId, p_milestone_key:stage, p_fields:fields,
+  });
+  if(error) throw error;
+  if(typeof data!=='string' || !data)throw new Error('Claim stage did not complete.');
+  return data;
 }

@@ -17,6 +17,21 @@ const normalize = (value: string | null | undefined) => (value || '').toLowerCas
 
 export function getClaimTrackerState(data: PartnerClaimDetail) {
   const status = normalize(data.claim.current_status);
+  // Match the Operations stage status groups before falling back to a heuristic.
+  // The status after Stage 1 submission must lead to Spot Status, not remain at Stage 1.
+  const exactGroups: readonly string[][] = [
+    ['Draft','Initial Documents Pending','Documents Pending'],
+    ['Initial Documents Submitted','Initial Documents Verification Pending','Documents Submitted','Initial Documents Verified','Claim Intimated','Surveyor Appointed'],
+    ['Vehicle Inspected','Spot Survey Completed','Final Documents Awaited','Final Documents Verification Pending','Final Documents Submitted','Final Documents Verified','Claim Intimation','Final Surveyor Details','Survey Status'],
+    ['Survey Done','Estimate Submitted','Approval Pending','Work Approval Status'],
+    ['Work Approval Received','Under Repair','Repair Started','Repair Done','Repair Completed','RA Intimation'],
+    ['RA Intimation Done'],
+    ['Final Bill Submitted','DO Status'],
+    ['DO Submitted'],
+    ['Payment Stage','Claim Completion In Progress','Settlement Under Process'],
+    ['Claim Complete','Settled','Closed'],
+  ];
+  const exactIndex = exactGroups.findIndex(group => group.some(value => normalize(value) === status));
   // Existing Partner RPC contains broker status history, not the customer milestone table.
   // Project only recognized statuses. Never equate the number of history events with completed stages.
   const rules: Array<[RegExp, number]> = [
@@ -32,7 +47,7 @@ export function getClaimTrackerState(data: PartnerClaimDetail) {
     [/spot intimation|initial document|accident reported|draft/, 0],
   ];
   const matched = rules.find(([pattern]) => pattern.test(status));
-  const completed = matched?.[1] ?? 0;
+  const completed = exactIndex >= 0 ? exactIndex : matched?.[1] ?? 0;
   const index = Math.min(completed, 8);
   return { index, current: CLAIM_STAGES[index], progress: Math.round(completed / 9 * 100), substage: data.claim.current_status || 'Status pending', completed };
 }
