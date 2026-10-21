@@ -172,3 +172,25 @@ export async function savePartnerStageDraft(claimId: string, stage: string, fiel
   if (!data) throw new Error('Claim stage draft was not saved.');
   return data as string;
 }
+
+export async function listPartnerClaimDocuments(claimId: string): Promise<PartnerClaimDocument[]> {
+  const { data, error } = await supabase.rpc('partner_app_claim_document_list',{p_claim_id:claimId});
+  if(error) throw error;
+  return Array.isArray(data) ? data.map((x:{id:string;name:string;category:string|null})=>({id:x.id,name:x.name,category:x.category})) : [];
+}
+
+export async function uploadPartnerClaimDocument(claimId: string, kind: string, asset: { uri: string; name: string; size?: number; mimeType?: string }) {
+  const mime=asset.mimeType || (asset.name.toLowerCase().endsWith('.pdf')?'application/pdf':'');
+  if(!mime||!asset.size||asset.size<=0) throw new Error('Document type or size is unavailable.');
+  const meta={claim_id:claimId,kind,name:asset.name,size:asset.size,mime};
+  const {data:prepared,error:prepareError}=await supabase.functions.invoke('partner-claim-upload',{body:{...meta,action:'prepare'}});
+  if(prepareError||!prepared?.path||!prepared?.token) throw new Error(prepared?.error || prepareError?.message || 'Unable to prepare upload');
+  const response=await fetch(asset.uri);
+  if(!response.ok)throw new Error('Could not read selected document');
+  const content=await response.blob();
+  const {error:uploadError}=await supabase.storage.from('claim-documents').uploadToSignedUrl(prepared.path,prepared.token,content,{contentType:mime});
+  if(uploadError)throw uploadError;
+  const {data:completed,error:finalizeError}=await supabase.functions.invoke('partner-claim-upload',{body:{...meta,action:'finalize',path:prepared.path}});
+  if(finalizeError||!completed?.document_id)throw new Error(completed?.error || finalizeError?.message || 'File uploaded; record finalization pending.');
+  return completed.document_id as string;
+}
