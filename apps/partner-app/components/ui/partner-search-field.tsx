@@ -94,7 +94,13 @@ export function PartnerSearchField({
   containerStyle?: StyleProp<ViewStyle>;
 }) {
   const [focused, setFocused] = useState(false);
-  const rotating = !focused && !value && Boolean(placeholders?.length);
+  const rotating = !focused && !value;
+  const rotatingItems = placeholders?.length ? placeholders : [
+    placeholder,
+    'Search customer name...',
+    'Search vehicle number...',
+    'Search policy number...',
+  ].filter((item, index, all) => all.indexOf(item) === index);
 
   return (
     <View style={[styles.wrap, containerStyle, focused && styles.focused]}>
@@ -105,7 +111,7 @@ export function PartnerSearchField({
       />
       <View style={styles.inputShell}>
         {rotating ? (
-          <PartnerRotatingSearchPlaceholder placeholders={placeholders ?? [placeholder]} containerStyle={styles.placeholderOverlay} />
+          <PartnerRotatingSearchPlaceholder placeholders={rotatingItems} containerStyle={styles.placeholderOverlay} />
         ) : null}
         <TextInput
           accessibilityLabel={placeholder}
