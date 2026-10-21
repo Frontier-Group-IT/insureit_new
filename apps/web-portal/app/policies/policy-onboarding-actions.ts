@@ -247,6 +247,8 @@ function validatePayload(payload: PolicyOnboardingPayload) {
   const rtoState = String(payload.vehicle.rtoState ?? "").trim();
   const rtoName = String(payload.vehicle.rtoName ?? "").trim();
   const cpaAmount = Number(numericPayloadValue(payload.premium.cpa, false, "0"));
+  const addOnPremium = Number(numericPayloadValue(payload.premium.addOnPremium, false, "0"));
+  if (!Number.isFinite(addOnPremium) || addOnPremium < 0 || addOnPremium > 100000000 || Math.round(addOnPremium * 100) !== addOnPremium * 100) return "Enter a valid non-negative Add-on Premium (maximum two decimals).";
   if (!name) return "Enter the insured/customer name.";
   if (!/^[6-9][0-9]{9}$/.test(phone)) return "Enter a valid 10 digit Indian mobile number.";
   if (mode === "registered" && !isValidVehicleRegistrationNumber(rawRegistration)) return "Enter a valid vehicle registration number.";
@@ -681,6 +683,19 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     const result = data as { ok?: boolean; policyId?: string; policyCode?: string; customerId?: string; vehicleId?: string } | null;
     if (!result?.ok || !result.policyId || !result.policyCode || !result.customerId || !result.vehicleId) return { ok: false, kind: "database", error: "We couldn't complete the policy booking. Please try again." };
 
+    // The booking RPC commits independently. If this follow-up fails, NEVER advise
+    // re-submitting the booking (which could duplicate the policy).
+    const addOnAmount = Number(payload.premium.addOnPremium ?? 0);
+    if (addOnAmount > 0) {
+      diagnosticStage = "post_booking_motor_addon";
+      const { data: addonResult, error: addonError } = await admin.rpc("set_motor_policy_addon_premium_v1", {
+        p_policy_id: result.policyId, p_amount: addOnAmount,
+      });
+      if (addonError || !(addonResult as { ok?: boolean } | null)?.ok) {
+        console.error("policy_motor_addon_save_failed", { policyId: result.policyId, error: addonError?.message });
+        return { ok: false, kind: "database", error: `Policy ${result.policyCode} was created, but the Add-on Premium could not be saved. Do NOT submit again. Open the existing policy and update its premium after confirming the migration.` };
+      }
+    }
     if (createNewCustomer) {
       diagnosticStage = "post_booking_customer_activation";
       const { error: customerActivationError } = await admin
