@@ -57,6 +57,8 @@ export default function BusinessScreen() {
   const compactScreen = screenHeight < 800;
   const { context, cacheScopeKey, avatarUri } = usePartnerSession();
   const [overviewRange, setOverviewRange] = useState<OverviewRange>('mtd');
+  const [insurerDates, setInsurerDates] = useState(() => presetDateRange('mtd'));
+  const [customInsurerDatesApplied, setCustomInsurerDatesApplied] = useState(true);
   const [overviewMenuOpen, setOverviewMenuOpen] = useState(false);
   const [overviewCustomOpen, setOverviewCustomOpen] = useState(false);
   const [overviewPreset, setOverviewPreset] = useState<PartnerBusinessRangeSummary | null>(null);
@@ -75,16 +77,14 @@ export default function BusinessScreen() {
     renewals: PartnerRenewalSummary | null;
     claims: PartnerClaimSummary | null;
     payout: PartnerPayoutSummary | null;
-    topInsurers: PartnerTopInsurer[] | null;
     secondaryWarning: boolean;
   }> => {
-    const [performanceResult, networkResult, renewalResult, claimResult, payoutResult, insurersResult] = await Promise.allSettled([
+    const [performanceResult, networkResult, renewalResult, claimResult, payoutResult] = await Promise.allSettled([
       getPartnerBusinessPerformance(),
       getPartnerNetwork(),
       getPartnerRenewalSummary(),
       getPartnerClaimSummary(),
       getPartnerPayoutSummary(),
-      getPartnerTopInsurers(),
     ]);
 
     if (performanceResult.status === 'rejected') throw performanceResult.reason;
@@ -96,7 +96,6 @@ export default function BusinessScreen() {
       renewals: renewalResult.status === 'fulfilled' ? renewalResult.value : null,
       claims: claimResult.status === 'fulfilled' ? claimResult.value : null,
       payout: payoutResult.status === 'fulfilled' ? payoutResult.value : null,
-      topInsurers: insurersResult.status === 'fulfilled' ? insurersResult.value : null,
       secondaryWarning: renewalResult.status === 'rejected'
         || claimResult.status === 'rejected'
         || payoutResult.status === 'rejected',
@@ -151,7 +150,14 @@ export default function BusinessScreen() {
   const renewals = workspace.data?.renewals ?? null;
   const claims = workspace.data?.claims ?? null;
   const payout = workspace.data?.payout ?? null;
-  const topInsurers = workspace.data?.topInsurers ?? null;
+  const fetchRangeInsurers = useCallback(() => getPartnerTopInsurers(insurerDates.from, insurerDates.to), [insurerDates.from, insurerDates.to]);
+  const insurerQuery = usePartnerQuery<PartnerTopInsurer[]>({
+    scopeKey: cacheScopeKey,
+    key: `business:top-insurers:range:${insurerDates.from}:${insurerDates.to}`,
+    fetcher: fetchRangeInsurers,
+    staleTimeMs: 90_000,
+  });
+  const topInsurers = overviewRange === 'custom' && !customInsurerDatesApplied ? null : insurerQuery.data ?? null;
 
   const mtdReady = Boolean(currentMtd.data && previousMtd.data && !currentMtd.error && !previousMtd.error);
   const mtdCurrent = mtdReady ? currentMtd.data : null;
@@ -176,11 +182,14 @@ export default function BusinessScreen() {
 
     if (next === 'custom') {
       setOverviewRange('custom');
+      setCustomInsurerDatesApplied(false);
       setOverviewCustomOpen((open) => (overviewRange === 'custom' ? !open : true));
       return;
     }
 
     setOverviewRange(next);
+    setCustomInsurerDatesApplied(true);
+    setInsurerDates(presetDateRange(next));
     setOverviewCustomOpen(false);
     setOverviewPreset(null);
 
@@ -348,6 +357,8 @@ export default function BusinessScreen() {
               <PartnerBusinessRangeSummaryCard
                 onApplied={(result) => {
                   setOverviewPreset(result);
+                  setInsurerDates({ from: result.from_date, to: result.to_date });
+                  setCustomInsurerDatesApplied(true);
                   setOverviewCustomOpen(false);
                 }}
               />
@@ -486,7 +497,7 @@ export default function BusinessScreen() {
               <View style={styles.insurerEmptyIcon}><Ionicons name="business-outline" size={18} color="#3156B8" /></View>
               <View style={styles.insurerEmptyBody}>
                 <Text style={styles.insurerEmptyTitle}>Insurer mix</Text>
-                <Text style={styles.insurerEmptyText}>{topInsurers === null ? 'Insurer ranking temporarily unavailable.' : 'No insurer business this month.'}</Text>
+                <Text style={styles.insurerEmptyText}>{overviewRange === 'custom' && !customInsurerDatesApplied ? 'Apply a custom date range to view top insurers.' : insurerQuery.loading ? 'Loading insurers for selected range…' : insurerQuery.error ? 'Insurer ranking temporarily unavailable.' : 'No insurers in selected range.'}</Text>
               </View>
             </View>
           )}
