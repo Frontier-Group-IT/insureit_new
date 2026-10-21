@@ -67,7 +67,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/claims" />
 
       <section className="relative isolate overflow-hidden rounded-2xl border border-[#D6E7FA] bg-[#DDEEFF] text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.05)]">
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-[62%] bg-[url('/customer-insurance-quote-vehicles.svg')] bg-contain bg-right-bottom bg-no-repeat opacity-55" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-[62%] bg-[url('/assets/claim%20(2).jpeg')] bg-contain bg-right-bottom bg-no-repeat opacity-55" />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EEF7FF] via-[#EEF7FF]/96 via-47% to-transparent" />
         <div className="relative flex min-h-[170px] items-center px-5 py-6 sm:px-7">
           <div className="max-w-[520px]">

@@ -46,7 +46,7 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
   const openVehicle = (id: string) => router.push(`/customer/vehicles/${encodeURIComponent(id)}?account=${encodeURIComponent(accountId)}`);
   return <div className="space-y-3">
     <section className="relative isolate overflow-hidden rounded-2xl border border-[#D6E7FA] bg-[#DDEEFF] text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.05)]">
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-[66%] bg-[url('/customer-insurance-quote-vehicles.svg')] bg-contain bg-right-bottom bg-no-repeat opacity-70" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-[66%] bg-[url('/assets/vehicle.jpeg')] bg-contain bg-right-bottom bg-no-repeat opacity-70" />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EEF7FF] via-[#EEF7FF]/94 via-45% to-transparent" />
       <div className="relative flex min-h-[175px] items-center px-5 py-6 sm:px-7">
         <div className="max-w-[500px]">
