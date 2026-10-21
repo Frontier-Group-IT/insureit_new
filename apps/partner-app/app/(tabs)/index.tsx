@@ -1,5 +1,5 @@
 import { useCallback, useState, type ReactNode } from 'react';
-import { Animated, Image, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, ImageBackground, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -405,7 +405,8 @@ function PendingTasksCard({
     { key: 'claims', count: data.service.active_claims, label: 'Active claims', icon: PartnerAssets.actions.quickClaims, open: onOpenClaims },
   ];
   return (
-    <View style={styles.pendingCard}>
+    <ImageBackground source={require("../../assets/PT2.jpeg")} resizeMode="cover" imageStyle={styles.pendingBackgroundImage} style={styles.pendingCard}>
+      <View pointerEvents="none" style={styles.pendingBackgroundOverlay} />
       <View style={styles.pendingHeadingRow}>
         <View style={styles.pendingHeadingCopy}>
           <Text style={styles.pendingTitle}>Pending Tasks</Text>
@@ -416,9 +417,6 @@ function PendingTasksCard({
         </Pressable>
       </View>
       <View style={styles.pendingList}>
-        <View style={styles.pendingDecor} pointerEvents="none">
-          <Image source={PartnerAssets.emptyStates.incompleteDetails} style={styles.pendingDecorImage} resizeMode="contain" />
-        </View>
         {tasks.map((task) => (
           <Pressable
             key={task.key}
@@ -434,7 +432,7 @@ function PendingTasksCard({
           </Pressable>
         ))}
       </View>
-    </View>
+    </ImageBackground>
   );
 }
 
@@ -743,6 +741,8 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#D3EAFB',
   },
+  pendingBackgroundImage: { borderRadius: 15 },
+  pendingBackgroundOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.76)' },
   pendingHeadingRow: {
     minHeight: 29,
     flexDirection: 'row',
@@ -789,7 +789,7 @@ const styles = StyleSheet.create({
   miniChart: { height: 43, width: 130, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'flex-end', gap: 5, borderBottomWidth: 1, borderColor: '#E1EAF6' },
   miniBar: { width: 14, borderTopLeftRadius: 3, borderTopRightRadius: 3, backgroundColor: '#A6C6ED' },
   chartUnavailable: { fontSize: 8, color: '#7A8DAA', alignSelf: 'center' },
-  pendingList: { position: 'relative', marginTop: 5, padding: 5, paddingRight: 64, backgroundColor: '#EAF5FF', borderRadius: 10 },
+  pendingList: { position: 'relative', marginTop: 5, padding: 6, paddingRight: 22, backgroundColor: 'rgba(235,246,255,0.86)', borderRadius: 10 },
   pendingTaskRow: { flexDirection: 'row', alignItems: 'center', minHeight: 27, gap: 5 },
   pendingTaskIcon: { width: 18, height: 18 },
   pendingTaskCount: { color: '#153B80', fontSize: 10, fontWeight: '800', width: 23 },
