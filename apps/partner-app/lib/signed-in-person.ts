@@ -23,9 +23,9 @@ function readable(value: string): string {
 
 export function signedInPersonRole(identity: PartnerIdentity): string {
   const person = identity as ExtendedIdentity;
+  if (person.account_subtype === 'group_associate') return 'Group Associate';
   if (person.associate_role?.trim()) return readable(person.associate_role.trim());
   if (identity.actor_kind === 'employee') return readable(identity.role);
-  if (person.account_subtype === 'group_associate') return 'Group Associate';
   return readable(identity.intermediary_type);
 }
 
