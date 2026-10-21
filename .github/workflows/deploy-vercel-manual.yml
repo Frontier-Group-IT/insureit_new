@@ -68,4 +68,4 @@ jobs:
         run: vercel build --prod --token="$VERCEL_TOKEN"
 
       - name: Publish prebuilt production output
-        run: vercel deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN"
+        run: vercel deploy --prebuilt --archive=tgz --prod --yes --token="$VERCEL_TOKEN"
