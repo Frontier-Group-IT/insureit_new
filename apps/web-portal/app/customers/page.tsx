@@ -75,7 +75,7 @@ export default async function CustomersPage() {
   const rows: CustomerRow[] = (customersResult.data ?? []).map((customer) => ({
     ...customer,
     phone: profile.role === "relationship_manager"
-      ? customer.phone.replace(/\d(?=\d{4})/g, "•")
+      ? customer.phone.replace(/\d(?=\d{4,})/g, "•")
       : customer.phone,
   }));
 
