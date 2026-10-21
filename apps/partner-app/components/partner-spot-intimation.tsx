@@ -75,7 +75,7 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
               ['Location *', location, setLocation],
             ] as const).map(([label, value, change]) => <View key={label} style={{gap:5}}><Text style={styles.fieldLabel}>{label}</Text><TextInput accessibilityLabel={label} value={value} onChangeText={change} placeholder={label.includes('time') ? '2026-10-21T14:30' : label} style={styles.field} /></View>)}
             <Pressable accessibilityRole="button" disabled={saving} onPress={() => void save()} style={{ backgroundColor: '#0B347A', padding: 15, borderRadius: 12, alignItems: 'center', opacity: saving ? .6 : 1 }}><Text style={{color:'#FFF', fontWeight:'800'}}>{saving ? 'Saving…' : 'Save Spot Intimation'}</Text></Pressable>
-          </View> : <Text style={styles.restricted}>This stage is not editable in its current status.</Text>
+          </View> : <Text style={styles.restricted}>This stage is not editable in its current status.</Text>}
         </View>
         <View style={styles.card}>
           <View style={styles.docsHeading}><Text style={styles.sectionTitle}>Upload claim documents</Text><View style={styles.optional}><Text style={styles.optionalText}>View only</Text></View></View>
