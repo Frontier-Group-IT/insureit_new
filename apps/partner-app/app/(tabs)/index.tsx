@@ -19,6 +19,7 @@ import { usePartnerQuery } from '@/lib/use-partner-query';
 import { formatIndianCurrency } from '@/lib/format';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
+import { signedInPersonName } from '@/lib/signed-in-person';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 type BusinessPeriod = 'all' | 'last6' | 'last_month' | 'mtd';
@@ -104,7 +105,7 @@ export default function PartnerHomeScreen() {
     <PartnerScreen
       resetScrollOnFocus
       eyebrow="INSUREIT PARTNER"
-      title={greeting(identity.display_name)}
+      title={greeting(signedInPersonName(identity))}
       action={
         <View style={styles.headerActions}>
           <PartnerIconButton
@@ -119,7 +120,7 @@ export default function PartnerHomeScreen() {
             style={({ pressed }) => [styles.avatarTouch, pressed && styles.pressed]}
           >
             <PartnerProfileAvatar
-              name={identity.display_name}
+              name={signedInPersonName(identity)}
               uri={avatarUri}
               size={38}
               style={styles.avatar}
