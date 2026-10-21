@@ -142,3 +142,24 @@ export async function getPartnerClaimDetail(claimId: string) {
     },
   };
 }
+
+/** Creates or resumes an authorized Partner claim draft. Authorization is enforced inside the RPC. */
+export async function createPartnerClaim(customerId: string, vehicleId: string, policyId: string | null) {
+  const { data, error } = await supabase.rpc('partner_app_create_claim', {
+    p_customer_id: customerId,
+    p_vehicle_id: vehicleId,
+    p_policy_id: policyId,
+  });
+  if (error) throw error;
+  if (typeof data !== 'string' || !data) throw new Error('Claim ID not returned');
+  return data;
+}
+
+export async function savePartnerClaimSpot(claimId: string, incidentAt: string, spotAt: string, location: string, driver: string, phone: string) {
+  const { data, error } = await supabase.rpc('partner_app_save_claim_spot', {
+    p_claim_id: claimId, p_accident_at: incidentAt, p_spot_intimation_at: spotAt,
+    p_location: location, p_driver_name: driver, p_driver_phone: phone,
+  });
+  if (error) throw error;
+  if (data !== true) throw new Error('Claim details were not saved');
+}
