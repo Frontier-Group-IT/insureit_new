@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, CalendarClock, CarFront, ClipboardCheck, ClipboardList, FilePlus2, Headphones, ShieldPlus, ShieldCheck, FileText, RefreshCcw, ArrowLeftRight, Truck, CalendarDays, ClipboardPlus, ShieldX, Headset, Wrench } from "lucide-react";
+import { AlertTriangle, CarFront, ClipboardList, ShieldPlus, ShieldCheck, FileText, ArrowLeftRight, Truck, CalendarDays, ClipboardPlus, ShieldX, Headset } from "lucide-react";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
 import { CustomerHomeScrollMotion } from "./customer-home-scroll-motion";
 import { ManufacturerMark } from "../vehicles/customer-vehicles-register";
