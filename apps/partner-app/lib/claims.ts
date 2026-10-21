@@ -181,10 +181,10 @@ export async function listPartnerClaimDocuments(claimId: string): Promise<Partne
   return Array.isArray(data) ? data.map((x:{id:string;name:string;category:string|null})=>({id:x.id,name:x.name,category:x.category})) : [];
 }
 
-export async function uploadPartnerClaimDocument(claimId: string, kind: string, asset: { uri: string; name: string; size?: number; mimeType?: string }) {
+export async function uploadPartnerClaimDocument(claimId: string, kind: string, asset: { uri: string; name: string; size?: number; mimeType?: string }, milestoneKey = 'spot_intimation') {
   const mime=asset.mimeType || (asset.name.toLowerCase().endsWith('.pdf')?'application/pdf':'');
   if(!mime||!asset.size||asset.size<=0) throw new Error('Document type or size is unavailable.');
-  const meta={claim_id:claimId,kind,name:asset.name,size:asset.size,mime};
+  const meta={claim_id:claimId,kind,name:asset.name,size:asset.size,mime,milestone_key:milestoneKey};
   const {data:prepared,error:prepareError}=await supabase.functions.invoke('partner-claim-upload',{body:{...meta,action:'prepare'}});
   if(prepareError||!prepared?.path||!prepared?.token) throw new Error(prepared?.error || prepareError?.message || 'Unable to prepare upload');
   const response=await fetch(asset.uri);
