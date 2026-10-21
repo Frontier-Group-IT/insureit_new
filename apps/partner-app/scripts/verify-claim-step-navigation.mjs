@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+const read = (rel) => readFileSync(fileURLToPath(new URL(rel,import.meta.url)),'utf8');
+const footer = read('../components/partner-claim-step-footer.tsx');
+const stageOne = read('../components/partner-spot-intimation.tsx');
+assert.match(footer,/CLAIM_STAGES\.map/);
+assert.match(footer,/Previous/);
+assert.match(footer,/accessibilityState=\{\{ disabled: busy \|\| !canContinue \}\}/);
+assert.match(stageOne,/continueLabel="Start Claim & Continue"/);
+assert.match(stageOne,/onContinue=\{\(\) => void save\(\)\}/);
+assert.match(stageOne,/await savePartnerClaimSpot\(/);
+assert.match(stageOne,/key: 'spot_status'/);
+assert.ok(stageOne.indexOf('await savePartnerClaimSpot(') < stageOne.indexOf("key: 'spot_status'"),'Stage 1 save precedes navigation');
+console.log('Partner claim wizard stage-one navigation contracts passed');
