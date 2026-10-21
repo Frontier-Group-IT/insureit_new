@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
   filterOptionText: { color: '#506079', fontSize: 10, lineHeight: 13, fontWeight: '600' },
   filterOptionTextActive: { color: '#3156B8', fontWeight: '800' },
   banner: { marginTop: 8 },
-  addClaimButton: { marginTop: 10, height: 43, borderRadius: 9, backgroundColor: '#4B26E8', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
+  addClaimButton: { marginTop: 10, height: 43, borderRadius: 9, backgroundColor: '#183864', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
   addClaimButtonPressed: { opacity: 0.8 },
   addClaimButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
   summaryRow: { flexDirection: 'row', gap: 3, marginTop: 8 },
