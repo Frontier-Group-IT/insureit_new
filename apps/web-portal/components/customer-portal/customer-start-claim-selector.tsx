@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, FileText, Headphones, ImageIcon, MapPin, Plus, Radio, ShieldAlert } from "lucide-react";
+import { ArrowRight, CheckCircle2, FileText, ImageIcon, MapPin, Plus, Radio, ShieldAlert } from "lucide-react";
 import type { CustomerPolicyRow, CustomerVehicleRow } from "@/lib/customer-web-data";
 import { prepareCustomerClaim } from "@/app/customer/(protected)/start-claim/actions";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
@@ -59,14 +59,6 @@ export function CustomerStartClaimSelector({
           <div>
             <h2 className="text-[18px] font-bold text-[#102B54]">Select your vehicle</h2>
             <p className="mt-1 text-[13px] text-[#7186A0]">Choose the vehicle involved in the incident to proceed with your claim.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href={{ pathname: "/customer/add-vehicle", query: { account: accountId } }} className="inline-flex items-center gap-1.5 rounded-xl border border-[#D3E1F2] bg-white px-3 py-2 text-[12px] font-semibold text-[#1769DC] hover:bg-[#F7FBFF]">
-              <Plus className="h-4 w-4" /> Add vehicle
-            </Link>
-            <Link href={{ pathname: "/customer/support", query: { account: accountId } }} className="inline-flex items-center gap-1.5 rounded-xl border border-[#D3E1F2] bg-white px-3 py-2 text-[12px] font-semibold text-[#1769DC] hover:bg-[#F7FBFF]">
-              <Headphones className="h-4 w-4" /> Need help?
-            </Link>
           </div>
         </div>
 
