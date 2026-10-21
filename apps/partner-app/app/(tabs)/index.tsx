@@ -251,7 +251,7 @@ export default function PartnerHomeScreen() {
 
               <View style={styles.businessMainRow}>
                 <View style={styles.businessMainCopy}>
-                  <Text style={styles.businessPremium}>{formatIndianCurrency(rangeData?.net_premium ?? 0)}</Text>
+                  <Text style={styles.businessPremium}>{formatWholeIndianCurrency(rangeData?.net_premium ?? 0)}</Text>
                   <Text style={styles.businessCaption}>Business Generated (Net Premium)</Text>
                   {business.loading && !rangeData ? (
                     <Text style={styles.trendNeutral}>Updating business figures…</Text>
@@ -630,7 +630,7 @@ function Trend({ value, hasPrevious, comparisonLabel = 'previous period' }: { va
         color={positive ? '#1D9C60' : '#C27A11'}
       />
       <ShrinkLoopText style={[styles.trendText, { color: positive ? '#1D9C60' : '#C27A11' }]}>
-        {Math.abs(value).toFixed(1)}% {positive ? 'above' : 'below'} {comparisonLabel}
+        {Math.round(Math.abs(value))}% {positive ? 'above' : 'below'} {comparisonLabel}
       </ShrinkLoopText>
     </View>
   );
@@ -659,6 +659,12 @@ function ShrinkLoopText({
       {children}
     </Animated.Text>
   );
+}
+
+function formatWholeIndianCurrency(value: number | string | null | undefined) {
+  const amount = Number(value ?? 0);
+  const safeAmount = Number.isFinite(amount) ? Math.round(amount) : 0;
+  return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(safeAmount)}`;
 }
 
 function percentageChange(current: number, previous: number) {
