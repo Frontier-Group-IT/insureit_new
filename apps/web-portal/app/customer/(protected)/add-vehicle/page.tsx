@@ -59,7 +59,7 @@ export default async function AddCustomerVehicle({ searchParams }: { searchParam
         ? "This registration number is already registered. Please check the number or contact Support to link the existing vehicle."
         : "Vehicle could not be saved. Please check the details and try again. Your entries have been preserved." };
     }
-    redirect("/customer/start-claim?account="+encodeURIComponent(authorized.id));
+    redirect("/customer/vehicles?account="+encodeURIComponent(authorized.id)+"&added=1");
   }
   const field="mt-1 block h-10 w-full rounded-lg border border-[#D9E3F0] bg-white px-3 text-[12px] text-[#142746]";
   const label="min-w-0 text-[11px] font-semibold text-[#445670]";
