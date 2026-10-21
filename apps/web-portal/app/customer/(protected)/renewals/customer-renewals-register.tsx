@@ -1,3 +1,4 @@
+import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 "use client";
 
 import Link from "next/link";
