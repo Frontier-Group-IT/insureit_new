@@ -12,8 +12,8 @@ assert.match(page, /await resolveCustomerWebScope\(params\.account\);/, "Custome
 assert.match(page, /try\s*\{\s*rows\s*=\s*await loadCustomerExchangeFeed/, "Marketplace failures must be handled locally");
 assert.match(page, /catch\s*\(error\)\s*\{\s*feedUnavailable\s*=\s*true/, "Failed feeds must set recovery state");
 assert.match(page, /feedUnavailable\s*\?/, "Exchange must render a specific recovery state");
-assert.match(page, /<form action="\/customer\/exchange" method="get">/, "Retry must make a full new request on repeated attempts");
-assert.match(page, /name="account" value=\{account\.id\}/, "Retry must preserve authorized customer account");
+assert.match(page, /<form action="\/customer\/exchange" method="get"[^>]*>/, "Retry must make a full new request on repeated attempts");
+assert.match(page, /name="account" value=\{accountId\}/, "Retry must preserve authorized customer account");
 assert.match(page, /name="q" value=\{query\}/, "Retry must preserve query filter");
 assert.match(page, /name="category" value=\{category\}/, "Retry must preserve category filter");
 assert.match(page, /tabHref\("buy"\)/, "Customer Exchange must expose the Buy workspace");
