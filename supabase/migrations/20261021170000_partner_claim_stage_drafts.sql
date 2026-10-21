@@ -3,7 +3,7 @@ begin;
 -- to the Operations workflow's separate authorization and required-field gates.
 create or replace function public.partner_app_save_claim_stage_draft(p_claim_id uuid,p_milestone_key text,p_fields jsonb)
 returns uuid language plpgsql security definer set search_path=public,auth as $fn$
-declare v_status text; v_stage public.claim_status; v_id uuid; v_active int; v_target int; v_allowed text[];
+declare v_status text; v_stage public.claim_status; v_id uuid; v_active int; v_target int; v_allowed text[]; v_field_allow text[];
 begin
  if auth.uid() is null or not public.partner_app_claim_in_scope(p_claim_id) then
    raise exception 'Claim not available in Partner scope' using errcode='42501';
@@ -16,6 +16,19 @@ begin
  v_target:=array_position(v_allowed,p_milestone_key);
  if v_target is null or p_fields is null or jsonb_typeof(p_fields)<>'object' or pg_column_size(p_fields)>12000 then
    raise exception 'Invalid claim stage details' using errcode='22023';
+ end if;
+ v_field_allow:=case p_milestone_key
+   when 'spot_status' then array['spot_survey_done_date','surveyor_name','surveyor_phone','surveyor_email']
+   when 'claim_intimation' then array['claim_intimation_date','dealership_name','dealership_location','gate_in_date','estimate_amount']
+   when 'work_approval' then array['approval_received_date','cashless']
+   when 'repair_ri' then array['repair_complete_date','ri_done_date']
+   when 'billing' then array['bill_date','bill_amount']
+   when 'delivery_order' then array['assessment_received','do_date','do_amount']
+   when 'vehicle_delivery' then array['vehicle_received','vehicle_received_date']
+   when 'payment_encashment' then array['depreciation_slip_submitted','satisfaction_voucher_submitted','payment_received_date','payment_received_amount']
+   else array[]::text[] end;
+ if exists(select 1 from jsonb_object_keys(p_fields) k where k<>all(v_field_allow)) then
+   raise exception 'Unknown or restricted stage field' using errcode='22023';
  end if;
  if (select count(*) from jsonb_object_keys(p_fields))>30 or exists(
    select 1 from jsonb_each(p_fields) v where v.key !~ '^[a-z][a-z0-9_]{0,63}$' or jsonb_typeof(v.value) not in ('string','number','boolean','null')
@@ -42,7 +55,7 @@ begin
  when 'vehicle_delivery' then 'Payment Stage'::public.claim_status
  else 'Settlement Under Process'::public.claim_status end;
  insert into public.claim_stage_details(claim_id,stage,details,created_by)
- values(p_claim_id,v_stage,jsonb_build_object('milestone_key',p_milestone_key,'partner_draft',true,'updated_at',now())||p_fields,auth.uid())
+ values(p_claim_id,v_stage,jsonb_build_object('partner_draft_stage',p_milestone_key,'partner_draft',true,'updated_at',now())||p_fields,auth.uid())
  returning id into v_id;
  return v_id;
 end;$fn$;
