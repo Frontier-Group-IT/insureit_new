@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { Plus, CheckCircle2, FileText, ShieldCheck } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { CustomerVehiclesRegister } from "./customer-vehicles-register";
 import {
   CustomerAccountTabs,
@@ -57,7 +56,6 @@ export default async function CustomerVehiclesPage({
   return <div className="space-y-3">
     <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/vehicles" />
     {params.added === "1" ? <div role="status" className="flex items-center gap-2 rounded-xl border border-[#B4E5CE] bg-[#ECFBF3] px-4 py-3 text-sm font-semibold text-[#116747]"><CheckCircle2 className="h-5 w-5"/>Vehicle saved successfully. You can add its policy or start a claim.</div> : null}
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#D8E5F3] bg-white p-3"><h2 className="text-base font-bold text-[#17345D]">My Vehicles</h2><div className="flex flex-wrap gap-2"><Link href={{pathname:"/customer/add-vehicle",query:{account:account.id}}} className="inline-flex items-center gap-1.5 rounded-lg bg-[#1756A9] px-3 py-2 text-xs font-bold text-white"><Plus className="h-4 w-4"/>Add Vehicle</Link><Link href={{pathname:"/customer/add-policy",query:{account:account.id}}} className="inline-flex items-center gap-1.5 rounded-lg border border-[#CEDDEE] px-3 py-2 text-xs font-bold text-[#1756A9]"><FileText className="h-4 w-4"/>Add Policy</Link><Link href={{pathname:"/customer/start-claim",query:{account:account.id}}} className="inline-flex items-center gap-1.5 rounded-lg border border-[#CEDDEE] px-3 py-2 text-xs font-bold text-[#1756A9]"><ShieldCheck className="h-4 w-4"/>Start Claim</Link></div></div>
     <CustomerVehiclesRegister accountId={account.id} items={items} initialQuery={params.q ?? ""} />
   </div>;
 }
