@@ -46,13 +46,13 @@ export function CustomerRcLookup() {
         if(input){input.value=String(value);input.dispatchEvent(new Event("input",{bubbles:true}));input.dispatchEvent(new Event("change",{bubbles:true}));}
       }
       setReg(d.registrationNumber||clean);
-      setNotice("RC details fetched. Check all fields before saving.");
+      setNotice("");
     }catch(e){setNotice(e instanceof Error?e.message:"Vehicle lookup failed. Enter details manually.");}
     finally{setBusy(false);}
   }
-  return <div className="sm:col-span-2 rounded-2xl border border-[#C3D9F3] bg-[#F1F7FF] p-4">
-    <label className="block text-sm font-bold">Registration number *</label>
-    <div className="mt-2 flex gap-2"><input name="registration" value={reg} onChange={e=>setReg(e.target.value.toUpperCase())} required maxLength={15} placeholder="MH19BN4334" className="min-w-0 flex-1 rounded-xl border bg-white p-3 text-sm"/><button type="button" disabled={busy} onClick={()=>void lookup()} className="inline-flex items-center gap-1 rounded-xl bg-[#0B3884] px-4 text-sm font-bold text-white disabled:opacity-60">{busy?<LoaderCircle className="h-4 w-4 animate-spin"/>:<Search className="h-4 w-4"/>} Fetch RC</button></div>
-    {notice&&<p role="status" className="mt-2 text-xs text-[#415D81]">{notice}</p>}
+  return <div className="min-w-0 sm:col-span-2">
+    <label className="block text-[11px] font-semibold text-[#445670]">Registration number *</label>
+    <div className="mt-1 flex gap-2"><input name="registration" value={reg} onChange={e=>setReg(e.target.value.toUpperCase())} required maxLength={15} placeholder="MH19BN4334" className="h-10 min-w-0 flex-1 rounded-lg border border-[#D9E3F0] bg-white px-3 text-[12px] text-[#142746]"/><button type="button" disabled={busy} onClick={()=>void lookup()} className="inline-flex h-10 shrink-0 items-center gap-1 rounded-lg bg-[#0B3884] px-3 text-[12px] font-semibold text-white disabled:opacity-60">{busy?<LoaderCircle className="h-4 w-4 animate-spin"/>:<Search className="h-4 w-4"/>} Fetch RC</button></div>
+    {notice&&<p role="alert" className="mt-1 text-[11px] text-[#A43B49]">{notice}</p>}
   </div>;
 }
