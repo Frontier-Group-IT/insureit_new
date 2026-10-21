@@ -35,7 +35,7 @@ Deno.serve(async request=>{
     const size=Number(body.size);
     const video=kind==='accident_video';
     const audio=kind==='voice_note';
-    const supported=video?['video/mp4','video/quicktime','video/webm']:audio?['audio/m4a','audio/mp4','audio/aac','audio/webm']:['application/pdf','image/jpeg','image/png','image/webp'];
+    const supported=video?['video/mp4','video/quicktime','video/webm']:audio?['audio/m4a','audio/mp4','audio/x-m4a']:['application/pdf','image/jpeg','image/png','image/webp'];
     const max=video?50*1024*1024:audio?10*1024*1024:5*1024*1024;
     if(!supported.includes(mime)||!Number.isFinite(size)||size<=0||size>max||!name)return reply({error:'Unsupported file type or size'},400);
     if(action==='prepare'){
