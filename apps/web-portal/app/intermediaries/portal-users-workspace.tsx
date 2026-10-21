@@ -6,6 +6,7 @@ import { FormSubmitButton } from "@/components/form-submit-button";
 import { IntermediaryTabs } from "./intermediary-tabs";
 import { createIntermediaryPortalLogin } from "./portal-account-actions";
 import { resendIntermediaryPortalInvite } from "./resend-portal-invite-action";
+import { createGroupBranchPortalLogin, resendGroupBranchPortalInvite } from "./groups/group-branch-login-actions";
 import type { AdditionalPortalAccount, PortalUserRow } from "./portal-users/page";
 
 type StatusFilter = "all" | "active" | "inactive";
@@ -87,8 +88,8 @@ export function IntermediaryPortalUsersWorkspace({ rows, extraRows, initialQuery
                   <td className="px-4 py-3"><p className="font-semibold text-[#0F2A55]">{row.name}</p><p className="text-[9px] text-[#64748B]">{row.code} · {row.context}</p></td>
                   <td className="px-3 py-3"><span className="rounded-lg bg-[#EEF4FA] px-2 py-1 text-[9px] font-semibold text-[#17365D]">{row.type}</span></td>
                   <td className="px-3 py-3">{row.email??"Email not recorded"}</td><td className="px-3 py-3"><Status value={row.status}/></td>
-                  <td className="px-3 py-3">—</td><td className="px-3 py-3">{row.reviewHref ? <Link prefetch={false} href={row.reviewHref} className="font-semibold text-[#4F46E5] hover:underline">Open account</Link> : row.context}</td>
-                  <td className="px-3 py-3 text-right"><Link prefetch={false} href={row.manageHref} className="rounded-lg border border-[#CBD5E1] px-3 py-2 text-[9px] font-semibold text-[#17365D] hover:bg-[#F1F5F9]">Manage</Link></td>
+                  <td className="px-3 py-3">{row.invitationStatus??"—"}</td><td className="px-3 py-3">{row.reviewHref ? <Link prefetch={false} href={row.reviewHref} className="font-semibold text-[#4F46E5] hover:underline">Open account</Link> : row.context}</td>
+                  <td className="px-3 py-3 text-right">{row.type==="Branch" ? <BranchPortalAction row={row}/> : <Link prefetch={false} href={row.manageHref} className="rounded-lg border border-[#CBD5E1] px-3 py-2 text-[9px] font-semibold text-[#17365D] hover:bg-[#F1F5F9]">Manage</Link>}</td>
                 </tr>;
               }
               const { intermediary, account }=item.row;
@@ -161,6 +162,28 @@ function Status({ value }: { value: string }) {
   return <span className={`inline-flex rounded-full border px-2 py-1 text-[8.5px] font-semibold capitalize ${style}`}>{label}</span>;
 }
 
+
+function BranchPortalAction({ row }: { row: AdditionalPortalAccount }) {
+  if (!row.branchId) return null;
+  if (row.status === "not_created") {
+    if (!row.loginEmail || !row.phone) return <span className="text-[9px] font-semibold text-amber-700" title="A Branch email and phone are required for portal access.">Email / phone required</span>;
+    return <form action={createGroupBranchPortalLogin} className="inline-flex">
+      <input type="hidden" name="entity_type" value="branch" />
+      <input type="hidden" name="entity_id" value={row.branchId} />
+      <input type="hidden" name="login_email" value={row.loginEmail} />
+      <input type="hidden" name="phone" value={row.phone} />
+      <FormSubmitButton label="Create Portal User" pendingLabel="Creating..." className="inline-flex h-8 items-center rounded-lg border border-emerald-300 bg-emerald-50 px-3 text-[9px] font-bold text-emerald-700 hover:bg-emerald-100 disabled:opacity-60" />
+    </form>;
+  }
+  if (row.status === "active") {
+    return <form action={resendGroupBranchPortalInvite} className="inline-flex">
+      <input type="hidden" name="entity_type" value="branch" />
+      <input type="hidden" name="entity_id" value={row.branchId} />
+      <FormSubmitButton label="Resend Invite" pendingLabel="Sending..." className="inline-flex h-8 items-center rounded-lg border border-blue-200 bg-blue-50 px-3 text-[9px] font-bold text-blue-700 hover:bg-blue-100 disabled:opacity-60" />
+    </form>;
+  }
+  return <Link prefetch={false} href={row.manageHref} className="rounded-lg border border-[#CBD5E1] px-3 py-2 text-[9px] font-semibold text-[#17365D]">Manage</Link>;
+}
 
 function PortalAction({ row }: { row: PortalUserRow }) {
   const { intermediary, account } = row;
