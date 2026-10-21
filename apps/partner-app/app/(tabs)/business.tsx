@@ -1,7 +1,7 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { Image, type ImageSourcePropType, Pressable, RefreshControl, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Animated, Image, type ImageSourcePropType, Pressable, RefreshControl, StyleSheet, Text, View, useWindowDimensions, type StyleProp, type TextStyle } from 'react-native';
 
 import { PartnerBusinessRangeSummaryCard } from '@/components/partner-business-range-summary';
 import { PartnerScreen } from '@/components/partner-screen';
@@ -590,10 +590,35 @@ function OverviewCard({ icon, value, label, changeLabel, compareLabel = 'vs last
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={styles.overviewLabel}>{label}</Text>
       <View style={styles.growthRow}>
         {trend ? <Ionicons name={trend.icon} size={9} color={trend.color} /> : null}
-        <Text numberOfLines={1} style={[styles.growthText, { color: trend?.color ?? '#718198' }]}>{changeLabel}</Text>
+        <ShrinkLoopText style={[styles.growthText, { color: trend?.color ?? '#718198' }]}>{changeLabel}</ShrinkLoopText>
       </View>
       <Text numberOfLines={1} style={styles.vsText}>{compareLabel}</Text>
     </Pressable>
+  );
+}
+
+function ShrinkLoopText({
+  children,
+  style,
+}: {
+  children: ReactNode;
+  style?: StyleProp<TextStyle>;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(Animated.sequence([
+      Animated.timing(scale, { toValue: 0.96, duration: 650, useNativeDriver: true }),
+      Animated.timing(scale, { toValue: 1, duration: 650, useNativeDriver: true }),
+    ]));
+    animation.start();
+    return () => animation.stop();
+  }, [scale]);
+
+  return (
+    <Animated.Text numberOfLines={1} style={[style, { transform: [{ scale }] }]}>
+      {children}
+    </Animated.Text>
   );
 }
 
