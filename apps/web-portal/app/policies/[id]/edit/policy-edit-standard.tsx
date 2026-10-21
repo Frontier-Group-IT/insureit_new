@@ -33,7 +33,7 @@ type VehicleRow = {
   engine_capacity_cc: number | null; seating_capacity: number | null; gvw_kg: number | null;
   rto_name: string | null; rto_state: string | null; updated_at: string | null;
 };
-type PremiumRow = { od_premium: number | null; tp_premium: number | null; cpa_opted: boolean | null; cpa_amount: number | null; net_premium: number | null; gst_amount: number | null; gross_premium: number | null };
+type PremiumRow = { od_premium: number | null; tp_premium: number | null; cpa_opted: boolean | null; cpa_amount: number | null; add_on_premium: number | null; net_premium: number | null; gst_amount: number | null; gross_premium: number | null };
 type PayinRow = { payout_basis: string | null; projected_od_percent: number | null; projected_tp_percent: number | null; insurer_scheme_amount: number | null; commercial_basis: string | null; projected_commission_percent: number | null; projected_commission_amount: number | null; commercial_status: string | null };
 type PayoutRow = { retention_amount: number | null; od_payout_percent: number | null; tp_payout_percent: number | null; status: string | null; payout_date: string | null; voucher_number: string | null; payout_basis: string | null; partner_payout_percent: number | null; partner_payout_amount: number | null; gross_payout: number | null; commercial_status: string | null };
 type NonMotorDetailsRow = {
@@ -120,7 +120,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     vehicleId
       ? admin.from("vehicles").select("id,vehicle_no,vehicle_type,vehicle_class_code,vehicle_class_description,make,model,year,chassis_no,engine_no,fuel_type,engine_capacity_cc,seating_capacity,gvw_kg,rto_name,rto_state,updated_at").eq("id", vehicleId).maybeSingle<VehicleRow>()
       : Promise.resolve({ data: null as VehicleRow | null, error: null }),
-    admin.from("policy_premium_details").select("od_premium,tp_premium,cpa_opted,cpa_amount,net_premium,gst_amount,gross_premium").eq("policy_id", id).maybeSingle<PremiumRow>(),
+    admin.from("policy_premium_details").select("od_premium,tp_premium,cpa_opted,cpa_amount,add_on_premium,net_premium,gst_amount,gross_premium").eq("policy_id", id).maybeSingle<PremiumRow>(),
     admin.from("policy_payin_details").select("payout_basis,projected_od_percent,projected_tp_percent,insurer_scheme_amount,commercial_basis,projected_commission_percent,projected_commission_amount,commercial_status").eq("policy_id", id).maybeSingle<PayinRow>(),
     admin.from("policy_intermediary_payouts").select("retention_amount,od_payout_percent,tp_payout_percent,status,payout_date,voucher_number,payout_basis,partner_payout_percent,partner_payout_amount,gross_payout,commercial_status").eq("policy_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle<PayoutRow>(),
     getActiveInsuranceCompanyOptions(),
@@ -413,6 +413,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     idv: stringValue(policy.insured_declared_value),
     od: stringValue(premium?.od_premium),
     tp: stringValue(premium?.tp_premium),
+    addOnPremium: stringValue(premium?.add_on_premium),
     cpaOpted: premium?.cpa_opted === false ? "No" : "Yes",
     cpa: stringValue(premium?.cpa_amount),
     policyNo: policy.policy_no,
