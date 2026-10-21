@@ -7,6 +7,7 @@ import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { savePartnerClaimSpot, type PartnerClaimDetail } from '@/lib/claims';
+import { pickAndUploadPartnerClaimDocument, type PartnerClaimUploadCategory } from '@/lib/claim-uploads';
 import { formatClaimDate } from '@/lib/claim-tracker';
 
 const DOCUMENTS = [
@@ -26,6 +27,17 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
   const [phone, setPhone] = useState('');
   const [location, setLocation] = useState(data.claim.accident_location || '');
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState<string|null>(null);
+  const [uploaded, setUploaded] = useState<Record<string,number>>({});
+  const upload = async (category: PartnerClaimUploadCategory) => {
+    if(uploading) return;
+    setUploading(category);
+    try {
+      const id=await pickAndUploadPartnerClaimDocument(data.claim.id,category);
+      if(id) setUploaded(current=>({...current,[category]:(current[category]||0)+1}));
+    } catch(e) {Alert.alert('Upload failed',e instanceof Error?e.message:'Please try again.');}
+    finally {setUploading(null);}
+  };
   const save = async () => {
     if (saving) return;
     const accident = new Date(incidentAt);
@@ -78,9 +90,9 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
           </View> : <Text style={styles.restricted}>This stage is not editable in its current status.</Text>}
         </View>
         <View style={styles.card}>
-          <View style={styles.docsHeading}><Text style={styles.sectionTitle}>Upload claim documents</Text><View style={styles.optional}><Text style={styles.optionalText}>View only</Text></View></View>
-          <View style={styles.tiles}>{DOCUMENTS.map(item=><View key={item.title} accessible accessibilityLabel={`${item.title}, document availability not provided`} style={styles.tile}><View style={[styles.documentIcon,{backgroundColor:item.color}]}><MaterialCommunityIcons name={item.icon} color="#FFF" size={24}/></View><Text style={styles.tileTitle}>{item.title}</Text><Text style={styles.tileSub}>Unavailable</Text></View>)}</View>
-          <View style={styles.bulk}><Ionicons name="documents-outline" size={27} color="#245CB0"/><View style={styles.bulkText}><Text style={styles.bulkTitle}>Upload multiple documents</Text><Text style={styles.bulkHint}>Partner document uploads require authorized access</Text></View><Ionicons name="add-circle-outline" size={25} color="#8EA3C4"/></View>
+          <View style={styles.docsHeading}><Text style={styles.sectionTitle}>Upload claim documents</Text><View style={styles.optional}><Text style={styles.optionalText}>Optional now</Text></View></View>
+          <View style={styles.tiles}>{DOCUMENTS.map(item=><Pressable key={item.title} accessibilityRole="button" accessibilityLabel={`Upload ${item.title}`} disabled={Boolean(uploading)} onPress={()=>void upload(item.title as PartnerClaimUploadCategory)} style={[styles.tile,uploading&&styles.disabledRecording]}><View style={[styles.documentIcon,{backgroundColor:item.color}]}><MaterialCommunityIcons name={item.icon} color="#FFF" size={24}/></View><Text style={styles.tileTitle}>{item.title}</Text><Text style={styles.tileSub}>{uploading===item.title?"Uploading…":uploaded[item.title]?`${uploaded[item.title]} uploaded`:"Tap to upload"}</Text></Pressable>)}</View>
+          <Pressable accessibilityRole="button" disabled={Boolean(uploading)} onPress={()=>void upload("Other")} style={styles.bulk}><Ionicons name="documents-outline" size={27} color="#245CB0"/><View style={styles.bulkText}><Text style={styles.bulkTitle}>Add more documents</Text><Text style={styles.bulkHint}>Select another file to upload</Text></View><Ionicons name="add-circle-outline" size={25} color="#245CB0"/></Pressable>
         </View>
         <View style={styles.voice}><View style={styles.voiceTop}><View style={styles.mic}><Ionicons name="mic-outline" size={27} color="#1A56A3"/></View><View style={styles.headingCopy}><Text style={styles.sectionTitle}>Incident Voice Note</Text><Text style={styles.subtitle}>Describe what happened in your own words. Maximum recording time is 2 minutes.</Text></View></View><View style={styles.disabledRecording}><Ionicons name="mic-outline" size={18} color="#FFF"/><Text style={styles.disabledText}>Recording unavailable for Partner access</Text></View></View>
       </ScrollView>
