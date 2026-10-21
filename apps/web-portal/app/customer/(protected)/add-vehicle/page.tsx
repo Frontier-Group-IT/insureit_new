@@ -37,7 +37,7 @@ export default async function AddCustomerVehicle({ searchParams }: { searchParam
       p_road_tax_expiry_date:date("roadTaxDate"),p_national_permit_expiry_date:date("nationalPermitDate"),p_local_permit_expiry_date:date("localPermitDate"),
     });
     if(error) throw new Error("Vehicle could not be added. Check for an existing registration or contact Support.");
-    redirect("/customer/start-claim?account="+encodeURIComponent(authorized.id));
+    redirect("/customer/vehicles?account="+encodeURIComponent(authorized.id)+"&added=1");
   }
   const field="mt-1 block h-10 w-full rounded-lg border border-[#D9E3F0] bg-white px-3 text-[12px] text-[#142746]";
   const label="min-w-0 text-[11px] font-semibold text-[#445670]";
