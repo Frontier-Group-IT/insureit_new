@@ -17,15 +17,7 @@ export async function pickAndUploadPartnerClaimDocument(claimId: string, categor
   const mime=file.mimeType||'application/octet-stream';
   const max=category==='Accident Video'?20*1024*1024:5*1024*1024;
   if(file.size && file.size>max) throw new Error('Selected file exceeds the upload size limit.');
-  const form=new FormData();
-  form.append('claim_id',claimId);
-  form.append('category',category);
-  // React Native FormData file parts require a URI rather than browser File.
-  form.append('file',{uri:file.uri,name:file.name||'attachment',type:mime} as unknown as Blob);
-  const {data,error}=await supabase.functions.invoke('partner-claim-document',{body:form});
-  if(error) throw error;
-  if(!data?.ok||!data?.id) throw new Error(typeof data?.error==='string'?data.error:'Document upload failed.');
-  return String(data.id);
+  return uploadSelectedPartnerClaimFile(claimId,category,{uri:file.uri,name:file.name||'attachment',mimeType:mime});
 }
 
 export async function getPartnerClaimDocumentUrl(documentId: string): Promise<string> {
@@ -33,4 +25,17 @@ export async function getPartnerClaimDocumentUrl(documentId: string): Promise<st
   if(error) throw error;
   if(typeof data?.url!=='string'||!data.url.startsWith('https://')) throw new Error('Document link unavailable');
   return data.url;
+}
+
+export async function uploadSelectedPartnerClaimFile(
+ claimId: string,category: PartnerClaimUploadCategory,file:{uri:string;name:string;mimeType:string}
+) {
+  const form=new FormData();
+  form.append('claim_id',claimId);
+  form.append('category',category);
+  form.append('file',{uri:file.uri,name:file.name,type:file.mimeType} as unknown as Blob);
+  const {data,error}=await supabase.functions.invoke('partner-claim-document',{body:form});
+  if(error) throw error;
+  if(!data?.ok||!data?.id) throw new Error(typeof data?.error==='string'?data.error:'Document upload failed.');
+  return String(data.id);
 }
