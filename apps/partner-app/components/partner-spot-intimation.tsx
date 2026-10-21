@@ -9,6 +9,7 @@ import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { savePartnerClaimSpot, uploadPartnerClaimDocument, listPartnerClaimDocuments, type PartnerClaimDocument, type PartnerClaimDetail } from '@/lib/claims';
 import { formatClaimDate } from '@/lib/claim-tracker';
+import { PartnerIncidentVoiceRecorder } from '@/components/partner-incident-voice-recorder';
 
 const DOCUMENTS = [
   { kind: 'rc', title: 'RC Copy', icon: 'file-document-outline', color: '#07A56D' },
@@ -109,7 +110,10 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
           <View style={styles.tiles}>{DOCUMENTS.map(item=><Pressable key={item.kind} accessibilityRole="button" accessibilityLabel={`Upload ${item.title}`} disabled={uploading} onPress={()=>void pickAndUpload(item.kind)} style={styles.tile}><View style={[styles.documentIcon,{backgroundColor:item.color}]}><MaterialCommunityIcons name={item.icon} color="#FFF" size={24}/></View><Text style={styles.tileTitle}>{item.title}</Text><Text style={styles.tileSub}>{uploaded.filter(x=>x.category===item.title).length ? "Uploaded" : "Tap to upload"}</Text></Pressable>)}</View>
           <Pressable accessibilityRole="button" accessibilityLabel="Upload multiple claim documents" disabled={uploading} onPress={()=>void pickAndUpload("additional_document",true)} style={styles.bulk}><Ionicons name="documents-outline" size={27} color="#245CB0"/><View style={styles.bulkText}><Text style={styles.bulkTitle}>Upload multiple documents</Text><Text style={styles.bulkHint}>Select up to eight additional files</Text></View><Ionicons name="add-circle-outline" size={25} color="#8EA3C4"/></Pressable>
         </View>
-        <View style={styles.voice}><View style={styles.voiceTop}><View style={styles.mic}><Ionicons name="mic-outline" size={27} color="#1A56A3"/></View><View style={styles.headingCopy}><Text style={styles.sectionTitle}>Incident Voice Note</Text><Text style={styles.subtitle}>Describe what happened in your own words. Maximum recording time is 2 minutes.</Text></View></View><Pressable accessibilityRole="button" onPress={()=>void pickAndUpload("voice_note")} disabled={uploading} style={styles.disabledRecording}><Ionicons name="mic-outline" size={18} color="#FFF"/><Text style={styles.disabledText}>Attach voice note</Text></Pressable></View>
+        <PartnerIncidentVoiceRecorder claimId={data.claim.id} onUploaded={()=>void loadDocuments()} />
+        <Pressable accessibilityRole="button" onPress={()=>void pickAndUpload('voice_note')} disabled={uploading} style={[styles.disabledRecording,{marginTop:5}]}>
+          <Ionicons name="attach-outline" size={18} color="#FFF"/><Text style={styles.disabledText}>Attach Existing Voice Recording</Text>
+        </Pressable>
       </ScrollView>
       <View style={styles.nav}><Nav title="Home" icon="home" onPress={() => router.push('/(tabs)' as never)}/><Nav title="Business" icon="briefcase-outline" onPress={() => router.push('/(tabs)/business' as never)}/><Nav title="Policies" icon="document-text-outline" onPress={() => router.push('/(tabs)/policies' as never)}/><Nav title="Claims" icon="shield-checkmark-outline" onPress={() => router.push('/(tabs)/claims' as never)}/><Nav title="More" icon="grid-outline" onPress={() => router.push('/(tabs)/more' as never)}/></View>
     </SafeAreaView>
