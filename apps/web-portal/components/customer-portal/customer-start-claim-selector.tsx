@@ -2,10 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, FileText, Headphones, ImageIcon, MapPin, Plus, Radio, ShieldAlert } from "lucide-react";
+import { ArrowRight, Headphones, Plus, ShieldAlert } from "lucide-react";
 import type { CustomerPolicyRow, CustomerVehicleRow } from "@/lib/customer-web-data";
 import { prepareCustomerClaim } from "@/app/customer/(protected)/start-claim/actions";
-import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
 
 type ClaimIdentity = { id: string; policy_id: string | null; external_policy_id: string | null; current_status: string };
 
@@ -55,39 +54,20 @@ export function CustomerStartClaimSelector({
       </section>
 
       <section className="rounded-2xl border border-[#E1EAF5] bg-white p-4 sm:p-5">
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-[18px] font-bold text-[#102B54]">Select your vehicle</h2>
-            <p className="mt-1 text-[13px] text-[#7186A0]">Choose the vehicle involved in the incident to proceed with your claim.</p>
-          </div>
-        </div>
-
+        <label htmlFor="claim-vehicle" className="mb-3 block text-[18px] font-bold text-[#102B54]">Select your vehicle</label>
         {vehicles.length ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            {vehicles.map((item) => {
-              const selected = item.id === vehicleId;
-              return (
-                <button
-                  type="button"
-                  key={item.id}
-                  onClick={() => setVehicleId(item.id)}
-                  className={`flex min-w-0 items-center gap-3 rounded-xl border p-3 text-left transition ${selected ? "border-[#2D7FF0] bg-[#F2F8FF] shadow-[0_0_0_1px_rgba(45,127,240,.08)]" : "border-[#DDE7F3] bg-white hover:border-[#BBD2EF] hover:bg-[#FBFDFF]"}`}
-                  aria-pressed={selected}
-                >
-                  <span className="grid h-14 w-20 shrink-0 place-items-center rounded-lg bg-[#F3F7FC]">
-                    <CustomerClaimLogo value={item.make} size={54} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <strong className="block truncate text-[14px] text-[#17345D]">{vehicleLabel(item)}</strong>
-                    <span className="mt-1 block truncate text-[12px] text-[#6F83A0]">{[item.make, item.model].filter(Boolean).join(" · ") || "Vehicle details unavailable"}</span>
-                  </span>
-                  <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 ${selected ? "border-[#1769DC]" : "border-[#AEBFD5]"}`}>
-                    {selected ? <span className="h-2.5 w-2.5 rounded-full bg-[#1769DC]" /> : null}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          <select
+            id="claim-vehicle"
+            value={vehicleId}
+            onChange={(event) => setVehicleId(event.target.value)}
+            className="h-11 w-full rounded-xl border border-[#DDE7F3] bg-white px-3 text-[13px] font-semibold text-[#17345D] outline-none transition focus:border-[#2D7FF0] focus:ring-2 focus:ring-[#DCEBFF]"
+          >
+            {vehicles.map((item) => (
+              <option key={item.id} value={item.id}>
+                {vehicleLabel(item)}{item.make || item.model ? ` — ${[item.make, item.model].filter(Boolean).join(" · ")}` : ""}
+              </option>
+            ))}
+          </select>
         ) : (
           <div className="rounded-xl border border-dashed border-[#C9D9EB] bg-[#FBFDFF] p-7 text-center text-[13px] text-[#7186A0]">
             No vehicles are linked to this account yet.
@@ -105,27 +85,6 @@ export function CustomerStartClaimSelector({
             </Link>
           </div>
         ) : null}
-      </section>
-
-      <section className="rounded-2xl border border-[#DDEBFA] bg-[#EAF4FF] p-4 sm:p-5">
-        <div className="mb-4">
-          <h2 className="text-[18px] font-bold text-[#102B54]">What happens next?</h2>
-          <p className="mt-1 text-[13px] text-[#7186A0]">A simple and guided process to get your claim started.</p>
-        </div>
-        <div className="grid gap-3 lg:grid-cols-3">
-          {[
-            {step:"1",title:"Provide incident details",description:"Tell us what happened, including date, time and location.",icon:FileText},
-            {step:"2",title:"Upload documents & photos",description:"Share relevant documents and photos of the incident.",icon:ImageIcon},
-            {step:"3",title:"Track your claim",description:"Follow the status of your claim as it progresses.",icon:MapPin},
-          ].map(({step,title,description,icon:Icon},index)=><div key={title} className="relative flex items-start gap-3 rounded-xl bg-white/70 p-3">
-            <span className="relative grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white text-[#1769DC] shadow-sm">
-              <Icon className="h-5 w-5"/>
-              <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-[#DDEBFF] text-[10px] font-bold text-[#1769DC]">{step}</span>
-            </span>
-            <span className="min-w-0 flex-1"><strong className="block text-[13px] text-[#17345D]">{title}</strong><span className="mt-1 block text-[12px] leading-relaxed text-[#6F83A0]">{description}</span></span>
-            {index<2?<ArrowRight className="mt-3 hidden h-4 w-4 text-[#6784AA] lg:block"/>:null}
-          </div>)}
-        </div>
       </section>
 
       <div className="grid gap-3 sm:grid-cols-2">

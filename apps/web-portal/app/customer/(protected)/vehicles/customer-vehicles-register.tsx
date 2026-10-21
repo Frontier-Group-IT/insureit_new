@@ -93,7 +93,7 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
                 onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openVehicle(v.id); } }}
                 className="cursor-pointer bg-white transition-colors hover:bg-[#F2F7FF] focus-visible:bg-[#EAF3FF] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#1769DC]">
                 <td className="px-3 py-3"><strong className="whitespace-nowrap text-[13px] text-[#15376B]">{v.number}</strong></td>
-                <td className="px-3 py-3"><span className="flex items-center gap-2"><ManufacturerMark make={v.make}/><span className="min-w-0"><strong className="block text-[12px] text-[#142C56]">{v.make||"—"}</strong><span className="block max-w-[220px] truncate text-[11px] text-[#607CA4]">{v.model||"—"}</span></span></span></td>
+                <td className="px-3 py-3"><span className="flex items-center gap-2"><ManufacturerMark make={v.make}/><span className="min-w-0"><strong className="block max-w-[220px] truncate text-[12px] text-[#142C56]">{v.model||"—"}</strong></span></span></td>
                 <td className="px-3 py-3 text-[12px] font-medium text-[#264572]">{v.type||"—"}</td>
                 <td className="px-3 py-3 text-[12px] text-[#264572]">{v.chassis||"—"}</td>
                 <td className="px-3 py-3 text-[12px] text-[#264572]">{v.engine||"—"}</td>
