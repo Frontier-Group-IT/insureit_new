@@ -26,6 +26,13 @@ assert.match(picker,/expo-document-picker/);
 assert.match(stageOne,/pickAndUploadPartnerClaimDocument/);
 assert.match(inventory,/partner_app_claim_in_scope\(p_claim_id\)/);
 
+const progression=read('../../../supabase/migrations/20261021174000_partner_claim_stage_progression.sql');
+assert.match(progression,/partner_app_claim_in_scope\(p_claim_id\)/);
+assert.match(progression,/claim_service_mode::text <> 'broker_managed'/);
+assert.match(progression,/jsonb_each_text\(p_details\)/);
+assert.match(progression,/raise exception 'This stage requires Operations approval/);
+assert.match(progression,/claim_status_history/);
+assert.match(editor,/Complete Stage & Continue/);
 const voice=read('../components/partner-claim-voice-recorder.tsx');
 assert.match(voice,/useAudioRecorder/);
 assert.match(voice,/MAX_DURATION_MS=120000/);
