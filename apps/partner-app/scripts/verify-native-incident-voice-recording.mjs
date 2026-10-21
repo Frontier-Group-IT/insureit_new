@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+const read=(path)=>readFileSync(fileURLToPath(new URL(path,import.meta.url)),'utf8');
+const recorder=read('../components/partner-incident-voice-recorder.tsx');
+const screen=read('../components/partner-spot-intimation.tsx');
+const app=JSON.parse(read('../app.json'));
+const pkg=JSON.parse(read('../package.json'));
+const lock=JSON.parse(read('../../../package-lock.json'));
+assert.equal(pkg.dependencies['expo-audio'],'~1.1.1');
+assert.equal(lock.packages['apps/partner-app'].dependencies['expo-audio'],'~1.1.1');
+assert.ok(app.expo.plugins.some(p=>Array.isArray(p)&&p[0]==='expo-audio'),'Expo native microphone config must be present');
+assert.match(recorder,/MAX_RECORDING_MS = 120_000/);
+assert.match(recorder,/requestRecordingPermissionsAsync/);
+assert.match(recorder,/await recorder\.stop\(\)/);
+assert.match(recorder,/uploadPartnerClaimDocument\(claimId,'voice_note'/);
+assert.match(screen,/PartnerIncidentVoiceRecorder claimId=\{data\.claim\.id\}/);
+console.log('Partner native incident voice recording contracts passed; new binary required before OTA');
