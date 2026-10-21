@@ -4,7 +4,7 @@ const reply = (body:unknown,status=200)=>new Response(JSON.stringify(body),{stat
 const bucket='claim-documents';
 const allowed: Record<string,string> = {
   rc:'RC Copy',insurance:'Insurance Copy',licence:'Driver Licence',gr_load:'GR / Load Bill',
-  accident_photo:'Accident Photo',accident_video:'Accident Video',voice_note:'Incident Voice Note',
+  accident_photo:'Accident Photo',accident_video:'Accident Video',voice_note:'Incident Voice Note',additional_document:'Additional Document',
 };
 Deno.serve(async request=>{
   if(request.method==='OPTIONS')return new Response(null,{headers:cors});
