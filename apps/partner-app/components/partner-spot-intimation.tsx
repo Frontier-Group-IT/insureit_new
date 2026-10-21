@@ -1,5 +1,5 @@
 import * as DocumentPicker from 'expo-document-picker';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -33,6 +33,7 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
     try { setUploaded(await listPartnerClaimDocuments(data.claim.id)); }
     catch { /* Never confuse a failed inventory fetch with an empty server list. */ }
   };
+  useEffect(() => { void loadDocuments(); }, [data.claim.id]);
   const pickAndUpload = async (kind: string) => {
     if (uploading) return;
     try {
@@ -102,7 +103,7 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
         <View style={styles.card}>
           <View style={styles.docsHeading}><Text style={styles.sectionTitle}>Upload claim documents</Text><View style={styles.optional}><Text style={styles.optionalText}>{uploading ? "Uploading…" : "Optional now"}</Text></View></View>
           <View style={styles.tiles}>{DOCUMENTS.map(item=><Pressable key={item.kind} accessibilityRole="button" accessibilityLabel={`Upload ${item.title}`} disabled={uploading} onPress={()=>void pickAndUpload(item.kind)} style={styles.tile}><View style={[styles.documentIcon,{backgroundColor:item.color}]}><MaterialCommunityIcons name={item.icon} color="#FFF" size={24}/></View><Text style={styles.tileTitle}>{item.title}</Text><Text style={styles.tileSub}>{uploaded.filter(x=>x.category===item.kind).length ? "Uploaded" : "Tap to upload"}</Text></Pressable>)}</View>
-          <Pressable accessibilityRole="button" accessibilityLabel="Upload multiple claim documents" disabled={uploading} onPress={()=>void pickAndUpload("gr_load")} style={styles.bulk}><Ionicons name="documents-outline" size={27} color="#245CB0"/><View style={styles.bulkText}><Text style={styles.bulkTitle}>Upload multiple documents</Text><Text style={styles.bulkHint}>Tap to select another document</Text></View><Ionicons name="add-circle-outline" size={25} color="#8EA3C4"/></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Upload another claim document" disabled={uploading} onPress={()=>void pickAndUpload("gr_load")} style={styles.bulk}><Ionicons name="documents-outline" size={27} color="#245CB0"/><View style={styles.bulkText}><Text style={styles.bulkTitle}>Upload another document</Text><Text style={styles.bulkHint}>Choose a document from your device</Text></View><Ionicons name="add-circle-outline" size={25} color="#8EA3C4"/></Pressable>
         </View>
         <View style={styles.voice}><View style={styles.voiceTop}><View style={styles.mic}><Ionicons name="mic-outline" size={27} color="#1A56A3"/></View><View style={styles.headingCopy}><Text style={styles.sectionTitle}>Incident Voice Note</Text><Text style={styles.subtitle}>Describe what happened in your own words. Maximum recording time is 2 minutes.</Text></View></View><Pressable accessibilityRole="button" onPress={()=>void pickAndUpload("voice_note")} disabled={uploading} style={styles.disabledRecording}><Ionicons name="mic-outline" size={18} color="#FFF"/><Text style={styles.disabledText}>Attach voice note</Text></Pressable></View>
       </ScrollView>
