@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Activity, BadgeCheck, Gauge, Heart, MapPin, Search, ShoppingBag, Store, Truck } from "lucide-react";
 import {
   CustomerAccountTabs,
@@ -322,7 +323,7 @@ function ExchangeRecovery({
   );
 }
 
-function ActivityMetric({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
+function ActivityMetric({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
   return (
     <div className="rounded-2xl border border-[#DCE4EE] bg-white p-4 shadow-[0_8px_24px_rgba(28,50,82,.04)]">
       <div className="flex items-center gap-2 text-[#3156B8]">{icon}<span className="text-[10px] font-black">{label}</span></div>
