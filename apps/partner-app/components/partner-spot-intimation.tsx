@@ -1,11 +1,12 @@
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import { PartnerAssets } from '@/lib/partner-assets';
-import type { PartnerClaimDetail } from '@/lib/claims';
+import { savePartnerClaimSpot, type PartnerClaimDetail } from '@/lib/claims';
 import { formatClaimDate } from '@/lib/claim-tracker';
 
 const DOCUMENTS = [
@@ -19,6 +20,27 @@ const DOCUMENTS = [
 
 export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
   const router = useRouter();
+  const [incidentAt, setIncidentAt] = useState(data.claim.accident_at ? data.claim.accident_at.slice(0,16) : '');
+  const [spotAt, setSpotAt] = useState('');
+  const [driver, setDriver] = useState('');
+  const [phone, setPhone] = useState('');
+  const [location, setLocation] = useState(data.claim.accident_location || '');
+  const [saving, setSaving] = useState(false);
+  const save = async () => {
+    if (saving) return;
+    const accident = new Date(incidentAt);
+    const spot = new Date(spotAt);
+    if (!Number.isFinite(accident.getTime()) || !Number.isFinite(spot.getTime()) || !driver.trim() || !phone.trim() || !location.trim()) {
+      Alert.alert('Complete all required details','Use YYYY-MM-DDTHH:mm for dates and enter the driver, phone and location.'); return;
+    }
+    setSaving(true);
+    try {
+      await savePartnerClaimSpot(data.claim.id, accident.toISOString(), spot.toISOString(), location, driver, phone);
+      Alert.alert('Saved','Spot Intimation saved successfully.');
+      router.replace({ pathname: '/claim/[id]', params: { id: data.claim.id } } as never);
+    } catch (e) { Alert.alert('Unable to save',e instanceof Error ? e.message : 'Please try again.'); }
+    finally { setSaving(false); }
+  };
   const date = data.claim.accident_at ? new Date(data.claim.accident_at) : null;
   const incidentTime = date && !Number.isNaN(date.getTime()) ? new Intl.DateTimeFormat('en-IN', { hour: 'numeric', minute: '2-digit' }).format(date) : null;
   return (
@@ -43,7 +65,17 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
           <ReadOnlyField label="Driver Name *" value={null}/>
           <ReadOnlyField label="Driver Number *" value={null}/>
           <ReadOnlyField label="Location *" value={data.claim.accident_location}/>
-          <Text style={styles.restricted}>Fields not supplied by the authorized Partner claim service are shown as Not recorded, rather than using invented values.</Text>
+          {data.claim.current_status === 'Draft' || data.claim.current_status === 'Initial Documents Pending' ? <View style={{ gap: 9, paddingTop: 6 }}>
+            <Text style={styles.restricted}>Enter date and time as YYYY-MM-DDTHH:mm (24-hour format). Claim registration does not confirm insurance coverage.</Text>
+            {([
+              ['Accident date and time *', incidentAt, setIncidentAt],
+              ['Spot intimation date and time *', spotAt, setSpotAt],
+              ['Driver name *', driver, setDriver],
+              ['Driver phone *', phone, setPhone],
+              ['Location *', location, setLocation],
+            ] as const).map(([label, value, change]) => <View key={label} style={{gap:5}}><Text style={styles.fieldLabel}>{label}</Text><TextInput accessibilityLabel={label} value={value} onChangeText={change} placeholder={label.includes('time') ? '2026-10-21T14:30' : label} style={styles.field} /></View>)}
+            <Pressable accessibilityRole="button" disabled={saving} onPress={() => void save()} style={{ backgroundColor: '#0B347A', padding: 15, borderRadius: 12, alignItems: 'center', opacity: saving ? .6 : 1 }}><Text style={{color:'#FFF', fontWeight:'800'}}>{saving ? 'Saving…' : 'Save Spot Intimation'}</Text></Pressable>
+          </View> : <Text style={styles.restricted}>This stage is not editable in its current status.</Text>
         </View>
         <View style={styles.card}>
           <View style={styles.docsHeading}><Text style={styles.sectionTitle}>Upload claim documents</Text><View style={styles.optional}><Text style={styles.optionalText}>View only</Text></View></View>
