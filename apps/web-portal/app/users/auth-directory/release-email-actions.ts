@@ -24,13 +24,13 @@ export async function archiveAndReleaseLoginEmail(userId:string, expectedEmail:s
  if(authError||!auth.user||profileError||!profile)return {status:"error",message:"Selected Auth user or profile could not be verified."};
  if(profile.role==="it_super_user"||profile.role==="it_user"||profile.role==="customer")return {status:"error",message:"Protected IT or customer phone identities cannot use this release workflow."};
  if(normalize(auth.user.email)!==requested)return {status:"error",message:"Login email has changed. Refresh the directory and review the account before proceeding."};
- if(profile.email&&normalize(profile.email)!==requested)return {status:"error",message:"Profile email differs from Auth email. Resolve the mismatch before releasing the address."};
+ // Profile contact emails may intentionally differ from the login; do not alter unrelated history.
 
  let employeeId=profile.employee_id;
  if(employeeId){
    const {data:employee,error:employeeError}=await admin.from("employees").select("id,email,employment_status").eq("id",employeeId).maybeSingle<{id:string;email:string|null;employment_status:string}>();
    if(employeeError||!employee)return {status:"error",message:"Linked employee could not be verified."};
-   if(employee.email&&normalize(employee.email)!==requested)return {status:"error",message:"Employee Directory email differs from Auth. Review this link before releasing the address."};
+   // Retain a different employee contact email rather than overwriting historical data.
  }
  // A non-routable archive address is intentionally never used to log in.
  const archiveEmail=`retired-${userId}@retired-login.insureit.invalid`;
@@ -53,10 +53,10 @@ export async function archiveAndReleaseLoginEmail(userId:string, expectedEmail:s
  if(renameError)return {status:"error",message:"Account archived, but Auth email could not be released. Retry after investigating; original email remains reserved."};
 
  // Profile/Employee contact fields are separate and must not reserve the old login email.
- const {error:profileEmailError}=await admin.from("profiles").update({email:null}).eq("id",userId);
+ const {error:profileEmailError}=await admin.from("profiles").update({email:null}).eq("id",userId).ilike("email",requested);
  if(profileEmailError)return {status:"error",message:"Auth email changed, but profile email cleanup failed. Do not create the replacement account yet."};
  if(employeeId){
-   const {error:employeeEmailError}=await admin.from("employees").update({email:null,updated_by:actor.id,updated_at:new Date().toISOString()}).eq("id",employeeId);
+   const {error:employeeEmailError}=await admin.from("employees").update({email:null,updated_by:actor.id,updated_at:new Date().toISOString()}).eq("id",employeeId).ilike("email",requested);
    if(employeeEmailError)return {status:"error",message:"Auth email changed, but employee email cleanup failed. Do not create the replacement account yet."};
  }
  const {data:verified,error:verificationError}=await admin.auth.admin.getUserById(userId);
