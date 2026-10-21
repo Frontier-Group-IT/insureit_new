@@ -142,7 +142,7 @@ export default function StartClaimScreen() {
           .not('current_status', 'in', '("Settled","Closed","Claim Complete","Rejected")').limit(1).maybeSingle();
         if (existingError) throw existingError;
         if (existing?.id) {
-          router.push({ pathname: '/customer/claim-detail', params: { id: existing.id } } as any);
+          router.push({ pathname: '/customer/report-accident', params: { vehicleId: selectedVehicle.id, draftClaimId: existing.id } } as any);
           return;
         }
         const { data: draft, error: createError } = await supabase.from('claims').insert({
@@ -151,7 +151,7 @@ export default function StartClaimScreen() {
           insurance_company_id: null, current_status: 'Draft', created_by: session.user.id,
         }).select('id').single();
         if (createError || !draft?.id) throw createError ?? new Error('Claim draft creation failed');
-        router.push({ pathname: '/customer/claim-detail', params: { id: draft.id } } as any);
+        router.push({ pathname: '/customer/report-accident', params: { vehicleId: selectedVehicle.id, draftClaimId: draft.id } } as any);
         return;
       }
       if (selectedPolicy.source === 'external') {
