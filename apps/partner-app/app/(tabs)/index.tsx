@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, useEffect, type ReactNode } from 'react';
-import { Animated, Image, ImageBackground, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, ImageBackground, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -290,8 +290,14 @@ export default function PartnerHomeScreen() {
                 <View style={styles.metricDivider} />
                 <MetricCell
                   icon={<PartnerCommissionEarnedIcon size={36} />}
-                  value={rangeData?.commission_available ? formatIndianCurrency(rangeData.commission_earned ?? 0) : '—'}
-                  label="Commission Earned"
+                  value={identity.actor_kind === 'employee'
+                    ? (rangeData?.projected_retention != null ? formatIndianCurrency(rangeData.projected_retention) : '—')
+                    : (rangeData?.scoped_payout != null
+                      ? formatIndianCurrency(rangeData.scoped_payout)
+                      : rangeData?.commission_available
+                        ? formatIndianCurrency(rangeData.commission_earned ?? 0)
+                        : '—')}
+                  label={identity.actor_kind === 'employee' ? 'Projected Retention' : 'Commission Earned'}
                 />
               </View>
             </Animated.View>
@@ -305,7 +311,12 @@ export default function PartnerHomeScreen() {
                   <Text style={styles.sectionLink}>View All  ›</Text>
                 </Pressable>
               </View>
-              <View style={styles.quickGrid}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.quickGrid}
+                directionalLockEnabled
+              >
                 <QuickAction
                   asset={PartnerAssets.actions.quickPolicyIntake}
                   label="Policy Intake"
@@ -326,7 +337,7 @@ export default function PartnerHomeScreen() {
                   label="Customers"
                   onPress={() => router.push('/customers')}
                 />
-              </View>
+              </ScrollView>
             </View>
           </PartnerEnter>
 
@@ -350,9 +361,9 @@ export default function PartnerHomeScreen() {
               <Image source={PartnerAssets.actions.quickRenewals} style={styles.renewalIcon} resizeMode="contain" />
               <View style={styles.renewalBody}>
                 <Text style={styles.renewalTitle}>Renewals Due Soon</Text>
-                <Text style={styles.renewalMessage}>
+                <ShrinkLoopText style={styles.renewalMessage}>
                   {data.business.renewals_30_days} policies expiring within 30 days
-                </Text>
+                </ShrinkLoopText>
               </View>
               <Text style={styles.sectionLink}>View Renewals  ›</Text>
             </Pressable>
@@ -426,7 +437,7 @@ function PendingTasksCard({
       <View style={styles.pendingHeadingRow}>
         <View style={styles.pendingHeadingCopy}>
           <Text style={styles.pendingTitle}>Pending Tasks</Text>
-          <Text style={styles.pendingHint}>Keep up with important actions{'\n'}to avoid policy lapses.</Text>
+          <Text style={styles.pendingHint}>Keep up with important actions.</Text>
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel="View all pending tasks" onPress={onViewAll}>
           <Text style={styles.sectionLink}>View All  ›</Text>
@@ -551,10 +562,35 @@ function Trend({ value, hasPrevious, comparisonLabel = 'previous period' }: { va
         size={13}
         color={positive ? '#1D9C60' : '#C27A11'}
       />
-      <Text style={[styles.trendText, { color: positive ? '#1D9C60' : '#C27A11' }]}>
+      <ShrinkLoopText style={[styles.trendText, { color: positive ? '#1D9C60' : '#C27A11' }]}>
         {Math.abs(value).toFixed(1)}% {positive ? 'above' : 'below'} {comparisonLabel}
-      </Text>
+      </ShrinkLoopText>
     </View>
+  );
+}
+
+function ShrinkLoopText({
+  children,
+  style,
+}: {
+  children: ReactNode;
+  style?: StyleProp<TextStyle>;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(Animated.sequence([
+      Animated.timing(scale, { toValue: 0.96, duration: 650, useNativeDriver: true }),
+      Animated.timing(scale, { toValue: 1, duration: 650, useNativeDriver: true }),
+    ]));
+    animation.start();
+    return () => animation.stop();
+  }, [scale]);
+
+  return (
+    <Animated.Text style={[style, { transform: [{ scale }] }]}>
+      {children}
+    </Animated.Text>
   );
 }
 
@@ -735,8 +771,8 @@ const styles = StyleSheet.create({
     borderColor: '#E4EAF2',
   },
   sectionTitle: { marginBottom: 9, color: '#17233A', fontSize: 13, fontWeight: '800' },
-  quickGrid: { flexDirection: 'row', gap: 7 },
-  quickActionTouch: { flex: 1, minWidth: 0 },
+  quickGrid: { flexDirection: 'row', gap: 7, paddingRight: 2 },
+  quickActionTouch: { width: 94, flexShrink: 0 },
   quickAction: {
     height: 72,
     borderRadius: 13,
