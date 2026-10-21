@@ -34,7 +34,7 @@ export type PortalUserRow = {
 };
 
 export type AdditionalPortalAccount = {
- id:string; name:string; code:string; email:string|null; type:"Group"|"Branch"|"Group Associate"|"Partner Associate"; status:string; manageHref:string; reviewHref?:string; context:string;
+ id:string; name:string; code:string; email:string|null; type:"Group"|"Branch"|"Group Associate"|"Partner Associate"; status:string; manageHref:string; reviewHref?:string; context:string; invitationStatus?:string; loginEmail?:string; phone?:string; branchId?:string;
 };
 
 type StatusFilter = "all" | "active" | "inactive";
@@ -75,9 +75,9 @@ export default async function IntermediaryPortalUsersPage({
   if (scope.mode === "organization") {
     const [{data: groups,error:groupError},{data:partners,error:partnerError},{data:branches,error:branchError},{data:identities,error:identityError},{data:groupAssociates,error:groupAssociateError},{data:partnerAssociates,error:partnerAssociateError}] = await Promise.all([
       admin.from("intermediary_groups").select("id,group_name,group_code,status").eq("status","active"),
-      admin.from("partners").select("id,display_name,partner_code,parent_partner_id"),
-      admin.from("partner_branch_profiles").select("partner_id"),
-      admin.from("portal_access_identities").select("entity_type,entity_id,login_email,status"),
+      admin.from("partners").select("id,display_name,partner_code,parent_partner_id,source_application_id"),
+      admin.from("partner_branch_profiles").select("partner_id,email,phone"),
+      admin.from("portal_access_identities").select("entity_type,entity_id,login_email,status,created_at"),
       admin.from("group_portal_associate_accounts").select("id,group_id,name,email,status"),
       admin.from("partner_portal_associate_accounts").select("id,intermediary_id,name,email,status"),
     ]);
@@ -85,7 +85,8 @@ export default async function IntermediaryPortalUsersPage({
     if (!extraLoadError) {
       const groupById = new Map((groups??[]).map(g=>[g.id,g]));
       const partnerById = new Map((partners??[]).map(p=>[p.id,p]));
-      const branchIds = new Set((branches??[]).map(p=>p.partner_id));
+      const branchById = new Map((branches??[]).map(p=>[p.partner_id,p]));
+      const branchIds = new Set(branchById.keys());
       const identityByEntity = new Map((identities??[]).map(a=>[`${a.entity_type}:${a.entity_id}`,a]));
       for (const g of groups??[]) {
         const login=identityByEntity.get(`group:${g.id}`);
@@ -94,7 +95,10 @@ export default async function IntermediaryPortalUsersPage({
       for (const p of partners??[]) {
         if (!branchIds.has(p.id)) continue;
         const login=identityByEntity.get(`branch:${p.id}`);
-        extraRows.push({id:`branch:${p.id}`,name:p.display_name,code:p.partner_code,email:login?.login_email??null,type:"Branch",status:login?.status??"not_created",manageHref:"/intermediaries/groups/login-access",reviewHref:`/intermediaries/portal-users/branches/${p.id}`,context:partnerById.get(p.parent_partner_id??"")?.display_name??"Branch login"});
+        const parent = partnerById.get(p.parent_partner_id??"");
+        const applicationId = parent?.source_application_id ?? p.source_application_id;
+        const branchProfile = branchById.get(p.id);
+        extraRows.push({id:`branch:${p.id}`,name:p.display_name,code:p.partner_code,email:login?.login_email??branchProfile?.email??null,type:"Branch",status:login?.status??"not_created",manageHref:"/intermediaries/groups/login-access",reviewHref:applicationId?`/intermediaries/applications/${applicationId}`:undefined,context:parent?.display_name??"Branch login",invitationStatus:login?.created_at?"Sent":"Not Sent",loginEmail:branchProfile?.email??null,phone:branchProfile?.phone??null,branchId:p.id});
       }
       for (const a of groupAssociates??[]) {
         const group=groupById.get(a.group_id);
