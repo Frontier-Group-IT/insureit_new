@@ -1,7 +1,8 @@
+import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Search, CarFront, ShieldCheck, ShieldX, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { getVehicleBrandLogo } from "@/lib/vehicle-brand-logo";
@@ -22,21 +23,6 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
   const [query, setQuery] = useState(initialQuery);
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
-  const [hintIndex, setHintIndex] = useState(0);
-  const [reducedMotion, setReducedMotion] = useState(false);
-  const hints = ["Search vehicles…", "Search policies…", "Search claims…", "Search customer records…"];
-  useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReducedMotion(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
-  useEffect(() => {
-    if (query || reducedMotion) return;
-    const interval = window.setInterval(() => setHintIndex((index) => index + 1), 3200);
-    return () => window.clearInterval(interval);
-  }, [query, reducedMotion]);
   const pageSize = 6;
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -62,26 +48,13 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
         <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><CarFront className="h-6 w-6 text-[#176CE7]"/>Vehicle Register</h2>
         <label className="flex w-full min-w-0 items-center gap-2 rounded-lg border border-[#DCE7F5] bg-[#FAFCFF] px-3 py-2 sm:w-[250px] lg:w-[320px]">
           <Search className="h-4 w-4 shrink-0 text-[#7D95B7]" aria-hidden="true"/><span className="sr-only">Search vehicles</span>
-          <span className="relative min-w-0 flex-1">
-            <input aria-label="Search vehicles" type="search" value={query} onChange={e=>{setQuery(e.target.value);setPage(1);}} className="relative z-10 w-full min-w-0 appearance-none border-0 bg-transparent p-0 text-[13px] shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 focus-visible:outline-none"/>
-            {!query && <span aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden text-[13px] text-[#95A2B7]">
-              {hintIndex > 0 && !reducedMotion && <span key={`old-${hintIndex}`} className="vehicle-hint-out absolute inset-x-0 top-0 truncate">{hints[(hintIndex - 1) % hints.length]}</span>}
-              <span key={`new-${hintIndex}`} className={`absolute inset-x-0 top-0 truncate ${hintIndex > 0 && !reducedMotion ? "vehicle-hint-in" : ""}`}>{hints[hintIndex % hints.length]}</span>
-            </span>}
-          </span>
+          <CustomerAnimatedSearchInput aria-label="Search vehicles" value={query} onChange={e=>{setQuery(e.target.value);setPage(1);}} hints={["Search registration number…", "Search chassis number…", "Search engine number…", "Search make or model…", "Search policy number…"]} className="text-[13px] text-[#203650] placeholder:text-[#95A2B7]"/>
         </label>
         <div className="ml-auto flex flex-wrap items-center gap-2">
         <select aria-label="Vehicle status filter" value={statusFilter} onChange={e=>{setStatusFilter(e.target.value);setPage(1);}} className="rounded-lg border border-[#DCE7F5] bg-white px-3 py-2 text-[13px] text-[#263F67]"><option value="all">All Status</option><option value="insured">Insured</option><option value="uninsured">Uninsured</option><option value="due">Due</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="expired">Expired</option></select>
         <Link href={{ pathname: "/customer/add-vehicle", query: { account: accountId } }} className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#1769DC] px-3 py-2.5 text-[12px] font-semibold text-white transition hover:bg-[#1058BD]"><Plus className="h-4 w-4"/>Add Vehicle</Link>
         </div>
       </header>
-      <style jsx>{`
-        @keyframes vehicle-hint-enter { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        @keyframes vehicle-hint-exit { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-100%); opacity: 0; } }
-        .vehicle-hint-in { animation: vehicle-hint-enter 400ms ease-in-out both; }
-        .vehicle-hint-out { animation: vehicle-hint-exit 400ms ease-in-out both; }
-        @media (prefers-reduced-motion: reduce) { .vehicle-hint-in, .vehicle-hint-out { animation: none; } }
-      `}</style>
       <div className="w-full overflow-x-auto rounded-xl border border-[#E2EAF5]">
         <table className="w-full min-w-[1040px] border-collapse text-left">
           <thead className="bg-[#F4F7FB] text-[11px] font-semibold uppercase tracking-wide text-[#7188A8]">
