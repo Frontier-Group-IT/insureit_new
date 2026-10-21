@@ -57,7 +57,7 @@ export function AuthDirectoryTable({rows}:{rows:DirectoryRow[]}) {
         <dl className="mt-4 grid grid-cols-1 gap-3 rounded-xl bg-slate-50 p-4 text-xs sm:grid-cols-2">{[["User ID",selected.id],["Organization / Branch",selected.organization||"—"],["Login Method",selected.loginMethod],["Auth Login",selected.loginMethod==="Phone"?"Hidden · phone login":selected.authEmail||"—"],["Profile Email",selected.loginMethod==="Phone"?"Hidden":selected.profileEmail||"—"],["Auth Status",selected.confirmed?"Confirmed":"Unconfirmed"],["Profile",selected.status],["Identity",selected.identityStatus],["Last Sign In",date(selected.lastSignIn)],["Created",date(selected.createdAt)]].map(([key,value])=><div key={key}><dt className="mb-1 font-semibold text-slate-500">{key}</dt><dd className="break-all font-medium text-slate-900">{value}</dd></div>)}</dl>
         {selected.warning.length>0&&<div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900"><strong>Identity warnings</strong>{selected.warning.map(x=><div key={x}>• {x}</div>)}</div>}
         {selected.loginMethod==="Phone"&&selected.accountType==="Customer"?<p className="mt-4 rounded-lg border p-3 text-xs">Customer phone login is managed through the customer authentication flow. Confirm account identity before modifying email/password credentials.</p>:<div className="mt-4"><AdminPasswordReset key={selected.id} userId={selected.id}/></div>}
-        <IdentityRemoval key={selected.id} id={selected.id} name={selected.name}/>
+        <IdentityRemoval key={selected.id} id={selected.id} name={selected.name} email={selected.loginMethod==="Email"?selected.authEmail:""} role={selected.role}/>
       </section>
     </div>}
   </div>;

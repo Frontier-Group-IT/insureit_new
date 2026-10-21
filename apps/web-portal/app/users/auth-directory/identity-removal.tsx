@@ -1,11 +1,12 @@
 "use client";
 import { useState } from "react";
 import { ResolveDependencies } from "./resolve-dependencies";
+import { ReleaseEmailControl } from "./release-email-control";
 import { archiveUserIdentity } from "./archive-identity-actions";
 import { useRouter } from "next/navigation";
 import { removeAuthDirectoryIdentity, type IdentityRemovalMode } from "./identity-removal-actions";
 
-export function IdentityRemoval({id,name}:{id:string;name:string}) {
+export function IdentityRemoval({id,name,email,role}:{id:string;name:string;email:string;role:string}) {
  const router=useRouter();
  const [mode,setMode]=useState<IdentityRemovalMode>("login_only");
  const [confirmation,setConfirmation]=useState("");
@@ -31,6 +32,7 @@ export function IdentityRemoval({id,name}:{id:string;name:string}) {
    <button type="button" onClick={()=>setArchiveOpen(!archiveOpen)} className="mt-2 rounded border border-blue-400 bg-white px-3 py-2 font-semibold">{archiveOpen?"Cancel archiving":"Archive user"}</button>
    {archiveOpen&&<div className="mt-3 space-y-2"><p>Confirm archiving <strong>{name}</strong> ({id}). Existing sessions may continue until expiry. Pending work needs separate review.</p><label className="block">Type ARCHIVE USER to confirm<input className="mt-1 w-full rounded border p-2" value={archiveConfirmation} onChange={e=>setArchiveConfirmation(e.target.value)}/></label><button type="button" disabled={pending||archiveConfirmation!=="ARCHIVE USER"} className="rounded bg-blue-900 px-3 py-2 font-semibold text-white disabled:opacity-40" onClick={async()=>{setPending(true);try{const result=await archiveUserIdentity(id,archiveConfirmation);setMessage(result.message);if(result.status==="success"){setArchiveOpen(false);setArchiveConfirmation("");router.refresh();}}catch{setMessage("Could not archive the account.");}finally{setPending(false);}}}>{pending?"Archiving…":"Confirm archive"}</button></div>}
   </div>
+  <ReleaseEmailControl userId={id} name={name} email={email} role={role}/>
   <strong className="text-red-900">Account removal</strong>
   <p>Choose whether to revoke login only or request full deletion for {name}.</p>
   <label className="block"><input type="radio" checked={mode==="login_only"} onChange={()=>{setMode("login_only");setConfirmation("");}}/> Login access only — prevent sign-in, preserve profile and business history</label>
