@@ -163,3 +163,13 @@ export async function savePartnerClaimSpot(claimId: string, incidentAt: string, 
   if (error) throw error;
   if (data !== true) throw new Error('Claim details were not saved');
 }
+
+/** Save a Partner-scoped draft for a later claim stage without changing approval/status. */
+export async function savePartnerStageDraft(claimId: string, stageKey: string, details: Record<string,string>) {
+  const { data, error } = await supabase.rpc('partner_app_save_claim_stage_draft', {
+    p_claim_id: claimId, p_stage_key: stageKey, p_details: details,
+  });
+  if (error) throw error;
+  if (typeof data !== 'string' || !data) throw new Error('Stage draft was not saved');
+  return data;
+}
