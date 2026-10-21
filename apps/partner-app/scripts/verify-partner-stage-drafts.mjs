@@ -26,4 +26,10 @@ assert.match(picker,/expo-document-picker/);
 assert.match(stageOne,/pickAndUploadPartnerClaimDocument/);
 assert.match(inventory,/partner_app_claim_in_scope\(p_claim_id\)/);
 
-console.log('Partner draft stages and scoped document upload contracts verified');
+const voice=read('../components/partner-claim-voice-recorder.tsx');
+assert.match(voice,/useAudioRecorder/);
+assert.match(voice,/MAX_DURATION_MS=120000/);
+assert.match(voice,/uploadSelectedPartnerClaimFile/);
+assert.match(stageOne,/requireOptionalNativeModule\('ExpoAudio'\)/);
+assert.match(stageOne,/NativeVoiceRecorder/);
+console.log('Partner claim stages, uploads and guarded native voice recorder contracts verified');
