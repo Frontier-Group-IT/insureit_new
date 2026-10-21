@@ -1,9 +1,10 @@
+import * as DocumentPicker from 'expo-document-picker';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getPartnerClaimDetail, savePartnerStageDraft } from '@/lib/claims';
-import { CLAIM_STAGES } from '@/lib/claim-tracker';
+import { getPartnerClaimDetail, savePartnerStageDraft, completePartnerClaimStage, uploadPartnerClaimDocument } from '@/lib/claims';
+import { CLAIM_STAGES, getClaimTrackerState } from '@/lib/claim-tracker';
 
 const FIELDS: Record<string, readonly [string, string][]> = {
   spot_status: [['spot_survey_done_date','Spot survey completion date'],['surveyor_name','Surveyor name'],['surveyor_phone','Surveyor phone'],['surveyor_email','Surveyor email']],
@@ -20,6 +21,8 @@ export default function PartnerStageDraftEditor() {
   const { id, key } = useLocalSearchParams<{ id: string; key: string }>();
   const [fields,setFields]=useState<Record<string,string>>({});
   const [busy,setBusy]=useState(false);
+  const [uploading,setUploading]=useState(false);
+  const [activeStage,setActiveStage]=useState(0);
   const [authorized,setAuthorized]=useState(false);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState('');
@@ -30,6 +33,7 @@ export default function PartnerStageDraftEditor() {
       if(!id || !key || !FIELDS[key]) throw new Error('Unsupported claim stage');
       const detail=await getPartnerClaimDetail(id);
       if(['Claim Complete','Settled','Closed','Rejected'].includes(detail.claim.current_status||'')) throw new Error('This claim is closed to editing');
+      setActiveStage(getClaimTrackerState(detail).index);
       setAuthorized(true);setError('');
     } catch(e) {setAuthorized(false);setError(e instanceof Error?e.message:'Claim not available in your Partner scope');}
     finally {setLoading(false);}
@@ -44,13 +48,50 @@ export default function PartnerStageDraftEditor() {
     catch(e){Alert.alert('Unable to save',e instanceof Error?e.message:'Try again.');}
     finally{setBusy(false);}
   };
+
+  const normalized=()=>Object.fromEntries(Object.entries(fields).map(([k,v])=>[k,v.trim()]).filter(([,v])=>v));
+  const finish=async()=>{
+    if(!id || !key || busy || !authorized)return;
+    const values=normalized();
+    setBusy(true);
+    try {
+      await completePartnerClaimStage(id,key,values);
+      const index=CLAIM_STAGES.findIndex(s=>s.key===key);
+      const next=CLAIM_STAGES[index+1];
+      Alert.alert('Stage completed','Claim milestone saved and progressed successfully.',[{
+        text:'OK',onPress:()=>router.replace(next?{pathname:'/claim/stage',params:{id,key:next.key}} as never:{pathname:'/claim/[id]',params:{id}} as never),
+      }]);
+    } catch(e){Alert.alert('Cannot complete stage',e instanceof Error?e.message:'Please check required fields and try again.');}
+    finally{setBusy(false);}
+  };
+  const confirmComplete=()=>Alert.alert('Complete this claim stage?','This updates the official claim status. Confirm only when the required milestone work has actually been completed.',[
+    {text:'Cancel',style:'cancel'},{text:'Complete & Continue',onPress:()=>void finish()},
+  ]);
+  const attachDocuments=async()=>{
+    if(!id || !key || uploading || !authorized)return;
+    try{
+      const pick=await DocumentPicker.getDocumentAsync({type:['application/pdf','image/jpeg','image/png','image/webp'],multiple:true,copyToCacheDirectory:true});
+      if(pick.canceled||!pick.assets?.length)return;
+      if(pick.assets.length>8)throw new Error('You can attach up to eight files at once.');
+      setUploading(true);
+      let count=0;
+      for(const asset of pick.assets){await uploadPartnerClaimDocument(id,'additional_document',asset,key);count++;}
+      Alert.alert('Documents uploaded',`${count} document${count===1?'':'s'} attached to this claim stage.`);
+    }catch(e){Alert.alert('Upload failed',e instanceof Error?e.message:'Previously completed uploads remain attached.');}
+    finally{setUploading(false);}
+  };
+  const stageIndex=CLAIM_STAGES.findIndex(s=>s.key===key);
+  const canComplete=authorized&&stageIndex===activeStage;
   return <SafeAreaView style={styles.root}>
     <View style={styles.header}><Pressable onPress={()=>router.back()} accessibilityRole="button"><Text style={styles.back}>‹ Back</Text></Pressable><Text style={styles.heading}>{stage?.label||'Stage'} Details</Text></View>
     <ScrollView contentContainerStyle={styles.content}>
       {loading?<Text>Verifying claim access…</Text>:error?<Text style={styles.error}>{error}</Text>:<>
-        <Text style={styles.note}>Enter relevant stage details. The Operations approval workflow remains unchanged; saving here does not mark any milestone complete.</Text>
+        <Text style={styles.note}>Enter relevant stage details. Save a draft at any permitted stage, or complete the current stage when the required work and documents are ready. Completion updates the official claim workflow.</Text>
         {FIELDS[key||'']?.map(([name,label])=><View key={name} style={styles.field}><Text style={styles.label}>{label}</Text><TextInput accessibilityLabel={label} value={fields[name]||''} onChangeText={v=>setFields(old=>({...old,[name]:v}))} style={styles.input} placeholder={label}/></View>)}
-        <Pressable disabled={busy} accessibilityRole="button" onPress={()=>void save()} style={[styles.save,busy&&{opacity:.5}]}><Text style={styles.saveText}>{busy?'Saving…':'Save Stage Details'}</Text></Pressable>
+        <Pressable accessibilityRole="button" disabled={busy||uploading} onPress={()=>void attachDocuments()} style={[styles.save,{backgroundColor:'#E8F1FC',borderWidth:1,borderColor:'#A7C6E8'},uploading&&{opacity:.5}]}><Text style={{fontWeight:'900',color:'#154A86'}}>{uploading?'Uploading…':'Attach Stage Documents'}</Text></Pressable>
+        <Pressable disabled={busy} accessibilityRole="button" onPress={()=>void save()} style={[styles.save,busy&&{opacity:.5}]}><Text style={styles.saveText}>{busy?'Saving…':'Save Draft'}</Text></Pressable>
+        <Pressable disabled={busy||!canComplete} accessibilityRole="button" accessibilityState={{disabled:busy||!canComplete}} onPress={confirmComplete} style={[styles.save,{backgroundColor:'#1063B5'},(busy||!canComplete)&&{opacity:.4}]}><Text style={styles.saveText}>{busy?'Saving…':'Complete & Continue'}</Text></Pressable>
+        {!canComplete?<Text style={styles.note}>Stage completion is available only for the current eligible milestone. Drafts are still subject to server-side authorization.</Text>:null}
       </>}
     </ScrollView>
   </SafeAreaView>;
