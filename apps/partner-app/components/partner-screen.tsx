@@ -17,6 +17,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PartnerBanner } from '@/components/ui/partner-banner';
+import { PartnerRotatingSearchPlaceholder } from '@/components/ui/partner-search-field';
 import { PartnerTopBar } from '@/components/ui/partner-top-bar';
 import { getPartnerUnreadActivityCount } from '@/lib/engagement';
 import { partnerTheme } from '@/lib/theme';
@@ -67,6 +68,7 @@ export function PartnerScreen({
   const setHeroSearchValue = heroSearch?.onChangeText ?? sharedSearch.setQuery;
   const hasHeroSearchValue = heroSearchValue.trim().length > 0;
   const [unreadActivityCount, setUnreadActivityCount] = useState(0);
+  const [homeSearchFocused, setHomeSearchFocused] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const latestScrollY = useRef(0);
 
@@ -211,11 +213,20 @@ export function PartnerScreen({
 
             <View style={styles.homeSearchCard}>
               <Ionicons name="search-outline" size={22} color="#3E269B" />
+              {!homeSearchFocused && !heroSearchValue ? (
+                <PartnerRotatingSearchPlaceholder
+                  placeholders={['Search customer name...', 'Search vehicle number...', 'Search policy number...']}
+                  containerStyle={{ position: 'absolute', left: 42, right: 74, top: 0, bottom: 0, justifyContent: 'center' }}
+                  textStyle={{ fontSize: 12, color: '#8B95A8' }}
+                />
+              ) : null}
               <TextInput
                 value={heroSearchValue}
+                onFocus={() => setHomeSearchFocused(true)}
+                onBlur={() => setHomeSearchFocused(false)}
                 onChangeText={setHeroSearchValue}
                 onSubmitEditing={submitHomeSearch}
-                placeholder={heroSearch?.placeholder ?? 'Search customer, vehicle number or policy no.'}
+                placeholder={!homeSearchFocused && !heroSearchValue ? '' : (heroSearch?.placeholder ?? 'Search customer, vehicle number or policy no.')}
                 placeholderTextColor="#8B95A8"
                 returnKeyType="search"
                 autoCapitalize="none"
