@@ -206,3 +206,12 @@ export async function openPartnerClaimDocument(claimId: string, documentId: stri
   }
   return data.url as string;
 }
+
+export async function completePartnerClaimStage(claimId: string, stage: string, fields: Record<string,string>) {
+  const { data, error } = await supabase.rpc('partner_app_complete_claim_stage',{
+    p_claim_id: claimId, p_milestone_key:stage, p_fields:fields,
+  });
+  if(error) throw error;
+  if(typeof data!=='string' || !data)throw new Error('Claim stage did not complete.');
+  return data;
+}
