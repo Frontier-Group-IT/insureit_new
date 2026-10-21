@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
+import { PartnerMotionBadge } from '@/components/ui/partner-motion-badge';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
@@ -345,9 +346,9 @@ function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void
         <View style={styles.claimHeadingRow}>
           <Text numberOfLines={1} style={styles.claimNo}>{row.claim_no || 'Claim'}</Text>
           {mode ? (
-            <View style={[styles.modeBadge, mode === 'External' && styles.modeBadgeExternal]}>
+            <PartnerMotionBadge style={[styles.modeBadge, mode === 'External' && styles.modeBadgeExternal]}>
               <Text style={[styles.modeBadgeText, mode === 'External' && styles.modeBadgeTextExternal]}>{mode}</Text>
-            </View>
+            </PartnerMotionBadge>
           ) : null}
         </View>
         <Text numberOfLines={1} style={styles.claimCustomer}>{row.customer_name}</Text>
@@ -355,7 +356,7 @@ function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void
       </View>
 
       <View style={styles.claimStatusRight}>
-        <View style={[
+        <PartnerMotionBadge style={[
           styles.statusPill,
           rejected ? styles.statusRejected : completed ? styles.statusSuccess : isNew ? styles.statusNew : styles.statusWarning,
         ]}>
@@ -372,7 +373,7 @@ function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void
           >
             {status}
           </Text>
-        </View>
+        </PartnerMotionBadge>
       </View>
     </Pressable>
   );
