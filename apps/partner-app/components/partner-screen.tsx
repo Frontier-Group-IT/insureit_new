@@ -154,7 +154,7 @@ export function PartnerScreen({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps={scrollProps?.keyboardShouldPersistTaps ?? 'handled'}
       >
-        {hideTopBar ? null : isHomeHero ? (
+        {!hideTopBar && isHomeHero ? (
           <View style={styles.homeHeroWrap}>
             <Animated.View style={[styles.homeHero, homeMotionScrollY ? {
               transform: [{ translateY: homeMotionScrollY.interpolate({
@@ -213,6 +213,8 @@ export function PartnerScreen({
             </Animated.View>
 
           </View>
+        ) : null}
+        {!hideTopBar && isHomeHero ? (
           <View style={styles.homeStickySearchWrap}>
             <View style={styles.homeSearchCard}>
               <Ionicons name="search-outline" size={22} color="#3E269B" />
@@ -260,7 +262,9 @@ export function PartnerScreen({
                 <Ionicons name="chevron-forward" size={17} color={hasHeroSearchValue ? '#1765C1' : '#A3ABBA'} />
               </Pressable>
             </View>
-        ) : (
+          </View>
+        ) : null}
+        {!hideTopBar && !isHomeHero ? (
           <PartnerTopBar
             title={title}
             eyebrow={eyebrow}
@@ -270,7 +274,7 @@ export function PartnerScreen({
             artwork={artwork}
             action={action}
           />
-        )}
+        ) : null}
 
         {isOffline ? (
           <View style={styles.networkBanner}>
