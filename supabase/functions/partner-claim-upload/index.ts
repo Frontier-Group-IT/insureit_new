@@ -68,7 +68,7 @@ Deno.serve(async request=>{
       const {data:existing}=await admin.from('claim_documents').select('id').eq('claim_id',claimId).eq('storage_path',path).maybeSingle();
       if(existing?.id)return reply({document_id:existing.id});
       const {data:inserted,error:insertError}=await admin.from('claim_documents').insert({
-        claim_id:claimId,customer_id:claim.customer_id,document_type:kind,file_name:name,
+        claim_id:claimId,customer_id:claim.customer_id,document_type:allowed[kind],file_name:name,
         storage_bucket:bucket,storage_path:path,mime_type:mime,file_size:actualSize,uploaded_by:userData.user.id,
         verification_required:true,
       }).select('id').single();
