@@ -56,22 +56,22 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
     </section>
     <section aria-label="Vehicle overview" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {[
-        {title:"Total vehicles",value:items.length,description:"In your register",icon:CarFront,tint:"bg-[#EAF3FF] text-[#1769DC]",filter:"all"},
-        {title:"Insured",value:insuredCount,description:"With active cover",icon:ShieldCheck,tint:"bg-[#E5F7EE] text-[#087A57]",filter:"insured"},
-        {title:"Uninsured",value:uninsuredCount,description:"Need protection",icon:ShieldX,tint:"bg-[#FFF0F1] text-[#C2414D]",filter:"uninsured"},
-        {title:"Coverage",value:items.length ? `${Math.round((insuredCount/items.length)*100)}%` : "0%",description:"Vehicles protected",icon:ShieldCheck,tint:"bg-[#EAF3FF] text-[#1769DC]",filter:"insured"},
-      ].map(({title,value,description,icon:Icon,tint,filter})=><button type="button" key={title} onClick={()=>{setStatusFilter(filter);setPage(1);}} className={`flex items-center gap-3 rounded-2xl border bg-white p-4 text-left transition hover:border-[#AFCDF7] ${statusFilter===filter?"border-[#9EC3F7]":"border-[#E1EAF5]"}`}>
-        <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl ${tint}`}><Icon className="h-6 w-6"/></span>
-        <span className="min-w-0 flex-1"><strong className="block text-[12px] font-medium text-[#60799B]">{title}</strong><span className="block text-[28px] font-bold leading-tight text-[#102449]">{value}</span><small className="block text-[12px] text-[#7890AD]">{description}</small></span>
+        {title:"Total vehicles",value:items.length,icon:CarFront,tint:"bg-[#EAF3FF] text-[#1769DC]",filter:"all"},
+        {title:"Insured",value:insuredCount,icon:ShieldCheck,tint:"bg-[#E5F7EE] text-[#087A57]",filter:"insured"},
+        {title:"Uninsured",value:uninsuredCount,icon:ShieldX,tint:"bg-[#FFF0F1] text-[#C2414D]",filter:"uninsured"},
+        {title:"Coverage",value:items.length ? `${Math.round((insuredCount/items.length)*100)}%` : "0%",icon:ShieldCheck,tint:"bg-[#EAF3FF] text-[#1769DC]",filter:"insured"},
+      ].map(({title,value,icon:Icon,tint,filter})=><button type="button" key={title} onClick={()=>{setStatusFilter(filter);setPage(1);}} className={`flex items-center gap-2.5 rounded-2xl border bg-white px-3 py-2.5 text-left transition hover:border-[#AFCDF7] ${statusFilter===filter?"border-[#9EC3F7]":"border-[#E1EAF5]"}`}>
+        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${tint}`}><Icon className="h-5 w-5"/></span>
+        <span className="min-w-0 flex-1"><strong className="block text-[12px] font-medium text-[#60799B]">{title}</strong><span className="block text-[24px] font-bold leading-tight text-[#102449]">{value}</span></span>
         <span className="grid h-7 w-7 place-items-center rounded-full border border-[#E1EAF5] text-[#176CE7]"><ChevronRight className="h-4 w-4"/></span>
       </button>)}
     </section>
     <section className="rounded-2xl border border-[#DFE9F5] bg-white p-3 shadow-sm sm:p-4">
       <header className="mb-3 flex flex-wrap items-center gap-2">
-        <h2 className="mr-auto flex items-center gap-2 text-[17px] font-bold text-[#102B54]"><CarFront className="h-6 w-6 text-[#176CE7]"/>Vehicle Register</h2>
-        <label className="flex w-full items-center gap-2 rounded-lg border border-[#DCE7F5] bg-[#FAFCFF] px-3 py-2 focus-within:border-[#4E95E9] sm:ml-auto sm:w-[320px] lg:w-[370px]">
+        <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><CarFront className="h-6 w-6 text-[#176CE7]"/>Vehicle Register</h2>
+        <label className="flex w-full min-w-0 items-center gap-2 rounded-lg border border-[#DCE7F5] bg-[#FAFCFF] px-3 py-2 focus-within:border-[#4E95E9] sm:w-[250px] lg:w-[320px]">
           <Search className="h-4 w-4 shrink-0 text-[#7D95B7]"/><span className="sr-only">Search vehicles</span>
-          <input type="search" value={query} onChange={e=>{setQuery(e.target.value);setPage(1);}} placeholder="Search by vehicle number, make, model or chassis..." className="w-full min-w-0 bg-transparent text-[13px] outline-none"/>
+          <input type="search" value={query} onChange={e=>{setQuery(e.target.value);setPage(1);}} placeholder="Search by vehicle number, make, model or chassis..." className="w-full min-w-0 border-0 bg-transparent p-0 text-[13px] shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0"/>
         </label>
         <select aria-label="Vehicle status filter" value={statusFilter === "insured" || statusFilter === "uninsured" ? "all" : statusFilter} onChange={e=>{setStatusFilter(e.target.value);setPage(1);}} className="rounded-lg border border-[#DCE7F5] bg-white px-3 py-2 text-[13px] text-[#263F67]"><option value="all">All Status</option><option value="due">Due</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="expired">Expired</option></select>
         <Link href={{ pathname: "/customer/add-vehicle", query: { account: accountId } }} className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#1769DC] px-3 py-2.5 text-[12px] font-semibold text-white transition hover:bg-[#1058BD]"><Plus className="h-4 w-4"/>Add Vehicle</Link>
@@ -92,7 +92,7 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
                 onClick={() => openVehicle(v.id)}
                 onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openVehicle(v.id); } }}
                 className="cursor-pointer bg-white transition-colors hover:bg-[#F2F7FF] focus-visible:bg-[#EAF3FF] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#1769DC]">
-                <td className="px-3 py-3"><span className="flex items-center gap-2"><CarFront className="h-5 w-5 shrink-0 text-[#176CE7]"/><strong className="whitespace-nowrap text-[13px] text-[#15376B]">{v.number}</strong></span></td>
+                <td className="px-3 py-3"><strong className="whitespace-nowrap text-[13px] text-[#15376B]">{v.number}</strong></td>
                 <td className="px-3 py-3"><span className="flex items-center gap-2"><ManufacturerMark make={v.make}/><span className="min-w-0"><strong className="block text-[12px] text-[#142C56]">{v.make||"—"}</strong><span className="block max-w-[220px] truncate text-[11px] text-[#607CA4]">{v.model||"—"}</span></span></span></td>
                 <td className="px-3 py-3 text-[12px] font-medium text-[#264572]">{v.type||"—"}</td>
                 <td className="px-3 py-3 text-[12px] text-[#264572]">{v.chassis||"—"}</td>
