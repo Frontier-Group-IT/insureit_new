@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState, type PropsWithChildren, type ReactNode } from 'react';
 import {
+  Animated,
   Image,
   Platform,
   Pressable,
@@ -35,6 +36,7 @@ export function PartnerScreen({
   scrollProps,
   heroSearch,
   resetScrollOnFocus = false,
+  homeMotionScrollY,
 }: PropsWithChildren<{
   title: string;
   eyebrow?: string;
@@ -47,6 +49,8 @@ export function PartnerScreen({
   scrollProps?: Omit<ScrollViewProps, 'contentContainerStyle'>;
   /** Home/Business only: avoid retained iOS pull-to-refresh negative scroll offsets. */
   resetScrollOnFocus?: boolean;
+  /** Optional native-driven parallax on Home only; does not alter other tabs. */
+  homeMotionScrollY?: Animated.Value;
   heroSearch?: {
     value: string;
     onChangeText: (value: string) => void;
@@ -123,14 +127,23 @@ export function PartnerScreen({
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView
+      <Animated.ScrollView
         ref={scrollRef}
         {...scrollProps}
         scrollEventThrottle={scrollProps?.scrollEventThrottle ?? 16}
-        onScroll={(event) => {
-          latestScrollY.current = event.nativeEvent.contentOffset.y;
-          scrollProps?.onScroll?.(event);
-        }}
+        onScroll={homeMotionScrollY
+          ? Animated.event([{ nativeEvent: { contentOffset: { y: homeMotionScrollY } } }], {
+              useNativeDriver: true,
+              listener: (event) => {
+                const y = (event as { nativeEvent: { contentOffset: { y: number } } }).nativeEvent.contentOffset.y;
+                latestScrollY.current = y;
+                scrollProps?.onScroll?.(event as Parameters<NonNullable<ScrollViewProps['onScroll']>>[0]);
+              },
+            })
+          : (event) => {
+              latestScrollY.current = event.nativeEvent.contentOffset.y;
+              scrollProps?.onScroll?.(event);
+            }}
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustContentInsets={false}
         automaticallyAdjustsScrollIndicatorInsets={false}
@@ -140,7 +153,11 @@ export function PartnerScreen({
       >
         {hideTopBar ? null : isHomeHero ? (
           <View style={styles.homeHeroWrap}>
-            <View style={styles.homeHero}>
+            <Animated.View style={[styles.homeHero, homeMotionScrollY ? {
+              transform: [{ translateY: homeMotionScrollY.interpolate({
+                inputRange: [0, 140], outputRange: [0, -22], extrapolate: 'clamp',
+              }) }],
+            } : null]}>
               <Image
                 source={require('../assets/figma-dashboard/hero-banner.jpg')}
                 style={styles.homeHeroImage}
@@ -190,7 +207,7 @@ export function PartnerScreen({
               <Text numberOfLines={1} style={styles.homeHeroGreeting}>
                 {title}
               </Text>
-            </View>
+            </Animated.View>
 
             <View style={styles.homeSearchCard}>
               <Ionicons name="search-outline" size={22} color="#3E269B" />
@@ -252,7 +269,7 @@ export function PartnerScreen({
           </View>
         ) : null}
         {children}
-      </ScrollView>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }
