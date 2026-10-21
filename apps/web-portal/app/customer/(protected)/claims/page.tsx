@@ -113,7 +113,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
                   return (
                     <tr key={claim.id} className="group relative text-[#263F67] transition-colors hover:bg-[#F2F7FF] focus-within:bg-[#F2F7FF]">
                       <td className="px-5 py-3">
-                        <Link href={detailHref} className="flex min-w-0 items-center gap-3 rounded-md outline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1769DC]" aria-label={`View claim ${claim.insurer_claim_no || claim.claim_no || "for " + (claim.vehicle_no || "vehicle")}`}>
+                        <Link href={detailHref} className="flex min-w-0 items-center gap-3 rounded-md outline-offset-2 after:absolute after:inset-0 after:cursor-pointer after:content-[''] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1769DC] focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:outline-[#1769DC]" aria-label={`View claim ${claim.insurer_claim_no || claim.claim_no || "for " + (claim.vehicle_no || "vehicle")}`}>
                           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#F1F6FC]"><ManufacturerMark make={claim.vehicle_make || ""} /></span>
                           <span className="min-w-0"><strong className="block truncate text-[13px] text-[#15375F]">{claim.vehicle_no || "—"}</strong><span className="block truncate text-[12px] text-[#607B9F]">{[claim.vehicle_make, claim.vehicle_model].filter(Boolean).join(" ") || "—"}</span></span>
                         </Link>
