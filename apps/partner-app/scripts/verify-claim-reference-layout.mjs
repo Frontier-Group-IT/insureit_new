@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+const read = relative => readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8');
+const claims=read('../app/(tabs)/claims.tsx'), add=read('../app/claim/new.tsx'), reference=read('../components/partner-spot-intimation.tsx');
+assert.match(claims,/addClaimButton: \{[^\n]*backgroundColor: '#183864'/);
+for(const label of ['Spot Intimation','Claim Tracker','Incident Details','Spot Intimation Date *','Driver Name *','Driver Number *','Location *','Upload claim documents','Incident Voice Note','Upload multiple documents','RC Copy','Accident Video']) assert.ok(add.includes(label),label);
+assert.match(add,/CLAIM_STAGES\.map/);
+assert.match(add,/SafeAreaView/);
+assert.match(add,/keyboardShouldPersistTaps/);
+assert.match(add,/Saving|Save actions are unavailable/);
+assert.doesNotMatch(add,/supabase\.from\(|supabase\.rpc\(/);
+assert.match(reference,/View only/);
+console.log('Add Claim reference layout contract passed.');
