@@ -1,7 +1,8 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   Image,
   Pressable,
@@ -56,6 +57,8 @@ export default function PoliciesScreen() {
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const [unreadActivityCount, setUnreadActivityCount] = useState(0);
+  const [loadMoreFeedback, setLoadMoreFeedback] = useState(false);
+  const loadMoreStartedAt = useRef(0);
 
   useFocusEffect(useCallback(() => {
     let cancelled = false;
@@ -102,6 +105,14 @@ export default function PoliciesScreen() {
     fetchPage,
     staleTimeMs: 60_000,
   });
+
+  useEffect(() => {
+    if (!loadMoreFeedback || collection.loading) return;
+    const elapsed = Date.now() - loadMoreStartedAt.current;
+    const remaining = Math.max(0, 450 - elapsed);
+    const timer = setTimeout(() => setLoadMoreFeedback(false), remaining);
+    return () => clearTimeout(timer);
+  }, [collection.loading, loadMoreFeedback]);
 
   const refreshAll = useCallback(async () => {
     await Promise.all([summary.refresh(), collection.refresh()]);
@@ -302,16 +313,35 @@ export default function PoliciesScreen() {
     />
   );
 
+  const isLoadingMore = loadMoreFeedback || collection.loading || collection.changingPage;
   const footer = collection.rows.length && collection.rows.length < collection.total ? (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Load More Policies"
-      disabled={collection.loading || collection.changingPage}
-      onPress={() => setVisibleLimit((current) => current + PAGE_SIZE)}
-      style={({ pressed }) => [styles.loadMoreButton, pressed && styles.pressed]}
+      accessibilityLabel={isLoadingMore ? 'Loading more policies' : 'Load More Policies'}
+      accessibilityState={{ disabled: isLoadingMore, busy: isLoadingMore }}
+      disabled={isLoadingMore}
+      onPress={() => {
+        loadMoreStartedAt.current = Date.now();
+        setLoadMoreFeedback(true);
+        setVisibleLimit((current) => current + PAGE_SIZE);
+      }}
+      style={({ pressed }) => [
+        styles.loadMoreButton,
+        isLoadingMore && styles.loadMoreButtonLoading,
+        pressed && !isLoadingMore && styles.pressed,
+      ]}
     >
-      <Text style={styles.loadMoreText}>{collection.loading ? 'Loading Policies…' : 'Load More Policies'}</Text>
-      <Feather name="chevron-down" size={13} color="#3156B8" />
+      {isLoadingMore ? (
+        <>
+          <ActivityIndicator size="small" color="#FFFFFF" />
+          <Text style={styles.loadMoreTextLoading}>Loading more policies…</Text>
+        </>
+      ) : (
+        <>
+          <Text style={styles.loadMoreText}>Load More Policies</Text>
+          <Feather name="chevron-down" size={13} color="#3156B8" />
+        </>
+      )}
     </Pressable>
   ) : null;
 
@@ -708,7 +738,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#F1F5FD',
   },
+  loadMoreButtonLoading: { backgroundColor: '#3156B8' },
   loadMoreText: { color: '#3156B8', fontSize: 8, lineHeight: 11, fontWeight: '800' },
+  loadMoreTextLoading: { color: '#FFFFFF', fontSize: 8.5, lineHeight: 12, fontWeight: '800' },
   endText: { color: '#9AA6B7', fontSize: 7, lineHeight: 10, fontWeight: '600' },
   pressed: { opacity: 0.72 },
 });
