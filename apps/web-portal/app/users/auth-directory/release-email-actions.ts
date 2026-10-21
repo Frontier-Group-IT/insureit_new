@@ -26,7 +26,7 @@ export async function archiveAndReleaseLoginEmail(userId:string, expectedEmail:s
  if(normalize(auth.user.email)!==requested)return {status:"error",message:"Login email has changed. Refresh the directory and review the account before proceeding."};
  // Profile contact emails may intentionally differ from the login; do not alter unrelated history.
 
- let employeeId=profile.employee_id;
+ const employeeId=profile.employee_id;
  if(employeeId){
    const {data:employee,error:employeeError}=await admin.from("employees").select("id,email,employment_status").eq("id",employeeId).maybeSingle<{id:string;email:string|null;employment_status:string}>();
    if(employeeError||!employee)return {status:"error",message:"Linked employee could not be verified."};
