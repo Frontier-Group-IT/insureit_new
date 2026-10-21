@@ -125,6 +125,63 @@ export default function PoliciesScreen() {
   };
   const name = context?.identity.display_name || 'Partner';
 
+  // Keep the search/filter row visible once the list scrolls past the hero.
+  // A same-size spacer preserves scroll position when the search docks.
+  const [searchSticky, setSearchSticky] = useState(false);
+  const searchTopY = useRef(Number.POSITIVE_INFINITY);
+  const searchControls = (
+      <View style={styles.searchRow}>
+        <PartnerSearchField
+          value={query}
+          onChangeText={setQuery}
+          onClear={() => setQuery('')}
+          placeholder="Search customer, vehicle number or policy number..."
+          placeholders={['Search customer...', 'Search vehicle number...', 'Search policy number...']}
+          containerStyle={styles.searchField}
+        />
+        <PartnerAnchoredDropdown
+          visible={filterMenuOpen}
+          onDismiss={() => setFilterMenuOpen(false)}
+          align="right"
+          menuWidth={170}
+          menu={(
+            <View style={styles.filterMenu}>
+              {POLICY_FILTER_OPTIONS.map((option) => {
+                const active = lifecycle === option.value;
+                return (
+                  <Pressable
+                    key={option.value}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    onPress={() => {
+                      setFilterMenuOpen(false);
+                      selectSummary(option.value);
+                    }}
+                    style={({ pressed }) => [styles.filterOption, active && styles.filterOptionActive, pressed && styles.pressed]}
+                  >
+                    <Text style={[styles.filterOptionText, active && styles.filterOptionTextActive]}>{option.label}</Text>
+                    {active ? <Ionicons name="checkmark" size={15} color="#3156B8" /> : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Filter policies"
+            accessibilityState={{ expanded: filterMenuOpen }}
+            onPress={() => setFilterMenuOpen((open) => !open)}
+            style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}
+          >
+            <Ionicons name="filter-outline" size={18} color="#3156B8" />
+            <Text style={styles.filterText}>Filter</Text>
+          </Pressable>
+        </PartnerAnchoredDropdown>
+      </View>
+
+  );
+
   const header = (
     <View>
       <View style={styles.hero}>
@@ -182,54 +239,8 @@ export default function PoliciesScreen() {
         </View>
       </View>
 
-      <View style={styles.searchRow}>
-        <PartnerSearchField
-          value={query}
-          onChangeText={setQuery}
-          onClear={() => setQuery('')}
-          placeholder="Search customer, vehicle number or policy number..."
-          placeholders={['Search customer...', 'Search vehicle number...', 'Search policy number...']}
-          containerStyle={styles.searchField}
-        />
-        <PartnerAnchoredDropdown
-          visible={filterMenuOpen}
-          onDismiss={() => setFilterMenuOpen(false)}
-          align="right"
-          menuWidth={170}
-          menu={(
-            <View style={styles.filterMenu}>
-              {POLICY_FILTER_OPTIONS.map((option) => {
-                const active = lifecycle === option.value;
-                return (
-                  <Pressable
-                    key={option.value}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active }}
-                    onPress={() => {
-                      setFilterMenuOpen(false);
-                      selectSummary(option.value);
-                    }}
-                    style={({ pressed }) => [styles.filterOption, active && styles.filterOptionActive, pressed && styles.pressed]}
-                  >
-                    <Text style={[styles.filterOptionText, active && styles.filterOptionTextActive]}>{option.label}</Text>
-                    {active ? <Ionicons name="checkmark" size={15} color="#3156B8" /> : null}
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
-        >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Filter policies"
-            accessibilityState={{ expanded: filterMenuOpen }}
-            onPress={() => setFilterMenuOpen((open) => !open)}
-            style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}
-          >
-            <Ionicons name="filter-outline" size={18} color="#3156B8" />
-            <Text style={styles.filterText}>Filter</Text>
-          </Pressable>
-        </PartnerAnchoredDropdown>
+      <View onLayout={(event) => { searchTopY.current = event.nativeEvent.layout.y; }}>
+        {searchSticky ? <View style={styles.searchSpacer} /> : searchControls}
       </View>
 
       <View style={styles.summaryRow}>
@@ -357,6 +368,11 @@ export default function PoliciesScreen() {
           />
         )}
         ListHeaderComponent={header}
+        onScroll={(event) => {
+          const shouldStick = event.nativeEvent.contentOffset.y >= searchTopY.current;
+          setSearchSticky((current) => current === shouldStick ? current : shouldStick);
+        }}
+        scrollEventThrottle={16}
         ListEmptyComponent={empty}
         ListFooterComponent={footer}
         ItemSeparatorComponent={() => <View style={styles.cardGap} />}
@@ -375,6 +391,7 @@ export default function PoliciesScreen() {
         maxToRenderPerBatch={10}
         windowSize={7}
       />
+      {searchSticky ? <View style={styles.stickySearchOverlay}>{searchControls}</View> : null}
     </SafeAreaView>
   );
 }
@@ -571,6 +588,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   intakeHeaderText: { color: '#0B2E63', fontSize: 9.5, lineHeight: 12, fontWeight: '800' },
+  searchSpacer: { height: 44, marginTop: -10, marginHorizontal: 16 },
+  stickySearchOverlay: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 50, elevation: 12, backgroundColor: '#F5F7FB', paddingTop: 10, paddingBottom: 8 },
   searchRow: {
     zIndex: 5,
     marginTop: -10,
