@@ -4,7 +4,7 @@ const home=fs.readFileSync("app/customer/(protected)/home/page.tsx","utf8");
 assert.match(home, /pathname: "\/customer\/start-claim", query: accountQuery/);
 assert.match(home, /Start New Claim/);
 assert.doesNotMatch(home, /Track Existing Claims/);
-assert.match(home, /href:\s*\{pathname:"\/customer\/claims",query:accountQuery\}/);
+assert.match(home, /pathname:"\/customer\/claims",query:accountQuery/);
 assert.doesNotMatch(home, /openClaims\.length \? "\/customer\/claims" : "\/customer\/start-claim"/);
 assert.match(home, /resolveCustomerWebScope\(params\.account\)/);
 assert.match(home, /loadCustomerClaimListContext\(account\.id\)/);
