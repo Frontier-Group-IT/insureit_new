@@ -16,8 +16,15 @@ assert.match(page, /<form action="\/customer\/exchange" method="get">/, "Retry m
 assert.match(page, /name="account" value=\{account\.id\}/, "Retry must preserve authorized customer account");
 assert.match(page, /name="q" value=\{query\}/, "Retry must preserve query filter");
 assert.match(page, /name="category" value=\{category\}/, "Retry must preserve category filter");
-assert.match(page, /href="\/customer\/home"/, "A failed Exchange feed must not trap users");
+assert.match(page, /tabHref\("buy"\)/, "Customer Exchange must expose the Buy workspace");
+assert.match(page, /tabHref\("sell"\)/, "Customer Exchange must expose the Sell workspace");
+assert.match(page, /tabHref\("activity"\)/, "Customer Exchange must expose the Activity workspace");
+assert.match(page, /loadCustomerExchangeSellableVehicles/, "Sell workspace must use the customer-scoped Exchange backend");
+assert.match(page, /loadCustomerExchangeActivity/, "Activity workspace must use the customer-scoped Exchange backend");
 assert.match(loader, /rpc\("exchange_marketplace_feed"/, "Exchange must preserve the existing feed RPC");
+assert.match(loader, /rpc\("exchange_my_sellable_vehicles"/, "Web Exchange Sell must use the same sellable-vehicle RPC as the app");
+assert.match(loader, /rpc\("exchange_my_activity"/, "Web Exchange Activity must use the same activity RPC as the app");
+assert.match(loader, /catch\s*\{[\s\S]*return null;/, "Media signing failure must not hide valid Exchange listings");
 assert.match(globalError, /onClick=\{reset\}/, "Existing generic reset must not be removed");
 assert.match(globalError, /window\.location\.reload\(\)/, "Existing generic full reload must not be removed");
 assert.doesNotMatch(page, /createSupabaseAdminClient|SUPABASE_SERVICE_ROLE_KEY/, "Never bypass Customer authorization");
