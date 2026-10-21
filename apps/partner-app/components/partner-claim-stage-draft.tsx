@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { savePartnerStageDraft, type PartnerClaimDetail } from '@/lib/claims';
+import { getPartnerStageDraft, savePartnerStageDraft, type PartnerClaimDetail } from '@/lib/claims';
 import type { ClaimStageKey } from '@/lib/claim-tracker';
 
 const FIELDS: Partial<Record<ClaimStageKey, readonly {key: string; label: string}[]>> = {
@@ -19,10 +19,20 @@ export function PartnerClaimStageDraft({data,stage}:{data:PartnerClaimDetail;sta
   const fields=FIELDS[stage];
   const [values,setValues]=useState<Record<string,string>>({});
   const [saving,setSaving]=useState(false);
+  const [loaded,setLoaded]=useState(false);
+  useEffect(()=>{
+    let mounted=true;
+    setLoaded(false);
+    void getPartnerStageDraft(data.claim.id,stage).then(draft=>{
+      if(mounted) setValues(Object.fromEntries(Object.entries(draft).filter(([,v])=>typeof v==='string').map(([key,value])=>[key,String(value)])));
+    }).catch(()=>undefined).finally(()=>{if(mounted)setLoaded(true);});
+    return()=>{mounted=false;};
+  },[data.claim.id,stage]);
   if (!fields?.length) return null;
   const closed=['Settled','Closed','Rejected','Claim Complete'].includes(data.claim.current_status||'');
   const save=async()=>{
     const provided=Object.fromEntries(Object.entries(values).map(([key,value])=>[key,value.trim()]).filter(([,value])=>Boolean(value)));
+    if(!loaded)return;
     if(!Object.keys(provided).length){Alert.alert('No changes','Enter at least one stage detail to save.');return;}
     setSaving(true);
     try{await savePartnerStageDraft(data.claim.id,stage,provided);Alert.alert('Draft saved','Your entries were recorded for review. This did not advance the claim status.');}
@@ -33,7 +43,7 @@ export function PartnerClaimStageDraft({data,stage}:{data:PartnerClaimDetail;sta
     <Text style={styles.title}>Enter stage details</Text>
     <Text style={styles.caption}>Partner entries are saved as drafts. Operations verifies each stage before approval or progression.</Text>
     {fields.map(field=><View key={field.key} style={styles.field}><Text style={styles.label}>{field.label}</Text><TextInput accessibilityLabel={field.label} value={values[field.key]||''} onChangeText={text=>setValues(current=>({...current,[field.key]:text}))} editable={!closed&&!saving} placeholder="Enter details" placeholderTextColor="#8695A8" style={styles.input}/></View>)}
-    <Pressable accessibilityRole="button" accessibilityLabel="Save stage draft" disabled={closed||saving} onPress={()=>void save()} style={[styles.button,(closed||saving)&&styles.disabled]}><Text style={styles.buttonText}>{saving?'Saving…':closed?'Claim closed':'Save stage draft'}</Text></Pressable>
+    <Pressable accessibilityRole="button" accessibilityLabel="Save stage draft" disabled={closed||saving||!loaded} onPress={()=>void save()} style={[styles.button,(closed||saving)&&styles.disabled]}><Text style={styles.buttonText}>{saving?'Saving…':closed?'Claim closed':!loaded?'Loading draft…':'Save stage draft'}</Text></Pressable>
   </View>;
 }
 const styles=StyleSheet.create({
