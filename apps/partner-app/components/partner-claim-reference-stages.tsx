@@ -7,6 +7,7 @@ import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerAssets } from '@/lib/partner-assets';
 import type { PartnerClaimDetail } from '@/lib/claims';
+import { PartnerClaimDocuments } from '@/components/partner-claim-documents';
 
 type Stage = 'spot_status' | 'claim_intimation';
 type DocumentTab = 'vehicle' | 'driver' | 'permit' | 'kyc' | 'forms';
@@ -85,6 +86,7 @@ export function PartnerClaimReferenceStage({data, stage}:{data:PartnerClaimDetai
         <View style={styles.card}><View style={styles.docHeading}><Text style={styles.sectionTitle}>Documents for verification</Text><Text style={styles.chip}>Claims desk review</Text></View>
           <View style={styles.tabStrip}>{DOCUMENT_TABS.map(tab=><Pressable key={tab.key} accessibilityRole="tab" accessibilityState={{selected:documentTab===tab.key}} accessibilityLabel={tab.label} onPress={()=>setDocumentTab(tab.key)} style={[styles.tab,documentTab===tab.key&&styles.tabSelected]}><Text numberOfLines={1} style={[styles.tabText,documentTab===tab.key&&styles.tabTextSelected]}>{tab.label}</Text></Pressable>)}</View>
           <View style={styles.lockNotice}><Ionicons name="lock-closed-outline" size={20} color="#77622E"/><Text style={styles.lockText}>This document stage is visible now. Uploads will open when the claims desk requests the Claim Intimation documents.</Text></View>
+          <View style={styles.card}><Text style={styles.sectionTitle}>Uploaded claim documents</Text><PartnerClaimDocuments documents={data.documents} /></View>
           <View style={styles.documentGrid}>{DOCUMENTS[documentTab].map(item=><View key={item.label} style={styles.documentTile}><View style={[styles.documentIcon,{backgroundColor:item.color}]}><MaterialCommunityIcons name={item.icon} color="#FFF" size={25}/></View><Text style={styles.documentName}>{item.label}</Text><Text style={styles.documentDescription}>{item.detail}</Text><View style={styles.uploadDisabled}><Ionicons name="cloud-upload-outline" size={15} color="#D9E2F3"/><Text style={styles.uploadDisabledText}>Upload</Text></View></View>)}</View>
           <View style={styles.additional}><MaterialCommunityIcons name="file-document-multiple-outline" size={28} color="#7C91BB"/><View style={styles.additionalCopy}><Text style={styles.additionalTitle}>Additional uploads locked</Text><Text style={styles.additionalHint}>The claims desk will open uploads when these documents are required.</Text></View><Ionicons name="chevron-forward" size={16} color="#7790B0"/></View></View>
       </>}
