@@ -26,4 +26,7 @@ assert.match(docDb,/partner_app_claim_in_scope\(p_claim_id\)/);
 assert.match(edge,/partner_app_claim_in_scope/);
 assert.match(edge,/createSignedUploadUrl/);
 assert.match(edge,/actualSize>max/);
+assert.match(edge,/document_type:allowed\[kind\]/);
+assert.match(edge,/action==='view'/);
+assert.match(spot,/x.category===item.title/);
 console.log('Partner claim stage drafts and scoped document workflows verified');
