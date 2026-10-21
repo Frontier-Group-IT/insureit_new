@@ -24,7 +24,7 @@ export type PolicyEditPayload = {
     validUpto: string;
     remarks: string;
   };
-  premium: { od: string; tp: string; cpaOpted: boolean; cpa: string };
+  premium: { od: string; tp: string; addOnPremium: string; cpaOpted: boolean; cpa: string };
   payin: { basis: string; odPercent: string; tpPercent: string; scheme: string; provided: boolean };
   payout: { retention: string; odPercent: string; tpPercent: string; flatAmount: string; status: string; date: string; voucherNumber: string; provided: boolean };
 };
@@ -86,7 +86,7 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
     return { ok: false, error: "CPA amount is mandatory for GCV policies and must be greater than 0." };
   }
 
-  const monetaryValues = [payload.policy.idv, payload.premium.od, payload.premium.tp, payload.premium.cpa, payload.payin.scheme, payload.payout.flatAmount];
+  const monetaryValues = [payload.policy.idv, payload.premium.od, payload.premium.tp, payload.premium.cpa, payload.premium.addOnPremium, payload.payin.scheme, payload.payout.flatAmount];
   if (monetaryValues.some((value) => !validNumber(value))) return { ok: false, error: "Review the premium and scheme values." };
 
   const percentageValues = [payload.payin.odPercent, payload.payin.tpPercent, payload.payout.odPercent, payload.payout.tpPercent];
@@ -142,6 +142,17 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
     const result = data as { ok?: boolean; policyId?: string; policyCode?: string } | null;
     if (!result?.ok || !result.policyId) return { ok: false, error: "We couldn't complete the policy update. Please try again." };
 
+    const addOnAmount = Number(payload.premium.addOnPremium || 0);
+    if (addOnAmount > 100000000 || Math.round(addOnAmount * 100) !== addOnAmount * 100) {
+      return { ok: false, error: "The policy was saved. Check the existing policy before retrying; Add-on Premium must have at most two decimal places." };
+    }
+    const { data: addOnResult, error: addOnError } = await admin.rpc("set_motor_policy_addon_premium_v1", {
+      p_policy_id: result.policyId, p_amount: addOnAmount,
+    });
+    if (addOnError || !(addOnResult as { ok?: boolean } | null)?.ok) {
+      console.error("policy_motor_addon_update_failed", { policyId: result.policyId, error: addOnError?.message });
+      return { ok: false, error: "Policy changes were saved, but Add-on Premium could not be confirmed. Review the existing policy before saving again." };
+    }
     await recordPolicyActivity(admin, result.policyId, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_EDITED);
     revalidatePath("/policies");
     revalidatePath(`/policies/${policyId}/edit`);
