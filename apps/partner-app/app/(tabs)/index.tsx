@@ -443,12 +443,13 @@ function MiniBusinessTrend({ values }: { values: number[] }) {
   const max = Math.max(1, ...recent);
   // Restart only when data changes, not on every Home tab refocus.
   const signature = recent.join(',');
-  const rise = useRef(new Animated.Value(0)).current;
+  const rise = useRef(new Animated.Value(0.7)).current;
   useEffect(() => {
-    rise.setValue(0);
-    const animation = Animated.timing(rise, {
-      toValue: 1, duration: 320, useNativeDriver: true,
-    });
+    rise.setValue(0.7);
+    const animation = Animated.loop(Animated.sequence([
+      Animated.timing(rise, { toValue: 1, duration: 1350, useNativeDriver: true }),
+      Animated.timing(rise, { toValue: 0.7, duration: 1350, useNativeDriver: true }),
+    ]));
     animation.start();
     return () => animation.stop();
   }, [rise, signature]);
