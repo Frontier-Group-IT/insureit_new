@@ -1,0 +1,64 @@
+name: Verify Motor Add-on Premium Saving (Manual, No Deploy)
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_isolated_save_test:
+        description: 'Run real create/edit/rollback against configured isolated Supabase test project'
+        required: true
+        default: false
+        type: boolean
+      isolated_write_confirmation:
+        description: 'For isolated test writes only, type I_AUTHORIZE_ISOLATED_TEST_WRITES'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  non_mutating_regressions:
+    name: Validate formulas, saved contract and deployment prohibition
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/web-portal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Atomic saving static regression
+        run: node scripts/motor-addon-atomic-save-regression.mjs
+      - name: OD pay-in payout static regression
+        run: node scripts/motor-addon-od-commercial-regression.mjs
+      - name: Confirm no deployment commands in workflow
+        shell: bash
+        run: |
+          if grep -En '^[[:space:]]*(- run:|run:|uses:).*?(vercel deploy|wrangler deploy|expo publish|eas build)' ../../.github/workflows/verify-motor-addon-saving-manual.yml; then
+            echo 'Unexpected publish or build command'
+            exit 1
+          fi
+  isolated_e2e_save:
+    name: Isolated DB create edit persistence and rollback
+    needs: non_mutating_regressions
+    if: ${{ inputs.run_isolated_save_test == true && inputs.isolated_write_confirmation == 'I_AUTHORIZE_ISOLATED_TEST_WRITES' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: motor-addon-isolated-testing
+    defaults:
+      run:
+        working-directory: apps/web-portal
+    env:
+      MOTOR_E2E_SUPABASE_URL: ${{ secrets.MOTOR_E2E_SUPABASE_URL }}
+      MOTOR_E2E_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.MOTOR_E2E_SUPABASE_SERVICE_ROLE_KEY }}
+      MOTOR_E2E_PAYLOAD_JSON: ${{ secrets.MOTOR_E2E_PAYLOAD_JSON }}
+      MOTOR_E2E_ENABLE_WRITES: ${{ inputs.isolated_write_confirmation }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify isolated DB and execute real save flow
+        run: node scripts/motor-addon-e2e-isolated.mjs
