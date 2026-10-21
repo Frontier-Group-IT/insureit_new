@@ -29,8 +29,8 @@ export default async function CustomerProfilePage({
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/profile" />
 
       <section className="relative isolate overflow-hidden rounded-2xl bg-[#061B3B] text-white">
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-[65%] bg-[radial-gradient(ellipse_at_80%_40%,#3299FF_0%,#1155A0_42%,transparent_75%)] opacity-90"/>
-        <div className="pointer-events-none absolute -bottom-32 right-[12%] h-72 w-72 rounded-full border-[45px] border-[#80C7FF]/10"/>
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat opacity-95" style={{ backgroundImage: 'url("/assets/profile%20(2).jpeg")' }} />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#061B3B]/80 via-[#061B3B]/35 to-[#061B3B]/10" />
         <div className="relative flex min-h-[180px] items-center justify-between gap-4 px-6 py-6 sm:px-8">
           <div className="max-w-[520px]">
             <h1 className="text-[clamp(27px,3.5vw,40px)] font-black leading-tight">Your <span className="text-[#369BFF]">Profile</span></h1>
