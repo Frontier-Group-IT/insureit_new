@@ -4,6 +4,7 @@ import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
 import { CustomerRcLookup } from "@/components/customer-portal/customer-rc-lookup";
+import { CustomerVehicleForm, type SaveVehicleState } from "./customer-vehicle-form";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ const vehicleClasses = [["PCP","Private Car"],["TWP","Two Wheeler"],["GCV","Good
 export default async function AddCustomerVehicle({ searchParams }: { searchParams?: Promise<{ account?: string }> }) {
   const q=searchParams?await searchParams:{};
   const { account,accounts }=await resolveCustomerWebScope(q.account);
-  async function save(form: FormData) {
+  async function save(_state: SaveVehicleState, form: FormData): Promise<SaveVehicleState> {
     "use server";
     const accountId=String(form.get("account")||"");
     const { account: authorized }=await resolveCustomerWebScope(accountId);
@@ -20,23 +21,44 @@ export default async function AddCustomerVehicle({ searchParams }: { searchParam
     const make=String(form.get("make")||"").trim();
     const model=String(form.get("model")||"").trim();
     const year=Number(form.get("year"));
-    if(!/^[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{1,4}$/.test(reg)) throw new Error("Enter a complete valid registration number");
-    if(!vehicleClasses.some(c=>c[0]===klass)||!make||!model||!Number.isInteger(year)||year<1950||year>new Date().getFullYear()+1) throw new Error("Invalid vehicle details");
-    const num=(key:string) => {const raw=String(form.get(key)||"");const value=raw?Number(raw):null;if(value!==null&&(!Number.isFinite(value)||value<=0))throw new Error("Invalid vehicle capacity");return value;};
-    const gvw=klass==="GCV"||klass==="CPM"?num("capacityGvw"):null;
-    const seats=klass==="PCV"?num("capacitySeating"):null;
-    const engine=klass!=="GCV"&&klass!=="CPM"&&klass!=="PCV"?num("capacityEngine"):null;
-    const date=(key:string)=>{const v=String(form.get(key)||"");if(v&&!/^\d{4}-\d{2}-\d{2}$/.test(v))throw new Error("Invalid vehicle date");return v||null;};
+    if(!/^[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{1,4}$/.test(reg)) return { error: "Enter a complete valid registration number." };
+    if(!vehicleClasses.some(c=>c[0]===klass)||!make||!model||!Number.isInteger(year)||year<1950||year>new Date().getFullYear()+1) return { error: "Check vehicle class, manufacturer, model and manufacturing year." };
+    const num=(key:string) => {const raw=String(form.get(key)||"");const value=raw?Number(raw):null;if(value!==null&&(!Number.isFinite(value)||value<=0))throw new Error("Enter a valid positive vehicle capacity.");return value;};
+    let gvw: number | null;
+    let seats: number | null;
+    let engine: number | null;
+    try {
+      gvw=klass==="GCV"||klass==="CPM"?num("capacityGvw"):null;
+      seats=klass==="PCV"?num("capacitySeating"):null;
+      engine=klass!=="GCV"&&klass!=="CPM"&&klass!=="PCV"?num("capacityEngine"):null;
+    } catch { return { error: "Enter a valid positive vehicle capacity." }; }
+    const date=(key:string)=>{const v=String(form.get(key)||"");if(v&&!/^\d{4}-\d{2}-\d{2}$/.test(v))throw new Error("Enter a valid vehicle date.");return v||null;};
+    let registrationDate: string | null;
+    let fitnessDate: string | null;
+    let pucDate: string | null;
+    let roadTaxDate: string | null;
+    let nationalPermitDate: string | null;
+    let localPermitDate: string | null;
+    try {
+      registrationDate=date("registrationDate"); fitnessDate=date("fitnessDate");
+      pucDate=date("pucDate"); roadTaxDate=date("roadTaxDate");
+      nationalPermitDate=date("nationalPermitDate"); localPermitDate=date("localPermitDate");
+    } catch { return { error: "Enter a valid date in the vehicle details." }; }
     const db=await createServerSupabaseClient();
     const { error }=await (db.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>)("create_customer_vehicle_v2",{
       p_customer_id:authorized.id,p_vehicle_no:reg,p_vehicle_type:klass,p_make:make,p_model:model,p_year:year,
       p_chassis_no:String(form.get("chassis")||"").trim().toUpperCase()||null,
       p_engine_no:String(form.get("engine")||"").trim().toUpperCase()||null,
       p_permit_no:null,p_gvw_kg:gvw,p_engine_capacity_cc:engine,p_seating_capacity:seats,
-      p_fuel_type:String(form.get("fuel")||"")||null,p_registration_date:date("registrationDate"),p_fitness_expiry_date:date("fitnessDate"),p_puc_expiry_date:date("pucDate"),
-      p_road_tax_expiry_date:date("roadTaxDate"),p_national_permit_expiry_date:date("nationalPermitDate"),p_local_permit_expiry_date:date("localPermitDate"),
+      p_fuel_type:String(form.get("fuel")||"")||null,p_registration_date:registrationDate,p_fitness_expiry_date:fitnessDate,p_puc_expiry_date:pucDate,
+      p_road_tax_expiry_date:roadTaxDate,p_national_permit_expiry_date:nationalPermitDate,p_local_permit_expiry_date:localPermitDate,
     });
-    if(error) throw new Error("Vehicle could not be added. Check for an existing registration or contact Support.");
+    if (error) {
+      const conflict = (error as { code?: string }).code === "23505" || /vehicles_vehicle_no_key|duplicate key/i.test(error.message);
+      return { error: conflict
+        ? "This registration number is already registered. Please check the number or contact Support to link the existing vehicle."
+        : "Vehicle could not be saved. Please check the details and try again. Your entries have been preserved." };
+    }
     redirect("/customer/start-claim?account="+encodeURIComponent(authorized.id));
   }
   const field="mt-1 block h-10 w-full rounded-lg border border-[#D9E3F0] bg-white px-3 text-[12px] text-[#142746]";
@@ -55,7 +77,7 @@ export default async function AddCustomerVehicle({ searchParams }: { searchParam
       </div>
     </div>
     <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/add-vehicle"/>
-    <form id="customer-add-vehicle-form" action={save} className="space-y-3">
+    <CustomerVehicleForm action={save}>
       <input type="hidden" name="account" value={account.id}/>
       <section className="overflow-hidden rounded-xl border border-[#DCE4EE] bg-white">
         <div className="flex items-center gap-3 border-b border-[#DFE8F3] px-3 py-2.5"><span className="grid h-8 w-8 place-items-center rounded-lg bg-[#17365F] text-[11px] font-bold text-white">01</span><h2 className="text-[13px] font-semibold">Vehicle Ownership</h2></div>
@@ -90,6 +112,6 @@ export default async function AddCustomerVehicle({ searchParams }: { searchParam
         <p className="text-[11px] text-[#75849C]">RC lookup uses the existing Customer API. Verify fetched details before saving.</p>
         <button className="rounded-lg bg-[#17365F] px-5 py-2.5 text-[12px] font-semibold text-white">Save Vehicle</button>
       </div>
-    </form>
+    </CustomerVehicleForm>
   </div>;
 }
