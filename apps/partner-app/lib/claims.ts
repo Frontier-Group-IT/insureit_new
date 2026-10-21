@@ -124,6 +124,8 @@ export async function getPartnerClaimDetail(claimId: string) {
       .map(item => ({ id: String(item.id), name: String(item.name), category: typeof item.category === 'string' ? item.category : null }))
     : null;
   const detail: PartnerClaimDetail = { ...payload, documents };
+  try { detail.documents = await listPartnerClaimDocuments(claimId); }
+  catch { /* Keep inventory unknown; scoped RPC may be unavailable before deployment. */ }
   if (!detail.vehicle?.id || !detail.customer?.id) return detail;
 
   const { data: customerDetail } = await supabase.rpc('partner_app_customer_detail', {
@@ -193,4 +195,14 @@ export async function uploadPartnerClaimDocument(claimId: string, kind: string, 
   const {data:completed,error:finalizeError}=await supabase.functions.invoke('partner-claim-upload',{body:{...meta,action:'finalize',path:prepared.path}});
   if(finalizeError||!completed?.document_id)throw new Error(completed?.error || finalizeError?.message || 'File uploaded; record finalization pending.');
   return completed.document_id as string;
+}
+
+export async function openPartnerClaimDocument(claimId: string, documentId: string) {
+  const { data, error } = await supabase.functions.invoke('partner-claim-upload',{
+    body:{ action:'view', claim_id:claimId, document_id:documentId },
+  });
+  if(error || typeof data?.url!=='string' || !data.url.startsWith('https://')) {
+    throw new Error(data?.error || error?.message || 'Could not open this claim document.');
+  }
+  return data.url as string;
 }
