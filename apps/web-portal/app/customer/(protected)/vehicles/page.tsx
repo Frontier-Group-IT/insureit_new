@@ -50,6 +50,7 @@ export default async function CustomerVehiclesPage({
       chassis: vehicle.chassis_no ?? "",
       engine: vehicle.engine_no ?? "",
       policy: policy?.policy_no ?? null,
+      insurerName: policy?.insurer_name ?? null,
       status,
     };
   });
