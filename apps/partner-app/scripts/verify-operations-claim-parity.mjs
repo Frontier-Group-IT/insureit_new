@@ -14,7 +14,8 @@ for(const key of ['spot_status','claim_intimation','work_approval','repair_ri','
  assert.ok(stages.includes(key),'missing stage form '+key);
 }
 assert.match(spot,/pickAndUpload/);
-assert.match(spot,/Upload another document/);
+assert.match(spot,/Upload multiple documents/);
+assert.match(spot,/pickAndUpload\("additional_document",true\)/);
 assert.match(spot,/Attach voice note/);
 assert.match(client,/uploadToSignedUrl/);
 assert.match(client,/partner_app_claim_document_list/);
