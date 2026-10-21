@@ -34,18 +34,22 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
     catch { /* Never confuse a failed inventory fetch with an empty server list. */ }
   };
   useEffect(() => { void loadDocuments(); }, [data.claim.id]);
-  const pickAndUpload = async (kind: string) => {
+  const pickAndUpload = async (kind: string, multiple = false) => {
     if (uploading) return;
     try {
       const types=kind==='accident_video'?['video/mp4','video/quicktime','video/webm']:kind==='voice_note'?['audio/m4a','audio/mp4','audio/x-m4a']:['application/pdf','image/jpeg','image/png','image/webp'];
-      const picked=await DocumentPicker.getDocumentAsync({type:types,multiple:false,copyToCacheDirectory:true});
+      const picked=await DocumentPicker.getDocumentAsync({type:types,multiple,copyToCacheDirectory:true});
       if(picked.canceled || !picked.assets?.length)return;
+      if(picked.assets.length>8)throw new Error('Select at most eight documents at a time.');
       setUploading(true);
-      const asset=picked.assets[0];
-      await uploadPartnerClaimDocument(data.claim.id,kind,asset);
+      let completed=0;
+      for(const asset of picked.assets){
+        await uploadPartnerClaimDocument(data.claim.id,kind,asset);
+        completed++;
+      }
       await loadDocuments();
-      Alert.alert('Uploaded','Document added to this claim.');
-    } catch(e){Alert.alert('Upload failed',e instanceof Error?e.message:'Please retry.');}
+      Alert.alert('Uploaded',`${completed} document${completed===1?'':'s'} added to this claim.`);
+    } catch(e){Alert.alert('Upload failed',e instanceof Error?e.message:'Please retry. Previously uploaded files were retained.');await loadDocuments();}
     finally{setUploading(false);}
   };
 
@@ -103,7 +107,7 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
         <View style={styles.card}>
           <View style={styles.docsHeading}><Text style={styles.sectionTitle}>Upload claim documents</Text><View style={styles.optional}><Text style={styles.optionalText}>{uploading ? "Uploading…" : "Optional now"}</Text></View></View>
           <View style={styles.tiles}>{DOCUMENTS.map(item=><Pressable key={item.kind} accessibilityRole="button" accessibilityLabel={`Upload ${item.title}`} disabled={uploading} onPress={()=>void pickAndUpload(item.kind)} style={styles.tile}><View style={[styles.documentIcon,{backgroundColor:item.color}]}><MaterialCommunityIcons name={item.icon} color="#FFF" size={24}/></View><Text style={styles.tileTitle}>{item.title}</Text><Text style={styles.tileSub}>{uploaded.filter(x=>x.category===item.kind).length ? "Uploaded" : "Tap to upload"}</Text></Pressable>)}</View>
-          <Pressable accessibilityRole="button" accessibilityLabel="Upload another claim document" disabled={uploading} onPress={()=>void pickAndUpload("gr_load")} style={styles.bulk}><Ionicons name="documents-outline" size={27} color="#245CB0"/><View style={styles.bulkText}><Text style={styles.bulkTitle}>Upload another document</Text><Text style={styles.bulkHint}>Choose a document from your device</Text></View><Ionicons name="add-circle-outline" size={25} color="#8EA3C4"/></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Upload multiple claim documents" disabled={uploading} onPress={()=>void pickAndUpload("additional_document",true)} style={styles.bulk}><Ionicons name="documents-outline" size={27} color="#245CB0"/><View style={styles.bulkText}><Text style={styles.bulkTitle}>Upload multiple documents</Text><Text style={styles.bulkHint}>Select up to eight additional files</Text></View><Ionicons name="add-circle-outline" size={25} color="#8EA3C4"/></Pressable>
         </View>
         <View style={styles.voice}><View style={styles.voiceTop}><View style={styles.mic}><Ionicons name="mic-outline" size={27} color="#1A56A3"/></View><View style={styles.headingCopy}><Text style={styles.sectionTitle}>Incident Voice Note</Text><Text style={styles.subtitle}>Describe what happened in your own words. Maximum recording time is 2 minutes.</Text></View></View><Pressable accessibilityRole="button" onPress={()=>void pickAndUpload("voice_note")} disabled={uploading} style={styles.disabledRecording}><Ionicons name="mic-outline" size={18} color="#FFF"/><Text style={styles.disabledText}>Attach voice note</Text></Pressable></View>
       </ScrollView>
