@@ -37,6 +37,15 @@ export default function PartnerHomeScreen() {
   const [businessPeriod, setBusinessPeriod] = useState<BusinessPeriod>('mtd');
   const [periodOpen, setPeriodOpen] = useState(false);
   const homeScrollY = useRef(new Animated.Value(0)).current;
+  const businessPulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const pulse = Animated.loop(Animated.sequence([
+      Animated.timing(businessPulse, { toValue: 1.018, duration: 1600, useNativeDriver: true }),
+      Animated.timing(businessPulse, { toValue: 1, duration: 1600, useNativeDriver: true }),
+    ]));
+    pulse.start();
+    return () => pulse.stop();
+  }, [businessPulse]);
 
   const fetchHomeWorkspace = useCallback(async (): Promise<{
     home: PartnerHomeData;
@@ -173,7 +182,7 @@ export default function PartnerHomeScreen() {
           ) : null}
 
           <PartnerEnter delay={20}>
-            <View style={styles.businessCard}>
+            <Animated.View style={[styles.businessCard, { transform: [{ scale: businessPulse }] }]} >
               <View style={styles.businessTopRow}>
                 <View style={styles.periodWrap}>
                   <PartnerAnchoredDropdown
@@ -285,7 +294,7 @@ export default function PartnerHomeScreen() {
                   label="Commission Earned"
                 />
               </View>
-            </View>
+            </Animated.View>
           </PartnerEnter>
 
           <PartnerEnter delay={70}>
