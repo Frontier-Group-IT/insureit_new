@@ -8,6 +8,7 @@ import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { savePartnerClaimSpot, type PartnerClaimDetail } from '@/lib/claims';
 import { formatClaimDate } from '@/lib/claim-tracker';
+import { PartnerClaimStepFooter } from '@/components/partner-claim-step-footer';
 
 const DOCUMENTS = [
   { title: 'RC Copy', icon: 'file-document-outline', color: '#07A56D' },
@@ -36,8 +37,7 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
     setSaving(true);
     try {
       await savePartnerClaimSpot(data.claim.id, accident.toISOString(), spot.toISOString(), location, driver, phone);
-      Alert.alert('Saved','Spot Intimation saved successfully.');
-      router.replace({ pathname: '/claim/[id]', params: { id: data.claim.id } } as never);
+      router.replace({ pathname: '/claim/stage', params: { id: data.claim.id, key: 'spot_status' } } as never);
     } catch (e) { Alert.alert('Unable to save',e instanceof Error ? e.message : 'Please try again.'); }
     finally { setSaving(false); }
   };
@@ -74,7 +74,7 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
               ['Driver phone *', phone, setPhone],
               ['Location *', location, setLocation],
             ] as const).map(([label, value, change]) => <View key={label} style={{gap:5}}><Text style={styles.fieldLabel}>{label}</Text><TextInput accessibilityLabel={label} value={value} onChangeText={change} placeholder={label.includes('time') ? '2026-10-21T14:30' : label} style={styles.field} /></View>)}
-            <Pressable accessibilityRole="button" disabled={saving} onPress={() => void save()} style={{ backgroundColor: '#0B347A', padding: 15, borderRadius: 12, alignItems: 'center', opacity: saving ? .6 : 1 }}><Text style={{color:'#FFF', fontWeight:'800'}}>{saving ? 'Saving…' : 'Save Spot Intimation'}</Text></Pressable>
+            
           </View> : <Text style={styles.restricted}>This stage is not editable in its current status.</Text>}
         </View>
         <View style={styles.card}>
@@ -84,6 +84,7 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
         </View>
         <View style={styles.voice}><View style={styles.voiceTop}><View style={styles.mic}><Ionicons name="mic-outline" size={27} color="#1A56A3"/></View><View style={styles.headingCopy}><Text style={styles.sectionTitle}>Incident Voice Note</Text><Text style={styles.subtitle}>Describe what happened in your own words. Maximum recording time is 2 minutes.</Text></View></View><View style={styles.disabledRecording}><Ionicons name="mic-outline" size={18} color="#FFF"/><Text style={styles.disabledText}>Recording unavailable for Partner access</Text></View></View>
       </ScrollView>
+      <PartnerClaimStepFooter index={0} busy={saving} canContinue={data.claim.current_status === "Draft" || data.claim.current_status === "Initial Documents Pending"} onPrevious={() => router.push("/claim/select-vehicle" as never)} onContinue={() => void save()} continueLabel="Start Claim & Continue" />
       <View style={styles.nav}><Nav title="Home" icon="home" onPress={() => router.push('/(tabs)' as never)}/><Nav title="Business" icon="briefcase-outline" onPress={() => router.push('/(tabs)/business' as never)}/><Nav title="Policies" icon="document-text-outline" onPress={() => router.push('/(tabs)/policies' as never)}/><Nav title="Claims" icon="shield-checkmark-outline" onPress={() => router.push('/(tabs)/claims' as never)}/><Nav title="More" icon="grid-outline" onPress={() => router.push('/(tabs)/more' as never)}/></View>
     </SafeAreaView>
   );
