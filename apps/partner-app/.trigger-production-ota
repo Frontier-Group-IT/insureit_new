@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=8550dd331ce97dcc320824c4475627b6ebe771e5
-reason=partner-home-balanced-motion-pr-3342
+source_main=93a114fec5afd1b7c23d1b7ee4031ca669d0fdce
+reason=continuous-home-motion-search-pr-3345
