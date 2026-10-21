@@ -70,7 +70,14 @@ export default async function CustomersPage() {
     data_ms: finishedAt - afterScope,
     total_ms: finishedAt - startedAt,
   });
-  const rows: CustomerRow[] = customersResult.data ?? [];
+  // Remove full customer mobile numbers from the RM server-rendered payload,
+  // including client-side search, exports, clipboard, and the register table.
+  const rows: CustomerRow[] = (customersResult.data ?? []).map((customer) => ({
+    ...customer,
+    phone: profile.role === "relationship_manager"
+      ? customer.phone.replace(/\d(?=\d{4,})/g, "•")
+      : customer.phone,
+  }));
 
   return (
     <AppShell title="Customers">

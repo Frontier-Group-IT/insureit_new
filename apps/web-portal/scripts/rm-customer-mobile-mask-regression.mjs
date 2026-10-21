@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+const page = readFileSync(fileURLToPath(new URL("../app/customers/page.tsx", import.meta.url)), "utf8");
+const workspace = readFileSync(fileURLToPath(new URL("../app/customers/customer-workspace.tsx", import.meta.url)), "utf8");
+assert.match(page, /profile\.role === "relationship_manager"/);
+assert.match(page, /customer\.phone\.replace\(\/\\d\(\?=\\d\{4,\}\)\/g, "•"\)/);
+assert.match(page, /<CustomerWorkspace rows=\{rows\}/);
+assert.match(workspace, /selectedRows\.map\(\(row\) => \[row\.contact_name/);
+assert.match(workspace, /selectedRows\.map\(\(row\) => row\.phone\)/);
+const mask = (phone) => phone.replace(/\d(?=\d{4,})/g, "•");
+assert.equal(mask("7771003207"), "••••••3207");
+assert.equal(mask("+917771003207"), "+••••••••3207");
+console.log("RM customer mobile masking regression passed");
