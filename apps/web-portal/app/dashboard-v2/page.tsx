@@ -82,6 +82,7 @@ export default async function DashboardV2Page({ searchParams }: { searchParams: 
           business={business}
           canCreatePolicy={createPolicies || editPolicies}
           canCreatePolicyIntake={createPolicyIntakes}
+          showRmPerformanceButton={viewReports && profile?.role !== "relationship_manager"}
         />
       </div>
     </ClaimManagerShell>
