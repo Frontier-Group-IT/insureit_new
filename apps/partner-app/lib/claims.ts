@@ -189,7 +189,9 @@ export async function uploadPartnerClaimDocument(claimId: string, kind: string, 
   if(prepareError||!prepared?.path||!prepared?.token) throw new Error(prepared?.error || prepareError?.message || 'Unable to prepare upload');
   const response=await fetch(asset.uri);
   if(!response.ok)throw new Error('Could not read selected document');
-  const content=await response.blob();
+  // ArrayBuffer is more reliable than the React Native Blob polyfill for Supabase uploads.
+  const content=await response.arrayBuffer();
+  if(content.byteLength!==asset.size)throw new Error('Selected file size changed while preparing upload.');
   const {error:uploadError}=await supabase.storage.from('claim-documents').uploadToSignedUrl(prepared.path,prepared.token,content,{contentType:mime});
   if(uploadError)throw uploadError;
   const {data:completed,error:finalizeError}=await supabase.functions.invoke('partner-claim-upload',{body:{...meta,action:'finalize',path:prepared.path}});
