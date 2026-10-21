@@ -1,5 +1,5 @@
-import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 "use client";
+import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 
 import { Search } from "lucide-react";
 import { useState } from "react";
