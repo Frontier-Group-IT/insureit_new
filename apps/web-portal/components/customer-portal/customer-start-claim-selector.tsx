@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, FileText, ImageIcon, MapPin, Plus, Radio, ShieldAlert } from "lucide-react";
+import { ArrowRight, CheckCircle2, FileText, Headphones, ImageIcon, MapPin, Plus, Radio, ShieldAlert } from "lucide-react";
 import type { CustomerPolicyRow, CustomerVehicleRow } from "@/lib/customer-web-data";
 import { prepareCustomerClaim } from "@/app/customer/(protected)/start-claim/actions";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
