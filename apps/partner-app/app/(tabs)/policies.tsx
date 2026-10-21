@@ -77,14 +77,6 @@ export default function PoliciesScreen() {
     savedPolicyLifecycle = lifecycle;
   }, [lifecycle, query]);
 
-  useEffect(() => {
-    if (!loadMoreFeedback || collection.loading) return;
-    const elapsed = Date.now() - loadMoreStartedAt.current;
-    const remaining = Math.max(0, 450 - elapsed);
-    const timer = setTimeout(() => setLoadMoreFeedback(false), remaining);
-    return () => clearTimeout(timer);
-  }, [collection.loading, loadMoreFeedback]);
-
   const fetchSummary = useCallback(() => getPartnerPolicySummary(), []);
   const summary = usePartnerQuery<PartnerPolicySummary>({
     scopeKey: cacheScopeKey,
@@ -113,6 +105,14 @@ export default function PoliciesScreen() {
     fetchPage,
     staleTimeMs: 60_000,
   });
+
+  useEffect(() => {
+    if (!loadMoreFeedback || collection.loading) return;
+    const elapsed = Date.now() - loadMoreStartedAt.current;
+    const remaining = Math.max(0, 450 - elapsed);
+    const timer = setTimeout(() => setLoadMoreFeedback(false), remaining);
+    return () => clearTimeout(timer);
+  }, [collection.loading, loadMoreFeedback]);
 
   const refreshAll = useCallback(async () => {
     await Promise.all([summary.refresh(), collection.refresh()]);
