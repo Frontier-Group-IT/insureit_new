@@ -57,6 +57,8 @@ type PreparedUpload = {
   signed_url: string;
 };
 
+export type PartnerIntakePolicyType = "motor" | "non_motor" | "life" | "health";
+
 export type IntakeProgress = {
   stage: "preparing" | "uploading" | "submitting";
   percent?: number;
@@ -98,9 +100,25 @@ export async function getPartnerPolicyIntakeWeb(id: string) {
 export async function submitPartnerPolicyIntakeWeb(input: {
   leadSourceId?: string;
   customerMobile: string;
-  file: File;
+  policyType: PartnerIntakePolicyType;
+  file?: File | null;
   onProgress?: (progress: IntakeProgress) => void;
 }) {
+  if (!input.file) {
+    if (input.policyType !== "life" && input.policyType !== "health") {
+      throw new Error("Upload a policy copy for Motor or Non-Motor intake.");
+    }
+    input.onProgress?.({ stage: "submitting" });
+    return apiRequest<{ ok: true; id: string; number: string; status: "ready_for_review" }>(
+      "/api/partner/policy-intakes",
+      { method: "POST", body: JSON.stringify({
+        action: "submit_without_proposal",
+        lead_source_id: input.leadSourceId,
+        policy_type: input.policyType,
+        customer_mobile: input.customerMobile,
+      }) },
+    );
+  }
   const meta = fileMeta(input.file);
   input.onProgress?.({ stage: "preparing" });
 
@@ -108,6 +126,7 @@ export async function submitPartnerPolicyIntakeWeb(input: {
     method: "POST",
     body: JSON.stringify({
       action: "prepare",
+      policy_type: input.policyType,
       lead_source_id: input.leadSourceId,
       customer_mobile: input.customerMobile,
       file: meta,
@@ -124,6 +143,7 @@ export async function submitPartnerPolicyIntakeWeb(input: {
     method: "POST",
     body: JSON.stringify({
       action: "complete",
+      policy_type: input.policyType,
       id: prepared.id,
       number: prepared.number,
       lead_source_id: input.leadSourceId,
