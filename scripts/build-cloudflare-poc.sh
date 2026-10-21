@@ -9,4 +9,7 @@ export INSUREIT_CLOUDFLARE_BUILD="1"
 
 npm install --no-save --workspace apps/web-portal @opennextjs/cloudflare@1.20.8 wrangler@latest
 cd apps/web-portal
-npx opennextjs-cloudflare build
+# Temporary Cloudflare TESTING-only bypass: OpenNext currently rejects Next.js 15.5.27
+# at its support-policy validation even though this adapter's peer range accepts it.
+# Does not waive security review; remove after a separately tested Next.js patch update.
+npx opennextjs-cloudflare build --dangerouslyUseUnsupportedNextVersion
