@@ -45,8 +45,8 @@ export type PartnerTopInsurer = {
   premium: number | string;
 };
 
-export async function getPartnerTopInsurers(): Promise<PartnerTopInsurer[]> {
-  const { data, error } = await supabase.rpc('partner_app_top_insurers');
+export async function getPartnerTopInsurers(fromDate: string, toDate: string): Promise<PartnerTopInsurer[]> {
+  const { data, error } = await supabase.rpc('partner_app_top_insurers_range', { p_from_date: fromDate, p_to_date: toDate });
   if (error) throw error;
   return Array.isArray(data) ? data as PartnerTopInsurer[] : [];
 }
