@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireGroupAssociateManager } from "../../group-associate-access";
 import { requireIntermediaryGroupManager } from "@/lib/intermediary-group-access";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { resendGroupBranchPortalInvite, setGroupBranchPortalLoginStatus } from "../../../group-branch-login-actions";
+import { resendGroupBranchPortalInvite, setGroupBranchPortalLoginStatus } from "../../group-branch-login-actions";
 
 const validId = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
