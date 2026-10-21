@@ -154,3 +154,12 @@ export async function createPartnerClaim(customerId: string, vehicleId: string, 
   if (typeof data !== 'string' || !data) throw new Error('Claim ID not returned');
   return data;
 }
+
+export async function savePartnerClaimSpot(claimId: string, incidentAt: string, spotAt: string, location: string, driver: string, phone: string) {
+  const { data, error } = await supabase.rpc('partner_app_save_claim_spot', {
+    p_claim_id: claimId, p_accident_at: incidentAt, p_spot_intimation_at: spotAt,
+    p_location: location, p_driver_name: driver, p_driver_phone: phone,
+  });
+  if (error) throw error;
+  if (data !== true) throw new Error('Claim details were not saved');
+}
