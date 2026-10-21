@@ -40,6 +40,9 @@ Deno.serve(async request=>{
       return reply({url:signed.signedUrl});
     }
     if(['Settled','Closed','Claim Complete','Rejected'].includes(claim.current_status))return reply({error:'Claim is closed'},409);
+    const milestone=String(body.milestone_key||'spot_intimation');
+    const milestones=['spot_intimation','spot_status','claim_intimation','work_approval','repair_ri','billing','delivery_order','vehicle_delivery','payment_encashment'];
+    if(!milestones.includes(milestone))return reply({error:'Invalid claim milestone'},400);
     const name=String(body.name||'').slice(0,150);
     const mime=String(body.mime||'').toLowerCase();
     const size=Number(body.size);
@@ -50,14 +53,14 @@ Deno.serve(async request=>{
     if(!supported.includes(mime)||!Number.isFinite(size)||size<=0||size>max||!name)return reply({error:'Unsupported file type or size'},400);
     if(action==='prepare'){
       const cleaned=name.replace(/[^A-Za-z0-9._-]/g,'_');
-      const path=`${claim.customer_id}/${claimId}/partner/${crypto.randomUUID()}-${cleaned}`;
+      const path=`${claim.customer_id}/${claimId}/partner/${milestone}/${crypto.randomUUID()}-${cleaned}`;
       const {data,error}=await admin.storage.from(bucket).createSignedUploadUrl(path,{upsert:false});
       if(error||!data)return reply({error:'Could not prepare authorized upload'},500);
       return reply({path,token:data.token});
     }
     if(action==='finalize'){
       const path=String(body.path||'');
-      if(!path.startsWith(`${claim.customer_id}/${claimId}/partner/`)||path.includes('..'))return reply({error:'Invalid file path'},400);
+      if(!path.startsWith(`${claim.customer_id}/${claimId}/partner/${milestone}/`)||path.includes('..'))return reply({error:'Invalid file path'},400);
       const objectName=path.split('/').pop()||'';
       const folder=path.slice(0,path.lastIndexOf('/'));
       const {data:objects,error:objectError}=await admin.storage.from(bucket).list(folder,{search:objectName,limit:100});
@@ -70,7 +73,7 @@ Deno.serve(async request=>{
       const {data:inserted,error:insertError}=await admin.from('claim_documents').insert({
         claim_id:claimId,customer_id:claim.customer_id,document_type:allowed[kind],file_name:name,
         storage_bucket:bucket,storage_path:path,mime_type:mime,file_size:actualSize,uploaded_by:userData.user.id,
-        verification_required:true,
+        verification_required:true,milestone_key:milestone,
       }).select('id').single();
       if(insertError||!inserted)return reply({error:'File uploaded but document record could not be finalized'},500);
       return reply({document_id:inserted.id});
