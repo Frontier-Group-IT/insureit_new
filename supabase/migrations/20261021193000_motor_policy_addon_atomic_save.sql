@@ -8,6 +8,7 @@ DECLARE
   v_result jsonb;
   v_id uuid;
   v_amount numeric;
+  v_existing_amount numeric;
 BEGIN
   IF auth.role() IS DISTINCT FROM 'service_role' THEN RAISE EXCEPTION 'Service role required'; END IF;
   IF p_payload IS NULL OR jsonb_typeof(p_payload) <> 'object' THEN RAISE EXCEPTION 'Invalid policy payload'; END IF;
@@ -37,9 +38,14 @@ BEGIN
   END IF;
   v_id := nullif(v_result ->> 'policyId','')::uuid;
   IF v_id IS NULL THEN RAISE EXCEPTION 'Motor policy save returned no policy id'; END IF;
-  -- Always apply, even for zero: edits can clear a previously set add-on.
-  -- Any error rolls back the preceding booking/edit automatically.
-  PERFORM public.set_motor_policy_addon_premium_v1(v_id,v_amount);
+  -- Do not recalculate historical zero-add-on premiums (some have historical
+  -- overrides/rounding). Edits that clear a nonzero add-on must recalculate.
+  SELECT add_on_premium INTO v_existing_amount
+  FROM public.policy_premium_details WHERE policy_id = v_id;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Motor premium row not found'; END IF;
+  IF v_amount <> 0 OR coalesce(v_existing_amount,0) <> 0 THEN
+    PERFORM public.set_motor_policy_addon_premium_v1(v_id,v_amount);
+  END IF;
   RETURN v_result;
 END; $$;
 REVOKE ALL ON FUNCTION public.save_motor_policy_with_addon_v1(text,jsonb,uuid,uuid,integer,uuid,text,date) FROM PUBLIC, anon, authenticated;
