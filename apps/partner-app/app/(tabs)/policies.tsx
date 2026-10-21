@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
+import { PartnerMotionBadge } from '@/components/ui/partner-motion-badge';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
@@ -382,10 +383,10 @@ function PolicyCard({ row, onPress }: { row: PartnerPolicyRow; onPress: () => vo
       </View>
 
       <View style={styles.policyRight}>
-        <View style={[styles.statusPill, { backgroundColor: status.background }]}>
+        <PartnerMotionBadge style={[styles.statusPill, { backgroundColor: status.background }]}>
           <View style={[styles.statusDot, { backgroundColor: status.foreground }]} />
           <Text style={[styles.statusText, { color: status.foreground }]}>{status.label}</Text>
-        </View>
+        </PartnerMotionBadge>
         <Text style={styles.policyPeriod}>{formatDate(row.start_date)} - {formatDate(row.end_date)}</Text>
       </View>
     </Pressable>
