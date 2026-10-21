@@ -118,6 +118,11 @@ jobs:
       - name: Verify claim journey milestone deduplication
         run: node apps/partner-app/scripts/verify-claim-journey-deduplication.mjs
 
+      - name: Verify Partner claim authorization and native voice contracts
+        run: |
+          node apps/partner-app/scripts/verify-operations-claim-parity.mjs
+          node apps/partner-app/scripts/verify-native-incident-voice-recording.mjs
+
       - name: Partner app typecheck
         run: npm run typecheck:partner
 
