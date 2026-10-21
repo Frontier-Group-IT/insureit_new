@@ -75,7 +75,7 @@ export default async function CustomerExchangeListingPage({
             </div>
           </div>
           <div className="mt-4 rounded-xl border border-[#D8E1EC] bg-[#F8FAFD] px-3 py-3 text-[10.5px] font-semibold leading-5 text-[#607089]">
-            Exchange actions such as bidding, favorites, callback requests and selling remain available in the Customer App for this web phase. This page is intentionally read-only.
+            This listing uses the same Exchange marketplace data as the Customer App, including vehicle, verification, pricing and document information.
           </div>
         </section>
 
