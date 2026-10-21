@@ -1,3 +1,4 @@
+import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 import Link from "next/link";
 import { BadgeCheck, Gauge, MapPin, Search, ShieldCheck, Truck } from "lucide-react";
 import {
@@ -69,12 +70,7 @@ export default async function CustomerExchangePage({
           <Search className="h-4 w-4 shrink-0 text-[#73829A]" />
           <input type="hidden" name="account" value={account.id} />
           {category !== "All" ? <input type="hidden" name="category" value={category} /> : null}
-          <input
-            name="q"
-            defaultValue={query}
-            placeholder="Search make, model, location or category"
-            className="min-w-0 flex-1 bg-transparent text-[12px] font-semibold text-[#10213D] outline-none placeholder:text-[#9AA6B7]"
-          />
+          <CustomerAnimatedSearchInput name="q" defaultValue={query} aria-label="Search exchange listings" hints={["Search manufacturer…", "Search model…", "Search location…", "Search category…"]} className="text-[12px] font-semibold text-[#10213D]"/>
           <button className="rounded-lg bg-[#142746] px-4 py-2 text-[10px] font-black text-white">Search</button>
         </form>
 
