@@ -49,7 +49,9 @@ Deno.serve(async request=>{
       const path=String(body.path||'');
       if(!path.startsWith(`${claim.customer_id}/${claimId}/partner/`)||path.includes('..'))return reply({error:'Invalid file path'},400);
       const objectName=path.split('/').pop()||'';
-      const {data:object,error:objectError}=await admin.from('storage.objects').select('name,metadata').eq('bucket_id',bucket).eq('name',path).maybeSingle();
+      const folder=path.slice(0,path.lastIndexOf('/'));
+      const {data:objects,error:objectError}=await admin.storage.from(bucket).list(folder,{search:objectName,limit:100});
+      const object=objects?.find(item=>item.name===objectName);
       if(objectError||!object)return reply({error:'Upload is not yet present'},409);
       const actualSize=Number((object.metadata as Record<string,unknown>|null)?.size||0);
       if(!actualSize||actualSize>max)return reply({error:'Uploaded file exceeds allowed size'},400);
