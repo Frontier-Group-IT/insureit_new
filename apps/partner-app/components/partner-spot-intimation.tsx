@@ -37,7 +37,7 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
   const pickAndUpload = async (kind: string) => {
     if (uploading) return;
     try {
-      const types=kind==='accident_video'?['video/mp4','video/quicktime','video/webm']:kind==='voice_note'?['audio/m4a','audio/mp4','audio/aac','audio/webm']:['application/pdf','image/jpeg','image/png','image/webp'];
+      const types=kind==='accident_video'?['video/mp4','video/quicktime','video/webm']:kind==='voice_note'?['audio/m4a','audio/mp4','audio/x-m4a']:['application/pdf','image/jpeg','image/png','image/webp'];
       const picked=await DocumentPicker.getDocumentAsync({type:types,multiple:false,copyToCacheDirectory:true});
       if(picked.canceled || !picked.assets?.length)return;
       setUploading(true);
