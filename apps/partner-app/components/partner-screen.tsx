@@ -216,7 +216,7 @@ export function PartnerScreen({
               {!homeSearchFocused && !heroSearchValue ? (
                 <PartnerRotatingSearchPlaceholder
                   placeholders={['Search customer name...', 'Search vehicle number...', 'Search policy number...']}
-                  containerStyle={{ position: 'absolute', left: 42, right: 74, top: 0, bottom: 0, justifyContent: 'center' }}
+                  containerStyle={{ position: 'absolute', left: 42, right: 74, top: 0, bottom: 0, height: '100%', justifyContent: 'center' }}
                   textStyle={{ fontSize: 12, color: '#8B95A8' }}
                 />
               ) : null}
