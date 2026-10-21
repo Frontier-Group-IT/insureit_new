@@ -47,8 +47,8 @@ export function CustomerStartClaimSelector({
   return (
     <div className="space-y-4">
       <section className="relative isolate overflow-hidden rounded-2xl border border-[#D6E7FA] bg-[#EAF4FF] px-5 py-6 text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.05)] sm:px-7 sm:py-8">
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-[45%] bg-[url('/assets/customer-claim/start-claim-hero.webp')] bg-contain bg-right-center bg-no-repeat opacity-95" />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EEF7FF] via-[#EEF7FF]/96 via-52% to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat opacity-95" style={{ backgroundImage: 'url("/assets/startclaim.png")' }} data-banner="startclaim-png" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EEF7FF]/35 via-[#EEF7FF]/10 via-52% to-transparent" />
         <div className="relative flex min-h-[105px] items-center sm:min-h-[125px]">
           <h1 className="text-[clamp(28px,3.3vw,42px)] font-bold tracking-tight">Start a Claim</h1>
         </div>
