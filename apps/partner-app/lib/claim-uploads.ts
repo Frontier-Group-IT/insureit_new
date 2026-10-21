@@ -27,3 +27,10 @@ export async function pickAndUploadPartnerClaimDocument(claimId: string, categor
   if(!data?.ok||!data?.id) throw new Error(typeof data?.error==='string'?data.error:'Document upload failed.');
   return String(data.id);
 }
+
+export async function getPartnerClaimDocumentUrl(documentId: string): Promise<string> {
+  const {data,error}=await supabase.functions.invoke('partner-claim-document',{body:{action:'signed_url',document_id:documentId}});
+  if(error) throw error;
+  if(typeof data?.url!=='string'||!data.url.startsWith('https://')) throw new Error('Document link unavailable');
+  return data.url;
+}
