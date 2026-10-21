@@ -123,7 +123,14 @@ export async function getPartnerClaimDetail(claimId: string) {
     ? payload.documents.filter(item => Boolean(item) && typeof item === 'object' && typeof item.id === 'string' && typeof item.name === 'string')
       .map(item => ({ id: String(item.id), name: String(item.name), category: typeof item.category === 'string' ? item.category : null }))
     : null;
-  const detail: PartnerClaimDetail = { ...payload, documents };
+  // Scoped document inventory is a separate Partner-authorized RPC.
+  // Fail closed rather than presenting missing information as an empty list.
+  const { data: inventory, error: inventoryError } = await supabase.rpc('partner_app_claim_documents', { p_claim_id: claimId });
+  const scopedDocuments: PartnerClaimDocument[] | null = inventoryError || !Array.isArray(inventory)
+    ? null
+    : inventory.filter(item => item && typeof item.id === 'string' && typeof item.name === 'string')
+      .map(item => ({ id: item.id as string, name: item.name as string, category: typeof item.category === 'string' ? item.category : null }));
+  const detail: PartnerClaimDetail = { ...payload, documents: scopedDocuments ?? documents };
   if (!detail.vehicle?.id || !detail.customer?.id) return detail;
 
   const { data: customerDetail } = await supabase.rpc('partner_app_customer_detail', {
