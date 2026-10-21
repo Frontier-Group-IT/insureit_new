@@ -4,29 +4,16 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Search, CarFront, ShieldCheck, ShieldX, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 
-const manufacturerIcons: Record<string, string> = {
-  honda: "honda", suzuki: "suzuki", yamaha: "yamaha", hero: "hero", bajaj: "bajaj",
-  tata: "tata", mahindra: "mahindra", hyundai: "hyundai",
-  toyota: "toyota", ford: "ford", kia: "kia", bmw: "bmw", audi: "audi",
-  volkswagen: "volkswagen", renault: "renault", nissan: "nissan", skoda: "skoda",
-  volvo: "volvo", mercedes: "mercedesbenz", isuzu: "isuzu",
-};
-export function ManufacturerMark({ make }: { make: string }) {
-  const key = make.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
-  const brand = manufacturerIcons[key];
+import { getVehicleBrandLogo } from "@/lib/vehicle-brand-logo";
+import { getInsurerLogo } from "@/lib/insurer-logo";
+
+function MasterLogo({ src, alt, initials }: { src: string | null; alt: string; initials: string }) {
   const [failed, setFailed] = useState(false);
-  const initials = make ? make.slice(0, 2).toUpperCase() : "—";
-  // The Simple Icons v15 CDN does not provide a reliable TVS asset.
-  // Use a clear local TVS wordmark rather than silently falling back to initials.
-  if (key === "tvs" || key === "tvsmotorcompany") return <span role="img" aria-label="TVS Motor" title="TVS Motor" className="inline-flex h-7 w-10 shrink-0 items-center justify-center rounded bg-white text-[13px] font-black italic tracking-[-.08em] text-[#D92131]">TVS</span>;
-  if (!brand || failed) return <span aria-label={make || "Unknown manufacturer"} title={make || "Unknown manufacturer"} className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md bg-[#EDF3FA] px-1 text-[9px] font-bold text-[#426083]">{initials}</span>;
-  return <span className="relative inline-flex h-7 w-7 shrink-0 items-center justify-center" title={make}>
-    <span aria-hidden="true" className="absolute inset-0 grid place-items-center rounded-md bg-[#EDF3FA] text-[8px] font-bold text-[#426083]">{initials}</span>
-    <img src={`https://cdn.jsdelivr.net/npm/simple-icons@v15/icons/${brand}.svg`} alt={`${make} logo`} width={28} height={28} loading="lazy" onError={() => setFailed(true)} className={`relative z-10 h-7 w-7 rounded-sm bg-white object-contain p-0.5 ${key === "suzuki" ? "brightness-0 saturate-100 [filter:invert(17%)_sepia(99%)_saturate(2195%)_hue-rotate(199deg)_brightness(91%)_contrast(96%)]" : ""}`} />
-  </span>;
+  if (!src || failed) return <span aria-label={alt} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#EDF3FA] text-[9px] font-bold text-[#426083]">{initials}</span>;
+  return <img src={src} alt={alt} title={alt} loading="lazy" onError={() => setFailed(true)} className="h-8 w-8 shrink-0 rounded-md bg-white object-contain p-0.5" />;
 }
 
-export type VehicleItem = { id: string; number: string; make: string; model: string; type: string; chassis: string; engine: string; policy: string | null; status: "due" | "active" | "inactive" | "expired" };
+export type VehicleItem = { id: string; number: string; make: string; model: string; type: string; chassis: string; engine: string; policy: string | null; insurerName: string | null; status: "due" | "active" | "inactive" | "expired" };
 export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }: { accountId: string; items: VehicleItem[]; initialQuery?: string }) {
   const router = useRouter();
   const [query, setQuery] = useState(initialQuery);
@@ -93,11 +80,11 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
                 onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openVehicle(v.id); } }}
                 className="cursor-pointer bg-white transition-colors hover:bg-[#F2F7FF] focus-visible:bg-[#EAF3FF] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#1769DC]">
                 <td className="px-3 py-3"><strong className="whitespace-nowrap text-[13px] text-[#15376B]">{v.number}</strong></td>
-                <td className="px-3 py-3"><span className="flex items-center gap-2"><ManufacturerMark make={v.make}/><span className="min-w-0"><strong className="block text-[12px] text-[#142C56]">{v.make||"—"}</strong><span className="block max-w-[220px] truncate text-[11px] text-[#607CA4]">{v.model||"—"}</span></span></span></td>
+                <td className="px-3 py-3"><span className="flex items-center gap-2"><MasterLogo key={v.make} src={getVehicleBrandLogo(v.make)} alt={`${v.make || "Unknown manufacturer"} logo`} initials={v.make ? v.make.slice(0,2).toUpperCase() : "—"}/><span className="min-w-0"><strong className="block text-[12px] text-[#142C56]">{v.make||"—"}</strong><span className="block max-w-[220px] truncate text-[11px] text-[#607CA4]">{v.model||"—"}</span></span></span></td>
                 <td className="px-3 py-3 text-[12px] font-medium text-[#264572]">{v.type||"—"}</td>
                 <td className="px-3 py-3 text-[12px] text-[#264572]">{v.chassis||"—"}</td>
                 <td className="px-3 py-3 text-[12px] text-[#264572]">{v.engine||"—"}</td>
-                <td className="px-3 py-3 text-[12px] text-[#264572]">{v.policy||"—"}</td>
+                <td className="px-3 py-3 text-[12px] text-[#264572]"><span className="flex items-center gap-2">{v.policy ? <><MasterLogo key={v.insurerName || v.policy} src={getInsurerLogo(v.insurerName)} alt={`${v.insurerName || "Unknown insurer"} logo`} initials={v.insurerName ? v.insurerName.slice(0,2).toUpperCase() : "—"}/><span title={v.insurerName || undefined} className="min-w-0"><span className="block whitespace-nowrap">{v.policy}</span>{v.insurerName ? <span className="block max-w-[155px] truncate text-[10px] text-[#607CA4]">{v.insurerName}</span> : null}</span></> : "—"}</span></td>
                 <td className="px-3 py-3"><span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-1 text-[11px] font-semibold ${insured?"bg-[#E4FAEF] text-[#079968]":"bg-[#FFF0F1] text-[#E53454]"}`}>{insured?<ShieldCheck className="h-3 w-3"/>:<ShieldX className="h-3 w-3"/>}{insured?"Insured":"Not insured"}</span></td>
               </tr>;
             })}
