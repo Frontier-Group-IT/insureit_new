@@ -22,4 +22,8 @@ assert.doesNotMatch(menu, /event\.currentTarget\.form\?\.requestSubmit\(\)/,
 assert.match(menu, /<form action=\{resendPartnerAssociateInvite\} onSubmit=/);
 assert.match(menu, /associate-resend-cooldown/, "Resend cooldown must be recorded on submit");
 assert.match(menu, /type="submit"/);
+assert.match(menu, /withinTrigger && !withinMenu/, "Outside dismissal must check the actual portal menu");
+assert.match(menu, /onClick=\{\(event\) => event\.stopPropagation\(\)\}/, "Portal menu clicks must not bubble into page handlers");
+assert.match(menu, /z-\[9999\] pointer-events-auto/, "Actions must stay above overlapping page UI");
+assert.match(menu, /z-\[10000\]/, "Confirmation dialogs must be above the action menu");
 console.log("Associate action menu interaction contract: OK");
