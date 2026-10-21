@@ -34,7 +34,7 @@ export type PortalUserRow = {
 };
 
 export type AdditionalPortalAccount = {
- id:string; name:string; code:string; email:string|null; type:"Group"|"Branch"|"Group Associate"|"Partner Associate"; status:string; manageHref:string; context:string;
+ id:string; name:string; code:string; email:string|null; type:"Group"|"Branch"|"Group Associate"|"Partner Associate"; status:string; manageHref:string; reviewHref?:string; context:string;
 };
 
 type StatusFilter = "all" | "active" | "inactive";
@@ -94,7 +94,7 @@ export default async function IntermediaryPortalUsersPage({
       for (const p of partners??[]) {
         if (!branchIds.has(p.id)) continue;
         const login=identityByEntity.get(`branch:${p.id}`);
-        extraRows.push({id:`branch:${p.id}`,name:p.display_name,code:p.partner_code,email:login?.login_email??null,type:"Branch",status:login?.status??"not_created",manageHref:"/intermediaries/groups/login-access",context:partnerById.get(p.parent_partner_id??"")?.display_name??"Branch login"});
+        extraRows.push({id:`branch:${p.id}`,name:p.display_name,code:p.partner_code,email:login?.login_email??null,type:"Branch",status:login?.status??"not_created",manageHref:"/intermediaries/groups/login-access",reviewHref:`/intermediaries/portal-users/branches/${p.id}`,context:partnerById.get(p.parent_partner_id??"")?.display_name??"Branch login"});
       }
       for (const a of groupAssociates??[]) {
         const group=groupById.get(a.group_id);

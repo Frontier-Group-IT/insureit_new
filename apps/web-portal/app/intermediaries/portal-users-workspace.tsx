@@ -87,7 +87,7 @@ export function IntermediaryPortalUsersWorkspace({ rows, extraRows, initialQuery
                   <td className="px-4 py-3"><p className="font-semibold text-[#0F2A55]">{row.name}</p><p className="text-[9px] text-[#64748B]">{row.code} · {row.context}</p></td>
                   <td className="px-3 py-3"><span className="rounded-lg bg-[#EEF4FA] px-2 py-1 text-[9px] font-semibold text-[#17365D]">{row.type}</span></td>
                   <td className="px-3 py-3">{row.email??"Email not recorded"}</td><td className="px-3 py-3"><Status value={row.status}/></td>
-                  <td className="px-3 py-3">—</td><td className="px-3 py-3">{row.context}</td>
+                  <td className="px-3 py-3">—</td><td className="px-3 py-3">{row.reviewHref ? <Link prefetch={false} href={row.reviewHref} className="font-semibold text-[#4F46E5] hover:underline">Open account</Link> : row.context}</td>
                   <td className="px-3 py-3 text-right"><Link prefetch={false} href={row.manageHref} className="rounded-lg border border-[#CBD5E1] px-3 py-2 text-[9px] font-semibold text-[#17365D] hover:bg-[#F1F5F9]">Manage</Link></td>
                 </tr>;
               }
