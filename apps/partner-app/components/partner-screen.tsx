@@ -260,7 +260,6 @@ export function PartnerScreen({
                 <Ionicons name="chevron-forward" size={17} color={hasHeroSearchValue ? '#1765C1' : '#A3ABBA'} />
               </Pressable>
             </View>
-          </View>
         ) : (
           <PartnerTopBar
             title={title}
