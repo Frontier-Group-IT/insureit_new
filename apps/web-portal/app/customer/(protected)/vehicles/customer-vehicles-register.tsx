@@ -38,8 +38,6 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
     return () => window.clearInterval(interval);
   }, [query, reducedMotion]);
   const pageSize = 6;
-  const insuredCount = items.filter(v => v.status === "active" || v.status === "due").length;
-  const uninsuredCount = items.length - insuredCount;
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     const filtered = items.filter(v => (statusFilter === "all" || (statusFilter === "insured" ? v.status === "active" || v.status === "due" : statusFilter === "uninsured" ? v.status === "inactive" || v.status === "expired" : v.status === statusFilter)) && (!q || [v.number, v.make, v.model, v.chassis, v.engine, v.type, v.policy ?? ""].some(x => x.toLowerCase().includes(q))));
