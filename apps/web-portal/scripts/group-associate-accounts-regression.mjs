@@ -59,7 +59,12 @@ assert.match(sections,/Associate Accounts could not be loaded completely/);
 assert.match(sections,/!loadError \? <GroupAssociateCreateEntry/);
 assert.ok(sections.indexOf('{groupAdmin ? <tr') < sections.indexOf('(associates??[]).map'), "Group Administrator must render as first row");
 
-assert.match(sections,/Group profile/);
+assert.match(sections,/GroupAdminMenu/);
+const adminMenu=read("app/intermediaries/groups/[id]/associate-accounts/group-admin-menu.tsx");
+assert.match(adminMenu,/Edit Group Administrator/);
+assert.match(adminMenu,/Resend Link/);
+assert.match(adminMenu,/changeGroupAdministratorAccess/);
+assert.match(adminMenu,/Deleting this login can orphan the Group/);
 assert.match(sections,/hasRegisterRecords/);
 assert.match(sections,/GroupAssociateCreateEntry/);
 assert.match(sharedForm,/Save Details/);

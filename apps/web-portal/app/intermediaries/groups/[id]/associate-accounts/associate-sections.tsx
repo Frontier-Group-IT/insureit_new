@@ -6,6 +6,7 @@ import { requireGroupAssociateManager } from "../../group-associate-access";
 import { AssociateCreateForm } from "./associate-create-form";
 import { GroupAssociateCreateEntry } from "./group-associate-create-entry";
 import { AssociateControls } from "./associate-controls";
+import { GroupAdminMenu } from "./group-admin-menu";
 
 type Query = {success?:string; error?:string};
 export async function GroupAssociateSections({id,query:q={},surface="operations",partners=[],headerPartnerAssignment}:{id:string;query?:Query;surface?:"operations"|"partner";partners?:GroupPartnerRow[];headerPartnerAssignment?:ReactNode}) {
@@ -15,7 +16,7 @@ export async function GroupAssociateSections({id,query:q={},surface="operations"
   admin.from("group_portal_associate_accounts").select("id,name,phone_number,email,designation,address,city,state,postal_code,role,status").eq("group_id",id).order("created_at",{ascending:false}),
   admin.from("group_administrator_contacts").select("admin_name,admin_email,admin_mobile,address,city,state,postal_code").eq("group_id",id).maybeSingle(),
   admin.from("intermediary_groups").select("status").eq("id",id).maybeSingle(),
-  admin.from("portal_access_identities").select("profile_id,login_email").eq("entity_type","group").eq("entity_id",id).eq("status","active").limit(1).maybeSingle()
+  admin.from("portal_access_identities").select("profile_id,login_email,status").eq("entity_type","group").eq("entity_id",id).limit(1).maybeSingle()
  ]);
  const associates=associatesResult.data;
  const group=groupResult.data;
@@ -62,7 +63,7 @@ export async function GroupAssociateSections({id,query:q={},surface="operations"
       <td className="p-3">{[groupAdmin.address,groupAdmin.city,groupAdmin.state,groupAdmin.postal_code].filter(Boolean).join(", ")||"—"}</td>
       <td className="p-3"><span className="rounded-full border px-2 py-1">Group Administrator</span></td>
       <td className="p-3">{group?.status==="active"?"Group Active":"Group "+(group?.status??"—")}</td>
-      <td className="p-3 text-[10px] text-[#64748B]">Group profile</td>
+      <td className="p-3"><GroupAdminMenu groupId={id} contact={groupAdmin} loginStatus={identity?.status==="active"||identity?.status==="disabled"?identity.status:null}/></td>
     </tr> : null}{(associates??[]).map(a=><tr key={a.id} className="border-t">
       <td className="p-3">{a.name}</td><td className="p-3">{a.phone_number}</td><td className="p-3">{a.email}</td><td className="p-3">{a.designation}</td>
       <td className="p-3">{[a.address,a.city,a.state,a.postal_code].filter(Boolean).join(", ")||"–"}</td>
