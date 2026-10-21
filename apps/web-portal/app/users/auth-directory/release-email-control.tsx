@@ -27,7 +27,7 @@ export function ReleaseEmailControl({userId,name,email,role}:{userId:string;name
    <p className="mt-1">For reusing <strong>{email}</strong> on a completely new user. The original Auth identity, completed intakes, policy documents, and historical attribution stay intact. The old account is disabled.</p>
    <button type="button" onClick={()=>setOpen(!open)} className="mt-2 rounded-lg border border-blue-400 bg-white px-3 py-2 font-semibold">{open?"Cancel":"Release email for a new user"}</button>
    {open&&<div className="mt-3 space-y-2 rounded-lg border border-blue-200 bg-white p-3">
-     <p>Selected: <strong>{name}</strong>. Confirm you're archiving the correct account; the replacement will receive a different Auth user ID and its own role and permissions.</p>
+     <p>Selected: <strong>{name}</strong>. Confirm you are archiving the correct account; the replacement will receive a different Auth user ID and its own role and permissions.</p>
      <label className="block">Type <strong>{expected}</strong> to confirm
        <input autoComplete="off" className="mt-1 block w-full rounded border border-slate-300 p-2" value={confirm} onChange={e=>setConfirm(e.target.value)}/>
      </label>
