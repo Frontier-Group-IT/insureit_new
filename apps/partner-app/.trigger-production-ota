@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=6b8f370abfff1c0523a32eb02f450dc2fd34c0ff
-reason=claim-document-inventory-folder-icon-pr-3340
+source_main=4d7a95ba5b728b35608b72067258e37309f03cc1
+reason=partner-pending-tasks-reference-layout-pr-3349
