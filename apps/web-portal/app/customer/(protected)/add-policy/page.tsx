@@ -88,7 +88,7 @@ export default async function AddCustomerPolicy({ searchParams }: { searchParams
       <input type="hidden" name="account" value={account.id}/>
       <section className="overflow-hidden rounded-2xl border border-[#B9D4EE] bg-[#F0F7FF] shadow-sm">
         <div className="flex items-center gap-2 border-b border-[#BDD8F1] bg-[#DDEEFF] px-4 py-3 font-extrabold text-[#13345D]"><CarFront className="h-5 w-5 text-[#155BAA]"/>Vehicle</div>
-        <div className="p-4 [&_select]:!border-[#B5CDE5] [&_select]:!bg-white [&_select]:!py-3"><CustomerPolicySelections vehicles={vehicles} blocked={policies.filter(p=>p.vehicle_id&&p.start_date<=new Date().toISOString().slice(0,10)&&p.end_date>=new Date().toISOString().slice(0,10)).map(p=>p.vehicle_id as string)} initial={q.vehicle} /></div>
+        <div className="p-4 [&_select]:!border-[#B5CDE5] [&_select]:!bg-white [&_select]:!py-3"><CustomerPolicySelections accountId={account.id} vehicles={vehicles} blocked={policies.filter(p=>p.vehicle_id&&p.start_date<=new Date().toISOString().slice(0,10)&&p.end_date>=new Date().toISOString().slice(0,10)).map(p=>p.vehicle_id as string)} initial={q.vehicle} /></div>
       </section>
       <section className="overflow-hidden rounded-2xl border border-[#F0D7B4] bg-[#FFF8ED] shadow-sm">
         <div className="flex items-center gap-2 border-b border-[#EED5B1] bg-[#FFEBCF] px-4 py-3 font-extrabold text-[#13345D]"><FileText className="h-5 w-5 text-[#B97422]"/>Policy details</div>
