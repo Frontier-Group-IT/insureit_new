@@ -202,13 +202,9 @@ export function CustomerServiceRequestForm(props: Props) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <CarFront className="h-6 w-6 text-[#123866]"/>
-            <div><h2 className="text-[18px] font-black text-[#10213D]">Vehicle Details</h2><p className="text-[10px] text-[#687D98]">Enter your vehicle and challan details to get started.</p></div>
+            <h2 className="text-[18px] font-black text-[#10213D]">Vehicle Details</h2>
           </div>
           <span className="rounded-full bg-[#EAF4FF] px-3 py-1.5 text-[10px] font-bold text-[#1261BA]">Recent vehicles</span>
-        </div>
-        <div className="flex flex-wrap gap-2 py-1">
-          {props.vehicles.slice(0,8).map(vehicle=><button type="button" key={vehicle.id} aria-pressed={vehicleId===vehicle.id} onClick={()=>chooseVehicle(vehicle.id)} className={`rounded-full border px-3 py-2 text-[10px] font-bold ${vehicleId===vehicle.id?"border-[#267AFF] bg-[#EDF5FF] text-[#146AD3]":"border-[#D8E1EC] bg-white text-[#536A89] hover:bg-[#F8FAFD]"}`}>{vehicle.label}</button>)}
-          <button type="button" onClick={()=>{setVehicleId("");setVehicleNo("");}} className="rounded-full border border-[#D8E1EC] px-3 py-2 text-[10px] font-bold text-[#536A89] hover:bg-[#F8FAFD]"><CirclePlus className="mr-1 inline h-3.5 w-3.5"/>Add another vehicle</button>
         </div>
         <label className="block text-[11px] font-bold text-[#142746]">Vehicle registration number <span className="text-[#D33B4C]">*</span>
           <span className="mt-1 flex items-center gap-2 rounded-xl border border-[#D8E1EC] bg-white px-3 focus-within:border-[#267AFF]"><CarFront className="h-4 w-4 text-[#8B9CB3]"/><input className="h-11 w-full min-w-0 bg-transparent text-[12px] font-semibold text-[#10213D] outline-none" value={vehicleNo} onChange={event=>{setVehicleNo(event.target.value.toUpperCase());if(selectedVehicle?.label!==event.target.value.toUpperCase())setVehicleId("");}} placeholder="Enter vehicle registration number (e.g. MP20SZ6089)" /></span>
