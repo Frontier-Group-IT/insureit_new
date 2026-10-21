@@ -1,3 +1,4 @@
+import { PartnerClaimUploadPanel } from '@/components/partner-claim-upload-panel';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -61,6 +62,7 @@ export function PartnerClaimStageDraft({data,stage}:{data:PartnerClaimDetail;sta
     {fields.map(field=><View key={field.key} style={styles.field}><Text style={styles.label}>{field.label}</Text><TextInput accessibilityLabel={field.label} value={values[field.key]||''} onChangeText={text=>setValues(current=>({...current,[field.key]:text}))} editable={!closed&&!saving} placeholder="Enter details" placeholderTextColor="#8695A8" style={styles.input}/></View>)}
     <Pressable accessibilityRole="button" accessibilityLabel="Save stage draft" disabled={closed||saving||!loaded} onPress={()=>void save()} style={[styles.button,(closed||saving)&&styles.disabled]}><Text style={styles.buttonText}>{saving?'Saving…':closed?'Claim closed':!loaded?'Loading draft…':'Save stage draft'}</Text></Pressable>
     {stage!=="payment_encashment" ? <Pressable accessibilityRole="button" accessibilityLabel="Complete claim stage and continue" disabled={closed||saving||!loaded} onPress={()=>void submit()} style={[styles.button,(closed||saving||!loaded)&&styles.disabled]}><Text style={styles.buttonText}>Complete Stage & Continue</Text></Pressable> : <Text style={styles.caption}>Final settlement and claim closure remain subject to Operations approval.</Text>}
+    {!closed ? <PartnerClaimUploadPanel claimId={data.claim.id} stage={stage} /> : null}
   </View>;
 }
 const styles=StyleSheet.create({
