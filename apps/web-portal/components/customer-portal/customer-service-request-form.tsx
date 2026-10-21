@@ -207,10 +207,10 @@ export function CustomerServiceRequestForm(props: Props) {
           <span className="rounded-full bg-[#EAF4FF] px-3 py-1.5 text-[10px] font-bold text-[#1261BA]">Recent vehicles</span>
         </div>
         <label className="block text-[11px] font-bold text-[#142746]">Vehicle registration number <span className="text-[#D33B4C]">*</span>
-          <span className="mt-1 flex items-center gap-2 rounded-xl border border-[#D8E1EC] bg-white px-3 focus-within:border-[#267AFF]"><CarFront className="h-4 w-4 text-[#8B9CB3]"/><input className="h-11 w-full min-w-0 bg-transparent text-[12px] font-semibold text-[#10213D] outline-none" value={vehicleNo} onChange={event=>{setVehicleNo(event.target.value.toUpperCase());if(selectedVehicle?.label!==event.target.value.toUpperCase())setVehicleId("");}} placeholder="Enter vehicle registration number (e.g. MP20SZ6089)" /></span>
+          <span className="mt-1 flex items-center gap-2 rounded-xl border border-[#D8E1EC] bg-white px-3"><CarFront className="h-4 w-4 text-[#8B9CB3]"/><input className="h-11 w-full min-w-0 border-0 bg-transparent p-0 text-[12px] font-semibold text-[#10213D] shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0" value={vehicleNo} onChange={event=>{setVehicleNo(event.target.value.toUpperCase());if(selectedVehicle?.label!==event.target.value.toUpperCase())setVehicleId("");}} placeholder="Enter vehicle registration number (e.g. MP20SZ6089)" /></span>
         </label>
         <label className="block text-[11px] font-bold text-[#142746]">Challan / reference number (optional)
-          <span className="mt-1 flex items-center gap-2 rounded-xl border border-[#D8E1EC] bg-white px-3 focus-within:border-[#267AFF]"><FileText className="h-4 w-4 text-[#8B9CB3]"/><input className="h-11 w-full min-w-0 bg-transparent text-[12px] text-[#10213D] outline-none" value={challanNo} onChange={event=>setChallanNo(event.target.value)} placeholder="Enter challan or reference number"/></span>
+          <span className="mt-1 flex items-center gap-2 rounded-xl border border-[#D8E1EC] bg-white px-3"><FileText className="h-4 w-4 text-[#8B9CB3]"/><input className="h-11 w-full min-w-0 border-0 bg-transparent p-0 text-[12px] text-[#10213D] shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0" value={challanNo} onChange={event=>setChallanNo(event.target.value)} placeholder="Enter challan or reference number"/></span>
         </label>
         <label className="block text-[11px] font-bold text-[#142746]">Add a note (optional)
           <textarea className={`${areaClass} mt-1`} value={note} onChange={event=>setNote(event.target.value)} placeholder="Add any additional details..." />
@@ -229,25 +229,34 @@ export function CustomerServiceRequestForm(props: Props) {
   if (props.mode !== "support_ticket") return null;
   return (
     <div className="space-y-3">
-      <div>
-        <label className="text-[10px] font-black uppercase tracking-[0.1em] text-[#718096]">Related to</label>
-        <select className={`${inputClass} mt-2`} value={claimId} onChange={(event) => setClaimId(event.target.value)}>
-          <option value="">General support</option>
-          {props.claims.map((claim) => <option key={claim.id} value={claim.id}>{claim.claim_no} · {claim.status}</option>)}
-        </select>
+      <div className="grid gap-3 md:grid-cols-3">
+        <label className="block min-w-0 text-[11px] font-bold text-[#142746]">Related to
+          <select className={`${inputClass} mt-1`} value={claimId} onChange={(event) => setClaimId(event.target.value)}>
+            <option value="">General support</option>
+            {props.claims.map((claim) => <option key={claim.id} value={claim.id}>{claim.claim_no} · {claim.status}</option>)}
+          </select>
+        </label>
+        <label className="block min-w-0 text-[11px] font-bold text-[#142746]">Category *
+          <select className={`${inputClass} mt-1`} value={category} onChange={(event) => setCategory(event.target.value)}>
+            <option value="claim">Claim Support</option><option value="policy">Policy Support</option><option value="documents">Document Help</option><option value="roadside">Roadside Help</option><option value="other">Other</option>
+          </select>
+        </label>
+        <label className="block min-w-0 text-[11px] font-bold text-[#142746]">Priority *
+          <select className={`${inputClass} mt-1`} value={priority} onChange={(event) => setPriority(event.target.value)}>
+            <option value="low">Low priority</option><option value="medium">Medium priority</option><option value="high">High priority</option>
+          </select>
+        </label>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block text-[11px] font-bold text-[#142746]">Category *<select className={`${inputClass} mt-1`} value={category} onChange={(event) => setCategory(event.target.value)}>
-          <option value="claim">Claim Support</option><option value="policy">Policy Support</option><option value="documents">Document Help</option><option value="roadside">Roadside Help</option><option value="other">Other</option>
-        </select></label>
-        <label className="block text-[11px] font-bold text-[#142746]">Priority *<select className={`${inputClass} mt-1`} value={priority} onChange={(event) => setPriority(event.target.value)}>
-          <option value="low">Low priority</option><option value="medium">Medium priority</option><option value="high">High priority</option>
-        </select></label>
+      <div className="grid gap-3 md:grid-cols-2 md:items-start">
+        <label className="block min-w-0 text-[11px] font-bold text-[#142746]">Subject *
+          <input className={`${inputClass} mt-1`} value={subject} onChange={(event) => setSubject(event.target.value.slice(0, 120))} placeholder="Brief subject" />
+        </label>
+        <label className="block min-w-0 text-[11px] font-bold text-[#142746]">Describe your request *
+          <textarea className={`${areaClass} mt-1 min-h-12`} value={description} onChange={(event) => setDescription(event.target.value.slice(0, 2000))} placeholder="Describe what you need help with" />
+        </label>
       </div>
-      <label className="block text-[11px] font-bold text-[#142746]">Subject *<input className={`${inputClass} mt-1`} value={subject} onChange={(event) => setSubject(event.target.value.slice(0, 120))} placeholder="Brief subject" /></label>
-      <label className="block text-[11px] font-bold text-[#142746]">Describe your request *<textarea className={`${areaClass} mt-1`} value={description} onChange={(event) => setDescription(event.target.value.slice(0, 2000))} placeholder="Describe what you need help with" /></label>
       {error ? <p role="alert" className="rounded-xl bg-[#FFF0F0] px-3 py-2 text-[10.5px] font-bold text-[#A13B3B]">{error}</p> : null}
-      <button type="button" disabled={busy} onClick={() => void submit()} className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#142746] px-4 text-[11px] font-black text-white disabled:opacity-60">
+      <button type="button" disabled={busy} onClick={() => void submit()} className="ml-auto flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#142746] px-5 text-[11px] font-black text-white disabled:opacity-60 sm:w-auto">
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
         {busy ? "Submitting..." : "Submit Ticket"}
       </button>

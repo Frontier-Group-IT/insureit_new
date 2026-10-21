@@ -93,7 +93,7 @@ export default async function CustomerPoliciesPage({
           </div>
         </div>
       </section>
-      {counts.due>0?<section className="flex items-center justify-between gap-3 rounded-2xl border border-[#F0DFC0] bg-[#FFF9EE] px-4 py-3">
+      {counts.due>0?<section className="flex items-center justify-between gap-3 rounded-2xl border border-[#F0DFC0] bg-white px-4 py-3">
         <div className="flex min-w-0 items-center gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#FFF0CF] text-[#B66A16]"><Clock3 className="h-5 w-5"/></span><div><strong className="block text-[13px] text-[#7A4B10]">{counts.due} polic{counts.due===1?"y is":"ies are"} approaching renewal</strong><span className="text-[12px] text-[#92714A]">Review due policies to avoid a break in cover.</span></div></div>
         <Link href={makeHref({status:"due"})} className="shrink-0 rounded-lg bg-white px-3 py-2 text-[12px] font-semibold text-[#9A5C12] shadow-sm">Review</Link>
       </section>:null}
