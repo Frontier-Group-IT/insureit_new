@@ -149,11 +149,12 @@ export function PartnerScreen({
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustContentInsets={false}
         automaticallyAdjustsScrollIndicatorInsets={false}
+        stickyHeaderIndices={isHomeHero && !hideTopBar ? [1] : undefined}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps={scrollProps?.keyboardShouldPersistTaps ?? 'handled'}
       >
-        {hideTopBar ? null : isHomeHero ? (
+        {!hideTopBar && isHomeHero ? (
           <View style={styles.homeHeroWrap}>
             <Animated.View style={[styles.homeHero, homeMotionScrollY ? {
               transform: [{ translateY: homeMotionScrollY.interpolate({
@@ -211,6 +212,10 @@ export function PartnerScreen({
               </Text>
             </Animated.View>
 
+          </View>
+        ) : null}
+        {!hideTopBar && isHomeHero ? (
+          <View style={styles.homeStickySearchWrap}>
             <View style={styles.homeSearchCard}>
               <Ionicons name="search-outline" size={22} color="#3E269B" />
               {!homeSearchFocused && !heroSearchValue ? (
@@ -258,7 +263,8 @@ export function PartnerScreen({
               </Pressable>
             </View>
           </View>
-        ) : (
+        ) : null}
+        {!hideTopBar && !isHomeHero ? (
           <PartnerTopBar
             title={title}
             eyebrow={eyebrow}
@@ -268,7 +274,7 @@ export function PartnerScreen({
             artwork={artwork}
             action={action}
           />
-        )}
+        ) : null}
 
         {isOffline ? (
           <View style={styles.networkBanner}>
@@ -307,7 +313,17 @@ const styles = StyleSheet.create({
   homeHeroWrap: {
     position: 'relative',
     marginHorizontal: -partnerTheme.spacing.lg,
-    marginBottom: 35,
+    marginBottom: 0,
+  },
+  homeStickySearchWrap: {
+    marginTop: -26,
+    marginBottom: 9,
+    marginHorizontal: -partnerTheme.spacing.lg,
+    height: 61,
+    paddingHorizontal: 10,
+    backgroundColor: "#F5F7FB",
+    zIndex: 10,
+    elevation: 5,
   },
   homeHero: {
     height: 174,
@@ -445,10 +461,6 @@ const styles = StyleSheet.create({
     textShadowRadius: 1,
   },
   homeSearchCard: {
-    position: 'absolute',
-    left: 10,
-    right: 10,
-    bottom: -26,
     height: 52,
     paddingLeft: 13,
     paddingRight: 10,
