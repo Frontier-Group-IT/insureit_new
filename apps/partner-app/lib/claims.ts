@@ -186,3 +186,11 @@ export async function getPartnerStageDraft(claimId: string, stageKey: string) {
   if(error) throw error;
   return data && typeof data==='object' && !Array.isArray(data) ? data as Record<string,string> : {};
 }
+
+/** Completes a currently eligible Partner stage using the same managed-claim transition trigger as Operations. */
+export async function completePartnerClaimStage(claimId: string, stageKey: string, details: Record<string,string>) {
+  const {data,error}=await supabase.rpc('partner_app_complete_claim_stage',{p_claim_id:claimId,p_stage_key:stageKey,p_details:details});
+  if(error) throw error;
+  if(typeof data!=='string'||!data) throw new Error('The claim stage could not be completed');
+  return data;
+}
