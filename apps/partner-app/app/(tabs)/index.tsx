@@ -416,12 +416,17 @@ function PendingTasksCard({
     { key: 'claims', count: data.service.active_claims, label: 'Active claims', icon: PartnerAssets.actions.quickClaims, open: onOpenClaims },
   ];
   return (
-    <ImageBackground source={require("../../assets/PT2.jpeg")} resizeMode="cover" imageStyle={styles.pendingBackgroundImage} style={styles.pendingCard}>
+    <ImageBackground
+      source={require('../../assets/PT2.jpeg')}
+      resizeMode="cover"
+      imageStyle={styles.pendingBackgroundImage}
+      style={styles.pendingCard}
+    >
       <View pointerEvents="none" style={styles.pendingBackgroundOverlay} />
       <View style={styles.pendingHeadingRow}>
         <View style={styles.pendingHeadingCopy}>
           <Text style={styles.pendingTitle}>Pending Tasks</Text>
-          <Text style={styles.pendingHint}>Keep up with important actions.</Text>
+          <Text style={styles.pendingHint}>Keep up with important actions{'\n'}to avoid policy lapses.</Text>
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel="View all pending tasks" onPress={onViewAll}>
           <Text style={styles.sectionLink}>View All  ›</Text>
@@ -434,12 +439,14 @@ function PendingTasksCard({
             accessibilityRole="button"
             accessibilityLabel={`${task.count} ${task.label}`}
             onPress={task.open}
-            style={({ pressed }) => [styles.pendingTaskRow, pressed && styles.pressed, pressed && { transform: [{ scale: 0.96 }] }]}
+            style={({ pressed }) => [styles.pendingTaskRow, pressed && styles.pressed]}
           >
             <Image source={task.icon} style={styles.pendingTaskIcon} resizeMode="contain" />
-            <Text style={styles.pendingTaskCount}>{task.count}</Text>
+            <Text style={[styles.pendingTaskCount, task.key === 'renewal' && task.count > 0 && styles.pendingTaskUrgent]}>
+              {task.count}
+            </Text>
             <Text numberOfLines={1} style={styles.pendingTaskLabel}>{task.label}</Text>
-            <Ionicons name="chevron-forward" size={13} color="#3156B8" />
+            <Ionicons name="chevron-forward" size={13} color="#193D91" />
           </Pressable>
         ))}
       </View>
@@ -759,67 +766,48 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginBottom: 8,
     paddingHorizontal: 12,
-    paddingTop: 9,
-    paddingBottom: 8,
+    paddingTop: 10,
+    paddingBottom: 12,
     overflow: 'hidden',
     borderRadius: 15,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#EAF5FF',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#D3EAFB',
+    minHeight: 134,
   },
   pendingBackgroundImage: { borderRadius: 15 },
-  pendingBackgroundOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.76)' },
+  pendingBackgroundOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(231,244,255,0.12)',
+  },
   pendingHeadingRow: {
-    minHeight: 29,
+    minHeight: 36,
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
   },
-  pendingHeadingCopy: { flex: 1, paddingRight: 10 },
-  pendingTitle: { color: '#17366C', fontSize: 13, lineHeight: 16, fontWeight: '800' },
-  pendingHint: { marginTop: 1, color: '#68809B', fontSize: 9.5, lineHeight: 12, fontWeight: '500' },
-  pendingDecor: {
-    position: 'absolute',
-    right: 1,
-    top: 5,
-    width: 60,
-    height: 75,
-    alignItems: 'center',
-    justifyContent: 'center',
-    opacity: 0.5,
+  pendingHeadingCopy: { flex: 1, paddingRight: 8 },
+  pendingTitle: { color: '#123A8B', fontSize: 13, lineHeight: 16, fontWeight: '800' },
+  pendingHint: { marginTop: 1, color: '#56749B', fontSize: 8.5, lineHeight: 10.5, fontWeight: '500' },
+  pendingList: {
+    position: 'relative',
+    marginTop: 5,
+    width: '58%',
+    gap: 2,
   },
-  pendingDecorImage: { width: 58, height: 58 },
-  pendingRow: {
-    minHeight: 35,
-    marginTop: 1,
-    paddingRight: 60,
+  pendingTaskRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    minHeight: 23,
+    paddingHorizontal: 5,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    gap: 5,
   },
-  pendingIconBox: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pendingIcon: { width: 27, height: 27 },
-  pendingCopy: { flex: 1, minWidth: 0 },
-  pendingRowTitle: { color: '#25344C', fontSize: 10.5, lineHeight: 13, fontWeight: '800' },
-  pendingRowSubtitle: { marginTop: 1, color: '#728198', fontSize: 8.8, lineHeight: 11, fontWeight: '500' },
-
-  sectionHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 },
-  sectionLink: { color: '#3156B8', fontSize: 9, fontWeight: '800' },
-  chartSide: { width: 132, alignItems: 'flex-end', justifyContent: 'center' },
-  miniChart: { height: 43, width: 130, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'flex-end', gap: 5, borderBottomWidth: 1, borderColor: '#E1EAF6' },
-  miniBar: { width: 14, borderTopLeftRadius: 3, borderTopRightRadius: 3, backgroundColor: '#A6C6ED' },
-  chartUnavailable: { fontSize: 8, color: '#7A8DAA', alignSelf: 'center' },
-  pendingList: { position: 'relative', marginTop: 5, padding: 6, paddingRight: 22, backgroundColor: 'rgba(235,246,255,0.86)', borderRadius: 10 },
-  pendingTaskRow: { flexDirection: 'row', alignItems: 'center', minHeight: 27, gap: 5 },
-  pendingTaskIcon: { width: 18, height: 18 },
-  pendingTaskCount: { color: '#153B80', fontSize: 10, fontWeight: '800', width: 23 },
-  pendingTaskLabel: { flex: 1, color: '#294872', fontSize: 9, fontWeight: '600' },
+  pendingTaskIcon: { width: 15, height: 15 },
+  pendingTaskCount: { color: '#153B80', fontSize: 10, fontWeight: '800', minWidth: 17 },
+  pendingTaskUrgent: { color: '#E0444D' },
+  pendingTaskLabel: { flex: 1, minWidth: 0, color: '#294872', fontSize: 8, fontWeight: '600' },
   renewalCard: { marginBottom: 8, minHeight: 56, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 11, gap: 10, backgroundColor: '#FFFFFF', borderRadius: 13, borderWidth: 1, borderColor: '#E3EBF5' },
   renewalIcon: { width: 34, height: 34 },
   renewalBody: { flex: 1, minWidth: 0 },
