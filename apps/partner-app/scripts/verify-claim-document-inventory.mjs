@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+const read=(path)=>readFileSync(fileURLToPath(new URL(path,import.meta.url)),'utf8');
+const restored=read('../../../supabase/migrations/20261021170000_revert_partner_claim_detail_document_inventory.sql');
+const screen=read('../app/claim/[id].tsx');
+assert.match(restored,/partner_app_claim_in_scope\(p_claim_id\)/);
+assert.doesNotMatch(restored,/'documents',coalesce\(\(/);
+assert.match(restored,/\$function\$;\s*$/);
+assert.match(screen,/PartnerAssets\.actions\.documentSearch/);
+console.log('Partner claim inventory rollback contract passed');
