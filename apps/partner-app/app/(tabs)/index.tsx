@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, useEffect, type ReactNode } from 'react';
-import { Animated, Image, ImageBackground, Pressable, RefreshControl, StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
+import { Animated, Image, ImageBackground, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -311,7 +311,12 @@ export default function PartnerHomeScreen() {
                   <Text style={styles.sectionLink}>View All  ›</Text>
                 </Pressable>
               </View>
-              <View style={styles.quickGrid}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.quickGrid}
+                directionalLockEnabled
+              >
                 <QuickAction
                   asset={PartnerAssets.actions.quickPolicyIntake}
                   label="Policy Intake"
@@ -332,7 +337,7 @@ export default function PartnerHomeScreen() {
                   label="Customers"
                   onPress={() => router.push('/customers')}
                 />
-              </View>
+              </ScrollView>
             </View>
           </PartnerEnter>
 
@@ -766,8 +771,8 @@ const styles = StyleSheet.create({
     borderColor: '#E4EAF2',
   },
   sectionTitle: { marginBottom: 9, color: '#17233A', fontSize: 13, fontWeight: '800' },
-  quickGrid: { flexDirection: 'row', gap: 7 },
-  quickActionTouch: { flex: 1, minWidth: 0 },
+  quickGrid: { flexDirection: 'row', gap: 7, paddingRight: 2 },
+  quickActionTouch: { width: 94, flexShrink: 0 },
   quickAction: {
     height: 72,
     borderRadius: 13,
