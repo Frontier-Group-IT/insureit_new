@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+const source=readFileSync(fileURLToPath(new URL('../app/claim/[id].tsx',import.meta.url)),'utf8');
+assert.match(source,/PartnerAssets\.actions\.quickClaims/);
+assert.match(source,/PartnerInsurerLogo name=\{data\.insurer\.name\}/);
+assert.match(source,/PartnerAssets\.actions\.documentSearch/);
+assert.doesNotMatch(source,/git-branch-outline/);
+assert.match(source,/accessibilityState=\{\{ expanded: documentsOpen \}\}/);
+assert.match(source,/accessibilityState=\{\{ expanded: journeyOpen \}\}/);
+assert.match(source,/PartnerClaimDocuments documents=\{data\.documents\}/);
+console.log('Claim Details header, journey, and documents icon contract passed');
