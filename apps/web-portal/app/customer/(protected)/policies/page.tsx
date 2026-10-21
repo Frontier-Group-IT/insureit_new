@@ -1,6 +1,6 @@
 import { PolicySourceFilter } from "./policy-source-filter";
 import Link from "next/link";
-import { FileText, Search, ShieldCheck, ShieldX, Clock3, Layers3 } from "lucide-react";
+import { FileText, Search, ShieldCheck, ShieldX, Clock3, Layers3, Plus } from "lucide-react";
 import { getStaticInsurerLogo } from "@/lib/insurer-logo";
 import {
   CustomerAccountTabs,
@@ -110,6 +110,7 @@ export default async function CustomerPoliciesPage({
       <section className="overflow-hidden rounded-2xl border border-[#D9E2EF] bg-white shadow-[0_8px_30px_rgba(24,42,72,.04)]">
         <div className="flex flex-wrap items-center gap-2 border-b border-[#E4EAF2] px-3 py-3 sm:px-4 xl:flex-nowrap">
           <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><ShieldCheck className="h-5 w-5 text-[#175CA8]" aria-hidden="true" />Policy Register</h2>
+          <Link href={{ pathname: "/customer/add-policy", query: { account: account.id } }} className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#1253A7] px-3 py-2.5 text-[12px] font-bold text-white shadow-sm transition hover:bg-[#0A3E87] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1253A7]"><Plus className="h-4 w-4" />Add Policy</Link>
           <form className="flex w-full min-w-0 flex-1 items-center gap-2 rounded-lg border border-[#D7E0EF] bg-[#FAFCFF] px-3 py-2.5 sm:min-w-[220px] sm:max-w-[400px]">
             <Search className="h-4 w-4 shrink-0 text-[#8C9BB2]" />
             <input type="hidden" name="account" value={account.id} />
