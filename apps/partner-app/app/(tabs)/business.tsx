@@ -1,7 +1,7 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Animated, Image, type ImageSourcePropType, Pressable, RefreshControl, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Animated, Image, type ImageSourcePropType, Pressable, RefreshControl, StyleSheet, Text, View, useWindowDimensions, type StyleProp, type TextStyle } from 'react-native';
 
 import { PartnerBusinessRangeSummaryCard } from '@/components/partner-business-range-summary';
 import { PartnerScreen } from '@/components/partner-screen';
@@ -602,7 +602,7 @@ function ShrinkLoopText({
   style,
 }: {
   children: ReactNode;
-  style?: import('react-native').TextStyle | import('react-native').TextStyle[];
+  style?: StyleProp<TextStyle>;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
 
