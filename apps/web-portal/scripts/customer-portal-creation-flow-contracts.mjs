@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+const read = (relative) => readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8');
+const addVehicle = read('../app/customer/(protected)/add-vehicle/page.tsx');
+const vehicles = read('../app/customer/(protected)/vehicles/page.tsx');
+const addPolicy = read('../app/customer/(protected)/add-policy/page.tsx');
+const claim = read('../app/customer/(protected)/start-claim/actions.ts');
+
+assert.match(addVehicle, /resolveCustomerWebScope\(accountId\)/);
+assert.match(addVehicle, /create_customer_vehicle_v2/);
+assert.match(addVehicle, /customer\/vehicles\?account=/);
+assert.match(addVehicle, /CustomerRcLookup/);
+assert.match(vehicles, /\/customer\/add-vehicle/);
+assert.match(vehicles, /\/customer\/add-policy/);
+assert.match(vehicles, /\/customer\/start-claim/);
+assert.match(addPolicy, /create_customer_external_policy/);
+assert.match(addPolicy, /selectedVehicle/);
+assert.match(addPolicy, /customer-documents/);
+assert.match(claim, /resolveCustomerWebScope\(customerId\)/);
+assert.match(claim, /vehicles\.some\(v => v\.id === vehicleId\)/);
+assert.match(claim, /policies\.find\(p => p\.id === policyId && p\.vehicle_id === vehicleId\)/);
+assert.match(claim, /ensure_self_managed_external_claim_draft/);
+console.log('Customer portal vehicle / policy / claim journey contracts passed');
