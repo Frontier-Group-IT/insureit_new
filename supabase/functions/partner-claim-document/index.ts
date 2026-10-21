@@ -16,6 +16,19 @@ Deno.serve(async request=>{
   const admin=createClient(url,service,{auth:{persistSession:false}});
   const {data:identity,error:authError}=await scoped.auth.getUser();
   if(authError||!identity.user) return respond({error:"Invalid session"},401);
+  if(request.headers.get("content-type")?.includes("application/json")) {
+    let body:{action?:string;document_id?:string};
+    try{body=await request.json();}catch{return respond({error:"Invalid JSON"},400);}
+    if(body.action!=="signed_url"||typeof body.document_id!=="string"||! /^[a-f0-9-]{36}$/i.test(body.document_id)) return respond({error:"Invalid document request"},400);
+    const {data:doc,error:docError}=await admin.from("claim_documents")
+      .select("claim_id,storage_bucket,storage_path").eq("id",body.document_id).maybeSingle();
+    if(docError||!doc||doc.storage_bucket!=="claim-documents") return respond({error:"Document unavailable"},404);
+    const {data:allow,error:permissionError}=await scoped.rpc("partner_app_claim_in_scope",{p_claim_id:doc.claim_id});
+    if(permissionError||allow!==true) return respond({error:"Document access denied"},403);
+    const {data:signed,error:signedError}=await admin.storage.from("claim-documents").createSignedUrl(doc.storage_path,60);
+    if(signedError||!signed?.signedUrl) return respond({error:"Could not open document"},502);
+    return respond({url:signed.signedUrl},200);
+  }
   let form:FormData;
   try{form=await request.formData();}catch{return respond({error:"Invalid upload form"},400);}
   const claimId=form.get("claim_id"),category=form.get("category"),file=form.get("file");
