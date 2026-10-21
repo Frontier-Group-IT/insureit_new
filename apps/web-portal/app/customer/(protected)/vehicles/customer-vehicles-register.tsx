@@ -13,6 +13,10 @@ function MasterLogo({ src, alt, initials }: { src: string | null; alt: string; i
   return <img src={src} alt={alt} title={alt} loading="lazy" onError={() => setFailed(true)} className="h-8 w-8 shrink-0 rounded-md bg-white object-contain p-0.5" />;
 }
 
+export function ManufacturerMark({ make }: { make: string }) {
+  return <MasterLogo key={make} src={getVehicleBrandLogo(make)} alt={`${make || "Unknown manufacturer"} logo`} initials={make ? make.slice(0, 2).toUpperCase() : "—"} />;
+}
+
 export type VehicleItem = { id: string; number: string; make: string; model: string; type: string; chassis: string; engine: string; policy: string | null; insurerName: string | null; status: "due" | "active" | "inactive" | "expired" };
 export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }: { accountId: string; items: VehicleItem[]; initialQuery?: string }) {
   const router = useRouter();
