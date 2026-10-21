@@ -17,19 +17,6 @@ export function CustomerPolicyAnimatedSearch({
   source: string;
 }) {
   const [value, setValue] = useState(query);
-  return () => media.removeEventListener("change", sync);
-  }, []);
-
-  useEffect(() => {
-    if (value || reduceMotion) return;
-    const timer = window.setInterval(() => setHintIndex((index) => index + 1), 3200);
-    return () => window.clearInterval(timer);
-  }, [value, reduceMotion]);
-
-  const showingHint = value.length === 0;
-  const currentHint = SEARCH_HINTS[hintIndex % SEARCH_HINTS.length];
-  const previousHint = hintIndex > 0 ? SEARCH_HINTS[(hintIndex - 1) % SEARCH_HINTS.length] : null;
-
   return (
     <form
       role="search"
