@@ -1,5 +1,5 @@
-import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 "use client";
+import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
