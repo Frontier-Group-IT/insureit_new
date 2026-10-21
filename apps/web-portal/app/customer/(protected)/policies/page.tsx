@@ -1,6 +1,7 @@
 import { PolicySourceFilter } from "./policy-source-filter";
+import { CustomerPolicyAnimatedSearch } from "./customer-policy-animated-search";
 import Link from "next/link";
-import { FileText, Search, ShieldCheck, ShieldX, Clock3, Layers3, Plus } from "lucide-react";
+import { FileText, ShieldCheck, Clock3, Plus } from "lucide-react";
 import { getStaticInsurerLogo } from "@/lib/insurer-logo";
 import {
   CustomerAccountTabs,
@@ -92,17 +93,6 @@ export default async function CustomerPoliciesPage({
           </div>
         </div>
       </section>
-      <section aria-label="Policy overview" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[
-          {label:"All policies",value:policies.length,detail:"Across your account",icon:Layers3,tint:"bg-[#EAF3FF] text-[#1769DC]",status:"all"},
-          {label:"Active",value:counts.active,detail:"Currently protected",icon:ShieldCheck,tint:"bg-[#E5F7EE] text-[#087A57]",status:"active"},
-          {label:"Renewal due",value:counts.due,detail:"Action recommended",icon:Clock3,tint:"bg-[#FFF7E8] text-[#B66A16]",status:"due"},
-          {label:"Expired",value:counts.expired,detail:"No longer active",icon:ShieldX,tint:"bg-[#FFF0F1] text-[#C2414D]",status:"expired"},
-        ].map(({label,value,detail,icon:Icon,tint,status})=><Link key={label} href={makeHref({status})} className={`flex min-w-0 items-center gap-3 rounded-2xl border bg-white p-4 transition hover:border-[#B6D2F2] hover:shadow-sm ${statusFilter===status?"border-[#A9C9F1]":"border-[#E1EAF5]"}`}>
-          <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${tint}`}><Icon className="h-5 w-5"/></span>
-          <span className="min-w-0"><span className="block text-[12px] font-medium text-[#60799B]">{label}</span><strong className="block text-[28px] font-bold leading-tight tabular-nums text-[#102B54]">{value}</strong><small className="block text-[12px] text-[#7890AD]">{detail}</small></span>
-        </Link>)}
-      </section>
       {counts.due>0?<section className="flex items-center justify-between gap-3 rounded-2xl border border-[#F0DFC0] bg-[#FFF9EE] px-4 py-3">
         <div className="flex min-w-0 items-center gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#FFF0CF] text-[#B66A16]"><Clock3 className="h-5 w-5"/></span><div><strong className="block text-[13px] text-[#7A4B10]">{counts.due} polic{counts.due===1?"y is":"ies are"} approaching renewal</strong><span className="text-[12px] text-[#92714A]">Review due policies to avoid a break in cover.</span></div></div>
         <Link href={makeHref({status:"due"})} className="shrink-0 rounded-lg bg-white px-3 py-2 text-[12px] font-semibold text-[#9A5C12] shadow-sm">Review</Link>
@@ -110,15 +100,7 @@ export default async function CustomerPoliciesPage({
       <section className="overflow-hidden rounded-2xl border border-[#D9E2EF] bg-white shadow-[0_8px_30px_rgba(24,42,72,.04)]">
         <div className="flex flex-wrap items-center gap-2 border-b border-[#E4EAF2] px-3 py-3 sm:px-4 xl:flex-nowrap">
           <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><ShieldCheck className="h-5 w-5 text-[#175CA8]" aria-hidden="true" />Policy Register</h2>
-          <Link href={{ pathname: "/customer/add-policy", query: { account: account.id } }} className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#1253A7] px-3 py-2.5 text-[12px] font-bold text-white shadow-sm transition hover:bg-[#0A3E87] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1253A7]"><Plus className="h-4 w-4" />Add Policy</Link>
-          <form className="flex w-full min-w-0 flex-1 items-center gap-2 rounded-lg border border-[#D7E0EF] bg-[#FAFCFF] px-3 py-2.5 sm:min-w-[220px] sm:max-w-[400px]">
-            <Search className="h-4 w-4 shrink-0 text-[#8C9BB2]" />
-            <input type="hidden" name="account" value={account.id} />
-            {statusFilter !== "all" ? <input type="hidden" name="status" value={statusFilter} /> : null}
-            {sourceFilter !== "all" ? <input type="hidden" name="source" value={sourceFilter} /> : null}
-            <input name="q" defaultValue={currentQuery} aria-label="Search policies" placeholder="Search policy, insurer, vehicle or product..." className="w-full min-w-0 border-0 bg-transparent p-0 text-[13px] text-[#203650] outline-none placeholder:text-[#95A2B7]" />
-            <button type="submit" className="sr-only">Search</button>
-          </form>
+          <CustomerPolicyAnimatedSearch accountId={account.id} query={currentQuery} status={statusFilter ?? "all"} source={sourceFilter ?? "all"} />
           <div aria-label="Policy status filter" className="ml-auto flex flex-wrap items-center gap-1 rounded-lg border border-[#D8E2F0] bg-[#F8FAFD] p-1">
             {[
               ["all", "All", policies.length],
@@ -128,6 +110,7 @@ export default async function CustomerPoliciesPage({
             ].map(([value,label,count])=><Link key={String(value)} href={makeHref({status:String(value)})} className={`whitespace-nowrap rounded-md px-3 py-2 text-[12px] font-semibold ${statusFilter===value?"bg-[#0D756D] text-white":"text-[#60728D] hover:bg-white"}`}>{label} {count}</Link>)}
           </div>
           <PolicySourceFilter accountId={account.id} query={currentQuery} status={statusFilter ?? "all"} source={sourceFilter ?? "all"} />
+          <Link href={{ pathname: "/customer/add-policy", query: { account: account.id } }} className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#1253A7] px-3 py-2.5 text-[12px] font-bold text-white shadow-sm transition hover:bg-[#0A3E87] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1253A7]"><Plus className="h-4 w-4" />Add Policy</Link>
         </div>
       {sourceFilteredRows.length === 0 ? (
         <div className="p-5"><EmptyCustomerState title="No matching policies" body="Try adjusting your filters." /></div>
