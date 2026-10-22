@@ -6,6 +6,13 @@ import { ManufacturerMark } from "../vehicles/customer-vehicles-register";
 import { customerPolicyTone, loadCustomerWebPolicies, loadCustomerWebVehicles, resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { isCompletedCustomerClaim, loadCustomerClaimListContext } from "@/lib/customer-web-phase2-data";
 
+function customerHomeInsurerName(name: string | null): string {
+  if (!name) return "—";
+  return name.trim()
+    .replace(/\s+(?:Company\s+)?(?:Private\s+|Pvt\.?\s+)?Limited\.?$/i, "")
+    .trim();
+}
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -137,7 +144,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
                   const href={pathname:`/customer/vehicles/${vehicle.id}`,query:accountQuery};
                   return <tr key={vehicle.id} className="cursor-pointer transition hover:bg-[#F8FBFF]">
                     <td className="p-0"><Link href={href} className="block px-3 py-1.5 font-semibold text-[11px] text-[#15345E]">{vehicle.vehicle_no || (vehicle.chassis_no?`New-${vehicle.chassis_no}`:"Unregistered")}</Link></td>
-                    <td className="p-0"><Link href={href} className="flex px-3 py-1.5 items-center gap-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F5F9FE]"><ManufacturerMark make={vehicle.make??""}/></span><span className="min-w-0"><strong className="block truncate text-[11px] text-[#2B4668]">{vehicle.make || "—"}</strong><span className="block truncate text-[10px] text-[#7186A0]">{vehicle.model || "—"}</span></span></Link></td>
+                    <td className="p-0"><Link href={href} className="flex px-3 py-1.5 items-center gap-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F5F9FE]"><ManufacturerMark make={vehicle.make??""}/></span><span className="min-w-0"><span className="block truncate text-[10px] text-[#7186A0]">{vehicle.model || "—"}</span></span></Link></td>
                     <td className="p-0"><Link href={href} className="block px-3 py-1.5"><span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${insured?"bg-emerald-50 text-emerald-700":"bg-red-50 text-red-600"}`}>{insured?"Insured":"Not insured"}</span></Link></td>
                   </tr>;
                 })}
@@ -149,7 +156,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
       <div className="grid gap-3 lg:grid-cols-2">
         <section data-home-reveal className="min-w-0 rounded-xl border border-[#E0E8F3] bg-white p-3">
           <div className="mb-3 flex items-center justify-between"><h2 className="flex items-center gap-2 text-[14px] font-black text-[#10284A]"><ShieldCheck className="h-4 w-4 text-[#1672DC]"/>My Policies</h2><Link href={{pathname:"/customer/policies",query:accountQuery}} className="text-[10px] font-bold text-[#176CD4]">View all</Link></div>
-          <div className="overflow-x-auto"><table className="w-full min-w-[410px] text-left text-[10px]"><thead className="bg-[#F1F6FC] text-center text-[#637B9A]"><tr><th className="px-2 py-1.5">Policy Number</th><th className="px-2 py-1.5">Vehicle</th><th className="px-2 py-1.5">Insurer</th><th className="px-2 py-1.5">Status</th></tr></thead><tbody>{latestPolicies.map(policy=><tr key={policy.id} className="border-b border-[#EEF2F8]"><td className="px-2 py-1.5 font-bold"><Link href={{pathname:`/customer/policies/${policy.id}`,query:{...accountQuery,source:policy.source}}}>{policy.policy_no||"—"}</Link></td><td className="px-2 py-1.5">{policy.vehicle_no||"—"}</td><td className="px-2 py-1.5">{policy.insurer_name||"—"}</td><td className="px-2 py-1.5"><span className="rounded-full bg-[#EEF5FF] px-2 py-1">{customerPolicyTone(policy.end_date).tone}</span></td></tr>)}</tbody></table>{latestPolicies.length===0?<p className="p-3 text-xs text-[#7186A0]">No policies found.</p>:null}</div>
+          <div className="overflow-x-auto"><table className="w-full min-w-[410px] text-left text-[10px]"><thead className="bg-[#F1F6FC] text-center text-[#637B9A]"><tr><th className="px-2 py-1.5">Policy Number</th><th className="px-2 py-1.5">Vehicle</th><th className="px-2 py-1.5">Insurer</th><th className="px-2 py-1.5">Status</th></tr></thead><tbody>{latestPolicies.map(policy=><tr key={policy.id} className="border-b border-[#EEF2F8]"><td className="px-2 py-1.5 font-bold"><Link href={{pathname:`/customer/policies/${policy.id}`,query:{...accountQuery,source:policy.source}}}>{policy.policy_no||"—"}</Link></td><td className="px-2 py-1.5">{policy.vehicle_no||"—"}</td><td className="px-2 py-1.5">{customerHomeInsurerName(policy.insurer_name)}</td><td className="px-2 py-1.5"><span className="rounded-full bg-[#EEF5FF] px-2 py-1">{customerPolicyTone(policy.end_date).tone}</span></td></tr>)}</tbody></table>{latestPolicies.length===0?<p className="p-3 text-xs text-[#7186A0]">No policies found.</p>:null}</div>
         </section>
         <section data-home-reveal className="min-w-0 rounded-xl border border-[#E0E8F3] bg-white p-3">
           <div className="mb-3 flex items-center justify-between"><h2 className="flex items-center gap-2 text-[14px] font-black text-[#10284A]"><ClipboardList className="h-4 w-4 text-[#1672DC]"/>My Claims</h2><Link href={{pathname:"/customer/claims",query:accountQuery}} className="text-[10px] font-bold text-[#176CD4]">View all</Link></div>
