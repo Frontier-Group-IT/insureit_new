@@ -20,3 +20,8 @@ assert.match(selector,/Preparing claim\.\.\./,"Show a loading state during submi
 assert.match(claimAction,/\.eq\("vehicle_id", vehicleId\)\.is\("policy_id", null\)\.is\("external_policy_id", null\)/,"No-policy draft recovery must remain scoped to vehicle and policy-free drafts");
 assert.match(claimAction,/policy_id: policy\?\.id \?\? null/,"No-policy draft creation must use a null policy");
 console.log("Customer no-policy Continue claim submission contract passed.");
+
+assert.match(selector,/useActionState\(prepareCustomerClaim/,"Claim server errors must return to the start-claim form");
+assert.match(selector,/role="alert"/,"Claim errors must be visible inline");
+assert.match(claimAction,/error\?\.code === "23514"/,"Policyless database constraint errors should be reported clearly");
+assert.match(claimAction,/console\.error\("Customer claim draft creation failed"/,"Database failures must be logged server-side");

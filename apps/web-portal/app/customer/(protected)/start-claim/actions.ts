@@ -6,7 +6,9 @@ import { getCustomerWebSession } from "@/lib/customer-web";
 import { loadCustomerWebPolicies, loadCustomerWebVehicles, resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaims } from "@/lib/customer-web-phase2-data";
 
-export async function prepareCustomerClaim(form: FormData) {
+export type PrepareCustomerClaimState = { error: string | null };
+
+export async function prepareCustomerClaim(_previous: PrepareCustomerClaimState, form: FormData): Promise<PrepareCustomerClaimState> {
   const customerId = String(form.get("account") || "");
   const vehicleId = String(form.get("vehicle") || "");
   const policyId = String(form.get("policy") || "");
@@ -15,9 +17,9 @@ export async function prepareCustomerClaim(form: FormData) {
   const [vehicles, policies, claims] = await Promise.all([
     loadCustomerWebVehicles(account.id), loadCustomerWebPolicies(account.id), loadCustomerClaims(account.id)
   ]);
-  if (!vehicles.some(v => v.id === vehicleId)) throw new Error("Vehicle is not linked to your account");
+  if (!vehicles.some(v => v.id === vehicleId)) return { error: "This vehicle is not linked to your account. Please refresh and select a vehicle again." };
   const policy = policies.find(p => p.id === policyId && p.vehicle_id === vehicleId);
-  if (policyId && !policy) throw new Error("Policy is not linked to this vehicle");
+  if (policyId && !policy) return { error: "This policy is not linked to the selected vehicle." };
   const active = claims.find(c => (policy ? (policy.source === "external" ? c.external_policy_id === policy.id : c.policy_id === policy.id) : c.vehicle_id === vehicleId && !c.policy_id && !c.external_policy_id) && !["Settled","Closed","Claim Complete","Rejected"].includes(c.current_status));
   if (active) {
     redirect("/customer/claims/" + encodeURIComponent(active.id) + "?account=" + encodeURIComponent(account.id));
@@ -27,10 +29,10 @@ export async function prepareCustomerClaim(form: FormData) {
     const { data, error } = await supabase.rpc("ensure_self_managed_external_claim_draft", {
       p_customer_id: account.id, p_vehicle_id: vehicleId, p_external_policy_id: policy.id,
     });
-    if (error) throw new Error("Could not prepare external claim safely");
+    if (error) return { error: "We could not prepare your claim. Please try again or contact support." };
     const value = Array.isArray(data) ? data[0] : data;
     const claimId = value && typeof value === "object" && "claim_id" in value ? String(value.claim_id) : "";
-    if (!claimId) throw new Error("External claim draft was not confirmed");
+    if (!claimId) return { error: "We could not confirm your claim draft. Please try again." };
     redirect("/customer/spot-intimation?account=" + encodeURIComponent(account.id) + "&id=" + encodeURIComponent(claimId));
   }
   const stamp = new Date();
@@ -45,7 +47,10 @@ export async function prepareCustomerClaim(form: FormData) {
     const base = supabase.from("claims").select("id,current_status").eq("customer_id", account.id);
     const scoped = policy ? base.eq("policy_id", policy.id) : base.eq("vehicle_id", vehicleId).is("policy_id", null).is("external_policy_id", null);
     const { data: recovered } = await scoped.not("current_status", "in", '("Settled","Closed","Claim Complete","Rejected")').limit(1).maybeSingle();
-    if (!recovered?.id) throw new Error("Claim could not be prepared safely");
+    if (!recovered?.id) {
+      console.error("Customer claim draft creation failed", { code: error?.code, message: error?.message, details: error?.details, hint: error?.hint, recoveryCode: null });
+      return { error: error?.code === "23514" ? "Claim registration without a linked policy is not yet enabled. Please contact support." : "Your claim could not be registered. Please try again or contact support." };
+    }
     redirect("/customer/spot-intimation?account=" + encodeURIComponent(account.id) + "&id=" + encodeURIComponent(recovered.id));
   }
   redirect("/customer/spot-intimation?account=" + encodeURIComponent(account.id) + "&id=" + encodeURIComponent(created.id));

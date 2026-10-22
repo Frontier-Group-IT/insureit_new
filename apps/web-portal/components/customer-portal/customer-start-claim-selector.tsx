@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useActionState, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { ArrowRight, Headphones, LoaderCircle, Plus, ShieldAlert, X } from "lucide-react";
@@ -31,6 +31,7 @@ export function CustomerStartClaimSelector({
       : vehicles[0]?.id || "",
   );
 
+  const [claimState, claimAction] = useActionState(prepareCustomerClaim, { error: null });
   const [policyDialogOpen, setPolicyDialogOpen] = useState(false);
   const claimFormRef = useRef<HTMLFormElement>(null);
   const confirmationGrantedRef = useRef(false);
@@ -95,7 +96,7 @@ export function CustomerStartClaimSelector({
             Continue existing claim <ArrowRight className="h-5 w-5"/>
           </Link>
         ) : (
-          <form ref={claimFormRef} action={prepareCustomerClaim} className="flex" onSubmit={(event) => { if (!hasActivePolicy && !confirmationGrantedRef.current) { event.preventDefault(); setPolicyDialogOpen(true); } }}>
+          <form ref={claimFormRef} action={claimAction} className="flex" onSubmit={(event) => { if (!hasActivePolicy && !confirmationGrantedRef.current) { event.preventDefault(); setPolicyDialogOpen(true); } }}>
             <input type="hidden" name="account" value={accountId}/>
             <input type="hidden" name="vehicle" value={vehicleId}/>
             <input type="hidden" name="policy" value={policy?.id || ""}/>
@@ -103,6 +104,7 @@ export function CustomerStartClaimSelector({
           </form>
         )}
       </div>
+      {claimState.error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-800">{claimState.error}</p>}
       {policyDialogOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#071B39]/55 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setPolicyDialogOpen(false); }}>
           <div role="dialog" aria-modal="true" aria-labelledby="claim-policy-dialog-title" aria-describedby="claim-policy-dialog-description" onKeyDown={(event) => { if (event.key === "Escape") setPolicyDialogOpen(false); }} className="w-full max-w-[420px] rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
@@ -113,7 +115,7 @@ export function CustomerStartClaimSelector({
             <h2 id="claim-policy-dialog-title" className="mt-4 text-[18px] font-bold text-[#102B54]">No Active Policy Found</h2>
             <p id="claim-policy-dialog-description" className="mt-2 text-[13px] leading-5 text-[#5A6D86]">This vehicle has no active insurance policy. You can still register a claim, but coverage and eligibility will be reviewed separately.</p>
             <div className="mt-5 grid grid-cols-2 gap-2">
-              <button type="button" disabled={confirming} onClick={() => { if (confirming) return; confirmationGrantedRef.current = true; setConfirming(true); claimFormRef.current?.requestSubmit(); }} className="min-h-11 rounded-lg border border-[#B7CEE8] bg-white px-3 text-[12px] font-bold text-[#174A87] hover:bg-[#F4F9FE] disabled:opacity-60">{confirming ? "Preparing claim..." : "Continue"}</button>
+              <button type="button" disabled={confirming} onClick={() => { if (confirming) return; confirmationGrantedRef.current = true; setConfirming(true); setPolicyDialogOpen(false); claimFormRef.current?.requestSubmit(); }} className="min-h-11 rounded-lg border border-[#B7CEE8] bg-white px-3 text-[12px] font-bold text-[#174A87] hover:bg-[#F4F9FE] disabled:opacity-60">{confirming ? "Preparing claim..." : "Continue"}</button>
               <Link href={{ pathname: "/customer/add-policy", query: { account: accountId, vehicle: vehicleId } }} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-[#0B3884] px-3 text-[12px] font-bold text-white"><Plus className="h-4 w-4"/>Add Policy</Link>
             </div>
           </div>
