@@ -5,6 +5,9 @@ import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail } from "@/lib/customer-web-phase2-data";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
+import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
+import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/customer-claim-evidence-workspace";
+import { CustomerClaimVoiceRecorder } from "@/components/customer-portal/customer-claim-voice-recorder";
 import { SpotIntimationSaveForm, type SpotSaveState } from "./spot-intimation-save-form";
 
 export const dynamic="force-dynamic";
@@ -22,7 +25,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
   const q=searchParams?await searchParams:{};
   const {account}=await resolveCustomerWebScope(q.account);
   if(!q.id) redirect("/customer/start-claim?account="+encodeURIComponent(account.id));
-  const {claim}=await loadCustomerClaimDetail(account.id,q.id);
+  const {claim,documents}=await loadCustomerClaimDetail(account.id,q.id);
   const external=Boolean(claim.external_policy_id);
   async function submit(_state: SpotSaveState, form:FormData): Promise<SpotSaveState> {
     "use server";
@@ -57,7 +60,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
       }).eq("id",owned.id).eq("customer_id",authorized.id).eq("current_status","Draft").select("id").single();
       if(error || !data?.id) return {error:"Claim submission could not be completed. Please check Claim Details before retrying."};
     }
-    redirect("/customer/claims/"+encodeURIComponent(owned.id)+"?account="+encodeURIComponent(authorized.id));
+    redirect("/customer/claims/"+encodeURIComponent(owned.id)+"/stage/spot_status?account="+encodeURIComponent(authorized.id));
   }
 
   const fieldClass = "mt-1.5 block h-10 w-full min-w-0 rounded-lg border border-[#D7E2F0] bg-white px-3 text-[13px] font-medium text-[#193659] outline-none transition focus-visible:border-[#2D7FF0] focus-visible:ring-2 focus-visible:ring-[#DCEBFF]";
@@ -75,7 +78,8 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
         <div className="flex min-w-0 items-center gap-3"><CustomerClaimLogo value={claim.insurer_name} kind="insurer" size={40}/><div className="min-w-0"><p className="truncate text-[13px] font-bold">{claim.policy_no||"No linked policy"}</p><p className="truncate text-[11px] text-white/75">{claim.insurer_name||"Insurer not assigned"}</p></div></div>
       </div>
     </section>
-    <SpotIntimationSaveForm action={submit} cancelHref={`/customer/start-claim?account=${encodeURIComponent(account.id)}`}>
+    <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey="spot_intimation" currentKey="spot_intimation" completedKeys={[]}/>
+    <SpotIntimationSaveForm action={submit} cancelHref={`/customer/start-claim?account=${encodeURIComponent(account.id)}`} evidence={<><CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage="spot_intimation" returnToSpotIntimation/><CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id}/></>}>
       <input type="hidden" name="account" value={account.id}/><input type="hidden" name="claim" value={claim.id}/>
       <div className="flex items-center gap-2 border-b border-[#E5EDF6] pb-3">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EDF4FF] text-[#2860AD]"><CalendarDays className="h-5 w-5"/></span>

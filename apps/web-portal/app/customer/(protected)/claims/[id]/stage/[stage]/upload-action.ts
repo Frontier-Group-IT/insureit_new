@@ -19,11 +19,12 @@ export async function uploadCustomerClaimDocument(form:FormData) {
   const claimId=String(form.get("claim")||"");
   const stage=String(form.get("stage")||"");
   const type=String(form.get("type")||"");
+  const returnToSpotIntimation=form.get("returnToSpotIntimation")==="1";
   if(!documentTypes.includes(type))throw new Error("Unsupported claim document category");
   const file=form.get("file");
   if(!(file instanceof File)||file.size===0)throw new Error("Select a file to upload");
   const video=file.type.startsWith("video/");
-  const supported=["application/pdf","image/jpeg","image/png","image/webp","image/heic","video/mp4","video/quicktime","video/webm","audio/mp4","audio/m4a","audio/x-m4a"];
+  const supported=["application/pdf","image/jpeg","image/png","image/webp","image/heic","video/mp4","video/quicktime","video/webm","audio/mp4","audio/m4a","audio/x-m4a","audio/webm","audio/ogg"];
   if(!supported.includes(file.type))throw new Error("Unsupported claim document format");
   const limit=video?50*1024*1024:5*1024*1024;
   if(file.size>limit)throw new Error("Claim document exceeds allowed file size");
@@ -45,6 +46,9 @@ export async function uploadCustomerClaimDocument(form:FormData) {
   if(saved.error){
     await db.storage.from("claim-documents").remove([path]);
     throw new Error("Document uploaded but could not be registered; please retry");
+  }
+  if (returnToSpotIntimation && stage==="spot_intimation" && claim.current_status==="Draft") {
+    redirect("/customer/spot-intimation?account="+encodeURIComponent(account.id)+"&id="+encodeURIComponent(claim.id));
   }
   redirect("/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(stage)+"?account="+encodeURIComponent(account.id));
 }
