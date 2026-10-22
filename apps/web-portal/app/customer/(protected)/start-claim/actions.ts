@@ -49,7 +49,7 @@ export async function prepareCustomerClaim(_previous: PrepareCustomerClaimState,
     const { data: recovered, error: recoveryError } = await scoped.not("current_status", "in", '("Settled","Closed","Claim Complete","Rejected")').limit(1).maybeSingle();
     if (!recovered?.id) {
       console.error("Customer claim draft creation failed", { code: error?.code, message: error?.message, details: error?.details, hint: error?.hint, recoveryCode: recoveryError?.code, recoveryMessage: recoveryError?.message });
-      return { error: error?.code === "23514" ? "Claim registration without a linked policy is not yet enabled. Please contact support." : "Your claim could not be registered. Please try again or contact support." };
+      return { error: error?.code === "42501" || error?.code === "PGRST301" ? "Your account is not authorized to register this claim. Check vehicle ownership or contact support." : error?.code === "23514" ? "Claim registration is restricted by a database rule. Please contact support." : "Your claim could not be registered. Please try again or contact support." };
     }
     redirect("/customer/spot-intimation?account=" + encodeURIComponent(account.id) + "&id=" + encodeURIComponent(recovered.id));
   }
