@@ -79,7 +79,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
       </div>
     </section>
     <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey="spot_intimation" currentKey="spot_intimation" completedKeys={[]}/>
-    <SpotIntimationSaveForm action={submit} cancelHref={`/customer/start-claim?account=${encodeURIComponent(account.id)}`}>
+    <SpotIntimationSaveForm action={submit} cancelHref={`/customer/start-claim?account=${encodeURIComponent(account.id)}`} evidence={<><CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage="spot_intimation" returnToSpotIntimation/><CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id}/></>}>
       <input type="hidden" name="account" value={account.id}/><input type="hidden" name="claim" value={claim.id}/>
       <div className="flex items-center gap-2 border-b border-[#E5EDF6] pb-3">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EDF4FF] text-[#2860AD]"><CalendarDays className="h-5 w-5"/></span>
@@ -95,8 +95,6 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
         <label className="text-[12px] font-semibold text-[#243C5F] sm:col-span-2"><span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-[#7389A9]"/>Accident location {external?"(optional)":"*"}</span><textarea name="location" required={!external} maxLength={500} rows={2} placeholder="Enter accident location" className="mt-1.5 block min-h-[66px] w-full resize-y rounded-lg border border-[#D7E2F0] bg-white px-3 py-2 text-[13px] font-medium text-[#193659] outline-none transition focus-visible:border-[#2D7FF0] focus-visible:ring-2 focus-visible:ring-[#DCEBFF]"/></label>
       </div>
     </SpotIntimationSaveForm>
-    <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage="spot_intimation" returnToSpotIntimation/>
-    <CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id}/>
     <p className="text-[11px] text-[#77869B]">Your details will be securely submitted for claim processing. Claim status and next steps are available in Claim Details.</p>
   </div>;
 }
