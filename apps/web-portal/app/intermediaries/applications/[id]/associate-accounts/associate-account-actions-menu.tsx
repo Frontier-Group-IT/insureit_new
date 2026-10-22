@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal, useFormStatus } from "react-dom";
-import { AlertTriangle, Ban, MoreVertical, Pencil, Send, Trash2, X } from "lucide-react";
+import { AlertTriangle, Ban, Pencil, Send, Trash2, X } from "lucide-react";
 
 import {
   deletePartnerAssociateAccount,
@@ -41,84 +41,14 @@ export function AssociateAccountActionsMenu({
   intermediaryId: string;
   returnPath: string;
 }) {
-  const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
-  // Enable with ?debugAssociateActions=1. No account or personal data is logged.
-  const trace = (stage: string) => {
-    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debugAssociateActions") === "1") {
-      console.info("[associate-actions]", stage);
-    }
-  };
   const showDialog = (dialog: "edit" | "status" | "delete") => {
-    trace("handler:" + dialog);
-    setOpen(false);
     if (dialog === "edit") setEditOpen(true);
     if (dialog === "status") setStatusOpen(true);
     if (dialog === "delete") setDeleteOpen(true);
   };
-  const rootRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-
-  useEffect(() => {
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setOpen(false);
-        setEditOpen(false);
-        setDeleteOpen(false);
-        setStatusOpen(false);
-      }
-    }
-    document.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!open) {
-      setMenuPosition(null);
-      return;
-    }
-
-    function positionMenu() {
-      const button = buttonRef.current;
-      if (!button) return;
-
-      const rect = button.getBoundingClientRect();
-      const menuWidth = 176;
-      const menuHeight = 154;
-      const gap = 8;
-      const viewportPadding = 12;
-
-      const left = Math.min(
-        Math.max(viewportPadding, rect.right - menuWidth),
-        window.innerWidth - menuWidth - viewportPadding,
-      );
-      const fitsBelow = rect.bottom + gap + menuHeight <= window.innerHeight - viewportPadding;
-      const top = fitsBelow
-        ? rect.bottom + gap
-        : Math.max(viewportPadding, rect.top - gap - menuHeight);
-
-      setMenuPosition({ top, left });
-    }
-
-    positionMenu();
-    window.addEventListener("resize", positionMenu);
-    window.addEventListener("scroll", positionMenu, true);
-
-    return () => {
-      window.removeEventListener("resize", positionMenu);
-      window.removeEventListener("scroll", positionMenu, true);
-    };
-  }, [open]);
-
-  useEffect(() => {
-    trace("state:menu=" + open + ":edit=" + editOpen + ":status=" + statusOpen + ":delete=" + deleteOpen);
-  }, [open, editOpen, statusOpen, deleteOpen]);
 
   const commonHidden = (
     <>
@@ -131,95 +61,20 @@ export function AssociateAccountActionsMenu({
 
   return (
     <>
-      <div ref={rootRef} className="relative inline-flex">
-        <button
-          ref={buttonRef}
-          type="button"
-          aria-label={`Actions for ${associate.name}`}
-          aria-haspopup="menu"
-          aria-expanded={open}
-          onClick={() => {
-            trace("trigger:click");
-            if (open) { setOpen(false); return; }
-            const rect = buttonRef.current?.getBoundingClientRect();
-            if (!rect) return;
-            const menuWidth = 176;
-            const menuHeight = 154;
-            const gap = 8;
-            const padding = 12;
-            setMenuPosition({
-              left: Math.max(padding, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - padding)),
-              top: rect.bottom + gap + menuHeight <= window.innerHeight - padding
-                ? rect.bottom + gap
-                : Math.max(padding, rect.top - gap - menuHeight),
-            });
-            setOpen(true);
-          }}
-          className="grid h-8 w-8 place-items-center rounded-lg border border-transparent text-[#334155] transition hover:border-[#DCE5EF] hover:bg-[#F1F5F9]"
-        >
-          <MoreVertical className="h-4 w-4" />
+      <div role="group" aria-label={`Account actions for ${associate.name}`} className="inline-flex items-center justify-center gap-1 whitespace-nowrap">
+        <button type="button" aria-label={`Edit ${associate.name}`} title="Edit" onClick={() => showDialog("edit")} className="grid h-8 w-8 place-items-center rounded-lg text-[#334155] transition hover:bg-[#E8F0FA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315FEA]">
+          <Pencil className="h-4 w-4" aria-hidden="true" />
         </button>
-
-        {open && menuPosition
-          ? createPortal(
-              <>
-                <button
-                  type="button"
-                  aria-label="Close actions menu"
-                  className="fixed inset-0 z-[9998] cursor-default bg-transparent"
-                  onClick={() => setOpen(false)}
-                />
-                <div
-                  ref={menuRef}
-                  role="menu"
-                  aria-label={`Actions for ${associate.name}`}
-                  style={{ top: menuPosition.top, left: menuPosition.left }}
-                  className="fixed z-[9999] pointer-events-auto w-44 overflow-hidden rounded-xl border border-[#DCE5EF] bg-white py-1.5 shadow-[0_18px_45px_rgba(15,23,42,.18)]"
-                  onPointerDownCapture={() => trace("menu:pointerdown:capture")}
-                  onClickCapture={() => trace("menu:click:capture")}
-                >
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => showDialog("edit")}
-                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC]"
-                >
-                  <Pencil className="h-3.5 w-3.5 text-[#64748B]" />
-                  Edit
-                </button>
-
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => showDialog("status")}
-                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC]"
-                >
-                  <Ban className="h-3.5 w-3.5 text-[#64748B]" />
-                  {associate.status === "disabled" ? "Enable" : "Disable"}
-                </button>
-
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => showDialog("delete")}
-                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-rose-600 hover:bg-rose-50"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Delete
-                </button>
-
-                <form action={resendPartnerAssociateInvite}>
-                  {commonHidden}
-                  <ResendInviteButton
-                    status={associate.status}
-                    invitedAt={associate.invited_at}
-                  />
-                </form>
-                </div>
-              </>,
-              document.body,
-            )
-          : null}
+        <button type="button" aria-label={`${associate.status === "disabled" ? "Enable" : "Disable"} ${associate.name}`} title={associate.status === "disabled" ? "Enable" : "Disable"} onClick={() => showDialog("status")} className="grid h-8 w-8 place-items-center rounded-lg text-[#64748B] transition hover:bg-[#F1F5F9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315FEA]">
+          <Ban className="h-4 w-4" aria-hidden="true" />
+        </button>
+        <form action={resendPartnerAssociateInvite} className="inline-flex">
+          {commonHidden}
+          <ResendInviteButton status={associate.status} invitedAt={associate.invited_at} />
+        </form>
+        <button type="button" aria-label={`Delete ${associate.name}`} title="Delete" onClick={() => showDialog("delete")} className="grid h-8 w-8 place-items-center rounded-lg text-rose-600 transition hover:bg-rose-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-500">
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
+        </button>
       </div>
 
       {editOpen ? (
@@ -359,13 +214,13 @@ function ResendInviteButton({
   return (
     <button
       type="submit"
-      role="menuitem"
+      aria-label={pending ? "Sending link" : remaining > 0 ? `Resend link in ${remaining} seconds` : "Resend link"}
       disabled={disabled}
       title={title}
-      className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-40"
+      className="grid h-8 w-8 place-items-center rounded-lg text-[#64748B] hover:bg-[#F1F5F9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315FEA] disabled:cursor-not-allowed disabled:opacity-40"
     >
       <Send className="h-3.5 w-3.5 text-[#64748B]" />
-      {pending ? "Sending..." : remaining > 0 ? `Resend in ${remaining}s` : "Resend Link"}
+
     </button>
   );
 }
