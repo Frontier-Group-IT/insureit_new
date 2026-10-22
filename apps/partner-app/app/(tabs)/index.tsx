@@ -241,7 +241,7 @@ export default function PartnerHomeScreen() {
 
               <View style={styles.businessMainRow}>
                 <View style={styles.businessMainCopy}>
-                  <Text style={styles.businessPremium}>{formatWholeIndianCurrency(rangeData?.net_premium ?? 0)}</Text>
+                  <Text style={styles.businessPremium}>{rangeData ? formatWholeIndianCurrency(rangeData.net_premium) : '—'}</Text>
                   <Text style={styles.businessCaption}>Business Generated (Net Premium)</Text>
                   {business.loading && !rangeData ? (
                     <Text style={styles.trendNeutral}>Updating business figures…</Text>
@@ -274,7 +274,7 @@ export default function PartnerHomeScreen() {
               <View style={styles.businessBottomRow}>
                 <MetricCell
                   icon={<PartnerPoliciesSoldIcon size={36} />}
-                  value={String(rangeData?.policies ?? data.business.policies_this_month)}
+                  value={rangeData ? String(rangeData.policies) : '—'}
                   label="Policies Sold"
                 />
                 <View style={styles.metricDivider} />
