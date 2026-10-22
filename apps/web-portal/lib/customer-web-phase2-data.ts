@@ -236,6 +236,8 @@ export async function loadCustomerClaimDetail(customerId: string, claimId: strin
     supabase.from("claim_tasks").select("id,claim_id,title,status").eq("claim_id", claimId).eq("status", "open"),
   ]);
 
+  if (documentResult.error) throw new Error("Claim documents could not be loaded. Please retry.");
+
   const milestones = (milestoneResult.data ?? []) as CustomerClaimMilestone[];
   const documents = (documentResult.data ?? []) as CustomerClaimDocument[];
   const tasks = (taskResult.data ?? []) as CustomerClaimTask[];
