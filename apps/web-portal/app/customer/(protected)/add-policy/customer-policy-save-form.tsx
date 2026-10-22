@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { LoaderCircle } from "lucide-react";
+import Link from "next/link";
 
 export type PolicySaveState = {
   error: string | null;
@@ -44,14 +45,17 @@ export function CustomerPolicySaveForm({
           ) : null}
         </div>
       ) : null}
-      <button
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Link href={{ pathname: "/customer/policies", query: { account: accountId } }} aria-disabled={pending} tabIndex={pending ? -1 : undefined} className={`inline-flex min-h-11 items-center justify-center rounded-xl border border-[#CBD8E8] bg-white px-5 py-2.5 text-[12px] font-semibold text-[#17365F] transition hover:bg-[#F1F6FD] ${pending ? "pointer-events-none opacity-60" : ""}`}>Cancel</Link>
+        <button
         type="submit"
         disabled={pending || state.policyCreated}
         aria-disabled={pending || state.policyCreated}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1755A7] px-5 py-4 text-sm font-extrabold text-white shadow-sm transition hover:bg-[#0B418A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#155BAA] disabled:cursor-not-allowed disabled:opacity-70"
+        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1755A7] px-5 py-2.5 text-[12px] font-extrabold text-white shadow-sm transition hover:bg-[#0B418A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#155BAA] disabled:cursor-not-allowed disabled:opacity-70"
       >
         {pending ? <><LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true"/>Saving...</> : state.policyCreated ? "Policy saved" : "Save policy"}
-      </button>
+        </button>
+      </div>
     </form>
   );
 }
