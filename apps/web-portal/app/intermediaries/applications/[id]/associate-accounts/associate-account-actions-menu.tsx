@@ -60,7 +60,7 @@ export function AssociateAccountActionsMenu({
   };
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDialogElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
@@ -120,15 +120,6 @@ export function AssociateAccountActionsMenu({
     trace("state:menu=" + open + ":edit=" + editOpen + ":status=" + statusOpen + ":delete=" + deleteOpen);
   }, [open, editOpen, statusOpen, deleteOpen]);
 
-  // Render the action dropdown in the browser top layer. Background UI can no
-  // longer intercept pointer events intended for the menu.
-  useEffect(() => {
-    const dialog = menuRef.current;
-    if (!open || !menuPosition || !dialog) return;
-    if (!dialog.open) dialog.showModal();
-    return () => { if (dialog.open) dialog.close(); };
-  }, [open, Boolean(menuPosition)]);
-
   const commonHidden = (
     <>
       <input type="hidden" name="application_id" value={applicationId} />
@@ -147,7 +138,23 @@ export function AssociateAccountActionsMenu({
           aria-label={`Actions for ${associate.name}`}
           aria-haspopup="menu"
           aria-expanded={open}
-          onClick={() => { trace("trigger:click"); setOpen((value) => !value); }}
+          onClick={() => {
+            trace("trigger:click");
+            if (open) { setOpen(false); return; }
+            const rect = buttonRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            const menuWidth = 176;
+            const menuHeight = 154;
+            const gap = 8;
+            const padding = 12;
+            setMenuPosition({
+              left: Math.max(padding, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - padding)),
+              top: rect.bottom + gap + menuHeight <= window.innerHeight - padding
+                ? rect.bottom + gap
+                : Math.max(padding, rect.top - gap - menuHeight),
+            });
+            setOpen(true);
+          }}
           className="grid h-8 w-8 place-items-center rounded-lg border border-transparent text-[#334155] transition hover:border-[#DCE5EF] hover:bg-[#F1F5F9]"
         >
           <MoreVertical className="h-4 w-4" />
@@ -155,22 +162,21 @@ export function AssociateAccountActionsMenu({
 
         {open && menuPosition
           ? createPortal(
-              <dialog
-                ref={menuRef}
-                aria-label={`Actions for ${associate.name}`}
-                onCancel={(event) => { event.preventDefault(); setOpen(false); }}
-                onPointerDown={(event) => {
-                  if (event.target === event.currentTarget) setOpen(false);
-                }}
-                style={{ top: menuPosition.top, left: menuPosition.left }}
-                className="fixed m-0 w-44 overflow-hidden rounded-xl border border-[#DCE5EF] bg-white p-0 shadow-[0_18px_45px_rgba(15,23,42,.18)] backdrop:bg-transparent"
-              >
+              <>
+                <button
+                  type="button"
+                  aria-label="Close actions menu"
+                  className="fixed inset-0 z-[9998] cursor-default bg-transparent"
+                  onClick={() => setOpen(false)}
+                />
                 <div
+                  ref={menuRef}
                   role="menu"
-                  className="py-1.5"
+                  aria-label={`Actions for ${associate.name}`}
+                  style={{ top: menuPosition.top, left: menuPosition.left }}
+                  className="fixed z-[9999] pointer-events-auto w-44 overflow-hidden rounded-xl border border-[#DCE5EF] bg-white py-1.5 shadow-[0_18px_45px_rgba(15,23,42,.18)]"
                   onPointerDownCapture={() => trace("menu:pointerdown:capture")}
                   onClickCapture={() => trace("menu:click:capture")}
-                  onClick={(event) => event.stopPropagation()}
                 >
                 <button
                   type="button"
@@ -210,7 +216,7 @@ export function AssociateAccountActionsMenu({
                   />
                 </form>
                 </div>
-              </dialog>,
+              </>,
               document.body,
             )
           : null}
