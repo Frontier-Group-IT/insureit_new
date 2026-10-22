@@ -15,7 +15,7 @@ for (const action of ["edit", "status", "delete"]) {
 }
 for (const icon of ["Pencil", "Ban", "Send", "Trash2"]) {
   assert.ok(menu.includes(`<${icon} `), `Inline icon missing: ${icon}`);
-}
+assert.ok(menu.includes("<form action={resendPartnerAssociateInvite}"),
 assert.match(menu, /<form action=\\{resendPartnerAssociateInvite\\}/, "Resend server action remains available");
 assert.match(menu, /aria-label=\\{`Edit/, "Edit has accessible name");
 assert.match(menu, /aria-label=\\{`Delete/, "Delete has accessible name");
