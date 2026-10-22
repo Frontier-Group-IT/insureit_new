@@ -6,20 +6,18 @@ const base = new URL("../app/intermediaries/applications/[id]/associate-accounts
 const menu = readFileSync(fileURLToPath(new URL("associate-account-actions-menu.tsx", base)), "utf8");
 const actions = readFileSync(fileURLToPath(new URL("actions.ts", base)), "utf8");
 
-assert.match(menu, /event\.composedPath\(\)/, "Outside handling must include portal event path");
-assert.match(menu, /document\.addEventListener\("pointerdown", closeOnOutsideClick\)/);
-assert.match(menu, /withinTrigger && !withinMenu/, "Outside dismissal must check the actual portal menu");
-assert.match(menu, /z-\[9999\] pointer-events-auto/, "Actions must stay above overlapping page UI");
-assert.match(menu, /z-\[10000\]/, "Confirmation dialogs must be above the action menu");
-
+assert.match(menu, /if \(!dialog.open\) dialog.showModal\(\)/, "Menu must open in native top layer");
+assert.match(menu, /<dialog/, "Menu must use top-layer dialog");
+assert.match(menu, /role="menu"/, "Menu choices retain accessible menu semantics");
+assert.doesNotMatch(menu, /document\.addEventListener\("pointerdown"/, "No document-level outside pointerdown dismissal");
+assert.match(menu, /onCancel=\{\(event\)/, "Escape dismisses menu");
 for (const action of ["edit", "status", "delete"]) {
   assert.ok(
     menu.includes(`onClick={() => showDialog("${action}")}`),
     `Missing accessible click/keyboard activation: ${action}`
   );
 }
-assert.doesNotMatch(menu, /onPointerDown=\\{\\(event\\) => \\{/,
-  "Dialog buttons should not unmount the menu during pointerdown");
+assert.ok(!menu.includes('if (event.button === 0) showDialog('), "No pointer-first dialog activation");
 assert.ok(!menu.includes("requestSubmit("),
   "Resend should use the native submit once, without manual requestSubmit");
 assert.doesNotMatch(menu, /recordResendAttempt/,
