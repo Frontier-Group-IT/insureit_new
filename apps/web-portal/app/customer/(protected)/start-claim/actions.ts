@@ -22,7 +22,7 @@ export async function prepareCustomerClaim(_previous: PrepareCustomerClaimState,
   if (policyId && !policy) return { error: "This policy is not linked to the selected vehicle." };
   const active = claims.find(c => (policy ? (policy.source === "external" ? c.external_policy_id === policy.id : c.policy_id === policy.id) : c.vehicle_id === vehicleId && !c.policy_id && !c.external_policy_id) && !["Settled","Closed","Claim Complete","Rejected"].includes(c.current_status));
   if (active) {
-    redirect("/customer/claims/" + encodeURIComponent(active.id) + "?account=" + encodeURIComponent(account.id));
+    redirect("/customer/spot-intimation?account=" + encodeURIComponent(account.id) + "&id=" + encodeURIComponent(active.id));
   }
   const supabase = await createServerSupabaseClient();
   if (policy?.source === "external") {
@@ -46,9 +46,9 @@ export async function prepareCustomerClaim(_previous: PrepareCustomerClaimState,
     // Recover a concurrent draft instead of creating a second claim.
     const base = supabase.from("claims").select("id,current_status").eq("customer_id", account.id);
     const scoped = policy ? base.eq("policy_id", policy.id) : base.eq("vehicle_id", vehicleId).is("policy_id", null).is("external_policy_id", null);
-    const { data: recovered } = await scoped.not("current_status", "in", '("Settled","Closed","Claim Complete","Rejected")').limit(1).maybeSingle();
+    const { data: recovered, error: recoveryError } = await scoped.not("current_status", "in", '("Settled","Closed","Claim Complete","Rejected")').limit(1).maybeSingle();
     if (!recovered?.id) {
-      console.error("Customer claim draft creation failed", { code: error?.code, message: error?.message, details: error?.details, hint: error?.hint, recoveryCode: null });
+      console.error("Customer claim draft creation failed", { code: error?.code, message: error?.message, details: error?.details, hint: error?.hint, recoveryCode: recoveryError?.code, recoveryMessage: recoveryError?.message });
       return { error: error?.code === "23514" ? "Claim registration without a linked policy is not yet enabled. Please contact support." : "Your claim could not be registered. Please try again or contact support." };
     }
     redirect("/customer/spot-intimation?account=" + encodeURIComponent(account.id) + "&id=" + encodeURIComponent(recovered.id));
