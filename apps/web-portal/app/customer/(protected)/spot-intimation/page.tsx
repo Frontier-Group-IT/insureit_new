@@ -52,6 +52,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
     let db: Awaited<ReturnType<typeof createServerSupabaseClient>>;
     try { db=await createServerSupabaseClient(); }
     catch (error) { console.error("Customer Spot Intimation database connection failed",error); return {error:"Unable to connect to claim service. Please try again."}; }
+    try {
     if(owned.external_policy_id) {
       if(owned.claim_service_mode==="broker_managed") {
         if(owned.current_status!=="Draft") return {error:"This claim has already progressed. Open Claim Details to continue."};
@@ -80,6 +81,10 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
         accident_description:"Driver: "+driver+"\nDriver phone: "+phone,
       }).eq("id",owned.id).eq("customer_id",authorized.id).eq("current_status","Draft").select("id").single();
       if(error || !data?.id) return {error:"Claim submission could not be completed. Please check Claim Details before retrying."};
+    }
+    } catch (error) {
+      console.error("Customer Spot Intimation save failed unexpectedly",error);
+      return {error:"Your claim could not be saved. Please check Claim Details before trying again."};
     }
     redirect("/customer/claims/"+encodeURIComponent(owned.id)+"/stage/spot_status?account="+encodeURIComponent(authorized.id));
   }
