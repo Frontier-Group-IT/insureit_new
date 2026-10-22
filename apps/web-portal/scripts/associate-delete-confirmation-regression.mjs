@@ -8,7 +8,7 @@ assert.match(source,/<DeleteAssociateConfirmation/);
 assert.match(source,/Permanently delete associate account\?/);
 assert.match(source,/associateName/);
 assert.match(source,/Protected business history may prevent deletion/);
-assert.match(source,/aria-modal="true"/);
+assert.match(source,/dialog\.showModal\(\)/);\nassert.match(source,/<dialog/);
 assert.match(source,/createPortal\(/);
 assert.match(source,/<form action=\{deletePartnerAssociateAccount\}/);
 assert.match(source,/\{hiddenFields\}/);
