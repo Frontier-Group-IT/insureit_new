@@ -137,7 +137,7 @@ export async function loadPolicyIntakeOnboardingDraft(id:string):Promise<PolicyI
 }
 
 export async function savePolicyIntakeOnboardingDraft(id:string,expectedRevision:number,draft:PolicyIntakeDraft):Promise<PolicyIntakeDraftSaveResult>{
-  await requirePolicyIntakeFinalizer(); await requirePolicyIntakeReviewer(); const admin=createSupabaseAdminClient();
+  await requirePolicyIntakeFinalizer(); const reviewer=await requirePolicyIntakeReviewer(); const admin=createSupabaseAdminClient();
   const {data:intake}=await admin.from("policy_intake_requests").select("status,assigned_to_profile_id").eq("id",id).maybeSingle<{status:string;assigned_to_profile_id:string|null}>();
   if(!intake||intake.status!=="in_review")return{ok:false,error:"This intake is no longer in review.",conflict:true};
   const {data,error}=await admin.from("policy_intake_onboarding_drafts")
