@@ -216,7 +216,7 @@ export function CustomerServiceRequestForm(props: Props) {
           <textarea className={`${areaClass} mt-1`} value={note} onChange={event=>setNote(event.target.value)} placeholder="Add any additional details..." />
         </label>
         <div className="space-y-2 rounded-xl border border-[#DCE6F2] bg-[#F6F9FD] p-3">
-          <label className="flex items-start gap-2 text-[10px] font-medium text-[#405473]"><input type="checkbox" checked={consent} onChange={event=>setConsent(event.target.checked)} className="mt-0.5 h-3.5 w-3.5 accent-[#1766C4]"/><span>I agree to the Terms of Use, Privacy Policy and authorize INSUREIT to contact me about this request.</span></label>
+          <label className="flex items-start gap-2 text-[10px] font-medium text-[#405473]"><input type="checkbox" checked={consent} onChange={event=>setConsent(event.target.checked)} className="mt-0.5 h-3.5 w-3.5 accent-[#1766C4]"/><span>I agree to the Terms of Use, <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()} className="font-bold text-[#1769DC] underline-offset-2 hover:underline focus-visible:underline">Privacy Policy</a> and authorize INSUREIT to contact me about this request.</span></label>
           <label className="flex items-center gap-2 text-[10px] font-medium text-[#405473]"><input type="checkbox" checked={whatsapp} onChange={event=>setWhatsapp(event.target.checked)} className="h-3.5 w-3.5 accent-[#1766C4]"/>Send updates on WhatsApp</label>
         </div>
         {error?<p role="alert" className="rounded-xl bg-[#FFF0F0] px-3 py-2 text-[11px] font-bold text-[#A13B3B]">{error}</p>:null}
