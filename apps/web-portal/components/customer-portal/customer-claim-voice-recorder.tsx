@@ -38,7 +38,7 @@ export function CustomerClaimVoiceRecorder({ claimId, accountId }: { claimId: st
       const chunks: BlobPart[] = [];
       instance.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
       instance.onstop = () => {
-        const mime = instance.mimeType || "audio/webm";
+        const mime = (instance.mimeType || "audio/webm").split(";")[0];
         const extension = mime.includes("mp4") ? "m4a" : mime.includes("ogg") ? "ogg" : "webm";
         const blob = new Blob(chunks, { type: mime });
         if (blob.size > 0 && blob.size <= 5 * 1024 * 1024) setAudioFile(new File([blob], "incident-voice-note." + extension, { type: mime }));
