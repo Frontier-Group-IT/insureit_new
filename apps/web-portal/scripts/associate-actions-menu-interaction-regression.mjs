@@ -14,23 +14,16 @@ assert.match(menu, /z-\[10000\]/, "Confirmation dialogs must be above the action
 
 for (const action of ["edit", "status", "delete"]) {
   assert.ok(
-    menu.includes(`if (event.button === 0) showDialog("${action}")`),
-    `Missing pointer-first dialog activation: ${action}`
-  );
-  assert.ok(
     menu.includes(`onClick={() => showDialog("${action}")}`),
-    `Missing keyboard/click fallback: ${action}`
+    `Missing accessible click/keyboard activation: ${action}`
   );
 }
-
-assert.match(menu, /onPointerUp=\{\(event\) => \{/,
-  "Resend must have pointer completion handling");
-assert.ok(
-  menu.includes("event.currentTarget.form?.requestSubmit()"),
-  "Resend must explicitly submit its existing form after a valid pointer activation"
-);
-assert.match(menu, /submittedByPointerRef/, "Resend must de-duplicate the following click");
-assert.match(menu, /recordResendAttempt/, "Resend cooldown must be recorded once");
+assert.doesNotMatch(menu, /onPointerDown=\\{\\(event\\) => \\{/,
+  "Dialog buttons should not unmount the menu during pointerdown");
+assert.doesNotMatch(menu, /requestSubmit\\(/,
+  "Resend should use the native submit once, without manual requestSubmit");
+assert.doesNotMatch(menu, /recordResendAttempt/,
+  "Cooldown should only reflect confirmed server invitation timestamp");
 assert.match(menu, /<form action=\{resendPartnerAssociateInvite\}>/,
   "Resend must preserve the existing server action form");
 assert.match(menu, /type="submit"/);
@@ -45,4 +38,4 @@ for (const serverAction of [
     `Server action must remain present: ${serverAction}`);
 }
 
-console.log("Associate action menu pointer activation contract: OK");
+console.log("Associate action menu click activation contract: OK");
