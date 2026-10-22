@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { CalendarDays, CarFront, FileText, ShieldCheck, UploadCloud, Wallet } from "lucide-react";
+import { CalendarDays, CarFront, FileText, UploadCloud, Wallet } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { getCustomerWebSession } from "@/lib/customer-web";
 import { resolveCustomerWebScope, loadCustomerWebVehicles, loadCustomerWebPolicies } from "@/lib/customer-web-data";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
-import { CustomerPolicySelections } from "@/components/customer-portal/customer-policy-selections";
+import { CustomerPolicySelectionProvider, CustomerPolicyVehicleField, CustomerPolicyProductField } from "@/components/customer-portal/customer-policy-selections";
 import { CustomerPolicySaveForm, type PolicySaveState } from "./customer-policy-save-form";
 
 export const dynamic = "force-dynamic";
@@ -78,39 +78,44 @@ export default async function AddCustomerPolicy({ searchParams }: { searchParams
     }
     redirect("/customer/policies?account=" + encodeURIComponent(authorized.id));
   }
-  const inputClass = "mt-1.5 block w-full min-h-10 rounded-xl border border-[#D6E0EF] bg-[#FBFDFF] px-3 py-2 text-[12px] text-[#1B3150] outline-none transition focus:border-[#2C70C5] focus:ring-2 focus:ring-[#DDEBFC]";
-  return <div className="w-full space-y-3 pb-8">
+  const inputClass = "mt-1.5 block w-full min-h-10 rounded-xl border border-[#D6E0EF] bg-white px-3 py-2 text-[12px] text-[#1B3150] outline-none transition focus:border-[#2C70C5] focus:ring-2 focus:ring-[#DDEBFC]";
+  const blockedVehicles = policies.filter(p => p.vehicle_id && p.start_date <= new Date().toISOString().slice(0, 10) && p.end_date >= new Date().toISOString().slice(0, 10)).map(p => p.vehicle_id as string);
+  return <div className="mx-auto w-full max-w-5xl space-y-3 pb-8">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h1 className="text-xl font-black text-[#102B54]">Add Policy</h1>
       <Link href={{ pathname: "/customer/policies", query: { account: account.id } }} className="rounded-lg border border-[#CEDBEA] px-3 py-2 text-xs font-bold text-[#24538E] hover:bg-[#EEF5FE]">Back to My Policies</Link>
     </div>
     <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/add-policy"/>
-    <div className="overflow-hidden rounded-2xl border border-[#DCE6F2] bg-white shadow-sm"><div className="flex items-center justify-between bg-gradient-to-r from-[#0D2853] to-[#24508A] px-5 py-4 text-white"><h2 className="text-[17px] font-bold">Policy Onboarding</h2><ShieldCheck className="h-6 w-6 text-cyan-200"/></div><div className="flex flex-wrap gap-5 bg-[#F7F9FC] px-5 py-3 text-[11px] font-semibold text-[#506783]"><a href="#policy-step-vehicle" className="hover:text-[#1A5DB6] focus-visible:underline">01 &nbsp; Vehicle</a><a href="#policy-step-details" className="hover:text-[#1A5DB6] focus-visible:underline">02 &nbsp; Policy Details</a><a href="#policy-step-save" className="hover:text-[#1A5DB6] focus-visible:underline">03 &nbsp; Review &amp; Save</a></div></div>
     <CustomerPolicySaveForm action={save} accountId={account.id}>
       <input type="hidden" name="account" value={account.id}/>
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(275px,1fr)]"><div className="min-w-0 space-y-3"><section id="policy-step-vehicle" className="overflow-hidden rounded-2xl border border-[#DFE7F0] bg-white shadow-sm">
-        <div className="flex items-center gap-2 border-b border-[#E7EDF4] px-4 py-3 text-[13px] font-extrabold text-[#13345D]"><span className="rounded-lg bg-[#163A68] px-2.5 py-1.5 text-xs text-white">01</span><CarFront className="h-5 w-5 text-[#155BAA]"/>Vehicle identification</div>
-        <div className="grid gap-3 p-4 sm:grid-cols-2 [&_select]:!border-[#D5E0ED] [&_select]:!bg-white [&_select]:!py-2 [&_select]:!text-[12px]"><CustomerPolicySelections accountId={account.id} vehicles={vehicles} blocked={policies.filter(p=>p.vehicle_id&&p.start_date<=new Date().toISOString().slice(0,10)&&p.end_date>=new Date().toISOString().slice(0,10)).map(p=>p.vehicle_id as string)} initial={q.vehicle} /></div>
-      </section>
-      <section id="policy-step-details" className="overflow-hidden rounded-2xl border border-[#DFE7F0] bg-white shadow-sm">
-        <div className="flex items-center gap-2 border-b border-[#E7EDF4] px-4 py-3 text-[13px] font-extrabold text-[#13345D]"><span className="rounded-lg bg-[#163A68] px-2.5 py-1.5 text-xs text-white">02</span><FileText className="h-5 w-5 text-[#B97422]"/>Policy details</div>
-        <div className="grid gap-3 p-4 sm:grid-cols-2">
-          <label className="text-[12px] font-bold text-[#1B3150] sm:col-span-2">Insurer *<select name="insurer" required className={inputClass}><option value="">Select insurer</option>{(companies.data||[]).map(i=><option key={i.id} value={i.id}>{i.name}</option>)}</select></label>
-          <label className="text-[12px] font-bold text-[#1B3150]">Policy no. *<input required name="number" maxLength={100} placeholder="Enter policy number" className={inputClass}/></label>
-          <div className="self-end rounded-xl bg-[#FFF1DA] p-3 text-[11px] leading-5 text-[#855C26]"><ShieldCheck className="mr-1 inline h-4 w-4"/>Select your policy product in the Vehicle section above.</div>
-        </div>
-      </section>
-      <section id="policy-step-save" className="overflow-hidden rounded-2xl border border-[#DFE7F0] bg-white shadow-sm">
-        <div className="flex items-center gap-2 border-b border-[#E7EDF4] px-4 py-3 text-[13px] font-extrabold text-[#13345D]"><span className="rounded-lg bg-[#163A68] px-2.5 py-1.5 text-xs text-white">03</span><CalendarDays className="h-5 w-5 text-[#138867]"/>Validity, premium &amp; documents</div>
-        <div className="grid gap-3 p-4 sm:grid-cols-2">
-          <label className="text-[12px] font-bold text-[#1B3150]">Start date *<input required type="date" name="start" className={inputClass}/></label>
-          <label className="text-[12px] font-bold text-[#1B3150]">End date *<input required type="date" name="end" className={inputClass}/></label>
-          <label className="text-[12px] font-bold text-[#1B3150]">IDV (optional)<input type="number" min="0" step="0.01" name="idv" placeholder="₹ 0.00" className={inputClass}/></label>
-          <label className="text-[12px] font-bold text-[#1B3150]"><Wallet className="mr-1 inline h-4 w-4 text-[#158565]"/>Premium (optional)<input type="number" min="0" step="0.01" name="premium" placeholder="₹ 0.00" className={inputClass}/></label>
-          <label className="rounded-xl border border-dashed border-[#ABC8E7] bg-[#F7FAFF] p-3 text-[12px] font-bold text-[#1E4472] sm:col-span-2"><UploadCloud className="mr-2 inline h-5 w-5"/>Upload policy copy <span className="font-normal text-[#65809E]">(PDF or image, up to 5 MB)</span><input name="copy" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="mt-2 block w-full text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-[#E2EEFF] file:px-3 file:py-2 file:font-semibold file:text-[#1A55A0]"/></label>
-        </div>
-      </section></div><aside className="rounded-2xl border border-[#DCE6F2] bg-white p-4 shadow-sm xl:sticky xl:top-24"><h3 className="text-[14px] font-bold text-[#17385E]">Policy summary</h3><p className="mt-2 text-[11px] leading-5 text-[#647A97]">Review your vehicle, insurer, dates and premium before saving. Values update as you enter them.</p><div id="customer-policy-live-summary" aria-live="polite" className="mt-3 space-y-3 text-[12px] text-[#294766]"><p>Select a vehicle to begin.</p></div></aside></div>
+      <CustomerPolicySelectionProvider vehicles={vehicles} blocked={blockedVehicles} initial={q.vehicle}>
+        <section className="overflow-hidden rounded-2xl border border-[#B9D4EE] bg-[#EFF7FF] shadow-sm">
+          <div className="flex items-center gap-2 border-b border-[#B9D4EE] bg-[#DDEEFF] px-4 py-3 text-[13px] font-extrabold text-[#13345D]"><CarFront className="h-5 w-5 text-[#155BAA]"/>Vehicle</div>
+          <div className="p-4"><CustomerPolicyVehicleField accountId={account.id}/></div>
+        </section>
+        <section className="overflow-hidden rounded-2xl border border-[#F0D7B4] bg-[#FFF8ED] shadow-sm">
+          <div className="flex items-center gap-2 border-b border-[#EED5B1] bg-[#FFEBCF] px-4 py-3 text-[13px] font-extrabold text-[#13345D]"><FileText className="h-5 w-5 text-[#B97422]"/>Policy details</div>
+          <div className="grid gap-3 p-4 sm:grid-cols-2">
+            <label className="block text-[12px] font-bold text-[#1B3150]">Insurer *
+              <select name="insurer" required className={inputClass}><option value="">Select insurer</option>{(companies.data||[]).map(i=><option key={i.id} value={i.id}>{i.name}</option>)}</select>
+            </label>
+            <label className="block text-[12px] font-bold text-[#1B3150]">Policy no. *
+              <input required name="number" maxLength={100} placeholder="Enter policy number" className={inputClass}/>
+            </label>
+            <div className="sm:col-span-2"><CustomerPolicyProductField/></div>
+          </div>
+        </section>
+        <section className="overflow-hidden rounded-2xl border border-[#BEE4D3] bg-[#F1FBF6] shadow-sm">
+          <div className="flex items-center gap-2 border-b border-[#BCE5D1] bg-[#DDF7E9] px-4 py-3 text-[13px] font-extrabold text-[#13345D]"><CalendarDays className="h-5 w-5 text-[#138867]"/>Validity and value</div>
+          <div className="grid gap-3 p-4 sm:grid-cols-2">
+            <label className="block text-[12px] font-bold text-[#1B3150]">Start date *<input required type="date" name="start" className={inputClass}/></label>
+            <label className="block text-[12px] font-bold text-[#1B3150]">End date *<input required type="date" name="end" className={inputClass}/></label>
+            <label className="block text-[12px] font-bold text-[#1B3150]">IDV (optional)<input type="number" min="0" step="0.01" name="idv" placeholder="₹ 0.00" className={inputClass}/></label>
+            <label className="block text-[12px] font-bold text-[#1B3150]"><Wallet className="mr-1 inline h-4 w-4 text-[#158565]"/>Premium (optional)<input type="number" min="0" step="0.01" name="premium" placeholder="₹ 0.00" className={inputClass}/></label>
+            <label className="rounded-xl border border-dashed border-[#ABC8E7] bg-[#F7FAFF] p-3 text-[12px] font-bold text-[#1E4472] sm:col-span-2"><UploadCloud className="mr-2 inline h-5 w-5"/>Upload policy copy <span className="font-normal text-[#65809E]">(PDF or image, up to 5 MB)</span><input name="copy" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="mt-2 block w-full text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-[#E2EEFF] file:px-3 file:py-2 file:font-semibold file:text-[#1A55A0]"/></label>
+          </div>
+        </section>
+      </CustomerPolicySelectionProvider>
     </CustomerPolicySaveForm>
-    <p className="text-xs leading-5 text-[#718096]">Your policy will be added to your account as an external policy. The customer-authorized service verifies vehicle ownership and keeps other customers’ records private.</p>
   </div>;
 }
