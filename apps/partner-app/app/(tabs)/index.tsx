@@ -493,31 +493,56 @@ function MetricCell({
   );
 }
 
-function QuickAction({ asset, label, onPress }: { asset: number; label: string; onPress: () => void }) {
-  const scale = useState(() => new Animated.Value(1))[0];
-  const animate = (pressed: boolean) => {
-    Animated.spring(scale, {
-      toValue: pressed ? 0.96 : 1,
-      useNativeDriver: true,
-      speed: 28,
-      bounciness: 5,
+const QUICK_ACTION_WIDTH = 94;
+const QUICK_ACTION_GAP = 7;
+const QUICK_ACTION_STEP = QUICK_ACTION_WIDTH + QUICK_ACTION_GAP;
+
+function QuickAction({
+  asset, label, onPress, index, scrollX, viewportWidth,
+}: {
+  asset: number; label: string; onPress: () => void;
+  index: number; scrollX: Animated.Value; viewportWidth: number;
+}) {
+  const pressScale = useRef(new Animated.Value(1)).current;
+  const animatePress = (pressed: boolean) => {
+    Animated.spring(pressScale, {
+      toValue: pressed ? 0.96 : 1, useNativeDriver: true,
+      speed: 28, bounciness: 5,
     }).start();
   };
+  // Card focus is driven by carousel scroll offset, including programmatic auto-scroll.
+  const centeredOffset = index * QUICK_ACTION_STEP + QUICK_ACTION_WIDTH / 2 - viewportWidth / 2;
+  const inputRange = [
+    centeredOffset - QUICK_ACTION_STEP * 2,
+    centeredOffset - QUICK_ACTION_STEP,
+    centeredOffset,
+    centeredOffset + QUICK_ACTION_STEP,
+    centeredOffset + QUICK_ACTION_STEP * 2,
+  ];
+  const focusScale = scrollX.interpolate({
+    inputRange, outputRange: [0.94, 0.98, 1.12, 0.98, 0.94], extrapolate: 'clamp',
+  });
+  const highlightOpacity = scrollX.interpolate({
+    inputRange, outputRange: [0, 0.12, 1, 0.12, 0], extrapolate: 'clamp',
+  });
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      onPressIn={() => animate(true)}
-      onPressOut={() => animate(false)}
+      onPressIn={() => animatePress(true)}
+      onPressOut={() => animatePress(false)}
       style={styles.quickActionTouch}
     >
-      <Animated.View style={[styles.quickAction, { transform: [{ scale }] }]}>
-        <View style={styles.quickIcon}>
-          <Image source={asset} style={styles.quickImage} resizeMode="contain" />
-        </View>
-        <Text numberOfLines={2} style={styles.quickLabel}>{label}</Text>
+      <Animated.View style={[styles.quickAction, { transform: [{ scale: focusScale }] }]}>
+        <Animated.View pointerEvents="none" style={[styles.quickActionFocus, { opacity: highlightOpacity }]} />
+        <Animated.View style={{ alignItems: 'center', transform: [{ scale: pressScale }] }}>
+          <View style={styles.quickIcon}>
+            <Image source={asset} style={styles.quickImage} resizeMode="contain" />
+          </View>
+          <Text numberOfLines={2} style={styles.quickLabel}>{label}</Text>
+        </Animated.View>
       </Animated.View>
     </Pressable>
   );
@@ -529,6 +554,8 @@ function QuickActionsCarousel({
   actions: Array<{ key: string; asset: number; label: string; onPress: () => void }>;
 }) {
   const scrollRef = useRef<ScrollView>(null);
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const [viewportWidth, setViewportWidth] = useState(0);
   const offsetRef = useRef(0);
   const loopWidthRef = useRef(0);
   const draggingRef = useRef(false);
@@ -565,6 +592,7 @@ function QuickActionsCarousel({
       ref={scrollRef}
       horizontal
       showsHorizontalScrollIndicator={false}
+      onLayout={(event) => setViewportWidth(event.nativeEvent.layout.width)}
       contentContainerStyle={styles.quickGrid}
       directionalLockEnabled
       scrollEventThrottle={16}
@@ -577,6 +605,7 @@ function QuickActionsCarousel({
           offsetRef.current -= loopWidthRef.current;
           scrollRef.current?.scrollTo({ x: offsetRef.current, animated: false });
         }
+        scrollX.setValue(offsetRef.current);
       }}
       onScrollBeginDrag={pauseForTouch}
       onScrollEndDrag={resumeAfterTouch}
@@ -588,6 +617,9 @@ function QuickActionsCarousel({
           asset={action.asset}
           label={action.label}
           onPress={action.onPress}
+          index={index}
+          scrollX={scrollX}
+          viewportWidth={viewportWidth}
         />
       ))}
     </ScrollView>
@@ -820,8 +852,8 @@ const styles = StyleSheet.create({
     borderColor: '#E4EAF2',
   },
   sectionTitle: { marginBottom: 9, color: '#17233A', fontSize: 13, fontWeight: '800' },
-  quickGrid: { flexDirection: 'row', gap: 7, paddingRight: 2 },
-  quickActionTouch: { width: 94, flexShrink: 0 },
+  quickGrid: { flexDirection: 'row', gap: QUICK_ACTION_GAP, paddingRight: 2, paddingVertical: 7 },
+  quickActionTouch: { width: QUICK_ACTION_WIDTH, flexShrink: 0 },
   quickAction: {
     height: 72,
     borderRadius: 13,
@@ -829,6 +861,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#F8FAFD',
   },
+  quickActionFocus: { ...StyleSheet.absoluteFillObject, borderRadius: 13, borderWidth: 1.5, borderColor: '#3778D5', backgroundColor: '#DCEBFF' },
   quickIcon: {
     width: 38,
     height: 38,
