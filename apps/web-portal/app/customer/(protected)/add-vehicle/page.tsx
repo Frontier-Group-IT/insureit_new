@@ -110,7 +110,10 @@ export default async function AddCustomerVehicle({ searchParams }: { searchParam
       </section>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-[11px] text-[#75849C]">RC lookup uses the existing Customer API. Verify fetched details before saving.</p>
-        <button className="rounded-lg bg-[#17365F] px-5 py-2.5 text-[12px] font-semibold text-white">Save Vehicle</button>
+        <div className="flex items-center gap-2">
+          <Link href={{pathname:"/customer/vehicles",query:{account:account.id}}} className="inline-flex items-center justify-center rounded-lg border border-[#CBD8E8] bg-white px-5 py-2.5 text-[12px] font-semibold text-[#17365F] transition hover:bg-[#F1F6FD]">Cancel</Link>
+          <button type="submit" className="rounded-lg bg-[#17365F] px-5 py-2.5 text-[12px] font-semibold text-white">Save Vehicle</button>
+        </div>
       </div>
     </CustomerVehicleForm>
   </div>;
