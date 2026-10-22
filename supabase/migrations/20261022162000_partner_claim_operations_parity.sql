@@ -123,7 +123,7 @@ begin
     p_claim_id,v_customer_id,left(btrim(p_document_type),160),left(btrim(p_file_name),255),
     'claim-documents',p_storage_path,nullif(btrim(coalesce(p_mime_type,'')),''),
     p_file_size,'pending',auth.uid(),
-    case when nullif(btrim(coalesce(p_milestone_key,'')),'') is null then null else p_milestone_key::public.claim_milestone end,
+    case when nullif(btrim(coalesce(p_milestone_key,'')),'') is null then null else p_milestone_key::public.claim_milestone_key end,
     true
   )
   returning id into v_id;
