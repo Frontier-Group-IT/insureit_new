@@ -20,7 +20,7 @@ for (const action of ["edit", "status", "delete"]) {
 }
 assert.doesNotMatch(menu, /onPointerDown=\\{\\(event\\) => \\{/,
   "Dialog buttons should not unmount the menu during pointerdown");
-assert.doesNotMatch(menu, /requestSubmit\\(/,
+assert.ok(!menu.includes("requestSubmit("),
   "Resend should use the native submit once, without manual requestSubmit");
 assert.doesNotMatch(menu, /recordResendAttempt/,
   "Cooldown should only reflect confirmed server invitation timestamp");
