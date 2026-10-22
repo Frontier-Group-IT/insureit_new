@@ -6,26 +6,19 @@ const base = new URL("../app/intermediaries/applications/[id]/associate-accounts
 const menu = readFileSync(fileURLToPath(new URL("associate-account-actions-menu.tsx", base)), "utf8");
 const actions = readFileSync(fileURLToPath(new URL("actions.ts", base)), "utf8");
 
-assert.match(menu, /role="menu"/, "Dropdown must preserve menu semantics");
-assert.match(menu, /Close actions menu/, "Backdrop must dismiss menu");
-assert.ok(menu.includes("z-[9999] pointer-events-auto"), "Dropdown must have click-receiving layer above backdrop");
-assert.ok(menu.includes('onPointerDownCapture={() => trace("menu:pointerdown:capture")}'), "Trace hit-testing inside menu");
-assert.ok(!menu.includes('document.addEventListener("pointerdown"'), "No competing document pointer dismissal");
-assert.ok(!menu.includes("if (!dialog.open) dialog.showModal()"), "Dropdown must not depend on native modal effect");
+assert.ok(!menu.includes('MoreVertical'), "Three-dot button is removed");
+assert.ok(!menu.includes('role="menu"'), "No dropdown menu remains");
+assert.ok(!menu.includes('Close actions menu'), "No overlay backdrop remains");
+assert.ok(!menu.includes('menuPosition'), "No floating positioning remains");
 for (const action of ["edit", "status", "delete"]) {
-  assert.ok(
-    menu.includes(`onClick={() => showDialog("${action}")}`),
-    `Missing accessible click/keyboard activation: ${action}`
-  );
+  assert.ok(menu.includes(`onClick={() => showDialog("${action}")}`), `Direct ${action} click handler missing`);
 }
-assert.ok(!menu.includes('if (event.button === 0) showDialog('), "No pointer-first dialog activation");
-assert.ok(!menu.includes("requestSubmit("),
-  "Resend should use the native submit once, without manual requestSubmit");
-assert.doesNotMatch(menu, /recordResendAttempt/,
-  "Cooldown should only reflect confirmed server invitation timestamp");
-assert.match(menu, /<form action=\{resendPartnerAssociateInvite\}>/,
-  "Resend must preserve the existing server action form");
-assert.match(menu, /type="submit"/);
+for (const icon of ["Pencil", "Ban", "Send", "Trash2"]) {
+  assert.ok(menu.includes(`<${icon} `), `Inline icon missing: ${icon}`);
+}
+assert.match(menu, /<form action=\\{resendPartnerAssociateInvite\\}/, "Resend server action remains available");
+assert.match(menu, /aria-label=\\{`Edit/, "Edit has accessible name");
+assert.match(menu, /aria-label=\\{`Delete/, "Delete has accessible name");
 
 for (const serverAction of [
   "updatePartnerAssociateAccount",
