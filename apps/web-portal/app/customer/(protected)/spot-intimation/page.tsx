@@ -60,7 +60,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
       }).eq("id",owned.id).eq("customer_id",authorized.id).eq("current_status","Draft").select("id").single();
       if(error || !data?.id) return {error:"Claim submission could not be completed. Please check Claim Details before retrying."};
     }
-    redirect("/customer/claims/"+encodeURIComponent(owned.id)+"?account="+encodeURIComponent(authorized.id));
+    redirect("/customer/claims/"+encodeURIComponent(owned.id)+"/stage/spot_status?account="+encodeURIComponent(authorized.id));
   }
 
   const fieldClass = "mt-1.5 block h-10 w-full min-w-0 rounded-lg border border-[#D7E2F0] bg-white px-3 text-[13px] font-medium text-[#193659] outline-none transition focus-visible:border-[#2D7FF0] focus-visible:ring-2 focus-visible:ring-[#DCEBFF]";
