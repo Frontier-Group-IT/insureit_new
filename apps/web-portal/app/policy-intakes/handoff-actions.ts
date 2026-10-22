@@ -125,9 +125,9 @@ export async function preparePolicyIntakeHandoff(id:string,takeOver=false):Promi
 }
 
 export async function loadPolicyIntakeOnboardingDraft(id:string):Promise<PolicyIntakeHandoffResult>{
-  await requirePolicyIntakeFinalizer(); const reviewer=await requirePolicyIntakeReviewer(); const admin=createSupabaseAdminClient();
+  await requirePolicyIntakeFinalizer(); await requirePolicyIntakeReviewer(); const admin=createSupabaseAdminClient();
   const {data:intake}=await admin.from("policy_intake_requests").select("id,intake_number,status,created_at,ocr_fields,assigned_to_profile_id,matched_customer_id,customer_mobile").eq("id",id).maybeSingle<{id:string;intake_number:string;status:string;created_at:string;ocr_fields:PolicyIntakeOcrField[];assigned_to_profile_id:string|null;matched_customer_id:string|null;customer_mobile:string}>();
-  if(!intake||intake.status!=="in_review"||intake.assigned_to_profile_id!==reviewer.id)return{ok:false,error:"This intake is not assigned to you for Policy Onboarding."};
+  if(!intake||intake.status!=="in_review")return{ok:false,error:"This intake is not in review for Policy Onboarding."};
   const duplicateCheck=await loadPolicyIntakeDuplicateMatches(admin,[intake]);
   if(!duplicateCheck.ok)return{ok:false,error:duplicateCheck.error};
   if(duplicateCheck.matches.has(id))return{ok:false,error:"This policy intake is a duplicate and cannot continue in Policy Onboarding."};
@@ -139,7 +139,7 @@ export async function loadPolicyIntakeOnboardingDraft(id:string):Promise<PolicyI
 export async function savePolicyIntakeOnboardingDraft(id:string,expectedRevision:number,draft:PolicyIntakeDraft):Promise<PolicyIntakeDraftSaveResult>{
   await requirePolicyIntakeFinalizer(); const reviewer=await requirePolicyIntakeReviewer(); const admin=createSupabaseAdminClient();
   const {data:intake}=await admin.from("policy_intake_requests").select("status,assigned_to_profile_id").eq("id",id).maybeSingle<{status:string;assigned_to_profile_id:string|null}>();
-  if(!intake||intake.status!=="in_review"||intake.assigned_to_profile_id!==reviewer.id)return{ok:false,error:"This intake is no longer assigned to you.",conflict:true};
+  if(!intake||intake.status!=="in_review")return{ok:false,error:"This intake is no longer in review.",conflict:true};
   const {data,error}=await admin.from("policy_intake_onboarding_drafts")
     .update({draft_payload:draft,revision:expectedRevision+1,updated_by_profile_id:reviewer.id,updated_at:new Date().toISOString()})
     .eq("intake_id",id).eq("revision",expectedRevision).select("revision").maybeSingle<{revision:number}>();
