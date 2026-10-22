@@ -184,7 +184,9 @@ export async function IntermediaryRegister({
         linkedLabel,
         linkedHref: linked ? `/intermediaries/applications/${linked.id}` : null,
         portalAccess: portalAccessLabel(row.portal_access_status),
-        partnerStatus: linked ? (linked.registration_status === REGISTERED_STATUS ? "Active" : "Onboarding") : (partnerComplete ? "Active" : partnerStatusLabel(app?.partner_status ?? row.account_status)),
+        partnerStatus: linked
+          ? (linked.registration_status === REGISTERED_STATUS ? "Active" : "Onboarding")
+          : "Not Created",
         customerCount: metric ? Number(metric.customer_count) : null,
         netPremium: metric ? Number(metric.net_premium) : null,
         payout: metric ? Number(metric.payout) : null,

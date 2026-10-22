@@ -30,3 +30,6 @@ assert.match(client, /row\.customerCount === null \? "—"/);
 assert.match(client, /row\.netPremium === null/);
 assert.match(client, /row\.payout === null/);
 console.log("Partner Register business metrics migration and UI contract regression passed");
+
+assert.match(loader, /partnerStatus:\s*linked[\s\S]*"Not Created"/, "Unlinked POSP\/MISP status must be Not Created");
+assert.doesNotMatch(loader, /partnerStatus:[^\n]*partnerComplete \? "Active"/, "Partner activation must not be reused as linked POSP\/MISP Active status");
