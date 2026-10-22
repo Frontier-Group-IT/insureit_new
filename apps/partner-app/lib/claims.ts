@@ -73,7 +73,9 @@ export type PartnerClaimDetail = {
     claim_service_mode: string | null;
     assistance_status: string | null;
     accident_at: string | null;
+    spot_intimation_at?: string | null;
     accident_location: string | null;
+    accident_description?: string | null;
     estimated_loss: number | string | null;
     approved_amount: number | string | null;
     settlement_amount: number | string | null;
@@ -105,6 +107,7 @@ export type PartnerClaimDetail = {
   stages: {
     id: string;
     stage: string;
+    details?: Record<string, unknown> | null;
     created_at: string;
   }[];
 };
@@ -162,4 +165,55 @@ export async function savePartnerClaimSpot(claimId: string, incidentAt: string, 
   });
   if (error) throw error;
   if (data !== true) throw new Error('Claim details were not saved');
+}
+
+
+export type PartnerClaimStageKey =
+  | 'spot_status'
+  | 'claim_intimation'
+  | 'work_approval'
+  | 'repair_ri'
+  | 'billing'
+  | 'delivery_order'
+  | 'vehicle_delivery'
+  | 'payment_encashment';
+
+export async function savePartnerClaimStage(
+  claimId: string,
+  milestoneKey: PartnerClaimStageKey,
+  details: Record<string, string | number | boolean>,
+  advance = true,
+) {
+  const { data, error } = await supabase.rpc('partner_app_save_claim_stage', {
+    p_claim_id: claimId,
+    p_milestone_key: milestoneKey,
+    p_details: details,
+    p_advance: advance,
+  });
+  if (error) throw error;
+  if (!data || data.ok !== true) throw new Error('Claim stage was not saved.');
+  return data as { ok: true; current_status: string };
+}
+
+export async function attachPartnerClaimDocument(input: {
+  claimId: string;
+  documentType: string;
+  fileName: string;
+  storagePath: string;
+  mimeType?: string | null;
+  fileSize?: number | null;
+  milestoneKey?: string | null;
+}) {
+  const { data, error } = await supabase.rpc('partner_app_attach_claim_document', {
+    p_claim_id: input.claimId,
+    p_document_type: input.documentType,
+    p_file_name: input.fileName,
+    p_storage_path: input.storagePath,
+    p_mime_type: input.mimeType ?? null,
+    p_file_size: input.fileSize ?? null,
+    p_milestone_key: input.milestoneKey ?? null,
+  });
+  if (error) throw error;
+  if (typeof data !== 'string' || !data) throw new Error('Claim document was not attached.');
+  return data;
 }
