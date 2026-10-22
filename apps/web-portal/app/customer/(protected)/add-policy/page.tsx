@@ -5,7 +5,7 @@ import { createServerSupabaseClient } from "@/lib/auth-server";
 import { getCustomerWebSession } from "@/lib/customer-web";
 import { resolveCustomerWebScope, loadCustomerWebVehicles, loadCustomerWebPolicies } from "@/lib/customer-web-data";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
-import { CustomerPolicySelections } from "@/components/customer-portal/customer-policy-selections";
+import { CustomerPolicySelectionProvider, CustomerPolicyVehicleField, CustomerPolicyProductField } from "@/components/customer-portal/customer-policy-selections";
 import { CustomerPolicySaveForm, type PolicySaveState } from "./customer-policy-save-form";
 
 export const dynamic = "force-dynamic";
@@ -87,17 +87,18 @@ export default async function AddCustomerPolicy({ searchParams }: { searchParams
     <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/add-policy"/>
     <div className="overflow-hidden rounded-2xl border border-[#DCE6F2] bg-white shadow-sm"><div className="flex items-center justify-between bg-gradient-to-r from-[#0D2853] to-[#24508A] px-5 py-4 text-white"><h2 className="text-[17px] font-bold">Policy Onboarding</h2><ShieldCheck className="h-6 w-6 text-cyan-200"/></div><div className="flex flex-wrap gap-5 bg-[#F7F9FC] px-5 py-3 text-[11px] font-semibold text-[#506783]"><a href="#policy-step-vehicle" className="hover:text-[#1A5DB6] focus-visible:underline">01 &nbsp; Vehicle</a><a href="#policy-step-details" className="hover:text-[#1A5DB6] focus-visible:underline">02 &nbsp; Policy Details</a><a href="#policy-step-save" className="hover:text-[#1A5DB6] focus-visible:underline">03 &nbsp; Review &amp; Save</a></div></div>
     <CustomerPolicySaveForm action={save} accountId={account.id}>
+      <CustomerPolicySelectionProvider vehicles={vehicles} blocked={policies.filter(p=>p.vehicle_id&&p.start_date<=new Date().toISOString().slice(0,10)&&p.end_date>=new Date().toISOString().slice(0,10)).map(p=>p.vehicle_id as string)} initial={q.vehicle}>
       <input type="hidden" name="account" value={account.id}/>
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(275px,1fr)]"><div className="min-w-0 space-y-3"><section id="policy-step-vehicle" className="overflow-hidden rounded-2xl border border-[#DFE7F0] bg-white shadow-sm">
+      <div className="space-y-3"><section id="policy-step-vehicle" className="overflow-hidden rounded-2xl border border-[#DFE7F0] bg-white shadow-sm">
         <div className="flex items-center gap-2 border-b border-[#E7EDF4] px-4 py-3 text-[13px] font-extrabold text-[#13345D]"><span className="rounded-lg bg-[#163A68] px-2.5 py-1.5 text-xs text-white">01</span><CarFront className="h-5 w-5 text-[#155BAA]"/>Vehicle identification</div>
-        <div className="grid gap-3 p-4 sm:grid-cols-2 [&_select]:!border-[#D5E0ED] [&_select]:!bg-white [&_select]:!py-2 [&_select]:!text-[12px]"><CustomerPolicySelections accountId={account.id} vehicles={vehicles} blocked={policies.filter(p=>p.vehicle_id&&p.start_date<=new Date().toISOString().slice(0,10)&&p.end_date>=new Date().toISOString().slice(0,10)).map(p=>p.vehicle_id as string)} initial={q.vehicle} /></div>
+        <div className="grid gap-3 p-4 sm:grid-cols-2 [&_select]:!border-[#D5E0ED] [&_select]:!bg-white [&_select]:!py-2 [&_select]:!text-[12px]"><CustomerPolicyVehicleField accountId={account.id} /></div>
       </section>
       <section id="policy-step-details" className="overflow-hidden rounded-2xl border border-[#DFE7F0] bg-white shadow-sm">
         <div className="flex items-center gap-2 border-b border-[#E7EDF4] px-4 py-3 text-[13px] font-extrabold text-[#13345D]"><span className="rounded-lg bg-[#163A68] px-2.5 py-1.5 text-xs text-white">02</span><FileText className="h-5 w-5 text-[#B97422]"/>Policy details</div>
         <div className="grid gap-3 p-4 sm:grid-cols-2">
           <label className="text-[12px] font-bold text-[#1B3150] sm:col-span-2">Insurer *<select name="insurer" required className={inputClass}><option value="">Select insurer</option>{(companies.data||[]).map(i=><option key={i.id} value={i.id}>{i.name}</option>)}</select></label>
           <label className="text-[12px] font-bold text-[#1B3150]">Policy no. *<input required name="number" maxLength={100} placeholder="Enter policy number" className={inputClass}/></label>
-          <div className="self-end rounded-xl bg-[#FFF1DA] p-3 text-[11px] leading-5 text-[#855C26]"><ShieldCheck className="mr-1 inline h-4 w-4"/>Select your policy product in the Vehicle section above.</div>
+          <CustomerPolicyProductField />
         </div>
       </section>
       <section id="policy-step-save" className="overflow-hidden rounded-2xl border border-[#DFE7F0] bg-white shadow-sm">
@@ -109,7 +110,8 @@ export default async function AddCustomerPolicy({ searchParams }: { searchParams
           <label className="text-[12px] font-bold text-[#1B3150]"><Wallet className="mr-1 inline h-4 w-4 text-[#158565]"/>Premium (optional)<input type="number" min="0" step="0.01" name="premium" placeholder="₹ 0.00" className={inputClass}/></label>
           <label className="rounded-xl border border-dashed border-[#ABC8E7] bg-[#F7FAFF] p-3 text-[12px] font-bold text-[#1E4472] sm:col-span-2"><UploadCloud className="mr-2 inline h-5 w-5"/>Upload policy copy <span className="font-normal text-[#65809E]">(PDF or image, up to 5 MB)</span><input name="copy" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="mt-2 block w-full text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-[#E2EEFF] file:px-3 file:py-2 file:font-semibold file:text-[#1A55A0]"/></label>
         </div>
-      </section></div><aside className="rounded-2xl border border-[#DCE6F2] bg-white p-4 shadow-sm xl:sticky xl:top-24"><h3 className="text-[14px] font-bold text-[#17385E]">Policy summary</h3><p className="mt-2 text-[11px] leading-5 text-[#647A97]">Review your vehicle, insurer, dates and premium before saving. Values update as you enter them.</p><div id="customer-policy-live-summary" aria-live="polite" className="mt-3 space-y-3 text-[12px] text-[#294766]"><p>Select a vehicle to begin.</p></div></aside></div>
+      </section></div>
+      </CustomerPolicySelectionProvider>
     </CustomerPolicySaveForm>
     <p className="text-xs leading-5 text-[#718096]">Your policy will be added to your account as an external policy. The customer-authorized service verifies vehicle ownership and keeps other customers’ records private.</p>
   </div>;
