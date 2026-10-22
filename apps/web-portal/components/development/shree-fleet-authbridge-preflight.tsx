@@ -33,8 +33,10 @@ export default function ShreeFleetAuthbridgePreflight(){
      "Potentially new - global check pending",
      "New by chassis — global check clear",
      "New by chassis - global check clear",
+     "New by chassis (Shree + global check); RC conflict check pending",
+     "New by chassis and RC (database-wide checks); AuthBridge pending",
    ]);
-   const alreadyLinkedStatuses=new Set(["Already on Shree Transport"]);
+   const alreadyLinkedStatuses=new Set(["Already on Shree Transport", "Already linked to Shree Transport"]);
    if(parsed.some(row=>!candidateStatuses.has(row.existing_status)&&!alreadyLinkedStatuses.has(row.existing_status))){
      setMessage("The reconciliation contains an unrecognized status. No AuthBridge lookup will run.");return;
    }
