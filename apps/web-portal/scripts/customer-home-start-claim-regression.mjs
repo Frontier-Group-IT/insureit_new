@@ -33,3 +33,12 @@ assert.match(selector,/existingClaim\.current_status === "Draft" \? "\/customer\
 assert.match(claimAction,/active\.current_status === "Draft"/,"Server must resume drafts at Spot Intimation");
 assert.match(claimAction,/recoveryCode: recoveryError\?\.code/,"Log the actual recovery failure code");
 console.log("Policy-free claim draft resume and recovery diagnostics regression passed.");
+
+const claimLogo=fs.readFileSync("components/customer-portal/customer-claim-logo.tsx","utf8");
+const spotPage=fs.readFileSync("app/customer/(protected)/spot-intimation/page.tsx","utf8");
+assert.match(claimLogo,/getVehicleBrandLogo\(value\)/,"Customer header vehicle mark must use managed manufacturer resolver");
+assert.match(claimLogo,/getInsurerLogo\(value\)/,"Customer header insurer mark must use managed insurer resolver");
+assert.match(claimLogo,/kind === "insurer"[\s\S]*<Shield/,"Missing insurer must show a neutral icon");
+assert.match(spotPage,/<CustomerClaimLogo value=\{claim.vehicle_make\} size=\{40\}/,"Spot header manufacturer mark retained");
+assert.match(spotPage,/<CustomerClaimLogo value=\{claim.insurer_name\} kind="insurer" size=\{40\}/,"Spot header insurer mark retained");
+console.log("Spot Intimation managed logo resolution regression passed.");
