@@ -22,7 +22,7 @@ export async function prepareCustomerClaim(_previous: PrepareCustomerClaimState,
   if (policyId && !policy) return { error: "This policy is not linked to the selected vehicle." };
   const active = claims.find(c => (policy ? (policy.source === "external" ? c.external_policy_id === policy.id : c.policy_id === policy.id) : c.vehicle_id === vehicleId && !c.policy_id && !c.external_policy_id) && !["Settled","Closed","Claim Complete","Rejected"].includes(c.current_status));
   if (active) {
-    redirect("/customer/spot-intimation?account=" + encodeURIComponent(account.id) + "&id=" + encodeURIComponent(active.id));
+    redirect((active.current_status === "Draft" ? "/customer/spot-intimation" : "/customer/claims/" + encodeURIComponent(active.id)) + "?account=" + encodeURIComponent(account.id) + (active.current_status === "Draft" ? "&id=" + encodeURIComponent(active.id) : ""));
   }
   const supabase = await createServerSupabaseClient();
   if (policy?.source === "external") {
