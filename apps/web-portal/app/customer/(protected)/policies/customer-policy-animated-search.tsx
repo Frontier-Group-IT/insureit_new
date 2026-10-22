@@ -21,7 +21,7 @@ export function CustomerPolicyAnimatedSearch({
     <form
       role="search"
       action="/customer/policies"
-      className="flex w-full min-w-0 flex-1 items-center gap-2 rounded-lg border border-[#D7E0EF] bg-[#FAFCFF] px-3 py-2.5 sm:min-w-[220px] sm:max-w-[400px] focus-within:border-[#B7CBEB]"
+      className="flex w-full min-w-0 flex-1 items-center gap-2 rounded-lg border border-[#D7E0EF] bg-[#FAFCFF] px-2.5 py-1.5 sm:min-w-[180px] sm:max-w-[290px] focus-within:border-[#B7CBEB]"
     >
       <Search className="h-4 w-4 shrink-0 text-[#8C9BB2]" aria-hidden="true" />
       <input type="hidden" name="account" value={accountId} />
