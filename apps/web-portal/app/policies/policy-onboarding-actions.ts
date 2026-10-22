@@ -590,7 +590,7 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       });
     } else if (payload.sourceIntakeId) {
       diagnosticStage = "policy_intake_finalizer_authorization";
-      const intakeFinalizer = await requirePolicyIntakeFinalizer();
+      await requirePolicyIntakeFinalizer();
       if (!/^[0-9a-f-]{36}$/i.test(payload.sourceIntakeId)) {
         return { ok:false, kind:"validation", error:"The Policy Intake reference is invalid. Reload the intake and try again." };
       }
@@ -607,8 +607,8 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       if (intakeGuardError || !intakeGuard) {
         return { ok:false, kind:"validation", error:"Policy Intake is unavailable. Reload the intake before registering the policy." };
       }
-      if (intakeGuard.status !== "in_review" || intakeGuard.assigned_to_profile_id !== intakeFinalizer.id) {
-        return { ok:false, kind:"validation", error:"This Policy Intake is not assigned to you for final registration." };
+      if (intakeGuard.status !== "in_review") {
+        return { ok:false, kind:"validation", error:"This Policy Intake is no longer in review." };
       }
 
       const { data:intakeCopy, error:intakeCopyError } = await admin
