@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarDays, CheckCircle2, ArrowLeft, MapPin, Clock3, UserRound } from "lucide-react";
+import { CalendarDays, ArrowLeft, MapPin, Clock3, UserRound } from "lucide-react";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail } from "@/lib/customer-web-phase2-data";
 import { createServerSupabaseClient } from "@/lib/auth-server";
@@ -61,14 +61,9 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
   }
 
   const fieldClass = "mt-1.5 block h-10 w-full min-w-0 rounded-lg border border-[#D7E2F0] bg-white px-3 text-[13px] font-medium text-[#193659] outline-none transition focus-visible:border-[#2D7FF0] focus-visible:ring-2 focus-visible:ring-[#DCEBFF]";
-  return <div className="mx-auto w-full max-w-6xl space-y-3">
-    <div className="flex flex-wrap items-center justify-between gap-3">
+  return <div className="mx-auto w-full max-w-[90rem] space-y-3">
+    <div className="flex items-center">
       <Link href={{pathname:"/customer/start-claim",query:{account:account.id}}} className="inline-flex items-center gap-2 text-[13px] font-semibold text-[#29569A] hover:text-[#153E78]"><ArrowLeft className="h-4 w-4"/> Back to Start Claim</Link>
-      <span className="rounded-full border border-[#D9E4F2] bg-white px-3 py-1 text-[11px] font-semibold text-[#537095]">{external?"Self-tracked claim":"Managed claim"}</span>
-    </div>
-    <div className="flex items-center gap-2 rounded-xl border border-[#DAE5F3] bg-white p-2 text-[12px] font-semibold">
-      <span className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#ECF7F1] px-2 py-2 text-[#087A57]"><CheckCircle2 className="h-4 w-4"/> <span>1. Select Vehicle</span></span>
-      <span className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#EAF3FF] px-2 py-2 text-[#1253A7]"><span className="grid h-4 w-4 place-items-center rounded-full border border-[#1253A7] text-[10px]">2</span> Spot Intimation</span>
     </div>
     <section aria-label="Selected claim" className="overflow-hidden rounded-2xl bg-[#0C2F67] px-4 py-3 text-white">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/15 pb-2">
@@ -80,7 +75,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
         <div className="flex min-w-0 items-center gap-3"><CustomerClaimLogo value={claim.insurer_name} kind="insurer" size={40}/><div className="min-w-0"><p className="truncate text-[13px] font-bold">{claim.policy_no||"No linked policy"}</p><p className="truncate text-[11px] text-white/75">{claim.insurer_name||"Insurer not assigned"}</p></div></div>
       </div>
     </section>
-    <SpotIntimationSaveForm action={submit}>
+    <SpotIntimationSaveForm action={submit} cancelHref={`/customer/start-claim?account=${encodeURIComponent(account.id)}`}>
       <input type="hidden" name="account" value={account.id}/><input type="hidden" name="claim" value={claim.id}/>
       <div className="flex items-center gap-2 border-b border-[#E5EDF6] pb-3">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EDF4FF] text-[#2860AD]"><CalendarDays className="h-5 w-5"/></span>
