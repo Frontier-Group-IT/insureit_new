@@ -89,11 +89,11 @@ export default async function AddCustomerPolicy({ searchParams }: { searchParams
     <CustomerPolicySaveForm action={save} accountId={account.id}>
       <CustomerPolicySelectionProvider vehicles={vehicles} blocked={policies.filter(p=>p.vehicle_id&&p.start_date<=new Date().toISOString().slice(0,10)&&p.end_date>=new Date().toISOString().slice(0,10)).map(p=>p.vehicle_id as string)} initial={q.vehicle}>
       <input type="hidden" name="account" value={account.id}/>
-      <div className="space-y-3"><section id="policy-step-vehicle" className="overflow-hidden rounded-2xl border border-[#DFE7F0] bg-white shadow-sm">
+      <div className="grid items-stretch gap-3 xl:grid-cols-2"><div className="flex min-w-0 flex-col gap-3"><section id="policy-step-vehicle" className="overflow-hidden rounded-2xl border border-[#DFE7F0] bg-white shadow-sm">
         <div className="flex items-center gap-2 border-b border-[#E7EDF4] px-4 py-3 text-[13px] font-extrabold text-[#13345D]"><span className="rounded-lg bg-[#163A68] px-2.5 py-1.5 text-xs text-white">01</span><CarFront className="h-5 w-5 text-[#155BAA]"/>Vehicle identification</div>
-        <div className="grid gap-3 p-4 sm:grid-cols-2 [&_select]:!border-[#D5E0ED] [&_select]:!bg-white [&_select]:!py-2 [&_select]:!text-[12px]"><CustomerPolicyVehicleField accountId={account.id} /></div>
+        <div className="grid gap-3 p-4 sm:grid-cols-2 [&_select]:!border-[#D5E0ED] [&_select]:!bg-white [&_select]:!py-2 [&_select]:!text-[12px]"><CustomerPolicyVehicleField /></div>
       </section>
-      <section id="policy-step-details" className="overflow-hidden rounded-2xl border border-[#DFE7F0] bg-white shadow-sm">
+      <section id="policy-step-details" className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-[#DFE7F0] bg-white shadow-sm">
         <div className="flex items-center gap-2 border-b border-[#E7EDF4] px-4 py-3 text-[13px] font-extrabold text-[#13345D]"><span className="rounded-lg bg-[#163A68] px-2.5 py-1.5 text-xs text-white">02</span><FileText className="h-5 w-5 text-[#B97422]"/>Policy details</div>
         <div className="grid gap-3 p-4 sm:grid-cols-2">
           <label className="text-[12px] font-bold text-[#1B3150] sm:col-span-2">Insurer *<select name="insurer" required className={inputClass}><option value="">Select insurer</option>{(companies.data||[]).map(i=><option key={i.id} value={i.id}>{i.name}</option>)}</select></label>
@@ -101,7 +101,7 @@ export default async function AddCustomerPolicy({ searchParams }: { searchParams
           <CustomerPolicyProductField />
         </div>
       </section>
-      <section id="policy-step-save" className="overflow-hidden rounded-2xl border border-[#DFE7F0] bg-white shadow-sm">
+      </div><section id="policy-step-save" className="h-full min-w-0 overflow-hidden rounded-2xl border border-[#DFE7F0] bg-white shadow-sm">
         <div className="flex items-center gap-2 border-b border-[#E7EDF4] px-4 py-3 text-[13px] font-extrabold text-[#13345D]"><span className="rounded-lg bg-[#163A68] px-2.5 py-1.5 text-xs text-white">03</span><CalendarDays className="h-5 w-5 text-[#138867]"/>Validity, premium &amp; documents</div>
         <div className="grid gap-3 p-4 sm:grid-cols-2">
           <label className="text-[12px] font-bold text-[#1B3150]">Start date *<input required type="date" name="start" className={inputClass}/></label>
