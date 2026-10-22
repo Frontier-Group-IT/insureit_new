@@ -9,3 +9,14 @@ assert.doesNotMatch(home, /openClaims\.length \? "\/customer\/claims" : "\/custo
 assert.match(home, /resolveCustomerWebScope\(params\.account\)/);
 assert.match(home, /loadCustomerClaimListContext\(account\.id\)/);
 console.log("Customer Home permanent Start Claim regression passed.");
+
+const selector=fs.readFileSync("components/customer-portal/customer-start-claim-selector.tsx","utf8");
+const claimAction=fs.readFileSync("app/customer/(protected)/start-claim/actions.ts","utf8");
+assert.match(selector,/confirmationGrantedRef\.current = true/,"Confirmation must grant form submission independently of React render state");
+assert.match(selector,/claimFormRef\.current\?\.requestSubmit\(\)/,"Confirmation must submit the selected vehicle form");
+assert.match(selector,/!hasActivePolicy && !confirmationGrantedRef\.current/,"No-policy claims must proceed after confirmation");
+assert.match(selector,/disabled=\{confirming\}/,"Confirmation must block repeat clicks");
+assert.match(selector,/Preparing claim\.\.\./,"Show a loading state during submission");
+assert.match(claimAction,/\.eq\("vehicle_id", vehicleId\)\.is\("policy_id", null\)\.is\("external_policy_id", null\)/,"No-policy draft recovery must remain scoped to vehicle and policy-free drafts");
+assert.match(claimAction,/policy_id: policy\?\.id \?\? null/,"No-policy draft creation must use a null policy");
+console.log("Customer no-policy Continue claim submission contract passed.");
