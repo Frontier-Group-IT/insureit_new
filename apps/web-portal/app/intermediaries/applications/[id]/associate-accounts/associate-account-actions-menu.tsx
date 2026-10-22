@@ -394,14 +394,20 @@ function DeleteAssociateConfirmation({
   onClose: () => void;
   hiddenFields: React.ReactNode;
 }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (dialog && !dialog.open) dialog.showModal();
+    return () => { if (dialog?.open) dialog.close(); };
+  }, []);
   return createPortal(
-    <div
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      ref={dialogRef}
       aria-labelledby="associate-delete-confirm-title"
-      className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/35 p-4"
+      onCancel={(event) => { event.preventDefault(); onClose(); }}
+      className="fixed inset-0 z-[10000] m-auto w-[calc(100%-32px)] max-w-[420px] overflow-hidden rounded-2xl bg-white p-0 shadow-[0_24px_70px_rgba(15,23,42,.22)] backdrop:bg-slate-950/35"
     >
-      <div className="w-full max-w-[420px] overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_rgba(15,23,42,.22)]">
+      <div>
         <div className="flex items-start gap-3 px-5 pt-5">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-rose-50 text-rose-600">
             <AlertTriangle className="h-5 w-5" aria-hidden="true" />
@@ -427,7 +433,7 @@ function DeleteAssociateConfirmation({
           <DeletePermanentlyButton />
         </form>
       </div>
-    </div>,
+    </dialog>,
     document.body,
   );
 }
@@ -443,16 +449,21 @@ function Modal({
   children: React.ReactNode;
   wide?: boolean;
 }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (dialog && !dialog.open) dialog.showModal();
+    return () => { if (dialog?.open) dialog.close(); };
+  }, []);
+
   return createPortal(
-    <div
-      className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-[1px]"
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      ref={dialogRef}
       aria-label={title}
+      onCancel={(event) => { event.preventDefault(); onClose(); }}
+      className={`fixed inset-0 z-[10000] m-auto max-h-[calc(100dvh-32px)] w-[calc(100%-32px)] overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white p-0 shadow-[0_24px_70px_rgba(15,23,42,.22)] backdrop:bg-slate-950/35 backdrop:backdrop-blur-[1px] ${wide ? "max-w-[1080px]" : "max-w-xl"}`}
     >
-      <div
-        className={`flex max-h-[calc(100dvh-32px)] w-full flex-col overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_24px_70px_rgba(15,23,42,.22)] md:translate-x-6 ${wide ? "max-w-[1080px]" : "max-w-xl"}`}
-      >
+      <div className="flex max-h-[calc(100dvh-32px)] flex-col">
         <div className="flex shrink-0 items-center justify-between border-b border-[#E7ECF3] px-5 py-4">
           <h3 className="text-[13px] font-semibold text-[#17203A]">{title}</h3>
           <button type="button" onClick={onClose} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-lg text-[#64748B] hover:bg-[#F1F5F9]">
@@ -461,7 +472,7 @@ function Modal({
         </div>
         <div className="min-h-0 overflow-y-auto">{children}</div>
       </div>
-    </div>,
+    </dialog>,
     document.body,
   );
 }
