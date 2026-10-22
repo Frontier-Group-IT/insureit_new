@@ -45,7 +45,14 @@ export function AssociateAccountActionsMenu({
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
+  // Enable with ?debugAssociateActions=1. No account or personal data is logged.
+  const trace = (stage: string) => {
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debugAssociateActions") === "1") {
+      console.info("[associate-actions]", stage);
+    }
+  };
   const showDialog = (dialog: "edit" | "status" | "delete") => {
+    trace("handler:" + dialog);
     setOpen(false);
     if (dialog === "edit") setEditOpen(true);
     if (dialog === "status") setStatusOpen(true);
@@ -64,7 +71,10 @@ export function AssociateAccountActionsMenu({
       const withinTrigger = rootRef.current?.contains(event.target as Node) || path.includes(rootRef.current as EventTarget);
       const withinMenu = menuRef.current?.contains(event.target as Node) || path.includes(menuRef.current as EventTarget);
       if (!withinTrigger && !withinMenu) {
+        trace("document:pointerdown:outside");
         setOpen(false);
+      } else {
+        trace("document:pointerdown:inside");
       }
     }
     function closeOnEscape(event: KeyboardEvent) {
@@ -121,6 +131,10 @@ export function AssociateAccountActionsMenu({
     };
   }, [open]);
 
+  useEffect(() => {
+    trace("state:menu=" + open + ":edit=" + editOpen + ":status=" + statusOpen + ":delete=" + deleteOpen);
+  }, [open, editOpen, statusOpen, deleteOpen]);
+
   const commonHidden = (
     <>
       <input type="hidden" name="application_id" value={applicationId} />
@@ -139,7 +153,7 @@ export function AssociateAccountActionsMenu({
           aria-label={`Actions for ${associate.name}`}
           aria-haspopup="menu"
           aria-expanded={open}
-          onClick={() => setOpen((value) => !value)}
+          onClick={() => { trace("trigger:click"); setOpen((value) => !value); }}
           className="grid h-8 w-8 place-items-center rounded-lg border border-transparent text-[#334155] transition hover:border-[#DCE5EF] hover:bg-[#F1F5F9]"
         >
           <MoreVertical className="h-4 w-4" />
@@ -152,6 +166,8 @@ export function AssociateAccountActionsMenu({
                 role="menu"
                 style={{ top: menuPosition.top, left: menuPosition.left }}
                 className="fixed z-[9999] pointer-events-auto w-44 overflow-hidden rounded-xl border border-[#DCE5EF] bg-white py-1.5 shadow-[0_18px_45px_rgba(15,23,42,.18)]"
+                onPointerDownCapture={() => trace("menu:pointerdown:capture")}
+                onClickCapture={() => trace("menu:click:capture")}
                 onClick={(event) => event.stopPropagation()}
 
               >
