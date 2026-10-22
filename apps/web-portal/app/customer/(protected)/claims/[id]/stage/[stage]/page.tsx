@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import { CUSTOMER_EXTERNAL_STAGE_FIELDS } from "@/lib/customer-claim-stage-fields";
 import { saveCustomerExternalStage } from "./actions";
@@ -26,6 +26,10 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
   const activeIndex=INTERNAL_JOURNEY_STAGES.findIndex(s=>s.key===selected.key);
   const completed=external ? projection?.stages.find(s=>s.key===p.stage)?.completed || false : activeIndex<(internal_projection?.completedStageCount??0);
   const milestone=milestones.find(m=>m.milestone_key===selected.key);
+  if (selected.key==="spot_intimation" && claim.current_status==="Draft") {
+    redirect("/customer/spot-intimation?account="+encodeURIComponent(account.id)+"&id="+encodeURIComponent(claim.id));
+  }
+  const canEditStage = external && claim.claim_service_mode==="self_managed" && claim.assistance_status!=="accepted" && Boolean(CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key]) && !completed && activeIndex===currentIndex;
   return <div className="space-y-3">
     <Link href={{pathname:`/customer/claims/${claim.id}`,query:{account:account.id}}} className="inline-flex items-center gap-2 text-sm font-bold text-[#245DAB]"><ArrowLeft className="h-4 w-4"/> Claim overview</Link>
     <section className="overflow-hidden rounded-2xl border border-[#D9E3F0] bg-white">
@@ -54,7 +58,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       </div>
     </section>
     <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey={selected.key} currentKey={INTERNAL_JOURNEY_STAGES[currentIndex]?.key || "spot_intimation"} completedKeys={INTERNAL_JOURNEY_STAGES.filter((stage,i)=>external?projection?.stages.some(x=>x.key===stage.key&&x.completed):i<(internal_projection?.completedStageCount??0)).map(stage=>stage.key)} />
-    {!(external && claim.claim_service_mode==="self_managed" && claim.assistance_status!=="accepted" && CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key]) ? <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white">
+    {!canEditStage ? <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white">
       <h2 className="border-b border-[#D9E3F0] px-5 py-4 text-[17px] font-semibold text-[#071D49]">{selected.key==="spot_intimation"?"Accident & Spot Intimation Details":selected.label+" Details"}</h2>
       {selected.key==="spot_intimation" ? (
         <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-5">
@@ -83,7 +87,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
         </div>
       )}
     </section> : null}
-    {external && claim.claim_service_mode==="self_managed" && claim.assistance_status!=="accepted" && CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key] ? (
+    {canEditStage ? (
       <form id="customer-claim-stage-details-form" action={saveCustomerExternalStage} className="mt-2 rounded-2xl border border-[#D9E6F7] bg-white p-5">
         <div className="mb-4"><h2 className="text-[17px] font-semibold text-[#071D49]">Stage Details</h2><p className="text-[12px] text-[#75869A]">Record {selected.label.toLowerCase()} details.</p></div><div className={`grid gap-3 sm:grid-cols-2 ${selected.key==="claim_intimation"?"lg:grid-cols-5":selected.key==="work_approval"||selected.key==="payment_encashment"?"lg:grid-cols-5":selected.key==="repair_ri"||selected.key==="delivery_order"?"lg:grid-cols-3":selected.key==="billing"||selected.key==="vehicle_delivery"?"lg:grid-cols-2":"lg:grid-cols-4"}`}>
         <input type="hidden" name="account" value={account.id}/>
@@ -98,7 +102,10 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
             )}
           </label>
         ))}</div>
-
+        <div className="mt-5 flex flex-wrap items-center justify-end gap-2 border-t border-[#D9E3F0] pt-4">
+          <Link href={{pathname:`/customer/claims/${claim.id}`,query:{account:account.id}}} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] px-5 text-[12px] font-semibold text-[#174A87]">Cancel</Link>
+          <button type="submit" className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#1253A7] px-5 text-[12px] font-bold text-white hover:bg-[#0B3884]">Save &amp; Continue</button>
+        </div>
       </form>
     ):null}
     {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key}/> : null}
