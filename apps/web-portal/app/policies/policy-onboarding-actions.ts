@@ -581,7 +581,8 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     let rpcResult;
     if (replacementRequested && replacementPolicyId) {
       diagnosticStage = "rpc:replace_active_motor_policy_v1";
-      rpcResult = await admin.rpc("replace_active_motor_policy_v1", {
+      rpcResult = await admin.rpc("save_motor_policy_with_addon_v1", {
+        p_operation: "replace",
         p_existing_policy_id: replacementPolicyId,
         p_payload: rpcPayload,
         p_reason: replacementReason,
@@ -632,10 +633,10 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       }
 
       diagnosticStage = "rpc:finalize_policy_intake_motor_v1";
-      rpcResult = await admin.rpc("finalize_policy_intake_motor_v1", { p_intake_id:payload.sourceIntakeId, p_payload:rpcPayload, p_expected_revision:payload.draftRevision });
+      rpcResult = await admin.rpc("save_motor_policy_with_addon_v1", { p_operation:"intake", p_intake_id:payload.sourceIntakeId, p_payload:rpcPayload, p_expected_revision:payload.draftRevision });
     } else {
       diagnosticStage = "rpc:onboard_motor_policy_commercial_status_v2";
-      rpcResult = await admin.rpc("onboard_motor_policy_commercial_status_v2", { p_payload: rpcPayload });
+      rpcResult = await admin.rpc("save_motor_policy_with_addon_v1", { p_operation:"create", p_payload: rpcPayload });
     }
     const { data, error } = rpcResult;
     if (error) {
@@ -683,19 +684,6 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     const result = data as { ok?: boolean; policyId?: string; policyCode?: string; customerId?: string; vehicleId?: string } | null;
     if (!result?.ok || !result.policyId || !result.policyCode || !result.customerId || !result.vehicleId) return { ok: false, kind: "database", error: "We couldn't complete the policy booking. Please try again." };
 
-    // The booking RPC commits independently. If this follow-up fails, NEVER advise
-    // re-submitting the booking (which could duplicate the policy).
-    const addOnAmount = Number(payload.premium.addOnPremium ?? 0);
-    if (addOnAmount > 0) {
-      diagnosticStage = "post_booking_motor_addon";
-      const { data: addonResult, error: addonError } = await admin.rpc("set_motor_policy_addon_premium_v1", {
-        p_policy_id: result.policyId, p_amount: addOnAmount,
-      });
-      if (addonError || !(addonResult as { ok?: boolean } | null)?.ok) {
-        console.error("policy_motor_addon_save_failed", { policyId: result.policyId, error: addonError?.message });
-        return { ok: false, kind: "database", error: `Policy ${result.policyCode} was created, but the Add-on Premium could not be saved. Do NOT submit again. Open the existing policy and update its premium after confirming the migration.` };
-      }
-    }
     if (createNewCustomer) {
       diagnosticStage = "post_booking_customer_activation";
       const { error: customerActivationError } = await admin

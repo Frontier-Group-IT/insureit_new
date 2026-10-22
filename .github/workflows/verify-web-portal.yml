@@ -81,6 +81,10 @@ jobs:
         run: node scripts/partner-register-business-metrics-regression.mjs
       - name: Intermediary IIB registration finalization regression
         run: node scripts/intermediary-iib-registration-finalization-regression.mjs
+      - name: Motor Add-on Premium OD commercials regression
+        run: node scripts/motor-addon-od-commercial-regression.mjs
+      - name: Motor Add-on Premium atomic save regression
+        run: node scripts/motor-addon-atomic-save-regression.mjs
       - name: Policy intake workflow regression
         run: npm run policy-intake:workflow-regression
       - name: Life Health payment mode validation regression

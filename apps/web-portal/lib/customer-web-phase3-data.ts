@@ -75,6 +75,29 @@ export type CustomerExchangeListingDetail = {
   }>;
 };
 
+export type CustomerExchangeActivity = {
+  favorites: Array<Record<string, unknown>>;
+  bids: Array<Record<string, unknown>>;
+  listings: Array<Record<string, unknown>>;
+  deals: Array<Record<string, unknown>>;
+  contact_requests: Array<Record<string, unknown>>;
+};
+
+export type CustomerExchangeSellableVehicle = {
+  vehicle_id: string;
+  vehicle_no: string;
+  make: string | null;
+  model: string | null;
+  year: number | null;
+  vehicle_type: string;
+  vehicle_category: string | null;
+  fuel_type: string | null;
+  body_type: string | null;
+  city: string | null;
+  state: string | null;
+  has_active_listing: boolean;
+};
+
 export type CustomerServiceActivity = {
   id: string;
   enquiry_no: string;
@@ -115,9 +138,14 @@ type ServiceActivityTable = {
 
 async function signedUrl(bucket: string | null, storagePath: string | null) {
   if (!bucket || !storagePath) return null;
-  const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(storagePath, 3600);
-  return error ? null : data.signedUrl;
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data, error } = await supabase.storage.from(bucket).createSignedUrl(storagePath, 3600);
+    return error ? null : data.signedUrl;
+  } catch {
+    // Media signing must never hide otherwise valid marketplace listings.
+    return null;
+  }
 }
 
 export const loadCustomerExchangeFeed = cache(async (input?: { category?: string | null; query?: string | null }) => {
@@ -135,6 +163,29 @@ export const loadCustomerExchangeFeed = cache(async (input?: { category?: string
     ...row,
     cover_url: await signedUrl(row.cover_storage_bucket, row.cover_storage_path),
   })));
+});
+
+export const loadCustomerExchangeSellableVehicles = cache(async (customerId: string): Promise<CustomerExchangeSellableVehicle[]> => {
+  const supabase = await createServerSupabaseClient();
+  const rpc = supabase.rpc as unknown as UntypedRpc;
+  const { data, error } = await rpc("exchange_my_sellable_vehicles", { p_customer_id: customerId });
+  if (error) throw new Error("Exchange selling workspace is temporarily unavailable.");
+  return (data ?? []) as CustomerExchangeSellableVehicle[];
+});
+
+export const loadCustomerExchangeActivity = cache(async (customerId: string): Promise<CustomerExchangeActivity> => {
+  const supabase = await createServerSupabaseClient();
+  const rpc = supabase.rpc as unknown as UntypedRpc;
+  const { data, error } = await rpc("exchange_my_activity", { p_customer_id: customerId });
+  if (error) throw new Error("Exchange activity is temporarily unavailable.");
+  const row = (data ?? {}) as Partial<CustomerExchangeActivity>;
+  return {
+    favorites: Array.isArray(row.favorites) ? row.favorites : [],
+    bids: Array.isArray(row.bids) ? row.bids : [],
+    listings: Array.isArray(row.listings) ? row.listings : [],
+    deals: Array.isArray(row.deals) ? row.deals : [],
+    contact_requests: Array.isArray(row.contact_requests) ? row.contact_requests : [],
+  };
 });
 
 export async function loadCustomerExchangeListing(listingId: string) {

@@ -1,7 +1,8 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   Image,
   Pressable,
@@ -56,6 +57,8 @@ export default function PoliciesScreen() {
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const [unreadActivityCount, setUnreadActivityCount] = useState(0);
+  const [loadMoreFeedback, setLoadMoreFeedback] = useState(false);
+  const loadMoreStartedAt = useRef(0);
 
   useFocusEffect(useCallback(() => {
     let cancelled = false;
@@ -103,6 +106,14 @@ export default function PoliciesScreen() {
     staleTimeMs: 60_000,
   });
 
+  useEffect(() => {
+    if (!loadMoreFeedback || collection.loading) return;
+    const elapsed = Date.now() - loadMoreStartedAt.current;
+    const remaining = Math.max(0, 450 - elapsed);
+    const timer = setTimeout(() => setLoadMoreFeedback(false), remaining);
+    return () => clearTimeout(timer);
+  }, [collection.loading, loadMoreFeedback]);
+
   const refreshAll = useCallback(async () => {
     await Promise.all([summary.refresh(), collection.refresh()]);
   }, [collection, summary]);
@@ -113,6 +124,63 @@ export default function PoliciesScreen() {
     setLifecycle(filter);
   };
   const name = context?.identity.display_name || 'Partner';
+
+  // Keep the search/filter row visible once the list scrolls past the hero.
+  // A same-size spacer preserves scroll position when the search docks.
+  const [searchSticky, setSearchSticky] = useState(false);
+  const searchTopY = useRef(Number.POSITIVE_INFINITY);
+  const searchControls = (
+      <View style={styles.searchRow}>
+        <PartnerSearchField
+          value={query}
+          onChangeText={setQuery}
+          onClear={() => setQuery('')}
+          placeholder="Search customer, vehicle number or policy number..."
+          placeholders={['Search customer...', 'Search vehicle number...', 'Search policy number...']}
+          containerStyle={styles.searchField}
+        />
+        <PartnerAnchoredDropdown
+          visible={filterMenuOpen}
+          onDismiss={() => setFilterMenuOpen(false)}
+          align="right"
+          menuWidth={170}
+          menu={(
+            <View style={styles.filterMenu}>
+              {POLICY_FILTER_OPTIONS.map((option) => {
+                const active = lifecycle === option.value;
+                return (
+                  <Pressable
+                    key={option.value}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    onPress={() => {
+                      setFilterMenuOpen(false);
+                      selectSummary(option.value);
+                    }}
+                    style={({ pressed }) => [styles.filterOption, active && styles.filterOptionActive, pressed && styles.pressed]}
+                  >
+                    <Text style={[styles.filterOptionText, active && styles.filterOptionTextActive]}>{option.label}</Text>
+                    {active ? <Ionicons name="checkmark" size={15} color="#3156B8" /> : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Filter policies"
+            accessibilityState={{ expanded: filterMenuOpen }}
+            onPress={() => setFilterMenuOpen((open) => !open)}
+            style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}
+          >
+            <Ionicons name="filter-outline" size={18} color="#3156B8" />
+            <Text style={styles.filterText}>Filter</Text>
+          </Pressable>
+        </PartnerAnchoredDropdown>
+      </View>
+
+  );
 
   const header = (
     <View>
@@ -171,54 +239,8 @@ export default function PoliciesScreen() {
         </View>
       </View>
 
-      <View style={styles.searchRow}>
-        <PartnerSearchField
-          value={query}
-          onChangeText={setQuery}
-          onClear={() => setQuery('')}
-          placeholder="Search customer, vehicle number or policy number..."
-          placeholders={['Search customer...', 'Search vehicle number...', 'Search policy number...']}
-          containerStyle={styles.searchField}
-        />
-        <PartnerAnchoredDropdown
-          visible={filterMenuOpen}
-          onDismiss={() => setFilterMenuOpen(false)}
-          align="right"
-          menuWidth={170}
-          menu={(
-            <View style={styles.filterMenu}>
-              {POLICY_FILTER_OPTIONS.map((option) => {
-                const active = lifecycle === option.value;
-                return (
-                  <Pressable
-                    key={option.value}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active }}
-                    onPress={() => {
-                      setFilterMenuOpen(false);
-                      selectSummary(option.value);
-                    }}
-                    style={({ pressed }) => [styles.filterOption, active && styles.filterOptionActive, pressed && styles.pressed]}
-                  >
-                    <Text style={[styles.filterOptionText, active && styles.filterOptionTextActive]}>{option.label}</Text>
-                    {active ? <Ionicons name="checkmark" size={15} color="#3156B8" /> : null}
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
-        >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Filter policies"
-            accessibilityState={{ expanded: filterMenuOpen }}
-            onPress={() => setFilterMenuOpen((open) => !open)}
-            style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}
-          >
-            <Ionicons name="filter-outline" size={18} color="#3156B8" />
-            <Text style={styles.filterText}>Filter</Text>
-          </Pressable>
-        </PartnerAnchoredDropdown>
+      <View onLayout={(event) => { searchTopY.current = event.nativeEvent.layout.y; }}>
+        {searchSticky ? <View style={styles.searchSpacer} /> : searchControls}
       </View>
 
       <View style={styles.summaryRow}>
@@ -302,16 +324,35 @@ export default function PoliciesScreen() {
     />
   );
 
+  const isLoadingMore = loadMoreFeedback || collection.loading || collection.changingPage;
   const footer = collection.rows.length && collection.rows.length < collection.total ? (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Load More Policies"
-      disabled={collection.loading || collection.changingPage}
-      onPress={() => setVisibleLimit((current) => current + PAGE_SIZE)}
-      style={({ pressed }) => [styles.loadMoreButton, pressed && styles.pressed]}
+      accessibilityLabel={isLoadingMore ? 'Loading more policies' : 'Load More Policies'}
+      accessibilityState={{ disabled: isLoadingMore, busy: isLoadingMore }}
+      disabled={isLoadingMore}
+      onPress={() => {
+        loadMoreStartedAt.current = Date.now();
+        setLoadMoreFeedback(true);
+        setVisibleLimit((current) => current + PAGE_SIZE);
+      }}
+      style={({ pressed }) => [
+        styles.loadMoreButton,
+        isLoadingMore && styles.loadMoreButtonLoading,
+        pressed && !isLoadingMore && styles.pressed,
+      ]}
     >
-      <Text style={styles.loadMoreText}>{collection.loading ? 'Loading Policies…' : 'Load More Policies'}</Text>
-      <Feather name="chevron-down" size={13} color="#3156B8" />
+      {isLoadingMore ? (
+        <>
+          <ActivityIndicator size="small" color="#FFFFFF" />
+          <Text style={styles.loadMoreTextLoading}>Loading more policies…</Text>
+        </>
+      ) : (
+        <>
+          <Text style={styles.loadMoreText}>Load More Policies</Text>
+          <Feather name="chevron-down" size={13} color="#3156B8" />
+        </>
+      )}
     </Pressable>
   ) : null;
 
@@ -327,6 +368,11 @@ export default function PoliciesScreen() {
           />
         )}
         ListHeaderComponent={header}
+        onScroll={(event) => {
+          const shouldStick = event.nativeEvent.contentOffset.y >= searchTopY.current;
+          setSearchSticky((current) => current === shouldStick ? current : shouldStick);
+        }}
+        scrollEventThrottle={16}
         ListEmptyComponent={empty}
         ListFooterComponent={footer}
         ItemSeparatorComponent={() => <View style={styles.cardGap} />}
@@ -345,6 +391,7 @@ export default function PoliciesScreen() {
         maxToRenderPerBatch={10}
         windowSize={7}
       />
+      {searchSticky ? <View style={styles.stickySearchOverlay}>{searchControls}</View> : null}
     </SafeAreaView>
   );
 }
@@ -541,6 +588,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   intakeHeaderText: { color: '#0B2E63', fontSize: 9.5, lineHeight: 12, fontWeight: '800' },
+  searchSpacer: { height: 44, marginTop: -10, marginHorizontal: 16 },
+  stickySearchOverlay: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 50, elevation: 12, backgroundColor: '#F5F7FB', paddingTop: 10, paddingBottom: 8 },
   searchRow: {
     zIndex: 5,
     marginTop: -10,
@@ -708,7 +757,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#F1F5FD',
   },
+  loadMoreButtonLoading: { backgroundColor: '#3156B8' },
   loadMoreText: { color: '#3156B8', fontSize: 8, lineHeight: 11, fontWeight: '800' },
+  loadMoreTextLoading: { color: '#FFFFFF', fontSize: 8.5, lineHeight: 12, fontWeight: '800' },
   endText: { color: '#9AA6B7', fontSize: 7, lineHeight: 10, fontWeight: '600' },
   pressed: { opacity: 0.72 },
 });

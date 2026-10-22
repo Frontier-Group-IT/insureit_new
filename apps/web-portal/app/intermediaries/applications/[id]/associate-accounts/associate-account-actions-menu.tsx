@@ -162,6 +162,9 @@ export function AssociateAccountActionsMenu({
                 <button
                   type="button"
                   role="menuitem"
+                  onPointerDown={(event) => {
+                    if (event.button === 0) showDialog("edit");
+                  }}
                   onClick={() => showDialog("edit")}
                   className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC]"
                 >
@@ -172,6 +175,9 @@ export function AssociateAccountActionsMenu({
                 <button
                   type="button"
                   role="menuitem"
+                  onPointerDown={(event) => {
+                    if (event.button === 0) showDialog("status");
+                  }}
                   onClick={() => showDialog("status")}
                   className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC]"
                 >
@@ -182,6 +188,9 @@ export function AssociateAccountActionsMenu({
                 <button
                   type="button"
                   role="menuitem"
+                  onPointerDown={(event) => {
+                    if (event.button === 0) showDialog("delete");
+                  }}
                   onClick={() => showDialog("delete")}
                   className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-rose-600 hover:bg-rose-50"
                 >
@@ -189,7 +198,7 @@ export function AssociateAccountActionsMenu({
                   Delete
                 </button>
 
-                <form action={resendPartnerAssociateInvite} onSubmit={() => window.localStorage.setItem(`associate-resend-cooldown:${associate.id}`, String(Date.now() + RESEND_COOLDOWN_SECONDS * 1000))}>
+                <form action={resendPartnerAssociateInvite}>
                   {commonHidden}
                   <ResendInviteButton
                     associateId={associate.id}
@@ -313,6 +322,13 @@ function ResendInviteButton({
   const { pending } = useFormStatus();
   const storageKey = `associate-resend-cooldown:${associateId}`;
   const [remaining, setRemaining] = useState(0);
+  const submittedByPointerRef = useRef(false);
+
+  const recordResendAttempt = () => {
+    const cooldownUntil = Date.now() + RESEND_COOLDOWN_SECONDS * 1000;
+    window.localStorage.setItem(storageKey, String(cooldownUntil));
+    setRemaining(RESEND_COOLDOWN_SECONDS);
+  };
 
   useEffect(() => {
     const invitedUntil = invitedAt
@@ -346,6 +362,26 @@ function ResendInviteButton({
       role="menuitem"
       disabled={disabled}
       title={title}
+      onPointerUp={(event) => {
+        if (disabled || event.button !== 0) return;
+        const target = document.elementFromPoint(event.clientX, event.clientY);
+        if (!target || !event.currentTarget.contains(target)) return;
+        submittedByPointerRef.current = true;
+        recordResendAttempt();
+        event.currentTarget.form?.requestSubmit();
+      }}
+      onClick={(event) => {
+        if (submittedByPointerRef.current) {
+          event.preventDefault();
+          submittedByPointerRef.current = false;
+          return;
+        }
+        if (disabled) {
+          event.preventDefault();
+          return;
+        }
+        recordResendAttempt();
+      }}
       className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-40"
     >
       <Send className="h-3.5 w-3.5 text-[#64748B]" />

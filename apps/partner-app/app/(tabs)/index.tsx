@@ -37,15 +37,6 @@ export default function PartnerHomeScreen() {
   const [businessPeriod, setBusinessPeriod] = useState<BusinessPeriod>('mtd');
   const [periodOpen, setPeriodOpen] = useState(false);
   const homeScrollY = useRef(new Animated.Value(0)).current;
-  const businessPulse = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    const pulse = Animated.loop(Animated.sequence([
-      Animated.timing(businessPulse, { toValue: 1.018, duration: 1600, useNativeDriver: true }),
-      Animated.timing(businessPulse, { toValue: 1, duration: 1600, useNativeDriver: true }),
-    ]));
-    pulse.start();
-    return () => pulse.stop();
-  }, [businessPulse]);
 
   const fetchHomeWorkspace = useCallback(async (): Promise<{
     home: PartnerHomeData;
@@ -181,8 +172,7 @@ export default function PartnerHomeScreen() {
             </View>
           ) : null}
 
-          <PartnerEnter delay={20}>
-            <Animated.View style={[styles.businessCard, { transform: [{ scale: businessPulse }] }]} >
+          <View style={styles.businessCard}>
               <View style={styles.businessTopRow}>
                 <View style={styles.periodWrap}>
                   <PartnerAnchoredDropdown
@@ -251,7 +241,7 @@ export default function PartnerHomeScreen() {
 
               <View style={styles.businessMainRow}>
                 <View style={styles.businessMainCopy}>
-                  <Text style={styles.businessPremium}>{formatIndianCurrency(rangeData?.net_premium ?? 0)}</Text>
+                  <Text style={styles.businessPremium}>{formatWholeIndianCurrency(rangeData?.net_premium ?? 0)}</Text>
                   <Text style={styles.businessCaption}>Business Generated (Net Premium)</Text>
                   {business.loading && !rangeData ? (
                     <Text style={styles.trendNeutral}>Updating business figures…</Text>
@@ -300,8 +290,7 @@ export default function PartnerHomeScreen() {
                   label={identity.actor_kind === 'employee' ? 'Projected Retention' : 'Commission Earned'}
                 />
               </View>
-            </Animated.View>
-          </PartnerEnter>
+          </View>
 
           <PartnerEnter delay={70}>
             <View style={styles.quickCard}>
@@ -463,24 +452,11 @@ function PendingTasksCard({
 function MiniBusinessTrend({ values }: { values: number[] }) {
   const recent = values.slice(-6);
   const max = Math.max(1, ...recent);
-  // Restart only when data changes, not on every Home tab refocus.
-  const signature = recent.join(',');
-  const rise = useRef(new Animated.Value(0.7)).current;
-  useEffect(() => {
-    rise.setValue(0.7);
-    const animation = Animated.loop(Animated.sequence([
-      Animated.timing(rise, { toValue: 1, duration: 1350, useNativeDriver: true }),
-      Animated.timing(rise, { toValue: 0.7, duration: 1350, useNativeDriver: true }),
-    ]));
-    animation.start();
-    return () => animation.stop();
-  }, [rise, signature]);
   return (
     <View style={styles.miniChart} accessibilityLabel="Recent premium trend">
       {recent.length ? recent.map((value, index) => (
-        <Animated.View key={index} style={[styles.miniBar, {
+        <View key={index} style={[styles.miniBar, {
           height: Math.max(4, Math.round(Math.max(0, value) / max * 43)),
-          transform: [{ scaleY: rise }],
         }]} />
       )) : <Text style={styles.chartUnavailable}>Trend unavailable</Text>}
     </View>
@@ -630,7 +606,7 @@ function Trend({ value, hasPrevious, comparisonLabel = 'previous period' }: { va
         color={positive ? '#1D9C60' : '#C27A11'}
       />
       <ShrinkLoopText style={[styles.trendText, { color: positive ? '#1D9C60' : '#C27A11' }]}>
-        {Math.abs(value).toFixed(1)}% {positive ? 'above' : 'below'} {comparisonLabel}
+        {Math.round(Math.abs(value))}% {positive ? 'above' : 'below'} {comparisonLabel}
       </ShrinkLoopText>
     </View>
   );
@@ -659,6 +635,12 @@ function ShrinkLoopText({
       {children}
     </Animated.Text>
   );
+}
+
+function formatWholeIndianCurrency(value: number | string | null | undefined) {
+  const amount = Number(value ?? 0);
+  const safeAmount = Number.isFinite(amount) ? Math.round(amount) : 0;
+  return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(safeAmount)}`;
 }
 
 function percentageChange(current: number, previous: number) {
