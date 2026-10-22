@@ -22,12 +22,14 @@ const DOCUMENTS = [
 export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
   const router = useRouter();
   const initialAccident = splitDateTime(data.claim.accident_at);
+  const initialSpot = splitDateTime(data.claim.spot_intimation_at);
+  const initialDriver = parseDriver(data.claim.accident_description);
   const [incidentDate, setIncidentDate] = useState(initialAccident.date);
   const [incidentTime, setIncidentTime] = useState(initialAccident.time);
-  const [spotDate, setSpotDate] = useState('');
-  const [spotTime, setSpotTime] = useState('');
-  const [driver, setDriver] = useState('');
-  const [phone, setPhone] = useState('');
+  const [spotDate, setSpotDate] = useState(initialSpot.date);
+  const [spotTime, setSpotTime] = useState(initialSpot.time);
+  const [driver, setDriver] = useState(initialDriver.name);
+  const [phone, setPhone] = useState(initialDriver.phone);
   const [location, setLocation] = useState(data.claim.accident_location || '');
   const [saving, setSaving] = useState(false);
   const save = async () => {
@@ -85,6 +87,7 @@ function EditableField({label,required,value,onChange,placeholder,editable,icon,
 
 function splitDateTime(value:string|null|undefined){if(!value)return{date:'',time:''};const date=new Date(value);if(Number.isNaN(date.getTime()))return{date:'',time:''};const pad=(n:number)=>String(n).padStart(2,'0');return{date:`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`,time:`${pad(date.getHours())}:${pad(date.getMinutes())}`};}
 function parseLocalDateTime(date:string,time:string){if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^\d{2}:\d{2}$/.test(time))return null;const parsed=new Date(`${date}T${time}:00`);return Number.isNaN(parsed.getTime())?null:parsed;}
+function parseDriver(value:string|null|undefined){const text=value||'';const name=text.match(/^Driver:\s*(.+)$/mi)?.[1]?.trim()||'';const phone=text.match(/^Driver phone:\s*(.+)$/mi)?.[1]?.trim()||'';return{name,phone};}
 function Nav({title,icon,onPress}:{title:string;icon:keyof typeof Ionicons.glyphMap;onPress:()=>void}) {return <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={styles.navItem}><View style={styles.navIcon}><Ionicons name={icon} size={20} color="#D3E2F9"/></View><Text style={styles.navLabel}>{title}</Text></Pressable>}
 const styles=StyleSheet.create({
 screen:{flex:1,backgroundColor:'#EDF6FE'},header:{height:50,backgroundColor:'#0860C8',flexDirection:'row',alignItems:'center',paddingHorizontal:12,gap:10},back:{width:34,height:34,alignItems:'center',justifyContent:'center'},headerCopy:{flex:1,justifyContent:'center'},headerTitle:{color:'#FFF',fontSize:15,fontWeight:'800'},headerSubtitle:{color:'#DDEBFA',fontSize:10},scroll:{flex:1},content:{paddingHorizontal:13,paddingTop:23,paddingBottom:30,gap:13},
