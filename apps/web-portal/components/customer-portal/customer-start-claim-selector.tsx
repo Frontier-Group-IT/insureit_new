@@ -14,7 +14,7 @@ function ClaimSubmitButton({ disabled }: { disabled: boolean }) {
   </button>;
 }
 
-type ClaimIdentity = { id: string; policy_id: string | null; external_policy_id: string | null; current_status: string };
+type ClaimIdentity = { id: string; vehicle_id: string | null; policy_id: string | null; external_policy_id: string | null; current_status: string };
 
 export function CustomerStartClaimSelector({
   accountId, vehicles, policies, existingClaims, initialVehicleId,
@@ -46,7 +46,7 @@ export function CustomerStartClaimSelector({
   const hasActivePolicy = Boolean(policy);
   const existingClaim = existingClaims.find((claim) =>
     !["Settled", "Closed", "Claim Complete", "Rejected"].includes(claim.current_status) &&
-    (policy ? (policy.source === "external" ? claim.external_policy_id === policy.id : claim.policy_id === policy.id) : false),
+    (policy ? (policy.source === "external" ? claim.external_policy_id === policy.id : claim.policy_id === policy.id) : claim.vehicle_id === vehicleId && !claim.policy_id && !claim.external_policy_id),
   );
 
   const vehicleLabel = (item: CustomerVehicleRow) =>
@@ -92,7 +92,7 @@ export function CustomerStartClaimSelector({
           <Headphones className="h-5 w-5" /> Get Assistance
         </Link>
         {existingClaim ? (
-          <Link href={{ pathname: `/customer/claims/${existingClaim.id}`, query: { account: accountId } }} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#0B3884] px-4 text-[13px] font-semibold text-white">
+          <Link href={{ pathname: existingClaim.current_status === "Draft" ? "/customer/spot-intimation" : `/customer/claims/${existingClaim.id}`, query: { account: accountId, ...(existingClaim.current_status === "Draft" ? { id: existingClaim.id } : {}) } }} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#0B3884] px-4 text-[13px] font-semibold text-white">
             Continue existing claim <ArrowRight className="h-5 w-5"/>
           </Link>
         ) : (
