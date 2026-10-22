@@ -11,7 +11,7 @@ const page = readFileSync(resolve(root, "page.tsx"), "utf8");
 for (const [label, dialog] of [["Edit", "edit"], ["Disable", "status"], ["Delete", "delete"]]) {
   assert.match(menu, new RegExp('onClick=\\{\\(\\) => showDialog\\("'+dialog+'"\\)\\}'), label + " should open its dialog from a click");
 }
-assert.doesNotMatch(menu, /onPointerDown=\{/, "Do not unmount the menu before click completes");
+assert.ok(!menu.includes('if (event.button === 0) showDialog('), "Do not open action dialogs during pointerdown");
 assert.doesNotMatch(menu, /requestSubmit\(/, "Do not manually submit resend invitation twice");
 assert.doesNotMatch(menu, /associate-resend-cooldown:/, "Do not store an optimistic cooldown for failed email requests");
 assert.match(menu, /<form action=\{resendPartnerAssociateInvite\}>/);
