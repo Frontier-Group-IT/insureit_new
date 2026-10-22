@@ -23,6 +23,7 @@ export default async function CustomerStartClaimPage({ searchParams }: { searchP
         policies={policies}
         existingClaims={claims.map((claim) => ({
           id: claim.id,
+          vehicle_id: claim.vehicle_id,
           policy_id: claim.policy_id,
           external_policy_id: claim.external_policy_id,
           current_status: claim.current_status,
