@@ -64,3 +64,11 @@ assert.match(stagePage,/!completed && activeIndex===currentIndex/,"Completed and
 assert.match(stagePage,/Save &amp; Continue/,"Eligible stages must have a submit action");
 assert.match(stageActions,/const next=INTERNAL_JOURNEY_STAGES\[index\+1\]/,"Successful stage submissions should route to the next stage");
 console.log("Customer nine-stage editing permissions and navigation regression passed.");
+
+const brokerSpot=fs.readFileSync("app/customer/(protected)/spot-intimation/page.tsx","utf8");
+assert.match(brokerSpot,/owned\.claim_service_mode==="broker_managed"/,"Customer broker-managed draft save must be explicitly scoped");
+assert.match(brokerSpot,/\.eq\("claim_service_mode","broker_managed"\)/,"Broker draft update must retain mode guard");
+assert.match(brokerSpot,/\.eq\("customer_id",authorized\.id\)/,"Broker draft update must stay authorized to the customer");
+assert.match(brokerSpot,/\.eq\("current_status","Draft"\)/,"Broker draft update must not change progressed claims");
+assert.match(brokerSpot,/Customer Spot Intimation save failed unexpectedly/,"Unexpected save failures must return an inline error");
+console.log("Customer broker Spot Intimation guard and failure-handling regression passed.");
