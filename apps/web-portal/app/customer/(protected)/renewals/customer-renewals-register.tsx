@@ -79,7 +79,7 @@ export function CustomerRenewalsRegister({ accountId, items, categories }: {
         <label className="flex w-full min-w-0 items-center gap-2 rounded-lg border border-[#D8E1EC] bg-white px-2.5 py-1.5 sm:w-[250px]">
           <Search className="h-4 w-4 shrink-0 text-[#73829A]"/>
           <span className="sr-only">Search renewals</span>
-          <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search vehicle, document or reference..." className="w-full min-w-0 border-0 bg-transparent p-0 text-[13px] outline-none focus:outline-none focus:ring-0"/>
+          <CustomerAnimatedSearchInput value={query} onChange={event => setQuery(event.target.value)} aria-label="Search renewals" autoComplete="off" hints={["Search vehicle number…", "Search policy number…", "Search document type…", "Search reference…", "Search renewal status…"]} className="text-[13px] text-[#203650]" />
         </label>
         <div className="ml-auto flex items-center gap-4 text-[11px] font-semibold text-[#61738D]">
           <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#C38A20]"/>Due</span>
