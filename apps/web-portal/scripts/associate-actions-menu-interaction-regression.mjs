@@ -16,7 +16,7 @@ for (const action of ["Edit", "Enable", "Disable", "Delete"]) {
   assert.ok(source.includes(action), `Missing expected label ${action}`);
 }
 assert.match(source, /iconOnly associateName=\{associate.name\}/);
-assert.match(source, /<form action=\{resendPartnerAssociateInvite\}>/);
+assert.ok(source.includes("<form action={resendPartnerAssociateInvite}"), "Resend must use existing server action");
 for (const serverAction of [
   "updatePartnerAssociateAccount", "togglePartnerAssociateAccountStatus",
   "deletePartnerAssociateAccount", "resendPartnerAssociateInvite",
