@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileText, ClipboardList, ShieldCheck, Clock3, Plus } from "lucide-react";
+import { FileText, ClipboardList, Plus } from "lucide-react";
 import { getStaticInsurerLogo } from "@/lib/insurer-logo";
 import { ManufacturerMark } from "../vehicles/customer-vehicles-register";
 import { CustomerClaimsSearch, CustomerClaimsStageFilter } from "./customer-claims-search";
@@ -37,8 +37,6 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
   });
   const internalCount = enriched.filter((item) => !item.external).length;
   const externalCount = enriched.length - internalCount;
-  const completedCount = enriched.filter((item) => item.completed).length;
-  const openCount = enriched.filter((item) => !item.completed && item.claim.current_status !== "Rejected").length;
   const stages = INTERNAL_JOURNEY_STAGES.map((stage) => stage.label);
   const filtered = enriched.filter(({ claim, external, stage }) => {
     if (external !== (type === "external")) return false;
@@ -67,17 +65,6 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
             <h1 className="text-[clamp(28px,3.2vw,40px)] font-bold tracking-tight">Claims</h1>
           </div>
         </div>
-      </section>
-
-      <section aria-label="Claim overview" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {[
-          {label:"Total claims",value:claims.length,detail:"Across your account",icon:ClipboardList,tint:"bg-[#EAF3FF] text-[#1769DC]"},
-          {label:"Open",value:openCount,detail:"Still in progress",icon:Clock3,tint:"bg-[#FFF7E8] text-[#B66A16]"},
-          {label:"Settled / completed",value:completedCount,detail:"Journey completed",icon:ShieldCheck,tint:"bg-[#E5F7EE] text-[#087A57]"},
-        ].map(({label,value,detail,icon:Icon,tint})=><div key={label} className="flex min-w-0 items-center gap-3 rounded-2xl border border-[#E1EAF5] bg-white p-4">
-          <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${tint}`}><Icon className="h-5 w-5"/></span>
-          <span className="min-w-0"><span className="block text-[12px] font-medium text-[#60799B]">{label}</span><strong className="block text-[28px] font-bold leading-tight tabular-nums text-[#102B54]">{value}</strong><small className="block text-[12px] text-[#7890AD]">{detail}</small></span>
-        </div>)}
       </section>
 
       <section className="overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white">
@@ -115,7 +102,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
                       <td className="px-5 py-3">
                         <Link href={detailHref} className="flex min-w-0 items-center gap-3 rounded-md outline-offset-2 after:absolute after:inset-0 after:cursor-pointer after:content-[''] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1769DC] focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:outline-[#1769DC]" aria-label={`View claim ${claim.insurer_claim_no || claim.claim_no || "for " + (claim.vehicle_no || "vehicle")}`}>
                           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#F1F6FC]"><ManufacturerMark make={claim.vehicle_make || ""} /></span>
-                          <span className="min-w-0"><strong className="block truncate text-[13px] text-[#15375F]">{claim.vehicle_no || "—"}</strong><span className="block truncate text-[12px] text-[#607B9F]">{[claim.vehicle_make, claim.vehicle_model].filter(Boolean).join(" ") || "—"}</span></span>
+                          <span className="min-w-0"><strong className="block truncate text-[13px] text-[#15375F]">{claim.vehicle_no || "—"}</strong><span className="block truncate text-[12px] text-[#607B9F]">{claim.vehicle_model || "—"}</span></span>
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-[13px] font-semibold">{claim.insurer_claim_no || claim.claim_no || "—"}</td>
