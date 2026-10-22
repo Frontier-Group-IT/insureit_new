@@ -68,6 +68,9 @@ export async function saveCustomerExternalStage(form:FormData) {
   const db=await createServerSupabaseClient();
   const session=await getCustomerWebSession();
   const current=milestones.find(m=>m.milestone_key===key);
+  if (current && ["completed","not_applicable"].includes(current.milestone_status)) {
+    throw new Error("This claim stage has already been completed and cannot be edited.");
+  }
   if(key==="vehicle_delivery"||key==="spot_status"){
     const done=key!=="vehicle_delivery"||(values.vehicle_received==="yes"&&Boolean(values.vehicle_received_date));
     const {error}=await db.from("claim_milestones").upsert({
@@ -84,5 +87,8 @@ export async function saveCustomerExternalStage(form:FormData) {
     });
     if(error)throw new Error("Could not save claim stage");
   }
-  redirect("/customer/claims/"+encodeURIComponent(claim.id)+"?account="+encodeURIComponent(account.id));
+  const next=INTERNAL_JOURNEY_STAGES[index+1];
+  redirect(next
+    ? "/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(next.key)+"?account="+encodeURIComponent(account.id)
+    : "/customer/claims/"+encodeURIComponent(claim.id)+"?account="+encodeURIComponent(account.id));
 }
