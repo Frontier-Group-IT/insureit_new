@@ -93,38 +93,26 @@ export function AssociateAccountActionsMenu({
     };
   }, []);
 
+  // Position before opening so the portalled menu renders in the same click.
+  function positionMenu() {
+    const button = buttonRef.current;
+    if (!button) return;
+    const rect = button.getBoundingClientRect();
+    const menuWidth = 176;
+    const menuHeight = 154;
+    const gap = 8;
+    const viewportPadding = 12;
+    const left = Math.max(viewportPadding, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - viewportPadding));
+    const top = rect.bottom + gap + menuHeight <= window.innerHeight - viewportPadding
+      ? rect.bottom + gap
+      : Math.max(viewportPadding, rect.top - gap - menuHeight);
+    setMenuPosition({ top, left });
+  }
+
   useEffect(() => {
-    if (!open) {
-      setMenuPosition(null);
-      return;
-    }
-
-    function positionMenu() {
-      const button = buttonRef.current;
-      if (!button) return;
-
-      const rect = button.getBoundingClientRect();
-      const menuWidth = 176;
-      const menuHeight = 154;
-      const gap = 8;
-      const viewportPadding = 12;
-
-      const left = Math.min(
-        Math.max(viewportPadding, rect.right - menuWidth),
-        window.innerWidth - menuWidth - viewportPadding,
-      );
-      const fitsBelow = rect.bottom + gap + menuHeight <= window.innerHeight - viewportPadding;
-      const top = fitsBelow
-        ? rect.bottom + gap
-        : Math.max(viewportPadding, rect.top - gap - menuHeight);
-
-      setMenuPosition({ top, left });
-    }
-
-    positionMenu();
+    if (!open) return;
     window.addEventListener("resize", positionMenu);
     window.addEventListener("scroll", positionMenu, true);
-
     return () => {
       window.removeEventListener("resize", positionMenu);
       window.removeEventListener("scroll", positionMenu, true);
@@ -153,7 +141,7 @@ export function AssociateAccountActionsMenu({
           aria-label={`Actions for ${associate.name}`}
           aria-haspopup="menu"
           aria-expanded={open}
-          onClick={() => { trace("trigger:click"); setOpen((value) => !value); }}
+          onClick={() => { trace("trigger:click"); if (!open) positionMenu(); setOpen(!open); }}
           className="grid h-8 w-8 place-items-center rounded-lg border border-transparent text-[#334155] transition hover:border-[#DCE5EF] hover:bg-[#F1F5F9]"
         >
           <MoreVertical className="h-4 w-4" />
