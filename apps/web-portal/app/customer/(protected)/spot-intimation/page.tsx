@@ -31,8 +31,15 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
     "use server";
     const customerId=String(form.get("account")||"");
     const claimId=String(form.get("claim")||"");
-    const {account:authorized}=await resolveCustomerWebScope(customerId);
-    const {claim:owned}=await loadCustomerClaimDetail(authorized.id,claimId);
+    let authorized: Awaited<ReturnType<typeof resolveCustomerWebScope>>["account"];
+    let owned: Awaited<ReturnType<typeof loadCustomerClaimDetail>>["claim"];
+    try {
+      ({account:authorized}=await resolveCustomerWebScope(customerId));
+      ({claim:owned}=await loadCustomerClaimDetail(authorized.id,claimId));
+    } catch (error) {
+      console.error("Customer Spot Intimation scope/load failed",error);
+      return {error:"We could not verify this claim. Please reload the page and try again."};
+    }
     let incident: Date;
     let spot: Date;
     try { incident=dateTime(form,"accident"); spot=dateTime(form,"spot"); }
@@ -42,14 +49,29 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
     const phone=String(form.get("phone")||"").trim();
     const location=String(form.get("location")||"").trim().slice(0,500);
     if(phone && !/^\+?[0-9 ]{10,15}$/.test(phone)) return {error:"Enter a valid driver phone number."};
-    const db=await createServerSupabaseClient();
+    let db: Awaited<ReturnType<typeof createServerSupabaseClient>>;
+    try { db=await createServerSupabaseClient(); }
+    catch (error) { console.error("Customer Spot Intimation database connection failed",error); return {error:"Unable to connect to claim service. Please try again."}; }
+    try {
     if(owned.external_policy_id) {
-      if(owned.claim_service_mode==="broker_managed") return {error:"This broker-managed claim cannot be submitted here."};
+      if(owned.claim_service_mode==="broker_managed") {
+        if(owned.current_status!=="Draft") return {error:"This claim has already progressed. Open Claim Details to continue."};
+        const {data:brokerSaved,error:brokerError}=await db.from("claims").update({
+          current_status:"Initial Documents Pending",accident_at:incident.toISOString(),
+          spot_intimation_at:spot.toISOString(),accident_location:location||null,
+          accident_description:[driver&&"Driver: "+driver,phone&&"Driver phone: "+phone].filter(Boolean).join("\n")||null,
+        }).eq("id",owned.id).eq("customer_id",authorized.id).eq("current_status","Draft").eq("claim_service_mode","broker_managed").select("id").maybeSingle();
+        if(brokerError || !brokerSaved?.id) {
+          console.error("Customer broker-managed spot submission failed",{code:brokerError?.code,message:brokerError?.message});
+          return {error:"Spot Intimation could not be saved for this claim. Please contact support if the problem persists."};
+        }
+      } else {
       const {error}=await db.rpc("finalize_self_managed_external_claim_draft",{
         p_claim_id:owned.id,p_accident_at:incident.toISOString(),p_spot_intimation_at:spot.toISOString(),
         p_driver_name:driver||null,p_driver_phone:phone||null,p_location:location||null,
       });
       if(error) return {error:"Spot Intimation could not be saved. Please try again."};
+      }
     } else {
       if(owned.current_status!=="Draft") return {error:"This claim is already in progress. Open Claim Details to review it."};
       if(!driver || !phone || !location) return {error:"Driver name, number and accident location are required."};
@@ -59,6 +81,10 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
         accident_description:"Driver: "+driver+"\nDriver phone: "+phone,
       }).eq("id",owned.id).eq("customer_id",authorized.id).eq("current_status","Draft").select("id").single();
       if(error || !data?.id) return {error:"Claim submission could not be completed. Please check Claim Details before retrying."};
+    }
+    } catch (error) {
+      console.error("Customer Spot Intimation save failed unexpectedly",error);
+      return {error:"Your claim could not be saved. Please check Claim Details before trying again."};
     }
     redirect("/customer/claims/"+encodeURIComponent(owned.id)+"/stage/spot_status?account="+encodeURIComponent(authorized.id));
   }
