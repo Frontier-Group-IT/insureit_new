@@ -28,7 +28,19 @@ export default function ShreeFleetAuthbridgePreflight(){
      return Object.fromEntries(cols.map((key,i)=>[key,(cells[i]??"").trim()])) as Candidate;
    });
    if(parsed.length!==202){setMessage("Expected 202 source rows. No AuthBridge request made.");return;}
-   const candidates=parsed.filter(row=>row.existing_status.startsWith("New by chassis"));
+   // Accept the exact statuses emitted by the preliminary and verified reconciliation exports.
+   const candidateStatuses=new Set([
+     "Potentially new - global check pending",
+     "New by chassis — global check clear",
+     "New by chassis - global check clear",
+     "New by chassis (Shree + global check); RC conflict check pending",
+     "New by chassis and RC (database-wide checks); AuthBridge pending",
+   ]);
+   const alreadyLinkedStatuses=new Set(["Already on Shree Transport", "Already linked to Shree Transport"]);
+   if(parsed.some(row=>!candidateStatuses.has(row.existing_status)&&!alreadyLinkedStatuses.has(row.existing_status))){
+     setMessage("The reconciliation contains an unrecognized status. No AuthBridge lookup will run.");return;
+   }
+   const candidates=parsed.filter(row=>candidateStatuses.has(row.existing_status));
    if(candidates.length!==101||candidates.some(r=>!r.registration_number)){setMessage("Candidate set differs from the reviewed 101 registration numbers. Stop and reconcile.");return;}
    const chassis=new Set(candidates.map(r=>normalize(r.chassis_number)));
    const rc=new Set(candidates.map(r=>normalize(r.registration_number)));
