@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Headphones, Plus, ShieldAlert } from "lucide-react";
+import { ArrowRight, Headphones, Plus, ShieldAlert, X } from "lucide-react";
 import type { CustomerPolicyRow, CustomerVehicleRow } from "@/lib/customer-web-data";
 import { prepareCustomerClaim } from "@/app/customer/(protected)/start-claim/actions";
 
@@ -23,20 +23,20 @@ export function CustomerStartClaimSelector({
       : vehicles[0]?.id || "",
   );
 
+  const [policyDialogOpen, setPolicyDialogOpen] = useState(false);
+  const claimFormRef = useRef<HTMLFormElement>(null);
   const vehicle = vehicles.find((item) => item.id === vehicleId);
   const vehiclePolicies = useMemo(
     () => policies.filter((policy) => policy.vehicle_id === vehicleId).sort((a, b) => b.end_date.localeCompare(a.end_date)),
     [policies, vehicleId],
   );
   const today = new Date().toISOString().slice(0, 10);
-  const policy = vehiclePolicies.find((item) => item.start_date <= today && item.end_date >= today) ?? vehiclePolicies[0];
-  const hasActivePolicy = Boolean(policy && policy.start_date <= today && policy.end_date >= today);
-  const existingClaim = policy
-    ? existingClaims.find((claim) =>
-        (policy.source === "external" ? claim.external_policy_id === policy.id : claim.policy_id === policy.id) &&
-        !["Settled", "Closed", "Claim Complete", "Rejected"].includes(claim.current_status),
-      )
-    : undefined;
+  const policy = vehiclePolicies.find((item) => item.start_date <= today && item.end_date >= today);
+  const hasActivePolicy = Boolean(policy);
+  const existingClaim = existingClaims.find((claim) =>
+    !["Settled", "Closed", "Claim Complete", "Rejected"].includes(claim.current_status) &&
+    (policy ? (policy.source === "external" ? claim.external_policy_id === policy.id : claim.policy_id === policy.id) : false),
+  );
 
   const vehicleLabel = (item: CustomerVehicleRow) =>
     item.registration_status === "unregistered" || !item.vehicle_no
@@ -54,12 +54,12 @@ export function CustomerStartClaimSelector({
       </section>
 
       <section className="rounded-2xl border border-[#E1EAF5] bg-white p-4 shadow-[0_6px_24px_rgba(20,58,100,.04)] sm:p-5">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><label htmlFor="claim-vehicle" className="text-[16px] font-bold text-[#102B54]">Select your vehicle</label><span className="inline-flex items-center gap-1.5 rounded-full bg-[#EDF8F2] px-2.5 py-1 text-[11px] font-semibold text-[#087A57]"><CheckCircle2 className="h-3.5 w-3.5"/> Step 1 of 2</span></div>
+        <div className="mb-3"><label htmlFor="claim-vehicle" className="text-[16px] font-bold text-[#102B54]">Select your vehicle</label></div>
         {vehicles.length ? (
           <select
             id="claim-vehicle"
             value={vehicleId}
-            onChange={(event) => setVehicleId(event.target.value)}
+            onChange={(event) => { setVehicleId(event.target.value); setPolicyDialogOpen(false); }}
             className="h-10 w-full rounded-lg border border-[#DDE7F3] bg-white px-3 text-[13px] font-semibold text-[#17345D] outline-none transition focus:border-[#2D7FF0] focus:ring-2 focus:ring-[#DCEBFF]"
           >
             {vehicles.map((item) => (
@@ -74,17 +74,6 @@ export function CustomerStartClaimSelector({
           </div>
         )}
 
-        {vehicle && !hasActivePolicy ? (
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#F2D7DA] bg-[#FFF7F8] px-3 py-2.5">
-            <span className="flex items-center gap-2 text-[12px] font-medium text-[#A43B49]">
-              <ShieldAlert className="h-4 w-4" />
-              No active policy found. You can still register a claim; coverage will be reviewed separately.
-            </span>
-            <Link href={{ pathname: "/customer/add-policy", query: { account: accountId, vehicle: vehicleId } }} className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#1769DC]">
-              <Plus className="h-4 w-4" /> Add policy
-            </Link>
-          </div>
-        ) : null}
       </section>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -96,7 +85,7 @@ export function CustomerStartClaimSelector({
             Continue existing claim <ArrowRight className="h-5 w-5"/>
           </Link>
         ) : (
-          <form action={prepareCustomerClaim} className="flex">
+          <form ref={claimFormRef} action={prepareCustomerClaim} className="flex" onSubmit={(event) => { if (!hasActivePolicy && !policyDialogOpen) { event.preventDefault(); setPolicyDialogOpen(true); } }}>
             <input type="hidden" name="account" value={accountId}/>
             <input type="hidden" name="vehicle" value={vehicleId}/>
             <input type="hidden" name="policy" value={policy?.id || ""}/>
@@ -106,6 +95,22 @@ export function CustomerStartClaimSelector({
           </form>
         )}
       </div>
+      {policyDialogOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#071B39]/55 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setPolicyDialogOpen(false); }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="claim-policy-dialog-title" aria-describedby="claim-policy-dialog-description" onKeyDown={(event) => { if (event.key === "Escape") setPolicyDialogOpen(false); }} className="w-full max-w-[420px] rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
+            <div className="flex items-start justify-between gap-3">
+              <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#FFF4E4] text-[#B77917]"><ShieldAlert className="h-6 w-6" /></span>
+              <button type="button" autoFocus onClick={() => setPolicyDialogOpen(false)} aria-label="Close confirmation" className="rounded-lg p-1.5 text-[#60738E] hover:bg-[#F2F6FB]"><X className="h-5 w-5"/></button>
+            </div>
+            <h2 id="claim-policy-dialog-title" className="mt-4 text-[18px] font-bold text-[#102B54]">No Active Policy Found</h2>
+            <p id="claim-policy-dialog-description" className="mt-2 text-[13px] leading-5 text-[#5A6D86]">This vehicle has no active insurance policy. You can still register a claim, but coverage and eligibility will be reviewed separately.</p>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => claimFormRef.current?.requestSubmit()} className="min-h-11 rounded-lg border border-[#B7CEE8] bg-white px-3 text-[12px] font-bold text-[#174A87] hover:bg-[#F4F9FE]">Continue</button>
+              <Link href={{ pathname: "/customer/add-policy", query: { account: accountId, vehicle: vehicleId } }} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-[#0B3884] px-3 text-[12px] font-bold text-white"><Plus className="h-4 w-4"/>Add Policy</Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
