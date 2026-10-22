@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-import Link from "next/link";
 import type { CustomerVehicleRow } from "@/lib/customer-web-data";
 
 type SelectionProps = { vehicles: CustomerVehicleRow[]; blocked: string[]; initial?: string; accountId: string };
@@ -38,13 +37,9 @@ function usePolicySelection() {
   return value;
 }
 
-export function CustomerPolicyVehicleField({ accountId }: { accountId: string }) {
+export function CustomerPolicyVehicleField() {
   const { vehicles, blocked, selected, setSelected } = usePolicySelection();
   return <>
-    <div className="sm:col-span-2 flex items-center justify-between gap-2">
-      <span className="text-xs font-bold text-[#1B3150]">Choose a vehicle already linked to your account</span>
-      <Link href={{ pathname: "/customer/add-vehicle", query: { account: accountId } }} className="text-xs font-bold text-[#1769DC] hover:underline">+ Add Vehicle</Link>
-    </div>
     <label className="text-sm font-bold sm:col-span-2">Vehicle number *
       <select name="vehicle" value={selected} onChange={e => setSelected(e.target.value)} required className="mt-2 block w-full rounded-xl border p-3 text-sm">
         <option value="">Select a vehicle</option>
@@ -67,7 +62,7 @@ export function CustomerPolicyProductField() {
 // Keep the original combined interface for any other callers.
 export function CustomerPolicySelections(props: SelectionProps) {
   return <CustomerPolicySelectionProvider {...props}>
-    <CustomerPolicyVehicleField accountId={props.accountId}/>
+    <CustomerPolicyVehicleField/>
     <CustomerPolicyProductField/>
   </CustomerPolicySelectionProvider>;
 }
