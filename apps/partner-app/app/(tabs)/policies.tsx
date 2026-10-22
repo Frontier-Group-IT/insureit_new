@@ -58,6 +58,7 @@ export default function PoliciesScreen() {
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const [unreadActivityCount, setUnreadActivityCount] = useState(0);
   const [loadMoreFeedback, setLoadMoreFeedback] = useState(false);
+  const [requestedLimit, setRequestedLimit] = useState(PAGE_SIZE);
   const loadMoreStartedAt = useRef(0);
 
   useFocusEffect(useCallback(() => {
@@ -70,7 +71,11 @@ export default function PoliciesScreen() {
   }, [cacheScopeKey]));
   const debouncedSearch = useDebouncedValue(query.trim(), 350);
 
-  useEffect(() => { setVisibleLimit(PAGE_SIZE); }, [lifecycle, debouncedSearch]);
+  useEffect(() => {
+    setVisibleLimit(PAGE_SIZE);
+    setRequestedLimit(PAGE_SIZE);
+    setLoadMoreFeedback(false);
+  }, [lifecycle, debouncedSearch]);
 
   useEffect(() => {
     savedPolicyQuery = query;
@@ -100,19 +105,37 @@ export default function PoliciesScreen() {
 
   const collection = usePartnerPageQuery<PartnerPolicyRow>({
     scopeKey: cacheScopeKey,
-    key: `policies:list:${lifecycle}:${debouncedSearch || 'all'}`,
+    // The requested limit is part of the cache identity. Without this, increasing
+    // 10 -> 20 can reuse the cached 10-row "page 0" result and appear to do nothing.
+    key: `policies:list:${lifecycle}:${debouncedSearch || 'all'}:limit:${visibleLimit}`,
     pageSize: visibleLimit,
     fetchPage,
     staleTimeMs: 60_000,
   });
 
   useEffect(() => {
-    if (!loadMoreFeedback || collection.loading) return;
+    if (!loadMoreFeedback) return;
+
+    const reachedRequestedSize =
+      collection.rows.length >= requestedLimit ||
+      (collection.total > 0 && collection.rows.length >= collection.total);
+    const finishedRequest = !collection.loading && !collection.changingPage && reachedRequestedSize;
+
+    if (!finishedRequest && !collection.error) return;
+
     const elapsed = Date.now() - loadMoreStartedAt.current;
-    const remaining = Math.max(0, 450 - elapsed);
+    const remaining = Math.max(0, 900 - elapsed);
     const timer = setTimeout(() => setLoadMoreFeedback(false), remaining);
     return () => clearTimeout(timer);
-  }, [collection.loading, loadMoreFeedback]);
+  }, [
+    collection.changingPage,
+    collection.error,
+    collection.loading,
+    collection.rows.length,
+    collection.total,
+    loadMoreFeedback,
+    requestedLimit,
+  ]);
 
   const refreshAll = useCallback(async () => {
     await Promise.all([summary.refresh(), collection.refresh()]);
@@ -332,9 +355,11 @@ export default function PoliciesScreen() {
       accessibilityState={{ disabled: isLoadingMore, busy: isLoadingMore }}
       disabled={isLoadingMore}
       onPress={() => {
+        const nextLimit = visibleLimit + PAGE_SIZE;
         loadMoreStartedAt.current = Date.now();
+        setRequestedLimit(nextLimit);
         setLoadMoreFeedback(true);
-        setVisibleLimit((current) => current + PAGE_SIZE);
+        setVisibleLimit(nextLimit);
       }}
       style={({ pressed }) => [
         styles.loadMoreButton,
