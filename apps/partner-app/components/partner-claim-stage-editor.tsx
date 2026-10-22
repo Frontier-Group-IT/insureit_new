@@ -134,11 +134,17 @@ function ClaimHero({data,title,icon}:{data:PartnerClaimDetail;title:string;icon:
 
 function latestStageValues(data:PartnerClaimDetail,stage:ClaimStageKey){
   const result:Record<string,string>={};
-  for(const item of data.stages){void item;}
-  // Current scoped detail RPC intentionally exposes stage names only; fields start empty until
-  // the richer detail payload migration is applied. Existing claim-level amounts remain visible elsewhere.
-  if(stage==='claim_intimation'&&data.claim.estimated_loss!=null) result.estimate_amount=String(data.claim.estimated_loss);
-  if(stage==='payment_encashment'&&data.claim.settlement_amount!=null) result.payment_received_amount=String(data.claim.settlement_amount);
+  for(const item of data.stages){
+    const details=item.details;
+    if(!details||typeof details!=='object') continue;
+    if(details.milestone_key!==stage) continue;
+    for(const [key,value] of Object.entries(details)){
+      if(key==='milestone_key'||key==='completed_at'||value===null||value===undefined) continue;
+      result[key]=String(value);
+    }
+  }
+  if(stage==='claim_intimation'&&data.claim.estimated_loss!=null&&!result.estimate_amount) result.estimate_amount=String(data.claim.estimated_loss);
+  if(stage==='payment_encashment'&&data.claim.settlement_amount!=null&&!result.payment_received_amount) result.payment_received_amount=String(data.claim.settlement_amount);
   return result;
 }
 function Nav({label,icon,onPress}:{label:string;icon:keyof typeof Ionicons.glyphMap;onPress:()=>void}){return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.navItem}><View style={styles.navIcon}><Ionicons name={icon} size={19} color="#D8E5F8"/></View><Text style={styles.navLabel}>{label}</Text></Pressable>;}
