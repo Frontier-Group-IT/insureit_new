@@ -25,3 +25,11 @@ assert.match(selector,/useActionState\(prepareCustomerClaim/,"Claim server error
 assert.match(selector,/role="alert"/,"Claim errors must be visible inline");
 assert.match(claimAction,/error\?\.code === "23514"/,"Policyless database constraint errors should be reported clearly");
 assert.match(claimAction,/console\.error\("Customer claim draft creation failed"/,"Database failures must be logged server-side");
+
+const startClaimPage=fs.readFileSync("app/customer/(protected)/start-claim/page.tsx","utf8");
+assert.match(startClaimPage,/vehicle_id: claim\.vehicle_id/,"Selected-vehicle draft detection must include vehicle ID");
+assert.match(selector,/claim\.vehicle_id === vehicleId && !claim\.policy_id && !claim\.external_policy_id/,"Policy-free existing claims must be discovered");
+assert.match(selector,/existingClaim\.current_status === "Draft" \? "\/customer\/spot-intimation"/,"Existing drafts should resume at Spot Intimation");
+assert.match(claimAction,/active\.current_status === "Draft"/,"Server must resume drafts at Spot Intimation");
+assert.match(claimAction,/recoveryCode: recoveryError\?\.code/,"Log the actual recovery failure code");
+console.log("Policy-free claim draft resume and recovery diagnostics regression passed.");
