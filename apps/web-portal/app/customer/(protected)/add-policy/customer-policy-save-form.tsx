@@ -1,7 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { useActionState } from "react";
 import { LoaderCircle } from "lucide-react";
 import Link from "next/link";
 
@@ -20,21 +19,9 @@ export function CustomerPolicySaveForm({
   children: React.ReactNode;
 }) {
   const [state, formAction, pending] = useActionState(action, initialState);
-  const [portal, setPortal] = useState<Element | null>(null);
-  const [summary, setSummary] = useState<Record<string,string>>({});
-  useEffect(() => { setPortal(document.getElementById("customer-policy-live-summary")); }, []);
-  function trackFields(form: HTMLFormElement) {
-    const values = new FormData(form);
-    const option = (name: string) => {
-      const field = form.elements.namedItem(name);
-      return field instanceof HTMLSelectElement ? field.selectedOptions[0]?.textContent || "" : String(values.get(name) || "");
-    };
-    setSummary({ vehicle: option("vehicle"), type: option("type"), insurer: option("insurer"), number: String(values.get("number") || ""), start: String(values.get("start") || ""), end: String(values.get("end") || ""), premium: String(values.get("premium") || ""), idv: String(values.get("idv") || "") });
-  }
   return (
-    <form action={formAction} onChange={event => trackFields(event.currentTarget)} encType="multipart/form-data" className="space-y-3" aria-busy={pending}>
+    <form action={formAction} encType="multipart/form-data" className="space-y-3" aria-busy={pending}>
       {children}
-      {portal ? createPortal(<div className="space-y-3">{([["Vehicle",summary.vehicle],["Product",summary.type],["Insurer",summary.insurer],["Policy number",summary.number],["Start date",summary.start],["End date",summary.end],["IDV",summary.idv],["Premium",summary.premium]] as const).map(([label,value]) => <div key={label} className="flex items-start justify-between gap-2 border-b border-[#EEF2F8] pb-2"><span className="text-[#7185A0]">{label}</span><strong className="max-w-[58%] truncate text-right font-semibold text-[#183D6A]">{value && !value.startsWith("Select ") ? value : "—"}</strong></div>)}</div>,portal) : null}
       {state.error ? (
         <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-800">
           {state.error}
