@@ -696,15 +696,38 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       }
     }
 
+    // The booking RPC has already committed at this point. A failed auxiliary
+    // activity write or cache refresh must never turn a successful save into an
+    // ambiguous failure that tempts the user to create a duplicate policy.
     diagnosticStage = "post_booking_vehicle_activity";
-    await recordVehicleActivity(
-      admin,
-      result.vehicleId,
-      profile.id,
-      vehicle ? VEHICLE_ACTIVITY_ACTIONS.VEHICLE_LINKED_TO_POLICY : VEHICLE_ACTIVITY_ACTIONS.VEHICLE_CREATED,
-    );
+    try {
+      await recordVehicleActivity(
+        admin,
+        result.vehicleId,
+        profile.id,
+        vehicle ? VEHICLE_ACTIVITY_ACTIONS.VEHICLE_LINKED_TO_POLICY : VEHICLE_ACTIVITY_ACTIONS.VEHICLE_CREATED,
+      );
+    } catch (activityError) {
+      console.error("policy_onboarding_post_commit_activity_failed", {
+        error: policyOnboardingErrorForServerLog(activityError),
+      });
+    }
 
-    revalidatePath("/policies"); revalidatePath("/customers"); revalidatePath("/vehicles"); revalidatePath(`/vehicles/${result.vehicleId}/edit`); if(payload.sourceIntakeId){revalidatePath("/policy-intakes");revalidatePath(`/policy-intakes/${payload.sourceIntakeId}`);}
+    diagnosticStage = "post_booking_cache_revalidation";
+    try {
+      revalidatePath("/policies");
+      revalidatePath("/customers");
+      revalidatePath("/vehicles");
+      revalidatePath(`/vehicles/${result.vehicleId}/edit`);
+      if (payload.sourceIntakeId) {
+        revalidatePath("/policy-intakes");
+        revalidatePath(`/policy-intakes/${payload.sourceIntakeId}`);
+      }
+    } catch (refreshError) {
+      console.error("policy_onboarding_post_commit_refresh_failed", {
+        error: policyOnboardingErrorForServerLog(refreshError),
+      });
+    }
     return { ok: true, policyId: result.policyId, policyCode: result.policyCode, customerId: result.customerId, vehicleId: result.vehicleId, status: "active" };
   } catch (error) {
     console.error("policy_onboarding_server_error", {
