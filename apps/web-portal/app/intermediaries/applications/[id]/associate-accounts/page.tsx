@@ -217,7 +217,7 @@ export default async function PartnerAssociateAccountsPage({
             <h2 className="text-[13px] font-semibold text-[#17203A]">Associate Accounts Register</h2>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1120px] text-left text-[10.5px]">
+            <table className="w-full min-w-[1240px] text-left text-[10.5px]">
               <thead className="border-b border-[#E7ECF3] bg-[#F8FAFC] text-[8.5px] font-bold uppercase tracking-[.06em] text-[#64748B]">
                 <tr>
                   <th className="px-5 py-3">Name</th>
@@ -227,7 +227,7 @@ export default async function PartnerAssociateAccountsPage({
                   <th className="px-3 py-3">Address</th>
                   <th className="px-3 py-3">Role</th>
                   <th className="px-3 py-3">Status</th>
-                  <th className="px-3 py-3 text-center">Action</th>
+                  <th className="min-w-[168px] px-3 py-3 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EEF2F6]">

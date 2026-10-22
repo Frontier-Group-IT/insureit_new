@@ -14,7 +14,7 @@ for (const [label, dialog] of [["Edit", "edit"], ["Disable", "status"], ["Delete
 assert.ok(!menu.includes('if (event.button === 0) showDialog('), "Do not open action dialogs during pointerdown");
 assert.doesNotMatch(menu, /requestSubmit\(/, "Do not manually submit resend invitation twice");
 assert.doesNotMatch(menu, /associate-resend-cooldown:/, "Do not store an optimistic cooldown for failed email requests");
-assert.match(menu, /<form action=\{resendPartnerAssociateInvite\}>/);
+assert.match(menu, /<form action=\{resendPartnerAssociateInvite\}/);
 assert.match(menu, /<form action=\{updatePartnerAssociateAccount\}>/);
 assert.match(menu, /<form action=\{togglePartnerAssociateAccountStatus\}>/);
 assert.match(menu, /<form action=\{deletePartnerAssociateAccount\}/);

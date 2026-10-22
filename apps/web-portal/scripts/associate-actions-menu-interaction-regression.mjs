@@ -3,38 +3,24 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const base = new URL("../app/intermediaries/applications/[id]/associate-accounts/", import.meta.url);
-const menu = readFileSync(fileURLToPath(new URL("associate-account-actions-menu.tsx", base)), "utf8");
+const source = readFileSync(fileURLToPath(new URL("associate-account-actions-menu.tsx", base)), "utf8");
 const actions = readFileSync(fileURLToPath(new URL("actions.ts", base)), "utf8");
 
-assert.match(menu, /role="menu"/, "Dropdown must preserve menu semantics");
-assert.match(menu, /Close actions menu/, "Backdrop must dismiss menu");
-assert.ok(menu.includes("z-[9999] pointer-events-auto"), "Dropdown must have click-receiving layer above backdrop");
-assert.ok(menu.includes('onPointerDownCapture={() => trace("menu:pointerdown:capture")}'), "Trace hit-testing inside menu");
-assert.ok(!menu.includes('document.addEventListener("pointerdown"'), "No competing document pointer dismissal");
-assert.ok(!menu.includes("if (!dialog.open) dialog.showModal()"), "Dropdown must not depend on native modal effect");
+assert.match(source, /role="group"/, "Actions must render directly in the register row");
+assert.doesNotMatch(source, /MoreVertical|role="menu"|Close actions menu|setMenuPosition|menuPosition|pointerdown:capture/,
+  "Old three-dot dropdown, portal menu, and positioning logic must be gone");
 for (const action of ["edit", "status", "delete"]) {
-  assert.ok(
-    menu.includes(`onClick={() => showDialog("${action}")}`),
-    `Missing accessible click/keyboard activation: ${action}`
-  );
+  assert.ok(source.includes(`onClick={() => showDialog("${action}")}`), `Missing direct button for ${action}`);
 }
-assert.ok(!menu.includes('if (event.button === 0) showDialog('), "No pointer-first dialog activation");
-assert.ok(!menu.includes("requestSubmit("),
-  "Resend should use the native submit once, without manual requestSubmit");
-assert.doesNotMatch(menu, /recordResendAttempt/,
-  "Cooldown should only reflect confirmed server invitation timestamp");
-assert.match(menu, /<form action=\{resendPartnerAssociateInvite\}>/,
-  "Resend must preserve the existing server action form");
-assert.match(menu, /type="submit"/);
-
+for (const action of ["Edit", "Enable", "Disable", "Delete"]) {
+  assert.ok(source.includes(action), `Missing expected label ${action}`);
+}
+assert.match(source, /iconOnly associateName=\{associate.name\}/);
+assert.ok(source.includes("<form action={resendPartnerAssociateInvite}"), "Resend must use existing server action");
 for (const serverAction of [
-  "updatePartnerAssociateAccount",
-  "togglePartnerAssociateAccountStatus",
-  "deletePartnerAssociateAccount",
-  "resendPartnerAssociateInvite",
+  "updatePartnerAssociateAccount", "togglePartnerAssociateAccountStatus",
+  "deletePartnerAssociateAccount", "resendPartnerAssociateInvite",
 ]) {
-  assert.match(actions, new RegExp(`export async function ${serverAction}`),
-    `Server action must remain present: ${serverAction}`);
+  assert.ok(actions.includes(`export async function ${serverAction}`), `Missing server action ${serverAction}`);
 }
-
-console.log("Associate action menu click activation contract: OK");
+console.log("Associate inline action contract passed");
