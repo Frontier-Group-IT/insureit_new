@@ -10,7 +10,7 @@ assert.match(menu, /role="menu"/, "Dropdown must preserve menu semantics");
 assert.match(menu, /Close actions menu/, "Backdrop must dismiss menu");
 assert.match(menu, /z-\\[9999\\] pointer-events-auto/, "Dropdown must have click-receiving layer above backdrop");
 assert.match(menu, /onPointerDownCapture=\\{\\(\\) => trace\\("menu:pointerdown:capture"\\)\\}/, "Trace hit-testing inside menu");
-assert.doesNotMatch(menu, /document\\.addEventListener\\("pointerdown"/, "No competing document pointer dismissal");
+assert.ok(!menu.includes('document.addEventListener("pointerdown"'), "No competing document pointer dismissal");
 assert.doesNotMatch(menu, /if \\(!dialog\\.open\\) dialog\\.showModal\\(\\)/, "Dropdown must not depend on native modal effect");
 for (const action of ["edit", "status", "delete"]) {
   assert.ok(
