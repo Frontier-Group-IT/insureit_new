@@ -73,7 +73,9 @@ export type PartnerClaimDetail = {
     claim_service_mode: string | null;
     assistance_status: string | null;
     accident_at: string | null;
+    spot_intimation_at?: string | null;
     accident_location: string | null;
+    accident_description?: string | null;
     estimated_loss: number | string | null;
     approved_amount: number | string | null;
     settlement_amount: number | string | null;
@@ -105,6 +107,7 @@ export type PartnerClaimDetail = {
   stages: {
     id: string;
     stage: string;
+    details?: Record<string, unknown> | null;
     created_at: string;
   }[];
 };
