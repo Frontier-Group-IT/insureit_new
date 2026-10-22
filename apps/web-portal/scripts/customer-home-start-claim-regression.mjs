@@ -42,3 +42,15 @@ assert.match(claimLogo,/kind === "insurer"[\s\S]*<Shield/,"Missing insurer must 
 assert.match(spotPage,/<CustomerClaimLogo value=\{claim.vehicle_make\} size=\{40\}/,"Spot header manufacturer mark retained");
 assert.match(spotPage,/<CustomerClaimLogo value=\{claim.insurer_name\} kind="insurer" size=\{40\}/,"Spot header insurer mark retained");
 console.log("Spot Intimation managed logo resolution regression passed.");
+
+const spotLayout=fs.readFileSync("app/customer/(protected)/spot-intimation/page.tsx","utf8");
+const voiceRecorder=fs.readFileSync("components/customer-portal/customer-claim-voice-recorder.tsx","utf8");
+const claimUpload=fs.readFileSync("app/customer/(protected)/claims/[id]/stage/[stage]/upload-action.ts","utf8");
+assert.match(spotLayout,/<CustomerClaimStageStrip/,"Spot Intimation must display nine-stage progress");
+assert.match(spotLayout,/<CustomerClaimEvidenceWorkspace/,"Spot Intimation must offer existing authenticated documents");
+assert.match(spotLayout,/<CustomerClaimVoiceRecorder/,"Spot Intimation must offer browser voice recording");
+assert.match(spotLayout,/\/stage\/spot_status\?account=/,"Spot Intimation should continue to stage 2");
+assert.match(voiceRecorder,/MediaRecorder/,"Voice note recording must use supported browser recording");
+assert.match(voiceRecorder,/uploadCustomerClaimDocument/,"Voice note must use existing authorized upload action");
+assert.match(claimUpload,/returnToSpotIntimation && stage==="spot_intimation"/,"Evidence uploads must stay on draft intimation");
+console.log("Spot Intimation nine-stage layout, evidence and voice note regression passed.");
