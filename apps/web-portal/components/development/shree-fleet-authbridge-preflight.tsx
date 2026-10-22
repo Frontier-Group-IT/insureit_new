@@ -31,6 +31,7 @@ export default function ShreeFleetAuthbridgePreflight(){
    // Accept the exact statuses emitted by the preliminary and verified reconciliation exports.
    const candidateStatuses=new Set([
      "Potentially new - global check pending",
+    "New by chassis - global check pending",
      "New by chassis — global check clear",
      "New by chassis - global check clear",
      "New by chassis (Shree + global check); RC conflict check pending",
