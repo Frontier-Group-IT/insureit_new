@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarDays, CheckCircle2, ArrowLeft, ArrowRight, MapPin, Clock3, UserRound } from "lucide-react";
+import { CalendarDays, CheckCircle2, ArrowLeft, MapPin, Clock3, UserRound } from "lucide-react";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail } from "@/lib/customer-web-phase2-data";
 import { createServerSupabaseClient } from "@/lib/auth-server";
