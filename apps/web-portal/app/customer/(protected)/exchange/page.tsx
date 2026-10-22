@@ -1,7 +1,7 @@
 import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Activity, BadgeCheck, Gauge, Heart, MapPin, Search, ShoppingBag, Store, Truck } from "lucide-react";
+import { Activity, BadgeCheck, Heart, Search, ShoppingBag, Store, Truck } from "lucide-react";
 import {
   CustomerAccountTabs,
   EmptyCustomerState,
@@ -166,60 +166,78 @@ export default async function CustomerExchangePage({
                 </div>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {rows.map((row) => {
-                  const vehicleName = [row.make, row.model].filter(Boolean).join(" ") || row.title;
-                  const location = [row.city, row.state].filter(Boolean).join(", ") || "Location on request";
-                  const hasPrice = Number(row.asking_price || 0) > 0;
-                  return (
-                    <Link
-                      key={row.listing_id}
-                      href={{ pathname: `/customer/exchange/${row.listing_id}`, query: { account: account.id } }}
-                      className="group overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white shadow-[0_8px_24px_rgba(28,50,82,.04)] transition hover:-translate-y-0.5 hover:border-[#B9C9DB]"
-                    >
-                      <div
-                        className="relative h-44 overflow-hidden bg-[#EEF3F8] bg-cover bg-center"
-                        style={row.cover_url ? { backgroundImage: `url("${row.cover_url}")` } : undefined}
-                      >
-                        {!row.cover_url ? (
-                          <div className="absolute inset-0 grid place-items-center">
-                            <Truck className="h-14 w-14 text-[#8D9AAD]" />
-                          </div>
-                        ) : null}
-                        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#0B1D35]/70 to-transparent" />
-                        <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
-                          <span className="rounded-full bg-white/95 px-2.5 py-1 text-[9px] font-black text-[#31445F] shadow-sm">{row.category}</span>
-                          {row.documents_verified || row.owner_verified ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-[#E9F8F0]/95 px-2.5 py-1 text-[9px] font-black text-[#0C7A52] shadow-sm">
-                              <BadgeCheck className="h-3 w-3" /> Verified
+              <div className="overflow-x-auto rounded-2xl border border-[#DCE4EE] bg-white shadow-[0_8px_24px_rgba(28,50,82,.04)]">
+                <table className="w-full min-w-[1040px] table-fixed border-collapse text-left">
+                  <thead className="bg-[#F7F9FC] text-[10px] font-extrabold uppercase tracking-[.08em] text-[#74849E]">
+                    <tr>
+                      <th scope="col" className="w-[32%] px-5 py-4">Listing / Vehicle</th>
+                      <th scope="col" className="w-[14%] px-4 py-4">Location</th>
+                      <th scope="col" className="w-[16%] px-4 py-4">Commercials</th>
+                      <th scope="col" className="w-[19%] px-4 py-4">Evidence</th>
+                      <th scope="col" className="w-[12%] px-4 py-4">Verification</th>
+                      <th scope="col" className="w-[7%] px-3 py-4 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E8EDF5]">
+                    {rows.map((row) => {
+                      const vehicleName = [row.make, row.model].filter(Boolean).join(" ") || row.title;
+                      const location = [row.city, row.state].filter(Boolean).join(", ") || "Location on request";
+                      const hasPrice = Number(row.asking_price || 0) > 0;
+                      const href = { pathname: `/customer/exchange/${row.listing_id}`, query: { account: account.id } };
+                      return (
+                        <tr key={row.listing_id} className="group transition-colors hover:bg-[#F9FBFF]">
+                          <td className="px-5 py-4 align-top">
+                            <div className="flex min-w-0 items-start gap-3">
+                              <Link href={href} className="grid h-[75px] w-[88px] shrink-0 place-items-center overflow-hidden rounded-xl border border-[#E1E8F2] bg-[#EEF3F8]">
+                                {row.cover_url ? <img src={row.cover_url} alt={vehicleName} className="h-full w-full object-cover" /> : <Truck className="h-8 w-8 text-[#8295B0]" />}
+                              </Link>
+                              <div className="min-w-0 pt-0.5">
+                                <div className="flex items-center gap-2">
+                                  <Link href={href} className="truncate text-[12px] font-black text-[#173A7D] hover:underline">{row.listing_no}</Link>
+                                  <span className="shrink-0 rounded-full bg-[#E7F7EF] px-2 py-0.5 text-[9px] font-black text-[#087A4B]">LIVE</span>
+                                </div>
+                                <Link href={href} className="mt-1 block truncate text-[12px] font-extrabold text-[#273752] hover:text-[#176BD4]">{vehicleName}</Link>
+                                <p className="mt-1 truncate text-[10px] font-semibold text-[#72819B]">{row.masked_registration} · {row.year || "—"} · {row.category}</p>
+                                <p className="mt-1 truncate text-[9.5px] text-[#8291A8]">{row.vehicle_type || "Commercial vehicle"}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 align-top">
+                            <p className="text-[11px] font-bold text-[#34435C]">{location}</p>
+                            <p className="mt-1 text-[10px] text-[#7A899F]">{row.odometer_km != null ? `${Number(row.odometer_km).toLocaleString("en-IN")} km` : "Mileage unavailable"}</p>
+                          </td>
+                          <td className="px-4 py-4 align-top">
+                            <p className="text-[14px] font-black text-[#182B4B]">{hasPrice ? formatCustomerCompactMoney(Number(row.asking_price)) : "On request"}</p>
+                            <p className="mt-1 text-[9px] font-bold uppercase text-[#7687A0]">{row.selling_mode.replaceAll("_", " ")}</p>
+                            {row.bid_count > 0 ? <p className="mt-2 text-[10px] font-semibold text-[#59749A]">{row.bid_count} offer{row.bid_count === 1 ? "" : "s"}</p> : null}
+                          </td>
+                          <td className="px-4 py-4 align-top">
+                            <div className="flex items-center gap-2">
+                              <div className="grid h-12 w-14 shrink-0 place-items-center overflow-hidden rounded-lg border border-[#E1E8F2] bg-[#F1F5FA]">
+                                {row.cover_url ? <img src={row.cover_url} alt="Listing cover" className="h-full w-full object-cover" /> : <Truck className="h-5 w-5 text-[#8C9BB0]" />}
+                              </div>
+                              <span className="text-[10px] font-semibold text-[#70819A]">Vehicle image</span>
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              <span className={`rounded-full px-2 py-1 text-[9px] font-bold ${row.owner_verified ? "bg-[#E7F8F0] text-[#0B8456]" : "bg-[#F2F4F7] text-[#8994A5]"}`}>{row.owner_verified ? "●" : "○"} Owner</span>
+                              <span className={`rounded-full px-2 py-1 text-[9px] font-bold ${row.documents_verified ? "bg-[#E7F8F0] text-[#0B8456]" : "bg-[#F2F4F7] text-[#8994A5]"}`}>{row.documents_verified ? "●" : "○"} Docs</span>
+                              <span className={`rounded-full px-2 py-1 text-[9px] font-bold ${row.inspected ? "bg-[#E7F8F0] text-[#0B8456]" : "bg-[#F2F4F7] text-[#8994A5]"}`}>{row.inspected ? "●" : "○"} Inspection</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 align-top">
+                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold ${row.owner_verified && row.documents_verified ? "text-[#13805C]" : "text-[#73839B]"}`}>
+                              <BadgeCheck className="h-4 w-4" />
+                              {row.owner_verified && row.documents_verified ? "Verified" : "Review pending"}
                             </span>
-                          ) : null}
-                        </div>
-                        <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-2 text-white">
-                          <div className="min-w-0">
-                            <p className="truncate text-[15px] font-black">{vehicleName}</p>
-                            <p className="mt-0.5 truncate text-[9.5px] font-bold text-white/80">{row.vehicle_type || row.masked_registration}</p>
-                          </div>
-                          <p className="shrink-0 text-[16px] font-black">
-                            {hasPrice ? formatCustomerCompactMoney(Number(row.asking_price)) : "Price on request"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="p-4">
-                        <div className="grid grid-cols-2 gap-2 rounded-xl bg-[#F7F9FC] p-3 text-[9.5px] font-bold text-[#65758C]">
-                          <span className="inline-flex min-w-0 items-center gap-1.5"><MapPin className="h-3.5 w-3.5 shrink-0 text-[#267AFF]" /><span className="truncate">{location}</span></span>
-                          <span className="inline-flex min-w-0 items-center gap-1.5"><Gauge className="h-3.5 w-3.5 shrink-0 text-[#267AFF]" /><span className="truncate">{row.odometer_km ? `${Number(row.odometer_km).toLocaleString("en-IN")} km` : "Usage unavailable"}</span></span>
-                          <span>Year: <strong className="text-[#30445E]">{row.year || "—"}</strong></span>
-                          <span>Mode: <strong className="capitalize text-[#30445E]">{row.selling_mode.replaceAll("_", " ")}</strong></span>
-                        </div>
-                        <div className="mt-3 flex items-center justify-between">
-                          <span className="text-[9.5px] font-bold text-[#71839A]">{row.inspected ? "Inspected listing" : "Inspection status pending"}</span>
-                          <span className="inline-flex items-center gap-1 text-[10px] font-black text-[#176BD4]">View details <span aria-hidden="true">→</span></span>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
+                          </td>
+                          <td className="px-3 py-4 text-center align-top">
+                            <Link href={href} aria-label={`View listing ${row.listing_no}`} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#D8E2F0] text-lg font-extrabold text-[#1C3B72] transition hover:bg-[#E9F2FF]">⋮</Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </section>
           )}
