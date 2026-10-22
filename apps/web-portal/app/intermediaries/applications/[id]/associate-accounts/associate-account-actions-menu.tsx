@@ -60,23 +60,10 @@ export function AssociateAccountActionsMenu({
   };
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDialogElement>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
-    function closeOnOutsideClick(event: PointerEvent) {
-      // The menu lives in a portal. Use the full event path so a press within
-      // portal content cannot be mistaken for an outside press.
-      const path = event.composedPath();
-      const withinTrigger = rootRef.current?.contains(event.target as Node) || path.includes(rootRef.current as EventTarget);
-      const withinMenu = menuRef.current?.contains(event.target as Node) || path.includes(menuRef.current as EventTarget);
-      if (!withinTrigger && !withinMenu) {
-        trace("document:pointerdown:outside");
-        setOpen(false);
-      } else {
-        trace("document:pointerdown:inside");
-      }
-    }
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setOpen(false);
@@ -85,10 +72,8 @@ export function AssociateAccountActionsMenu({
         setStatusOpen(false);
       }
     }
-    document.addEventListener("pointerdown", closeOnOutsideClick);
     document.addEventListener("keydown", closeOnEscape);
     return () => {
-      document.removeEventListener("pointerdown", closeOnOutsideClick);
       document.removeEventListener("keydown", closeOnEscape);
     };
   }, []);
@@ -135,6 +120,15 @@ export function AssociateAccountActionsMenu({
     trace("state:menu=" + open + ":edit=" + editOpen + ":status=" + statusOpen + ":delete=" + deleteOpen);
   }, [open, editOpen, statusOpen, deleteOpen]);
 
+  // Render the action dropdown in the browser top layer. Background UI can no
+  // longer intercept pointer events intended for the menu.
+  useEffect(() => {
+    const dialog = menuRef.current;
+    if (!open || !menuPosition || !dialog) return;
+    if (!dialog.open) dialog.showModal();
+    return () => { if (dialog.open) dialog.close(); };
+  }, [open, Boolean(menuPosition)]);
+
   const commonHidden = (
     <>
       <input type="hidden" name="application_id" value={applicationId} />
@@ -161,16 +155,23 @@ export function AssociateAccountActionsMenu({
 
         {open && menuPosition
           ? createPortal(
-              <div
+              <dialog
                 ref={menuRef}
-                role="menu"
+                aria-label={`Actions for ${associate.name}`}
+                onCancel={(event) => { event.preventDefault(); setOpen(false); }}
+                onPointerDown={(event) => {
+                  if (event.target === event.currentTarget) setOpen(false);
+                }}
                 style={{ top: menuPosition.top, left: menuPosition.left }}
-                className="fixed z-[9999] pointer-events-auto w-44 overflow-hidden rounded-xl border border-[#DCE5EF] bg-white py-1.5 shadow-[0_18px_45px_rgba(15,23,42,.18)]"
-                onPointerDownCapture={() => trace("menu:pointerdown:capture")}
-                onClickCapture={() => trace("menu:click:capture")}
-                onClick={(event) => event.stopPropagation()}
-
+                className="fixed m-0 w-44 overflow-hidden rounded-xl border border-[#DCE5EF] bg-white p-0 shadow-[0_18px_45px_rgba(15,23,42,.18)] backdrop:bg-transparent"
               >
+                <div
+                  role="menu"
+                  className="py-1.5"
+                  onPointerDownCapture={() => trace("menu:pointerdown:capture")}
+                  onClickCapture={() => trace("menu:click:capture")}
+                  onClick={(event) => event.stopPropagation()}
+                >
                 <button
                   type="button"
                   role="menuitem"
@@ -208,7 +209,8 @@ export function AssociateAccountActionsMenu({
                     invitedAt={associate.invited_at}
                   />
                 </form>
-              </div>,
+                </div>
+              </dialog>,
               document.body,
             )
           : null}
