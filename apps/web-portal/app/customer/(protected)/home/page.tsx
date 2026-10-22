@@ -92,7 +92,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
         </div>
       </section>
       <section className="rounded-2xl border border-[#E1EAF5] bg-white p-4 sm:p-5">
-        <h2 className="mb-3 text-[17px] font-bold text-[#102B54]">Quick actions</h2>
+        <h2 className="mb-3 text-[14px] font-bold text-[#102B54]">Quick actions</h2>
         <nav aria-label="Quick actions" className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
           {[
             {title:"Renew policies",href:"/customer/renewals",icon:CalendarDays,background:"bg-[#EAF3FF]",color:"text-[#1769DC]"},
@@ -104,22 +104,22 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
           ].map(({title,href,icon:Icon,background,color})=><Link key={href} href={href === "/customer/start-claim" ? { pathname: "/customer/start-claim", query: accountQuery } : { pathname: href, query: accountQuery }} className="customer-home-quick-action group flex min-w-0 flex-col items-center gap-2 rounded-xl px-2 py-3 text-center hover:bg-[#F3F8FE]"><span className={`grid h-11 w-11 place-items-center rounded-xl ${background} ${color}`}><Icon className="h-[22px] w-[22px] stroke-[2]"/></span><span className="text-[12px] font-semibold text-[#244771]">{title}</span></Link>)}
         </nav>
       </section>
-      <div className="grid gap-4 lg:grid-cols-[.9fr_1.1fr]">
-        <section data-home-reveal className="overflow-hidden rounded-2xl border border-[#E0E8F3] bg-white">
-          <div className="flex items-center justify-between gap-2 border-b border-[#E6EDF6] px-4 py-1.5"><h2 className="flex items-center gap-2 text-[17px] font-bold text-[#102B54]"><AlertTriangle className="h-4 w-4 text-red-500"/>Needs your attention</h2><Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="text-[12px] font-semibold text-[#1769DC]">View all</Link></div>
+      <div className="grid gap-3 lg:grid-cols-2">
+        <section data-home-reveal className="min-w-0 overflow-hidden rounded-2xl border border-[#E0E8F3] bg-white">
+          <div className="flex items-center justify-between gap-2 border-b border-[#E6EDF6] px-3 py-1.5"><h2 className="flex items-center gap-2 text-[14px] font-bold text-[#102B54]"><AlertTriangle className="h-4 w-4 text-red-500"/>Needs your attention</h2><Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="text-[12px] font-semibold text-[#1769DC]">View all</Link></div>
           {attentionCount === 0?<p className="m-4 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700">No urgent insurance actions.</p>:<div className="overflow-x-auto">
-            <table className="w-full min-w-[520px] text-left">
-              <thead className="bg-[#F7FAFE] text-center text-[11px] font-semibold uppercase tracking-wide text-[#7186A0]"><tr><th className="px-4 py-1.5">Vehicle / Policy</th><th className="px-4 py-1.5">Issue</th><th className="px-4 py-1.5">Status</th></tr></thead>
+            <table className="w-full min-w-[440px] text-left">
+              <thead className="bg-[#F7FAFE] text-center text-[10px] font-semibold uppercase tracking-wide text-[#7186A0]"><tr><th className="px-3 py-1.5">Vehicle / Policy</th><th className="px-3 py-1.5">Issue</th><th className="px-3 py-1.5">Status</th></tr></thead>
               <tbody className="divide-y divide-[#EDF2F7]">
                 {uncoveredVehicles.slice(0, 3).map(vehicle=>{ const href={pathname:`/customer/vehicles/${vehicle.id}`,query:accountQuery}; return <tr key={vehicle.id} className="cursor-pointer transition hover:bg-[#FFF9F7]">
-                  <td className="p-0"><Link href={href} className="block px-4 py-1.5 font-semibold text-[13px] text-[#15345E]">{vehicle.vehicle_no || (vehicle.chassis_no ? `New-${vehicle.chassis_no}` : "Unregistered vehicle")}</Link></td>
-                  <td className="p-0"><Link href={href} className="block px-4 py-1.5 text-[12px] text-[#C65A28]">No active insurance cover</Link></td>
-                  <td className="p-0"><Link href={href} className="block px-4 py-1.5"><span className="inline-flex rounded-full bg-red-50 px-2 py-1 text-[11px] font-semibold text-red-600">Uninsured</span></Link></td>
+                  <td className="p-0"><Link href={href} className="block px-3 py-1.5 font-semibold text-[11px] text-[#15345E]">{vehicle.vehicle_no || (vehicle.chassis_no ? `New-${vehicle.chassis_no}` : "Unregistered vehicle")}</Link></td>
+                  <td className="p-0"><Link href={href} className="block px-3 py-1.5 text-[11px] text-[#C65A28]">No active insurance cover</Link></td>
+                  <td className="p-0"><Link href={href} className="block px-3 py-1.5"><span className="inline-flex rounded-full bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-600">Uninsured</span></Link></td>
                 </tr>;})}
                 {duePolicies.slice(0, 2).map(policy=>{ const href={pathname:`/customer/policies/${policy.id}`,query:{...accountQuery,source:policy.source}}; return <tr key={policy.id} className="cursor-pointer transition hover:bg-[#FFFCF6]">
-                  <td className="p-0"><Link href={href} className="block px-4 py-1.5 font-semibold text-[13px] text-[#15345E]">{policy.policy_no || "Renewal due"}</Link></td>
-                  <td className="p-0"><Link href={href} className="block px-4 py-1.5 text-[12px] text-amber-700">Policy renewal due</Link></td>
-                  <td className="p-0"><Link href={href} className="block px-4 py-1.5"><span className="inline-flex rounded-full bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-700">Due</span></Link></td>
+                  <td className="p-0"><Link href={href} className="block px-3 py-1.5 font-semibold text-[11px] text-[#15345E]">{policy.policy_no || "Renewal due"}</Link></td>
+                  <td className="p-0"><Link href={href} className="block px-3 py-1.5 text-[11px] text-amber-700">Policy renewal due</Link></td>
+                  <td className="p-0"><Link href={href} className="block px-3 py-1.5"><span className="inline-flex rounded-full bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-700">Due</span></Link></td>
                 </tr>;})}
               </tbody>
             </table>
@@ -127,18 +127,18 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
         </section>
 
         <section data-home-reveal className="min-w-0 overflow-hidden rounded-2xl border border-[#E0E8F3] bg-white">
-          <div className="flex items-center justify-between border-b border-[#E6EDF6] px-4 py-1.5"><h2 className="flex items-center gap-2 text-[17px] font-bold text-[#102B54]"><CarFront className="h-4 w-4 text-[#1672DC]"/>My Vehicles</h2><Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="text-[12px] font-semibold text-[#1769DC]">View all</Link></div>
+          <div className="flex items-center justify-between border-b border-[#E6EDF6] px-3 py-1.5"><h2 className="flex items-center gap-2 text-[14px] font-bold text-[#102B54]"><CarFront className="h-4 w-4 text-[#1672DC]"/>My Vehicles</h2><Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="text-[12px] font-semibold text-[#1769DC]">View all</Link></div>
           {vehicles.length===0?<p className="p-4 text-xs text-[#7186A0]">No vehicles found.</p>:<div className="overflow-x-auto">
-            <table className="w-full min-w-[620px] text-left">
-              <thead className="bg-[#F7FAFE] text-center text-[11px] font-semibold uppercase tracking-wide text-[#7186A0]"><tr><th className="px-4 py-1.5">Vehicle</th><th className="px-4 py-1.5">Make / Model</th><th className="px-4 py-1.5">Insurance status</th></tr></thead>
+            <table className="w-full min-w-[470px] text-left">
+              <thead className="bg-[#F7FAFE] text-center text-[10px] font-semibold uppercase tracking-wide text-[#7186A0]"><tr><th className="px-3 py-1.5">Vehicle</th><th className="px-3 py-1.5">Make / Model</th><th className="px-3 py-1.5">Insurance status</th></tr></thead>
               <tbody className="divide-y divide-[#EDF2F7]">
                 {vehicles.slice(0,3).map(vehicle=>{
                   const insured=coveredIds.has(vehicle.id);
                   const href={pathname:`/customer/vehicles/${vehicle.id}`,query:accountQuery};
                   return <tr key={vehicle.id} className="cursor-pointer transition hover:bg-[#F8FBFF]">
-                    <td className="p-0"><Link href={href} className="block px-4 py-1.5 font-semibold text-[13px] text-[#15345E]">{vehicle.vehicle_no || (vehicle.chassis_no?`New-${vehicle.chassis_no}`:"Unregistered")}</Link></td>
-                    <td className="p-0"><Link href={href} className="flex px-4 py-1.5 items-center gap-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F5F9FE]"><ManufacturerMark make={vehicle.make??""}/></span><span className="min-w-0"><strong className="block truncate text-[12px] text-[#2B4668]">{vehicle.make || "—"}</strong><span className="block truncate text-[11px] text-[#7186A0]">{vehicle.model || "—"}</span></span></Link></td>
-                    <td className="p-0"><Link href={href} className="block px-4 py-1.5"><span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${insured?"bg-emerald-50 text-emerald-700":"bg-red-50 text-red-600"}`}>{insured?"Insured":"Not insured"}</span></Link></td>
+                    <td className="p-0"><Link href={href} className="block px-3 py-1.5 font-semibold text-[11px] text-[#15345E]">{vehicle.vehicle_no || (vehicle.chassis_no?`New-${vehicle.chassis_no}`:"Unregistered")}</Link></td>
+                    <td className="p-0"><Link href={href} className="flex px-3 py-1.5 items-center gap-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F5F9FE]"><ManufacturerMark make={vehicle.make??""}/></span><span className="min-w-0"><strong className="block truncate text-[11px] text-[#2B4668]">{vehicle.make || "—"}</strong><span className="block truncate text-[10px] text-[#7186A0]">{vehicle.model || "—"}</span></span></Link></td>
+                    <td className="p-0"><Link href={href} className="block px-3 py-1.5"><span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${insured?"bg-emerald-50 text-emerald-700":"bg-red-50 text-red-600"}`}>{insured?"Insured":"Not insured"}</span></Link></td>
                   </tr>;
                 })}
               </tbody>
