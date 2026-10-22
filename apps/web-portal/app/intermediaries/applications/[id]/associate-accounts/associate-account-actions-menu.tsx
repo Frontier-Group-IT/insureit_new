@@ -153,18 +153,11 @@ export function AssociateAccountActionsMenu({
                 style={{ top: menuPosition.top, left: menuPosition.left }}
                 className="fixed z-[9999] pointer-events-auto w-44 overflow-hidden rounded-xl border border-[#DCE5EF] bg-white py-1.5 shadow-[0_18px_45px_rgba(15,23,42,.18)]"
                 onClick={(event) => event.stopPropagation()}
-                onPointerDown={(event) => {
-                  // Prevent unrelated document/ancestor pointer handlers from
-                  // treating a menu action as an outside interaction.
-                  event.stopPropagation();
-                }}
+
               >
                 <button
                   type="button"
                   role="menuitem"
-                  onPointerDown={(event) => {
-                    if (event.button === 0) showDialog("edit");
-                  }}
                   onClick={() => showDialog("edit")}
                   className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC]"
                 >
@@ -175,9 +168,6 @@ export function AssociateAccountActionsMenu({
                 <button
                   type="button"
                   role="menuitem"
-                  onPointerDown={(event) => {
-                    if (event.button === 0) showDialog("status");
-                  }}
                   onClick={() => showDialog("status")}
                   className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC]"
                 >
@@ -188,9 +178,6 @@ export function AssociateAccountActionsMenu({
                 <button
                   type="button"
                   role="menuitem"
-                  onPointerDown={(event) => {
-                    if (event.button === 0) showDialog("delete");
-                  }}
                   onClick={() => showDialog("delete")}
                   className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-rose-600 hover:bg-rose-50"
                 >
@@ -201,7 +188,6 @@ export function AssociateAccountActionsMenu({
                 <form action={resendPartnerAssociateInvite}>
                   {commonHidden}
                   <ResendInviteButton
-                    associateId={associate.id}
                     status={associate.status}
                     invitedAt={associate.invited_at}
                   />
@@ -311,43 +297,33 @@ export function AssociateAccountActionsMenu({
 const RESEND_COOLDOWN_SECONDS = 60;
 
 function ResendInviteButton({
-  associateId,
   status,
   invitedAt,
 }: {
-  associateId: string;
   status: Status;
   invitedAt: string | null;
 }) {
   const { pending } = useFormStatus();
-  const storageKey = `associate-resend-cooldown:${associateId}`;
   const [remaining, setRemaining] = useState(0);
-  const submittedByPointerRef = useRef(false);
-
-  const recordResendAttempt = () => {
-    const cooldownUntil = Date.now() + RESEND_COOLDOWN_SECONDS * 1000;
-    window.localStorage.setItem(storageKey, String(cooldownUntil));
-    setRemaining(RESEND_COOLDOWN_SECONDS);
-  };
+  // The backend owns the cooldown. Only a confirmed invitation timestamp
+  // should disable this control, never an unconfirmed local attempt.
 
   useEffect(() => {
     const invitedUntil = invitedAt
       ? new Date(invitedAt).getTime() + RESEND_COOLDOWN_SECONDS * 1000
       : 0;
-    const storedUntil = Number(window.localStorage.getItem(storageKey) ?? "0");
-    const cooldownUntil = Math.max(invitedUntil, Number.isFinite(storedUntil) ? storedUntil : 0);
+    const cooldownUntil = invitedUntil;
 
     const updateRemaining = () => {
       const seconds = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
       setRemaining(seconds);
-      if (seconds === 0) window.localStorage.removeItem(storageKey);
     };
 
     updateRemaining();
     if (cooldownUntil <= Date.now()) return;
     const timer = window.setInterval(updateRemaining, 1000);
     return () => window.clearInterval(timer);
-  }, [invitedAt, storageKey]);
+  }, [invitedAt]);
 
   const disabled = status === "disabled" || pending || remaining > 0;
   const title = status === "disabled"
@@ -362,26 +338,6 @@ function ResendInviteButton({
       role="menuitem"
       disabled={disabled}
       title={title}
-      onPointerUp={(event) => {
-        if (disabled || event.button !== 0) return;
-        const target = document.elementFromPoint(event.clientX, event.clientY);
-        if (!target || !event.currentTarget.contains(target)) return;
-        submittedByPointerRef.current = true;
-        recordResendAttempt();
-        event.currentTarget.form?.requestSubmit();
-      }}
-      onClick={(event) => {
-        if (submittedByPointerRef.current) {
-          event.preventDefault();
-          submittedByPointerRef.current = false;
-          return;
-        }
-        if (disabled) {
-          event.preventDefault();
-          return;
-        }
-        recordResendAttempt();
-      }}
       className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-40"
     >
       <Send className="h-3.5 w-3.5 text-[#64748B]" />
