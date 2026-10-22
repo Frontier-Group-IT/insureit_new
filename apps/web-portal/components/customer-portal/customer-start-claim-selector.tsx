@@ -1,10 +1,18 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import Link from "next/link";
-import { ArrowRight, Headphones, Plus, ShieldAlert, X } from "lucide-react";
+import { ArrowRight, Headphones, LoaderCircle, Plus, ShieldAlert, X } from "lucide-react";
 import type { CustomerPolicyRow, CustomerVehicleRow } from "@/lib/customer-web-data";
 import { prepareCustomerClaim } from "@/app/customer/(protected)/start-claim/actions";
+
+function ClaimSubmitButton({ disabled }: { disabled: boolean }) {
+  const { pending } = useFormStatus();
+  return <button type="submit" disabled={disabled || pending} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#0B3884] px-4 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+    {pending ? <><LoaderCircle className="h-4 w-4 animate-spin"/>Preparing claim...</> : <>Continue to Claim <ArrowRight className="h-5 w-5"/></>}
+  </button>;
+}
 
 type ClaimIdentity = { id: string; policy_id: string | null; external_policy_id: string | null; current_status: string };
 
@@ -25,6 +33,8 @@ export function CustomerStartClaimSelector({
 
   const [policyDialogOpen, setPolicyDialogOpen] = useState(false);
   const claimFormRef = useRef<HTMLFormElement>(null);
+  const confirmationGrantedRef = useRef(false);
+  const [confirming, setConfirming] = useState(false);
   const vehicle = vehicles.find((item) => item.id === vehicleId);
   const vehiclePolicies = useMemo(
     () => policies.filter((policy) => policy.vehicle_id === vehicleId).sort((a, b) => b.end_date.localeCompare(a.end_date)),
@@ -59,7 +69,7 @@ export function CustomerStartClaimSelector({
           <select
             id="claim-vehicle"
             value={vehicleId}
-            onChange={(event) => { setVehicleId(event.target.value); setPolicyDialogOpen(false); }}
+            onChange={(event) => { setVehicleId(event.target.value); setPolicyDialogOpen(false); confirmationGrantedRef.current = false; setConfirming(false); }}
             className="h-10 w-full rounded-lg border border-[#DDE7F3] bg-white px-3 text-[13px] font-semibold text-[#17345D] outline-none transition focus:border-[#2D7FF0] focus:ring-2 focus:ring-[#DCEBFF]"
           >
             {vehicles.map((item) => (
@@ -85,13 +95,11 @@ export function CustomerStartClaimSelector({
             Continue existing claim <ArrowRight className="h-5 w-5"/>
           </Link>
         ) : (
-          <form ref={claimFormRef} action={prepareCustomerClaim} className="flex" onSubmit={(event) => { if (!hasActivePolicy && !policyDialogOpen) { event.preventDefault(); setPolicyDialogOpen(true); } }}>
+          <form ref={claimFormRef} action={prepareCustomerClaim} className="flex" onSubmit={(event) => { if (!hasActivePolicy && !confirmationGrantedRef.current) { event.preventDefault(); setPolicyDialogOpen(true); } }}>
             <input type="hidden" name="account" value={accountId}/>
             <input type="hidden" name="vehicle" value={vehicleId}/>
             <input type="hidden" name="policy" value={policy?.id || ""}/>
-            <button type="submit" disabled={!vehicle} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#0B3884] px-4 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
-              Continue to Claim <ArrowRight className="h-5 w-5"/>
-            </button>
+            <ClaimSubmitButton disabled={!vehicle}/>
           </form>
         )}
       </div>
@@ -105,7 +113,7 @@ export function CustomerStartClaimSelector({
             <h2 id="claim-policy-dialog-title" className="mt-4 text-[18px] font-bold text-[#102B54]">No Active Policy Found</h2>
             <p id="claim-policy-dialog-description" className="mt-2 text-[13px] leading-5 text-[#5A6D86]">This vehicle has no active insurance policy. You can still register a claim, but coverage and eligibility will be reviewed separately.</p>
             <div className="mt-5 grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => claimFormRef.current?.requestSubmit()} className="min-h-11 rounded-lg border border-[#B7CEE8] bg-white px-3 text-[12px] font-bold text-[#174A87] hover:bg-[#F4F9FE]">Continue</button>
+              <button type="button" disabled={confirming} onClick={() => { if (confirming) return; confirmationGrantedRef.current = true; setConfirming(true); claimFormRef.current?.requestSubmit(); }} className="min-h-11 rounded-lg border border-[#B7CEE8] bg-white px-3 text-[12px] font-bold text-[#174A87] hover:bg-[#F4F9FE] disabled:opacity-60">{confirming ? "Preparing claim..." : "Continue"}</button>
               <Link href={{ pathname: "/customer/add-policy", query: { account: accountId, vehicle: vehicleId } }} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-[#0B3884] px-3 text-[12px] font-bold text-white"><Plus className="h-4 w-4"/>Add Policy</Link>
             </div>
           </div>
