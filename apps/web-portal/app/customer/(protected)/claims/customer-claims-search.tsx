@@ -1,4 +1,5 @@
 "use client";
+import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 
 import { Search } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -27,8 +28,8 @@ export function CustomerClaimsSearch({ initialQuery, accountId, type }: { initia
   return <label className="flex w-full min-w-0 flex-1 items-center gap-2 rounded-lg border sm:min-w-[220px] sm:max-w-[400px] border-[#D8E1EC] bg-white px-3 py-2.5 transition-colors focus-within:border-[#4E95E9]">
     <Search className="h-4 w-4 shrink-0 text-[#71829A]" aria-hidden="true"/>
     <span className="sr-only">Search claims</span>
-    <input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search claims..." aria-busy={pending}
-      className="w-full min-w-0 border-0 bg-transparent p-0 text-[11px] shadow-none outline-none ring-0 focus:outline-none focus:ring-0 placeholder:text-[#8A9AB0]"/>
+    <CustomerAnimatedSearchInput value={query} onChange={e => setQuery(e.target.value)} aria-label="Search claims" aria-busy={pending} hints={["Search claim number…", "Search vehicle number…", "Search claim status…"]} className="text-[11px] text-[#263B59]"/>
+
   </label>;
 }
 

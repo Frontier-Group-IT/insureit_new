@@ -1,3 +1,4 @@
+import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 import Link from "next/link";
 import { ArrowRight, FilePlus2, Headphones, MessageCircle, Search } from "lucide-react";
 import {
@@ -79,7 +80,7 @@ export default async function CustomerSupportPage({
           <form className="flex w-full items-center gap-2 rounded-xl bg-white px-3 py-2.5 shadow-[0_0_0_1px_#D8E1EC] focus-within:shadow-[0_0_0_2px_#176BD4] lg:w-[430px]">
             <Search className="h-4 w-4 shrink-0 text-[#73829A]" />
             <input type="hidden" name="account" value={account.id} />
-            <input name="q" defaultValue={params.q ?? ""} placeholder="Search requests" className="min-w-0 flex-1 bg-transparent text-[11px] font-semibold text-[#10213D] outline-none" />
+            <CustomerAnimatedSearchInput name="q" defaultValue={params.q ?? ""} aria-label="Search support requests" hints={["Search request number…", "Search subject…", "Search vehicle number…", "Search request status…"]} className="text-[11px] font-semibold text-[#10213D]"/>
           </form>
         </div>
 
