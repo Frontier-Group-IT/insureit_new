@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarDays, ClipboardCheck } from "lucide-react";
+import { CalendarDays, CheckCircle2, ArrowLeft, ArrowRight, MapPin, Clock3, UserRound } from "lucide-react";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail } from "@/lib/customer-web-phase2-data";
 import { createServerSupabaseClient } from "@/lib/auth-server";
@@ -60,25 +60,42 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
     redirect("/customer/claims/"+encodeURIComponent(owned.id)+"?account="+encodeURIComponent(authorized.id));
   }
 
-  return <div className="mx-auto max-w-4xl space-y-5">
-    <Link href={{pathname:"/customer/start-claim",query:{account:account.id}}} className="text-sm font-semibold text-[#29569A]">← Back to Start Claim</Link>
-    <div className="rounded-2xl bg-[#0B3884] p-5 text-white">
-      <div className="flex items-center justify-between border-b border-white/20 pb-3"><span className="flex items-center gap-2 text-sm font-bold"><img src="/assets/customer-claim/stages/spot_intimation.png" alt="" className="h-6 w-6 rounded-md bg-white object-contain p-0.5"/> Spot Intimation</span><span className="rounded-full bg-white/15 px-3 py-1 text-xs">{external?"Self-tracked claim":"Managed claim"}</span></div>
-      <div className="mt-3 grid gap-4 sm:grid-cols-2"><div className="flex items-center gap-3"><CustomerClaimLogo value={claim.vehicle_make} size={44}/><div><p className="text-sm font-bold">{claim.vehicle_no||"Vehicle"}</p><p className="text-xs text-white/80">{[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" · ")}</p></div></div><div className="flex items-center gap-3"><CustomerClaimLogo value={claim.insurer_name} kind="insurer" size={44}/><div><p className="text-sm font-bold">{claim.policy_no||"Policy"}</p><p className="text-xs text-white/80">{claim.insurer_name}</p></div></div></div>
+  const fieldClass = "mt-1.5 block h-10 w-full min-w-0 rounded-lg border border-[#D7E2F0] bg-white px-3 text-[13px] font-medium text-[#193659] outline-none transition focus-visible:border-[#2D7FF0] focus-visible:ring-2 focus-visible:ring-[#DCEBFF]";
+  return <div className="mx-auto w-full max-w-6xl space-y-3">
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <Link href={{pathname:"/customer/start-claim",query:{account:account.id}}} className="inline-flex items-center gap-2 text-[13px] font-semibold text-[#29569A] hover:text-[#153E78]"><ArrowLeft className="h-4 w-4"/> Back to Start Claim</Link>
+      <span className="rounded-full border border-[#D9E4F2] bg-white px-3 py-1 text-[11px] font-semibold text-[#537095]">{external?"Self-tracked claim":"Managed claim"}</span>
     </div>
+    <div className="flex items-center gap-2 rounded-xl border border-[#DAE5F3] bg-white p-2 text-[12px] font-semibold">
+      <span className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#ECF7F1] px-2 py-2 text-[#087A57]"><CheckCircle2 className="h-4 w-4"/> <span>1. Select Vehicle</span></span>
+      <span className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#EAF3FF] px-2 py-2 text-[#1253A7]"><span className="grid h-4 w-4 place-items-center rounded-full border border-[#1253A7] text-[10px]">2</span> Spot Intimation</span>
+    </div>
+    <section aria-label="Selected claim" className="overflow-hidden rounded-2xl bg-[#0C2F67] px-4 py-3 text-white">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/15 pb-2">
+        <h1 className="flex items-center gap-2 text-[16px] font-bold"><img src="/assets/customer-claim/stages/spot_intimation.png" alt="" className="h-6 w-6 rounded-md bg-white object-contain p-0.5"/> Spot Intimation</h1>
+        <span className="text-[11px] text-white/70">Incident registration</span>
+      </div>
+      <div className="grid gap-3 pt-3 sm:grid-cols-2 sm:gap-5">
+        <div className="flex min-w-0 items-center gap-3"><CustomerClaimLogo value={claim.vehicle_make} size={40}/><div className="min-w-0"><p className="truncate text-[13px] font-bold">{claim.vehicle_no||"Vehicle"}</p><p className="truncate text-[11px] text-white/75">{[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" · ")}</p></div></div>
+        <div className="flex min-w-0 items-center gap-3"><CustomerClaimLogo value={claim.insurer_name} kind="insurer" size={40}/><div className="min-w-0"><p className="truncate text-[13px] font-bold">{claim.policy_no||"No linked policy"}</p><p className="truncate text-[11px] text-white/75">{claim.insurer_name||"Insurer not assigned"}</p></div></div>
+      </div>
+    </section>
     <SpotIntimationSaveForm action={submit}>
       <input type="hidden" name="account" value={account.id}/><input type="hidden" name="claim" value={claim.id}/>
-      <div><h1 className="flex items-center gap-2 text-lg font-black text-[#112B51]"><CalendarDays className="h-5 w-5 text-[#2860AD]"/> Incident Details</h1><p className="mt-1 text-xs text-[#73849B]">Accident date, time and first insurer intimation</p></div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="text-sm font-bold">Accident date *<input name="accidentDate" type="date" required className="mt-2 block w-full rounded-xl border p-3"/></label>
-        <label className="text-sm font-bold">Accident time *<input name="accidentTime" type="time" required className="mt-2 block w-full rounded-xl border p-3"/></label>
-        <label className="text-sm font-bold">Spot Intimation date *<input name="spotDate" type="date" required className="mt-2 block w-full rounded-xl border p-3"/></label>
-        <label className="text-sm font-bold">Spot Intimation time *<input name="spotTime" type="time" required className="mt-2 block w-full rounded-xl border p-3"/></label>
-        <label className="text-sm font-bold">Driver name {external?"(optional)":"*"}<input name="driver" required={!external} maxLength={120} className="mt-2 block w-full rounded-xl border p-3"/></label>
-        <label className="text-sm font-bold">Driver number {external?"(optional)":"*"}<input name="phone" required={!external} type="tel" maxLength={15} className="mt-2 block w-full rounded-xl border p-3"/></label>
-        <label className="text-sm font-bold sm:col-span-2">Accident location {external?"(optional)":"*"}<textarea name="location" required={!external} maxLength={500} rows={3} className="mt-2 block w-full rounded-xl border p-3"/></label>
+      <div className="flex items-center gap-2 border-b border-[#E5EDF6] pb-3">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EDF4FF] text-[#2860AD]"><CalendarDays className="h-5 w-5"/></span>
+        <h2 className="text-[17px] font-bold text-[#112B51]">Incident Details</h2>
+      </div>
+      <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
+        <label className="text-[12px] font-semibold text-[#243C5F]"><span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-[#7389A9]"/>Accident date *</span><input name="accidentDate" type="date" required className={fieldClass}/></label>
+        <label className="text-[12px] font-semibold text-[#243C5F]"><span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5 text-[#7389A9]"/>Accident time *</span><input name="accidentTime" type="time" required className={fieldClass}/></label>
+        <label className="text-[12px] font-semibold text-[#243C5F]"><span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-[#7389A9]"/>Spot Intimation date *</span><input name="spotDate" type="date" required className={fieldClass}/></label>
+        <label className="text-[12px] font-semibold text-[#243C5F]"><span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5 text-[#7389A9]"/>Spot Intimation time *</span><input name="spotTime" type="time" required className={fieldClass}/></label>
+        <label className="text-[12px] font-semibold text-[#243C5F]"><span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5 text-[#7389A9]"/>Driver name {external?"(optional)":"*"}</span><input name="driver" required={!external} maxLength={120} placeholder="Enter driver name" autoComplete="name" className={fieldClass}/></label>
+        <label className="text-[12px] font-semibold text-[#243C5F]"><span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5 text-[#7389A9]"/>Driver mobile {external?"(optional)":"*"}</span><input name="phone" required={!external} type="tel" maxLength={15} inputMode="tel" placeholder="Enter mobile number" autoComplete="tel" className={fieldClass}/></label>
+        <label className="text-[12px] font-semibold text-[#243C5F] sm:col-span-2"><span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-[#7389A9]"/>Accident location {external?"(optional)":"*"}</span><textarea name="location" required={!external} maxLength={500} rows={2} placeholder="Enter accident location" className="mt-1.5 block min-h-[66px] w-full resize-y rounded-lg border border-[#D7E2F0] bg-white px-3 py-2 text-[13px] font-medium text-[#193659] outline-none transition focus-visible:border-[#2D7FF0] focus-visible:ring-2 focus-visible:ring-[#DCEBFF]"/></label>
       </div>
     </SpotIntimationSaveForm>
-    <p className="text-xs text-[#77869B]">Customer-only submission. Subsequent managed-claim stages are controlled by Operations; external claims use the self-tracked milestone contract.</p>
+    <p className="text-[11px] text-[#77869B]">Your details will be securely submitted for claim processing. Claim status and next steps are available in Claim Details.</p>
   </div>;
 }
