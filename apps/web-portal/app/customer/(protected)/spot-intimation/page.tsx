@@ -5,6 +5,9 @@ import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail } from "@/lib/customer-web-phase2-data";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
+import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
+import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/customer-claim-evidence-workspace";
+import { CustomerClaimVoiceRecorder } from "@/components/customer-portal/customer-claim-voice-recorder";
 import { SpotIntimationSaveForm, type SpotSaveState } from "./spot-intimation-save-form";
 
 export const dynamic="force-dynamic";
@@ -22,7 +25,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
   const q=searchParams?await searchParams:{};
   const {account}=await resolveCustomerWebScope(q.account);
   if(!q.id) redirect("/customer/start-claim?account="+encodeURIComponent(account.id));
-  const {claim}=await loadCustomerClaimDetail(account.id,q.id);
+  const {claim,documents}=await loadCustomerClaimDetail(account.id,q.id);
   const external=Boolean(claim.external_policy_id);
   async function submit(_state: SpotSaveState, form:FormData): Promise<SpotSaveState> {
     "use server";
@@ -75,6 +78,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
         <div className="flex min-w-0 items-center gap-3"><CustomerClaimLogo value={claim.insurer_name} kind="insurer" size={40}/><div className="min-w-0"><p className="truncate text-[13px] font-bold">{claim.policy_no||"No linked policy"}</p><p className="truncate text-[11px] text-white/75">{claim.insurer_name||"Insurer not assigned"}</p></div></div>
       </div>
     </section>
+    <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey="spot_intimation" currentKey="spot_intimation" completedKeys={[]}/>
     <SpotIntimationSaveForm action={submit} cancelHref={`/customer/start-claim?account=${encodeURIComponent(account.id)}`}>
       <input type="hidden" name="account" value={account.id}/><input type="hidden" name="claim" value={claim.id}/>
       <div className="flex items-center gap-2 border-b border-[#E5EDF6] pb-3">
@@ -91,6 +95,8 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
         <label className="text-[12px] font-semibold text-[#243C5F] sm:col-span-2"><span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-[#7389A9]"/>Accident location {external?"(optional)":"*"}</span><textarea name="location" required={!external} maxLength={500} rows={2} placeholder="Enter accident location" className="mt-1.5 block min-h-[66px] w-full resize-y rounded-lg border border-[#D7E2F0] bg-white px-3 py-2 text-[13px] font-medium text-[#193659] outline-none transition focus-visible:border-[#2D7FF0] focus-visible:ring-2 focus-visible:ring-[#DCEBFF]"/></label>
       </div>
     </SpotIntimationSaveForm>
+    <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage="spot_intimation" returnToSpotIntimation/>
+    <CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id}/>
     <p className="text-[11px] text-[#77869B]">Your details will be securely submitted for claim processing. Claim status and next steps are available in Claim Details.</p>
   </div>;
 }
