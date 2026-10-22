@@ -1,32 +1,73 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { CustomerVehicleRow } from "@/lib/customer-web-data";
 
-export function CustomerPolicySelections({
-  vehicles, blocked, initial, accountId,
-}:{
-  vehicles:CustomerVehicleRow[]; blocked:string[]; initial?:string; accountId:string;
-}) {
-  const [selected,setSelected]=useState(initial && vehicles.some(v=>v.id===initial && !blocked.includes(v.id)) ? initial : "");
-  const vehicle=useMemo(()=>vehicles.find(v=>v.id===selected),[vehicles,selected]);
-  const products=(vehicle?.vehicle_type==="PCP"||vehicle?.vehicle_type==="TWP")
-    ? ["Package","Third Party","SAOD","Bundled","Long Term Package","Long Term Third Party"]
-    : ["Package","Third Party","SAOD"];
+type SelectionProps = { vehicles: CustomerVehicleRow[]; blocked: string[]; initial?: string; accountId: string };
+type SelectionContext = {
+  vehicles: CustomerVehicleRow[];
+  blocked: string[];
+  selected: string;
+  setSelected: (value: string) => void;
+  products: string[];
+  vehicleType: string;
+};
+const PolicySelectionContext = createContext<SelectionContext | null>(null);
+
+export function CustomerPolicySelectionProvider({
+  vehicles, blocked, initial, children,
+}: Omit<SelectionProps, "accountId"> & { children: ReactNode }) {
+  const [selected, setSelected] = useState(
+    initial && vehicles.some(v => v.id === initial && !blocked.includes(v.id)) ? initial : "",
+  );
+  const vehicle = useMemo(() => vehicles.find(v => v.id === selected), [vehicles, selected]);
+  const vehicleType = vehicle?.vehicle_type ?? "";
+  const products = (vehicleType === "PCP" || vehicleType === "TWP")
+    ? ["Package", "Third Party", "SAOD", "Bundled", "Long Term Package", "Long Term Third Party"]
+    : ["Package", "Third Party", "SAOD"];
+
+  return <PolicySelectionContext.Provider value={{ vehicles, blocked, selected, setSelected, products, vehicleType }}>
+    {children}
+  </PolicySelectionContext.Provider>;
+}
+
+function usePolicySelection() {
+  const value = useContext(PolicySelectionContext);
+  if (!value) throw new Error("Policy selection fields require their provider.");
+  return value;
+}
+
+export function CustomerPolicyVehicleField({ accountId }: { accountId: string }) {
+  const { vehicles, blocked, selected, setSelected } = usePolicySelection();
   return <>
-    <div className="sm:col-span-2 flex items-center justify-between gap-2"><span className="text-xs font-bold text-[#1B3150]">Choose a vehicle already linked to your account</span><Link href={{pathname:"/customer/add-vehicle",query:{account:accountId}}} className="text-xs font-bold text-[#1769DC] hover:underline">+ Add Vehicle</Link></div>
-    <label className="text-sm font-bold sm:col-span-2">Vehicle *
-      <select name="vehicle" value={selected} onChange={e=>setSelected(e.target.value)} required className="mt-2 block w-full rounded-xl border p-3 text-sm">
+    <div className="sm:col-span-2 flex items-center justify-between gap-2">
+      <span className="text-xs font-bold text-[#1B3150]">Choose a vehicle already linked to your account</span>
+      <Link href={{ pathname: "/customer/add-vehicle", query: { account: accountId } }} className="text-xs font-bold text-[#1769DC] hover:underline">+ Add Vehicle</Link>
+    </div>
+    <label className="text-sm font-bold sm:col-span-2">Vehicle number *
+      <select name="vehicle" value={selected} onChange={e => setSelected(e.target.value)} required className="mt-2 block w-full rounded-xl border p-3 text-sm">
         <option value="">Select a vehicle</option>
-        {vehicles.map(v=><option key={v.id} value={v.id} disabled={blocked.includes(v.id)}>{v.vehicle_no} · {[v.make,v.model].filter(Boolean).join(" ")}{blocked.includes(v.id)?" · Active policy exists":""}</option>)}
+        {vehicles.map(v => <option key={v.id} value={v.id} disabled={blocked.includes(v.id)}>{v.vehicle_no} · {[v.make,v.model].filter(Boolean).join(" ")}{blocked.includes(v.id) ? " · Active policy exists" : ""}</option>)}
       </select>
     </label>
     {vehicles.length > 0 && blocked.length === vehicles.length ? <p role="status" className="sm:col-span-2 rounded-lg border border-[#F2D7DA] bg-[#FFF7F8] p-3 text-xs text-[#A43B49]">Every linked vehicle already has an active policy. You cannot add a duplicate active policy.</p> : null}
-    <label className="text-sm font-bold">Policy product *
-      <select key={vehicle?.vehicle_type||""} required name="type" defaultValue="" className="mt-2 block w-full rounded-xl border p-3 text-sm">
-        <option value="">Select product</option>{products.map(v=><option key={v}>{v}</option>)}
-      </select>
-    </label>
   </>;
+}
+
+export function CustomerPolicyProductField() {
+  const { vehicleType, products } = usePolicySelection();
+  return <label className="text-[12px] font-bold text-[#1B3150]">Policy Type *
+    <select key={vehicleType} required name="type" defaultValue="" className="mt-1.5 block w-full min-h-10 rounded-xl border border-[#D6E0EF] bg-[#FBFDFF] px-3 py-2 text-[12px] text-[#1B3150] outline-none transition focus:border-[#2C70C5] focus:ring-2 focus:ring-[#DDEBFC]">
+      <option value="">Select product</option>{products.map(v => <option key={v} value={v}>{v}</option>)}
+    </select>
+  </label>;
+}
+
+// Keep the original combined interface for any other callers.
+export function CustomerPolicySelections(props: SelectionProps) {
+  return <CustomerPolicySelectionProvider {...props}>
+    <CustomerPolicyVehicleField accountId={props.accountId}/>
+    <CustomerPolicyProductField/>
+  </CustomerPolicySelectionProvider>;
 }
