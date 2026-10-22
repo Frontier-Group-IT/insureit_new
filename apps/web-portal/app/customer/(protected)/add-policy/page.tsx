@@ -6,6 +6,7 @@ import { getCustomerWebSession } from "@/lib/customer-web";
 import { resolveCustomerWebScope, loadCustomerWebVehicles, loadCustomerWebPolicies } from "@/lib/customer-web-data";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
 import { CustomerPolicySelections } from "@/components/customer-portal/customer-policy-selections";
+import { CustomerPolicySaveForm, type PolicySaveState } from "./customer-policy-save-form";
 
 export const dynamic = "force-dynamic";
 
@@ -16,34 +17,34 @@ export default async function AddCustomerPolicy({ searchParams }: { searchParams
   const supabase = await createServerSupabaseClient();
   const companies = await supabase.from("insurance_companies").select("id,name").order("name");
 
-  async function save(form: FormData) {
+  async function save(_state: PolicySaveState, form: FormData): Promise<PolicySaveState> {
     "use server";
     const accountId = String(form.get("account") || "");
     const { account: authorized } = await resolveCustomerWebScope(accountId);
     const vehicleId = String(form.get("vehicle") || "");
     const permittedVehicles = await loadCustomerWebVehicles(authorized.id);
     const selectedVehicle = permittedVehicles.find(v => v.id === vehicleId);
-    if (!selectedVehicle) throw new Error("Vehicle not available to your account");
+    if (!selectedVehicle) return { error: "Vehicle not available to your account.", policyCreated: false };
     const rows = await loadCustomerWebPolicies(authorized.id);
     const startDate = String(form.get("start") || "");
     const endDate = String(form.get("end") || "");
-    if (!startDate || !endDate || endDate < startDate) throw new Error("Invalid policy dates");
+    if (!startDate || !endDate || endDate < startDate) return { error: "Check the policy start and end dates.", policyCreated: false };
     const today = new Date().toISOString().slice(0, 10);
-    if (rows.some(p => p.vehicle_id === vehicleId && p.start_date <= today && p.end_date >= today)) throw new Error("This vehicle already has an active policy");
+    if (rows.some(p => p.vehicle_id === vehicleId && p.start_date <= today && p.end_date >= today)) return { error: "This vehicle already has an active policy.", policyCreated: false };
     const insurerId = String(form.get("insurer") || "");
     const no = String(form.get("number") || "").trim().toUpperCase();
     const kind = String(form.get("type") || "").trim();
-    if (!no || !insurerId || !kind) throw new Error("Complete all mandatory policy fields");
+    if (!no || !insurerId || !kind) return { error: "Complete all mandatory policy fields.", policyCreated: false };
     const allowed = selectedVehicle.vehicle_type === "PCP" || selectedVehicle.vehicle_type === "TWP" ? ["Package","Third Party","SAOD","Bundled","Long Term Package","Long Term Third Party"] : ["Package","Third Party","SAOD"];
-    if (!allowed.includes(kind)) throw new Error("This policy product is not valid for the selected vehicle class");
+    if (!allowed.includes(kind)) return { error: "This policy product is not valid for this vehicle.", policyCreated: false };
     const db = await createServerSupabaseClient();
     const insurerCheck = await db.from("insurance_companies").select("id").eq("id", insurerId).maybeSingle();
-    if (!insurerCheck.data) throw new Error("Invalid insurance company");
+    if (!insurerCheck.data) return { error: "Select a valid insurance company.", policyCreated: false };
     const premium = String(form.get("premium") || "");
     const idv = String(form.get("idv") || "");
-    if ([premium,idv].some(v => v !== "" && (!Number.isFinite(Number(v)) || Number(v) < 0))) throw new Error("Invalid monetary value");
+    if ([premium,idv].some(v => v !== "" && (!Number.isFinite(Number(v)) || Number(v) < 0))) return { error: "Enter valid non-negative IDV and premium values.", policyCreated: false };
     const upload = form.get("copy");
-    if (upload instanceof File && upload.size > 0 && (upload.size > 5 * 1024 * 1024 || !["application/pdf","image/jpeg","image/png","image/webp"].includes(upload.type))) throw new Error("Policy copy must be a PDF or image under 5 MB");
+    if (upload instanceof File && upload.size > 0 && (upload.size > 5 * 1024 * 1024 || !["application/pdf","image/jpeg","image/png","image/webp"].includes(upload.type))) return { error: "Policy copy must be a PDF or image under 5 MB.", policyCreated: false };
     const { data: created, error } = await (db.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>)("create_customer_external_policy", {
       p_customer_id: authorized.id,
       p_vehicle_id: vehicleId,
@@ -55,16 +56,16 @@ export default async function AddCustomerPolicy({ searchParams }: { searchParams
       p_premium_amount: premium === "" ? null : Number(premium),
       p_insured_declared_value: idv === "" ? null : Number(idv),
     });
-    if (error) throw new Error("Policy could not be saved. Please verify its details.");
+    if (error) return { error: "Policy could not be saved. Please verify its details and try again.", policyCreated: false };
     const row = Array.isArray(created) ? created[0] : created;
     const newPolicyId = row && typeof row === "object" && "id" in row ? String(row.id) : "";
     if (upload instanceof File && upload.size > 0) {
-      if (!newPolicyId) throw new Error("Policy saved, but its ID could not be confirmed for document upload");
+      if (!newPolicyId) return { error: "Policy was created, but its document upload could not be completed. Do not submit again; check My Policies.", policyCreated: true };
       const session = await getCustomerWebSession();
       const ext = upload.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g,"") || "pdf";
       const storagePath = authorized.id + "/policy-copy/" + crypto.randomUUID() + "." + ext;
       const stored = await db.storage.from("customer-documents").upload(storagePath, upload, { contentType: upload.type, upsert: false });
-      if (stored.error) throw new Error("Policy saved but document upload failed");
+      if (stored.error) return { error: "Policy was saved, but its document upload failed. Do not submit again; check My Policies.", policyCreated: true };
       const saved = await db.from("customer_documents").insert({
         customer_id: authorized.id, external_policy_id: newPolicyId, document_type: "policy_copy",
         file_name: upload.name.slice(0,180), storage_bucket: "customer-documents", storage_path: storagePath,
@@ -72,7 +73,7 @@ export default async function AddCustomerPolicy({ searchParams }: { searchParams
       });
       if (saved.error) {
         await db.storage.from("customer-documents").remove([storagePath]);
-        throw new Error("Policy saved but document registration failed");
+        return { error: "Policy was saved, but its document registration failed. Do not submit again; check My Policies.", policyCreated: true };
       }
     }
     redirect("/customer/policies?account=" + encodeURIComponent(authorized.id));
@@ -84,7 +85,7 @@ export default async function AddCustomerPolicy({ searchParams }: { searchParams
       <Link href={{ pathname: "/customer/policies", query: { account: account.id } }} className="rounded-lg border border-[#CEDBEA] px-3 py-2 text-xs font-bold text-[#24538E] hover:bg-[#EEF5FE]">Back to My Policies</Link>
     </div>
     <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/add-policy"/>
-    <form action={save} encType="multipart/form-data" className="space-y-3">
+    <CustomerPolicySaveForm action={save} accountId={account.id}>
       <input type="hidden" name="account" value={account.id}/>
       <section className="overflow-hidden rounded-2xl border border-[#B9D4EE] bg-[#F0F7FF] shadow-sm">
         <div className="flex items-center gap-2 border-b border-[#BDD8F1] bg-[#DDEEFF] px-4 py-3 font-extrabold text-[#13345D]"><CarFront className="h-5 w-5 text-[#155BAA]"/>Vehicle</div>
@@ -108,8 +109,7 @@ export default async function AddCustomerPolicy({ searchParams }: { searchParams
           <label className="rounded-xl border border-dashed border-[#ABC8E7] bg-[#F7FAFF] p-3 text-[12px] font-bold text-[#1E4472] sm:col-span-2"><UploadCloud className="mr-2 inline h-5 w-5"/>Upload policy copy <span className="font-normal text-[#65809E]">(PDF or image, up to 5 MB)</span><input name="copy" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="mt-2 block w-full text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-[#E2EEFF] file:px-3 file:py-2 file:font-semibold file:text-[#1A55A0]"/></label>
         </div>
       </section>
-      <button type="submit" className="w-full rounded-xl bg-[#1755A7] px-5 py-4 text-sm font-extrabold text-white shadow-sm transition hover:bg-[#0B418A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#155BAA]">Save policy</button>
-    </form>
+    </CustomerPolicySaveForm>
     <p className="text-xs leading-5 text-[#718096]">Your policy will be added to your account as an external policy. The customer-authorized service verifies vehicle ownership and keeps other customers’ records private.</p>
   </div>;
 }
