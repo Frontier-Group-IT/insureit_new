@@ -12,5 +12,8 @@ assert.match(creation, /await onboardPolicy\(finalPayload\)/);
 assert.match(creation, /catch \(error\)/);
 assert.match(creation, /setSubmitError\("The policy save response could not be confirmed/);
 assert.match(creation, /Check the Policy Register/);
+assert.match(creation, /UnrecognizedActionError/, "Detect stale deployed Server Action references");
+assert.match(creation, /sessionStorage\.setItem\(POLICY_DRAFT_KEY/, "Preserve form draft on stale-action errors");
+assert.match(creation, /reload the page/, "Provide explicit refresh instruction");
 assert.doesNotMatch(creation, /catch \(error\)[\s\S]*runCreate\(/, "Do not automatically retry uncertain writes");
 console.log("Policy onboarding unexpected server-action failure is handled without rerunning save");
