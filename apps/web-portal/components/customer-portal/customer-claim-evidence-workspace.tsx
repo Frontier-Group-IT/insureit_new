@@ -34,7 +34,7 @@ export function CustomerClaimEvidenceWorkspace({documents,claimId,accountId,stag
             <span className="text-[10px] font-semibold text-[#8B97A9]">Customer upload</span>
           </div>
           <div className="mt-3 flex items-center gap-2 text-[11px]">
-            {items.length ? <span className="inline-flex items-center gap-1 rounded-xl bg-[#EFF9F3] px-2 py-1.5 font-semibold text-[#2A5360]"><CheckCircle2 className="h-4 w-4 text-[#0CA66D]"/>{items.length} Uploaded</span> : <span className="rounded-xl bg-[#F1F5FB] px-2 py-1.5 font-semibold text-[#64748B]">Not uploaded</span>}
+            {items.length ? <span className="inline-flex items-center gap-1 rounded-xl bg-[#EFF9F3] px-2 py-1.5 font-semibold text-[#2A5360]"><CheckCircle2 className="h-4 w-4 text-[#0CA66D]"/>{items.length} Uploaded</span> : null}
           </div>
           {items.length>0&&<div className="mt-2 space-y-1 border-t border-[#EDF1F6] pt-2">{items.map(item=><div key={item.id} className="flex items-center justify-between gap-2 rounded-lg bg-[#FAFCFF] px-2 py-1.5 text-[10px]"><span className="truncate text-[#435B7D]" title={item.file_name || label}>{item.file_name || label + " · " + new Date(item.created_at).toLocaleDateString("en-IN")}</span><span className="shrink-0 font-semibold text-[#13855B]">Uploaded</span></div>)}</div>}
           <form action={uploadCustomerClaimDocument} className="mt-2 flex items-end gap-2 border-t border-[#EDF1F6] pt-2">
