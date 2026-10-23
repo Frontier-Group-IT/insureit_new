@@ -2,7 +2,6 @@ import { useCallback, useRef, useState, type PropsWithChildren, type ReactNode }
 import {
   Animated,
   Image,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -36,7 +35,6 @@ export function PartnerScreen({
   children,
   scrollProps,
   heroSearch,
-  resetScrollOnFocus = false,
   homeMotionScrollY,
 }: PropsWithChildren<{
   title: string;
@@ -48,8 +46,6 @@ export function PartnerScreen({
   action?: ReactNode;
   hideTopBar?: boolean;
   scrollProps?: Omit<ScrollViewProps, 'contentContainerStyle'>;
-  /** Home/Business only: avoid retained iOS pull-to-refresh negative scroll offsets. */
-  resetScrollOnFocus?: boolean;
   /** Optional native-driven parallax on Home only; does not alter other tabs. */
   homeMotionScrollY?: Animated.Value;
   heroSearch?: {
@@ -89,21 +85,18 @@ export function PartnerScreen({
     };
   }, [isHomeHero]));
 
+  // Reset the main vertical scroll position whenever this screen regains focus.
+  // React Navigation retains tab screens, so an explicit reset is required.
   useFocusEffect(useCallback(() => {
-    if (Platform.OS !== 'ios' || !resetScrollOnFocus) return undefined;
-
-    // Do not reset a valid scroll position when returning from another tab.
-    // Only fix an overscrolled (negative) native offset left by pull-to-refresh.
-    const repairNegativeOffset = () => {
-      if (latestScrollY.current < -2) {
-        scrollRef.current?.scrollTo({ y: 0, animated: false });
-        latestScrollY.current = 0;
-      }
+    const reset = () => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+      latestScrollY.current = 0;
+      homeMotionScrollY?.setValue(0);
     };
-    repairNegativeOffset();
-    const frame = requestAnimationFrame(repairNegativeOffset);
+    reset();
+    const frame = requestAnimationFrame(reset);
     return () => cancelAnimationFrame(frame);
-  }, [resetScrollOnFocus]));
+  }, [homeMotionScrollY]));
 
   const submitHomeSearch = () => {
     if (heroSearch?.onSubmit) {
