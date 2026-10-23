@@ -25,9 +25,9 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
   const { claims, milestones_by_claim } = await loadCustomerClaimListContext(account.id);
   // Query only the authorized customer record; missing mobile must not block the register.
   const db = await createServerSupabaseClient();
-  const { data: customerContact } = await db.from("customers").select("id,mobile").eq("id", account.id).maybeSingle();
+  const { data: customerContact } = await db.from("customers").select("id,phone").eq("id", account.id).maybeSingle();
   const customerName = account.customer_name || account.contact_name || "Account holder";
-  const customerMobile = typeof customerContact?.mobile === "string" ? customerContact.mobile : null;
+  const customerMobile = typeof customerContact?.phone === "string" ? customerContact.mobile : null;
   const type = params.type === "external" ? "external" : "internal";
   const query = (params.q ?? "").trim().toLowerCase();
   const stageFilter = params.stage ?? "";
@@ -125,7 +125,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
                     <td className="border-r border-[#E1E9F4] px-3 py-3"><div className="flex justify-center" title={claim.insurer_name || "Insurer not assigned"}><CustomerClaimLogo value={claim.insurer_name} kind="insurer" size={36}/></div></td>
                     <td className="max-w-[180px] break-words border-r border-[#E1E9F4] px-3 py-3">{claim.policy_no || "—"}</td>
                     <td className="max-w-[210px] break-words border-r border-[#E1E9F4] px-3 py-3 font-medium">{claim.claim_no || "—"}</td>
-                    <td className="border-r border-[#E1E9F4] px-3 py-3">{claim.insurer_claim_no || "—"}</td>
+                    <td className="border-r border-[#E1E9F4] px-3 py-3">{claim.insurer_claim_no || "Pending insurer claim number"}</td>
                     <td className="px-3 py-3 text-left"><span className="block font-medium">{stage || "—"}</span><span className="block text-[11px] text-[#627691]">{claim.current_status || "—"}</span></td>
                   </tr>;
                 })}
