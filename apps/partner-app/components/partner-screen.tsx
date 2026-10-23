@@ -46,6 +46,8 @@ export function PartnerScreen({
   action?: ReactNode;
   hideTopBar?: boolean;
   scrollProps?: Omit<ScrollViewProps, 'contentContainerStyle'>;
+  /** Retained for existing callers; all PartnerScreen pages now reset on focus. */
+  resetScrollOnFocus?: boolean;
   /** Optional native-driven parallax on Home only; does not alter other tabs. */
   homeMotionScrollY?: Animated.Value;
   heroSearch?: {
