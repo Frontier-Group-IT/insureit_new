@@ -15,6 +15,7 @@ function isOperationsHeadLifePath(pathname: string) {
   return pathname === "/policies" ||
     new RegExp("^/policies/[^/]+$").test(pathname) ||
     new RegExp("^/policies/[0-9a-fA-F-]{36}/(edit|document)$").test(pathname) ||
+    pathname === "/policies/new/non-motor" ||
     pathname === "/policy-intakes" ||
     pathname === "/policy-intakes/new" ||
     new RegExp("^/policy-intakes/[0-9a-fA-F-]{36}$").test(pathname) ||
