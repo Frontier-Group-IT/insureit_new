@@ -1,11 +1,14 @@
 import { PolicyIntakeForm } from "@/components/policy-intake-form";
 import { AppShell } from "@/components/shell";
+import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
+import { requireCapability } from "@/lib/master-data-server";
 import { loadEligiblePolicyIntakeSources, requirePolicyIntakeCreator } from "@/lib/policy-intake-server";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewPolicyIntakePage() {
-  const profile = await requirePolicyIntakeCreator();
+  const { profile: requester } = await getAuthenticatedProfile(await getServerAccessToken());
+  const profile = requester?.role === "operations_head_life" ? await requireCapability("view_policies") : await requirePolicyIntakeCreator();
   const sources = await loadEligiblePolicyIntakeSources(profile);
   return <AppShell title="New Policy Intake">
     <PolicyIntakeForm sources={sources} />
