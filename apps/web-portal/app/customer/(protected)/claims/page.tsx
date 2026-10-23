@@ -109,7 +109,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
                   const lossDate = claim.accident_at ? new Date(claim.accident_at) : null;
                   return <tr key={claim.id} className="group relative border-b border-[#E1E9F4] transition-colors hover:bg-[#EDF5FF] focus-within:bg-[#EDF5FF] last:border-b-0">
                     <td className="border-r border-[#E1E9F4] px-3 py-3 text-left">
-                      <Link href={detailHref} aria-label={`Open claim ${claim.claim_no || claim.vehicle_no || ""}`} className="relative z-10 block rounded outline-offset-2 after:absolute after:inset-0 after:z-[-1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1769DC]">
+                      <Link href={detailHref} aria-label={`Open claim ${claim.claim_no || claim.vehicle_no || ""}`} className="block rounded outline-offset-2 after:absolute after:inset-0 after:cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1769DC]">
                         <span className="block font-medium">{customerName}</span>
                         <span className="block text-[11px] text-[#627691]">{customerMobile || "—"}</span>
                       </Link>
