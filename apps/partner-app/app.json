@@ -44,6 +44,12 @@
         {
           "faceIDPermission": "Use Face ID to unlock INSUREIT Partner on this device."
         }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow INSUREIT Partner to record incident voice notes for claim intimation."
+        }
       ]
     ],
     "experiments": {
