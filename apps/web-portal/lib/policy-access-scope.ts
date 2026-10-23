@@ -22,6 +22,36 @@ export async function getAccessiblePolicyRmEmployeeIds(
   return Array.from(new Set(scope.employeeIds));
 }
 
+/**
+ * The Operations Head's scope is the union of policies owned by a downline RM
+ * and those sourced through a Partner/POSP/MISP attached to a downline employee.
+ * No business-line/vertical filter applies. Missing ownership fails closed.
+ */
+export async function getOperationsHeadDownlinePolicyScope(profileId: string) {
+  const scope = await getEmployeeAccessScope(profileId, "operations_head_life", "view_policies");
+  const employeeIds = scope.employeeIds;
+  if (!employeeIds.length) return { employeeIds: [], intermediaryCodes: [] };
+  const admin = createSupabaseAdminClient();
+  const profileIds = scope.profileIds;
+  const filters = [`associate_employee_id.in.(${employeeIds.join(",")})`];
+  if (profileIds.length) filters.push(`associate_profile_id.in.(${profileIds.join(",")})`);
+  const { data, error } = await admin.from("intermediaries")
+    .select("intermediary_code").or(filters.join(","))
+    .returns<Array<{ intermediary_code: string | null }>>();
+  if (error) return { employeeIds: [], intermediaryCodes: [] };
+  return {
+    employeeIds,
+    intermediaryCodes: Array.from(new Set((data ?? []).map(item => item.intermediary_code?.trim()).filter((code): code is string => Boolean(code)))),
+  };
+}
+
+export function operationsHeadPolicyFilter(scope: { employeeIds: string[]; intermediaryCodes: string[] }) {
+  const filters: string[] = [];
+  if (scope.employeeIds.length) filters.push(`rm_employee_id.in.(${scope.employeeIds.join(",")})`);
+  if (scope.intermediaryCodes.length) filters.push(`intermediary_code.in.(${scope.intermediaryCodes.join(",")})`);
+  return filters.join(",");
+}
+
 export async function getSalesExecutivePolicyIds(profileId: string) {
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
@@ -54,15 +84,16 @@ export async function canAccessPolicy(
     return !error && Boolean(data?.id);
   }
 
-  const rmEmployeeIds = await getAccessiblePolicyRmEmployeeIds(profileId, role, capability);
   if (role === "operations_head_life") {
-    if (!rmEmployeeIds?.length) return false;
+    const downline = await getOperationsHeadDownlinePolicyScope(profileId);
+    const filter = operationsHeadPolicyFilter(downline);
+    if (!filter) return false;
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin.from("policies")
-      .select("id").eq("id", policyId).in("rm_employee_id", rmEmployeeIds)
-      .in("business_line", ["Life", "Health"]).maybeSingle<{ id: string }>();
+      .select("id").eq("id", policyId).or(filter).maybeSingle<{ id: string }>();
     return !error && Boolean(data?.id);
   }
+  const rmEmployeeIds = await getAccessiblePolicyRmEmployeeIds(profileId, role, capability);
   if (rmEmployeeIds === null) return true;
   if (!rmEmployeeIds.length) return false;
 
