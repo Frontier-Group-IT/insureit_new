@@ -48,6 +48,25 @@ export const getEmployeeAccessScope = cache(async (profileId: string, role: stri
     }
   }
 
+  if (role === "operations_head_life") {
+    if (capability !== "view_policies") return { mode: "none", employeeIds: [], profileIds: [] };
+    // Always bind this operational role to the confirmed Life vertical hierarchy,
+    // never to the login holder's own employee tree or to broad permission overrides.
+    const root = "ac167429-0ce0-4ffe-90ea-4040cb4fea95";
+    const { data: employees, error } = await fetchAllPages<EmployeeLink, unknown>((from, to) => admin
+      .from("employees").select("id,reporting_manager_id")
+      .eq("employment_status", "active")
+      .order("id", { ascending: true }).range(from, to).returns<EmployeeLink[]>());
+    if (error || !employees?.some(employee => employee.id === root)) {
+      return { mode: "none", employeeIds: [], profileIds: [] };
+    }
+    const employeeIds = descendantIds(root, employees);
+    const { data: profiles } = await fetchAllPages<ProfileLink, unknown>((from, to) => admin
+      .from("profiles").select("id,employee_id").in("employee_id", employeeIds)
+      .eq("is_active", true).order("id", { ascending: true }).range(from, to).returns<ProfileLink[]>());
+    return { mode: "hierarchy", employeeIds, profileIds: (profiles ?? []).map(p => p.id) };
+  }
+
   if (requestedMode === "organization") return { mode: "organization", employeeIds: [], profileIds: [] };
 
   const { data: currentProfile } = await admin.from("profiles").select("id,employee_id").eq("id", profileId).maybeSingle<ProfileLink>();

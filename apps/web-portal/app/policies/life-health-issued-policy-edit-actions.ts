@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { recordPolicyActivity, POLICY_ACTIVITY_ACTIONS } from "@/lib/policy-activity";
+import { getOperationsHeadDownlinePolicyScope } from "@/lib/policy-access-scope";
 
 export type LifeHealthIssuedPolicyEditResult = { ok: true } | { ok: false; error: string };
 export type LifeHealthPolicyCopyResult =
@@ -39,8 +41,8 @@ function revalidateIssuedPolicy(policyId: string, caseId: string) {
 }
 
 export async function replaceIssuedLifeHealthPolicyCopy(formData: FormData): Promise<LifeHealthPolicyCopyResult> {
-  const profile = await requirePolicyEditor();
   const policyId = clean(formData.get("policyId"));
+  const profile = await requirePolicyEditor(policyId);
   const caseId = clean(formData.get("caseId"));
   const file = formData.get("file");
   if (!policyId || !caseId) return { ok: false, error: "Policy edit reference is missing." };
@@ -95,8 +97,8 @@ export async function replaceIssuedLifeHealthPolicyCopy(formData: FormData): Pro
 }
 
 export async function deleteIssuedLifeHealthPolicyCopy(formData: FormData): Promise<LifeHealthPolicyCopyResult> {
-  await requirePolicyEditor();
   const policyId = clean(formData.get("policyId"));
+  await requirePolicyEditor(policyId);
   const caseId = clean(formData.get("caseId"));
   if (!policyId || !caseId) return { ok: false, error: "Policy edit reference is missing." };
 
@@ -117,10 +119,10 @@ export async function deleteIssuedLifeHealthPolicyCopy(formData: FormData): Prom
 }
 
 export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<LifeHealthIssuedPolicyEditResult> {
-  const profile = await requirePolicyEditor();
-  const commercialAccess = canAccessPolicyCommercials(profile);
-  const admin = createSupabaseAdminClient();
   const policyId = clean(formData.get("policyId"));
+  const profile = await requirePolicyEditor(policyId);
+  const commercialAccess = canAccessPolicyCommercials(profile, profile.role === "operations_head_life");
+  const admin = createSupabaseAdminClient();
   const caseId = clean(formData.get("caseId"));
   const businessLine = clean(formData.get("businessLine"));
   const sourcingDate = clean(formData.get("sourcingDate"));
@@ -185,6 +187,15 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
     rmEmployeeId = caseRow.rm_employee_id || policy.rm_employee_id || null;
     rmName = caseRow.rm_name?.trim() || policy.rm_name?.trim() || null;
     rmCode = caseRow.rm_code?.trim() || null;
+  }
+
+  if (profile.role === "operations_head_life") {
+    const scope = await getOperationsHeadDownlinePolicyScope(profile.id);
+    if (caseRow.intermediary_id !== sourceId ||
+        (!scope.employeeIds.includes(rmEmployeeId || "") &&
+         !scope.intermediaryCodes.includes(intermediaryCode))) {
+      return { ok: false, error: "The policy and case must remain assigned to Gagan Singh's downline." };
+    }
   }
 
   const { error: caseError } = await admin.from("life_health_cases").update({
@@ -291,6 +302,7 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
     if (payoutWrite.error) return { ok: false, error: "The Partner Payout could not be updated." };
   }
 
+  await recordPolicyActivity(admin, policyId, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_EDITED);
   revalidateIssuedPolicy(policyId, caseId);
   return { ok: true };
 }

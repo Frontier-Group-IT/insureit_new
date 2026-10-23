@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { canAccessCustomer } from "@/lib/employee-access-scope";
+import { canAccessPolicy } from "@/lib/policy-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -59,7 +60,9 @@ export async function openPolicyCopy(documentId: string): Promise<PolicyCopyOpen
   if (documentError) return { ok: false, error: "Could not load the policy copy. Please try again." };
   if (!documentRow?.id || !documentRow.policies?.customer_id) return { ok: false, error: "Policy copy is not available." };
 
-  const canView = await canAccessCustomer(profile.id, profile.role, documentRow.policies.customer_id, "view_policies");
+  const canView = profile.role === "operations_head_life"
+    ? await canAccessPolicy(profile.id, profile.role, documentRow.policy_id, "view_policies")
+    : await canAccessCustomer(profile.id, profile.role, documentRow.policies.customer_id, "view_policies");
   if (!canView) return { ok: false, error: "You do not have access to this policy copy." };
 
   const { data: signed, error: signedError } = await admin.storage
@@ -74,7 +77,7 @@ export async function uploadPolicyCopy(
   policyId: string,
   formData: FormData,
 ): Promise<PolicyCopyUploadResult> {
-  const profile = await requirePolicyEditor();
+  const profile = await requirePolicyEditor(policyId);
   const normalizedPolicyId = policyId.trim();
   const file = formData.get("file");
 

@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { requirePolicyIntakeFinalizer } from "@/lib/policy-intake-server";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
+import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
+import { getOperationsHeadDownlinePolicyScope, operationsHeadPolicyFilter } from "@/lib/policy-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";
 import { recordVehicleActivity, VEHICLE_ACTIVITY_ACTIONS } from "@/lib/vehicle-activity";
@@ -432,10 +434,23 @@ export async function loadExistingVehicleForPolicyOnboarding(vehicleId: string):
   | { ok: true; selection: PolicyExistingVehicleSelection }
   | { ok: false; error: string }
 > {
-  await requirePolicyCreator();
+  const { profile: requester } = await getAuthenticatedProfile(await getServerAccessToken());
+  if (requester?.role !== "operations_head_life") await requirePolicyCreator();
   try {
     const vehicle = await findExistingVehicleById(vehicleId);
     if (!vehicle) return { ok: false, error: "The existing vehicle is no longer available. Refresh and try again." };
+    if (requester?.role === "operations_head_life") {
+      const scope = await getOperationsHeadDownlinePolicyScope(requester.id);
+      const filter = operationsHeadPolicyFilter(scope);
+      if (!filter) return { ok: false, error: "Vehicle access is outside the downline." };
+      const admin = createSupabaseAdminClient();
+      const [policies, cases] = await Promise.all([
+        admin.from("policies").select("id").eq("customer_id", vehicle.customer_id).or(filter).limit(1),
+        admin.from("life_health_cases").select("id").eq("customer_id", vehicle.customer_id).or(filter).limit(1),
+      ]);
+      if (policies.error || cases.error || (!policies.data?.length && !cases.data?.length))
+        return { ok: false, error: "Vehicle access is outside the downline." };
+    }
     return { ok: true, selection: existingVehicleSelection(vehicle) };
   } catch {
     return { ok: false, error: "We couldn't load the existing vehicle. Your form has not been changed." };
@@ -443,7 +458,7 @@ export async function loadExistingVehicleForPolicyOnboarding(vehicleId: string):
 }
 
 export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<PolicyOnboardingResult> {
-  const profile = await requirePolicyCreator();
+  const profile = await requirePolicyCreator(String(payload.policy.intermediaryCode ?? ""));
   const selectedExistingVehicleId = payload.resolution?.selectedExistingVehicleId?.trim() || null;
   if (selectedExistingVehicleId) {
     try {
@@ -590,7 +605,7 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       });
     } else if (payload.sourceIntakeId) {
       diagnosticStage = "policy_intake_finalizer_authorization";
-      await requirePolicyIntakeFinalizer();
+      await requirePolicyIntakeFinalizer(payload.sourceIntakeId);
       if (!/^[0-9a-f-]{36}$/i.test(payload.sourceIntakeId)) {
         return { ok:false, kind:"validation", error:"The Policy Intake reference is invalid. Reload the intake and try again." };
       }

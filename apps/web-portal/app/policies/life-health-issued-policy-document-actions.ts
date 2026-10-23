@@ -25,8 +25,8 @@ function revalidateIssuedPolicy(policyId: string, caseId: string) {
 }
 
 async function context(formData: FormData) {
-  const profile = await requirePolicyEditor();
   const policyId = clean(formData.get("policyId"));
+  const profile = await requirePolicyEditor(policyId);
   const caseId = clean(formData.get("caseId"));
   const type = clean(formData.get("documentType")) as LifeHealthIssuedDocumentType;
   if (!policyId || !caseId || !DOCUMENT_TYPES.has(type)) return { profile, policyId, caseId, type, admin: null, valid: false };

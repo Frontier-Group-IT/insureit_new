@@ -5,7 +5,7 @@ import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel"
 import { PolicyIntakePolicyRegisterLinksPortal } from "@/components/policy-intake-policy-register-links";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
-import { getAccessiblePolicyRmEmployeeIds, getSalesExecutivePolicyIds } from "@/lib/policy-access-scope";
+import { getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadPolicyFilter, getSalesExecutivePolicyIds } from "@/lib/policy-access-scope";
 import { loadPolicyIntakeReviewSummary } from "@/lib/policy-intake-review-summary";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -85,6 +85,9 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
     hasEffectiveCapability(profile, "review_policy_intakes", "edit"),
     hasEffectiveCapability(profile, "view_policy_intakes", "view"),
   ]);
+  const operationsHeadFilter = profile.role === "operations_head_life"
+    ? operationsHeadPolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))
+    : null;
   const afterScope = performance.now();
   const admin = createSupabaseAdminClient();
 
@@ -121,7 +124,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
   }
 
   const canTrackOwnPolicyIntakes = profile.role === "relationship_manager" && canViewPolicyIntakes;
-  const policyIntakeSummaryPromise = canReviewPolicyIntakes
+  const policyIntakeSummaryPromise = profile.role === "operations_head_life" ? Promise.resolve(null) : canReviewPolicyIntakes
     ? loadPolicyIntakeReviewSummary(admin)
     : canTrackOwnPolicyIntakes
       ? loadPolicyIntakeReviewSummary(admin, { submittedByProfileId: profile.id, includeActionRequired: false })
@@ -191,7 +194,8 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
         .select("id, policy_no, policy_type, policy_product, business_line, issuance_date, created_at, start_date, end_date, insured_declared_value, intermediary_type, intermediary_code, rm_name, rm_employee_id, policy_premium_details(gross_premium), policy_documents(id, document_type, file_name), customers!inner(company_name, contact_name), vehicles(vehicle_no, chassis_no, engine_no), insurance_companies(name), non_motor_policy_details(category, risk_title, risk_location, transit_from, transit_to, nature_of_business, liability_type, risk_details), claims(count)")
         .order("created_at", { ascending: false })
         .range(from, to);
-      if (accessibleRmEmployeeIds !== null) query = query.in("rm_employee_id", accessibleRmEmployeeIds);
+      if (profile.role === "operations_head_life" && operationsHeadFilter) query = query.or(operationsHeadFilter);
+      else if (accessibleRmEmployeeIds !== null) query = query.in("rm_employee_id", accessibleRmEmployeeIds);
       return query.returns<PolicyRow[]>();
     }),
     policyIntakeSummaryPromise,

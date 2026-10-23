@@ -31,7 +31,7 @@ export async function submitLifeHealthIntakeWithoutProposal(input: {
   policyType: string;
   customerMobile: string;
 }): Promise<SubmitWithoutProposalResult> {
-  const profile = await requirePolicyIntakeCreator();
+  const profile = await requirePolicyIntakeCreator(input.leadSourceId);
   if (!isLifeHealthPolicyType(input.policyType)) {
     return { ok: false, error: "A proposal form can only be skipped for Life or Health policy intake." };
   }
@@ -105,7 +105,7 @@ export async function submitLifeHealthIntakeWithoutProposal(input: {
 }
 
 export async function getPolicyIntakeDocumentAvailability(id: string) {
-  await requirePolicyIntakeViewer();
+  await requirePolicyIntakeViewer(id);
   const admin = createSupabaseAdminClient();
   const { data } = await admin
     .from("policy_intake_requests")

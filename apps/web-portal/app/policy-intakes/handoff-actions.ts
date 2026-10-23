@@ -53,8 +53,8 @@ type IntakeForHandoff={
 };
 
 export async function preparePolicyIntakeHandoff(id:string,takeOver=false):Promise<PolicyIntakeHandoffResult> {
-  await requirePolicyIntakeFinalizer();
-  const reviewer=await requirePolicyIntakeReviewer();
+  await requirePolicyIntakeFinalizer(id);
+  const reviewer=await requirePolicyIntakeReviewer(id);
   const admin=createSupabaseAdminClient();
   const {data:intake}=await admin.from("policy_intake_requests")
     .select("id,intake_number,lead_source_type,lead_source_name,lead_source_code,customer_mobile,matched_customer_id,ocr_fields,status,created_at,assigned_to_profile_id")
@@ -125,7 +125,7 @@ export async function preparePolicyIntakeHandoff(id:string,takeOver=false):Promi
 }
 
 export async function loadPolicyIntakeOnboardingDraft(id:string):Promise<PolicyIntakeHandoffResult>{
-  await requirePolicyIntakeFinalizer(); await requirePolicyIntakeReviewer(); const admin=createSupabaseAdminClient();
+  await requirePolicyIntakeFinalizer(id); await requirePolicyIntakeReviewer(id); const admin=createSupabaseAdminClient();
   const {data:intake}=await admin.from("policy_intake_requests").select("id,intake_number,status,created_at,ocr_fields,assigned_to_profile_id,matched_customer_id,customer_mobile").eq("id",id).maybeSingle<{id:string;intake_number:string;status:string;created_at:string;ocr_fields:PolicyIntakeOcrField[];assigned_to_profile_id:string|null;matched_customer_id:string|null;customer_mobile:string}>();
   if(!intake||intake.status!=="in_review")return{ok:false,error:"This intake is not in review for Policy Onboarding."};
   const duplicateCheck=await loadPolicyIntakeDuplicateMatches(admin,[intake]);
@@ -137,7 +137,7 @@ export async function loadPolicyIntakeOnboardingDraft(id:string):Promise<PolicyI
 }
 
 export async function savePolicyIntakeOnboardingDraft(id:string,expectedRevision:number,draft:PolicyIntakeDraft):Promise<PolicyIntakeDraftSaveResult>{
-  await requirePolicyIntakeFinalizer(); const reviewer=await requirePolicyIntakeReviewer(); const admin=createSupabaseAdminClient();
+  await requirePolicyIntakeFinalizer(id); const reviewer=await requirePolicyIntakeReviewer(id); const admin=createSupabaseAdminClient();
   const {data:intake}=await admin.from("policy_intake_requests").select("status,assigned_to_profile_id").eq("id",id).maybeSingle<{status:string;assigned_to_profile_id:string|null}>();
   if(!intake||intake.status!=="in_review")return{ok:false,error:"This intake is no longer in review.",conflict:true};
   const {data,error}=await admin.from("policy_intake_onboarding_drafts")

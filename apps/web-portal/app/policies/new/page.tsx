@@ -7,6 +7,9 @@ import { AppShell } from "@/components/shell";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
+import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
+import { requireCapability } from "@/lib/master-data-server";
+import { getOperationsHeadDownlinePolicyScope, operationsHeadPolicyFilter } from "@/lib/policy-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getActiveInsuranceCompanyOptions, getActiveVehicleManufacturerOptions } from "@/lib/reference-data-cache";
 
@@ -21,9 +24,19 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function NewPolicyPage({ searchParams }: { searchParams: Promise<{ intake_id?:string; customer_id?:string; vehicle_id?:string }> }) {
-  const profile = await requirePolicyCreator();
-  const commercialAccess = canAccessPolicyCommercials(profile);
+  const { profile: requester } = await getAuthenticatedProfile(await getServerAccessToken());
+  const profile = requester?.role === "operations_head_life" ? await requireCapability("view_policies") : await requirePolicyCreator();
+  const commercialAccess = canAccessPolicyCommercials(profile, profile.role === "operations_head_life");
   const admin = createSupabaseAdminClient();
+  const scoped = profile.role === "operations_head_life" ? await getOperationsHeadDownlinePolicyScope(profile.id) : null;
+  const scopedFilter = scoped ? operationsHeadPolicyFilter(scoped) : null;
+  if (scoped && !scoped.intermediaryCodes.length) return <SetupError message="No downline Partner/POSP/MISP is available for policy creation." />;
+  const [scopedPolicies, scopedCases] = scoped && scopedFilter ? await Promise.all([
+    admin.from("policies").select("customer_id").or(scopedFilter).returns<Array<{customer_id:string}>>(),
+    admin.from("life_health_cases").select("customer_id").or(scopedFilter).returns<Array<{customer_id:string}>>(),
+  ]) : [{ data: [] as Array<{customer_id:string}>, error: null }, { data: [] as Array<{customer_id:string}>, error: null }];
+  if (scoped && (scopedPolicies.error || scopedCases.error)) return <SetupError />;
+  const allowedCustomerIds = new Set([...(scopedPolicies.data ?? []), ...(scopedCases.data ?? [])].map(row => row.customer_id));
   const params = await searchParams;
   let workflowInitialValues: import("@/components/policy-unified-form").PolicyUnifiedInitialValues | undefined;
   let workflowRegistrationMode: "registered" | "unregistered" | undefined;
@@ -39,6 +52,7 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
     workflowInitialValues = form; workflowRegistrationMode = registrationMode;
     preselectedCustomerId = intakeDraft.matchedCustomerId; sourceIntakeId = params.intake_id; initialDraftRevision = intakeDraft.draftRevision;
   } else if (params.customer_id && params.vehicle_id) {
+    if (scoped && !allowedCustomerIds.has(params.customer_id)) return <SetupError message="The customer is outside the approved downline portfolio." />;
     const [{data:customer},{data:vehicle}] = await Promise.all([
       admin.from("customers").select("id,contact_name,company_name,phone").eq("id",params.customer_id).maybeSingle<PrefillCustomer>(),
       admin.from("vehicles").select("id,customer_id,vehicle_no,registration_status,vehicle_type,make,model,fuel_type,year,chassis_no,engine_no,engine_capacity_cc,seating_capacity,gvw_kg,rto_state,rto_name").eq("id",params.vehicle_id).maybeSingle<PrefillVehicle>(),
@@ -63,7 +77,7 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
   if (customersResult.error || intermediariesResult.error) return <SetupError />;
   const manufacturerOptions = cachedManufacturers.map((option) => option.value);
 
-  const intermediaryRows = intermediariesResult.data ?? [];
+  const intermediaryRows = (intermediariesResult.data ?? []).filter(item => !scoped || scoped.intermediaryCodes.includes(item.intermediary_code?.trim() ?? ""));
   const partnerApplicationIds = intermediaryRows.filter((item) => item.intermediary_type === "partner" && !item.associate_employee_id && item.application_id).map((item) => item.application_id!).filter((value, index, values) => values.indexOf(value) === index);
   const partnerApplicationsResult = partnerApplicationIds.length ? await admin.from("intermediary_onboarding_applications").select("id,partner_record_id").in("id", partnerApplicationIds).returns<ApplicationPartnerRow[]>() : { data: [] as ApplicationPartnerRow[], error: null };
   if (partnerApplicationsResult.error) return <SetupError />;
@@ -75,8 +89,8 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
   const associateByPartnerRecord = new Map<string, string>();
   for (const row of partnerAssociatesResult.data ?? []) if (row.partner_record_id && row.associate_employee_id && !associateByPartnerRecord.has(row.partner_record_id)) associateByPartnerRecord.set(row.partner_record_id, row.associate_employee_id);
   const employeeById = new Map(salesEmployees.map((employee) => [employee.id, employee]));
-  const customerOptions = (customersResult.data ?? []).map((row) => ({ id: row.id, name: row.company_name?.trim() || row.contact_name, contactName: row.contact_name, phone: row.phone, email: row.email ?? "" }));
-  const rmOptions: PolicyRmOption[] = salesEmployees.map((employee) => { const name = employee.full_name?.trim() || "Unnamed Sales Employee"; return { value: name, label: employee.employee_code ? `${name} - ${employee.employee_code}` : name }; });
+  const customerOptions = (customersResult.data ?? []).filter(row => !scoped || allowedCustomerIds.has(row.id)).map((row) => ({ id: row.id, name: row.company_name?.trim() || row.contact_name, contactName: row.contact_name, phone: row.phone, email: row.email ?? "" }));
+  const rmOptions: PolicyRmOption[] = salesEmployees.filter(employee => !scoped || scoped.employeeIds.includes(employee.id)).map((employee) => { const name = employee.full_name?.trim() || "Unnamed Sales Employee"; return { value: name, label: employee.employee_code ? `${name} - ${employee.employee_code}` : name }; });
   const sourceOptions = intermediaryRows.filter((item) => item.intermediary_code?.trim() && item.display_name?.trim()).map((item) => {
     const partnerRecordId = item.application_id ? partnerRecordByApplication.get(item.application_id) : null;
     const associateEmployeeId = item.associate_employee_id || (partnerRecordId ? associateByPartnerRecord.get(partnerRecordId) : null) || null;

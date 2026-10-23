@@ -64,7 +64,7 @@ export default async function PolicyReadOnlyPage({ params }: { params: Promise<{
       <section className="mx-auto max-w-[1100px] overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
         <div className="flex flex-col gap-3 border-b border-[#E5ECF5] bg-[#F8FAFC] px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-[#17365D] text-white"><ShieldCheck className="h-5 w-5" /></span><div><p className="text-[9px] font-bold uppercase tracking-[.1em] text-[#64748B]">Read-only policy record</p><h1 className="mt-1 text-[18px] font-semibold text-[#0F172A]">{data.policy_no}</h1><p className="mt-1 text-[10px] text-[#64748B]">{data.insurance_companies?.name ?? "Insurance company"}</p></div></div>
-          <span className="inline-flex items-center gap-1.5 self-start rounded-full border border-[#CFE0F2] bg-[#EFF6FF] px-3 py-1.5 text-[9px] font-bold text-[#315B9A]"><Eye className="h-3.5 w-3.5" />View only</span>
+          {profile.role === "operations_head_life" ? <Link href={`/policies/${id}/edit`} className="inline-flex items-center gap-1.5 self-start rounded-full border border-[#BFD4F5] bg-[#EFF6FF] px-3 py-1.5 text-[9px] font-bold text-[#174EA6]">Edit Policy</Link> : <span className="inline-flex items-center gap-1.5 self-start rounded-full border border-[#CFE0F2] bg-[#EFF6FF] px-3 py-1.5 text-[9px] font-bold text-[#315B9A]"><Eye className="h-3.5 w-3.5" />View only</span>}
         </div>
         <div className="grid gap-4 p-5 md:grid-cols-2">
           <Info label="Policy number" value={data.policy_no} />

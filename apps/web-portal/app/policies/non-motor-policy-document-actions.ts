@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requirePolicyCreator, requirePolicyEditor } from "@/lib/policy-access-server";
+import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const POLICY_DOCUMENT_BUCKET = "policy-documents";
@@ -46,9 +47,10 @@ async function requireNonMotorPolicy(admin: ReturnType<typeof createSupabaseAdmi
 }
 
 export async function uploadNonMotorPolicyDocument(formData: FormData): Promise<NonMotorDocumentUploadResult> {
-  const profile = await requirePolicyCreator();
-  const admin = createSupabaseAdminClient();
   const policyId = String(formData.get("policyId") ?? "").trim();
+  const { profile: requester } = await getAuthenticatedProfile(await getServerAccessToken());
+  const profile = requester?.role === "operations_head_life" ? await requirePolicyEditor(policyId) : await requirePolicyCreator();
+  const admin = createSupabaseAdminClient();
   const documentType = String(formData.get("documentType") ?? "").trim();
   const fileValue = formData.get("file");
 
@@ -158,7 +160,7 @@ export async function deleteNonMotorPolicyDocument(
   policyId: string,
   documentType: string,
 ): Promise<NonMotorDocumentDeleteResult> {
-  await requirePolicyEditor();
+  await requirePolicyEditor(policyId);
   const admin = createSupabaseAdminClient();
 
   if (!policyId) return { ok: false, error: "The policy reference is missing for this document." };

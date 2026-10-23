@@ -61,7 +61,7 @@ async function latestPolicyCopy(admin: ReturnType<typeof createSupabaseAdminClie
 }
 
 export async function getPolicyCopyForEdit(policyId: string): Promise<PolicyEditCopyResult> {
-  await requirePolicyEditor();
+  await requirePolicyEditor(policyId);
   const normalizedPolicyId = policyId.trim();
   if (!isUuid(normalizedPolicyId)) return { ok: false, error: "Invalid policy reference." };
 
@@ -72,7 +72,7 @@ export async function getPolicyCopyForEdit(policyId: string): Promise<PolicyEdit
 }
 
 export async function savePolicyCopyForEdit(policyId: string, formData: FormData): Promise<PolicyEditCopyResult> {
-  const profile = await requirePolicyEditor();
+  const profile = await requirePolicyEditor(policyId);
   const normalizedPolicyId = policyId.trim();
   const file = formData.get("file");
 
@@ -160,7 +160,7 @@ export async function savePolicyCopyForEdit(policyId: string, formData: FormData
 }
 
 export async function removePolicyCopyForEdit(policyId: string): Promise<PolicyEditCopyResult> {
-  const profile = await requirePolicyEditor();
+  const profile = await requirePolicyEditor(policyId);
   const normalizedPolicyId = policyId.trim();
   if (!isUuid(normalizedPolicyId)) return { ok: false, error: "Invalid policy reference." };
 

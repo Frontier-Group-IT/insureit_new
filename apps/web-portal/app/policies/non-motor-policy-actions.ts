@@ -5,6 +5,7 @@ import { requirePolicyCreator, requirePolicyEditor } from "@/lib/policy-access-s
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { recordPolicyActivity, POLICY_ACTIVITY_ACTIONS } from "@/lib/policy-activity";
 
 export type NonMotorCommercialBasis = "NET_PREMIUM_PERCENT" | "FIXED_AMOUNT";
 
@@ -50,9 +51,9 @@ function customerIdentityName(row: CustomerIdentityRow) { return cleanCustomerNa
 
 
 export async function updateNonMotorPolicy(policyId: string, payload: NonMotorPolicyPayload): Promise<NonMotorPolicyResult> {
-  const profile = await requirePolicyEditor();
+  const profile = await requirePolicyEditor(policyId);
   const admin = createSupabaseAdminClient();
-  const commercial = canAccessPolicyCommercials(profile) ? (payload.commercial ?? EMPTY_COMMERCIAL) : EMPTY_COMMERCIAL;
+  const commercial = canAccessPolicyCommercials(profile, profile.role === "operations_head_life") ? (payload.commercial ?? EMPTY_COMMERCIAL) : EMPTY_COMMERCIAL;
   const id = clean(policyId);
   if (!id) return { ok:false, error:"Policy reference is missing." };
 
@@ -111,6 +112,17 @@ export async function updateNonMotorPolicy(policyId: string, payload: NonMotorPo
 
   const sourceResolution = await resolvePolicyIntermediarySource(payload.source);
   if (!sourceResolution.ok) return { ok:false, error:sourceResolution.error };
+
+  if (profile.role === "operations_head_life") {
+    const { data: ownership } = await admin.from("policies")
+      .select("intermediary_code,rm_name").eq("id", id)
+      .maybeSingle<{ intermediary_code: string | null; rm_name: string | null }>();
+    if (!ownership ||
+        ownership.intermediary_code?.trim() !== sourceResolution.source.intermediaryCode ||
+        (ownership.rm_name ?? "").trim().toLowerCase() !== payload.source.rmName.trim().toLowerCase()) {
+      return { ok: false, error: "Changing the linked intermediary or RM is not permitted." };
+    }
+  }
 
   const duplicate = await admin.from("policies")
     .select("id")
@@ -249,15 +261,16 @@ export async function updateNonMotorPolicy(policyId: string, payload: NonMotorPo
 
   revalidatePath("/policies");
   revalidatePath(`/policies/${id}`);
+  await recordPolicyActivity(admin, id, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_EDITED);
   revalidatePath(`/policies/${id}/edit`);
   return { ok:true, policyId:id, policyCode:existing.policy_code || policyNumber };
 }
 
 export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Promise<NonMotorPolicyResult> {
-  const profile = await requirePolicyCreator();
+  const profile = await requirePolicyCreator(payload.source.intermediaryCode);
   const admin = createSupabaseAdminClient();
   // Keep the server as the source of truth for the same restricted commercial access used by Motor onboarding.
-  const commercial = canAccessPolicyCommercials(profile) ? (payload.commercial ?? EMPTY_COMMERCIAL) : EMPTY_COMMERCIAL;
+  const commercial = canAccessPolicyCommercials(profile, profile.role === "operations_head_life") ? (payload.commercial ?? EMPTY_COMMERCIAL) : EMPTY_COMMERCIAL;
 
   const policyNumber = clean(payload.policy.policyNumber).toUpperCase();
   const normalizedPolicy = normalizePolicyNumber(policyNumber);

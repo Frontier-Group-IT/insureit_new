@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { canAccessCustomer } from "@/lib/employee-access-scope";
+import { canAccessPolicy } from "@/lib/policy-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -13,11 +14,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ doc
   const admin = createSupabaseAdminClient();
   const { data: document } = await admin
     .from("policy_documents")
-    .select("storage_bucket,storage_path,policies!inner(customer_id)")
+    .select("policy_id,storage_bucket,storage_path,policies!inner(customer_id)")
     .eq("id", documentId)
     .eq("document_type", "policy_copy")
-    .maybeSingle<{ storage_bucket: string; storage_path: string; policies: { customer_id: string } | null }>();
-  if (!document?.policies?.customer_id || !(await canAccessCustomer(profile.id, profile.role, document.policies.customer_id, "view_policies"))) {
+    .maybeSingle<{ policy_id: string; storage_bucket: string; storage_path: string; policies: { customer_id: string } | null }>();
+  const allowed = document?.policies?.customer_id && (profile.role === "operations_head_life"
+    ? await canAccessPolicy(profile.id, profile.role, document.policy_id, "view_policies")
+    : await canAccessCustomer(profile.id, profile.role, document.policies.customer_id, "view_policies"));
+  if (!allowed) {
     return NextResponse.json({ error: "Document not found" }, { status: 404 });
   }
   const { data: signed, error } = await admin.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 600);

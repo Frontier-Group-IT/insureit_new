@@ -30,7 +30,7 @@ assert(actions.includes('policy_type:input.policyType'),"New intake must persist
 assert(!/from\(["']policies["']\)\s*\.insert\(/.test(actions),"Sales intake submission must never insert a real policy");
 assert(actions.includes('input.storagePath.startsWith(`intakes/${input.id}/original/`)'),"Original upload must use the isolated intake source-document prefix");
 assert(actions.includes('createSignedUrl(data.storage_path,300)'),"Policy-copy access must use a short-lived signed URL");
-assert(actions.includes('requirePolicyIntakeFinalizer()'),"Closing an intake must require explicit Finalize authority");
+assert(actions.includes('requirePolicyIntakeFinalizer(id)'),"Closing an intake must require explicit record-scoped Finalize authority");
 assert(actions.includes('preparePolicyIntakeResponseUpload'),"Initiators must be able to respond when Operations requests another document");
 assert(actions.includes('.from("policy_intake_documents")'),"Original and replacement copies must retain document lineage");
 assert(!actions.includes('remove([intake.storage_path])'),"Replacement uploads must not delete the previous policy copy");
@@ -60,10 +60,10 @@ assert(queue.includes("loadPolicyIntakeDuplicateMatches(admin, rows)"),"Policy I
 assert(queue.includes('status: "Duplicate"'),"Detected duplicates must be removed from Ready for review and shown in the Duplicate bucket");
 assert(queue.includes("policy_type"),"Policy Intake queue payload must include the stored policy type");
 const retryActions=read("app/policy-intakes/retry-actions.ts");
-assert(retryActions.includes("requirePolicyIntakeViewer()"),"Retry-state lookup must be safe for normal Policy Intake viewers such as RM submitters");
+assert(retryActions.includes("requirePolicyIntakeViewer(id)"),"Retry-state lookup must verify ownership of the requested intake, including RM submitters");
 assert(retryActions.includes('hasEffectiveCapability(profile, "review_policy_intakes", "edit")'),"Retry-state lookup must only expose retryability to actual reviewers");
 assert(retryActions.includes("retryable: canReview && isPolicyIntakeOcrRetryable"),"Non-reviewers must never receive a retryable OCR action");
-assert(retryActions.includes("await requirePolicyIntakeReviewer();"),"Actual OCR retry execution must remain reviewer-only");
+assert(retryActions.includes("await requirePolicyIntakeReviewer(id);"),"Actual OCR retry execution must remain reviewer-only");
 assert(retryActions.includes("proposal forms do not use policy OCR")||retryActions.includes("Proposal forms do not use policy OCR"),"OCR retry execution must reject Life/Health proposal forms server-side");
 
 const detail=read("app/policy-intakes/[id]/page.tsx");
@@ -120,7 +120,7 @@ assert(policyOnboardingActions.includes('"Policy copy is required to complete re
 assert(policyOnboardingActions.includes('rpc:finalize_policy_intake_motor_v1'),"Intake conversion must use the transactional finalizer instead of ordinary direct policy booking.");
 assert(actions.includes('.eq("document_type","policy_copy").eq("source_intake_id",id)'),"Legacy Intake completion fallback must verify the official linked policy copy before closing the Intake.");
 assert(!/\.from\("vehicles"\)[\s\S]{0,260}customers\(/.test(policyOnboardingActions),"Policy Onboarding must not use an ambiguous bare vehicles -> customers embed.");
-const copyState=read("app/policy-intakes/policy-copy-state-actions.ts");assert(copyState.includes('requirePolicyIntakeFinalizer()'),"Policy-copy reuse must require Finalize authority server-side");assert(copyState.includes('.from("policy_intake_documents")')&&copyState.includes('.eq("is_current", true)'),"Policy-copy reuse must verify the current Intake document, including replacements");assert(copyState.includes('document.storage_bucket !== intake.storage_bucket || document.storage_path !== intake.storage_path'),"Policy-copy reuse must reject stale Intake document references");
+const copyState=read("app/policy-intakes/policy-copy-state-actions.ts");assert(copyState.includes('requirePolicyIntakeFinalizer(id)'),"Policy-copy reuse must require Finalize authority server-side");assert(copyState.includes('.from("policy_intake_documents")')&&copyState.includes('.eq("is_current", true)'),"Policy-copy reuse must verify the current Intake document, including replacements");assert(copyState.includes('document.storage_bucket !== intake.storage_bucket || document.storage_path !== intake.storage_path'),"Policy-copy reuse must reject stale Intake document references");
 const copyBridge=read("components/policy-intake-copy-reuse-bridge.tsx");assert(copyBridge.includes('searchParams.get("intake_id")'),"Policy-copy reuse must recover Intake context from the authoritative onboarding URL rather than relying only on origin-scoped session state");assert(copyBridge.includes("verifyPolicyIntakeCurrentPolicyCopy(intakeId)"),"Policy-copy reuse must be server-verified before bypassing the upload modal");assert(copyBridge.includes('sessionStorage.setItem(KEY'),"Verified Intake context must restore the existing Policy Save confirmation contract");
 const routeEnhancements=read("components/policy-route-enhancements.tsx");assert(routeEnhancements.includes("PolicyIntakeCopyReuseBridge"),"Policy routes must mount the Intake copy reuse bridge before save confirmation");
 

@@ -3,6 +3,8 @@ import { AppShell } from "@/components/shell";
 import { LifeHealthCaseDetail } from "@/components/life-health-case-detail";
 import { LifeHealthCaseErrorPopupGuard } from "@/components/life-health-case-error-popup-guard";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
+import { requireCapability } from "@/lib/master-data-server";
+import { getOperationsHeadDownlinePolicyScope, operationsHeadPolicyFilter } from "@/lib/policy-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -19,14 +21,20 @@ type ActivityRow = { id:string; action:string; createdAt:string; createdBy:strin
 const documentAction=(type:string)=>type==="policy_copy"?"Policy Doc. Uploaded":type==="proposal_form"?"Proposal Form Uploaded":type==="kyc"?"KYC Uploaded":"Document Uploaded";
 
 export default async function LifeHealthCasePage({ params }: { params: Promise<{ id: string }> }) {
-  await requirePolicyCreator();
+  const profile = await requireCapability("view_policies");
+  if (profile.role !== "operations_head_life") await requirePolicyCreator();
   const admin = createSupabaseAdminClient();
   const { id } = await params;
-  const { data: caseRow, error } = await admin.from("life_health_cases")
+  let request = admin.from("life_health_cases")
     .select("id,case_number,business_line,status,sourcing_date,customer_id,insurance_company_id,product_name,proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode,premium_amount,intermediary_type,intermediary_code,lead_source,intermediary_mobile,rm_name,rm_code,remarks,final_policy_id,converted_at,created_at,created_by,converted_by")
-    .eq("id", id).maybeSingle<CaseRow>();
+    .eq("id", id);
+  if (profile.role === "operations_head_life") {
+    const downlineFilter = operationsHeadPolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id));
+    if (!downlineFilter) notFound();
+    request = request.or(downlineFilter);
+  }
+  const { data: caseRow, error } = await request.maybeSingle<CaseRow>();
   if (error || !caseRow) notFound();
-
   const [customerResult, insurerResult, insurersResult, documentsResult, policyResult] = await Promise.all([
     admin.from("customers").select("id,contact_name,company_name,phone,email,address,address_street").eq("id", caseRow.customer_id).maybeSingle<CustomerRow>(),
     admin.from("insurance_companies").select("id,name").eq("id", caseRow.insurance_company_id).maybeSingle<InsurerRow>(),

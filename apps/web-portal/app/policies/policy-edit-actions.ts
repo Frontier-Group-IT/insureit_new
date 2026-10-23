@@ -71,7 +71,7 @@ function textNumber(value: number | null | undefined) {
 }
 
 export async function updatePolicyOnboarding(policyId: string, payload: PolicyEditPayload): Promise<PolicyEditResult> {
-  const profile = await requirePolicyEditor();
+  const profile = await requirePolicyEditor(policyId);
 
   if (!/^[0-9a-f-]{36}$/i.test(policyId)) return { ok: false, error: "Invalid policy reference." };
   if (!payload.policy.policyNumber.trim()) return { ok: false, error: "Enter the policy number." };
@@ -97,10 +97,20 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
     if (!sourceResolution.ok) return { ok: false, error: sourceResolution.error };
 
     const admin = createSupabaseAdminClient();
+    if (profile.role === "operations_head_life") {
+      const { data: original } = await admin.from("policies")
+        .select("intermediary_code,rm_name").eq("id", policyId)
+        .maybeSingle<{ intermediary_code: string | null; rm_name: string | null }>();
+      if (!original ||
+          original.intermediary_code?.trim() !== sourceResolution.source.intermediaryCode ||
+          (original.rm_name ?? "").trim().toLowerCase() !== payload.policy.rmName.trim().toLowerCase()) {
+        return { ok: false, error: "The assigned intermediary and RM cannot be changed by this role." };
+      }
+    }
     let protectedPayin = payload.payin;
     let protectedPayout = payload.payout;
 
-    if (!canAccessPolicyCommercials(profile)) {
+    if (!canAccessPolicyCommercials(profile, profile.role === "operations_head_life")) {
       const [payinResult, payoutResult] = await Promise.all([
         admin.from("policy_payin_details").select("payout_basis,projected_od_percent,projected_tp_percent,insurer_scheme_amount").eq("policy_id", policyId).maybeSingle<ExistingPayin>(),
         admin.from("policy_intermediary_payouts").select("retention_amount,od_payout_percent,tp_payout_percent,payout_basis,partner_payout_amount,status,payout_date,voucher_number").eq("policy_id", policyId).order("created_at", { ascending: false }).limit(1).maybeSingle<ExistingPayout>(),

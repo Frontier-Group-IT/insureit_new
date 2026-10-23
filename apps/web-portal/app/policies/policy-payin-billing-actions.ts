@@ -48,8 +48,8 @@ function hasBillingEvidence(billNumber: string, billDate: string) {
 }
 
 export async function loadPolicyPayinBilling(policyId: string): Promise<{ ok: true; billing: PolicyPayinBilling } | { ok: false; error: string }> {
-  const profile = await requirePolicyEditor();
-  if (!canAccessPolicyCommercials(profile)) return { ok: false, error: "Commercial details restricted" };
+  const profile = await requirePolicyEditor(policyId);
+  if (!canAccessPolicyCommercials(profile, profile.role === "operations_head_life")) return { ok: false, error: "Commercial details restricted" };
   if (!validPolicyId(policyId)) return { ok: false, error: "Invalid policy reference." };
 
   const admin = createSupabaseAdminClient();
@@ -77,8 +77,8 @@ export async function savePolicyPayinBilling(
   policyId: string,
   billing: Pick<PolicyPayinBilling, "billNumber" | "billedAmount" | "billDate" | "status">,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const profile = await requirePolicyEditor();
-  if (!canAccessPolicyCommercials(profile)) return { ok: true };
+  const profile = await requirePolicyEditor(policyId);
+  if (!canAccessPolicyCommercials(profile, profile.role === "operations_head_life")) return { ok: true };
   if (!validPolicyId(policyId)) return { ok: false, error: "Invalid policy reference." };
 
   const billNumber = billing.billNumber.trim();

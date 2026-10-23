@@ -3,6 +3,9 @@ import { type PolicyRmOption, type PolicySourceOption } from "@/components/polic
 import { AppShell } from "@/components/shell";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
+import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
+import { requireCapability } from "@/lib/master-data-server";
+import { getOperationsHeadDownlinePolicyScope, operationsHeadPolicyFilter } from "@/lib/policy-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -20,8 +23,18 @@ type IntermediaryRow = {
 };
 
 export default async function NewNonMotorPolicyPage() {
-  await requirePolicyCreator();
+  const { profile: requester } = await getAuthenticatedProfile(await getServerAccessToken());
+  const profile = requester?.role === "operations_head_life" ? await requireCapability("view_policies") : await requirePolicyCreator();
   const admin = createSupabaseAdminClient();
+  const scoped = profile.role === "operations_head_life" ? await getOperationsHeadDownlinePolicyScope(profile.id) : null;
+  if (scoped && !scoped.intermediaryCodes.length) return <SetupError />;
+  const scopedFilter = scoped ? operationsHeadPolicyFilter(scoped) : "";
+  const [scopedPolicies, scopedCases] = scopedFilter ? await Promise.all([
+    admin.from("policies").select("customer_id").or(scopedFilter).returns<Array<{ customer_id: string }>>(),
+    admin.from("life_health_cases").select("customer_id").or(scopedFilter).returns<Array<{ customer_id: string }>>(),
+  ]) : [{ data: [] as Array<{ customer_id: string }>, error: null }, { data: [] as Array<{ customer_id: string }>, error: null }];
+  if (scoped && (scopedPolicies.error || scopedCases.error)) return <SetupError />;
+  const allowedCustomers = new Set([...(scopedPolicies.data ?? []), ...(scopedCases.data ?? [])].map(row => row.customer_id));
 
   let salesEmployees: Awaited<ReturnType<typeof loadPospMispAssociates>> = [];
   try {
@@ -39,14 +52,14 @@ export default async function NewNonMotorPolicyPage() {
   if (insurersResult.error || customersResult.error || intermediariesResult.error) return <SetupError />;
 
   const insurers: NonMotorInsurerOption[] = (insurersResult.data ?? []).map((row) => ({ value: row.id, label: row.name }));
-  const customers: NonMotorCustomerOption[] = (customersResult.data ?? []).map((row) => ({ id: row.id, name: row.company_name?.trim() || row.contact_name, contactName: row.contact_name, phone: row.phone, email: row.email ?? "" }));
+  const customers: NonMotorCustomerOption[] = (customersResult.data ?? []).filter(row => !scoped || allowedCustomers.has(row.id)).map((row) => ({ id: row.id, name: row.company_name?.trim() || row.contact_name, contactName: row.contact_name, phone: row.phone, email: row.email ?? "" }));
   const employeeById = new Map(salesEmployees.map((employee) => [employee.id, employee]));
-  const rms: PolicyRmOption[] = salesEmployees.map((employee) => {
+  const rms: PolicyRmOption[] = salesEmployees.filter(employee => !scoped || scoped.employeeIds.includes(employee.id)).map((employee) => {
     const name = employee.full_name?.trim() || "Unnamed Sales Employee";
     return { value: name, label: employee.employee_code ? `${name} - ${employee.employee_code}` : name };
   });
   const sources: PolicySourceOption[] = (intermediariesResult.data ?? [])
-    .filter((item) => item.intermediary_code?.trim() && item.display_name?.trim())
+    .filter((item) => item.intermediary_code?.trim() && item.display_name?.trim() && (!scoped || scoped.intermediaryCodes.includes(item.intermediary_code!.trim())))
     .map((item) => {
       const associate = item.associate_employee_id ? employeeById.get(item.associate_employee_id) : null;
       return {
