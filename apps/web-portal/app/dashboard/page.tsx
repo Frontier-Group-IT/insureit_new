@@ -44,9 +44,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const viewReports = can("view_reports");
 
   // This role sees policy commercials only inside per-policy downline analytics.
-  const commercial = isDownlineHead || canAccessPolicyCommercials(profile);
+  const commercial = canAccessPolicyCommercials(profile);
   const isRelationshipManager = profile?.role === "relationship_manager";
-  const dashboardCommercialAccess = commercial || isRelationshipManager;
+  const dashboardCommercialAccess = isDownlineHead || commercial || isRelationshipManager;
   const dashboardCommercialOperationsAccess = !isRelationshipManager && accountsCapability && commercial;
   const access: DashboardAccess = {
     viewPolicies,
