@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import { getPartnerClaimDetail, type PartnerClaimDetail } from '@/lib/claims';
@@ -13,6 +13,13 @@ import { CLAIM_STAGES, getClaimTrackerState, formatClaimDate } from '@/lib/claim
 
 export default function ClaimTrackerScreen() {
   const router = useRouter();
+  const mainScrollRef = useRef<ScrollView ref={mainScrollRef}>(null);
+  useFocusEffect(useCallback(() => {
+    const reset = () => mainScrollRef.current?.scrollTo({ y: 0, animated: false });
+    reset();
+    const frame = requestAnimationFrame(reset);
+    return () => cancelAnimationFrame(frame);
+  }, []));
   const { id } = useLocalSearchParams<{ id: string }>();
   const [data, setData] = useState<PartnerClaimDetail | null>(null);
   const [loading, setLoading] = useState(true);
