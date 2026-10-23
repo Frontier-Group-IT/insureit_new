@@ -443,7 +443,7 @@ export async function loadExistingVehicleForPolicyOnboarding(vehicleId: string):
 }
 
 export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<PolicyOnboardingResult> {
-  const profile = await requirePolicyCreator();
+  const profile = await requirePolicyCreator(String(payload.policy.intermediaryCode ?? ""));
   const selectedExistingVehicleId = payload.resolution?.selectedExistingVehicleId?.trim() || null;
   if (selectedExistingVehicleId) {
     try {
