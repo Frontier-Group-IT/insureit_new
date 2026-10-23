@@ -36,6 +36,9 @@ export function PartnerScreen({
   scrollProps,
   heroSearch,
   homeMotionScrollY,
+  stickyHeading,
+  stickyControls,
+  stickyStartY = 100,
 }: PropsWithChildren<{
   title: string;
   eyebrow?: string;
@@ -50,6 +53,9 @@ export function PartnerScreen({
   resetScrollOnFocus?: boolean;
   /** Optional native-driven parallax on Home only; does not alter other tabs. */
   homeMotionScrollY?: Animated.Value;
+  stickyHeading?: string;
+  stickyControls?: ReactNode;
+  stickyStartY?: number;
   heroSearch?: {
     value: string;
     onChangeText: (value: string) => void;
@@ -69,6 +75,12 @@ export function PartnerScreen({
   const [homeSearchFocused, setHomeSearchFocused] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const latestScrollY = useRef(0);
+  const [showFixedHeader, setShowFixedHeader] = useState(false);
+  const updateFixedHeader = (y: number) => {
+    if (!stickyHeading && !isHomeHero) return;
+    const next = y >= (isHomeHero ? 145 : stickyStartY);
+    setShowFixedHeader((previous) => previous === next ? previous : next);
+  };
 
   useFocusEffect(useCallback(() => {
     if (!isHomeHero) return undefined;
@@ -122,6 +134,55 @@ export function PartnerScreen({
     setHeroSearchValue('');
   };
 
+  const homeSearchControl = (
+            <View style={styles.homeSearchCard}>
+              <Ionicons name="search-outline" size={22} color="#3E269B" />
+              {!homeSearchFocused && !heroSearchValue ? (
+                <PartnerRotatingSearchPlaceholder
+                  placeholders={['Search customer name...', 'Search vehicle number...', 'Search policy number...']}
+                  containerStyle={{ position: 'absolute', left: 42, right: 74, top: 0, bottom: 0, height: '100%', justifyContent: 'center' }}
+                  textStyle={{ fontSize: 12, color: '#8B95A8' }}
+                />
+              ) : null}
+              <TextInput
+                value={heroSearchValue}
+                onFocus={() => setHomeSearchFocused(true)}
+                onBlur={() => setHomeSearchFocused(false)}
+                onChangeText={setHeroSearchValue}
+                onSubmitEditing={submitHomeSearch}
+                placeholder={!homeSearchFocused && !heroSearchValue ? '' : (heroSearch?.placeholder ?? 'Search customer, vehicle number or policy no.')}
+                placeholderTextColor="#8B95A8"
+                returnKeyType="search"
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={styles.homeSearchInput}
+                accessibilityLabel="Search customer, vehicle number or policy number"
+              />
+              {heroSearchValue ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear search"
+                  hitSlop={8}
+                  onPress={clearHeroSearch}
+                  style={({ pressed }) => [styles.homeSearchClear, pressed && styles.homeSearchPressed]}
+                >
+                  <Ionicons name="close-circle-outline" size={18} color="#A3ABBA" />
+                </Pressable>
+              ) : null}
+              <View style={styles.homeSearchDivider} />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Search"
+                hitSlop={8}
+                onPress={submitHomeSearch}
+                style={({ pressed }) => [styles.homeSearchAction, pressed && styles.homeSearchPressed]}
+              >
+                <Text style={[styles.homeSearchActionText, hasHeroSearchValue && styles.homeSearchActionTextActive]}>Search</Text>
+                <Ionicons name="chevron-forward" size={17} color={hasHeroSearchValue ? '#1765C1' : '#A3ABBA'} />
+              </Pressable>
+            </View>
+  );
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <Animated.ScrollView
@@ -134,17 +195,19 @@ export function PartnerScreen({
               listener: (event) => {
                 const y = (event as { nativeEvent: { contentOffset: { y: number } } }).nativeEvent.contentOffset.y;
                 latestScrollY.current = y;
+                updateFixedHeader(y);
                 scrollProps?.onScroll?.(event as Parameters<NonNullable<ScrollViewProps['onScroll']>>[0]);
               },
             })
           : (event) => {
               latestScrollY.current = event.nativeEvent.contentOffset.y;
+              updateFixedHeader(latestScrollY.current);
               scrollProps?.onScroll?.(event);
             }}
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustContentInsets={false}
         automaticallyAdjustsScrollIndicatorInsets={false}
-        stickyHeaderIndices={isHomeHero && !hideTopBar ? [1] : undefined}
+        stickyHeaderIndices={undefined}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps={scrollProps?.keyboardShouldPersistTaps ?? 'handled'}
@@ -211,52 +274,7 @@ export function PartnerScreen({
         ) : null}
         {!hideTopBar && isHomeHero ? (
           <View style={styles.homeStickySearchWrap}>
-            <View style={styles.homeSearchCard}>
-              <Ionicons name="search-outline" size={22} color="#3E269B" />
-              {!homeSearchFocused && !heroSearchValue ? (
-                <PartnerRotatingSearchPlaceholder
-                  placeholders={['Search customer name...', 'Search vehicle number...', 'Search policy number...']}
-                  containerStyle={{ position: 'absolute', left: 42, right: 74, top: 0, bottom: 0, height: '100%', justifyContent: 'center' }}
-                  textStyle={{ fontSize: 12, color: '#8B95A8' }}
-                />
-              ) : null}
-              <TextInput
-                value={heroSearchValue}
-                onFocus={() => setHomeSearchFocused(true)}
-                onBlur={() => setHomeSearchFocused(false)}
-                onChangeText={setHeroSearchValue}
-                onSubmitEditing={submitHomeSearch}
-                placeholder={!homeSearchFocused && !heroSearchValue ? '' : (heroSearch?.placeholder ?? 'Search customer, vehicle number or policy no.')}
-                placeholderTextColor="#8B95A8"
-                returnKeyType="search"
-                autoCapitalize="none"
-                autoCorrect={false}
-                style={styles.homeSearchInput}
-                accessibilityLabel="Search customer, vehicle number or policy number"
-              />
-              {heroSearchValue ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Clear search"
-                  hitSlop={8}
-                  onPress={clearHeroSearch}
-                  style={({ pressed }) => [styles.homeSearchClear, pressed && styles.homeSearchPressed]}
-                >
-                  <Ionicons name="close-circle-outline" size={18} color="#A3ABBA" />
-                </Pressable>
-              ) : null}
-              <View style={styles.homeSearchDivider} />
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Search"
-                hitSlop={8}
-                onPress={submitHomeSearch}
-                style={({ pressed }) => [styles.homeSearchAction, pressed && styles.homeSearchPressed]}
-              >
-                <Text style={[styles.homeSearchActionText, hasHeroSearchValue && styles.homeSearchActionTextActive]}>Search</Text>
-                <Ionicons name="chevron-forward" size={17} color={hasHeroSearchValue ? '#1765C1' : '#A3ABBA'} />
-              </Pressable>
-            </View>
+            {homeSearchControl}
           </View>
         ) : null}
         {!hideTopBar && !isHomeHero ? (
@@ -282,6 +300,12 @@ export function PartnerScreen({
         ) : null}
         {children}
       </Animated.ScrollView>
+      {showFixedHeader && (isHomeHero || (stickyHeading && stickyControls)) ? (
+        <View style={styles.fixedWhiteHeader} pointerEvents="box-none">
+          <Text numberOfLines={1} style={styles.fixedWhiteHeading}>{isHomeHero ? title : stickyHeading}</Text>
+          {isHomeHero ? homeSearchControl : stickyControls}
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -303,6 +327,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: partnerTheme.spacing.lg,
     paddingBottom: 104,
   },
+  fixedWhiteHeader: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 60, backgroundColor: "#FFFFFF", paddingTop: 12, paddingBottom: 10, paddingHorizontal: 10 },
+  fixedWhiteHeading: { color: "#153F88", fontSize: 15, lineHeight: 18, fontWeight: "800", marginLeft: 8, marginBottom: 12 },
   networkBanner: { marginBottom: partnerTheme.spacing.sm },
 
   homeHeroWrap: {
