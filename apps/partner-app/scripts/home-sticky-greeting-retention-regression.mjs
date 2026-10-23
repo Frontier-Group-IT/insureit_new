@@ -8,20 +8,20 @@ function assert(condition, message) {
 }
 
 assert(
-  home.includes("formatWholeIndianCurrency(rangeData.projected_retention)"),
-  'Projected Retention must be formatted without decimal places.',
+  home.includes("formatIndianCurrency(rangeData.projected_retention)"),
+  'Projected Retention must preserve the original currency formatting.',
 );
 assert(
   screen.includes('stickyHeaderIndices={isHomeHero && !hideTopBar ? [1] : undefined}'),
   'Home sticky header index must remain the greeting/search group.',
 );
 assert(
-  screen.includes('style={styles.homeStickyGreeting}') && screen.includes('{title}'),
-  'Greeting must render inside the sticky home search group.',
+  screen.includes('style={styles.homeHeroGreeting}') && screen.includes('{title}'),
+  'Greeting must render within the hero banner.',
 );
 assert(
-  !screen.includes('style={styles.homeHeroGreeting}'),
-  'Greeting must no longer live inside the scrolling hero.',
+  !screen.includes('style={styles.homeStickyGreeting}'),
+  'Greeting must not be attached to the sticky search group.',
 );
 
-console.log('Partner Home sticky greeting and retention regression checks passed.');
+console.log('Partner Home hero greeting and original retention formatting checks passed.');
