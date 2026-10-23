@@ -34,8 +34,14 @@ export async function requireExternalPolicyCreator() {
   return profile;
 }
 
-export async function requirePolicyEditor() {
+export async function requirePolicyEditor(policyId?: string) {
   const profile = await authenticatedPolicyProfile();
+  if (profile.role === "operations_head_life") {
+    if (!policyId) redirect("/access-denied");
+    const { canAccessPolicy } = await import("@/lib/policy-access-scope");
+    if (!(await canAccessPolicy(profile.id, profile.role, policyId))) redirect("/access-denied");
+    return profile;
+  }
   const permission = await getEffectivePermission(profile.id, profile.role, "view_policies");
   if (accessRank[permission.access] < accessRank.edit) redirect("/access-denied");
   return profile;
