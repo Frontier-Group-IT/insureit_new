@@ -94,7 +94,7 @@ function vehicleCapacity(vehicle: VehicleRow, vehicleClass: string) {
 export default async function EditPolicyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const policyEditor = await requirePolicyEditor(id);
-  const commercialAccess = canAccessPolicyCommercials(policyEditor);
+  const commercialAccess = canAccessPolicyCommercials(policyEditor, policyEditor.role === "operations_head_life");
   const scoped = policyEditor.role === "operations_head_life" ? await getOperationsHeadDownlinePolicyScope(policyEditor.id) : null;
   const admin = createSupabaseAdminClient();
 
