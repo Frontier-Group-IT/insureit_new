@@ -46,7 +46,6 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
   let vehicleHandoff = false;
 
   if (params.intake_id) {
-    if (scoped) return <SetupError message="Policy Intake handoff is not enabled for this role yet." />;
     const intakeDraft = await loadPolicyIntakeOnboardingDraft(params.intake_id);
     if (!intakeDraft.ok) return <SetupError message={intakeDraft.error} />;
     const { registrationMode, ...form } = intakeDraft.draft;
