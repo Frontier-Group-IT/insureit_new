@@ -1,4 +1,5 @@
 import type { OperationsDashboardData } from "@/lib/operations-dashboard";
+import { getOperationsHeadDownlinePolicyScope, operationsHeadPolicyFilter } from "@/lib/policy-access-scope";
 import {
   getAccessibleCustomerIds,
   getAccessibleIntermediaryApplicationIds,
@@ -309,8 +310,14 @@ export async function getDashboardCurrentData(
     access.viewIntermediaries ? getAccessibleIntermediaryApplicationIds(profile.id, profile.role, "view_intermediaries") : Promise.resolve([]),
   ]);
 
-  const policyRequest = access.viewPolicies && policyCustomerIds?.length !== 0
-    ? loadDashboardPolicies(admin, policyCustomerIds)
+  // The Operations Head's portfolio is an RM-or-Partner union. Customer-level scope
+  // is not equivalent: one customer may hold out-of-downline policies.
+  const isDownlineHead = profile.role === "operations_head_life";
+  const downlinePolicyFilter = isDownlineHead
+    ? operationsHeadPolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))
+    : null;
+  const policyRequest = access.viewPolicies && (isDownlineHead ? Boolean(downlinePolicyFilter) : policyCustomerIds?.length !== 0)
+    ? loadDashboardPolicies(admin, isDownlineHead ? null : policyCustomerIds, downlinePolicyFilter)
     : Promise.resolve({ data: [] as PolicyRow[], error: null });
 
   const vehicleRequest = access.viewVehicles && vehicleCustomerIds?.length !== 0
@@ -845,6 +852,7 @@ export async function getDashboardCurrentData(
 async function loadDashboardPolicies(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   customerIds: string[] | null,
+  downlineFilter?: string | null,
 ) {
   const rows: PolicyRow[] = [];
   for (let from = 0; ; from += dashboardPageSize) {
@@ -853,7 +861,8 @@ async function loadDashboardPolicies(
       .select("id,customer_id,vehicle_id,insurance_company_id,policy_type,business_line,business_type,policy_product,status,issuance_date,created_at,end_date,intermediary_type,intermediary_code,lead_source,intermediary_group_id,intermediary_group_name")
       .order("id", { ascending: true })
       .range(from, from + dashboardPageSize - 1);
-    if (customerIds !== null) query = query.in("customer_id", customerIds);
+    if (downlineFilter) query = query.or(downlineFilter);
+    else if (customerIds !== null) query = query.in("customer_id", customerIds);
     const result = await query.returns<PolicyRow[]>();
     if (result.error) return { data: null, error: result.error };
     const page = result.data ?? [];
