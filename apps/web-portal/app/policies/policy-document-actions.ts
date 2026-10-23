@@ -77,7 +77,7 @@ export async function uploadPolicyCopy(
   policyId: string,
   formData: FormData,
 ): Promise<PolicyCopyUploadResult> {
-  const profile = await requirePolicyEditor();
+  const profile = await requirePolicyEditor(policyId);
   const normalizedPolicyId = policyId.trim();
   const file = formData.get("file");
 
