@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { FileText, ClipboardList, Plus } from "lucide-react";
-import { getStaticInsurerLogo } from "@/lib/insurer-logo";
-import { ManufacturerMark } from "../vehicles/customer-vehicles-register";
+import { ClipboardList, Plus } from "lucide-react";
+import { createServerSupabaseClient } from "@/lib/auth-server";
+import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
 import { CustomerClaimsSearch, CustomerClaimsStageFilter } from "./customer-claims-search";
 import { INTERNAL_JOURNEY_STAGES, projectInternalClaim } from "@insureit/claim-journey";
 import { CustomerAccountTabs, EmptyCustomerState } from "@/components/customer-portal/customer-phase1";
@@ -23,6 +23,11 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
   const params = searchParams ? await searchParams : {};
   const { account, accounts } = await resolveCustomerWebScope(params.account);
   const { claims, milestones_by_claim } = await loadCustomerClaimListContext(account.id);
+  // Query only the authorized customer record; missing mobile must not block the register.
+  const db = await createServerSupabaseClient();
+  const { data: customerContact } = await db.from("customers").select("id,mobile").eq("id", account.id).maybeSingle();
+  const customerName = account.customer_name || account.contact_name || "Account holder";
+  const customerMobile = typeof customerContact?.mobile === "string" ? customerContact.mobile : null;
   const type = params.type === "external" ? "external" : "internal";
   const query = (params.q ?? "").trim().toLowerCase();
   const stageFilter = params.stage ?? "";
@@ -42,7 +47,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
     if (external !== (type === "external")) return false;
     if (stageFilter && stage !== stageFilter) return false;
     if (!query) return true;
-    return [claim.vehicle_no, claim.claim_no, claim.insurer_claim_no, claim.policy_no, claim.insurer_name, claim.vehicle_make, claim.vehicle_model, stage]
+    return [customerName, customerMobile, claim.vehicle_no, claim.claim_no, claim.insurer_claim_no, claim.policy_no, claim.insurer_name, claim.vehicle_make, claim.vehicle_model, stage]
       .some((value) => value?.toLowerCase().includes(query));
   });
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -69,7 +74,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
 
       <section className="overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white">
         <div className="flex flex-wrap items-center gap-2 border-b border-[#E6ECF4] p-4 xl:flex-nowrap">
-          <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><ClipboardList className="h-5 w-5 text-[#1769DC]"/>Claims Register</h2>
+          <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><ClipboardList className="h-5 w-5 text-[#1769DC]"/>{type === "internal" ? "Internal claims" : "External claims"} <span className="rounded-full bg-[#E7F0FD] px-2.5 py-1 text-[11px] text-[#205BA3]">{type === "internal" ? internalCount : externalCount} claims</span></h2>
           <CustomerClaimsSearch initialQuery={params.q ?? ""} accountId={account.id} type={type} />
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <CustomerClaimsStageFilter value={stageFilter} stages={stages} accountId={account.id} type={type} query={params.q ?? ""} />
@@ -84,37 +89,45 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
 
         {rows.length ? (
           <div className="w-full overflow-x-auto">
-            <table className="w-full min-w-[740px] border-collapse text-left">
-              <thead className="bg-[#F6F9FD] text-[11px] font-semibold uppercase tracking-wide text-[#6E839F]">
+            <table className="w-full min-w-[1280px] border-collapse text-center text-[12px] text-[#263F67]">
+              <thead className="bg-[#073A7D] text-[12px] font-semibold text-white">
                 <tr>
-                  <th scope="col" className="w-[37%] px-5 py-3">Vehicle</th>
-                  <th scope="col" className="w-[20%] px-4 py-3">Claim number</th>
-                  <th scope="col" className="w-[12%] px-4 py-3 text-center">Insurer</th>
-                  <th scope="col" className="px-4 py-3">Current stage</th>
+                  <th scope="col" className="border-r border-white/15 px-3 py-3 text-left">Customer / Mobile</th>
+                  <th scope="col" className="border-r border-white/15 px-3 py-3">Vehicle No.</th>
+                  <th scope="col" className="border-r border-white/15 px-3 py-3">Vehicle</th>
+                  <th scope="col" className="border-r border-white/15 px-3 py-3">Loss Date</th>
+                  <th scope="col" className="border-r border-white/15 px-3 py-3">Insurer</th>
+                  <th scope="col" className="border-r border-white/15 px-3 py-3">Policy</th>
+                  <th scope="col" className="border-r border-white/15 px-3 py-3">Control No.</th>
+                  <th scope="col" className="border-r border-white/15 px-3 py-3">Claim No.</th>
+                  <th scope="col" className="px-3 py-3">Process</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E7EDF5]">
+              <tbody>
                 {rows.map(({ claim, stage }) => {
-                  const logo = getStaticInsurerLogo(claim.insurer_name);
                   const detailHref = { pathname: `/customer/claims/${claim.id}`, query: { account: account.id } };
-                  return (
-                    <tr key={claim.id} className="group relative text-[#263F67] transition-colors hover:bg-[#F2F7FF] focus-within:bg-[#F2F7FF]">
-                      <td className="px-5 py-3">
-                        <Link href={detailHref} className="flex min-w-0 items-center gap-3 rounded-md outline-offset-2 after:absolute after:inset-0 after:cursor-pointer after:content-[''] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1769DC] focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:outline-[#1769DC]" aria-label={`View claim ${claim.insurer_claim_no || claim.claim_no || "for " + (claim.vehicle_no || "vehicle")}`}>
-                          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#F1F6FC]"><ManufacturerMark make={claim.vehicle_make || ""} /></span>
-                          <span className="min-w-0"><strong className="block truncate text-[13px] text-[#15375F]">{claim.vehicle_no || "—"}</strong><span className="block truncate text-[12px] text-[#607B9F]">{claim.vehicle_model || "—"}</span></span>
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 text-[13px] font-semibold">{claim.insurer_claim_no || claim.claim_no || "—"}</td>
-                      <td className="px-4 py-3 text-center">
-                        {logo ? <img src={logo} alt={claim.insurer_name || "Insurer"} title={claim.insurer_name || "Insurer"} className="mx-auto h-8 w-8 object-contain" /> : <FileText aria-label={claim.insurer_name || "Insurer unavailable"} className="mx-auto h-5 w-5 text-[#607B9F]" />}
-                      </td>
-                      <td className="px-4 py-3">
-                        <strong className="block text-[13px] text-[#263F67]">{stage || "—"}</strong>
-                        <span className="mt-1 inline-flex rounded-full bg-[#F1F6FC] px-2 py-1 text-[11px] font-semibold text-[#315B89]">{claim.current_status || "—"}</span>
-                      </td>
-                    </tr>
-                  );
+                  const lossDate = claim.accident_at ? new Date(claim.accident_at) : null;
+                  return <tr key={claim.id} className="group relative border-b border-[#E1E9F4] transition-colors hover:bg-[#EDF5FF] focus-within:bg-[#EDF5FF] last:border-b-0">
+                    <td className="border-r border-[#E1E9F4] px-3 py-3 text-left">
+                      <Link href={detailHref} aria-label={`Open claim ${claim.claim_no || claim.vehicle_no || ""}`} className="relative z-10 block rounded outline-offset-2 after:absolute after:inset-0 after:z-[-1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1769DC]">
+                        <span className="block font-medium">{customerName}</span>
+                        <span className="block text-[11px] text-[#627691]">{customerMobile || "—"}</span>
+                      </Link>
+                    </td>
+                    <td className="border-r border-[#E1E9F4] px-3 py-3 font-medium">{claim.vehicle_no || "—"}</td>
+                    <td className="border-r border-[#E1E9F4] px-3 py-3">
+                      <div className="flex items-center justify-center gap-2">
+                        <CustomerClaimLogo value={claim.vehicle_make} size={34}/>
+                        <span className="text-left">{claim.vehicle_model || "—"}</span>
+                      </div>
+                    </td>
+                    <td className="border-r border-[#E1E9F4] px-3 py-3">{lossDate && !Number.isNaN(lossDate.getTime()) ? lossDate.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : "—"}</td>
+                    <td className="border-r border-[#E1E9F4] px-3 py-3"><div className="flex justify-center" title={claim.insurer_name || "Insurer not assigned"}><CustomerClaimLogo value={claim.insurer_name} kind="insurer" size={36}/></div></td>
+                    <td className="max-w-[180px] break-words border-r border-[#E1E9F4] px-3 py-3">{claim.policy_no || "—"}</td>
+                    <td className="max-w-[210px] break-words border-r border-[#E1E9F4] px-3 py-3 font-medium">{claim.claim_no || "—"}</td>
+                    <td className="border-r border-[#E1E9F4] px-3 py-3">{claim.insurer_claim_no || "—"}</td>
+                    <td className="px-3 py-3 text-left"><span className="block font-medium">{stage || "—"}</span><span className="block text-[11px] text-[#627691]">{claim.current_status || "—"}</span></td>
+                  </tr>;
                 })}
               </tbody>
             </table>
