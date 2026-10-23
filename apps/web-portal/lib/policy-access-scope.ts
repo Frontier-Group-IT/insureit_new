@@ -63,6 +63,25 @@ export async function canAccessOperationsHeadCase(profileId: string, caseId: str
   return !error && Boolean(data?.id);
 }
 
+/** Verify policy-intake ownership through downline source or a booked downline policy. */
+export async function canAccessOperationsHeadIntake(profileId: string, intakeId: string) {
+  const scope = await getOperationsHeadDownlinePolicyScope(profileId);
+  if (!intakeId || (!scope.employeeIds.length && !scope.intermediaryCodes.length)) return false;
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin.from("policy_intake_requests")
+    .select("lead_source_code,submitted_by_profile_id,final_policy_id")
+    .eq("id", intakeId).maybeSingle<{
+      lead_source_code: string | null;
+      submitted_by_profile_id: string | null;
+      final_policy_id: string | null;
+    }>();
+  if (error || !data) return false;
+  if (data.lead_source_code && scope.intermediaryCodes.includes(data.lead_source_code.trim())) return true;
+  const hierarchy = await getEmployeeAccessScope(profileId, "operations_head_life", "view_policies");
+  if (data.submitted_by_profile_id && hierarchy.profileIds.includes(data.submitted_by_profile_id)) return true;
+  return Boolean(data.final_policy_id && await canAccessPolicy(profileId, "operations_head_life", data.final_policy_id));
+}
+
 export async function getSalesExecutivePolicyIds(profileId: string) {
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
