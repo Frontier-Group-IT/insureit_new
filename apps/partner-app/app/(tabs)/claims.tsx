@@ -96,6 +96,7 @@ export default function ClaimsScreen() {
   // The overlay is transparent: only the existing white search control paints a surface.
   // The banner, metrics, and Add Claim continue to scroll as normal.
   const [showStickyControls, setShowStickyControls] = useState(false);
+  const [heroHeight, setHeroHeight] = useState(98);
   const searchControls = (
     <View style={styles.searchRow}>
       <PartnerSearchField
@@ -151,7 +152,7 @@ export default function ClaimsScreen() {
 
   const header = (
     <View>
-      <View style={styles.hero}>
+      <View style={styles.hero} onLayout={(event) => setHeroHeight(event.nativeEvent.layout.height)}>
         <Image
           source={require('../../assets/partner/banners/claims-header-reference.jpg')}
           resizeMode="cover"
@@ -310,7 +311,9 @@ export default function ClaimsScreen() {
       <FlatList
         scrollEventThrottle={16}
         onScroll={(event) => {
-          const sticky = event.nativeEvent.contentOffset.y >= 98;
+          // Activate when the original heading reaches its pinned vertical position.
+          // Measure the banner so layout changes do not shift the sticky threshold.
+          const sticky = event.nativeEvent.contentOffset.y >= Math.max(0, heroHeight - 48);
           setShowStickyControls((previous) => previous === sticky ? previous : sticky);
           if (sticky && filterMenuOpen) setFilterMenuOpen(false);
         }}
@@ -423,7 +426,7 @@ const styles = StyleSheet.create({
   content: { flexGrow: 1, paddingBottom: 104, backgroundColor: '#FFFFFF' },
   pressed: { opacity: 0.76 },
   stickyOverlay: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 40, backgroundColor: "transparent" },
-  stickyTitle: { marginLeft: 18, marginTop: 5, marginBottom: 13, color: "#153F88", fontSize: 15, lineHeight: 18, fontWeight: "800", letterSpacing: -0.2 },
+  stickyTitle: { marginLeft: 18, marginTop: 20, marginBottom: 31, color: "#153F88", fontSize: 15, lineHeight: 18, fontWeight: "800", letterSpacing: -0.2 },
   stickySearchBody: { paddingHorizontal: 10, backgroundColor: "transparent" },
 
   hero: { height: 98, overflow: 'hidden', backgroundColor: '#0752A2' },

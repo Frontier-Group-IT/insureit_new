@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const source = readFileSync('apps/partner-app/app/(tabs)/claims.tsx', 'utf8');
+assert.match(source, /<SafeAreaView style=\{styles\.safeArea\} edges=\{\['top'\]\}>/);
+assert.match(source, /onLayout=\{\(event\) => setHeroHeight\(event\.nativeEvent\.layout\.height\)\}/);
+assert.match(source, /contentOffset\.y >= Math\.max\(0, heroHeight - 48\)/);
+assert.doesNotMatch(source, /contentOffset\.y >= 98/);
+assert.match(source, /stickyOverlay: \{[^\n]+backgroundColor: "transparent"/);
+assert.match(source, /stickySearchBody: \{[^\n]+backgroundColor: "transparent"/);
+assert.match(source, /<View style=\{styles\.stickyOverlay\} pointerEvents="box-none">/);
+assert.match(source, /<Text style=\{styles\.stickyTitle\}>Claims<\/Text>/);
+assert.match(source, /<View style=\{styles\.stickySearchBody\}>\{searchControls\}<\/View>/);
+assert.match(source, /ListHeaderComponent=\{header\}/);
+assert.match(source, /<View style=\{styles\.summaryRow\}>/);
+assert.match(source, /accessibilityLabel="Add Claim"/);
+console.log('Partner Claims transparent sticky positioning regression passed');
