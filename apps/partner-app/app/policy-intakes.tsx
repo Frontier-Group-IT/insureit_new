@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -26,6 +26,13 @@ const FILTERS: Array<{ key: IntakeFilter; label: string }> = [
 
 export default function PolicyIntakesScreen() {
   const router = useRouter();
+  const mainScrollRef = useRef<ScrollView>(null);
+  useFocusEffect(useCallback(() => {
+    const reset = () => mainScrollRef.current?.scrollTo({ y: 0, animated: false });
+    reset();
+    const frame = requestAnimationFrame(reset);
+    return () => cancelAnimationFrame(frame);
+  }, []));
   const [rows, setRows] = useState<PartnerPolicyIntake[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -124,6 +131,7 @@ export default function PolicyIntakesScreen() {
       </View>
 
       <ScrollView
+        ref={mainScrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
