@@ -72,3 +72,21 @@ assert.match(brokerSpot,/\.eq\("customer_id",authorized\.id\)/,"Broker draft upd
 assert.match(brokerSpot,/\.eq\("current_status","Draft"\)/,"Broker draft update must not change progressed claims");
 assert.match(brokerSpot,/Customer Spot Intimation save failed unexpectedly/,"Unexpected save failures must return an inline error");
 console.log("Customer broker Spot Intimation guard and failure-handling regression passed.");
+
+const compactDocument=fs.readFileSync("components/customer-portal/customer-claim-compact-document.tsx","utf8");
+const compactOpen=fs.readFileSync("app/customer/claim-documents/[id]/open/route.ts","utf8");
+const compactStage3=fs.readFileSync("components/customer-portal/customer-claim-document-groups.tsx","utf8");
+const compactStage1=fs.readFileSync("components/customer-portal/customer-claim-evidence-workspace.tsx","utf8");
+const compactSaveForm=fs.readFileSync("app/customer/(protected)/spot-intimation/spot-intimation-save-form.tsx","utf8");
+assert.match(compactDocument,/ordered\[0\]/,"Show latest document by default");
+assert.match(compactDocument,/expanded\?ordered\.slice\(1\)/,"Collapse extra files by default");
+assert.match(compactDocument,/form\.current\?\.requestSubmit\(\)/,"Upload icon must actually submit selected file");
+assert.match(compactDocument,/target="_blank"/,"Click document to open it");
+assert.match(compactOpen,/loadCustomerClaimDetail\(account\.id,claimId\)/,"Document open must authorize claim");
+assert.match(compactOpen,/\.eq\("customer_id",account\.id\)/,"Document open must scope to customer");
+assert.match(compactStage1,/CustomerClaimCompactDocument/,"Use shared compact files in Stage 1");
+assert.match(compactStage3,/CustomerClaimCompactDocument/,"Use shared compact files in Stage 3");
+assert.match(spotLayout,/xl:grid-cols-7/,"Incident details must be one desktop row");
+assert.doesNotMatch(spotLayout,/Your details will be securely submitted/,"Remove footer helper");
+assert.match(compactSaveForm,/rounded-2xl border border-\[#DBE4F0\] bg-white p-3/,"Cancel and Save must be inside an action section");
+console.log("Compact stage 1 and 3 document and incident layout regression passed.");

@@ -111,16 +111,16 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EDF4FF] text-[#2860AD]"><CalendarDays className="h-5 w-5"/></span>
         <h2 className="text-[17px] font-bold text-[#112B51]">Incident Details</h2>
       </div>
-      <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
+      <div className="grid gap-x-3 gap-y-3 sm:grid-cols-2 xl:grid-cols-7">
         <label className="text-[12px] font-semibold text-[#243C5F]"><span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-[#7389A9]"/>Accident date *</span><input name="accidentDate" type="date" required className={fieldClass}/></label>
         <label className="text-[12px] font-semibold text-[#243C5F]"><span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5 text-[#7389A9]"/>Accident time *</span><input name="accidentTime" type="time" required className={fieldClass}/></label>
         <label className="text-[12px] font-semibold text-[#243C5F]"><span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-[#7389A9]"/>Spot Intimation date *</span><input name="spotDate" type="date" required className={fieldClass}/></label>
         <label className="text-[12px] font-semibold text-[#243C5F]"><span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5 text-[#7389A9]"/>Spot Intimation time *</span><input name="spotTime" type="time" required className={fieldClass}/></label>
         <label className="text-[12px] font-semibold text-[#243C5F]"><span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5 text-[#7389A9]"/>Driver name {external?"(optional)":"*"}</span><input name="driver" required={!external} maxLength={120} placeholder="Enter driver name" autoComplete="name" className={fieldClass}/></label>
         <label className="text-[12px] font-semibold text-[#243C5F]"><span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5 text-[#7389A9]"/>Driver mobile {external?"(optional)":"*"}</span><input name="phone" required={!external} type="tel" maxLength={15} inputMode="tel" placeholder="Enter mobile number" autoComplete="tel" className={fieldClass}/></label>
-        <label className="text-[12px] font-semibold text-[#243C5F] sm:col-span-2"><span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-[#7389A9]"/>Accident location {external?"(optional)":"*"}</span><textarea name="location" required={!external} maxLength={500} rows={2} placeholder="Enter accident location" className="mt-1.5 block min-h-[66px] w-full resize-y rounded-lg border border-[#D7E2F0] bg-white px-3 py-2 text-[13px] font-medium text-[#193659] outline-none transition focus-visible:border-[#2D7FF0] focus-visible:ring-2 focus-visible:ring-[#DCEBFF]"/></label>
+        <label className="text-[12px] font-semibold text-[#243C5F] sm:col-span-2 xl:col-span-1"><span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-[#7389A9]"/>Accident location {external?"(optional)":"*"}</span><textarea name="location" required={!external} maxLength={500} rows={1} placeholder="Enter accident location" className="mt-1.5 block min-h-10 w-full resize-y rounded-lg border border-[#D7E2F0] bg-white px-3 py-2 text-[13px] font-medium text-[#193659] outline-none transition focus-visible:border-[#2D7FF0] focus-visible:ring-2 focus-visible:ring-[#DCEBFF]"/></label>
       </div>
     </SpotIntimationSaveForm>
-    <p className="text-[11px] text-[#77869B]">Your details will be securely submitted for claim processing. Claim status and next steps are available in Claim Details.</p>
+
   </div>;
 }
