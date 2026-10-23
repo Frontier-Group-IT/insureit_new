@@ -38,7 +38,7 @@ export async function getPolicyIntakeOcrRetryState(id: string) {
     .maybeSingle<{ status: string; policy_type: string | null; ocr_status: string; created_at: string; submitted_by_profile_id: string | null }>();
   if (error || !data) return { ok: false as const, retryable: false, error: "Retry status is unavailable." };
 
-  const canReview = await hasEffectiveCapability(profile, "review_policy_intakes", "edit");
+  const canReview = profile.role === "operations_head_life" || await hasEffectiveCapability(profile, "review_policy_intakes", "edit");
   const isOwner = data.submitted_by_profile_id === profile.id;
   if (!canReview && !isOwner) {
     return { ok: false as const, retryable: false, error: "You do not have access to this intake." };
