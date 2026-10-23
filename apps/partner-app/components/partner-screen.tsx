@@ -207,15 +207,15 @@ export function PartnerScreen({
                 </View>
               </View>
 
+              <Text numberOfLines={1} style={styles.homeHeroGreeting}>
+                {title}
+              </Text>
             </Animated.View>
 
           </View>
         ) : null}
         {!hideTopBar && isHomeHero ? (
           <View style={styles.homeStickySearchWrap}>
-            <Text numberOfLines={1} style={styles.homeStickyGreeting}>
-              {title}
-            </Text>
             <View style={styles.homeSearchCard}>
               <Ionicons name="search-outline" size={22} color="#3E269B" />
               {!homeSearchFocused && !heroSearchValue ? (
@@ -316,35 +316,14 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   homeStickySearchWrap: {
-    marginTop: -58,
+    marginTop: -26,
     marginBottom: 9,
     marginHorizontal: -partnerTheme.spacing.lg,
-    minHeight: 93,
-    paddingTop: 4,
+    height: 61,
     paddingHorizontal: 10,
-    paddingBottom: 7,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: "#F5F7FB",
     zIndex: 10,
     elevation: 5,
-  },
-  homeStickyGreeting: {
-    alignSelf: 'flex-start',
-    maxWidth: '82%',
-    marginLeft: 5,
-    marginBottom: 5,
-    overflow: 'hidden',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 2,
-    backgroundColor: 'rgba(3, 41, 88, 0.46)',
-    color: '#FFFFFF',
-    fontSize: 11.5,
-    lineHeight: 15,
-    fontWeight: '700',
-    letterSpacing: -0.02,
-    textShadowColor: 'rgba(0,0,0,0.18)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
   },
   homeHero: {
     height: 174,
@@ -460,6 +439,26 @@ const styles = StyleSheet.create({
   homeHeroAvatarText: {
     color: partnerTheme.colors.brandStrong,
     ...partnerTheme.typography.label,
+  },
+  homeHeroGreeting: {
+    zIndex: 3,
+    position: 'absolute',
+    left: 15,
+    bottom: 39,
+    maxWidth: '80%',
+    overflow: 'hidden',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 2,
+    backgroundColor: 'rgba(3, 41, 88, 0.46)',
+    color: '#FFFFFF',
+    fontSize: 11.5,
+    lineHeight: 15,
+    fontWeight: '700',
+    letterSpacing: -0.02,
+    textShadowColor: 'rgba(0,0,0,0.18)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
   },
   homeSearchCard: {
     height: 52,
