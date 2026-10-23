@@ -55,6 +55,14 @@ export async function canAccessPolicy(
   }
 
   const rmEmployeeIds = await getAccessiblePolicyRmEmployeeIds(profileId, role, capability);
+  if (role === "operations_head_life") {
+    if (!rmEmployeeIds?.length) return false;
+    const admin = createSupabaseAdminClient();
+    const { data, error } = await admin.from("policies")
+      .select("id").eq("id", policyId).in("rm_employee_id", rmEmployeeIds)
+      .in("business_line", ["Life", "Health"]).maybeSingle<{ id: string }>();
+    return !error && Boolean(data?.id);
+  }
   if (rmEmployeeIds === null) return true;
   if (!rmEmployeeIds.length) return false;
 
