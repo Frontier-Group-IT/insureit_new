@@ -71,7 +71,7 @@ function textNumber(value: number | null | undefined) {
 }
 
 export async function updatePolicyOnboarding(policyId: string, payload: PolicyEditPayload): Promise<PolicyEditResult> {
-  const profile = await requirePolicyEditor();
+  const profile = await requirePolicyEditor(policyId);
 
   if (!/^[0-9a-f-]{36}$/i.test(policyId)) return { ok: false, error: "Invalid policy reference." };
   if (!payload.policy.policyNumber.trim()) return { ok: false, error: "Enter the policy number." };
