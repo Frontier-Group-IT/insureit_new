@@ -38,9 +38,9 @@ export default async function LifeHealthCasesPage({ searchParams }: { searchPara
   if (error) return <AppShell title="Life / Health Cases"><div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-[10px] text-red-700">Life / Health cases could not be loaded.</div></AppShell>;
   const allRows = rows ?? [];
   const isLifeHead = profile.role === "operations_head_life";
-  const pendingCount = (isLifeHead ? null : caseSummary?.pending) ?? allRows.filter((row) => !row.final_policy_id).length;
-  const issuedCount = (isLifeHead ? null : caseSummary?.issued) ?? allRows.filter((row) => Boolean(row.final_policy_id)).length;
-  const allCount = (isLifeHead ? null : caseSummary?.all) ?? allRows.length;
+  const pendingCount = caseSummary?.pending ?? allRows.filter((row) => !row.final_policy_id).length;
+  const issuedCount = caseSummary?.issued ?? allRows.filter((row) => Boolean(row.final_policy_id)).length;
+  const allCount = caseSummary?.all ?? allRows.length;
   const visibleRows = filter === "all" ? allRows : allRows.filter((row) => filter === "issued" ? Boolean(row.final_policy_id) : !row.final_policy_id);
   const customerIds = Array.from(new Set(allRows.map((row) => row.customer_id)));
   const insurerIds = Array.from(new Set(allRows.map((row) => row.insurance_company_id)));
