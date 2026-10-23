@@ -8,8 +8,8 @@ function assert(condition, message) {
 }
 
 assert(
-  home.includes("formatIndianCurrency(rangeData.projected_retention)"),
-  'Projected Retention must preserve the original currency formatting.',
+  home.includes("formatWholeIndianCurrency(rangeData.projected_retention)"),
+  'Projected Retention must display whole rupees without decimals.',
 );
 assert(
   screen.includes('stickyHeaderIndices={isHomeHero && !hideTopBar ? [1] : undefined}'),
