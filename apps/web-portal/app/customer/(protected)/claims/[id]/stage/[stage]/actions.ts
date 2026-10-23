@@ -89,6 +89,6 @@ export async function saveCustomerExternalStage(form:FormData) {
   }
   const next=INTERNAL_JOURNEY_STAGES[index+1];
   redirect(next
-    ? "/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(next.key)+"?account="+encodeURIComponent(account.id)
+    ? "/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(next.key)+"?account="+encodeURIComponent(account.id)+"&mode=edit"
     : "/customer/claims/"+encodeURIComponent(claim.id)+"?account="+encodeURIComponent(account.id));
 }
