@@ -28,7 +28,7 @@ export default async function CustomerClaimDetailPage({
           <ArrowLeft className="h-4 w-4" /> Back to Claims
         </Link>
         <div className="flex flex-wrap items-center gap-2">
-          <a href={documentUrl} target="_blank" rel="noopener noreferrer"
+          <a href={documentUrl + "&preview=1"} target="_blank" rel="noopener noreferrer"
             className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#B9CBE2] bg-white px-4 text-[12px] font-semibold text-[#174A87]">
             <ExternalLink className="h-4 w-4" /> Open PDF
           </a>
@@ -55,7 +55,7 @@ export default async function CustomerClaimDetailPage({
         </header>
         <div className="bg-[#EEF2F8] p-3 sm:p-6">
           <div className="mx-auto max-w-[850px] overflow-hidden rounded-lg border border-[#D7DFEA] bg-white shadow-[0_12px_40px_rgba(15,35,65,.11)]">
-            <iframe title="Claim Form PDF Preview" src={documentUrl + "#toolbar=0&navpanes=0"}
+            <iframe title="Claim Form PDF Preview" src={documentUrl + "&preview=1#toolbar=0&navpanes=0"}
               className="block h-[76vh] min-h-[570px] w-full border-0" />
           </div>
           <p className="mt-3 text-center text-[11px] text-[#64748B]">
