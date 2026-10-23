@@ -36,7 +36,7 @@ export default async function CustomerClaimDetailPage({
             className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#B9CBE2] bg-white px-4 text-[12px] font-semibold text-[#174A87]">
             <FileDown className="h-4 w-4" /> Download Claim Form
           </a>
-          <Link href={{ pathname: `/customer/claims/${claim.id}/stage/spot_intimation`, query: { account: account.id, mode: "edit" } }}
+          <Link href={{ pathname: `/customer/claims/${claim.id}/stage/spot_intimation`, query: { account: account.id, mode:"edit" } }}
             className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#0B3884] px-4 text-[12px] font-semibold text-white">
             <Pencil className="h-4 w-4" /> Edit Claim
           </Link>
