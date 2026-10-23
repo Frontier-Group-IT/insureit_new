@@ -1,5 +1,5 @@
 import "server-only";
-import { getAccessiblePolicyRmEmployeeIds } from "@/lib/policy-access-scope";
+import { getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadPolicyFilter } from "@/lib/policy-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type ProfileLike = { id: string; role?: string | null };
@@ -41,7 +41,11 @@ export async function getDashboardBusinessData(profile: ProfileLike | null | und
   const empty = emptyBusiness(filters);
   if (!profile?.id) return empty;
 
-  const rmEmployeeIds = await getAccessiblePolicyRmEmployeeIds(profile.id, profile.role, "view_policies");
+  const downlineFilter = profile.role === "operations_head_life"
+    ? operationsHeadPolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))
+    : null;
+  if (profile.role === "operations_head_life" && !downlineFilter) return empty;
+  const rmEmployeeIds = profile.role === "operations_head_life" ? null : await getAccessiblePolicyRmEmployeeIds(profile.id, profile.role, "view_policies");
   if (rmEmployeeIds !== null && rmEmployeeIds.length === 0) return empty;
 
   const admin = createSupabaseAdminClient();
@@ -57,7 +61,8 @@ export async function getDashboardBusinessData(profile: ProfileLike | null | und
     .from("policies")
     .select(select)
     .or(`and(issuance_date.gte.${filters.fromDate},issuance_date.lte.${filters.toDate}),and(issuance_date.is.null,created_at.gte.${fromCreatedAt},created_at.lt.${toCreatedAtExclusive})`);
-  if (rmEmployeeIds !== null) policyQuery = policyQuery.in("rm_employee_id", rmEmployeeIds);
+  if (downlineFilter) policyQuery = policyQuery.or(downlineFilter);
+  else if (rmEmployeeIds !== null) policyQuery = policyQuery.in("rm_employee_id", rmEmployeeIds);
 
   const policyResult = await policyQuery.returns<PolicyRow[]>();
   if (policyResult.error) return { ...empty, warnings: ["Filtered business production could not be refreshed."] };

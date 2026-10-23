@@ -78,4 +78,18 @@ assert.ok(read("app/policies/policy-edit-actions.ts").includes("The assigned int
 assert.ok(read("app/policies/non-motor-policy-actions.ts").includes("Changing the linked intermediary or RM is not permitted"));
 const commercial=read("lib/policy-commercial-access.ts");
 assert.ok(commercial.includes('profile?.role === "operations_head_life") return scopedRecordAuthorized'));
+const scopedDashboard=read("app/dashboard/page.tsx");
+assert.ok(scopedDashboard.includes('isDownlineHead'));
+assert.ok(scopedDashboard.includes('access.viewVehicles = false'));
+assert.ok(scopedDashboard.includes('access.viewClaims = false'));
+assert.ok(scopedDashboard.includes('access.viewPolicyIntakes = false'));
+assert.ok(scopedDashboard.includes('!isDownlineHead && dashboardCommercialOperationsAccess'));
+const dashboardPolicies=read("app/dashboard-v2/dashboard-data.ts");
+assert.ok(dashboardPolicies.includes('operationsHeadPolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))'));
+assert.ok(dashboardPolicies.includes('query = query.or(downlineFilter)'));
+const dashboardBusiness=read("app/dashboard-v2/dashboard-business.ts");
+assert.ok(dashboardBusiness.includes('policyQuery = policyQuery.or(downlineFilter)'));
+assert.ok(nav.includes('href:"/dashboard",label:"Dashboard"'));
+assert.ok(!nav.includes('href:"/policies/new/non-motor",label:"Add Non-Motor Policy"'));
+assert.ok(middleware.includes('const operationsHeadLifeHome = "/dashboard"'));
 console.log("Operations Head Life provisional isolation contract passed.");
