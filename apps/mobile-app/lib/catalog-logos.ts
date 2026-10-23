@@ -132,7 +132,11 @@ const vehicleBrandLogos: Record<string, ImageSourcePropType> = {
   yamaha: require('../assets/catalog/vehicle-brands/yamaha.png'),
 };
 
-const vehicleBrandAliases: Record<string, keyof typeof vehicleBrandLogos> = {
+const vehicleBrandAliases: Record<string, string> = {
+  mahindra: 'mahindra',
+  mahindraandmahindra: 'mahindra',
+  mahindraandmahindralimited: 'mahindra',
+  mahindramahindra: 'mahindra',
   bajaj: 'bajajauto',
   bharatbenzindia: 'bharatbenz',
   bharatbenzdcm: 'bharatbenz',
@@ -202,4 +206,16 @@ export function getInsurerLogoSource(insurerName: string | null | undefined) {
 
 export function getVehicleBrandLogoSource(make: string | null | undefined) {
   return resolveLogo(make, vehicleBrandLogos, vehicleBrandAliases);
+}
+
+
+const vehicleBrandSvgAssets: Record<string, string> = {
+  mahindra: '/assets/vehicle-brands/mahindra.svg',
+};
+
+export function getVehicleBrandSvgAssetPath(make: string | null | undefined) {
+  const key = normalizeLogoKey(make);
+  if (!key) return null;
+  const alias = vehicleBrandAliases[key] ?? key;
+  return vehicleBrandSvgAssets[alias] ?? null;
 }

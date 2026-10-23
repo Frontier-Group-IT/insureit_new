@@ -2,12 +2,13 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
+import { SvgUri } from 'react-native-svg';
 
 import { AppSearchBar } from '@/components/design-system';
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { getOperationalCustomerContexts } from '@/lib/customer-context';
-import { getInsurerLogoSource, getVehicleBrandLogoSource } from '@/lib/catalog-logos';
+import { getInsurerLogoSource, getVehicleBrandLogoSource, getVehicleBrandSvgAssetPath } from '@/lib/catalog-logos';
 import { supabase } from '@/lib/supabase';
 import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
 import { palette } from '@/lib/theme';
@@ -294,6 +295,8 @@ export default function PoliciesScreen() {
         const manufacturerLogo = getVehicleBrandLogoSource(vehicle?.make);
         const insurerLogo = getInsurerLogoSource(company?.name);
         const manufacturerLogoUrl = masterLogoUrl('manufacturer', vehicle?.make, logoRevision);
+        const manufacturerSvgPath = getVehicleBrandSvgAssetPath(vehicle?.make);
+        const manufacturerSvgUrl = manufacturerSvgPath ? `${LOGO_ORIGIN}${manufacturerSvgPath}` : null;
         const insurerLogoUrl = masterLogoUrl('insurer', company?.name, logoRevision);
         const lifeHealthKind = getLifeHealthKind(policy);
 
@@ -351,6 +354,7 @@ export default function PoliciesScreen() {
                 <PolicySummaryColumn
                   icon={manufacturerLogo}
                   remoteLogoUrl={manufacturerLogoUrl}
+                  remoteSvgUrl={manufacturerSvgUrl}
                   fallbackIcon="car-side"
                   primaryValue={vehicle?.vehicle_no ?? 'Vehicle unavailable'}
                   secondaryValue={vehicle?.make ?? '-'}
@@ -478,6 +482,7 @@ function LifeHealthMetric({
 function PolicySummaryColumn({
   icon,
   remoteLogoUrl,
+  remoteSvgUrl,
   fallbackIcon,
   primaryValue,
   secondaryValue,
@@ -487,6 +492,7 @@ function PolicySummaryColumn({
 }: {
   icon: ImageSourcePropType | null;
   remoteLogoUrl?: string | null;
+  remoteSvgUrl?: string | null;
   fallbackIcon: 'car-side' | 'shield-outline';
   primaryValue: string;
   secondaryValue: string;
@@ -500,14 +506,21 @@ function PolicySummaryColumn({
   useEffect(() => {
     setRemoteFailed(false);
     setImageFailed(false);
-  }, [remoteLogoUrl, icon]);
+  }, [remoteLogoUrl, remoteSvgUrl, icon]);
 
   const visibleSource = !remoteFailed && remoteLogoUrl ? { uri: remoteLogoUrl } : icon;
 
   return (
     <View style={styles.summaryColumn}>
       <View style={styles.catalogIconWrap}>
-        {visibleSource && !imageFailed ? (
+        {remoteSvgUrl && !imageFailed ? (
+          <SvgUri
+            uri={remoteSvgUrl}
+            width="100%"
+            height="100%"
+            onError={() => setImageFailed(true)}
+          />
+        ) : visibleSource && !imageFailed ? (
           <Image
             source={visibleSource}
             resizeMode="contain"
