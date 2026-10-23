@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getPartnerClaimDetail, type PartnerClaimDetail } from '@/lib/claims';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
@@ -11,6 +11,13 @@ import { CLAIM_STAGES, formatClaimDate, getClaimTrackerState, getStageHistory, t
 
 export default function PartnerClaimStageScreen() {
   const router = useRouter();
+  const mainScrollRef = useRef<ScrollView>(null);
+  useFocusEffect(useCallback(() => {
+    const reset = () => mainScrollRef.current?.scrollTo({ y: 0, animated: false });
+    reset();
+    const frame = requestAnimationFrame(reset);
+    return () => cancelAnimationFrame(frame);
+  }, []));
   const params = useLocalSearchParams<{ id?: string; key?: string }>();
   const id = typeof params.id === 'string' ? params.id : '';
   const key = typeof params.key === 'string' ? params.key : '';

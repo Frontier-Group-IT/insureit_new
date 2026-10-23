@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import {
   BackHandler,
   FlatList,
@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
@@ -48,6 +48,13 @@ const POLICY_TYPE_OPTIONS: Array<{ value: PartnerPolicyType; label: string; icon
 
 export default function NewPolicyIntakeScreen() {
   const router = useRouter();
+  const mainScrollRef = useRef<ScrollView>(null);
+  useFocusEffect(useCallback(() => {
+    const reset = () => mainScrollRef.current?.scrollTo({ y: 0, animated: false });
+    reset();
+    const frame = requestAnimationFrame(reset);
+    return () => cancelAnimationFrame(frame);
+  }, []));
   const { isOffline } = usePartnerNetwork();
   const [sources, setSources] = useState<PartnerPolicyIntakeSource[]>([]);
   const [sourceId, setSourceId] = useState('');
@@ -359,6 +366,7 @@ export default function NewPolicyIntakeScreen() {
       {confirmDialog}
       <ReferenceHeader />
       <ScrollView
+        ref={mainScrollRef}
         contentContainerStyle={styles.detailsContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"

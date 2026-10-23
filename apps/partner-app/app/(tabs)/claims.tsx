@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   Image,
@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
@@ -44,6 +44,13 @@ const CLAIM_FILTER_OPTIONS: Array<{ value: PartnerClaimState; label: string }> =
 
 export default function ClaimsScreen() {
   const router = useRouter();
+  const verticalListRef = useRef<FlatList>(null);
+  useFocusEffect(useCallback(() => {
+    const reset = () => verticalListRef.current?.scrollToOffset({ offset: 0, animated: false });
+    reset();
+    const frame = requestAnimationFrame(reset);
+    return () => cancelAnimationFrame(frame);
+  }, []));
   const { cacheScopeKey, context, avatarUri } = usePartnerSession();
   const [state, setState] = useState<PartnerClaimState>(savedClaimState);
   const [query, setQuery] = useState(savedClaimQuery);
@@ -310,6 +317,7 @@ export default function ClaimsScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <FlatList
+        ref={verticalListRef}
         scrollEventThrottle={16}
         onScroll={(event) => {
           // Activate when the original heading reaches its pinned vertical position.

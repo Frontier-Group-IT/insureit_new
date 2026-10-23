@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CLAIM_STAGES } from '@/lib/claim-tracker';
 
@@ -17,6 +17,13 @@ const DOCUMENTS = [
 type DraftField = 'customer' | 'vehicle' | 'policy' | 'insurer' | 'accidentDate' | 'accidentTime' | 'intimationDate' | 'intimationTime' | 'driverName' | 'driverNumber' | 'location';
 export default function PartnerNewClaimScreen() {
   const router = useRouter();
+  const mainScrollRef = useRef<ScrollView>(null);
+  useFocusEffect(useCallback(() => {
+    const reset = () => mainScrollRef.current?.scrollTo({ y: 0, animated: false });
+    reset();
+    const frame = requestAnimationFrame(reset);
+    return () => cancelAnimationFrame(frame);
+  }, []));
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState<Record<DraftField,string>>({
     customer:'',vehicle:'',policy:'',insurer:'',accidentDate:'',accidentTime:'',
