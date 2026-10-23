@@ -27,6 +27,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     minimum: "view" | "edit" | "approve" = "view",
   ) => accessRank[permissionMap[capability] ?? "none"] >= accessRank[minimum];
 
+  const isDownlineHead = profile?.role === "operations_head_life";
   const viewPolicies = can("view_policies");
   const editPolicies = can("view_policies", "edit");
   const createPolicies = can("create_policies", "edit");
@@ -42,7 +43,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const accountsCapability = can("view_accounts");
   const viewReports = can("view_reports");
 
-  const commercial = canAccessPolicyCommercials(profile);
+  // This role sees policy commercials only inside per-policy downline analytics.
+  const commercial = isDownlineHead || canAccessPolicyCommercials(profile);
   const isRelationshipManager = profile?.role === "relationship_manager";
   const dashboardCommercialAccess = commercial || isRelationshipManager;
   const dashboardCommercialOperationsAccess = !isRelationshipManager && accountsCapability && commercial;
@@ -61,13 +63,29 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     commercial,
   };
 
-  const proposalSummaryRequest = viewPolicies
+  if (isDownlineHead) {
+    // Keep the default dashboard component and arrangement, but suppress
+    // unrelated fleet/claims/tasks/accounts modules and global summaries.
+    access.viewVehicles = false;
+    access.viewClaims = false;
+    access.viewIntermediaries = false;
+    access.viewPolicyIntakes = false;
+    access.reviewPolicyIntakes = false;
+    access.viewCustomers = false;
+    access.viewTasks = false;
+    access.viewKyc = false;
+    access.viewAccounts = false;
+    access.viewReports = false;
+    access.commercial = true;
+  }
+
+  const proposalSummaryRequest = viewPolicies && !isDownlineHead
     ? loadLifeHealthCaseSummary(createSupabaseAdminClient())
     : Promise.resolve(null);
 
   const [data, business, proposalSummary] = await Promise.all([
     getDashboardCurrentData(profile, access, base),
-    getDashboardBusinessData(profile, query, dashboardCommercialAccess, dashboardCommercialOperationsAccess),
+    getDashboardBusinessData(profile, query, isDownlineHead || dashboardCommercialAccess, !isDownlineHead && dashboardCommercialOperationsAccess),
     proposalSummaryRequest,
   ]);
 
@@ -77,7 +95,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         data={data}
         access={access}
         business={business}
-        canCreatePolicy={createPolicies || editPolicies}
+        canCreatePolicy={isDownlineHead || createPolicies || editPolicies}
         canCreatePolicyIntake={createPolicyIntakes}
         showRmPerformanceButton={viewReports && !isRelationshipManager}
       />
