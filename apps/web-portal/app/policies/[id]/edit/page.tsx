@@ -24,7 +24,7 @@ type PayoutRow = { commercial_status:string|null; payout_basis:string|null; part
 export default async function EditPolicyPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const policyEditor = await requirePolicyEditor(resolvedParams.id);
-  const commercialAccess = canAccessPolicyCommercials(policyEditor);
+  const commercialAccess = canAccessPolicyCommercials(policyEditor, policyEditor.role === "operations_head_life");
   const scope = policyEditor.role === "operations_head_life" ? await getOperationsHeadDownlinePolicyScope(policyEditor.id) : null;
   const admin = createSupabaseAdminClient();
   const { data: policy, error } = await admin.from("policies").select("id,business_line,customer_id,insurance_company_id,issuance_date,start_date,end_date,premium_amount,insured_declared_value,remarks,policy_no,rm_name,rm_employee_id,created_by,created_at,updated_at").eq("id", resolvedParams.id).maybeSingle<PolicyRouteRow>();
