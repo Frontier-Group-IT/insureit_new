@@ -120,7 +120,7 @@ export async function deleteIssuedLifeHealthPolicyCopy(formData: FormData): Prom
 export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<LifeHealthIssuedPolicyEditResult> {
   const policyId = clean(formData.get("policyId"));
   const profile = await requirePolicyEditor(policyId);
-  const commercialAccess = canAccessPolicyCommercials(profile);
+  const commercialAccess = canAccessPolicyCommercials(profile, profile.role === "operations_head_life");
   const admin = createSupabaseAdminClient();
   const caseId = clean(formData.get("caseId"));
   const businessLine = clean(formData.get("businessLine"));
