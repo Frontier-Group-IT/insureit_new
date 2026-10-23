@@ -60,7 +60,7 @@ assert(queue.includes("loadPolicyIntakeDuplicateMatches(admin, rows)"),"Policy I
 assert(queue.includes('status: "Duplicate"'),"Detected duplicates must be removed from Ready for review and shown in the Duplicate bucket");
 assert(queue.includes("policy_type"),"Policy Intake queue payload must include the stored policy type");
 const retryActions=read("app/policy-intakes/retry-actions.ts");
-assert(retryActions.includes("requirePolicyIntakeViewer()"),"Retry-state lookup must be safe for normal Policy Intake viewers such as RM submitters");
+assert(retryActions.includes("requirePolicyIntakeViewer(id)"),"Retry-state lookup must verify ownership of the requested intake, including RM submitters");
 assert(retryActions.includes('hasEffectiveCapability(profile, "review_policy_intakes", "edit")'),"Retry-state lookup must only expose retryability to actual reviewers");
 assert(retryActions.includes("retryable: canReview && isPolicyIntakeOcrRetryable"),"Non-reviewers must never receive a retryable OCR action");
 assert(retryActions.includes("await requirePolicyIntakeReviewer();"),"Actual OCR retry execution must remain reviewer-only");
