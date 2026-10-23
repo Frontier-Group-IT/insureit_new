@@ -29,7 +29,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
   if (selected.key==="spot_intimation" && claim.current_status==="Draft") {
     redirect("/customer/spot-intimation?account="+encodeURIComponent(account.id)+"&id="+encodeURIComponent(claim.id));
   }
-  const canEditStage = external && claim.claim_service_mode==="self_managed" && claim.assistance_status!=="accepted" && Boolean(CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key]) && !completed && activeIndex===currentIndex;
+  const canEditStage = external && claim.claim_service_mode==="self_managed" && claim.assistance_status!=="accepted" && Boolean(CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key]) ;
   const editMode = q.mode === "edit";
   const canUploadStage = selected.key==="spot_intimation" || selected.key==="claim_intimation";
   const allowEdit = canEditStage || canUploadStage;
