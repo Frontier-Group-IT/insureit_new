@@ -2,12 +2,13 @@ import Link from "next/link";
 import { Check, LockKeyhole } from "lucide-react";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 
-export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, completedKeys, currentKey }: {
+export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, completedKeys, currentKey, editMode = false }: {
   claimId: string;
   accountId: string;
   selectedKey: string;
   completedKeys: string[];
   currentKey: string;
+  editMode?: boolean;
 }) {
   const activeIndex = INTERNAL_JOURNEY_STAGES.findIndex(stage => stage.key === currentKey);
   const selected = INTERNAL_JOURNEY_STAGES.find(stage => stage.key === selectedKey);
@@ -25,7 +26,7 @@ export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, compl
             const selectedStage = stage.key === selectedKey;
             const available = completed || current || (activeIndex >= 0 && index <= activeIndex);
             return <li key={stage.key} className="border-r border-[#D9E3F0] last:border-r-0">
-              <Link href={{ pathname:`/customer/claims/${claimId}/stage/${stage.key}`, query:{account:accountId} }}
+              <Link href={{ pathname:`/customer/claims/${claimId}/stage/${stage.key}`, query:{account:accountId,...(editMode?{mode:"edit"}:{})} }}
                 aria-current={current?"step":undefined}
                 aria-label={stage.label}
                 className={`flex min-h-[50px] w-full items-center justify-center border-b-2 px-2.5 py-1.5 text-center transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6] ${selectedStage?"border-b-[#071D49]":"border-b-transparent"} ${current?"bg-[#F7FAFF]":available?"bg-white hover:bg-[#FAFCFF]":"bg-white hover:bg-[#FAFCFF]"}`}>
