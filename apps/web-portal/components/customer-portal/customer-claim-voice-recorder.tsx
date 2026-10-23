@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { Mic, Play, Square, Trash2, Upload } from "lucide-react";
 import { uploadCustomerClaimDocument } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/upload-action";
 
@@ -13,6 +13,7 @@ export function CustomerClaimVoiceRecorder({ claimId, accountId }: { claimId: st
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [uploadState, uploadAction, uploadPending] = useActionState(uploadCustomerClaimDocument, {error:null});
   useEffect(() => {
     if (!audioFile) { setAudioUrl(null); return; }
     const url = URL.createObjectURL(audioFile);
@@ -80,10 +81,10 @@ export function CustomerClaimVoiceRecorder({ claimId, accountId }: { claimId: st
       <Play className="h-4 w-4 text-[#1253A7]" />
       <audio controls src={audioUrl} className="h-9 max-w-full" />
       <button type="button" onClick={() => setAudioFile(null)} aria-label="Delete recorded audio" className="rounded-md p-2 text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" /></button>
-      <button type="button" onClick={upload} className="rounded-lg bg-[#1253A7] px-4 py-2 text-xs font-semibold text-white">Upload voice note</button>
+      <button type="button" onClick={upload} disabled={uploadPending} className="rounded-lg bg-[#1253A7] px-4 py-2 text-xs font-semibold text-white">Upload voice note</button>
     </div>}
-    {error && <p role="alert" className="mt-3 text-xs text-red-700">{error}</p>}
-    <form action={uploadCustomerClaimDocument} ref={formRef} className="hidden">
+    {(error || uploadState.error) && <p role="alert" className="mt-3 text-xs text-red-700">{error || uploadState.error}</p>}
+    <form action={uploadAction} ref={formRef} className="hidden">
       <input type="hidden" name="account" value={accountId} />
       <input type="hidden" name="claim" value={claimId} />
       <input type="hidden" name="stage" value="spot_intimation" />
