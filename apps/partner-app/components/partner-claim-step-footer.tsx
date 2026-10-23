@@ -23,7 +23,7 @@ export function PartnerClaimStepFooter({ index, busy = false, canContinue = fals
       <Pressable accessibilityRole="button" accessibilityLabel={continueLabel} accessibilityState={{ disabled: busy || !canContinue }}
         onPress={onContinue} disabled={busy || !canContinue}
         style={[styles.button, styles.continue, (busy || !canContinue) && styles.disabled]}>
-        <Text style={styles.continueText}>{busy ? 'Saving…' : continueLabel}</Text>
+        <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.continueText}>{busy ? 'Saving…' : continueLabel}</Text>
         <Ionicons name="arrow-forward" size={19} color="#FFF"/>
       </Pressable>
     </View>
@@ -35,11 +35,11 @@ export function PartnerClaimStepFooter({ index, busy = false, canContinue = fals
 const styles = StyleSheet.create({
   root: { paddingHorizontal: 15, paddingTop: 11, paddingBottom: 17, gap: 17, backgroundColor: '#EDF6FE' },
   actions: { flexDirection: 'row', gap: 10 },
-  button: { flex: 1, minHeight: 52, borderRadius: 13, flexDirection: 'row', gap: 9, justifyContent: 'center', alignItems: 'center' },
+  button: { flex: 1, minWidth: 0, minHeight: 52, borderRadius: 13, flexDirection: 'row', gap: 6, paddingHorizontal: 10, justifyContent: 'center', alignItems: 'center' },
   previous: { backgroundColor: '#F9FCFF', borderColor: '#C6D6E7', borderWidth: 1 },
   previousText: { color: '#356393', fontSize: 13, fontWeight: '800' },
   continue: { backgroundColor: '#0B347A' },
-  continueText: { color: '#FFF', fontSize: 13, fontWeight: '800' },
+  continueText: { flexShrink: 1, color: '#FFF', textAlign: 'center', fontSize: 12, lineHeight: 15, fontWeight: '800' },
   disabled: { opacity: .45 },
   dots: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 7 },
   dot: { height: 7, width: 7, borderRadius: 8, backgroundColor: '#D9E0EA' },
