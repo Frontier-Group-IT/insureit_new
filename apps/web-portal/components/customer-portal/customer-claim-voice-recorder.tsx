@@ -51,8 +51,15 @@ export function CustomerClaimVoiceRecorder({ claimId, accountId }: { claimId: st
       instance.start();
       recorder.current = instance;
       setRecording(true);
-    } catch {
-      setError("Microphone access was not granted. You can upload an audio file instead.");
+    } catch (cause) {
+      const name = cause instanceof DOMException ? cause.name : "";
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        setError("Microphone permission is blocked for this site. Allow microphone access in your browser site settings, then tap Record Voice again.");
+      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+        setError("No microphone was detected on this device.");
+      } else {
+        setError("Microphone could not be started. Check browser microphone access and try again.");
+      }
     }
   }
   function stop() {
@@ -70,7 +77,6 @@ export function CustomerClaimVoiceRecorder({ claimId, accountId }: { claimId: st
       <span className="grid h-9 w-9 place-items-center rounded-lg bg-[#EDF4FF] text-[#2860AD]"><Mic className="h-5 w-5" /></span>
       <h2 className="text-[17px] font-bold text-[#112B51]">Incident Voice Note</h2>
     </div>
-    <p className="mb-3 text-xs text-[#64748B]">Record what happened, listen before uploading, or attach an existing audio file.</p>
     <div className="flex flex-wrap items-center gap-2">
       {recording
         ? <button type="button" onClick={stop} className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white"><Square className="h-4 w-4" /> Stop recording</button>
