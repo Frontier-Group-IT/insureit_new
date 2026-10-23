@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=0deba6cb083500b504e6cebadebeaaf2bee1e8b4
-reason=partner-claims-white-sticky-header-pr-3460
+source_main=caafc168126f28c6fde792a2ab0cc9f2091037df
+reason=ota-safe-spot-control-video-upload-no-microphone-pr-3462
