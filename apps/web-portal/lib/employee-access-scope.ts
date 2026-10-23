@@ -49,6 +49,7 @@ export const getEmployeeAccessScope = cache(async (profileId: string, role: stri
   }
 
   if (role === "operations_head_life") {
+    if (capability !== "view_policies") return { mode: "none", employeeIds: [], profileIds: [] };
     // Always bind this operational role to the confirmed Life vertical hierarchy,
     // never to the login holder's own employee tree or to broad permission overrides.
     const root = "ac167429-0ce0-4ffe-90ea-4040cb4fea95";
