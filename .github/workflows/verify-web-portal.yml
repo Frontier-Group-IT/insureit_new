@@ -105,6 +105,8 @@ jobs:
         run: npm run customer-web:foundation-regression
       - name: Policyless customer claim ownership RLS regression
         run: node scripts/customer-policyless-claim-rls-regression.mjs
+      - name: Customer Claims phone and insurer number regression
+        run: node scripts/customer-claims-phone-claimno-regression.mjs
       - name: Customer Home permanent Start Claim regression
         working-directory: apps/web-portal
         run: node scripts/customer-home-start-claim-regression.mjs
