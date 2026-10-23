@@ -30,7 +30,7 @@ assert(actions.includes('policy_type:input.policyType'),"New intake must persist
 assert(!/from\(["']policies["']\)\s*\.insert\(/.test(actions),"Sales intake submission must never insert a real policy");
 assert(actions.includes('input.storagePath.startsWith(`intakes/${input.id}/original/`)'),"Original upload must use the isolated intake source-document prefix");
 assert(actions.includes('createSignedUrl(data.storage_path,300)'),"Policy-copy access must use a short-lived signed URL");
-assert(actions.includes('requirePolicyIntakeFinalizer()'),"Closing an intake must require explicit Finalize authority");
+assert(actions.includes('requirePolicyIntakeFinalizer(id)'),"Closing an intake must require explicit record-scoped Finalize authority");
 assert(actions.includes('preparePolicyIntakeResponseUpload'),"Initiators must be able to respond when Operations requests another document");
 assert(actions.includes('.from("policy_intake_documents")'),"Original and replacement copies must retain document lineage");
 assert(!actions.includes('remove([intake.storage_path])'),"Replacement uploads must not delete the previous policy copy");
