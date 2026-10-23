@@ -50,6 +50,13 @@ const POLICY_FILTER_OPTIONS: Array<{ value: PartnerPolicyLifecycle; label: strin
 
 export default function PoliciesScreen() {
   const router = useRouter();
+  const verticalListRef = useRef<FlatList>(null);
+  useFocusEffect(useCallback(() => {
+    const reset = () => verticalListRef.current?.scrollToOffset({ offset: 0, animated: false });
+    reset();
+    const frame = requestAnimationFrame(reset);
+    return () => cancelAnimationFrame(frame);
+  }, []));
   const { cacheScopeKey, context, avatarUri } = usePartnerSession();
   const { isOffline } = usePartnerNetwork();
   const [lifecycle, setLifecycle] = useState<PartnerPolicyLifecycle>(savedPolicyLifecycle);
@@ -384,6 +391,7 @@ export default function PoliciesScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <FlatList
+        ref={verticalListRef}
         data={collection.rows}
         keyExtractor={(row) => row.policy_id}
         renderItem={({ item }) => (
