@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
+import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
+import { requireOperationsHeadRecordOwnership } from "@/lib/operations-head-record-authorization";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const PAYMENT_FREQUENCIES = new Set(["Monthly", "Quarterly", "Half Yearly", "Annually", "One Time"]);
@@ -14,9 +16,10 @@ const clean = (value: FormDataEntryValue | null) => String(value ?? "").trim();
 const numberValue = (value: string) => { const parsed = Number(value.replace(/,/g, "")); return Number.isFinite(parsed) ? parsed : null; };
 
 export async function updateLifeHealthCaseDetails(formData: FormData) {
-  await requirePolicyCreator();
-  const admin = createSupabaseAdminClient();
   const caseId = clean(formData.get("caseId"));
+  const { profile: requester } = await getAuthenticatedProfile(await getServerAccessToken());
+  const profile = requester?.role === "operations_head_life" ? await requireOperationsHeadRecordOwnership("life_health_case", caseId) : await requirePolicyCreator();
+  const admin = createSupabaseAdminClient();
   const insurerId = clean(formData.get("insurerId"));
   const customerName = clean(formData.get("customerName"));
   const customerPhone = clean(formData.get("customerPhone")).replace(/\D/g, "").slice(-10);
@@ -40,8 +43,20 @@ export async function updateLifeHealthCaseDetails(formData: FormData) {
   if (row.final_policy_id) return { ok: false as const, error: "Issued cases cannot be edited." };
   if (!row.customer_id) return { ok: false as const, error: "The case customer reference is missing." };
 
-  const { error: customerError } = await admin.from("customers").update({ contact_name: customerName, phone: customerPhone, address: customerAddress || null, address_street: customerAddress || null, updated_at: new Date().toISOString() }).eq("id", row.customer_id);
-  if (customerError) return { ok: false as const, error: "Customer details could not be updated." };
+  if (profile.role === "operations_head_life") {
+    const { data: customer, error } = await admin.from("customers")
+      .select("contact_name,phone,address,address_street").eq("id", row.customer_id)
+      .maybeSingle<{ contact_name: string; phone: string; address: string | null; address_street: string | null }>();
+    if (error || !customer ||
+        customer.contact_name.trim() !== customerName ||
+        customer.phone.replace(/\D/g, "").slice(-10) !== customerPhone ||
+        (customer.address_street || customer.address || "").trim() !== customerAddress) {
+      return { ok: false as const, error: "Customer master changes require separate authorization; case fields can be updated without changing customer identity." };
+    }
+  } else {
+    const { error: customerError } = await admin.from("customers").update({ contact_name: customerName, phone: customerPhone, address: customerAddress || null, address_street: customerAddress || null, updated_at: new Date().toISOString() }).eq("id", row.customer_id);
+    if (customerError) return { ok: false as const, error: "Customer details could not be updated." };
+  }
 
   const { error: caseError } = await admin.from("life_health_cases").update({
     insurance_company_id: insurerId,
