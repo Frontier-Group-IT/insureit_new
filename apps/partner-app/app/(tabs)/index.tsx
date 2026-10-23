@@ -281,7 +281,7 @@ export default function PartnerHomeScreen() {
                 <MetricCell
                   icon={<PartnerCommissionEarnedIcon size={36} />}
                   value={identity.actor_kind === 'employee'
-                    ? (rangeData?.projected_retention != null ? formatWholeIndianCurrency(rangeData.projected_retention) : '—')
+                    ? (rangeData?.projected_retention != null ? formatIndianCurrency(rangeData.projected_retention) : '—')
                     : (rangeData?.scoped_payout != null
                       ? formatIndianCurrency(rangeData.scoped_payout)
                       : rangeData?.commission_available
