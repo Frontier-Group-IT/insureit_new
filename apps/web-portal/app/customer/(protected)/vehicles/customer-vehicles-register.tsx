@@ -3,7 +3,7 @@ import { CustomerAnimatedSearchInput } from "@/components/customer-portal/custom
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { Search, CarFront, ShieldCheck, ShieldX, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, CarFront, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { getVehicleBrandLogo } from "@/lib/vehicle-brand-logo";
 import { getInsurerLogo } from "@/lib/insurer-logo";
@@ -59,14 +59,13 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
         <table className="w-full min-w-[1040px] border-collapse text-left">
           <thead className="bg-[#F4F7FB] text-[11px] font-semibold uppercase tracking-wide text-[#7188A8]">
             <tr>
-              {["Vehicle", "Make / Model", "Type", "Chassis No.", "Engine No.", "Policy", "Status"].map(heading =>
+              {["Vehicle", "Make / Model", "Type", "Chassis No.", "Engine No.", "Policy"].map(heading =>
                 <th key={heading} scope="col" className="border-b border-[#E2EAF5] px-3 py-3">{heading}</th>
               )}
             </tr>
           </thead>
           <tbody className="divide-y divide-[#E2EAF5]">
-            {visibleRows.length===0 ? <tr><td colSpan={7} className="p-8 text-center text-sm text-[#637B9B]">No matching vehicles. Try another search or filter.</td></tr> : visibleRows.map(v => {
-              const insured = v.status === "active" || v.status === "due";
+            {visibleRows.length===0 ? <tr><td colSpan={6} className="p-8 text-center text-sm text-[#637B9B]">No matching vehicles. Try another search or filter.</td></tr> : visibleRows.map(v => {
               return <tr key={v.id} role="link" tabIndex={0} aria-label={`View details for vehicle ${v.number}`}
                 onClick={() => openVehicle(v.id)}
                 onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openVehicle(v.id); } }}
@@ -76,8 +75,7 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
                 <td className="px-3 py-3 text-[12px] font-medium text-[#264572]">{v.type||"—"}</td>
                 <td className="px-3 py-3 text-[12px] text-[#264572]">{v.chassis||"—"}</td>
                 <td className="px-3 py-3 text-[12px] text-[#264572]">{v.engine||"—"}</td>
-                <td className="px-3 py-2 text-[12px] text-[#264572]"><div className="flex min-w-[185px] flex-col divide-y divide-[#E7EDF6]">{v.policies.length ? v.policies.map(p => <div key={p.id} className="flex min-w-0 items-center gap-2 py-1.5"><MasterLogo src={getInsurerLogo(p.insurerName)} alt={`${p.insurerName || "Unknown insurer"} logo`} initials={p.insurerName ? p.insurerName.slice(0,2).toUpperCase() : "—"}/><span className="min-w-0 flex-1" title={p.insurerName || undefined}><span className="block whitespace-nowrap">{p.number}</span><span className="block max-w-[190px] truncate text-[10px] text-[#607CA4]">{p.insurerName || "Insurer not specified"}</span></span><span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${p.status === "active" ? "bg-emerald-50 text-emerald-700" : p.status === "due" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"}`}>{p.status === "active" ? "Active" : p.status === "due" ? "Due" : p.status === "expired" ? "Expired" : "Inactive"}</span></div>) : <span className="py-2 text-[#7186A0]">No policies linked</span>}</div></td>
-                <td className="px-3 py-3"><span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-1 text-[11px] font-semibold ${insured?"bg-[#E4FAEF] text-[#079968]":"bg-[#FFF0F1] text-[#E53454]"}`}>{insured?<ShieldCheck className="h-3 w-3"/>:<ShieldX className="h-3 w-3"/>}{insured?"Insured":"Not insured"}</span></td>
+                <td className="px-3 py-2 text-[12px] text-[#264572]"><div className="flex min-w-[185px] flex-col divide-y divide-[#E7EDF6]">{v.policies.length ? v.policies.map(p => <div key={p.id} className="flex min-w-0 items-center gap-2 py-1.5"><MasterLogo src={getInsurerLogo(p.insurerName)} alt={`${p.insurerName || "Unknown insurer"} logo`} initials={p.insurerName ? p.insurerName.slice(0,2).toUpperCase() : "—"}/><span className="min-w-0 flex-1" title={p.insurerName || undefined}><span className="block whitespace-nowrap">{p.number}</span><span className="block max-w-[190px] truncate text-[10px] text-[#607CA4]">{p.insurerName || "Insurer not specified"}</span></span><span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${p.status === "active" ? "bg-emerald-50 text-emerald-700" : p.status === "due" ? "bg-amber-50 text-amber-700" : p.status === "expired" ? "bg-red-50 text-red-700" : "bg-slate-100 text-slate-600"}`}>{p.status === "active" ? "Active" : p.status === "due" ? "Due" : p.status === "expired" ? "Expired" : "Inactive"}</span></div>) : <span className="py-2 text-[#7186A0]">No policies linked</span>}</div></td>
               </tr>;
             })}
           </tbody>
