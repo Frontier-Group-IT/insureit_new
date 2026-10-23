@@ -13,7 +13,7 @@ const definitions = [
   { label:"Audio", type:"Incident Voice Note", icon:Mic, color:"text-blue-600" },
 ] as const;
 
-export function CustomerClaimEvidenceWorkspace({documents,claimId,accountId,stage,returnToSpotIntimation=false}:{documents:DocumentRow[];claimId:string;accountId:string;stage:string;returnToSpotIntimation?:boolean}) {
+export function CustomerClaimEvidenceWorkspace({documents,claimId,accountId,stage,returnToSpotIntimation=false,allowUpload=true}:{documents:DocumentRow[];claimId:string;accountId:string;stage:string;returnToSpotIntimation?:boolean;allowUpload?:boolean}) {
   const normalized = (v:string)=>v.trim().toLowerCase().replace(/[^a-z0-9]/g,"");
   const match = (type:string, expected:string)=>normalized(type)===normalized(expected)
     || (expected==="Incident Voice Note" && ["audio","voicenote","incidentaudio"].includes(normalized(type)))
@@ -37,11 +37,11 @@ export function CustomerClaimEvidenceWorkspace({documents,claimId,accountId,stag
             {items.length ? <span className="inline-flex items-center gap-1 rounded-xl bg-[#EFF9F3] px-2 py-1.5 font-semibold text-[#2A5360]"><CheckCircle2 className="h-4 w-4 text-[#0CA66D]"/>{items.length} Uploaded</span> : null}
           </div>
           {items.length>0&&<div className="mt-2 space-y-1 border-t border-[#EDF1F6] pt-2">{items.map(item=><div key={item.id} className="flex items-center justify-between gap-2 rounded-lg bg-[#FAFCFF] px-2 py-1.5 text-[10px]"><span className="truncate text-[#435B7D]" title={item.file_name || label}>{item.file_name || label + " · " + new Date(item.created_at).toLocaleDateString("en-IN")}</span><span className="shrink-0 font-semibold text-[#13855B]">Uploaded</span></div>)}</div>}
-          <form action={uploadCustomerClaimDocument} className="mt-2 flex items-end gap-2 border-t border-[#EDF1F6] pt-2">
+          {allowUpload ? <form action={uploadCustomerClaimDocument} className="mt-2 flex items-end gap-2 border-t border-[#EDF1F6] pt-2">
             <input type="hidden" name="account" value={accountId}/><input type="hidden" name="claim" value={claimId}/><input type="hidden" name="stage" value={stage}/><input type="hidden" name="returnToSpotIntimation" value={returnToSpotIntimation ? "1" : "0"}/><input type="hidden" name="type" value={type}/>
             <label className="min-w-0 flex-1"><span className="sr-only">Upload {label}</span><input type="file" name="file" required accept={type==="Accident Video"?"video/mp4,video/quicktime,video/webm":type==="Incident Voice Note"?"audio/mp4,audio/x-m4a,audio/m4a":".pdf,.jpg,.jpeg,.png,.webp,.heic"} className="block w-full text-[10px] text-[#687A95] file:mr-2 file:rounded-md file:border-0 file:bg-[#F0F5FF] file:px-2 file:py-1.5 file:font-semibold file:text-[#24569E]"/></label>
             <button type="submit" aria-label={`Upload ${label}`} className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-[#BBD0F2] text-[#2460B8] hover:bg-[#EEF4FF]"><FilePlus2 className="h-4 w-4"/></button>
-          </form>
+          </form> : null}
         </div>;
       })}
     </div>

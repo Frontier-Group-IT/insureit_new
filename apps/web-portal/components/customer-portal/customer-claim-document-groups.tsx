@@ -22,9 +22,9 @@ const groups = [
 ] as const;
 const normalized = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
-function DocumentCard({ definition, documents, claimId, accountId, stage }: {
+function DocumentCard({ definition, documents, claimId, accountId, stage, allowUpload }: {
   definition: { label: string; type: string; icon: typeof FileText };
-  documents: Doc[]; claimId: string; accountId: string; stage: string;
+  documents: Doc[]; claimId: string; accountId: string; stage: string; allowUpload: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [chosen, setChosen] = useState("");
@@ -33,7 +33,7 @@ function DocumentCard({ definition, documents, claimId, accountId, stage }: {
   return <article className="min-w-0 rounded-xl border border-[#DCE5F4] bg-white p-3 shadow-[0_3px_12px_rgba(7,29,73,0.025)]">
     <div className="flex items-start justify-between gap-2">
       <h3 className="flex min-w-0 items-center gap-2 text-[12px] font-semibold text-[#071D49]"><Icon className="h-5 w-5 shrink-0 text-[#2460B8]"/><span>{definition.label}</span></h3>
-      <form action={uploadCustomerClaimDocument} className="flex shrink-0 items-center gap-2">
+      {allowUpload ? <form action={uploadCustomerClaimDocument} className="flex shrink-0 items-center gap-2">
         <input type="hidden" name="account" value={accountId}/>
         <input type="hidden" name="claim" value={claimId}/>
         <input type="hidden" name="stage" value={stage}/>
@@ -42,7 +42,7 @@ function DocumentCard({ definition, documents, claimId, accountId, stage }: {
         <button type="button" onClick={() => input.current?.click()} aria-label={`Choose file for ${definition.label}`} title="Choose document" className="rounded-md p-1 text-[#2460B8] hover:bg-[#EEF4FF]"><FilePlus2 className="h-4 w-4"/></button>
         {chosen ? <button type="submit" className="rounded-md border border-[#BBD0F2] px-2 py-1 text-[10px] font-semibold text-[#24569E]">Upload</button> : null}
         {items.length ? <span className="rounded-full bg-[#EFF9F3] px-2 py-1 text-[10px] text-[#13855B]">Uploaded</span> : null}
-      </form>
+      </form> : null}
     </div>
     {items.length ? <>
       <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
@@ -59,8 +59,8 @@ function DocumentCard({ definition, documents, claimId, accountId, stage }: {
   </article>;
 }
 
-export function CustomerClaimDocumentGroups({ documents, claimId, accountId, stage, showSaveDetails = false }: {
-  documents: Doc[]; claimId: string; accountId: string; stage: string; showSaveDetails?: boolean;
+export function CustomerClaimDocumentGroups({ documents, claimId, accountId, stage, showSaveDetails = false, allowUpload = true }: {
+  documents: Doc[]; claimId: string; accountId: string; stage: string; showSaveDetails?: boolean; allowUpload?: boolean;
 }) {
   const [active, setActive] = useState(0);
   const uploaded = documents.length;
@@ -70,7 +70,7 @@ export function CustomerClaimDocumentGroups({ documents, claimId, accountId, sta
       {groups.map((group, i) => <button key={group.name} type="button" role="tab" aria-selected={i === active} onClick={() => setActive(i)} className={`flex min-h-11 items-center gap-2 border-r border-[#D9E3F0] px-3 text-left text-[11px] font-semibold ${i === active ? "bg-gradient-to-r from-[#6853EE] to-[#4E95E9] text-white" : "bg-[#FAFCFF] text-[#183257] hover:bg-[#EDF4FF]"}`}><span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white/85 text-[#164E9B]">{i + 1}</span>{group.name}</button>)}
     </div>
     <div role="tabpanel" className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-      {groups[active].types.map(definition => <DocumentCard key={definition.type} definition={definition} documents={documents} claimId={claimId} accountId={accountId} stage={stage}/>)}
+      {groups[active].types.map(definition => <DocumentCard key={definition.type} definition={definition} documents={documents} claimId={claimId} accountId={accountId} stage={stage} allowUpload={allowUpload}/>)}
     </div>
     <div className="mt-5 flex justify-end border-t border-[#E5EBF5] pt-4">
       {showSaveDetails ? <button type="submit" form="customer-claim-stage-details-form" className="rounded-lg bg-gradient-to-r from-[#6853EE] to-[#4E95E9] px-5 py-2.5 text-[12px] font-semibold text-white hover:opacity-90">Save Details</button> : null}

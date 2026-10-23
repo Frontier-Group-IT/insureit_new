@@ -6,7 +6,7 @@ import { saveCustomerExternalStage } from "./actions";
 import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/customer-claim-evidence-workspace";
 import { CustomerClaimDocumentGroups } from "@/components/customer-portal/customer-claim-document-groups";
 import { CustomerClaimBooleanChoice } from "@/components/customer-portal/customer-claim-boolean-choice";
-import { Check, Circle, ArrowLeft, LockKeyhole, CarFront, FileText, ShieldCheck, CalendarDays } from "lucide-react";
+import { Check, Circle, ArrowLeft, LockKeyhole, CarFront, FileText, ShieldCheck, CalendarDays, Pencil } from "lucide-react";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
@@ -14,7 +14,7 @@ import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimPro
 export const dynamic="force-dynamic";
 export const revalidate=0;
 
-export default async function CustomerClaimStage({params,searchParams}:{params:Promise<{id:string;stage:string}>;searchParams?:Promise<{account?:string}>}) {
+export default async function CustomerClaimStage({params,searchParams}:{params:Promise<{id:string;stage:string}>;searchParams?:Promise<{account?:string;mode?:string}>}) {
   const p=await params;const q=searchParams?await searchParams:{};
   const {account}=await resolveCustomerWebScope(q.account);
   const {claim,milestones,documents,internal_projection}=await loadCustomerClaimDetail(account.id,p.id);
@@ -30,8 +30,11 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
     redirect("/customer/spot-intimation?account="+encodeURIComponent(account.id)+"&id="+encodeURIComponent(claim.id));
   }
   const canEditStage = external && claim.claim_service_mode==="self_managed" && claim.assistance_status!=="accepted" && Boolean(CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key]) && !completed && activeIndex===currentIndex;
+  const editMode = q.mode === "edit";
+  const canUploadStage = selected.key==="spot_intimation" || selected.key==="claim_intimation";
+  const allowEdit = canEditStage || canUploadStage;
   return <div className="space-y-3">
-    <Link href={{pathname:`/customer/claims/${claim.id}`,query:{account:account.id}}} className="inline-flex items-center gap-2 text-sm font-bold text-[#245DAB]"><ArrowLeft className="h-4 w-4"/> Claim overview</Link>
+    <div className="flex flex-wrap items-center justify-between gap-3"><Link href={{pathname:"/customer/claims",query:{account:account.id}}} className="inline-flex items-center gap-2 text-sm font-bold text-[#245DAB]"><ArrowLeft className="h-4 w-4"/> Claims Register</Link>{allowEdit ? (editMode ? <Link href={{pathname:`/customer/claims/${claim.id}/stage/${selected.key}`,query:{account:account.id}}} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#B9CBE2] px-4 text-[12px] font-semibold text-[#174A87]">View Details</Link> : <Link href={{pathname:`/customer/claims/${claim.id}/stage/${selected.key}`,query:{account:account.id,mode:"edit"}}} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#0B3884] px-4 text-[12px] font-semibold text-white"><Pencil className="h-4 w-4"/> Edit Claim</Link>) : null}</div>
     <section className="overflow-hidden rounded-2xl border border-[#D9E3F0] bg-white">
       <div className="grid grid-cols-2 lg:grid-cols-5">
         {([
@@ -58,7 +61,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       </div>
     </section>
     <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey={selected.key} currentKey={INTERNAL_JOURNEY_STAGES[currentIndex]?.key || "spot_intimation"} completedKeys={INTERNAL_JOURNEY_STAGES.filter((stage,i)=>external?projection?.stages.some(x=>x.key===stage.key&&x.completed):i<(internal_projection?.completedStageCount??0)).map(stage=>stage.key)} />
-    {!canEditStage ? <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white">
+    {!(editMode && canEditStage) ? <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white">
       <h2 className="border-b border-[#D9E3F0] px-5 py-4 text-[17px] font-semibold text-[#071D49]">{selected.key==="spot_intimation"?"Accident & Spot Intimation Details":selected.label+" Details"}</h2>
       {selected.key==="spot_intimation" ? (
         <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-5">
@@ -87,7 +90,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
         </div>
       )}
     </section> : null}
-    {canEditStage ? (
+    {editMode && canEditStage ? (
       <form id="customer-claim-stage-details-form" action={saveCustomerExternalStage} className="mt-2 rounded-2xl border border-[#D9E6F7] bg-white p-5">
         <div className="mb-4"><h2 className="text-[17px] font-semibold text-[#071D49]">Stage Details</h2><p className="text-[12px] text-[#75869A]">Record {selected.label.toLowerCase()} details.</p></div><div className={`grid gap-3 sm:grid-cols-2 ${selected.key==="claim_intimation"?"lg:grid-cols-5":selected.key==="work_approval"||selected.key==="payment_encashment"?"lg:grid-cols-5":selected.key==="repair_ri"||selected.key==="delivery_order"?"lg:grid-cols-3":selected.key==="billing"||selected.key==="vehicle_delivery"?"lg:grid-cols-2":"lg:grid-cols-4"}`}>
         <input type="hidden" name="account" value={account.id}/>
@@ -108,7 +111,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
         </div>
       </form>
     ):null}
-    {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key}/> : null}
-    {selected.key==="claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} showSaveDetails={external && claim.claim_service_mode==="self_managed" && claim.assistance_status!=="accepted"} /> : null}
+    {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} allowUpload={editMode}/> : null}
+    {selected.key==="claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} showSaveDetails={editMode && canEditStage} allowUpload={editMode} /> : null}
   </div>;
 }
