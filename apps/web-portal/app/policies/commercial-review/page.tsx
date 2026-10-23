@@ -9,7 +9,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import type { CommercialStatus } from "./actions";
 
 type PolicyRow = { id: string; policy_no: string; insurance_company_id: string; issuance_date: string | null; start_date: string; intermediary_type: string | null; intermediary_code: string | null; vehicle_id: string | null; business_line: string | null };
-type PremiumRow = { policy_id: string; od_premium: number | null; tp_premium: number | null; cpa_amount: number | null; net_premium: number | null };
+type PremiumRow = { policy_id: string; od_premium: number | null; add_on_premium: number | null; tp_premium: number | null; cpa_amount: number | null; net_premium: number | null };
 type PayinRow = { policy_id: string; projected_od_percent: number | null; projected_tp_percent: number | null; insurer_scheme_amount: number | null; total_projected_payin: number | null; commercial_status: CommercialStatus | null; commercial_note: string | null; commercial_reviewed_at: string | null; updated_at: string | null };
 type PayoutRow = { policy_id: string; intermediary_type: string | null; intermediary_code: string | null; od_payout_percent: number | null; tp_payout_percent: number | null; gross_payout: number | null; commercial_status: CommercialStatus | null; commercial_note: string | null; commercial_reviewed_at: string | null; updated_at: string | null; created_at: string };
 type InsurerRow = { id: string; name: string };
@@ -27,7 +27,7 @@ export default async function PolicyCommercialReviewPage() {
   const admin = createSupabaseAdminClient();
   const [policiesResult, premiumResult, payinResult, payoutResult, insurersResult, intermediariesResult, eventsResult, vehiclesResult] = await Promise.all([
     fetchAllPages<PolicyRow, unknown>((from, to) => admin.from("policies").select("id,policy_no,insurance_company_id,issuance_date,start_date,intermediary_type,intermediary_code,vehicle_id,business_line").order("issuance_date", { ascending: false }).range(from, to).returns<PolicyRow[]>()),
-    fetchAllPages<PremiumRow, unknown>((from, to) => admin.from("policy_premium_details").select("policy_id,od_premium,tp_premium,cpa_amount,net_premium").order("policy_id", { ascending: true }).range(from, to).returns<PremiumRow[]>()),
+    fetchAllPages<PremiumRow, unknown>((from, to) => admin.from("policy_premium_details").select("policy_id,od_premium,add_on_premium,tp_premium,cpa_amount,net_premium").order("policy_id", { ascending: true }).range(from, to).returns<PremiumRow[]>()),
     fetchAllPages<PayinRow, unknown>((from, to) => admin.from("policy_payin_details").select("policy_id,projected_od_percent,projected_tp_percent,insurer_scheme_amount,total_projected_payin,commercial_status,commercial_note,commercial_reviewed_at,updated_at").order("policy_id", { ascending: true }).range(from, to).returns<PayinRow[]>()),
     fetchAllPages<PayoutRow, unknown>((from, to) => admin.from("policy_intermediary_payouts").select("policy_id,intermediary_type,intermediary_code,od_payout_percent,tp_payout_percent,gross_payout,commercial_status,commercial_note,commercial_reviewed_at,updated_at,created_at").order("created_at", { ascending: false }).order("id", { ascending: false }).range(from, to).returns<PayoutRow[]>()),
     fetchAllPages<InsurerRow, unknown>((from, to) => admin.from("insurance_companies").select("id,name").order("id", { ascending: true }).range(from, to).returns<InsurerRow[]>()),
@@ -69,6 +69,7 @@ export default async function PolicyCommercialReviewPage() {
       intermediaryType: policyIntermediaryType,
       intermediaryCode: policyIntermediaryCode,
       odPremium: Number(premium?.od_premium ?? 0),
+      addonPremium: Number(premium?.add_on_premium ?? 0),
       netPremium: Number(premium?.net_premium ?? 0),
       tpCpaPremium: Number(premium?.tp_premium ?? 0) + Number(premium?.cpa_amount ?? 0),
       projectedOdPercent: Number(payin?.projected_od_percent ?? 0),
