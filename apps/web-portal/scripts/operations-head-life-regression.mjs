@@ -27,6 +27,15 @@ assert.match(permission,/role==="operations_head_life"/);
 const policyDocuments=read("app/policies/policy-document-actions.ts");
 assert.match(policyDocuments,/profile.role === "operations_head_life"/);
 assert.match(policyDocuments,/canAccessPolicy\(profile.id, profile.role, documentRow.policy_id, "view_policies"\)/);
+const caseList=read("app/policies/life-health-cases/page.tsx");
+assert.match(caseList,/\.in\("rm_employee_id", lifeHeadRmIds\)/);
+assert.match(caseList,/\.in\("business_line", \["Life", "Health"\]\)/);
+assert.match(caseList,/lifeHeadRmIds !== null \? Promise.resolve\(null\)/,
+ "Life Operations must not reuse organization-wide summary counts");
+const caseDetail=read("app/policies/life-health-cases/[id]/page.tsx");
+assert.match(caseDetail,/request = request\.in\("business_line", \["Life", "Health"\]\)\.in\("rm_employee_id", allowedRmIds\)/);
+assert.match(caseDetail,/Read-only Life & Health case/);
+assert.match(middleware,/pathname === "\/policies\/life-health-cases"/);
 const migration=read("../../supabase/migrations/20261023101500_operations_head_life_role.sql");
 assert.match(migration,/add value if not exists 'operations_head_life'/);
 console.log("Operations Head Life provisional isolation contract passed.");
