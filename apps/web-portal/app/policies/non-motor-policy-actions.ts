@@ -112,6 +112,17 @@ export async function updateNonMotorPolicy(policyId: string, payload: NonMotorPo
   const sourceResolution = await resolvePolicyIntermediarySource(payload.source);
   if (!sourceResolution.ok) return { ok:false, error:sourceResolution.error };
 
+  if (profile.role === "operations_head_life") {
+    const { data: ownership } = await admin.from("policies")
+      .select("intermediary_code,rm_name").eq("id", id)
+      .maybeSingle<{ intermediary_code: string | null; rm_name: string | null }>();
+    if (!ownership ||
+        ownership.intermediary_code?.trim() !== sourceResolution.source.intermediaryCode ||
+        (ownership.rm_name ?? "").trim().toLowerCase() !== payload.source.rmName.trim().toLowerCase()) {
+      return { ok: false, error: "Changing the linked intermediary or RM is not permitted." };
+    }
+  }
+
   const duplicate = await admin.from("policies")
     .select("id")
     .eq("policy_no_normalized", normalizedPolicy)
