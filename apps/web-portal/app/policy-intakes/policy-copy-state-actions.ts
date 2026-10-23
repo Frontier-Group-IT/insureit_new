@@ -8,7 +8,7 @@ export type PolicyIntakePolicyCopyState =
   | { ok: false; error: string };
 
 export async function verifyPolicyIntakeCurrentPolicyCopy(id: string): Promise<PolicyIntakePolicyCopyState> {
-  const profile = await requirePolicyIntakeFinalizer();
+  const profile = await requirePolicyIntakeFinalizer(id);
   const intakeId = id.trim();
   if (!intakeId) return { ok: false, error: "Policy Intake reference is missing." };
 
