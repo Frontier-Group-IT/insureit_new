@@ -80,10 +80,10 @@ function ocrLabel(status: string) { return status === "completed" ? "Details fet
 
 export default async function PolicyIntakeDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const profile = await requirePolicyIntakeViewer();
+  const profile = await requirePolicyIntakeViewer(id);
   const [reviewer, finalizer] = await Promise.all([
-    hasEffectiveCapability(profile, "review_policy_intakes", "edit"),
-    hasEffectiveCapability(profile, "finalize_policy_intakes", "approve"),
+    profile.role === "operations_head_life" ? Promise.resolve(true) : hasEffectiveCapability(profile, "review_policy_intakes", "edit"),
+    profile.role === "operations_head_life" ? Promise.resolve(true) : hasEffectiveCapability(profile, "finalize_policy_intakes", "approve"),
   ]);
   const admin = createSupabaseAdminClient();
   const { data } = await admin.from("policy_intake_requests").select("id,intake_number,status,lead_source_name,lead_source_type,lead_source_code,customer_mobile,matched_customer_id,file_name,ocr_status,ocr_fields,ocr_warnings,attention_reason,created_at,submitted_by_profile_id,submitted_by_portal_account_id,assigned_to_profile_id,final_policy_id").eq("id", id).maybeSingle<Intake>();
