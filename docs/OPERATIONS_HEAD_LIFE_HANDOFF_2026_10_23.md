@@ -25,3 +25,13 @@
 
 ## Rollback
 Close draft PR / revert its isolated commits. No production database writes have been made.
+
+## 23 October continuation
+- Scoped Life/Health case list and case detail to active root employee reporting tree, `rm_employee_id` and Life/Health `business_line`; the new role receives a read-only case details UI rather than the general edit component. Shared counts remain unchanged for other roles, and the Life Head case-count fallback reflects only scoped rows.
+- Policy-copy signed URL issuance for the new role now uses `canAccessPolicy` against the exact document's policy instead of broad customer scope.
+- Applied an explicit effective permission ceiling: `view_policies=view` only; all other capabilities blocked even in the presence of employee/role overrides. Life hierarchy resolver similarly fails closed unless called for `view_policies`.
+- Life/Health navigation includes the restricted Cases list. The middleware route boundary adds this list and authorized case details.
+- Regression is invoked directly from the Verify web portal workflow; existing count compatibility test preserved.
+- A TypeScript route regex escape error was found and corrected before release. Re-run required to confirm all checks green.
+- Still **NOT IMPLEMENTED**: policy creation/edit, document critical verify, case creation/edit, intake review/finalization, finance adjustments, audit history and export/report guards for the new role. Do not assign the role.
+- The enum migration is not applied. PostgreSQL enum additions are additive but not trivially reversible; rollback is to keep role unassigned, and revert application changes.
