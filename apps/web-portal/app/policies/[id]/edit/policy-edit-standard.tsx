@@ -11,6 +11,7 @@ import { AppShell } from "@/components/shell";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
+import { getOperationsHeadDownlinePolicyScope } from "@/lib/policy-access-scope";
 import { loadPolicyPayinBilling } from "@/app/policies/policy-payin-billing-actions";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getCustomerManager } from "@/lib/master-data-server";
@@ -91,9 +92,10 @@ function vehicleCapacity(vehicle: VehicleRow, vehicleClass: string) {
 }
 
 export default async function EditPolicyPage({ params }: { params: Promise<{ id: string }> }) {
-  const policyEditor = await requirePolicyEditor();
-  const commercialAccess = canAccessPolicyCommercials(policyEditor);
   const { id } = await params;
+  const policyEditor = await requirePolicyEditor(id);
+  const commercialAccess = canAccessPolicyCommercials(policyEditor);
+  const scoped = policyEditor.role === "operations_head_life" ? await getOperationsHeadDownlinePolicyScope(policyEditor.id) : null;
   const admin = createSupabaseAdminClient();
 
   const policyResult = await admin.from("policies")
@@ -218,13 +220,13 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
   const insurerOptions = Array.from(insurerOptionsById.values()).sort((a, b) => a.label.localeCompare(b.label));
 
   const employeeById = new Map(salesEmployees.map((employee) => [employee.id, employee]));
-  const rmOptions: PolicyRmOption[] = salesEmployees.map((employee) => {
+  const rmOptions: PolicyRmOption[] = salesEmployees.filter(employee => !scoped || scoped.employeeIds.includes(employee.id)).map((employee) => {
     const name = employee.full_name?.trim() || "Unnamed Sales Employee";
     return { value: name, label: employee.employee_code ? `${name} - ${employee.employee_code}` : name };
   });
   if (policy.rm_name && !rmOptions.some((item)=>item.value === policy.rm_name)) rmOptions.push({ value: policy.rm_name, label: `${policy.rm_name} · Saved value` });
 
-  const sourceOptions: PolicySourceOption[] = intermediaryRows.filter((item)=>item.intermediary_code?.trim() && item.display_name?.trim()).map((item)=>{
+  const sourceOptions: PolicySourceOption[] = intermediaryRows.filter((item)=>item.intermediary_code?.trim() && item.display_name?.trim() && (!scoped || scoped.intermediaryCodes.includes(item.intermediary_code!.trim()) || item.intermediary_code!.trim() === policy.intermediary_code)).map((item)=>{
     const partnerRecordId = item.application_id ? partnerRecordByApplication.get(item.application_id) : null;
     const associateEmployeeId = item.associate_employee_id || (partnerRecordId ? associateByPartnerRecord.get(partnerRecordId) : null) || null;
     const associate = associateEmployeeId ? employeeById.get(associateEmployeeId) : null;
