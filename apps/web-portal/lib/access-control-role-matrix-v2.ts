@@ -429,6 +429,16 @@ export const roleMatrixV2: readonly RoleDefinitionV2[] = [
     ],
   },
   {
+    code: "operations_head_life",
+    label: "Operations Head - Life",
+    purpose: "Life and Health operations restricted to Gagan Singh's reporting hierarchy; critical verification requires explicit server authorization.",
+    category: "business",
+    status: "active",
+    assignable: true,
+    defaultScope: "hierarchy",
+    grants: [grant("policies.view", "view", "hierarchy"), grant("notifications.view", "view", "self")],
+  },
+  {
     code: "claims_head",
     label: "Claims Head",
     purpose: "Organisation-wide claims owner with final operational authority across claim verification, assignment and workflow progression.",
