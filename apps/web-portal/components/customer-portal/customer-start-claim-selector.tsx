@@ -5,7 +5,7 @@ import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
 import { getInsurerLogo } from "@/lib/insurer-logo";
-import { ArrowRight, Headphones, LoaderCircle, Plus, ShieldAlert, ShieldCheck, ShieldX, X } from "lucide-react";
+import { ArrowRight, Headphones, LoaderCircle, Plus, ShieldAlert, ShieldCheck, ShieldX, TriangleAlert, X } from "lucide-react";
 import type { CustomerPolicyRow, CustomerVehicleRow } from "@/lib/customer-web-data";
 import { prepareCustomerClaim } from "@/app/customer/(protected)/start-claim/actions";
 
@@ -35,6 +35,7 @@ export function CustomerStartClaimSelector({
 
   const [claimState, claimAction] = useActionState(prepareCustomerClaim, { error: null });
   const [policyDialogOpen, setPolicyDialogOpen] = useState(false);
+  const [existingClaimDialogOpen, setExistingClaimDialogOpen] = useState(false);
   const claimFormRef = useRef<HTMLFormElement>(null);
   const confirmationGrantedRef = useRef(false);
   const [confirming, setConfirming] = useState(false);
@@ -75,7 +76,7 @@ export function CustomerStartClaimSelector({
           <select
             id="claim-vehicle"
             value={vehicleId}
-            onChange={(event) => { setVehicleId(event.target.value); setPolicyDialogOpen(false); confirmationGrantedRef.current = false; setConfirming(false); }}
+            onChange={(event) => { setVehicleId(event.target.value); setPolicyDialogOpen(false); setExistingClaimDialogOpen(false); confirmationGrantedRef.current = false; setConfirming(false); }}
             className="h-10 w-full rounded-lg border border-[#DDE7F3] bg-white px-3 text-[13px] font-semibold text-[#17345D] outline-none transition focus:border-[#2D7FF0] focus:ring-2 focus:ring-[#DCEBFF]"
           >
             {vehicles.map((item) => (
@@ -122,9 +123,9 @@ export function CustomerStartClaimSelector({
           <Headphones className="h-5 w-5" /> Get Assistance
         </Link>
         {existingClaim ? (
-          <Link href={{ pathname: existingClaim.current_status === "Draft" ? "/customer/spot-intimation" : `/customer/claims/${existingClaim.id}`, query: { account: accountId, ...(existingClaim.current_status === "Draft" ? { id: existingClaim.id } : {}) } }} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#0B3884] px-4 text-[13px] font-semibold text-white">
-            Continue existing claim <ArrowRight className="h-5 w-5"/>
-          </Link>
+          <button type="button" onClick={() => setExistingClaimDialogOpen(true)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#0B3884] px-4 text-[13px] font-semibold text-white">
+            Continue to Claim <ArrowRight className="h-5 w-5"/>
+          </button>
         ) : (
           <form ref={claimFormRef} action={claimAction} className="flex" onSubmit={(event) => { if (!hasActivePolicy && !confirmationGrantedRef.current) { event.preventDefault(); setPolicyDialogOpen(true); } }}>
             <input type="hidden" name="account" value={accountId}/>
@@ -135,6 +136,25 @@ export function CustomerStartClaimSelector({
         )}
       </div>
       {claimState.error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-800">{claimState.error}</p>}
+      {existingClaim && existingClaimDialogOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#071B39]/60 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setExistingClaimDialogOpen(false); }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="existing-claim-dialog-title" aria-describedby="existing-claim-dialog-description" onKeyDown={(event) => { if (event.key === "Escape") setExistingClaimDialogOpen(false); }} className="w-full max-w-[420px] rounded-[26px] bg-white px-6 py-7 text-center shadow-2xl sm:px-7">
+            <span className="mx-auto grid h-[76px] w-[76px] place-items-center rounded-full bg-[#FFF0E8] text-[#DE694B]">
+              <TriangleAlert className="h-8 w-8" strokeWidth={1.9} aria-hidden="true" />
+            </span>
+            <h2 id="existing-claim-dialog-title" className="mt-5 text-[20px] font-extrabold text-[#0D2148]">Claim already in progress</h2>
+            <p id="existing-claim-dialog-description" className="mt-3 text-[13px] font-medium leading-5 text-[#667187]">An active claim already exists for this policy.</p>
+            <div className="mt-7 grid gap-3">
+              <Link autoFocus href={{ pathname: existingClaim.current_status === "Draft" ? "/customer/spot-intimation" : `/customer/claims/${existingClaim.id}`, query: { account: accountId, ...(existingClaim.current_status === "Draft" ? { id: existingClaim.id } : {}) } }} className="inline-flex min-h-[52px] items-center justify-center rounded-2xl bg-[#0B3884] px-4 text-[14px] font-bold text-white hover:bg-[#0A3275] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0B3884]">
+                View Existing Claim
+              </Link>
+              <button type="button" onClick={() => setExistingClaimDialogOpen(false)} className="min-h-[52px] rounded-2xl border border-[#AFC4DC] bg-white px-4 text-[14px] font-bold text-[#0B3884] hover:bg-[#F4F8FE]">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {policyDialogOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#071B39]/55 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setPolicyDialogOpen(false); }}>
           <div role="dialog" aria-modal="true" aria-labelledby="claim-policy-dialog-title" aria-describedby="claim-policy-dialog-description" onKeyDown={(event) => { if (event.key === "Escape") setPolicyDialogOpen(false); }} className="w-full max-w-[420px] rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
