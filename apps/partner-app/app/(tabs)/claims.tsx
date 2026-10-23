@@ -93,6 +93,62 @@ export default function ClaimsScreen() {
   };
   const name = context?.identity.display_name || 'Partner';
 
+  // The overlay is transparent: only the existing white search control paints a surface.
+  // The banner, metrics, and Add Claim continue to scroll as normal.
+  const [showStickyControls, setShowStickyControls] = useState(false);
+  const searchControls = (
+    <View style={styles.searchRow}>
+      <PartnerSearchField
+        value={query}
+        onChangeText={setQuery}
+        onClear={() => setQuery('')}
+        placeholder="Search customer, claim number, vehicle number..."
+        placeholders={['Search customer...', 'Search claim number...', 'Search vehicle number...']}
+        containerStyle={styles.searchField}
+      />
+      <PartnerAnchoredDropdown
+        visible={filterMenuOpen}
+        onDismiss={() => setFilterMenuOpen(false)}
+        align="right"
+        menuWidth={160}
+        menu={(
+          <View style={styles.filterMenu}>
+            {CLAIM_FILTER_OPTIONS.map((option) => {
+              const active = !rejectedFilterNotice && state === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  onPress={() => {
+                    setFilterMenuOpen(false);
+                    selectSummary(option.value);
+                  }}
+                  style={({ pressed }) => [styles.filterOption, active && styles.filterOptionActive, pressed && styles.pressed]}
+                >
+                  <Text style={[styles.filterOptionText, active && styles.filterOptionTextActive]}>{option.label}</Text>
+                  {active ? <Ionicons name="checkmark" size={15} color="#3156B8" /> : null}
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Filter claims"
+          accessibilityState={{ expanded: filterMenuOpen }}
+          onPress={() => setFilterMenuOpen((open) => !open)}
+          style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}
+        >
+          <Ionicons name="filter-outline" size={18} color="#3156B8" />
+          <Text style={styles.filterText}>Filter</Text>
+        </Pressable>
+      </PartnerAnchoredDropdown>
+    </View>
+
+  );
+
   const header = (
     <View>
       <View style={styles.hero}>
@@ -147,55 +203,7 @@ export default function ClaimsScreen() {
       </View>
 
       <View style={styles.body}>
-        <View style={styles.searchRow}>
-          <PartnerSearchField
-            value={query}
-            onChangeText={setQuery}
-            onClear={() => setQuery('')}
-            placeholder="Search customer, claim number, vehicle number..."
-            placeholders={['Search customer...', 'Search claim number...', 'Search vehicle number...']}
-            containerStyle={styles.searchField}
-          />
-          <PartnerAnchoredDropdown
-            visible={filterMenuOpen}
-            onDismiss={() => setFilterMenuOpen(false)}
-            align="right"
-            menuWidth={160}
-            menu={(
-              <View style={styles.filterMenu}>
-                {CLAIM_FILTER_OPTIONS.map((option) => {
-                  const active = !rejectedFilterNotice && state === option.value;
-                  return (
-                    <Pressable
-                      key={option.value}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active }}
-                      onPress={() => {
-                        setFilterMenuOpen(false);
-                        selectSummary(option.value);
-                      }}
-                      style={({ pressed }) => [styles.filterOption, active && styles.filterOptionActive, pressed && styles.pressed]}
-                    >
-                      <Text style={[styles.filterOptionText, active && styles.filterOptionTextActive]}>{option.label}</Text>
-                      {active ? <Ionicons name="checkmark" size={15} color="#3156B8" /> : null}
-                    </Pressable>
-                  );
-                })}
-              </View>
-            )}
-          >
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Filter claims"
-              accessibilityState={{ expanded: filterMenuOpen }}
-              onPress={() => setFilterMenuOpen((open) => !open)}
-              style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}
-            >
-              <Ionicons name="filter-outline" size={18} color="#3156B8" />
-              <Text style={styles.filterText}>Filter</Text>
-            </Pressable>
-          </PartnerAnchoredDropdown>
-        </View>
+        {searchControls}
 
         <View style={styles.summaryRow}>
           {([
@@ -300,6 +308,12 @@ export default function ClaimsScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <FlatList
+        scrollEventThrottle={16}
+        onScroll={(event) => {
+          const sticky = event.nativeEvent.contentOffset.y >= 98;
+          setShowStickyControls((previous) => previous === sticky ? previous : sticky);
+          if (sticky && filterMenuOpen) setFilterMenuOpen(false);
+        }}
         data={rows}
         keyExtractor={(row) => row.claim_id}
         renderItem={({ item }) => (
@@ -316,6 +330,12 @@ export default function ClaimsScreen() {
         refreshing={collection.refreshing || summary.refreshing}
         onRefresh={() => void refreshAll()}
       />
+      {showStickyControls ? (
+        <View style={styles.stickyOverlay} pointerEvents="box-none">
+          <Text style={styles.stickyTitle}>Claims</Text>
+          <View style={styles.stickySearchBody}>{searchControls}</View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -402,6 +422,9 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
   content: { flexGrow: 1, paddingBottom: 104, backgroundColor: '#FFFFFF' },
   pressed: { opacity: 0.76 },
+  stickyOverlay: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 40, backgroundColor: "transparent" },
+  stickyTitle: { marginLeft: 18, marginTop: 5, marginBottom: 13, color: "#153F88", fontSize: 15, lineHeight: 18, fontWeight: "800", letterSpacing: -0.2 },
+  stickySearchBody: { paddingHorizontal: 10, backgroundColor: "transparent" },
 
   hero: { height: 98, overflow: 'hidden', backgroundColor: '#0752A2' },
   heroBackdrop: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%', opacity: 0.92 },
