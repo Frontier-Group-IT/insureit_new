@@ -13,7 +13,7 @@ import { CLAIM_STAGES, getClaimTrackerState, formatClaimDate } from '@/lib/claim
 
 export default function ClaimTrackerScreen() {
   const router = useRouter();
-  const mainScrollRef = useRef<ScrollView ref={mainScrollRef}>(null);
+  const mainScrollRef = useRef<ScrollView>(null);
   useFocusEffect(useCallback(() => {
     const reset = () => mainScrollRef.current?.scrollTo({ y: 0, animated: false });
     reset();
