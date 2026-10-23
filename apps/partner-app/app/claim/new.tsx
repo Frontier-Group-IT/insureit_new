@@ -17,7 +17,7 @@ const DOCUMENTS = [
 type DraftField = 'customer' | 'vehicle' | 'policy' | 'insurer' | 'accidentDate' | 'accidentTime' | 'intimationDate' | 'intimationTime' | 'driverName' | 'driverNumber' | 'location';
 export default function PartnerNewClaimScreen() {
   const router = useRouter();
-  const mainScrollRef = useRef<ScrollView ref={mainScrollRef}>(null);
+  const mainScrollRef = useRef<ScrollView>(null);
   useFocusEffect(useCallback(() => {
     const reset = () => mainScrollRef.current?.scrollTo({ y: 0, animated: false });
     reset();
