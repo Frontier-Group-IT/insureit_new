@@ -131,7 +131,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
       : Promise.resolve(null);
 
   if (profile.role === "backoffice_executive") {
-    if ((profile.role === "operations_head_life" && !operationsHeadFilter) || (profile.role !== "operations_head_life" && accessibleRmEmployeeIds !== null && !accessibleRmEmployeeIds.length)) {
+    if (accessibleRmEmployeeIds !== null && !accessibleRmEmployeeIds.length) {
       const policyIntakeSummary = await policyIntakeSummaryPromise;
       const finishedAt = performance.now();
       logPortalRoutePerformance("/policies", {
