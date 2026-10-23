@@ -212,7 +212,7 @@ export function PartnerScreen({
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustContentInsets={false}
         automaticallyAdjustsScrollIndicatorInsets={false}
-        stickyHeaderIndices={isHomeHero && !hideTopBar && !stickyHeading ? [1] : undefined}
+        stickyHeaderIndices={undefined}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps={scrollProps?.keyboardShouldPersistTaps ?? 'handled'}
