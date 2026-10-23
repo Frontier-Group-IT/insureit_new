@@ -164,7 +164,7 @@ const applicationOnlyPermissionKeys = new Set([
   "exchange.listings.create",
   "exchange.listings.review",
 ]);
-const applicationOnlyRoleCodes = new Set(["accounts", "sales_executive", "it_user"]);
+const applicationOnlyRoleCodes = new Set(["accounts", "sales_executive", "it_user", "operations_head_life"]);
 const itUserShadowSql = readFileSync(
   resolve(process.cwd(), "../../supabase/release-sql/20261020_it_user_v2_shadow_role_optional.sql"),
   "utf8",
