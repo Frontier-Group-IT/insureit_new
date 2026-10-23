@@ -110,7 +110,7 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
     let protectedPayin = payload.payin;
     let protectedPayout = payload.payout;
 
-    if (!canAccessPolicyCommercials(profile)) {
+    if (!canAccessPolicyCommercials(profile, profile.role === "operations_head_life")) {
       const [payinResult, payoutResult] = await Promise.all([
         admin.from("policy_payin_details").select("payout_basis,projected_od_percent,projected_tp_percent,insurer_scheme_amount").eq("policy_id", policyId).maybeSingle<ExistingPayin>(),
         admin.from("policy_intermediary_payouts").select("retention_amount,od_payout_percent,tp_payout_percent,payout_basis,partner_payout_amount,status,payout_date,voucher_number").eq("policy_id", policyId).order("created_at", { ascending: false }).limit(1).maybeSingle<ExistingPayout>(),
