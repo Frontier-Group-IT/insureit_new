@@ -6,7 +6,7 @@ import { saveCustomerExternalStage } from "./actions";
 import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/customer-claim-evidence-workspace";
 import { CustomerClaimDocumentGroups } from "@/components/customer-portal/customer-claim-document-groups";
 import { CustomerClaimBooleanChoice } from "@/components/customer-portal/customer-claim-boolean-choice";
-import { Check, Circle, ArrowLeft, LockKeyhole, CarFront, FileText, ShieldCheck, CalendarDays, Pencil } from "lucide-react";
+import { Check, Circle, ArrowLeft, LockKeyhole, CarFront, FileText, ShieldCheck, CalendarDays } from "lucide-react";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
@@ -30,11 +30,12 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
     redirect("/customer/spot-intimation?account="+encodeURIComponent(account.id)+"&id="+encodeURIComponent(claim.id));
   }
   const canEditStage = external && claim.claim_service_mode==="self_managed" && claim.assistance_status!=="accepted" && Boolean(CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key]) && !completed && activeIndex===currentIndex;
-  const editMode = q.mode === "edit";
+  if (q.mode !== "edit") redirect("/customer/claims/"+encodeURIComponent(claim.id)+"?account="+encodeURIComponent(account.id));
+  const editMode = true;
   const canUploadStage = selected.key==="spot_intimation" || selected.key==="claim_intimation";
   const allowEdit = canEditStage || canUploadStage;
   return <div className="space-y-3">
-    <div className="flex flex-wrap items-center justify-between gap-3"><Link href={{pathname:"/customer/claims",query:{account:account.id}}} className="inline-flex items-center gap-2 text-sm font-bold text-[#245DAB]"><ArrowLeft className="h-4 w-4"/> Claims Register</Link>{allowEdit ? (editMode ? <Link href={{pathname:`/customer/claims/${claim.id}/stage/${selected.key}`,query:{account:account.id}}} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#B9CBE2] px-4 text-[12px] font-semibold text-[#174A87]">View Details</Link> : <Link href={{pathname:`/customer/claims/${claim.id}/stage/${selected.key}`,query:{account:account.id,mode:"edit"}}} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#0B3884] px-4 text-[12px] font-semibold text-white"><Pencil className="h-4 w-4"/> Edit Claim</Link>) : null}</div>
+    <Link href={{pathname:"/customer/claims",query:{account:account.id}}} className="inline-flex items-center gap-2 text-sm font-bold text-[#245DAB]"><ArrowLeft className="h-4 w-4"/> Claims Register</Link>
     <section className="overflow-hidden rounded-2xl border border-[#D9E3F0] bg-white">
       <div className="grid grid-cols-2 lg:grid-cols-5">
         {([
@@ -60,7 +61,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
         <span>Policy copy: <strong>Not available</strong></span>
       </div>
     </section>
-    <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey={selected.key} currentKey={INTERNAL_JOURNEY_STAGES[currentIndex]?.key || "spot_intimation"} completedKeys={INTERNAL_JOURNEY_STAGES.filter((stage,i)=>external?projection?.stages.some(x=>x.key===stage.key&&x.completed):i<(internal_projection?.completedStageCount??0)).map(stage=>stage.key)} />
+    <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey={selected.key} currentKey={INTERNAL_JOURNEY_STAGES[currentIndex]?.key || "spot_intimation"} editMode completedKeys={INTERNAL_JOURNEY_STAGES.filter((stage,i)=>external?projection?.stages.some(x=>x.key===stage.key&&x.completed):i<(internal_projection?.completedStageCount??0)).map(stage=>stage.key)} />
     {!(editMode && canEditStage) ? <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white">
       <h2 className="border-b border-[#D9E3F0] px-5 py-4 text-[17px] font-semibold text-[#071D49]">{selected.key==="spot_intimation"?"Accident & Spot Intimation Details":selected.label+" Details"}</h2>
       {selected.key==="spot_intimation" ? (
