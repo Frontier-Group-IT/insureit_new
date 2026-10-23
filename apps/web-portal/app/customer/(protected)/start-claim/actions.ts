@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/auth-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getCustomerWebSession } from "@/lib/customer-web";
 import { loadCustomerWebPolicies, loadCustomerWebVehicles, resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaims } from "@/lib/customer-web-phase2-data";
@@ -37,14 +38,18 @@ export async function prepareCustomerClaim(_previous: PrepareCustomerClaimState,
   }
   const stamp = new Date();
   const claimNo = "CLM-" + stamp.toISOString().slice(0, 10).replace(/-/g, "") + "-" + stamp.getTime().toString().slice(-6);
-  const { data: created, error } = await supabase.from("claims").insert({
+  // Customer scope and vehicle ownership were verified above. Customer-web
+  // sessions are not Supabase Auth sessions, so the ordinary RLS client cannot
+  // INSERT claims (42501). Use the trusted server client only for this scoped write.
+  const claimWriter = createSupabaseAdminClient();
+  const { data: created, error } = await claimWriter.from("claims").insert({
     claim_no: claimNo, customer_id: account.id, vehicle_id: vehicleId,
     policy_id: policy?.id ?? null, insurance_company_id: policy?.insurance_company_id ?? null,
     current_status: "Draft", created_by: session.user.id,
   }).select("id").single();
   if (error || !created?.id) {
     // Recover a concurrent draft instead of creating a second claim.
-    const base = supabase.from("claims").select("id,current_status").eq("customer_id", account.id);
+    const base = claimWriter.from("claims").select("id,current_status").eq("customer_id", account.id);
     const scoped = policy ? base.eq("policy_id", policy.id) : base.eq("vehicle_id", vehicleId).is("policy_id", null).is("external_policy_id", null);
     const { data: recovered, error: recoveryError } = await scoped.not("current_status", "in", '("Settled","Closed","Claim Complete","Rejected")').limit(1).maybeSingle();
     if (!recovered?.id) {
