@@ -20,6 +20,7 @@ function isOperationsHeadLifePath(pathname: string) {
     new RegExp("^/policy-intakes/[0-9a-fA-F-]{36}$").test(pathname) ||
     pathname === "/policies/life-health-cases" ||
     new RegExp("^/policies/life-health-cases/[^/]+$").test(pathname) ||
+    new RegExp("^/policies/life-health-case-documents/[0-9a-fA-F-]{36}/view$").test(pathname) ||
     pathname === "/access-denied";
 }
 const claimsHeadHome = "/claims";
