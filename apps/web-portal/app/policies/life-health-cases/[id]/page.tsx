@@ -3,6 +3,8 @@ import { AppShell } from "@/components/shell";
 import { LifeHealthCaseDetail } from "@/components/life-health-case-detail";
 import { LifeHealthCaseErrorPopupGuard } from "@/components/life-health-case-error-popup-guard";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
+import { requireCapability } from "@/lib/master-data-server";
+import { getAccessiblePolicyRmEmployeeIds } from "@/lib/policy-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -19,13 +21,36 @@ type ActivityRow = { id:string; action:string; createdAt:string; createdBy:strin
 const documentAction=(type:string)=>type==="policy_copy"?"Policy Doc. Uploaded":type==="proposal_form"?"Proposal Form Uploaded":type==="kyc"?"KYC Uploaded":"Document Uploaded";
 
 export default async function LifeHealthCasePage({ params }: { params: Promise<{ id: string }> }) {
-  await requirePolicyCreator();
+  const profile = await requireCapability("view_policies");
+  if (profile.role !== "operations_head_life") await requirePolicyCreator();
   const admin = createSupabaseAdminClient();
   const { id } = await params;
-  const { data: caseRow, error } = await admin.from("life_health_cases")
+  let request = admin.from("life_health_cases")
     .select("id,case_number,business_line,status,sourcing_date,customer_id,insurance_company_id,product_name,proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode,premium_amount,intermediary_type,intermediary_code,lead_source,intermediary_mobile,rm_name,rm_code,remarks,final_policy_id,converted_at,created_at,created_by,converted_by")
-    .eq("id", id).maybeSingle<CaseRow>();
+    .eq("id", id);
+  if (profile.role === "operations_head_life") {
+    const allowedRmIds = await getAccessiblePolicyRmEmployeeIds(profile.id, profile.role, "view_policies");
+    if (!allowedRmIds?.length) notFound();
+    request = request.in("business_line", ["Life", "Health"]).in("rm_employee_id", allowedRmIds);
+  }
+  const { data: caseRow, error } = await request.maybeSingle<CaseRow>();
   if (error || !caseRow) notFound();
+  if (profile.role === "operations_head_life") {
+    return <AppShell title="Life / Health Case" backHref="/policies/life-health-cases">
+      <section className="mx-auto max-w-4xl rounded-xl border border-slate-200 bg-white p-5">
+        <p className="text-xs font-semibold text-slate-500">Read-only Life & Health case</p>
+        <h1 className="mt-2 text-lg font-bold text-slate-900">{caseRow.case_number}</h1>
+        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+          <div><dt className="text-slate-500">Business line</dt><dd>{caseRow.business_line}</dd></div>
+          <div><dt className="text-slate-500">Status</dt><dd>{caseRow.status}</dd></div>
+          <div><dt className="text-slate-500">Product</dt><dd>{caseRow.product_name}</dd></div>
+          <div><dt className="text-slate-500">Proposal number</dt><dd>{caseRow.proposal_number}</dd></div>
+          <div><dt className="text-slate-500">RM</dt><dd>{caseRow.rm_name ?? "—"}</dd></div>
+          <div><dt className="text-slate-500">Premium</dt><dd>{caseRow.premium_amount.toLocaleString("en-IN")}</dd></div>
+        </dl>
+      </section>
+    </AppShell>;
+  }
 
   const [customerResult, insurerResult, insurersResult, documentsResult, policyResult] = await Promise.all([
     admin.from("customers").select("id,contact_name,company_name,phone,email,address,address_street").eq("id", caseRow.customer_id).maybeSingle<CustomerRow>(),
