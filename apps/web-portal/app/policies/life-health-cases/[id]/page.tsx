@@ -35,23 +35,6 @@ export default async function LifeHealthCasePage({ params }: { params: Promise<{
   }
   const { data: caseRow, error } = await request.maybeSingle<CaseRow>();
   if (error || !caseRow) notFound();
-  if (profile.role === "operations_head_life") {
-    return <AppShell title="Life / Health Case" backHref="/policies/life-health-cases">
-      <section className="mx-auto max-w-4xl rounded-xl border border-slate-200 bg-white p-5">
-        <p className="text-xs font-semibold text-slate-500">Read-only Life & Health case</p>
-        <h1 className="mt-2 text-lg font-bold text-slate-900">{caseRow.case_number}</h1>
-        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-          <div><dt className="text-slate-500">Business line</dt><dd>{caseRow.business_line}</dd></div>
-          <div><dt className="text-slate-500">Status</dt><dd>{caseRow.status}</dd></div>
-          <div><dt className="text-slate-500">Product</dt><dd>{caseRow.product_name}</dd></div>
-          <div><dt className="text-slate-500">Proposal number</dt><dd>{caseRow.proposal_number}</dd></div>
-          <div><dt className="text-slate-500">RM</dt><dd>{caseRow.rm_name ?? "—"}</dd></div>
-          <div><dt className="text-slate-500">Premium</dt><dd>{caseRow.premium_amount.toLocaleString("en-IN")}</dd></div>
-        </dl>
-      </section>
-    </AppShell>;
-  }
-
   const [customerResult, insurerResult, insurersResult, documentsResult, policyResult] = await Promise.all([
     admin.from("customers").select("id,contact_name,company_name,phone,email,address,address_street").eq("id", caseRow.customer_id).maybeSingle<CustomerRow>(),
     admin.from("insurance_companies").select("id,name").eq("id", caseRow.insurance_company_id).maybeSingle<InsurerRow>(),
