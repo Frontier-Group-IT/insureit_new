@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
@@ -91,7 +92,39 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
     </SafeAreaView>
   );
 }
-function EditableField({label,required,value,onChange,placeholder,editable,icon,keyboard='default'}:{label:string;required?:boolean;value:string;onChange:(value:string)=>void;placeholder:string;editable:boolean;icon?:keyof typeof Ionicons.glyphMap;keyboard?:'default'|'phone-pad'}) {return <View style={styles.fieldWrap}><Text style={styles.fieldLabel}>{label}{required?<Text style={{color:'#D74747'}}> *</Text>:null}</Text><View style={[styles.field,!editable&&{opacity:.65}]}><TextInput accessibilityLabel={label} editable={editable} value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor="#9EABBC" keyboardType={keyboard} style={styles.editableInput}/>{icon?<Ionicons name={icon} color="#1857A9" size={20}/>:null}</View></View>}
+function EditableField({label,required,value,onChange,placeholder,editable,icon,keyboard='default'}:{label:string;required?:boolean;value:string;onChange:(value:string)=>void;placeholder:string;editable:boolean;icon?:keyof typeof Ionicons.glyphMap;keyboard?:'default'|'phone-pad'}) {
+  const [pickerVisible,setPickerVisible]=useState(false);
+  const mode=icon==='calendar-outline'?'date':icon==='time-outline'?'time':null;
+  const now=new Date();
+  const pickerValue=(()=>{
+    if(mode==='date' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const parsed=new Date(value+'T12:00:00');
+      if(!Number.isNaN(parsed.getTime()))return parsed;
+    }
+    if(mode==='time' && /^\d{2}:\d{2}$/.test(value)) {
+      const [h,m]=value.split(':').map(Number);
+      if(h<24&&m<60){const parsed=new Date();parsed.setHours(h,m,0,0);return parsed;}
+    }
+    return now;
+  })();
+  const openPicker=()=>{if(editable&&mode)setPickerVisible(true);};
+  const pad=(n:number)=>String(n).padStart(2,'0');
+  return <View style={styles.fieldWrap}>
+    <Text style={styles.fieldLabel}>{label}{required?<Text style={{color:'#D74747'}}> *</Text>:null}</Text>
+    <View style={[styles.field,!editable&&{opacity:.65}]}>
+      <TextInput accessibilityLabel={label} editable={editable} value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor="#9EABBC" keyboardType={keyboard} style={styles.editableInput}/>
+      {icon?<Pressable accessibilityRole="button" accessibilityLabel={`Choose ${label}`} accessibilityState={{disabled:!editable}} disabled={!editable} onPress={openPicker} hitSlop={10} style={{minWidth:36,minHeight:36,alignItems:'center',justifyContent:'center'}}><Ionicons name={icon} color="#1857A9" size={20}/></Pressable>:null}
+    </View>
+    {pickerVisible && mode ? <View>
+      <DateTimePicker value={pickerValue} mode={mode} display={Platform.OS==='ios'?'spinner':'default'} onChange={(event,date)=>{
+        if(Platform.OS!=='ios')setPickerVisible(false);
+        if(event.type==='dismissed'||!date)return;
+        onChange(mode==='date'?`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`:`${pad(date.getHours())}:${pad(date.getMinutes())}`);
+      }}/>
+      {Platform.OS==='ios'?<Pressable accessibilityRole="button" accessibilityLabel="Done selecting date or time" onPress={()=>setPickerVisible(false)} style={{alignSelf:'flex-end',padding:10}}><Text style={{color:'#1857A9',fontWeight:'800'}}>Done</Text></Pressable>:null}
+    </View>:null}
+  </View>;
+}
 
 function splitDateTime(value:string|null|undefined){if(!value)return{date:'',time:''};const date=new Date(value);if(Number.isNaN(date.getTime()))return{date:'',time:''};const pad=(n:number)=>String(n).padStart(2,'0');return{date:`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`,time:`${pad(date.getHours())}:${pad(date.getMinutes())}`};}
 function parseLocalDateTime(date:string,time:string){if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^\d{2}:\d{2}$/.test(time))return null;const parsed=new Date(`${date}T${time}:00`);return Number.isNaN(parsed.getTime())?null:parsed;}
