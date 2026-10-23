@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createServerSupabaseClient } from "@/lib/auth-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getCustomerWebSession } from "@/lib/customer-web";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail } from "@/lib/customer-web-phase2-data";
@@ -33,7 +33,8 @@ export async function uploadCustomerClaimDocument(form:FormData) {
   if(claim.claim_service_mode==="broker_managed" && ["Settled","Closed","Claim Complete"].includes(claim.current_status))
     throw new Error("Completed managed claims cannot accept new customer documents");
   const session=await getCustomerWebSession();
-  const db=await createServerSupabaseClient();
+  // Customer account and claim ownership have been checked by the server above.
+  const db=createSupabaseAdminClient();
   const ext=file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g,"")||"pdf";
   const path=account.id+"/"+claim.id+"/"+crypto.randomUUID()+"."+ext;
   const uploaded=await db.storage.from("claim-documents").upload(path,file,{contentType:file.type,upsert:false});
