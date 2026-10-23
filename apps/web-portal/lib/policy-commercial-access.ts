@@ -13,7 +13,9 @@ const COMMERCIAL_PROFILE_IDS = new Set([
   "f634d48a-e075-4dbd-849c-3e17974f3f94",
 ]);
 
-export function canAccessPolicyCommercials(profile: CommercialProfile) {
+export function canAccessPolicyCommercials(profile: CommercialProfile, scopedRecordAuthorized = false) {
+  // Dedicated downline role must pass the per-policy/case server guard first.
+  if (profile?.role === "operations_head_life") return scopedRecordAuthorized;
   if (profile?.role === "accounts") return true;
   return Boolean(profile?.id && COMMERCIAL_PROFILE_IDS.has(profile.id));
 }
