@@ -35,3 +35,13 @@ Close draft PR / revert its isolated commits. No production database writes have
 - A TypeScript route regex escape error was found and corrected before release. Re-run required to confirm all checks green.
 - Still **NOT IMPLEMENTED**: policy creation/edit, document critical verify, case creation/edit, intake review/finalization, finance adjustments, audit history and export/report guards for the new role. Do not assign the role.
 - The enum migration is not applied. PostgreSQL enum additions are additive but not trivially reversible; rollback is to keep role unassigned, and revert application changes.
+
+## Revised user requirement — 23 October 2026
+User explicitly superseded the vertical restriction: **Operations Head - Life can work on Motor, Non-Motor, Life, Health and every other policy vertical**, provided the **RM OR partner** responsible belongs to Gagan Singh's (5117) active employee downline. The display label stays Operations Head - Life.
+
+Implemented read-scope revision in this branch:
+- `getOperationsHeadDownlinePolicyScope` returns downline employee IDs and intermediary codes assigned to downline employees/profiles.
+- `operationsHeadPolicyFilter` and `canAccessPolicy` check `policies.rm_employee_id` **or** `policies.intermediary_code` against this scope. No `business_line` constraint.
+- Policy Register uses the same server-side ownership OR scope; signed policy-copy URLs already call `canAccessPolicy`.
+- Life/Health case list remains its own Life/Health-specific module and scoped to downline RM. Full cross-vertical creation, editing and critical verification are not safe to enable until every server action and document verification handler is guarded against this exact ownership rule. Permission ceiling stays view-only; **this is an incomplete draft, not ready for merge or production**.
+- Existing static scope tests updated. Partner association comes from `intermediaries.associate_employee_id` / `associate_profile_id`. For partner codes that are reused across intermediary types, further mapping hardening is required before granting write access.
