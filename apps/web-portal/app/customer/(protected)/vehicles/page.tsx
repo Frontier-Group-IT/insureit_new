@@ -40,6 +40,10 @@ export default async function CustomerVehiclesPage({
     const priority = { active: 2, due: 1, expired: 0 };
     active.sort((a, b) => priority[customerPolicyTone(b.end_date).tone] - priority[customerPolicyTone(a.end_date).tone]);
     const policy = active[0];
+    const allPolicies = [...associated].sort((a,b) => {
+      const rank = (p: typeof associated[number]) => inactivePolicyStatuses.has((p.status ?? "").trim().toLowerCase()) ? 3 : customerPolicyTone(p.end_date).tone === "active" ? 0 : customerPolicyTone(p.end_date).tone === "due" ? 1 : 2;
+      return rank(a)-rank(b) || b.end_date.localeCompare(a.end_date);
+    });
     const status: "due" | "active" | "inactive" | "expired" = policy ? customerPolicyTone(policy.end_date).tone : eligible.length ? "expired" : "inactive";
     return {
       id: vehicle.id,
@@ -50,6 +54,7 @@ export default async function CustomerVehiclesPage({
       chassis: vehicle.chassis_no ?? "",
       engine: vehicle.engine_no ?? "",
       policy: policy?.policy_no ?? null,
+      policies: allPolicies.map(p => ({ id: p.id, number: p.policy_no || "—", insurerName: p.insurer_name ?? null, status: inactivePolicyStatuses.has((p.status ?? "").trim().toLowerCase()) ? "inactive" as const : customerPolicyTone(p.end_date).tone })),
       insurerName: policy?.insurer_name ?? null,
       status,
     };
