@@ -10,9 +10,9 @@ type RefreshedSession = { access_token: string; refresh_token: string; expires_i
 const cookieOptions = { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/" };
 const accountsHome = "/accounts";
 const salesExecutiveHome = "/policies";
-const operationsHeadLifeHome = "/policies";
+const operationsHeadLifeHome = "/dashboard";
 function isOperationsHeadLifePath(pathname: string) {
-  return pathname === "/policies" ||
+  return pathname === "/dashboard" || pathname === "/policies" ||
     pathname === "/policies/new" ||
     new RegExp("^/policies/[0-9a-fA-F-]{36}$").test(pathname) ||
     new RegExp("^/policies/[0-9a-fA-F-]{36}/(edit|document)$").test(pathname) ||
