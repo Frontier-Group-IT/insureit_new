@@ -38,6 +38,9 @@ export function PartnerScreen({
   heroSearch,
   resetScrollOnFocus = false,
   homeMotionScrollY,
+  stickyHeading,
+  stickyControls,
+  stickyStartY = 100,
 }: PropsWithChildren<{
   title: string;
   eyebrow?: string;
@@ -52,6 +55,9 @@ export function PartnerScreen({
   resetScrollOnFocus?: boolean;
   /** Optional native-driven parallax on Home only; does not alter other tabs. */
   homeMotionScrollY?: Animated.Value;
+  stickyHeading?: string;
+  stickyControls?: ReactNode;
+  stickyStartY?: number;
   heroSearch?: {
     value: string;
     onChangeText: (value: string) => void;
@@ -71,6 +77,12 @@ export function PartnerScreen({
   const [homeSearchFocused, setHomeSearchFocused] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const latestScrollY = useRef(0);
+  const [showFixedHeader, setShowFixedHeader] = useState(false);
+  const updateFixedHeader = (y: number) => {
+    if (!stickyHeading || !stickyControls) return;
+    const next = y >= stickyStartY;
+    setShowFixedHeader((previous) => previous === next ? previous : next);
+  };
 
   useFocusEffect(useCallback(() => {
     if (!isHomeHero) return undefined;
@@ -139,11 +151,13 @@ export function PartnerScreen({
               listener: (event) => {
                 const y = (event as { nativeEvent: { contentOffset: { y: number } } }).nativeEvent.contentOffset.y;
                 latestScrollY.current = y;
+                updateFixedHeader(y);
                 scrollProps?.onScroll?.(event as Parameters<NonNullable<ScrollViewProps['onScroll']>>[0]);
               },
             })
           : (event) => {
               latestScrollY.current = event.nativeEvent.contentOffset.y;
+              updateFixedHeader(latestScrollY.current);
               scrollProps?.onScroll?.(event);
             }}
         contentInsetAdjustmentBehavior="never"
@@ -287,6 +301,12 @@ export function PartnerScreen({
         ) : null}
         {children}
       </Animated.ScrollView>
+      {showFixedHeader && stickyHeading && stickyControls ? (
+        <View style={styles.fixedWhiteHeader} pointerEvents="box-none">
+          <Text style={styles.fixedWhiteHeading}>{stickyHeading}</Text>
+          {stickyControls}
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -308,6 +328,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: partnerTheme.spacing.lg,
     paddingBottom: 104,
   },
+  fixedWhiteHeader: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 60, backgroundColor: "#FFFFFF", paddingTop: 12, paddingBottom: 10, paddingHorizontal: 10 },
+  fixedWhiteHeading: { color: "#153F88", fontSize: 15, lineHeight: 18, fontWeight: "800", marginLeft: 8, marginBottom: 12 },
   networkBanner: { marginBottom: partnerTheme.spacing.sm },
 
   homeHeroWrap: {
