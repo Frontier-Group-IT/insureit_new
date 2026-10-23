@@ -3,6 +3,8 @@
 import { useActionState, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
+import Image from "next/image";
+import { getInsurerLogo } from "@/lib/insurer-logo";
 import { ArrowRight, Headphones, LoaderCircle, Plus, ShieldAlert, ShieldCheck, ShieldX, X } from "lucide-react";
 import type { CustomerPolicyRow, CustomerVehicleRow } from "@/lib/customer-web-data";
 import { prepareCustomerClaim } from "@/app/customer/(protected)/start-claim/actions";
@@ -95,7 +97,7 @@ export function CustomerStartClaimSelector({
         {displayPolicy ? (
           <div className="rounded-2xl bg-[#0C367D] px-4 py-4 text-white shadow-[0_8px_20px_rgba(12,54,125,.12)] sm:px-5">
             <div className="flex min-w-0 items-center gap-3">
-              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-white text-[#0C367D]"><ShieldCheck className="h-7 w-7" aria-hidden="true"/></span>
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-white p-1 text-[#0C367D]">{displayPolicy.insurer_name ? <Image src={getInsurerLogo(displayPolicy.insurer_name) || ""} alt={`${displayPolicy.insurer_name} logo`} width={44} height={44} unoptimized className="h-full w-full object-contain" /> : <ShieldCheck className="h-7 w-7" aria-hidden="true"/>}</span>
               <div className="min-w-0 flex-1">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-[#B9D1F2]">{displayPolicy.source === "external" ? "Self tracked policy" : "Insurance policy"}</p>
                 <p className="truncate text-[19px] font-extrabold tracking-wide" title={displayPolicy.policy_no}>{displayPolicy.policy_no}</p>
