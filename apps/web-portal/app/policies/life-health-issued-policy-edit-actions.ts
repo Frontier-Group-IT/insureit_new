@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { recordPolicyActivity, POLICY_ACTIVITY_ACTIONS } from "@/lib/policy-activity";
 import { getOperationsHeadDownlinePolicyScope } from "@/lib/policy-access-scope";
 
 export type LifeHealthIssuedPolicyEditResult = { ok: true } | { ok: false; error: string };
@@ -301,6 +302,7 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
     if (payoutWrite.error) return { ok: false, error: "The Partner Payout could not be updated." };
   }
 
+  await recordPolicyActivity(admin, policyId, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_EDITED);
   revalidateIssuedPolicy(policyId, caseId);
   return { ok: true };
 }
