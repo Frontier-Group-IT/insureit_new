@@ -7,7 +7,7 @@ assert.match(source, /onLayout=\{\(event\) => setSearchHeight\(event\.nativeEven
 assert.match(source, /contentOffset\.y >= Math\.max\(0, heroHeight - searchHeight\)/);
 assert.doesNotMatch(source, /contentOffset\.y >= 98/);
 assert.match(source, /stickyOverlay: \{[^\n]+backgroundColor: "#FFFFFF"/);
-assert.match(source, /stickySearchBody: \{[^\n]+backgroundColor: "transparent"/);
+assert.match(source, /stickySearchBody: \{[^\n]+backgroundColor: "#FFFFFF"/);
 assert.match(source, /<View style=\{styles\.stickyOverlay\} pointerEvents="box-none">/);
 assert.match(source, /<Text style=\{styles\.stickyTitle\}>Claims<\/Text>/);
 assert.match(source, /<View style=\{styles\.stickySearchBody\}>\{searchControls\}<\/View>/);
