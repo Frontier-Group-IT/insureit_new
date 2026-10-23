@@ -7,6 +7,7 @@ import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-c
 import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/customer-claim-evidence-workspace";
 import { CustomerClaimVoiceRecorder } from "@/components/customer-portal/customer-claim-voice-recorder";
 import { SpotIntimationSaveForm, type SpotSaveState } from "./spot-intimation-save-form";
+import { AutoCloseTimeInput } from "@/components/customer-portal/auto-close-time-input";
 
 export const dynamic="force-dynamic";
 
@@ -112,7 +113,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
           <span className="mt-2 flex min-w-0 overflow-hidden rounded-lg border border-[#CAD8EA] bg-white">
             <input name="accidentDate" type="date" required aria-label="Accident date" className={splitFieldClass}/>
             <span aria-hidden="true" className="my-1.5 w-px shrink-0 bg-[#D6E0ED]"/>
-            <input name="accidentTime" type="time" required aria-label="Accident time" className={splitFieldClass}/>
+            <AutoCloseTimeInput name="accidentTime" required ariaLabel="Accident time" className={splitFieldClass}/>
           </span>
         </label>
         <label className="min-w-0">
@@ -120,7 +121,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
           <span className="mt-2 flex min-w-0 overflow-hidden rounded-lg border border-[#CAD8EA] bg-white">
             <input name="spotDate" type="date" required aria-label="Spot intimation date" className={splitFieldClass}/>
             <span aria-hidden="true" className="my-1.5 w-px shrink-0 bg-[#D6E0ED]"/>
-            <input name="spotTime" type="time" required aria-label="Spot intimation time" className={splitFieldClass}/>
+            <AutoCloseTimeInput name="spotTime" required ariaLabel="Spot intimation time" className={splitFieldClass}/>
           </span>
         </label>
         <label className="min-w-0">
