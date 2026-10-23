@@ -52,7 +52,7 @@ function customerIdentityName(row: CustomerIdentityRow) { return cleanCustomerNa
 export async function updateNonMotorPolicy(policyId: string, payload: NonMotorPolicyPayload): Promise<NonMotorPolicyResult> {
   const profile = await requirePolicyEditor(policyId);
   const admin = createSupabaseAdminClient();
-  const commercial = canAccessPolicyCommercials(profile) ? (payload.commercial ?? EMPTY_COMMERCIAL) : EMPTY_COMMERCIAL;
+  const commercial = canAccessPolicyCommercials(profile, profile.role === "operations_head_life") ? (payload.commercial ?? EMPTY_COMMERCIAL) : EMPTY_COMMERCIAL;
   const id = clean(policyId);
   if (!id) return { ok:false, error:"Policy reference is missing." };
 
@@ -268,7 +268,7 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
   const profile = await requirePolicyCreator(payload.source.intermediaryCode);
   const admin = createSupabaseAdminClient();
   // Keep the server as the source of truth for the same restricted commercial access used by Motor onboarding.
-  const commercial = canAccessPolicyCommercials(profile) ? (payload.commercial ?? EMPTY_COMMERCIAL) : EMPTY_COMMERCIAL;
+  const commercial = canAccessPolicyCommercials(profile, profile.role === "operations_head_life") ? (payload.commercial ?? EMPTY_COMMERCIAL) : EMPTY_COMMERCIAL;
 
   const policyNumber = clean(payload.policy.policyNumber).toUpperCase();
   const normalizedPolicy = normalizePolicyNumber(policyNumber);
