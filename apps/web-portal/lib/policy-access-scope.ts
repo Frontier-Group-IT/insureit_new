@@ -52,6 +52,17 @@ export function operationsHeadPolicyFilter(scope: { employeeIds: string[]; inter
   return filters.join(",");
 }
 
+/** Reusable server-side case authorization, never customer-only scope. */
+export async function canAccessOperationsHeadCase(profileId: string, caseId: string): Promise<boolean> {
+  const downline = await getOperationsHeadDownlinePolicyScope(profileId);
+  const filter = operationsHeadPolicyFilter(downline);
+  if (!caseId || !filter) return false;
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin.from("life_health_cases")
+    .select("id").eq("id", caseId).or(filter).maybeSingle<{ id: string }>();
+  return !error && Boolean(data?.id);
+}
+
 export async function getSalesExecutivePolicyIds(profileId: string) {
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
