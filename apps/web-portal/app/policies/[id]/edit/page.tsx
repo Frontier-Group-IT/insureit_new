@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { LifeHealthIssuedPolicyEditForm, type LifeHealthIssuedEditSource } from "@/components/life-health-issued-policy-edit-form";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
+import { getOperationsHeadDownlinePolicyScope } from "@/lib/policy-access-scope";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getActiveInsuranceCompanyOptions } from "@/lib/reference-data-cache";
@@ -24,6 +25,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
   const resolvedParams = await params;
   const policyEditor = await requirePolicyEditor(resolvedParams.id);
   const commercialAccess = canAccessPolicyCommercials(policyEditor);
+  const scope = policyEditor.role === "operations_head_life" ? await getOperationsHeadDownlinePolicyScope(policyEditor.id) : null;
   const admin = createSupabaseAdminClient();
   const { data: policy, error } = await admin.from("policies").select("id,business_line,customer_id,insurance_company_id,issuance_date,start_date,end_date,premium_amount,insured_declared_value,remarks,policy_no,rm_name,rm_employee_id,created_by,created_at,updated_at").eq("id", resolvedParams.id).maybeSingle<PolicyRouteRow>();
 
@@ -52,7 +54,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     const savedRmName = savedRmEmployee?.full_name?.trim() || lifeHealthCase.rm_name?.trim() || policy.rm_name?.trim() || "";
     const savedRmCode = savedRmEmployee?.employee_code?.trim() || lifeHealthCase.rm_code?.trim() || "";
 
-    const sources: LifeHealthIssuedEditSource[] = (intermediaryRows ?? []).map((row) => {
+    const sources: LifeHealthIssuedEditSource[] = (intermediaryRows ?? []).filter(row => !scope || scope.intermediaryCodes.includes(row.intermediary_code?.trim() ?? "") || row.id === lifeHealthCase.intermediary_id).map((row) => {
       const employee = row.associate_employee_id ? employeeById.get(row.associate_employee_id) : null;
       const isSavedSource = row.id === lifeHealthCase.intermediary_id;
       return { id:row.id, type:row.intermediary_type === "posp" ? "POSP" : row.intermediary_type === "misp" ? "MISP" : "SIBL / Partner", label:row.display_name, code:row.intermediary_code?.trim() || "", mobile:row.mobile?.replace(/\D/g, "").slice(-10) || "", rmName:employee?.full_name?.trim() || (isSavedSource ? savedRmName : ""), rmCode:employee?.employee_code?.trim() || (isSavedSource ? savedRmCode : "") };
