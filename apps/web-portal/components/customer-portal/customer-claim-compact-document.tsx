@@ -47,7 +47,7 @@ export function CustomerClaimCompactDocument({label,type,documents,accountId,cla
   return <article className="min-w-0 rounded-xl border border-[#DCE5F4] bg-white p-3">
     <div className="flex items-center justify-between gap-2">
       <div className="flex min-w-0 flex-1 items-center gap-2"><img src={documentIcon(type)} alt="" aria-hidden="true" loading="lazy" className="h-9 w-9 shrink-0 object-contain" /><h3 className="min-w-0 text-[12px] font-semibold text-[#102B54]">{label}</h3></div>
-      {ordered.length>0?<span aria-label={`${ordered.length} uploaded`} className="shrink-0 rounded-full bg-[#EDF8F2] px-2 py-0.5 text-[10px] font-semibold text-[#087A57]">{ordered.length} Uploaded</span>:null}
+      {ordered.length>0?<button type="button" aria-expanded={ordered.length>1?expanded:undefined} aria-label={ordered.length>1?`${ordered.length} uploaded, ${expanded?'collapse':'expand'} documents`:`${ordered.length} uploaded`} onClick={ordered.length>1?()=>setExpanded(v=>!v):undefined} className={`inline-flex shrink-0 items-center gap-1 rounded-full bg-[#EDF8F2] px-2 py-0.5 text-[10px] font-semibold text-[#087A57] ${ordered.length>1?'cursor-pointer transition hover:bg-[#DFF3E8] focus-visible:outline-2 focus-visible:outline-[#16835D]':'cursor-default'}`}>{ordered.length} Uploaded{ordered.length>1?(expanded?<ChevronUp className="h-3 w-3"/>:<ChevronDown className="h-3 w-3"/>):null}</button>:null}
       {allowUpload?<form action={uploadAction} ref={form}>
         <input type="hidden" name="account" value={accountId}/><input type="hidden" name="claim" value={claimId}/><input type="hidden" name="stage" value={stage}/><input type="hidden" name="type" value={type}/><input type="hidden" name="returnToSpotIntimation" value={returnToSpotIntimation?"1":"0"}/>
         <input ref={input} type="file" name="file" required accept={accept} className="sr-only" aria-label={`Choose ${label}`} onChange={e=>{if(e.currentTarget.files?.length)form.current?.requestSubmit();}}/>
@@ -57,7 +57,7 @@ export function CustomerClaimCompactDocument({label,type,documents,accountId,cla
     {uploadState.error?<p role="alert" className="mt-2 text-[11px] font-medium text-red-700">{uploadState.error}</p>:null}
     {ordered.length>0?<div className="mt-2 space-y-1.5">
       {openFile(ordered[0])}
-      {ordered.length>1?<><button type="button" aria-expanded={expanded} onClick={()=>setExpanded(v=>!v)} className="flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-[11px] font-semibold text-[#24569E] hover:bg-[#F1F6FF]"><span>{expanded?"Show less":`+${ordered.length-1} more documents`}</span>{expanded?<ChevronUp className="h-4 w-4"/>:<ChevronDown className="h-4 w-4"/>}</button>{expanded?ordered.slice(1).map(openFile):null}</>:null}
+      {ordered.length>1&&expanded?ordered.slice(1).map(openFile):null}
     </div>:null}
   </article>;
 }
