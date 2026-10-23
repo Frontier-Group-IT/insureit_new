@@ -10,7 +10,6 @@ import { PartnerAssets } from '@/lib/partner-assets';
 import { savePartnerClaimSpot, type PartnerClaimDetail } from '@/lib/claims';
 import { PartnerClaimStepFooter } from '@/components/partner-claim-step-footer';
 import { PartnerClaimDocumentUpload } from '@/components/partner-claim-document-upload';
-import { PartnerIncidentVoiceRecorder } from '@/components/partner-incident-voice-recorder';
 
 const DOCUMENTS = [
   { title: 'RC Copy', artwork: require('../../mobile-app/assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png') },
@@ -86,7 +85,7 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
           <View style={styles.tiles}>{DOCUMENTS.map(item=><PartnerClaimDocumentUpload key={item.title} claimId={data.claim.id} customerId={data.customer.id} documentType={item.title} milestoneKey="spot_intimation" documents={data.documents} variant="tile" artwork={item.artwork} label={item.title}/>)}</View>
           <PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="Spot Intimation Attachment" milestoneKey="spot_intimation" documents={data.documents} variant="bulk" artwork={CUSTOMER_BULK_ICON} label="Upload multiple documents" subtitle="Select several files now, or tap again later to add more."/>
         </View>
-        <View style={styles.voice}><View style={styles.voiceTop}><View style={styles.mic}><Ionicons name="mic-outline" size={28} color="#0A4FA8"/></View><View style={styles.headingCopy}><Text style={styles.sectionTitle}>Incident Voice Note</Text><Text style={styles.subtitle}>Describe what happened in your own words. Maximum recording time is 2 minutes.</Text></View></View><PartnerIncidentVoiceRecorder claimId={data.claim.id} customerId={data.customer.id} /></View>
+        <View style={styles.voice}><View style={styles.voiceTop}><View style={styles.mic}><Ionicons name="mic-outline" size={28} color="#0A4FA8"/></View><View style={styles.headingCopy}><Text style={styles.sectionTitle}>Incident Voice Note</Text><Text style={styles.subtitle}>Describe what happened in your own words. Maximum recording time is 2 minutes.</Text></View></View><PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="Incident Voice Note" milestoneKey="spot_intimation" documents={data.documents} variant="voice"/></View>
         <PartnerClaimStepFooter index={0} busy={saving} canContinue={data.claim.current_status === "Draft" || data.claim.current_status === "Initial Documents Pending"} onPrevious={() => router.push("/claim/select-vehicle" as never)} onContinue={() => void save()} continueLabel="Start Claim & Continue" />
       </ScrollView>
       <View style={styles.nav}><Nav title="Home" icon="home" onPress={() => router.push('/(tabs)' as never)}/><Nav title="Business" icon="briefcase-outline" onPress={() => router.push('/(tabs)/business' as never)}/><Nav title="Policies" icon="document-text-outline" onPress={() => router.push('/(tabs)/policies' as never)}/><Nav title="Claims" icon="shield-checkmark-outline" onPress={() => router.push('/(tabs)/claims' as never)}/><Nav title="More" icon="grid-outline" onPress={() => router.push('/(tabs)/more' as never)}/></View>
