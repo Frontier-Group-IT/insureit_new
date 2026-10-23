@@ -323,6 +323,18 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
         // browser receives its result. Never automatically resubmit: the
         // previous operation may have succeeded.
         console.error("[policy-onboarding] Save action failed unexpectedly", error);
+        // A page kept open across production deployments can retain a stale
+        // Next.js Server Action ID. Never retry the write automatically.
+        const message = error instanceof Error ? error.message : String(error);
+        if (/UnrecognizedActionError|Server Action .* was not found|Failed to find Server Action/i.test(message)) {
+          try {
+            sessionStorage.setItem(POLICY_DRAFT_KEY, JSON.stringify({
+              savedAt: Date.now(), form, registrationMode: vehicleRegistrationMode,
+            }));
+          } catch {}
+          setSubmitError("This Policy Onboarding page is outdated after a website update. Your draft has been preserved. First check the Policy Register for this policy number, then reload the page to use the latest save action. Do not submit twice.");
+          return;
+        }
         setSubmitError("The policy save response could not be confirmed. Check the Policy Register for this policy number before trying again, to avoid a duplicate. Your form remains available.");
       }
     });
