@@ -251,11 +251,30 @@ export default function BusinessScreen() {
     return [];
   }, [netTrend.data, trendPreset, trendRange]);
 
+  const businessSearchControls = (
+          <View style={[styles.searchRow, compactScreen && styles.searchRowShort]}>
+            <Pressable accessibilityRole="button" onPress={() => router.push('/search')} style={({ pressed }) => [styles.searchBox, pressed && styles.pressed]}>
+              <Ionicons name="search-outline" size={21} color="#3156B8" />
+              <PartnerRotatingSearchPlaceholder
+                placeholders={['Search customer...', 'Search vehicle number...', 'Search policy number...']}
+                textStyle={styles.searchText}
+              />
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Open business custom range" onPress={() => void selectOverviewRange('custom')} style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}>
+              <Ionicons name="filter-outline" size={18} color="#3156B8" />
+              <Text style={styles.filterText}>Filter</Text>
+            </Pressable>
+          </View>
+  );
+
   return (
     <PartnerScreen
       resetScrollOnFocus
       title=""
       hideTopBar
+      stickyHeading="Business"
+      stickyControls={businessSearchControls}
+      stickyStartY={compactScreen ? 54 : 58}
       scrollProps={{
         refreshControl: (
           <RefreshControl
@@ -306,19 +325,7 @@ export default function BusinessScreen() {
             <View style={styles.heroCopy}><Text style={styles.heroTitle}>Business</Text></View>
           </View>
 
-          <View style={[styles.searchRow, compactScreen && styles.searchRowShort]}>
-            <Pressable accessibilityRole="button" onPress={() => router.push('/search')} style={({ pressed }) => [styles.searchBox, pressed && styles.pressed]}>
-              <Ionicons name="search-outline" size={21} color="#3156B8" />
-              <PartnerRotatingSearchPlaceholder
-                placeholders={['Search customer...', 'Search vehicle number...', 'Search policy number...']}
-                textStyle={styles.searchText}
-              />
-            </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="Open business custom range" onPress={() => void selectOverviewRange('custom')} style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}>
-              <Ionicons name="filter-outline" size={18} color="#3156B8" />
-              <Text style={styles.filterText}>Filter</Text>
-            </Pressable>
-          </View>
+          {businessSearchControls}
 
           {workspace.stale || workspace.error || workspace.data?.secondaryWarning ? (
             <View style={styles.feedback}>
