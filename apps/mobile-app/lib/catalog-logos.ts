@@ -132,7 +132,7 @@ const vehicleBrandLogos: Record<string, ImageSourcePropType> = {
   yamaha: require('../assets/catalog/vehicle-brands/yamaha.png'),
 };
 
-const vehicleBrandAliases: Record<string, keyof typeof vehicleBrandLogos> = {
+const vehicleBrandAliases: Record<string, string> = {
   mahindra: 'mahindra',
   mahindraandmahindra: 'mahindra',
   mahindraandmahindralimited: 'mahindra',
