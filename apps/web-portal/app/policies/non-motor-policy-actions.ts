@@ -50,7 +50,7 @@ function customerIdentityName(row: CustomerIdentityRow) { return cleanCustomerNa
 
 
 export async function updateNonMotorPolicy(policyId: string, payload: NonMotorPolicyPayload): Promise<NonMotorPolicyResult> {
-  const profile = await requirePolicyEditor();
+  const profile = await requirePolicyEditor(policyId);
   const admin = createSupabaseAdminClient();
   const commercial = canAccessPolicyCommercials(profile) ? (payload.commercial ?? EMPTY_COMMERCIAL) : EMPTY_COMMERCIAL;
   const id = clean(policyId);
