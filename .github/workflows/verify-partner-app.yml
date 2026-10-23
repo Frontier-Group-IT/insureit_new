@@ -115,6 +115,9 @@ jobs:
       - name: Verify pre-APK UAT and security contracts
         run: npm --workspace apps/partner-app run verify:uat
 
+      - name: Verify transparent Claims sticky positioning
+        run: node apps/partner-app/scripts/verify-claims-transparent-sticky-position.mjs
+
       - name: Verify claim journey milestone deduplication
         run: node apps/partner-app/scripts/verify-claim-journey-deduplication.mjs
 
