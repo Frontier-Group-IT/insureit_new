@@ -590,7 +590,7 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       });
     } else if (payload.sourceIntakeId) {
       diagnosticStage = "policy_intake_finalizer_authorization";
-      await requirePolicyIntakeFinalizer();
+      await requirePolicyIntakeFinalizer(payload.sourceIntakeId);
       if (!/^[0-9a-f-]{36}$/i.test(payload.sourceIntakeId)) {
         return { ok:false, kind:"validation", error:"The Policy Intake reference is invalid. Reload the intake and try again." };
       }
