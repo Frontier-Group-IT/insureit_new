@@ -4,6 +4,10 @@ import { PolicyIntakeWorkspace, type PolicyIntakeViewKey, type PolicyIntakeWorks
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { requirePolicyIntakeViewer } from "@/lib/policy-intake-server";
+import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
+import { requireCapability } from "@/lib/master-data-server";
+import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
+import { getOperationsHeadDownlinePolicyScope, operationsHeadPolicyFilter } from "@/lib/policy-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -24,11 +28,13 @@ function resolveInitialView(value: string | undefined, reviewer: boolean): Polic
 }
 
 export default async function PolicyIntakesPage({ searchParams }: { searchParams?: Promise<PolicyIntakeSearchParams> }) {
-  const profile = await requirePolicyIntakeViewer();
+  const { profile: requester } = await getAuthenticatedProfile(await getServerAccessToken());
+  const isDownlineHead = requester?.role === "operations_head_life";
+  const profile = isDownlineHead ? await requireCapability("view_policies") : await requirePolicyIntakeViewer();
   const params = searchParams ? await searchParams : undefined;
   const [reviewer, creator] = await Promise.all([
-    hasEffectiveCapability(profile, "review_policy_intakes", "edit"),
-    hasEffectiveCapability(profile, "create_policy_intakes", "edit"),
+    isDownlineHead ? Promise.resolve(true) : hasEffectiveCapability(profile, "review_policy_intakes", "edit"),
+    isDownlineHead ? Promise.resolve(true) : hasEffectiveCapability(profile, "create_policy_intakes", "edit"),
   ]);
   const initialView = resolveInitialView(params?.view, reviewer);
   const admin = createSupabaseAdminClient();
@@ -37,7 +43,23 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
     .select("id,intake_number,status,policy_type,lead_source_name,lead_source_type,lead_source_code,customer_mobile,created_at,ocr_status,ocr_fields,file_name,assigned_to_profile_id,submitted_by_profile_id,submitted_by_portal_account_id")
     .order("created_at", { ascending: false })
     .limit(500);
-  if (!reviewer) query = query.eq("submitted_by_profile_id", profile.id);
+  if (isDownlineHead) {
+    const [scope, employeeScope] = await Promise.all([
+      getOperationsHeadDownlinePolicyScope(profile.id),
+      getEmployeeAccessScope(profile.id, profile.role, "view_policies"),
+    ]);
+    const filter = operationsHeadPolicyFilter(scope);
+    const { data: allowedPolicies, error: scopeError } = filter
+      ? await admin.from("policies").select("id").or(filter).returns<Array<{ id: string }>>()
+      : { data: [] as Array<{ id: string }>, error: null };
+    if (scopeError) throw new Error("downline_policy_intake_scope_unavailable");
+    const predicates: string[] = [];
+    if (scope.intermediaryCodes.length) predicates.push(`lead_source_code.in.(${scope.intermediaryCodes.join(",")})`);
+    if (employeeScope.profileIds.length) predicates.push(`submitted_by_profile_id.in.(${employeeScope.profileIds.join(",")})`);
+    if (allowedPolicies?.length) predicates.push(`final_policy_id.in.(${allowedPolicies.map(row => row.id).join(",")})`);
+    if (predicates.length) query = query.or(predicates.join(","));
+    else query = query.eq("id", "00000000-0000-0000-0000-000000000000");
+  } else if (!reviewer) query = query.eq("submitted_by_profile_id", profile.id);
   const { data, error } = await query.returns<PolicyIntakeListRow[]>();
 
   const rows = data ?? [];
