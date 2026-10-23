@@ -28,8 +28,6 @@ export async function saveCustomerExternalStage(form:FormData) {
   const index=INTERNAL_JOURNEY_STAGES.findIndex(stage=>stage.key===key);
   if(index<1)throw new Error("Invalid stage");
   const previous=milestones.find(m=>m.milestone_key===INTERNAL_JOURNEY_STAGES[index-1].key);
-  if(!previous||!["completed","not_applicable"].includes(previous.milestone_status))
-    throw new Error("Complete the preceding claim stage first");
   const values:Record<string,string|number|boolean>={};
   for(const field of config){
     const value=String(form.get(field.key)||"").trim();
@@ -60,7 +58,7 @@ export async function saveCustomerExternalStage(form:FormData) {
     throw new Error("Payment date must not precede document submission");
   const dateKey=stageDates[key];
   const date=dateKey?values[dateKey]:null;
-  if(typeof date==="string"&&previous.details){
+  if(typeof date==="string"&&previous?.details){
     const prevKey=stageDates[previous.milestone_key]||"spot_intimation_at";
     const previousDate=previous.details[prevKey];
     if(typeof previousDate==="string"&&date<previousDate.slice(0,10))throw new Error("Stage date precedes the previous stage");
@@ -68,9 +66,6 @@ export async function saveCustomerExternalStage(form:FormData) {
   const db=await createServerSupabaseClient();
   const session=await getCustomerWebSession();
   const current=milestones.find(m=>m.milestone_key===key);
-  if (current && ["completed","not_applicable"].includes(current.milestone_status)) {
-    throw new Error("This claim stage has already been completed and cannot be edited.");
-  }
   if(key==="vehicle_delivery"||key==="spot_status"){
     const done=key!=="vehicle_delivery"||(values.vehicle_received==="yes"&&Boolean(values.vehicle_received_date));
     const {error}=await db.from("claim_milestones").upsert({

@@ -60,7 +60,8 @@ const stageActions=fs.readFileSync("app/customer/(protected)/claims/[id]/stage/[
 assert.match(stagePage,/selected\.key==="spot_intimation" && claim\.current_status==="Draft"/,"Draft Stage 1 should use editable incident form");
 assert.match(stagePage,/redirect\("\/customer\/spot-intimation\?account="/,"Draft Stage 1 must route to editable form");
 assert.match(stagePage,/const canEditStage = external && claim\.claim_service_mode==="self_managed"/,"Stage editing must honor self-managed permissions");
-assert.match(stagePage,/!completed && activeIndex===currentIndex/,"Completed and noncurrent stages must stay read-only");
+assert.doesNotMatch(stagePage,/!completed && activeIndex===currentIndex/,"Authorized self-managed External Claims must allow completed and noncurrent stage edits");
+assert.match(stagePage,/claim\.assistance_status!=="accepted"/,"Accepted assistance must still block customer stage edits");
 assert.match(stagePage,/Save &amp; Continue/,"Eligible stages must have a submit action");
 assert.match(stageActions,/const next=INTERNAL_JOURNEY_STAGES\[index\+1\]/,"Successful stage submissions should route to the next stage");
 console.log("Customer nine-stage editing permissions and navigation regression passed.");
