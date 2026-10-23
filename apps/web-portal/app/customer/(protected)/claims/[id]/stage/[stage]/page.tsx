@@ -5,7 +5,6 @@ import { CUSTOMER_EXTERNAL_STAGE_FIELDS } from "@/lib/customer-claim-stage-field
 import { saveCustomerExternalStage } from "./actions";
 import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/customer-claim-evidence-workspace";
 import { CustomerClaimDocumentGroups } from "@/components/customer-portal/customer-claim-document-groups";
-import { CustomerClaimUploadSummary } from "@/components/customer-portal/customer-claim-upload-summary";
 import { CustomerClaimBooleanChoice } from "@/components/customer-portal/customer-claim-boolean-choice";
 import { Check, Circle, ArrowLeft, LockKeyhole, CarFront, FileText, ShieldCheck, CalendarDays } from "lucide-react";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
@@ -111,6 +110,5 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
     ):null}
     {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key}/> : null}
     {selected.key==="claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} showSaveDetails={external && claim.claim_service_mode==="self_managed" && claim.assistance_status!=="accepted"} /> : null}
-    {selected.key!=="spot_intimation" && selected.key!=="claim_intimation" ? <CustomerClaimUploadSummary documents={documents} /> : null}
   </div>;
 }

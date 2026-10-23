@@ -41,7 +41,7 @@ function DocumentCard({ definition, documents, claimId, accountId, stage }: {
         <input ref={input} type="file" name="file" required accept=".pdf,.jpg,.jpeg,.png,.webp,.heic" onChange={e => setChosen(e.currentTarget.files?.[0]?.name || "")} className="sr-only" aria-label={`Choose ${definition.label}`}/>
         <button type="button" onClick={() => input.current?.click()} aria-label={`Choose file for ${definition.label}`} title="Choose document" className="rounded-md p-1 text-[#2460B8] hover:bg-[#EEF4FF]"><FilePlus2 className="h-4 w-4"/></button>
         {chosen ? <button type="submit" className="rounded-md border border-[#BBD0F2] px-2 py-1 text-[10px] font-semibold text-[#24569E]">Upload</button> : null}
-        <span className="rounded-full bg-[#F1F5FB] px-2 py-1 text-[10px] text-[#536781]">{items.length ? "Uploaded" : "Not uploaded"}</span>
+        {items.length ? <span className="rounded-full bg-[#EFF9F3] px-2 py-1 text-[10px] text-[#13855B]">Uploaded</span> : null}
       </form>
     </div>
     {items.length ? <>
@@ -54,7 +54,7 @@ function DocumentCard({ definition, documents, claimId, accountId, stage }: {
         <span className="min-w-0 flex-1 truncate" title={doc.file_name || doc.document_type}>{doc.file_name || definition.label + " · " + new Date(doc.created_at).toLocaleDateString("en-IN")}</span>
         <span className="shrink-0 text-[10px] text-[#13855B]">Uploaded</span>
       </div>)}</div>
-    </> : <p className="mt-4 text-[11px] text-[#8794A7]">Not uploaded</p>}
+    </> : null}
     {chosen ? <p className="mt-2 truncate text-[10px] text-[#536781]" title={chosen}>Selected: {chosen}</p> : null}
   </article>;
 }
