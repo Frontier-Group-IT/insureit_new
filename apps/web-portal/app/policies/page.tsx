@@ -121,7 +121,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
   }
 
   const canTrackOwnPolicyIntakes = profile.role === "relationship_manager" && canViewPolicyIntakes;
-  const policyIntakeSummaryPromise = canReviewPolicyIntakes
+  const policyIntakeSummaryPromise = profile.role === "operations_head_life" ? Promise.resolve(null) : canReviewPolicyIntakes
     ? loadPolicyIntakeReviewSummary(admin)
     : canTrackOwnPolicyIntakes
       ? loadPolicyIntakeReviewSummary(admin, { submittedByProfileId: profile.id, includeActionRequired: false })
@@ -192,6 +192,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
         .order("created_at", { ascending: false })
         .range(from, to);
       if (accessibleRmEmployeeIds !== null) query = query.in("rm_employee_id", accessibleRmEmployeeIds);
+      if (profile.role === "operations_head_life") query = query.in("business_line", ["Life", "Health"]);
       return query.returns<PolicyRow[]>();
     }),
     policyIntakeSummaryPromise,
