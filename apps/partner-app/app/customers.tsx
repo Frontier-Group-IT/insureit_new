@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PartnerBanner } from '@/components/ui/partner-banner';
@@ -26,6 +26,13 @@ let savedCustomerQuery = '';
 
 export default function CustomersScreen() {
   const router = useRouter();
+  const verticalListRef = useRef<FlatList>(null);
+  useFocusEffect(useCallback(() => {
+    const reset = () => verticalListRef.current?.scrollToOffset({ offset: 0, animated: false });
+    reset();
+    const frame = requestAnimationFrame(reset);
+    return () => cancelAnimationFrame(frame);
+  }, []));
   const { cacheScopeKey } = usePartnerSession();
   const [query, setQuery] = useState(savedCustomerQuery);
   const [statusFilter, setStatusFilter] = useState<PartnerCustomerStatusFilter>('all');
@@ -185,6 +192,7 @@ export default function CustomersScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <FlatList
+        ref={verticalListRef}
         key={`customers-page-${collection.page}`}
         data={collection.rows}
         keyExtractor={(row) => row.customer_id}
