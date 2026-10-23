@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BarChart3, BadgeCheck, ChevronRight, ClipboardList, FileCheck2, FileInput, FlaskConical, Gauge, Landmark, LayoutGrid, Plus, Settings, ShieldCheck, Sparkles, Store, Upload, UserPlus, UsersRound } from "lucide-react";
+import { BarChart3, BadgeCheck, ChevronRight, ClipboardList, FileCheck2, FileInput, FileText, FlaskConical, Gauge, Landmark, LayoutGrid, Plus, Settings, ShieldCheck, Sparkles, Store, Upload, UserPlus, UsersRound } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { BrandLockup } from "@/components/brand-lockup";
 import { internalLaunchHome, isIntermediaryOnlyLaunch } from "@/lib/launch-scope";
