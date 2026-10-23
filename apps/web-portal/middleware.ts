@@ -15,6 +15,9 @@ function isOperationsHeadLifePath(pathname: string) {
   return pathname === "/policies" ||
     new RegExp("^/policies/[^/]+$").test(pathname) ||
     new RegExp("^/policies/[0-9a-fA-F-]{36}/(edit|document)$").test(pathname) ||
+    pathname === "/policy-intakes" ||
+    pathname === "/policy-intakes/new" ||
+    new RegExp("^/policy-intakes/[0-9a-fA-F-]{36}$").test(pathname) ||
     pathname === "/policies/life-health-cases" ||
     new RegExp("^/policies/life-health-cases/[^/]+$").test(pathname) ||
     pathname === "/access-denied";
