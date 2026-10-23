@@ -5,7 +5,7 @@ import { LifeHealthCaseRegister, type LifeHealthCaseRegisterRow } from "@/compon
 import { loadLifeHealthCaseSummary } from "@/lib/life-health-case-summary";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { requireCapability } from "@/lib/master-data-server";
-import { getAccessiblePolicyRmEmployeeIds } from "@/lib/policy-access-scope";
+import { getOperationsHeadDownlinePolicyScope, operationsHeadPolicyFilter } from "@/lib/policy-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -19,21 +19,21 @@ type CaseFilter = "pending" | "issued" | "all";
 export default async function LifeHealthCasesPage({ searchParams }: { searchParams?: Promise<{ status?: string }> }) {
   const profile = await requireCapability("view_policies");
   if (profile.role !== "operations_head_life") await requirePolicyCreator();
-  const lifeHeadRmIds = profile.role === "operations_head_life"
-    ? await getAccessiblePolicyRmEmployeeIds(profile.id, profile.role, "view_policies")
+  const downlineCaseFilter = profile.role === "operations_head_life"
+    ? operationsHeadPolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))
     : null;
   const params = searchParams ? await searchParams : undefined;
   const filter: CaseFilter = params?.status === "issued" || params?.status === "all" ? params.status : "pending";
   const admin = createSupabaseAdminClient();
   const [{ data: rows, error }, caseSummary] = await Promise.all([
-    lifeHeadRmIds !== null
-      ? lifeHeadRmIds.length
+    downlineCaseFilter !== null
+      ? downlineCaseFilter.length
         ? admin.from("life_health_cases").select("id,case_number,business_line,status,sourcing_date,product_name,proposal_number,premium_amount,customer_id,insurance_company_id,rm_name,lead_source,final_policy_id,created_at")
-            .in("rm_employee_id", lifeHeadRmIds).in("business_line", ["Life", "Health"])
+            .or(downlineCaseFilter)
             .order("created_at", { ascending: false }).limit(500).returns<CaseRow[]>()
         : Promise.resolve({ data: [] as CaseRow[], error: null })
       : admin.from("life_health_cases").select("id,case_number,business_line,status,sourcing_date,product_name,proposal_number,premium_amount,customer_id,insurance_company_id,rm_name,lead_source,final_policy_id,created_at").order("created_at", { ascending: false }).limit(500).returns<CaseRow[]>(),
-    lifeHeadRmIds !== null ? Promise.resolve(null) : loadLifeHealthCaseSummary(admin),
+    downlineCaseFilter !== null ? Promise.resolve(null) : loadLifeHealthCaseSummary(admin),
   ]);
   if (error) return <AppShell title="Life / Health Cases"><div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-[10px] text-red-700">Life / Health cases could not be loaded.</div></AppShell>;
   const allRows = rows ?? [];
