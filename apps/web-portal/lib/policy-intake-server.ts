@@ -40,4 +40,19 @@ export async function requirePolicyIntakeFinalizer(intakeId?: string) {
   if (!intakeId || !(await canAccessOperationsHeadIntake(profile.id, intakeId))) redirect("/access-denied");
   return profile;
 }
-export async function loadEligiblePolicyIntakeSources(profile:{id:string;role:string|null}){const admin=createSupabaseAdminClient();const ids=await getAccessibleIntermediaryIds(profile.id,profile.role,"create_policy_intakes");if(ids!==null&&!ids.length)return[] as PolicyIntakeSource[];let query=admin.from("intermediaries").select("id,intermediary_type,display_name,intermediary_code").in("intermediary_type",["posp","misp","partner"]).eq("account_status","active").order("display_name",{ascending:true});if(ids!==null)query=query.in("id",ids);const{data,error}=await query.returns<PolicyIntakeSource[]>();if(error)throw new Error("policy_intake_sources_unavailable");return(data??[]).filter(item=>item.display_name?.trim());}
+export async function loadEligiblePolicyIntakeSources(profile:{id:string;role:string|null}) {
+  const admin = createSupabaseAdminClient();
+  const lifeHead = profile.role === "operations_head_life";
+  const codes = lifeHead ? (await getOperationsHeadDownlinePolicyScope(profile.id)).intermediaryCodes : null;
+  if (codes && !codes.length) return [] as PolicyIntakeSource[];
+  const ids = lifeHead ? null : await getAccessibleIntermediaryIds(profile.id,profile.role,"create_policy_intakes");
+  if (ids !== null && !ids?.length && !lifeHead) return [] as PolicyIntakeSource[];
+  let query=admin.from("intermediaries").select("id,intermediary_type,display_name,intermediary_code")
+    .in("intermediary_type",["posp","misp","partner"]).eq("account_status","active")
+    .order("display_name",{ascending:true});
+  if (codes) query=query.in("intermediary_code",codes);
+  else if (ids !== null && ids) query=query.in("id",ids);
+  const {data,error}=await query.returns<PolicyIntakeSource[]>();
+  if(error) throw new Error("policy_intake_sources_unavailable");
+  return (data??[]).filter(item=>item.display_name?.trim());
+}
