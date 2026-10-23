@@ -1,6 +1,4 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarDays, ArrowLeft, MapPin, Clock3, UserRound } from "lucide-react";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail } from "@/lib/customer-web-phase2-data";
 import { createServerSupabaseClient } from "@/lib/auth-server";
@@ -89,11 +87,9 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
     redirect("/customer/claims/"+encodeURIComponent(owned.id)+"/stage/spot_status?account="+encodeURIComponent(authorized.id));
   }
 
-  const fieldClass = "mt-1.5 block h-10 w-full min-w-0 rounded-lg border border-[#D7E2F0] bg-white px-3 text-[13px] font-medium text-[#193659] outline-none transition focus-visible:border-[#2D7FF0] focus-visible:ring-2 focus-visible:ring-[#DCEBFF]";
+  const textFieldClass = "block h-[42px] w-full min-w-0 rounded-lg border border-[#CAD8EA] bg-white px-3 text-[13px] font-medium text-[#193659] outline-none transition placeholder:text-[#95A3B8] focus-visible:border-[#2D7FF0] focus-visible:ring-2 focus-visible:ring-[#DCEBFF]";
+  const splitFieldClass = "block h-[42px] min-w-0 flex-1 bg-transparent px-3 text-[13px] font-medium text-[#193659] outline-none";
   return <div className="mx-auto w-full max-w-[90rem] space-y-3">
-    <div className="flex items-center">
-      <Link href={{pathname:"/customer/start-claim",query:{account:account.id}}} className="inline-flex items-center gap-2 text-[13px] font-semibold text-[#29569A] hover:text-[#153E78]"><ArrowLeft className="h-4 w-4"/> Back to Start Claim</Link>
-    </div>
     <section aria-label="Selected claim" className="overflow-hidden rounded-2xl bg-[#0C2F67] px-4 py-3 text-white">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/15 pb-2">
         <h1 className="flex items-center gap-2 text-[16px] font-bold"><img src="/assets/customer-claim/stages/spot_intimation.png" alt="" className="h-6 w-6 rounded-md bg-white object-contain p-0.5"/> Spot Intimation</h1>
@@ -107,18 +103,38 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
     <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey="spot_intimation" currentKey="spot_intimation" completedKeys={[]}/>
     <SpotIntimationSaveForm action={submit} cancelHref={`/customer/start-claim?account=${encodeURIComponent(account.id)}`} evidence={<><CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage="spot_intimation" returnToSpotIntimation/><CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id}/></>}>
       <input type="hidden" name="account" value={account.id}/><input type="hidden" name="claim" value={claim.id}/>
-      <div className="flex items-center gap-2 border-b border-[#E5EDF6] pb-3">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EDF4FF] text-[#2860AD]"><CalendarDays className="h-5 w-5"/></span>
-        <h2 className="text-[17px] font-bold text-[#112B51]">Incident Details</h2>
+      <div className="-mx-4 -mt-4 border-b border-[#D8E3F1] px-4 py-3 sm:-mx-5 sm:-mt-5 sm:px-5">
+        <h2 className="text-[17px] font-bold text-[#112B51]">Accident &amp; Spot Intimation Details</h2>
       </div>
-      <div className="grid gap-x-3 gap-y-3 sm:grid-cols-2 xl:grid-cols-7">
-        <label className="text-[12px] font-semibold text-[#243C5F]"><span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-[#7389A9]"/>Accident date *</span><input name="accidentDate" type="date" required className={fieldClass}/></label>
-        <label className="text-[12px] font-semibold text-[#243C5F]"><span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5 text-[#7389A9]"/>Accident time *</span><input name="accidentTime" type="time" required className={fieldClass}/></label>
-        <label className="text-[12px] font-semibold text-[#243C5F]"><span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-[#7389A9]"/>Spot Intimation date *</span><input name="spotDate" type="date" required className={fieldClass}/></label>
-        <label className="text-[12px] font-semibold text-[#243C5F]"><span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5 text-[#7389A9]"/>Spot Intimation time *</span><input name="spotTime" type="time" required className={fieldClass}/></label>
-        <label className="text-[12px] font-semibold text-[#243C5F]"><span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5 text-[#7389A9]"/>Driver name {external?"(optional)":"*"}</span><input name="driver" required={!external} maxLength={120} placeholder="Enter driver name" autoComplete="name" className={fieldClass}/></label>
-        <label className="text-[12px] font-semibold text-[#243C5F]"><span className="inline-flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5 text-[#7389A9]"/>Driver mobile {external?"(optional)":"*"}</span><input name="phone" required={!external} type="tel" maxLength={15} inputMode="tel" placeholder="Enter mobile number" autoComplete="tel" className={fieldClass}/></label>
-        <label className="text-[12px] font-semibold text-[#243C5F] sm:col-span-2 xl:col-span-1"><span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-[#7389A9]"/>Accident location {external?"(optional)":"*"}</span><textarea name="location" required={!external} maxLength={500} rows={1} placeholder="Enter accident location" className="mt-1.5 block min-h-10 w-full resize-y rounded-lg border border-[#D7E2F0] bg-white px-3 py-2 text-[13px] font-medium text-[#193659] outline-none transition focus-visible:border-[#2D7FF0] focus-visible:ring-2 focus-visible:ring-[#DCEBFF]"/></label>
+      <div className="grid gap-x-2.5 gap-y-3 pt-1 md:grid-cols-2 xl:grid-cols-[1.2fr_1.2fr_1.15fr_.8fr_1.35fr]">
+        <label className="min-w-0">
+          <span className="block text-[10px] font-bold uppercase tracking-[.025em] text-[#245BB2]">Accident Date &amp; Time <span className="text-rose-500">*</span></span>
+          <span className="mt-2 flex min-w-0 overflow-hidden rounded-lg border border-[#CAD8EA] bg-white">
+            <input name="accidentDate" type="date" required aria-label="Accident date" className={splitFieldClass}/>
+            <span aria-hidden="true" className="my-1.5 w-px shrink-0 bg-[#D6E0ED]"/>
+            <input name="accidentTime" type="time" required aria-label="Accident time" className={splitFieldClass}/>
+          </span>
+        </label>
+        <label className="min-w-0">
+          <span className="block text-[10px] font-bold uppercase tracking-[.025em] text-[#245BB2]">Spot Intimation Date &amp; Time <span className="text-rose-500">*</span></span>
+          <span className="mt-2 flex min-w-0 overflow-hidden rounded-lg border border-[#CAD8EA] bg-white">
+            <input name="spotDate" type="date" required aria-label="Spot intimation date" className={splitFieldClass}/>
+            <span aria-hidden="true" className="my-1.5 w-px shrink-0 bg-[#D6E0ED]"/>
+            <input name="spotTime" type="time" required aria-label="Spot intimation time" className={splitFieldClass}/>
+          </span>
+        </label>
+        <label className="min-w-0">
+          <span className="block text-[10px] font-bold uppercase tracking-[.025em] text-[#245BB2]">Driver Name <span className="text-rose-500">{external?"":"*"}</span></span>
+          <input name="driver" required={!external} maxLength={120} placeholder="Enter driver name" autoComplete="name" className={"mt-2 "+textFieldClass}/>
+        </label>
+        <label className="min-w-0">
+          <span className="block text-[10px] font-bold uppercase tracking-[.025em] text-[#245BB2]">Driver Number <span className="text-rose-500">{external?"":"*"}</span></span>
+          <input name="phone" required={!external} type="tel" maxLength={15} inputMode="tel" placeholder="Enter mobile number" autoComplete="tel" className={"mt-2 "+textFieldClass}/>
+        </label>
+        <label className="min-w-0 md:col-span-2 xl:col-span-1">
+          <span className="block text-[10px] font-bold uppercase tracking-[.025em] text-[#245BB2]">Location <span className="text-rose-500">{external?"":"*"}</span></span>
+          <input name="location" required={!external} maxLength={500} placeholder="Enter accident location" className={"mt-2 "+textFieldClass}/>
+        </label>
       </div>
     </SpotIntimationSaveForm>
 
