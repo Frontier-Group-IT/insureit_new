@@ -265,7 +265,7 @@ export async function updateNonMotorPolicy(policyId: string, payload: NonMotorPo
 }
 
 export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Promise<NonMotorPolicyResult> {
-  const profile = await requirePolicyCreator();
+  const profile = await requirePolicyCreator(payload.source.intermediaryCode);
   const admin = createSupabaseAdminClient();
   // Keep the server as the source of truth for the same restricted commercial access used by Motor onboarding.
   const commercial = canAccessPolicyCommercials(profile) ? (payload.commercial ?? EMPTY_COMMERCIAL) : EMPTY_COMMERCIAL;
