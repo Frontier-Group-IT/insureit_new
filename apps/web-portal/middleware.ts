@@ -12,7 +12,11 @@ const accountsHome = "/accounts";
 const salesExecutiveHome = "/policies";
 const operationsHeadLifeHome = "/policies";
 function isOperationsHeadLifePath(pathname: string) {
-  return pathname === "/policies" || /^\\/policies\\/[^/]+$/.test(pathname) || pathname === "/access-denied";
+  return pathname === "/policies" ||
+    /^\\/policies\\/[^/]+$/.test(pathname) ||
+    pathname === "/policies/life-health-cases" ||
+    /^\\/policies\\/life-health-cases\\/[^/]+$/.test(pathname) ||
+    pathname === "/access-denied";
 }
 const claimsHeadHome = "/claims";
 
