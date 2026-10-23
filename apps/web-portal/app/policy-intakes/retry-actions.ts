@@ -29,7 +29,7 @@ export type RetryPolicyIntakeOcrResult =
   | { ok: false; error: string };
 
 export async function getPolicyIntakeOcrRetryState(id: string) {
-  const profile = await requirePolicyIntakeViewer();
+  const profile = await requirePolicyIntakeViewer(id);
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from("policy_intake_requests")
@@ -52,7 +52,7 @@ export async function getPolicyIntakeOcrRetryState(id: string) {
 }
 
 export async function retryPolicyIntakeOcr(id: string): Promise<RetryPolicyIntakeOcrResult> {
-  await requirePolicyIntakeReviewer();
+  await requirePolicyIntakeReviewer(id);
   const admin = createSupabaseAdminClient();
   const { data: intake, error } = await admin
     .from("policy_intake_requests")
