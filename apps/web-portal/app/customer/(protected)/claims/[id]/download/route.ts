@@ -67,6 +67,6 @@ export async function GET(request:Request,{params}:{params:Promise<{id:string}>}
       }
     }
     const bytes=await pdf.save();
-    return new NextResponse(new Uint8Array(bytes),{headers:{"Content-Type":"application/pdf","Content-Disposition":'attachment; filename="claim-details.pdf"',"Cache-Control":"private, no-store"}});
+    return new NextResponse(new Uint8Array(bytes),{headers:{"Content-Type":"application/pdf","Content-Disposition":new URL(request.url).searchParams.get("preview")==="1" ? 'inline; filename="claim-form.pdf"' : 'attachment; filename="claim-form.pdf"',"Cache-Control":"private, no-store"}});
   }catch{return NextResponse.json({error:"Unable to generate claim details PDF"},{status:404});}
 }
