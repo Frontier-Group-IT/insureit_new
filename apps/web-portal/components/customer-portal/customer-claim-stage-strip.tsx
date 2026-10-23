@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, LockKeyhole } from "lucide-react";
+import { Check, Circle } from "lucide-react";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 
 export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, completedKeys, currentKey }: {
@@ -31,7 +31,7 @@ export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, compl
                 className={`flex min-h-[50px] w-full items-center justify-center border-b-2 px-2.5 py-1.5 text-center transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6] ${selectedStage?"border-b-[#071D49]":"border-b-transparent"} ${current?"bg-[#F7FAFF]":available?"bg-white hover:bg-[#FAFCFF]":"bg-white hover:bg-[#FAFCFF]"}`}>
                 <span className="flex items-center justify-center gap-2">
                   <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${completed?"bg-[#E8F8F0] text-[#0A9B72]":current?"bg-[#155EEF] text-white shadow-[0_2px_6px_rgba(21,94,239,0.18)]":"bg-[#EEF2F7] text-[#58708F]"}`}>
-                    {completed?<Check className="h-3.5 w-3.5"/>:current?<span className="text-[9px] font-semibold">{index+1}</span>:<LockKeyhole className="h-3 w-3"/>}
+                    {completed?<Check className="h-3.5 w-3.5"/>:current?<span className="text-[9px] font-semibold">{index+1}</span>:<Circle className="h-3 w-3"/>}
                   </span>
                   <span className={`block text-[9px] font-semibold leading-none ${current?"text-[#155EEF]":completed?"text-[#3E536F]":"text-[#667A96]"}`}>{stage.label}</span>
                 </span>
