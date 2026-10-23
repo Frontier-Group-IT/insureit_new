@@ -436,7 +436,7 @@ export const roleMatrixV2: readonly RoleDefinitionV2[] = [
     status: "active",
     assignable: true,
     defaultScope: "hierarchy",
-    grants: [grant("policies.view", "view", "hierarchy"), grant("notifications.view", "view", "self")],
+    grants: [grant("policies.view", "view", "hierarchy")],
   },
   {
     code: "claims_head",
