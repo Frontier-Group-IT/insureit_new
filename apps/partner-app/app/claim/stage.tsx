@@ -11,7 +11,7 @@ import { CLAIM_STAGES, formatClaimDate, getClaimTrackerState, getStageHistory, t
 
 export default function PartnerClaimStageScreen() {
   const router = useRouter();
-  const mainScrollRef = useRef<ScrollView ref={mainScrollRef}>(null);
+  const mainScrollRef = useRef<ScrollView>(null);
   useFocusEffect(useCallback(() => {
     const reset = () => mainScrollRef.current?.scrollTo({ y: 0, animated: false });
     reset();
