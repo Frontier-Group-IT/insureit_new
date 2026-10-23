@@ -5,6 +5,7 @@ import { requirePolicyCreator, requirePolicyEditor } from "@/lib/policy-access-s
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { recordPolicyActivity, POLICY_ACTIVITY_ACTIONS } from "@/lib/policy-activity";
 
 export type NonMotorCommercialBasis = "NET_PREMIUM_PERCENT" | "FIXED_AMOUNT";
 
@@ -260,6 +261,7 @@ export async function updateNonMotorPolicy(policyId: string, payload: NonMotorPo
 
   revalidatePath("/policies");
   revalidatePath(`/policies/${id}`);
+  await recordPolicyActivity(admin, id, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_EDITED);
   revalidatePath(`/policies/${id}/edit`);
   return { ok:true, policyId:id, policyCode:existing.policy_code || policyNumber };
 }
