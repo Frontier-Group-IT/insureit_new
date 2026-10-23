@@ -93,12 +93,13 @@ export default function ClaimsScreen() {
   };
   const name = context?.identity.display_name || 'Partner';
 
-  // The overlay is transparent: only the existing white search control paints a surface.
+  // The white sticky surface hides scrolling content, while the original banner remains unchanged at the top.
   // The banner, metrics, and Add Claim continue to scroll as normal.
   const [showStickyControls, setShowStickyControls] = useState(false);
   const [heroHeight, setHeroHeight] = useState(98);
+  const [searchHeight, setSearchHeight] = useState(44);
   const searchControls = (
-    <View style={styles.searchRow}>
+    <View style={styles.searchRow} onLayout={(event) => setSearchHeight(event.nativeEvent.layout.height)}>
       <PartnerSearchField
         value={query}
         onChangeText={setQuery}
@@ -313,7 +314,7 @@ export default function ClaimsScreen() {
         onScroll={(event) => {
           // Activate when the original heading reaches its pinned vertical position.
           // Measure the banner so layout changes do not shift the sticky threshold.
-          const sticky = event.nativeEvent.contentOffset.y >= Math.max(0, heroHeight - 48);
+          const sticky = event.nativeEvent.contentOffset.y >= Math.max(0, heroHeight - searchHeight);
           setShowStickyControls((previous) => previous === sticky ? previous : sticky);
           if (sticky && filterMenuOpen) setFilterMenuOpen(false);
         }}
@@ -425,9 +426,9 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
   content: { flexGrow: 1, paddingBottom: 104, backgroundColor: '#FFFFFF' },
   pressed: { opacity: 0.76 },
-  stickyOverlay: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 40, backgroundColor: "transparent" },
-  stickyTitle: { marginLeft: 18, marginTop: 20, marginBottom: 31, color: "#153F88", fontSize: 15, lineHeight: 18, fontWeight: "800", letterSpacing: -0.2 },
-  stickySearchBody: { paddingHorizontal: 10, backgroundColor: "transparent" },
+  stickyOverlay: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 40, backgroundColor: "#FFFFFF" },
+  stickyTitle: { marginLeft: 18, marginTop: 12, marginBottom: 12, color: "#153F88", fontSize: 15, lineHeight: 18, fontWeight: "800", letterSpacing: -0.2 },
+  stickySearchBody: { paddingHorizontal: 10, paddingBottom: 10, backgroundColor: "#FFFFFF" },
 
   hero: { height: 98, overflow: 'hidden', backgroundColor: '#0752A2' },
   heroBackdrop: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%', opacity: 0.92 },
