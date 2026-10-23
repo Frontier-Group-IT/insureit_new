@@ -27,7 +27,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
   const db = await createServerSupabaseClient();
   const { data: customerContact } = await db.from("customers").select("id,phone").eq("id", account.id).maybeSingle();
   const customerName = account.customer_name || account.contact_name || "Account holder";
-  const customerMobile = typeof customerContact?.phone === "string" ? customerContact.mobile : null;
+  const customerMobile = typeof customerContact?.phone === "string" ? customerContact.phone : null;
   const type = params.type === "external" ? "external" : "internal";
   const query = (params.q ?? "").trim().toLowerCase();
   const stageFilter = params.stage ?? "";
