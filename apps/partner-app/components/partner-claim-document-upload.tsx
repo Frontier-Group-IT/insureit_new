@@ -78,7 +78,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
         onPress={() => void pickAndUpload()}
         style={({ pressed }) => [styles.tile, count > 0 && styles.tileReady, busy && styles.disabled, pressed && !busy && styles.pressed]}
       >
-        <View style={styles.artworkWrap}>{artwork ? <Image source={artwork} style={styles.artwork} resizeMode="contain" /> : <Ionicons name="document-outline" size={34} color="#0A43A3" />}</View>
+        <View style={styles.artworkWrap}>{artwork ? <Image source={artwork} style={styles.artwork} resizeMode="contain" /> : documentType === "Accident Video" ? <View style={styles.videoIcon}><Ionicons name="videocam" size={27} color="#FFFFFF" /></View> : <Ionicons name="document-outline" size={34} color="#0A43A3" />}</View>
         <Text numberOfLines={2} style={styles.tileTitle}>{label ?? documentType}</Text>
         <Text numberOfLines={1} style={[styles.tileStatus, count > 0 && styles.tileStatusReady]}>{busy ? 'Uploading…' : count > 0 ? 'Uploaded' : 'Tap to upload'}</Text>
       </Pressable>
@@ -154,6 +154,7 @@ const styles=StyleSheet.create({
   tileReady:{backgroundColor:'#F2F7FF',borderColor:'#6D9EE8'},
   artworkWrap:{width:49,height:49,overflow:'hidden',alignItems:'center',justifyContent:'center'},
   artwork:{width:39,height:39},
+  videoIcon:{width:43,height:43,borderRadius:10,backgroundColor:'#F31E35',alignItems:'center',justifyContent:'center'},
   tileTitle:{color:'#071D49',fontSize:8.5,lineHeight:11,fontWeight:'800',textAlign:'center',marginTop:3},
   tileStatus:{color:'#7A8799',fontSize:7.5,fontWeight:'800',marginTop:3},
   tileStatusReady:{color:'#326FC6'},
