@@ -26,7 +26,7 @@ export const revalidate = 0;
 export default async function NewPolicyPage({ searchParams }: { searchParams: Promise<{ intake_id?:string; customer_id?:string; vehicle_id?:string }> }) {
   const { profile: requester } = await getAuthenticatedProfile(await getServerAccessToken());
   const profile = requester?.role === "operations_head_life" ? await requireCapability("view_policies") : await requirePolicyCreator();
-  const commercialAccess = canAccessPolicyCommercials(profile);
+  const commercialAccess = canAccessPolicyCommercials(profile, profile.role === "operations_head_life");
   const admin = createSupabaseAdminClient();
   const scoped = profile.role === "operations_head_life" ? await getOperationsHeadDownlinePolicyScope(profile.id) : null;
   const scopedFilter = scoped ? operationsHeadPolicyFilter(scoped) : null;
