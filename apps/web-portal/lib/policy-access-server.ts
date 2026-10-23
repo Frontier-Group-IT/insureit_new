@@ -18,8 +18,15 @@ async function authenticatedPolicyProfile() {
   return { ...profile, role };
 }
 
-export async function requirePolicyCreator() {
+export async function requirePolicyCreator(sourceCode?: string) {
   const profile = await authenticatedPolicyProfile();
+  if (profile.role === "operations_head_life") {
+    if (!sourceCode) redirect("/access-denied");
+    const { getOperationsHeadDownlinePolicyScope } = await import("@/lib/policy-access-scope");
+    const scope = await getOperationsHeadDownlinePolicyScope(profile.id);
+    if (!scope.intermediaryCodes.includes(sourceCode.trim())) redirect("/access-denied");
+    return profile;
+  }
   const legacy = await getEffectivePermission(profile.id, profile.role, "view_policies");
   const createOnly = await hasEffectiveCapability(profile, "create_policies", "edit");
   if (accessRank[legacy.access] < accessRank.edit && !createOnly) redirect("/access-denied");
