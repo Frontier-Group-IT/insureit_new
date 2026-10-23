@@ -97,6 +97,16 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
     if (!sourceResolution.ok) return { ok: false, error: sourceResolution.error };
 
     const admin = createSupabaseAdminClient();
+    if (profile.role === "operations_head_life") {
+      const { data: original } = await admin.from("policies")
+        .select("intermediary_code,rm_name").eq("id", policyId)
+        .maybeSingle<{ intermediary_code: string | null; rm_name: string | null }>();
+      if (!original ||
+          original.intermediary_code?.trim() !== sourceResolution.source.intermediaryCode ||
+          (original.rm_name ?? "").trim().toLowerCase() !== payload.policy.rmName.trim().toLowerCase()) {
+        return { ok: false, error: "The assigned intermediary and RM cannot be changed by this role." };
+      }
+    }
     let protectedPayin = payload.payin;
     let protectedPayout = payload.payout;
 
