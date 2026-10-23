@@ -10,6 +10,7 @@ import { PartnerAssets } from '@/lib/partner-assets';
 import { savePartnerClaimSpot, type PartnerClaimDetail } from '@/lib/claims';
 import { PartnerClaimStepFooter } from '@/components/partner-claim-step-footer';
 import { PartnerClaimDocumentUpload } from '@/components/partner-claim-document-upload';
+import { PartnerIncidentVoiceRecorder } from '@/components/partner-incident-voice-recorder';
 
 const DOCUMENTS = [
   { title: 'RC Copy', artwork: require('../../mobile-app/assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png') },
@@ -17,7 +18,7 @@ const DOCUMENTS = [
   { title: 'Driver Licence', artwork: require('../../mobile-app/assets/brand/spot-intimation/glossy_purple_id_card_icon.png') },
   { title: 'GR / Load Bill', artwork: require('../../mobile-app/assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png') },
   { title: 'Accident Photo', artwork: require('../../mobile-app/assets/brand/spot-intimation/glossy_pink_camera_document_icon.png') },
-  { title: 'Accident Video', artwork: require('../../mobile-app/assets/brand/spot-intimation/glossy_red_video_document_icon.png') },
+  { title: 'Accident Video', artwork: undefined },
 ] as const;
 
 const CUSTOMER_STAGE_ICON = require('../../mobile-app/assets/claims/claim-intimation.png');
@@ -60,7 +61,7 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
           <View style={styles.heroGlowLarge}/><View style={styles.heroGlowSmall}/>
-          <View style={styles.heroHeading}><View style={styles.heroCircle}><Image source={CUSTOMER_STAGE_ICON} style={styles.heroIconArtwork} resizeMode="contain"/></View><Text style={styles.heroTitle}>Spot Intimation</Text><Text style={styles.control}>{data.claim.claim_no || 'Not recorded'}</Text></View>
+          <View style={styles.heroHeading}><View style={styles.heroCircle}><Image source={CUSTOMER_STAGE_ICON} style={styles.heroIconArtwork} resizeMode="contain"/></View><Text style={styles.heroTitle}>Spot Intimation</Text><Text style={styles.control}>{data.claim.claim_no?.startsWith('CLM-') ? 'Control No. Pending' : (data.claim.claim_no || 'Control No. Pending')}</Text></View>
           <View style={styles.heroRule}/>
           <View style={styles.identityRow}>
             <View style={styles.identity}><View style={styles.logo}><Image source={getPartnerManufacturerLogoSource(data.vehicle.make) ?? PartnerAssets.navigation.claims} resizeMode="contain" style={styles.logoImage}/></View><View style={styles.identityCopy}><Text numberOfLines={1} style={styles.identityTitle}>{data.vehicle.vehicle_no || 'Vehicle not recorded'}</Text><Text style={styles.identitySub} numberOfLines={1}>{data.vehicle.make || 'Manufacturer not recorded'}</Text></View></View>
@@ -85,7 +86,7 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
           <View style={styles.tiles}>{DOCUMENTS.map(item=><PartnerClaimDocumentUpload key={item.title} claimId={data.claim.id} customerId={data.customer.id} documentType={item.title} milestoneKey="spot_intimation" documents={data.documents} variant="tile" artwork={item.artwork} label={item.title}/>)}</View>
           <PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="Spot Intimation Attachment" milestoneKey="spot_intimation" documents={data.documents} variant="bulk" artwork={CUSTOMER_BULK_ICON} label="Upload multiple documents" subtitle="Select several files now, or tap again later to add more."/>
         </View>
-        <View style={styles.voice}><View style={styles.voiceTop}><View style={styles.mic}><Ionicons name="mic-outline" size={28} color="#0A4FA8"/></View><View style={styles.headingCopy}><Text style={styles.sectionTitle}>Incident Voice Note</Text><Text style={styles.subtitle}>Describe what happened in your own words. Maximum recording time is 2 minutes.</Text></View></View><PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="Incident Voice Note" milestoneKey="spot_intimation" documents={data.documents} variant="voice"/></View>
+        <View style={styles.voice}><View style={styles.voiceTop}><View style={styles.mic}><Ionicons name="mic-outline" size={28} color="#0A4FA8"/></View><View style={styles.headingCopy}><Text style={styles.sectionTitle}>Incident Voice Note</Text><Text style={styles.subtitle}>Describe what happened in your own words. Maximum recording time is 2 minutes.</Text></View></View><PartnerIncidentVoiceRecorder claimId={data.claim.id} customerId={data.customer.id} /></View>
         <PartnerClaimStepFooter index={0} busy={saving} canContinue={data.claim.current_status === "Draft" || data.claim.current_status === "Initial Documents Pending"} onPrevious={() => router.push("/claim/select-vehicle" as never)} onContinue={() => void save()} continueLabel="Start Claim & Continue" />
       </ScrollView>
       <View style={styles.nav}><Nav title="Home" icon="home" onPress={() => router.push('/(tabs)' as never)}/><Nav title="Business" icon="briefcase-outline" onPress={() => router.push('/(tabs)/business' as never)}/><Nav title="Policies" icon="document-text-outline" onPress={() => router.push('/(tabs)/policies' as never)}/><Nav title="Claims" icon="shield-checkmark-outline" onPress={() => router.push('/(tabs)/claims' as never)}/><Nav title="More" icon="grid-outline" onPress={() => router.push('/(tabs)/more' as never)}/></View>
