@@ -559,11 +559,12 @@ function QuickActionsCarousel({
   const offsetRef = useRef(0);
   const loopWidthRef = useRef(0);
   const draggingRef = useRef(false);
+  const touchingRef = useRef(false);
   const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
-      if (draggingRef.current || loopWidthRef.current <= 0) return;
+      if (draggingRef.current || touchingRef.current || loopWidthRef.current <= 0) return;
       const next = offsetRef.current + 0.75;
       offsetRef.current = next >= loopWidthRef.current ? next - loopWidthRef.current : next;
       scrollRef.current?.scrollTo({ x: offsetRef.current, animated: false });
@@ -576,11 +577,13 @@ function QuickActionsCarousel({
   }, []);
 
   const pauseForTouch = () => {
+    touchingRef.current = true;
     draggingRef.current = true;
     if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
   };
 
   const resumeAfterTouch = () => {
+    touchingRef.current = false;
     if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
     resumeTimerRef.current = setTimeout(() => {
       draggingRef.current = false;
@@ -595,6 +598,9 @@ function QuickActionsCarousel({
       onLayout={(event) => setViewportWidth(event.nativeEvent.layout.width)}
       contentContainerStyle={styles.quickGrid}
       directionalLockEnabled
+      onTouchStart={pauseForTouch}
+      onTouchEnd={resumeAfterTouch}
+      onTouchCancel={resumeAfterTouch}
       scrollEventThrottle={16}
       onContentSizeChange={(width) => {
         loopWidthRef.current = width / 2;
@@ -607,7 +613,7 @@ function QuickActionsCarousel({
         }
         scrollX.setValue(offsetRef.current);
       }}
-      onScrollBeginDrag={pauseForTouch}
+      onScrollBeginDrag={() => { draggingRef.current = true; }}
       onScrollEndDrag={resumeAfterTouch}
       onMomentumScrollEnd={resumeAfterTouch}
     >
