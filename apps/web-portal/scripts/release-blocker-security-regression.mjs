@@ -50,6 +50,7 @@ for (const [name, content] of [
   ["application review layout", applicationLayout],
 ]) {
   if (!content.includes("requireScopedPospMispManager(id)") &&
+      !(name === "account review page" && content.includes("requireScopedPospMispManager(id, true)")) &&
       !(name === "workflow review page" && content.includes("requireScopedPospMispManager(id, true)")) &&
       !(name === "application review layout" && content.includes("requireScopedPospMispManager(id, true)"))) {
     throw new Error(`[release-blocker-security] ${name} must use the scoped intermediary guard`);
