@@ -212,7 +212,7 @@ export default function ClaimsScreen() {
       </View>
 
       <View style={styles.body}>
-        {showStickyControls ? <View style={{ height: searchHeight }} /> : searchControls}
+        <View style={{ backgroundColor: '#1760C1', marginHorizontal: -10, paddingHorizontal: 10, paddingBottom: 12 }}>{searchControls}</View>
 
         <View style={styles.summaryRow}>
           {([
