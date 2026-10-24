@@ -96,3 +96,46 @@ export async function saveCustomerExternalStage(form:FormData) {
     ? "/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(next.key)+"?account="+encodeURIComponent(account.id)+"&mode=edit"
     : "/customer/claims/"+encodeURIComponent(claim.id)+"?account="+encodeURIComponent(account.id));
 }
+
+/** Save incomplete Stage 3 details without completing the claim milestone. */
+export async function saveCustomerClaimIntimationDraft(form: FormData) {
+  const accountId = String(form.get("account") || "");
+  const claimId = String(form.get("claim") || "");
+  const key = String(form.get("stage") || "");
+  if (key !== "claim_intimation") throw new Error("Draft saving is only available for Claim Intimation");
+  const { account } = await resolveCustomerWebScope(accountId);
+  const { claim, milestones } = await loadCustomerClaimDetail(account.id, claimId);
+  if (!isExternalCustomerClaim(claim) || claim.claim_service_mode !== "self_managed" || claim.assistance_status === "accepted")
+    throw new Error("Claim stage editing is not available");
+  const index = INTERNAL_JOURNEY_STAGES.findIndex(stage => stage.key === key);
+  const previous = milestones.find(m => m.milestone_key === INTERNAL_JOURNEY_STAGES[index - 1].key);
+  const current = milestones.find(m => m.milestone_key === key);
+  if (!previous || !["completed", "not_applicable"].includes(previous.milestone_status) ||
+      (current && ["completed", "not_applicable"].includes(current.milestone_status)))
+    throw new Error("Claim Intimation cannot be edited");
+  const values: Record<string, string | number> = {};
+  for (const field of CUSTOMER_EXTERNAL_STAGE_FIELDS[key]) {
+    const value = String(form.get(field.key) || "").trim();
+    if (!value) continue;
+    if (value.length > 500) throw new Error("Value too long");
+    if (field.type === "number") {
+      const amount = Number(value);
+      if (!Number.isFinite(amount) || amount < 0) throw new Error("Invalid monetary amount");
+      values[field.key] = amount;
+    } else {
+      if (field.type === "date" && !/^\d{4}-\d{2}-\d{2}$/.test(value))
+        throw new Error("Invalid stage date");
+      values[field.key] = value;
+    }
+  }
+  const db = await createServerSupabaseClient();
+  const session = await getCustomerWebSession();
+  const { error } = await db.from("claim_milestones").upsert({
+    claim_id: claim.id, milestone_key: key, milestone_status: "in_progress",
+    details: { ...(current?.details ?? {}), ...values },
+    completed_at: null, recorded_by: session.user.id, recorded_by_actor: "customer",
+  }, { onConflict: "claim_id,milestone_key" });
+  if (error) throw new Error("Could not save Claim Intimation draft");
+  redirect("/customer/claims/" + encodeURIComponent(claim.id) + "/stage/claim_intimation?account=" +
+    encodeURIComponent(account.id) + "&mode=edit");
+}
