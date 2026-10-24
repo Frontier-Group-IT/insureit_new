@@ -12,7 +12,8 @@ const vehicle:Field[]=[
 {key:"color",label:"Colour"},{key:"normsType",label:"Emission standard"},{key:"fitnessExpiryDate",label:"Fitness valid until"},{key:"pucUpto",label:"PUC valid until"},
 {key:"taxUpto",label:"Road tax valid until"},{key:"permitType",label:"Permit type"},{key:"permitNumber",label:"Permit number"},{key:"permitValidUpto",label:"Permit valid until"},
 {key:"nationalPermitUpto",label:"National permit until"},{key:"blacklistStatus",label:"Blacklist status"}];
-// Keep supplementary RC fields available in Advanced RC details without crowding the quote essentials.\nconst primaryVehicleKeys = new Set(["make","model","vehicleClass","vehicleCategory","fuelType","manufacturingYear","registrationDate","rtoName","rtoState","chassisNumber","engineNumber","engineCapacity","grossWeight","seatingCapacity"]);
+// Keep supplementary RC fields available in Advanced RC details without crowding the quote essentials.
+const primaryVehicleKeys = new Set(["make","model","vehicleClass","vehicleCategory","fuelType","manufacturingYear","registrationDate","rtoName","rtoState","chassisNumber","engineNumber","engineCapacity","grossWeight","seatingCapacity"]);
 const primaryVehicle = vehicle.filter(field => primaryVehicleKeys.has(field.key));
 const advancedVehicle = vehicle.filter(field => !primaryVehicleKeys.has(field.key));
 const rcToQuoteField:Record<string,string> = {
