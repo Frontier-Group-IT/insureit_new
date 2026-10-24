@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import { ArrowLeft, ExternalLink, FileDown, FileText, Pencil } from "lucide-react";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim } from "@/lib/customer-web-phase2-data";
@@ -16,7 +18,14 @@ export default async function CustomerClaimDetailPage({
   const { id } = await params;
   const q = searchParams ? await searchParams : {};
   const { account } = await resolveCustomerWebScope(q.account);
-  const { claim } = await loadCustomerClaimDetail(account.id, id);
+  const { claim, milestones } = await loadCustomerClaimDetail(account.id, id);
+  // The downloadable claim form is a final document, not a Stage 1 preview.
+  // Require completion of every stage, even if a claim-level status was advanced.
+  const completedKeys = new Set(milestones.filter(m => m.milestone_status === "completed" || m.milestone_status === "not_applicable").map(m => m.milestone_key));
+  const allNineCompleted = INTERNAL_JOURNEY_STAGES.every(stage => completedKeys.has(stage.key));
+  if (!allNineCompleted) {
+    redirect(`/customer/claims/${encodeURIComponent(claim.id)}/stage/spot_intimation?account=${encodeURIComponent(account.id)}&mode=edit`);
+  }
   const documentUrl = `/customer/claims/${encodeURIComponent(claim.id)}/download?account=${encodeURIComponent(account.id)}`;
   const source = isExternalCustomerClaim(claim) ? "External" : "Internal";
 
