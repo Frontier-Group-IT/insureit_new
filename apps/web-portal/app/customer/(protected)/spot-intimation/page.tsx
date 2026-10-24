@@ -85,10 +85,9 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
       console.error("Customer Spot Intimation save failed unexpectedly",error);
       return {error:"Your claim could not be saved. Please check Claim Details before trying again."};
     }
-    if (!owned.external_policy_id) {
-      redirect("/customer/claims?account="+encodeURIComponent(authorized.id));
-    }
-    redirect("/customer/claims/"+encodeURIComponent(owned.id)+"/stage/spot_status?account="+encodeURIComponent(authorized.id));
+    // After a successful Stage 1 save, open Stage 2 in the permitted editing workflow.
+    // mode=edit is required because the stage route otherwise redirects to Claim Details.
+    redirect("/customer/claims/"+encodeURIComponent(owned.id)+"/stage/spot_status?account="+encodeURIComponent(authorized.id)+"&mode=edit");
   }
 
   const textFieldClass = "block h-[42px] w-full min-w-0 rounded-lg border border-[#CAD8EA] bg-white px-3 text-[13px] font-medium text-[#193659] outline-none transition placeholder:text-[#95A3B8] focus-visible:border-[#2D7FF0] focus-visible:ring-2 focus-visible:ring-[#DCEBFF]";
