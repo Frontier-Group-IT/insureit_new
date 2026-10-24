@@ -1,0 +1,61 @@
+name: Customer iOS EAS Build (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type BUILD_IOS to confirm an iOS-only EAS production build'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: customer-ios-eas-build
+  cancel-in-progress: false
+
+jobs:
+  build-ios:
+    name: Build INSUREIT Customer iOS
+    if: ${{ inputs.confirm == 'BUILD_IOS' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout selected release branch
+        uses: actions/checkout@v4
+      - name: Verify release branch
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF_NAME" != release/customer-ios-current-ota-20261024 ]]; then
+            echo "::error::Select release/customer-ios-current-ota-20261024 before running this workflow."
+            exit 1
+          fi
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Customer mobile typecheck
+        run: npm run typecheck:mobile
+      - name: Customer mobile lint
+        run: npm run lint:mobile
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Verify Expo token is configured
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        shell: bash
+        run: |
+          if [[ -z "$EXPO_TOKEN" ]]; then
+            echo "::error::Add EXPO_TOKEN as a GitHub Actions secret."
+            exit 1
+          fi
+      - name: Build iOS on EAS
+        working-directory: apps/mobile-app
+        run: eas build --platform ios --profile production --non-interactive --no-wait
