@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { PartnerErrorBoundary } from '@/components/partner-error-boundary';
 import { PartnerBiometricLockProvider } from '@/providers/partner-biometric-lock-provider';
@@ -11,8 +12,9 @@ import { PartnerSessionProvider } from '@/providers/partner-session-provider';
 
 export default function RootLayout() {
   return (
-    <PartnerErrorBoundary>
-      <PartnerNetworkProvider>
+    <SafeAreaProvider>
+      <PartnerErrorBoundary>
+        <PartnerNetworkProvider>
         <PartnerSessionProvider>
           <PartnerBiometricLockProvider>
             <PartnerNativeRuntimeProvider>
@@ -54,7 +56,8 @@ export default function RootLayout() {
             </PartnerNativeRuntimeProvider>
           </PartnerBiometricLockProvider>
         </PartnerSessionProvider>
-      </PartnerNetworkProvider>
-    </PartnerErrorBoundary>
+        </PartnerNetworkProvider>
+      </PartnerErrorBoundary>
+    </SafeAreaProvider>
   );
 }

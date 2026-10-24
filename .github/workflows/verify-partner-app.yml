@@ -115,6 +115,9 @@ jobs:
       - name: Verify pre-APK UAT and security contracts
         run: npm --workspace apps/partner-app run verify:uat
 
+      - name: Verify sticky native safe-area containment
+        run: node apps/partner-app/scripts/verify-sticky-safe-area.mjs
+
       - name: Verify white sticky headers on Home Business Policies and Claims
         run: node apps/partner-app/scripts/verify-four-tab-white-sticky-header.mjs
 
