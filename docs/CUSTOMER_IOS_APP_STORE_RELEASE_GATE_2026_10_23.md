@@ -9,8 +9,8 @@
 ## Mandatory gates before EAS iOS production build
 - [ ] Validate latest main/mobile dependencies and app.json using Expo config diagnostics, dependency consistency, typecheck and lint.
 - [ ] Run production iOS build and on-device smoke test (real iPhone) without modifying Android binary.
-- [ ] Test customer signup, Firebase phone OTP, resend, existing customer login, session refresh, logout and re-login, expired OTP, denied permissions.
-- [ ] Confirm iOS Firebase platform configuration is present and correct for the exact bundle identifier and authentication provider; test on a real device.
+- [ ] Preserve and test the SAME authentication methods that ship in the live Android 0.3.0 (9) build: customer registration, login, session persistence, logout/re-login, recovery, and denied-permission behavior. Do NOT add Firebase OTP or a new OTP flow to iOS.
+- [ ] Verify the authentication code and dependencies of the final iOS binary against Android's current production flow; do not assume an earlier Firebase PR represents the shipped Android build.
 - [ ] Test own-data authorization; vehicle add/view/edit, policy add/view/copy upload, claim without policy/expired policy, nine-stage claim editing, documents, microphone, and support/navigation.
 - [ ] Confirm usable in-app account deletion initiation (not merely logout/deactivation) with legal retention explanation; conduct safe test only with dedicated test accounts.
 - [ ] Audit microphone, location, camera/photos, files, notifications and any tracking/analytics declarations against real code.
@@ -27,7 +27,7 @@
 - [ ] Complete age rating, content rights, encryption/export compliance, territory/pricing, availability and account deletion disclosures.
 - [ ] Capture final binary's actual non-misleading iPhone screenshots and check Apple's current screenshot dimensions; at least one required Dynamic Island iPhone set.
 - [ ] Create reviewer demo account containing synthetic representative vehicle, policy and claim records; no real customer data.
-- [ ] Make login possible throughout review (including OTP challenges); provide test phone/credentials and explicit reviewer steps securely in App Store Connect, not GitHub.
+- [ ] Make login possible throughout review without requiring any unavailable verification or manual intervention; provide test phone/credentials and explicit reviewer steps securely in App Store Connect, not GitHub.
 - [ ] Reviewer notes must explain business model, customer self-registration, claim workflow, third-party services, insurance brokerage company and authorization evidence.
 - [ ] Confirm all links and reviewer account work from an external network.
 
