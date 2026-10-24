@@ -272,7 +272,7 @@ export default function PoliciesScreen() {
         </View>
       </View>
 
-      <View onLayout={(event) => { searchTopY.current = event.nativeEvent.layout.y; }}>
+      <View style={{ backgroundColor: '#1760C1', paddingBottom: 12 }} onLayout={(event) => { searchTopY.current = event.nativeEvent.layout.y; }}>
         {searchSticky ? <View style={styles.searchSpacer} /> : searchControls}
       </View>
 
@@ -606,7 +606,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     lineHeight: 18,
-    fontWeight: '800',
+    fontWeight: '400',
     letterSpacing: -0.2,
   },
   intakeHeaderButton: {
