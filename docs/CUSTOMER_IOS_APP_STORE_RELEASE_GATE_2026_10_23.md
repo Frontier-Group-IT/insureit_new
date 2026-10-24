@@ -54,6 +54,13 @@ The production EAS profile explicitly specifies store distribution, a real-devic
 - [ ] Validate App Store-facing assets, privacy disclosures and reviewer-access instructions with business owner.
 - [ ] App Store Connect upload and submission are prohibited until verification is complete.
 
+## Inspected source evidence (2026-10-24)
+- `apps/mobile-app/app/login.tsx` and `signup.tsx` call `sendPhoneOtp`, `sendPhoneSignupOtp`, and `verifyPhoneOtp` from `lib/auth.ts`. These are Supabase authentication flows, NOT Firebase. Keep them unchanged. Apple reviewer demo must be able to receive valid Supabase SMS OTP or receive an approved alternative test sign-in flow before submission.
+- `apps/mobile-app/app/customer/profile.tsx` Account & Privacy links to the Legal Center. No self-service account-deletion button was found in this inspected screen; `apps/mobile-app/app/customer/legal/index.tsx` only lists legal documents. Confirm whether account deletion is supported elsewhere and implement a secure deletion-initiation mechanism if absent. Do NOT assume sign-out or local session removal equals account deletion.
+- Latest release branch CI successfully completed mobile run #1623 and web run #7071 at commit `0257fd77c5aa997662e9e99b064878f4594e3e27`.
+- Passing JavaScript CI is not an iOS binary, Apple signing, privacy review, or a real iPhone smoke test.
+- DO NOT falsely mark the above outstanding items as complete.
+
 ## No-submit policy
 Never submit or upload solely because config passed. Block release until all gates above are checked with recorded evidence. The Partner app remains untouched. An Apple approval on first submission cannot be guaranteed.
 
