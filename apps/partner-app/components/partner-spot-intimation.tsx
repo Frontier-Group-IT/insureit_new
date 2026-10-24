@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
@@ -116,15 +116,20 @@ function EditableField({label,required,value,onChange,placeholder,editable,icon,
       <TextInput accessibilityLabel={label} editable={editable} value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor="#9EABBC" keyboardType={keyboard} style={styles.editableInput}/>
       {icon?<Pressable accessibilityRole="button" accessibilityLabel={`Choose ${label}`} accessibilityState={{disabled:!editable}} disabled={!editable} onPress={openPicker} hitSlop={10} style={{minWidth:36,minHeight:36,alignItems:'center',justifyContent:'center'}}><Ionicons name={icon} color="#1857A9" size={20}/></Pressable>:null}
     </View>
-    {pickerVisible && mode ? <View>
-      <DateTimePicker value={draftPickerValue} mode={mode} display={Platform.OS==='ios'?'spinner':'default'} onChange={(event,date)=>{
-        if(Platform.OS!=='ios')setPickerVisible(false);
-        if(event.type==='dismissed'||!date)return;
-        setDraftPickerValue(date);
-        if(Platform.OS!=='ios')onChange(mode==='date'?`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`:`${pad(date.getHours())}:${pad(date.getMinutes())}`);
-      }}/>
-      {Platform.OS==='ios'?<Pressable accessibilityRole="button" accessibilityLabel="Done selecting date or time" onPress={()=>{const date=draftPickerValue;onChange(mode==='date'?`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`:`${pad(date.getHours())}:${pad(date.getMinutes())}`);setPickerVisible(false);}} style={{alignSelf:'flex-end',padding:10}}><Text style={{color:'#1857A9',fontWeight:'800'}}>Done</Text></Pressable>:null}
-    </View>:null}
+    {pickerVisible && mode ? <Modal transparent animationType="fade" visible={pickerVisible} onRequestClose={()=>setPickerVisible(false)}>
+      <View style={pickerModalStyles.backdrop}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Dismiss date or time picker" onPress={()=>setPickerVisible(false)} style={pickerModalStyles.outside}/>
+        <View style={pickerModalStyles.sheet}>
+          <DateTimePicker value={draftPickerValue} mode={mode} display={Platform.OS==='ios'?'spinner':'default'} onChange={(event,date)=>{
+            if(Platform.OS!=='ios')setPickerVisible(false);
+            if(event.type==='dismissed'||!date)return;
+            setDraftPickerValue(date);
+            if(Platform.OS!=='ios')onChange(mode==='date'? `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`:`${pad(date.getHours())}:${pad(date.getMinutes())}`);
+          }}/>
+          {Platform.OS==='ios'?<Pressable accessibilityRole="button" accessibilityLabel="Done selecting date or time" onPress={()=>{const date=draftPickerValue;onChange(mode==='date'?`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`:`${pad(date.getHours())}:${pad(date.getMinutes())}`);setPickerVisible(false);}} style={pickerModalStyles.done}><Text style={pickerModalStyles.doneText}>Done</Text></Pressable>:null}
+        </View>
+      </View>
+    </Modal> : null}
   </View>;
 }
 
@@ -138,4 +143,12 @@ hero:{position:'relative',overflow:'hidden',backgroundColor:'#062D70',borderRadi
 card:{backgroundColor:'#FFF',borderRadius:18,borderColor:'#D7E2EF',borderWidth:1,padding:12,gap:10,shadowColor:'#14375F',shadowOpacity:.04,shadowRadius:7,shadowOffset:{width:0,height:3},elevation:1},sectionHeading:{flexDirection:'row',alignItems:'center',gap:10,marginBottom:8,paddingVertical:2},sectionArtworkWrap:{width:38,height:38,alignItems:'center',justifyContent:'center'},sectionArtwork:{width:34,height:34},headingCopy:{flex:1},sectionTitle:{fontSize:12.5,fontWeight:'900',color:'#071D49'},subtitle:{fontSize:9.5,color:'#718198',lineHeight:13,marginTop:2},fieldWrap:{gap:6},fieldLabel:{fontSize:10.5,color:'#172E51',fontWeight:'800'},field:{minHeight:52,borderRadius:14,borderColor:'#D3E0EC',borderWidth:1,backgroundColor:'#FBFDFF',paddingHorizontal:12,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},fieldValue:{fontSize:12,color:'#183052',fontWeight:'800'},editableInput:{flex:1,height:47,fontSize:12,color:'#183052',fontWeight:'700'},subheading:{borderTopWidth:1,borderTopColor:'#E3EAF1',paddingTop:15,marginTop:5},subheadingText:{color:'#183052',fontSize:12,fontWeight:'900'},restricted:{fontSize:9,color:'#8191A6',lineHeight:14,marginTop:5},
 documentReadyCard:{borderRadius:18,borderWidth:1,borderColor:'#D7E2EF',backgroundColor:'#FFF',padding:12,shadowColor:'#14375F',shadowOpacity:.05,shadowRadius:9,shadowOffset:{width:0,height:4},elevation:1},docsHeading:{flexDirection:'row',justifyContent:'space-between',alignItems:'flex-start',gap:10,marginBottom:10},optional:{backgroundColor:'#EEF5FF',paddingVertical:5,paddingHorizontal:9,borderRadius:999},optionalText:{fontSize:8.5,color:'#0A43A3',fontWeight:'900'},tiles:{flexDirection:'row',flexWrap:'wrap',gap:8},
 voice:{borderRadius:18,backgroundColor:'#F4F8FE',borderWidth:1,borderColor:'#D3E0EC',padding:12,gap:12},voiceTop:{flexDirection:'row',alignItems:'center',gap:10},mic:{height:48,width:48,backgroundColor:'#E7F0FC',borderRadius:12,alignItems:'center',justifyContent:'center'},disabledRecording:{minHeight:46,backgroundColor:'#315C9F',borderRadius:13,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8},disabledText:{color:'#FFF',fontSize:11,fontWeight:'800'},nav:{height:61,backgroundColor:'#081F4C',flexDirection:'row',alignItems:'center',justifyContent:'space-around',borderTopLeftRadius:18,borderTopRightRadius:18},navItem:{flex:1,alignItems:'center',gap:3},navIcon:{width:36,height:32,borderRadius:10,backgroundColor:'#193666',alignItems:'center',justifyContent:'center'},navLabel:{fontSize:9,color:'#D1DFF1',fontWeight:'700'}
+});
+
+const pickerModalStyles = StyleSheet.create({
+  backdrop: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(10, 24, 48, 0.3)', paddingHorizontal: 22 },
+  outside: { ...StyleSheet.absoluteFillObject },
+  sheet: { borderRadius: 18, backgroundColor: '#FFFFFF', padding: 14, overflow: 'hidden' },
+  done: { alignSelf: 'flex-end', paddingHorizontal: 14, paddingVertical: 12 },
+  doneText: { color: '#1857A9', fontWeight: '800', fontSize: 16 },
 });
