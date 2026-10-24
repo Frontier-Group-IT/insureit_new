@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
-import { requireOperationsHeadRecordOwnership } from "@/lib/operations-head-record-authorization";
+import { canAccessOperationsHeadCase } from "@/lib/policy-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type DocumentRow = {
@@ -28,7 +28,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ doc
     return new NextResponse("Document not found.", { status: 404 });
   }
 
-  if (requester?.role === "operations_head_life") await requireOperationsHeadRecordOwnership("life_health_case", document.case_id);
+  if (requester?.role === "operations_head_life" && !(await canAccessOperationsHeadCase(requester.id, document.case_id))) {
+    return new NextResponse("Document not found.", { status: 404 });
+  }
 
   const { data: signed, error: signedError } = await admin.storage
     .from(document.storage_bucket)
