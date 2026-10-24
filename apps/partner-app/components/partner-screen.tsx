@@ -75,10 +75,11 @@ export function PartnerScreen({
   const [homeSearchFocused, setHomeSearchFocused] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const latestScrollY = useRef(0);
+  const homeStickyStartY = useRef(114);
   const [showFixedHeader, setShowFixedHeader] = useState(false);
   const updateFixedHeader = (y: number) => {
     if (!stickyHeading && !isHomeHero) return;
-    const next = y >= (isHomeHero ? 145 : stickyStartY);
+    const next = y >= (isHomeHero ? homeStickyStartY.current : stickyStartY);
     setShowFixedHeader((previous) => previous === next ? previous : next);
   };
 
@@ -105,6 +106,7 @@ export function PartnerScreen({
     const reset = () => {
       scrollRef.current?.scrollTo({ y: 0, animated: false });
       latestScrollY.current = 0;
+      setShowFixedHeader(false);
       homeMotionScrollY?.setValue(0);
     };
     reset();
@@ -207,7 +209,7 @@ export function PartnerScreen({
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustContentInsets={false}
         automaticallyAdjustsScrollIndicatorInsets={false}
-        stickyHeaderIndices={undefined}
+        stickyHeaderIndices={isHomeHero && !hideTopBar ? [1] : undefined}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps={scrollProps?.keyboardShouldPersistTaps ?? 'handled'}
@@ -265,16 +267,23 @@ export function PartnerScreen({
                 </View>
               </View>
 
-              <Text numberOfLines={1} style={styles.homeHeroGreeting}>
-                {title}
-              </Text>
             </Animated.View>
 
           </View>
         ) : null}
         {!hideTopBar && isHomeHero ? (
-          <View style={styles.homeStickySearchWrap}>
-            {homeSearchControl}
+          <View
+            onLayout={(event) => {
+              homeStickyStartY.current = event.nativeEvent.layout.y;
+            }}
+            style={[styles.homeStickyPair, showFixedHeader && styles.homeStickyPairActive]}
+          >
+            <Text numberOfLines={1} style={[styles.homeHeroGreeting, styles.homeStickyGreeting]}>
+              {title}
+            </Text>
+            <View style={styles.homeStickySearchWrap}>
+              {homeSearchControl}
+            </View>
           </View>
         ) : null}
         {!hideTopBar && !isHomeHero ? (
@@ -300,10 +309,10 @@ export function PartnerScreen({
         ) : null}
         {children}
       </Animated.ScrollView>
-      {showFixedHeader && (isHomeHero || (stickyHeading && stickyControls)) ? (
+      {showFixedHeader && !isHomeHero && stickyHeading && stickyControls ? (
         <View style={styles.fixedWhiteHeader} pointerEvents="box-none">
-          <Text numberOfLines={1} style={styles.fixedWhiteHeading}>{isHomeHero ? title : stickyHeading}</Text>
-          {isHomeHero ? homeSearchControl : stickyControls}
+          <Text numberOfLines={1} style={styles.fixedWhiteHeading}>{stickyHeading}</Text>
+          {stickyControls}
         </View>
       ) : null}
     </SafeAreaView>
@@ -336,13 +345,30 @@ const styles = StyleSheet.create({
     marginHorizontal: -partnerTheme.spacing.lg,
     marginBottom: 0,
   },
-  homeStickySearchWrap: {
-    marginTop: -26,
-    marginBottom: 9,
+  homeStickyPair: {
+    marginTop: -60,
     marginHorizontal: -partnerTheme.spacing.lg,
+    zIndex: 30,
+    elevation: 8,
+  },
+  homeStickyPairActive: {
+    backgroundColor: '#F5F7FB',
+  },
+  homeStickyGreeting: {
+    position: 'relative',
+    left: 0,
+    bottom: 0,
+    alignSelf: 'flex-start',
+    marginLeft: 15,
+    marginBottom: 12,
+  },
+  homeStickySearchWrap: {
+    marginTop: 0,
+    marginBottom: 9,
+    marginHorizontal: 0,
     height: 61,
     paddingHorizontal: 10,
-    backgroundColor: "#F5F7FB",
+    backgroundColor: 'transparent',
     zIndex: 10,
     elevation: 5,
   },
