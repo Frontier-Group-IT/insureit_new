@@ -145,10 +145,13 @@ export default function PartnerClaimVehicleSelector() {
         )}
       </View>
       <View style={styles.policyTitle}><Text style={styles.heading}>Policy details</Text></View>
-      {choice?.policy_id ? <View style={styles.policy}><PartnerInsurerLogo name={choice.insurer_name || ''} fallback={PartnerAssets.navigation.claims} style={styles.logoImage}/><View style={styles.vehicleText}><Text style={styles.policyNo}>{choice.policy_no || 'Policy number pending'}</Text><Text style={styles.policyCaption}>{choice.insurer_name || 'Insurer not recorded'}</Text><Text style={styles.policyCaption}>Expiry: {choice.policy_end_date || 'Not recorded'}</Text></View><View accessibilityLabel={`Policy status: ${policyStatus.label}`} style={[styles.policyIndicator, { backgroundColor: policyStatus.color }]}><Ionicons name={policyStatus.icon} size={20} color="#FFF"/></View></View> : <Text style={styles.hint}>No linked policy found. You can register the claim; coverage will be verified separately.</Text>}
+      {choice?.policy_id ? <View style={styles.policy}><PartnerInsurerLogo name={choice.insurer_name || ''} fallback={PartnerAssets.navigation.claims} style={styles.logoImage}/><View style={styles.vehicleText}><Text style={styles.policyNo}>{choice.policy_no || 'Policy number pending'}</Text><Text style={styles.policyCaption}>{choice.insurer_name || 'Insurer not recorded'}</Text><Text style={styles.policyCaption}>Expiry: {choice.policy_end_date || 'Not recorded'}</Text></View><View accessibilityLabel={`Policy status: ${policyStatus.label}`} style={[styles.policyIndicator, { backgroundColor: policyStatus.color }]}><Ionicons name={policyStatus.icon} size={14} color="#FFF"/></View></View> : <Text style={styles.hint}>No linked policy found. You can register the claim; coverage will be verified separately.</Text>}
       <View style={styles.actions}>
         <Pressable accessibilityRole="button" accessibilityLabel="Cancel claim setup" onPress={() => router.back()} style={styles.secondary}><Text style={styles.secondaryText}>Cancel</Text></Pressable>
         <Pressable disabled={!choice || creating} onPress={() => void startClaim()} style={[styles.primary,(!choice || creating) && styles.disabled]}><Text style={styles.primaryText}>{creating ? "Starting…" : "Start Claim"}</Text><Ionicons name="arrow-forward" color="#FFF" size={19}/></Pressable>
+      </View>
+      <View pointerEvents="none" style={styles.vehicleBackdrop}>
+        <Image source={require('../../assets/partner/actions/commercial-vehicles.png')} resizeMode="contain" style={styles.vehicleBackdropImage} />
       </View>
     </ScrollView>
   </SafeAreaView>;
@@ -206,7 +209,9 @@ const styles = StyleSheet.create({
  policy:{backgroundColor:'#0B347A',borderRadius:16,padding:15,flexDirection:'row',gap:13,alignItems:'center'},
  policyNo:{fontSize:13,fontWeight:'900',color:'#FFF'},
  policyCaption:{fontSize:10,color:'#D5E5FC',marginTop:5},
- policyIndicator:{height:35,width:35,borderRadius:18,alignItems:'center',justifyContent:'center'},
+ policyIndicator:{height:24,width:24,borderRadius:12,alignItems:'center',justifyContent:'center'},
+ vehicleBackdrop:{height:155,marginTop:18,alignItems:'center',justifyContent:'flex-end',overflow:'hidden'},
+ vehicleBackdropImage:{width:'100%',height:'100%',opacity:0.18},
  actions:{flexDirection:'row',gap:10,marginTop:5},
  secondary:{flex:1,alignItems:'center',justifyContent:'center',borderRadius:13,borderWidth:1,borderColor:'#C3D4E8',minHeight:52},
  secondaryText:{color:'#154180',fontWeight:'800',fontSize:11},
