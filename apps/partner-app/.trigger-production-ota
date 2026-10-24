@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=b1e93381c87a33bbe77f71ce09137a5c73d95502
-reason=partner-claim-policy-expiry-regex-fix-pr-3492
+source_main=c26d78eda2c5e76f9503b7e2bcd609ede86e44cc
+reason=partner-ios-android-sticky-statusbar-pr-3493
