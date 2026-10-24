@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ClipboardList, Plus } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
+import { CustomerClaimClickableRow } from "./customer-claim-clickable-row";
 import { CustomerClaimsSearch } from "./customer-claims-search";
 import { projectInternalClaim } from "@insureit/claim-journey";
 import { CustomerAccountTabs, EmptyCustomerState } from "@/components/customer-portal/customer-phase1";
@@ -112,9 +113,9 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
                 {rows.map(({ claim, stage }) => {
                   const detailHref = { pathname: `/customer/claims/${claim.id}`, query: { account: account.id } };
                   const lossDate = claim.accident_at ? new Date(claim.accident_at) : null;
-                  return <tr key={claim.id} className="group relative border-b border-[#E1E9F4] transition-colors hover:bg-[#EDF5FF] focus-within:bg-[#EDF5FF] last:border-b-0">
+                  return <CustomerClaimClickableRow key={claim.id} href={`/customer/claims/${encodeURIComponent(claim.id)}?account=${encodeURIComponent(account.id)}`} label={`Open claim ${claim.claim_no || claim.vehicle_no || ""}`}>
                     <td className="border-r border-[#E1E9F4] px-3 py-3 text-left">
-                      <Link href={detailHref} aria-label={`Open claim ${claim.claim_no || claim.vehicle_no || ""}`} className="block rounded outline-offset-2 after:absolute after:inset-0 after:cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1769DC]">
+                      <Link href={detailHref} aria-label={`Open claim ${claim.claim_no || claim.vehicle_no || ""}`} className="block rounded outline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1769DC]">
                         <span className="block font-medium">{customerName}</span>
                         <span className="block text-[11px] text-[#627691]">{customerMobile || "—"}</span>
                       </Link>
@@ -132,7 +133,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
                     <td className="max-w-[210px] break-words border-r border-[#E1E9F4] px-3 py-3 font-medium">{claim.claim_no || "—"}</td>
                     <td className="border-r border-[#E1E9F4] px-3 py-3">{claim.insurer_claim_no || "Pending insurer claim number"}</td>
                     <td className="px-3 py-3 text-left"><span className="block font-medium">{stage || "—"}</span><span className="block text-[11px] text-[#627691]">{claim.current_status || "—"}</span></td>
-                  </tr>;
+                  </CustomerClaimClickableRow>;
                 })}
               </tbody>
             </table>
