@@ -325,7 +325,7 @@ export default function BusinessScreen() {
             <View style={styles.heroCopy}><Text style={styles.heroTitle}>Business</Text></View>
           </View>
 
-          <BusinessSearchSlot controls={businessSearchControls} />
+          <View style={{ backgroundColor: '#1760C1', paddingHorizontal: 8, paddingBottom: 12 }}><BusinessSearchSlot controls={businessSearchControls} /></View>
 
           {workspace.stale || workspace.error || workspace.data?.secondaryWarning ? (
             <View style={styles.feedback}>
