@@ -29,8 +29,6 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
   const currentPolicies = policies.filter((policy) => customerPolicyTone(policy.end_date).tone !== "expired");
   const coveredIds = new Set(currentPolicies.map((policy) => policy.vehicle_id).filter(Boolean));
   const uncoveredVehicles = vehicles.filter((vehicle) => !coveredIds.has(vehicle.id));
-  const covered = vehicles.length - uncoveredVehicles.length;
-  const coverage = vehicles.length ? Math.round((covered / vehicles.length) * 100) : 0;
   const duePolicies = policies.filter((policy) => customerPolicyTone(policy.end_date).tone === "due");
   const openClaims = claims.filter((claim) => !isCompletedCustomerClaim(claim, milestones_by_claim.get(claim.id) ?? []) && claim.current_status !== "Rejected");
   const attentionCount = uncoveredVehicles.length + duePolicies.length;
@@ -86,21 +84,8 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
           <h1 className="text-[clamp(27px,3vw,38px)] font-bold tracking-tight">Good morning, {account.contact_name?.split(" ")[0] || "Customer"}!</h1>
         </div>
       </section>
-      <section aria-label="Fleet overview" className="overflow-hidden rounded-2xl border border-[#E1EAF5] bg-white">
-        <div className="grid grid-cols-2 lg:grid-cols-4">
-          {[
-            {label:"Total vehicles",value:vehicles.length,icon:CarFront,color:"text-[#1769DC]",background:"bg-[#EAF3FF]",href:"/customer/vehicles"},
-            {label:"Insured vehicles",value:covered,icon:ShieldCheck,color:"text-[#087A57]",background:"bg-[#E5F7EE]",href:"/customer/vehicles"},
-            {label:"Uninsured vehicles",value:uncoveredVehicles.length,icon:ShieldX,color:"text-[#C2414D]",background:"bg-[#FFF0F1]",href:"/customer/vehicles"},
-            {label:"Fleet coverage",value:`${coverage}%`,icon:ShieldPlus,color:"text-[#1769DC]",background:"bg-[#EAF3FF]",href:"/customer/vehicles"},
-          ].map(({label,value,icon:Icon,color,background,href},index)=><Link key={label} href={{pathname:href,query:accountQuery}} className={`customer-home-breathe flex min-w-0 items-center gap-2.5 px-3 py-2.5 transition duration-200 hover:bg-[#F8FBFF] sm:px-4 sm:py-3 ${index===0?"hover:z-10 hover:shadow-[0_8px_22px_rgba(20,58,100,.10)]":""} ${index%2===0?"":"border-l border-[#E6EDF6]"} ${index>=2?"border-t border-[#E6EDF6] lg:border-t-0":""} ${index>0?"lg:border-l lg:border-[#E6EDF6]":""}`}>
-            <span className={`customer-home-icon-breathe grid h-9 w-9 shrink-0 place-items-center rounded-xl ${background} ${color}`}><Icon className="h-5 w-5"/></span>
-            <span className="min-w-0"><span className="block text-[12px] font-medium text-[#60799B]">{label}</span><strong className="block text-[24px] font-bold leading-tight tabular-nums text-[#102B54]">{value}</strong></span>
-          </Link>)}
-        </div>
-      </section>
-      <section className="rounded-2xl border border-[#E1EAF5] bg-white p-4 sm:p-5">
-        <h2 className="mb-3 text-[14px] font-bold text-[#102B54]">Quick actions</h2>
+      <section className="px-1 py-2">
+        <h2 className="mb-2 text-[14px] font-black text-[#10284A]">Quick actions</h2>
         <nav aria-label="Quick actions" className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
           {[
             {title:"Renew policies",href:"/customer/renewals",icon:CalendarDays,background:"bg-[#EAF3FF]",color:"text-[#1769DC]"},
@@ -114,7 +99,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
       </section>
       <div className="grid gap-3 lg:grid-cols-2">
         <section data-home-reveal className="min-w-0 overflow-hidden rounded-2xl border border-[#E0E8F3] bg-white">
-          <div className="flex items-center justify-between gap-2 border-b border-[#E6EDF6] px-3 py-1.5"><h2 className="flex items-center gap-2 text-[14px] font-bold text-[#102B54]"><AlertTriangle className="h-4 w-4 text-red-500"/>Needs your attention</h2><Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="text-[12px] font-semibold text-[#1769DC]">View all</Link></div>
+          <div className="flex items-center justify-between gap-2 border-b border-[#E6EDF6] px-3 py-1.5"><h2 className="flex items-center gap-2 text-[14px] font-black text-[#10284A]"><AlertTriangle className="h-4 w-4 text-red-500"/>Needs your attention</h2><Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="text-[12px] font-semibold text-[#1769DC]">View all</Link></div>
           {attentionCount === 0?<p className="m-4 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700">No urgent insurance actions.</p>:<div className="overflow-x-auto">
             <table className="w-full min-w-[440px] text-center">
               <thead className="bg-[#F7FAFE] text-center text-[10px] font-semibold uppercase tracking-wide text-[#7186A0]"><tr><th className="px-3 py-1.5">Vehicle / Policy</th><th className="px-3 py-1.5">Issue</th><th className="px-3 py-1.5">Status</th></tr></thead>
@@ -135,7 +120,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
         </section>
 
         <section data-home-reveal className="min-w-0 overflow-hidden rounded-2xl border border-[#E0E8F3] bg-white">
-          <div className="flex items-center justify-between border-b border-[#E6EDF6] px-3 py-1.5"><h2 className="flex items-center gap-2 text-[14px] font-bold text-[#102B54]"><CarFront className="h-4 w-4 text-[#1672DC]"/>My Vehicles</h2><Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="text-[12px] font-semibold text-[#1769DC]">View all</Link></div>
+          <div className="flex items-center justify-between border-b border-[#E6EDF6] px-3 py-1.5"><h2 className="flex items-center gap-2 text-[14px] font-black text-[#10284A]"><CarFront className="h-4 w-4 text-[#1672DC]"/>My Vehicles</h2><Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="text-[12px] font-semibold text-[#1769DC]">View all</Link></div>
           {vehicles.length===0?<p className="p-4 text-xs text-[#7186A0]">No vehicles found.</p>:<div className="overflow-x-auto">
             <table className="w-full min-w-[470px] text-center">
               <thead className="bg-[#F7FAFE] text-center text-[10px] font-semibold uppercase tracking-wide text-[#7186A0]"><tr><th className="px-3 py-1.5">Vehicle</th><th className="px-3 py-1.5">Make / Model</th><th className="px-3 py-1.5">Insurance status</th></tr></thead>
@@ -161,7 +146,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
         </section>
         <section data-home-reveal className="min-w-0 rounded-xl border border-[#E0E8F3] bg-white p-3">
           <div className="mb-3 flex items-center justify-between"><h2 className="flex items-center gap-2 text-[14px] font-black text-[#10284A]"><ClipboardList className="h-4 w-4 text-[#1672DC]"/>My Claims</h2><Link href={{pathname:"/customer/claims",query:accountQuery}} className="text-[10px] font-bold text-[#176CD4]">View all</Link></div>
-          <div className="overflow-x-auto"><table className="w-full min-w-[340px] text-center text-[10px] text-[#526782]"><thead className="bg-[#F1F6FC] text-center text-[#637B9A]"><tr><th className="px-2 py-1.5">Claim Number</th><th className="px-2 py-1.5">Status</th></tr></thead><tbody>{latestClaims.map(claim=>{ const href={pathname:"/customer/claims",query:accountQuery}; return <tr key={claim.id} className="cursor-pointer border-b border-[#EEF2F8] transition hover:bg-[#F8FBFF]"><td className="p-0 font-medium"><Link href={href} className="block px-2 py-1.5 text-center text-[#526782]">{claim.claim_no||claim.id.slice(0,8)}</Link></td><td className="p-0"><Link href={href} className="block px-2 py-1.5 text-center text-[#526782]">{claim.current_status||"Submitted"}</Link></td></tr>;})}</tbody></table>{latestClaims.length===0?<p className="p-3 text-xs text-[#7186A0]">No claims found.</p>:null}</div>
+          <div className="overflow-x-auto"><table className="w-full min-w-[480px] text-center text-[10px] text-[#526782]"><thead className="bg-[#F1F6FC] text-center text-[#637B9A]"><tr><th className="px-2 py-1.5">Claim Number</th><th className="px-2 py-1.5">Vehicle Number</th><th className="px-2 py-1.5">Incident Date</th><th className="px-2 py-1.5">Status</th></tr></thead><tbody>{latestClaims.map(claim=>{ const href={pathname:`/customer/claims/${claim.id}`,query:accountQuery}; return <tr key={claim.id} className="cursor-pointer border-b border-[#EEF2F8] transition hover:bg-[#F8FBFF]">{[claim.claim_no||claim.id.slice(0,8),claim.vehicle_no||"—",claim.accident_at?new Date(claim.accident_at).toLocaleDateString("en-IN",{day:"2-digit",month:"2-digit",year:"numeric"}):"—",claim.current_status||"Submitted"].map((value,index)=><td key={index} className="p-0"><Link href={href} className="block px-2 py-1.5 text-center text-[#526782]">{value}</Link></td>)}</tr>;})}</tbody></table>{latestClaims.length===0?<p className="p-3 text-xs text-[#7186A0]">No claims found.</p>:null}</div>
         </section>
       </div>
     </div>
