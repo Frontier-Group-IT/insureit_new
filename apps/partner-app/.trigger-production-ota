@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=2777fff678da2325aa49f3ca61502ac65cde9815
-reason=partner-home-ios-touch-fix-pr-3482
+source_main=ad1d04454ab9efb8cd127cefce6667d89a12da31
+reason=partner-ios-sticky-safe-area-pr-3483
