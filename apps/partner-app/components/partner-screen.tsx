@@ -227,11 +227,12 @@ export function PartnerScreen({
               }) }],
             } : null]}>
               <Image
+                pointerEvents="none"
                 source={require('../assets/figma-dashboard/hero-banner.jpg')}
                 style={styles.homeHeroImage}
                 resizeMode="cover"
               />
-              <View style={styles.homeHeroShade} />
+              <View pointerEvents="none" style={styles.homeHeroShade} />
 
               <View style={styles.homeHeroTopRow}>
                 <View style={styles.homeBrand} accessibilityLabel="INSUREIT Partner">
