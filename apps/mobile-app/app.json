@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "insureit",
+    "name": "INSUREIT Customer",
     "slug": "insureit-mobile",
     "version": "0.3.0",
     "orientation": "portrait",
@@ -37,7 +37,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.insureit.mobile",
-      "buildNumber": "5",
+      "buildNumber": "1",
       "supportsTablet": false,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
