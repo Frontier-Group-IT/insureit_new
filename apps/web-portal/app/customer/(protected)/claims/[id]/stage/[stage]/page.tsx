@@ -112,6 +112,12 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
         </div>
       </form>
     ):null}
+    {completed && activeIndex < INTERNAL_JOURNEY_STAGES.length - 1 ? (
+      <div className="flex flex-wrap justify-end gap-2 rounded-xl border border-[#D9E6F7] bg-white px-4 py-3">
+        <Link href={{ pathname: "/customer/claims", query: { account: account.id } }} className="inline-flex min-h-10 items-center rounded-lg border border-[#B9CBE2] px-5 text-[12px] font-semibold text-[#174A87]">Cancel</Link>
+        <Link href={{ pathname: `/customer/claims/${claim.id}/stage/${INTERNAL_JOURNEY_STAGES[activeIndex + 1].key}`, query: { account: account.id, mode: "edit" } }} className="inline-flex min-h-10 items-center rounded-lg bg-[#1253A7] px-5 text-[12px] font-bold text-white">Continue to Stage {activeIndex + 2}</Link>
+      </div>
+    ) : null}
     {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} allowUpload={editMode}/> : null}
     {selected.key==="claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} showSaveDetails={editMode && canEditStage} allowUpload={editMode} /> : null}
   </div>;
