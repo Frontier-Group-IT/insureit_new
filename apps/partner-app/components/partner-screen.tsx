@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 11.5,
     lineHeight: 15,
-    fontWeight: '700',
+    fontWeight: '400',
     letterSpacing: -0.02,
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
