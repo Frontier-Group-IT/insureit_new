@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState, type PropsWithChildren, type ReactNode } from 'react';
 import {
   Animated,
+  Platform,
   Image,
   Pressable,
   ScrollView,
