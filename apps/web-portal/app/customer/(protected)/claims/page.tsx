@@ -3,20 +3,21 @@ import { ClipboardList, Plus } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
 import { CustomerClaimsSearch, CustomerClaimsStageFilter } from "./customer-claims-search";
-import { INTERNAL_JOURNEY_STAGES, projectInternalClaim } from "@insureit/claim-journey";
+import { projectInternalClaim } from "@insureit/claim-journey";
 import { CustomerAccountTabs, EmptyCustomerState } from "@/components/customer-portal/customer-phase1";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import {
   buildExternalClaimProjection,
   isExternalCustomerClaim,
   isCompletedCustomerClaim,
+  customerClaimFilter,
   loadCustomerClaimListContext,
 } from "@/lib/customer-web-phase2-data";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type Params = { account?: string; q?: string; type?: string; stage?: string; page?: string };
+type Params = { account?: string; q?: string; filter?: string; page?: string };
 const PAGE_SIZE = 15;
 
 export default async function CustomerClaimsPage({ searchParams }: { searchParams?: Promise<Params> }) {
@@ -28,9 +29,8 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
   const { data: customerContact } = await db.from("customers").select("id,phone").eq("id", account.id).maybeSingle();
   const customerName = account.customer_name || account.contact_name || "Account holder";
   const customerMobile = typeof customerContact?.phone === "string" ? customerContact.phone : null;
-  const type = params.type === "external" ? "external" : "internal";
+  const statusFilter = (["all", "open", "action", "completed"].includes(params.filter ?? "") ? params.filter : "all") as "all" | "open" | "action" | "completed";
   const query = (params.q ?? "").trim().toLowerCase();
-  const stageFilter = params.stage ?? "";
   const enriched = claims.map((claim) => {
     const external = isExternalCustomerClaim(claim);
     const milestones = milestones_by_claim.get(claim.id) ?? [];
@@ -40,12 +40,20 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
     const completed = isCompletedCustomerClaim(claim, milestones);
     return { claim, external, stage, completed };
   });
-  const internalCount = enriched.filter((item) => !item.external).length;
-  const externalCount = enriched.length - internalCount;
-  const stages = INTERNAL_JOURNEY_STAGES.map((stage) => stage.label);
-  const filtered = enriched.filter(({ claim, external, stage }) => {
-    if (external !== (type === "external")) return false;
-    if (stageFilter && stage !== stageFilter) return false;
+  const matchesStatus = (item: (typeof enriched)[number], filter: "all" | "open" | "action" | "completed") => {
+    if (filter === "all") return true;
+    if (filter === "completed") return item.completed;
+    if (filter === "open") return !item.completed && item.claim.current_status !== "Rejected";
+    return customerClaimFilter(item.claim, "action", {
+      milestones: milestones_by_claim.get(item.claim.id) ?? [],
+      internal_projection: item.external ? null : projectInternalClaim(item.claim.current_status),
+    } as Parameters<typeof customerClaimFilter>[2]);
+  };
+  const filterOptions = ([["all", "All"], ["open", "Open"], ["action", "Action Required"], ["completed", "Completed"]] as const)
+    .map(([key, label]) => ({ key, label, count: enriched.filter((item) => matchesStatus(item, key)).length }));
+  const filtered = enriched.filter((item) => {
+    const { claim, stage } = item;
+    if (!matchesStatus(item, statusFilter)) return false;
     if (!query) return true;
     return [customerName, customerMobile, claim.vehicle_no, claim.claim_no, claim.insurer_claim_no, claim.policy_no, claim.insurer_name, claim.vehicle_make, claim.vehicle_model, stage]
       .some((value) => value?.toLowerCase().includes(query));
@@ -56,7 +64,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
   const rows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const href = (changes: Partial<Params>) => ({
     pathname: "/customer/claims",
-    query: { account: account.id, type, ...(params.q ? { q: params.q } : {}), ...(stageFilter ? { stage: stageFilter } : {}), ...changes },
+    query: { account: account.id, ...(params.q ? { q: params.q } : {}), ...(statusFilter !== "all" ? { filter: statusFilter } : {}), ...changes },
   });
   return (
     <div className="space-y-4 pb-6">
@@ -74,15 +82,12 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
 
       <section className="overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white">
         <div className="flex flex-wrap items-center gap-2 border-b border-[#E6ECF4] p-4 xl:flex-nowrap">
-          <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><ClipboardList className="h-5 w-5 text-[#1769DC]"/>{type === "internal" ? "Internal claims" : "External claims"} <span className="rounded-full bg-[#E7F0FD] px-2.5 py-1 text-[11px] text-[#205BA3]">{type === "internal" ? internalCount : externalCount} claims</span></h2>
-          <CustomerClaimsSearch initialQuery={params.q ?? ""} accountId={account.id} type={type} />
+          <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><ClipboardList className="h-5 w-5 text-[#1769DC]"/>My Claims <span className="rounded-full bg-[#E7F0FD] px-2.5 py-1 text-[11px] text-[#205BA3]">{enriched.length} claims</span></h2>
+          <CustomerClaimsSearch initialQuery={params.q ?? ""} accountId={account.id} />
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            <CustomerClaimsStageFilter value={stageFilter} stages={stages} accountId={account.id} type={type} query={params.q ?? ""} />
-            <div className="flex rounded-lg border border-[#DCE4EE] bg-[#F8FAFD] p-0.5 text-[12px] font-semibold">
-              {(["internal", "external"] as const).map(key => <Link key={key} href={href({type:key,stage:"",page:"1"})} className={`rounded-md px-3 py-2 ${type === key ? "bg-[#E7F0FD] text-[#124788]" : "text-[#64748B]"}`}>
-                {key === "internal" ? "Internal" : "External"} <span className="ml-1 rounded-full bg-[#D9E8FA] px-1.5 py-0.5">{key === "internal" ? internalCount : externalCount}</span>
-              </Link>)}
-            </div>
+            <nav aria-label="Claim status" className="flex flex-wrap items-center gap-1.5">
+              {filterOptions.map(({ key, label, count }) => <Link key={key} href={href({filter:key,page:"1"})} aria-current={statusFilter === key ? "page" : undefined} className={`rounded-full border px-3 py-2 text-[12px] font-semibold transition-colors ${statusFilter === key ? "border-[#071E45] bg-[#071E45] text-white" : "border-[#DCE4EE] bg-white text-[#344767] hover:bg-[#F0F6FF]"}`}>{label} ({count})</Link>)}
+            </nav>
             <Link href={{ pathname: "/customer/start-claim", query: { account: account.id } }} className="inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-[#1769DC] px-3 py-2.5 text-[12px] font-semibold text-white hover:bg-[#1058BD]"><Plus className="h-4 w-4"/>Start a new claim</Link>
           </div>
         </div>
@@ -132,7 +137,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
               </tbody>
             </table>
           </div>
-        ) : <div className="py-8"><EmptyCustomerState title="No matching claims" body="Change the claim type, search or stage filter." /></div>}
+        ) : <div className="py-8"><EmptyCustomerState title="No matching claims" body="Try another search or status filter." /></div>}
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E2E9F3] px-5 py-4 text-[12px] text-[#536681]">
           <span>Showing {filtered.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}</span>
