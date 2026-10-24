@@ -216,7 +216,7 @@ export default function ClaimsScreen() {
 
         <View style={styles.summaryRow}>
           {([
-            { label: 'Total Claims', filter: 'all' as const, value: summary.data?.total_claims, icon: 'document-text-outline' as const },
+            { label: 'All Claims', filter: 'all' as const, value: summary.data?.total_claims, icon: 'document-text-outline' as const },
             { label: 'Settled Claims', filter: 'completed' as const, value: summary.data?.completed_claims, icon: 'shield-checkmark' as const },
             { label: 'In Progress', filter: 'active' as const, value: summary.data?.active_claims, icon: 'hourglass-outline' as const },
           ]).map((metric) => (
