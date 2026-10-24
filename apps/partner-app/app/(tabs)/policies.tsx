@@ -10,8 +10,9 @@ import {
   StyleSheet,
   Text,
   View,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
@@ -50,6 +51,10 @@ const POLICY_FILTER_OPTIONS: Array<{ value: PartnerPolicyLifecycle; label: strin
 
 export default function PoliciesScreen() {
   const router = useRouter();
+  const safeAreaInsets = useSafeAreaInsets();
+  // Some iOS OTA runtimes report an insufficient tab-screen top inset.
+  // Offset only the fixed sticky overlay; do not move the scrollable hero.
+  const stickyStatusBarClearance = Platform.OS === 'ios' ? Math.max(0, 54 - safeAreaInsets.top) : 0;
   const verticalListRef = useRef<FlatList>(null);
   useFocusEffect(useCallback(() => {
     const reset = () => verticalListRef.current?.scrollToOffset({ offset: 0, animated: false });
@@ -424,7 +429,7 @@ export default function PoliciesScreen() {
         maxToRenderPerBatch={10}
         windowSize={7}
       />
-      {searchSticky ? <View style={styles.stickySearchOverlay} pointerEvents="box-none"><Text style={styles.stickyClaimsHeading}>Policies</Text>{searchControls}</View> : null}
+      {searchSticky ? <View style={[styles.stickySearchOverlay , { top: stickyStatusBarClearance }]} pointerEvents="box-none"><Text style={styles.stickyClaimsHeading}>Policies</Text>{searchControls}</View> : null}
     </SafeAreaView>
   );
 }
