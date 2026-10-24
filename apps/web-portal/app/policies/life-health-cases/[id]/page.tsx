@@ -1,11 +1,10 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { LifeHealthCaseDetail } from "@/components/life-health-case-detail";
 import { LifeHealthCaseErrorPopupGuard } from "@/components/life-health-case-error-popup-guard";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { requireCapability } from "@/lib/master-data-server";
-import { canAccessOperationsHeadCase, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
+import { getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -56,31 +55,6 @@ export default async function LifeHealthCasePage({ params }: { params: Promise<{
 
   const customer = customerResult.data;
   const insurer = insurerResult.data;
-  const editable = profile.role !== "operations_head_life" || await canAccessOperationsHeadCase(profile.id, id, true);
-  if (!editable) {
-    const fields = [
-      ["Customer", customer?.company_name?.trim() || customer?.contact_name || "—"],
-      ["Mobile", customer?.phone || "—"],
-      ["Insurer", insurer?.name || "—"],
-      ["Product", caseRow.product_name],
-      ["Proposal number", caseRow.proposal_number],
-      ["RM", caseRow.rm_name || "—"],
-      ["Lead source", caseRow.lead_source || "—"],
-      ["Partner code", caseRow.intermediary_code || "Direct"],
-      ["Premium", new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR"}).format(Number(caseRow.premium_amount || 0))],
-      ["Status", caseRow.status.replaceAll("_"," ")],
-      ["Remarks", caseRow.remarks || "—"],
-    ];
-    return <AppShell title="Life / Health Case">
-      <section className="mx-auto max-w-5xl rounded-2xl border border-slate-200 bg-white p-5">
-        <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-semibold text-slate-500">Read-only · {caseRow.business_line}</p><h1 className="mt-1 text-xl font-bold">{caseRow.case_number}</h1></div><Link href="/policies/life-health-cases" className="rounded-lg border px-3 py-2 text-xs">Back</Link></div>
-        <p className="mt-3 text-xs text-slate-500">Visible across Life/Health. Editing remains restricted to Gagan Singh&apos;s RM/partner downline.</p>
-        <dl className="mt-5 grid gap-3 sm:grid-cols-2 md:grid-cols-3">{fields.map(([label,value])=><div key={label} className="rounded-xl bg-slate-50 p-3"><dt className="text-[10px] uppercase text-slate-500">{label}</dt><dd className="mt-1 text-sm font-medium">{value}</dd></div>)}</dl>
-        {policyResult.data?.id ? <Link href={`/policies/${policyResult.data.id}`} className="mt-4 inline-block text-sm font-semibold text-blue-700 underline">View issued policy</Link> : null}
-        {documents.length ? <div className="mt-5 space-y-2"><h2 className="text-sm font-bold">Documents</h2>{documents.map(doc=><Link key={doc.id} href={`/policies/life-health-case-documents/${doc.id}/view`} target="_blank" className="block rounded-lg border p-2 text-xs text-blue-700">{doc.file_name}</Link>)}</div> : null}
-      </section>
-    </AppShell>;
-  }
   return <AppShell title="Life / Health Case">
     <LifeHealthCaseErrorPopupGuard />
     <LifeHealthCaseDetail
