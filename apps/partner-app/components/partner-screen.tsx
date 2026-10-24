@@ -43,6 +43,7 @@ export function PartnerScreen({
   stickyHeading,
   stickyControls,
   stickyStartY = 100,
+  scrollLinkedHeader = false,
 }: PropsWithChildren<{
   title: string;
   eyebrow?: string;
@@ -60,6 +61,8 @@ export function PartnerScreen({
   stickyHeading?: string;
   stickyControls?: ReactNode;
   stickyStartY?: number;
+  /** Keep the heading and search controls in the natural scroll flow. */
+  scrollLinkedHeader?: boolean;
   heroSearch?: {
     value: string;
     onChangeText: (value: string) => void;
@@ -80,11 +83,12 @@ export function PartnerScreen({
   const [homeSearchFocused, setHomeSearchFocused] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const latestScrollY = useRef(0);
-  const showFixedHeader = false;
+  const [fixedHeaderActive, setFixedHeaderActive] = useState(false);
+  const showFixedHeader = !scrollLinkedHeader && fixedHeaderActive;
   const updateFixedHeader = (y: number) => {
-    if (!stickyHeading && !isHomeHero) return;
+    if (scrollLinkedHeader || (!stickyHeading && !isHomeHero)) return;
     const next = y >= (isHomeHero ? 42 : stickyStartY);
-    // Header scrolls naturally with its content on Partner tabs.
+    setFixedHeaderActive(previous => previous === next ? previous : next);
   };
 
   useFocusEffect(useCallback(() => {
