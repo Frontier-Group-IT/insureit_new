@@ -567,8 +567,10 @@ function QuickActionsCarousel({
 
   useEffect(() => {
     const timer = setInterval(() => {
-      // Pause while the user interacts; auto-scroll on iOS and Android.
-      if (draggingRef.current || touchingRef.current || loopWidthRef.current <= 0) return;
+      // Keep iOS carousel stationary between user gestures so its moving
+      // native scroll surface cannot compete with Home button presses.
+      // Android retains the existing automatic carousel motion.
+      if (Platform.OS === 'ios' || draggingRef.current || touchingRef.current || loopWidthRef.current <= 0) return;
       const next = offsetRef.current + 0.75;
       offsetRef.current = next >= loopWidthRef.current ? next - loopWidthRef.current : next;
       scrollRef.current?.scrollTo({ x: offsetRef.current, animated: false });
