@@ -160,7 +160,7 @@ export default function PoliciesScreen() {
 
   // Keep the search/filter row visible once the list scrolls past the hero.
   // A same-size spacer preserves scroll position when the search docks.
-  const searchSticky = false;
+  const [searchSticky, setSearchSticky] = useState(false);
   const searchTopY = useRef(Number.POSITIVE_INFINITY);
   const searchControls = (
       <View style={styles.searchRow}>
@@ -272,7 +272,7 @@ export default function PoliciesScreen() {
         </View>
       </View>
 
-      <View style={{ backgroundColor: '#1760C1', paddingBottom: 12 }} onLayout={(event) => { searchTopY.current = event.nativeEvent.layout.y; }}>
+      <View onLayout={(event) => { searchTopY.current = event.nativeEvent.layout.y; }}>
         {searchSticky ? <View style={styles.searchSpacer} /> : searchControls}
       </View>
 
@@ -407,7 +407,7 @@ export default function PoliciesScreen() {
         ListHeaderComponent={header}
         onScroll={(event) => {
           const shouldStick = event.nativeEvent.contentOffset.y >= searchTopY.current;
-          // Scroll-linked: search and heading remain in the list rather than docking.
+          setSearchSticky((current) => current === shouldStick ? current : shouldStick);
         }}
         scrollEventThrottle={16}
         ListEmptyComponent={empty}
@@ -606,7 +606,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     lineHeight: 18,
-    fontWeight: '400',
+    fontWeight: '800',
     letterSpacing: -0.2,
   },
   intakeHeaderButton: {
@@ -668,7 +668,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: StyleSheet.hairlineWidth,
     borderLeftColor: '#D9DFEA',
   },
-  filterText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: '400' },
+  filterText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: '700' },
   filterMenu: {
     overflow: 'hidden',
     borderRadius: 12,
