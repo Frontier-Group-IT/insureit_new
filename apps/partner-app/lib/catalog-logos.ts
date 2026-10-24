@@ -43,6 +43,13 @@ const insurers: Array<[string[], ImageSourcePropType]> = [
 // null so the Customer Detail screen can render its existing default fallback artwork/icon.
 const manufacturers: Array<[string[], ImageSourcePropType]> = [
   [['tata motors', 'tata'], require('../assets/catalog/vehicle-brands/tata.png')],
+  [['volkswagen', 'vw', 'volkswagen india'], require('../assets/catalog/vehicle-brands/volkswagen.png')],
+  [['hyundai', 'hyundai motors', 'hyundai motor india'], require('../assets/catalog/vehicle-brands/hyundai.png')],
+  [['mahindra', 'mahindra and mahindra', 'mahindra motors', 'm and m'], require('../assets/catalog/vehicle-brands/mahindra.png')],
+  [['kia', 'kia motors', 'kia india'], require('../assets/catalog/vehicle-brands/kia.png')],
+  [['ashok leyland'], require('../assets/catalog/vehicle-brands/ashok-leyland.png')],
+  [['toyota', 'toyota kirloskar'], require('../assets/catalog/vehicle-brands/toyota.png')],
+  [['maruti suzuki'], require('../assets/catalog/vehicle-brands/maruti-suzuki.png')],
   [['honda'], require('../assets/catalog/vehicle-brands/honda.png')],
   [['ace', 'action construction equipment'], require('../assets/catalog/vehicle-brands/ace.png')],
   [['ammann'], require('../assets/catalog/vehicle-brands/ammann.png')],
