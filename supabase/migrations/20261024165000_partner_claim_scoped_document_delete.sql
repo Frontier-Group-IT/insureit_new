@@ -41,6 +41,7 @@ on storage.objects for delete
 to authenticated
 using (
   bucket_id = 'claim-documents'
+  and owner_id = auth.uid()::text
   and split_part(name, '/', 1) ~* '^[0-9a-f-]{36}$'
   and split_part(name, '/', 2) ~* '^[0-9a-f-]{36}$'
   and exists (
