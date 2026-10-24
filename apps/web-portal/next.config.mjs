@@ -83,6 +83,8 @@ const nextConfig = {
   async headers() {
     return [
       { source: "/(.*)", headers: securityHeaders },
+      // Permit this same-origin PDF endpoint to render only inside INSUREIT.
+      { source: "/customer/claims/:id/download", headers: embeddedEditorHeaders },
       {
         source: "/firebase-otp-test/:path*",
         headers: firebaseOtpTestHeaders,

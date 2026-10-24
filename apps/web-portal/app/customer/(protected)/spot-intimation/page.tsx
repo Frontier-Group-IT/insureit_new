@@ -85,6 +85,9 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
       console.error("Customer Spot Intimation save failed unexpectedly",error);
       return {error:"Your claim could not be saved. Please check Claim Details before trying again."};
     }
+    if (!owned.external_policy_id) {
+      redirect("/customer/claims?account="+encodeURIComponent(authorized.id));
+    }
     redirect("/customer/claims/"+encodeURIComponent(owned.id)+"/stage/spot_status?account="+encodeURIComponent(authorized.id));
   }
 

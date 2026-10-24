@@ -9,6 +9,10 @@ export async function GET(request:Request,{params}:{params:Promise<{id:string}>}
     const {id}=await params;
     const {account}=await resolveCustomerWebScope(new URL(request.url).searchParams.get("account"));
     const {claim,milestones,documents}=await loadCustomerClaimDetail(account.id,id);
+    const completedKeys=new Set(milestones.filter(m=>m.milestone_status==="completed"||m.milestone_status==="not_applicable").map(m=>m.milestone_key));
+    if(!INTERNAL_JOURNEY_STAGES.every(stage=>completedKeys.has(stage.key))) {
+      return NextResponse.json({error:"The claim form is available after all nine stages are completed."},{status:409});
+    }
     const pdf=await PDFDocument.create();
     const font=await pdf.embedFont(StandardFonts.Helvetica);
     const bold=await pdf.embedFont(StandardFonts.HelveticaBold);
