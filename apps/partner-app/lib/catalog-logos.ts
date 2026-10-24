@@ -42,6 +42,7 @@ const insurers: Array<[string[], ImageSourcePropType]> = [
 // Keep only catalog files that are actually bundled. Unknown/unavailable brands resolve to
 // null so the Customer Detail screen can render its existing default fallback artwork/icon.
 const manufacturers: Array<[string[], ImageSourcePropType]> = [
+  [['tata motors', 'tata'], require('../assets/catalog/vehicle-brands/tata.png')],
   [['honda'], require('../assets/catalog/vehicle-brands/honda.png')],
   [['ace', 'action construction equipment'], require('../assets/catalog/vehicle-brands/ace.png')],
   [['ammann'], require('../assets/catalog/vehicle-brands/ammann.png')],
