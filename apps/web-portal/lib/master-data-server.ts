@@ -58,28 +58,29 @@ export async function requireCustomerManager(customerId: string) {
   return profile;
 }
 
-export async function getPospMispManager() {
+export async function getPospMispManager(allowOperationsHeadLife = false) {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
+  if (profile?.role === "operations_head_life") return allowOperationsHeadLife && await hasEffectiveCapability(profile, "view_intermediaries", "view") ? profile : null;
   return profile?.id && await hasAnyEffectiveCapability(profile, ["create_intermediary_application", "review_intermediary_application"]) ? profile : null;
 }
 
-export async function requirePospMispManager() {
-  const profile = await getPospMispManager();
+export async function requirePospMispManager(allowOperationsHeadLife = false) {
+  const profile = await getPospMispManager(allowOperationsHeadLife);
   if (!profile) redirect("/access-denied");
   return profile;
 }
 
-export async function getScopedPospMispManager(applicationId: string) {
-  const profile = await getPospMispManager();
+export async function getScopedPospMispManager(applicationId: string, allowOperationsHeadLife = false) {
+  const profile = await getPospMispManager(allowOperationsHeadLife);
   if (!profile) return null;
 
-  const allowed = await canAccessIntermediaryApplication(profile.id, profile.role, applicationId, "review_intermediary_application");
+  const allowed = await canAccessIntermediaryApplication(profile.id, profile.role, applicationId, profile.role === "operations_head_life" ? "view_intermediaries" : "review_intermediary_application");
   return allowed ? profile : null;
 }
 
-export async function requireScopedPospMispManager(applicationId: string) {
-  const profile = await getScopedPospMispManager(applicationId);
+export async function requireScopedPospMispManager(applicationId: string, allowOperationsHeadLife = false) {
+  const profile = await getScopedPospMispManager(applicationId, allowOperationsHeadLife);
   if (!profile) redirect("/access-denied");
   return profile;
 }

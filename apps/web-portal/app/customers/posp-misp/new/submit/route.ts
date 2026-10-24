@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
-import { isEmployeeWithinAccessScope } from "@/lib/employee-access-scope";
+import { isEmployeeWithinAccessScope, canAccessIntermediaryApplication } from "@/lib/employee-access-scope";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createScopedManualPospMispOnboarding } from "../../scoped-manual-action";
 
@@ -53,6 +54,11 @@ export async function POST(request: Request) {
   const existingApplicationId = await findExistingOpenApplication(admin, partnerType, text(data, "pan_number"));
 
   if (existingApplicationId) {
+    const { profile: requester } = await getAuthenticatedProfile(await getServerAccessToken());
+    if (requester?.role === "operations_head_life" && !(await canAccessIntermediaryApplication(requester.id, requester.role, existingApplicationId, "view_intermediaries"))) {
+      return redirectToForm(request.url, data, partnerType,
+        "An application already exists for this PAN outside your authorized reporting hierarchy. Contact an administrator.", "pan_number");
+    }
     return NextResponse.redirect(
       successDestination(request.url, existingApplicationId, submitIntent, "documents_started"),
       303,
@@ -125,6 +131,7 @@ async function validateSubmissionScope(data: FormData) {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
   if (!profile?.id) return { message: "You are not authorized to create an intermediary application.", field: null };
+  if (profile.role === "operations_head_life" && !(await hasEffectiveCapability(profile, "view_intermediaries", "view"))) return { message: "You are not authorized to create an intermediary application.", field: null };
   const allowed = await isEmployeeWithinAccessScope(profile.id, profile.role, employeeId);
   return allowed ? null : { message: "You can only create an application for yourself or an employee in your reporting hierarchy.", field: "associate_employee_id" };
 }

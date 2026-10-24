@@ -17,7 +17,7 @@ export type NewOnboardingQuery = Record<string, string | undefined> & {
 };
 
 export async function renderNewOnboardingPage(partnerType: OnboardingPartnerType, query: NewOnboardingQuery) {
-  const profile = await requirePospMispManager();
+  const profile = await requirePospMispManager(true);
   const [salesManagers, oems, banks] = await Promise.all([
     loadSalesManagers(profile!.id, profile!.role),
     getActiveVehicleManufacturerOptions(),

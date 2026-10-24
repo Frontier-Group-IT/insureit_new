@@ -128,7 +128,8 @@ const reviewErrorMessages: Record<string, string> = {
 export default async function IntermediaryAccountReviewPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; success?: string }> }) {
   const { id } = await params;
   const query = await searchParams;
-  await requireScopedPospMispManager(id);
+  const reviewer = await requireScopedPospMispManager(id, true);
+  const limitedLifeHead = reviewer.role === "operations_head_life";
   const admin = createSupabaseAdminClient();
 
   const [{ data: application }, { data: profile }, { data: assignment }, { data: documents }, { data: intermediary }, { data: panJob }] = await Promise.all([
@@ -190,7 +191,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
         { icon: "link" as IconName, label: `${linkedType.toUpperCase()} ID`, value: linkedAccountId, href: linked && linkedAccountId !== "Not Created" ? `/intermediaries/applications/${linked.id}` : undefined, showViewIcon: Boolean(linked && linkedAccountId !== "Not Created") },
         { icon: "id" as IconName, label: "Linked Account Status", value: linkedAccountStatus },
         { icon: "rm" as IconName, label: "Assigned RM", value: profile.associate_name ?? "Not assigned" },
-        { icon: "portal" as IconName, label: "Portal Access", value: activePartner ? portalAccessLabel(intermediary?.portal_access_status) : "Available after activation", portalAction: activePartner ? portalAccessAction(intermediary?.portal_access_status) : undefined, intermediaryId: activePartner ? intermediary?.id : undefined, returnPath },
+        { icon: "portal" as IconName, label: "Portal Access", value: activePartner ? portalAccessLabel(intermediary?.portal_access_status) : "Available after activation", portalAction: activePartner && !limitedLifeHead ? portalAccessAction(intermediary?.portal_access_status) : undefined, intermediaryId: activePartner ? intermediary?.id : undefined, returnPath },
         { icon: "calendar" as IconName, label: "Activation Date", value: date(activationDate) },
       ]
     : [
@@ -198,7 +199,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
         { icon: "id" as IconName, label: "Account Status", value: intermediary?.account_status ? pretty(intermediary.account_status) : "Under Onboarding" },
         { icon: "link" as IconName, label: "Parent Partner", value: partnerId ?? "Pending", href: parentApplication ? `/intermediaries/applications/${parentApplication.id}` : undefined, showViewIcon: Boolean(parentApplication) },
         { icon: "rm" as IconName, label: "Assigned RM", value: profile.associate_name ?? "Not assigned" },
-        { icon: "portal" as IconName, label: "Portal Access", value: portalAccessLabel(intermediary?.portal_access_status), portalAction: portalAccessAction(intermediary?.portal_access_status), intermediaryId: intermediary?.id, returnPath },
+        { icon: "portal" as IconName, label: "Portal Access", value: portalAccessLabel(intermediary?.portal_access_status), portalAction: limitedLifeHead ? undefined : portalAccessAction(intermediary?.portal_access_status), intermediaryId: intermediary?.id, returnPath },
         { icon: "calendar" as IconName, label: "Activation Date", value: accountActivated ? date(intermediary?.activated_at) : "-" },
       ];
 
@@ -219,7 +220,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {isPartner ? (
+              {isPartner && !limitedLifeHead ? (
                 activePartner && !linked ? (
                   <form action={createLinkedIntermediaryAccount}>
                     <input type="hidden" name="application_id" value={id} />
@@ -228,7 +229,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
                   </form>
                 ) : null
               ) : <Link href={`/intermediaries/applications/${id}/workflow?stage=${stageFor(profile)}`} aria-label={`Continue ${kind} onboarding`} title={`Continue ${kind} onboarding`} className={`${compactLightActionClassName} h-9 w-9 px-0`}><svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 text-white/75" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></svg></Link>}
-              {isPartner && activePartner && intermediary?.id ? (
+              {isPartner && !limitedLifeHead && activePartner && intermediary?.id ? (
                 <Link
                   href={`/intermediaries/applications/${id}/associate-accounts`}
                   className={`${compactLightActionClassName} h-9 gap-2 px-3 text-[9.5px] font-semibold`}
@@ -237,7 +238,8 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
                   <span>Associate Account</span>
                 </Link>
               ) : null}
-              {isPartner ? <Link href={`/intermediaries/applications/${id}/workflow?stage=primary`} aria-label="Edit details" title="Edit details" className={`${compactLightActionClassName} h-9 w-9 px-0`}><PencilIcon /></Link> : null}
+              {limitedLifeHead ? <Link href={`/intermediaries/applications/${id}/workflow?stage=primary`} className={`${compactLightActionClassName} h-9 px-3 text-[10px] font-semibold`}>Edit details</Link>
+                : isPartner ? <Link href={`/intermediaries/applications/${id}/workflow?stage=primary`} aria-label="Edit details" title="Edit details" className={`${compactLightActionClassName} h-9 w-9 px-0`}><PencilIcon /></Link> : null}
             </div>
           </div>
           <div className="grid border-t border-white/15 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">{stats.map((stat) => <HeaderStat key={stat.label} {...stat} />)}</div>

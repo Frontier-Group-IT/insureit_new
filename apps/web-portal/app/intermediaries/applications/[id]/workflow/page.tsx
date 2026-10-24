@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { requireScopedPospMispManager } from "@/lib/master-data-server";
+import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
 import { getActiveBankOptions, getActiveVehicleManufacturerOptions, getPospMispAssociates } from "@/lib/reference-data-cache";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resolveIibPanVerificationStatus, type IibPanVerificationJob } from "@/lib/iib-pan-verification-status";
@@ -101,7 +102,8 @@ const workflowStages: ViewStage[] = ["primary", "documents", "registration", "tr
 
 export default async function IntermediaryWorkflowPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; success?: string; stage?: string; field?: string; migration_error?: string }> }) {
   const { id } = await params;
-  await requireScopedPospMispManager(id);
+  const reviewer = await requireScopedPospMispManager(id, true);
+  const limitedLifeHead = reviewer.role === "operations_head_life";
   const query = await searchParams;
   const admin = createSupabaseAdminClient();
   const [{ data: application }, { data: profile }, { data: documents }, { data: panJob }, { data: assignment }] = await Promise.all([
@@ -113,12 +115,14 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
   ]);
   if (!application || !profile) notFound();
 
-  const [associates, banks, oems] = await Promise.all([
+  const [allAssociates, banks, oems] = await Promise.all([
     getPospMispAssociates(),
     getActiveBankOptions(),
     getActiveVehicleManufacturerOptions(),
   ]);
 
+  const lifeScope = limitedLifeHead ? await getEmployeeAccessScope(reviewer.id, reviewer.role, "view_intermediaries") : null;
+  const associates = allAssociates.filter((item) => !lifeScope || lifeScope.employeeIds.includes(item.id));
   const { aadhaar_number_encrypted, dp_aadhaar_number_encrypted, ...safeProfile } = profile;
   const aadhaarEncrypted = profile.partner_type === "misp" ? dp_aadhaar_number_encrypted : aadhaar_number_encrypted;
   const aadhaarLastFour = profile.partner_type === "misp" ? profile.dp_aadhaar_last_four : profile.aadhaar_last_four;
@@ -162,7 +166,7 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
           : !agreementSigned
             ? "agreement"
             : "iib";
-  const viewStage: ViewStage = requestedStage && unlocked.has(requestedStage) ? requestedStage : defaultView;
+  const viewStage: ViewStage = limitedLifeHead ? "primary" : requestedStage && unlocked.has(requestedStage) ? requestedStage : defaultView;
   const docList = (documents ?? []).map((item) => ({ document_type: item.document_type, file_name: item.file_name }));
   const popupEvent = query.success && popupEvents.has(query.success) ? query.success : null;
   const verificationPan = (profile.partner_type === "misp" ? profile.dp_pan_number : profile.pan_number)?.replace(/\s/g, "").toUpperCase() ?? null;
@@ -206,7 +210,7 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
           </div>
         </section>
 
-        {!onboardingComplete ? (context === "partner" ? (
+        {!limitedLifeHead && !onboardingComplete ? (context === "partner" ? (
           <PartnerTwoStepNavigation applicationId={id} viewStage={viewStage} documentsComplete={documentsComplete} partnerActive={application.partner_status === "active_partner"} />
         ) : (
           <SixStepNavigation viewStage={viewStage} documentsComplete={documentsComplete} registrationComplete={registrationComplete} trainingExamComplete={trainingExamComplete} agreementSigned={agreementSigned} iibUploaded={iibUploaded} />
@@ -215,12 +219,12 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
 
         {query.success && !popupEvent ? <WorkflowSuccessToast message={successes[query.success] ?? "Saved successfully."} /> : null}
 
-        <IntermediaryDocumentUploadController applicationId={id} enabled={viewStage === "documents" && editable} showGst={Boolean(profile.gst_number)} />
+        {!limitedLifeHead ? <IntermediaryDocumentUploadController applicationId={id} enabled={viewStage === "documents" && editable} showGst={Boolean(profile.gst_number)} /> : null}
         <main className="overflow-hidden rounded-2xl border bg-white">
           {viewStage === "primary" || viewStage === "documents" ? (
             <div className="space-y-4 bg-[#F4F7FB]">
               <PospMispApplicationEditor applicationId={id} profile={editProfile} workflowStage={profile.workflow_stage} viewStage={viewStage} editable={editable} salesManagers={associates.map((item) => ({ value: item.id, label: item.full_name ?? "Unnamed" }))} banks={banks} oems={oems} documents={docList} actionTargetId={context === "partner" && viewStage === "primary" ? `partner-primary-actions-${id}` : undefined} />
-              {viewStage === "primary" ? <div className="pb-4 sm:pb-5"><ExistingIntermediaryMigrationEditor applicationId={id} accountType={profile.partner_type} values={migrationValues} editable={editable} />{context === "partner" ? <div id={`partner-primary-actions-${id}`} className="mt-4" /> : null}</div> : null}
+              {!limitedLifeHead && viewStage === "primary" ? <div className="pb-4 sm:pb-5"><ExistingIntermediaryMigrationEditor applicationId={id} accountType={profile.partner_type} values={migrationValues} editable={editable} />{context === "partner" ? <div id={`partner-primary-actions-${id}`} className="mt-4" /> : null}</div> : null}
             </div>
           ) : viewStage === "iib" ? (
             <div className="bg-[#F4F7FB] p-4"><IibSubmissionStage applicationId={id} agreementSigned={agreementSigned} finalType={application.final_type} /></div>
