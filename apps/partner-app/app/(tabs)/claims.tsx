@@ -15,6 +15,7 @@ import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdo
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerMotionBadge } from '@/components/ui/partner-motion-badge';
+import { CLAIM_STAGES, claimStatusMilestone } from '@/lib/claim-tracker';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
@@ -345,8 +346,14 @@ export default function ClaimsScreen() {
 }
 
 function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void }) {
-  const status = humanize(row.current_status || row.claim_state);
-  const stageTone = claimStatusTone(row.current_status, row.claim_state);
+  const completed = row.claim_state === 'completed';
+  const stageIndex = claimStatusMilestone(row.current_status);
+  // The list RPC supplies a broker status but not saved milestone records.
+  // Show the next milestone for recognized legacy statuses such as Survey Done.
+  const status = completed ? 'Completed' : stageIndex > 0
+    ? CLAIM_STAGES[Math.min(stageIndex, CLAIM_STAGES.length - 1)].label
+    : humanize(row.current_status || row.claim_state);
+  const stageTone = completed ? 'success' : stageIndex > 0 ? 'approval' : claimStatusTone(row.current_status, row.claim_state);
   const vehicleLabel = row.vehicle_no || 'Vehicle not linked';
   const mode = claimModeLabel(row.claim_service_mode);
 
