@@ -510,7 +510,7 @@ function QuickAction({
       speed: 28, bounciness: 5,
     }).start();
   };
-  // Card focus is driven by carousel scroll offset, including programmatic auto-scroll.
+  // Only the icon gains focus as it crosses the carousel's fixed center point.
   const centeredOffset = index * QUICK_ACTION_STEP + QUICK_ACTION_WIDTH / 2 - viewportWidth / 2;
   const inputRange = [
     centeredOffset - QUICK_ACTION_STEP * 2,
@@ -519,11 +519,11 @@ function QuickAction({
     centeredOffset + QUICK_ACTION_STEP,
     centeredOffset + QUICK_ACTION_STEP * 2,
   ];
-  const focusScale = scrollX.interpolate({
-    inputRange, outputRange: [0.94, 0.98, 1.12, 0.98, 0.94], extrapolate: 'clamp',
+  const iconScale = scrollX.interpolate({
+    inputRange, outputRange: [1, 1.03, 1.17, 1.03, 1], extrapolate: 'clamp',
   });
   const highlightOpacity = scrollX.interpolate({
-    inputRange, outputRange: [0, 0.12, 1, 0.12, 0], extrapolate: 'clamp',
+    inputRange, outputRange: [0, 0.08, 1, 0.08, 0], extrapolate: 'clamp',
   });
 
   return (
@@ -535,15 +535,15 @@ function QuickAction({
       onPressOut={() => animatePress(false)}
       style={styles.quickActionTouch}
     >
-      <Animated.View style={[styles.quickAction, { transform: [{ scale: focusScale }] }]}>
-        <Animated.View pointerEvents="none" style={[styles.quickActionFocus, { opacity: highlightOpacity }]} />
+      <View style={styles.quickAction}>
         <Animated.View style={{ alignItems: 'center', transform: [{ scale: pressScale }] }}>
-          <View style={styles.quickIcon}>
+          <Animated.View style={[styles.quickIcon, { transform: [{ scale: iconScale }] }]}>
+            <Animated.View pointerEvents="none" style={[styles.quickIconFocus, { opacity: highlightOpacity }]} />
             <Image source={asset} style={styles.quickImage} resizeMode="contain" />
-          </View>
+          </Animated.View>
           <Text numberOfLines={2} style={styles.quickLabel}>{label}</Text>
         </Animated.View>
-      </Animated.View>
+      </View>
     </Pressable>
   );
 }
@@ -869,7 +869,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#F8FAFD',
   },
-  quickActionFocus: { ...StyleSheet.absoluteFillObject, borderRadius: 13, borderWidth: 1.5, borderColor: '#3778D5', backgroundColor: '#DCEBFF' },
+  quickIconFocus: { ...StyleSheet.absoluteFillObject, borderRadius: 12, backgroundColor: '#DCEBFF' },
   quickIcon: {
     width: 38,
     height: 38,
