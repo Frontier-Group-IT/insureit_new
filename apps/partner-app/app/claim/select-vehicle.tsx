@@ -48,6 +48,7 @@ export default function PartnerClaimVehicleSelector() {
   }, []);
   useEffect(() => { void load(debouncedSearch); }, [debouncedSearch]);
   const choice = selectedChoice;
+  const policyStatus = getPolicyExpiryStatus(choice?.policy_end_date);
   const shown = choices;
   const choose = (row: PartnerClaimVehicleChoice) => {
     setSelectedChoice(row);
@@ -144,7 +145,7 @@ export default function PartnerClaimVehicleSelector() {
         )}
       </View>
       <View style={styles.policyTitle}><Text style={styles.heading}>Policy details</Text></View>
-      {choice?.policy_id ? <View style={styles.policy}><PartnerInsurerLogo name={choice.insurer_name || ''} fallback={PartnerAssets.navigation.claims} style={styles.logoImage}/><View style={styles.vehicleText}><Text style={styles.policyNo}>{choice.policy_no || 'Policy number pending'}</Text><Text style={styles.policyCaption}>{choice.insurer_name || 'Insurer not recorded'}</Text><Text style={styles.policyCaption}>Expiry: {choice.policy_end_date || 'Not recorded'}</Text></View><View accessibilityLabel="Policy status indicator" style={styles.policyIndicator}><Ionicons name="alert" size={20} color="#FFF"/></View></View> : <Text style={styles.hint}>No linked policy found. You can register the claim; coverage will be verified separately.</Text>}
+      {choice?.policy_id ? <View style={styles.policy}><PartnerInsurerLogo name={choice.insurer_name || ''} fallback={PartnerAssets.navigation.claims} style={styles.logoImage}/><View style={styles.vehicleText}><Text style={styles.policyNo}>{choice.policy_no || 'Policy number pending'}</Text><Text style={styles.policyCaption}>{choice.insurer_name || 'Insurer not recorded'}</Text><Text style={styles.policyCaption}>Expiry: {choice.policy_end_date || 'Not recorded'}</Text></View><View accessibilityLabel={`Policy status: ${policyStatus.label}`} style={[styles.policyIndicator, { backgroundColor: policyStatus.color }]}><Ionicons name={policyStatus.icon} size={20} color="#FFF"/></View></View> : <Text style={styles.hint}>No linked policy found. You can register the claim; coverage will be verified separately.</Text>}
       <View style={styles.actions}>
         <Pressable accessibilityRole="button" accessibilityLabel="Cancel claim setup" onPress={() => router.back()} style={styles.secondary}><Text style={styles.secondaryText}>Cancel</Text></Pressable>
         <Pressable disabled={!choice || creating} onPress={() => void startClaim()} style={[styles.primary,(!choice || creating) && styles.disabled]}><Text style={styles.primaryText}>{creating ? "Starting…" : "Start Claim"}</Text><Ionicons name="arrow-forward" color="#FFF" size={19}/></Pressable>
@@ -152,6 +153,27 @@ export default function PartnerClaimVehicleSelector() {
     </ScrollView>
   </SafeAreaView>;
 }
+function getPolicyExpiryStatus(expiry: string | null | undefined): {
+  label: string;
+  color: string;
+  icon: 'checkmark' | 'alert' | 'time-outline';
+} {
+  if (!expiry || !/^\\d{4}-\\d{2}-\\d{2}$/.test(expiry)) {
+    return { label: 'Unknown', color: '#738399', icon: 'alert' };
+  }
+  const today = new Date();
+  const todayUtc = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const [year, month, day] = expiry.split('-').map(Number);
+  const expiryUtc = Date.UTC(year, month - 1, day);
+  if (!Number.isFinite(expiryUtc) || new Date(expiryUtc).toISOString().slice(0, 10) !== expiry) {
+    return { label: 'Unknown', color: '#738399', icon: 'alert' };
+  }
+  const daysUntilExpiry = Math.round((expiryUtc - todayUtc) / 86400000);
+  if (daysUntilExpiry < 0) return { label: 'Expired', color: '#D84D5B', icon: 'alert' };
+  if (daysUntilExpiry <= 30) return { label: 'Due', color: '#E89B21', icon: 'time-outline' };
+  return { label: 'Active', color: '#20A56B', icon: 'checkmark' };
+}
+
 const styles = StyleSheet.create({
  root:{flex:1,backgroundColor:'#EDF5FF'},
  header:{height:67,paddingHorizontal:15,flexDirection:'row',alignItems:'center',gap:13,backgroundColor:'#1261C4'},
@@ -184,7 +206,7 @@ const styles = StyleSheet.create({
  policy:{backgroundColor:'#0B347A',borderRadius:16,padding:15,flexDirection:'row',gap:13,alignItems:'center'},
  policyNo:{fontSize:13,fontWeight:'900',color:'#FFF'},
  policyCaption:{fontSize:10,color:'#D5E5FC',marginTop:5},
- policyIndicator:{height:35,width:35,borderRadius:18,backgroundColor:'#DC656E',alignItems:'center',justifyContent:'center'},
+ policyIndicator:{height:35,width:35,borderRadius:18,alignItems:'center',justifyContent:'center'},
  actions:{flexDirection:'row',gap:10,marginTop:5},
  secondary:{flex:1,alignItems:'center',justifyContent:'center',borderRadius:13,borderWidth:1,borderColor:'#C3D4E8',minHeight:52},
  secondaryText:{color:'#154180',fontWeight:'800',fontSize:11},
