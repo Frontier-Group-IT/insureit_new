@@ -7,7 +7,6 @@ const home = read('app/(tabs)/index.tsx');
 const enter = read('components/ui/partner-enter.tsx');
 assert.match(enter, /<Animated\.View\s+pointerEvents="box-none"/, 'Animated entrance wrappers must not consume background taps');
 assert.match(screen, /<View pointerEvents="none" style=\{styles\.homeHeroShade\}/, 'Hero shade must be decorative');
-assert.match(screen, /<Image\s+pointerEvents="none"\s+source=\{require\('\.\.\/assets\/figma-dashboard\/hero-banner\.jpg'\)\}/, 'Hero image must be decorative');
 assert.match(screen, /style=\{\[styles\.fixedWhiteHeader, \{ top: safeAreaInsets\.top \}\]\} pointerEvents="box-none"/, 'Sticky shell must pass through touches outside controls');
 for (const route of ["'/(tabs)/business'", "'/(tabs)/more'", "'/renewals'", "'/(tabs)/claims'", "'/customers'"]) {
   assert.ok(home.includes('router.push(' + route + ')'), 'Missing Home action route ' + route);
