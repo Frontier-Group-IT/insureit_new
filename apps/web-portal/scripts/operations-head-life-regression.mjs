@@ -32,7 +32,7 @@ assert.match(policyDocuments,/profile.role === "operations_head_life"/);
 assert.match(policyDocuments,/canAccessPolicy\(profile.id, profile.role, documentRow.policy_id, "view_policies"\)/);
 const caseList=read("app/policies/life-health-cases/page.tsx");
 assert.ok(caseList.includes(".or(downlineCaseFilter)"));
-assert.ok(caseList.includes("operationsHeadPolicyFilter"));
+assert.ok(caseList.includes("operationsHeadVisiblePolicyFilter"));
 assert.ok(caseList.includes("downlineCaseFilter !== null ? Promise.resolve(null)"));
 const caseDetail=read("app/policies/life-health-cases/[id]/page.tsx");
 assert.ok(caseDetail.includes("request = request.or(downlineFilter)"));
@@ -43,11 +43,11 @@ const migration=read("../../supabase/migrations/20261023101500_operations_head_l
 assert.match(migration,/add value if not exists 'operations_head_life'/);
 const policyAccessServer=read("lib/policy-access-server.ts");
 assert.ok(policyAccessServer.includes('requirePolicyEditor(policyId?: string)'));
-assert.ok(policyAccessServer.includes('canAccessPolicy(profile.id, profile.role, policyId)'));
+assert.ok(policyAccessServer.includes('canAccessPolicy(profile.id, profile.role, policyId, "view_policies", true)'));
 assert.ok(policyAccessServer.includes('scope.intermediaryCodes.includes(sourceCode.trim())'));
 const writeGuard=read("lib/operations-head-record-authorization.ts");
 assert.ok(writeGuard.includes('requireOperationsHeadRecordOwnership'));
-assert.ok(writeGuard.includes('canAccessOperationsHeadCase(profile.id, recordId)'));
+assert.ok(writeGuard.includes('canAccessOperationsHeadCase(profile.id, recordId, true)'));
 for(const path of [
   "app/policies/policy-edit-actions.ts",
   "app/policies/non-motor-policy-actions.ts",
@@ -62,10 +62,10 @@ for(const path of [
 for(const path of [
   "app/policies/life-health-case-edit-actions.ts",
   "app/policies/life-health-policy-actions.ts",
-  "app/policies/life-health-case-documents/[documentId]/view/route.ts",
 ]) {
   assert.ok(read(path).includes('requireOperationsHeadRecordOwnership("life_health_case"'),path + ": per-case scope required");
 }
+assert.ok(read("app/policies/life-health-case-documents/[documentId]/view/route.ts").includes("canAccessOperationsHeadCase(requester.id, document.case_id)"));
 const intakes=read("lib/policy-intake-server.ts");
 assert.ok(intakes.includes("canAccessOperationsHeadIntake(profile.id, intakeId)"));
 assert.ok(read("app/policy-intakes/page.tsx").includes("submitted_by_profile_id.in."));
@@ -85,11 +85,15 @@ assert.ok(scopedDashboard.includes('access.viewClaims = false'));
 assert.ok(scopedDashboard.includes('access.viewPolicyIntakes = false'));
 assert.ok(scopedDashboard.includes('!isDownlineHead && dashboardCommercialOperationsAccess'));
 const dashboardPolicies=read("app/dashboard-v2/dashboard-data.ts");
-assert.ok(dashboardPolicies.includes('operationsHeadPolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))'));
+assert.ok(dashboardPolicies.includes('operationsHeadVisiblePolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))'));
 assert.ok(dashboardPolicies.includes('query = query.or(downlineFilter)'));
 const dashboardBusiness=read("app/dashboard-v2/dashboard-business.ts");
 assert.ok(dashboardBusiness.includes('policyQuery = policyQuery.or(downlineFilter)'));
 assert.ok(nav.includes('href:"/dashboard",label:"Dashboard"'));
 assert.ok(!nav.includes('href:"/policies/new/non-motor",label:"Add Non-Motor Policy"'));
 assert.ok(middleware.includes('const operationsHeadLifeHome = "/dashboard"'));
-console.log("Operations Head Life provisional isolation contract passed.");
+assert.ok(policy.includes('business_line.in.("Life","Health")'));
+assert.ok(policy.includes('write ? operationsHeadPolicyFilter(downline) : operationsHeadVisiblePolicyFilter(downline)'));
+assert.ok(register.includes("operationsHeadVisiblePolicyFilter"));
+assert.ok(caseDetail.includes("operationsHeadVisiblePolicyFilter"));
+console.log("Operations Head Life all-Life/Health visibility and downline-only writes regression passed.");

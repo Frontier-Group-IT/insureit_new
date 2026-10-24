@@ -17,8 +17,8 @@ export async function requireOperationsHeadRecordOwnership(kind: OperationsHeadR
   }
 
   const allowed = kind === "policy"
-    ? await canAccessPolicy(profile.id, "operations_head_life", recordId, "view_policies")
-    : await canAccessOperationsHeadCase(profile.id, recordId);
+    ? await canAccessPolicy(profile.id, "operations_head_life", recordId, "view_policies", true)
+    : await canAccessOperationsHeadCase(profile.id, recordId, true);
 
   if (!allowed) throw new Error("operations_head_record_access_denied");
   return profile;

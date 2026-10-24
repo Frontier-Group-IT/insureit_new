@@ -1,5 +1,5 @@
 import type { OperationsDashboardData } from "@/lib/operations-dashboard";
-import { getOperationsHeadDownlinePolicyScope, operationsHeadPolicyFilter } from "@/lib/policy-access-scope";
+import { getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
 import {
   getAccessibleCustomerIds,
   getAccessibleIntermediaryApplicationIds,
@@ -314,7 +314,7 @@ export async function getDashboardCurrentData(
   // is not equivalent: one customer may hold out-of-downline policies.
   const isDownlineHead = profile.role === "operations_head_life";
   const downlinePolicyFilter = isDownlineHead
-    ? operationsHeadPolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))
+    ? operationsHeadVisiblePolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))
     : null;
   const policyRequest = access.viewPolicies && (isDownlineHead ? Boolean(downlinePolicyFilter) : policyCustomerIds?.length !== 0)
     ? loadDashboardPolicies(admin, isDownlineHead ? null : policyCustomerIds, downlinePolicyFilter)

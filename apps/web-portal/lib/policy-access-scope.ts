@@ -52,10 +52,17 @@ export function operationsHeadPolicyFilter(scope: { employeeIds: string[]; inter
   return filters.join(",");
 }
 
+/** View scope: full Life/Health vertical plus the existing RM/partner downline. */
+export function operationsHeadVisiblePolicyFilter(scope: { employeeIds: string[]; intermediaryCodes: string[] }) {
+  const downline = operationsHeadPolicyFilter(scope);
+  const lifeHealth = 'business_line.in.("Life","Health")';
+  return downline ? `${downline},${lifeHealth}` : lifeHealth;
+}
+
 /** Reusable server-side case authorization, never customer-only scope. */
-export async function canAccessOperationsHeadCase(profileId: string, caseId: string): Promise<boolean> {
+export async function canAccessOperationsHeadCase(profileId: string, caseId: string, write = false): Promise<boolean> {
   const downline = await getOperationsHeadDownlinePolicyScope(profileId);
-  const filter = operationsHeadPolicyFilter(downline);
+  const filter = write ? operationsHeadPolicyFilter(downline) : operationsHeadVisiblePolicyFilter(downline);
   if (!caseId || !filter) return false;
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin.from("life_health_cases")
@@ -79,7 +86,7 @@ export async function canAccessOperationsHeadIntake(profileId: string, intakeId:
   if (data.lead_source_code && scope.intermediaryCodes.includes(data.lead_source_code.trim())) return true;
   const hierarchy = await getEmployeeAccessScope(profileId, "operations_head_life", "view_policies");
   if (data.submitted_by_profile_id && hierarchy.profileIds.includes(data.submitted_by_profile_id)) return true;
-  return Boolean(data.final_policy_id && await canAccessPolicy(profileId, "operations_head_life", data.final_policy_id));
+  return Boolean(data.final_policy_id && await canAccessPolicy(profileId, "operations_head_life", data.final_policy_id, "view_policies", true));
 }
 
 export async function getSalesExecutivePolicyIds(profileId: string) {
@@ -100,6 +107,7 @@ export async function canAccessPolicy(
   role: string | null | undefined,
   policyId: string,
   capability: Capability = "view_policies",
+  write = false,
 ) {
   if (role === "sales_executive") {
     const admin = createSupabaseAdminClient();
@@ -116,7 +124,7 @@ export async function canAccessPolicy(
 
   if (role === "operations_head_life") {
     const downline = await getOperationsHeadDownlinePolicyScope(profileId);
-    const filter = operationsHeadPolicyFilter(downline);
+    const filter = !write ? operationsHeadVisiblePolicyFilter(downline) : operationsHeadPolicyFilter(downline);
     if (!filter) return false;
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin.from("policies")
