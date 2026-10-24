@@ -375,7 +375,7 @@ function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void
           ) : null}
         </View>
         <View style={styles.claimIdentityRow}>
-          <Text numberOfLines={1} style={styles.claimCustomer}>{row.customer_name}</Text>
+          <Text style={styles.claimCustomer}>{row.customer_name}</Text>
           <Text style={styles.claimSeparator}>-</Text>
           <Text numberOfLines={1} ellipsizeMode="tail" style={styles.claimDetail}>{vehicleLabel}</Text>
         </View>
@@ -642,10 +642,10 @@ const styles = StyleSheet.create({
   modeBadgeExternal: { backgroundColor: '#F0EAFE' },
   modeBadgeText: { color: '#2355A7', fontSize: 7.2, lineHeight: 9.5, fontWeight: '800' },
   modeBadgeTextExternal: { color: '#6842B8' },
-  claimIdentityRow: { marginTop: 3, flexDirection: 'row', alignItems: 'center', minWidth: 0, gap: 4 },
-  claimCustomer: { flexShrink: 1, color: '#405A82', fontSize: 9.4, lineHeight: 12, fontWeight: '700' },
+  claimIdentityRow: { marginTop: 3, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', minWidth: 0, gap: 4 },
+  claimCustomer: { flexShrink: 0, maxWidth: '100%', color: '#405A82', fontSize: 9.4, lineHeight: 12, fontWeight: '700' },
   claimSeparator: { color: '#8390A7', fontSize: 9.5 },
-  claimDetail: { flexShrink: 1, minWidth: 0, color: '#173D75', fontSize: 10.3, lineHeight: 13, fontWeight: '700' },
+  claimDetail: { flexShrink: 1, minWidth: 0, maxWidth: '100%', color: '#173D75', fontSize: 10.3, lineHeight: 13, fontWeight: '700' },
   claimStatusRight: { maxWidth: 110, alignItems: 'flex-end', justifyContent: 'flex-start', alignSelf: 'flex-start' },
   statusPill: {
     maxWidth: 110,
