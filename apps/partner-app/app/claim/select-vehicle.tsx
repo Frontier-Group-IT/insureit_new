@@ -37,7 +37,7 @@ export default function PartnerClaimVehicleSelector() {
         setChoices(rows);
         if (!query) setSelectedChoice(previous => previous ?? rows[0] ?? null);
       }
-      setTotal(rows[0]?.total_count ?? (offset ? total : 0));
+      setTotal(previous => rows[0]?.total_count ?? (offset ? previous : 0));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Unable to load authorized vehicles.');
       if (!offset) setChoices([]);
@@ -45,7 +45,7 @@ export default function PartnerClaimVehicleSelector() {
       setBusy(false);
       setLoadingMore(false);
     }
-  }, [total]);
+  }, []);
   useEffect(() => { void load(debouncedSearch); }, [debouncedSearch]);
   const choice = selectedChoice;
   const shown = choices;
@@ -136,7 +136,7 @@ export default function PartnerClaimVehicleSelector() {
           >
             {choice ? <View style={styles.logo}><Image source={getPartnerManufacturerLogoSource(choice.make) ?? PartnerAssets.navigation.claims} resizeMode="contain" style={styles.logoImage}/></View> : <Ionicons name="car-outline" size={23} color="#1D569B" />}
             <View style={styles.vehicleText}>
-              <Text style={choice ? styles.plate : styles.placeholder}>{choice?.vehicle.vehicle_no || 'Select vehicle number'}</Text>
+              <Text style={choice ? styles.plate : styles.placeholder}>{choice?.vehicle_no || 'Select vehicle number'}</Text>
               {choice ? <Text style={styles.description} numberOfLines={1}>{[choice.make,choice.model].filter(Boolean).join(' · ')}</Text> : null}
             </View>
             <Ionicons name="list" size={23} color="#24528C"/>
@@ -144,7 +144,7 @@ export default function PartnerClaimVehicleSelector() {
         )}
       </View>
       <View style={styles.policyTitle}><Text style={styles.heading}>Policy details</Text></View>
-      {choice?.policy ? <View style={styles.policy}><PartnerInsurerLogo name={choice.insurer_name || ''} fallback={PartnerAssets.navigation.claims} style={styles.logoImage}/><View style={styles.vehicleText}><Text style={styles.policyNo}>{choice.policy_no || 'Policy number pending'}</Text><Text style={styles.policyCaption}>{choice.insurer_name || 'Insurer not recorded'}</Text><Text style={styles.policyCaption}>Expiry: {choice.policy_end_date || 'Not recorded'}</Text></View><View accessibilityLabel="Policy status indicator" style={styles.policyIndicator}><Ionicons name="alert" size={20} color="#FFF"/></View></View> : <Text style={styles.hint}>No linked policy found. You can register the claim; coverage will be verified separately.</Text>}
+      {choice?.policy_id ? <View style={styles.policy}><PartnerInsurerLogo name={choice.insurer_name || ''} fallback={PartnerAssets.navigation.claims} style={styles.logoImage}/><View style={styles.vehicleText}><Text style={styles.policyNo}>{choice.policy_no || 'Policy number pending'}</Text><Text style={styles.policyCaption}>{choice.insurer_name || 'Insurer not recorded'}</Text><Text style={styles.policyCaption}>Expiry: {choice.policy_end_date || 'Not recorded'}</Text></View><View accessibilityLabel="Policy status indicator" style={styles.policyIndicator}><Ionicons name="alert" size={20} color="#FFF"/></View></View> : <Text style={styles.hint}>No linked policy found. You can register the claim; coverage will be verified separately.</Text>}
       <View style={styles.actions}>
         <Pressable accessibilityRole="button" accessibilityLabel="Cancel claim setup" onPress={() => router.back()} style={styles.secondary}><Text style={styles.secondaryText}>Cancel</Text></Pressable>
         <Pressable disabled={!choice || creating} onPress={() => void startClaim()} style={[styles.primary,(!choice || creating) && styles.disabled]}><Text style={styles.primaryText}>{creating ? "Starting…" : "Start Claim"}</Text><Ionicons name="arrow-forward" color="#FFF" size={19}/></Pressable>
