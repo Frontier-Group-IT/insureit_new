@@ -107,6 +107,7 @@ export async function canAccessPolicy(
   role: string | null | undefined,
   policyId: string,
   capability: Capability = "view_policies",
+  write = false,
 ) {
   if (role === "sales_executive") {
     const admin = createSupabaseAdminClient();
@@ -123,7 +124,7 @@ export async function canAccessPolicy(
 
   if (role === "operations_head_life") {
     const downline = await getOperationsHeadDownlinePolicyScope(profileId);
-    const filter = capability === "view_policies" ? operationsHeadVisiblePolicyFilter(downline) : operationsHeadPolicyFilter(downline);
+    const filter = !write ? operationsHeadVisiblePolicyFilter(downline) : operationsHeadPolicyFilter(downline);
     if (!filter) return false;
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin.from("policies")
