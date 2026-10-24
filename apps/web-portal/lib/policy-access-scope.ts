@@ -83,7 +83,7 @@ export async function canAccessOperationsHeadCase(profileId: string, caseId: str
   if (!caseId || !filter) return false;
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin.from("life_health_cases")
-    .select("id").eq("id", caseId).or(filter).maybeSingle<{ id: string }>();
+    .select("id").eq("id", caseId).in("business_line", ["Life", "Health"]).or(filter).maybeSingle<{ id: string }>();
   return !error && Boolean(data?.id);
 }
 
@@ -103,7 +103,13 @@ export async function canAccessOperationsHeadIntake(profileId: string, intakeId:
   if (data.lead_source_code && scope.intermediaryCodes.includes(data.lead_source_code.trim())) return true;
   const hierarchy = await getEmployeeAccessScope(profileId, "operations_head_life", "view_policies");
   if (data.submitted_by_profile_id && hierarchy.profileIds.includes(data.submitted_by_profile_id)) return true;
-  return Boolean(data.final_policy_id && await canAccessPolicy(profileId, "operations_head_life", data.final_policy_id, "view_policies", true));
+  if (!data.final_policy_id) return false;
+  const downline = operationsHeadPolicyFilter(scope);
+  if (!downline) return false;
+  const { data: policy, error: policyError } = await admin.from("policies")
+    .select("id").eq("id", data.final_policy_id).or(downline)
+    .maybeSingle<{ id: string }>();
+  return !policyError && Boolean(policy?.id);
 }
 
 export async function getSalesExecutivePolicyIds(profileId: string) {
@@ -150,7 +156,9 @@ export async function canAccessPolicy(
 
   if (role === "operations_head_life") {
     const downline = await getOperationsHeadDownlinePolicyScope(profileId);
-    const filter = !write ? operationsHeadVisiblePolicyFilter(downline) : operationsHeadPolicyFilter(downline);
+    // All Life/Health records are authorized for case processing and issued-policy edits; other verticals stay downline-only.
+    void write;
+    const filter = operationsHeadVisiblePolicyFilter(downline);
     if (!filter) return false;
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin.from("policies")
