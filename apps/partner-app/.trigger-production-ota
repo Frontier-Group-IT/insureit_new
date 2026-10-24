@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=a6494ab474db3dee1a2cdf9f11c168da4bd540f1
-reason=publish-claimbg-select-vehicle-pr-3501-20261024
+source_main=054709eb30b82672c4553f600aa7009054dfb33f
+reason=partner-completed-claim-stages-green-pr-3503
