@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -75,6 +75,7 @@ export default function PartnerClaimVehicleSelector() {
       </View>
       <Text style={styles.headerTitle}>Select Vehicle</Text>
     </View>
+    <ImageBackground source={require('../../assets/partner/backgrounds/CLAIMBG.jpeg')} resizeMode="cover" style={styles.background} imageStyle={styles.backgroundImage}>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.section}>
         <Text style={styles.heading}>Vehicle number *</Text>
@@ -150,10 +151,8 @@ export default function PartnerClaimVehicleSelector() {
         <Pressable accessibilityRole="button" accessibilityLabel="Cancel claim setup" onPress={() => router.back()} style={styles.secondary}><Text style={styles.secondaryText}>Cancel</Text></Pressable>
         <Pressable disabled={!choice || creating} onPress={() => void startClaim()} style={[styles.primary,(!choice || creating) && styles.disabled]}><Text style={styles.primaryText}>{creating ? "Starting…" : "Start Claim"}</Text><Ionicons name="arrow-forward" color="#FFF" size={19}/></Pressable>
       </View>
-      <View pointerEvents="none" style={styles.vehicleBackdrop}>
-        <Image source={require('../../assets/partner/actions/commercial-vehicles.png')} resizeMode="contain" style={styles.vehicleBackdropImage} />
-      </View>
     </ScrollView>
+    </ImageBackground>
   </SafeAreaView>;
 }
 function getPolicyExpiryStatus(expiry: string | null | undefined): {
@@ -184,7 +183,9 @@ const styles = StyleSheet.create({
  headerIcon:{width:40,height:40,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,0.16)',borderWidth:1,borderColor:'rgba(255,255,255,0.18)'},
  headerIconImage:{width:27,height:27},
  headerTitle:{color:'#FFF',fontSize:18,fontWeight:'900'},
- content:{padding:15,paddingBottom:35,gap:12},
+ background:{flex:1},
+ backgroundImage:{opacity:0.26},
+ content:{padding:15,paddingBottom:35,gap:12,flexGrow:1},
  section:{backgroundColor:'#FFF',borderRadius:17,padding:14,borderWidth:1,borderColor:'#DEE8F4',gap:11},
  heading:{fontSize:14,fontWeight:'900',color:'#122E53'},
  vehicleSelect:{backgroundColor:'#F9FCFF',borderRadius:12,borderWidth:1,borderColor:'#BDCEE2',paddingHorizontal:12,minHeight:66,flexDirection:'row',alignItems:'center',gap:12},
@@ -210,8 +211,6 @@ const styles = StyleSheet.create({
  policyNo:{fontSize:13,fontWeight:'900',color:'#FFF'},
  policyCaption:{fontSize:10,color:'#D5E5FC',marginTop:5},
  policyIndicator:{height:24,width:24,borderRadius:12,alignItems:'center',justifyContent:'center'},
- vehicleBackdrop:{height:155,marginTop:18,alignItems:'center',justifyContent:'flex-end',overflow:'hidden'},
- vehicleBackdropImage:{width:'100%',height:'100%',opacity:0.18},
  actions:{flexDirection:'row',gap:10,marginTop:5},
  secondary:{flex:1,alignItems:'center',justifyContent:'center',borderRadius:13,borderWidth:1,borderColor:'#C3D4E8',minHeight:52},
  secondaryText:{color:'#154180',fontWeight:'800',fontSize:11},
