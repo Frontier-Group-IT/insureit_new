@@ -645,9 +645,9 @@ const styles = StyleSheet.create({
   modeBadgeText: { color: '#2355A7', fontSize: 7.2, lineHeight: 9.5, fontWeight: '800' },
   modeBadgeTextExternal: { color: '#6842B8' },
   claimIdentityRow: { marginTop: 3, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', minWidth: 0, gap: 4 },
-  claimCustomer: { flexShrink: 0, maxWidth: '100%', color: '#405A82', fontSize: 9.4, lineHeight: 12, fontWeight: '700' },
+  claimCustomer: { flexShrink: 0, maxWidth: '100%', color: '#405A82', fontSize: 9, lineHeight: 12, fontWeight: '400' },
   claimSeparator: { color: '#8390A7', fontSize: 9.5 },
-  claimDetail: { flexShrink: 1, minWidth: 0, maxWidth: '100%', color: '#173D75', fontSize: 10.3, lineHeight: 13, fontWeight: '700' },
+  claimDetail: { flexShrink: 1, minWidth: 0, maxWidth: '100%', color: '#173D75', fontSize: 9, lineHeight: 12, fontWeight: '400' },
   claimStatusRight: { maxWidth: 110, alignItems: 'flex-end', justifyContent: 'flex-start', alignSelf: 'flex-start' },
   statusPill: {
     maxWidth: 110,
