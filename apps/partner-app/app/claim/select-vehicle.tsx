@@ -158,7 +158,7 @@ function getPolicyExpiryStatus(expiry: string | null | undefined): {
   color: string;
   icon: 'checkmark' | 'alert' | 'time-outline';
 } {
-  if (!expiry || !/^\\d{4}-\\d{2}-\\d{2}$/.test(expiry)) {
+  if (!expiry || !/^\d{4}-\d{2}-\d{2}$/.test(expiry)) {
     return { label: 'Unknown', color: '#738399', icon: 'alert' };
   }
   const today = new Date();
