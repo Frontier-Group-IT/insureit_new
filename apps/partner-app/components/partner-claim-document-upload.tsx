@@ -1,8 +1,8 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { useState } from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
+import { Alert, Image, Modal, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { attachPartnerClaimDocument, type PartnerClaimDetail } from '@/lib/claims';
+import { attachPartnerClaimDocument, removePartnerClaimDocument, type PartnerClaimDetail } from '@/lib/claims';
 import { supabase } from '@/lib/supabase';
 
 type Props = {
@@ -20,7 +20,23 @@ type Props = {
 
 export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, milestoneKey, documents, compact = false, variant = 'button', artwork, label, subtitle }: Props) {
   const [busy, setBusy] = useState(false);
-  const count = (documents ?? []).filter((item) => item.category === documentType).length;
+  const [added, setAdded] = useState<Array<{ id: string; name: string; category: string }>>([]);
+  const [removedIds, setRemovedIds] = useState<string[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const uploaded = [...(documents ?? []), ...added].filter(item => item.category === documentType && !removedIds.includes(item.id));
+  const count = uploaded.length;
+  const latest = uploaded[uploaded.length - 1];
+  const deleting = async () => {
+    if (!deleteTarget || busy) return;
+    setBusy(true);
+    try {
+      await removePartnerClaimDocument(claimId, deleteTarget.id);
+      setRemovedIds(current => [...current, deleteTarget.id]);
+      setDeleteTarget(null);
+    } catch (error) {
+      Alert.alert('Unable to delete', error instanceof Error ? error.message : 'Please try again.');
+    } finally { setBusy(false); }
+  };
 
   async function pickAndUpload() {
     if (busy) return;
@@ -46,7 +62,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
         });
         if (upload.error) throw upload.error;
         try {
-          await attachPartnerClaimDocument({
+          const documentId = await attachPartnerClaimDocument({
             claimId,
             documentType,
             fileName: asset.name || documentType,
@@ -55,6 +71,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
             fileSize: asset.size ?? body.byteLength,
             milestoneKey: milestoneKey ?? null,
           });
+          setAdded(current => [...current, { id: documentId, name: asset.name || documentType, category: documentType }]);
         } catch (error) {
           await supabase.storage.from('claim-documents').remove([storagePath]);
           throw error;
@@ -70,18 +87,23 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
 
   if (variant === 'tile') {
     return (
-      <Pressable
+      <View style={[styles.tile, count > 0 && styles.tileReady]}><Pressable
         accessibilityRole="button"
         accessibilityLabel={`${label ?? documentType}, ${busy ? 'uploading' : count ? 'uploaded, tap to add more' : 'tap to upload'}`}
         accessibilityState={{ busy }}
         disabled={busy}
         onPress={() => void pickAndUpload()}
-        style={({ pressed }) => [styles.tile, count > 0 && styles.tileReady, busy && styles.disabled, pressed && !busy && styles.pressed]}
+        style={({ pressed }) => [styles.tileInner, busy && styles.disabled, pressed && !busy && styles.pressed]}
       >
+        {count > 0 ? <Ionicons name="checkmark-circle" size={19} color="#21A26B" style={styles.savedCheck} /> : null}
         <View style={styles.artworkWrap}>{artwork ? <Image source={artwork} style={styles.artwork} resizeMode="contain" /> : documentType === "Accident Video" ? <View style={styles.videoIcon}><Ionicons name="videocam" size={27} color="#FFFFFF" /></View> : <Ionicons name="document-outline" size={34} color="#0A43A3" />}</View>
         <Text numberOfLines={2} style={styles.tileTitle}>{label ?? documentType}</Text>
-        <Text numberOfLines={1} style={[styles.tileStatus, count > 0 && styles.tileStatusReady]}>{busy ? 'Uploading…' : count > 0 ? 'Uploaded' : 'Tap to upload'}</Text>
+        {count > 0 ? <Text numberOfLines={1} style={styles.fileName}>{latest?.name}</Text> : null}
+        <Text numberOfLines={1} style={[styles.tileStatus, count > 0 && styles.tileStatusReady]}>{busy ? 'Uploading…' : count > 0 ? 'Saved' : 'Tap to upload'}</Text>
       </Pressable>
+      {latest && !busy ? <Pressable accessibilityRole="button" accessibilityLabel={`Delete ${latest.name}`} onPress={()=>setDeleteTarget({ id: latest.id, name: latest.name })} style={styles.removeIcon}><Ionicons name="close-circle" size={22} color="#D64545" /></Pressable> : null}
+      <Modal transparent visible={Boolean(deleteTarget)} animationType="fade" onRequestClose={()=>!busy && setDeleteTarget(null)}><View style={styles.modalDim}><View style={styles.dialog}><View style={styles.trashCircle}><Ionicons name="trash-outline" color="#CD3939" size={24}/></View><Text style={styles.dialogTitle}>Delete document?</Text><Text style={styles.dialogBody}>Are you sure you want to delete {deleteTarget?.name}?</Text><View style={styles.dialogActions}><Pressable disabled={busy} accessibilityRole="button" onPress={()=>setDeleteTarget(null)} style={styles.cancelButton}><Text style={styles.cancelText}>Cancel</Text></Pressable><Pressable disabled={busy} accessibilityRole="button" onPress={()=>void deleting()} style={styles.deleteButton}><Text style={styles.deleteText}>{busy ? 'Deleting…' : 'Delete'}</Text></Pressable></View></View></View></Modal>
+      </View>
     );
   }
 
@@ -151,13 +173,26 @@ const styles=StyleSheet.create({
   compact:{minHeight:32,paddingHorizontal:8},
   text:{color:'#FFF',fontSize:9.5,fontWeight:'900'},
   tile:{position:'relative',width:'31.5%',minWidth:0,minHeight:106,borderRadius:14,backgroundColor:'#F7FAFF',borderWidth:1.5,borderColor:'#E2EAF4',paddingVertical:8,paddingHorizontal:5,alignItems:'center',justifyContent:'center'},
-  tileReady:{backgroundColor:'#F2F7FF',borderColor:'#6D9EE8'},
+  tileReady:{backgroundColor:'#EFFAF4',borderColor:'#42B883',borderWidth:2},
+  tileInner:{width:'100%',minHeight:91,alignItems:'center',justifyContent:'center'},
+  savedCheck:{position:'absolute',top:0,left:0},
+  removeIcon:{position:'absolute',top:2,right:2,zIndex:5,padding:2},
+  fileName:{color:'#53647A',fontSize:7,marginTop:2,maxWidth:'95%'},
+  modalDim:{flex:1,backgroundColor:'rgba(13,29,52,0.5)',justifyContent:'center',paddingHorizontal:30},
+  dialog:{borderRadius:22,backgroundColor:'#FFFFFF',padding:22,alignItems:'center',gap:12},
+  trashCircle:{width:48,height:48,borderRadius:24,backgroundColor:'#FFF0F0',alignItems:'center',justifyContent:'center'},
+  dialogTitle:{fontSize:18,fontWeight:'800',color:'#17243B'},
+  dialogBody:{fontSize:13,lineHeight:19,color:'#667489',textAlign:'center'},
+  dialogActions:{flexDirection:'row',gap:10,width:'100%',marginTop:6},
+  cancelButton:{flex:1,alignItems:'center',paddingVertical:14,borderRadius:12,borderWidth:1,borderColor:'#CCD6E1'},
+  deleteButton:{flex:1,alignItems:'center',paddingVertical:14,borderRadius:12,backgroundColor:'#C73535'},
+  cancelText:{color:'#1A2F4F',fontWeight:'700'},deleteText:{color:'#FFFFFF',fontWeight:'700'},
   artworkWrap:{width:49,height:49,overflow:'hidden',alignItems:'center',justifyContent:'center'},
   artwork:{width:39,height:39},
   videoIcon:{width:43,height:43,borderRadius:10,backgroundColor:'#F31E35',alignItems:'center',justifyContent:'center'},
   tileTitle:{color:'#071D49',fontSize:8.5,lineHeight:11,fontWeight:'800',textAlign:'center',marginTop:3},
   tileStatus:{color:'#7A8799',fontSize:7.5,fontWeight:'800',marginTop:3},
-  tileStatusReady:{color:'#326FC6'},
+  tileStatusReady:{color:'#16865B'},
   bulk:{minHeight:58,marginTop:10,borderRadius:14,borderWidth:1.5,borderStyle:'dashed',borderColor:'#AFC8E8',backgroundColor:'#F7FAFF',paddingHorizontal:10,flexDirection:'row',alignItems:'center',gap:9},
   bulkReady:{borderStyle:'solid',borderColor:'#52B57F',backgroundColor:'#EFFAF4'},
   bulkArtwork:{width:34,height:34},

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
@@ -136,15 +136,20 @@ function EditableField({field,value,onChange}:{field:Field;value:string;onChange
         <TextInput accessibilityLabel={field.label} value={value} onChangeText={onChange} placeholder={field.placeholder||(isDate?'YYYY-MM-DD':`Enter ${field.label.toLowerCase()}`)} placeholderTextColor="#A1ADBC" keyboardType={field.kind==='number'?'decimal-pad':'default'} style={styles.input}/>
         {isDate?<Pressable accessibilityRole="button" accessibilityLabel={`Choose ${field.label}`} onPress={()=>{setDraftPickerValue(pickerValue);setPickerVisible(true);}} hitSlop={10} style={styles.calendarButton}><Ionicons name="calendar-outline" size={20} color="#1857A9"/></Pressable>:null}
       </View>
-      {isDate&&pickerVisible?<View>
-        <DateTimePicker value={draftPickerValue} mode="date" display={Platform.OS==='ios'?'spinner':'default'} onChange={(event,date)=>{
-          if(Platform.OS!=='ios')setPickerVisible(false);
-          if(event.type==='dismissed'||!date)return;
-          setDraftPickerValue(date);
-          if(Platform.OS!=='ios')onChange(`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`);
-        }}/>
-        {Platform.OS==='ios'?<Pressable accessibilityRole="button" accessibilityLabel={`Done selecting ${field.label}`} onPress={()=>{const date=draftPickerValue;onChange(`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`);setPickerVisible(false);}} style={styles.pickerDone}><Text style={styles.pickerDoneText}>Done</Text></Pressable>:null}
-      </View>:null}
+      {isDate&&pickerVisible?<Modal transparent animationType="fade" visible={pickerVisible} onRequestClose={()=>setPickerVisible(false)}>
+        <View style={pickerModalStyles.backdrop}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Dismiss date picker" onPress={()=>setPickerVisible(false)} style={pickerModalStyles.outside}/>
+          <View style={pickerModalStyles.sheet}>
+            <DateTimePicker value={draftPickerValue} mode="date" display={Platform.OS==='ios'?'spinner':'default'} onChange={(event,date)=>{
+              if(Platform.OS!=='ios')setPickerVisible(false);
+              if(event.type==='dismissed'||!date)return;
+              setDraftPickerValue(date);
+              if(Platform.OS!=='ios')onChange(`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`);
+            }}/>
+            {Platform.OS==='ios'?<Pressable accessibilityRole="button" accessibilityLabel={`Done selecting ${field.label}`} onPress={()=>{const date=draftPickerValue;onChange(`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`);setPickerVisible(false);}} style={pickerModalStyles.done}><Text style={pickerModalStyles.doneText}>Done</Text></Pressable>:null}
+          </View>
+        </View>
+      </Modal>:null}
     </>}
   </View>;
 }
@@ -176,4 +181,12 @@ const styles=StyleSheet.create({
   card:{backgroundColor:'#FFF',borderRadius:18,borderWidth:1,borderColor:'#D7E2EC',padding:13,gap:10},sectionHeading:{flexDirection:'row',alignItems:'center',gap:10,marginBottom:3},sectionIcon:{width:36,height:36,borderRadius:12,backgroundColor:'#EDF5FF',alignItems:'center',justifyContent:'center'},sectionTitle:{fontSize:12.5,fontWeight:'900',color:'#14284B'},sectionSubtitle:{fontSize:9.5,color:'#7D8B9F',marginTop:2},
   fieldWrap:{gap:5},fieldLabel:{fontSize:10.5,fontWeight:'800',color:'#203859'},required:{color:'#D94B4B'},inputShell:{minHeight:47,borderRadius:12,borderWidth:1,borderColor:'#CFDCE9',backgroundColor:'#FBFDFF',paddingHorizontal:11,flexDirection:'row',alignItems:'center'},input:{flex:1,height:45,fontSize:12,color:'#183052',fontWeight:'700'},calendarButton:{minWidth:36,minHeight:36,alignItems:'center',justifyContent:'center'},pickerDone:{alignSelf:'flex-end',padding:10},pickerDoneText:{color:'#1857A9',fontWeight:'800'},choiceRow:{flexDirection:'row',gap:8},choice:{flex:1,minHeight:43,borderRadius:11,borderWidth:1,borderColor:'#D5E0EA',backgroundColor:'#FFF',alignItems:'center',justifyContent:'center'},choiceSelected:{backgroundColor:'#EAF3FF',borderColor:'#1768C9'},choiceText:{fontSize:11,fontWeight:'800',color:'#78889D'},choiceTextSelected:{color:'#0B52A5'},documentGrid:{flexDirection:'row',flexWrap:'wrap',gap:8},documentTile:{width:'31.5%',minHeight:132,borderRadius:12,borderWidth:1,borderColor:'#DDE6EF',backgroundColor:'#F8FBFF',padding:7,alignItems:'center',gap:6},documentGlyph:{width:34,height:34,borderRadius:8,backgroundColor:'#1768C9',alignItems:'center',justifyContent:'center'},documentLabel:{fontSize:8.5,fontWeight:'900',color:'#203552',textAlign:'center',minHeight:22},
   nav:{height:61,backgroundColor:'#081F4C',borderTopLeftRadius:17,borderTopRightRadius:17,flexDirection:'row',alignItems:'center'},navItem:{flex:1,alignItems:'center',gap:3},navIcon:{width:34,height:32,borderRadius:11,backgroundColor:'#193869',alignItems:'center',justifyContent:'center'},navLabel:{fontSize:9,color:'#D3E0F3',fontWeight:'700'},
+});
+
+const pickerModalStyles = StyleSheet.create({
+  backdrop: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(10, 24, 48, 0.3)', paddingHorizontal: 22 },
+  outside: { ...StyleSheet.absoluteFillObject },
+  sheet: { borderRadius: 18, backgroundColor: '#FFFFFF', padding: 14, overflow: 'hidden' },
+  done: { alignSelf: 'flex-end', paddingHorizontal: 14, paddingVertical: 12 },
+  doneText: { color: '#1857A9', fontWeight: '800', fontSize: 16 },
 });

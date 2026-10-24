@@ -217,3 +217,17 @@ export async function attachPartnerClaimDocument(input: {
   if (typeof data !== 'string' || !data) throw new Error('Claim document was not attached.');
   return data;
 }
+
+/** Delete only an authorized claim document; the database RPC verifies claim scope and uploader. */
+export async function removePartnerClaimDocument(claimId: string, documentId: string) {
+  const { data, error } = await supabase.rpc('partner_app_remove_claim_document', {
+    p_claim_id: claimId,
+    p_document_id: documentId,
+  });
+  if (error) throw error;
+  if (typeof data !== 'string' || !data) throw new Error('Document deletion was not confirmed.');
+  // The server removes the metadata first. Storage cleanup is best-effort;
+  // failure must not restore an already-deleted document to the UI.
+  const result = await supabase.storage.from('claim-documents').remove([data]);
+  if (result.error) console.warn('Claim document storage cleanup could not finish', result.error.message);
+}
