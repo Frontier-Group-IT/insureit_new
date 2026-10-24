@@ -76,7 +76,7 @@ export function PartnerAnchoredDropdown({
           {anchorRect ? (
             <View
               pointerEvents="auto"
-              style=[
+              style={[
                 styles.menuHost,
                 {
                   left,
