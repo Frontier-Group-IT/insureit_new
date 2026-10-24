@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, useEffect, type ReactNode } from 'react';
-import { Animated, Image, ImageBackground, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
+import { Animated, Image, ImageBackground, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, Platform, type StyleProp, type TextStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -564,7 +564,8 @@ function QuickActionsCarousel({
 
   useEffect(() => {
     const timer = setInterval(() => {
-      if (draggingRef.current || touchingRef.current || loopWidthRef.current <= 0) return;
+      // On iOS, repeated programmatic scrollTo calls compete with card taps.
+      if (Platform.OS === 'ios' || draggingRef.current || touchingRef.current || loopWidthRef.current <= 0) return;
       const next = offsetRef.current + 0.75;
       offsetRef.current = next >= loopWidthRef.current ? next - loopWidthRef.current : next;
       scrollRef.current?.scrollTo({ x: offsetRef.current, animated: false });
@@ -760,7 +761,8 @@ const styles = StyleSheet.create({
 
   businessCard: {
     position: 'relative',
-    zIndex: 4,
+    // iOS must not elevate the whole business card above adjacent touch targets.
+    zIndex: Platform.OS === 'ios' ? 0 : 4,
     marginBottom: 8,
     paddingHorizontal: 12,
     paddingTop: 6,
@@ -781,7 +783,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  periodWrap: { position: 'relative', zIndex: 10 },
+  periodWrap: { position: 'relative', zIndex: Platform.OS === 'ios' ? 0 : 10 },
   periodButton: { minHeight: 28, flexDirection: 'row', alignItems: 'center', gap: 3 },
   periodButtonText: { color: '#17366C', fontSize: 13, fontWeight: '800' },
   periodMenu: {
