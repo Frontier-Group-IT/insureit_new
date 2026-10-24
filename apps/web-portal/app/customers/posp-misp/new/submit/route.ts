@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { isEmployeeWithinAccessScope, canAccessIntermediaryApplication } from "@/lib/employee-access-scope";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createScopedManualPospMispOnboarding } from "../../scoped-manual-action";
 
@@ -130,6 +131,7 @@ async function validateSubmissionScope(data: FormData) {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
   if (!profile?.id) return { message: "You are not authorized to create an intermediary application.", field: null };
+  if (profile.role === "operations_head_life" && !(await hasEffectiveCapability(profile, "view_intermediaries", "view"))) return { message: "You are not authorized to create an intermediary application.", field: null };
   const allowed = await isEmployeeWithinAccessScope(profile.id, profile.role, employeeId);
   return allowed ? null : { message: "You can only create an application for yourself or an employee in your reporting hierarchy.", field: "associate_employee_id" };
 }
