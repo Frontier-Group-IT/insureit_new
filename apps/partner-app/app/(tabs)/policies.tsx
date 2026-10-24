@@ -52,9 +52,9 @@ const POLICY_FILTER_OPTIONS: Array<{ value: PartnerPolicyLifecycle; label: strin
 export default function PoliciesScreen() {
   const router = useRouter();
   const safeAreaInsets = useSafeAreaInsets();
-  // Some iOS OTA runtimes report an insufficient tab-screen top inset.
-  // Offset only the fixed sticky overlay; do not move the scrollable hero.
-  const stickyStatusBarClearance = Platform.OS === 'ios' ? Math.max(0, 54 - safeAreaInsets.top) : 0;
+  // SafeAreaView already offsets overlays when iOS reports a top inset.
+  // Only fall back when older OTA runtimes report zero, avoiding double spacing.
+  const stickyStatusBarClearance = Platform.OS === 'ios' && safeAreaInsets.top === 0 ? 54 : 0;
   const verticalListRef = useRef<FlatList>(null);
   useFocusEffect(useCallback(() => {
     const reset = () => verticalListRef.current?.scrollToOffset({ offset: 0, animated: false });
