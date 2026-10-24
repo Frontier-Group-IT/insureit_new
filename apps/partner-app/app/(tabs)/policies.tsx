@@ -160,7 +160,7 @@ export default function PoliciesScreen() {
 
   // Keep the search/filter row visible once the list scrolls past the hero.
   // A same-size spacer preserves scroll position when the search docks.
-  const [searchSticky, setSearchSticky] = useState(false);
+  const searchSticky = false;
   const searchTopY = useRef(Number.POSITIVE_INFINITY);
   const searchControls = (
       <View style={styles.searchRow}>
@@ -407,7 +407,7 @@ export default function PoliciesScreen() {
         ListHeaderComponent={header}
         onScroll={(event) => {
           const shouldStick = event.nativeEvent.contentOffset.y >= searchTopY.current;
-          setSearchSticky((current) => current === shouldStick ? current : shouldStick);
+          // Scroll-linked: search and heading remain in the list rather than docking.
         }}
         scrollEventThrottle={16}
         ListEmptyComponent={empty}
@@ -668,7 +668,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: StyleSheet.hairlineWidth,
     borderLeftColor: '#D9DFEA',
   },
-  filterText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: '700' },
+  filterText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: '400' },
   filterMenu: {
     overflow: 'hidden',
     borderRadius: 12,
