@@ -107,11 +107,17 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
           </label>
         ))}</div>
         <div className="mt-5 flex flex-wrap items-center justify-end gap-2 border-t border-[#D9E3F0] pt-4">
-          <Link href={{pathname:`/customer/claims/${claim.id}`,query:{account:account.id}}} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] px-5 text-[12px] font-semibold text-[#174A87]">Cancel</Link>
+          <Link href={{pathname:"/customer/claims",query:{account:account.id}}} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] px-5 text-[12px] font-semibold text-[#174A87]">Cancel</Link>
           <button type="submit" className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#1253A7] px-5 text-[12px] font-bold text-white hover:bg-[#0B3884]">Save &amp; Continue</button>
         </div>
       </form>
     ):null}
+    {completed && activeIndex < INTERNAL_JOURNEY_STAGES.length - 1 ? (
+      <div className="flex flex-wrap justify-end gap-2 rounded-xl border border-[#D9E6F7] bg-white px-4 py-3">
+        <Link href={{ pathname: "/customer/claims", query: { account: account.id } }} className="inline-flex min-h-10 items-center rounded-lg border border-[#B9CBE2] px-5 text-[12px] font-semibold text-[#174A87]">Cancel</Link>
+        <Link href={{ pathname: `/customer/claims/${claim.id}/stage/${INTERNAL_JOURNEY_STAGES[activeIndex + 1].key}`, query: { account: account.id, mode: "edit" } }} className="inline-flex min-h-10 items-center rounded-lg bg-[#1253A7] px-5 text-[12px] font-bold text-white">Continue to Stage {activeIndex + 2}</Link>
+      </div>
+    ) : null}
     {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} allowUpload={editMode}/> : null}
     {selected.key==="claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} showSaveDetails={editMode && canEditStage} allowUpload={editMode} /> : null}
   </div>;
