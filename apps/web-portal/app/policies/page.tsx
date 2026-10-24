@@ -5,7 +5,7 @@ import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel"
 import { PolicyIntakePolicyRegisterLinksPortal } from "@/components/policy-intake-policy-register-links";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
-import { getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadPolicyFilter, getSalesExecutivePolicyIds } from "@/lib/policy-access-scope";
+import { getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter, getSalesExecutivePolicyIds } from "@/lib/policy-access-scope";
 import { loadPolicyIntakeReviewSummary } from "@/lib/policy-intake-review-summary";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -86,7 +86,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
     hasEffectiveCapability(profile, "view_policy_intakes", "view"),
   ]);
   const operationsHeadFilter = profile.role === "operations_head_life"
-    ? operationsHeadPolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))
+    ? operationsHeadVisiblePolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))
     : null;
   const afterScope = performance.now();
   const admin = createSupabaseAdminClient();
