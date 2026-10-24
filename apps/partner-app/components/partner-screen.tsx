@@ -227,7 +227,6 @@ export function PartnerScreen({
               }) }],
             } : null]}>
               <Image
-                pointerEvents="none"
                 source={require('../assets/figma-dashboard/hero-banner.jpg')}
                 style={styles.homeHeroImage}
                 resizeMode="cover"
