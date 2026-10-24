@@ -12,6 +12,14 @@ const vehicle:Field[]=[
 {key:"color",label:"Colour"},{key:"normsType",label:"Emission standard"},{key:"fitnessExpiryDate",label:"Fitness valid until"},{key:"pucUpto",label:"PUC valid until"},
 {key:"taxUpto",label:"Road tax valid until"},{key:"permitType",label:"Permit type"},{key:"permitNumber",label:"Permit number"},{key:"permitValidUpto",label:"Permit valid until"},
 {key:"nationalPermitUpto",label:"National permit until"},{key:"blacklistStatus",label:"Blacklist status"}];
+const primaryVehicleKeys = new Set(["make","model","vehicleClass","vehicleCategory","fuelType","manufacturingYear","registrationDate","rtoName","rtoState","chassisNumber","engineNumber","engineCapacity","grossWeight","seatingCapacity"]);
+const primaryVehicle = vehicle.filter(field => primaryVehicleKeys.has(field.key));
+const advancedVehicle = vehicle.filter(field => !primaryVehicleKeys.has(field.key));
+const rcToQuoteField:Record<string,string> = {
+  manufacturer:"make", engineCapacityCc:"engineCapacity", gvwKg:"grossWeight",
+  pucExpiryDate:"pucUpto", roadTaxExpiryDate:"taxUpto",
+  localPermitExpiryDate:"permitValidUpto", nationalPermitExpiryDate:"nationalPermitUpto"
+};
 const customer:Field[]=[{key:"ownerName",label:"Registered owner / proposer"},{key:"mobileNumber",label:"Mobile"},{key:"email",label:"Email"},{key:"dob",label:"DOB / incorporation date"},
 {key:"proposerType",label:"Individual / organization"},{key:"gender",label:"Gender"},{key:"occupation",label:"Occupation / business"},{key:"pan",label:"PAN"},
 {key:"gstin",label:"GSTIN"},{key:"kyc",label:"CKYC / KYC reference"},{key:"permanentAddress",label:"Registered address"},{key:"presentAddress",label:"Communication address"},
@@ -33,7 +41,7 @@ function Section({title,subtitle,fields,values,onSet,open,onToggle}:{title:strin
 export default function QuoteBookWorkspace(){
  const [mode,setMode]=useState<"registered"|"unregistered">("registered");
  const [query,setQuery]=useState(""); const [values,setValues]=useState<Record<string,string>>(defaults);
- const [open,setOpen]=useState<Record<string,boolean>>({vehicle:true,customer:true,cover:true,nominee:false,addons:true});
+ const [open,setOpen]=useState<Record<string,boolean>>({vehicle:true,customer:true,cover:true,nominee:false,addons:true,vehicleAdvanced:false});
  const [selected,setSelected]=useState<string[]>([]); const [loading,setLoading]=useState(false); const [message,setMessage]=useState("");
  const set=(k:string,v:string)=>setValues(p=>({...p,[k]:v}));
  const toggle=(k:string)=>setOpen(p=>({...p,[k]:!p[k]}));
@@ -42,14 +50,15 @@ export default function QuoteBookWorkspace(){
  setLoading(true);setMessage("");
  try{const response=await fetch("/api/vehicles/rc-lookup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({registrationNumber:query})});const data=await response.json();
  if(!response.ok){setMessage(data.error||"RC lookup failed.");return;}
- const d=data.details??data.review??{};setValues(p=>{const next: Record<string, string> = {...p,registrationNumber:query.toUpperCase()};for(const [k,v] of Object.entries(d)){if(v!==null&&v!==undefined&&typeof v!=="object")next[k]=String(v);}return next;});setMessage("Vehicle details received. Review and correct before requesting quotes.");
+ const d=data.details??data.review??{};setValues(p=>{const next: Record<string, string> = {...p,registrationNumber:query.toUpperCase()};for(const [k,v] of Object.entries(d)){if(v!==null&&v!==undefined&&typeof v!=="object"&&String(v).trim()){next[rcToQuoteField[k]??k]=String(v);}}return next;});setMessage(data.isStale ? "Cached RC details received (provider unavailable). Review and verify before requesting quotes." : "Available RC details received. Missing fields may not be supplied by the provider; review before quoting.");
  }catch{setMessage("Could not contact the RC lookup service. Enter details manually.");}finally{setLoading(false);}};
  return <div className="mx-auto max-w-[1520px] space-y-2.5">
  <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5"><div><h1 className="text-[16px] font-bold tracking-tight text-slate-900">Quote & Book <span className="ml-1 rounded-md bg-indigo-50 px-2 py-1 align-middle text-[9px] font-bold text-indigo-700">DEVELOPMENT</span></h1><p className="mt-0.5 text-[10px] text-slate-500">Vehicle → Customer → Coverage → Compare → Proposal → Pay & Issue</p></div><span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-800"><Info className="h-3 w-3"/> Quotation & payment APIs not connected</span></div>
  <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_265px]"><div className="space-y-2">
  <section className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm"><div className="mb-2 flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2"><Truck className="h-4 w-4 text-blue-700"/><span className="text-[12px] font-bold text-slate-800">Vehicle identification</span></div><div className="inline-flex rounded-lg bg-slate-100 p-0.5">{(["registered","unregistered"] as const).map(v=><button type="button" key={v} onClick={()=>{setMode(v);setQuery("");setMessage("");}} className={`rounded-md px-3 py-1.5 text-[10px] font-semibold capitalize ${mode===v?"bg-white text-blue-800 shadow":"text-slate-600"}`}>{v}</button>)}</div></div>
  <div className="flex flex-wrap items-center gap-2"><div className="relative min-w-[220px] flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400"/><input aria-label={mode==="registered"?"Vehicle registration number":"Vehicle chassis number"} value={query} onChange={e=>setQuery(e.target.value.toUpperCase())} placeholder={mode==="registered"?"Enter registration number e.g. MP20AB1234":"Enter chassis / VIN"} className="h-9 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-[12px] uppercase outline-none focus:border-blue-500"/></div><button type="button" disabled={loading} onClick={fetchVehicle} className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#173965] px-4 text-[11px] font-bold text-white disabled:opacity-60">{loading?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<FileSearch className="h-3.5 w-3.5"/>}{mode==="registered"?"Fetch RC details":"Use chassis"}</button></div>{message&&<p role="status" className="mt-2 text-[10px] text-blue-700">{message}</p>}</section>
- <Section title="Vehicle details" subtitle="Specifications, registration, RTO, compliance and permits" fields={vehicle} values={values} onSet={set} open={!!open.vehicle} onToggle={()=>toggle("vehicle")}/>
+ <Section title="Vehicle details" subtitle="Essential information for quotation; additional fields available below" fields={primaryVehicle} values={values} onSet={set} open={!!open.vehicle} onToggle={()=>toggle("vehicle")}/>
+ <Section title="Advanced RC details" subtitle="Optional specifications, fitness, pollution, tax and permit data" fields={advancedVehicle} values={values} onSet={set} open={!!open.vehicleAdvanced} onToggle={()=>toggle("vehicleAdvanced")}/>
  <Section title="Customer & proposer" subtitle="Owner, contact, KYC, communication address and tax identity" fields={customer} values={values} onSet={set} open={!!open.customer} onToggle={()=>toggle("customer")}/>
  <Section title="Quotation & previous insurance" subtitle="Coverage, insured value, prior policy, NCB and finance" fields={cover} values={values} onSet={set} open={!!open.cover} onToggle={()=>toggle("cover")}/>
  <Section title="Nominee, PA & liability" subtitle="Nomination and proposal-stage declarations" fields={nominee} values={values} onSet={set} open={!!open.nominee} onToggle={()=>toggle("nominee")}/>
