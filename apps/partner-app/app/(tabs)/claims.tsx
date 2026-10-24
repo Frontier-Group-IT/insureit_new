@@ -102,7 +102,7 @@ export default function ClaimsScreen() {
 
   // The white sticky surface hides scrolling content, while the original banner remains unchanged at the top.
   // The banner, metrics, and Add Claim continue to scroll as normal.
-  const [showStickyControls, setShowStickyControls] = useState(false);
+  const showStickyControls = false;
   const [heroHeight, setHeroHeight] = useState(98);
   const [searchHeight, setSearchHeight] = useState(44);
   const searchControls = (
@@ -212,7 +212,7 @@ export default function ClaimsScreen() {
       </View>
 
       <View style={styles.body}>
-        {showStickyControls ? <View style={{ height: searchHeight }} /> : searchControls}
+        <View style={{ backgroundColor: '#1760C1', marginHorizontal: -10, paddingHorizontal: 10, paddingBottom: 12 }}>{searchControls}</View>
 
         <View style={styles.summaryRow}>
           {([
@@ -314,7 +314,7 @@ export default function ClaimsScreen() {
           // Activate when the original heading reaches its pinned vertical position.
           // Measure the banner so layout changes do not shift the sticky threshold.
           const sticky = event.nativeEvent.contentOffset.y >= Math.max(0, heroHeight - searchHeight);
-          setShowStickyControls((previous) => previous === sticky ? previous : sticky);
+          // Scroll-linked: allow heading and controls to leave the viewport.
           if (sticky && filterMenuOpen) setFilterMenuOpen(false);
         }}
         data={rows}
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
   },
   heroAvatarText: { color: partnerTheme.colors.brandStrong, fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
   heroCopy: { zIndex: 3, position: 'absolute', left: 18, bottom: 12 },
-  heroTitle: { color: '#FFFFFF', fontSize: 15, lineHeight: 18, fontWeight: '800', letterSpacing: -0.2 },
+  heroTitle: { color: '#FFFFFF', fontSize: 15, lineHeight: 18, fontWeight: '400', letterSpacing: -0.2 },
 
   body: { paddingHorizontal: 10, zIndex: 5, backgroundColor: '#FFFFFF' },
   searchRow: {
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: StyleSheet.hairlineWidth,
     borderLeftColor: '#D9DFEA',
   },
-  filterText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: '700' },
+  filterText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: '400' },
   filterMenu: {
     overflow: 'hidden',
     borderRadius: 12,
