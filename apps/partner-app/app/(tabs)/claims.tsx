@@ -6,11 +6,10 @@ import {
   StyleSheet,
   Text,
   View,
-  Platform,
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
@@ -45,10 +44,8 @@ const CLAIM_FILTER_OPTIONS: Array<{ value: PartnerClaimState; label: string }> =
 
 export default function ClaimsScreen() {
   const router = useRouter();
-  const safeAreaInsets = useSafeAreaInsets();
   // SafeAreaView already offsets overlays when iOS reports a top inset.
   // Only fall back when older OTA runtimes report zero, avoiding double spacing.
-  const stickyStatusBarClearance = Platform.OS === 'ios' && safeAreaInsets.top === 0 ? 54 : 0;
   const verticalListRef = useRef<FlatList>(null);
   useFocusEffect(useCallback(() => {
     const reset = () => verticalListRef.current?.scrollToOffset({ offset: 0, animated: false });
@@ -334,7 +331,7 @@ export default function ClaimsScreen() {
         onRefresh={() => void refreshAll()}
       />
       {showStickyControls ? (
-        <View style={[styles.stickyOverlay , { top: stickyStatusBarClearance }]} pointerEvents="box-none">
+        <View style={styles.stickyOverlay} pointerEvents="box-none">
           <Text style={styles.stickyTitle}>Claims</Text>
           <View style={styles.stickySearchBody}>{searchControls}</View>
         </View>
@@ -454,7 +451,7 @@ const styles = StyleSheet.create({
   content: { flexGrow: 1, paddingBottom: 104, backgroundColor: '#FFFFFF' },
   pressed: { opacity: 0.76 },
   stickyOverlay: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 40, backgroundColor: "#FFFFFF" },
-  stickyTitle: { marginLeft: 18, marginTop: 12, marginBottom: 12, color: "#153F88", fontSize: 15, lineHeight: 18, fontWeight: "800", letterSpacing: -0.2 },
+  stickyTitle: { marginLeft: 18, marginTop: 12, marginBottom: 12, color: "#153F88", fontSize: 15, lineHeight: 18, fontWeight: "400", letterSpacing: -0.2 },
   stickySearchBody: { paddingHorizontal: 10, paddingBottom: 10, backgroundColor: "#FFFFFF" },
 
   hero: { height: 98, overflow: 'hidden', backgroundColor: '#0752A2' },

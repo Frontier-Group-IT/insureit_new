@@ -10,9 +10,8 @@ import {
   StyleSheet,
   Text,
   View,
-  Platform,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
@@ -51,10 +50,8 @@ const POLICY_FILTER_OPTIONS: Array<{ value: PartnerPolicyLifecycle; label: strin
 
 export default function PoliciesScreen() {
   const router = useRouter();
-  const safeAreaInsets = useSafeAreaInsets();
   // SafeAreaView already offsets overlays when iOS reports a top inset.
   // Only fall back when older OTA runtimes report zero, avoiding double spacing.
-  const stickyStatusBarClearance = Platform.OS === 'ios' && safeAreaInsets.top === 0 ? 54 : 0;
   const verticalListRef = useRef<FlatList>(null);
   useFocusEffect(useCallback(() => {
     const reset = () => verticalListRef.current?.scrollToOffset({ offset: 0, animated: false });
@@ -429,7 +426,7 @@ export default function PoliciesScreen() {
         maxToRenderPerBatch={10}
         windowSize={7}
       />
-      {searchSticky ? <View style={[styles.stickySearchOverlay , { top: stickyStatusBarClearance }]} pointerEvents="box-none"><Text style={styles.stickyClaimsHeading}>Policies</Text>{searchControls}</View> : null}
+      {searchSticky ? <View style={styles.stickySearchOverlay} pointerEvents="box-none"><Text style={styles.stickyClaimsHeading}>Policies</Text>{searchControls}</View> : null}
     </SafeAreaView>
   );
 }
@@ -628,7 +625,7 @@ const styles = StyleSheet.create({
   intakeHeaderText: { color: '#0B2E63', fontSize: 9.5, lineHeight: 12, fontWeight: '800' },
   searchSpacer: { height: 44, marginTop: -10, marginHorizontal: 16 },
   stickySearchOverlay: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 50, backgroundColor: '#FFFFFF', paddingTop: 12, paddingBottom: 10 },
-  stickyClaimsHeading: { color: '#153F88', fontSize: 15, lineHeight: 18, fontWeight: '800', marginLeft: 18, marginBottom: 12 },
+  stickyClaimsHeading: { color: '#153F88', fontSize: 15, lineHeight: 18, fontWeight: '400', marginLeft: 18, marginBottom: 12 },
   searchRow: {
     zIndex: 5,
     marginTop: -10,
