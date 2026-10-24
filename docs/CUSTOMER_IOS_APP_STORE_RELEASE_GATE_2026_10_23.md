@@ -12,7 +12,8 @@
 - [ ] Preserve and test the SAME authentication methods that ship in the live Android 0.3.0 (9) build: customer registration, login, session persistence, logout/re-login, recovery, and denied-permission behavior. Do NOT add Firebase OTP or a new OTP flow to iOS.
 - [ ] Verify the authentication code and dependencies of the final iOS binary against Android's current production flow; do not assume an earlier Firebase PR represents the shipped Android build.
 - [ ] Test own-data authorization; vehicle add/view/edit, policy add/view/copy upload, claim without policy/expired policy, nine-stage claim editing, documents, microphone, and support/navigation.
-- [ ] Confirm usable in-app account deletion initiation (not merely logout/deactivation) with legal retention explanation; conduct safe test only with dedicated test accounts.
+- [x] Verified in-app account-deletion initiation and legal retention explanation in source: Profile → Request account deletion → /customer/account-deletion; confirmation, support_tickets insert, existing ticket detection, fallback public page. [Source inspection 2026-10-24]
+- [ ] Verify in-app ticket insertion/RLS and the back-office fulfillment/deletion process with a synthetic test account. Source inspection alone does not establish that requests are completed.
 - [ ] Audit microphone, location, camera/photos, files, notifications and any tracking/analytics declarations against real code.
 - [ ] Confirm no broken URL, placeholder, test credentials or debug controls in released binary.
 - [ ] Verify Sign in with Apple applicability based on all actual sign-in methods; don't claim a blanket exemption without review.
@@ -49,14 +50,15 @@ The production EAS profile explicitly specifies store distribution, a real-devic
 - [x] Expo production profile now explicitly targets iOS App Store real devices.
 - [x] GitHub mobile CI passed on prior release-branch commit (run #1621); recheck latest commits after changes.
 - [ ] Confirm real Android production authentication UI and logic matches proposed iOS exactly. Firebase OTP is **out of scope**, and must not be included.
-- [ ] Inspect implementation of account deletion; add accessible deletion entry point and server-side flow if missing.
+- [x] Inspect implementation of account deletion: existing Profile action and dedicated request screen are present; do not duplicate. [Source inspection 2026-10-24]
+- [ ] Verify ticket fulfillment and eventual deletion with authorized nonproduction data.
 - [ ] Validate iOS native signing, successful compiled artifact and actual device testing; cannot infer from TypeScript checks.
 - [ ] Validate App Store-facing assets, privacy disclosures and reviewer-access instructions with business owner.
 - [ ] App Store Connect upload and submission are prohibited until verification is complete.
 
 ## Inspected source evidence (2026-10-24)
 - `apps/mobile-app/app/login.tsx` and `signup.tsx` call `sendPhoneOtp`, `sendPhoneSignupOtp`, and `verifyPhoneOtp` from `lib/auth.ts`. These are Supabase authentication flows, NOT Firebase. Keep them unchanged. Apple reviewer demo must be able to receive valid Supabase SMS OTP or receive an approved alternative test sign-in flow before submission.
-- `apps/mobile-app/app/customer/profile.tsx` Account & Privacy links to the Legal Center. No self-service account-deletion button was found in this inspected screen; `apps/mobile-app/app/customer/legal/index.tsx` only lists legal documents. Confirm whether account deletion is supported elsewhere and implement a secure deletion-initiation mechanism if absent. Do NOT assume sign-out or local session removal equals account deletion.
+- CORRECTION: `apps/mobile-app/app/customer/profile.tsx` contains `Request account deletion` routing to `/customer/account-deletion`. The existing `apps/mobile-app/app/customer/account-deletion.tsx` screen requires confirmation, checks open deletion tickets, inserts a high-priority `support_tickets` request and provides a public fallback. The in-app initiation exists; do not duplicate. Fulfillment and authorization still require end-to-end testing.
 - Latest release branch CI successfully completed mobile run #1623 and web run #7071 at commit `0257fd77c5aa997662e9e99b064878f4594e3e27`.
 - Passing JavaScript CI is not an iOS binary, Apple signing, privacy review, or a real iPhone smoke test.
 - DO NOT falsely mark the above outstanding items as complete.
