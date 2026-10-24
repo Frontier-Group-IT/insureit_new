@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerRotatingSearchPlaceholder } from '@/components/ui/partner-search-field';
@@ -67,6 +67,7 @@ export function PartnerScreen({
 }>) {
   const { isOffline } = usePartnerNetwork();
   const router = useRouter();
+  const safeAreaInsets = useSafeAreaInsets();
   const sharedSearch = usePartnerSearch();
   const isHomeHero = eyebrow === 'INSUREIT PARTNER' && !onBack;
   const heroSearchValue = heroSearch?.value ?? sharedSearch.query;
@@ -185,7 +186,8 @@ export function PartnerScreen({
   );
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <View style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
       <Animated.ScrollView
         ref={scrollRef}
         {...scrollProps}
@@ -301,13 +303,15 @@ export function PartnerScreen({
         ) : null}
         {children}
       </Animated.ScrollView>
+      </SafeAreaView>
+      {showFixedHeader && safeAreaInsets.top > 0 ? <View pointerEvents="none" style={[styles.stickyStatusBarShield, { height: safeAreaInsets.top }]} /> : null}
       {showFixedHeader && (isHomeHero || (stickyHeading && stickyControls)) ? (
-        <View style={styles.fixedWhiteHeader} pointerEvents="box-none">
+        <View style={[styles.fixedWhiteHeader, { top: safeAreaInsets.top }]} pointerEvents="box-none">
           <Text numberOfLines={1} style={styles.fixedWhiteHeading}>{isHomeHero ? title : stickyHeading}</Text>
           {isHomeHero ? homeSearchControl : stickyControls}
         </View>
       ) : null}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -328,8 +332,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: partnerTheme.spacing.lg,
     paddingBottom: 104,
   },
+  stickyStatusBarShield: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: '#FFFFFF', zIndex: 61 },
   fixedWhiteHeader: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 60, backgroundColor: "#FFFFFF", paddingTop: 12, paddingBottom: 10, paddingHorizontal: 10 },
-  fixedWhiteHeading: { color: "#153F88", fontSize: 15, lineHeight: 18, fontWeight: "800", marginLeft: 8, marginBottom: 12 },
+  fixedWhiteHeading: { color: "#153F88", fontSize: 15, lineHeight: 18, fontWeight: "400", marginLeft: 8, marginBottom: 12 },
   networkBanner: { marginBottom: partnerTheme.spacing.sm },
 
   homeHeroWrap: {

@@ -8,8 +8,9 @@ assert.match(source, /contentOffset\.y >= Math\.max\(0, heroHeight - searchHeigh
 assert.doesNotMatch(source, /contentOffset\.y >= 98/);
 assert.match(source, /stickyOverlay: \{[^\n]+backgroundColor: "#FFFFFF"/);
 assert.match(source, /stickySearchBody: \{[^\n]+backgroundColor: "#FFFFFF"/);
-assert.match(source, /<View style=\{\[styles\.stickyOverlay\s*,\s*\{ top: stickyStatusBarClearance \}\]\} pointerEvents="box-none">/);
-assert.match(source, /Platform\.OS === 'ios' && safeAreaInsets\.top === 0 \? 54 : 0/);
+assert.match(source, /<View style=\{\[styles\.stickyOverlay, \{ top: safeAreaInsets\.top \}\]\} pointerEvents="box-none">/);
+assert.match(source, /<View pointerEvents="none" style=\{\[styles\.stickyStatusBarShield, \{ height: safeAreaInsets\.top \}\]\} \/>/);
+assert.doesNotMatch(source, /stickyStatusBarClearance/);
 assert.match(source, /<Text style=\{styles\.stickyTitle\}>Claims<\/Text>/);
 assert.match(source, /<View style=\{styles\.stickySearchBody\}>\{searchControls\}<\/View>/);
 assert.match(source, /ListHeaderComponent=\{header\}/);

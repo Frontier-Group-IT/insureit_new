@@ -10,7 +10,6 @@ import {
   StyleSheet,
   Text,
   View,
-  Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -54,7 +53,6 @@ export default function PoliciesScreen() {
   const safeAreaInsets = useSafeAreaInsets();
   // SafeAreaView already offsets overlays when iOS reports a top inset.
   // Only fall back when older OTA runtimes report zero, avoiding double spacing.
-  const stickyStatusBarClearance = Platform.OS === 'ios' && safeAreaInsets.top === 0 ? 54 : 0;
   const verticalListRef = useRef<FlatList>(null);
   useFocusEffect(useCallback(() => {
     const reset = () => verticalListRef.current?.scrollToOffset({ offset: 0, animated: false });
@@ -394,7 +392,8 @@ export default function PoliciesScreen() {
   ) : null;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <View style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
       <FlatList
         ref={verticalListRef}
         data={collection.rows}
@@ -429,8 +428,10 @@ export default function PoliciesScreen() {
         maxToRenderPerBatch={10}
         windowSize={7}
       />
-      {searchSticky ? <View style={[styles.stickySearchOverlay , { top: stickyStatusBarClearance }]} pointerEvents="box-none"><Text style={styles.stickyClaimsHeading}>Policies</Text>{searchControls}</View> : null}
-    </SafeAreaView>
+      </SafeAreaView>
+      {searchSticky && safeAreaInsets.top > 0 ? <View pointerEvents="none" style={[styles.stickyStatusBarShield, { height: safeAreaInsets.top }]} /> : null}
+      {searchSticky ? <View style={[styles.stickySearchOverlay, { top: safeAreaInsets.top }]} pointerEvents="box-none"><Text style={styles.stickyClaimsHeading}>Policies</Text>{searchControls}</View> : null}
+    </View>
   );
 }
 
@@ -627,8 +628,9 @@ const styles = StyleSheet.create({
   },
   intakeHeaderText: { color: '#0B2E63', fontSize: 9.5, lineHeight: 12, fontWeight: '800' },
   searchSpacer: { height: 44, marginTop: -10, marginHorizontal: 16 },
+  stickyStatusBarShield: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, backgroundColor: '#FFFFFF' },
   stickySearchOverlay: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 50, backgroundColor: '#FFFFFF', paddingTop: 12, paddingBottom: 10 },
-  stickyClaimsHeading: { color: '#153F88', fontSize: 15, lineHeight: 18, fontWeight: '800', marginLeft: 18, marginBottom: 12 },
+  stickyClaimsHeading: { color: '#153F88', fontSize: 15, lineHeight: 18, fontWeight: '400', marginLeft: 18, marginBottom: 12 },
   searchRow: {
     zIndex: 5,
     marginTop: -10,
