@@ -220,12 +220,13 @@ export function PartnerScreen({
                 inputRange: [0, 140], outputRange: [0, -22], extrapolate: 'clamp',
               }) }],
             } : null]}>
-              <Image
-                pointerEvents="none"
-                source={require('../assets/figma-dashboard/hero-banner.jpg')}
-                style={styles.homeHeroImage}
-                resizeMode="cover"
-              />
+              <View pointerEvents="none" style={styles.homeHeroImage}>
+                <Image
+                  source={require('../assets/figma-dashboard/hero-banner.jpg')}
+                  style={StyleSheet.absoluteFill}
+                  resizeMode="cover"
+                />
+              </View>
               <View pointerEvents="none" style={styles.homeHeroShade} />
 
               <View style={styles.homeHeroTopRow}>
