@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type PropsWithChildren, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useRef, useState, type PropsWithChildren, type ReactNode } from 'react';
 import {
   Animated,
   Platform,
@@ -23,6 +23,9 @@ import { getPartnerUnreadActivityCount } from '@/lib/engagement';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerNetwork } from '@/providers/partner-network-provider';
 import { usePartnerSearch } from '@/providers/partner-search-provider';
+
+const PartnerStickyContext = createContext(false);
+export const usePartnerStickyVisible = () => useContext(PartnerStickyContext);
 
 export function PartnerScreen({
   title,
@@ -186,6 +189,7 @@ export function PartnerScreen({
   );
 
   return (
+    <PartnerStickyContext.Provider value={showFixedHeader}>
     <View style={styles.safeArea}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
       <Animated.ScrollView
@@ -277,7 +281,7 @@ export function PartnerScreen({
         ) : null}
         {!hideTopBar && isHomeHero ? (
           <View style={styles.homeStickySearchWrap}>
-            {homeSearchControl}
+            {showFixedHeader ? <View style={styles.homeSearchPlaceholder} /> : homeSearchControl}
           </View>
         ) : null}
         {!hideTopBar && !isHomeHero ? (
@@ -312,6 +316,7 @@ export function PartnerScreen({
         </View>
       ) : null}
     </View>
+    </PartnerStickyContext.Provider>
   );
 }
 
@@ -342,6 +347,7 @@ const styles = StyleSheet.create({
     marginHorizontal: -partnerTheme.spacing.lg,
     marginBottom: 0,
   },
+  homeSearchPlaceholder: { height: 61 },
   homeStickySearchWrap: {
     marginTop: -26,
     marginBottom: 9,
