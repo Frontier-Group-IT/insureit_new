@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=054709eb30b82672c4553f600aa7009054dfb33f
-reason=partner-completed-claim-stages-green-pr-3503
+source_main=b6dea2007046d280aaca94c60d1406c3b278e20f
+reason=publish-partner-ios-quick-actions-active-icons-pr-3504-20261024
