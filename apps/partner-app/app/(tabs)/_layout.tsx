@@ -1,6 +1,7 @@
 import type { ComponentProps } from 'react';
 import { Redirect, Tabs } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { partnerTheme } from '@/lib/theme';
@@ -10,6 +11,7 @@ type IconName = ComponentProps<typeof Ionicons>['name'];
 
 export default function PartnerTabsLayout() {
   const { status } = usePartnerSession();
+  const insets = useSafeAreaInsets();
 
   if (status === 'loading') {
     return <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View>;
@@ -22,12 +24,12 @@ export default function PartnerTabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,
-        tabBarActiveTintColor: partnerTheme.colors.brandStrong,
-        tabBarInactiveTintColor: partnerTheme.colors.inkSubtle,
+        tabBarActiveTintColor: '#FFFFFF',
+        tabBarInactiveTintColor: '#AFC1DE',
         tabBarLabelStyle: styles.label,
         tabBarIconStyle: styles.icon,
         tabBarItemStyle: styles.item,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [styles.tabBar, { height: 64 + insets.bottom, paddingBottom: 7 + insets.bottom }],
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: tabIcon('home-outline', 'home') }} />
@@ -52,11 +54,11 @@ function tabIcon(inactive: IconName, active: IconName) {
 const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.canvas },
   tabBar: {
-    height: 70,
+    height: 64,
     paddingTop: 5,
     paddingBottom: 7,
-    backgroundColor: partnerTheme.colors.surface,
-    borderTopColor: partnerTheme.colors.line,
+    backgroundColor: '#071E49',
+    borderTopColor: '#173968',
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   item: {
@@ -72,7 +74,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconWrapActive: {
-    backgroundColor: partnerTheme.colors.brandSoft,
+    backgroundColor: '#203F79',
   },
   label: {
     marginTop: 0,
