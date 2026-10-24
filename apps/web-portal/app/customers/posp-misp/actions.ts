@@ -634,7 +634,7 @@ async function currentManager(employeeId?: string | null) {
   const { profile } = await getAuthenticatedProfile(accessToken);
   if (!profile?.id) throw new Error("You are not authorized to manage POSP/MISP onboarding.");
   if (profile.role === "operations_head_life") {
-    if (!employeeId || !(await isEmployeeWithinAccessScope(profile.id, profile.role, employeeId))) throw new Error("Selected RM must be in Gagan Singh\u0027s active downline.");
+    if (!(await hasEffectiveCapability(profile, "view_intermediaries", "view")) || !employeeId || !(await isEmployeeWithinAccessScope(profile.id, profile.role, employeeId))) throw new Error("Selected RM must be authorized within Gagan Singh\u0027s active downline.");
     return profile;
   }
   if (!(await hasAnyEffectiveCapability(profile, ["create_intermediary_application", "review_intermediary_application"]))) throw new Error("You are not authorized to manage POSP/MISP onboarding.");
