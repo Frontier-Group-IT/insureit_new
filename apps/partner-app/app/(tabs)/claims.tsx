@@ -211,7 +211,7 @@ export default function ClaimsScreen() {
       </View>
 
       <View style={styles.body}>
-        {searchControls}
+        {showStickyControls ? <View style={{ height: searchHeight }} /> : searchControls}
 
         <View style={styles.summaryRow}>
           {([
