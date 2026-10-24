@@ -124,6 +124,7 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
 
 function EditableField({field,value,onChange}:{field:Field;value:string;onChange:(value:string)=>void}){
   const [pickerVisible,setPickerVisible]=useState(false);
+  const [draftPickerValue,setDraftPickerValue]=useState<Date>(()=>new Date());
   const isDate=field.kind==='date';
   const parsedDate=/^\d{4}-\d{2}-\d{2}$/.test(value)?new Date(value+'T12:00:00'):null;
   const pickerValue=parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : new Date();
@@ -133,15 +134,16 @@ function EditableField({field,value,onChange}:{field:Field;value:string;onChange
     :<>
       <View style={styles.inputShell}>
         <TextInput accessibilityLabel={field.label} value={value} onChangeText={onChange} placeholder={field.placeholder||(isDate?'YYYY-MM-DD':`Enter ${field.label.toLowerCase()}`)} placeholderTextColor="#A1ADBC" keyboardType={field.kind==='number'?'decimal-pad':'default'} style={styles.input}/>
-        {isDate?<Pressable accessibilityRole="button" accessibilityLabel={`Choose ${field.label}`} onPress={()=>setPickerVisible(true)} hitSlop={10} style={styles.calendarButton}><Ionicons name="calendar-outline" size={20} color="#1857A9"/></Pressable>:null}
+        {isDate?<Pressable accessibilityRole="button" accessibilityLabel={`Choose ${field.label}`} onPress={()=>{setDraftPickerValue(pickerValue);setPickerVisible(true);}} hitSlop={10} style={styles.calendarButton}><Ionicons name="calendar-outline" size={20} color="#1857A9"/></Pressable>:null}
       </View>
       {isDate&&pickerVisible?<View>
-        <DateTimePicker value={pickerValue} mode="date" display={Platform.OS==='ios'?'spinner':'default'} onChange={(event,date)=>{
+        <DateTimePicker value={draftPickerValue} mode="date" display={Platform.OS==='ios'?'spinner':'default'} onChange={(event,date)=>{
           if(Platform.OS!=='ios')setPickerVisible(false);
           if(event.type==='dismissed'||!date)return;
-          onChange(`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`);
+          setDraftPickerValue(date);
+          if(Platform.OS!=='ios')onChange(`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`);
         }}/>
-        {Platform.OS==='ios'?<Pressable accessibilityRole="button" accessibilityLabel={`Done selecting ${field.label}`} onPress={()=>setPickerVisible(false)} style={styles.pickerDone}><Text style={styles.pickerDoneText}>Done</Text></Pressable>:null}
+        {Platform.OS==='ios'?<Pressable accessibilityRole="button" accessibilityLabel={`Done selecting ${field.label}`} onPress={()=>{const date=draftPickerValue;onChange(`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`);setPickerVisible(false);}} style={styles.pickerDone}><Text style={styles.pickerDoneText}>Done</Text></Pressable>:null}
       </View>:null}
     </>}
   </View>;
