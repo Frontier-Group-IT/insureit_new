@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=0a662e4c5d360ff468edd9253e5a5c4cc878b288
-reason=partner-four-tab-scroll-linked-blue-header-pr-3525
+source_main=63d5f5da6f23c92e2e1ce757c7c5307b160e6a6b
+reason=revert-partner-four-tab-scroll-linked-headers-pr-3528
