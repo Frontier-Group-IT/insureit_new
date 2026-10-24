@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
@@ -44,6 +44,7 @@ const CLAIM_FILTER_OPTIONS: Array<{ value: PartnerClaimState; label: string }> =
 
 export default function ClaimsScreen() {
   const router = useRouter();
+  const safeAreaInsets = useSafeAreaInsets();
   // SafeAreaView already offsets overlays when iOS reports a top inset.
   // Only fall back when older OTA runtimes report zero, avoiding double spacing.
   const verticalListRef = useRef<FlatList>(null);
@@ -303,7 +304,8 @@ export default function ClaimsScreen() {
   ) : null;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <View style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
       <FlatList
         ref={verticalListRef}
         scrollEventThrottle={16}
@@ -330,13 +332,15 @@ export default function ClaimsScreen() {
         refreshing={collection.refreshing || summary.refreshing}
         onRefresh={() => void refreshAll()}
       />
+      </SafeAreaView>
+      {showStickyControls && safeAreaInsets.top > 0 ? <View pointerEvents="none" style={[styles.stickyStatusBarShield, { height: safeAreaInsets.top }]} /> : null}
       {showStickyControls ? (
-        <View style={styles.stickyOverlay} pointerEvents="box-none">
+        <View style={[styles.stickyOverlay, { top: safeAreaInsets.top }]} pointerEvents="box-none">
           <Text style={styles.stickyTitle}>Claims</Text>
           <View style={styles.stickySearchBody}>{searchControls}</View>
         </View>
       ) : null}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -450,6 +454,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
   content: { flexGrow: 1, paddingBottom: 104, backgroundColor: '#FFFFFF' },
   pressed: { opacity: 0.76 },
+  stickyStatusBarShield: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, backgroundColor: '#FFFFFF' },
   stickyOverlay: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 40, backgroundColor: "#FFFFFF" },
   stickyTitle: { marginLeft: 18, marginTop: 12, marginBottom: 12, color: "#153F88", fontSize: 15, lineHeight: 18, fontWeight: "400", letterSpacing: -0.2 },
   stickySearchBody: { paddingHorizontal: 10, paddingBottom: 10, backgroundColor: "#FFFFFF" },
