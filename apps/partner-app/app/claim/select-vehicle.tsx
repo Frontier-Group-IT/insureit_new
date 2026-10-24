@@ -115,7 +115,7 @@ export default function PartnerClaimVehicleSelector() {
                       style={[styles.option, isSelected && styles.optionSelected]}
                     >
                       <View style={styles.logo}>
-                        <Image source={getPartnerManufacturerLogoSource(row.make) ?? PartnerAssets.navigation.claims} resizeMode="contain" style={styles.logoImage}/>
+                        {getPartnerManufacturerLogoSource(row.make) ? <Image source={getPartnerManufacturerLogoSource(row.make)!} resizeMode="contain" style={styles.logoImage}/> : <Ionicons name="car-outline" size={24} color="#55789F"/>}
                       </View>
                       <View style={styles.vehicleText}>
                         <Text style={[styles.plate, isSelected && styles.plateSelected]}>{row.vehicle_no || 'Registration pending'}</Text>
@@ -136,7 +136,7 @@ export default function PartnerClaimVehicleSelector() {
             onPress={() => setDropdownOpen(true)}
             style={styles.vehicleSelect}
           >
-            {choice ? <View style={styles.logo}><Image source={getPartnerManufacturerLogoSource(choice.make) ?? PartnerAssets.navigation.claims} resizeMode="contain" style={styles.logoImage}/></View> : <Ionicons name="car-outline" size={23} color="#1D569B" />}
+            {choice ? <View style={styles.logo}>{getPartnerManufacturerLogoSource(choice.make) ? <Image source={getPartnerManufacturerLogoSource(choice.make)!} resizeMode="contain" style={styles.logoImage}/> : <Ionicons name="car-outline" size={24} color="#55789F"/>}</View> : <Ionicons name="car-outline" size={23} color="#1D569B" />}
             <View style={styles.vehicleText}>
               <Text style={choice ? styles.plate : styles.placeholder}>{choice?.vehicle_no || 'Select vehicle number'}</Text>
               {choice ? <Text style={styles.description} numberOfLines={1}>{[choice.make,choice.model].filter(Boolean).join(' · ')}</Text> : null}
