@@ -80,11 +80,11 @@ export function PartnerScreen({
   const [homeSearchFocused, setHomeSearchFocused] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const latestScrollY = useRef(0);
-  const [showFixedHeader, setShowFixedHeader] = useState(false);
+  const showFixedHeader = false;
   const updateFixedHeader = (y: number) => {
     if (!stickyHeading && !isHomeHero) return;
     const next = y >= (isHomeHero ? 42 : stickyStartY);
-    setShowFixedHeader((previous) => previous === next ? previous : next);
+    // Header scrolls naturally with its content on Partner tabs.
   };
 
   useFocusEffect(useCallback(() => {
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
     marginHorizontal: -partnerTheme.spacing.lg,
     height: 61,
     paddingHorizontal: 10,
-    backgroundColor: "#F5F7FB",
+    backgroundColor: "#1760C1",
     // The overlapping search should not create an elevated iOS touch plane
     // over business controls lower in the same scrolling screen.
     zIndex: Platform.OS === 'ios' ? 0 : 10,
