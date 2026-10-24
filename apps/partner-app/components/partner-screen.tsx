@@ -10,10 +10,11 @@ import {
   type ImageSourcePropType,
   type ScrollViewProps,
   View,
+  Platform,
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerRotatingSearchPlaceholder } from '@/components/ui/partner-search-field';
@@ -66,6 +67,10 @@ export function PartnerScreen({
 }>) {
   const { isOffline } = usePartnerNetwork();
   const router = useRouter();
+  const safeAreaInsets = useSafeAreaInsets();
+  // SafeAreaView already offsets overlays when iOS reports a top inset.
+  // Only fall back when older OTA runtimes report zero, avoiding double spacing.
+  const stickyStatusBarClearance = Platform.OS === 'ios' && safeAreaInsets.top === 0 ? 54 : 0;
   const sharedSearch = usePartnerSearch();
   const isHomeHero = eyebrow === 'INSUREIT PARTNER' && !onBack;
   const heroSearchValue = heroSearch?.value ?? sharedSearch.query;
@@ -301,7 +306,7 @@ export function PartnerScreen({
         {children}
       </Animated.ScrollView>
       {showFixedHeader && (isHomeHero || (stickyHeading && stickyControls)) ? (
-        <View style={styles.fixedWhiteHeader} pointerEvents="box-none">
+        <View style={[styles.fixedWhiteHeader , { top: stickyStatusBarClearance }]} pointerEvents="box-none">
           <Text numberOfLines={1} style={styles.fixedWhiteHeading}>{isHomeHero ? title : stickyHeading}</Text>
           {isHomeHero ? homeSearchControl : stickyControls}
         </View>
