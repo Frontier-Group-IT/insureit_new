@@ -31,6 +31,29 @@
 - [ ] Reviewer notes must explain business model, customer self-registration, claim workflow, third-party services, insurance brokerage company and authorization evidence.
 - [ ] Confirm all links and reviewer account work from an external network.
 
+## iOS build command after audit passes
+Run from repository root with approved Apple credentials and Expo account:
+```bash
+npm ci
+npm run typecheck:mobile
+npm run lint:mobile
+cd apps/mobile-app
+npx expo-doctor
+npx eas-cli build --platform ios --profile production
+```
+The production EAS profile explicitly specifies store distribution, a real-device iOS binary, and keeps autoIncrement disabled so build 1 stays intentional. For subsequent uploads increment iOS buildNumber. Do not use an Android build command.
+
+## Evidence and open verification
+- [x] iOS display name changed to INSUREIT Customer (isolated release branch).
+- [x] Initial iOS build number set to 1 (isolated release branch).
+- [x] Expo production profile now explicitly targets iOS App Store real devices.
+- [x] GitHub mobile CI passed on prior release-branch commit (run #1621); recheck latest commits after changes.
+- [ ] Confirm real Android production authentication UI and logic matches proposed iOS exactly. Firebase OTP is **out of scope**, and must not be included.
+- [ ] Inspect implementation of account deletion; add accessible deletion entry point and server-side flow if missing.
+- [ ] Validate iOS native signing, successful compiled artifact and actual device testing; cannot infer from TypeScript checks.
+- [ ] Validate App Store-facing assets, privacy disclosures and reviewer-access instructions with business owner.
+- [ ] App Store Connect upload and submission are prohibited until verification is complete.
+
 ## No-submit policy
 Never submit or upload solely because config passed. Block release until all gates above are checked with recorded evidence. The Partner app remains untouched. An Apple approval on first submission cannot be guaranteed.
 
