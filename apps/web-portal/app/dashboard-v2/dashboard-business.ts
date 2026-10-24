@@ -1,5 +1,5 @@
 import "server-only";
-import { getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadPolicyFilter } from "@/lib/policy-access-scope";
+import { getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type ProfileLike = { id: string; role?: string | null };
@@ -42,7 +42,7 @@ export async function getDashboardBusinessData(profile: ProfileLike | null | und
   if (!profile?.id) return empty;
 
   const downlineFilter = profile.role === "operations_head_life"
-    ? operationsHeadPolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))
+    ? operationsHeadVisiblePolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))
     : null;
   if (profile.role === "operations_head_life" && !downlineFilter) return empty;
   const rmEmployeeIds = profile.role === "operations_head_life" ? null : await getAccessiblePolicyRmEmployeeIds(profile.id, profile.role, "view_policies");
