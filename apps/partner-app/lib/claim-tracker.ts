@@ -15,10 +15,8 @@ export const CLAIM_STAGES = [
 export type ClaimStageKey = (typeof CLAIM_STAGES)[number]['key'];
 const normalize = (value: string | null | undefined) => (value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
-export function getClaimTrackerState(data: PartnerClaimDetail) {
-  const status = normalize(data.claim.current_status);
-  // Existing Partner RPC contains broker status history, not the customer milestone table.
-  // Project only recognized statuses. Never equate the number of history events with completed stages.
+export function claimStatusMilestone(statusValue: string | null | undefined) {
+  const status = normalize(statusValue);
   const rules: Array<[RegExp, number]> = [
     [/claim complete|settled|closed/, 9],
     [/payment stage|payment encashment|claim completion in progress/, 8],
@@ -28,13 +26,42 @@ export function getClaimTrackerState(data: PartnerClaimDetail) {
     [/repair|ri stage/, 4],
     [/work approval/, 3],
     [/claim intimation|final document|final survey/, 2],
-    [/spot status|surveyor|spot survey|spot deputation/, 1],
+    [/spot status|surveyor|spot survey|spot deputation|survey done/, 1],
     [/spot intimation|initial document|accident reported|draft/, 0],
   ];
-  const matched = rules.find(([pattern]) => pattern.test(status));
-  const completed = matched?.[1] ?? 0;
-  const index = Math.min(completed, 8);
-  return { index, current: CLAIM_STAGES[index], progress: Math.round(completed / 9 * 100), substage: data.claim.current_status || 'Status pending', completed };
+  return rules.find(([pattern]) => pattern.test(status))?.[1] ?? 0;
+}
+
+export function getClaimTrackerState(data: PartnerClaimDetail) {
+  // Stage-save RPC writes milestone_key to the stage details. These saved records,
+  // not the legacy broker status label, are the primary source of completion.
+  const saved = new Set<ClaimStageKey>();
+  for (const item of data.stages) {
+    const details = item.details;
+    const key = details && typeof details === 'object' && 'milestone_key' in details
+      ? details.milestone_key : null;
+    if (typeof key === 'string' && CLAIM_STAGES.some(stage => stage.key === key)) {
+      saved.add(key as ClaimStageKey);
+    }
+  }
+  // The Spot Intimation form writes directly to the claim record.
+  if (data.claim.spot_intimation_at && data.claim.accident_at) saved.add('spot_intimation');
+
+  const statusIndex = claimStatusMilestone(data.claim.current_status);
+  const savedLastIndex = CLAIM_STAGES.reduce((last, stage, i) => saved.has(stage.key) ? i : last, -1);
+  // A later saved milestone implies the previous journey steps have been reached.
+  // Legacy claims without saved milestones retain the broker-status fallback.
+  const completed = Math.max(savedLastIndex + 1, statusIndex);
+  const index = Math.min(completed, CLAIM_STAGES.length - 1);
+  const completedKeys = new Set(CLAIM_STAGES.slice(0, completed).map(stage => stage.key));
+  return {
+    index,
+    current: CLAIM_STAGES[index],
+    progress: Math.round(completed / CLAIM_STAGES.length * 100),
+    substage: completedKeys.has(CLAIM_STAGES[index].key) ? 'Completed' : 'Current milestone',
+    completed,
+    completedKeys,
+  };
 }
 
 export function formatClaimDate(value: string | null | undefined) {
