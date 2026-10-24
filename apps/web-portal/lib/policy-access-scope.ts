@@ -127,7 +127,7 @@ export async function canAccessPolicy(
   write = false,
 ) {
   const anjanaScope = await getAnjanaParsottamPolicyScope(profileId, role);
-  if (anjanaScope) {
+  if (anjanaScope && !write) {
     const filters = operationsHeadPolicyFilter(anjanaScope);
     if (!filters) return false;
     const admin = createSupabaseAdminClient();
