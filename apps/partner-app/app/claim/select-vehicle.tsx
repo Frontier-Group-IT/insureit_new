@@ -3,58 +3,62 @@ import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View 
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { listPartnerCustomers, getPartnerCustomerDetail, type PartnerCustomerDetail } from '@/lib/customers';
+import { listPartnerClaimVehicleChoices, type PartnerClaimVehicleChoice } from '@/lib/claim-vehicle-choices';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { createPartnerClaim } from '@/lib/claims';
 
-type Account = { customer_id: string; customer_name: string };
-type Choice = { customer: Account; vehicle: PartnerCustomerDetail['vehicles'][number]; policy: PartnerCustomerDetail['policies'][number] | null };
+const PAGE_SIZE = 50;
 export default function PartnerClaimVehicleSelector() {
   const router = useRouter();
   const [search, setSearch] = useState('');
-  const [choices, setChoices] = useState<Choice[]>([]);
-  const [selected, setSelected] = useState<string>('');
+  const [choices, setChoices] = useState<PartnerClaimVehicleChoice[]>([]);
+  const [selectedChoice, setSelectedChoice] = useState<PartnerClaimVehicleChoice | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [busy, setBusy] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [total, setTotal] = useState(0);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
-  const load = useCallback(async () => {
-    setBusy(true); setError('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(id);
+  }, [search]);
+
+  const load = useCallback(async (query: string, offset = 0) => {
+    if (offset) setLoadingMore(true);
+    else { setBusy(true); setError(''); }
     try {
-      // Server RPC enforces partner scope, including employee and partner visibility.
-      const customers = await listPartnerCustomers({ limit: 100 });
-      const accountRows = customers.map(x => ({ customer_id: x.customer_id, customer_name: x.customer_name }));
-      const details = await Promise.all(accountRows.map(async customer => {
-        try {
-          const detail = await getPartnerCustomerDetail(customer.customer_id);
-          return detail.vehicles.map(vehicle => {
-            const linked = detail.policies.filter(policy => policy.vehicle_id === vehicle.vehicle_id)
-              .sort((a,b) => (b.end_date || '').localeCompare(a.end_date || ''));
-            return { customer, vehicle, policy: linked[0] || null };
-          });
-        } catch { return [] as Choice[]; }
-      }));
-      const nextChoices = details.flat();
-      setChoices(nextChoices);
-      setSelected(current => nextChoices.some(row => `${row.customer.customer_id}:${row.vehicle.vehicle_id}` === current)
-        ? current
-        : nextChoices.length ? `${nextChoices[0].customer.customer_id}:${nextChoices[0].vehicle.vehicle_id}` : '');
-    } catch {
-      setError('Unable to load vehicles in your Partner scope.');
-      setChoices([]);
-    } finally { setBusy(false); }
+      const rows = await listPartnerClaimVehicleChoices({ search: query, limit: PAGE_SIZE, offset });
+      if (offset) setChoices(previous => [...previous, ...rows]);
+      else {
+        setChoices(rows);
+        if (!query) setSelectedChoice(previous => previous ?? rows[0] ?? null);
+      }
+      setTotal(previous => rows[0]?.total_count ?? (offset ? previous : 0));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Unable to load authorized vehicles.');
+      if (!offset) setChoices([]);
+    } finally {
+      setBusy(false);
+      setLoadingMore(false);
+    }
   }, []);
-  useEffect(() => { void load(); }, [load]);
-  const shown = useMemo(() => choices.filter(c => [c.vehicle.vehicle_no,c.vehicle.make,c.vehicle.model,c.customer.customer_name].some(v => (v||'').toLowerCase().includes(search.toLowerCase()))), [choices,search]);
-  const choice = choices.find(x => `${x.customer.customer_id}:${x.vehicle.vehicle_id}` === selected);
-  const choose = (row: Choice) => { setSelected(`${row.customer.customer_id}:${row.vehicle.vehicle_id}`); setDropdownOpen(false); setSearch(''); };
+  useEffect(() => { void load(debouncedSearch); }, [debouncedSearch]);
+  const choice = selectedChoice;
+  const shown = choices;
+  const choose = (row: PartnerClaimVehicleChoice) => {
+    setSelectedChoice(row);
+    setDropdownOpen(false);
+    setSearch('');
+  };
   const startClaim = async () => {
     if (!choice || creating) return;
     setCreating(true);
     try {
-      const claimId = await createPartnerClaim(choice.customer.customer_id, choice.vehicle.vehicle_id, choice.policy?.policy_id ?? null);
+      const claimId = await createPartnerClaim(choice.customer_id, choice.vehicle_id, choice.policy_id);
       router.replace({ pathname: '/claim/stage', params: { id: claimId, key: 'spot_intimation' } } as never);
     } catch (reason) {
       Alert.alert('Claim could not be started', reason instanceof Error ? reason.message : 'Please try again or contact the claims desk.');
@@ -99,26 +103,27 @@ export default function PartnerClaimVehicleSelector() {
             {busy ? <Text style={styles.hint}>Loading authorized vehicles...</Text> : error ? <Text style={styles.error}>{error}</Text> : !shown.length ? <Text style={styles.hint}>No matching vehicles found.</Text> :
               <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="always" style={styles.options}>
                 {shown.map(row => {
-                  const isSelected = selected === `${row.customer.customer_id}:${row.vehicle.vehicle_id}`;
+                  const isSelected = choice?.customer_id === row.customer_id && choice?.vehicle_id === row.vehicle_id;
                   return (
                     <Pressable
-                      key={row.customer.customer_id + ':' + row.vehicle.vehicle_id}
+                      key={row.customer_id + ':' + row.vehicle_id}
                       accessibilityRole="button"
                       accessibilityState={{ selected: isSelected }}
                       onPress={() => choose(row)}
                       style={[styles.option, isSelected && styles.optionSelected]}
                     >
                       <View style={styles.logo}>
-                        <Image source={getPartnerManufacturerLogoSource(row.vehicle.make) ?? PartnerAssets.navigation.claims} resizeMode="contain" style={styles.logoImage}/>
+                        <Image source={getPartnerManufacturerLogoSource(row.make) ?? PartnerAssets.navigation.claims} resizeMode="contain" style={styles.logoImage}/>
                       </View>
                       <View style={styles.vehicleText}>
-                        <Text style={[styles.plate, isSelected && styles.plateSelected]}>{row.vehicle.vehicle_no || 'Registration pending'}</Text>
-                        <Text style={styles.description} numberOfLines={1}>{[row.vehicle.make,row.vehicle.model].filter(Boolean).join(' · ')}</Text>
+                        <Text style={[styles.plate, isSelected && styles.plateSelected]}>{row.vehicle_no || 'Registration pending'}</Text>
+                        <Text style={styles.description} numberOfLines={1}>{[row.make,row.model].filter(Boolean).join(' · ')}</Text>
                       </View>
                       {isSelected ? <Ionicons name="checkmark-circle" color="#0A4DA7" size={24}/> : null}
                     </Pressable>
                   );
                 })}
+                {shown.length < total ? <Pressable accessibilityRole="button" accessibilityLabel="Load more authorized vehicles" disabled={loadingMore} onPress={() => void load(debouncedSearch, shown.length)} style={{padding:14,alignItems:'center'}}><Text style={styles.hint}>{loadingMore ? 'Loading more vehicles…' : 'Load more vehicles'}</Text></Pressable> : null}
               </ScrollView>}
           </View>
         ) : (
@@ -129,17 +134,17 @@ export default function PartnerClaimVehicleSelector() {
             onPress={() => setDropdownOpen(true)}
             style={styles.vehicleSelect}
           >
-            {choice ? <View style={styles.logo}><Image source={getPartnerManufacturerLogoSource(choice.vehicle.make) ?? PartnerAssets.navigation.claims} resizeMode="contain" style={styles.logoImage}/></View> : <Ionicons name="car-outline" size={23} color="#1D569B" />}
+            {choice ? <View style={styles.logo}><Image source={getPartnerManufacturerLogoSource(choice.make) ?? PartnerAssets.navigation.claims} resizeMode="contain" style={styles.logoImage}/></View> : <Ionicons name="car-outline" size={23} color="#1D569B" />}
             <View style={styles.vehicleText}>
-              <Text style={choice ? styles.plate : styles.placeholder}>{choice?.vehicle.vehicle_no || 'Select vehicle number'}</Text>
-              {choice ? <Text style={styles.description} numberOfLines={1}>{[choice.vehicle.make,choice.vehicle.model].filter(Boolean).join(' · ')}</Text> : null}
+              <Text style={choice ? styles.plate : styles.placeholder}>{choice?.vehicle_no || 'Select vehicle number'}</Text>
+              {choice ? <Text style={styles.description} numberOfLines={1}>{[choice.make,choice.model].filter(Boolean).join(' · ')}</Text> : null}
             </View>
             <Ionicons name="list" size={23} color="#24528C"/>
           </Pressable>
         )}
       </View>
       <View style={styles.policyTitle}><Text style={styles.heading}>Policy details</Text></View>
-      {choice?.policy ? <View style={styles.policy}><PartnerInsurerLogo name={choice.policy.insurer_name || ''} fallback={PartnerAssets.navigation.claims} style={styles.logoImage}/><View style={styles.vehicleText}><Text style={styles.policyNo}>{choice.policy.policy_no || 'Policy number pending'}</Text><Text style={styles.policyCaption}>{choice.policy.insurer_name || 'Insurer not recorded'}</Text><Text style={styles.policyCaption}>Expiry: {choice.policy.end_date || 'Not recorded'}</Text></View><View accessibilityLabel="Policy status indicator" style={styles.policyIndicator}><Ionicons name="alert" size={20} color="#FFF"/></View></View> : <Text style={styles.hint}>No linked policy found. You can register the claim; coverage will be verified separately.</Text>}
+      {choice?.policy_id ? <View style={styles.policy}><PartnerInsurerLogo name={choice.insurer_name || ''} fallback={PartnerAssets.navigation.claims} style={styles.logoImage}/><View style={styles.vehicleText}><Text style={styles.policyNo}>{choice.policy_no || 'Policy number pending'}</Text><Text style={styles.policyCaption}>{choice.insurer_name || 'Insurer not recorded'}</Text><Text style={styles.policyCaption}>Expiry: {choice.policy_end_date || 'Not recorded'}</Text></View><View accessibilityLabel="Policy status indicator" style={styles.policyIndicator}><Ionicons name="alert" size={20} color="#FFF"/></View></View> : <Text style={styles.hint}>No linked policy found. You can register the claim; coverage will be verified separately.</Text>}
       <View style={styles.actions}>
         <Pressable accessibilityRole="button" accessibilityLabel="Cancel claim setup" onPress={() => router.back()} style={styles.secondary}><Text style={styles.secondaryText}>Cancel</Text></Pressable>
         <Pressable disabled={!choice || creating} onPress={() => void startClaim()} style={[styles.primary,(!choice || creating) && styles.disabled]}><Text style={styles.primaryText}>{creating ? "Starting…" : "Start Claim"}</Text><Ionicons name="arrow-forward" color="#FFF" size={19}/></Pressable>
