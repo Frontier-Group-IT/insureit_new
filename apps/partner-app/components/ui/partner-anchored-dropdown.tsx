@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Modal, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 type AnchorRect = { x: number; y: number; width: number; height: number };
 
@@ -62,11 +62,11 @@ export function PartnerAnchoredDropdown({
         animationType="none"
         onRequestClose={onDismiss}
         presentationStyle="overFullScreen"
-        statusBarTranslucent
+        statusBarTranslucent={Platform.OS === 'android'}
         transparent
         visible={visible}
       >
-        <View accessibilityViewIsModal style={styles.modalRoot}>
+        <View accessibilityViewIsModal style={styles.modalRoot} pointerEvents="box-none">
           <Pressable
             accessibilityLabel="Close dropdown"
             accessibilityRole="button"
@@ -75,7 +75,7 @@ export function PartnerAnchoredDropdown({
           />
           {anchorRect ? (
             <View
-              pointerEvents="box-none"
+              pointerEvents="auto"
               style={[
                 styles.menuHost,
                 {
