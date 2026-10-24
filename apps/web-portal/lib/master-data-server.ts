@@ -61,7 +61,7 @@ export async function requireCustomerManager(customerId: string) {
 export async function getPospMispManager(allowOperationsHeadLife = false) {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (profile?.role === "operations_head_life") return allowOperationsHeadLife ? profile : null;
+  if (profile?.role === "operations_head_life") return allowOperationsHeadLife && await hasEffectiveCapability(profile, "view_intermediaries", "view") ? profile : null;
   return profile?.id && await hasAnyEffectiveCapability(profile, ["create_intermediary_application", "review_intermediary_application"]) ? profile : null;
 }
 
