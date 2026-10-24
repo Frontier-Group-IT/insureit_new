@@ -146,8 +146,9 @@ requireText(policies, 'name="document-text-outline"', 'Policies reference cards 
 requireText(policies, 'function policyStatus(', 'Policies reference cards must preserve lifecycle status styling.');
 requireText(claims, 'PartnerAssets.navigation.claims', 'Claims empty state/fallback must retain Partner claim artwork.');
 requireText(claims, 'PartnerInsurerLogo', 'Claims rows must render insurer logos through the live-master-data PartnerInsurerLogo component.');
-requireText(claims, "row.claim_state === 'completed'", 'Claims rows must preserve completed-state detection.');
-requireText(claims, 'styles.statusSuccess', 'Completed claims must preserve success-state styling.');
+requireText(claims, "state === 'completed'", 'Claims rows must preserve completed-state detection.');
+requireText(claims, "success: { pill:", 'Completed claims must preserve green success-state styling.');
+requireText(claims, "claimToneStyles[stageTone].pill", 'Claim status badges must use stage-specific styling.');
 requireText(renewals, 'PartnerAssets.emptyStates.noRenewals', 'Renewal empty states must use the prepared no-renewals artwork.');
 requireText(renewals, 'PartnerAssets.actions.renewals', 'Upcoming renewal rows must use Partner renewal artwork.');
 requireText(renewals, 'styles.opportunitiesHeader', 'Renewal opportunity card must keep a section header.');
