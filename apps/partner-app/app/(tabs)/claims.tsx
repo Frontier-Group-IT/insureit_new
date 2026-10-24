@@ -55,7 +55,6 @@ export default function ClaimsScreen() {
   const [state, setState] = useState<PartnerClaimState>(savedClaimState);
   const [query, setQuery] = useState(savedClaimQuery);
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
-  const [rejectedFilterNotice, setRejectedFilterNotice] = useState(false);
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const debouncedSearch = useDebouncedValue(query.trim(), 350);
   useEffect(() => { setVisibleLimit(PAGE_SIZE); }, [state, debouncedSearch]);
@@ -90,13 +89,10 @@ export default function ClaimsScreen() {
   const refreshAll = useCallback(async () => {
     await Promise.all([summary.refresh(), collection.refresh()]);
   }, [collection, summary]);
-  const selectSummary = (filter: PartnerClaimState | 'rejected') => {
+  const selectSummary = (filter: PartnerClaimState) => {
     setQuery('');
     setVisibleLimit(PAGE_SIZE);
-    // Rejected is not supported by the current authorized claim-list RPC.
-    // Return to All with a clear notice instead of displaying incorrect results.
-    setRejectedFilterNotice(filter === 'rejected');
-    setState(filter === 'rejected' ? 'all' : filter);
+    setState(filter);
   };
   const name = context?.identity.display_name || 'Partner';
 
@@ -123,7 +119,7 @@ export default function ClaimsScreen() {
         menu={(
           <View style={styles.filterMenu}>
             {CLAIM_FILTER_OPTIONS.map((option) => {
-              const active = !rejectedFilterNotice && state === option.value;
+              const active = state === option.value;
               return (
                 <Pressable
                   key={option.value}
@@ -219,15 +215,14 @@ export default function ClaimsScreen() {
             { label: 'Total Claims', filter: 'all' as const, value: summary.data?.total_claims, icon: 'document-text-outline' as const },
             { label: 'Settled Claims', filter: 'completed' as const, value: summary.data?.completed_claims, icon: 'shield-checkmark' as const },
             { label: 'In Progress', filter: 'active' as const, value: summary.data?.active_claims, icon: 'hourglass-outline' as const },
-            { label: 'Rejected Claims', filter: 'rejected' as const, value: undefined, icon: 'close-circle' as const },
           ]).map((metric) => (
             <Pressable
               key={metric.label}
               accessibilityRole="button"
               accessibilityLabel={`Show ${metric.label}`}
-              accessibilityState={{ selected: metric.filter === 'rejected' ? rejectedFilterNotice : !rejectedFilterNotice && state === metric.filter && !query }}
+              accessibilityState={{ selected: state === metric.filter && !query }}
               onPress={() => selectSummary(metric.filter)}
-              style={({ pressed }) => [styles.summaryCard, (metric.filter !== 'rejected' && !rejectedFilterNotice && state === metric.filter && !query) && styles.summaryCardSelected, pressed && styles.summaryCardPressed]}
+              style={({ pressed }) => [styles.summaryCard, (state === metric.filter && !query) && styles.summaryCardSelected, pressed && styles.summaryCardPressed]}
             >
               <View style={styles.summaryIcon}><Ionicons name={metric.icon} size={17} color="#153F88" /></View>
               <Text style={styles.summaryValue}>{metric.value == null ? '—' : metric.value.toLocaleString('en-IN')}</Text>
@@ -249,15 +244,6 @@ export default function ClaimsScreen() {
           </View>
           <Ionicons name="arrow-forward" size={21} color="#FFFFFF" />
         </Pressable>
-
-        {rejectedFilterNotice ? (
-          <View style={styles.banner}>
-            <PartnerBanner
-              tone="warning"
-              message="A rejected-only filter is not yet available. Showing all claims instead."
-            />
-          </View>
-        ) : null}
 
         {(collection.stale || summary.stale) ? (
           <View style={styles.banner}>
@@ -354,9 +340,7 @@ export default function ClaimsScreen() {
 
 function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void }) {
   const status = humanize(row.current_status || row.claim_state);
-  const completed = row.claim_state === 'completed';
-  const rejected = /reject/i.test(row.current_status || '');
-  const isNew = /^new$/i.test((row.current_status || '').trim());
+  const stageTone = claimStatusTone(row.current_status, row.claim_state);
   const vehicleLabel = row.vehicle_no || 'Vehicle not linked';
   const mode = claimModeLabel(row.claim_service_mode);
 
@@ -385,24 +369,27 @@ function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void
             </PartnerMotionBadge>
           ) : null}
         </View>
-        <Text numberOfLines={1} style={styles.claimCustomer}>{row.customer_name}</Text>
-        <Text numberOfLines={1} style={styles.claimDetail}>{vehicleLabel}</Text>
+        <View style={styles.claimIdentityRow}>
+          <Text numberOfLines={1} style={styles.claimCustomer}>{row.customer_name}</Text>
+          <Text style={styles.claimSeparator}>-</Text>
+          <Text numberOfLines={1} ellipsizeMode="tail" style={styles.claimDetail}>{vehicleLabel}</Text>
+        </View>
       </View>
 
       <View style={styles.claimStatusRight}>
         <PartnerMotionBadge style={[
           styles.statusPill,
-          rejected ? styles.statusRejected : completed ? styles.statusSuccess : isNew ? styles.statusNew : styles.statusWarning,
+          claimToneStyles[stageTone].pill,
         ]}>
           <View style={[
             styles.statusDot,
-            rejected ? styles.statusDotRejected : completed ? styles.statusDotSuccess : isNew ? styles.statusDotNew : styles.statusDotWarning,
+            claimToneStyles[stageTone].dot,
           ]} />
           <Text
             numberOfLines={1}
             style={[
               styles.statusText,
-              rejected ? styles.statusTextRejected : completed ? styles.statusTextSuccess : isNew ? styles.statusTextNew : styles.statusTextWarning,
+              claimToneStyles[stageTone].text,
             ]}
           >
             {status}
@@ -412,6 +399,33 @@ function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void
     </Pressable>
   );
 }
+
+type ClaimStageTone = 'draft' | 'documents' | 'approval' | 'survey' | 'settlement' | 'success' | 'rejected' | 'new' | 'warning';
+
+function claimStatusTone(status: string | null, state: string): ClaimStageTone {
+  const value = (status || '').toLowerCase().replace(/[_-]/g, ' ').trim();
+  if (/reject|declin/.test(value)) return 'rejected';
+  if (state === 'completed' || /settled|closed|completed/.test(value)) return 'success';
+  if (/^new$/.test(value)) return 'new';
+  if (/draft/.test(value)) return 'draft';
+  if (/document|kyc|intimation/.test(value)) return 'documents';
+  if (/approv|workshop|repair/.test(value)) return 'approval';
+  if (/survey|assessment|inspection/.test(value)) return 'survey';
+  if (/payment|settlement|invoice/.test(value)) return 'settlement';
+  return 'warning';
+}
+
+const claimToneStyles: Record<ClaimStageTone, { pill: object; dot: object; text: object }> = {
+  draft: { pill: { backgroundColor: '#FDEBE2' }, dot: { backgroundColor: '#E85D29' }, text: { color: '#B7481D' } },
+  documents: { pill: { backgroundColor: '#FFF3C9' }, dot: { backgroundColor: '#E9A000' }, text: { color: '#9D6400' } },
+  approval: { pill: { backgroundColor: '#E4EFFF' }, dot: { backgroundColor: '#2673D9' }, text: { color: '#2058A9' } },
+  survey: { pill: { backgroundColor: '#F0E8FF' }, dot: { backgroundColor: '#8752CD' }, text: { color: '#6736A8' } },
+  settlement: { pill: { backgroundColor: '#DFF5F4' }, dot: { backgroundColor: '#149B95' }, text: { color: '#08766F' } },
+  success: { pill: { backgroundColor: '#E4F6EE' }, dot: { backgroundColor: '#19A56F' }, text: { color: '#178157' } },
+  rejected: { pill: { backgroundColor: '#FDEBEC' }, dot: { backgroundColor: '#E04F5F' }, text: { color: '#C43F50' } },
+  new: { pill: { backgroundColor: '#E8F1FF' }, dot: { backgroundColor: '#3156B8' }, text: { color: '#153F88' } },
+  warning: { pill: { backgroundColor: '#FFF2DD' }, dot: { backgroundColor: '#F39A1E' }, text: { color: '#B66A14' } },
+};
 
 function claimModeLabel(value: string | null) {
   const normalized = (value || '').toLowerCase();
@@ -548,8 +562,8 @@ const styles = StyleSheet.create({
   addClaimButtonIcon: { width: 42, height: 42 },
   addClaimButtonPressed: { opacity: 0.8 },
   addClaimButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
-  summaryRow: { flexDirection: 'row', gap: 3, marginTop: 8 },
-  summaryCard: { flex: 1, minWidth: 0, alignItems: 'center', paddingVertical: 8, paddingHorizontal: 2, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E3ECF8', borderRadius: 9, elevation: 1 },
+  summaryRow: { flexDirection: 'row', gap: 5, marginTop: 8 },
+  summaryCard: { flex: 1, minWidth: 0, alignItems: 'center', paddingVertical: 6, paddingHorizontal: 3, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E3ECF8', borderRadius: 9, elevation: 1 },
   summaryCardSelected: { backgroundColor: '#E8F1FF', borderColor: '#2458C5', borderBottomWidth: 3 },
   summaryCardPressed: { backgroundColor: '#E8F1FF' },
   summaryIcon: { width: 27, height: 27, borderRadius: 9, backgroundColor: '#EDF4FF', alignItems: 'center', justifyContent: 'center' },
@@ -618,16 +632,18 @@ const styles = StyleSheet.create({
   claimIcon: { width: 28, height: 28 },
   claimCopy: { flex: 1, minWidth: 0 },
   claimHeadingRow: { minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  claimNo: { flexShrink: 1, color: '#071D49', fontSize: 13, lineHeight: 16, fontWeight: '800' },
+  claimNo: { flexShrink: 1, color: '#071D49', fontSize: 11.5, lineHeight: 15, fontWeight: '500' },
   modeBadge: { paddingHorizontal: 5, paddingVertical: 2, borderRadius: 6, backgroundColor: '#E8F1FF' },
   modeBadgeExternal: { backgroundColor: '#F0EAFE' },
   modeBadgeText: { color: '#2355A7', fontSize: 7.2, lineHeight: 9.5, fontWeight: '800' },
   modeBadgeTextExternal: { color: '#6842B8' },
-  claimCustomer: { marginTop: 1, color: '#405A82', fontSize: 9.4, lineHeight: 12, fontWeight: '700' },
-  claimDetail: { marginTop: 1, color: '#7788A5', fontSize: 8.2, lineHeight: 10.5 },
-  claimStatusRight: { width: 92, alignItems: 'flex-end', justifyContent: 'center' },
+  claimIdentityRow: { marginTop: 3, flexDirection: 'row', alignItems: 'center', minWidth: 0, gap: 4 },
+  claimCustomer: { flexShrink: 1, color: '#405A82', fontSize: 9.4, lineHeight: 12, fontWeight: '700' },
+  claimSeparator: { color: '#8390A7', fontSize: 9.5 },
+  claimDetail: { flexShrink: 1, minWidth: 0, color: '#173D75', fontSize: 10.3, lineHeight: 13, fontWeight: '700' },
+  claimStatusRight: { maxWidth: 110, alignItems: 'flex-end', justifyContent: 'flex-start', alignSelf: 'flex-start' },
   statusPill: {
-    maxWidth: 92,
+    maxWidth: 110,
     minHeight: 21,
     flexDirection: 'row',
     alignItems: 'center',
