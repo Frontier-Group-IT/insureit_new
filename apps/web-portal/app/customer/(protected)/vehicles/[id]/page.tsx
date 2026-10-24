@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ArrowLeft, CalendarDays, CarFront, ShieldCheck } from "lucide-react";
 import {
   CustomerAccountTabs,
-  CustomerPageHeading,
   EmptyCustomerState,
   StatusPill,
 } from "@/components/customer-portal/customer-phase1";
@@ -28,7 +27,6 @@ export default async function CustomerVehicleDetailPage({
   const query: { account?: string } = searchParams ? await searchParams : {};
   const { account, accounts } = await resolveCustomerWebScope(query.account);
   const { vehicle, policies } = await loadCustomerVehicleDetail(account.id, id);
-  const currentPolicy = policies.find((policy) => customerPolicyTone(policy.end_date).tone !== "expired");
 
   const ownership = [
     ["Registration number", customerDisplayVehicleNo(vehicle)],
@@ -57,15 +55,15 @@ export default async function CustomerVehicleDetailPage({
 
   return (
     <div className="space-y-3">
-      <Link href={{ pathname: "/customer/vehicles", query: { account: account.id } }} className="inline-flex items-center gap-1 text-[11px] font-black text-[#53627A] hover:text-[#142746]">
-        <ArrowLeft className="h-3.5 w-3.5" /> Back to vehicles
-      </Link>
-      <CustomerPageHeading
-        eyebrow="Vehicle detail"
-        title={customerDisplayVehicleNo(vehicle)}
-        description={[vehicle.make, vehicle.model].filter(Boolean).join(" · ") || vehicle.vehicle_type}
-        action={<StatusPill tone={currentPolicy ? "active" : "expired"}>{currentPolicy ? "Covered" : "No active policy"}</StatusPill>}
-      />
+      <header className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#DCE4EE] bg-white px-4 py-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#EAF3FF] text-[#174EA6]"><CarFront className="h-6 w-6" aria-hidden="true"/></span>
+          <h1 className="truncate text-[18px] font-bold text-[#102B54]">{customerDisplayVehicleNo(vehicle)}</h1>
+        </div>
+        <Link href={{ pathname: "/customer/vehicles", query: { account: account.id } }} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[#DCE4EE] px-3 text-[12px] font-semibold text-[#174A87] hover:bg-[#F1F6FD]">
+          <ArrowLeft className="h-4 w-4" aria-hidden="true"/> Back
+        </Link>
+      </header>
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/vehicles" />
 
       <div className="overflow-hidden rounded-xl border border-[#DCE4EE] bg-white">
