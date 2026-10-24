@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Animated, Image, type ImageSourcePropType, Pressable, RefreshControl, StyleSheet, Text, View, useWindowDimensions, type StyleProp, type TextStyle } from 'react-native';
 
 import { PartnerBusinessRangeSummaryCard } from '@/components/partner-business-range-summary';
-import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerScreen, usePartnerStickyVisible } from '@/components/partner-screen';
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
@@ -325,7 +325,7 @@ export default function BusinessScreen() {
             <View style={styles.heroCopy}><Text style={styles.heroTitle}>Business</Text></View>
           </View>
 
-          {businessSearchControls}
+          <BusinessSearchSlot controls={businessSearchControls} />
 
           {workspace.stale || workspace.error || workspace.data?.secondaryWarning ? (
             <View style={styles.feedback}>
@@ -900,3 +900,7 @@ const styles = StyleSheet.create({
   barTrackCompact: { height: 56 },
   pressed: { opacity: 0.75 },
 });
+function BusinessSearchSlot({ controls }: { controls: React.ReactNode }) {
+  const stickyVisible = usePartnerStickyVisible();
+  return stickyVisible ? <View style={{ height: 44 }} /> : <>{controls}</>;
+}
