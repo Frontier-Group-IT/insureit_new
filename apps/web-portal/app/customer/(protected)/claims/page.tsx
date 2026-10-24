@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ClipboardList, Plus } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
-import { CustomerClaimsSearch, CustomerClaimsStageFilter } from "./customer-claims-search";
+import { CustomerClaimsSearch } from "./customer-claims-search";
 import { projectInternalClaim } from "@insureit/claim-journey";
 import { CustomerAccountTabs, EmptyCustomerState } from "@/components/customer-portal/customer-phase1";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
