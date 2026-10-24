@@ -269,7 +269,6 @@ export default function BusinessScreen() {
 
   return (
     <PartnerScreen
-      scrollLinkedHeader
       resetScrollOnFocus
       title=""
       hideTopBar
@@ -326,7 +325,7 @@ export default function BusinessScreen() {
             <View style={styles.heroCopy}><Text style={styles.heroTitle}>Business</Text></View>
           </View>
 
-          <View style={{ backgroundColor: '#1760C1', paddingHorizontal: 8, paddingBottom: 12 }}><BusinessSearchSlot controls={businessSearchControls} /></View>
+          <BusinessSearchSlot controls={businessSearchControls} />
 
           {workspace.stale || workspace.error || workspace.data?.secondaryWarning ? (
             <View style={styles.feedback}>
@@ -816,12 +815,12 @@ const styles = StyleSheet.create({
   heroAvatar: { width: 35, height: 35, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
   heroAvatarText: { color: '#144E98', fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
   heroCopy: { position: 'absolute', zIndex: 3, left: 18, bottom: 12 },
-  heroTitle: { color: '#FFFFFF', fontSize: 15, lineHeight: 18, fontWeight: '400', letterSpacing: -0.2 },
+  heroTitle: { color: '#FFFFFF', fontSize: 15, lineHeight: 18, fontWeight: '800', letterSpacing: -0.2 },
   searchRow: { zIndex: 5, marginTop: -10, marginBottom: 3, height: 44, flexDirection: 'row', alignItems: 'stretch', borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D9DFEA', overflow: 'hidden', shadowColor: '#173B6C', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 3 },
   searchBox: { flex: 1, height: 44, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 15, backgroundColor: '#FFFFFF' },
-  searchText: { flex: 1, color: '#8B95A8', fontSize: 11.5, lineHeight: 16, fontWeight: '400' },
+  searchText: { flex: 1, color: '#8B95A8', fontSize: 11.5, lineHeight: 16, fontWeight: '500' },
   filterButton: { height: 44, minWidth: 68, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: '#D9DFEA' },
-  filterText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: '400' },
+  filterText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: '700' },
   feedback: { marginBottom: 8 },
   selectorAnchor: { position: 'relative', zIndex: 20 },
   sectionHeader: { minHeight: 18, marginTop: 5, marginBottom: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
@@ -903,5 +902,5 @@ const styles = StyleSheet.create({
 });
 function BusinessSearchSlot({ controls }: { controls: React.ReactNode }) {
   const stickyVisible = usePartnerStickyVisible();
-  return <>{controls}</>;
+  return stickyVisible ? <View style={{ height: 44 }} /> : <>{controls}</>;
 }

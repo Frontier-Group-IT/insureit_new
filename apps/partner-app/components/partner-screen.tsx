@@ -43,7 +43,6 @@ export function PartnerScreen({
   stickyHeading,
   stickyControls,
   stickyStartY = 100,
-  scrollLinkedHeader = false,
 }: PropsWithChildren<{
   title: string;
   eyebrow?: string;
@@ -61,8 +60,6 @@ export function PartnerScreen({
   stickyHeading?: string;
   stickyControls?: ReactNode;
   stickyStartY?: number;
-  /** Keep the heading and search controls in the natural scroll flow. */
-  scrollLinkedHeader?: boolean;
   heroSearch?: {
     value: string;
     onChangeText: (value: string) => void;
@@ -83,12 +80,11 @@ export function PartnerScreen({
   const [homeSearchFocused, setHomeSearchFocused] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const latestScrollY = useRef(0);
-  const [fixedHeaderActive, setFixedHeaderActive] = useState(false);
-  const showFixedHeader = !scrollLinkedHeader && fixedHeaderActive;
+  const [showFixedHeader, setShowFixedHeader] = useState(false);
   const updateFixedHeader = (y: number) => {
-    if (scrollLinkedHeader || (!stickyHeading && !isHomeHero)) return;
+    if (!stickyHeading && !isHomeHero) return;
     const next = y >= (isHomeHero ? 42 : stickyStartY);
-    setFixedHeaderActive(previous => previous === next ? previous : next);
+    setShowFixedHeader((previous) => previous === next ? previous : next);
   };
 
   useFocusEffect(useCallback(() => {
@@ -358,7 +354,7 @@ const styles = StyleSheet.create({
     marginHorizontal: -partnerTheme.spacing.lg,
     height: 61,
     paddingHorizontal: 10,
-    backgroundColor: "#1760C1",
+    backgroundColor: "#F5F7FB",
     // The overlapping search should not create an elevated iOS touch plane
     // over business controls lower in the same scrolling screen.
     zIndex: Platform.OS === 'ios' ? 0 : 10,
@@ -493,7 +489,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 11.5,
     lineHeight: 15,
-    fontWeight: '400',
+    fontWeight: '700',
     letterSpacing: -0.02,
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
