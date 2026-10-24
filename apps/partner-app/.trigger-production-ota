@@ -1,3 +1,3 @@
 Partner production OTA trigger
-reason=publish-reverted-pr-3475-original-hero-banner
-revert_commit=270b03542f929c7585b2797de08270c4ab174fb8
+source_main=ef412cc6e1f51f86ad9db7c60b2fafc4066adb74
+reason=partner-ios-sticky-header-position-pr-3479
