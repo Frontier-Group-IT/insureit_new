@@ -132,6 +132,10 @@ export default function PartnerHomeScreen() {
         </View>
       }
       scrollProps={{
+        // On iOS the vertical ScrollView must not cancel a stationary Pressable
+        // after touch-down; this made Home actions highlight without onPress.
+        canCancelContentTouches: Platform.OS !== 'ios',
+        delaysContentTouches: false,
         refreshControl: (
           <RefreshControl
             refreshing={workspace.refreshing || business.refreshing || (businessPeriod === 'mtd' && previousMonthMtd.refreshing)}
@@ -599,6 +603,8 @@ function QuickActionsCarousel({
       onLayout={(event) => setViewportWidth(event.nativeEvent.layout.width)}
       contentContainerStyle={styles.quickGrid}
       directionalLockEnabled
+      canCancelContentTouches={Platform.OS !== 'ios'}
+      delaysContentTouches={false}
       onTouchStart={pauseForTouch}
       onTouchEnd={resumeAfterTouch}
       onTouchCancel={resumeAfterTouch}
