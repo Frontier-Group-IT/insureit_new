@@ -62,10 +62,10 @@ for(const path of [
 for(const path of [
   "app/policies/life-health-case-edit-actions.ts",
   "app/policies/life-health-policy-actions.ts",
-  "app/policies/life-health-case-documents/[documentId]/view/route.ts",
 ]) {
   assert.ok(read(path).includes('requireOperationsHeadRecordOwnership("life_health_case"'),path + ": per-case scope required");
 }
+assert.ok(read("app/policies/life-health-case-documents/[documentId]/view/route.ts").includes("canAccessOperationsHeadCase(requester.id, document.case_id)"));
 const intakes=read("lib/policy-intake-server.ts");
 assert.ok(intakes.includes("canAccessOperationsHeadIntake(profile.id, intakeId)"));
 assert.ok(read("app/policy-intakes/page.tsx").includes("submitted_by_profile_id.in."));
