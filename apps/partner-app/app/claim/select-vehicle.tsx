@@ -180,7 +180,10 @@ function getPolicyExpiryStatus(expiry: string | null | undefined): {
 // Apply a small, make-specific optical adjustment without stretching the artwork.
 function manufacturerLogoAdjustment(make: string | null | undefined) {
   const normalized = (make || '').trim().toLowerCase();
-  if (/^(mahindra|tata)(\\b|\\s)/.test(normalized)) return { transform: [{ scale: 1.13 }] };
+  const paddedMakes = ['mahindra', 'tata', 'hyundai', 'volkswagen'];
+  if (paddedMakes.some(name => normalized === name || normalized.startsWith(name + ' '))) {
+    return { transform: [{ scale: 1.12 }] };
+  }
   return undefined;
 }
 
@@ -208,8 +211,8 @@ const styles = StyleSheet.create({
  plateSelected:{color:'#0A3C82'},
  hint:{fontSize:11,color:'#667F9A',padding:9},
  error:{fontSize:11,color:'#B42318',padding:9},
- logo:{height:54,width:54,alignItems:'center',justifyContent:'center',borderRadius:11,backgroundColor:'#F0F5FB',overflow:'hidden'},
- manufacturerLogoImage:{height:46,width:46},
+ logo:{height:54,width:54,alignItems:'center',justifyContent:'center',borderRadius:11,backgroundColor:'#FFFFFF',overflow:'hidden'},
+ manufacturerLogoImage:{height:54,width:54},
  logoImage:{height:32,width:32},
  vehicleText:{flex:1,minWidth:0},
  plate:{fontSize:13,fontWeight:'900',color:'#102B54'},
