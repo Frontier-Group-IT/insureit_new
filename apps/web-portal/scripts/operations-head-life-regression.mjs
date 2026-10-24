@@ -37,7 +37,13 @@ assert.ok(caseList.includes("downlineCaseFilter !== null ? Promise.resolve(null)
 const caseDetail=read("app/policies/life-health-cases/[id]/page.tsx");
 assert.ok(caseDetail.includes("request = request.or(downlineFilter)"));
 assert.ok(caseDetail.includes("LifeHealthCaseDetail"));
-assert.ok(!caseDetail.includes("Read-only Life & Health case"));
+assert.ok(!caseDetail.includes("Read-only ·"));
+assert.ok(!caseDetail.includes("if (!editable)"));
+assert.ok(read("app/policies/life-health-policy-actions.ts").includes('requireOperationsHeadRecordOwnership("life_health_case",caseId)'));
+assert.ok(read("app/policies/life-health-case-edit-actions.ts").includes('requireOperationsHeadRecordOwnership("life_health_case", caseId)'));
+assert.ok(!read("app/policies/life-health-case-edit-actions.ts").includes("Customer master changes require separate authorization"));
+assert.ok(policy.includes('in("business_line", ["Life", "Health"])'));
+assert.ok(policy.includes("operationsHeadPolicyFilter(scope)"), "Policy Intake must remain downline only");
 assert.ok(middleware.includes('pathname === "/policies/life-health-cases"'));
 const migration=read("../../supabase/migrations/20261023101500_operations_head_life_role.sql");
 assert.match(migration,/add value if not exists 'operations_head_life'/);
@@ -47,7 +53,7 @@ assert.ok(policyAccessServer.includes('canAccessPolicy(profile.id, profile.role,
 assert.ok(policyAccessServer.includes('scope.intermediaryCodes.includes(sourceCode.trim())'));
 const writeGuard=read("lib/operations-head-record-authorization.ts");
 assert.ok(writeGuard.includes('requireOperationsHeadRecordOwnership'));
-assert.ok(writeGuard.includes('canAccessOperationsHeadCase(profile.id, recordId, true)'));
+assert.ok(writeGuard.includes('canAccessOperationsHeadCase(profile.id, recordId)'));
 for(const path of [
   "app/policies/policy-edit-actions.ts",
   "app/policies/non-motor-policy-actions.ts",
@@ -93,7 +99,7 @@ assert.ok(nav.includes('href:"/dashboard",label:"Dashboard"'));
 assert.ok(!nav.includes('href:"/policies/new/non-motor",label:"Add Non-Motor Policy"'));
 assert.ok(middleware.includes('const operationsHeadLifeHome = "/dashboard"'));
 assert.ok(policy.includes('business_line.in.("Life","Health")'));
-assert.ok(policy.includes('write ? operationsHeadPolicyFilter(downline) : operationsHeadVisiblePolicyFilter(downline)'));
+assert.ok(policy.includes('const filter = operationsHeadVisiblePolicyFilter(downline)'));
 assert.ok(register.includes("operationsHeadVisiblePolicyFilter"));
 assert.ok(caseDetail.includes("operationsHeadVisiblePolicyFilter"));
 console.log("Operations Head Life all-Life/Health visibility and downline-only writes regression passed.");
