@@ -32,8 +32,9 @@ export default async function CustomerExchangePage({
     ? (params.category ?? "All")
     : "All";
   const query = params.q?.trim() ?? "";
-  const tab: ExchangeTab = tabs.includes((params.tab ?? "buy") as ExchangeTab)
-    ? (params.tab as ExchangeTab)
+  const requestedTab = params.tab ?? "buy";
+  const tab: ExchangeTab = tabs.includes(requestedTab as ExchangeTab)
+    ? (requestedTab as ExchangeTab)
     : "buy";
 
   let rows: Awaited<ReturnType<typeof loadCustomerExchangeFeed>> = [];
@@ -168,7 +169,7 @@ export default async function CustomerExchangePage({
 
               <div className="overflow-x-auto rounded-2xl border border-[#DCE4EE] bg-white shadow-[0_8px_24px_rgba(28,50,82,.04)]">
                 <table className="w-full min-w-[1040px] table-fixed border-collapse text-left">
-                  <thead className="bg-[#F7F9FC] text-[10px] font-extrabold uppercase tracking-[.08em] text-[#74849E]">
+                  <thead className="border-b border-[#E8ECF2] bg-[#F8FAFC] text-[9px] font-black uppercase tracking-[.09em] text-[#6C778C]">
                     <tr>
                       <th scope="col" className="w-[32%] px-5 py-4">Listing / Vehicle</th>
                       <th scope="col" className="w-[14%] px-4 py-4">Location</th>
@@ -185,7 +186,7 @@ export default async function CustomerExchangePage({
                       const hasPrice = Number(row.asking_price || 0) > 0;
                       const href = { pathname: `/customer/exchange/${row.listing_id}`, query: { account: account.id } };
                       return (
-                        <tr key={row.listing_id} className="group transition-colors hover:bg-[#F9FBFF]">
+                        <tr key={row.listing_id} className="group transition-colors hover:bg-[#FBFCFE]">
                           <td className="px-5 py-4 align-top">
                             <div className="flex min-w-0 items-start gap-3">
                               <Link href={href} className="grid h-[75px] w-[88px] shrink-0 place-items-center overflow-hidden rounded-xl border border-[#E1E8F2] bg-[#EEF3F8]">
