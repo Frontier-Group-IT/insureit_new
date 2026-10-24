@@ -25,8 +25,8 @@ export function claimStatusMilestone(statusValue: string | null | undefined) {
     [/billing|invoice/, 5],
     [/repair|ri stage/, 4],
     [/work approval/, 3],
-    [/claim intimation|final document|final survey/, 2],
-    [/spot status|surveyor|spot survey|spot deputation|survey done/, 1],
+    [/claim intimation|final document|final survey|survey done/, 2],
+    [/spot status|surveyor|spot survey|spot deputation/, 1],
     [/spot intimation|initial document|accident reported|draft/, 0],
   ];
   return rules.find(([pattern]) => pattern.test(status))?.[1] ?? 0;
