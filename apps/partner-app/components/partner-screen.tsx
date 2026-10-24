@@ -350,8 +350,10 @@ const styles = StyleSheet.create({
     height: 61,
     paddingHorizontal: 10,
     backgroundColor: "#F5F7FB",
-    zIndex: 10,
-    elevation: 5,
+    // The overlapping search should not create an elevated iOS touch plane
+    // over business controls lower in the same scrolling screen.
+    zIndex: Platform.OS === 'ios' ? 0 : 10,
+    elevation: Platform.OS === 'ios' ? 0 : 5,
   },
   homeHero: {
     height: 174,
