@@ -5,7 +5,7 @@ import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel"
 import { PolicyIntakePolicyRegisterLinksPortal } from "@/components/policy-intake-policy-register-links";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
-import { getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter, getSalesExecutivePolicyIds } from "@/lib/policy-access-scope";
+import { getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter, getSalesExecutivePolicyIds, getAnjanaParsottamPolicyScope, operationsHeadPolicyFilter } from "@/lib/policy-access-scope";
 import { loadPolicyIntakeReviewSummary } from "@/lib/policy-intake-review-summary";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -85,13 +85,15 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
     hasEffectiveCapability(profile, "review_policy_intakes", "edit"),
     hasEffectiveCapability(profile, "view_policy_intakes", "view"),
   ]);
+  const anjanaScope = await getAnjanaParsottamPolicyScope(profile.id, profile.role);
+  const anjanaFilter = anjanaScope ? operationsHeadPolicyFilter(anjanaScope) : null;
   const operationsHeadFilter = profile.role === "operations_head_life"
     ? operationsHeadVisiblePolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))
     : null;
   const afterScope = performance.now();
   const admin = createSupabaseAdminClient();
 
-  if (profile.role === "sales_executive") {
+  if (profile.role === "sales_executive" && !anjanaScope) {
     const ownPolicyIds = await getSalesExecutivePolicyIds(profile.id);
     if (!ownPolicyIds.length) {
       const finishedAt = performance.now();
@@ -194,7 +196,10 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
         .select("id, policy_no, policy_type, policy_product, business_line, issuance_date, created_at, start_date, end_date, insured_declared_value, intermediary_type, intermediary_code, rm_name, rm_employee_id, policy_premium_details(gross_premium), policy_documents(id, document_type, file_name), customers!inner(company_name, contact_name), vehicles(vehicle_no, chassis_no, engine_no), insurance_companies(name), non_motor_policy_details(category, risk_title, risk_location, transit_from, transit_to, nature_of_business, liability_type, risk_details), claims(count)")
         .order("created_at", { ascending: false })
         .range(from, to);
-      if (profile.role === "operations_head_life" && operationsHeadFilter) query = query.or(operationsHeadFilter);
+      if (anjanaScope) {
+        if (!anjanaFilter) return query.eq("id", "00000000-0000-0000-0000-000000000000").returns<PolicyRow[]>();
+        query = query.or(anjanaFilter);
+      } else if (profile.role === "operations_head_life" && operationsHeadFilter) query = query.or(operationsHeadFilter);
       else if (accessibleRmEmployeeIds !== null) query = query.in("rm_employee_id", accessibleRmEmployeeIds);
       return query.returns<PolicyRow[]>();
     }),
