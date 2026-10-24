@@ -269,10 +269,11 @@ export default function BusinessScreen() {
 
   return (
     <PartnerScreen
+      scrollLinkedHeader
       resetScrollOnFocus
       title=""
       hideTopBar
-      stickyHeading={undefined}
+      stickyHeading="Business"
       stickyControls={businessSearchControls}
       stickyStartY={compactScreen ? 54 : 58}
       scrollProps={{
