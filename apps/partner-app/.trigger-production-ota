@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=5d829bfebb122d97b3f7573bedf9fc6248b13de9
-reason=partner-claim-stage-date-pickers-pr-3477
+reason=publish-reverted-pr-3475-original-hero-banner
+revert_commit=270b03542f929c7585b2797de08270c4ab174fb8
