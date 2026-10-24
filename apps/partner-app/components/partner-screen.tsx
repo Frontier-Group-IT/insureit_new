@@ -10,11 +10,10 @@ import {
   type ImageSourcePropType,
   type ScrollViewProps,
   View,
-  Platform,
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerRotatingSearchPlaceholder } from '@/components/ui/partner-search-field';
@@ -67,10 +66,6 @@ export function PartnerScreen({
 }>) {
   const { isOffline } = usePartnerNetwork();
   const router = useRouter();
-  const safeAreaInsets = useSafeAreaInsets();
-  // Overlay is a sibling of SafeAreaView, so position it below the real status-bar inset.
-  // Older iOS runtimes occasionally report zero: reserve a safe fallback in that case.
-  const stickyStatusBarClearance = safeAreaInsets.top > 0 ? safeAreaInsets.top : (Platform.OS === 'ios' ? 54 : 0);
   const sharedSearch = usePartnerSearch();
   const isHomeHero = eyebrow === 'INSUREIT PARTNER' && !onBack;
   const heroSearchValue = heroSearch?.value ?? sharedSearch.query;
@@ -83,7 +78,7 @@ export function PartnerScreen({
   const [showFixedHeader, setShowFixedHeader] = useState(false);
   const updateFixedHeader = (y: number) => {
     if (!stickyHeading && !isHomeHero) return;
-    const next = y >= (isHomeHero ? 145 : stickyStartY);
+    const next = y >= (isHomeHero ? 42 : stickyStartY);
     setShowFixedHeader((previous) => previous === next ? previous : next);
   };
 
@@ -189,8 +184,7 @@ export function PartnerScreen({
   );
 
   return (
-    <View style={styles.safeArea}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <Animated.ScrollView
         ref={scrollRef}
         {...scrollProps}
@@ -306,14 +300,13 @@ export function PartnerScreen({
         ) : null}
         {children}
       </Animated.ScrollView>
-      </SafeAreaView>
       {showFixedHeader && (isHomeHero || (stickyHeading && stickyControls)) ? (
-        <View style={[styles.fixedWhiteHeader, { top: stickyStatusBarClearance }]} pointerEvents="box-none">
+        <View style={styles.fixedWhiteHeader} pointerEvents="box-none">
           <Text numberOfLines={1} style={styles.fixedWhiteHeading}>{isHomeHero ? title : stickyHeading}</Text>
           {isHomeHero ? homeSearchControl : stickyControls}
         </View>
       ) : null}
-    </View>
+    </SafeAreaView>
   );
 }
 
