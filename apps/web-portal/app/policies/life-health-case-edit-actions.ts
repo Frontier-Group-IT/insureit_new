@@ -18,7 +18,8 @@ const numberValue = (value: string) => { const parsed = Number(value.replace(/,/
 export async function updateLifeHealthCaseDetails(formData: FormData) {
   const caseId = clean(formData.get("caseId"));
   const { profile: requester } = await getAuthenticatedProfile(await getServerAccessToken());
-  const profile = requester?.role === "operations_head_life" ? await requireOperationsHeadRecordOwnership("life_health_case", caseId) : await requirePolicyCreator();
+  if (requester?.role === "operations_head_life") await requireOperationsHeadRecordOwnership("life_health_case", caseId);
+  else await requirePolicyCreator();
   const admin = createSupabaseAdminClient();
   const insurerId = clean(formData.get("insurerId"));
   const customerName = clean(formData.get("customerName"));
