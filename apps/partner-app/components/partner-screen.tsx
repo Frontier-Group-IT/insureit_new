@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
     paddingBottom: 104,
   },
   fixedWhiteHeader: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 60, backgroundColor: "#FFFFFF", paddingTop: 12, paddingBottom: 10, paddingHorizontal: 10 },
-  fixedWhiteHeading: { color: "#153F88", fontSize: 15, lineHeight: 18, fontWeight: "800", marginLeft: 8, marginBottom: 12 },
+  fixedWhiteHeading: { color: "#153F88", fontSize: 15, lineHeight: 18, fontWeight: "400", marginLeft: 8, marginBottom: 12 },
   networkBanner: { marginBottom: partnerTheme.spacing.sm },
 
   homeHeroWrap: {
