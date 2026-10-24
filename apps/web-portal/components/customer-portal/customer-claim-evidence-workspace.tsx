@@ -7,7 +7,6 @@ const definitions=[
   {label:"Driver Licence",type:"Driver Licence",accept:".pdf,.jpg,.jpeg,.png,.webp,.heic"},
   {label:"GR / Load Bill",type:"GR / Load Bill",accept:".pdf,.jpg,.jpeg,.png,.webp,.heic"},
   {label:"Accident Video",type:"Accident Video",accept:"video/mp4,video/quicktime,video/webm"},
-  {label:"Audio",type:"Incident Voice Note",accept:"audio/mp4,audio/x-m4a,audio/m4a,audio/webm,audio/ogg"},
 ];
 const normalize=(s:string)=>s.trim().toLowerCase().replace(/[^a-z0-9]/g,"");
 function match(type:string, expected:string) {
