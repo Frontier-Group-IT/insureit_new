@@ -4,6 +4,23 @@ import type { Capability } from "@/lib/roles";
 import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
+/** Explicit, fail-closed scope for Anjana; includes RM ownership and sourced intermediary codes. */
+export async function getAnjanaParsottamPolicyScope(profileId: string, role: string | null | undefined) {
+  if (profileId !== "a8a5b9ad-5435-4e29-9f2d-b47fb338199a" || role !== "sales_executive") return null;
+  const scope = await getEmployeeAccessScope(profileId, role, "view_policies");
+  if (scope.mode !== "hierarchy" || !scope.employeeIds.includes("a8d8ef1f-914f-4e0c-93ab-694bcc99832d"))
+    return { employeeIds: [], intermediaryCodes: [] };
+  const admin = createSupabaseAdminClient();
+  const filters = [`associate_employee_id.in.(${scope.employeeIds.join(",")})`];
+  if (scope.profileIds.length) filters.push(`associate_profile_id.in.(${scope.profileIds.join(",")})`);
+  const { data, error } = await admin.from("intermediaries")
+    .select("intermediary_code").or(filters.join(","))
+    .returns<Array<{ intermediary_code: string | null }>>();
+  if (error) return { employeeIds: [], intermediaryCodes: [] };
+  return { employeeIds: scope.employeeIds, intermediaryCodes: Array.from(new Set((data ?? [])
+    .map(row => row.intermediary_code?.trim()).filter((code): code is string => Boolean(code)))) };
+}
+
 /**
  * Returns the RM employee ids that may own policies visible to this profile.
  * `null` means organization-wide access; an empty array means no policy scope.
@@ -109,6 +126,15 @@ export async function canAccessPolicy(
   capability: Capability = "view_policies",
   write = false,
 ) {
+  const anjanaScope = await getAnjanaParsottamPolicyScope(profileId, role);
+  if (anjanaScope && !write) {
+    const filters = operationsHeadPolicyFilter(anjanaScope);
+    if (!filters) return false;
+    const admin = createSupabaseAdminClient();
+    const { data, error } = await admin.from("policies").select("id")
+      .eq("id", policyId).or(filters).maybeSingle<{ id: string }>();
+    return !error && Boolean(data?.id);
+  }
   if (role === "sales_executive") {
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin

@@ -48,6 +48,36 @@ export const getEmployeeAccessScope = cache(async (profileId: string, role: stri
     }
   }
 
+  // Anjana is explicitly authorized to use Parsottam's sales subtree for
+  // policy viewing and intake lead-source selection only. Never broaden other
+  // Sales Executives or unrelated capabilities.
+  const anjanaProfileId = "a8a5b9ad-5435-4e29-9f2d-b47fb338199a";
+  const parsottamEmployeeId = "a8d8ef1f-914f-4e0c-93ab-694bcc99832d";
+  if (profileId === anjanaProfileId && role === "sales_executive" &&
+      (capability === "view_policies" || capability === "create_policy_intakes")) {
+    const { data: anjana, error: identityError } = await admin.from("profiles")
+      .select("employee_id").eq("id", profileId).eq("is_active", true)
+      .maybeSingle<{ employee_id: string | null }>();
+    const { data: employee, error: managerError } = await admin.from("employees")
+      .select("reporting_manager_id").eq("id", anjana?.employee_id ?? "")
+      .maybeSingle<{ reporting_manager_id: string | null }>();
+    if (identityError || managerError || employee?.reporting_manager_id !== parsottamEmployeeId)
+      return { mode: "none", employeeIds: [], profileIds: [] };
+    const { data: employees, error } = await fetchAllPages<EmployeeLink, unknown>((from, to) => admin
+      .from("employees").select("id,reporting_manager_id")
+      .eq("employment_status", "active")
+      .order("id", { ascending: true }).range(from, to).returns<EmployeeLink[]>());
+    if (error || !employees?.some(item => item.id === parsottamEmployeeId))
+      return { mode: "none", employeeIds: [], profileIds: [] };
+    const employeeIds = descendantIds(parsottamEmployeeId, employees);
+    const { data: profiles, error: profileError } = await fetchAllPages<ProfileLink, unknown>((from, to) => admin
+      .from("profiles").select("id,employee_id").in("employee_id", employeeIds)
+      .eq("is_active", true).order("id", { ascending: true })
+      .range(from, to).returns<ProfileLink[]>());
+    if (profileError) return { mode: "none", employeeIds: [], profileIds: [] };
+    return { mode: "hierarchy", employeeIds, profileIds: Array.from(new Set([profileId, ...(profiles ?? []).map(p => p.id)])) };
+  }
+
   if (role === "operations_head_life") {
     if (capability && !["view_policies","view_intermediaries"].includes(capability)) return { mode: "none", employeeIds: [], profileIds: [] };
     // Always bind this operational role to the confirmed Life vertical hierarchy,
