@@ -11,11 +11,24 @@ import { isValidVehicleRegistrationNumber } from "@/lib/vehicle-registration";
 export const dynamic = "force-dynamic";
 
 const RC_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const RC_MAPPER_VERSION = "2026-09-21-v5";
+const RC_MAPPER_VERSION = "2026-10-24-v6";
 const MAX_DISPLAY_FIELDS = 160;
 
 type RcMappedDetails = {
   registrationNumber: string;
+  vehicleCategory: string | null;
+  bodyType: string | null;
+  manufactureDate: string | null;
+  rtoName: string | null;
+  rtoState: string | null;
+  unladenWeight: string | null;
+  standingCapacity: string | null;
+  sleeperCapacity: string | null;
+  wheelBase: string | null;
+  color: string | null;
+  normsType: string | null;
+  permitType: string | null;
+  blacklistStatus: string | null;
   registrationDate: string | null;
   manufacturer: string | null;
   model: string | null;
@@ -236,6 +249,19 @@ function mapVehicleDetails(raw: unknown, registrationNumber: string): RcMappedDe
 
   return {
     registrationNumber,
+    vehicleCategory: cleanText(findValue(values, ["Usage / Category", "Vehicle Usage", "Usage Type", "Vehicle Category", "Vehicle Description"])),
+    bodyType: cleanText(findValue(values, ["Body Type", "Type of Body", "Body Description"])),
+    manufactureDate: cleanText(findValue(values, ["Manufacturing Date", "Month/Year of Manufacture", "Month Year of Manufacture", "Mfg Month Year"])),
+    rtoName: cleanText(findValue(values, ["RTO Name", "RTO Location", "Registering Authority", "Registration Authority", "Office Name", "RTO", "Registered RTO"])),
+    rtoState: cleanText(findValue(values, ["RTO State", "Registration State", "State of Registration", "Registering State"])),
+    unladenWeight: cleanNumber(findValue(values, ["Unladen Weight", "Unladen Weight KG", "ULW", "Kerb Weight"])),
+    standingCapacity: cleanInteger(findValue(values, ["Standing Capacity", "Standing Seats", "Standing Passenger Capacity"])),
+    sleeperCapacity: cleanInteger(findValue(values, ["Sleeper Capacity", "Sleeper Seats", "Sleeper Berths"])),
+    wheelBase: cleanNumber(findValue(values, ["Wheelbase", "Wheel Base", "Wheelbase MM"])),
+    color: cleanText(findValue(values, ["Colour", "Color", "Vehicle Colour", "Vehicle Color"])),
+    normsType: cleanText(findValue(values, ["Emission Norms", "Emission Standard", "Norms Type", "Pollution Norms", "Bharat Stage"])),
+    permitType: cleanText(findValue(values, ["Permit Type", "Type of Permit", "Permit Category"])),
+    blacklistStatus: cleanText(findValue(values, ["Blacklist Status", "Blacklisted Status", "Blacklisted"])),
     registrationDate: toIsoDate(findValue(values, ["Registration Date", "registrationdate", "regdate", "dateofregistration"])),
     manufacturer: normalizeFetchedVehicleManufacturer(cleanText(findValue(values, ["Maker/Manufacturer", "Manufacturer", "Maker", "manufacturername", "makername"]))),
     model: cleanText(findValue(values, ["Model / Makers Class", "Model/Makers Class", "Model", "Makers Class", "vehiclemodel", "variant"])),
