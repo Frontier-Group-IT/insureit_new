@@ -5,7 +5,7 @@ import { LifeHealthCaseRegister, type LifeHealthCaseRegisterRow } from "@/compon
 import { loadLifeHealthCaseSummary } from "@/lib/life-health-case-summary";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { requireCapability } from "@/lib/master-data-server";
-import { getOperationsHeadDownlinePolicyScope, operationsHeadPolicyFilter } from "@/lib/policy-access-scope";
+import { getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export default async function LifeHealthCasesPage({ searchParams }: { searchPara
   const profile = await requireCapability("view_policies");
   if (profile.role !== "operations_head_life") await requirePolicyCreator();
   const downlineCaseFilter = profile.role === "operations_head_life"
-    ? operationsHeadPolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))
+    ? operationsHeadVisiblePolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))
     : null;
   const params = searchParams ? await searchParams : undefined;
   const filter: CaseFilter = params?.status === "issued" || params?.status === "all" ? params.status : "pending";
