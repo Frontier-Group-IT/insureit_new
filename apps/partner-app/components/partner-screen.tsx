@@ -231,7 +231,7 @@ export function PartnerScreen({
                 style={styles.homeHeroImage}
                 resizeMode="cover"
               />
-              <View style={styles.homeHeroShade} />
+              <View pointerEvents="none" style={styles.homeHeroShade} />
 
               <View style={styles.homeHeroTopRow}>
                 <View style={styles.homeBrand} accessibilityLabel="INSUREIT Partner">

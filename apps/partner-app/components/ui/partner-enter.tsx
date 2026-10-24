@@ -26,6 +26,7 @@ export function PartnerEnter({
 
   return (
     <Animated.View
+      pointerEvents="box-none"
       style={[
         style,
         {

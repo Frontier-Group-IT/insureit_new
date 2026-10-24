@@ -602,6 +602,7 @@ function QuickActionsCarousel({
       onTouchStart={pauseForTouch}
       onTouchEnd={resumeAfterTouch}
       onTouchCancel={resumeAfterTouch}
+      keyboardShouldPersistTaps="always"
       scrollEventThrottle={16}
       onContentSizeChange={(width) => {
         loopWidthRef.current = width / 2;
