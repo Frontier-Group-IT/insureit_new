@@ -115,7 +115,7 @@ export default function PartnerClaimVehicleSelector() {
                       style={[styles.option, isSelected && styles.optionSelected]}
                     >
                       <View style={styles.logo}>
-                        {getPartnerManufacturerLogoSource(row.make) ? <Image source={getPartnerManufacturerLogoSource(row.make)!} resizeMode="contain" style={styles.logoImage}/> : <Ionicons name="car-outline" size={24} color="#55789F"/>}
+                        {getPartnerManufacturerLogoSource(row.make) ? <Image source={getPartnerManufacturerLogoSource(row.make)!} resizeMode="contain" style={[styles.manufacturerLogoImage, manufacturerLogoAdjustment(row.make)]}/> : <Ionicons name="car-outline" size={24} color="#55789F"/>}
                       </View>
                       <View style={styles.vehicleText}>
                         <Text style={[styles.plate, isSelected && styles.plateSelected]}>{row.vehicle_no || 'Registration pending'}</Text>
@@ -136,7 +136,7 @@ export default function PartnerClaimVehicleSelector() {
             onPress={() => setDropdownOpen(true)}
             style={styles.vehicleSelect}
           >
-            {choice ? <View style={styles.logo}>{getPartnerManufacturerLogoSource(choice.make) ? <Image source={getPartnerManufacturerLogoSource(choice.make)!} resizeMode="contain" style={styles.logoImage}/> : <Ionicons name="car-outline" size={24} color="#55789F"/>}</View> : <Ionicons name="car-outline" size={23} color="#1D569B" />}
+            {choice ? <View style={styles.logo}>{getPartnerManufacturerLogoSource(choice.make) ? <Image source={getPartnerManufacturerLogoSource(choice.make)!} resizeMode="contain" style={[styles.manufacturerLogoImage, manufacturerLogoAdjustment(choice.make)]}/> : <Ionicons name="car-outline" size={24} color="#55789F"/>}</View> : <Ionicons name="car-outline" size={23} color="#1D569B" />}
             <View style={styles.vehicleText}>
               <Text style={choice ? styles.plate : styles.placeholder}>{choice?.vehicle_no || 'Select vehicle number'}</Text>
               {choice ? <Text style={styles.description} numberOfLines={1}>{[choice.make,choice.model].filter(Boolean).join(' · ')}</Text> : null}
@@ -176,6 +176,14 @@ function getPolicyExpiryStatus(expiry: string | null | undefined): {
   return { label: 'Active', color: '#20A56B', icon: 'checkmark' };
 }
 
+// Some supplied logos have substantial transparent space within the bitmap.
+// Apply a small, make-specific optical adjustment without stretching the artwork.
+function manufacturerLogoAdjustment(make: string | null | undefined) {
+  const normalized = (make || '').trim().toLowerCase();
+  if (/^(mahindra|tata)(\\b|\\s)/.test(normalized)) return { transform: [{ scale: 1.13 }] };
+  return undefined;
+}
+
 const styles = StyleSheet.create({
  root:{flex:1,backgroundColor:'#EDF5FF'},
  header:{height:67,paddingHorizontal:15,flexDirection:'row',alignItems:'center',gap:13,backgroundColor:'#1261C4'},
@@ -200,7 +208,8 @@ const styles = StyleSheet.create({
  plateSelected:{color:'#0A3C82'},
  hint:{fontSize:11,color:'#667F9A',padding:9},
  error:{fontSize:11,color:'#B42318',padding:9},
- logo:{height:43,width:43,alignItems:'center',justifyContent:'center',borderRadius:10,backgroundColor:'#F0F5FB'},
+ logo:{height:54,width:54,alignItems:'center',justifyContent:'center',borderRadius:11,backgroundColor:'#F0F5FB',overflow:'hidden'},
+ manufacturerLogoImage:{height:46,width:46},
  logoImage:{height:32,width:32},
  vehicleText:{flex:1,minWidth:0},
  plate:{fontSize:13,fontWeight:'900',color:'#102B54'},
