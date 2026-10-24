@@ -83,7 +83,7 @@ export async function canAccessOperationsHeadCase(profileId: string, caseId: str
   if (!caseId || !filter) return false;
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin.from("life_health_cases")
-    .select("id").eq("id", caseId).or(filter).maybeSingle<{ id: string }>();
+    .select("id").eq("id", caseId).in("business_line", ["Life", "Health"]).or(filter).maybeSingle<{ id: string }>();
   return !error && Boolean(data?.id);
 }
 
@@ -157,6 +157,7 @@ export async function canAccessPolicy(
   if (role === "operations_head_life") {
     const downline = await getOperationsHeadDownlinePolicyScope(profileId);
     // All Life/Health records are authorized for case processing and issued-policy edits; other verticals stay downline-only.
+    void write;
     const filter = operationsHeadVisiblePolicyFilter(downline);
     if (!filter) return false;
     const admin = createSupabaseAdminClient();
