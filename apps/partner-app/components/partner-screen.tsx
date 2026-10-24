@@ -68,9 +68,9 @@ export function PartnerScreen({
   const { isOffline } = usePartnerNetwork();
   const router = useRouter();
   const safeAreaInsets = useSafeAreaInsets();
-  // SafeAreaView already offsets overlays when iOS reports a top inset.
-  // Only fall back when older OTA runtimes report zero, avoiding double spacing.
-  const stickyStatusBarClearance = Platform.OS === 'ios' && safeAreaInsets.top === 0 ? 54 : 0;
+  // Overlay is a sibling of SafeAreaView, so position it below the real status-bar inset.
+  // Older iOS runtimes occasionally report zero: reserve a safe fallback in that case.
+  const stickyStatusBarClearance = safeAreaInsets.top > 0 ? safeAreaInsets.top : (Platform.OS === 'ios' ? 54 : 0);
   const sharedSearch = usePartnerSearch();
   const isHomeHero = eyebrow === 'INSUREIT PARTNER' && !onBack;
   const heroSearchValue = heroSearch?.value ?? sharedSearch.query;
@@ -189,7 +189,8 @@ export function PartnerScreen({
   );
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <View style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
       <Animated.ScrollView
         ref={scrollRef}
         {...scrollProps}
@@ -305,13 +306,14 @@ export function PartnerScreen({
         ) : null}
         {children}
       </Animated.ScrollView>
+      </SafeAreaView>
       {showFixedHeader && (isHomeHero || (stickyHeading && stickyControls)) ? (
-        <View style={[styles.fixedWhiteHeader , { top: stickyStatusBarClearance }]} pointerEvents="box-none">
+        <View style={[styles.fixedWhiteHeader, { top: stickyStatusBarClearance }]} pointerEvents="box-none">
           <Text numberOfLines={1} style={styles.fixedWhiteHeading}>{isHomeHero ? title : stickyHeading}</Text>
           {isHomeHero ? homeSearchControl : stickyControls}
         </View>
       ) : null}
-    </SafeAreaView>
+    </View>
   );
 }
 
