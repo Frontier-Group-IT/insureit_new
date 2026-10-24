@@ -150,7 +150,8 @@ export async function canAccessPolicy(
 
   if (role === "operations_head_life") {
     const downline = await getOperationsHeadDownlinePolicyScope(profileId);
-    const filter = !write ? operationsHeadVisiblePolicyFilter(downline) : operationsHeadPolicyFilter(downline);
+    // All Life/Health records are authorized for case processing and issued-policy edits; other verticals stay downline-only.
+    const filter = operationsHeadVisiblePolicyFilter(downline);
     if (!filter) return false;
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin.from("policies")
