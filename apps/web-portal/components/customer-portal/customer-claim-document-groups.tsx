@@ -18,18 +18,18 @@ const groups = [
 ] as const;
 
 const normalized=(s:string)=>s.toLowerCase().replace(/[^a-z0-9]/g,"");
-export function CustomerClaimDocumentGroups({documents,claimId,accountId,stage,showSaveDetails=false,allowUpload=true}:{
-  documents:CustomerClaimFile[];claimId:string;accountId:string;stage:string;showSaveDetails?:boolean;allowUpload?:boolean;
+export function CustomerClaimDocumentGroups({documents,claimId,accountId,stage,showSaveDetails=false,showDraftAction=false,draftAction,allowUpload=true}:{
+  documents:CustomerClaimFile[];claimId:string;accountId:string;stage:string;showSaveDetails?:boolean;showDraftAction?:boolean;draftAction?:(form:FormData)=>Promise<void>;allowUpload?:boolean;
 }) {
   const [active,setActive]=useState(0);
   return <section className="rounded-2xl border border-[#DCE5F3] bg-white p-4">
-    <h2 className="mb-3 text-[17px] font-semibold text-[#071D49]">Claim Documents</h2>
+    <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-[17px] font-semibold text-[#071D49]">Document Verification</h2><span className="rounded-lg bg-[#F3F6FC] px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">Documents verified {documents.filter(doc=>doc.verification_status==="verified").length} / {groups.reduce((sum, group)=>sum+group.types.length,0)}</span></div>
     <div role="tablist" aria-label="Claim document groups" className="grid grid-cols-2 overflow-hidden rounded-lg border border-[#D9E3F0] sm:grid-cols-5">
-      {groups.map((group,i)=><button key={group.name} type="button" role="tab" aria-selected={i===active} onClick={()=>setActive(i)} className={`flex min-h-11 items-center gap-2 border-r border-[#D9E3F0] px-3 text-left text-[11px] font-semibold ${i===active?"bg-[#1253A7] text-white":"bg-[#FAFCFF] text-[#183257] hover:bg-[#EDF4FF]"}`}>{group.name}</button>)}
+      {groups.map((group,i)=><button key={group.name} type="button" role="tab" aria-selected={i===active} onClick={()=>setActive(i)} className={`flex min-h-11 items-center gap-2 border-r border-[#D9E3F0] px-3 text-left text-[11px] font-semibold ${i===active?"bg-gradient-to-r from-[#6042E8] to-[#4F90EA] text-white":"bg-[#FAFCFF] text-[#183257] hover:bg-[#EDF4FF]"}`}><span className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] ${i===active?"bg-white text-[#5144D8]":"bg-[#EAF1FF] text-[#1D3C6B]"}`}>{i+1}</span>{group.name}</button>)}
     </div>
     <div role="tabpanel" className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
       {groups[active].types.map(item=><CustomerClaimCompactDocument key={item.type} label={item.label} type={item.type} documents={documents.filter(doc=>normalized(doc.document_type)===normalized(item.type))} claimId={claimId} accountId={accountId} stage={stage} allowUpload={allowUpload}/>)}
     </div>
-    {showSaveDetails?<div className="mt-4 flex justify-end border-t border-[#E5EBF5] pt-4"><button type="submit" form="customer-claim-stage-details-form" className="rounded-lg bg-[#1253A7] px-5 py-2.5 text-[12px] font-semibold text-white">Save Details</button></div>:null}
+    {showSaveDetails?<div className="mt-4 flex justify-end gap-3 border-t border-[#E5EBF5] pt-4">{showDraftAction && draftAction ? <button type="submit" form="customer-claim-stage-details-form" formAction={draftAction} formNoValidate className="rounded-lg border border-[#BCD1F1] bg-white px-5 py-2.5 text-[12px] font-semibold text-[#163C72] hover:bg-[#F1F6FF]">Save as Draft</button> : null}<button type="submit" form="customer-claim-stage-details-form" className="rounded-lg bg-gradient-to-r from-[#6042E8] to-[#4F90EA] px-5 py-2.5 text-[12px] font-semibold text-white">Save Details</button></div>:null}
   </section>;
 }
