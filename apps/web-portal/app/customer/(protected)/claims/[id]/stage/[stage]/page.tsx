@@ -6,7 +6,7 @@ import { saveCustomerExternalStage, saveCustomerClaimIntimationDraft, switchCust
 import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/customer-claim-evidence-workspace";
 import { CustomerClaimDocumentGroups } from "@/components/customer-portal/customer-claim-document-groups";
 import { CustomerClaimBooleanChoice } from "@/components/customer-portal/customer-claim-boolean-choice";
-import { Check, Circle, ArrowLeft, LockKeyhole, CarFront, FileText, ShieldCheck, CalendarDays } from "lucide-react";
+import { Check, Circle, LockKeyhole, CarFront, FileText, ShieldCheck, CalendarDays } from "lucide-react";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
@@ -35,7 +35,6 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
   const canUploadStage = selected.key==="spot_intimation" || selected.key==="claim_intimation";
   const allowEdit = canEditStage || canUploadStage;
   return <div className="space-y-3">
-    <Link href={{pathname:"/customer/claims",query:{account:account.id}}} className="inline-flex items-center gap-2 text-sm font-bold text-[#245DAB]"><ArrowLeft className="h-4 w-4"/> Claims Register</Link>
     <section className="overflow-hidden rounded-2xl border border-[#D9E3F0] bg-white">
       <div className="grid grid-cols-2 lg:grid-cols-5">
         {([
