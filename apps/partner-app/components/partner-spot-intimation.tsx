@@ -94,6 +94,7 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
 }
 function EditableField({label,required,value,onChange,placeholder,editable,icon,keyboard='default'}:{label:string;required?:boolean;value:string;onChange:(value:string)=>void;placeholder:string;editable:boolean;icon?:keyof typeof Ionicons.glyphMap;keyboard?:'default'|'phone-pad'}) {
   const [pickerVisible,setPickerVisible]=useState(false);
+  const [draftPickerValue,setDraftPickerValue]=useState<Date>(()=>new Date());
   const mode=icon==='calendar-outline'?'date':icon==='time-outline'?'time':null;
   const now=new Date();
   const pickerValue=(()=>{
@@ -107,7 +108,7 @@ function EditableField({label,required,value,onChange,placeholder,editable,icon,
     }
     return now;
   })();
-  const openPicker=()=>{if(editable&&mode)setPickerVisible(true);};
+  const openPicker=()=>{if(editable&&mode){setDraftPickerValue(pickerValue);setPickerVisible(true);}};
   const pad=(n:number)=>String(n).padStart(2,'0');
   return <View style={styles.fieldWrap}>
     <Text style={styles.fieldLabel}>{label}{required?<Text style={{color:'#D74747'}}> *</Text>:null}</Text>
@@ -116,12 +117,13 @@ function EditableField({label,required,value,onChange,placeholder,editable,icon,
       {icon?<Pressable accessibilityRole="button" accessibilityLabel={`Choose ${label}`} accessibilityState={{disabled:!editable}} disabled={!editable} onPress={openPicker} hitSlop={10} style={{minWidth:36,minHeight:36,alignItems:'center',justifyContent:'center'}}><Ionicons name={icon} color="#1857A9" size={20}/></Pressable>:null}
     </View>
     {pickerVisible && mode ? <View>
-      <DateTimePicker value={pickerValue} mode={mode} display={Platform.OS==='ios'?'spinner':'default'} onChange={(event,date)=>{
+      <DateTimePicker value={draftPickerValue} mode={mode} display={Platform.OS==='ios'?'spinner':'default'} onChange={(event,date)=>{
         if(Platform.OS!=='ios')setPickerVisible(false);
         if(event.type==='dismissed'||!date)return;
-        onChange(mode==='date'?`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`:`${pad(date.getHours())}:${pad(date.getMinutes())}`);
+        setDraftPickerValue(date);
+        if(Platform.OS!=='ios')onChange(mode==='date'?`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`:`${pad(date.getHours())}:${pad(date.getMinutes())}`);
       }}/>
-      {Platform.OS==='ios'?<Pressable accessibilityRole="button" accessibilityLabel="Done selecting date or time" onPress={()=>setPickerVisible(false)} style={{alignSelf:'flex-end',padding:10}}><Text style={{color:'#1857A9',fontWeight:'800'}}>Done</Text></Pressable>:null}
+      {Platform.OS==='ios'?<Pressable accessibilityRole="button" accessibilityLabel="Done selecting date or time" onPress={()=>{const date=draftPickerValue;onChange(mode==='date'?`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`:`${pad(date.getHours())}:${pad(date.getMinutes())}`);setPickerVisible(false);}} style={{alignSelf:'flex-end',padding:10}}><Text style={{color:'#1857A9',fontWeight:'800'}}>Done</Text></Pressable>:null}
     </View>:null}
   </View>;
 }
