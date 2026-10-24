@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=c4204f649b467b11221e3a368b146389bbc7c998
-reason=partner-claim-vehicle-complete-selector-pr-3480
+source_main=2777fff678da2325aa49f3ca61502ac65cde9815
+reason=partner-home-ios-touch-fix-pr-3482
