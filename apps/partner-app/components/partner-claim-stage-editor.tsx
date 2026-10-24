@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
@@ -122,9 +123,27 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
 }
 
 function EditableField({field,value,onChange}:{field:Field;value:string;onChange:(value:string)=>void}){
+  const [pickerVisible,setPickerVisible]=useState(false);
+  const isDate=field.kind==='date';
+  const parsedDate=/^\d{4}-\d{2}-\d{2}$/.test(value)?new Date(value+'T12:00:00'):null;
+  const pickerValue=parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : new Date();
+  const pad=(n:number)=>String(n).padStart(2,'0');
   return <View style={styles.fieldWrap}><Text style={styles.fieldLabel}>{field.label}{field.required?<Text style={styles.required}> *</Text>:null}</Text>
     {field.kind==='choice'?<View style={styles.choiceRow}>{(field.options||[]).map(option=><Pressable key={option.value} accessibilityRole="button" accessibilityState={{selected:value===option.value}} onPress={()=>onChange(option.value)} style={[styles.choice,value===option.value&&styles.choiceSelected]}><Text style={[styles.choiceText,value===option.value&&styles.choiceTextSelected]}>{option.label}</Text></Pressable>)}</View>
-    :<View style={styles.inputShell}><TextInput value={value} onChangeText={onChange} placeholder={field.placeholder|| (field.kind==='date'?'YYYY-MM-DD':`Enter ${field.label.toLowerCase()}`)} placeholderTextColor="#A1ADBC" keyboardType={field.kind==='number'?'decimal-pad':'default'} style={styles.input}/>{field.kind==='date'?<Ionicons name="calendar-outline" size={18} color="#5E7CA2"/>:null}</View>}
+    :<>
+      <View style={styles.inputShell}>
+        <TextInput accessibilityLabel={field.label} value={value} onChangeText={onChange} placeholder={field.placeholder||(isDate?'YYYY-MM-DD':`Enter ${field.label.toLowerCase()}`)} placeholderTextColor="#A1ADBC" keyboardType={field.kind==='number'?'decimal-pad':'default'} style={styles.input}/>
+        {isDate?<Pressable accessibilityRole="button" accessibilityLabel={`Choose ${field.label}`} onPress={()=>setPickerVisible(true)} hitSlop={10} style={styles.calendarButton}><Ionicons name="calendar-outline" size={20} color="#1857A9"/></Pressable>:null}
+      </View>
+      {isDate&&pickerVisible?<View>
+        <DateTimePicker value={pickerValue} mode="date" display={Platform.OS==='ios'?'spinner':'default'} onChange={(event,date)=>{
+          if(Platform.OS!=='ios')setPickerVisible(false);
+          if(event.type==='dismissed'||!date)return;
+          onChange(`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`);
+        }}/>
+        {Platform.OS==='ios'?<Pressable accessibilityRole="button" accessibilityLabel={`Done selecting ${field.label}`} onPress={()=>setPickerVisible(false)} style={styles.pickerDone}><Text style={styles.pickerDoneText}>Done</Text></Pressable>:null}
+      </View>:null}
+    </>}
   </View>;
 }
 
@@ -153,6 +172,6 @@ const styles=StyleSheet.create({
   root:{flex:1,backgroundColor:'#EDF6FE'},header:{height:50,backgroundColor:'#0860C8',flexDirection:'row',alignItems:'center',paddingHorizontal:12,gap:10},back:{width:34,height:34,alignItems:'center',justifyContent:'center'},headerCopy:{flex:1},headerTitle:{color:'#FFF',fontSize:15,fontWeight:'900'},headerSubtitle:{color:'#DDEBFA',fontSize:10},scroll:{flex:1},content:{paddingHorizontal:13,paddingTop:18,paddingBottom:24,gap:12},
   hero:{backgroundColor:'#07357E',borderRadius:18,padding:12,elevation:3},heroHeading:{flexDirection:'row',alignItems:'center',gap:8},heroCircle:{width:32,height:32,borderRadius:16,backgroundColor:'#165AB1',alignItems:'center',justifyContent:'center'},heroTitle:{flex:1,color:'#FFF',fontSize:15,fontWeight:'900'},control:{maxWidth:'42%',color:'#FFF',fontSize:10.5,fontWeight:'800'},heroRule:{height:1,backgroundColor:'#5E7BA8',marginVertical:10},identityRow:{flexDirection:'row',alignItems:'center',gap:7},identity:{flex:1,minWidth:0,flexDirection:'row',alignItems:'center',gap:7},identityDivider:{width:1,height:38,backgroundColor:'#5377A6'},logo:{width:40,height:40,borderRadius:9,backgroundColor:'#FFF',alignItems:'center',justifyContent:'center'},logoImage:{width:33,height:33},identityCopy:{flex:1,minWidth:0},identityTitle:{color:'#FFF',fontSize:9.5,fontWeight:'900'},identitySub:{color:'#DCE8F8',fontSize:8,marginTop:2},
   card:{backgroundColor:'#FFF',borderRadius:18,borderWidth:1,borderColor:'#D7E2EC',padding:13,gap:10},sectionHeading:{flexDirection:'row',alignItems:'center',gap:10,marginBottom:3},sectionIcon:{width:36,height:36,borderRadius:12,backgroundColor:'#EDF5FF',alignItems:'center',justifyContent:'center'},sectionTitle:{fontSize:12.5,fontWeight:'900',color:'#14284B'},sectionSubtitle:{fontSize:9.5,color:'#7D8B9F',marginTop:2},
-  fieldWrap:{gap:5},fieldLabel:{fontSize:10.5,fontWeight:'800',color:'#203859'},required:{color:'#D94B4B'},inputShell:{minHeight:47,borderRadius:12,borderWidth:1,borderColor:'#CFDCE9',backgroundColor:'#FBFDFF',paddingHorizontal:11,flexDirection:'row',alignItems:'center'},input:{flex:1,height:45,fontSize:12,color:'#183052',fontWeight:'700'},choiceRow:{flexDirection:'row',gap:8},choice:{flex:1,minHeight:43,borderRadius:11,borderWidth:1,borderColor:'#D5E0EA',backgroundColor:'#FFF',alignItems:'center',justifyContent:'center'},choiceSelected:{backgroundColor:'#EAF3FF',borderColor:'#1768C9'},choiceText:{fontSize:11,fontWeight:'800',color:'#78889D'},choiceTextSelected:{color:'#0B52A5'},documentGrid:{flexDirection:'row',flexWrap:'wrap',gap:8},documentTile:{width:'31.5%',minHeight:132,borderRadius:12,borderWidth:1,borderColor:'#DDE6EF',backgroundColor:'#F8FBFF',padding:7,alignItems:'center',gap:6},documentGlyph:{width:34,height:34,borderRadius:8,backgroundColor:'#1768C9',alignItems:'center',justifyContent:'center'},documentLabel:{fontSize:8.5,fontWeight:'900',color:'#203552',textAlign:'center',minHeight:22},
+  fieldWrap:{gap:5},fieldLabel:{fontSize:10.5,fontWeight:'800',color:'#203859'},required:{color:'#D94B4B'},inputShell:{minHeight:47,borderRadius:12,borderWidth:1,borderColor:'#CFDCE9',backgroundColor:'#FBFDFF',paddingHorizontal:11,flexDirection:'row',alignItems:'center'},input:{flex:1,height:45,fontSize:12,color:'#183052',fontWeight:'700'},calendarButton:{minWidth:36,minHeight:36,alignItems:'center',justifyContent:'center'},pickerDone:{alignSelf:'flex-end',padding:10},pickerDoneText:{color:'#1857A9',fontWeight:'800'},choiceRow:{flexDirection:'row',gap:8},choice:{flex:1,minHeight:43,borderRadius:11,borderWidth:1,borderColor:'#D5E0EA',backgroundColor:'#FFF',alignItems:'center',justifyContent:'center'},choiceSelected:{backgroundColor:'#EAF3FF',borderColor:'#1768C9'},choiceText:{fontSize:11,fontWeight:'800',color:'#78889D'},choiceTextSelected:{color:'#0B52A5'},documentGrid:{flexDirection:'row',flexWrap:'wrap',gap:8},documentTile:{width:'31.5%',minHeight:132,borderRadius:12,borderWidth:1,borderColor:'#DDE6EF',backgroundColor:'#F8FBFF',padding:7,alignItems:'center',gap:6},documentGlyph:{width:34,height:34,borderRadius:8,backgroundColor:'#1768C9',alignItems:'center',justifyContent:'center'},documentLabel:{fontSize:8.5,fontWeight:'900',color:'#203552',textAlign:'center',minHeight:22},
   nav:{height:61,backgroundColor:'#081F4C',borderTopLeftRadius:17,borderTopRightRadius:17,flexDirection:'row',alignItems:'center'},navItem:{flex:1,alignItems:'center',gap:3},navIcon:{width:34,height:32,borderRadius:11,backgroundColor:'#193869',alignItems:'center',justifyContent:'center'},navLabel:{fontSize:9,color:'#D3E0F3',fontWeight:'700'},
 });
