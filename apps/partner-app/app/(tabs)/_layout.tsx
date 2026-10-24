@@ -45,7 +45,7 @@ function tabIcon(inactive: IconName, active: IconName) {
   return function PartnerTabIcon({ color, focused }: { color: string; size: number; focused: boolean }) {
     return (
       <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
-        <Ionicons name={focused ? active : inactive} color={color} size={20} />
+        <Ionicons name={focused ? active : inactive} color={color} size={focused ? 25 : 20} />
       </View>
     );
   };
@@ -67,9 +67,9 @@ const styles = StyleSheet.create({
   },
   icon: { marginTop: 0 },
   iconWrap: {
-    width: 40,
-    height: 28,
-    borderRadius: 14,
+    width: 44,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -520,7 +520,7 @@ function QuickAction({
     centeredOffset + QUICK_ACTION_STEP * 2,
   ];
   const iconScale = scrollX.interpolate({
-    inputRange, outputRange: [1, 1.03, 1.17, 1.03, 1], extrapolate: 'clamp',
+    inputRange, outputRange: [1, 1.05, 1.25, 1.05, 1], extrapolate: 'clamp',
   });
   const highlightOpacity = scrollX.interpolate({
     inputRange, outputRange: [0, 0.08, 1, 0.08, 0], extrapolate: 'clamp',
@@ -564,8 +564,8 @@ function QuickActionsCarousel({
 
   useEffect(() => {
     const timer = setInterval(() => {
-      // On iOS, repeated programmatic scrollTo calls compete with card taps.
-      if (Platform.OS === 'ios' || draggingRef.current || touchingRef.current || loopWidthRef.current <= 0) return;
+      // Pause while the user interacts; auto-scroll on iOS and Android.
+      if (draggingRef.current || touchingRef.current || loopWidthRef.current <= 0) return;
       const next = offsetRef.current + 0.75;
       offsetRef.current = next >= loopWidthRef.current ? next - loopWidthRef.current : next;
       scrollRef.current?.scrollTo({ x: offsetRef.current, animated: false });
