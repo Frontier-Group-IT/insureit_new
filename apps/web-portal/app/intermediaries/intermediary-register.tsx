@@ -64,7 +64,7 @@ export async function IntermediaryRegister({
   success,
   error,
 }: { selectedType: IntermediaryType | null } & Filters) {
-  const profile = await requirePospMispManager();
+  const profile = await requirePospMispManager(true);
   const admin = createSupabaseAdminClient();
   const effectiveType = selectedType ?? typeFilter;
   const accessibleIds = await getAccessibleIntermediaryIds(profile.id, profile.role);

@@ -95,6 +95,8 @@ jobs:
         run: node --experimental-strip-types scripts/sales-executive-policy-access-regression.mjs
       - name: Life Operations hierarchy and policy authorization regression
         run: node --experimental-strip-types scripts/operations-head-life-regression.mjs
+      - name: Operations Head intermediary downline security regression
+        run: node --experimental-strip-types scripts/operations-head-life-intermediary-regression.mjs
       - name: Claims Head least-privilege regression
         run: node --experimental-strip-types scripts/claims-head-least-privilege-regression.mjs
       - name: Policy Intake Policy Register quick-link regression

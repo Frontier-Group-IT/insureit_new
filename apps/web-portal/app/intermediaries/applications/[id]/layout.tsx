@@ -30,7 +30,7 @@ export default async function ApplicationReviewLayout({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const reviewer = await requireScopedPospMispManager(id);
+  const reviewer = await requireScopedPospMispManager(id, true);
   const canDelete = await hasEffectiveCapability(reviewer, "manage_system", "approve");
   const admin = createSupabaseAdminClient();
 

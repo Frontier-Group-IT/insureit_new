@@ -5,8 +5,8 @@ import { roleCapabilities, roleLabels } from "../lib/roles.ts";
 
 const read = (name) => readFileSync(resolve(process.cwd(),name),"utf8");
 assert.equal(roleLabels.operations_head_life,"Operations Head - Life");
-assert.deepEqual(roleCapabilities.operations_head_life,["view_policies"],
-  "Keep generic capability view-only: mutations require per-record authorization");
+assert.deepEqual(roleCapabilities.operations_head_life,["view_policies","view_intermediaries"],
+  "Generic policy/intermediary capabilities stay read-only; explicit scoped actions authorize writes");
 const scope=read("lib/employee-access-scope.ts");
 assert.match(scope,/role === "operations_head_life"/);
 assert.match(scope,/ac167429-0ce0-4ffe-90ea-4040cb4fea95/);

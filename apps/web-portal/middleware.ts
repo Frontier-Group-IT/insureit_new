@@ -24,6 +24,15 @@ function isOperationsHeadLifePath(pathname: string) {
     pathname === "/policies/life-health-cases" ||
     new RegExp("^/policies/life-health-cases/[^/]+$").test(pathname) ||
     new RegExp("^/policies/life-health-case-documents/[0-9a-fA-F-]{36}/view$").test(pathname) ||
+    pathname === "/intermediaries" ||
+    pathname === "/intermediaries/partner" ||
+    pathname === "/intermediaries/posp" ||
+    pathname === "/intermediaries/misp" ||
+    pathname === "/intermediaries/posp/new" ||
+    pathname === "/intermediaries/misp/new" ||
+    pathname === "/customers/posp-misp/new" ||
+    pathname === "/customers/posp-misp/new/submit" ||
+    new RegExp("^/intermediaries/applications/[0-9a-fA-F-]{36}(/workflow)?$").test(pathname) ||
     pathname === "/access-denied";
 }
 const claimsHeadHome = "/claims";

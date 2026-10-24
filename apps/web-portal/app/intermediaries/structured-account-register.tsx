@@ -44,7 +44,7 @@ export async function StructuredAccountRegister({
   search?: string;
   status?: StructuredAccountStatus;
 }) {
-  const profile = await requirePospMispManager();
+  const profile = await requirePospMispManager(true);
   const admin = createSupabaseAdminClient();
   const accessibleIds = await getAccessibleIntermediaryIds(profile!.id, profile!.role);
 

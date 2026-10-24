@@ -6,6 +6,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
+import { isEmployeeWithinAccessScope } from "@/lib/employee-access-scope";
 import { parsePospMispWorkbook, WorkbookValidationError } from "@/lib/posp-misp-workbook";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { canManagePospMispOnboarding } from "@/lib/roles";
@@ -628,10 +629,15 @@ function normalizeExcelRow(partnerType: PartnerType, source: Record<string, unkn
   };
 }
 
-async function currentManager() {
+async function currentManager(employeeId?: string | null) {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile?.id || !(await hasAnyEffectiveCapability(profile, ["create_intermediary_application", "review_intermediary_application"]))) throw new Error("You are not authorized to manage POSP/MISP onboarding.");
+  if (!profile?.id) throw new Error("You are not authorized to manage POSP/MISP onboarding.");
+  if (profile.role === "operations_head_life") {
+    if (!employeeId || !(await isEmployeeWithinAccessScope(profile.id, profile.role, employeeId))) throw new Error("Selected RM must be in Gagan Singh\u0027s active downline.");
+    return profile;
+  }
+  if (!(await hasAnyEffectiveCapability(profile, ["create_intermediary_application", "review_intermediary_application"]))) throw new Error("You are not authorized to manage POSP/MISP onboarding.");
   return profile;
 }
 
@@ -873,7 +879,7 @@ function contactPayloads(applicationId: string, row: NormalizedRow): ContactPayl
 export async function createPospMispOnboarding(_state: PospMispState, data: FormData): Promise<PospMispState> {
   let manager: { id: string };
   try {
-    manager = await currentManager();
+    manager = await currentManager(String(data.get("associate_employee_id") ?? ""));
   } catch (error) {
     return fail(error instanceof Error ? error.message : "You are not authorized.");
   }

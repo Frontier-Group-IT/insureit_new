@@ -49,7 +49,7 @@ export const getEmployeeAccessScope = cache(async (profileId: string, role: stri
   }
 
   if (role === "operations_head_life") {
-    if (capability !== "view_policies") return { mode: "none", employeeIds: [], profileIds: [] };
+    if (capability && !["view_policies","view_intermediaries"].includes(capability)) return { mode: "none", employeeIds: [], profileIds: [] };
     // Always bind this operational role to the confirmed Life vertical hierarchy,
     // never to the login holder's own employee tree or to broad permission overrides.
     const root = "ac167429-0ce0-4ffe-90ea-4040cb4fea95";
@@ -178,7 +178,24 @@ export async function getAccessibleIntermediaryApplicationIds(profileId: string,
     .order("id", { ascending: true })
     .range(from, to)
     .returns<ApplicationLink[]>());
-  return Array.from(new Set((data ?? []).map((row) => row.application_id).filter(Boolean)));
+  const applicationIds = new Set((data ?? []).map((row) => row.application_id).filter(Boolean));
+  if (role === "operations_head_life") {
+    // Records may be linked either on the onboarding profile or on the
+    // materialized intermediary. Never accept an unverified name/code match.
+    const directFilters: string[] = [];
+    if (scope.profileIds.length) directFilters.push(`associate_profile_id.in.(${scope.profileIds.join(",")})`);
+    if (scope.employeeIds.length) directFilters.push(`associate_employee_id.in.(${scope.employeeIds.join(",")})`);
+    if (!directFilters.length) return [];
+    const { data: linked, error: linkedError } = await fetchAllPages<IntermediaryLink, unknown>((from, to) => admin
+      .from("intermediaries")
+      .select("id,application_id")
+      .or(directFilters.join(","))
+      .order("id", { ascending: true })
+      .range(from, to).returns<IntermediaryLink[]>());
+    if (linkedError) return [];
+    for (const intermediary of linked ?? []) if (intermediary.application_id) applicationIds.add(intermediary.application_id);
+  }
+  return Array.from(applicationIds);
 }
 
 export async function getAccessibleImportBatchIds(profileId: string, role: string | null | undefined, capability: Capability = "view_intermediaries") {

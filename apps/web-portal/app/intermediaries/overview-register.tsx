@@ -55,7 +55,7 @@ type RelatedApplicationState = {
 const APPLICATION_SELECT = "id,registration_status,partner_status,requested_type,draft_data,partner_record_id";
 
 export async function OverviewIntermediaryRegister({ search = "", success, error }: { search?: string; success?: string; error?: string }) {
-  const profile = await requirePospMispManager();
+  const profile = await requirePospMispManager(true);
   const admin = createSupabaseAdminClient();
   const accessibleIds = await getAccessibleIntermediaryIds(profile.id, profile.role);
   const canReview = await hasEffectiveCapability(profile, "review_intermediary_application", "edit");

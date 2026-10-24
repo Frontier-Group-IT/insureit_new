@@ -49,7 +49,11 @@ for (const [name, content] of [
   ["workflow review page", workflowReview],
   ["application review layout", applicationLayout],
 ]) {
-  requireText(name, content, "requireScopedPospMispManager(id)");
+  if (!content.includes("requireScopedPospMispManager(id)") &&
+      !(name === "workflow review page" && content.includes("requireScopedPospMispManager(id, true)")) &&
+      !(name === "application review layout" && content.includes("requireScopedPospMispManager(id, true)"))) {
+    throw new Error(`[release-blocker-security] ${name} must use the scoped intermediary guard`);
+  }
   rejectText(name, content, "await requirePospMispManager()");
 }
 
