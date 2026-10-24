@@ -104,6 +104,7 @@ export default function PartnerHomeScreen() {
 
   return (
     <PartnerScreen
+      scrollLinkedHeader
       resetScrollOnFocus
       homeMotionScrollY={homeScrollY}
       eyebrow="INSUREIT PARTNER"
