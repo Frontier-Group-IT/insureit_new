@@ -46,7 +46,7 @@ export async function requirePolicyEditor(policyId?: string) {
   if (profile.role === "operations_head_life") {
     if (!policyId) redirect("/access-denied");
     const { canAccessPolicy } = await import("@/lib/policy-access-scope");
-    if (!(await canAccessPolicy(profile.id, profile.role, policyId))) redirect("/access-denied");
+    if (!(await canAccessPolicy(profile.id, profile.role, policyId, "view_policies", true))) redirect("/access-denied");
     return profile;
   }
   const permission = await getEffectivePermission(profile.id, profile.role, "view_policies");
