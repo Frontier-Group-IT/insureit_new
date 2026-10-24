@@ -43,20 +43,8 @@ export async function updateLifeHealthCaseDetails(formData: FormData) {
   if (row.final_policy_id) return { ok: false as const, error: "Issued cases cannot be edited." };
   if (!row.customer_id) return { ok: false as const, error: "The case customer reference is missing." };
 
-  if (profile.role === "operations_head_life") {
-    const { data: customer, error } = await admin.from("customers")
-      .select("contact_name,phone,address,address_street").eq("id", row.customer_id)
-      .maybeSingle<{ contact_name: string; phone: string; address: string | null; address_street: string | null }>();
-    if (error || !customer ||
-        customer.contact_name.trim() !== customerName ||
-        customer.phone.replace(/\D/g, "").slice(-10) !== customerPhone ||
-        (customer.address_street || customer.address || "").trim() !== customerAddress) {
-      return { ok: false as const, error: "Customer master changes require separate authorization; case fields can be updated without changing customer identity." };
-    }
-  } else {
-    const { error: customerError } = await admin.from("customers").update({ contact_name: customerName, phone: customerPhone, address: customerAddress || null, address_street: customerAddress || null, updated_at: new Date().toISOString() }).eq("id", row.customer_id);
-    if (customerError) return { ok: false as const, error: "Customer details could not be updated." };
-  }
+  const { error: customerError } = await admin.from("customers").update({ contact_name: customerName, phone: customerPhone, address: customerAddress || null, address_street: customerAddress || null, updated_at: new Date().toISOString() }).eq("id", row.customer_id);
+  if (customerError) return { ok: false as const, error: "Customer details could not be updated." };
 
   const { error: caseError } = await admin.from("life_health_cases").update({
     insurance_company_id: insurerId,
