@@ -17,6 +17,7 @@ assert.ok(scope.includes('const root = "ac167429-0ce0-4ffe-90ea-4040cb4fea95"'))
 assert.ok(scope.includes('if (role === "operations_head_life") {') && scope.includes('linkedError) return []'));
 const master=read("lib/master-data-server.ts");
 assert.ok(master.includes("getPospMispManager(allowOperationsHeadLife = false)"));
+assert.ok(master.includes('allowOperationsHeadLife && await hasEffectiveCapability(profile, "view_intermediaries", "view")'));
 assert.ok(master.includes("getScopedPospMispManager(applicationId: string, allowOperationsHeadLife = false)"));
 assert.ok(master.includes('profile.role === "operations_head_life" ? "view_intermediaries" : "review_intermediary_application"'));
 for (const path of ["app/intermediaries/overview-register.tsx","app/intermediaries/intermediary-register.tsx","app/intermediaries/structured-account-register.tsx","app/customers/posp-misp/new/new-onboarding-page.tsx"]) {
@@ -49,4 +50,5 @@ const older=read("app/customers/posp-misp/actions.ts");
 assert.ok(older.includes('isEmployeeWithinAccessScope(profile.id, profile.role, employeeId)'));
 const submission=read("app/customers/posp-misp/new/submit/route.ts");
 assert.ok(submission.includes('canAccessIntermediaryApplication(requester.id, requester.role, existingApplicationId, "view_intermediaries")'));
+assert.ok(submission.includes('hasEffectiveCapability(profile, "view_intermediaries", "view")'));
 console.log("Operations Head intermediary read/create/edit least-privilege checks passed.");
