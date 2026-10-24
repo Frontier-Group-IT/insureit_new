@@ -105,6 +105,7 @@ export function PartnerScreen({
     const reset = () => {
       scrollRef.current?.scrollTo({ y: 0, animated: false });
       latestScrollY.current = 0;
+      setShowFixedHeader(false);
       homeMotionScrollY?.setValue(0);
     };
     reset();
@@ -220,11 +221,12 @@ export function PartnerScreen({
               }) }],
             } : null]}>
               <Image
+                pointerEvents="none"
                 source={require('../assets/figma-dashboard/hero-banner.jpg')}
                 style={styles.homeHeroImage}
                 resizeMode="cover"
               />
-              <View style={styles.homeHeroShade} />
+              <View pointerEvents="none" style={styles.homeHeroShade} />
 
               <View style={styles.homeHeroTopRow}>
                 <View style={styles.homeBrand} accessibilityLabel="INSUREIT Partner">
@@ -301,7 +303,7 @@ export function PartnerScreen({
         {children}
       </Animated.ScrollView>
       {showFixedHeader && (isHomeHero || (stickyHeading && stickyControls)) ? (
-        <View style={styles.fixedWhiteHeader} pointerEvents="box-none">
+        <View pointerEvents="box-none" style={styles.fixedWhiteHeader} collapsable={false}>
           <Text numberOfLines={1} style={styles.fixedWhiteHeading}>{isHomeHero ? title : stickyHeading}</Text>
           {isHomeHero ? homeSearchControl : stickyControls}
         </View>
