@@ -50,10 +50,13 @@ function routeItems(pathname: string) {
 
 export function CustomerRouteBreadcrumbs() {
   const pathname = usePathname();
+  const startClaim = pathname === "/customer/start-claim";
   const router = useRouter();
-  const items = routeItems(pathname);
+  const items = startClaim ? [{label:"Home",href:"/customer/home"},{label:"Start a Claim"}] : routeItems(pathname);
   const visibleItems = items.length > 4 ? [items[0], { label: "…" }, ...items.slice(-2)] : items;
   const pillClass = "relative inline-flex h-9 max-w-[220px] min-w-0 items-center rounded-xl border border-[#E2E8F0] bg-[#F2F6FC] px-3 text-xs font-semibold text-[#203F64] before:absolute before:bottom-1.5 before:left-0 before:top-1.5 before:w-[3px] before:rounded-r-full before:bg-[#2F91FF]/85 sm:px-4 sm:text-[13px]";
+
+  if (startClaim) return <nav aria-label="Customer page path" className="flex min-w-0 items-center gap-3 text-[13px] font-semibold sm:text-[14px]"><Link href="/customer/home" className="inline-flex items-center gap-2 text-[#677391] hover:text-[#633BF5]"><span className="text-[17px]" aria-hidden="true">⌂</span> Home</Link><ChevronRight className="h-4 w-4 text-[#7E87A4]" aria-hidden="true"/><span aria-current="page" className="truncate text-[#633BF5]">Start a Claim</span></nav>;
 
   return (
     <div data-customer-route-breadcrumbs="true" className="flex min-w-0 items-center gap-2 sm:gap-3">
