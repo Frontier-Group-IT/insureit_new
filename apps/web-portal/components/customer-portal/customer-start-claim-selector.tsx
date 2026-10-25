@@ -5,13 +5,13 @@ import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
 import { getInsurerLogo } from "@/lib/insurer-logo";
-import { ArrowRight, Headphones, LoaderCircle, Plus, ShieldAlert, ShieldCheck, ShieldX, TriangleAlert, X } from "lucide-react";
+import { ArrowRight, CarFront, Headphones, LoaderCircle, Plus, ShieldAlert, ShieldCheck, ShieldX, TriangleAlert, X } from "lucide-react";
 import type { CustomerPolicyRow, CustomerVehicleRow } from "@/lib/customer-web-data";
 import { prepareCustomerClaim } from "@/app/customer/(protected)/start-claim/actions";
 
 function ClaimSubmitButton({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
-  return <button type="submit" disabled={disabled || pending} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#0B3884] px-4 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+  return <button type="submit" disabled={disabled || pending} className="inline-flex min-h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8737F4] via-[#6741F5] to-[#2477F3] px-4 text-[14px] font-semibold text-white shadow-[0_8px_18px_rgba(93,72,220,.14)] disabled:cursor-not-allowed disabled:opacity-50">
     {pending ? <><LoaderCircle className="h-4 w-4 animate-spin"/>Preparing claim...</> : <>Continue to Claim <ArrowRight className="h-5 w-5"/></>}
   </button>;
 }
@@ -61,23 +61,25 @@ export function CustomerStartClaimSelector({
       : item.vehicle_no;
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-3">
-      <section className="relative isolate overflow-hidden rounded-2xl border border-[#D6E7FA] bg-[#EAF4FF] px-5 py-6 text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.05)] sm:px-7 sm:py-8">
-        <div className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat opacity-95" style={{ backgroundImage: 'url("/assets/startclaim.png")' }} data-banner="startclaim-png" />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EEF7FF]/35 via-[#EEF7FF]/10 via-52% to-transparent" />
-        <div className="relative flex min-h-[105px] items-center sm:min-h-[125px]">
-          <h1 className="text-[clamp(28px,3.3vw,42px)] font-bold tracking-tight">Start a Claim</h1>
+    <div data-customer-start-claim-reference="true" className="mx-auto w-full space-y-5 pb-8">
+      <section className="relative isolate overflow-hidden rounded-[15px] border border-[#E1E7FB] bg-[#ECF1FF] text-[#0B1643] shadow-[0_5px_22px_rgba(25,46,103,.06)]">
+        <div className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'url("/assets/SCLAIM.jpeg")' }} data-banner="sclaim-jpeg" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F0F3FF]/95 via-[#F0F3FF]/68 via-[42%] to-transparent" />
+        <div className="relative flex min-h-[180px] flex-col justify-center px-6 py-7 sm:min-h-[210px] sm:px-9 lg:min-h-[245px] lg:px-12">
+          <h1 className="text-[clamp(29px,3.6vw,50px)] font-extrabold leading-[1.08] tracking-[-.04em] text-[#0B1748]">Start a <span className="text-[#6034F7]">Claim</span></h1>
+          <p className="mt-3 max-w-[480px] text-[12px] font-medium leading-relaxed text-[#65708B] sm:text-[15px]">We&apos;re here to help you, every step of the way.<br/>Get your claim settled quickly and easily.</p>
+          <span className="mt-4 h-1 w-14 rounded-full bg-gradient-to-r from-[#7B35F5] to-[#9288FF]" aria-hidden="true" />
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[#E1EAF5] bg-white p-4 shadow-[0_6px_24px_rgba(20,58,100,.04)] sm:p-5">
-        <div className="mb-3"><label htmlFor="claim-vehicle" className="text-[16px] font-bold text-[#102B54]">Select your vehicle</label></div>
+      <section className="rounded-2xl border border-[#EDF0F9] bg-white px-5 py-5 shadow-[0_8px_22px_rgba(30,46,98,.06)] sm:px-6">
+        <div className="mb-4 flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#F0EEFF] text-[#6337F6]"><CarFront className="h-5 w-5" aria-hidden="true" /></span><label htmlFor="claim-vehicle" className="text-[16px] font-bold text-[#111E4A]">Select your vehicle</label></div>
         {vehicles.length ? (
           <select
             id="claim-vehicle"
             value={vehicleId}
             onChange={(event) => { setVehicleId(event.target.value); setPolicyDialogOpen(false); setExistingClaimDialogOpen(false); confirmationGrantedRef.current = false; setConfirming(false); }}
-            className="h-10 w-full rounded-lg border border-[#DDE7F3] bg-white px-3 text-[13px] font-semibold text-[#17345D] outline-none transition focus:border-[#2D7FF0] focus:ring-2 focus:ring-[#DCEBFF]"
+            className="h-[46px] w-full rounded-lg border border-[#D6DDFC] bg-white px-4 text-[13px] font-medium text-[#19294D] outline-none transition focus:border-[#7546F5] focus:ring-2 focus:ring-[#F0EBFF]"
           >
             {vehicles.map((item) => (
               <option key={item.id} value={item.id}>
@@ -93,7 +95,7 @@ export function CustomerStartClaimSelector({
 
       </section>
 
-      <section aria-label="Policy details" className="space-y-2">
+      <section aria-label="Policy details" className="space-y-2" data-claim-policy-details="true">
         <h2 className="text-[16px] font-bold text-[#102B54]">Policy details</h2>
         {displayPolicy ? (
           <div className="rounded-2xl bg-[#0C367D] px-4 py-4 text-white shadow-[0_8px_20px_rgba(12,54,125,.12)] sm:px-5">
@@ -119,11 +121,11 @@ export function CustomerStartClaimSelector({
         )}
       </section>
       <div className="grid gap-3 sm:grid-cols-2">
-        <Link href={{ pathname: "/customer/support", query: { account: accountId } }} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#B9CCE4] bg-white px-4 text-[13px] font-semibold text-[#2057A0]">
+        <Link href={{ pathname: "/customer/support", query: { account: accountId } }} className="inline-flex min-h-[50px] items-center justify-center gap-2 rounded-xl border border-[#AA9BFF] bg-[#F7F6FF] px-4 text-[14px] font-semibold text-[#6539EF] transition hover:bg-[#F0EDFF]">
           <Headphones className="h-5 w-5" /> Get Assistance
         </Link>
         {existingClaim ? (
-          <button type="button" onClick={() => setExistingClaimDialogOpen(true)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#0B3884] px-4 text-[13px] font-semibold text-white">
+          <button type="button" onClick={() => setExistingClaimDialogOpen(true)} className="inline-flex min-h-[50px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8737F4] to-[#2477F3] px-4 text-[14px] font-semibold text-white">
             Continue to Claim <ArrowRight className="h-5 w-5"/>
           </button>
         ) : (
