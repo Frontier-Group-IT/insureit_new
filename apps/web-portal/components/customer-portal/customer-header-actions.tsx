@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Bell, ChevronRight, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { CustomerAvatar } from "./customer-avatar";
 
 export function CustomerHeaderActions({ name, userId }: { name: string; userId: string }) {
   const [open, setOpen] = useState(false);
+  const startClaim = usePathname() === "/customer/start-claim";
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,12 +37,13 @@ export function CustomerHeaderActions({ name, userId }: { name: string; userId: 
 
   return (
     <div className="flex items-center gap-3">
-      <Link href="/customer/support" aria-label="Customer updates and support" title="Updates and support" className="grid h-10 w-10 place-items-center rounded-full border border-[#D7E3F2] bg-[#EDF4FC] text-[#142746] hover:bg-[#DFEAFA]">
+      <Link href="/customer/support" aria-label="Customer updates and support" title="Updates and support" className={startClaim ? "relative grid h-10 w-10 place-items-center rounded-xl bg-[#F3F4FF] text-[#152550] hover:bg-[#EDEBFF]" : "grid h-10 w-10 place-items-center rounded-full border border-[#D7E3F2] bg-[#EDF4FC] text-[#142746] hover:bg-[#DFEAFA]"}>
         <Bell className="h-5 w-5" />
+        {startClaim ? <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full border border-white bg-[#F53C77]" aria-hidden="true" /> : null}
       </Link>
       <span className="h-8 w-px bg-[#D2DAE7]" aria-hidden="true" />
       <div ref={menuRef} className="relative">
-        <button type="button" aria-label="Open customer profile menu" aria-expanded={open} onClick={() => setOpen(!open)} className="grid h-11 w-11 place-items-center rounded-full border-2 border-[#245A9A] bg-white text-base font-bold text-[#10213D]">{initial}</button>
+        <button type="button" aria-label="Open customer profile menu" aria-expanded={open} onClick={() => setOpen(!open)} className={startClaim ? "grid h-11 w-11 place-items-center rounded-full bg-[#633BF5] text-base font-bold text-white shadow-[0_4px_12px_rgba(95,61,245,.18)]" : "grid h-11 w-11 place-items-center rounded-full border-2 border-[#245A9A] bg-white text-base font-bold text-[#10213D]"}>{initial}</button>
         {open ? (
           <>
             <div className="absolute right-0 top-14 z-50 w-[min(320px,calc(100vw-24px))] rounded-3xl border border-[#DBE4F0] bg-white shadow-[0_20px_50px_rgba(15,32,57,0.17)]">
