@@ -95,6 +95,23 @@ export function CustomerStartClaimSelector({
 
       </section>
 
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Link href={{ pathname: "/customer/support", query: { account: accountId } }} className="inline-flex min-h-[50px] items-center justify-center gap-2 rounded-xl border border-[#AA9BFF] bg-[#F7F6FF] px-4 text-[14px] font-semibold text-[#6539EF] transition hover:bg-[#F0EDFF]">
+          <Headphones className="h-5 w-5" /> Get Assistance
+        </Link>
+        {existingClaim ? (
+          <button type="button" onClick={() => setExistingClaimDialogOpen(true)} className="inline-flex min-h-[50px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8737F4] to-[#2477F3] px-4 text-[14px] font-semibold text-white">
+            Continue to Claim <ArrowRight className="h-5 w-5"/>
+          </button>
+        ) : (
+          <form ref={claimFormRef} action={claimAction} className="flex" onSubmit={(event) => { if (!hasActivePolicy && !confirmationGrantedRef.current) { event.preventDefault(); setPolicyDialogOpen(true); } }}>
+            <input type="hidden" name="account" value={accountId}/>
+            <input type="hidden" name="vehicle" value={vehicleId}/>
+            <input type="hidden" name="policy" value={policy?.id || ""}/>
+            <ClaimSubmitButton disabled={!vehicle}/>
+          </form>
+        )}
+      </div>
       <section aria-label="Policy details" className="space-y-2" data-claim-policy-details="true">
         <h2 className="text-[16px] font-bold text-[#102B54]">Policy details</h2>
         {displayPolicy ? (
@@ -120,23 +137,6 @@ export function CustomerStartClaimSelector({
           </div>
         )}
       </section>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Link href={{ pathname: "/customer/support", query: { account: accountId } }} className="inline-flex min-h-[50px] items-center justify-center gap-2 rounded-xl border border-[#AA9BFF] bg-[#F7F6FF] px-4 text-[14px] font-semibold text-[#6539EF] transition hover:bg-[#F0EDFF]">
-          <Headphones className="h-5 w-5" /> Get Assistance
-        </Link>
-        {existingClaim ? (
-          <button type="button" onClick={() => setExistingClaimDialogOpen(true)} className="inline-flex min-h-[50px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8737F4] to-[#2477F3] px-4 text-[14px] font-semibold text-white">
-            Continue to Claim <ArrowRight className="h-5 w-5"/>
-          </button>
-        ) : (
-          <form ref={claimFormRef} action={claimAction} className="flex" onSubmit={(event) => { if (!hasActivePolicy && !confirmationGrantedRef.current) { event.preventDefault(); setPolicyDialogOpen(true); } }}>
-            <input type="hidden" name="account" value={accountId}/>
-            <input type="hidden" name="vehicle" value={vehicleId}/>
-            <input type="hidden" name="policy" value={policy?.id || ""}/>
-            <ClaimSubmitButton disabled={!vehicle}/>
-          </form>
-        )}
-      </div>
       {claimState.error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-800">{claimState.error}</p>}
       {existingClaim && existingClaimDialogOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#071B39]/60 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setExistingClaimDialogOpen(false); }}>
