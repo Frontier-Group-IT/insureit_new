@@ -276,9 +276,9 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
 
   useEffect(() => {
     if (!spotState.ok) return;
-    try { window.sessionStorage.removeItem(`insureit:spot-intimation-draft:${claimId}`); } catch { /* optional storage */ }
     setSelectedKey("spot_status");
     router.replace(`/claims/${claimId}?stage=spot_status`);
+    try { window.sessionStorage.removeItem(`insureit:spot-intimation-draft:${claimId}`); } catch { /* optional storage */ }
   }, [claimId, router, spotState.ok]);
 
   return (

@@ -36,6 +36,7 @@ type PartnerIdentity = EmployeeIdentity | LegacyPartnerIdentity | ExplicitPortal
 
 type PartnerScope = {
   intermediary_ids?: string[];
+  partner_ids?: string[];
 };
 
 type UploadMeta = {
@@ -67,7 +68,7 @@ export async function GET(request: Request) {
   const view = url.searchParams.get("view")?.trim().toLowerCase();
 
   if (view === "sources") {
-    const sourceIds = authorizedSourceIds(identity, scope);
+    const sourceIds = await authorizedSourceIds(identity, scope);
     const { data: sources, error: sourcesError } = sourceIds.length
       ? await admin
           .from("intermediaries")
@@ -542,7 +543,7 @@ async function ownIntake(identity: PartnerIdentity, id: string) {
 }
 
 async function resolveSource(identity: PartnerIdentity, scope: PartnerScope, requestedId?: string) {
-  const authorized = authorizedSourceIds(identity, scope);
+  const authorized = await authorizedSourceIds(identity, scope);
   const requested = requestedId?.trim();
   const sourceId = isLegacyPartnerIdentity(identity)
     ? identity.intermediary_id
@@ -610,9 +611,44 @@ function uploaderColumns(identity: PartnerIdentity) {
     : { uploaded_by_profile_id: null, uploaded_by_portal_account_id: legacyPortalAccountId(identity) };
 }
 
-function authorizedSourceIds(identity: PartnerIdentity, scope: PartnerScope) {
+async function authorizedSourceIds(identity: PartnerIdentity, scope: PartnerScope) {
   if (isLegacyPartnerIdentity(identity)) return [identity.intermediary_id];
-  return [...new Set(scope.intermediary_ids ?? [])];
+
+  const ids = new Set(scope.intermediary_ids ?? []);
+  // Branch portals can select their *assigned parent Partner* when the branch
+  // itself has no intermediary record. Do not extend group/employee scopes or
+  // expose unrelated parent accounts.
+  if (!isExplicitPortalIdentity(identity) || identity.portal_access_type !== "branch") {
+    return [...ids];
+  }
+
+  const scopedPartnerIds = scope.partner_ids ?? [];
+  if (!scopedPartnerIds.includes(identity.portal_access_entity_id)) return [...ids];
+
+  const admin = createSupabaseAdminClient();
+  const { data: branch, error: branchError } = await admin
+    .from("partners")
+    .select("id,parent_partner_id,partner_status")
+    .eq("id", identity.portal_access_entity_id)
+    .maybeSingle<{ id: string; parent_partner_id: string | null; partner_status: string }>();
+  if (branchError || branch?.partner_status !== "active_partner" || !branch.parent_partner_id) return [...ids];
+
+  const { data: parent, error: parentError } = await admin
+    .from("partners")
+    .select("id,partner_status,source_application_id")
+    .eq("id", branch.parent_partner_id)
+    .maybeSingle<{ id: string; partner_status: string; source_application_id: string | null }>();
+  if (parentError || parent?.partner_status !== "active_partner" || !parent.source_application_id) return [...ids];
+
+  const { data: parentSource, error: sourceError } = await admin
+    .from("intermediaries")
+    .select("id")
+    .eq("application_id", parent.source_application_id)
+    .eq("intermediary_type", "partner")
+    .eq("account_status", "active")
+    .maybeSingle<{ id: string }>();
+  if (!sourceError && parentSource) ids.add(parentSource.id);
+  return [...ids];
 }
 
 async function processStoredOcr(id: string) {
