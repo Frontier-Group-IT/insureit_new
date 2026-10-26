@@ -48,14 +48,13 @@ export async function PartnerBranchSections({applicationId}:{applicationId:strin
       <input type="hidden" name="parent_partner_id" value={partner.id}/>
       <input type="hidden" name="return_application_id" value={applicationId}/>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">{field("Branch Name","branch_name")}{field("Phone Number","phone","tel")}{field("Email ID","email","email")}{field("Contact Name","contact_name")}</div>
-      <div className="grid items-end gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_auto]">
+      <div className="grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
         <label className={labelClass}>Address *<input name="address" required maxLength={500} className={fieldClass} placeholder="Enter branch address"/></label>
-        <label className={labelClass}>Parent Partner<input className={`${fieldClass} bg-[#F8FAFC]`} readOnly value={`${partner.display_name} · ${partner.partner_code}`}/></label>
         <div className="flex justify-end"><FormSubmitButton label="Save" pendingLabel="Saving…"/></div>
       </div>
     </form>}
   </section>,
-  register:<section aria-label="Branch Register"><BranchRegisterWorkspace rows={rows} canManage={canCreate} canPermanentDelete={manager?.role==="it_super_user"} loadError={loadError} embedded/></section>
+  register:<section aria-label="Branch Register"><BranchRegisterWorkspace rows={rows} canManage={canCreate} canPermanentDelete={manager?.role==="it_super_user"} loadError={loadError} embedded hideParentPartner/></section>
  };
 }
 function Message({children}:{children:React.ReactNode}) {return <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] text-amber-900">{children}</div>;}
