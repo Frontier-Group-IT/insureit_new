@@ -1,5 +1,7 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useIsFocused } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -50,6 +52,7 @@ const POLICY_FILTER_OPTIONS: Array<{ value: PartnerPolicyLifecycle; label: strin
 
 export default function PoliciesScreen() {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const safeAreaInsets = useSafeAreaInsets();
   // SafeAreaView already offsets overlays when iOS reports a top inset.
   // Only fall back when older OTA runtimes report zero, avoiding double spacing.
@@ -429,6 +432,7 @@ export default function PoliciesScreen() {
         windowSize={7}
       />
       </SafeAreaView>
+      {isFocused ? <StatusBar style={searchSticky ? 'light' : 'dark'} /> : null}
       {searchSticky && safeAreaInsets.top > 0 ? <View pointerEvents="none" style={[styles.stickyStatusBarShield, { height: safeAreaInsets.top }]} /> : null}
       {searchSticky ? <View style={[styles.stickySearchOverlay, { top: safeAreaInsets.top }]} pointerEvents="box-none"><Text style={styles.stickyClaimsHeading}>Policies</Text>{searchControls}</View> : null}
     </View>
@@ -628,9 +632,9 @@ const styles = StyleSheet.create({
   },
   intakeHeaderText: { color: '#0B2E63', fontSize: 9.5, lineHeight: 12, fontWeight: '800' },
   searchSpacer: { height: 44, marginTop: -10, marginHorizontal: 16 },
-  stickyStatusBarShield: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, backgroundColor: '#FFFFFF' },
-  stickySearchOverlay: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 50, backgroundColor: '#FFFFFF', paddingTop: 12, paddingBottom: 10 },
-  stickyClaimsHeading: { color: '#153F88', fontSize: 15, lineHeight: 18, fontWeight: '400', marginLeft: 18, marginBottom: 12 },
+  stickyStatusBarShield: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, backgroundColor: '#082657' },
+  stickySearchOverlay: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 50, backgroundColor: '#082657', paddingTop: 12, paddingBottom: 10 },
+  stickyClaimsHeading: { color: '#FFFFFF', fontSize: 15, lineHeight: 18, fontWeight: '400', marginLeft: 18, marginBottom: 12 },
   searchRow: {
     zIndex: 5,
     marginTop: -10,
