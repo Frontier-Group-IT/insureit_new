@@ -42,3 +42,6 @@
 @media (prefers-reduced-motion: reduce) {
   .customer-compact * { scroll-behavior: auto !important; }
 }
+
+/* Top navigation uses the entire available viewport; sidebar retains its comfortable reading width. */
+.customer-navigation-content[data-customer-nav-layout="top"] .customer-content-container { max-width: none; }
