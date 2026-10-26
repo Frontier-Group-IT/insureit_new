@@ -14,6 +14,7 @@ export function PermanentDeleteButton({
   label,
   name,
   compact = false,
+  iconOnly = false,
 }: {
   kind: PermanentDeleteKind;
   id: string;
@@ -21,6 +22,7 @@ export function PermanentDeleteButton({
   label?: string;
   name: string;
   compact?: boolean;
+  iconOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -112,12 +114,14 @@ export function PermanentDeleteButton({
           setSuccess(false);
           setOpen(true);
         }}
-        className={compact
+        aria-label={iconOnly ? `Delete ${name}` : undefined}
+        title={iconOnly ? "Delete" : undefined}
+        className={iconOnly ? "inline-flex h-8 w-8 items-center justify-center rounded-md text-rose-600 transition hover:bg-rose-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-500" : compact
           ? "inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-white px-2.5 text-[9px] font-bold text-red-600 transition hover:bg-red-50"
           : "inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-50"}
       >
         <Trash2 className="h-3.5 w-3.5" />
-        {label ?? "Delete"}
+        {!iconOnly ? (label ?? "Delete") : null}
       </button>
 
       {open && typeof document !== "undefined"
