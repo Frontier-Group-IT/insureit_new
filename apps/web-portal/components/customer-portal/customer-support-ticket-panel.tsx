@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Send, X, CircleHelp } from "lucide-react";
+import { Plus, Send, X } from "lucide-react";
 import { CustomerServiceRequestForm } from "@/components/customer-portal/customer-service-request-form";
 
 export function CustomerSupportTicketPanel({customerId,claims}:{customerId:string;claims:{id:string;claim_no:string;status:string}[]}) {
