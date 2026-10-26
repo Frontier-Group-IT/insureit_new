@@ -42,7 +42,7 @@ export default async function CustomerSupportPage({
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/support" />
 
       <section className="relative isolate min-h-[172px] overflow-hidden rounded-xl border border-[#E3E7F4] bg-[#F4F5FF] px-5 py-5 sm:px-7">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[url('/assets/supclaim.jpeg')] bg-cover bg-center" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[url('/assets/supclaim.jpeg')] bg-no-repeat bg-right-center bg-[length:auto_100%]" />
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F5F7FF]/96 via-[#F5F7FF]/82 via-40% to-transparent" />
         <div className="relative z-10 max-w-[530px]">
           <h1 className="text-[29px] font-extrabold leading-tight tracking-tight text-[#212755]">Need Help?</h1>
