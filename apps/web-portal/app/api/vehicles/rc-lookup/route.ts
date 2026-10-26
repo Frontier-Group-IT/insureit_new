@@ -11,11 +11,13 @@ import { isValidVehicleRegistrationNumber } from "@/lib/vehicle-registration";
 export const dynamic = "force-dynamic";
 
 const RC_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const RC_MAPPER_VERSION = "2026-10-24-v6";
+const RC_MAPPER_VERSION = "2026-10-26-v7";
 const MAX_DISPLAY_FIELDS = 160;
 
 type RcMappedDetails = {
   registrationNumber: string;
+  registeredOwnerName: string | null;
+  registeredAddress: string | null;
   vehicleCategory: string | null;
   bodyType: string | null;
   manufactureDate: string | null;
@@ -237,18 +239,20 @@ function mapVehicleDetails(raw: unknown, registrationNumber: string): RcMappedDe
     "Insurance To Date",
     "Insurance Upto",
     "Policy Expiry Date",
-    "insuranceexpirydate",
+    "insuranceexpirydate", "insurancevalidupto", "Insurance Validity", "Insurance Expiry",
   ]));
 
   const policyStartDate = toIsoDate(findValue(values, [
     "Insurance From Date",
     "Insurance From",
     "Policy Start Date",
-    "Policy From Date",
+    "Policy From Date", "Insurance Start Date",
   ]));
 
   return {
     registrationNumber,
+    registeredOwnerName: cleanText(findValue(values, ["Registered Owner Name","Owner Name","Registered Owner","Owner","Owner Full Name","Ownername","owner_name","registrationOwnerName"])),
+    registeredAddress: cleanText(findValue(values, ["Registered Address","Owner Address","Permanent Address","Full Address","Present Address","Address","Registration Address"])),
     vehicleCategory: cleanText(findValue(values, ["Usage / Category", "Vehicle Usage", "Usage Type", "Vehicle Category", "Vehicle Description"])),
     bodyType: cleanText(findValue(values, ["Body Type", "Type of Body", "Body Description"])),
     manufactureDate: cleanText(findValue(values, ["Manufacturing Date", "Month/Year of Manufacture", "Month Year of Manufacture", "Mfg Month Year"])),
@@ -265,7 +269,7 @@ function mapVehicleDetails(raw: unknown, registrationNumber: string): RcMappedDe
     registrationDate: toIsoDate(findValue(values, ["Registration Date", "registrationdate", "regdate", "dateofregistration"])),
     manufacturer: normalizeFetchedVehicleManufacturer(cleanText(findValue(values, ["Maker/Manufacturer", "Manufacturer", "Maker", "manufacturername", "makername"]))),
     model: cleanText(findValue(values, ["Model / Makers Class", "Model/Makers Class", "Model", "Makers Class", "vehiclemodel", "variant"])),
-    manufacturingYear: toYear(findValue(values, ["Manufacturing Date", "Manufacturing Year", "Month/Year of Manufacture", "mfgyear", "yearofmanufacture"])),
+    manufacturingYear: toYear(findValue(values, ["Manufacturing Date", "Manufacturing Year", "Month/Year of Manufacture", "mfgyear", "yearofmanufacture","Mfg Year","Manufacture Year","Manufacture Date","Month Year of Manufacture"])),
     vehicleClass: mapVehicleClass(cleanText(findValue(values, ["Vehicle Class", "Class of Vehicle", "Vehicle Category", "Vehicle Type", "Body Type"]))),
     fuelType: mapFuel(cleanText(findValue(values, ["Fuel Type", "Fuel", "Fuel Description"]))),
     engineCapacityCc: cleanNumber(findValue(values, ["Cubic Capacity", "Cubic Capacity CC", "Engine Capacity", "Engine Capacity CC", "Engine CC"])),
@@ -279,8 +283,8 @@ function mapVehicleDetails(raw: unknown, registrationNumber: string): RcMappedDe
     nationalPermitExpiryDate: toIsoDate(findValue(values, ["National Permit Upto", "National Permit Expiry Date", "National Permit Valid Upto"])),
     localPermitExpiryDate: toIsoDate(findValue(values, ["Permit Upto", "Permit Expiry Date", "Permit Valid Upto", "Local Permit Upto"])),
     permitNumber: cleanCode(findValue(values, ["Permit Number", "Permit No", "National Permit Number"])),
-    insuranceCompany: cleanText(findValue(values, ["Insurance Company", "Insurer", "Insurer Name"])),
-    policyNumber: cleanPolicyNumber(findValue(values, ["Policy Number", "Policy No", "Insurance Policy Number"])),
+    insuranceCompany: cleanText(findValue(values, ["Insurance Company", "Insurer", "Insurer Name","Insurance Company Name","Policy Insurer"])),
+    policyNumber: cleanPolicyNumber(findValue(values, ["Policy Number", "Policy No", "Insurance Policy Number","Insurance Policy No","Insurance Number"])),
     policyStartDate: policyStartDate ?? derivePolicyStartDate(policyExpiryDate),
     policyExpiryDate,
   };
