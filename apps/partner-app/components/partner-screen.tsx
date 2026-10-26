@@ -42,6 +42,7 @@ export function PartnerScreen({
   homeMotionScrollY,
   stickyHeading,
   stickyControls,
+  stickyHeaderNavy = false,
   stickyStartY = 100,
 }: PropsWithChildren<{
   title: string;
@@ -59,6 +60,7 @@ export function PartnerScreen({
   homeMotionScrollY?: Animated.Value;
   stickyHeading?: string;
   stickyControls?: ReactNode;
+  stickyHeaderNavy?: boolean;
   stickyStartY?: number;
   heroSearch?: {
     value: string;
@@ -308,10 +310,10 @@ export function PartnerScreen({
         {children}
       </Animated.ScrollView>
       </SafeAreaView>
-      {showFixedHeader && safeAreaInsets.top > 0 ? <View pointerEvents="none" style={[styles.stickyStatusBarShield, { height: safeAreaInsets.top }]} /> : null}
+      {showFixedHeader && safeAreaInsets.top > 0 ? <View pointerEvents="none" style={[styles.stickyStatusBarShield, stickyHeaderNavy && styles.navyStickyBackground, { height: safeAreaInsets.top }]} /> : null}
       {showFixedHeader && (isHomeHero || (stickyHeading && stickyControls)) ? (
-        <View style={[styles.fixedWhiteHeader, { top: safeAreaInsets.top }]} pointerEvents="box-none">
-          <Text numberOfLines={1} style={styles.fixedWhiteHeading}>{isHomeHero ? title : stickyHeading}</Text>
+        <View style={[styles.fixedWhiteHeader, stickyHeaderNavy && styles.navyStickyBackground, { top: safeAreaInsets.top }]} pointerEvents="box-none">
+          <Text numberOfLines={1} style={[styles.fixedWhiteHeading, stickyHeaderNavy && styles.navyStickyHeading]}>{isHomeHero ? title : stickyHeading}</Text>
           {isHomeHero ? homeSearchControl : stickyControls}
         </View>
       ) : null}
@@ -340,6 +342,8 @@ const styles = StyleSheet.create({
   stickyStatusBarShield: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: '#FFFFFF', zIndex: 61 },
   fixedWhiteHeader: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 60, backgroundColor: "#FFFFFF", paddingTop: 12, paddingBottom: 10, paddingHorizontal: 10 },
   fixedWhiteHeading: { color: "#153F88", fontSize: 15, lineHeight: 18, fontWeight: "400", marginLeft: 8, marginBottom: 12 },
+  navyStickyBackground: { backgroundColor: '#082657' },
+  navyStickyHeading: { color: '#FFFFFF' },
   networkBanner: { marginBottom: partnerTheme.spacing.sm },
 
   homeHeroWrap: {
