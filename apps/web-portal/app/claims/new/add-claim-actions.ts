@@ -105,7 +105,7 @@ export async function lookupClaimVehicle(vehicleNumber: string): Promise<AddClai
       .select("id,company_name,contact_name,phone")
       .eq("id", vehicle.customer_id)
       .maybeSingle<CustomerRow>(),
-    getActivePolicy(admin, vehicle.id, vehicle.customer_id),
+    getMostRecentPolicy(admin, vehicle.id, vehicle.customer_id),
   ]);
 
   if (customerError || !customer) {
@@ -189,14 +189,9 @@ export async function createOperationsClaim(vehicleId: string, lossAtIso: string
   const allowed = await canAccessCustomer(profile.id, profile.role, vehicle.customer_id, "manage_claims");
   if (!allowed) return { ok: false, message: "The selected vehicle could not be found." };
 
-  const policy = await getActivePolicy(admin, vehicle.id, vehicle.customer_id);
-  if (!policy) {
-    return {
-      ok: false,
-      message: "No active or eligible policy is linked to this vehicle. A claim cannot be created until a valid policy is available.",
-      errorCode: "no_eligible_policy",
-    };
-  }
+  // Use coverage on the loss date when available; otherwise retain the latest
+  // linked policy for reference only. Claim registration does not establish coverage.
+  const policy = await getPolicyForLossDateOrLatest(admin, vehicle.id, vehicle.customer_id, lossAt.toISOString().slice(0, 10));
 
   let existingRequest = admin
     .from("claims")
@@ -215,7 +210,7 @@ export async function createOperationsClaim(vehicleId: string, lossAtIso: string
   if (existingClaim) {
     return {
       ok: false,
-      message: "An active managed claim already exists for this vehicle and policy.",
+      message: "An active managed claim already exists for this vehicle or selected policy.",
       existingClaim: { id: existingClaim.id, claimNo: existingClaim.claim_no },
     };
   }
@@ -307,21 +302,38 @@ async function findVehicle(
   return (fallback.data ?? []).find((vehicle) => normalizeVehicleNumber(vehicle.vehicle_no) === normalizedValue) ?? null;
 }
 
-async function getActivePolicy(
+async function getMostRecentPolicy(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   vehicleId: string,
   customerId: string,
 ) {
-  const today = new Date().toISOString().slice(0, 10);
   const { data } = await admin
     .from("policies")
     .select("id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date,premium_amount,insured_declared_value")
     .eq("vehicle_id", vehicleId)
     .eq("customer_id", customerId)
-    .lte("start_date", today)
-    .gte("end_date", today)
     .order("end_date", { ascending: false })
     .limit(1)
     .maybeSingle<PolicyRow>();
   return data ?? null;
+}
+
+async function getPolicyForLossDateOrLatest(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  vehicleId: string,
+  customerId: string,
+  lossDate: string,
+) {
+  const { data: coveringPolicy, error } = await admin
+    .from("policies")
+    .select("id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date,premium_amount,insured_declared_value")
+    .eq("vehicle_id", vehicleId)
+    .eq("customer_id", customerId)
+    .lte("start_date", lossDate)
+    .gte("end_date", lossDate)
+    .order("end_date", { ascending: false })
+    .limit(1)
+    .maybeSingle<PolicyRow>();
+  if (error) throw new Error("Policy coverage lookup failed");
+  return coveringPolicy ?? getMostRecentPolicy(admin, vehicleId, customerId);
 }
