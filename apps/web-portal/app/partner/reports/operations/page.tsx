@@ -27,6 +27,7 @@ export default async function PartnerOperationsReport() {
         {fields.map(([label, value]) => <div key={label} className="rounded-xl border border-[#E2E9F3] bg-white p-5"><p className="text-xs font-semibold text-[#6D7E9A]">{label}</p><p className="mt-2 text-2xl font-bold">{number(value)}</p></div>)}
       </section>
       <section className="rounded-2xl border border-[#E2E9F3] bg-white p-5">
+        <a href="/partner/reports/export?type=claims" className="float-right ml-3 rounded-lg border border-[#D7E3F3] px-3 py-2 text-xs font-semibold text-[#2369C5]"> Download claims snapshot (up to 200 rows)</a>
         <h2 className="font-bold">Operations registers</h2>
         <p className="mt-2 text-sm text-[#70809A]">Access claim and renewal records within your existing portal permissions. Detailed operations exports remain unavailable pending server-side scope verification.</p>
         <div className="mt-4 flex flex-wrap gap-3"><Link href="/partner/claims" className="text-sm font-bold text-[#2369C5]">View claims →</Link><Link href="/partner/renewals" className="text-sm font-bold text-[#2369C5]">View renewals →</Link></div>
