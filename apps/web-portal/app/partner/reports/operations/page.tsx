@@ -1,7 +1,8 @@
+import { ScopedReportDistribution } from "@/components/partner-portal/scoped-report-distribution";
+import { PartnerReportsShell } from "@/components/partner-portal/partner-reports-shell";
 import Link from "next/link";
 import { requirePartnerReportScope } from "@/lib/reports/partner-report-scope";
 import { getPartnerWebClaimSummary, getPartnerWebRenewalSummary, listPartnerWebClaims } from "@/lib/partner-web";
-import { PartnerReportTabs } from "@/components/partner-portal/partner-report-tabs";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -11,7 +12,7 @@ export default async function PartnerOperationsReport({ searchParams }: { search
   const rawPage = (await searchParams).page;
   const page = rawPage && /^[1-9]\d{0,3}$/.test(rawPage) ? Number(rawPage) : 1;
   const offset = (page - 1) * 20;
-  await requirePartnerReportScope();
+  const reportScope = await requirePartnerReportScope();
   const [claims, renewals, recentClaims] = await Promise.all([getPartnerWebClaimSummary(), getPartnerWebRenewalSummary(), listPartnerWebClaims({ limit: 21, offset })]);
   const fields = [
     ["Active claims", claims.active_claims],
@@ -23,13 +24,13 @@ export default async function PartnerOperationsReport({ searchParams }: { search
     ["Overdue renewals", renewals.overdue_count],
   ] as const;
   return (
-    <main className="mx-auto min-h-screen max-w-[1500px] space-y-5 bg-[#F6F8FC] px-4 pb-28 pt-6 text-[#11254A] lg:ml-[268px] lg:px-8 lg:pb-12">
-      <h1 className="text-3xl font-extrabold">Reports</h1>
-      <PartnerReportTabs active="Operations" />
+    <PartnerReportsShell active="Operations" scope={reportScope}>
+      
+      <ScopedReportDistribution title="Claim status distribution" items={[{label:"Active claims",value:Number(claims.active_claims)},{label:"Completed claims",value:Number(claims.completed_claims)},{label:"Other claims",value:Math.max(0,Number(claims.total_claims)-Number(claims.active_claims)-Number(claims.completed_claims))}]}/>
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-        {fields.map(([label, value]) => <div key={label} className="rounded-xl border border-[#E2E9F3] bg-white p-5"><p className="text-xs font-semibold text-[#6D7E9A]">{label}</p><p className="mt-2 text-2xl font-bold">{number(value)}</p></div>)}
+        {fields.map(([label, value]) => <div key={label} className="rounded-xl border border-[#E2E9F3] bg-white p-3 shadow-sm"><p className="text-xs font-semibold text-[#6D7E9A]">{label}</p><p className="mt-2 text-2xl font-bold">{number(value)}</p></div>)}
       </section>
-      <section className="rounded-2xl border border-[#E2E9F3] bg-white p-5">
+      <section className="rounded-2xl border border-[#E2E9F3] bg-white p-3 shadow-sm">
         <Link href="/partner/reports/export?type=claims" className="float-right ml-3 rounded-lg border border-[#D7E3F3] px-3 py-2 text-xs font-semibold text-[#2369C5]"> Download claims snapshot (up to 200 rows)</Link>
         <h2 className="font-bold">Operations registers</h2>
         <p className="mt-2 text-sm text-[#70809A]">Access claim and renewal records within your existing portal permissions. Detailed operations exports remain unavailable pending server-side scope verification.</p>
@@ -37,13 +38,13 @@ export default async function PartnerOperationsReport({ searchParams }: { search
       </section>
       <section className="overflow-hidden rounded-2xl border border-[#E2E9F3] bg-white">
         <div className="border-b border-[#E9EEF6] px-5 py-4"><h2 className="font-bold">Claims register preview</h2><p className="mt-1 text-xs text-[#71809A]">Up to 20 claims from your authorized account scope</p></div>
-        <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-xs"><thead className="bg-[#F5F8FC] text-[#697A95]"><tr>{["Claim","Customer","Vehicle","Insurer","Status"].map(label=><th key={label} className="px-4 py-3 font-semibold">{label}</th>)}</tr></thead><tbody className="divide-y divide-[#E9EEF6]">{recentClaims.slice(0, 20).map(row=><tr key={row.claim_id}><td className="px-4 py-3 font-semibold">{row.claim_no || "—"}</td><td className="px-4 py-3">{row.customer_name}</td><td className="px-4 py-3">{row.vehicle_no || "—"}</td><td className="px-4 py-3">{row.insurer_name || "—"}</td><td className="px-4 py-3">{row.current_status || "—"}</td></tr>)}{!recentClaims.length && <tr><td colSpan={5} className="px-5 py-8 text-center text-[#70809A]">No claims in your current reporting scope.</td></tr>}</tbody></table></div>
+        <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-xs"><thead className="bg-[#F5F8FC] text-[#697A95]"><tr>{["Claim","Customer","Vehicle","Insurer","Status","Loss estimate","Settlement"].map(label=><th key={label} className="px-4 py-3 font-semibold">{label}</th>)}</tr></thead><tbody className="divide-y divide-[#E9EEF6]">{recentClaims.slice(0, 20).map(row=><tr key={row.claim_id}><td className="px-4 py-3 font-semibold">{row.claim_no || "—"}</td><td className="px-4 py-3">{row.customer_name}</td><td className="px-4 py-3">{row.vehicle_no || "—"}</td><td className="px-4 py-3">{row.insurer_name || "—"}</td><td className="px-4 py-3">{row.current_status || "—"}</td><td className="px-4 py-3 tabular-nums">{row.estimated_loss == null ? "—" : number(row.estimated_loss)}</td><td className="px-4 py-3 tabular-nums">{row.settlement_amount == null ? "—" : number(row.settlement_amount)}</td></tr>)}{!recentClaims.length && <tr><td colSpan={7} className="px-5 py-8 text-center text-[#70809A]">No claims in your current reporting scope.</td></tr>}</tbody></table></div>
       </section>
       <nav aria-label="Claims register pagination" className="flex items-center justify-end gap-3 text-xs font-semibold">
         {page > 1 ? <Link href={`/partner/reports/operations?page=${page - 1}`} className="rounded-lg border border-[#D9E4F3] bg-white px-4 py-2">Previous</Link> : null}
         <span>Page {page}</span>
         {recentClaims.length > 20 ? <Link href={`/partner/reports/operations?page=${page + 1}`} className="rounded-lg border border-[#D9E4F3] bg-white px-4 py-2">Next</Link> : null}
       </nav>
-    </main>
+    </PartnerReportsShell>
   );
 }

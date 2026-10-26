@@ -28,9 +28,19 @@ for (const [file, label] of pages) {
   const gateAt = source.indexOf("await requirePartnerReportScope()");
   assert(gateAt >= 0, `${label}: missing authenticated reporting gate`);
   assert(!/createSupabaseAdminClient|getEmployeeAccessScope|requireCapability/.test(source), `${label}: must not load Operations admin reports`);
+  assert(!/\b(?:insurer_payin|payin_amount|broker_retention|retention_amount|retention_percent|internal_margin|profit_margin)\b/i.test(source), `${label}: confidential employee-only financial fields must not enter intermediary Reports`);
   assert(!/\b(?:params|searchParams)\.(?:partner|group|branch)\b|[?&](?:partner|group|branch)=/.test(source), `${label}: hierarchy parameters must not expand scope`);
-  assert.match(source, new RegExp(`PartnerReportTabs active="${label}"`), `${label}: report navigation missing`);
+  assert.match(source, new RegExp(`PartnerReportsShell active="${label}" scope={reportScope}`), `${label}: shared report shell missing`);
 }
+const sharedShell = read("components/partner-portal/partner-reports-shell.tsx");
+assert.match(sharedShell, /PartnerReportTabs active={active}/, "Shared report navigation must remain present");
+assert.match(sharedShell, /reports-reference-shell/, "Shared shell must inherit reference Reports styling");
+assert.doesNotMatch(sharedShell, /createSupabaseAdminClient|payin|retention|margin/i, "Shared shell must not access confidential financial data");
+const distribution = read("components/partner-portal/scoped-report-distribution.tsx");
+assert.doesNotMatch(distribution, /createSupabaseAdminClient|payin|retention|margin/i, "Shared distribution must remain presentation-only");
+assert.match(read(pages[2][0]), /ScopedReportDistribution/, "Portfolio must reuse scoped distribution chart");
+assert.match(read(pages[3][0]), /ScopedReportDistribution/, "Operations must reuse scoped distribution chart");
+assert.match(read(pages[1][0]), /BusinessTrendCard/, "Business trend must reuse reference report chart");
 const overview = read(pages[0][0]);
 assert.match(overview, /payout\.available && canShowPayout/, "Payout output must require existing payout authorization");
 assert.match(overview, /reportScope\.role === "partner"/, "Partner payout must not be inherited by Group/Branch");
@@ -45,6 +55,8 @@ for (const path of ["app/partner/reports/portfolio/page.tsx", "app/partner/repor
   assert.ok(page.includes("slice(0, 20)"), "Pagination must render only 20 rows");
 }
 
+assert.match(read(pages[2][0]), /row\.premium_amount/, "Policy register must use only scoped premium data");
+assert.match(read(pages[3][0]), /row\.settlement_amount/, "Claim register must use only scoped settlement data");
 const exportRoute = read("app/partner/reports/export/route.ts");
 assert.match(exportRoute, /await requirePartnerReportScope\(\)/, "Exports must validate reporting scope");
 assert.match(exportRoute, /MAX_ROWS = 200/, "Exports must be explicitly bounded");

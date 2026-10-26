@@ -69,3 +69,19 @@
 ## CI pagination regression correction
 - The first CI run after pagination failed in the Reports security script because it broadly rejected any `searchParams`, including the safely validated `page` parameter. Updated that check to forbid only caller-controlled hierarchy identifiers (`partner`, `group`, `branch`) while allowing pagination. Actual report queries still take their scope from authenticated Partner RPCs.
 - New CI result and all five authenticated role tests remain to be verified. No release authorization implied.
+
+## PR #3583 continuation — shared reports presentation and restricted financial scope
+
+- Unified partner Reporting shell and tabs with existing employee Reports CSS styling, while retaining Partner RPC-backed datasets.
+- Business Trend uses the employee chart component with authenticated scoped premium and policy-count series.
+- Business KPI period selector (MTD / last month / last six months / one year) uses authenticated `partner_app_business_range` through `getPartnerWebBusinessRange`; existing six-month trend and mix are explicitly labelled and not falsely re-filtered.
+- Portfolio has an account-scoped Motor/other policy distribution; Operations has an account-scoped claims status distribution.
+- Group and Branch views do not invoke the payout summary RPC; Partner/Partner Associate render payout only when the existing authorized payout contract says it is available.
+- No intermediary view receives new pay-in, retention percentage, retention amount, or internal profitability/margin fields; regression assertions prohibit these names in intermediary report pages.
+- No unrestricted Operations admin report loaders, service-role read paths, arbitrary partner/group/branch query scope, or database migration introduced.
+
+### Remaining blockers before calling full parity finished
+- Employee reports have additional detailed register/filter/insurer-exposure data not yet supplied by scoped intermediary RPC contracts. Add those contracts using authenticated row-filtering before aggregation and prior to rendering or exporting.
+- Role-level integration tests must be performed for Group, Group Associate, Partner, Partner Associate and Branch, including cross-account denial and financial negative-access checks.
+- Latest GitHub CI must pass on the final head commit before merging; actual production visuals must be inspected with role-specific accounts.
+- PR remains unmerged and undeployed. Do not create APK/AAB.

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PartnerReportTabs } from "@/components/partner-portal/partner-report-tabs";
+import { PartnerReportsShell } from "@/components/partner-portal/partner-reports-shell";
 import { requirePartnerReportScope } from "@/lib/reports/partner-report-scope";
 import { BarChart3, BriefcaseBusiness, FileText, ShieldCheck, Truck, UsersRound } from "lucide-react";
 import {
@@ -22,12 +22,13 @@ export default async function PartnerReportsPage() {
   // The partner-session guard and every data RPC enforce the authenticated portal account scope.
   // Never substitute the admin report loaders or trust client-supplied group/partner IDs here.
   const reportScope = await requirePartnerReportScope();
+  const canShowPayout = reportScope.role === "partner" || reportScope.role === "partner_associate";
   const [performance, policies, claims, renewals, payout] = await Promise.all([
     getPartnerWebBusinessPerformance(),
     getPartnerWebPolicySummary(),
     getPartnerWebClaimSummary(),
     getPartnerWebRenewalSummary(),
-    getPartnerWebPayoutSummary(),
+    canShowPayout ? getPartnerWebPayoutSummary() : Promise.resolve({ available: false as const, visibility: "restricted" as const }),
   ]);
 
   const cards = [
@@ -38,22 +39,10 @@ export default async function PartnerReportsPage() {
     { title: "Open claims", value: integer(claims.active_claims), icon: Truck },
     { title: "Renewals due (30 days)", value: integer(policies.expiring_30_days), icon: BarChart3 },
   ];
-  const canShowPayout = reportScope.role === "partner" || reportScope.role === "partner_associate";
 
   return (
-    <main className="mx-auto min-h-screen max-w-[1500px] space-y-5 bg-[#F6F8FC] px-4 pb-28 pt-6 text-[#11254A] lg:ml-[268px] lg:px-8 lg:pb-12">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#7587A6]">Partner workspace</p>
-          <h1 className="mt-1 text-3xl font-extrabold">Reports</h1>
-          <p className="mt-1 text-sm text-[#64758F]">Business overview for your authorized account network.</p>
-        </div>
-        <span className="rounded-xl border border-[#DAE4F4] bg-white px-3 py-2 text-xs font-semibold text-[#36557B]">
-          {reportScope.role === "group" || reportScope.role === "group_associate" ? "Assigned group" : reportScope.role === "branch" ? "Your branch" : "Assigned partner"}
-        </span>
-      </header>
-      <PartnerReportTabs active="Overview" />
-      <section aria-label="Business metrics" className="grid grid-cols-2 overflow-hidden rounded-2xl border border-[#E2E9F3] bg-white md:grid-cols-3 xl:grid-cols-6">
+    <PartnerReportsShell active="Overview" scope={reportScope}>
+<section aria-label="Business metrics" className="grid grid-cols-2 overflow-hidden rounded-2xl border border-[#E2E9F3] bg-white md:grid-cols-3 xl:grid-cols-6">
         {cards.map(({ title, value, icon: Icon }) => (
           <div key={title} className="min-w-0 border-b border-r border-[#E9EEF6] p-4">
             <div className="flex items-center gap-2 text-[#51739F]"><Icon className="h-4 w-4" aria-hidden="true" /><span className="text-[11px] font-semibold">{title}</span></div>
@@ -62,7 +51,7 @@ export default async function PartnerReportsPage() {
         ))}
       </section>
       <div className="grid gap-4 lg:grid-cols-2">
-        <section className="rounded-2xl border border-[#E2E9F3] bg-white p-5">
+        <section className="rounded-2xl border border-[#E2E9F3] bg-white p-3 shadow-sm">
           <h2 className="text-base font-bold">Policy & renewal summary</h2>
           <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
             <div><dt className="text-[#70809A]">Total policies</dt><dd className="mt-1 text-xl font-bold">{integer(policies.total_policies)}</dd></div>
@@ -72,7 +61,7 @@ export default async function PartnerReportsPage() {
           </dl>
           <Link href="/partner/policies" className="mt-5 inline-block text-sm font-semibold text-[#345DD6]">View policies →</Link>
         </section>
-        <section className="rounded-2xl border border-[#E2E9F3] bg-white p-5">
+        <section className="rounded-2xl border border-[#E2E9F3] bg-white p-3 shadow-sm">
           <h2 className="text-base font-bold">Claims & commercials</h2>
           <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
             <div><dt className="text-[#70809A]">Total claims</dt><dd className="mt-1 text-xl font-bold">{integer(claims.total_claims)}</dd></div>
@@ -85,7 +74,7 @@ export default async function PartnerReportsPage() {
           <Link href="/partner/claims" className="mt-5 inline-block text-sm font-semibold text-[#345DD6]">View claims →</Link>
         </section>
       </div>
-      <p className="text-xs text-[#7889A3]">Figures are derived from existing account-scoped reporting services. Detailed reporting filters and exports will be enabled after equivalent backend scope enforcement is verified.</p>
-    </main>
+
+    </PartnerReportsShell>
   );
 }
