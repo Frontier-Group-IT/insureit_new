@@ -1,7 +1,7 @@
 "use server";
 
 import { requireClaimWorkflowAccess } from "@/lib/claim-workflow-access";
-import { lookupAuthbridgeRc, normalizeVehicleRegistrationNumber } from "@/lib/authbridge-rc-api";
+import { normalizeVehicleRegistrationNumber } from "@/lib/authbridge-rc-api";
 import { isValidVehicleRegistrationNumber } from "@/lib/vehicle-registration";
 
 type RcDates = Record<"fitness_valid_upto" | "tax_valid_upto" | "insurance_valid_upto" | "pucc_valid_upto" | "local_permit_valid_upto" | "national_permit_valid_upto", string>;
@@ -65,7 +65,7 @@ function mapProvider(raw: unknown): Partial<RcDates> {
   return out;
 }
 
-export async function getClaimRcVerificationDates(claimId: string, requestAuthbridge = false): Promise<RcResult> {
+export async function getClaimRcVerificationDates(claimId: string): Promise<RcResult> {
   try {
     if (!claimId || typeof claimId !== "string") return { ok: false, message: "Missing claim." };
     const { claim, supabase } = await requireClaimWorkflowAccess(claimId, "Not permitted to verify RC for this claim.");
@@ -95,15 +95,7 @@ export async function getClaimRcVerificationDates(claimId: string, requestAuthbr
     // Local vehicle records take priority; cached RC data fills gaps without a charge.
     const cacheDates = mapProvider(cached?.normalized_details ?? cached?.raw_response);
     for (const key of Object.keys(fields) as (keyof RcDates)[]) if (!dates[key] && cacheDates[key]) dates[key] = cacheDates[key];
-    if (!requestAuthbridge) return { ok: true, dates, source: hasVehicleDates ? "vehicle_register" : cached ? "rc_cache" : "none", fetchedAt: cached?.fetched_at, registrationNumber };
-    if (cached?.raw_response && cached.expires_at && Date.parse(cached.expires_at) > Date.now()) {
-      return { ok: true, dates, source: "rc_cache", fetchedAt: cached.fetched_at, registrationNumber };
-    }
-    // Deliberately called only from an explicit user click. Never run this in initial page load.
-    const response = await lookupAuthbridgeRc(registrationNumber);
-    const liveDates = mapProvider(response.data);
-    for (const key of Object.keys(fields) as (keyof RcDates)[]) if (liveDates[key]) dates[key] = liveDates[key];
-    return { ok: true, dates, source: "authbridge", fetchedAt: response.lookedUpAt ?? new Date().toISOString(), registrationNumber };
+    return { ok: true, dates, source: hasVehicleDates ? "vehicle_register" : cached ? "rc_cache" : "none", fetchedAt: cached?.fetched_at, registrationNumber };
   } catch (error) {
     console.error("claim_rc_verification_lookup_failed", { reason: error instanceof Error ? error.message.replace(/[A-Z]{2}[0-9A-Z]{6,12}/g,"[redacted]") : "lookup_failed" });
     return { ok: false, message: "RC data could not be retrieved. You can still enter the expiry dates manually." };
