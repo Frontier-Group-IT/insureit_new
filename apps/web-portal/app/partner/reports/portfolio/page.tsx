@@ -29,9 +29,9 @@ export default async function PartnerPortfolioReport({ searchParams }: { searchP
         {fields.map(([label, value]) => <div key={label} className="rounded-xl border border-[#E2E9F3] bg-white p-5"><p className="text-xs font-semibold text-[#6D7E9A]">{label}</p><p className="mt-2 text-2xl font-bold">{number(value)}</p></div>)}
       </section>
       <div className="rounded-2xl border border-[#E2E9F3] bg-white p-5">
-        <a href="/partner/reports/export?type=policies" className="float-right ml-3 rounded-lg border border-[#D7E3F3] px-3 py-2 text-xs font-semibold text-[#2369C5]"> Download policy snapshot (up to 200 rows)</a>
+        <Link href="/partner/reports/export?type=policies" className="float-right ml-3 rounded-lg border border-[#D7E3F3] px-3 py-2 text-xs font-semibold text-[#2369C5]"> Download policy snapshot (up to 200 rows)</Link>
         <h2 className="font-bold">Authorized policy portfolio</h2>
-        <p className="mt-2 text-sm text-[#70809A]">This summary uses the existing signed-in account's authorized policy scope. Detailed insurer exposure and register exports require separate scoped backend contracts.</p>
+        <p className="mt-2 text-sm text-[#70809A]">This summary uses the existing signed-in account&apos;s authorized policy scope. Detailed insurer exposure and register exports require separate scoped backend contracts.</p>
         <Link href="/partner/policies" className="mt-4 inline-block text-sm font-bold text-[#2369C5]">Open policies →</Link>
       </div>
       <section className="overflow-hidden rounded-2xl border border-[#E2E9F3] bg-white">
