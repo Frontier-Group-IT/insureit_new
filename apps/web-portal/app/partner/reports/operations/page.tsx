@@ -9,7 +9,7 @@ const number = (value: number | string) => new Intl.NumberFormat("en-IN", { maxi
 
 export default async function PartnerOperationsReport({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const rawPage = (await searchParams).page;
-  const page = rawPage && /^[1-9]\\d{0,3}$/.test(rawPage) ? Number(rawPage) : 1;
+  const page = rawPage && /^[1-9]\d{0,3}$/.test(rawPage) ? Number(rawPage) : 1;
   const offset = (page - 1) * 20;
   await requirePartnerReportScope();
   const [claims, renewals, recentClaims] = await Promise.all([getPartnerWebClaimSummary(), getPartnerWebRenewalSummary(), listPartnerWebClaims({ limit: 21, offset })]);
