@@ -1,5 +1,5 @@
-import "../customer-register-motion.css";
 "use client";
+import "../customer-register-motion.css";
 import Link from "next/link";
 import motion from "./renewals-motion.module.css";
 import { useMemo, useState } from "react";
