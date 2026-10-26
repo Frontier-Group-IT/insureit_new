@@ -6,7 +6,7 @@ import {getInsurerLogo} from "@/lib/insurer-logo";
 export type ShareQuote={id:string;name:string;cover:string;idv:number;od:number;tp:number;addons:number;tax:number;premium:number;inspection:string;extras:string[];excess:number};
 type CaseStatus="draft"|"ready"|"sent"|"awaiting"|"revision"|"accepted"|"declined";
 type ShareCase={ids:string[];status:CaseStatus;acceptedId:string;contactNote:string;events:string[]};
-const key="insureit.quote-share-case.preview.v1";
+const key="insureit.quote-share-case.preview.v2";
 const format=(v:number)=>"Rs. "+v.toLocaleString("en-IN");
 function safe(v:string){return v.replace(/[^\x20-\x7e]/g," ").slice(0,110);}
 async function createPDF(quotes:ShareQuote[],values:Record<string,string>){
@@ -37,9 +37,10 @@ export default function QuoteSharingWorkbench({quotes,values,onBack,onAccept}:{q
  const [state,setState]=useState<ShareCase>({ids:quotes.map(q=>q.id),status:"draft",acceptedId:"",contactNote:"",events:[]});
  const [viewer,setViewer]=useState<string|null>(quotes[0]?.id||null);
  const quoteIds=quotes.map(q=>q.id).join(",");
+ const contextKey=[quoteIds,values.registrationNumber||values.chassisNumber||"",values.ownerName||""].join("|");
  const [notice,setNotice]=useState("");
- useEffect(()=>{try{const raw=sessionStorage.getItem(key);if(raw){const saved=JSON.parse(raw) as ShareCase;if(saved&&Array.isArray(saved.ids)&&saved.ids.join(",")===quotes.map(q=>q.id).join(","))setState(saved);}}catch{}},[quoteIds]);
- const apply=(part:Partial<ShareCase>,event?:string)=>setState(prev=>{const next={...prev,...part,events:event?[event,...prev.events]:prev.events};try{sessionStorage.setItem(key,JSON.stringify(next));}catch{}return next});
+ useEffect(()=>{try{const raw=sessionStorage.getItem(key);if(raw){const stored=JSON.parse(raw) as {contextKey:string;data:ShareCase};const saved=stored?.data;if(stored?.contextKey===contextKey&&saved&&Array.isArray(saved.ids)&&saved.ids.join(",")===quoteIds)setState(saved);}}catch{}},[quoteIds,contextKey]);
+ const apply=(part:Partial<ShareCase>,event?:string)=>setState(prev=>{const next={...prev,...part,events:event?[event,...prev.events]:prev.events};try{sessionStorage.setItem(key,JSON.stringify({contextKey,data:next}));}catch{}return next});
  const accepted=quotes.find(q=>q.id===state.acceptedId);
  const selected=quotes.find(q=>q.id===viewer);
  const download=async(items:ShareQuote[])=>{try{const bytes=await createPDF(items,values);const blob=new Blob([new Uint8Array(bytes)],{type:"application/pdf"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=items.length===1?"INSUREIT-Quotation-"+items[0].id+".pdf":"INSUREIT-Quote-Comparison.pdf";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);apply({status:state.status==="draft"?"ready":state.status},"Quotation PDF prepared");setNotice("PDF downloaded. It is clearly watermarked as illustrative.");}catch{setNotice("Unable to generate PDF. Please retry.");}};
