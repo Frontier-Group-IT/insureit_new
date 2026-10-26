@@ -19,7 +19,7 @@ const primaryVehicle = vehicle.filter(field => primaryVehicleKeys.has(field.key)
 const advancedVehicle = vehicle.filter(field => !primaryVehicleKeys.has(field.key));
 const rcToQuoteField:Record<string,string> = {
   manufacturer:"make", engineCapacityCc:"engineCapacity", gvwKg:"grossWeight",
-  registeredOwnerName:"ownerName", registeredAddress:"permanentAddress", insuranceCompany:"previousInsurer", policyNumber:"previousPolicy", policyExpiryDate:"previousExpiry",
+  registeredOwnerName:"ownerName", registeredAddress:"permanentAddress", insuranceCompany:"previousInsurer", policyNumber:"previousPolicy", policyStartDate:"previousPolicyStart", policyExpiryDate:"previousExpiry",
   pucExpiryDate:"pucUpto", roadTaxExpiryDate:"taxUpto",
   localPermitExpiryDate:"permitValidUpto", nationalPermitExpiryDate:"nationalPermitUpto"
 };
@@ -29,7 +29,7 @@ const customer:Field[]=[{key:"ownerName",label:"Registered owner / proposer"},{k
 {key:"ownerCity",label:"City"},{key:"ownerState",label:"State"},{key:"ownerPincode",label:"PIN code"}];
 const cover:Field[]=[{key:"businessType",label:"Business type"},{key:"coverageType",label:"Cover requested"},{key:"startDate",label:"Proposed policy start"},{key:"idv",label:"Declared IDV (₹)"},
 {key:"bodyValue",label:"Body value (₹)"},{key:"trailerValue",label:"Trailer value (₹)"},{key:"electricalValue",label:"Electrical accessories (₹)"},{key:"nonElectricalValue",label:"Non-electrical accessories (₹)"},
-{key:"cngValue",label:"CNG/LPG kit (₹)"},{key:"previousInsurer",label:"Previous insurer"},{key:"previousPolicy",label:"Previous policy number"},{key:"previousExpiry",label:"Previous policy expiry"},
+{key:"cngValue",label:"CNG/LPG kit (₹)"},{key:"previousInsurer",label:"Previous insurer"},{key:"previousPolicy",label:"Previous policy number"},{key:"previousPolicyStart",label:"Previous policy start"},{key:"previousExpiry",label:"Previous policy expiry"},
 {key:"ncb",label:"NCB claimed (%)"},{key:"claims",label:"Claims in previous period"},{key:"financerName",label:"Financier name"},{key:"financeType",label:"Hypothecation / lease"}];
 const nominee:Field[]=[{key:"nomineeName",label:"Nominee name"},{key:"nomineeRelation",label:"Relationship"},{key:"nomineeDob",label:"Nominee DOB"},{key:"nomineeShare",label:"Share (%)"},
 {key:"appointee",label:"Appointee (minor nominee)"},{key:"ownerPa",label:"Owner-driver PA cover"},{key:"paidDrivers",label:"Number of paid drivers"},{key:"voluntaryDeductible",label:"Voluntary deductible (₹)"}];
@@ -60,7 +60,7 @@ const dropdowns: Record<string, string[]> = {
  paidDrivers:["0","1","2","3","4","5","6","7","8","9","10"],
  voluntaryDeductible:["0","2500","5000","7500","10000","15000","25000"]
 };
-const dateFields = new Set(["registrationDate","manufactureDate","fitnessExpiryDate","pucUpto","taxUpto","permitValidUpto","nationalPermitUpto","dob","startDate","previousExpiry","nomineeDob"]);
+const dateFields = new Set(["registrationDate","manufactureDate","fitnessExpiryDate","pucUpto","taxUpto","permitValidUpto","nationalPermitUpto","dob","startDate","previousPolicyStart","previousExpiry","nomineeDob"]);
 const numericFields = new Set(["manufacturingYear","engineCapacity","grossWeight","unladenWeight","seatingCapacity","standingCapacity","sleeperCapacity","wheelBase","idv","bodyValue","trailerValue","electricalValue","nonElectricalValue","cngValue","nomineeShare"]);
 
 function nextPolicyDay(iso:string){if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(iso))return "";const d=new Date(iso+"T00:00:00Z");if(Number.isNaN(d.getTime()))return "";d.setUTCDate(d.getUTCDate()+1);return d.toISOString().slice(0,10);}
