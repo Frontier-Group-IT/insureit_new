@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { listPartnerClaimVehicleChoices, type PartnerClaimVehicleChoice } from '@/lib/claim-vehicle-choices';
@@ -71,7 +71,7 @@ export default function PartnerClaimVehicleSelector() {
         <Ionicons name="arrow-back" color="#FFF" size={24}/>
       </Pressable>
       <View style={styles.headerIcon}>
-        <Image source={PartnerAssets.actions.addVehicle} resizeMode="contain" style={styles.headerIconImage}/>
+        <MaterialCommunityIcons name="truck" size={27} color="#FFFFFF" />
       </View>
       <Text style={styles.headerTitle}>Select Vehicle</Text>
     </View>
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
  header:{height:67,paddingHorizontal:15,flexDirection:'row',alignItems:'center',gap:13,backgroundColor:'#1261C4'},
  back:{width:34,height:40,justifyContent:'center',alignItems:'center'},
  headerIcon:{width:40,height:40,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,0.16)',borderWidth:1,borderColor:'rgba(255,255,255,0.18)'},
- headerIconImage:{width:27,height:27},
+
  headerTitle:{color:'#FFF',fontSize:18,fontWeight:'900'},
  background:{flex:1},
  backgroundImage:{opacity:0.26},
