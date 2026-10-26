@@ -20,7 +20,7 @@ export function CustomerPolicySaveForm({
 }) {
   const [state, formAction, pending] = useActionState(action, initialState);
   return (
-    <form action={formAction} encType="multipart/form-data" className="space-y-3" aria-busy={pending}>
+    <form action={formAction} encType="multipart/form-data" className="customer-workflow space-y-3" aria-busy={pending}>
       {children}
       {state.error ? (
         <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-800">
