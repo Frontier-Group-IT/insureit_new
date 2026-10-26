@@ -30,3 +30,19 @@
 - Group Associate has `account_subtype=group_associate` and Group portal type.
 - If scope lists are missing/malformed, reporting is blocked. Empty partner lists are not reinterpreted as all partners.
 - Existing operation reporting pages under `/reports` must remain untouched.
+
+## Continuation: four scoped summary tabs (2026-10-26)
+- Added reusable `PartnerReportTabs` navigation.
+- `/partner/reports/business` uses `partner_app_business_performance`-backed service for month-over-month totals, trend and business mix.
+- `/partner/reports/portfolio` uses `partner_app_policy_summary`-backed service for policy lifecycle and motor summary.
+- `/partner/reports/operations` uses account-scoped claim and renewal summary services.
+- Overview now shows all four tabs. All pages validate `requirePartnerReportScope()` before invoking their authenticated RPC-backed data services.
+- This completes first-pass navigation and high-level reporting UI, NOT legacy Operations report parity.
+- No ad-hoc unrestricted report RPC, service-role loader, export, database migration or user-supplied intermediary filters added.
+
+### Immediate QA blockers
+- Run TypeScript build, lint and role-level browser verification for Group, Group Associate, Partner, Partner Associate and Branch. Connector-side source inspection does not prove any of those passed.
+- Confirm production RPC contracts and Group Associate / Branch scope. Adjust the guard if their real payload differs without loosening the access boundary.
+- Verify that every source RPC correctly enforces the current authentication scope. Treat joins via shared customer ID as insufficient for policy isolation.
+- Confirm all operations financial visibility, including payouts, against current payout privilege RPC; do not add Pay-in to partner views merely because Reports exists.
+- Implement scoped detailed reporting RPCs and complete reference styling before calling this production-ready.
