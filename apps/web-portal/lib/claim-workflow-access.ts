@@ -37,7 +37,10 @@ export async function requireClaimWorkflowAccess(claimId: string, errorMessage =
       profile,
       claim,
       isPartner: false as const,
-      supabase: await createServerSupabaseClient(),
+      // Authorized against manage_claims and customer scope above. Use the same
+      // claim-visible server client for the subsequent stage read and mutation;
+      // employee table RLS can otherwise hide this already-authorized claim.
+      supabase: admin,
     };
   }
 
