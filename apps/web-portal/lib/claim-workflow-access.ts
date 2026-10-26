@@ -86,6 +86,11 @@ export async function insertAuthorizedClaimStageDetail(
     return;
   }
 
-  const { error } = await access.supabase.from("claim_stage_details").insert(payload);
+  // The stage-detail triggers compare created_by with auth.uid().
+  // Keep the prior claim-scoped authorization, but perform this insert using
+  // the verified user's JWT rather than the admin client (whose auth.uid()
+  // is null). RLS and the database trigger remain enforced.
+  const scoped = await createServerSupabaseClient();
+  const { error } = await scoped.from("claim_stage_details").insert(payload);
   if (error) throw new Error(error.message);
 }
