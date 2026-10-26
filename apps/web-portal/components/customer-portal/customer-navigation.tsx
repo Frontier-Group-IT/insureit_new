@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeftRight, BadgeIndianRupee, CalendarSync, CarFront, ClipboardCheck, ClipboardList, FileText, Headset, LayoutDashboard, PanelLeftClose, PanelLeftOpen, ReceiptText, Settings, ShieldCheck, Store, UserRound } from "lucide-react";
 import { BrandLockup } from "@/components/brand-lockup";
 
-export function CustomerNavigation() {
+export function CustomerNavigation({ mode = "sidebar" }: { mode?: "top" | "sidebar" }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [hoverLabel, setHoverLabel] = useState<{ label: string; top: number } | null>(null);
@@ -45,7 +45,7 @@ export function CustomerNavigation() {
 
   return (
     <>
-      <aside className={`fixed inset-y-0 left-0 z-50 hidden border-r border-[#E5EAF2] bg-white text-[#172B4D] transition-[width] duration-200 lg:flex lg:flex-col ${collapsed ? "w-16" : "w-[248px]"}`}>
+      {mode === "sidebar" && <aside className={`fixed inset-y-0 left-0 z-50 hidden border-r border-[#E5EAF2] bg-white text-[#172B4D] transition-[width] duration-200 lg:flex lg:flex-col ${collapsed ? "w-16" : "w-[248px]"}`}>
         <div className={`flex h-[78px] items-center border-b border-[#E5EAF2] ${collapsed ? "justify-center px-1" : "justify-between pl-5 pr-2"}`}>
           {!collapsed && <Link href="/customer/home" aria-label="INSUREIT Customer home"><BrandLockup compact /></Link>}
           <button type="button" onClick={toggleSidebar} title={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!collapsed} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[#53627A] hover:bg-[#EDF3FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]">
@@ -86,8 +86,8 @@ export function CustomerNavigation() {
             {!collapsed && <span>Settings</span>}
           </Link>
         </div>
-      </aside>
-      {collapsed && hoverLabel && (
+      </aside>}
+      {mode === "sidebar" && collapsed && hoverLabel && (
         <div role="tooltip" className="pointer-events-none fixed left-[70px] z-[100] -translate-y-1/2 whitespace-nowrap rounded-lg border border-[#D4E2F7] bg-white px-3 py-2 text-[12px] font-bold text-[#152649] shadow-[0_8px_22px_rgba(5,15,35,0.25)]" style={{ top: hoverLabel.top }}>
           {hoverLabel.label}
         </div>
