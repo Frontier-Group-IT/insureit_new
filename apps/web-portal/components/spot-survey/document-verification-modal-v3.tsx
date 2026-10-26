@@ -32,6 +32,7 @@ export function DocumentVerificationModalButton({ claimId, documentId, modalType
   const [saved, setSaved] = useState(false);
   const [rcLoading, setRcLoading] = useState(false);
   const [rcLookupMessage, setRcLookupMessage] = useState("");
+  const [rcRegistrationNumber, setRcRegistrationNumber] = useState("");
   const [spot, setSpot] = useState<SpotState>({
     axleStatus: detailText(initialDetails, "spot_axle_status"),
     overturned: detailText(initialDetails, "spot_overturned"),
@@ -44,6 +45,7 @@ export function DocumentVerificationModalButton({ claimId, documentId, modalType
     void getClaimRcVerificationDates(claimId).then((response) => {
       if (!active) return;
       if (response.ok) {
+        setRcRegistrationNumber(response.registrationNumber);
         setRcDates((previous) => {
           const next = { ...previous };
           for (const row of rcRows) if (!next[row.dateName] && response.dates[row.dateName as keyof typeof response.dates]) next[row.dateName] = response.dates[row.dateName as keyof typeof response.dates]!;
@@ -57,20 +59,49 @@ export function DocumentVerificationModalButton({ claimId, documentId, modalType
   }, [open, modalType, claimId]);
 
   const fetchRcFromAuthbridge = () => {
-    if (rcLoading) return;
+    if (rcLoading || !rcRegistrationNumber) return;
     setRcLoading(true);
-    setRcLookupMessage("Checking existing RC cache / AuthBridge...");
-    void getClaimRcVerificationDates(claimId, true).then((response) => {
-      if (response.ok) {
+    setRcLookupMessage("Checking existing AuthBridge cache / fetching RC details…");
+    void (async () => {
+      try {
+        const response = await fetch("/api/vehicles/rc-lookup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ registrationNumber: rcRegistrationNumber, claimId }),
+        });
+        const payload = await response.json() as {
+          error?: string;
+          source?: "local_cache" | "authbridge";
+          isStale?: boolean;
+          details?: Record<string, string | null>;
+        };
+        if (!response.ok || !payload.details) throw new Error(payload.error || "RC lookup unavailable.");
+        const mapping: Record<string, string> = {
+          fitness_valid_upto: "fitnessExpiryDate",
+          tax_valid_upto: "roadTaxExpiryDate",
+          insurance_valid_upto: "policyExpiryDate",
+          pucc_valid_upto: "pucExpiryDate",
+          local_permit_valid_upto: "localPermitExpiryDate",
+          national_permit_valid_upto: "nationalPermitExpiryDate",
+        };
         setRcDates((previous) => {
           const next = { ...previous };
-          for (const row of rcRows) if (!next[row.dateName] && response.dates[row.dateName as keyof typeof response.dates]) next[row.dateName] = response.dates[row.dateName as keyof typeof response.dates]!;
+          for (const [field, sourceKey] of Object.entries(mapping)) {
+            const date = payload.details?.[sourceKey];
+            if (!next[field] && typeof date === "string" && /^\\d{4}-\\d{2}-\\d{2}$/.test(date)) {
+              next[field] = date;
+            }
+          }
           return next;
         });
-        setRcLookupMessage(response.source === "authbridge" ? "AuthBridge lookup completed. Missing dates filled where available; review values before verification." : response.source === "rc_cache" ? "RC details filled from existing AuthBridge cache. Review before verification." : "No additional expiry dates returned. Enter missing dates manually.");
-      } else setRcLookupMessage(response.message);
-      setRcLoading(false);
-    }).catch(() => { setRcLoading(false); setRcLookupMessage("AuthBridge lookup failed. Manual entry remains available."); });
+        setRcLookupMessage(payload.isStale ? "Showing cached RC data (provider unavailable). Please confirm against the RC copy." : payload.source === "local_cache" ? "AuthBridge cache checked. Missing RC dates filled where available." : "AuthBridge lookup complete. Missing RC dates filled where available. Review before verification.");
+      } catch (error) {
+        setRcLookupMessage(error instanceof Error ? error.message : "AuthBridge lookup unavailable. Manual entry remains available.");
+      } finally {
+        setRcLoading(false);
+      }
+    })();
   };
 
   const policyStart = detailText(initialDetails, "insurance_start_date") || toDateOnly(policyStartDate) || "";
@@ -148,7 +179,7 @@ export function DocumentVerificationModalButton({ claimId, documentId, modalType
           {modalType === "rc" ? <>
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E6EEF7] bg-[#F8FAFD] px-6 py-2">
               <p className="text-[11px] text-[#526178]">{rcLoading ? "Loading RC expiry data…" : rcLookupMessage || "Stored expiry dates are loaded automatically."}</p>
-              <button type="button" onClick={fetchRcFromAuthbridge} disabled={rcLoading} title="Fetch missing RC expiry details from AuthBridge" className="inline-flex items-center gap-1.5 rounded-lg border border-[#BBD0ED] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#174EA6] hover:bg-blue-50 disabled:opacity-50"><RefreshCw size={14} className={rcLoading ? "animate-spin" : ""} /> AuthBridge Lookup</button>
+              <button type="button" onClick={fetchRcFromAuthbridge} disabled={rcLoading || !rcRegistrationNumber} title="Fetch missing RC expiry details from AuthBridge" className="inline-flex items-center gap-1.5 rounded-lg border border-[#BBD0ED] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#174EA6] hover:bg-blue-50 disabled:opacity-50"><RefreshCw size={14} className={rcLoading ? "animate-spin" : ""} /> AuthBridge Lookup</button>
             </div>
             <RcRows incidentDate={incident} values={rcDates} onChange={(key, value) => setRcDates((prev) => ({ ...prev, [key]: value }))} />
           </> : null}
