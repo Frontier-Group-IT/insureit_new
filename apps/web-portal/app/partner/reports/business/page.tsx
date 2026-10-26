@@ -2,7 +2,6 @@ import { BusinessTrendCard } from "@/components/reports/business-trend-card";
 import { PartnerReportsShell } from "@/components/partner-portal/partner-reports-shell";
 import { requirePartnerReportScope } from "@/lib/reports/partner-report-scope";
 import { getPartnerWebBusinessPerformance } from "@/lib/partner-web";
-import { PartnerReportsShell } from "@/components/partner-portal/partner-reports-shell";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -15,7 +14,6 @@ export default async function PartnerBusinessReport() {
   const report = await getPartnerWebBusinessPerformance();
   return (
     <PartnerReportsShell active="Business" scope={reportScope}>
-      <h1 className="text-3xl font-extrabold">Reports</h1>
       
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
