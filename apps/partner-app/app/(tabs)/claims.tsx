@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useIsFocused } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
@@ -45,6 +47,7 @@ const CLAIM_FILTER_OPTIONS: Array<{ value: PartnerClaimState; label: string }> =
 
 export default function ClaimsScreen() {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const safeAreaInsets = useSafeAreaInsets();
   // SafeAreaView already offsets overlays when iOS reports a top inset.
   // Only fall back when older OTA runtimes report zero, avoiding double spacing.
@@ -334,6 +337,7 @@ export default function ClaimsScreen() {
         onRefresh={() => void refreshAll()}
       />
       </SafeAreaView>
+      {isFocused ? <StatusBar style={showStickyControls ? 'light' : 'dark'} /> : null}
       {showStickyControls && safeAreaInsets.top > 0 ? <View pointerEvents="none" style={[styles.stickyStatusBarShield, { height: safeAreaInsets.top }]} /> : null}
       {showStickyControls ? (
         <View style={[styles.stickyOverlay, { top: safeAreaInsets.top }]} pointerEvents="box-none">
@@ -463,10 +467,10 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
   content: { flexGrow: 1, paddingBottom: 104, backgroundColor: '#FFFFFF' },
   pressed: { opacity: 0.76 },
-  stickyStatusBarShield: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, backgroundColor: '#FFFFFF' },
-  stickyOverlay: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 40, backgroundColor: "#FFFFFF" },
-  stickyTitle: { marginLeft: 18, marginTop: 12, marginBottom: 12, color: "#153F88", fontSize: 15, lineHeight: 18, fontWeight: "400", letterSpacing: -0.2 },
-  stickySearchBody: { paddingHorizontal: 10, paddingBottom: 10, backgroundColor: "#FFFFFF" },
+  stickyStatusBarShield: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, backgroundColor: '#082657' },
+  stickyOverlay: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 40, backgroundColor: "#082657" },
+  stickyTitle: { marginLeft: 18, marginTop: 12, marginBottom: 12, color: "#FFFFFF", fontSize: 15, lineHeight: 18, fontWeight: "400", letterSpacing: -0.2 },
+  stickySearchBody: { paddingHorizontal: 10, paddingBottom: 10, backgroundColor: "#082657" },
 
   hero: { height: 98, overflow: 'hidden', backgroundColor: '#0752A2' },
   heroBackdrop: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%', opacity: 0.92 },
