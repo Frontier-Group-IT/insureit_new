@@ -273,6 +273,7 @@ export default function BusinessScreen() {
       title=""
       hideTopBar
       stickyHeading="Business"
+      stickyHeaderNavy
       stickyControls={businessSearchControls}
       stickyStartY={compactScreen ? 54 : 58}
       scrollProps={{
