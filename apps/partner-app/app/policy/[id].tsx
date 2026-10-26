@@ -109,7 +109,7 @@ export default function PolicyDetailScreen() {
               </View>
               <View style={styles.periodDivider} />
               <View style={styles.periodBlock}>
-                <View style={styles.periodTitleRow}><View style={styles.periodIcon}><Ionicons name="calendar" color="#FFFFFF" size={19}/></View><Text style={styles.periodLabel}>Policy Period</Text></View>
+                <View style={styles.periodTitleRow}><PartnerPolicyDetailIcon kind="policy-period" size={26} showBadge={false} /><Text style={styles.periodLabel}>Policy Period</Text></View>
                 <Text style={styles.periodValue}>{formatDate(data.policy.start_date)} – {formatDate(data.policy.end_date)}</Text>
               </View>
             </View>
