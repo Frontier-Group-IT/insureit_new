@@ -1,3 +1,4 @@
+import { ScopedReportDistribution } from "@/components/partner-portal/scoped-report-distribution";
 import { PartnerReportsShell } from "@/components/partner-portal/partner-reports-shell";
 import Link from "next/link";
 import { requirePartnerReportScope } from "@/lib/reports/partner-report-scope";
@@ -24,6 +25,7 @@ export default async function PartnerPortfolioReport({ searchParams }: { searchP
   return (
     <PartnerReportsShell active="Portfolio" scope={reportScope}>
       
+      <ScopedReportDistribution title="Policy business mix" items={[{label:"Motor",value:Number(report.motor_policies)},{label:"Other business",value:Math.max(0,Number(report.total_policies)-Number(report.motor_policies))}]}/>
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3">
         {fields.map(([label, value]) => <div key={label} className="rounded-xl border border-[#E2E9F3] bg-white p-3 shadow-sm"><p className="text-xs font-semibold text-[#6D7E9A]">{label}</p><p className="mt-2 text-2xl font-bold">{number(value)}</p></div>)}
       </section>
