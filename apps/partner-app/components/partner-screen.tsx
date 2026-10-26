@@ -44,7 +44,7 @@ export function PartnerScreen({
   homeMotionScrollY,
   stickyHeading,
   stickyControls,
-  stickyHeaderNavy = true,
+  stickyHeaderNavy = false,
   stickyStartY = 100,
 }: PropsWithChildren<{
   title: string;
