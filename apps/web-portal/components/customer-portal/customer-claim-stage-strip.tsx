@@ -13,7 +13,7 @@ export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, compl
   const activeIndex = INTERNAL_JOURNEY_STAGES.findIndex(stage => stage.key === currentKey);
   const selected = INTERNAL_JOURNEY_STAGES.find(stage => stage.key === selectedKey);
   return (
-    <div className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
+    <div className="customer-workflow overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
         <h2 className="text-[17px] font-semibold text-[#071D49]">Operations claim journey</h2>
         <span className="rounded-full border border-[#BFD3F7] bg-[#F4F8FF] px-4 py-1.5 text-[11px] font-semibold text-[#174EA6]">{selected?.label ?? "Spot Intimation"}</span>
@@ -25,7 +25,7 @@ export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, compl
             const current = stage.key === currentKey;
             const selectedStage = stage.key === selectedKey;
             const available = completed || current || (activeIndex >= 0 && index <= activeIndex);
-            return <li key={stage.key} className="border-r border-[#D9E3F0] last:border-r-0">
+            return <li key={stage.key} className="customer-workflow-step border-r border-[#D9E3F0] last:border-r-0">
               <Link href={{ pathname:`/customer/claims/${claimId}/stage/${stage.key}`, query:{account:accountId,...(editMode?{mode:"edit"}:{})} }}
                 aria-current={current?"step":undefined}
                 aria-label={stage.label}
