@@ -84,6 +84,7 @@ export default function PolicyDetailScreen() {
               </View>
               <View style={styles.summaryBody}>
                 <Text numberOfLines={1} style={styles.summaryPolicyNo}>{data.policy.policy_no || data.policy.policy_code || 'Policy'}</Text>
+                <Text numberOfLines={1} style={styles.summaryInsurer}>{data.insurer.name || 'Insurer not recorded'}</Text>
               </View>
               <View style={styles.summaryBadges}>
                 <PartnerStatusBadge label={category} tone="brand" />
@@ -136,7 +137,7 @@ export default function PolicyDetailScreen() {
           <Card>
             <CardHeader iconKind="premium" title="Premium" />
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showPremiumDetails }} onPress={() => setShowPremiumDetails((value) => !value)} style={({ pressed }) => [styles.premiumDisclosure, pressed && styles.pressed]}>
-              <PartnerPolicyDetailIcon kind="premium-breakup" size={36} />
+              <PartnerPolicyDetailIcon kind="premium-breakup" size={25} />
               <View style={styles.disclosureText}><Text style={styles.disclosureTitle}>Premium breakup</Text><Text style={styles.disclosureSummary}>{formatIndianCurrency(data.premium.gross_premium)}</Text></View>
               <Ionicons name={showPremiumDetails ? 'chevron-up' : 'chevron-forward'} size={17} color="#2468D7" />
             </Pressable>
@@ -181,7 +182,7 @@ export default function PolicyDetailScreen() {
           <Card>
             <CardHeader iconKind="commercial-attribution" title="Commercial Attribution" />
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }} onPress={() => setShowCommercialDetails((value) => !value)} style={({ pressed }) => [styles.commercialRow, pressed && styles.pressed]}>
-              <PartnerPolicyDetailIcon kind="sales-ownership" size={36} />
+              <PartnerPolicyDetailIcon kind="sales-ownership" size={25} />
               <View style={styles.disclosureText}><Text style={styles.disclosureTitle}>Sales ownership</Text><Text numberOfLines={1} style={styles.disclosureSummary}>{[data.commercial.rm_name, data.commercial.intermediary_code].filter(Boolean).join(' · ') || 'View details'}</Text></View>
               <Ionicons name={showCommercialDetails ? 'chevron-up' : 'chevron-forward'} size={17} color="#2468D7" />
             </Pressable>
@@ -205,7 +206,7 @@ function Card({ children }: { children: ReactNode }) { return <View style={style
 function CardHeader({ iconKind, title, actionLabel, onAction }: { iconKind: PartnerPolicyDetailIconKind; title: string; actionLabel?: string; onAction?: () => void }) {
   return (
     <View style={styles.cardHeader}>
-      <View style={styles.cardHeaderLeft}><PartnerPolicyDetailIcon kind={iconKind} size={28} showBadge={false} /><Text style={styles.cardTitle}>{title}</Text></View>
+      <View style={styles.cardHeaderLeft}><PartnerPolicyDetailIcon kind={iconKind} size={22} showBadge={false} /><Text style={styles.cardTitle}>{title}</Text></View>
       {actionLabel ? (
         <Pressable accessibilityRole="button" disabled={!onAction} onPress={onAction} hitSlop={8} style={({ pressed }) => [styles.cardHeaderAction, pressed && onAction ? styles.pressed : null]}>
           <Text style={styles.cardHeaderActionText}>{actionLabel}</Text><Ionicons name="chevron-forward" size={13} color="#6D46CE" />
@@ -216,11 +217,11 @@ function CardHeader({ iconKind, title, actionLabel, onAction }: { iconKind: Part
 }
 
 function QuickAction({ iconKind, label, tone, onPress }: { iconKind: PartnerPolicyDetailIconKind; label: string; tone: PartnerPolicyDetailIconTone; onPress?: () => void }) {
-  return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.quickAction, quickToneStyle(tone), pressed && styles.pressed]}><PartnerPolicyDetailIcon kind={iconKind} size={40} tone={tone} /><Text numberOfLines={2} style={styles.quickLabel}>{label}</Text></Pressable>;
+  return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.quickAction, quickToneStyle(tone), pressed && styles.pressed]}><PartnerPolicyDetailIcon kind={iconKind} size={30} tone={tone} /><Text numberOfLines={2} style={styles.quickLabel}>{label}</Text></Pressable>;
 }
 
 function OverviewItem({ iconKind, label, value, insurerName }: { iconKind: PartnerPolicyDetailIconKind; label: string; value: string; insurerName?: string | null }) {
-  return <View style={styles.overviewItem}>{insurerName ? <View style={styles.overviewLogoWrap}><PartnerInsurerLogo name={insurerName} fallback={PartnerAssets.products.motorInsurance} style={styles.overviewLogo} /></View> : <PartnerPolicyDetailIcon kind={iconKind} size={32} tone="neutral" />}<View style={styles.overviewCopy}><Text style={styles.overviewLabel}>{label}</Text><Text numberOfLines={2} style={styles.overviewValue}>{value}</Text></View></View>;
+  return <View style={styles.overviewItem}>{insurerName ? <View style={styles.overviewLogoWrap}><PartnerInsurerLogo name={insurerName} fallback={PartnerAssets.products.motorInsurance} style={styles.overviewLogo} /></View> : <PartnerPolicyDetailIcon kind={iconKind} size={21} tone="neutral" />}<View style={styles.overviewCopy}><Text style={styles.overviewLabel}>{label}</Text><Text numberOfLines={2} style={styles.overviewValue}>{value}</Text></View></View>;
 }
 
 function EntityRow({ image, icon, title, subtitle, onPress }: { image?: ImageSourcePropType; icon?: keyof typeof Ionicons.glyphMap; title: string; subtitle: string; onPress?: () => void }) {
@@ -237,41 +238,42 @@ function formatDate(value: string | null) { if (!value) return '—'; const d = 
 function nullableMoney(value: number | string | null) { return value == null ? 'Not recorded' : formatIndianCurrency(value); }
 
 const styles = StyleSheet.create({
-  pageHeader: { height: 92, marginHorizontal: -partnerTheme.spacing.lg, overflow: 'hidden', paddingHorizontal: 16, paddingTop: 16, backgroundColor: '#0758B6' },
+  pageHeader: { height: 102, marginHorizontal: -partnerTheme.spacing.lg, overflow: 'hidden', paddingHorizontal: 16, paddingTop: 12, backgroundColor: '#0A367D' },
   headerGlowOne: { position: 'absolute', width: 210, height: 150, borderRadius: 120, right: -42, top: -76, backgroundColor: 'rgba(38,142,238,0.30)' },
   headerGlowTwo: { position: 'absolute', width: 170, height: 120, borderRadius: 100, right: 68, top: 34, backgroundColor: 'rgba(14,99,197,0.28)' },
   headerTitleRow: { marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerBackButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { color: '#FFFFFF', fontSize: 18, lineHeight: 22, fontWeight: '700', letterSpacing: -0.12 },
   stateWrap: { marginTop: 14 },
-  contentWrap: { marginTop: -31, gap: 10, paddingBottom: 8 },
-  summaryCard: { padding: 14, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: '#DEE6F1', backgroundColor: '#FFFFFF', shadowColor: '#14345E', shadowOpacity: 0.07, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
+  contentWrap: { marginTop: -41, gap: 8, paddingBottom: 12 },
+  summaryCard: { padding: 12, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: '#DCE7F3', backgroundColor: '#FFFFFF', shadowColor: '#14345E', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
   summaryTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  summaryArtworkWrap: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
-  summaryArtwork: { width: 40, height: 40 },
+  summaryArtworkWrap: { width: 40, height: 40, borderRadius: 10, backgroundColor: '#F1F6FD', alignItems: 'center', justifyContent: 'center' },
+  summaryArtwork: { width: 34, height: 34 },
   summaryBody: { flex: 1, minWidth: 0 },
   summaryPolicyNo: { color: '#0F213F', fontSize: 15, lineHeight: 19, fontWeight: '800' },
+  summaryInsurer: { color: '#75849A', fontSize: 9, lineHeight: 12, marginTop: 2 },
   summaryBadges: { alignItems: 'flex-end', gap: 5 },
-  summaryDivider: { height: StyleSheet.hairlineWidth, marginTop: 11, backgroundColor: '#E7ECF4' },
-  premiumRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', paddingTop: 9 },
-  premiumBlock: { flex: 1 }, premiumLabel: { color: '#79879B', fontSize: 9, lineHeight: 11 }, premiumValue: { marginTop: 1, color: '#092C62', fontSize: 21, lineHeight: 25, fontWeight: '800', letterSpacing: -0.3 },
+  summaryDivider: { height: StyleSheet.hairlineWidth, marginTop: 8, backgroundColor: '#E7ECF4' },
+  premiumRow: { minHeight: 47, flexDirection: 'row', alignItems: 'center', paddingTop: 7 },
+  premiumBlock: { flex: 1 }, premiumLabel: { color: '#79879B', fontSize: 9, lineHeight: 11 }, premiumValue: { marginTop: 1, color: '#092C62', fontSize: 19, lineHeight: 23, fontWeight: '800', letterSpacing: -0.3 },
   periodDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', marginHorizontal: 12, backgroundColor: '#E0E6F0' },
   periodBlock: { flex: 1.03, minWidth: 0 }, periodTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 }, periodLabel: { color: '#7B8797', fontSize: 9, lineHeight: 11 }, periodValue: { marginTop: 2, color: '#12233E', fontSize: 9.5, lineHeight: 12, fontWeight: '700' },
-  card: { overflow: 'hidden', borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F1', backgroundColor: '#FFFFFF', shadowColor: '#17365F', shadowOpacity: 0.035, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
-  cardHeader: { minHeight: 42, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  card: { overflow: 'hidden', borderRadius: 13, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F1', backgroundColor: '#FFFFFF' },
+  cardHeader: { minHeight: 37, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 }, cardTitle: { color: '#102A51', fontSize: 12.5, lineHeight: 16, fontWeight: '800' },
   cardHeaderAction: { flexDirection: 'row', alignItems: 'center', gap: 1, minHeight: 32, paddingLeft: 8 }, cardHeaderActionText: { color: '#6C46CC', fontSize: 9, lineHeight: 12, fontWeight: '700' },
-  quickGrid: { flexDirection: 'row', gap: 7, paddingHorizontal: 10, paddingBottom: 10 },
-  quickAction: { flex: 1, minHeight: 71, borderRadius: 10, alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 4 },
+  quickGrid: { flexDirection: 'row', gap: 6, paddingHorizontal: 9, paddingBottom: 9 },
+  quickAction: { flex: 1, minHeight: 60, borderRadius: 10, alignItems: 'center', justifyContent: 'center', gap: 3, paddingHorizontal: 3 },
   quickBlue: { backgroundColor: '#EAF5FF' }, quickGreen: { backgroundColor: '#E9F8F2' }, quickOrange: { backgroundColor: '#FFF1E6' }, quickPurple: { backgroundColor: '#F0EBFF' },
   quickLabel: { color: '#17304F', textAlign: 'center', fontSize: 8.5, lineHeight: 11, fontWeight: '700' },
   overviewGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 10, paddingBottom: 8 },
-  overviewItem: { width: '50%', minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 7, paddingHorizontal: 4, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDF1F6' },
+  overviewItem: { width: '50%', minHeight: 47, flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 5, paddingHorizontal: 4, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDF1F6' },
   overviewLogoWrap: { width: 32, height: 32, borderRadius: 9, backgroundColor: '#F0F5FC', alignItems: 'center', justifyContent: 'center' }, overviewLogo: { width: 27, height: 27 }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { color: '#8A95A6', fontSize: 8.5, lineHeight: 10 }, overviewValue: { marginTop: 2, color: '#192B46', fontSize: 10, lineHeight: 13, fontWeight: '700' },
-  premiumDisclosure: { minHeight: 58, marginHorizontal: 10, marginBottom: 9, paddingHorizontal: 9, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#F2F7FF' },
-  commercialRow: { minHeight: 58, marginHorizontal: 10, marginBottom: 9, paddingHorizontal: 9, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#FAFCFF' },
+  premiumDisclosure: { minHeight: 47, marginHorizontal: 9, marginBottom: 8, paddingHorizontal: 9, borderRadius: 9, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F2F7FF' },
+  commercialRow: { minHeight: 47, marginHorizontal: 9, marginBottom: 8, paddingHorizontal: 9, borderRadius: 9, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FAFCFF' },
   disclosureText: { flex: 1, minWidth: 0 }, disclosureTitle: { color: '#152945', fontSize: 10.5, lineHeight: 13, fontWeight: '700' }, disclosureSummary: { marginTop: 2, color: '#6F7F94', fontSize: 8.5, lineHeight: 11 },
   detailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 10, paddingBottom: 10 }, miniInfo: { width: '47%', minHeight: 38, padding: 7, borderRadius: 8, backgroundColor: '#F7F9FC' }, miniLabel: { color: '#8A95A6', fontSize: 8, lineHeight: 10, textTransform: 'uppercase' }, miniValue: { marginTop: 2, color: '#21334E', fontSize: 9.5, lineHeight: 12, fontWeight: '700' },
-  entityStack: { paddingHorizontal: 10, paddingBottom: 9 }, entityRow: { minHeight: 55, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDF1F6' }, entityIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EAF5FF' }, entityArtwork: { width: 27, height: 27 }, entityBody: { flex: 1, minWidth: 0 }, entityTitle: { color: '#142A49', fontSize: 10, lineHeight: 13, fontWeight: '800' }, entityMeta: { marginTop: 2, color: '#7C899B', fontSize: 8.5, lineHeight: 11 },
+  entityStack: { paddingHorizontal: 10, paddingBottom: 8 }, entityRow: { minHeight: 45, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDF1F6' }, entityIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EAF5FF' }, entityArtwork: { width: 27, height: 27 }, entityBody: { flex: 1, minWidth: 0 }, entityTitle: { color: '#142A49', fontSize: 10, lineHeight: 13, fontWeight: '800' }, entityMeta: { marginTop: 2, color: '#7C899B', fontSize: 8.5, lineHeight: 11 },
   pressed: { opacity: 0.68 },
 });
