@@ -7,6 +7,7 @@ export type ShareQuote={id:string;name:string;cover:string;idv:number;od:number;
 type CaseStatus="draft"|"ready"|"sent"|"awaiting"|"revision"|"accepted"|"declined";
 type ShareCase={ids:string[];status:CaseStatus;acceptedId:string;contactNote:string;events:string[]};
 const key="insureit.quote-share-case.preview.v2";
+const fingerprint=(value:string)=>{let hash=2166136261;for(let i=0;i<value.length;i++){hash=Math.imul(hash^value.charCodeAt(i),16777619);}return (hash>>>0).toString(36);};
 const format=(v:number)=>"Rs. "+v.toLocaleString("en-IN");
 function safe(v:string){return v.replace(/[^\x20-\x7e]/g," ").slice(0,110);}
 async function createPDF(quotes:ShareQuote[],values:Record<string,string>){
@@ -37,7 +38,7 @@ export default function QuoteSharingWorkbench({quotes,values,onBack,onAccept}:{q
  const [state,setState]=useState<ShareCase>({ids:quotes.map(q=>q.id),status:"draft",acceptedId:"",contactNote:"",events:[]});
  const [viewer,setViewer]=useState<string|null>(quotes[0]?.id||null);
  const quoteIds=quotes.map(q=>q.id).join(",");
- const contextKey=[quoteIds,values.registrationNumber||values.chassisNumber||"",values.ownerName||""].join("|");
+ const contextKey=fingerprint([quoteIds,values.registrationNumber||values.chassisNumber||"",values.ownerName||""].join("|"));
  const [notice,setNotice]=useState("");
  useEffect(()=>{try{const raw=sessionStorage.getItem(key);if(raw){const stored=JSON.parse(raw) as {contextKey:string;data:ShareCase};const saved=stored?.data;if(stored?.contextKey===contextKey&&saved&&Array.isArray(saved.ids)&&saved.ids.join(",")===quoteIds)setState(saved);}}catch{}},[quoteIds,contextKey]);
  const apply=(part:Partial<ShareCase>,event?:string)=>setState(prev=>{const next={...prev,...part,events:event?[event,...prev.events]:prev.events};try{sessionStorage.setItem(key,JSON.stringify({contextKey,data:next}));}catch{}return next});
