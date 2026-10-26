@@ -158,7 +158,7 @@ export function BranchRegisterWorkspace({
       </div>
 
       <div className="hidden overflow-x-auto md:block">
-        <table className={`w-full ${hideParentPartner ? "min-w-[820px]" : "min-w-[1040px]"} table-fixed text-left text-[11px] text-[#1E293B]">
+        <table className={`w-full ${hideParentPartner ? "min-w-[820px]" : "min-w-[1040px]"} table-fixed text-left text-[11px] text-[#1E293B]`}>
           <thead className="sticky top-0 z-10 border-b border-[#E2E8F0] bg-[#F8FAFC] text-[9px] font-bold uppercase tracking-[0.06em] text-[#64748B]">
             <tr>
               <th className="w-[220px] px-3 py-2.5">Branch</th>
