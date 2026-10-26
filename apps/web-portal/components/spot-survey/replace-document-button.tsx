@@ -95,9 +95,10 @@ export function ReplaceDocumentButton({ claimId, documentId, documentType, label
                   continue;
                 }
                 const fileOptions=file.type ? {cacheControl:"3600",contentType:file.type} : {cacheControl:"3600"};
-                const {error:uploadError}=await supabase.storage.from(bucketName).uploadToSignedUrl(upload.path,upload.token,file,fileOptions);
-                if(uploadError) throw new Error(uploadError.message);
+                // Keep the path for cleanup even if the storage request fails midway.
                 uploadedPath=upload.path;
+                const {error:uploadError}=await supabase.storage.from(bucketName).uploadToSignedUrl(upload.path,upload.token,file,fileOptions);
+                if(uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`);
                 const response=await finalizeClaimDocumentUpload(claimId,documentType,{
                   path:upload.path,fileName:upload.fileName,documentType:upload.documentType,
                 },isReplaceAction ? documentId : undefined);
@@ -110,9 +111,10 @@ export function ReplaceDocumentButton({ claimId, documentId, documentType, label
                 // The finalized document owns its storage object.
                 uploadedPath=null;
                 completed++;
-              } catch {
+              } catch (error) {
                 if(uploadedPath) await bestEffortCancelClaimDocumentUploads(claimId,[uploadedPath]);
-                errors.push(`${file.name}: upload failed.`);
+                const reason = error instanceof Error && error.message.trim() ? error.message : "Unexpected upload error.";
+                errors.push(`${file.name}: ${reason}`);
               }
             }
             setProgress("");
