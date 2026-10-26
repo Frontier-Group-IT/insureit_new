@@ -15,8 +15,8 @@ export default async function CustomerProtectedLayout({ children }: { children: 
         breadcrumbs={<CustomerRouteBreadcrumbs />}
         headerActions={<CustomerHeaderActions name={profile.full_name || "Customer"} userId={user.id} />}
       >
-        <main className="min-h-[calc(100vh-66px)] px-3 pb-24 pt-4 sm:px-5 sm:pt-5 lg:px-7 lg:pb-6 lg:pt-3">
-          <div className="mx-auto w-full max-w-[1480px]">{children}</div>
+        <main className="customer-motion-page-enter min-h-[calc(100vh-66px)] px-3 pb-24 pt-4 sm:px-5 sm:pt-5 lg:px-7 lg:pb-6 lg:pt-3">
+          <div className="customer-content-container mx-auto w-full max-w-[1480px]">{children}</div>
         </main>
       </CustomerSidebarShell>
     </div>

@@ -1,0 +1,56 @@
+/* Customer register motion: Vehicles, Policies, Renewals, Exchange only. */
+@keyframes customer-register-arrive {
+  from {opacity: 0; transform: translateY(9px);}
+  to {opacity: 1; transform: translateY(0);}
+}
+.customer-register-motion { --register-ease: cubic-bezier(.2,.7,.25,1); }
+.customer-register-motion .customer-register-hero { animation: customer-register-arrive 350ms var(--register-ease) both; }
+.customer-register-motion .customer-register-panel { animation: customer-register-arrive 380ms 65ms var(--register-ease) both; }
+.customer-register-motion .customer-register-row {
+  transition: background-color 190ms ease, box-shadow 190ms ease;
+}
+.customer-register-motion .customer-register-logo {
+  transition: transform 190ms var(--register-ease);
+}
+.customer-register-motion .customer-register-filter {
+  transition: background-color 190ms ease, border-color 190ms ease, color 190ms ease, box-shadow 190ms ease, transform 190ms ease;
+}
+.customer-register-motion .customer-register-control {
+  transition: border-color 190ms ease, box-shadow 190ms ease, background-color 190ms ease;
+}
+.customer-register-motion .customer-register-control:focus-within {
+  border-color: #8c71df;
+  box-shadow: 0 0 0 3px rgba(113,80,204,.12);
+}
+.customer-register-motion .customer-register-action {
+  transition: transform 190ms var(--register-ease), box-shadow 190ms ease, background-color 190ms ease, border-color 190ms ease;
+}
+.customer-register-motion .customer-register-card {
+  transition: transform 210ms var(--register-ease), box-shadow 210ms ease, border-color 210ms ease;
+}
+.customer-register-motion .customer-register-image img {
+  transition: transform 320ms var(--register-ease);
+}
+.customer-register-motion .customer-register-status {
+  transition: background-color 190ms ease, color 190ms ease, box-shadow 190ms ease;
+}
+@media (hover:hover) and (pointer:fine) {
+  .customer-register-motion .customer-register-row:hover {background-color: #f6f3ff; box-shadow: inset 3px 0 0 #9377dc;}
+  .customer-register-motion .customer-register-row:hover .customer-register-logo {transform: scale(1.08);}
+  .customer-register-motion .customer-register-card:hover {transform: translateY(-3px); box-shadow: 0 10px 26px rgba(67,45,132,.11); border-color: #d9cdf5;}
+  .customer-register-motion .customer-register-image:hover img,
+  .customer-register-motion .customer-register-row:hover .customer-register-image img {transform: scale(1.045);}
+  .customer-register-motion .customer-register-action:hover {transform: translateY(-2px); box-shadow: 0 6px 16px rgba(67,45,132,.13);}
+  .customer-register-motion .customer-register-filter:hover {border-color: #b8a4ef; background-color: #f7f4ff;}
+  .customer-register-motion .customer-register-status:hover {box-shadow: 0 0 0 2px rgba(142,113,214,.13);}
+}
+.customer-register-motion .customer-register-action:active:not(:disabled) {transform: scale(.98);}
+.customer-register-motion :is(.customer-register-row,.customer-register-card,.customer-register-action,.customer-register-filter):focus-visible {
+  outline: 2px solid #7051cf; outline-offset: 2px;
+}
+@media (prefers-reduced-motion:reduce) {
+  .customer-register-motion :is(.customer-register-hero,.customer-register-panel) {animation: none !important;}
+  .customer-register-motion :is(.customer-register-row,.customer-register-logo,.customer-register-filter,.customer-register-control,.customer-register-action,.customer-register-card,.customer-register-image img,.customer-register-status) {
+    transition: none !important; animation: none !important; transform: none !important;
+  }
+}
