@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import QuoteComparisonDemo from "./quote-comparison-demo";
-import { ChevronDown, FileSearch, Info, Loader2, Search, Truck, RotateCcw, ArrowRight } from "lucide-react";
+import { ChevronDown, FileSearch, Info, Loader2, Search, Truck, RotateCcw, ArrowRight, BadgeCheck, ScanLine } from "lucide-react";
 
 type Field = {key:string;label:string;placeholder?:string};
 const vehicle:Field[]=[
@@ -100,14 +100,24 @@ export default function QuoteBookWorkspace(){
  return <div className="w-full space-y-2.5">
  <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5"><div><h1 className="text-[16px] font-bold tracking-tight text-slate-900">Quote & Book <span className="ml-1 rounded-md bg-indigo-50 px-2 py-1 align-middle text-[9px] font-bold text-indigo-700">DEVELOPMENT</span></h1></div><span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-800"><Info className="h-3 w-3"/> Quotation & payment APIs not connected</span></div>
  <div className="space-y-2">
- <section className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
- <div className="mb-2 flex items-center gap-2"><Truck className="h-4 w-4 text-blue-700"/><span className="text-[13px] font-bold text-slate-900">Vehicle identification</span></div>
- <div className="flex flex-wrap items-center gap-2">
- <div className="relative min-w-[220px] max-w-[460px] flex-[1_1_290px]"><Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400"/><input aria-label={mode==="registered"?"Vehicle registration number":"Vehicle chassis number"} value={query} onChange={e=>setQuery(e.target.value.toUpperCase())} placeholder={mode==="registered"?"Registration number":"Chassis / VIN"} className="h-9 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-[12px] font-bold text-slate-950 uppercase outline-none placeholder:text-slate-400 focus:border-blue-600"/></div>
- <button type="button" disabled={loading} onClick={fetchVehicle} className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg bg-[#173965] px-4 text-[11px] font-bold text-white disabled:opacity-60">{loading?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<FileSearch className="h-3.5 w-3.5"/>}{mode==="registered"?"Fetch RC details":"Find chassis"}</button>
- <div role="group" aria-label="Vehicle registration status" className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-1">{(["registered","unregistered"] as const).map(v=><button type="button" aria-pressed={mode===v} key={v} onClick={()=>{setMode(v);clearForm();}} className={`rounded-full px-3 py-1.5 text-[11px] font-bold capitalize ${mode===v?"bg-[#173965] text-white shadow-sm":"text-slate-600 hover:text-blue-800"}`}>{v}</button>)}</div>
- <button type="button" onClick={clearForm} title="Clear all form details" aria-label="Clear form" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-300 px-3 text-[11px] font-bold text-slate-700 hover:bg-rose-50 hover:text-rose-700"><RotateCcw className="h-4 w-4"/>Clear</button>
- </div>{message&&<p role="status" className={`mt-2 text-[11px] font-medium ${demo?"text-amber-700":"text-blue-700"}`}>{message}</p>}</section>
+ <section className="overflow-hidden rounded-2xl border border-blue-200/70 bg-gradient-to-r from-white via-blue-50/50 to-indigo-50/60 p-4 shadow-sm sm:p-5">
+  <div className="mb-3 flex items-center justify-between gap-2"><div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#173965] text-white"><Truck className="h-4 w-4"/></span><div><h2 className="text-[14px] font-bold text-[#173965]">Vehicle identification</h2><p className="text-[10px] text-slate-500">Start with the registration or chassis number</p></div></div></div>
+  <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+   <div className="group relative min-w-0 flex-1">
+    <Search className="pointer-events-none absolute left-5 top-1/2 h-6 w-6 -translate-y-1/2 text-blue-500"/>
+    <input aria-label={mode==="registered"?"Vehicle registration number":"Vehicle chassis number"} autoComplete="off" value={query} onChange={e=>setQuery(e.target.value.toUpperCase())} onKeyDown={e=>{if(e.key==="Enter"&&!loading){e.preventDefault();void fetchVehicle();}}} placeholder={mode==="registered"?"ENTER REGISTRATION NUMBER":"ENTER CHASSIS NUMBER"} className="h-[78px] w-full rounded-2xl border-2 border-blue-300 bg-white pl-14 pr-4 text-[19px] font-extrabold tracking-wide text-[#173965] shadow-sm outline-none transition placeholder:text-[15px] placeholder:font-semibold placeholder:tracking-normal placeholder:text-slate-400 focus:border-blue-600 focus:ring-4 focus:ring-blue-100 sm:h-[84px] sm:text-[22px]"/>
+   </div>
+   <button type="button" disabled={loading} onClick={fetchVehicle} className="inline-flex h-14 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#173965] px-5 text-[12px] font-bold text-white shadow-md transition hover:bg-blue-800 disabled:opacity-60 lg:h-[78px]">{loading?<Loader2 className="h-5 w-5 animate-spin"/>:<FileSearch className="h-5 w-5"/>}{mode==="registered"?"Fetch RC details":"Find chassis"}</button>
+   <div className="flex items-center justify-end gap-2 lg:ml-auto lg:border-l lg:border-slate-200 lg:pl-4">
+    <div role="group" aria-label="Vehicle registration status" className="inline-flex gap-1 rounded-xl border border-slate-200 bg-white/80 p-1">
+      <button type="button" title="Registered vehicle" aria-label="Registered vehicle" aria-pressed={mode==="registered"} onClick={()=>{setMode("registered");clearForm();}} className={`flex h-12 w-12 items-center justify-center rounded-lg transition ${mode==="registered"?"bg-[#173965] text-white shadow-sm":"text-slate-500 hover:bg-blue-50 hover:text-blue-700"}`}><BadgeCheck className="h-5 w-5"/></button>
+      <button type="button" title="Unregistered vehicle" aria-label="Unregistered vehicle" aria-pressed={mode==="unregistered"} onClick={()=>{setMode("unregistered");clearForm();}} className={`flex h-12 w-12 items-center justify-center rounded-lg transition ${mode==="unregistered"?"bg-[#173965] text-white shadow-sm":"text-slate-500 hover:bg-blue-50 hover:text-blue-700"}`}><ScanLine className="h-5 w-5"/></button>
+    </div>
+    <button type="button" title="Clear form" aria-label="Clear form" onClick={clearForm} className="ml-2 flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"><RotateCcw className="h-5 w-5"/></button>
+   </div>
+  </div>
+  {message&&<p role="status" className={`mt-3 rounded-lg bg-white/80 px-3 py-2 text-[11px] font-medium ${demo?"text-amber-700":"text-blue-700"}`}>{message}</p>}
+ </section>
  <Section title="Vehicle details" subtitle="Essential information for quotation; additional fields available below" fields={primaryVehicle} values={values} onSet={set} open={!!open.vehicle} onToggle={()=>toggle("vehicle")}/>
  <Section title="Advanced RC details" subtitle="Optional specifications, fitness, pollution, tax and permit data" fields={advancedVehicle} values={values} onSet={set} open={!!open.vehicleAdvanced} onToggle={()=>toggle("vehicleAdvanced")}/>
  <Section title="Customer & proposer" subtitle="Owner, contact, KYC, communication address and tax identity" fields={customer} values={values} onSet={set} open={!!open.customer} onToggle={()=>toggle("customer")}/>
