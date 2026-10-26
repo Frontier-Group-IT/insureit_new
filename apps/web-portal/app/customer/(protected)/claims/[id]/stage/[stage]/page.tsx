@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import { CUSTOMER_EXTERNAL_STAGE_FIELDS } from "@/lib/customer-claim-stage-fields";
-import { saveCustomerExternalStage, saveCustomerClaimIntimationDraft, switchCustomerClaimToSelfManaged } from "./actions";
+import { saveCustomerExternalStage, saveCustomerClaimIntimationDraft } from "./actions";
 import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/customer-claim-evidence-workspace";
 import { CustomerClaimDocumentGroups } from "@/components/customer-portal/customer-claim-document-groups";
 import { CustomerClaimBooleanChoice } from "@/components/customer-portal/customer-claim-boolean-choice";
@@ -29,7 +29,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
   if (selected.key==="spot_intimation" && claim.current_status==="Draft") {
     redirect("/customer/spot-intimation?account="+encodeURIComponent(account.id)+"&id="+encodeURIComponent(claim.id));
   }
-  const canEditStage = external && claim.claim_service_mode==="self_managed" && claim.assistance_status!=="accepted" && Boolean(CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key]) && !completed && activeIndex===currentIndex;
+  const canEditStage = external && Boolean(CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key]) && !completed && activeIndex===currentIndex;
   if (q.mode !== "edit") redirect("/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(selected.key)+"?account="+encodeURIComponent(account.id)+"&mode=edit");
   const editMode = true;
   const canUploadStage = selected.key==="spot_intimation" || selected.key==="claim_intimation";
@@ -61,7 +61,6 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       </div>
     </section>
     <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey={selected.key} currentKey={INTERNAL_JOURNEY_STAGES[currentIndex]?.key || "spot_intimation"} editMode completedKeys={INTERNAL_JOURNEY_STAGES.filter((stage,i)=>external?projection?.stages.some(x=>x.key===stage.key&&x.completed):i<(internal_projection?.completedStageCount??0)).map(stage=>stage.key)} />
-    {external && claim.claim_service_mode==="broker_managed" && claim.assistance_status==="not_requested" && !completed && activeIndex===currentIndex ? <section className="rounded-xl border border-[#B9CBE2] bg-[#F5F9FF] p-4"><h2 className="text-sm font-bold text-[#143B72]">Complete this claim yourself</h2><p className="mt-1 text-xs text-[#526A8A]">This claim is currently set to INSUREIT-managed, so its stage fields are read-only. To enter Claim Intimation and continue through the remaining stages yourself, choose self-managed below.</p><form action={switchCustomerClaimToSelfManaged} className="mt-3"><input type="hidden" name="account" value={account.id}/><input type="hidden" name="claim" value={claim.id}/><input type="hidden" name="stage" value={selected.key}/><button type="submit" className="rounded-lg bg-[#1253A7] px-4 py-2.5 text-xs font-bold text-white">Manage this claim myself</button></form></section> : null}
     {!(editMode && canEditStage) ? <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white">
       <h2 className="border-b border-[#D9E3F0] px-5 py-4 text-[17px] font-semibold text-[#071D49]">{selected.key==="spot_intimation"?"Accident & Spot Intimation Details":selected.label+" Details"}</h2>
       {selected.key==="spot_intimation" ? (
