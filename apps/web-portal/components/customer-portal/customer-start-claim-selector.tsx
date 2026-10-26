@@ -11,7 +11,7 @@ import { prepareCustomerClaim } from "@/app/customer/(protected)/start-claim/act
 
 function ClaimSubmitButton({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
-  return <button type="submit" disabled={disabled || pending} className="inline-flex min-h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8737F4] via-[#6741F5] to-[#2477F3] px-4 text-[14px] font-semibold text-white shadow-[0_8px_18px_rgba(93,72,220,.14)] disabled:cursor-not-allowed disabled:opacity-50">
+  return <button type="submit" disabled={disabled || pending} className="customer-workflow-choice inline-flex min-h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8737F4] via-[#6741F5] to-[#2477F3] px-4 text-[14px] font-semibold text-white shadow-[0_8px_18px_rgba(93,72,220,.14)] disabled:cursor-not-allowed disabled:opacity-50">
     {pending ? <><LoaderCircle className="h-4 w-4 animate-spin"/>Preparing claim...</> : <>Continue to Claim <ArrowRight className="h-5 w-5"/></>}
   </button>;
 }
@@ -61,7 +61,7 @@ export function CustomerStartClaimSelector({
       : item.vehicle_no;
 
   return (
-    <div data-customer-start-claim-reference="true" className="mx-auto w-full space-y-5 pb-8">
+    <div data-customer-start-claim-reference="true" className="customer-workflow mx-auto w-full space-y-5 pb-8">
       <section className="relative isolate overflow-hidden rounded-[15px] border border-[#E1E7FB] bg-[#ECF1FF] text-[#0B1643] shadow-[0_5px_22px_rgba(25,46,103,.06)]">
         <div className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'url("/assets/SCLAIM.jpeg")' }} data-banner="sclaim-jpeg" />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F0F3FF]/95 via-[#F0F3FF]/68 via-[42%] to-transparent" />

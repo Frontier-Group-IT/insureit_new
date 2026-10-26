@@ -1,0 +1,78 @@
+/* Customer Portal Phase 4. Motion only: no claims or form state changes. */
+@keyframes customer-workflow-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes customer-workflow-alert {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes customer-workflow-complete {
+  from { opacity: .6; transform: scale(.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+.customer-compact .customer-workflow {
+  --customer-workflow-ease: cubic-bezier(.2,.7,.25,1);
+}
+.customer-compact .customer-workflow > :first-child {
+  animation: customer-workflow-enter 330ms var(--customer-workflow-ease) both;
+}
+.customer-compact .customer-workflow :is(button, a, input:not([type="file"]), select, textarea, label) {
+  transition: border-color 175ms ease, box-shadow 175ms ease, background-color 175ms ease, color 175ms ease, transform 175ms var(--customer-workflow-ease);
+}
+.customer-compact .customer-workflow :is(input:not([type="hidden"]):not([type="file"]), select, textarea):focus-visible {
+  border-color: #8569d6;
+  box-shadow: 0 0 0 3px rgba(113,80,204,.14);
+}
+.customer-compact .customer-workflow :is(button, a):focus-visible {
+  outline: 2px solid #8569d6; outline-offset: 2px;
+}
+.customer-compact .customer-workflow :is(button, a):active:not(:disabled) {
+  transform: scale(.985);
+}
+.customer-compact .customer-workflow [role="alert"],
+.customer-compact .customer-workflow [aria-live="polite"] {
+  animation: customer-workflow-alert 230ms ease-out both;
+}
+.customer-compact .customer-workflow [data-workflow-complete="true"] {
+  animation: customer-workflow-complete 280ms ease-out both;
+}
+.customer-compact .customer-workflow [aria-busy="true"] {
+  cursor: progress;
+}
+.customer-compact .customer-workflow :is(button, input, select, textarea):disabled {
+  cursor: not-allowed;
+}
+.customer-compact .customer-workflow .customer-workflow-choice,
+.customer-compact .customer-workflow .customer-workflow-document,
+.customer-compact .customer-workflow .customer-workflow-step {
+  transition: transform 200ms var(--customer-workflow-ease), box-shadow 200ms ease, border-color 200ms ease, background-color 200ms ease;
+}
+.customer-compact .customer-workflow .customer-workflow-step[aria-current="step"] {
+  box-shadow: inset 0 -3px 0 #7555d5;
+}
+.customer-compact .customer-workflow .customer-workflow-step[aria-disabled="true"] {
+  opacity: .72;
+}
+.customer-compact .customer-workflow .customer-workflow-reveal {
+  animation: customer-workflow-enter 240ms var(--customer-workflow-ease) both;
+}
+@media (hover: hover) and (pointer: fine) {
+  .customer-compact .customer-workflow :is(.customer-workflow-choice,.customer-workflow-document):hover {
+    border-color: #c9b9ee;
+    box-shadow: 0 7px 18px rgba(71,52,142,.09);
+    transform: translateY(-2px);
+  }
+  .customer-compact .customer-workflow :is(button,a)[class*="bg-"]:hover:not(:disabled) {
+    box-shadow: 0 6px 18px rgba(70,48,140,.12);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .customer-compact .customer-workflow *,
+  .customer-compact .customer-workflow *::before,
+  .customer-compact .customer-workflow *::after {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
+}

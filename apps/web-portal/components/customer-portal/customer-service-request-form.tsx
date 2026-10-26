@@ -143,7 +143,7 @@ export function CustomerServiceRequestForm(props: Props) {
 
   if (reference) {
     return (
-      <div className="rounded-2xl border border-[#CDE8DA] bg-[#F4FBF7] p-5 text-center">
+      <div className="customer-workflow customer-workflow-reveal rounded-2xl border border-[#CDE8DA] bg-[#F4FBF7] p-5 text-center">
         <CheckCircle2 className="mx-auto h-8 w-8 text-[#0B7A54]" />
         <p className="mt-2 text-sm font-black text-[#10213D]">Request received</p>
         <p className="mt-1 text-lg font-black tracking-wide text-[#0B7A54]">{reference}</p>
@@ -157,7 +157,7 @@ export function CustomerServiceRequestForm(props: Props) {
 
   if (props.mode === "insurance_quote") {
     return (
-      <div className="space-y-0">
+      <div className="customer-workflow space-y-0">
         <div className="border-b border-[#E8EDF5] pb-3">
           <div className="grid grid-cols-2 gap-2">
             <button type="button" aria-expanded={quoteVehicleChoice === "registered"} aria-pressed={quoteVehicleChoice === "registered"} onClick={() => {setQuoteVehicleChoice("registered");setNewVehicle(false);}} className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-left transition ${quoteVehicleChoice === "registered" ? "border-[#267AFF] bg-[#EDF5FF]" : "border-[#D7E2F0] hover:bg-[#F8FAFD]"}`}><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#E2EFFF] text-[#146AD3]"><CarFront className="h-4 w-4"/></span><span><strong className="block text-[10px] text-[#11284B]">Registered vehicle</strong><small className="text-[9px] text-[#71839A]">Select from your fleet</small></span></button>

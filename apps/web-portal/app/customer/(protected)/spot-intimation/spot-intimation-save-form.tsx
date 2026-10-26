@@ -53,7 +53,7 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
     try { sessionStorage.setItem(storageKey, JSON.stringify({ savedAt: Date.now(), values })); }
     catch { /* Browser storage is optional. */ }
   };
-  return <div className="space-y-3"><form ref={formRef} id="customer-spot-intimation-form" onInput={saveDraft} onChange={saveDraft} action={formAction} aria-busy={pending} className="space-y-4 rounded-2xl border border-[#DBE4F0] bg-white p-4 shadow-[0_6px_24px_rgba(20,58,100,.04)] sm:p-5">
+  return <div className="customer-workflow space-y-3"><form ref={formRef} id="customer-spot-intimation-form" onInput={saveDraft} onChange={saveDraft} action={formAction} aria-busy={pending} className="space-y-4 rounded-2xl border border-[#DBE4F0] bg-white p-4 shadow-[0_6px_24px_rgba(20,58,100,.04)] sm:p-5">
     {children}
     {state.error ? <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-800">{state.error}</p> : null}
     </form>

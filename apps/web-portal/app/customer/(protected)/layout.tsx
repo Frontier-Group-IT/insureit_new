@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import "./customer-compact.css";
+import "./customer-workflow-motion.css";
 import { CustomerSidebarShell } from "@/components/customer-portal/customer-sidebar-shell";
 import { CustomerHeaderActions } from "@/components/customer-portal/customer-header-actions";
 import { CustomerRouteBreadcrumbs } from "@/components/customer-portal/customer-route-breadcrumbs";

@@ -184,7 +184,7 @@ export function CustomerKycForm({
   const area = "min-h-20 w-full rounded-xl border border-[#D8E1EC] bg-white px-3 py-2 text-[11px] font-semibold text-[#10213D] outline-none";
 
   return (
-    <div className="space-y-4">
+    <div className="customer-workflow space-y-4">
       {application.status === "changes_requested" ? <p className="rounded-xl bg-[#FFF4E8] px-3 py-2 text-[10px] font-bold text-[#8B621A]">Changes were requested. Update the details/documents and resubmit.</p> : null}
       <section className="rounded-2xl border border-[#DCE4EE] bg-white p-4">
         <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[#718096]">1 · Personal information</p>
