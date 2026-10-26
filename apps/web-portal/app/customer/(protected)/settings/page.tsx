@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, FileText, Headphones, Loader2, LogOut, Settings, ShieldCheck, UserRound } from "lucide-react";
+import { ChevronRight, FileText, Headphones, Loader2, LogOut, Settings, ShieldCheck, UserRound, PanelLeft, PanelTop } from "lucide-react";
 import { createClient } from "@/lib/supabase";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { customerNavigationPreferenceEvent, customerNavigationPreferenceKey } from "@/components/customer-portal/customer-sidebar-shell";
 
 const accountLinks = [
   { href: "/customer/profile", title: "My Profile", detail: "View and update your personal information", Icon: UserRound },
@@ -13,6 +14,15 @@ const accountLinks = [
 
 export default function CustomerSettingsPage() {
   const [signingOut, setSigningOut] = useState(false);
+  const [navigationLayout, setNavigationLayout] = useState<"sidebar" | "top">("sidebar");
+  useEffect(() => {
+    try { setNavigationLayout(window.localStorage.getItem(customerNavigationPreferenceKey) === "top" ? "top" : "sidebar"); } catch { /* keep sidebar */ }
+  }, []);
+  function setPreferredLayout(next: "sidebar" | "top") {
+    setNavigationLayout(next);
+    try { window.localStorage.setItem(customerNavigationPreferenceKey, next); } catch { /* session only */ }
+    window.dispatchEvent(new CustomEvent(customerNavigationPreferenceEvent, { detail: { layout: next } }));
+  }
 
   async function signOut() {
     if (signingOut) return;
@@ -61,6 +71,18 @@ export default function CustomerSettingsPage() {
         </div>
       </section>
 
+      <section aria-labelledby="settings-layout-title" className="rounded-xl border border-[#EAE5F4] bg-white p-4">
+        <div className="mb-3 flex items-center gap-2 text-[#733BD4]"><PanelLeft className="h-5 w-5" /><h2 id="settings-layout-title" className="text-[15px] font-bold text-[#292655]">Appearance &amp; Layout</h2></div>
+        <p className="mb-4 text-[11px] text-[#8683A2]">Choose your preferred Customer Portal navigation layout.</p>
+        <div role="group" aria-label="Navigation layout" className="grid gap-3 sm:grid-cols-2">
+          <button type="button" aria-pressed={navigationLayout === "sidebar"} onClick={() => setPreferredLayout("sidebar")} className={"flex items-center gap-3 rounded-xl border p-4 text-left transition " + (navigationLayout === "sidebar" ? "border-[#7950DA] bg-[#F3EDFF]" : "border-[#EAE5F4] hover:bg-[#F8F5FF]")}>
+            <PanelLeft className="h-7 w-7 shrink-0 text-[#733BD4]" /><span><strong className="block text-[13px] text-[#292655]">Sidebar (Default)</strong><span className="block text-[11px] text-[#8683A2]">Left navigation with comfortable content width</span></span>
+          </button>
+          <button type="button" aria-pressed={navigationLayout === "top"} onClick={() => setPreferredLayout("top")} className={"flex items-center gap-3 rounded-xl border p-4 text-left transition " + (navigationLayout === "top" ? "border-[#7950DA] bg-[#F3EDFF]" : "border-[#EAE5F4] hover:bg-[#F8F5FF]")}>
+            <PanelTop className="h-7 w-7 shrink-0 text-[#733BD4]" /><span><strong className="block text-[13px] text-[#292655]">Top Menu Bar</strong><span className="block text-[11px] text-[#8683A2]">Horizontal navigation and full-width pages</span></span>
+          </button>
+        </div>
+      </section>
       <section className="overflow-hidden rounded-xl border border-[#EAE5F4] bg-white p-3 shadow-[0_4px_20px_rgba(91,62,143,.035)]" aria-labelledby="settings-security-title">
         <div className="flex items-center gap-3 px-1 pb-3 pt-1">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#F0E9FF] text-[#733BD4]"><ShieldCheck className="h-6 w-6" aria-hidden="true" /></span>
