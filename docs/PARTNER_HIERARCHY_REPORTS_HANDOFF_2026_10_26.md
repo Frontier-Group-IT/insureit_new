@@ -52,3 +52,10 @@
 - Static assertions cover five role scope invariants, authenticated scoping on all four report pages, absence of privileged Operations report loaders, no user-supplied hierarchy IDs, navigation, and payout permission gating.
 - Fixed payout discriminated-union rendering condition to narrow within the authorized JSX branch.
 - **These static assertions have not been executed in CI yet, and cannot replace five-role authenticated integration tests.**
+
+## Next iteration: scoped snapshots
+- CI on commit `e390763` passed the Partner reporting security regression; full verification failed at unrelated Customer Home Start Claim stage-editing assertion.
+- Added `/partner/reports/export?type=policies|claims` as read-only account-scoped CSV snapshots. Both use existing authenticated Partner RPCs, limit output to first 200 rows, neutralize spreadsheet-formula prefixes and set `Cache-Control: private, no-store`.
+- Added UI links from Portfolio/Operations and new export assertions to the regression script.
+- These are first-page snapshots, **not complete exports**; future full exports require bounded pagination, explicit completeness reporting and runtime access verification.
+- New CI not yet verified. Do not merge until tests and five-role authenticated isolation checks pass.
