@@ -81,15 +81,15 @@ export function CustomerProfileEditor({
           </div>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="flex min-w-0 items-center gap-2.5 rounded-2xl bg-[#F8F5FF] px-3.5 py-3.5">
+            <div className="customer-profile-detail-card flex min-w-0 items-center gap-2.5 rounded-2xl bg-[#F8F5FF] px-3.5 py-3.5">
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#EBE3FF] text-[#7246D3]"><Phone className="h-3.5 w-3.5" /></span>
               <div className="min-w-0"><p className="text-[9.5px] font-bold text-[#81739B]">Mobile Number</p><p className="mt-0.5 break-all text-[11px] font-black text-[#2D2352]">{phone || "—"}</p></div>
             </div>
-            <div className="flex min-w-0 items-center gap-2.5 rounded-2xl bg-[#F8F5FF] px-3.5 py-3.5">
+            <div className="customer-profile-detail-card flex min-w-0 items-center gap-2.5 rounded-2xl bg-[#F8F5FF] px-3.5 py-3.5">
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#EBE3FF] text-[#7246D3]"><Mail className="h-3.5 w-3.5" /></span>
               <div className="min-w-0"><p className="text-[9.5px] font-bold text-[#81739B]">Email Address</p><p className="mt-0.5 break-all text-[11px] font-black text-[#2D2352]">{email || "—"}</p></div>
             </div>
-            <div className="flex min-w-0 items-start gap-2.5 rounded-2xl bg-[#F8F5FF] px-3.5 py-3.5">
+            <div className="customer-profile-detail-card flex min-w-0 items-start gap-2.5 rounded-2xl bg-[#F8F5FF] px-3.5 py-3.5">
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#EBE3FF] text-[#7246D3]"><MapPin className="h-3.5 w-3.5" /></span>
               <div className="min-w-0">
                 <p className="text-[9.5px] font-bold text-[#81739B]">Location</p>
@@ -97,7 +97,7 @@ export function CustomerProfileEditor({
                 {address ? <p className="mt-0.5 text-[9.5px] font-bold leading-4 text-[#81739B]">{address}{postalCode ? ` · ${postalCode}` : ""}</p> : null}
               </div>
             </div>
-            <div className="flex min-w-0 items-center gap-2.5 rounded-2xl bg-[#F8F5FF] px-3.5 py-3.5">
+            <div className="customer-profile-detail-card flex min-w-0 items-center gap-2.5 rounded-2xl bg-[#F8F5FF] px-3.5 py-3.5">
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#EBE3FF] text-[#7246D3]"><FileText className="h-3.5 w-3.5" /></span>
               <div className="min-w-0"><p className="text-[9.5px] font-bold text-[#81739B]">Total Documents</p><p className="mt-0.5 text-[11px] font-black text-[#2D2352]">{documentsCount}</p></div>
             </div>
