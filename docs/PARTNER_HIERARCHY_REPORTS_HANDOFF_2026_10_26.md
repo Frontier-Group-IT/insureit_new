@@ -46,3 +46,9 @@
 - Verify that every source RPC correctly enforces the current authentication scope. Treat joins via shared customer ID as insufficient for policy isolation.
 - Confirm all operations financial visibility, including payouts, against current payout privilege RPC; do not add Pay-in to partner views merely because Reports exists.
 - Implement scoped detailed reporting RPCs and complete reference styling before calling this production-ready.
+
+## Security regression continuation
+- Added `apps/web-portal/scripts/partner-hierarchy-reports-regression.mjs`, runnable using `npm run partner-reports:security-regression` from `apps/web-portal`.
+- Static assertions cover five role scope invariants, authenticated scoping on all four report pages, absence of privileged Operations report loaders, no user-supplied hierarchy IDs, navigation, and payout permission gating.
+- Fixed payout discriminated-union rendering condition to narrow within the authorized JSX branch.
+- **These static assertions have not been executed in CI yet, and cannot replace five-role authenticated integration tests.**
