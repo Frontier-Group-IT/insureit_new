@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { advanceInternalSpotIntimation, saveInternalSpotIntimationDetails } from "@/app/claims/internal-spot-intimation-actions";
 import { completeClaimJourneyStage } from "@/app/claims/stage-actions";
@@ -197,6 +197,8 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const stageEditable = Boolean(selected.key !== "spot_intimation" && selected.key !== "claim_intimation" && selectedAvailable && stageTarget);
   const [spotSubmitting, setSpotSubmitting] = useState(false);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
+  const [errorNotice, setErrorNotice] = useState<string | null>(null);
+  const [spotFormVersion, setSpotFormVersion] = useState(0);
 
   useEffect(() => {
     if (!successNotice) return;
@@ -247,7 +249,18 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   );
 
   useEffect(() => {
+    if (state.ok || !state.message) return;
+    setErrorNotice(state.message);
+  }, [state]);
+
+  useEffect(() => {
+    if (spotState.ok || !spotState.message) return;
+    setErrorNotice(spotState.message);
+  }, [spotState]);
+
+  useEffect(() => {
     if (!state.ok) return;
+    try { window.sessionStorage.removeItem(`insureit:spot-intimation-draft:${claimId}`); } catch { /* optional storage */ }
     if (state.nextStageKey) {
       setSelectedKey(state.nextStageKey);
       router.replace(`/claims/${claimId}?stage=${state.nextStageKey}`);
@@ -263,6 +276,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
 
   useEffect(() => {
     if (!spotState.ok) return;
+    try { window.sessionStorage.removeItem(`insureit:spot-intimation-draft:${claimId}`); } catch { /* optional storage */ }
     setSelectedKey("spot_status");
     router.replace(`/claims/${claimId}?stage=spot_status`);
   }, [claimId, router, spotState.ok]);
@@ -311,6 +325,8 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         {selected.key === "spot_intimation" ? (
           <>
             <StageOneForm
+              key={`${claimId}-${spotFormVersion}`}
+              claimId={claimId}
               stage={selected}
               active={active ?? stages[0]}
               detail={spotDetail ?? detail}
@@ -319,12 +335,21 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
               accidentAt={accidentAt}
               spotIntimationAt={spotIntimationAt}
               formAction={spotCurrentEditable ? formAction : spotFormAction}
-              state={spotCurrentEditable ? state : { ok: spotState.ok, message: spotState.message, advanced: false, nextStageKey: null }}
               standalone={!spotCurrentEditable}
               onSubmitStart={() => setSpotSubmitting(true)}
             />
             <div className="mt-3">{spotContent}</div>
-            <div className="mt-3 flex justify-end">
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={spotSubmitting}
+                onClick={() => {
+                  try { window.sessionStorage.removeItem(`insureit:spot-intimation-draft:${claimId}`); } catch { /* optional storage */ }
+                  setErrorNotice(null);
+                  setSpotFormVersion((version) => version + 1);
+                }}
+                className="rounded-lg border border-[#B8C5D6] bg-white px-4 py-2 text-[11px] font-semibold text-[#071D49] disabled:opacity-50"
+              >Cancel</button>
               <FormSubmitButton
                 form="spot-intimation-form"
                 label="Save Details"
@@ -395,7 +420,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 );
               })}
             </div>
-            {state.message && !state.ok ? <p role="alert" className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] font-medium text-rose-800">{state.message}</p> : null}
+
             <div className="mt-3 flex justify-end">
               <FormSubmitButton
                 label={selectedSaveOnly ? "Save Details" : selected.key === "payment_encashment" ? "Save & complete claim" : `Save & move to ${nextStageLabel}`}
@@ -410,6 +435,15 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
       </div>
 
       {successNotice ? <ClaimStageSuccessPopup message={successNotice} /> : null}
+      {errorNotice ? (
+        <div className="fixed inset-0 z-[1000] grid place-items-center bg-[#07152F]/60 px-4" role="presentation">
+          <div role="alertdialog" aria-modal="true" aria-labelledby="spot-error-title" aria-describedby="spot-error-description" className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
+            <h2 id="spot-error-title" className="text-[16px] font-semibold text-[#9F253A]">Action required</h2>
+            <p id="spot-error-description" className="mt-2 text-[12px] leading-5 text-[#334155]">{errorNotice}</p>
+            <div className="mt-5 flex justify-end"><button type="button" autoFocus onClick={() => setErrorNotice(null)} className="rounded-lg bg-[#071D49] px-6 py-2 text-[12px] font-semibold text-white">OK</button></div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -475,8 +509,50 @@ function formatDisplayDate(value: string) {
   return match ? `${match[3]}-${match[2]}-${match[1]}` : value;
 }
 
-function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, spotIntimationAt, formAction, state, standalone = false, onSubmitStart }: { stage: (typeof stages)[number]; active: (typeof stages)[number]; detail: StageDetail | undefined; spotDetails?: InternalSpotIntimationDetails | null; next?: ClaimStatus; accidentAt?: string | null; spotIntimationAt?: string | null; formAction: (formData: FormData) => void; state: ActionState; standalone?: boolean; onSubmitStart?: () => void }) {
+function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accidentAt, spotIntimationAt, formAction, standalone = false, onSubmitStart }: { claimId: string; stage: (typeof stages)[number]; active: (typeof stages)[number]; detail: StageDetail | undefined; spotDetails?: InternalSpotIntimationDetails | null; next?: ClaimStatus; accidentAt?: string | null; spotIntimationAt?: string | null; formAction: (formData: FormData) => void; standalone?: boolean; onSubmitStart?: () => void }) {
   const [location, setLocation] = useState(spotDetails?.location ?? "");
+  const formRef = useRef<HTMLFormElement>(null);
+  const draftKey = `insureit:spot-intimation-draft:${claimId}`;
+  const draftFields = ["incident_at", "incident_time", "spot_intimation_at", "spot_intimation_time", "driver_name", "driver_phone", "location"];
+
+  // Document uploads refresh the server component tree. Restore unsaved form edits
+  // from this tab only; do not persist drafts to the database until Save Details.
+  useEffect(() => {
+    try {
+      const raw = window.sessionStorage.getItem(draftKey);
+      if (!raw || !formRef.current) return;
+      const draft = JSON.parse(raw) as Record<string, unknown>;
+      for (const name of draftFields) {
+        const value = draft[name];
+        if (typeof value !== "string") continue;
+        const field = Array.from(formRef.current.elements).find(
+          (element): element is HTMLInputElement => element instanceof HTMLInputElement && element.name === name
+        );
+        if (field && field.value !== value) {
+          const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+          nativeSetter?.call(field, value);
+          field.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+        if (name === "location") setLocation(value);
+      }
+    } catch {
+      // Session storage can be disabled. The normal persisted claim values remain usable.
+    }
+    // Restore only on mount or when switching to a different claim.
+  }, [draftKey]);
+
+  function preserveDraft() {
+    const form = formRef.current;
+    if (!form) return;
+    const draft: Record<string, string> = {};
+    for (const name of draftFields) {
+      const field = Array.from(form.elements).find(
+        (element): element is HTMLInputElement => element instanceof HTMLInputElement && element.name === name
+      );
+      if (field) draft[name] = field.value;
+    }
+    try { window.sessionStorage.setItem(draftKey, JSON.stringify(draft)); } catch { /* optional browser storage */ }
+  }
   const storedIncidentAt = detail?.details?.incident_at;
   const storedSpotIntimationAt = detail?.details?.spot_intimation_at;
   const incidentValue = spotDetails?.incident_at ?? accidentAt ?? (typeof storedIncidentAt === "string" ? storedIncidentAt : "");
@@ -486,7 +562,7 @@ function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, sp
   const groupedInputClassName = "h-full min-w-0 w-full border-0 bg-transparent pl-2 pr-[10%] text-[11px] font-semibold normal-case tracking-normal text-[#071D49] outline-none";
 
   return (
-    <form id="spot-intimation-form" action={formAction} onSubmit={onSubmitStart} className="mt-3 overflow-hidden rounded-2xl border border-[#BFD7F6] bg-white shadow-[0_8px_20px_rgba(23,78,166,0.05)]">
+    <form ref={formRef} id="spot-intimation-form" action={formAction} onInput={preserveDraft} onChange={preserveDraft} onSubmit={onSubmitStart} className="mt-3 overflow-hidden rounded-2xl border border-[#BFD7F6] bg-white shadow-[0_8px_20px_rgba(23,78,166,0.05)]">
       {!standalone ? <><input type="hidden" name="next_status" value={next} /><input type="hidden" name="notes" value={`Operations updated ${active.label} and moved the claim to ${next}.`} /></> : null}
       <div className="flex items-center gap-3 border-b border-[#DCE9F8] px-4 py-3">
         <h3 className="text-[16px] font-semibold tracking-[-0.01em] text-[#071D49]">Accident &amp; Spot Intimation Details</h3>
@@ -531,7 +607,7 @@ function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, sp
             );
           })}
         </div>
-        {state.message && !state.ok ? <p role="alert" className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] font-medium text-rose-800">{state.message}</p> : null}
+
       </div>
     </form>
   );
