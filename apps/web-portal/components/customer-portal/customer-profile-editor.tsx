@@ -63,7 +63,7 @@ export function CustomerProfileEditor({
     setMessage("");
   }
 
-  const input = "h-10 w-full rounded-xl border border-[#D8E1EC] bg-white px-3 text-[11px] font-semibold text-[#10213D] outline-none focus:border-[#8EACD1] focus:ring-2 focus:ring-[#DDEBFA]";
+  const input = "h-10 w-full rounded-xl border border-[#D8E1EC] bg-white px-3 text-[11px] font-semibold text-[#2D2352] outline-none focus:border-[#8EACD1] focus:ring-2 focus:ring-[#DDEBFA]";
 
   return (
     <>
@@ -73,33 +73,33 @@ export function CustomerProfileEditor({
             <button
               type="button"
               onClick={() => { setMessage(""); setEditing(true); }}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[#D6E0EB] bg-white px-3 py-2 text-[10px] font-black text-[#33445E] shadow-sm transition hover:border-[#AFC2D8] hover:bg-[#F8FBFF]"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#E4DAFB] bg-[#F4EEFF] px-3.5 py-2 text-[10px] font-black text-[#6742BB] transition hover:bg-[#EBE0FF]"
             >
               <Pencil className="h-3.5 w-3.5" /> Edit
             </button>
             {message ? <p className="mt-2 text-right text-[10px] font-bold text-[#0B7A54]">{message}</p> : null}
           </div>
 
-          <div className="mt-4 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="flex min-w-0 items-center gap-2.5 rounded-xl bg-[#F6F9FD] px-3 py-2.5">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#E4F0FF] text-[#176BD4]"><Phone className="h-3.5 w-3.5" /></span>
-              <div className="min-w-0"><p className="text-[9.5px] font-bold text-[#71839A]">Mobile Number</p><p className="mt-0.5 break-all text-[11px] font-black text-[#10213D]">{phone || "—"}</p></div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="flex min-w-0 items-center gap-2.5 rounded-2xl bg-[#F8F5FF] px-3.5 py-3.5">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#EBE3FF] text-[#7246D3]"><Phone className="h-3.5 w-3.5" /></span>
+              <div className="min-w-0"><p className="text-[9.5px] font-bold text-[#81739B]">Mobile Number</p><p className="mt-0.5 break-all text-[11px] font-black text-[#2D2352]">{phone || "—"}</p></div>
             </div>
-            <div className="flex min-w-0 items-center gap-2.5 rounded-xl bg-[#F6F9FD] px-3 py-2.5">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#E4F0FF] text-[#176BD4]"><Mail className="h-3.5 w-3.5" /></span>
-              <div className="min-w-0"><p className="text-[9.5px] font-bold text-[#71839A]">Email Address</p><p className="mt-0.5 break-all text-[11px] font-black text-[#10213D]">{email || "—"}</p></div>
+            <div className="flex min-w-0 items-center gap-2.5 rounded-2xl bg-[#F8F5FF] px-3.5 py-3.5">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#EBE3FF] text-[#7246D3]"><Mail className="h-3.5 w-3.5" /></span>
+              <div className="min-w-0"><p className="text-[9.5px] font-bold text-[#81739B]">Email Address</p><p className="mt-0.5 break-all text-[11px] font-black text-[#2D2352]">{email || "—"}</p></div>
             </div>
-            <div className="flex min-w-0 items-start gap-2.5 rounded-xl bg-[#F6F9FD] px-3 py-2.5">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#E4F0FF] text-[#176BD4]"><MapPin className="h-3.5 w-3.5" /></span>
+            <div className="flex min-w-0 items-start gap-2.5 rounded-2xl bg-[#F8F5FF] px-3.5 py-3.5">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#EBE3FF] text-[#7246D3]"><MapPin className="h-3.5 w-3.5" /></span>
               <div className="min-w-0">
-                <p className="text-[9.5px] font-bold text-[#71839A]">Location</p>
-                <p className="mt-0.5 text-[11px] font-black text-[#10213D]">{[city, state].filter(Boolean).join(", ") || "—"}</p>
-                {address ? <p className="mt-0.5 text-[9.5px] font-bold leading-4 text-[#71839A]">{address}{postalCode ? ` · ${postalCode}` : ""}</p> : null}
+                <p className="text-[9.5px] font-bold text-[#81739B]">Location</p>
+                <p className="mt-0.5 text-[11px] font-black text-[#2D2352]">{[city, state].filter(Boolean).join(", ") || "—"}</p>
+                {address ? <p className="mt-0.5 text-[9.5px] font-bold leading-4 text-[#81739B]">{address}{postalCode ? ` · ${postalCode}` : ""}</p> : null}
               </div>
             </div>
-            <div className="flex min-w-0 items-center gap-2.5 rounded-xl bg-[#F6F9FD] px-3 py-2.5">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#E4F0FF] text-[#176BD4]"><FileText className="h-3.5 w-3.5" /></span>
-              <div className="min-w-0"><p className="text-[9.5px] font-bold text-[#71839A]">Total Documents</p><p className="mt-0.5 text-[11px] font-black text-[#10213D]">{documentsCount}</p></div>
+            <div className="flex min-w-0 items-center gap-2.5 rounded-2xl bg-[#F8F5FF] px-3.5 py-3.5">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#EBE3FF] text-[#7246D3]"><FileText className="h-3.5 w-3.5" /></span>
+              <div className="min-w-0"><p className="text-[9.5px] font-bold text-[#81739B]">Total Documents</p><p className="mt-0.5 text-[11px] font-black text-[#2D2352]">{documentsCount}</p></div>
             </div>
           </div>
         </>
@@ -108,8 +108,8 @@ export function CustomerProfileEditor({
           <div className="w-full max-w-[620px] rounded-2xl border border-[#D9E3EF] bg-white shadow-[0_24px_70px_rgba(6,27,59,.24)]">
             <div className="flex items-center justify-between border-b border-[#E6EDF5] px-5 py-4">
               <div>
-                <h3 id="customer-profile-edit-title" className="text-[16px] font-black text-[#10213D]">Edit Profile</h3>
-                <p className="mt-1 text-[10px] text-[#71839A]">Update your contact information.</p>
+                <h3 id="customer-profile-edit-title" className="text-[16px] font-black text-[#2D2352]">Edit Profile</h3>
+                <p className="mt-1 text-[10px] text-[#81739B]">Update your contact information.</p>
               </div>
               <button type="button" disabled={busy} onClick={cancel} className="grid h-8 w-8 place-items-center rounded-lg text-[#6C7D94] transition hover:bg-[#F1F5F9] disabled:opacity-50" aria-label="Close edit profile">
                 <X className="h-4 w-4" />
