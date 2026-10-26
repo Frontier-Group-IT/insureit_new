@@ -65,3 +65,7 @@
 - Prev/Next controls are shown based on the bounded response; never use a caller-supplied partner/group ID.
 - Updated regression assertions for page validation, bounded RPC calls, and 20-row rendering.
 - Prior CI run passed Reports regression and failed at unrelated Customer Home self-managed-stage regression; latest pagination CI not yet confirmed.
+
+## CI pagination regression correction
+- The first CI run after pagination failed in the Reports security script because it broadly rejected any `searchParams`, including the safely validated `page` parameter. Updated that check to forbid only caller-controlled hierarchy identifiers (`partner`, `group`, `branch`) while allowing pagination. Actual report queries still take their scope from authenticated Partner RPCs.
+- New CI result and all five authenticated role tests remain to be verified. No release authorization implied.
