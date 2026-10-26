@@ -118,6 +118,6 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       </div>
     ) : null}
     {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} allowUpload={editMode}/> : null}
-    {selected.key==="claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} showSaveDetails={editMode && canEditStage} showDraftAction={editMode && canEditStage} draftAction={saveCustomerClaimIntimationDraft} allowUpload={editMode} /> : null}
+    {selected.key==="claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} showSaveDetails={editMode && canEditStage} showDraftAction={editMode && canEditStage} draftAction={saveCustomerClaimIntimationDraft} allowUpload={editMode && external} /> : null}
   </div>;
 }
