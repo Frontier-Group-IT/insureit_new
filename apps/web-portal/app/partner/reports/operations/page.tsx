@@ -1,7 +1,8 @@
+import { PartnerReportsShell } from "@/components/partner-portal/partner-reports-shell";
 import Link from "next/link";
 import { requirePartnerReportScope } from "@/lib/reports/partner-report-scope";
 import { getPartnerWebClaimSummary, getPartnerWebRenewalSummary, listPartnerWebClaims } from "@/lib/partner-web";
-import { PartnerReportTabs } from "@/components/partner-portal/partner-report-tabs";
+import { PartnerReportsShell } from "@/components/partner-portal/partner-reports-shell";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -11,7 +12,7 @@ export default async function PartnerOperationsReport({ searchParams }: { search
   const rawPage = (await searchParams).page;
   const page = rawPage && /^[1-9]\d{0,3}$/.test(rawPage) ? Number(rawPage) : 1;
   const offset = (page - 1) * 20;
-  await requirePartnerReportScope();
+  const reportScope = await requirePartnerReportScope();
   const [claims, renewals, recentClaims] = await Promise.all([getPartnerWebClaimSummary(), getPartnerWebRenewalSummary(), listPartnerWebClaims({ limit: 21, offset })]);
   const fields = [
     ["Active claims", claims.active_claims],
@@ -23,13 +24,13 @@ export default async function PartnerOperationsReport({ searchParams }: { search
     ["Overdue renewals", renewals.overdue_count],
   ] as const;
   return (
-    <main className="mx-auto min-h-screen max-w-[1500px] space-y-5 bg-[#F6F8FC] px-4 pb-28 pt-6 text-[#11254A] lg:ml-[268px] lg:px-8 lg:pb-12">
+    <PartnerReportsShell active="Operations" scope={reportScope}>
       <h1 className="text-3xl font-extrabold">Reports</h1>
-      <PartnerReportTabs active="Operations" />
+      
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-        {fields.map(([label, value]) => <div key={label} className="rounded-xl border border-[#E2E9F3] bg-white p-5"><p className="text-xs font-semibold text-[#6D7E9A]">{label}</p><p className="mt-2 text-2xl font-bold">{number(value)}</p></div>)}
+        {fields.map(([label, value]) => <div key={label} className="rounded-xl border border-[#E2E9F3] bg-white p-3 shadow-sm"><p className="text-xs font-semibold text-[#6D7E9A]">{label}</p><p className="mt-2 text-2xl font-bold">{number(value)}</p></div>)}
       </section>
-      <section className="rounded-2xl border border-[#E2E9F3] bg-white p-5">
+      <section className="rounded-2xl border border-[#E2E9F3] bg-white p-3 shadow-sm">
         <Link href="/partner/reports/export?type=claims" className="float-right ml-3 rounded-lg border border-[#D7E3F3] px-3 py-2 text-xs font-semibold text-[#2369C5]"> Download claims snapshot (up to 200 rows)</Link>
         <h2 className="font-bold">Operations registers</h2>
         <p className="mt-2 text-sm text-[#70809A]">Access claim and renewal records within your existing portal permissions. Detailed operations exports remain unavailable pending server-side scope verification.</p>
@@ -44,6 +45,6 @@ export default async function PartnerOperationsReport({ searchParams }: { search
         <span>Page {page}</span>
         {recentClaims.length > 20 ? <Link href={`/partner/reports/operations?page=${page + 1}`} className="rounded-lg border border-[#D9E4F3] bg-white px-4 py-2">Next</Link> : null}
       </nav>
-    </main>
+    </PartnerReportsShell>
   );
 }
