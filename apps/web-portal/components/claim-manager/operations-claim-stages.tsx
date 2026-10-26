@@ -197,6 +197,8 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const stageEditable = Boolean(selected.key !== "spot_intimation" && selected.key !== "claim_intimation" && selectedAvailable && stageTarget);
   const [spotSubmitting, setSpotSubmitting] = useState(false);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
+  const [errorNotice, setErrorNotice] = useState<string | null>(null);
+  const [spotFormVersion, setSpotFormVersion] = useState(0);
 
   useEffect(() => {
     if (!successNotice) return;
@@ -245,6 +247,16 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
     },
     { ok: false, message: "" },
   );
+
+  useEffect(() => {
+    if (state.ok || !state.message) return;
+    setErrorNotice(state.message);
+  }, [state]);
+
+  useEffect(() => {
+    if (spotState.ok || !spotState.message) return;
+    setErrorNotice(spotState.message);
+  }, [spotState]);
 
   useEffect(() => {
     if (!state.ok) return;
@@ -311,6 +323,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         {selected.key === "spot_intimation" ? (
           <>
             <StageOneForm
+              key={`${claimId}-${spotFormVersion}`}
               claimId={claimId}
               stage={selected}
               active={active ?? stages[0]}
@@ -325,7 +338,17 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
               onSubmitStart={() => setSpotSubmitting(true)}
             />
             <div className="mt-3">{spotContent}</div>
-            <div className="mt-3 flex justify-end">
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={spotSubmitting}
+                onClick={() => {
+                  try { window.sessionStorage.removeItem(`insureit:spot-intimation-draft:${claimId}`); } catch { /* optional storage */ }
+                  setErrorNotice(null);
+                  setSpotFormVersion((version) => version + 1);
+                }}
+                className="rounded-lg border border-[#B8C5D6] bg-white px-4 py-2 text-[11px] font-semibold text-[#071D49] disabled:opacity-50"
+              >Cancel</button>
               <FormSubmitButton
                 form="spot-intimation-form"
                 label="Save Details"
@@ -396,7 +419,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 );
               })}
             </div>
-            {state.message && !state.ok ? <p role="alert" className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] font-medium text-rose-800">{state.message}</p> : null}
+
             <div className="mt-3 flex justify-end">
               <FormSubmitButton
                 label={selectedSaveOnly ? "Save Details" : selected.key === "payment_encashment" ? "Save & complete claim" : `Save & move to ${nextStageLabel}`}
@@ -411,6 +434,15 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
       </div>
 
       {successNotice ? <ClaimStageSuccessPopup message={successNotice} /> : null}
+      {errorNotice ? (
+        <div className="fixed inset-0 z-[1000] grid place-items-center bg-[#07152F]/60 px-4" role="presentation">
+          <div role="alertdialog" aria-modal="true" aria-labelledby="spot-error-title" aria-describedby="spot-error-description" className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
+            <h2 id="spot-error-title" className="text-[16px] font-semibold text-[#9F253A]">Action required</h2>
+            <p id="spot-error-description" className="mt-2 text-[12px] leading-5 text-[#334155]">{errorNotice}</p>
+            <div className="mt-5 flex justify-end"><button type="button" autoFocus onClick={() => setErrorNotice(null)} className="rounded-lg bg-[#071D49] px-6 py-2 text-[12px] font-semibold text-white">OK</button></div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -579,7 +611,7 @@ function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accid
             );
           })}
         </div>
-        {state.message && !state.ok ? <p role="alert" className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] font-medium text-rose-800">{state.message}</p> : null}
+
       </div>
     </form>
   );
