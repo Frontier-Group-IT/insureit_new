@@ -1,5 +1,5 @@
-import "../customer-register-motion.css";
 "use client";
+import "../customer-register-motion.css";
 import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
