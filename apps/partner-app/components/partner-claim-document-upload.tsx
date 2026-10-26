@@ -121,7 +121,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
         {count > 0 ? <Ionicons name="checkmark-circle" size={19} color="#21A26B" style={styles.savedCheck} /> : null}
         <View style={styles.artworkWrap}>{artwork ? <Image source={artwork} style={styles.artwork} resizeMode="contain" /> : documentType === "Accident Video" ? <View style={styles.videoIcon}><Ionicons name="videocam" size={24} color="#FFFFFF" /></View> : <Ionicons name="document-outline" size={34} color="#0A43A3" />}</View>
         <Text numberOfLines={2} style={styles.tileTitle}>{label ?? documentType}</Text>
-        {count > 0 ? <Text numberOfLines={1} style={styles.fileName}>{latest?.name}</Text> : null}
+        {count > 0 ? <Text numberOfLines={1} style={styles.fileName}>{latest?.name}</Text> : <Text numberOfLines={2} style={styles.fileName}>{subtitle ?? 'Document copy'}</Text>}
         <Text numberOfLines={1} style={[styles.tileStatus, count > 0 && styles.tileStatusReady]}>{busy ? 'Uploading…' : count > 0 ? 'Saved' : 'Tap to upload'}</Text>
       </Pressable>
       {latest && !busy ? <Pressable accessibilityRole="button" accessibilityLabel={`Delete ${latest.name}`} onPress={()=>setDeleteTarget({ id: latest.id, name: latest.name })} style={styles.removeIcon}><Ionicons name="close-circle" size={22} color="#D64545" /></Pressable> : null}
@@ -206,9 +206,9 @@ const styles=StyleSheet.create({
   button:{minHeight:38,borderRadius:10,backgroundColor:'#145CB8',paddingHorizontal:10,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5},
   compact:{minHeight:32,paddingHorizontal:8},
   text:{color:'#FFF',fontSize:9.5,fontWeight:'900'},
-  tile:{position:'relative',width:'31.5%',minWidth:0,minHeight:106,borderRadius:14,backgroundColor:'#F7FAFF',borderWidth:1.5,borderColor:'#E2EAF4',paddingVertical:8,paddingHorizontal:5,alignItems:'center',justifyContent:'center'},
-  tileReady:{backgroundColor:'#EFFAF4',borderColor:'#42B883',borderWidth:2},
-  tileInner:{width:'100%',minHeight:91,alignItems:'center',justifyContent:'center'},
+  tile:{position:'relative',width:'31.5%',minWidth:0,minHeight:134,borderRadius:14,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#DDE6EF',paddingVertical:10,paddingHorizontal:5,alignItems:'center',justifyContent:'center'},
+  tileReady:{backgroundColor:'#FFFFFF',borderColor:'#B5DCC7',borderWidth:1},
+  tileInner:{width:'100%',minHeight:112,alignItems:'center',justifyContent:'center'},
   savedCheck:{position:'absolute',top:0,left:0},
   removeIcon:{position:'absolute',top:2,right:2,zIndex:5,padding:2},
   fileName:{color:'#53647A',fontSize:7,marginTop:2,maxWidth:'95%'},
@@ -235,8 +235,8 @@ const styles=StyleSheet.create({
   artwork:{width:39,height:39},
   videoIcon:{width:39,height:39,borderRadius:9,backgroundColor:'#F31E35',alignItems:'center',justifyContent:'center'},
   tileTitle:{color:'#071D49',fontSize:8.5,lineHeight:11,fontWeight:'800',textAlign:'center',marginTop:3},
-  tileStatus:{color:'#7A8799',fontSize:7.5,fontWeight:'800',marginTop:3},
-  tileStatusReady:{color:'#16865B'},
+  tileStatus:{color:'#FFFFFF',backgroundColor:'#8EAAD5',overflow:'hidden',borderRadius:7,paddingHorizontal:10,paddingVertical:7,fontSize:8,fontWeight:'800',marginTop:8,textAlign:'center',width:'95%'},
+  tileStatusReady:{color:'#16865B',backgroundColor:'#E6F6EE'},
   bulk:{minHeight:58,marginTop:10,borderRadius:14,borderWidth:1.5,borderStyle:'dashed',borderColor:'#AFC8E8',backgroundColor:'#F7FAFF',paddingHorizontal:10,flexDirection:'row',alignItems:'center',gap:9},
   bulkReady:{borderStyle:'solid',borderColor:'#52B57F',backgroundColor:'#EFFAF4'},
   bulkArtwork:{width:34,height:34},
