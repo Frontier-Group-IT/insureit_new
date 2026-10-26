@@ -13,6 +13,6 @@ for (const file of [screen, policies, claims]) {
   assert.match(file, /<SafeAreaView style=\{styles\.safeArea\} edges=\{\['top'\]\}>/);
 }
 assert.match(screen, /fixedWhiteHeader: \{[^\n]+top: 0[^\n]+backgroundColor: "#FFFFFF"/);
-assert.match(policies, /stickySearchOverlay: \{[^\n]+top: 0[^\n]+backgroundColor: '#FFFFFF'/);
+assert.match(policies, /stickySearchOverlay: \{[^\n]+top: 0[^\n]+backgroundColor: '#082657'/);
 assert.match(claims, /stickyOverlay: \{[^\n]+top: 0[^\n]+backgroundColor: "#FFFFFF"/);
-console.log('Native safe-area provider and white sticky header contracts passed');
+console.log('Native safe-area provider and navy sticky header contracts passed');
