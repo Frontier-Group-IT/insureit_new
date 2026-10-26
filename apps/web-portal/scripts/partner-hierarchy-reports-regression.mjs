@@ -36,8 +36,14 @@ assert.match(overview, /payout\.available && canShowPayout/, "Payout output must
 assert.match(overview, /reportScope\.role === "partner"/, "Partner payout must not be inherited by Group/Branch");
 assert.match(read("components/partner-portal/partner-navigation.tsx"), /href: "\/partner\/reports"/, "Sidebar navigation missing");
 
-assert.ok(read("app/partner/reports/portfolio/page.tsx").includes("listPartnerWebPolicies({ limit: 20, offset: 0 })"), "Portfolio register must use bounded Partner policy RPC");
-assert.ok(read("app/partner/reports/operations/page.tsx").includes("listPartnerWebClaims({ limit: 20, offset: 0 })"), "Operations register must use bounded Partner claims RPC");
+assert.ok(read("app/partner/reports/portfolio/page.tsx").includes("listPartnerWebPolicies({ limit: 21, offset })"), "Portfolio register must use bounded Partner policy RPC");
+assert.ok(read("app/partner/reports/operations/page.tsx").includes("listPartnerWebClaims({ limit: 21, offset })"), "Operations register must use bounded Partner claims RPC");
+
+for (const path of ["app/partner/reports/portfolio/page.tsx", "app/partner/reports/operations/page.tsx"]) {
+  const page = read(path);
+  assert.match(page, /\\^\\[1-9\\]/, "Page must validate supplied positive integer");
+  assert.match(page, /slice\\(0, 20\\)/, "Pagination must render only 20 rows");
+}
 
 const exportRoute = read("app/partner/reports/export/route.ts");
 assert.match(exportRoute, /await requirePartnerReportScope\(\)/, "Exports must validate reporting scope");
