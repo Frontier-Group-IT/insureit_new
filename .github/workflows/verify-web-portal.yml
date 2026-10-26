@@ -37,6 +37,8 @@ jobs:
           cache-dependency-path: apps/web-portal/package.json
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Operations claim payment-stage authorized write regression
+        run: node scripts/claim-payment-stage-authorized-write-regression.mjs
       - name: Partner hierarchy Reports security regression
         run: npm run partner-reports:security-regression
       - name: PostgREST high-volume row-cap audit
