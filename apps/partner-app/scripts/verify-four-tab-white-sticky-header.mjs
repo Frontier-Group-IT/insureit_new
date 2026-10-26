@@ -17,6 +17,6 @@ assert.match(business, /stickyHeading="Business"/);
 assert.match(business, /stickyControls=\{businessSearchControls\}/);
 assert.match(policies, /stickyClaimsHeading/);
 assert.match(policies, /stickySearchOverlay: \{[^\n]+backgroundColor: '#082657'/);
-assert.match(claims, /stickyOverlay: \{[^\n]+backgroundColor: "#FFFFFF"/);
+assert.match(claims, /stickyOverlay: \{[^\n]+backgroundColor: "#082657"/);
 assert.match(claims, /<Text style=\{styles.stickyTitle\}>Claims<\/Text>/);
 console.log('Primary tab navy sticky heading/search contracts passed');
