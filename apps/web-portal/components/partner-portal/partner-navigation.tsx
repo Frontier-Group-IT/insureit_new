@@ -31,6 +31,7 @@ type PartnerNavItem = { href: string; label: string; icon: PartnerCustomIconName
 const primaryItems: PartnerNavItem[] = [
   { href: "/partner", label: "Home", icon: "home" },
   { href: "/partner/business", label: "My Business", icon: "business" },
+  { href: "/partner/reports", label: "Reports", icon: "business" },
   { href: "/partner/customers", label: "Customers", icon: "customers" },
   { href: "/partner/vehicles", label: "Vehicle", icon: "vehicle" },
   { href: "/partner/policies", label: "Policies", icon: "policies" },
