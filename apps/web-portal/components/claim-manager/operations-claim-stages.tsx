@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { advanceInternalSpotIntimation, saveInternalSpotIntimationDetails } from "@/app/claims/internal-spot-intimation-actions";
 import { completeClaimJourneyStage } from "@/app/claims/stage-actions";
@@ -311,6 +311,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         {selected.key === "spot_intimation" ? (
           <>
             <StageOneForm
+              claimId={claimId}
               stage={selected}
               active={active ?? stages[0]}
               detail={spotDetail ?? detail}
@@ -475,8 +476,55 @@ function formatDisplayDate(value: string) {
   return match ? `${match[3]}-${match[2]}-${match[1]}` : value;
 }
 
-function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, spotIntimationAt, formAction, state, standalone = false, onSubmitStart }: { stage: (typeof stages)[number]; active: (typeof stages)[number]; detail: StageDetail | undefined; spotDetails?: InternalSpotIntimationDetails | null; next?: ClaimStatus; accidentAt?: string | null; spotIntimationAt?: string | null; formAction: (formData: FormData) => void; state: ActionState; standalone?: boolean; onSubmitStart?: () => void }) {
+function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accidentAt, spotIntimationAt, formAction, state, standalone = false, onSubmitStart }: { claimId: string; stage: (typeof stages)[number]; active: (typeof stages)[number]; detail: StageDetail | undefined; spotDetails?: InternalSpotIntimationDetails | null; next?: ClaimStatus; accidentAt?: string | null; spotIntimationAt?: string | null; formAction: (formData: FormData) => void; state: ActionState; standalone?: boolean; onSubmitStart?: () => void }) {
   const [location, setLocation] = useState(spotDetails?.location ?? "");
+  const formRef = useRef<HTMLFormElement>(null);
+  const draftKey = `insureit:spot-intimation-draft:${claimId}`;
+  const draftFields = ["incident_at", "incident_time", "spot_intimation_at", "spot_intimation_time", "driver_name", "driver_phone", "location"];
+
+  // Document uploads refresh the server component tree. Restore unsaved form edits
+  // from this tab only; do not persist drafts to the database until Save Details.
+  useEffect(() => {
+    try {
+      const raw = window.sessionStorage.getItem(draftKey);
+      if (!raw || !formRef.current) return;
+      const draft = JSON.parse(raw) as Record<string, unknown>;
+      for (const name of draftFields) {
+        const value = draft[name];
+        if (typeof value !== "string") continue;
+        const field = Array.from(formRef.current.elements).find(
+          (element): element is HTMLInputElement => element instanceof HTMLInputElement && element.name === name
+        );
+        if (field && field.value !== value) {
+          const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+          nativeSetter?.call(field, value);
+          field.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+        if (name === "location") setLocation(value);
+      }
+    } catch {
+      // Session storage can be disabled. The normal persisted claim values remain usable.
+    }
+    // Restore only on mount or when switching to a different claim.
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!state.ok) return;
+    try { window.sessionStorage.removeItem(draftKey); } catch { /* optional browser storage */ }
+  }, [draftKey, state.ok]);
+
+  function preserveDraft() {
+    const form = formRef.current;
+    if (!form) return;
+    const draft: Record<string, string> = {};
+    for (const name of draftFields) {
+      const field = Array.from(form.elements).find(
+        (element): element is HTMLInputElement => element instanceof HTMLInputElement && element.name === name
+      );
+      if (field) draft[name] = field.value;
+    }
+    try { window.sessionStorage.setItem(draftKey, JSON.stringify(draft)); } catch { /* optional browser storage */ }
+  }
   const storedIncidentAt = detail?.details?.incident_at;
   const storedSpotIntimationAt = detail?.details?.spot_intimation_at;
   const incidentValue = spotDetails?.incident_at ?? accidentAt ?? (typeof storedIncidentAt === "string" ? storedIncidentAt : "");
@@ -486,7 +534,7 @@ function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, sp
   const groupedInputClassName = "h-full min-w-0 w-full border-0 bg-transparent pl-2 pr-[10%] text-[11px] font-semibold normal-case tracking-normal text-[#071D49] outline-none";
 
   return (
-    <form id="spot-intimation-form" action={formAction} onSubmit={onSubmitStart} className="mt-3 overflow-hidden rounded-2xl border border-[#BFD7F6] bg-white shadow-[0_8px_20px_rgba(23,78,166,0.05)]">
+    <form ref={formRef} id="spot-intimation-form" action={formAction} onInput={preserveDraft} onChange={preserveDraft} onSubmit={onSubmitStart} className="mt-3 overflow-hidden rounded-2xl border border-[#BFD7F6] bg-white shadow-[0_8px_20px_rgba(23,78,166,0.05)]">
       {!standalone ? <><input type="hidden" name="next_status" value={next} /><input type="hidden" name="notes" value={`Operations updated ${active.label} and moved the claim to ${next}.`} /></> : null}
       <div className="flex items-center gap-3 border-b border-[#DCE9F8] px-4 py-3">
         <h3 className="text-[16px] font-semibold tracking-[-0.01em] text-[#071D49]">Accident &amp; Spot Intimation Details</h3>
