@@ -91,8 +91,8 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       )}
     </section> : null}
     {editMode && canEditStage ? (
-      <form id="customer-claim-stage-details-form" action={saveCustomerExternalStage} className="mt-2 rounded-2xl border border-[#D9E6F7] bg-white p-5">
-        <div className="mb-4 flex items-start justify-between gap-3"><div><h2 className="text-[17px] font-semibold text-[#071D49]">Stage Details</h2><p className="text-[12px] text-[#75869A]">Record {selected.label.toLowerCase()} details.</p></div>{selected.key==="claim_intimation"?<button type="submit" className="shrink-0 rounded-lg border border-[#BCD1F1] px-4 py-2.5 text-[12px] font-semibold text-[#1253A7] hover:bg-[#F0F6FF]">Save Details</button>:null}</div><div className={`grid gap-3 sm:grid-cols-2 ${selected.key==="claim_intimation"?"lg:grid-cols-5":selected.key==="work_approval"||selected.key==="payment_encashment"?"lg:grid-cols-5":selected.key==="repair_ri"||selected.key==="delivery_order"?"lg:grid-cols-3":selected.key==="billing"||selected.key==="vehicle_delivery"?"lg:grid-cols-2":"lg:grid-cols-4"}`}>
+      <form id="customer-claim-stage-details-form" action={selected.key==="claim_intimation"?saveCustomerClaimIntimationDraft:saveCustomerExternalStage} className="mt-2 rounded-2xl border border-[#D9E6F7] bg-white p-5">
+        <div className="mb-4 flex items-start justify-between gap-3"><div><h2 className="text-[17px] font-semibold text-[#071D49]">Stage Details</h2><p className="text-[12px] text-[#75869A]">Record {selected.label.toLowerCase()} details.</p></div></div><div className={`grid gap-3 sm:grid-cols-2 ${selected.key==="claim_intimation"?"lg:grid-cols-5":selected.key==="work_approval"||selected.key==="payment_encashment"?"lg:grid-cols-5":selected.key==="repair_ri"||selected.key==="delivery_order"?"lg:grid-cols-3":selected.key==="billing"||selected.key==="vehicle_delivery"?"lg:grid-cols-2":"lg:grid-cols-4"}`}>
         <input type="hidden" name="account" value={account.id}/>
         <input type="hidden" name="claim" value={claim.id}/>
         <input type="hidden" name="stage" value={selected.key}/>
@@ -105,13 +105,19 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
             )}
           </label>
         ))}</div>
-        <div className="mt-5 flex flex-wrap items-center justify-end gap-2 border-t border-[#D9E3F0] pt-4">
+        {selected.key!=="claim_intimation"?<div className="mt-5 flex flex-wrap items-center justify-end gap-2 border-t border-[#D9E3F0] pt-4">
           <Link href={{pathname:"/customer/claims",query:{account:account.id}}} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] px-5 text-[12px] font-semibold text-[#174A87]">Cancel</Link>
           <button type="submit" className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#1253A7] px-5 text-[12px] font-bold text-white hover:bg-[#0B3884]">Save &amp; Continue</button>
-        </div>
+        </div>:null}
       </form>
     ):null}
     {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} allowUpload={editMode}/> : null}
-    {selected.key==="claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} showSaveDetails={editMode && canEditStage} showDraftAction={editMode && canEditStage} draftAction={saveCustomerClaimIntimationDraft} allowUpload={editMode && external} /> : null}
+    {selected.key==="claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} showSaveDetails={false} allowUpload={editMode && external} /> : null}
+    {selected.key==="claim_intimation" && editMode && canEditStage ? (
+      <div className="flex flex-wrap items-center justify-end gap-3 rounded-xl border border-[#D9E6F7] bg-white px-5 py-4">
+        <Link href={{pathname:"/customer/claims",query:{account:account.id}}} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] px-5 text-[12px] font-semibold text-[#174A87]">Cancel</Link>
+        <button type="submit" form="customer-claim-stage-details-form" formAction={saveCustomerClaimIntimationDraft} formNoValidate className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#1253A7] px-6 text-[12px] font-bold text-white hover:bg-[#0B3884]">Save</button>
+      </div>
+    ) : null}
   </div>;
 }
