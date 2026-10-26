@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BarChart3, BriefcaseBusiness, FileText, ShieldCheck, Truck, UsersRound, WalletCards } from "lucide-react";
+import { BarChart3, BriefcaseBusiness, FileText, ShieldCheck, Truck, UsersRound } from "lucide-react";
 import {
   getPartnerWebSession,
   getPartnerWebBusinessPerformance,
@@ -20,7 +20,7 @@ const money = (value: number | string | null | undefined) =>
 export default async function PartnerReportsPage() {
   // The partner-session guard and every data RPC enforce the authenticated portal account scope.
   // Never substitute the admin report loaders or trust client-supplied group/partner IDs here.
-  const { identity, scope } = await getPartnerWebSession();
+  const { scope } = await getPartnerWebSession();
   const [performance, policies, claims, renewals, payout] = await Promise.all([
     getPartnerWebBusinessPerformance(),
     getPartnerWebPolicySummary(),
