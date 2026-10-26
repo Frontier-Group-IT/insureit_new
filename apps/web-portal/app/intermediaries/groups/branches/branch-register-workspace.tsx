@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Building2, GitBranch, Plus, Store } from "lucide-react";
-import { PermanentDeleteButton } from "@/components/permanent-delete-button";
+import { BranchActionMenu } from "./branch-action-menu";
 import {
   BrokerRegisterShell,
   BrokerRegisterToolbar,
@@ -20,6 +20,9 @@ export type BranchRegisterRow = {
   branch_kind: string;
   email: string | null;
   phone: string | null;
+  contact_name: string | null;
+  address: string | null;
+  login_disabled: boolean;
   invitation_status: "active" | "invited" | "pending" | "unknown";
   branch_status: string;
   parent_partner_id: string | null;
@@ -204,7 +207,7 @@ export function BranchRegisterWorkspace({
                 </td>
                 <td className="px-3 break-all text-[#475569]">{branch.email || "—"}</td>
                 <td className="px-3 text-[#475569]">{branch.phone || "—"}</td>
-                <td className="px-3"><StatusPill status={branch.invitation_status} /></td>{canPermanentDelete ? <td className="px-3 text-center"><PermanentDeleteButton kind="branch" id={branch.id} name={branch.branch_name} compact /></td> : null}
+                <td className="px-3"><StatusPill status={branch.login_disabled ? "disabled" : branch.invitation_status} /></td>{canPermanentDelete ? <td className="px-3 text-center"><BranchActionMenu branch={branch} /></td> : null}
               </tr>
             ))}
           </tbody>
@@ -238,7 +241,7 @@ function BranchMobileCard({ branch, canPermanentDelete }: { branch: BranchRegist
               <p className="truncate text-[15px] font-extrabold text-[#12203B]">{branch.branch_name}</p>
               <p className="mt-0.5 truncate text-[11px] text-[#66748A]">{branch.branch_code}</p>
             </div>
-            <StatusPill status={branch.branch_status} />
+            <StatusPill status={branch.login_disabled ? "disabled" : branch.invitation_status} />
           </div>
           <div className="mt-3 grid gap-2 text-[12px] text-[#53627A]">
             <div className="flex min-h-10 items-center gap-2 rounded-xl bg-[#F8FAFC] px-3">
@@ -273,7 +276,7 @@ function StatusPill({ status }: { status: string }) {
   const invited = status === "invited";
   return (
     <span className={`inline-flex rounded-full px-2.5 py-1 text-[8px] font-bold uppercase tracking-[0.05em] ${active ? "bg-[#EAF8EF] text-[#267A49]" : invited ? "bg-[#FFF4D9] text-[#A76600]" : "bg-[#F1F5F9] text-[#64748B]"}`}>
-      {active ? "Active" : invited ? "Invitation Sent" : status === "pending" ? "Invitation Pending" : "Status Unavailable"}
+      {active ? "Active" : invited ? "Invitation Sent" : status === "pending" ? "Invitation Pending" : status === "disabled" ? "Disabled" : "Status Unavailable"}
     </span>
   );
 }
