@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Camera, ContactRound, FileText, Mic, ShieldCheck, Trash2, Truck, Video } from "lucide-react";
+import { Shield, ShieldCheck, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { ClaimDocumentCollapsedStatus } from "@/components/claim-manager/claim-document-collapsed-status";
 import { ReplaceDocumentButton } from "./replace-document-button";
@@ -107,12 +107,12 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
             aria-label={`${isExpanded ? "Collapse" : "Expand"} ${item.title}`}
             className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/30 focus-visible:ring-offset-1"
           >
-            <DocumentTypeHeaderIcon itemKey={item.key} />
+            <DocumentVerificationIcon verified={allVerified} />
             <h2 className="truncate text-[13px] font-semibold leading-tight text-[#071D49]">{item.title}</h2>
           </button>
         ) : (
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <DocumentTypeHeaderIcon itemKey={item.key} />
+            <DocumentVerificationIcon verified={allVerified} />
             <h2 className="truncate text-[13px] font-semibold leading-tight text-[#071D49]">{item.title}</h2>
           </div>
         )}
@@ -191,10 +191,10 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
           title="Select document for verification"
           className={`grid h-8 w-8 place-items-center rounded-md border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/30 ${selected ? "border-[#174EA6] bg-[#EAF2FF]" : "border-transparent bg-transparent hover:border-[#B9D2FF] hover:bg-[#F4F8FF]"}`}
         >
-          <DocumentTypeHeaderIcon itemKey={item.key} />
+          <DocumentVerificationIcon verified={verified} />
         </button>
       ) : (
-        <div className="grid h-8 w-8 place-items-center"><DocumentTypeHeaderIcon itemKey={item.key} /></div>
+        <div className="grid h-8 w-8 place-items-center"><DocumentVerificationIcon verified={verified} /></div>
       )}
       <div className="min-w-0">
         <p className="flex min-h-8 items-center truncate text-[11px] font-semibold text-[#071D49]">{document.file_name}</p>
@@ -234,16 +234,9 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
   );
 }
 
-function DocumentTypeHeaderIcon({ itemKey }: { itemKey: string }) {
-  const baseClassName = "h-5 w-5 shrink-0";
-  if (itemKey === "spot") return <Camera aria-hidden="true" className={`${baseClassName} text-[#F037A5]`} strokeWidth={2.2} />;
-  if (itemKey === "rc") return <FileText aria-hidden="true" className={`${baseClassName} text-[#16A36A]`} strokeWidth={2.2} />;
-  if (itemKey === "insurance") return <ShieldCheck aria-hidden="true" className={`${baseClassName} text-[#2563EB]`} strokeWidth={2.2} />;
-  if (itemKey === "dl") return <ContactRound aria-hidden="true" className={`${baseClassName} text-[#9333EA]`} strokeWidth={2.2} />;
-  if (itemKey === "gr") return <Truck aria-hidden="true" className={`${baseClassName} text-[#EA7A16]`} strokeWidth={2.2} />;
-  if (itemKey === "video") return <Video aria-hidden="true" className={`${baseClassName} text-[#EF233C]`} strokeWidth={2.2} />;
-  if (itemKey === "audio") return <Mic aria-hidden="true" className={`${baseClassName} text-[#0A43A3]`} strokeWidth={2.2} />;
-  return <FileText aria-hidden="true" className={`${baseClassName} text-[#071D49]`} strokeWidth={2.2} />;
+function DocumentVerificationIcon({ verified }: { verified: boolean }) {
+  const Icon = verified ? ShieldCheck : Shield;
+  return <Icon aria-hidden="true" className={`h-5 w-5 shrink-0 ${verified ? "text-green-600" : "text-[#2563EB]"}`} strokeWidth={2.2} />;
 }
 
 function StatusBadge({ tone, label }: { tone: "green" | "amber" | "slate"; label: string }) {
