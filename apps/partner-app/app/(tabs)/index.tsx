@@ -106,6 +106,7 @@ export default function PartnerHomeScreen() {
     <PartnerScreen
       resetScrollOnFocus
       homeMotionScrollY={homeScrollY}
+      stickyHeaderNavy
       eyebrow="INSUREIT PARTNER"
       title={greeting(signedInPersonName(identity))}
       action={
