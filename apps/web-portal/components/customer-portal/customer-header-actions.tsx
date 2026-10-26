@@ -35,16 +35,16 @@ export function CustomerHeaderActions({ name, userId }: { name: string; userId: 
 
   return (
     <div className="flex items-center gap-3">
-      <Link href="/customer/support" aria-label="Customer updates and support" title="Updates and support" className="relative grid h-10 w-10 place-items-center rounded-xl bg-[#F3F4FF] text-[#152550] hover:bg-[#EDEBFF]">
+      <Link href="/customer/support" aria-label="Customer updates and support" title="Updates and support" className="customer-motion-icon relative grid h-10 w-10 place-items-center rounded-xl bg-[#F3F4FF] text-[#152550] hover:bg-[#EDEBFF]">
         <Bell className="h-5 w-5" />
         <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full border border-white bg-[#F53C77]" aria-hidden="true" />
       </Link>
       <span className="h-8 w-px bg-[#D2DAE7]" aria-hidden="true" />
       <div ref={menuRef} className="relative">
-        <button type="button" aria-label="Open customer profile menu" aria-expanded={open} onClick={() => setOpen(!open)} className="grid h-11 w-11 place-items-center rounded-full bg-[#633BF5] text-base font-bold text-white shadow-[0_4px_12px_rgba(95,61,245,.18)]">{initial}</button>
+        <button type="button" aria-label="Open customer profile menu" aria-expanded={open} onClick={() => setOpen(!open)} className="customer-motion-icon grid h-11 w-11 place-items-center rounded-full bg-[#633BF5] text-base font-bold text-white shadow-[0_4px_12px_rgba(95,61,245,.18)]">{initial}</button>
         {open ? (
           <>
-            <div className="absolute right-0 top-14 z-50 w-[min(320px,calc(100vw-24px))] rounded-3xl border border-[#DBE4F0] bg-white shadow-[0_20px_50px_rgba(15,32,57,0.17)]">
+            <div className="customer-motion-menu absolute right-0 top-14 z-50 w-[min(320px,calc(100vw-24px))] rounded-3xl border border-[#DBE4F0] bg-white shadow-[0_20px_50px_rgba(15,32,57,0.17)]">
               <div className="flex items-center gap-3 border-b border-[#EDF1F6] px-4 py-4 hover:bg-[#F6F9FD]">
                 <CustomerAvatar userId={userId} />
                 <Link href="/customer/profile" onClick={() => setOpen(false)} className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-[#142746]">{name}</span><span className="text-xs text-[#78869A]">View user details</span></Link>
