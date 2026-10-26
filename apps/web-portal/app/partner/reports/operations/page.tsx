@@ -2,7 +2,6 @@ import { PartnerReportsShell } from "@/components/partner-portal/partner-reports
 import Link from "next/link";
 import { requirePartnerReportScope } from "@/lib/reports/partner-report-scope";
 import { getPartnerWebClaimSummary, getPartnerWebRenewalSummary, listPartnerWebClaims } from "@/lib/partner-web";
-import { PartnerReportsShell } from "@/components/partner-portal/partner-reports-shell";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -25,7 +24,6 @@ export default async function PartnerOperationsReport({ searchParams }: { search
   ] as const;
   return (
     <PartnerReportsShell active="Operations" scope={reportScope}>
-      <h1 className="text-3xl font-extrabold">Reports</h1>
       
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
         {fields.map(([label, value]) => <div key={label} className="rounded-xl border border-[#E2E9F3] bg-white p-3 shadow-sm"><p className="text-xs font-semibold text-[#6D7E9A]">{label}</p><p className="mt-2 text-2xl font-bold">{number(value)}</p></div>)}
