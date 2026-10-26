@@ -59,3 +59,9 @@
 - Added UI links from Portfolio/Operations and new export assertions to the regression script.
 - These are first-page snapshots, **not complete exports**; future full exports require bounded pagination, explicit completeness reporting and runtime access verification.
 - New CI not yet verified. Do not merge until tests and five-role authenticated isolation checks pass.
+
+## Continuation — server-side register pagination
+- Portfolio and Operations previews now accept only 1–4 digit positive page numbers and request 21 records for 20 displayed rows, using scoped Partner list RPC offsets.
+- Prev/Next controls are shown based on the bounded response; never use a caller-supplied partner/group ID.
+- Updated regression assertions for page validation, bounded RPC calls, and 20-row rendering.
+- Prior CI run passed Reports regression and failed at unrelated Customer Home self-managed-stage regression; latest pagination CI not yet confirmed.
