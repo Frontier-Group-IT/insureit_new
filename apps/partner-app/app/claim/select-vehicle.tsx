@@ -77,7 +77,7 @@ export default function PartnerClaimVehicleSelector() {
     </View>
     <ImageBackground source={require('../../assets/partner/backgrounds/CLAIMBG.jpeg')} resizeMode="cover" style={styles.background} imageStyle={styles.backgroundImage}>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <View style={styles.section}>
+      <View style={styles.vehicleSection}>
         <Text style={styles.heading}>Vehicle number *</Text>
         {dropdownOpen ? (
           <View style={styles.dropdown}>
@@ -199,7 +199,8 @@ const styles = StyleSheet.create({
  content:{padding:15,paddingBottom:35,gap:12,flexGrow:1},
  section:{backgroundColor:'#FFF',borderRadius:17,padding:14,borderWidth:1,borderColor:'#DEE8F4',gap:11},
  heading:{fontSize:14,fontWeight:'900',color:'#122E53'},
- vehicleSelect:{backgroundColor:'#F9FCFF',borderRadius:12,borderWidth:1,borderColor:'#BDCEE2',paddingHorizontal:12,minHeight:66,flexDirection:'row',alignItems:'center',gap:12},
+ vehicleSection:{gap:11},
+ vehicleSelect:{backgroundColor:'#FFFFFF',borderRadius:16,borderWidth:1,borderColor:'#D7E3F2',padding:15,minHeight:76,flexDirection:'row',alignItems:'center',gap:13},
  placeholder:{fontSize:13,color:'#7890AC',fontWeight:'700'},
  dropdown:{backgroundColor:'#FFF',borderRadius:14,borderWidth:1.5,borderColor:'#A9C6E9',overflow:'hidden',shadowColor:'#0E3E7A',shadowOpacity:0.09,shadowRadius:8,shadowOffset:{width:0,height:3},elevation:2},
  search:{minHeight:64,backgroundColor:'#F3F7FF',borderBottomWidth:1,borderBottomColor:'#E1E8F2',flexDirection:'row',alignItems:'center',paddingHorizontal:14,gap:10},
