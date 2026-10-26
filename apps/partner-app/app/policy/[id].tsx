@@ -137,7 +137,7 @@ export default function PolicyDetailScreen() {
             </View>
             {showOverviewDetails ? (
               <View style={styles.detailGrid}>
-                <MiniInfo label="Insurer" value={data.insurer.name || 'Not recorded'} />
+                <OverviewItem iconKind="insurer" label="Insurer" value={data.insurer.name || 'Not recorded'} insurerName={data.insurer.name} />
                 <MiniInfo label="Policy number" value={data.policy.policy_no || data.policy.policy_code || 'Not recorded'} />
                 <MiniInfo label="Policy status" value={humanize(data.policy.status || data.policy.lifecycle_status)} />
                 <MiniInfo label="Start date" value={formatDate(data.policy.start_date)} />
