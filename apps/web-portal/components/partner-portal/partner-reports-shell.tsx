@@ -10,11 +10,11 @@ export function PartnerReportsShell({ active, scope, children }: { active: Tab; 
       <div className="reports-reference-topbar">
         <div className="reports-reference-left">
           <div className="reports-reference-heading"><h1>Reports</h1></div>
+          <PartnerReportTabs active={active}/>
           <span className="rounded-lg border border-[#DCE5F2] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#536889]">{label}</span>
         </div>
       </div>
     </header>
-    <PartnerReportTabs active={active}/>
     {children}
   </main>;
 }
