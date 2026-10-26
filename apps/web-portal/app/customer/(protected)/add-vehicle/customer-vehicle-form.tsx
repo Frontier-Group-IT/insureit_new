@@ -15,7 +15,7 @@ export function CustomerVehicleForm({
   const [state, formAction, pending] = useActionState(action, initialSaveVehicleState);
 
   return (
-    <form id="customer-add-vehicle-form" action={formAction} className="space-y-3">
+    <form id="customer-add-vehicle-form" action={formAction} className="customer-workflow space-y-3" aria-busy={pending}>
       {state.error ? (
         <div role="alert" aria-live="assertive" className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-800">
           {state.error}
