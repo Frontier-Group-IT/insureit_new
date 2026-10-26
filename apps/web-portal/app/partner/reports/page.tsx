@@ -16,7 +16,7 @@ function Kpi({label,value,note}:{label:string;value:string;note:string}){return 
 function AttentionRow({label,count,detail,href,alert}:{label:string;count:number;detail:string;href:string;alert?:boolean}){return <Link prefetch={false} href={href} className="ov-attention-row"><span className={`ov-attention-icon ov-attention-icon--${alert?"danger":"clock"}`}>{alert?<AlertCircle className="h-3.5 w-3.5"/>:<Clock3 className="h-3.5 w-3.5"/>}</span><span className="ov-attention-copy"><strong>{number(count)} {label}</strong><small>{detail}</small></span><ArrowRight className="h-3.5 w-3.5 text-[#7b8ba3]"/></Link>}
 export default async function PartnerReportsPage(){
  const reportScope=await requirePartnerReportScope();
- const canShowPayout=reportScope.role==="partner"||reportScope.role==="partner_associate";
+ const canShowPayout=reportScope.role === "partner" || reportScope.role === "partner_associate";
  const [performance,policies,claims,renewals,payout,recent]=await Promise.all([
   getPartnerWebBusinessPerformance(), getPartnerWebPolicySummary(), getPartnerWebClaimSummary(),
   getPartnerWebRenewalSummary(),canShowPayout?getPartnerWebPayoutSummary():Promise.resolve({available:false as const}),
