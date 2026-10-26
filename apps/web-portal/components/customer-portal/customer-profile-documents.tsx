@@ -19,7 +19,7 @@ const categories = [
 export function CustomerProfileDocuments({ customerId, documents }: { customerId: string; documents: Document[] }) {
   const [expanded, setExpanded] = useState(false);
   return (
-    <section id="customer-profile-vault" className="scroll-mt-24 overflow-hidden rounded-[22px] border border-[#E6E0F5] bg-[linear-gradient(105deg,#FBF9FF_0%,#F8F5FF_53%,#EAE3FF_100%)] shadow-[0_9px_24px_rgba(79,56,139,0.06)]">
+    <section id="customer-profile-vault" className="customer-profile-vault scroll-mt-24 overflow-hidden rounded-[22px] border border-[#E6E0F5] bg-[linear-gradient(105deg,#FBF9FF_0%,#F8F5FF_53%,#EAE3FF_100%)] shadow-[0_9px_24px_rgba(79,56,139,0.06)]">
       <div className="relative isolate overflow-hidden px-4 py-4 sm:px-5 sm:py-5">
         <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full border-[35px] border-white/45" />
         <div className="relative flex items-center gap-3">
@@ -36,7 +36,7 @@ export function CustomerProfileDocuments({ customerId, documents }: { customerId
         </div>
         <div className="relative mt-4 flex flex-wrap gap-2" aria-label="Document categories">
           {categories.map(({ label, Icon }) => (
-            <span key={label} className="inline-flex items-center gap-2 rounded-lg bg-white/95 px-3 py-2 text-[10px] font-bold text-[#6144AA] shadow-[0_2px_8px_rgba(91,59,162,0.05)]">
+            <span key={label} className="customer-profile-category inline-flex items-center gap-2 rounded-lg bg-white/95 px-3 py-2 text-[10px] font-bold text-[#6144AA] shadow-[0_2px_8px_rgba(91,59,162,0.05)]">
               <Icon className="h-4 w-4" /> {label}
             </span>
           ))}
@@ -47,7 +47,7 @@ export function CustomerProfileDocuments({ customerId, documents }: { customerId
         </div>
       </div>
       {expanded && (
-        <div id="customer-profile-vault-content" className="relative border-t border-[#E6DDF9] bg-white p-4">
+        <div id="customer-profile-vault-content" className="customer-profile-vault-content relative border-t border-[#E6DDF9] bg-white p-4">
           {documents.length === 0 && (
             <div className="mb-3 rounded-2xl border border-dashed border-[#DACDF5] bg-[#FAF8FF] px-4 py-5 text-center">
               <span className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-[#EEE7FF] text-[#714AC6]"><FolderOpen className="h-7 w-7"/></span>
