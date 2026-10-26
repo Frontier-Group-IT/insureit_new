@@ -1,0 +1,39 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+const root = resolve(import.meta.dirname, "..");
+const read = (path) => readFileSync(resolve(root, path), "utf8");
+
+const guard = read("lib/reports/partner-report-scope.ts");
+assert.match(guard, /getPartnerWebSession\(\)/, "Scope must come from authenticated session");
+assert.match(guard, /scope_mode === "organization"/, "Intermediaries must never receive organization-wide reporting");
+assert.match(guard, /scope\.scope_mode !== "hierarchy"/, "Group must require hierarchy scope");
+assert.match(guard, /scope\.scope_mode !== "self"/, "Branch must require self scope");
+assert.match(guard, /partnerIds\.length !== 1/, "Branch must be limited to its one mapped partner");
+assert.match(guard, /scope\.scope_mode !== "partner_family"/, "Partner must be restricted to partner family");
+assert.match(guard, /partnerIds\.includes\(identity\.partner_id\)/, "Partner identity must match scoped partner");
+assert.match(guard, /portal_account_source === "associate"/, "Partner Associate must inherit assigned Partner scope");
+assert.match(guard, /account_subtype === "group_associate"/, "Group Associate must inherit assigned Group scope");
+assert.doesNotMatch(guard, /createSupabaseAdminClient/, "No privileged database client in reporting gate");
+
+const pages = [
+  ["app/partner/reports/page.tsx", "Overview"],
+  ["app/partner/reports/business/page.tsx", "Business"],
+  ["app/partner/reports/portfolio/page.tsx", "Portfolio"],
+  ["app/partner/reports/operations/page.tsx", "Operations"],
+];
+for (const [file, label] of pages) {
+  const source = read(file);
+  const gateAt = source.indexOf("await requirePartnerReportScope()");
+  assert(gateAt >= 0, `${label}: missing authenticated reporting gate`);
+  assert(!/createSupabaseAdminClient|getEmployeeAccessScope|requireCapability/.test(source), `${label}: must not load Operations admin reports`);
+  assert(!/searchParams|params\.partner|params\.group|params\.branch/.test(source), `${label}: user parameters must not expand scope`);
+  assert.match(source, new RegExp(`PartnerReportTabs active="${label}"`), `${label}: report navigation missing`);
+}
+const overview = read(pages[0][0]);
+assert.match(overview, /payout\.available && canShowPayout/, "Payout output must require existing payout authorization");
+assert.match(overview, /reportScope\.role === "partner"/, "Partner payout must not be inherited by Group/Branch");
+assert.match(read("components/partner-portal/partner-navigation.tsx"), /href: "\/partner\/reports"/, "Sidebar navigation missing");
+
+console.log("Partner hierarchy reporting static boundary checks passed.");
