@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Alert, BackHandler, Image, Share, type ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, Image, type ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -52,13 +52,6 @@ export default function PolicyDetailScreen() {
   const manufacturerLogo = data?.vehicle ? getPartnerManufacturerLogoSource(data.vehicle.make) : null;
   const policyNumber = data?.policy.policy_no || data?.policy.policy_code || 'Policy';
   const isVerified = data ? ['active', 'issued', 'in_force', 'in force'].includes((data.policy.status || data.policy.lifecycle_status || '').toLowerCase().replaceAll('-', '_')) : false;
-  const sharePolicy = () => { if (data) void Share.share({ message: `Policy ${policyNumber}\n${data.insurer.name || ''}\n${formatDate(data.policy.start_date)} – ${formatDate(data.policy.end_date)}` }); };
-  const openMore = () => Alert.alert('Policy Details', policyNumber, [
-    { text: 'View policy information', onPress: () => setShowOverviewDetails(true) },
-    { text: 'View premium breakup', onPress: () => setShowPremiumDetails(true) },
-    { text: 'Share policy', onPress: sharePolicy },
-    { text: 'Cancel', style: 'cancel' },
-  ]);
 
   return (
     <PartnerScreen title="Policy Details" hideTopBar>
@@ -77,9 +70,6 @@ export default function PolicyDetailScreen() {
           </Pressable>
           <Ionicons name="document-text" size={23} color="#FFFFFF" />
           <Text style={styles.headerTitle}>Policy Details</Text>
-          <View style={styles.headerSpacer} />
-          <Pressable accessibilityRole="button" accessibilityLabel="Share policy" style={styles.headerAction} onPress={sharePolicy}><Ionicons name="share-social-outline" size={20} color="#FFFFFF" /></Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="More policy actions" style={styles.headerAction} onPress={openMore}><Ionicons name="ellipsis-horizontal" size={22} color="#FFFFFF" /></Pressable>
         </View>
       </View>
 
@@ -239,14 +229,14 @@ function formatDate(value: string | null) { if (!value) return '—'; const d = 
 function nullableMoney(value: number | string | null) { return value == null ? 'Not recorded' : formatIndianCurrency(value); }
 
 const styles = StyleSheet.create({
-  pageHeader: { height: 115, marginHorizontal: -partnerTheme.spacing.lg, overflow: 'hidden', paddingHorizontal: 16, paddingTop: 12, backgroundColor: '#0756BB' },
+  pageHeader: { height: 64, marginHorizontal: -partnerTheme.spacing.lg, overflow: 'hidden', paddingHorizontal: 16, justifyContent: 'center', backgroundColor: '#0756BB' },
   headerGlowOne: { position: 'absolute', width: 210, height: 150, borderRadius: 120, right: -42, top: -76, backgroundColor: 'rgba(38,142,238,0.30)' },
   headerGlowTwo: { position: 'absolute', width: 170, height: 120, borderRadius: 100, right: 68, top: 34, backgroundColor: 'rgba(14,99,197,0.28)' },
-  headerTitleRow: { marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerBackButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { color: '#FFFFFF', fontSize: 18, lineHeight: 22, fontWeight: '700', letterSpacing: -0.12 },
   stateWrap: { marginTop: 14 },
-  contentWrap: { marginTop: -23, gap: 9, paddingBottom: 15 },
+  contentWrap: { marginTop: 10, gap: 9, paddingBottom: 15 },
   summaryCard: { padding: 13, borderRadius: 15, backgroundColor: '#073472', shadowColor: '#052A60', shadowOpacity: 0.14, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   summaryTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   summaryArtworkWrap: { width: 43, height: 43, borderRadius: 10, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
@@ -256,8 +246,6 @@ const styles = StyleSheet.create({
   policyNoRow: { flexDirection: 'row', alignItems: 'center', gap: 7, flex: 1, minWidth: 0 },
   categoryPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FFFFFF', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6 },
   categoryLabel: { color: '#16457D', fontSize: 10, fontWeight: '700' },
-  headerSpacer: { flex: 1 },
-  headerAction: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.15)' },
   periodIcon: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1375DC' },
   summaryInsurer: { color: '#75849A', fontSize: 9, lineHeight: 12, marginTop: 2 },
   summaryBadges: { alignItems: 'flex-end', gap: 5 },
