@@ -260,6 +260,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
 
   useEffect(() => {
     if (!state.ok) return;
+    try { window.sessionStorage.removeItem(`insureit:spot-intimation-draft:${claimId}`); } catch { /* optional storage */ }
     if (state.nextStageKey) {
       setSelectedKey(state.nextStageKey);
       router.replace(`/claims/${claimId}?stage=${state.nextStageKey}`);
@@ -275,6 +276,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
 
   useEffect(() => {
     if (!spotState.ok) return;
+    try { window.sessionStorage.removeItem(`insureit:spot-intimation-draft:${claimId}`); } catch { /* optional storage */ }
     setSelectedKey("spot_status");
     router.replace(`/claims/${claimId}?stage=spot_status`);
   }, [claimId, router, spotState.ok]);
@@ -333,7 +335,6 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
               accidentAt={accidentAt}
               spotIntimationAt={spotIntimationAt}
               formAction={spotCurrentEditable ? formAction : spotFormAction}
-              state={spotCurrentEditable ? state : { ok: spotState.ok, message: spotState.message, advanced: false, nextStageKey: null }}
               standalone={!spotCurrentEditable}
               onSubmitStart={() => setSpotSubmitting(true)}
             />
@@ -508,7 +509,7 @@ function formatDisplayDate(value: string) {
   return match ? `${match[3]}-${match[2]}-${match[1]}` : value;
 }
 
-function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accidentAt, spotIntimationAt, formAction, state, standalone = false, onSubmitStart }: { claimId: string; stage: (typeof stages)[number]; active: (typeof stages)[number]; detail: StageDetail | undefined; spotDetails?: InternalSpotIntimationDetails | null; next?: ClaimStatus; accidentAt?: string | null; spotIntimationAt?: string | null; formAction: (formData: FormData) => void; state: ActionState; standalone?: boolean; onSubmitStart?: () => void }) {
+function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accidentAt, spotIntimationAt, formAction, standalone = false, onSubmitStart }: { claimId: string; stage: (typeof stages)[number]; active: (typeof stages)[number]; detail: StageDetail | undefined; spotDetails?: InternalSpotIntimationDetails | null; next?: ClaimStatus; accidentAt?: string | null; spotIntimationAt?: string | null; formAction: (formData: FormData) => void; standalone?: boolean; onSubmitStart?: () => void }) {
   const [location, setLocation] = useState(spotDetails?.location ?? "");
   const formRef = useRef<HTMLFormElement>(null);
   const draftKey = `insureit:spot-intimation-draft:${claimId}`;
@@ -539,11 +540,6 @@ function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accid
     }
     // Restore only on mount or when switching to a different claim.
   }, [draftKey]);
-
-  useEffect(() => {
-    if (!state.ok) return;
-    try { window.sessionStorage.removeItem(draftKey); } catch { /* optional browser storage */ }
-  }, [draftKey, state.ok]);
 
   function preserveDraft() {
     const form = formRef.current;
