@@ -1,12 +1,12 @@
 import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 import Link from "next/link";
-import { ArrowRight, FilePlus2, Headphones, MessageCircle, Search } from "lucide-react";
+import { ArrowRight, FileText, Headphones, ShieldCheck, Clock3, Search, CarFront, CreditCard, CircleHelp, MessageSquare, BadgeCheck, ClipboardList } from "lucide-react";
 import {
   CustomerAccountTabs,
   EmptyCustomerState,
   StatusPill,
 } from "@/components/customer-portal/customer-phase1";
-import { CustomerServiceRequestForm } from "@/components/customer-portal/customer-service-request-form";
+import { CustomerSupportTicketPanel } from "@/components/customer-portal/customer-support-ticket-panel";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import {
   formatCustomerCompactDate,
@@ -41,87 +41,71 @@ export default async function CustomerSupportPage({
     <div className="space-y-5">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/support" />
 
-      <section className="relative isolate overflow-hidden rounded-2xl border border-[#DCE6F2] bg-[#EAF4FF] px-5 py-6 shadow-[0_10px_28px_rgba(28,50,82,.05)] sm:px-7 sm:py-7">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[url('/assets/support%20(2).jpeg')] bg-cover bg-center opacity-95" />
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F7FBFF]/85 via-[#F7FBFF]/45 via-45% to-transparent" />
-        <div className="relative max-w-[720px]">
-          <h1 className="text-[clamp(27px,3.5vw,40px)] font-black leading-tight text-[#10213D]">
-            How can we <span className="text-[#267AFF]">help?</span>
-          </h1>
-        </div>
-
-        <div className="mt-5 grid gap-3 md:grid-cols-3">
-          <a href="tel:+916264911014" className="group flex items-center gap-3 rounded-2xl border border-[#D8E6F5] bg-white p-4 shadow-[0_6px_20px_rgba(28,50,82,.04)] transition hover:-translate-y-0.5 hover:border-[#9FC2EC]">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#EAF3FF] text-[#176BD4]"><Headphones className="h-5 w-5" /></span>
-            <span className="min-w-0 flex-1"><strong className="block text-[13px] font-black text-[#10213D]">Call Support</strong><span className="mt-1 block text-[10px] font-semibold text-[#71839A]">Speak directly with our support team.</span></span>
-            <ArrowRight className="h-4 w-4 shrink-0 text-[#176BD4] transition group-hover:translate-x-0.5" />
-          </a>
-
-          <a href="https://wa.me/916264911014" target="_blank" rel="noreferrer" className="group flex items-center gap-3 rounded-2xl border border-[#D8E6F5] bg-white p-4 shadow-[0_6px_20px_rgba(28,50,82,.04)] transition hover:-translate-y-0.5 hover:border-[#9FC2EC]">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#EAF8F0] text-[#138A5B]"><MessageCircle className="h-5 w-5" /></span>
-            <span className="min-w-0 flex-1"><strong className="block text-[13px] font-black text-[#10213D]">WhatsApp</strong><span className="mt-1 block text-[10px] font-semibold text-[#71839A]">Message us for quick assistance.</span></span>
-            <ArrowRight className="h-4 w-4 shrink-0 text-[#138A5B] transition group-hover:translate-x-0.5" />
-          </a>
-
-          <a href="#raise-support-ticket" className="group flex items-center gap-3 rounded-2xl border border-[#D8E6F5] bg-white p-4 shadow-[0_6px_20px_rgba(28,50,82,.04)] transition hover:-translate-y-0.5 hover:border-[#9FC2EC]">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#EEF1FF] text-[#495EC7]"><FilePlus2 className="h-5 w-5" /></span>
-            <span className="min-w-0 flex-1"><strong className="block text-[13px] font-black text-[#10213D]">Raise a Ticket</strong><span className="mt-1 block text-[10px] font-semibold text-[#71839A]">Submit a request and track progress.</span></span>
-            <ArrowRight className="h-4 w-4 shrink-0 text-[#495EC7] transition group-hover:translate-x-0.5" />
-          </a>
+      <section className="relative isolate min-h-[172px] overflow-hidden rounded-xl border border-[#E3E7F4] bg-[#F4F5FF] px-5 py-5 sm:px-7">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[url('/assets/supclaim.jpeg')] bg-cover bg-center" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F5F7FF]/96 via-[#F5F7FF]/82 via-40% to-transparent" />
+        <div className="relative z-10 max-w-[530px]">
+          <p className="text-[10px] font-semibold text-[#6976AB]">We're here for you</p>
+          <h1 className="mt-1 text-[29px] font-extrabold leading-tight tracking-tight text-[#212755]">Need Help?</h1>
+          <p className="mt-1 max-w-[360px] text-[11px] font-medium leading-4 text-[#7781A5]">Get quick support, track your requests<br/>and resolve your queries — all in one place.</p>
+          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+            <div className="flex items-center gap-2"><Headphones className="h-4 w-4 text-[#693CEC]"/><span><b className="block text-[10px] text-[#343B73]">Quick Response</b><small className="text-[9px] text-[#8791AB]">We're here to help</small></span></div>
+            <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#693CEC]"/><span><b className="block text-[10px] text-[#343B73]">Trusted Support</b><small className="text-[9px] text-[#8791AB]">From real experts</small></span></div>
+            <div className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-[#693CEC]"/><span><b className="block text-[10px] text-[#343B73]">24/7 Assistance</b><small className="text-[9px] text-[#8791AB]">Anytime, Anywhere</small></span></div>
+          </div>
         </div>
       </section>
 
-      <section id="support-activity" className="space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h2 className="text-[19px] font-black text-[#10213D]">My Support Requests</h2>
-          </div>
+      <section className="space-y-2.5">
+        <div className="flex items-start justify-between gap-2">
+          <div><h2 className="text-[15px] font-bold text-[#29305D]">Quick Help</h2><p className="text-[10px] text-[#8A91AC]">Find answers to common questions or get in touch with us.</p></div>
+          <Link href={{pathname:"/customer/support",query:{account:account.id}}} className="text-[10px] font-semibold text-[#6541E8]">View All Help Articles <ArrowRight className="inline h-3 w-3"/></Link>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          {([
+            {label:"Policy Related",desc:"Download, renewal, changes",icon:FileText,href:"/customer/policies"},
+            {label:"Claims",desc:"Status, documents, process",icon:ShieldCheck,href:"/customer/claims"},
+            {label:"Vehicle & Policy",desc:"Add vehicle, update details",icon:CarFront,href:"/customer/vehicles"},
+            {label:"Payments",desc:"Premium, refunds, receipts",icon:CreditCard,href:"/customer/support"},
+            {label:"Other Queries",desc:"General help & FAQs",icon:CircleHelp,href:"/customer/support"},
+          ] as const).map(item=><Link key={item.label} href={{pathname:item.href,query:{account:account.id}}} className="group flex min-h-[65px] items-center gap-2 rounded-xl border border-[#EBEDF7] bg-[#F9FAFF] p-2.5 transition hover:border-[#CFC8F9] hover:bg-[#F3F0FF]">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEEAFF] text-[#653DEC]"><item.icon className="h-4.5 w-4.5"/></span>
+            <span className="min-w-0 flex-1"><b className="block text-[11px] font-bold text-[#2B3268]">{item.label}</b><small className="block text-[9px] text-[#8A94AC]">{item.desc}</small></span>
+            <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#7D77BD]"/>
+          </Link>)}
+        </div>
+      </section>
 
-          <form className="flex w-full items-center gap-2 rounded-xl bg-white px-3 py-2.5 shadow-[0_0_0_1px_#D8E1EC] focus-within:shadow-[0_0_0_2px_#176BD4] lg:w-[430px]">
-            <Search className="h-4 w-4 shrink-0 text-[#73829A]" />
-            <input type="hidden" name="account" value={account.id} />
-            <CustomerAnimatedSearchInput name="q" defaultValue={params.q ?? ""} aria-label="Search support requests" hints={["Search request number…", "Search subject…", "Search vehicle number…", "Search request status…"]} className="text-[11px] font-semibold text-[#10213D]"/>
+      <section id="support-activity" className="space-y-3">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 text-[15px] font-bold text-[#29305D]"><ClipboardList className="h-4 w-4 text-[#673BEE]"/>My Support Requests</h2>
+            <p className="mt-0.5 text-[10px] text-[#8B93AE]">Track your raised tickets and their status.</p>
+          </div>
+          <form className="flex h-9 w-full items-center gap-2 rounded-lg border border-[#E6E8F4] bg-white px-3 focus-within:border-[#AB9BF5] sm:w-[280px]">
+            <Search className="h-3.5 w-3.5 shrink-0 text-[#939AB3]"/>
+            <input type="hidden" name="account" value={account.id}/>
+            <CustomerAnimatedSearchInput name="q" defaultValue={params.q ?? ""} aria-label="Search support requests" hints={["Search by ticket number or subject…","Search request status…"]} className="text-[10px] text-[#252B5E]"/>
           </form>
         </div>
-
-        <div className="overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white shadow-[0_8px_24px_rgba(28,50,82,.04)]">
-          {rows.length ? (
-            <div className="divide-y divide-[#E8EDF4]">
-              {rows.map((item) => (
-                <div key={item.id} className="grid gap-3 px-4 py-3.5 sm:grid-cols-[1fr_auto] sm:items-center">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-[11.5px] font-black text-[#10213D]">{item.enquiry_no}</p>
-                      <StatusPill tone={serviceActivityTone(item.status)}>{item.status.replace("_", " ")}</StatusPill>
-                    </div>
-                    <p className="mt-1 truncate text-[12px] font-black text-[#263A57]">{item.subject}</p>
-                    <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[9.5px] font-semibold text-[#7A889C]">
-                      {item.vehicle_no ? <span>Vehicle: <strong className="font-black text-[#52647D]">{item.vehicle_no}</strong></span> : null}
-                      <span>Last updated: <strong className="font-black text-[#52647D]">{formatCustomerCompactDate(item.updated_at || item.created_at)}</strong></span>
-                    </div>
-                  </div>
-                  <Link href={{ pathname: `/customer/support/${item.id}`, query: { account: account.id } }} className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#D8E1EC] bg-white px-3 py-2 text-[10px] font-black text-[#176BD4] hover:bg-[#F7FAFE]">
-                    View details <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-4"><EmptyCustomerState title={activity.length ? "No matching support requests" : "No support requests yet"} body={activity.length ? "Try a different search term." : "Your raised requests will appear here."} /></div>
-          )}
+        <div className="rounded-xl border border-[#EBEDF7] bg-white p-3 sm:p-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {rows.length ? rows.map(item=>(
+            <Link key={item.id} href={{pathname:`/customer/support/${item.id}`,query:{account:account.id}}} className="group flex min-h-[135px] flex-col rounded-xl border border-[#E9EBF5] bg-[#FCFCFF] p-3 transition hover:border-[#CFC7F7] hover:shadow-sm">
+              <div className="flex items-start gap-2">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEEAFE] text-[#6942EB]"><FileText className="h-4 w-4"/></span>
+                <span className="min-w-0 flex-1"><b className="block truncate text-[10.5px] text-[#252B5C]">{item.subject}</b><small className="text-[9px] text-[#7D86A5]">{item.enquiry_no}</small></span>
+                <StatusPill tone={serviceActivityTone(item.status)}>{item.status.replace("_"," ")}</StatusPill>
+              </div>
+              <p className="mt-2 text-[9px] leading-4 text-[#8189A5]">{item.vehicle_no?`Vehicle: ${item.vehicle_no} · `:""}{formatCustomerCompactDate(item.updated_at || item.created_at)}</p>
+              <span className="mt-auto flex items-center gap-1 pt-2 text-[10px] font-semibold text-[#6542EA]">View Details <ArrowRight className="h-3 w-3 transition group-hover:translate-x-0.5"/></span>
+            </Link>
+          )) : <div className="sm:col-span-2 xl:col-span-4"><EmptyCustomerState title={activity.length?"No matching support requests":"No support requests yet"} body={activity.length?"Try a different search term.":"Your raised requests will appear here."}/></div>}
+          </div>
         </div>
       </section>
 
-      <section id="raise-support-ticket" className="scroll-mt-24 rounded-2xl border border-[#DCE4EE] bg-white p-4 shadow-[0_8px_24px_rgba(28,50,82,.04)] sm:p-5">
-        <div className="mb-4">
-          <h2 className="text-[17px] font-black text-[#10213D]">Raise a Support Ticket</h2>
-        </div>
-        <CustomerServiceRequestForm
-          mode="support_ticket"
-          customerId={account.id}
-          claims={claims.map((claim) => ({ id: claim.id, claim_no: claim.claim_no, status: claim.current_status }))}
-        />
-      </section>
+      <CustomerSupportTicketPanel customerId={account.id} claims={claims.map(claim=>({id:claim.id,claim_no:claim.claim_no,status:claim.current_status}))}/>
     </div>
   );
 }
