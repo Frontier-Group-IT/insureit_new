@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requirePartnerReportScope } from "@/lib/reports/partner-report-scope";
-import { getPartnerWebClaimSummary, getPartnerWebRenewalSummary } from "@/lib/partner-web";
+import { getPartnerWebClaimSummary, getPartnerWebRenewalSummary, listPartnerWebClaims } from "@/lib/partner-web";
 import { PartnerReportTabs } from "@/components/partner-portal/partner-report-tabs";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,7 @@ const number = (value: number | string) => new Intl.NumberFormat("en-IN", { maxi
 
 export default async function PartnerOperationsReport() {
   await requirePartnerReportScope();
-  const [claims, renewals] = await Promise.all([getPartnerWebClaimSummary(), getPartnerWebRenewalSummary()]);
+  const [claims, renewals, recentClaims] = await Promise.all([getPartnerWebClaimSummary(), getPartnerWebRenewalSummary(), listPartnerWebClaims({ limit: 20, offset: 0 })]);
   const fields = [
     ["Active claims", claims.active_claims],
     ["Completed claims", claims.completed_claims],
@@ -31,6 +31,10 @@ export default async function PartnerOperationsReport() {
         <h2 className="font-bold">Operations registers</h2>
         <p className="mt-2 text-sm text-[#70809A]">Access claim and renewal records within your existing portal permissions. Detailed operations exports remain unavailable pending server-side scope verification.</p>
         <div className="mt-4 flex flex-wrap gap-3"><Link href="/partner/claims" className="text-sm font-bold text-[#2369C5]">View claims →</Link><Link href="/partner/renewals" className="text-sm font-bold text-[#2369C5]">View renewals →</Link></div>
+      </section>
+      <section className="overflow-hidden rounded-2xl border border-[#E2E9F3] bg-white">
+        <div className="border-b border-[#E9EEF6] px-5 py-4"><h2 className="font-bold">Claims register preview</h2><p className="mt-1 text-xs text-[#71809A]">Up to 20 claims from your authorized account scope</p></div>
+        <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-xs"><thead className="bg-[#F5F8FC] text-[#697A95]"><tr>{["Claim","Customer","Vehicle","Insurer","Status"].map(label=><th key={label} className="px-4 py-3 font-semibold">{label}</th>)}</tr></thead><tbody className="divide-y divide-[#E9EEF6]">{recentClaims.map(row=><tr key={row.claim_id}><td className="px-4 py-3 font-semibold">{row.claim_no || "—"}</td><td className="px-4 py-3">{row.customer_name}</td><td className="px-4 py-3">{row.vehicle_no || "—"}</td><td className="px-4 py-3">{row.insurer_name || "—"}</td><td className="px-4 py-3">{row.current_status || "—"}</td></tr>)}{!recentClaims.length && <tr><td colSpan={5} className="px-5 py-8 text-center text-[#70809A]">No claims in your current reporting scope.</td></tr>}</tbody></table></div>
       </section>
     </main>
   );
