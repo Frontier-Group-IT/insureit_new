@@ -56,7 +56,7 @@ export function CustomerTopNavigation({ onSwitchToSidebar }: { onSwitchToSidebar
       <nav aria-label="Customer top navigation" className="ml-auto flex min-w-0 items-center gap-0.5 sm:gap-1">
         {primary.map(({ label, href, Icon }) => (
           <Link key={href} href={href} aria-current={isActive(href) ? "page" : undefined}
-            className={`hidden items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors hover:bg-white/15 xl:flex 2xl:gap-2 2xl:px-3 2xl:text-[12px] ${isActive(href) ? "bg-white/20 text-white" : "text-white/90"}`}>
+            className={`customer-motion-nav-link hidden items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors hover:bg-white/15 xl:flex 2xl:gap-2 2xl:px-3 2xl:text-[12px] ${isActive(href) ? "bg-white/20 text-white" : "text-white/90"}`}>
             <Icon className="h-[17px] w-[17px] shrink-0" />{label}
           </Link>
         ))}
@@ -66,7 +66,7 @@ export function CustomerTopNavigation({ onSwitchToSidebar }: { onSwitchToSidebar
             More <ChevronDown className={`h-4 w-4 transition-transform ${moreOpen ? "rotate-180" : ""}`} />
           </button>
           {moreOpen && (
-            <div role="menu" aria-label="More customer pages" className="absolute right-0 top-full z-[80] mt-2 w-[240px] max-h-[min(70vh,480px)] overflow-y-auto rounded-xl border border-[#DDD9F3] bg-white p-1.5 text-[#1B2C4F] shadow-[0_18px_45px_rgba(10,20,49,0.24)]">
+            <div role="menu" aria-label="More customer pages" className="customer-motion-menu absolute right-0 top-full z-[80] mt-2 w-[240px] max-h-[min(70vh,480px)] overflow-y-auto rounded-xl border border-[#DDD9F3] bg-white p-1.5 text-[#1B2C4F] shadow-[0_18px_45px_rgba(10,20,49,0.24)]">
               <div className="xl:hidden">
                 {primary.map(({ label, href, Icon }) => (
                   <Link role="menuitem" key={href} href={href} onClick={() => setMoreOpen(false)} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-[12px] font-semibold hover:bg-[#F0ECFF] ${isActive(href) ? "bg-[#F0ECFF] text-[#5638A7]" : ""}`}>

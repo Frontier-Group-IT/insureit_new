@@ -61,14 +61,14 @@ export function DocumentVerificationModalButton({ claimId, documentId, modalType
   const fetchRcFromAuthbridge = () => {
     if (rcLoading || !rcRegistrationNumber) return;
     setRcLoading(true);
-    setRcLookupMessage("Checking existing AuthBridge cache / fetching RC details…");
+    setRcLookupMessage("Fetching fresh RC details directly from AuthBridge…");
     void (async () => {
       try {
         const response = await fetch("/api/vehicles/rc-lookup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "same-origin",
-          body: JSON.stringify({ registrationNumber: rcRegistrationNumber, claimId }),
+          body: JSON.stringify({ registrationNumber: rcRegistrationNumber, claimId, forceFresh: true }),
         });
         const payload = await response.json() as {
           error?: string;
@@ -76,7 +76,7 @@ export function DocumentVerificationModalButton({ claimId, documentId, modalType
           isStale?: boolean;
           details?: Record<string, string | null>;
         };
-        if (!response.ok || !payload.details) throw new Error(payload.error || "RC lookup unavailable.");
+        if (!response.ok || !payload.details || payload.source !== "authbridge" || payload.isStale) throw new Error(payload.error || "Fresh AuthBridge data unavailable. Existing dates unchanged.");
         const mapping: Record<string, string> = {
           fitness_valid_upto: "fitnessExpiryDate",
           tax_valid_upto: "roadTaxExpiryDate",
@@ -89,13 +89,13 @@ export function DocumentVerificationModalButton({ claimId, documentId, modalType
           const next = { ...previous };
           for (const [field, sourceKey] of Object.entries(mapping)) {
             const date = payload.details?.[sourceKey];
-            if (!next[field] && typeof date === "string" && /^\\d{4}-\\d{2}-\\d{2}$/.test(date)) {
+            if (typeof date === "string" && /^\\d{4}-\\d{2}-\\d{2}$/.test(date)) {
               next[field] = date;
             }
           }
           return next;
         });
-        setRcLookupMessage(payload.isStale ? "Showing cached RC data (provider unavailable). Please confirm against the RC copy." : payload.source === "local_cache" ? "AuthBridge cache checked. Missing RC dates filled where available." : "AuthBridge lookup complete. Missing RC dates filled where available. Review before verification.");
+        setRcLookupMessage("Fresh AuthBridge lookup completed. Returned dates updated; fields omitted by the provider remain unchanged. Review against RC before verification.");
       } catch (error) {
         setRcLookupMessage(error instanceof Error ? error.message : "AuthBridge lookup unavailable. Manual entry remains available.");
       } finally {

@@ -81,19 +81,22 @@ export async function POST(request: Request) {
     (await hasEffectiveCapability(auth.profile, "create_vehicles", "edit")) ||
     (await hasEffectiveCapability(auth.profile, "view_vehicles", "edit"));
 
-  let body: { registrationNumber?: string; claimId?: string };
+  let body: { registrationNumber?: string; claimId?: string; forceFresh?: boolean };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
+  const forceFreshClaimLookup = body.claimId && body.forceFresh === true;
   const registrationNumber = normalizeVehicleRegistrationNumber(body.registrationNumber ?? "");
   if (!isValidVehicleRegistrationNumber(registrationNumber)) {
     return NextResponse.json({ error: "Enter the complete vehicle registration number." }, { status: 400 });
   }
 
-  if (!canLookup) {
+  if (forceFreshClaimLookup && (!body.claimId || typeof body.claimId !== "string")) return NextResponse.json({ error: "Invalid claim lookup." }, { status: 400 });
+
+  if (!canLookup || forceFreshClaimLookup) {
     // Claims verification users may look up only the registration linked to a claim
     // they are authorized to process. A supplied claim ID never grants general RC lookup.
     if (!body.claimId || typeof body.claimId !== "string") {
@@ -130,7 +133,7 @@ export async function POST(request: Request) {
     console.warn("vehicle_rc_cache_read_failed", { reason: safeReason(error instanceof Error ? error.message : "cache read failed") });
   }
 
-  if (cached && Date.parse(cached.expires_at) > now && cached.raw_response) {
+  if (!forceFreshClaimLookup && cached && Date.parse(cached.expires_at) > now && cached.raw_response) {
     const payload = buildSuccessPayload({
       registrationNumber,
       raw: cached.raw_response,
@@ -201,7 +204,7 @@ export async function POST(request: Request) {
       reason: safeReason(message),
     });
 
-    if (cached?.raw_response) {
+    if (!forceFreshClaimLookup && cached?.raw_response) {
       const payload = buildSuccessPayload({
         registrationNumber,
         raw: cached.raw_response,
@@ -220,7 +223,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ error: userMessage(message) }, { status: 502 });
+    return NextResponse.json({ error: forceFreshClaimLookup ? "Fresh AuthBridge lookup failed. Existing values were left unchanged; retry or enter details manually." : userMessage(message) }, { status: 502 });
   }
 }
 

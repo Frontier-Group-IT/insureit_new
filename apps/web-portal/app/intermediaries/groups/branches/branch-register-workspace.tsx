@@ -18,6 +18,9 @@ export type BranchRegisterRow = {
   branch_code: string;
   branch_name: string;
   branch_kind: string;
+  email: string | null;
+  phone: string | null;
+  invitation_status: "active" | "invited" | "pending" | "unknown";
   branch_status: string;
   parent_partner_id: string | null;
   parent_partner_code: string | null;
@@ -72,6 +75,8 @@ export function BranchRegisterWorkspace({
         row.branch_name,
         row.branch_code,
         row.branch_kind,
+        row.email,
+        row.phone,
         row.parent_partner_name,
         row.parent_partner_code,
         row.group_name,
@@ -106,7 +111,7 @@ export function BranchRegisterWorkspace({
       <BrokerRegisterToolbar
         query={query}
         onQueryChange={(value) => { setQuery(value); setPage(1); }}
-        searchPlaceholder="Search branch, code, parent Partner, Group or employee"
+        searchPlaceholder="Search branch, email, phone, code, parent Partner, Group or employee"
         activeViewLabel={`${filteredRows.length} in current view`}
         action={canManage && !embedded ? (
           <Link
@@ -159,7 +164,8 @@ export function BranchRegisterWorkspace({
               <th className="w-[220px] px-3 py-2.5">Parent Partner</th>
               <th className="w-[190px] px-3 py-2.5">Business Group</th>
               <th className="w-[190px] px-3 py-2.5">Assigned Employee</th>
-              <th className="w-[130px] px-3 py-2.5">Type</th>
+              <th className="w-[190px] px-3 py-2.5">Email</th>
+              <th className="w-[140px] px-3 py-2.5">Phone Number</th>
               <th className="w-[110px] px-3 py-2.5">Status</th>{canPermanentDelete ? <th className="w-[110px] px-3 py-2.5 text-center">Action</th> : null}
             </tr>
           </thead>
@@ -196,8 +202,9 @@ export function BranchRegisterWorkspace({
                     </div>
                   ) : <span className="text-[#94A3B8]">—</span>}
                 </td>
-                <td className="px-3"><span className="capitalize text-[#475569]">{humanize(branch.branch_kind)}</span></td>
-                <td className="px-3"><StatusPill status={branch.branch_status} /></td>{canPermanentDelete ? <td className="px-3 text-center"><PermanentDeleteButton kind="branch" id={branch.id} name={branch.branch_name} compact /></td> : null}
+                <td className="px-3 break-all text-[#475569]">{branch.email || "—"}</td>
+                <td className="px-3 text-[#475569]">{branch.phone || "—"}</td>
+                <td className="px-3"><StatusPill status={branch.invitation_status} /></td>{canPermanentDelete ? <td className="px-3 text-center"><PermanentDeleteButton kind="branch" id={branch.id} name={branch.branch_name} compact /></td> : null}
               </tr>
             ))}
           </tbody>
@@ -241,6 +248,8 @@ function BranchMobileCard({ branch, canPermanentDelete }: { branch: BranchRegist
             <div className="grid grid-cols-2 gap-2 text-[11px]">
               <Info label="Group" value={branch.group_name ?? "—"} />
               <Info label="Employee" value={branch.employee_name ?? "—"} />
+              <Info label="Email" value={branch.email ?? "—"} />
+              <Info label="Phone" value={branch.phone ?? "—"} />
             </div>
           </div>
           {canPermanentDelete ? <div className="mt-3"><PermanentDeleteButton kind="branch" id={branch.id} name={branch.branch_name} compact /></div> : null}
@@ -260,10 +269,11 @@ function Info({ label, value }: { label: string; value: string }) {
 }
 
 function StatusPill({ status }: { status: string }) {
-  const active = status === "active_partner";
+  const active = status === "active";
+  const invited = status === "invited";
   return (
-    <span className={`inline-flex rounded-full px-2.5 py-1 text-[8px] font-bold uppercase tracking-[0.05em] ${active ? "bg-[#EAF8EF] text-[#267A49]" : "bg-[#F1F5F9] text-[#64748B]"}`}>
-      {active ? "Active" : humanize(status)}
+    <span className={`inline-flex rounded-full px-2.5 py-1 text-[8px] font-bold uppercase tracking-[0.05em] ${active ? "bg-[#EAF8EF] text-[#267A49]" : invited ? "bg-[#FFF4D9] text-[#A76600]" : "bg-[#F1F5F9] text-[#64748B]"}`}>
+      {active ? "Active" : invited ? "Invitation Sent" : status === "pending" ? "Invitation Pending" : "Status Unavailable"}
     </span>
   );
 }

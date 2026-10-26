@@ -43,6 +43,106 @@
   .customer-compact * { scroll-behavior: auto !important; }
 }
 
+/* Top navigation uses the entire available viewport; sidebar retains its comfortable reading width. */
+.customer-navigation-content[data-customer-nav-layout="top"] .customer-content-container { max-width: none; }
+
+/* Phase 1: Customer-only motion tokens. All visual feedback is presentation-only. */
+.customer-compact {
+  --customer-motion-fast: 160ms;
+  --customer-motion-normal: 240ms;
+  --customer-motion-ease: cubic-bezier(.2,.75,.25,1);
+  --customer-motion-focus: #7455d6;
+}
+@keyframes customer-motion-enter {
+  from { opacity: 0; transform: translateY(9px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes customer-motion-menu {
+  from { opacity: 0; transform: translateY(-6px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes customer-motion-dialog {
+  from { opacity: 0; transform: translateY(8px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes customer-motion-spin { to { transform: rotate(360deg); } }
+@keyframes customer-motion-shimmer {
+  from { background-position: 140% 0; }
+  to { background-position: -140% 0; }
+}
+.customer-compact .customer-motion-page-enter {
+  animation: customer-motion-enter 320ms var(--customer-motion-ease) both;
+}
+.customer-compact .customer-motion-menu {
+  transform-origin: top right;
+  animation: customer-motion-menu 190ms var(--customer-motion-ease) both;
+}
+.customer-compact :is([role="dialog"],[role="alertdialog"]) > :first-child {
+  animation: customer-motion-dialog 230ms var(--customer-motion-ease) both;
+}
+.customer-compact .customer-motion-skeleton {
+  background-image: linear-gradient(100deg,#eef0f8 20%,#f9f8ff 40%,#eef0f8 60%);
+  background-size: 240% 100%;
+  animation: customer-motion-shimmer 1.6s linear infinite;
+}
+.customer-compact .customer-motion-spinner { animation: customer-motion-spin .8s linear infinite; }
+.customer-compact main :is(button, a, input, select, textarea),
+.customer-compact nav a,
+.customer-compact header :is(button,a) {
+  transition-property: background-color,border-color,color,box-shadow,transform,opacity;
+  transition-duration: var(--customer-motion-fast);
+  transition-timing-function: var(--customer-motion-ease);
+}
+.customer-compact main :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),select,textarea):focus-visible {
+  border-color: var(--customer-motion-focus);
+  box-shadow: 0 0 0 3px rgba(116,85,214,.13);
+}
+.customer-compact main :is(button, a):active:not(:disabled) { transform: scale(.985); }
+.customer-compact main button:disabled { cursor: not-allowed; }
+.customer-compact main :is(section,article)[class*="shadow-"] {
+  transition: box-shadow var(--customer-motion-normal) var(--customer-motion-ease), border-color var(--customer-motion-normal) var(--customer-motion-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .customer-compact main :is(section,article)[class*="shadow-"]:hover {
+    box-shadow: 0 12px 32px rgba(42,37,93,.095);
+  }
+  .customer-compact main :is(button,a)[class*="shadow"]:hover:not(:disabled) {
+    box-shadow: 0 8px 20px rgba(76,52,150,.17);
+  }
+  .customer-compact .customer-motion-nav-link:hover { transform: translateY(-1px); }
+  .customer-compact .customer-motion-nav-link:hover svg { transform: scale(1.09); }
+}
+.customer-compact .customer-motion-nav-link { position: relative; }
+.customer-compact .customer-motion-nav-link svg {
+  transition: transform var(--customer-motion-fast) var(--customer-motion-ease);
+}
+.customer-compact .customer-motion-nav-link[aria-current="page"]::after {
+  content: ""; position: absolute; bottom: 2px; left: 14px; right: 14px;
+  height: 2px; border-radius: 999px; background: currentColor; opacity: .9;
+}
+.customer-compact .customer-motion-sidebar-link[aria-current="page"] {
+  box-shadow: inset 3px 0 0 #674bd5;
+}
+.customer-compact .customer-motion-icon:hover svg { transform: scale(1.08); }
+.customer-compact .customer-motion-icon svg {
+  transition: transform var(--customer-motion-fast) var(--customer-motion-ease);
+}
+@media (prefers-reduced-motion: reduce) {
+  .customer-compact .customer-motion-page-enter,
+  .customer-compact .customer-motion-menu,
+  .customer-compact .customer-motion-skeleton,
+  .customer-compact .customer-motion-spinner,
+  .customer-compact :is([role="dialog"],[role="alertdialog"]) > :first-child {
+    animation: none !important;
+  }
+  .customer-compact *, .customer-compact *::before, .customer-compact *::after {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Phase 2: Home and Profile motion — scoped to Customer Portal only. */
 @keyframes customer-profile-arrive { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes customer-vault-reveal { from { opacity: 0; transform: translateY(-7px); } to { opacity: 1; transform: translateY(0); } }
