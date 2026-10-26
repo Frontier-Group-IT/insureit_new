@@ -22,6 +22,7 @@ export default function PolicyDetailScreen() {
   const [showOverviewDetails, setShowOverviewDetails] = useState(false);
   const [showPremiumDetails, setShowPremiumDetails] = useState(false);
   const [showCommercialDetails, setShowCommercialDetails] = useState(false);
+  const [showVehicleDetails, setShowVehicleDetails] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -161,14 +162,31 @@ export default function PolicyDetailScreen() {
             </View>
           </Card>
           <Card>
-            <CardHeader iconKind="customer-vehicle" title={data.vehicle ? 'Vehicle Details' : 'Insured Risk Details'} actionLabel="View Details" onAction={() => setShowOverviewDetails(true)} />
+            <CardHeader iconKind="customer-vehicle" title={data.vehicle ? 'Vehicle Details' : 'Insured Risk Details'} actionLabel="View Details" onAction={() => setShowVehicleDetails((value) => !value)} />
             <View style={styles.entityStack}>
               {data.vehicle ? (
-                <EntityRow image={manufacturerLogo || PartnerAssets.products.motorInsurance} title={data.vehicle.vehicle_no || 'Vehicle'} subtitle={displayParts(data.vehicle.make, data.vehicle.model, data.vehicle.year) || humanize(data.vehicle.vehicle_type || 'vehicle')} onPress={data.customer.id ? () => router.push(`/customer/${data.customer.id}` as never) : undefined} />
+                <EntityRow image={manufacturerLogo || PartnerAssets.products.motorInsurance} title={data.vehicle.vehicle_no || 'Vehicle'} subtitle={displayParts(data.vehicle.make, data.vehicle.model, data.vehicle.year) || humanize(data.vehicle.vehicle_type || 'vehicle')} onPress={() => setShowVehicleDetails((value) => !value)} />
               ) : (
                 <EntityRow image={PartnerAssets.products.commercialInsurance} title={data.policy.policy_product || data.policy.policy_type || data.policy.business_line || 'Non-motor insured risk'} subtitle="No vehicle is linked to this policy." />
               )}
             </View>
+            {showVehicleDetails ? (
+              <View style={styles.detailGrid}>
+                {data.vehicle ? (
+                  <>
+                    <MiniInfo label="Vehicle number" value={data.vehicle.vehicle_no || "Not recorded"} />
+                    <MiniInfo label="Manufacturer" value={data.vehicle.make || "Not recorded"} />
+                    <MiniInfo label="Model" value={data.vehicle.model || "Not recorded"} />
+                    <MiniInfo label="Year" value={data.vehicle.year != null ? String(data.vehicle.year) : "Not recorded"} />
+                    <MiniInfo label="Vehicle type" value={humanize(data.vehicle.vehicle_type)} />
+                    <MiniInfo label="Category" value={humanize(data.vehicle.vehicle_category)} />
+                    <MiniInfo label="Commercial vehicle" value={data.vehicle.is_commercial == null ? "Not recorded" : data.vehicle.is_commercial ? "Yes" : "No"} />
+                  </>
+                ) : (
+                  <MiniInfo label="Insured risk" value="No vehicle is linked to this policy." />
+                )}
+              </View>
+            ) : null}
           </Card>
 
           <Card>
