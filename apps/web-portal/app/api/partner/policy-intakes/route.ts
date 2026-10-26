@@ -542,7 +542,7 @@ async function ownIntake(identity: PartnerIdentity, id: string) {
   return data;
 }
 
-async async function resolveSource(identity: PartnerIdentity, scope: PartnerScope, requestedId?: string) {
+async function resolveSource(identity: PartnerIdentity, scope: PartnerScope, requestedId?: string) {
   const authorized = await authorizedSourceIds(identity, scope);
   const requested = requestedId?.trim();
   const sourceId = isLegacyPartnerIdentity(identity)
