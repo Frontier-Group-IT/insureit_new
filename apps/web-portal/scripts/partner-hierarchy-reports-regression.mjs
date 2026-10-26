@@ -36,4 +36,12 @@ assert.match(overview, /payout\.available && canShowPayout/, "Payout output must
 assert.match(overview, /reportScope\.role === "partner"/, "Partner payout must not be inherited by Group/Branch");
 assert.match(read("components/partner-portal/partner-navigation.tsx"), /href: "\/partner\/reports"/, "Sidebar navigation missing");
 
+const exportRoute = read("app/partner/reports/export/route.ts");
+assert.match(exportRoute, /await requirePartnerReportScope\(\)/, "Exports must validate reporting scope");
+assert.match(exportRoute, /MAX_ROWS = 200/, "Exports must be explicitly bounded");
+assert.match(exportRoute, /listPartnerWebPolicies/, "Policy export must reuse account-scoped RPC");
+assert.match(exportRoute, /listPartnerWebClaims/, "Claims export must reuse account-scoped RPC");
+assert.doesNotMatch(exportRoute, /createSupabaseAdminClient/, "Exports must not use privileged report loaders");
+assert.match(exportRoute, /no-store/, "Sensitive exported data must not be cached");
+
 console.log("Partner hierarchy reporting static boundary checks passed.");
