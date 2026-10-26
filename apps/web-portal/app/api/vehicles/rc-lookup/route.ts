@@ -285,7 +285,7 @@ function mapVehicleDetails(raw: unknown, registrationNumber: string): RcMappedDe
     permitNumber: cleanCode(findValue(values, ["Permit Number", "Permit No", "National Permit Number"])),
     insuranceCompany: cleanText(findValue(values, ["Insurance Company", "Insurer", "Insurer Name","Insurance Company Name","Policy Insurer"])),
     policyNumber: cleanPolicyNumber(findValue(values, ["Policy Number", "Policy No", "Insurance Policy Number","Insurance Policy No","Insurance Number"])),
-    policyStartDate: policyStartDate ?? derivePolicyStartDate(policyExpiryDate),
+    policyStartDate,
     policyExpiryDate,
   };
 }
