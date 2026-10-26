@@ -6,8 +6,8 @@ assert.match(source, /onLayout=\{\(event\) => setHeroHeight\(event\.nativeEvent\
 assert.match(source, /onLayout=\{\(event\) => setSearchHeight\(event\.nativeEvent\.layout\.height\)\}/);
 assert.match(source, /contentOffset\.y >= Math\.max\(0, heroHeight - searchHeight\)/);
 assert.doesNotMatch(source, /contentOffset\.y >= 98/);
-assert.match(source, /stickyOverlay: \{[^\n]+backgroundColor: "#FFFFFF"/);
-assert.match(source, /stickySearchBody: \{[^\n]+backgroundColor: "#FFFFFF"/);
+assert.match(source, /stickyOverlay: \{[^\n]+backgroundColor: "#082657"/);
+assert.match(source, /stickySearchBody: \{[^\n]+backgroundColor: "#082657"/);
 assert.match(source, /<View style=\{\[styles\.stickyOverlay, \{ top: safeAreaInsets\.top \}\]\} pointerEvents="box-none">/);
 assert.match(source, /<View pointerEvents="none" style=\{\[styles\.stickyStatusBarShield, \{ height: safeAreaInsets\.top \}\]\} \/>/);
 assert.doesNotMatch(source, /stickyStatusBarClearance/);
@@ -16,4 +16,4 @@ assert.match(source, /<View style=\{styles\.stickySearchBody\}>\{searchControls\
 assert.match(source, /ListHeaderComponent=\{header\}/);
 assert.match(source, /<View style=\{styles\.summaryRow\}>/);
 assert.match(source, /accessibilityLabel="Add Claim"/);
-console.log('Partner Claims white sticky positioning regression passed');
+console.log('Partner Claims navy sticky positioning regression passed');
