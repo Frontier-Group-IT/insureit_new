@@ -9,10 +9,10 @@ const tabs = [
 
 export function PartnerReportTabs({ active }: { active: typeof tabs[number]["label"] }) {
   return (
-    <nav aria-label="Reports sections" className="flex max-w-full gap-1 overflow-x-auto border-b border-[#DEE6F1]">
+    <nav aria-label="Reports sections" className="reports-reference-tabs">
       {tabs.map((tab) => (
         <Link key={tab.href} href={tab.href} prefetch={false} aria-current={tab.label === active ? "page" : undefined}
-          className={`shrink-0 border-b-2 px-4 py-3 text-[13px] font-semibold transition ${tab.label === active ? "border-[#2469CB] text-[#175BB2]" : "border-transparent text-[#647795] hover:text-[#1B4B90]"}`}>
+          className={`reports-reference-tab ${tab.label === active ? "reports-reference-tab--active" : ""}`}>
           {tab.label}
         </Link>
       ))}
