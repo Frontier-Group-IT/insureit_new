@@ -179,7 +179,6 @@ export default function PolicyDetailScreen() {
                     <MiniInfo label="Model" value={data.vehicle.model || "Not recorded"} />
                     <MiniInfo label="Year" value={data.vehicle.year != null ? String(data.vehicle.year) : "Not recorded"} />
                     <MiniInfo label="Vehicle type" value={humanize(data.vehicle.vehicle_type || "")} />
-                    <MiniInfo label="Category" value={humanize(data.vehicle.vehicle_category || "")} />
                     <MiniInfo label="Commercial vehicle" value={data.vehicle.is_commercial == null ? "Not recorded" : data.vehicle.is_commercial ? "Yes" : "No"} />
                   </>
                 ) : (
