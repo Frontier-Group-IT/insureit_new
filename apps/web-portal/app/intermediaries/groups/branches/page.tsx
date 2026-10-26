@@ -1,3 +1,4 @@
+import { getBranchActivationStatuses } from "@/lib/branch-activation-status";
 import { AppShell } from "@/components/shell";
 import {
   getIntermediaryGroupEmployeeScope,
@@ -33,6 +34,8 @@ type PartnerRow = {
 type BranchProfileRow = {
   partner_id: string;
   created_by: string | null;
+  email: string | null;
+  phone: string | null;
 };
 
 type GroupRow = {
@@ -82,7 +85,7 @@ export default async function BranchRegisterPage() {
       .returns<PartnerRow[]>(),
     admin
       .from("partner_branch_profiles")
-      .select("partner_id,created_by")
+      .select("partner_id,created_by,email,phone")
       .returns<BranchProfileRow[]>(),
     admin
       .from("intermediary_groups")
@@ -124,6 +127,7 @@ export default async function BranchRegisterPage() {
     : { data: [] as MembershipRow[], error: null };
   const membershipByPartner = new Map((membershipResult.data ?? []).map((membership) => [membership.partner_id, membership]));
 
+  const activation = await getBranchActivationStatuses([...branchProfileByPartner.keys()]);
   const allowedEmployeeIds = new Set(scope.employeeIds);
   const rows: BranchRegisterRow[] = (partnerRows ?? []).flatMap((branch) => {
     if (!branchProfileByPartner.has(branch.id)) return [];
@@ -150,6 +154,9 @@ export default async function BranchRegisterPage() {
       branch_code: branch.partner_code,
       branch_name: branch.display_name,
       branch_kind: branch.partner_kind,
+      email: branchProfileByPartner.get(branch.id)?.email ?? null,
+      phone: branchProfileByPartner.get(branch.id)?.phone ?? null,
+      invitation_status: activation.get(branch.id) ?? "unknown",
       branch_status: branch.partner_status,
       parent_partner_id: parent?.id ?? null,
       parent_partner_code: parent?.partner_code ?? null,

@@ -24,7 +24,7 @@ export default async function CustomerProfilePage({
     <div className="space-y-4 pb-4">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/profile" />
 
-      <section className="relative isolate overflow-hidden rounded-[22px] border border-[#E4DDFB] bg-[linear-gradient(110deg,#F3EEFF_0%,#FAF7FF_47%,#D5D1FF_100%)] shadow-[0_10px_30px_rgba(83,58,151,0.08)]">
+      <section className="customer-profile-hero relative isolate overflow-hidden rounded-[22px] border border-[#E4DDFB] bg-[linear-gradient(110deg,#F3EEFF_0%,#FAF7FF_47%,#D5D1FF_100%)] shadow-[0_10px_30px_rgba(83,58,151,0.08)]">
         <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-40 h-[330px] w-[520px] rounded-full border-[60px] border-white/30" />
         <div aria-hidden="true" className="pointer-events-none absolute bottom-[-125px] right-[18%] h-[270px] w-[340px] rotate-[-25deg] rounded-[80px] bg-[#A99EF8]/15" />
         <div className="relative flex min-h-[174px] items-center justify-between gap-5 px-5 py-5 sm:px-7 lg:px-9">
@@ -59,7 +59,7 @@ export default async function CustomerProfilePage({
         </div>
       </section>
 
-      <section className="relative rounded-[22px] border border-[#E6E0F5] bg-white p-4 shadow-[0_9px_24px_rgba(79,56,139,0.055)] sm:p-5">
+      <section className="customer-profile-detail-section relative rounded-[22px] border border-[#E6E0F5] bg-white p-4 shadow-[0_9px_24px_rgba(79,56,139,0.055)] sm:p-5">
         <div className="flex items-start gap-3 pr-20 sm:pr-24">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[13px] bg-gradient-to-br from-[#8C5EF1] to-[#5734BD] text-white shadow-[0_5px_12px_rgba(97,61,191,0.18)]"><FileText className="h-5 w-5" /></span>
           <div className="min-w-0">
