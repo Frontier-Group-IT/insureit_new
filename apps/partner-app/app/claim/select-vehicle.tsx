@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { listPartnerClaimVehicleChoices, type PartnerClaimVehicleChoice } from '@/lib/claim-vehicle-choices';
@@ -71,7 +71,7 @@ export default function PartnerClaimVehicleSelector() {
         <Ionicons name="arrow-back" color="#FFF" size={24}/>
       </Pressable>
       <View style={styles.headerIcon}>
-        <Ionicons name="car" size={27} color="#FFFFFF" />
+        <MaterialCommunityIcons name="truck" size={27} color="#FFFFFF" />
       </View>
       <Text style={styles.headerTitle}>Select Vehicle</Text>
     </View>
