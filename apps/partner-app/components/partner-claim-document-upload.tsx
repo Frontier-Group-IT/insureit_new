@@ -20,6 +20,7 @@ type Props = {
 
 export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, milestoneKey, documents, compact = false, variant = 'button', artwork, label, subtitle }: Props) {
   const [busy, setBusy] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState<{ fileName: string; count: number } | null>(null);
   const [added, setAdded] = useState<Array<{ id: string; name: string; category: string }>>([]);
   const [removedIds, setRemovedIds] = useState<string[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -77,7 +78,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
           throw error;
         }
       }
-      Alert.alert('Uploaded', `${documentType} uploaded successfully.`);
+      setUploadSuccess({ fileName: picked.assets[picked.assets.length - 1]?.name || documentType, count: picked.assets.length });
     } catch (error) {
       Alert.alert('Unable to upload', error instanceof Error ? error.message : 'Please try again.');
     } finally {
@@ -85,8 +86,30 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
     }
   }
 
+  const successDialog = (
+    <Modal transparent visible={uploadSuccess !== null} animationType="fade" onRequestClose={() => setUploadSuccess(null)}>
+      <View style={styles.modalDim}>
+        <View style={styles.successDialog}>
+          <View style={styles.successCircle}><Ionicons name="checkmark-circle" color="#18965D" size={38} /></View>
+          <Text style={styles.successTitle}>Document Uploaded!</Text>
+          <Text style={styles.successMessage}>{uploadSuccess && uploadSuccess.count > 1 ? `${uploadSuccess.count} documents uploaded successfully.` : `${label ?? documentType} uploaded successfully.`}</Text>
+          <View style={styles.successFileRow}>
+            <Ionicons name="document-text-outline" color="#18965D" size={23}/>
+            <View style={styles.successFileCopy}>
+              <Text numberOfLines={1} style={styles.successFileType}>{uploadSuccess && uploadSuccess.count > 1 ? `${uploadSuccess.count} uploaded files` : label ?? documentType}</Text>
+              <Text numberOfLines={1} style={styles.successFileName}>{uploadSuccess?.fileName ?? ''}</Text>
+            </View>
+            <Ionicons name="checkmark-circle-outline" color="#18965D" size={21}/>
+          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close upload confirmation" onPress={() => setUploadSuccess(null)} style={styles.successOk}><Text style={styles.successOkText}>OK</Text></Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+
   if (variant === 'tile') {
     return (
+      <>
       <View style={[styles.tile, count > 0 && styles.tileReady]}><Pressable
         accessibilityRole="button"
         accessibilityLabel={`${label ?? documentType}, ${busy ? 'uploading' : count ? 'uploaded, tap to add more' : 'tap to upload'}`}
@@ -104,11 +127,14 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
       {latest && !busy ? <Pressable accessibilityRole="button" accessibilityLabel={`Delete ${latest.name}`} onPress={()=>setDeleteTarget({ id: latest.id, name: latest.name })} style={styles.removeIcon}><Ionicons name="close-circle" size={22} color="#D64545" /></Pressable> : null}
       <Modal transparent visible={Boolean(deleteTarget)} animationType="fade" onRequestClose={()=>!busy && setDeleteTarget(null)}><View style={styles.modalDim}><View style={styles.dialog}><View style={styles.trashCircle}><Ionicons name="trash-outline" color="#CD3939" size={24}/></View><Text style={styles.dialogTitle}>Delete document?</Text><Text style={styles.dialogBody}>Are you sure you want to delete {deleteTarget?.name}?</Text><View style={styles.dialogActions}><Pressable disabled={busy} accessibilityRole="button" onPress={()=>setDeleteTarget(null)} style={styles.cancelButton}><Text style={styles.cancelText}>Cancel</Text></Pressable><Pressable disabled={busy} accessibilityRole="button" onPress={()=>void deleting()} style={styles.deleteButton}><Text style={styles.deleteText}>{busy ? 'Deleting…' : 'Delete'}</Text></Pressable></View></View></View></Modal>
       </View>
+      {successDialog}
+      </>
     );
   }
 
   if (variant === 'bulk') {
     return (
+      <>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Upload multiple documents"
@@ -124,11 +150,14 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
         </View>
         <Ionicons name={busy ? 'hourglass-outline' : count > 0 ? 'checkmark-circle-outline' : 'add-circle-outline'} size={25} color={count > 0 ? '#168161' : '#0A43A3'} />
       </Pressable>
+      {successDialog}
+      </>
     );
   }
 
   if (variant === 'voice') {
     return (
+      <>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Record Voice Note"
@@ -140,10 +169,13 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
         <Ionicons name={busy ? 'hourglass-outline' : 'mic'} size={20} color="#FFFFFF" />
         <Text style={styles.voiceText}>{busy ? 'Uploading voice note…' : count > 0 ? 'Add Voice Note' : 'Record Voice Note'}</Text>
       </Pressable>
+      {successDialog}
+      </>
     );
   }
 
   return (
+    <>
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`Upload ${documentType}`}
@@ -154,6 +186,8 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
       <Ionicons name={busy ? 'hourglass-outline' : 'cloud-upload-outline'} size={compact ? 16 : 18} color="#FFFFFF" />
       <Text numberOfLines={1} style={styles.text}>{busy ? 'Uploading…' : count ? `Add more (${count})` : 'Upload'}</Text>
     </Pressable>
+    {successDialog}
+    </>
   );
 }
 
@@ -179,6 +213,16 @@ const styles=StyleSheet.create({
   removeIcon:{position:'absolute',top:2,right:2,zIndex:5,padding:2},
   fileName:{color:'#53647A',fontSize:7,marginTop:2,maxWidth:'95%'},
   modalDim:{flex:1,backgroundColor:'rgba(13,29,52,0.5)',justifyContent:'center',paddingHorizontal:30},
+  successDialog:{backgroundColor:'#FFFFFF',borderRadius:22,padding:22,alignItems:'center',gap:13},
+  successCircle:{width:64,height:64,borderRadius:32,backgroundColor:'#EAF8F0',alignItems:'center',justifyContent:'center'},
+  successTitle:{fontSize:18,fontWeight:'800',color:'#132A4B'},
+  successMessage:{fontSize:12.5,lineHeight:19,textAlign:'center',color:'#718095'},
+  successFileRow:{flexDirection:'row',width:'100%',alignItems:'center',gap:10,padding:12,borderRadius:12,backgroundColor:'#F0FAF4'},
+  successFileCopy:{flex:1,minWidth:0,gap:3},
+  successFileType:{fontSize:12,fontWeight:'700',color:'#1A3454'},
+  successFileName:{fontSize:10,color:'#718095'},
+  successOk:{width:'100%',minHeight:44,alignItems:'center',justifyContent:'center',backgroundColor:'#1155AD',borderRadius:12},
+  successOkText:{color:'#FFFFFF',fontSize:13,fontWeight:'800'},
   dialog:{borderRadius:22,backgroundColor:'#FFFFFF',padding:22,alignItems:'center',gap:12},
   trashCircle:{width:48,height:48,borderRadius:24,backgroundColor:'#FFF0F0',alignItems:'center',justifyContent:'center'},
   dialogTitle:{fontSize:18,fontWeight:'800',color:'#17243B'},
