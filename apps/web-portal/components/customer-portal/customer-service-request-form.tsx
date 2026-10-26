@@ -198,29 +198,29 @@ export function CustomerServiceRequestForm(props: Props) {
 
   if (props.mode === "challan_assistance") {
     return (
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <CarFront className="h-6 w-6 text-[#123866]"/>
-            <h2 className="text-[18px] font-black text-[#10213D]">Vehicle Details</h2>
+            <CarFront className="h-6 w-6 text-[#7144C7]"/>
+            <h2 className="text-[18px] font-bold text-[#23284C]">Vehicle Details</h2>
           </div>
-          <span className="rounded-full bg-[#EAF4FF] px-3 py-1.5 text-[10px] font-bold text-[#1261BA]">Recent vehicles</span>
+          <span className="rounded-full bg-[#F2EEFF] px-3 py-1 text-[10px] font-bold text-[#815CCB]">Recent vehicles</span>
         </div>
-        <label className="block text-[11px] font-bold text-[#142746]">Vehicle registration number <span className="text-[#D33B4C]">*</span>
-          <span className="mt-1 flex items-center gap-2 rounded-xl border border-[#D8E1EC] bg-white px-3"><CarFront className="h-4 w-4 text-[#8B9CB3]"/><input className="h-11 w-full min-w-0 border-0 bg-transparent p-0 text-[12px] font-semibold text-[#10213D] shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0" value={vehicleNo} onChange={event=>{setVehicleNo(event.target.value.toUpperCase());if(selectedVehicle?.label!==event.target.value.toUpperCase())setVehicleId("");}} placeholder="Enter vehicle registration number (e.g. MP20SZ6089)" /></span>
+        <label className="block text-[11px] font-bold text-[#35395F]">Vehicle registration number <span className="text-[#D33B4C]">*</span>
+          <span className="mt-1 flex items-center gap-2 rounded-lg border border-[#E2DDF0] bg-white px-3"><CarFront className="h-4 w-4 text-[#AAA1C8]"/><input className="h-9 w-full min-w-0 border-0 bg-transparent p-0 text-[12px] font-semibold text-[#10213D] shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0" value={vehicleNo} onChange={event=>{setVehicleNo(event.target.value.toUpperCase());if(selectedVehicle?.label!==event.target.value.toUpperCase())setVehicleId("");}} placeholder="Enter vehicle registration number (e.g. MP20SZ6089)" /></span>
         </label>
-        <label className="block text-[11px] font-bold text-[#142746]">Challan / reference number (optional)
-          <span className="mt-1 flex items-center gap-2 rounded-xl border border-[#D8E1EC] bg-white px-3"><FileText className="h-4 w-4 text-[#8B9CB3]"/><input className="h-11 w-full min-w-0 border-0 bg-transparent p-0 text-[12px] text-[#10213D] shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0" value={challanNo} onChange={event=>setChallanNo(event.target.value)} placeholder="Enter challan or reference number"/></span>
+        <label className="block text-[11px] font-bold text-[#35395F]">Challan / reference number (optional)
+          <span className="mt-1 flex items-center gap-2 rounded-lg border border-[#E2DDF0] bg-white px-3"><FileText className="h-4 w-4 text-[#AAA1C8]"/><input className="h-9 w-full min-w-0 border-0 bg-transparent p-0 text-[12px] text-[#10213D] shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0" value={challanNo} onChange={event=>setChallanNo(event.target.value)} placeholder="Enter challan or reference number"/></span>
         </label>
-        <label className="block text-[11px] font-bold text-[#142746]">Add a note (optional)
-          <textarea className={`${areaClass} mt-1`} value={note} onChange={event=>setNote(event.target.value)} placeholder="Add any additional details..." />
+        <label className="block text-[11px] font-bold text-[#35395F]">Add a note (optional)
+          <textarea className={`${areaClass} mt-1 min-h-12 rounded-lg border-[#E2DDF0] text-[11px] font-normal`} value={note} onChange={event=>setNote(event.target.value)} placeholder="Add any additional details..." />
         </label>
-        <div className="space-y-2 rounded-xl border border-[#DCE6F2] bg-[#F6F9FD] p-3">
-          <label className="flex items-start gap-2 text-[10px] font-medium text-[#405473]"><input type="checkbox" checked={consent} onChange={event=>setConsent(event.target.checked)} className="mt-0.5 h-3.5 w-3.5 accent-[#1766C4]"/><span>I agree to the Terms of Use, <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()} className="font-bold text-[#1769DC] underline-offset-2 hover:underline focus-visible:underline">Privacy Policy</a> and authorize INSUREIT to contact me about this request.</span></label>
-          <label className="flex items-center gap-2 text-[10px] font-medium text-[#405473]"><input type="checkbox" checked={whatsapp} onChange={event=>setWhatsapp(event.target.checked)} className="h-3.5 w-3.5 accent-[#1766C4]"/>Send updates on WhatsApp</label>
+        <div className="space-y-2 rounded-lg border border-[#E8E1F8] bg-[#F6F2FF] p-2.5">
+          <label className="flex items-start gap-2 text-[10px] font-medium text-[#6A6E8C]"><input type="checkbox" checked={consent} onChange={event=>setConsent(event.target.checked)} className="mt-0.5 h-3.5 w-3.5 accent-[#7042CA]"/><span>I agree to the Terms of Use, <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()} className="font-bold text-[#7141CC] underline-offset-2 hover:underline focus-visible:underline">Privacy Policy</a> and authorize INSUREIT to contact me about this request.</span></label>
+          <label className="flex items-center gap-2 text-[10px] font-medium text-[#6A6E8C]"><input type="checkbox" checked={whatsapp} onChange={event=>setWhatsapp(event.target.checked)} className="h-3.5 w-3.5 accent-[#7042CA]"/>Send updates on WhatsApp</label>
         </div>
         {error?<p role="alert" className="rounded-xl bg-[#FFF0F0] px-3 py-2 text-[11px] font-bold text-[#A13B3B]">{error}</p>:null}
-        <button type="button" disabled={busy} onClick={()=>void submit()} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0D2C56] text-[11px] font-black text-white hover:bg-[#17447E] disabled:opacity-60">{busy?<Loader2 className="h-4 w-4 animate-spin"/>:<Search className="h-4 w-4"/>}{busy?"Submitting...":"Get Challan Assistance"}</button>
+        <button type="button" disabled={busy} onClick={()=>void submit()} className="relative flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#7136CA] to-[#6230B8] text-[12px] font-bold text-white shadow-sm transition hover:from-[#6430B9] hover:to-[#5425A8] disabled:opacity-60">{busy?<Loader2 className="h-4 w-4 animate-spin"/>:<Search className="h-4 w-4"/>}{busy?"Submitting...":"Get Challan Assistance"}<ArrowRight className="absolute right-3 h-4 w-4" /></button>
       </div>
     );
   }
