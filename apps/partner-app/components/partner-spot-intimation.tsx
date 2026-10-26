@@ -36,6 +36,7 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
   const [phone, setPhone] = useState(initialDriver.phone);
   const [location, setLocation] = useState(data.claim.accident_location || '');
   const [saving, setSaving] = useState(false);
+  const [documentTab, setDocumentTab] = useState('Vehicle Docs');
   const save = async () => {
     if (saving) return;
     const accident = parseLocalDateTime(incidentDate, incidentTime);
@@ -81,8 +82,9 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
           {!editable ? <Text style={styles.restricted}>This completed stage remains visible for reference. Current claim progression determines whether it can be edited.</Text> : null}
         </View>
         <View style={styles.documentReadyCard}>
-          <View style={styles.docsHeading}><Text style={styles.sectionTitle}>Upload claim documents</Text><View style={styles.optional}><Text style={styles.optionalText}>Optional now</Text></View></View>
-          <View style={styles.tiles}>{DOCUMENTS.map(item=><PartnerClaimDocumentUpload key={item.title} claimId={data.claim.id} customerId={data.customer.id} documentType={item.title} milestoneKey="spot_intimation" documents={data.documents} variant="tile" artwork={item.artwork} label={item.title}/>)}</View>
+          <View style={styles.docsHeading}><Text style={styles.sectionTitle}>Documents for verification</Text><View style={styles.optional}><Text style={styles.optionalText}>Claims desk review</Text></View></View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginBottom:10}}>{['Vehicle Docs','Driver Docs','Permit / Tax','KYC / Other','Forms'].map((tab,index)=><Pressable key={tab} accessibilityRole="tab" accessibilityState={{selected:documentTab===tab}} onPress={()=>setDocumentTab(tab)} style={{padding:10,borderBottomWidth:documentTab===tab?2:0,borderBottomColor:"#0877EB",backgroundColor:documentTab===tab?"#EAF4FF":"#FFFFFF"}}><Text style={{color:documentTab===tab?"#0759B5":"#718099",fontSize:9,fontWeight:"700"}}>{index+1}. {tab}</Text></Pressable>)}</ScrollView>
+          <View style={styles.tiles}>{DOCUMENTS.filter(item=>item.title==='Driver Licence'?documentTab==='Driver Docs':item.title==='Accident Photo'||item.title==='Accident Video'?documentTab==='Forms':documentTab==='Vehicle Docs').map(item=><PartnerClaimDocumentUpload key={item.title} claimId={data.claim.id} customerId={data.customer.id} documentType={item.title} milestoneKey="spot_intimation" documents={data.documents} variant="tile" artwork={item.artwork} label={item.title}/>)}</View>
           <PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="Spot Intimation Attachment" milestoneKey="spot_intimation" documents={data.documents} variant="bulk" artwork={CUSTOMER_BULK_ICON} label="Upload multiple documents" subtitle="Select several files now, or tap again later to add more."/>
         </View>
         <View style={styles.voice}><View style={styles.voiceTop}><View style={styles.mic}><Ionicons name="mic-outline" size={28} color="#0A4FA8"/></View><View style={styles.headingCopy}><Text style={styles.sectionTitle}>Incident Voice Note</Text><Text style={styles.subtitle}>Describe what happened in your own words. Maximum recording time is 2 minutes.</Text></View></View><PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="Incident Voice Note" milestoneKey="spot_intimation" documents={data.documents} variant="voice"/></View>
