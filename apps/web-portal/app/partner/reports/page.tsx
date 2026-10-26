@@ -38,7 +38,7 @@ export default async function PartnerReportsPage() {
     { title: "Open claims", value: integer(claims.active_claims), icon: Truck },
     { title: "Renewals due (30 days)", value: integer(policies.expiring_30_days), icon: BarChart3 },
   ];
-  const canShowPayout = payout.available && (reportScope.role === "partner" || reportScope.role === "partner_associate");
+  const canShowPayout = reportScope.role === "partner" || reportScope.role === "partner_associate";
 
   return (
     <main className="mx-auto min-h-screen max-w-[1500px] space-y-5 bg-[#F6F8FC] px-4 pb-28 pt-6 text-[#11254A] lg:ml-[268px] lg:px-8 lg:pb-12">
@@ -77,7 +77,7 @@ export default async function PartnerReportsPage() {
           <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
             <div><dt className="text-[#70809A]">Total claims</dt><dd className="mt-1 text-xl font-bold">{integer(claims.total_claims)}</dd></div>
             <div><dt className="text-[#70809A]">Completed claims</dt><dd className="mt-1 text-xl font-bold">{integer(claims.completed_claims)}</dd></div>
-            {canShowPayout ? <>
+            {payout.available && canShowPayout ? <>
               <div><dt className="text-[#70809A]">Recorded payout</dt><dd className="mt-1 text-xl font-bold">{money(payout.recorded_amount)}</dd></div>
               <div><dt className="text-[#70809A]">Pending payout</dt><dd className="mt-1 text-xl font-bold">{money(payout.pending_amount)}</dd></div>
             </> : <div className="col-span-2 rounded-lg bg-[#F4F7FC] p-3 text-xs text-[#64758F]">Commercial figures are available only to authorized accounts.</div>}
