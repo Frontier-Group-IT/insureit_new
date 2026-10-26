@@ -128,7 +128,7 @@ assert(claimsPage.includes("resolveCustomerWebScope"), "Customer Claims must res
 assert(claimDetailPage.includes("loadCustomerClaimDetail(account.id,id)") || claimDetailPage.includes("loadCustomerClaimDetail(account.id, id)"), "Claim Detail must validate the requested claim inside Customer scope");
 const claimStagePage = read("app/customer/(protected)/claims/[id]/stage/[stage]/page.tsx");
 assert(claimDetailPage.includes("loadCustomerClaimDetail(account.id,id)") || claimDetailPage.includes("loadCustomerClaimDetail(account.id, id)"), "Claim Detail overview must validate the requested claim within Customer scope");
-assert(claimDetailPage.includes("stage/spot_intimation") && claimDetailPage.includes('mode:"edit"'), "Claim overview must link Edit Claim to the canonical first stage in edit mode");
+assert(claimDetailPage.includes("stage/${editStage}") && claimDetailPage.includes('mode:"edit"') && claimDetailPage.includes("externalProjection?.current_stage.key"), "Claim overview must link Edit Claim to the projected current stage in edit mode");
 assert(claimStagePage.includes("@insureit/claim-journey"), "Claim Stage must render the shared internal claim journey");
 assert(claimStagePage.includes("loadCustomerClaimDetail(account.id,p.id)"), "Claim Stage must validate the requested claim within Customer scope");
 assert(!claimsPage.includes("supabase."), "Customer Claims page must use the scoped Customer data layer rather than direct client queries");

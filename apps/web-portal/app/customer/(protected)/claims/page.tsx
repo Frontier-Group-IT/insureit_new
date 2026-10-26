@@ -4,7 +4,7 @@ import { createServerSupabaseClient } from "@/lib/auth-server";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
 import { CustomerClaimClickableRow } from "./customer-claim-clickable-row";
 import { CustomerClaimsSearch } from "./customer-claims-search";
-import { projectInternalClaim } from "@insureit/claim-journey";
+import { INTERNAL_JOURNEY_STAGES, projectInternalClaim } from "@insureit/claim-journey";
 import { CustomerAccountTabs, EmptyCustomerState } from "@/components/customer-portal/customer-phase1";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import {
@@ -39,7 +39,12 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
     const internalProjection = external ? null : projectInternalClaim(claim.current_status);
     const stage = externalProjection?.current_stage.label || internalProjection?.stageLabel || claim.current_status;
     const completed = isCompletedCustomerClaim(claim, milestones);
-    return { claim, external, stage, completed };
+    const currentStageKey = external
+      ? externalProjection?.current_stage.key
+      : INTERNAL_JOURNEY_STAGES[internalProjection?.stageIndex ?? 0]?.key;
+    const targetStage = currentStageKey ?? INTERNAL_JOURNEY_STAGES[INTERNAL_JOURNEY_STAGES.length - 1].key;
+    const stageHref = `/customer/claims/${encodeURIComponent(claim.id)}/stage/${targetStage}?account=${encodeURIComponent(account.id)}&mode=edit`;
+    return { claim, external, stage, completed, stageHref };
   });
   const matchesStatus = (item: (typeof enriched)[number], filter: "all" | "open" | "action" | "completed") => {
     if (filter === "all") return true;
@@ -110,10 +115,10 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
                 </tr>
               </thead>
               <tbody>
-                {rows.map(({ claim, stage }) => {
-                  const detailHref = { pathname: `/customer/claims/${claim.id}`, query: { account: account.id } };
+                {rows.map(({ claim, stage, stageHref }) => {
+                  const detailHref = stageHref;
                   const lossDate = claim.accident_at ? new Date(claim.accident_at) : null;
-                  return <CustomerClaimClickableRow key={claim.id} href={`/customer/claims/${encodeURIComponent(claim.id)}?account=${encodeURIComponent(account.id)}`} label={`Open claim ${claim.claim_no || claim.vehicle_no || ""}`}>
+                  return <CustomerClaimClickableRow key={claim.id} href={stageHref} label={`Open claim ${claim.claim_no || claim.vehicle_no || ""}`}>
                     <td className="border-r border-[#E1E9F4] px-3 py-3 text-left">
                       <Link href={detailHref} aria-label={`Open claim ${claim.claim_no || claim.vehicle_no || ""}`} className="block rounded outline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1769DC]">
                         <span className="block font-medium">{customerName}</span>

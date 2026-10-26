@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
+import { INTERNAL_JOURNEY_STAGES, projectInternalClaim } from "@insureit/claim-journey";
 import { ArrowLeft, ExternalLink, FileDown, FileText, Pencil } from "lucide-react";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
-import { loadCustomerClaimDetail, isExternalCustomerClaim } from "@/lib/customer-web-phase2-data";
+import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -25,7 +25,11 @@ export default async function CustomerClaimDetailPage({
   const documentUrl = `/customer/claims/${encodeURIComponent(claim.id)}/download?account=${encodeURIComponent(account.id)}`;
   const source = isExternalCustomerClaim(claim) ? "External" : "Internal";
   const currentStage = INTERNAL_JOURNEY_STAGES.find(stage => !completedKeys.has(stage.key));
-  const editStage = currentStage?.key ?? "spot_intimation";
+  const externalProjection = isExternalCustomerClaim(claim) ? buildExternalClaimProjection(milestones) : null;
+  const internalProjection = externalProjection ? null : projectInternalClaim(claim.current_status);
+  const editStage = externalProjection?.current_stage.key
+    ?? INTERNAL_JOURNEY_STAGES[internalProjection?.stageIndex ?? 0]?.key
+    ?? INTERNAL_JOURNEY_STAGES[INTERNAL_JOURNEY_STAGES.length - 1].key;
   const detailRows: Array<[string, unknown]> = [
     ["Control Number",claim.claim_no],["Claim Number",claim.insurer_claim_no],
     ["Claim Type",source],["Claim Status",claim.current_status],
