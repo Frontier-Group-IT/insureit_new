@@ -55,6 +55,8 @@ for (const path of ["app/partner/reports/portfolio/page.tsx", "app/partner/repor
   assert.ok(page.includes("slice(0, 20)"), "Pagination must render only 20 rows");
 }
 
+assert.match(read(pages[2][0]), /row\.premium_amount/, "Policy register must use only scoped premium data");
+assert.match(read(pages[3][0]), /row\.settlement_amount/, "Claim register must use only scoped settlement data");
 const exportRoute = read("app/partner/reports/export/route.ts");
 assert.match(exportRoute, /await requirePartnerReportScope\(\)/, "Exports must validate reporting scope");
 assert.match(exportRoute, /MAX_ROWS = 200/, "Exports must be explicitly bounded");
