@@ -7,9 +7,12 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 const number = (value: number | string) => new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(Number(value));
 
-export default async function PartnerOperationsReport() {
+export default async function PartnerOperationsReport({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const rawPage = (await searchParams).page;
+  const page = rawPage && /^[1-9]\\d{0,3}$/.test(rawPage) ? Number(rawPage) : 1;
+  const offset = (page - 1) * 20;
   await requirePartnerReportScope();
-  const [claims, renewals, recentClaims] = await Promise.all([getPartnerWebClaimSummary(), getPartnerWebRenewalSummary(), listPartnerWebClaims({ limit: 20, offset: 0 })]);
+  const [claims, renewals, recentClaims] = await Promise.all([getPartnerWebClaimSummary(), getPartnerWebRenewalSummary(), listPartnerWebClaims({ limit: 21, offset })]);
   const fields = [
     ["Active claims", claims.active_claims],
     ["Completed claims", claims.completed_claims],
@@ -34,8 +37,13 @@ export default async function PartnerOperationsReport() {
       </section>
       <section className="overflow-hidden rounded-2xl border border-[#E2E9F3] bg-white">
         <div className="border-b border-[#E9EEF6] px-5 py-4"><h2 className="font-bold">Claims register preview</h2><p className="mt-1 text-xs text-[#71809A]">Up to 20 claims from your authorized account scope</p></div>
-        <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-xs"><thead className="bg-[#F5F8FC] text-[#697A95]"><tr>{["Claim","Customer","Vehicle","Insurer","Status"].map(label=><th key={label} className="px-4 py-3 font-semibold">{label}</th>)}</tr></thead><tbody className="divide-y divide-[#E9EEF6]">{recentClaims.map(row=><tr key={row.claim_id}><td className="px-4 py-3 font-semibold">{row.claim_no || "—"}</td><td className="px-4 py-3">{row.customer_name}</td><td className="px-4 py-3">{row.vehicle_no || "—"}</td><td className="px-4 py-3">{row.insurer_name || "—"}</td><td className="px-4 py-3">{row.current_status || "—"}</td></tr>)}{!recentClaims.length && <tr><td colSpan={5} className="px-5 py-8 text-center text-[#70809A]">No claims in your current reporting scope.</td></tr>}</tbody></table></div>
+        <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-xs"><thead className="bg-[#F5F8FC] text-[#697A95]"><tr>{["Claim","Customer","Vehicle","Insurer","Status"].map(label=><th key={label} className="px-4 py-3 font-semibold">{label}</th>)}</tr></thead><tbody className="divide-y divide-[#E9EEF6]">{recentClaims.slice(0, 20).map(row=><tr key={row.claim_id}><td className="px-4 py-3 font-semibold">{row.claim_no || "—"}</td><td className="px-4 py-3">{row.customer_name}</td><td className="px-4 py-3">{row.vehicle_no || "—"}</td><td className="px-4 py-3">{row.insurer_name || "—"}</td><td className="px-4 py-3">{row.current_status || "—"}</td></tr>)}{!recentClaims.length && <tr><td colSpan={5} className="px-5 py-8 text-center text-[#70809A]">No claims in your current reporting scope.</td></tr>}</tbody></table></div>
       </section>
+      <nav aria-label="Claims register pagination" className="flex items-center justify-end gap-3 text-xs font-semibold">
+        {page > 1 ? <Link href={`/partner/reports/operations?page=${page - 1}`} className="rounded-lg border border-[#D9E4F3] bg-white px-4 py-2">Previous</Link> : null}
+        <span>Page {page}</span>
+        {recentClaims.length > 20 ? <Link href={`/partner/reports/operations?page=${page + 1}`} className="rounded-lg border border-[#D9E4F3] bg-white px-4 py-2">Next</Link> : null}
+      </nav>
     </main>
   );
 }
