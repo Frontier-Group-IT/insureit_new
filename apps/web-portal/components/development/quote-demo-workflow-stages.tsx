@@ -12,7 +12,8 @@ const initial:CaseState = { selectedReason:"",notes:"",payment:"not_requested",b
 const stages:Stage[] = ["booking","payment","issuance","post"];
 const labels:Record<Stage,string> = {compare:"Compare",share:"Quotation sharing",payment:"Payment",booking:"Booking",issuance:"Issuance",post:"Policy Register"};
 const money=(n:number)=>"₹"+n.toLocaleString("en-IN",{maximumFractionDigits:0});
-const storageKey="insureit.quote-book.preview-case.v2";
+const storageKey="insureit.quote-book.preview-case.v3";
+const fingerprint=(value:string)=>{let hash=2166136261;for(let i=0;i<value.length;i++)hash=Math.imul(hash^value.charCodeAt(i),16777619);return (hash>>>0).toString(36);};
 function BrandImage({src,alt}:{src:string|null;alt:string}) {
  const [failed,setFailed]=useState(false);
  return <span className="flex h-10 w-16 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-white p-1">{src&&!failed?<img alt={alt} src={src} onError={()=>setFailed(true)} className="max-h-8 max-w-full object-contain"/>:<span className="text-[10px] font-semibold text-slate-600">{alt.slice(0,10)}</span>}</span>;
@@ -24,8 +25,9 @@ export default function QuoteWorkflowStages({stage,setStage,insurer,premium,idv,
  const make=values.make||"Vehicle";
  const vehicle=[values.make,values.model].filter(Boolean).join(" ")||"Vehicle details pending";
  const customer=values.ownerName||"Customer details pending";
- useEffect(()=>{try{const saved=sessionStorage.getItem(storageKey);if(saved){const data=JSON.parse(saved) as {insurer:string;record:CaseState};if(data.insurer===insurer&&data.record?.history){setRecord({...initial,...data.record});}}}catch{/* start fresh if storage unavailable */}},[insurer]);
- const edit=(patch:Partial<CaseState>,action?:string)=>{setRecord(prev=>{const next={...prev,...patch,history:action?[action,...prev.history]:prev.history};try{sessionStorage.setItem(storageKey,JSON.stringify({insurer,record:next}));}catch{}return next;});setNotice("");};
+ const caseKey=fingerprint([insurer,values.registrationNumber||values.chassisNumber||"",values.ownerName||""].join("|"));
+ useEffect(()=>{try{const saved=sessionStorage.getItem(storageKey);if(saved){const data=JSON.parse(saved) as {insurer:string;caseKey:string;record:CaseState};if(data.insurer===insurer&&data.caseKey===caseKey&&data.record?.history){setRecord({...initial,...data.record});}}}catch{/* start fresh if storage unavailable */}},[insurer,caseKey]);
+ const edit=(patch:Partial<CaseState>,action?:string)=>{setRecord(prev=>{const next={...prev,...patch,history:action?[action,...prev.history]:prev.history};try{sessionStorage.setItem(storageKey,JSON.stringify({insurer,caseKey,record:next}));}catch{}return next;});setNotice("");};
  const forward=()=>{setNotice("");const i=stages.indexOf(stage);if(i<0)return;
   if(stage==="booking"&&record.booking==="not_submitted"){setNotice("Complete the policy booking details and submit the booking request first.");return;}
   if(stage==="payment"&&record.payment!=="paid"){setNotice("Payment is awaiting confirmation. Refresh the payment status to update this case.");return;}
