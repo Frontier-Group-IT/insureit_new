@@ -1,6 +1,7 @@
+import { PartnerReportsShell } from "@/components/partner-portal/partner-reports-shell";
 import { requirePartnerReportScope } from "@/lib/reports/partner-report-scope";
 import { getPartnerWebBusinessPerformance } from "@/lib/partner-web";
-import { PartnerReportTabs } from "@/components/partner-portal/partner-report-tabs";
+import { PartnerReportsShell } from "@/components/partner-portal/partner-reports-shell";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -9,12 +10,12 @@ const number = (value: number | string) => new Intl.NumberFormat("en-IN", { maxi
 const money = (value: number | string) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(Number(value));
 
 export default async function PartnerBusinessReport() {
-  await requirePartnerReportScope();
+  const reportScope = await requirePartnerReportScope();
   const report = await getPartnerWebBusinessPerformance();
   return (
-    <main className="mx-auto min-h-screen max-w-[1500px] space-y-5 bg-[#F6F8FC] px-4 pb-28 pt-6 text-[#11254A] lg:ml-[268px] lg:px-8 lg:pb-12">
+    <PartnerReportsShell active="Business" scope={reportScope}>
       <h1 className="text-3xl font-extrabold">Reports</h1>
-      <PartnerReportTabs active="Business" />
+      
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
           ["Premium this month", money(report.premium_this_month)],
@@ -22,13 +23,13 @@ export default async function PartnerBusinessReport() {
           ["Policies this month", number(report.policies_this_month)],
           ["Lifetime premium", money(report.lifetime_gross_premium)],
         ].map(([label, value]) => (
-          <div key={label} className="rounded-xl border border-[#E2E9F3] bg-white p-4">
+          <div key={label} className="rounded-xl border border-[#E2E9F3] bg-white p-3 shadow-sm">
             <p className="text-xs font-semibold text-[#6C7F9C]">{label}</p>
             <p className="mt-2 break-words text-2xl font-bold">{value}</p>
           </div>
         ))}
       </section>
-      <section className="rounded-2xl border border-[#E2E9F3] bg-white p-5">
+      <section className="rounded-2xl border border-[#E2E9F3] bg-white p-3 shadow-sm">
         <h2 className="text-base font-bold">Business trend</h2>
         <div className="mt-5 space-y-3">
           {report.trend.length ? report.trend.map((point) => (
@@ -40,7 +41,7 @@ export default async function PartnerBusinessReport() {
           )) : <p className="text-sm text-[#70809A]">No business trend data for this account.</p>}
         </div>
       </section>
-      <section className="rounded-2xl border border-[#E2E9F3] bg-white p-5">
+      <section className="rounded-2xl border border-[#E2E9F3] bg-white p-3 shadow-sm">
         <h2 className="text-base font-bold">Business mix</h2>
         <div className="mt-4 divide-y divide-[#EDF1F7]">
           {report.business_mix.length ? report.business_mix.map((item, index) => (
@@ -52,6 +53,6 @@ export default async function PartnerBusinessReport() {
           )) : <p className="py-4 text-sm text-[#70809A]">No business mix data for this account.</p>}
         </div>
       </section>
-    </main>
+    </PartnerReportsShell>
   );
 }
