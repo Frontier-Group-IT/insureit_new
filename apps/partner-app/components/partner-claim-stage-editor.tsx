@@ -92,6 +92,7 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
   const restored=useMemo(()=>latestStageValues(data,stage),[data,stage]);
   const [values,setValues]=useState<Record<string,string>>(restored);
   const [saving,setSaving]=useState(false);
+  const [documentTab,setDocumentTab]=useState('Vehicle Docs');
 
   function setValue(key:string,value:string){setValues(current=>({...current,[key]:value}));}
   function previous(){
@@ -130,31 +131,26 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
         {config.fields.map(field=><EditableField key={field.key} field={field} value={values[field.key]||''} onChange={(value)=>setValue(field.key,value)}/>)}
       </View>
 
-      <View style={styles.card}>
-        <View style={styles.documentHeader}>
-          <Text style={styles.sectionTitle}>Upload claim documents</Text>
-          <View style={styles.optionalChip}><Text style={styles.optionalText}>Optional now</Text></View>
-        </View>
-        <View style={styles.documentGrid}>
-          {STAGE_DOCUMENTS[stage].map((label,index)=><PartnerClaimDocumentUpload
-            key={label} claimId={data.claim.id} customerId={data.customer.id}
-            documentType={label} milestoneKey={stage} documents={data.documents}
-            variant="tile" artwork={DOCUMENT_ARTWORK[index % DOCUMENT_ARTWORK.length]} label={label}
-          />)}
-        </View>
-        <PartnerClaimDocumentUpload
-          claimId={data.claim.id} customerId={data.customer.id}
-          documentType={`${stage} Additional Documents`} milestoneKey={stage}
-          documents={data.documents} variant="bulk" artwork={BULK_ARTWORK}
-          label="Upload multiple documents"
-          subtitle="Select several files now, or tap again later to add more."
-        />
-      </View>
-
+      {stage === 'claim_intimation' ? <View style={styles.card}>
+        <View style={styles.documentHeader}><Text style={styles.sectionTitle}>Documents for verification</Text><View style={styles.optionalChip}><Text style={styles.optionalText}>Claims desk review</Text></View></View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginVertical:10}}>
+          {['Vehicle Docs','Driver Docs','Permit / Tax','KYC / Other','Forms'].map((tab,index)=><Pressable key={tab} accessibilityRole="tab" accessibilityState={{selected:documentTab===tab}} onPress={()=>setDocumentTab(tab)} style={[styles.docTab,documentTab===tab&&styles.docTabSelected]}><Text style={[styles.docTabText,documentTab===tab&&styles.docTabTextSelected]}>{index+1}. {tab}</Text></Pressable>)}
+        </ScrollView>
+        <View style={styles.documentGrid}>{STAGE_DOCUMENTS[stage].filter(label=>claimDocumentCategory(label)===documentTab).map(label=><PartnerClaimDocumentUpload key={label} claimId={data.claim.id} customerId={data.customer.id} documentType={label} milestoneKey={stage} documents={data.documents} variant="tile" artwork={DOCUMENT_ARTWORK[STAGE_DOCUMENTS[stage].indexOf(label)%DOCUMENT_ARTWORK.length]} label={label}/>)}</View>
+        <PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType={`${stage} Additional Documents`} milestoneKey={stage} documents={data.documents} variant="bulk" artwork={BULK_ARTWORK} label="Upload multiple documents" subtitle="Select several files now, or tap again later to add more."/>
+      </View> : null}
       <PartnerClaimStepFooter index={stageIndex} busy={saving} canContinue onPrevious={previous} onContinue={()=>void save()} continueLabel={stage==='payment_encashment'?'Complete Claim':'Save & Continue'}/>
     </ScrollView>
     <View style={styles.nav}><Nav label="Home" icon="home" onPress={()=>router.push('/(tabs)' as never)}/><Nav label="Business" icon="briefcase-outline" onPress={()=>router.push('/(tabs)/business' as never)}/><Nav label="Policies" icon="document-text-outline" onPress={()=>router.push('/(tabs)/policies' as never)}/><Nav label="Claims" icon="shield-checkmark-outline" onPress={()=>router.push('/(tabs)/claims' as never)}/><Nav label="More" icon="grid-outline" onPress={()=>router.push('/(tabs)/more' as never)}/></View>
   </SafeAreaView>;
+}
+
+function claimDocumentCategory(label:string){
+  if (['RC Copy','Insurance Copy','Fitness Copy','GR / Load Bill','Fasttag report last 15 days','Spot Report','Estimate Copy'].includes(label)) return 'Vehicle Docs';
+  if (['Driver Licence','Driver Aadhaar front','Driver Aadhaar back','Driver Statement'].includes(label)) return 'Driver Docs';
+  if (['Road Tax','Local Permit A','Local Permit B','National Permit','Authorization Letter'].includes(label)) return 'Permit / Tax';
+  if (['Aadhaar','PAN','GST','Cancelled Cheque','KYC Form'].includes(label)) return 'KYC / Other';
+  return 'Forms';
 }
 
 function EditableField({field,value,onChange}:{field:Field;value:string;onChange:(value:string)=>void}){
@@ -211,6 +207,7 @@ function latestStageValues(data:PartnerClaimDetail,stage:ClaimStageKey){
 function Nav({label,icon,onPress}:{label:string;icon:keyof typeof Ionicons.glyphMap;onPress:()=>void}){return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.navItem}><View style={styles.navIcon}><Ionicons name={icon} size={19} color="#D8E5F8"/></View><Text style={styles.navLabel}>{label}</Text></Pressable>;}
 
 const styles=StyleSheet.create({
+  docTab:{paddingHorizontal:10,paddingVertical:12,borderBottomWidth:2,borderBottomColor:'transparent',backgroundColor:'#F8FBFF'},docTabSelected:{borderBottomColor:'#0877EB',backgroundColor:'#EAF4FF'},docTabText:{fontSize:9,color:'#718099',fontWeight:'700'},docTabTextSelected:{color:'#0B58B2'},
   documentHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8},
   optionalChip:{backgroundColor:'#EFF5FF',borderRadius:18,paddingHorizontal:9,paddingVertical:6},
   optionalText:{fontSize:9.5,fontWeight:'700',color:'#164B9B'},
