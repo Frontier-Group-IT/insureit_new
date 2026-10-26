@@ -22,12 +22,13 @@ export default async function PartnerReportsPage() {
   // The partner-session guard and every data RPC enforce the authenticated portal account scope.
   // Never substitute the admin report loaders or trust client-supplied group/partner IDs here.
   const reportScope = await requirePartnerReportScope();
+  const canShowPayout = reportScope.role === "partner" || reportScope.role === "partner_associate";
   const [performance, policies, claims, renewals, payout] = await Promise.all([
     getPartnerWebBusinessPerformance(),
     getPartnerWebPolicySummary(),
     getPartnerWebClaimSummary(),
     getPartnerWebRenewalSummary(),
-    getPartnerWebPayoutSummary(),
+    canShowPayout ? getPartnerWebPayoutSummary() : Promise.resolve({ available: false as const, visibility: "restricted" as const }),
   ]);
 
   const cards = [
@@ -38,7 +39,6 @@ export default async function PartnerReportsPage() {
     { title: "Open claims", value: integer(claims.active_claims), icon: Truck },
     { title: "Renewals due (30 days)", value: integer(policies.expiring_30_days), icon: BarChart3 },
   ];
-  const canShowPayout = reportScope.role === "partner" || reportScope.role === "partner_associate";
 
   return (
     <PartnerReportsShell active="Overview" scope={reportScope}>
