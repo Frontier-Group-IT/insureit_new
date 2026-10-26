@@ -119,7 +119,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
         style={({ pressed }) => [styles.tileInner, busy && styles.disabled, pressed && !busy && styles.pressed]}
       >
         {count > 0 ? <Ionicons name="checkmark-circle" size={19} color="#21A26B" style={styles.savedCheck} /> : null}
-        <View style={styles.artworkWrap}>{artwork ? <Image source={artwork} style={styles.artwork} resizeMode="contain" /> : documentType === "Accident Video" ? <View style={styles.videoIcon}><Ionicons name="videocam" size={27} color="#FFFFFF" /></View> : <Ionicons name="document-outline" size={34} color="#0A43A3" />}</View>
+        <View style={styles.artworkWrap}>{artwork ? <Image source={artwork} style={styles.artwork} resizeMode="contain" /> : documentType === "Accident Video" ? <View style={styles.videoIcon}><Ionicons name="videocam" size={24} color="#FFFFFF" /></View> : <Ionicons name="document-outline" size={34} color="#0A43A3" />}</View>
         <Text numberOfLines={2} style={styles.tileTitle}>{label ?? documentType}</Text>
         {count > 0 ? <Text numberOfLines={1} style={styles.fileName}>{latest?.name}</Text> : null}
         <Text numberOfLines={1} style={[styles.tileStatus, count > 0 && styles.tileStatusReady]}>{busy ? 'Uploading…' : count > 0 ? 'Saved' : 'Tap to upload'}</Text>
@@ -233,7 +233,7 @@ const styles=StyleSheet.create({
   cancelText:{color:'#1A2F4F',fontWeight:'700'},deleteText:{color:'#FFFFFF',fontWeight:'700'},
   artworkWrap:{width:49,height:49,overflow:'hidden',alignItems:'center',justifyContent:'center'},
   artwork:{width:39,height:39},
-  videoIcon:{width:43,height:43,borderRadius:10,backgroundColor:'#F31E35',alignItems:'center',justifyContent:'center'},
+  videoIcon:{width:39,height:39,borderRadius:9,backgroundColor:'#F31E35',alignItems:'center',justifyContent:'center'},
   tileTitle:{color:'#071D49',fontSize:8.5,lineHeight:11,fontWeight:'800',textAlign:'center',marginTop:3},
   tileStatus:{color:'#7A8799',fontSize:7.5,fontWeight:'800',marginTop:3},
   tileStatusReady:{color:'#16865B'},
