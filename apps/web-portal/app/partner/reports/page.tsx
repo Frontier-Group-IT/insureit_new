@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PartnerReportTabs } from "@/components/partner-portal/partner-report-tabs";
 import { requirePartnerReportScope } from "@/lib/reports/partner-report-scope";
 import { BarChart3, BriefcaseBusiness, FileText, ShieldCheck, Truck, UsersRound } from "lucide-react";
 import {
@@ -51,6 +52,7 @@ export default async function PartnerReportsPage() {
           {reportScope.role === "group" || reportScope.role === "group_associate" ? "Assigned group" : reportScope.role === "branch" ? "Your branch" : "Assigned partner"}
         </span>
       </header>
+      <PartnerReportTabs active="Overview" />
       <section aria-label="Business metrics" className="grid grid-cols-2 overflow-hidden rounded-2xl border border-[#E2E9F3] bg-white md:grid-cols-3 xl:grid-cols-6">
         {cards.map(({ title, value, icon: Icon }) => (
           <div key={title} className="min-w-0 border-b border-r border-[#E9EEF6] p-4">
