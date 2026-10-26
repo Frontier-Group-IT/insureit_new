@@ -229,7 +229,7 @@ export default function RenewalsScreen() {
       keyExtractor={(row) => row.policy_id}
       renderItem={({ item, index }) => (
         <View style={[styles.recordCard, index === sortedRows.length - 1 && styles.recordCardLast]}>
-          <RenewalCard row={item} mode={mode} onOpenPolicy={() => router.push(`/policy/${item.policy_id}` as never)} />
+          <RenewalCard row={item} onOpenPolicy={() => router.push(`/policy/${item.policy_id}` as never)} />
         </View>
       )}
       header={header}
@@ -270,7 +270,7 @@ function resolveSummarySelection(data: PartnerRenewalSummary | null | undefined,
   return { eyebrow: 'NEXT 30 DAYS', premium: data?.due_30_premium ?? 0, count: data?.due_30_count ?? 0 };
 }
 
-function RenewalCard({ row, mode, onOpenPolicy }: { row: PartnerRenewalRow; mode: PartnerRenewalMode; onOpenPolicy: () => void }) {
+function RenewalCard({ row, onOpenPolicy }: { row: PartnerRenewalRow; onOpenPolicy: () => void }) {
   const expired = daysUntil(row.end_date) < 0;
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`Open renewal policy ${row.policy_no || row.policy_code || ''} for ${row.customer_name}`} onPress={onOpenPolicy} style={({ pressed }) => [styles.renewalRow, pressed && styles.pressed]}>
