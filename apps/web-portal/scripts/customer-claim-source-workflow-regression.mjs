@@ -1,0 +1,17 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const root=new URL("../",import.meta.url);
+const read=(name)=>readFileSync(new URL(name,root),"utf8");
+const stage=read("app/customer/(protected)/claims/[id]/stage/[stage]/page.tsx");
+const actions=read("app/customer/(protected)/claims/[id]/stage/[stage]/actions.ts");
+const data=read("lib/customer-web-phase2-data.ts");
+assert.match(stage,/const canEditStage = external && Boolean\(CUSTOMER_EXTERNAL_STAGE_FIELDS\[selected.key\]\)/);
+assert.doesNotMatch(stage,/switchCustomerClaimToSelfManaged|Complete this claim yourself/);
+assert.doesNotMatch(actions,/claim\.claim_service_mode\s*!==\s*"self_managed"/);
+assert.doesNotMatch(actions,/switchCustomerClaimToSelfManaged/);
+assert.match(actions,/if\(!isExternalCustomerClaim\(claim\)\)/);
+assert.match(actions,/Complete the preceding claim stage first/);
+assert.match(actions,/resolveCustomerWebScope\(accountId\)/);
+assert.doesNotMatch(data,/!completed && claim\.claim_service_mode === "self_managed"/);
+assert.match(stage,/external\?buildExternalClaimProjection\(milestones\)/);
+console.log("Customer claim internal/external workflow parity source checks passed");

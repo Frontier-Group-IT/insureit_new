@@ -23,7 +23,7 @@ export async function saveCustomerExternalStage(form:FormData) {
   if(!config)throw new Error("Invalid claim stage");
   const {account}=await resolveCustomerWebScope(accountId);
   const {claim,milestones}=await loadCustomerClaimDetail(account.id,claimId);
-  if(!isExternalCustomerClaim(claim)||claim.claim_service_mode!=="self_managed"||claim.assistance_status==="accepted")
+  if(!isExternalCustomerClaim(claim))
     throw new Error("Claim stage editing is not available");
   const index=INTERNAL_JOURNEY_STAGES.findIndex(stage=>stage.key===key);
   if(index<1)throw new Error("Invalid stage");
@@ -105,7 +105,7 @@ export async function saveCustomerClaimIntimationDraft(form: FormData) {
   if (key !== "claim_intimation") throw new Error("Draft saving is only available for Claim Intimation");
   const { account } = await resolveCustomerWebScope(accountId);
   const { claim, milestones } = await loadCustomerClaimDetail(account.id, claimId);
-  if (!isExternalCustomerClaim(claim) || claim.claim_service_mode !== "self_managed" || claim.assistance_status === "accepted")
+  if (!isExternalCustomerClaim(claim))
     throw new Error("Claim stage editing is not available");
   const index = INTERNAL_JOURNEY_STAGES.findIndex(stage => stage.key === key);
   const previous = milestones.find(m => m.milestone_key === INTERNAL_JOURNEY_STAGES[index - 1].key);
@@ -140,23 +140,3 @@ export async function saveCustomerClaimIntimationDraft(form: FormData) {
     encodeURIComponent(account.id) + "&mode=edit");
 }
 
-/** A customer may explicitly opt to manage an unassigned external claim themselves. */
-export async function switchCustomerClaimToSelfManaged(form: FormData) {
-  const accountId=String(form.get("account")||"");
-  const claimId=String(form.get("claim")||"");
-  const stage=String(form.get("stage")||"");
-  if (!INTERNAL_JOURNEY_STAGES.some(item=>item.key===stage)) throw new Error("Invalid claim stage");
-  const {account}=await resolveCustomerWebScope(accountId);
-  const {claim}=await loadCustomerClaimDetail(account.id,claimId);
-  if (!isExternalCustomerClaim(claim) || claim.claim_service_mode!=="broker_managed" ||
-      claim.assistance_status!=="not_requested")
-    throw new Error("This claim cannot be switched to self-managed.");
-  const db=await createServerSupabaseClient();
-  const {data,error}=await db.from("claims").update({claim_service_mode:"self_managed"})
-    .eq("id",claim.id).eq("customer_id",account.id)
-    .eq("claim_service_mode","broker_managed").eq("assistance_status","not_requested")
-    .select("id").maybeSingle();
-  if(error||!data?.id)throw new Error("Unable to change claim management. Please try again.");
-  redirect("/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+
-    encodeURIComponent(stage)+"?account="+encodeURIComponent(account.id)+"&mode=edit");
-}

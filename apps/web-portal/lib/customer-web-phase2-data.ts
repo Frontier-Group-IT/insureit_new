@@ -310,7 +310,7 @@ export function customerClaimFilter(
   if (filter === "completed") return completed;
   if (filter === "open") return !completed && claim.current_status !== "Rejected";
   if (isExternalCustomerClaim(claim)) {
-    return !completed && claim.claim_service_mode === "self_managed" &&
+    return !completed &&
       (claim.current_status.includes("Document") || claim.current_status.includes("Awaited") || claim.current_status.includes("Pending"));
   }
   return detail?.internal_projection?.customerActionRequired ??
