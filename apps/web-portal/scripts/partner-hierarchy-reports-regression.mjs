@@ -28,6 +28,7 @@ for (const [file, label] of pages) {
   const gateAt = source.indexOf("await requirePartnerReportScope()");
   assert(gateAt >= 0, `${label}: missing authenticated reporting gate`);
   assert(!/createSupabaseAdminClient|getEmployeeAccessScope|requireCapability/.test(source), `${label}: must not load Operations admin reports`);
+  assert(!/\b(?:insurer_payin|payin_amount|broker_retention|retention_amount|retention_percent|internal_margin|profit_margin)\b/i.test(source), `${label}: confidential employee-only financial fields must not enter intermediary Reports`);
   assert(!/\b(?:params|searchParams)\.(?:partner|group|branch)\b|[?&](?:partner|group|branch)=/.test(source), `${label}: hierarchy parameters must not expand scope`);
   assert.match(source, new RegExp(`PartnerReportsShell active="${label}" scope={reportScope}`), `${label}: shared report shell missing`);
 }
