@@ -7,6 +7,7 @@
     "build": "next build",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "partner-reports:security-regression": "node scripts/partner-hierarchy-reports-regression.mjs",
     "access-control:v2-regression": "node --experimental-strip-types scripts/access-control-catalogue-v2-regression.mjs",
     "access-control:v2-scope-regression": "node --experimental-strip-types scripts/access-control-scope-v2-regression.mjs",
     "access-control:v2-lifecycle-regression": "node --experimental-strip-types scripts/access-control-lifecycle-v2-regression.mjs",
