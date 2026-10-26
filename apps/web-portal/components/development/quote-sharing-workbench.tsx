@@ -1,7 +1,7 @@
 "use client";
-import {useEffect,useMemo,useState} from "react";
+import {useEffect,useState} from "react";
 import {PDFDocument,StandardFonts,rgb} from "pdf-lib";
-import {ArrowLeft,ArrowRight,Download,FileText,MessageCircle,CheckCircle2,ClipboardCopy} from "lucide-react";
+import {ArrowLeft,ArrowRight,Download,FileText,MessageCircle,ClipboardCopy} from "lucide-react";
 import {getInsurerLogo} from "@/lib/insurer-logo";
 export type ShareQuote={id:string;name:string;cover:string;idv:number;od:number;tp:number;addons:number;tax:number;premium:number;inspection:string;extras:string[];excess:number};
 type CaseStatus="draft"|"ready"|"sent"|"awaiting"|"revision"|"accepted"|"declined";
@@ -36,8 +36,9 @@ async function createPDF(quotes:ShareQuote[],values:Record<string,string>){
 export default function QuoteSharingWorkbench({quotes,values,onBack,onAccept}:{quotes:ShareQuote[];values:Record<string,string>;onBack:()=>void;onAccept:(id:string)=>void}){
  const [state,setState]=useState<ShareCase>({ids:quotes.map(q=>q.id),status:"draft",acceptedId:"",contactNote:"",events:[]});
  const [viewer,setViewer]=useState<string|null>(quotes[0]?.id||null);
+ const quoteIds=quotes.map(q=>q.id).join(",");
  const [notice,setNotice]=useState("");
- useEffect(()=>{try{const raw=sessionStorage.getItem(key);if(raw){const saved=JSON.parse(raw) as ShareCase;if(saved&&Array.isArray(saved.ids)&&saved.ids.join(",")===quotes.map(q=>q.id).join(","))setState(saved);}}catch{}},[quotes]);
+ useEffect(()=>{try{const raw=sessionStorage.getItem(key);if(raw){const saved=JSON.parse(raw) as ShareCase;if(saved&&Array.isArray(saved.ids)&&saved.ids.join(",")===quotes.map(q=>q.id).join(","))setState(saved);}}catch{}},[quoteIds]);
  const apply=(part:Partial<ShareCase>,event?:string)=>setState(prev=>{const next={...prev,...part,events:event?[event,...prev.events]:prev.events};try{sessionStorage.setItem(key,JSON.stringify(next));}catch{}return next});
  const accepted=quotes.find(q=>q.id===state.acceptedId);
  const selected=quotes.find(q=>q.id===viewer);
