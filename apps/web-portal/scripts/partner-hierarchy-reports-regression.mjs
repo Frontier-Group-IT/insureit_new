@@ -29,8 +29,12 @@ for (const [file, label] of pages) {
   assert(gateAt >= 0, `${label}: missing authenticated reporting gate`);
   assert(!/createSupabaseAdminClient|getEmployeeAccessScope|requireCapability/.test(source), `${label}: must not load Operations admin reports`);
   assert(!/\b(?:params|searchParams)\.(?:partner|group|branch)\b|[?&](?:partner|group|branch)=/.test(source), `${label}: hierarchy parameters must not expand scope`);
-  assert.match(source, new RegExp(`PartnerReportTabs active="${label}"`), `${label}: report navigation missing`);
+  assert.match(source, new RegExp(`PartnerReportsShell active="${label}" scope={reportScope}`), `${label}: shared report shell missing`);
 }
+const sharedShell = read("components/partner-portal/partner-reports-shell.tsx");
+assert.match(sharedShell, /PartnerReportTabs active={active}/, "Shared report navigation must remain present");
+assert.match(sharedShell, /reports-reference-shell/, "Shared shell must inherit reference Reports styling");
+assert.doesNotMatch(sharedShell, /createSupabaseAdminClient|payin|retention|margin/i, "Shared shell must not access confidential financial data");
 const overview = read(pages[0][0]);
 assert.match(overview, /payout\.available && canShowPayout/, "Payout output must require existing payout authorization");
 assert.match(overview, /reportScope\.role === "partner"/, "Partner payout must not be inherited by Group/Branch");
