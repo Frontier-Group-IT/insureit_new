@@ -13,6 +13,8 @@ import {
   View,
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
+import { useIsFocused } from '@react-navigation/native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -42,7 +44,7 @@ export function PartnerScreen({
   homeMotionScrollY,
   stickyHeading,
   stickyControls,
-  stickyHeaderNavy = false,
+  stickyHeaderNavy = true,
   stickyStartY = 100,
 }: PropsWithChildren<{
   title: string;
@@ -72,6 +74,7 @@ export function PartnerScreen({
 }>) {
   const { isOffline } = usePartnerNetwork();
   const router = useRouter();
+  const isFocused = useIsFocused();
   const safeAreaInsets = useSafeAreaInsets();
   const sharedSearch = usePartnerSearch();
   const isHomeHero = eyebrow === 'INSUREIT PARTNER' && !onBack;
@@ -192,6 +195,7 @@ export function PartnerScreen({
 
   return (
     <PartnerStickyContext.Provider value={showFixedHeader}>
+    {isFocused ? <StatusBar style={showFixedHeader && stickyHeaderNavy ? 'light' : 'dark'} /> : null}
     <View style={styles.safeArea}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
       <Animated.ScrollView
