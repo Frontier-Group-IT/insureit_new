@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requirePartnerReportScope } from "@/lib/reports/partner-report-scope";
-import { getPartnerWebPolicySummary } from "@/lib/partner-web";
+import { getPartnerWebPolicySummary, listPartnerWebPolicies } from "@/lib/partner-web";
 import { PartnerReportTabs } from "@/components/partner-portal/partner-report-tabs";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,7 @@ const number = (value: number | string) => new Intl.NumberFormat("en-IN", { maxi
 
 export default async function PartnerPortfolioReport() {
   await requirePartnerReportScope();
-  const report = await getPartnerWebPolicySummary();
+  const [report, recentPolicies] = await Promise.all([getPartnerWebPolicySummary(), listPartnerWebPolicies({ limit: 20, offset: 0 })]);
   const fields = [
     ["Total policies", report.total_policies],
     ["In force", report.in_force_policies],
@@ -31,6 +31,10 @@ export default async function PartnerPortfolioReport() {
         <p className="mt-2 text-sm text-[#70809A]">This summary uses the existing signed-in account's authorized policy scope. Detailed insurer exposure and register exports require separate scoped backend contracts.</p>
         <Link href="/partner/policies" className="mt-4 inline-block text-sm font-bold text-[#2369C5]">Open policies →</Link>
       </div>
+      <section className="overflow-hidden rounded-2xl border border-[#E2E9F3] bg-white">
+        <div className="border-b border-[#E9EEF6] px-5 py-4"><h2 className="font-bold">Policy register preview</h2><p className="mt-1 text-xs text-[#71809A]">Up to 20 policies from your authorized account scope</p></div>
+        <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-xs"><thead className="bg-[#F5F8FC] text-[#697A95]"><tr>{["Policy","Customer","Vehicle","Insurer","Expiry"].map(label=><th key={label} className="px-4 py-3 font-semibold">{label}</th>)}</tr></thead><tbody className="divide-y divide-[#E9EEF6]">{recentPolicies.map(row=><tr key={row.policy_id}><td className="px-4 py-3 font-semibold">{row.policy_no || "—"}</td><td className="px-4 py-3">{row.customer_name}</td><td className="px-4 py-3">{row.vehicle_no || "—"}</td><td className="px-4 py-3">{row.insurer_name || "—"}</td><td className="px-4 py-3">{row.end_date || "—"}</td></tr>)}{!recentPolicies.length && <tr><td colSpan={5} className="px-5 py-8 text-center text-[#70809A]">No policies in your current reporting scope.</td></tr>}</tbody></table></div>
+      </section>
     </main>
   );
 }
