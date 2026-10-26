@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=527f3bf65d884d8426b4c4c64906b50f61a109f1
-reason=partner-policy-number-truncation-pr-3566
+source_main=087bce967ffeac88464f627b54af5352b9d95aa6
+reason=partner-claim-documents-pr-3568
