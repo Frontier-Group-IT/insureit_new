@@ -36,6 +36,9 @@ assert.match(overview, /payout\.available && canShowPayout/, "Payout output must
 assert.match(overview, /reportScope\.role === "partner"/, "Partner payout must not be inherited by Group/Branch");
 assert.match(read("components/partner-portal/partner-navigation.tsx"), /href: "\/partner\/reports"/, "Sidebar navigation missing");
 
+assert.match(read("app/partner/reports/portfolio/page.tsx"), /listPartnerWebPolicies\\(\\{ limit: 20, offset: 0 \\}\\)/, "Portfolio register must use bounded Partner policy RPC");
+assert.match(read("app/partner/reports/operations/page.tsx"), /listPartnerWebClaims\\(\\{ limit: 20, offset: 0 \\}\\)/, "Operations register must use bounded Partner claims RPC");
+
 const exportRoute = read("app/partner/reports/export/route.ts");
 assert.match(exportRoute, /await requirePartnerReportScope\(\)/, "Exports must validate reporting scope");
 assert.match(exportRoute, /MAX_ROWS = 200/, "Exports must be explicitly bounded");
