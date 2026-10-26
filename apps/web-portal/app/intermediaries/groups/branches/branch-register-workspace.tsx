@@ -255,7 +255,7 @@ function BranchMobileCard({ branch, canPermanentDelete }: { branch: BranchRegist
               <Info label="Phone" value={branch.phone ?? "—"} />
             </div>
           </div>
-          {canPermanentDelete ? <div className="mt-3"><PermanentDeleteButton kind="branch" id={branch.id} name={branch.branch_name} compact /></div> : null}
+          {canPermanentDelete ? <div className="mt-3"><BranchActionMenu branch={branch} /></div> : null}
         </div>
       </div>
     </article>
