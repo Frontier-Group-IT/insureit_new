@@ -1,3 +1,4 @@
+import { BusinessTrendCard } from "@/components/reports/business-trend-card";
 import { PartnerReportsShell } from "@/components/partner-portal/partner-reports-shell";
 import { requirePartnerReportScope } from "@/lib/reports/partner-report-scope";
 import { getPartnerWebBusinessPerformance } from "@/lib/partner-web";
@@ -29,18 +30,7 @@ export default async function PartnerBusinessReport() {
           </div>
         ))}
       </section>
-      <section className="rounded-2xl border border-[#E2E9F3] bg-white p-3 shadow-sm">
-        <h2 className="text-base font-bold">Business trend</h2>
-        <div className="mt-5 space-y-3">
-          {report.trend.length ? report.trend.map((point) => (
-            <div key={point.month} className="grid grid-cols-[90px_1fr_auto] items-center gap-3 text-xs">
-              <span className="font-semibold text-[#58708E]">{point.month}</span>
-              <div className="h-3 overflow-hidden rounded-full bg-[#EAF0F9]"><div className="h-full rounded-full bg-[#317AD8]" style={{ width: `${Math.max(0, Math.min(100, Number(point.premium) / Math.max(1, ...report.trend.map((row) => Number(row.premium))) * 100))}%` }} /></div>
-              <span className="text-right font-bold">{money(point.premium)}</span>
-            </div>
-          )) : <p className="text-sm text-[#70809A]">No business trend data for this account.</p>}
-        </div>
-      </section>
+      <BusinessTrendCard activePeriod="last_6_months" options={[{value:"last_6_months",label:"Last 6 Months",href:"/partner/reports/business"}]} points={report.trend.map(point=>({key:point.month,label:point.month,axisLabel:point.month,policy_count:Number(point.policies),net_premium:Number(point.premium)}))}/>
       <section className="rounded-2xl border border-[#E2E9F3] bg-white p-3 shadow-sm">
         <h2 className="text-base font-bold">Business mix</h2>
         <div className="mt-4 divide-y divide-[#EDF1F7]">
