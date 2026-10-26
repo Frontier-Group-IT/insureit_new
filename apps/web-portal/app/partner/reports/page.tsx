@@ -15,16 +15,16 @@ const compactMoney=(value:number|string|null|undefined)=>{const v=Number(value??
 function Kpi({label,value,note}:{label:string;value:string;note:string}){return <div className="ov-kpi"><div className="ov-kpi-label">{label}<Info className="h-3 w-3"/></div><div className="ov-kpi-value">{value}</div><div className="ov-kpi-note">{note}</div></div>}
 function AttentionRow({label,count,detail,href,alert}:{label:string;count:number;detail:string;href:string;alert?:boolean}){return <Link prefetch={false} href={href} className="ov-attention-row"><span className={`ov-attention-icon ov-attention-icon--${alert?"danger":"clock"}`}>{alert?<AlertCircle className="h-3.5 w-3.5"/>:<Clock3 className="h-3.5 w-3.5"/>}</span><span className="ov-attention-copy"><strong>{number(count)} {label}</strong><small>{detail}</small></span><ArrowRight className="h-3.5 w-3.5 text-[#7b8ba3]"/></Link>}
 export default async function PartnerReportsPage(){
- const scope=await requirePartnerReportScope();
- const mayShowPayout=scope.role==="partner"||scope.role==="partner_associate";
+ const reportScope=await requirePartnerReportScope();
+ const canShowPayout=reportScope.role==="partner"||reportScope.role==="partner_associate";
  const [performance,policies,claims,renewals,payout,recent]=await Promise.all([
   getPartnerWebBusinessPerformance(), getPartnerWebPolicySummary(), getPartnerWebClaimSummary(),
-  getPartnerWebRenewalSummary(),mayShowPayout?getPartnerWebPayoutSummary():Promise.resolve({available:false as const}),
+  getPartnerWebRenewalSummary(),canShowPayout?getPartnerWebPayoutSummary():Promise.resolve({available:false as const}),
   listPartnerWebPolicies({limit:8,offset:0}),
  ]);
  const totalMix=performance.business_mix.reduce((total,row)=>total+Number(row.premium),0);
  const maxMix=Math.max(1,...performance.business_mix.map(row=>Number(row.premium)));
- return <PartnerReportsShell active="Overview" scope={scope}>
+ return <PartnerReportsShell active="Overview" scope={reportScope}>
   <div className="reports-v2-page reports-overview-reference">
    <section className="ov-card ov-kpis" aria-label="Overview key performance indicators">
     <Kpi label="Gross Premium" value={compactMoney(performance.premium_this_month)} note="Month to date · authorized scope"/>
@@ -60,7 +60,7 @@ export default async function PartnerReportsPage(){
       {!recent.length?<tr><td colSpan={5} className="r2-empty">No policy records in your reporting scope</td></tr>:null}
     </tbody></table></div>
    </section>
-   {payout.available&&mayShowPayout?<section className="ov-card ov-section p-3"><h2 className="text-[12px] font-bold">Authorized partner payout</h2><p className="text-[11px] text-slate-600">Recorded {money(payout.recorded_amount)} · Pending {money(payout.pending_amount)}</p></section>:null}
+   {payout.available && canShowPayout?<section className="ov-card ov-section p-3"><h2 className="text-[12px] font-bold">Authorized partner payout</h2><p className="text-[11px] text-slate-600">Recorded {money(payout.recorded_amount)} · Pending {money(payout.pending_amount)}</p></section>:null}
   </div>
  </PartnerReportsShell>;
 }
