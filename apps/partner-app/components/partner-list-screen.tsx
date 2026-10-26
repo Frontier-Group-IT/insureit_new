@@ -21,6 +21,7 @@ export function PartnerListScreen<T>({
   artwork,
   showArtwork = true,
   action,
+  topBar,
   data,
   renderItem,
   keyExtractor,
@@ -38,6 +39,7 @@ export function PartnerListScreen<T>({
   artwork?: ImageSourcePropType;
   showArtwork?: boolean;
   action?: ReactNode;
+  topBar?: ReactNode;
   data: readonly T[];
   renderItem: ListRenderItem<T>;
   keyExtractor: (item: T, index: number) => string;
@@ -62,7 +64,7 @@ export function PartnerListScreen<T>({
         contentContainerStyle={[styles.content, !data.length && styles.contentEmpty]}
         ListHeaderComponent={
           <View>
-            <PartnerTopBar title={title} eyebrow={eyebrow} onBack={onBack} artwork={artwork} showArtwork={showArtwork} action={action} />
+            {topBar ?? <PartnerTopBar title={title} eyebrow={eyebrow} onBack={onBack} artwork={artwork} showArtwork={showArtwork} action={action} />}
             {isOffline ? (
               <View style={styles.networkBanner}>
                 <PartnerBanner
