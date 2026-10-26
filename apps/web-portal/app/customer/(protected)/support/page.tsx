@@ -1,6 +1,6 @@
 import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 import Link from "next/link";
-import { ArrowRight, FileText, Headphones, ShieldCheck, Clock3, Search, CarFront, CreditCard, CircleHelp, MessageSquare, BadgeCheck, ClipboardList } from "lucide-react";
+import { ArrowRight, FileText, Headphones, ShieldCheck, Clock3, Search, CarFront, CreditCard, CircleHelp, ClipboardList } from "lucide-react";
 import {
   CustomerAccountTabs,
   EmptyCustomerState,
