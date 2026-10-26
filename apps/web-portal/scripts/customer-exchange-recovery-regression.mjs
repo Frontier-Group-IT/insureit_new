@@ -21,9 +21,9 @@ assert.match(page, /tabHref\("sell"\)/, "Customer Exchange must expose the Sell 
 assert.match(page, /tabHref\("activity"\)/, "Customer Exchange must expose the Activity workspace");
 assert.match(page, /loadCustomerExchangeSellableVehicles/, "Sell workspace must use the customer-scoped Exchange backend");
 assert.match(page, /loadCustomerExchangeActivity/, "Activity workspace must use the customer-scoped Exchange backend");
-assert.match(loader, /rpc\("exchange_marketplace_feed"/, "Exchange must preserve the existing feed RPC");
-assert.match(loader, /rpc\("exchange_my_sellable_vehicles"/, "Web Exchange Sell must use the same sellable-vehicle RPC as the app");
-assert.match(loader, /rpc\("exchange_my_activity"/, "Web Exchange Activity must use the same activity RPC as the app");
+assert.match(loader, /exchangeClient\.rpc\("exchange_marketplace_feed"/, "Exchange must preserve the existing feed RPC");
+assert.match(loader, /exchangeClient\.rpc\("exchange_my_sellable_vehicles"/, "Web Exchange Sell must use the same sellable-vehicle RPC as the app");
+assert.match(loader, /exchangeClient\.rpc\("exchange_my_activity"/, "Web Exchange Activity must use the same activity RPC as the app");
 assert.match(loader, /catch\s*\{[\s\S]*return null;/, "Media signing failure must not hide valid Exchange listings");
 assert.match(globalError, /onClick=\{reset\}/, "Existing generic reset must not be removed");
 assert.match(globalError, /window\.location\.reload\(\)/, "Existing generic full reload must not be removed");

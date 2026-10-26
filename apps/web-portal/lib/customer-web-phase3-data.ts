@@ -150,8 +150,8 @@ async function signedUrl(bucket: string | null, storagePath: string | null) {
 
 export const loadCustomerExchangeFeed = cache(async (input?: { category?: string | null; query?: string | null }) => {
   const supabase = await createServerSupabaseClient();
-  const rpc = supabase.rpc as unknown as UntypedRpc;
-  const { data, error } = await rpc("exchange_marketplace_feed", {
+  const exchangeClient = supabase as unknown as { rpc: UntypedRpc };
+  const { data, error } = await exchangeClient.rpc("exchange_marketplace_feed", {
     p_category: input?.category && input.category !== "All" ? input.category : null,
     p_query: input?.query?.trim() || null,
     p_limit: 100,
@@ -167,16 +167,16 @@ export const loadCustomerExchangeFeed = cache(async (input?: { category?: string
 
 export const loadCustomerExchangeSellableVehicles = cache(async (customerId: string): Promise<CustomerExchangeSellableVehicle[]> => {
   const supabase = await createServerSupabaseClient();
-  const rpc = supabase.rpc as unknown as UntypedRpc;
-  const { data, error } = await rpc("exchange_my_sellable_vehicles", { p_customer_id: customerId });
+  const exchangeClient = supabase as unknown as { rpc: UntypedRpc };
+  const { data, error } = await exchangeClient.rpc("exchange_my_sellable_vehicles", { p_customer_id: customerId });
   if (error) throw new Error("Exchange selling workspace is temporarily unavailable.");
   return (data ?? []) as CustomerExchangeSellableVehicle[];
 });
 
 export const loadCustomerExchangeActivity = cache(async (customerId: string): Promise<CustomerExchangeActivity> => {
   const supabase = await createServerSupabaseClient();
-  const rpc = supabase.rpc as unknown as UntypedRpc;
-  const { data, error } = await rpc("exchange_my_activity", { p_customer_id: customerId });
+  const exchangeClient = supabase as unknown as { rpc: UntypedRpc };
+  const { data, error } = await exchangeClient.rpc("exchange_my_activity", { p_customer_id: customerId });
   if (error) throw new Error("Exchange activity is temporarily unavailable.");
   const row = (data ?? {}) as Partial<CustomerExchangeActivity>;
   return {
@@ -194,8 +194,8 @@ export async function loadCustomerExchangeListing(listingId: string) {
   if (!listing) notFound();
 
   const supabase = await createServerSupabaseClient();
-  const rpc = supabase.rpc as unknown as UntypedRpc;
-  const { data, error } = await rpc("exchange_listing_detail", { p_listing_id: listingId });
+  const exchangeClient = supabase as unknown as { rpc: UntypedRpc };
+  const { data, error } = await exchangeClient.rpc("exchange_listing_detail", { p_listing_id: listingId });
   const detail = error || !data || typeof data !== "object" ? null : data as CustomerExchangeListingDetail;
   if (detail?.media?.length) {
     detail.media = await Promise.all(detail.media.map(async (item) => ({
