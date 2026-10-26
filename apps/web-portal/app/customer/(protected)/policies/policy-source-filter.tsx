@@ -24,7 +24,7 @@ export function PolicySourceFilter({ accountId, query, status, source }: {
         if (event.target.value !== "all") params.set("source", event.target.value);
         startTransition(() => router.push(`/customer/policies?${params.toString()}`));
       }}
-      className="rounded-xl border border-[#D8E2F0] bg-white px-3 py-2.5 text-[11px] font-semibold text-[#17345B]"
+      className="customer-register-control rounded-xl border border-[#D8E2F0] bg-white px-3 py-2.5 text-[11px] font-semibold text-[#17345B]"
     >
       <option value="all">All Sources</option>
       <option value="internal">Internal</option>
