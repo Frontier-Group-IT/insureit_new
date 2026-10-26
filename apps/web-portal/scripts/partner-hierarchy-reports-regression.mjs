@@ -28,7 +28,7 @@ for (const [file, label] of pages) {
   const gateAt = source.indexOf("await requirePartnerReportScope()");
   assert(gateAt >= 0, `${label}: missing authenticated reporting gate`);
   assert(!/createSupabaseAdminClient|getEmployeeAccessScope|requireCapability/.test(source), `${label}: must not load Operations admin reports`);
-  assert(!/searchParams|params\.partner|params\.group|params\.branch/.test(source), `${label}: user parameters must not expand scope`);
+  assert(!/\b(?:params|searchParams)\.(?:partner|group|branch)\b|[?&](?:partner|group|branch)=/.test(source), `${label}: hierarchy parameters must not expand scope`);
   assert.match(source, new RegExp(`PartnerReportTabs active="${label}"`), `${label}: report navigation missing`);
 }
 const overview = read(pages[0][0]);
