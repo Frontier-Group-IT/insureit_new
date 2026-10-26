@@ -1,3 +1,4 @@
+import { ScopedReportDistribution } from "@/components/partner-portal/scoped-report-distribution";
 import { PartnerReportsShell } from "@/components/partner-portal/partner-reports-shell";
 import Link from "next/link";
 import { requirePartnerReportScope } from "@/lib/reports/partner-report-scope";
@@ -25,6 +26,7 @@ export default async function PartnerOperationsReport({ searchParams }: { search
   return (
     <PartnerReportsShell active="Operations" scope={reportScope}>
       
+      <ScopedReportDistribution title="Claim status distribution" items={[{label:"Active claims",value:Number(claims.active_claims)},{label:"Completed claims",value:Number(claims.completed_claims)},{label:"Other claims",value:Math.max(0,Number(claims.total_claims)-Number(claims.active_claims)-Number(claims.completed_claims))}]}/>
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
         {fields.map(([label, value]) => <div key={label} className="rounded-xl border border-[#E2E9F3] bg-white p-3 shadow-sm"><p className="text-xs font-semibold text-[#6D7E9A]">{label}</p><p className="mt-2 text-2xl font-bold">{number(value)}</p></div>)}
       </section>
