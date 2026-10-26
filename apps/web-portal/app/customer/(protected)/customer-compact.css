@@ -43,6 +43,9 @@
   .customer-compact * { scroll-behavior: auto !important; }
 }
 
+/* Top navigation uses the entire available viewport; sidebar retains its comfortable reading width. */
+.customer-navigation-content[data-customer-nav-layout="top"] .customer-content-container { max-width: none; }
+
 /* Phase 1: Customer-only motion tokens. All visual feedback is presentation-only. */
 .customer-compact {
   --customer-motion-fast: 160ms;
