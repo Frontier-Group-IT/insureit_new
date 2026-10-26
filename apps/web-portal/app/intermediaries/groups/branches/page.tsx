@@ -36,6 +36,8 @@ type BranchProfileRow = {
   created_by: string | null;
   email: string | null;
   phone: string | null;
+  contact_name: string | null;
+  address: string | null;
 };
 
 type GroupRow = {
@@ -85,7 +87,7 @@ export default async function BranchRegisterPage() {
       .returns<PartnerRow[]>(),
     admin
       .from("partner_branch_profiles")
-      .select("partner_id,created_by,email,phone")
+      .select("partner_id,created_by,email,phone,contact_name,address")
       .returns<BranchProfileRow[]>(),
     admin
       .from("intermediary_groups")
@@ -128,6 +130,8 @@ export default async function BranchRegisterPage() {
   const membershipByPartner = new Map((membershipResult.data ?? []).map((membership) => [membership.partner_id, membership]));
 
   const activation = await getBranchActivationStatuses([...branchProfileByPartner.keys()]);
+  const { data: logins } = await admin.from("portal_access_identities").select("entity_id,status").eq("entity_type","branch").in("entity_id",[...branchProfileByPartner.keys()].length?[...branchProfileByPartner.keys()]:["00000000-0000-0000-0000-000000000000"]);
+  const disabled = new Set((logins??[]).filter(x=>x.status==="disabled").map(x=>x.entity_id));
   const allowedEmployeeIds = new Set(scope.employeeIds);
   const rows: BranchRegisterRow[] = (partnerRows ?? []).flatMap((branch) => {
     if (!branchProfileByPartner.has(branch.id)) return [];
@@ -156,6 +160,9 @@ export default async function BranchRegisterPage() {
       branch_kind: branch.partner_kind,
       email: branchProfileByPartner.get(branch.id)?.email ?? null,
       phone: branchProfileByPartner.get(branch.id)?.phone ?? null,
+      contact_name: branchProfileByPartner.get(branch.id)?.contact_name ?? null,
+      address: branchProfileByPartner.get(branch.id)?.address ?? null,
+      login_disabled: disabled.has(branch.id),
       invitation_status: activation.get(branch.id) ?? "unknown",
       branch_status: branch.partner_status,
       parent_partner_id: parent?.id ?? null,
