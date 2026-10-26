@@ -41,8 +41,8 @@ assert.ok(read("app/partner/reports/operations/page.tsx").includes("listPartnerW
 
 for (const path of ["app/partner/reports/portfolio/page.tsx", "app/partner/reports/operations/page.tsx"]) {
   const page = read(path);
-  assert.match(page, /\\^\\[1-9\\]/, "Page must validate supplied positive integer");
-  assert.match(page, /slice\\(0, 20\\)/, "Pagination must render only 20 rows");
+  assert.ok(page.includes(String.raw`/^[1-9]\d{0,3}$/`), "Page must validate supplied positive integer");
+  assert.ok(page.includes("slice(0, 20)"), "Pagination must render only 20 rows");
 }
 
 const exportRoute = read("app/partner/reports/export/route.ts");
