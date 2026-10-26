@@ -1,23 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { Ban, Pencil, Send, CheckCircle2 } from "lucide-react";
 import { PermanentDeleteButton } from "@/components/permanent-delete-button";
 import { editSuperBranch, resendSuperBranchLink, setSuperBranchLoginStatus } from "./super-actions";
 
 type Branch = { id: string; branch_name: string; email: string | null; phone: string | null; invitation_status: string; login_disabled: boolean; contact_name: string | null; address: string | null };
 export function BranchActionMenu({ branch }: { branch: Branch }) {
-  const [open,setOpen] = useState(false);
   const [edit,setEdit] = useState(false);
   const [confirmDisable,setConfirmDisable] = useState(false);
-  const button = "block w-full rounded px-3 py-2 text-left text-xs hover:bg-slate-100";
-  return <div className="relative inline-block text-left">
-    <button type="button" aria-label={`Actions for ${branch.branch_name}`} aria-expanded={open} onClick={()=>setOpen(!open)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold">•••</button>
-    {open && <div className="absolute right-0 top-full z-30 mt-1 w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-xl">
-      <button className={button} onClick={()=>{setEdit(true);setOpen(false)}}>✎ Edit</button>
-      <form action={resendSuperBranchLink}><input type="hidden" name="entity_id" value={branch.id}/><button disabled={branch.login_disabled} className={button+" disabled:opacity-40"}>✉ Resend Link</button></form>
-      <button className={button} onClick={()=>{setConfirmDisable(true);setOpen(false)}}>{branch.login_disabled?"Enable":"Disable"}</button>
-      <div className="border-t border-slate-100 p-1"><PermanentDeleteButton kind="branch" id={branch.id} name={branch.branch_name} compact /></div>
-    </div>}
+  const iconButton = "inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 disabled:cursor-not-allowed disabled:opacity-35";
+  return <div className="inline-flex items-center justify-center gap-2">
+    <button type="button" aria-label={`Edit ${branch.branch_name}`} title="Edit" className={iconButton+" text-slate-800"} onClick={()=>setEdit(true)}><Pencil className="h-4 w-4"/></button>
+    <button type="button" aria-label={`${branch.login_disabled?"Enable":"Disable"} ${branch.branch_name}`} title={branch.login_disabled?"Enable":"Disable"} className={iconButton} onClick={()=>setConfirmDisable(true)}>{branch.login_disabled?<CheckCircle2 className="h-4 w-4"/>:<Ban className="h-4 w-4"/>}</button>
+    <form action={resendSuperBranchLink} className="inline-flex"><input type="hidden" name="entity_id" value={branch.id}/><button type="submit" aria-label={`Resend invitation to ${branch.branch_name}`} title={branch.login_disabled?"Enable account before resending":"Resend Link"} disabled={branch.login_disabled} className={iconButton}><Send className="h-4 w-4"/></button></form>
+    <PermanentDeleteButton kind="branch" id={branch.id} name={branch.branch_name} compact iconOnly />
     {confirmDisable && <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
       <div className="w-full max-w-sm rounded-xl bg-white p-5 text-left shadow-xl">
         <h3 className="font-bold">{branch.login_disabled?"Enable":"Disable"} branch login?</h3>
