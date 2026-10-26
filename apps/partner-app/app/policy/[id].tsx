@@ -6,8 +6,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
-import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
-import { PartnerPolicyDetailIcon, type PartnerPolicyDetailIconKind, type PartnerPolicyDetailIconTone } from '@/components/ui/partner-policy-detail-icon';
+import { PartnerPolicyDetailIcon, type PartnerPolicyDetailIconKind } from '@/components/ui/partner-policy-detail-icon';
 import { getPartnerPolicyDetail, type PartnerPolicyDetail } from '@/lib/policies';
 import { formatIndianCurrency } from '@/lib/format';
 import { PartnerAssets } from '@/lib/partner-assets';
@@ -219,7 +218,7 @@ function CardHeader({ iconKind, title, actionLabel, onAction }: { iconKind: Part
   );
 }
 
-function QuickAction({ iconKind, label, tone, onPress }: { iconKind: PartnerPolicyDetailIconKind; label: string; tone: PartnerPolicyDetailIconTone; onPress?: () => void }) {
+function QuickAction({ iconKind, label, onPress }: { iconKind: PartnerPolicyDetailIconKind; label: string; tone?: string; onPress?: () => void }) {
   return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.quickAction, pressed && styles.pressed]}><Ionicons name={iconKind === "policy-document" ? "document-text" : iconKind === "renew-policy" ? "sync" : iconKind === "raise-claim" ? "shield-checkmark" : "people"} size={25} color="#0879E9" /><Text numberOfLines={2} style={styles.quickLabel}>{label}</Text></Pressable>;
 }
 
@@ -232,7 +231,6 @@ function EntityRow({ image, icon, title, subtitle, onPress }: { image?: ImageSou
 }
 
 function MiniInfo({ label, value }: { label: string; value: string }) { return <View style={styles.miniInfo}><Text style={styles.miniLabel}>{label}</Text><Text style={styles.miniValue}>{value}</Text></View>; }
-function quickToneStyle(tone: PartnerPolicyDetailIconTone) { if (tone === 'green') return styles.quickGreen; if (tone === 'orange') return styles.quickOrange; if (tone === 'purple') return styles.quickPurple; return styles.quickBlue; }
 function policyArtwork(category: string): ImageSourcePropType { if (category === 'Motor') return PartnerAssets.products.motorInsurance; if (category === 'Health') return PartnerAssets.products.healthInsurance; if (category === 'Life') return PartnerAssets.products.familyInsurance; return PartnerAssets.products.commercialInsurance; }
 function displayParts(...values: Array<string | number | null | undefined>) { return values.map((value) => value == null ? '' : String(value).trim()).filter((value) => value && value.toLowerCase() !== 'null' && value.toLowerCase() !== 'undefined').join(' · '); }
 function policyCategory(data: PartnerPolicyDetail) { const value = [data.policy.policy_type, data.policy.policy_product, data.policy.business_line].filter(Boolean).join(' ').toLowerCase(); if (value.includes('health')) return 'Health'; if (value.includes('life')) return 'Life'; if (value.includes('motor') || data.vehicle) return 'Motor'; return 'Non-Motor'; }
