@@ -1,7 +1,7 @@
 import Link from "next/link";
+import { requirePartnerReportScope } from "@/lib/reports/partner-report-scope";
 import { BarChart3, BriefcaseBusiness, FileText, ShieldCheck, Truck, UsersRound } from "lucide-react";
 import {
-  getPartnerWebSession,
   getPartnerWebBusinessPerformance,
   getPartnerWebPolicySummary,
   getPartnerWebClaimSummary,
@@ -20,7 +20,7 @@ const money = (value: number | string | null | undefined) =>
 export default async function PartnerReportsPage() {
   // The partner-session guard and every data RPC enforce the authenticated portal account scope.
   // Never substitute the admin report loaders or trust client-supplied group/partner IDs here.
-  const { scope } = await getPartnerWebSession();
+  const reportScope = await requirePartnerReportScope();
   const [performance, policies, claims, renewals, payout] = await Promise.all([
     getPartnerWebBusinessPerformance(),
     getPartnerWebPolicySummary(),
@@ -37,7 +37,7 @@ export default async function PartnerReportsPage() {
     { title: "Open claims", value: integer(claims.active_claims), icon: Truck },
     { title: "Renewals due (30 days)", value: integer(policies.expiring_30_days), icon: BarChart3 },
   ];
-  const canShowPayout = payout.available && scope.scope_mode !== "hierarchy";
+  const canShowPayout = payout.available && (reportScope.role === "partner" || reportScope.role === "partner_associate");
 
   return (
     <main className="mx-auto min-h-screen max-w-[1500px] space-y-5 bg-[#F6F8FC] px-4 pb-28 pt-6 text-[#11254A] lg:ml-[268px] lg:px-8 lg:pb-12">
@@ -48,7 +48,7 @@ export default async function PartnerReportsPage() {
           <p className="mt-1 text-sm text-[#64758F]">Business overview for your authorized account network.</p>
         </div>
         <span className="rounded-xl border border-[#DAE4F4] bg-white px-3 py-2 text-xs font-semibold text-[#36557B]">
-          {scope.scope_mode === "hierarchy" ? "Assigned hierarchy" : scope.scope_mode === "partner_family" ? "Partner family" : "Your account"}
+          {reportScope.role === "group" || reportScope.role === "group_associate" ? "Assigned group" : reportScope.role === "branch" ? "Your branch" : "Assigned partner"}
         </span>
       </header>
       <section aria-label="Business metrics" className="grid grid-cols-2 overflow-hidden rounded-2xl border border-[#E2E9F3] bg-white md:grid-cols-3 xl:grid-cols-6">
