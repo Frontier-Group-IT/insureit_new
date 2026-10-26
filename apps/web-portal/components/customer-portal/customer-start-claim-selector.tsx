@@ -5,7 +5,7 @@ import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
 import { getInsurerLogo } from "@/lib/insurer-logo";
-import { ArrowRight, CarFront, Headphones, LoaderCircle, Plus, ShieldAlert, ShieldCheck, ShieldX, TriangleAlert, X } from "lucide-react";
+import { ArrowRight, CalendarDays, CarFront, FileText, Headphones, Landmark, LoaderCircle, Plus, ShieldAlert, ShieldCheck, TriangleAlert, X } from "lucide-react";
 import type { CustomerPolicyRow, CustomerVehicleRow } from "@/lib/customer-web-data";
 import { prepareCustomerClaim } from "@/app/customer/(protected)/start-claim/actions";
 
@@ -95,6 +95,44 @@ export function CustomerStartClaimSelector({
 
       </section>
 
+      <section aria-label="Policy details" data-claim-policy-details="true" className="rounded-2xl border border-[#EDF0F9] bg-white px-4 py-4 shadow-[0_8px_22px_rgba(30,46,98,.06)] sm:px-6">
+        <div className="flex items-center gap-3 border-b border-[#E8EAF2] pb-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#F0EEFF] p-1.5 text-[#7938F7]">
+            {displayPolicy?.insurer_name && getInsurerLogo(displayPolicy.insurer_name) ? (
+              <Image src={getInsurerLogo(displayPolicy.insurer_name)!} alt={`${displayPolicy.insurer_name} logo`} width={36} height={36} unoptimized className="h-full w-full object-contain" />
+            ) : <ShieldCheck className="h-5 w-5" aria-hidden="true" />}
+          </span>
+          <h2 className="text-[16px] font-bold text-[#111E4A]">{displayPolicy?.source === "external" ? "Self Tracked Policy" : "Insurance Policy"}</h2>
+        </div>
+        {displayPolicy ? (
+          <>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-4 pt-4 lg:grid-cols-4 lg:gap-x-0">
+              {[
+                { label: "Policy No.", value: displayPolicy.policy_no || "—", icon: FileText },
+                { label: "Insurer", value: displayPolicy.insurer_name || "Insurer not recorded", detail: displayPolicy.policy_product || displayPolicy.policy_type, icon: Landmark },
+                { label: "Start Date", value: formatPolicyDate(displayPolicy.start_date), icon: CalendarDays },
+                { label: "End Date", value: formatPolicyDate(displayPolicy.end_date), icon: CalendarDays },
+              ].map(({ label, value, detail, icon: Icon }, index) => (
+                <div key={label} className={`flex min-w-0 gap-2.5 ${index > 0 ? "lg:border-l lg:border-[#E5E8F1] lg:pl-5" : ""}`}>
+                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[#8737F4]" aria-hidden="true" />
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-[#7B8191]">{label}</p>
+                    <p className="break-words text-[13px] font-bold leading-5 text-[#1B1D27]" title={value}>{value}</p>
+                    {detail ? <p className="text-[11px] text-[#777E90]">{detail}</p> : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {!hasActivePolicy ? <p className="mt-4 border-t border-[#E8EAF2] pt-3 text-[12px] text-[#AA681C]">{policyExpired ? "Policy expired" : "Policy not currently active"} · Claim registration is still permitted, subject to coverage review.</p> : null}
+          </>
+        ) : (
+          <div className="pt-4">
+            <p className="text-[13px] font-semibold text-[#17345D]">No policy found for this vehicle</p>
+            <p className="mt-1 text-[11px] text-[#657994]">You may still register a claim. Coverage and eligibility will be reviewed separately.</p>
+          </div>
+        )}
+      </section>
+
       <div className="grid gap-3 sm:grid-cols-2">
         <Link href={{ pathname: "/customer/support", query: { account: accountId } }} className="inline-flex min-h-[50px] items-center justify-center gap-2 rounded-xl border border-[#AA9BFF] bg-[#F7F6FF] px-4 text-[14px] font-semibold text-[#6539EF] transition hover:bg-[#F0EDFF]">
           <Headphones className="h-5 w-5" /> Get Assistance
@@ -112,31 +150,6 @@ export function CustomerStartClaimSelector({
           </form>
         )}
       </div>
-      <section aria-label="Policy details" className="space-y-2" data-claim-policy-details="true">
-        <h2 className="text-[16px] font-bold text-[#102B54]">Policy details</h2>
-        {displayPolicy ? (
-          <div className="rounded-2xl bg-[#0C367D] px-4 py-4 text-white shadow-[0_8px_20px_rgba(12,54,125,.12)] sm:px-5">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-white p-1 text-[#0C367D]">{displayPolicy.insurer_name ? <Image src={getInsurerLogo(displayPolicy.insurer_name) || ""} alt={`${displayPolicy.insurer_name} logo`} width={44} height={44} unoptimized className="h-full w-full object-contain" /> : <ShieldCheck className="h-7 w-7" aria-hidden="true"/>}</span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#B9D1F2]">{displayPolicy.source === "external" ? "Self tracked policy" : "Insurance policy"}</p>
-                <p className="truncate text-[19px] font-extrabold tracking-wide" title={displayPolicy.policy_no}>{displayPolicy.policy_no}</p>
-                <p className="truncate text-[12px] text-[#DBE8FF]">{displayPolicy.insurer_name || "Insurer not recorded"} · {displayPolicy.policy_product || displayPolicy.policy_type || "Policy"}</p>
-                <p className="mt-0.5 text-[11px] text-[#C5D9F4]">{formatPolicyDate(displayPolicy.start_date)} – {formatPolicyDate(displayPolicy.end_date)}</p>
-              </div>
-              <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${hasActivePolicy ? "bg-[#119B67]" : "bg-[#B56C21]"}`} aria-label={hasActivePolicy ? "Policy active" : policyExpired ? "Policy expired" : "Policy not active"}>
-                {hasActivePolicy ? <ShieldCheck className="h-5 w-5"/> : <ShieldX className="h-5 w-5"/>}
-              </span>
-            </div>
-            {!hasActivePolicy ? <p className="mt-3 border-t border-white/20 pt-2 text-[11px] text-[#FDE8C9]">{policyExpired ? "Policy expired" : "Policy not currently active"} · Claim registration is still permitted, subject to coverage review.</p> : null}
-          </div>
-        ) : (
-          <div className="rounded-xl border border-[#D5E2F2] bg-[#F5F9FF] px-4 py-3">
-            <p className="text-[13px] font-semibold text-[#17345D]">No policy found for this vehicle</p>
-            <p className="mt-1 text-[11px] text-[#657994]">You may still register a claim. Coverage and eligibility will be reviewed separately.</p>
-          </div>
-        )}
-      </section>
       {claimState.error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-800">{claimState.error}</p>}
       {existingClaim && existingClaimDialogOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#071B39]/60 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setExistingClaimDialogOpen(false); }}>
