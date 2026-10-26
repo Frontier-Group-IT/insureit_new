@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=6e1fa332aa5ddb74c3e15cc1b37f139c9e303295
-reason=partner-policy-remove-record-arrows-pr-3585
+source_main=c6bd5bb8a1c46c6ad05fe2d774acfa02fd0ab4e1
+reason=partner-policy-vehicle-details-fix-pr-3588
