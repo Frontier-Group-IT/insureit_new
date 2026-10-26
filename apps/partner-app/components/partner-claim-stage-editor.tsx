@@ -66,6 +66,25 @@ const CONFIG:Record<EditableStage,Config>={
 
 const CLAIM_INTIMATION_DOCS=['RC Copy','Insurance Copy','Fitness Copy','GR / Load Bill','Fasttag report last 15 days','Spot Report','Estimate Copy','Driver Licence','Driver Aadhaar front','Driver Aadhaar back','Driver Statement','Road Tax','Local Permit A','Local Permit B','National Permit','Authorization Letter','Aadhaar','PAN','GST','Cancelled Cheque','KYC Form','Claim Form','TP Affidavit','Towing Bill','Repair Estimate','NCB Verification'];
 
+const STAGE_DOCUMENTS: Record<EditableStage, string[]> = {
+  spot_status: ['Spot Survey Report', 'Surveyor Documents', 'Spot Photos'],
+  claim_intimation: CLAIM_INTIMATION_DOCS,
+  work_approval: ['Work Approval Letter', 'Surveyor Approval', 'Approval Photo', 'Repair Estimate', 'Work Order', 'Other Document'],
+  repair_ri: ['Repair Photos', 'Re-inspection Report', 'Repair Completion Report'],
+  billing: ['Final Invoice', 'Repair Bill', 'Payment Invoice'],
+  delivery_order: ['Assessment Sheet', 'Delivery Order', 'DO Approval'],
+  vehicle_delivery: ['Vehicle Delivery Receipt', 'Customer Acknowledgement', 'Delivery Photos'],
+  payment_encashment: ['Satisfaction Voucher', 'Payment Proof', 'Depreciation Slip', 'Settlement Letter'],
+};
+const DOCUMENT_ARTWORK = [
+  require('../../mobile-app/assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png'),
+  require('../../mobile-app/assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png'),
+  require('../../mobile-app/assets/brand/spot-intimation/glossy_purple_id_card_icon.png'),
+  require('../../mobile-app/assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png'),
+  require('../../mobile-app/assets/brand/spot-intimation/glossy_pink_camera_document_icon.png'),
+];
+const BULK_ARTWORK = require('../../mobile-app/assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png');
+
 export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;stage:EditableStage}) {
   const router=useRouter();
   const config=CONFIG[stage];
@@ -111,10 +130,26 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
         {config.fields.map(field=><EditableField key={field.key} field={field} value={values[field.key]||''} onChange={(value)=>setValue(field.key,value)}/>)}
       </View>
 
-      {stage==='claim_intimation'?<View style={styles.card}>
-        <View style={styles.sectionHeading}><View style={styles.sectionIcon}><MaterialCommunityIcons name="file-document-multiple-outline" size={23} color="#0B58A7"/></View><View style={{flex:1}}><Text style={styles.sectionTitle}>Documents for verification</Text><Text style={styles.sectionSubtitle}>Same claim-document set used in the Customer App</Text></View></View>
-        <View style={styles.documentGrid}>{CLAIM_INTIMATION_DOCS.map((label,index)=><View key={label} style={styles.documentTile}><View style={styles.documentGlyph}><MaterialCommunityIcons name={index%3===0?'file-document-outline':index%3===1?'card-account-details-outline':'clipboard-check-outline'} size={22} color="#FFF"/></View><Text style={styles.documentLabel} numberOfLines={2}>{label}</Text><PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType={label} milestoneKey="claim_intimation" documents={data.documents} compact/></View>)}</View>
-      </View>:null}
+      <View style={styles.card}>
+        <View style={styles.documentHeader}>
+          <Text style={styles.sectionTitle}>Upload claim documents</Text>
+          <View style={styles.optionalChip}><Text style={styles.optionalText}>Optional now</Text></View>
+        </View>
+        <View style={styles.documentGrid}>
+          {STAGE_DOCUMENTS[stage].map((label,index)=><PartnerClaimDocumentUpload
+            key={label} claimId={data.claim.id} customerId={data.customer.id}
+            documentType={label} milestoneKey={stage} documents={data.documents}
+            variant="tile" artwork={DOCUMENT_ARTWORK[index % DOCUMENT_ARTWORK.length]} label={label}
+          />)}
+        </View>
+        <PartnerClaimDocumentUpload
+          claimId={data.claim.id} customerId={data.customer.id}
+          documentType={`${stage} Additional Documents`} milestoneKey={stage}
+          documents={data.documents} variant="bulk" artwork={BULK_ARTWORK}
+          label="Upload multiple documents"
+          subtitle="Select several files now, or tap again later to add more."
+        />
+      </View>
 
       <PartnerClaimStepFooter index={stageIndex} busy={saving} canContinue onPrevious={previous} onContinue={()=>void save()} continueLabel={stage==='payment_encashment'?'Complete Claim':'Save & Continue'}/>
     </ScrollView>
@@ -176,6 +211,10 @@ function latestStageValues(data:PartnerClaimDetail,stage:ClaimStageKey){
 function Nav({label,icon,onPress}:{label:string;icon:keyof typeof Ionicons.glyphMap;onPress:()=>void}){return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.navItem}><View style={styles.navIcon}><Ionicons name={icon} size={19} color="#D8E5F8"/></View><Text style={styles.navLabel}>{label}</Text></Pressable>;}
 
 const styles=StyleSheet.create({
+  documentHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8},
+  optionalChip:{backgroundColor:'#EFF5FF',borderRadius:18,paddingHorizontal:9,paddingVertical:6},
+  optionalText:{fontSize:9.5,fontWeight:'700',color:'#164B9B'},
+
   root:{flex:1,backgroundColor:'#EDF6FE'},header:{height:50,backgroundColor:'#0860C8',flexDirection:'row',alignItems:'center',paddingHorizontal:12,gap:10},back:{width:34,height:34,alignItems:'center',justifyContent:'center'},headerCopy:{flex:1},headerTitle:{color:'#FFF',fontSize:15,fontWeight:'900'},headerSubtitle:{color:'#DDEBFA',fontSize:10},scroll:{flex:1},content:{paddingHorizontal:13,paddingTop:18,paddingBottom:24,gap:12},
   hero:{backgroundColor:'#07357E',borderRadius:18,padding:12,elevation:3},heroHeading:{flexDirection:'row',alignItems:'center',gap:8},heroCircle:{width:32,height:32,borderRadius:16,backgroundColor:'#165AB1',alignItems:'center',justifyContent:'center'},heroTitle:{flex:1,color:'#FFF',fontSize:15,fontWeight:'900'},control:{maxWidth:'42%',color:'#FFF',fontSize:10.5,fontWeight:'800'},heroRule:{height:1,backgroundColor:'#5E7BA8',marginVertical:10},identityRow:{flexDirection:'row',alignItems:'center',gap:7},identity:{flex:1,minWidth:0,flexDirection:'row',alignItems:'center',gap:7},identityDivider:{width:1,height:38,backgroundColor:'#5377A6'},logo:{width:40,height:40,borderRadius:9,backgroundColor:'#FFF',alignItems:'center',justifyContent:'center'},logoImage:{width:33,height:33},identityCopy:{flex:1,minWidth:0},identityTitle:{color:'#FFF',fontSize:9.5,fontWeight:'900'},identitySub:{color:'#DCE8F8',fontSize:8,marginTop:2},
   card:{backgroundColor:'#FFF',borderRadius:18,borderWidth:1,borderColor:'#D7E2EC',padding:13,gap:10},sectionHeading:{flexDirection:'row',alignItems:'center',gap:10,marginBottom:3},sectionIcon:{width:36,height:36,borderRadius:12,backgroundColor:'#EDF5FF',alignItems:'center',justifyContent:'center'},sectionTitle:{fontSize:12.5,fontWeight:'900',color:'#14284B'},sectionSubtitle:{fontSize:9.5,color:'#7D8B9F',marginTop:2},
