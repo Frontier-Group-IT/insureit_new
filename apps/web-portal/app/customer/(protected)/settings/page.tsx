@@ -7,8 +7,8 @@ import { useState } from "react";
 
 const accountLinks = [
   { href: "/customer/profile", title: "My Profile", detail: "View and update your personal information", Icon: UserRound },
-  { href: "/customer/profile#customer-profile-vault", title: "My Documents", detail: "Access your secure document vault", Icon: FileText },
-  { href: "/customer/support", title: "Help & Support", detail: "Get assistance or track support requests", Icon: Headphones },
+  { href: "/customer/profile#customer-profile-vault", title: "My Documents", detail: "Access and manage your important documents.", Icon: FileText },
+  { href: "/customer/support", title: "Help & Support", detail: "Get assistance or track your support request.", Icon: Headphones },
 ];
 
 export default function CustomerSettingsPage() {
@@ -29,46 +29,48 @@ export default function CustomerSettingsPage() {
 
   return (
     <div className="space-y-4 sm:space-y-5">
-      <section className="relative isolate overflow-hidden rounded-2xl bg-[#061B3B] text-white">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat opacity-95" style={{ backgroundImage: 'url("/assets/settings.jpeg")' }} />
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#061B3B]/80 via-[#061B3B]/35 to-[#061B3B]/10" />
-        <div className="relative flex min-h-[175px] items-center justify-between gap-4 px-5 py-6 sm:px-8">
-          <div className="max-w-[560px]">
-            <h1 className="text-[clamp(27px,3.5vw,40px)] font-black leading-tight">Account <span className="text-[#369BFF]">Settings</span></h1>
+      <section className="relative isolate overflow-hidden rounded-xl border border-[#E9E3FA] bg-[#F4F0FF]">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-full bg-right-center bg-no-repeat bg-[length:auto_100%] opacity-75" style={{ backgroundImage: 'url("/assets/settings.jpeg")' }} />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F7F4FF] via-[#F7F4FF]/95 via-[40%] to-[#F7F4FF]/10" />
+        <div className="relative flex min-h-[120px] items-center gap-5 px-5 py-5 sm:min-h-[140px] sm:px-6">
+          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#9A66EC] to-[#5724C7] text-white shadow-sm"><Settings className="h-9 w-9" aria-hidden="true" /></span>
+          <span aria-hidden="true" className="h-16 w-px shrink-0 bg-[#B8A7DF]" />
+          <div className="max-w-[440px]">
+            <h1 className="text-[clamp(22px,2.3vw,29px)] font-extrabold leading-tight text-[#29265B]">Account Settings</h1>
+            <p className="mt-1.5 max-w-[320px] text-[12px] leading-4 text-[#777896]">Manage your account and keep your information up to date.</p>
           </div>
-          <span className="hidden h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-white sm:flex"><Settings className="h-10 w-10" aria-hidden="true" /></span>
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white shadow-[0_8px_24px_rgba(28,50,82,.04)]" aria-labelledby="settings-account-title">
-        <div className="flex items-center gap-3 border-b border-[#E5ECF5] p-4 sm:p-5">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[#E5F1FF] text-[#176BD4]"><UserRound className="h-6 w-6" aria-hidden="true" /></span>
+      <section className="overflow-hidden rounded-xl border border-[#EAE5F4] bg-white p-3 shadow-[0_4px_20px_rgba(91,62,143,.035)]" aria-labelledby="settings-account-title">
+        <div className="flex items-center gap-3 px-1 pb-3 pt-1">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#F0E9FF] text-[#733BD4]"><UserRound className="h-6 w-6" aria-hidden="true" /></span>
           <div className="min-w-0 flex-1">
-            <h2 id="settings-account-title" className="text-[16px] font-black text-[#10213D]">My Account</h2>
-            <p className="mt-1 text-[11px] text-[#687D98]">Your personal details and documents in one place</p>
+            <h2 id="settings-account-title" className="text-[15px] font-bold text-[#292655]">My Account</h2>
+            <p className="mt-1 text-[11px] text-[#8683A2]">Manage your personal and account information</p>
           </div>
         </div>
-        <div className="divide-y divide-[#E9EEF5] px-3 sm:px-4">
+        <div className="space-y-2">
           {accountLinks.map(({ href, title, detail, Icon }) => (
-            <Link key={href} href={href} className="flex items-center gap-3 rounded-lg px-2 py-4 transition hover:bg-[#F5F9FF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#267AFF]">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EAF3FF] text-[#176BD4]"><Icon className="h-5 w-5" aria-hidden="true" /></span>
-              <span className="min-w-0 flex-1"><span className="block text-[12px] font-black text-[#10213D]">{title}</span><span className="mt-1 block text-[10px] leading-4 text-[#71839A]">{detail}</span></span>
-              <ChevronRight className="h-4 w-4 shrink-0 text-[#7B91AE]" aria-hidden="true" />
+            <Link key={href} href={href} className="flex items-center gap-3 rounded-lg bg-[#F8F6FE] px-3 py-2.5 transition hover:bg-[#F0E9FF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7843DC]">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#EAE0FF] text-[#753CD4]"><Icon className="h-5 w-5" aria-hidden="true" /></span>
+              <span className="min-w-0 flex-1"><span className="block text-[12px] font-bold text-[#292655]">{title}</span><span className="mt-1 block text-[10px] leading-4 text-[#8783A0]">{detail}</span></span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-[#7842DA]" aria-hidden="true" />
             </Link>
           ))}
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white shadow-[0_8px_24px_rgba(28,50,82,.04)]" aria-labelledby="settings-security-title">
-        <div className="flex items-center gap-3 border-b border-[#E5ECF5] px-5 py-4">
-          <ShieldCheck className="h-5 w-5 text-[#176BD4]" aria-hidden="true" />
-          <h2 id="settings-security-title" className="text-[14px] font-black text-[#10213D]">Security & Account</h2>
+      <section className="overflow-hidden rounded-xl border border-[#EAE5F4] bg-white p-3 shadow-[0_4px_20px_rgba(91,62,143,.035)]" aria-labelledby="settings-security-title">
+        <div className="flex items-center gap-3 px-1 pb-3 pt-1">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#F0E9FF] text-[#733BD4]"><ShieldCheck className="h-6 w-6" aria-hidden="true" /></span>
+          <div><h2 id="settings-security-title" className="text-[15px] font-bold text-[#292655]">Security & Account</h2><p className="mt-1 text-[11px] text-[#8683A2]">Manage your account security and preferences</p></div>
         </div>
-        <div className="p-3 sm:p-4">
-          <button type="button" onClick={() => void signOut()} disabled={signingOut} className="flex w-full items-center gap-3 rounded-lg px-2 py-3 text-left transition hover:bg-[#FFF5F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#C94848] disabled:cursor-wait disabled:opacity-60">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#FFF0F0] text-[#B74646]">{signingOut ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : <LogOut className="h-5 w-5" aria-hidden="true" />}</span>
-            <span className="min-w-0 flex-1"><span className="block text-[12px] font-black text-[#B74646]">{signingOut ? "Signing out…" : "Sign Out"}</span><span className="mt-1 block text-[10px] text-[#71839A]">Securely end your current session</span></span>
-            <ChevronRight className="h-4 w-4 shrink-0 text-[#B74646]" aria-hidden="true" />
+        <div className="">
+          <button type="button" onClick={() => void signOut()} disabled={signingOut} className="flex w-full items-center gap-3 rounded-lg bg-[#F8F6FE] px-3 py-2.5 text-left transition hover:bg-[#F2EBFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7843DC] disabled:cursor-wait disabled:opacity-60">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#FFE0F3] text-[#D23F91]">{signingOut ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : <LogOut className="h-5 w-5" aria-hidden="true" />}</span>
+            <span className="min-w-0 flex-1"><span className="block text-[12px] font-bold text-[#292655]">{signingOut ? "Signing out…" : "Sign Out"}</span><span className="mt-1 block text-[10px] text-[#8783A0]">Securely end your session and sign out from your account.</span></span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-[#7842DA]" aria-hidden="true" />
           </button>
         </div>
       </section>
