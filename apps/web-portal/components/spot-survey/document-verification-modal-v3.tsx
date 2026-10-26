@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { useMemo, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
+import { RefreshCw } from "lucide-react";
+import { getClaimRcVerificationDates } from "@/app/claims/[id]/claim-rc-prefill-actions";
 import { verifySpotSurveyDocument } from "@/app/claims/[id]/spot-survey-actions";
 
 type ModalType = "spot" | "rc" | "insurance" | "dl" | "gr";
@@ -28,11 +30,80 @@ export function DocumentVerificationModalButton({ claimId, documentId, modalType
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<Result | null>(null);
   const [saved, setSaved] = useState(false);
+  const [rcLoading, setRcLoading] = useState(false);
+  const [rcLookupMessage, setRcLookupMessage] = useState("");
+  const [rcRegistrationNumber, setRcRegistrationNumber] = useState("");
   const [spot, setSpot] = useState<SpotState>({
     axleStatus: detailText(initialDetails, "spot_axle_status"),
     overturned: detailText(initialDetails, "spot_overturned"),
   });
   const [rcDates, setRcDates] = useState<Record<string, string>>(() => Object.fromEntries(rcRows.map((row) => [row.dateName, detailText(initialDetails, row.dateName)]).filter(([, value]) => Boolean(value))));
+  useEffect(() => {
+    if (!open || modalType !== "rc") return;
+    let active = true;
+    setRcLoading(true);
+    void getClaimRcVerificationDates(claimId).then((response) => {
+      if (!active) return;
+      if (response.ok) {
+        setRcRegistrationNumber(response.registrationNumber);
+        setRcDates((previous) => {
+          const next = { ...previous };
+          for (const row of rcRows) if (!next[row.dateName] && response.dates[row.dateName as keyof typeof response.dates]) next[row.dateName] = response.dates[row.dateName as keyof typeof response.dates]!;
+          return next;
+        });
+        setRcLookupMessage(response.source === "none" ? "No stored RC dates found. Enter dates manually or use AuthBridge lookup." : "Available expiry dates prefilled from stored vehicle records / RC cache. Review against the RC copy.");
+      } else setRcLookupMessage(response.message);
+      setRcLoading(false);
+    }).catch(() => { if (active) { setRcLoading(false); setRcLookupMessage("Stored RC details unavailable. Manual entry remains available."); } });
+    return () => { active = false; };
+  }, [open, modalType, claimId]);
+
+  const fetchRcFromAuthbridge = () => {
+    if (rcLoading || !rcRegistrationNumber) return;
+    setRcLoading(true);
+    setRcLookupMessage("Checking existing AuthBridge cache / fetching RC details…");
+    void (async () => {
+      try {
+        const response = await fetch("/api/vehicles/rc-lookup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ registrationNumber: rcRegistrationNumber, claimId }),
+        });
+        const payload = await response.json() as {
+          error?: string;
+          source?: "local_cache" | "authbridge";
+          isStale?: boolean;
+          details?: Record<string, string | null>;
+        };
+        if (!response.ok || !payload.details) throw new Error(payload.error || "RC lookup unavailable.");
+        const mapping: Record<string, string> = {
+          fitness_valid_upto: "fitnessExpiryDate",
+          tax_valid_upto: "roadTaxExpiryDate",
+          insurance_valid_upto: "policyExpiryDate",
+          pucc_valid_upto: "pucExpiryDate",
+          local_permit_valid_upto: "localPermitExpiryDate",
+          national_permit_valid_upto: "nationalPermitExpiryDate",
+        };
+        setRcDates((previous) => {
+          const next = { ...previous };
+          for (const [field, sourceKey] of Object.entries(mapping)) {
+            const date = payload.details?.[sourceKey];
+            if (!next[field] && typeof date === "string" && /^\\d{4}-\\d{2}-\\d{2}$/.test(date)) {
+              next[field] = date;
+            }
+          }
+          return next;
+        });
+        setRcLookupMessage(payload.isStale ? "Showing cached RC data (provider unavailable). Please confirm against the RC copy." : payload.source === "local_cache" ? "AuthBridge cache checked. Missing RC dates filled where available." : "AuthBridge lookup complete. Missing RC dates filled where available. Review before verification.");
+      } catch (error) {
+        setRcLookupMessage(error instanceof Error ? error.message : "AuthBridge lookup unavailable. Manual entry remains available.");
+      } finally {
+        setRcLoading(false);
+      }
+    })();
+  };
+
   const policyStart = detailText(initialDetails, "insurance_start_date") || toDateOnly(policyStartDate) || "";
   const policyEnd = detailText(initialDetails, "insurance_end_date") || toDateOnly(policyEndDate) || "";
   const [insurance, setInsurance] = useState<InsuranceState>({
@@ -105,7 +176,13 @@ export function DocumentVerificationModalButton({ claimId, documentId, modalType
         <ModalHeader modalType={modalType} onClose={() => setOpen(false)} />
         <div className="max-h-[68vh] overflow-y-auto">
           {modalType === "spot" ? <SpotRows values={spot} setValues={setSpot} /> : null}
-          {modalType === "rc" ? <RcRows incidentDate={incident} values={rcDates} onChange={(key, value) => setRcDates((prev) => ({ ...prev, [key]: value }))} /> : null}
+          {modalType === "rc" ? <>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E6EEF7] bg-[#F8FAFD] px-6 py-2">
+              <p className="text-[11px] text-[#526178]">{rcLoading ? "Loading RC expiry data…" : rcLookupMessage || "Stored expiry dates are loaded automatically."}</p>
+              <button type="button" onClick={fetchRcFromAuthbridge} disabled={rcLoading || !rcRegistrationNumber} title="Fetch missing RC expiry details from AuthBridge" className="inline-flex items-center gap-1.5 rounded-lg border border-[#BBD0ED] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#174EA6] hover:bg-blue-50 disabled:opacity-50"><RefreshCw size={14} className={rcLoading ? "animate-spin" : ""} /> AuthBridge Lookup</button>
+            </div>
+            <RcRows incidentDate={incident} values={rcDates} onChange={(key, value) => setRcDates((prev) => ({ ...prev, [key]: value }))} />
+          </> : null}
           {modalType === "insurance" ? <InsuranceRows incidentDate={incident} values={insurance} setValues={setInsurance} /> : null}
           {modalType === "dl" ? <DlRows values={dl} setValues={setDl} incidentDate={incident} /> : null}
           {modalType === "gr" ? <GrRows values={gr} setValues={setGr} /> : null}

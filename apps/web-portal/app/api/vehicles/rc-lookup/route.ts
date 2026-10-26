@@ -7,6 +7,7 @@ import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { normalizeFetchedVehicleManufacturer } from "@/lib/vehicle-manufacturer-resolution";
 import { isValidVehicleRegistrationNumber } from "@/lib/vehicle-registration";
+import { requireClaimWorkflowAccess } from "@/lib/claim-workflow-access";
 
 export const dynamic = "force-dynamic";
 
@@ -80,11 +81,7 @@ export async function POST(request: Request) {
     (await hasEffectiveCapability(auth.profile, "create_vehicles", "edit")) ||
     (await hasEffectiveCapability(auth.profile, "view_vehicles", "edit"));
 
-  if (!canLookup) {
-    return NextResponse.json({ error: "You do not have permission to fetch RC details." }, { status: 403 });
-  }
-
-  let body: { registrationNumber?: string };
+  let body: { registrationNumber?: string; claimId?: string };
   try {
     body = await request.json();
   } catch {
@@ -94,6 +91,28 @@ export async function POST(request: Request) {
   const registrationNumber = normalizeVehicleRegistrationNumber(body.registrationNumber ?? "");
   if (!isValidVehicleRegistrationNumber(registrationNumber)) {
     return NextResponse.json({ error: "Enter the complete vehicle registration number." }, { status: 400 });
+  }
+
+  if (!canLookup) {
+    // Claims verification users may look up only the registration linked to a claim
+    // they are authorized to process. A supplied claim ID never grants general RC lookup.
+    if (!body.claimId || typeof body.claimId !== "string") {
+      return NextResponse.json({ error: "You do not have permission to fetch RC details." }, { status: 403 });
+    }
+    try {
+      const access = await requireClaimWorkflowAccess(body.claimId, "Claim RC lookup access denied.");
+      if (access.claim.claim_service_mode !== "broker_managed") throw new Error("Claim not in operations workflow.");
+      const { data: claimVehicle } = await access.supabase
+        .from("claims").select("vehicle_id,customer_id").eq("id",body.claimId).single();
+      if (!claimVehicle?.vehicle_id || claimVehicle.customer_id !== access.claim.customer_id) throw new Error("Invalid claim vehicle.");
+      const { data: vehicle } = await access.supabase.from("vehicles")
+        .select("vehicle_no").eq("id",claimVehicle.vehicle_id).eq("customer_id",access.claim.customer_id).single();
+      if (!vehicle || normalizeVehicleRegistrationNumber(vehicle.vehicle_no) !== registrationNumber) {
+        throw new Error("Vehicle registration mismatch.");
+      }
+    } catch {
+      return NextResponse.json({ error: "You do not have permission to fetch RC details for this claim." }, { status: 403 });
+    }
   }
 
   const admin = createSupabaseAdminClient();
