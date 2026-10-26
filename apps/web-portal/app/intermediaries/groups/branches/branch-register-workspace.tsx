@@ -41,12 +41,14 @@ export function BranchRegisterWorkspace({
   canPermanentDelete,
   loadError,
   embedded = false,
+  hideParentPartner = false,
 }: {
   rows: BranchRegisterRow[];
   canManage: boolean;
   canPermanentDelete: boolean;
   loadError: boolean;
   embedded?: boolean;
+  hideParentPartner?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewKey>("all");
@@ -99,7 +101,7 @@ export function BranchRegisterWorkspace({
     <BrokerRegisterShell
       eyebrow="Intermediary hierarchy"
       title="Branch Register"
-      description="View every accessible Branch together with its parent Partner, inherited Business Group and assigned employee."
+      description={hideParentPartner ? "View this Partner’s Branches, Business Groups and assigned employees." : "View every accessible Branch together with its parent Partner, inherited Business Group and assigned employee."}
       icon={<Store className="h-5 w-5" />}
       metrics={[
         { label: "Branches", value: rows.length, hint: "Accessible records", tone: "navy" },
@@ -111,7 +113,7 @@ export function BranchRegisterWorkspace({
       <BrokerRegisterToolbar
         query={query}
         onQueryChange={(value) => { setQuery(value); setPage(1); }}
-        searchPlaceholder="Search branch, email, phone, code, parent Partner, Group or employee"
+        searchPlaceholder={hideParentPartner ? "Search branch, email, phone, code, Group or employee" : "Search branch, email, phone, code, parent Partner, Group or employee"}
         activeViewLabel={`${filteredRows.length} in current view`}
         action={canManage && !embedded ? (
           <Link
@@ -152,16 +154,16 @@ export function BranchRegisterWorkspace({
       ) : null}
 
       <div className="mobile-card-list p-3 md:hidden">
-        {pageRows.map((branch) => <BranchMobileCard key={branch.id} branch={branch} canPermanentDelete={canPermanentDelete} />)}
+        {pageRows.map((branch) => <BranchMobileCard key={branch.id} branch={branch} canPermanentDelete={canPermanentDelete} hideParentPartner={hideParentPartner} />)}
         {!pageRows.length ? <RegisterEmpty title="No matching branches" description="Adjust the search, assignment view or Business Group filter." /> : null}
       </div>
 
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[1040px] table-fixed text-left text-[11px] text-[#1E293B]">
+        <table className={`w-full ${hideParentPartner ? "min-w-[820px]" : "min-w-[1040px]"} table-fixed text-left text-[11px] text-[#1E293B]`}>
           <thead className="sticky top-0 z-10 border-b border-[#E2E8F0] bg-[#F8FAFC] text-[9px] font-bold uppercase tracking-[0.06em] text-[#64748B]">
             <tr>
               <th className="w-[220px] px-3 py-2.5">Branch</th>
-              <th className="w-[220px] px-3 py-2.5">Parent Partner</th>
+              {!hideParentPartner ? <th className="w-[220px] px-3 py-2.5">Parent Partner</th> : null}
               <th className="w-[190px] px-3 py-2.5">Business Group</th>
               <th className="w-[190px] px-3 py-2.5">Assigned Employee</th>
               <th className="w-[190px] px-3 py-2.5">Email</th>
@@ -178,14 +180,14 @@ export function BranchRegisterWorkspace({
                     <p className="mt-0.5 truncate text-[9px] font-medium text-[#64748B]">{branch.branch_code}</p>
                   </div>
                 </td>
-                <td className="px-3">
+                {!hideParentPartner ? <td className="px-3">
                   {branch.parent_partner_name ? (
                     <div className="min-w-0">
                       <p className="truncate font-semibold text-[#334155]">{branch.parent_partner_name}</p>
                       <p className="mt-0.5 truncate text-[9px] text-[#64748B]">{branch.parent_partner_code ?? "—"}</p>
                     </div>
                   ) : <UnassignedLabel />}
-                </td>
+                </td> : null}
                 <td className="px-3">
                   {branch.group_name ? (
                     <div className="min-w-0">
@@ -225,7 +227,7 @@ export function BranchRegisterWorkspace({
   );
 }
 
-function BranchMobileCard({ branch, canPermanentDelete }: { branch: BranchRegisterRow; canPermanentDelete: boolean }) {
+function BranchMobileCard({ branch, canPermanentDelete, hideParentPartner = false }: { branch: BranchRegisterRow; canPermanentDelete: boolean; hideParentPartner?: boolean }) {
   return (
     <article className="mobile-record-card">
       <div className="flex items-start gap-3">
@@ -241,10 +243,10 @@ function BranchMobileCard({ branch, canPermanentDelete }: { branch: BranchRegist
             <StatusPill status={branch.branch_status} />
           </div>
           <div className="mt-3 grid gap-2 text-[12px] text-[#53627A]">
-            <div className="flex min-h-10 items-center gap-2 rounded-xl bg-[#F8FAFC] px-3">
+            {!hideParentPartner ? <div className="flex min-h-10 items-center gap-2 rounded-xl bg-[#F8FAFC] px-3">
               <Building2 className="h-4 w-4 shrink-0" />
               <span className="truncate">{branch.parent_partner_name ?? "Unassigned parent Partner"}</span>
-            </div>
+            </div> : null}
             <div className="grid grid-cols-2 gap-2 text-[11px]">
               <Info label="Group" value={branch.group_name ?? "—"} />
               <Info label="Employee" value={branch.employee_name ?? "—"} />
