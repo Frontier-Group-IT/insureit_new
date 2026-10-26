@@ -42,3 +42,22 @@
 @media (prefers-reduced-motion: reduce) {
   .customer-compact * { scroll-behavior: auto !important; }
 }
+
+/* Phase 2: Home and Profile motion — scoped to Customer Portal only. */
+@keyframes customer-profile-arrive { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes customer-vault-reveal { from { opacity: 0; transform: translateY(-7px); } to { opacity: 1; transform: translateY(0); } }
+.customer-compact .customer-profile-hero { animation: customer-profile-arrive 420ms cubic-bezier(.22,.72,.25,1) both; }
+.customer-compact .customer-profile-detail-section { animation: customer-profile-arrive 420ms 80ms cubic-bezier(.22,.72,.25,1) both; }
+.customer-compact .customer-profile-vault { animation: customer-profile-arrive 420ms 150ms cubic-bezier(.22,.72,.25,1) both; }
+.customer-compact .customer-profile-vault-content { animation: customer-vault-reveal 210ms ease-out both; }
+.customer-compact .customer-profile-detail-card, .customer-compact .customer-profile-category {
+  transition: transform 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
+}
+@media (hover:hover) and (pointer:fine) {
+  .customer-compact .customer-profile-detail-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(93,62,170,.09); }
+  .customer-compact .customer-profile-category:hover { transform: translateY(-2px); background-color: #fff; box-shadow: 0 5px 16px rgba(93,62,170,.12); }
+}
+@media (prefers-reduced-motion:reduce) {
+  .customer-compact :is(.customer-profile-hero,.customer-profile-detail-section,.customer-profile-vault,.customer-profile-vault-content) { animation: none !important; }
+  .customer-compact :is(.customer-profile-detail-card,.customer-profile-category) { transition: none !important; transform: none !important; }
+}
