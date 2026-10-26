@@ -5,12 +5,10 @@ import { useRouter } from 'expo-router';
 
 import { PartnerListScreen } from '@/components/partner-list-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
-import { PartnerOperationalRow } from '@/components/ui/partner-operational-row';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerPagination } from '@/components/ui/partner-pagination';
-import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
 import {
   getPartnerRenewalSummary,
   listPartnerRenewals,
@@ -139,8 +137,9 @@ export default function RenewalsScreen() {
               <Text style={styles.summaryLabel}>Net Premium</Text>
             </View>
             <View style={styles.summaryCount}>
-              <Text style={styles.summaryCountValue}>{selectedSummary.count}</Text>
-              <Text style={styles.summaryCountLabel}>Policies</Text>
+              <View style={styles.summaryCountIcon}><Ionicons name="document-text-outline" size={22} color="#FFFFFF" /></View>
+              <View><Text style={styles.summaryCountValue}>{selectedSummary.count}</Text>
+              <Text style={styles.summaryCountLabel}>Policies</Text></View>
             </View>
           </Pressable>
         </View>
@@ -171,7 +170,7 @@ export default function RenewalsScreen() {
 
       <View style={styles.opportunitiesHeader}>
         <View style={styles.opportunitiesLeft}>
-          <Ionicons name="list-outline" size={23} color="#3326D9" />
+          <View style={styles.listIcon}><Ionicons name="list-outline" size={23} color="#0877EB" /></View>
           <View>
             <Text style={styles.opportunitiesTitle}>{mode === 'expired' ? 'OVERDUE POLICIES' : 'RENEWAL OPPORTUNITIES'}</Text>
             <Text style={styles.opportunitiesMeta}>{collection.loading ? 'Loading…' : `${collection.rows.length} policies · ${collection.total} total`}</Text>
@@ -225,6 +224,7 @@ export default function RenewalsScreen() {
       title="Renewal Work Queue"
       onBack={() => router.back()}
       showArtwork={false}
+      topBar={<View style={styles.referenceHeader}><Ionicons name="arrow-back" size={21} color="#FFFFFF" onPress={() => router.back()} /><Ionicons name="document-text-outline" size={23} color="#FFFFFF" /><Text style={styles.referenceTitle}>Renewal Work Queue</Text></View>}
       data={sortedRows}
       keyExtractor={(row) => row.policy_id}
       renderItem={({ item, index }) => (
@@ -271,18 +271,20 @@ function resolveSummarySelection(data: PartnerRenewalSummary | null | undefined,
 }
 
 function RenewalCard({ row, mode, onOpenPolicy }: { row: PartnerRenewalRow; mode: PartnerRenewalMode; onOpenPolicy: () => void }) {
+  const expired = daysUntil(row.end_date) < 0;
   return (
-    <PartnerOperationalRow
-      title={row.customer_name}
-      subtitle={row.policy_no || row.policy_code || 'Policy'}
-      value={formatIndianCurrency(row.net_premium)}
-      leading={<View style={styles.renewalArtwork}><PartnerInsurerLogo name={row.insurer_name} fallback={PartnerAssets.actions.renewals} style={styles.renewalArtworkImage} /></View>}
-      trailing={<PartnerStatusBadge label={renewalLabel(row.end_date)} tone={mode === 'expired' ? 'danger' : renewalTone(row.end_date)} />}
-      onPress={onOpenPolicy}
-      accessibilityLabel={`Open renewal policy ${row.policy_no || row.policy_code || ''} for ${row.customer_name}`}
-      divider={false}
-      showChevron={false}
-    />
+    <Pressable accessibilityRole="button" accessibilityLabel={`Open renewal policy ${row.policy_no || row.policy_code || ''} for ${row.customer_name}`} onPress={onOpenPolicy} style={({ pressed }) => [styles.renewalRow, pressed && styles.pressed]}>
+      <View style={styles.renewalArtwork}><PartnerInsurerLogo name={row.insurer_name} fallback={PartnerAssets.actions.renewals} style={styles.renewalArtworkImage} /></View>
+      <View style={styles.renewalCopy}>
+        <Text numberOfLines={1} style={styles.renewalName}>{row.customer_name}</Text>
+        <Text numberOfLines={1} style={styles.renewalPolicy}>{row.policy_no || row.policy_code || 'Policy'}</Text>
+        <Text style={styles.renewalPremium}>{formatIndianCurrency(row.net_premium)}</Text>
+      </View>
+      <View style={[styles.renewalBadge, expired ? styles.badgeOverdue : styles.badgeUpcoming]}>
+        {expired ? <Ionicons name="time-outline" color="#C62626" size={13} /> : null}
+        <Text style={[styles.renewalBadgeText, expired ? styles.badgeOverdueText : styles.badgeUpcomingText]}>{renewalLabel(row.end_date)}</Text>
+      </View>
+    </Pressable>
   );
 }
 
@@ -297,24 +299,28 @@ function renewalTone(value: string | null): 'warning' | 'info' { return daysUnti
 function formatUpdatedAt(value: number | null) { if (!value) return 'earlier'; return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value)); }
 
 const styles = StyleSheet.create({
-  summaryPanel: { marginTop: -4, padding: 16, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E7ECF4', shadowColor: '#0A285F', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 },
-  summaryLead: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  referenceHeader: { minHeight: 82, marginHorizontal: -partnerTheme.spacing.lg, marginBottom: 14, paddingHorizontal: 18, backgroundColor: '#075BC6', flexDirection: 'row', alignItems: 'center', gap: 12 },
+  referenceTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '800', flexShrink: 1 },
+  summaryPanel: { marginTop: 0, padding: 16, borderRadius: 15, backgroundColor: '#092D69', shadowColor: '#0A285F', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 2 },
+  summaryLead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   summaryPressed: { opacity: 0.72 },
-  summaryEyebrow: { color: '#68758A', fontSize: 9, lineHeight: 12, fontWeight: '800', letterSpacing: 1.4 },
-  summaryPremium: { marginTop: 2, color: '#0C1830', fontSize: 22, lineHeight: 27, fontWeight: '800' },
-  summaryLabel: { marginTop: 1, color: '#657086', fontSize: 10 },
-  summaryCount: { alignItems: 'flex-end' },
-  summaryCountValue: { color: '#0C1830', fontSize: 23, lineHeight: 27, fontWeight: '800' },
-  summaryCountLabel: { marginTop: 3, color: '#657086', fontSize: 10 },
+  summaryEyebrow: { color: '#B6C9E6', fontSize: 9, lineHeight: 12, fontWeight: '800', letterSpacing: 1.4 },
+  summaryPremium: { marginTop: 2, color: '#FFFFFF', fontSize: 22, lineHeight: 27, fontWeight: '800' },
+  summaryLabel: { marginTop: 1, color: '#E6EFFF', fontSize: 10 },
+  summaryCount: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 13, borderLeftWidth: 1, borderLeftColor: '#5C79A4' },
+  summaryCountIcon: { backgroundColor: '#1262BD', width: 37, height: 37, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  summaryCountValue: { color: '#FFFFFF', fontSize: 23, lineHeight: 27, fontWeight: '800' },
+  summaryCountLabel: { marginTop: 3, color: '#DAE7FA', fontSize: 10 },
   banner: { marginTop: 9 }, inlineBanner: { marginBottom: 8 },
-  modeTabs: { marginTop: 14, flexDirection: 'row', gap: 20, borderBottomWidth: 1, borderBottomColor: '#E3E8F0' },
-  modeTab: { minHeight: 43, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 5, borderBottomWidth: 3, borderBottomColor: 'transparent' },
-  modeTabActive: { borderBottomColor: '#3E28F5' }, modeLabel: { color: '#29344B', fontSize: 12, fontWeight: '700' }, modeLabelActive: { color: '#111B31' },
+  modeTabs: { marginTop: 14, flexDirection: 'row', gap: 0, borderBottomWidth: 1, borderBottomColor: '#D5E3F2' },
+  modeTab: { flex: 1, minHeight: 43, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 5, borderBottomWidth: 3, borderBottomColor: 'transparent' },
+  modeTabActive: { borderBottomColor: '#0877EB' }, modeLabel: { color: '#29344B', fontSize: 12, fontWeight: '700' }, modeLabelActive: { color: '#111B31' },
   tabBadge: { minWidth: 23, height: 23, paddingHorizontal: 6, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }, tabBadgeBlue: { backgroundColor: '#EAF0FF' }, tabBadgeDanger: { backgroundColor: '#FFE9E9' },
-  tabBadgeText: { fontSize: 10, fontWeight: '800' }, tabBadgeBlueText: { color: '#4434F4' }, tabBadgeDangerText: { color: '#EF4444' },
+  tabBadgeText: { fontSize: 10, fontWeight: '800' }, tabBadgeBlueText: { color: '#0877EB' }, tabBadgeDangerText: { color: '#EF4444' },
   searchRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center' }, searchGrow: { flex: 1 },
   searchField: { borderColor: '#D8E0EB', backgroundColor: '#FFFFFF' },
   opportunitiesHeader: { marginTop: 14, paddingHorizontal: 10, paddingVertical: 10, backgroundColor: '#FFFFFF', borderColor: '#E4E9F1', borderWidth: 1, borderBottomWidth: 0, borderTopLeftRadius: 14, borderTopRightRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, opportunitiesLeft: { flexDirection: 'row', alignItems: 'center', gap: 9, flexShrink: 1 },
+  listIcon: { backgroundColor: '#EAF4FF', borderRadius: 9, width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   opportunitiesTitle: { color: '#17233B', fontSize: 11, lineHeight: 15, fontWeight: '900', letterSpacing: 0.25 }, opportunitiesMeta: { marginTop: 1, color: '#7A8598', fontSize: 9 },
   sortArea: { flexDirection: 'row', alignItems: 'center' }, sortButton: { minHeight: 35, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 11, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F1' }, sortText: { color: '#263249', fontSize: 10, fontWeight: '700' },
   sortOverlay: { flex: 1, justifyContent: 'flex-start' },
@@ -325,6 +331,14 @@ const styles = StyleSheet.create({
   recordCard: { backgroundColor: '#FFFFFF', borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#E4E9F1' },
   recordCardLast: { borderBottomWidth: 1, borderBottomLeftRadius: 14, borderBottomRightRadius: 14, overflow: 'hidden' },
   recordDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#E4E9F1' },
-renewalArtwork: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' }, renewalArtworkImage: { width: 36, height: 36 },
+renewalArtwork: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' }, renewalArtworkImage: { width: 44, height: 44 },
+  renewalRow: { minHeight: 78, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  renewalCopy: { flex: 1, minWidth: 0, gap: 3 },
+  renewalName: { color: '#102B53', fontWeight: '800', fontSize: 12 },
+  renewalPolicy: { color: '#7B879B', fontSize: 10.5 },
+  renewalPremium: { color: '#142A4A', fontWeight: '800', fontSize: 12 },
+  renewalBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 20, paddingHorizontal: 9, paddingVertical: 7 },
+  badgeOverdue: { backgroundColor: '#FFEBEB' }, badgeUpcoming: { backgroundColor: '#FFF4E3' },
+  renewalBadgeText: { fontSize: 10, fontWeight: '800' }, badgeOverdueText: { color: '#BF2929' }, badgeUpcomingText: { color: '#94611C' },
   pressed: { opacity: 0.65 },
 });
