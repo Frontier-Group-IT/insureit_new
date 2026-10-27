@@ -39,9 +39,7 @@ export default function CustomerSettingsPage() {
 
   return (
     <div className="space-y-4 sm:space-y-5">
-      <section className="relative isolate overflow-hidden rounded-xl border border-[#E9E3FA] bg-[#F4F0FF]">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-full bg-right-center bg-no-repeat bg-[length:auto_100%] opacity-75" style={{ backgroundImage: 'url("/assets/settings.jpeg")' }} />
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F7F4FF] via-[#F7F4FF]/95 via-[40%] to-[#F7F4FF]/10" />
+      <section className="relative isolate overflow-hidden rounded-xl border border-[#E4E8F1] bg-white">
         <div className="relative flex min-h-[120px] items-center gap-5 px-5 py-5 sm:min-h-[140px] sm:px-6">
           <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#9A66EC] to-[#5724C7] text-white shadow-sm"><Settings className="h-9 w-9" aria-hidden="true" /></span>
           <span aria-hidden="true" className="h-16 w-px shrink-0 bg-[#B8A7DF]" />
@@ -62,7 +60,7 @@ export default function CustomerSettingsPage() {
         </div>
         <div className="space-y-2">
           {accountLinks.map(({ href, title, detail, Icon }) => (
-            <Link key={href} href={href} className="flex items-center gap-3 rounded-lg bg-[#F8F6FE] px-3 py-2.5 transition hover:bg-[#F0E9FF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7843DC]">
+            <Link key={href} href={href} className="flex items-center gap-3 rounded-lg border border-[#EAE5F4] bg-white px-3 py-2.5 transition hover:bg-[#F8F6FE] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7843DC]">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#EAE0FF] text-[#753CD4]"><Icon className="h-5 w-5" aria-hidden="true" /></span>
               <span className="min-w-0 flex-1"><span className="block text-[12px] font-bold text-[#292655]">{title}</span><span className="mt-1 block text-[10px] leading-4 text-[#8783A0]">{detail}</span></span>
               <ChevronRight className="h-4 w-4 shrink-0 text-[#7842DA]" aria-hidden="true" />
@@ -75,7 +73,7 @@ export default function CustomerSettingsPage() {
         <div className="mb-3 flex items-center gap-2 text-[#733BD4]"><PanelLeft className="h-5 w-5" /><h2 id="settings-layout-title" className="text-[15px] font-bold text-[#292655]">Appearance &amp; Layout</h2></div>
         <p className="mb-4 text-[11px] text-[#8683A2]">Choose your preferred Customer Portal navigation layout.</p>
         <div role="group" aria-label="Navigation layout" className="grid gap-3 sm:grid-cols-2">
-          <button type="button" aria-pressed={navigationLayout === "sidebar"} onClick={() => setPreferredLayout("sidebar")} className={"flex items-center gap-3 rounded-xl border p-4 text-left transition " + (navigationLayout === "sidebar" ? "border-[#7950DA] bg-[#F3EDFF]" : "border-[#EAE5F4] hover:bg-[#F8F5FF]")}>
+          <button type="button" aria-pressed={navigationLayout === "sidebar"} onClick={() => setPreferredLayout("sidebar")} className={"flex items-center gap-3 rounded-xl border p-4 text-left transition " + (navigationLayout === "sidebar" ? "border-[#7950DA] bg-white ring-1 ring-[#7950DA]/20" : "border-[#EAE5F4] hover:bg-[#F8F5FF]")}>
             <PanelLeft className="h-7 w-7 shrink-0 text-[#733BD4]" /><span><strong className="block text-[13px] text-[#292655]">Sidebar (Default)</strong><span className="block text-[11px] text-[#8683A2]">Left navigation with comfortable content width</span></span>
           </button>
           <button type="button" aria-pressed={navigationLayout === "top"} onClick={() => setPreferredLayout("top")} className={"flex items-center gap-3 rounded-xl border p-4 text-left transition " + (navigationLayout === "top" ? "border-[#7950DA] bg-[#F3EDFF]" : "border-[#EAE5F4] hover:bg-[#F8F5FF]")}>
@@ -89,7 +87,7 @@ export default function CustomerSettingsPage() {
           <div><h2 id="settings-security-title" className="text-[15px] font-bold text-[#292655]">Security & Account</h2><p className="mt-1 text-[11px] text-[#8683A2]">Manage your account security and preferences</p></div>
         </div>
         <div className="">
-          <button type="button" onClick={() => void signOut()} disabled={signingOut} className="flex w-full items-center gap-3 rounded-lg bg-[#F8F6FE] px-3 py-2.5 text-left transition hover:bg-[#F2EBFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7843DC] disabled:cursor-wait disabled:opacity-60">
+          <button type="button" onClick={() => void signOut()} disabled={signingOut} className="flex w-full items-center gap-3 rounded-lg border border-[#EAE5F4] bg-white px-3 py-2.5 text-left transition hover:bg-[#F8F6FE] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7843DC] disabled:cursor-wait disabled:opacity-60">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#FFE0F3] text-[#D23F91]">{signingOut ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : <LogOut className="h-5 w-5" aria-hidden="true" />}</span>
             <span className="min-w-0 flex-1"><span className="block text-[12px] font-bold text-[#292655]">{signingOut ? "Signing out…" : "Sign Out"}</span><span className="mt-1 block text-[10px] text-[#8783A0]">Securely end your session and sign out from your account.</span></span>
             <ChevronRight className="h-4 w-4 shrink-0 text-[#7842DA]" aria-hidden="true" />
