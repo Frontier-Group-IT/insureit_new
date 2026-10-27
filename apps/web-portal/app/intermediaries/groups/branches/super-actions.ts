@@ -79,3 +79,17 @@ export async function editSuperBranch(form: FormData) {
   if (partnerError) throw new Error(partnerError.message);
   refresh();
 }
+
+export async function editSuperBranchSafely(form: FormData): Promise<{ ok: boolean; error?: string }> {
+  try {
+    await editSuperBranch(form);
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message === "IT Super User permission required.") return { ok: false, error: "You do not have permission to edit this branch." };
+    if (message === "Enter valid branch details.") return { ok: false, error: message };
+    if (message === "Branch profile not found." || message === "Invalid branch ID") return { ok: false, error: "Branch record not found. Refresh and retry." };
+    console.error("Branch edit failed", error);
+    return { ok: false, error: "Could not save branch changes. Please retry or contact support." };
+  }
+}
