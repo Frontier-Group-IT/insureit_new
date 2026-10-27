@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react';
 import { Redirect, Tabs } from 'expo-router';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -80,6 +80,6 @@ const styles = StyleSheet.create({
     marginTop: 0,
     fontSize: 9.25,
     lineHeight: 12,
-    fontWeight: '600',
+    fontWeight: Platform.OS === 'ios' ? '400' : '600',
   },
 });

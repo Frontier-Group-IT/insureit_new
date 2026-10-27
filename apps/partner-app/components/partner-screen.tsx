@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 11.5,
     lineHeight: 15,
-    fontWeight: '700',
+    fontWeight: Platform.OS === 'ios' ? '400' : '700',
     letterSpacing: -0.02,
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 1 },
@@ -551,10 +551,10 @@ const styles = StyleSheet.create({
   homeSearchActionText: {
     color: '#9DA6B6',
     fontSize: 10.5,
-    fontWeight: '600',
+    fontWeight: Platform.OS === 'ios' ? '400' : '600',
   },
   homeSearchActionTextActive: {
     color: '#1765C1',
-    fontWeight: '800',
+    fontWeight: Platform.OS === 'ios' ? '400' : '800',
   },
 });
