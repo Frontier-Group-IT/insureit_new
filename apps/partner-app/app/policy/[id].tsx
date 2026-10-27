@@ -7,7 +7,7 @@ import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerPolicyDetailIcon, type PartnerPolicyDetailIconKind } from '@/components/ui/partner-policy-detail-icon';
-import { getPartnerPolicyDetail, type PartnerPolicyDetail } from '@/lib/policies';
+import { getPartnerPolicyDetail, getPartnerPolicyIntermediaryName, type PartnerPolicyDetail } from '@/lib/policies';
 import { formatIndianCurrency } from '@/lib/format';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
@@ -19,6 +19,7 @@ export default function PolicyDetailScreen() {
   const [data, setData] = useState<PartnerPolicyDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [intermediaryName, setIntermediaryName] = useState<string | null>(null);
   const [showOverviewDetails, setShowOverviewDetails] = useState(false);
   const [showPremiumDetails, setShowPremiumDetails] = useState(false);
   const [showCommercialDetails, setShowCommercialDetails] = useState(false);
@@ -29,7 +30,13 @@ export default function PolicyDetailScreen() {
     setLoading(true);
     setError('');
     try {
-      setData(await getPartnerPolicyDetail(id));
+      const detail = await getPartnerPolicyDetail(id);
+      setData(detail);
+      setIntermediaryName(null);
+      if (detail.commercial.intermediary_code) {
+        // Name lookup is scoped by the same policy access check as policy details.
+        void getPartnerPolicyIntermediaryName(id).then(setIntermediaryName).catch(() => setIntermediaryName(null));
+      }
     } catch {
       setError('This policy could not be loaded in your Partner scope.');
     } finally {
@@ -100,7 +107,7 @@ export default function PolicyDetailScreen() {
               </View>
               <View style={styles.periodDivider} />
               <View style={styles.periodBlock}>
-                <View style={styles.periodTitleRow}><PartnerPolicyDetailIcon kind="policy-period" size={26} showBadge={false} /><Text style={styles.periodLabel}>Policy Period</Text></View>
+                <View style={styles.periodTitleRow}><Text style={styles.periodLabel}>Policy Period</Text></View>
                 <Text style={styles.periodValue}>{formatDate(data.policy.start_date)} – {formatDate(data.policy.end_date)}</Text>
               </View>
             </View>
@@ -145,12 +152,12 @@ export default function PolicyDetailScreen() {
 
             </Pressable>
             {showPremiumDetails ? (
-              <View style={styles.detailGrid}>
-                <MiniInfo label="Net premium" value={nullableMoney(data.premium.net_premium)} />
-                <MiniInfo label="OD premium" value={nullableMoney(data.premium.od_premium)} />
-                <MiniInfo label="TP premium" value={nullableMoney(data.premium.tp_premium)} />
-                <MiniInfo label="GST" value={nullableMoney(data.premium.gst_amount)} />
-                <MiniInfo label="CPA" value={data.premium.cpa_opted ? nullableMoney(data.premium.cpa_amount) : 'Not opted / not recorded'} />
+              <View style={styles.premiumDetailGrid}>
+                <MiniInfo compact label="Net premium" value={nullableMoney(data.premium.net_premium)} />
+                <MiniInfo compact label="OD premium" value={nullableMoney(data.premium.od_premium)} />
+                <MiniInfo compact label="TP premium" value={nullableMoney(data.premium.tp_premium)} />
+                <MiniInfo compact label="GST" value={nullableMoney(data.premium.gst_amount)} />
+                <MiniInfo compact label="CPA" value={data.premium.cpa_opted ? nullableMoney(data.premium.cpa_amount) : 'Not opted / not recorded'} />
               </View>
             ) : null}
           </Card>
@@ -197,7 +204,7 @@ export default function PolicyDetailScreen() {
             </Pressable>
             {showCommercialDetails ? (
               <View style={styles.detailGrid}>
-                <MiniInfo label="Intermediary" value={[humanize(data.commercial.intermediary_type || ''), data.commercial.intermediary_code].filter(Boolean).join(' · ') || 'Not recorded'} />
+                <MiniInfo label="Intermediary" value={intermediaryName || "Not recorded"} />
                 <MiniInfo label="RM" value={data.commercial.rm_name || 'Not recorded'} />
                 <MiniInfo label="Group" value={[data.commercial.group_name, data.commercial.group_code].filter(Boolean).join(' · ') || 'No policy snapshot'} />
                 <MiniInfo label="Policy lifecycle" value={humanize(data.policy.lifecycle_status)} />
@@ -226,7 +233,7 @@ function CardHeader({ iconKind, title, actionLabel, onAction }: { iconKind: Part
 }
 
 function QuickAction({ iconKind, label, onPress }: { iconKind: PartnerPolicyDetailIconKind; label: string; tone?: string; onPress?: () => void }) {
-  return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.quickAction, pressed && styles.pressed]}><Ionicons name={iconKind === "policy-document" ? "document-text" : iconKind === "renew-policy" ? "sync" : iconKind === "raise-claim" ? "shield-checkmark" : "people"} size={25} color="#0879E9" /><Text numberOfLines={2} style={styles.quickLabel}>{label}</Text></Pressable>;
+  return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.quickAction, iconKind === "policy-document" ? styles.quickBlue : iconKind === "renew-policy" ? styles.quickGreen : iconKind === "raise-claim" ? styles.quickOrange : styles.quickPurple, pressed && styles.pressed]}><Ionicons name={iconKind === "policy-document" ? "document-text" : iconKind === "renew-policy" ? "sync" : iconKind === "raise-claim" ? "shield-checkmark" : "people"} size={25} color="#0879E9" /><Text numberOfLines={2} style={styles.quickLabel}>{label}</Text></Pressable>;
 }
 
 function OverviewItem({ iconKind, label, value, insurerName }: { iconKind: PartnerPolicyDetailIconKind; label: string; value: string; insurerName?: string | null }) {
@@ -237,7 +244,7 @@ function EntityRow({ image, icon, title, subtitle, onPress }: { image?: ImageSou
   return <Pressable accessibilityRole={onPress ? 'button' : undefined} disabled={!onPress} onPress={onPress} style={({ pressed }) => [styles.entityRow, pressed && onPress ? styles.pressed : null]}><View style={styles.entityIcon}>{icon ? <Ionicons name={icon} size={20} color="#2468D7" /> : image ? <Image source={image} style={styles.entityArtwork} resizeMode="contain" /> : null}</View><View style={styles.entityBody}><Text numberOfLines={1} style={styles.entityTitle}>{title}</Text><Text numberOfLines={1} style={styles.entityMeta}>{subtitle}</Text></View></Pressable>;
 }
 
-function MiniInfo({ label, value }: { label: string; value: string }) { return <View style={styles.miniInfo}><Text style={styles.miniLabel}>{label}</Text><Text style={styles.miniValue}>{value}</Text></View>; }
+function MiniInfo({ label, value, compact = false }: { label: string; value: string; compact?: boolean }) { return <View style={[styles.miniInfo, compact && styles.miniInfoCompact]}><Text style={styles.miniLabel}>{label}</Text><Text style={styles.miniValue}>{value}</Text></View>; }
 function policyArtwork(category: string): ImageSourcePropType { if (category === 'Motor') return PartnerAssets.products.motorInsurance; if (category === 'Health') return PartnerAssets.products.healthInsurance; if (category === 'Life') return PartnerAssets.products.familyInsurance; return PartnerAssets.products.commercialInsurance; }
 function displayParts(...values: Array<string | number | null | undefined>) { return values.map((value) => value == null ? '' : String(value).trim()).filter((value) => value && value.toLowerCase() !== 'null' && value.toLowerCase() !== 'undefined').join(' · '); }
 function policyCategory(data: PartnerPolicyDetail) { const value = [data.policy.policy_type, data.policy.policy_product, data.policy.business_line].filter(Boolean).join(' ').toLowerCase(); if (value.includes('health')) return 'Health'; if (value.includes('life')) return 'Life'; if (value.includes('motor') || data.vehicle) return 'Motor'; return 'Non-Motor'; }
@@ -268,7 +275,7 @@ const styles = StyleSheet.create({
   summaryBadges: { alignItems: 'flex-end', gap: 5 },
   summaryDivider: { height: 1, marginTop: 12, backgroundColor: '#6B89AD' },
   premiumRow: { minHeight: 47, flexDirection: 'row', alignItems: 'center', paddingTop: 7 },
-  premiumBlock: { flex: 1 }, premiumLabel: { color: '#D5E5FA', fontSize: 9, lineHeight: 11 }, premiumValue: { marginTop: 1, color: '#FFFFFF', fontSize: 19, lineHeight: 23, fontWeight: '800', letterSpacing: -0.3 },
+  premiumBlock: { flex: 1 }, premiumLabel: { color: '#D5E5FA', fontSize: 9, lineHeight: 11 }, premiumValue: { marginTop: 1, color: '#FFFFFF', fontSize: 16, lineHeight: 20, fontWeight: '800', letterSpacing: -0.3 },
   periodDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', marginHorizontal: 12, backgroundColor: '#6B89AD' },
   periodBlock: { flex: 1.03, minWidth: 0 }, periodTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 }, periodLabel: { color: '#D5E5FA', fontSize: 9, lineHeight: 11 }, periodValue: { marginTop: 2, color: '#FFFFFF', fontSize: 9.5, lineHeight: 12, fontWeight: '700' },
   card: { overflow: 'hidden', borderRadius: 13, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F1', backgroundColor: '#FFFFFF' },
@@ -276,7 +283,7 @@ const styles = StyleSheet.create({
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 }, cardTitle: { color: '#102A51', fontSize: 12.5, lineHeight: 16, fontWeight: '800' },
   cardHeaderAction: { flexDirection: 'row', alignItems: 'center', gap: 1, minHeight: 32, paddingLeft: 8 }, cardHeaderActionText: { color: '#0969CF', fontSize: 9, lineHeight: 12, fontWeight: '700' },
   quickGrid: { flexDirection: 'row', gap: 0, paddingHorizontal: 9, paddingBottom: 9 },
-  quickAction: { flex: 1, minHeight: 61, alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 3, borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: '#DCE7F3' },
+  quickAction: { flex: 1, borderRadius: 9, marginHorizontal: 2, minHeight: 61, alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 3, borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: '#DCE7F3' },
   quickBlue: { backgroundColor: '#EAF5FF' }, quickGreen: { backgroundColor: '#E9F8F2' }, quickOrange: { backgroundColor: '#FFF1E6' }, quickPurple: { backgroundColor: '#F0EBFF' },
   quickLabel: { color: '#17304F', textAlign: 'center', fontSize: 8.5, lineHeight: 11, fontWeight: '700' },
   overviewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, paddingHorizontal: 9, paddingBottom: 9 },
@@ -285,7 +292,9 @@ const styles = StyleSheet.create({
   premiumDisclosure: { minHeight: 47, marginHorizontal: 9, marginBottom: 8, paddingHorizontal: 9, borderRadius: 9, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFFFF' },
   commercialRow: { minHeight: 47, marginHorizontal: 9, marginBottom: 8, paddingHorizontal: 9, borderRadius: 9, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFFFF' },
   disclosureText: { flex: 1, minWidth: 0 }, disclosureTitle: { color: '#152945', fontSize: 10.5, lineHeight: 13, fontWeight: '700' }, disclosureSummary: { marginTop: 2, color: '#6F7F94', fontSize: 8.5, lineHeight: 11 },
+  premiumDetailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 10, paddingBottom: 10 },
   detailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 10, paddingBottom: 10 }, miniInfo: { width: '47%', minHeight: 38, padding: 7, borderRadius: 8, backgroundColor: '#F7F9FC' }, miniLabel: { color: '#8A95A6', fontSize: 8, lineHeight: 10, textTransform: 'uppercase' }, miniValue: { marginTop: 2, color: '#21334E', fontSize: 9.5, lineHeight: 12, fontWeight: '700' },
+  miniInfoCompact: { width: '31%', flexGrow: 1, minWidth: 0, paddingHorizontal: 5 },
   entityStack: { paddingHorizontal: 10, paddingBottom: 8 }, entityRow: { minHeight: 45, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDF1F6' }, entityIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EAF5FF' }, entityArtwork: { width: 27, height: 27 }, entityBody: { flex: 1, minWidth: 0 }, entityTitle: { color: '#142A49', fontSize: 10, lineHeight: 13, fontWeight: '800' }, entityMeta: { marginTop: 2, color: '#7C899B', fontSize: 8.5, lineHeight: 11 },
   pressed: { opacity: 0.68 },
 });

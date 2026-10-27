@@ -194,9 +194,10 @@ for (const kind of [
   const configKey = kind.includes('-') ? `'${kind}':` : `${kind}:`;
   requireText(policyDetailIcon, configKey, `Policy detail professional icon system is missing ${kind}.`);
 }
-for (const directKind of ['premium-breakup', 'sales-ownership', 'policy-period']) {
+for (const directKind of ['premium-breakup', 'sales-ownership']) {
   requireText(policyDetail, `kind="${directKind}"`, `Policy detail must render the professional ${directKind} icon.`);
 }
+if (policyDetail.includes('kind="policy-period"')) throw new Error('Policy Period must not render an icon in the summary.');
 requireText(policyDetailIcon, "backgroundColor: palette.bg", 'Policy detail professional icons must render semantic tone backgrounds.');
 requireText(policyDetailIcon, "borderColor: palette.border", 'Policy detail professional icons must keep bordered professional tiles.');
 requireText(policyDetailIcon, "shadowColor: palette.fg", 'Policy detail professional icons must keep subtle semantic depth.');
