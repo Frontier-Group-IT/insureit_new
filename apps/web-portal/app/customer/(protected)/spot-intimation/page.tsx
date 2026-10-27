@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail } from "@/lib/customer-web-phase2-data";
 import { createServerSupabaseClient } from "@/lib/auth-server";
-import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
 import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/customer-claim-evidence-workspace";
 import { CustomerClaimVoiceRecorder } from "@/components/customer-portal/customer-claim-voice-recorder";
@@ -94,16 +93,6 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
   const textFieldClass = "block h-[42px] w-full min-w-0 rounded-lg border border-[#CAD8EA] bg-white px-3 text-[13px] font-medium text-[#193659] outline-none transition placeholder:text-[#95A3B8] focus-visible:border-[#2D7FF0] focus-visible:ring-2 focus-visible:ring-[#DCEBFF]";
   const splitFieldClass = "block h-[42px] min-w-0 flex-1 bg-transparent px-3 text-[13px] font-medium text-[#193659] outline-none";
   return <div className="mx-auto w-full max-w-[90rem] space-y-3">
-    <section aria-label="Selected claim" className="overflow-hidden rounded-2xl bg-[#0C2F67] px-4 py-3 text-white">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/15 pb-2">
-        <h1 className="flex items-center gap-2 text-[16px] font-bold"><img src="/assets/customer-claim/stages/spot_intimation.png" alt="" className="h-6 w-6 rounded-md bg-white object-contain p-0.5"/> Spot Intimation</h1>
-        <span className="text-[11px] text-white/70">Incident registration</span>
-      </div>
-      <div className="grid gap-3 pt-3 sm:grid-cols-2 sm:gap-5">
-        <div className="flex min-w-0 items-center gap-3"><CustomerClaimLogo value={claim.vehicle_make} size={40}/><div className="min-w-0"><p className="truncate text-[13px] font-bold">{claim.vehicle_no||"Vehicle"}</p><p className="truncate text-[11px] text-white/75">{[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" · ")}</p></div></div>
-        <div className="flex min-w-0 items-center gap-3"><CustomerClaimLogo value={claim.insurer_name} kind="insurer" size={40}/><div className="min-w-0"><p className="truncate text-[13px] font-bold">{claim.policy_no||"No linked policy"}</p><p className="truncate text-[11px] text-white/75">{claim.insurer_name||"Insurer not assigned"}</p></div></div>
-      </div>
-    </section>
     <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey="spot_intimation" currentKey="spot_intimation" completedKeys={[]}/>
     <SpotIntimationSaveForm action={submit} draftKey={account.id+":"+claim.id} cancelHref={`/customer/start-claim?account=${encodeURIComponent(account.id)}`} evidence={<><CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage="spot_intimation" returnToSpotIntimation/><CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id}/></>}>
       <input type="hidden" name="account" value={account.id}/><input type="hidden" name="claim" value={claim.id}/>
