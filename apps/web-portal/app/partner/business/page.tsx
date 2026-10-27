@@ -108,7 +108,8 @@ function monthBounds(reference: string, mode: string) {
 
 async function loadPartnerPolicies() {
   const rows: PartnerPolicyRow[] = [];
-  const pageSize = 200;
+  // partner_app_list_policies caps p_limit at 100. Match its actual page size.
+  const pageSize = 100;
   for (let offset = 0; offset < 5000; offset += pageSize) {
     const batch = await listPartnerWebPolicies({ limit: pageSize, offset, lifecycle: "all" });
     rows.push(...batch);
