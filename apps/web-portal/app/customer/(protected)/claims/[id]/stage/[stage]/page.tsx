@@ -9,7 +9,7 @@ import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/cus
 import { CustomerClaimVoiceRecorder } from "@/components/customer-portal/customer-claim-voice-recorder";
 import { CustomerClaimDocumentGroups } from "@/components/customer-portal/customer-claim-document-groups";
 import { CustomerClaimBooleanChoice } from "@/components/customer-portal/customer-claim-boolean-choice";
-import { Check, Circle, LockKeyhole, CarFront, FileText, ShieldCheck, CalendarDays, Clock3, ClipboardList, IndianRupee, Building2, MapPin, FolderOpen } from "lucide-react";
+import { Check, Circle, LockKeyhole, CarFront, FileText, ShieldCheck, CalendarDays, Clock3, ClipboardList, IndianRupee } from "lucide-react";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
