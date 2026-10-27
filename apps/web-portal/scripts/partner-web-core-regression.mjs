@@ -172,7 +172,7 @@ assert(policyLogoIndex >= 0 && policyProductIndex >= 0 && policyLogoIndex < poli
 assert(insurerNameIndex > policyProductIndex, "Partner Policy Register Insurer column must remain text-only after the Policy / Product logo");
 assert(partnerFleetSummary.includes("getInsurerLogo(policy.insurer_name)"), "Partner Fleet Summary must use the shared insurer resolver");
 
-const partnerBusinessPage = read("app/partner/business/page.tsx");
+const partnerBusinessPage = read("app/partner/reports/business/page.tsx");
 assert(partnerBusinessPage.includes('from "@/lib/insurer-logo"'), "My Business Top Insurer Contribution must use the shared insurer logo resolver");
 assert(partnerBusinessPage.includes("getInsurerLogo(row.name)"), "My Business insurer rows must resolve logo from insurer name");
 assert(partnerBusinessPage.includes("<InsurerTable rows={insurerRows} />"), "My Business must render the report-style insurer table");
