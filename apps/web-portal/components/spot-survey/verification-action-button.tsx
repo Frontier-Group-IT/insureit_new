@@ -65,7 +65,7 @@ function EmptySelectionVerifyButton({ attention }: { attention: boolean }) {
       <div className="fixed inset-0 z-[120] grid place-items-center bg-[#071D49]/40 px-4">
         <div role="alertdialog" aria-modal="true" aria-labelledby="verify-selection-warning" className="w-[min(420px,calc(100vw-32px))] rounded-2xl bg-white p-5 shadow-[0_24px_70px_rgba(7,29,73,.24)]">
           <h2 id="verify-selection-warning" className="text-[17px] font-semibold text-[#071D49]">Select a document</h2>
-          <p className="mt-2 text-[12px] leading-5 text-[#526178]">Select a document using the blue shield beside its category heading or the document icon beside its file name. A blue checkmark means selected; verification happens only after you complete the Verify action.</p>
+          <p className="mt-2 text-[12px] leading-5 text-[#526178]">Please select a document to verify by clicking the document icon beside its file name. You can also use the blue shield beside the category heading to select pending documents. A blue checkmark means selected; verification happens only after you complete the Verify action.</p>
           <div className="mt-4 flex justify-end"><button type="button" onClick={() => setOpen(false)} className="h-9 rounded-lg bg-[#17365D] px-5 text-[11px] font-semibold text-white">OK</button></div>
         </div>
       </div>,
