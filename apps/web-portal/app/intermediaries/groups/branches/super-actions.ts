@@ -33,6 +33,13 @@ export async function setSuperBranchLoginStatus(form: FormData) {
   const { data: identity, error } = await admin.from("portal_access_identities")
     .select("profile_id,status").eq("entity_type","branch").eq("entity_id",branchId).single();
   if (error || !identity) throw new Error("Branch login mapping not found");
+  if (nextStatus === "disabled") {
+    if (identity.status !== "active") throw new Error("Only Active branches can be disabled.");
+    const { data: userData, error: userError } = await admin.auth.admin.getUserById(identity.profile_id);
+    if (userError || !userData.user?.last_sign_in_at) {
+      throw new Error("This branch has not activated its invitation. Only Active branches can be disabled.");
+    }
+  }
   const { error: updateError } = await admin.from("portal_access_identities")
     .update({ status: nextStatus, updated_by: actor.id, updated_at: new Date().toISOString() })
     .eq("entity_type","branch").eq("entity_id",branchId);
