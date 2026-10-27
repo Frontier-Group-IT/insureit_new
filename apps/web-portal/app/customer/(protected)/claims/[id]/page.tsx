@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { INTERNAL_JOURNEY_STAGES, projectInternalClaim } from "@insureit/claim-journey";
-import { ArrowLeft, ExternalLink, FileDown, FileText, Pencil } from "lucide-react";
+import { ExternalLink, FileDown, FileText, Pencil } from "lucide-react";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
 
@@ -40,12 +40,16 @@ export default async function CustomerClaimDetailPage({
   ];
 
   return (
-    <div className="mx-auto max-w-[1100px] space-y-4 pb-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link href={{ pathname: "/customer/claims", query: { account: account.id } }}
-          className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#245DAB] hover:underline">
-          <ArrowLeft className="h-4 w-4" /> Back to Claims
-        </Link>
+    <div className="w-full min-w-0 space-y-4 pb-8">
+      <section className="overflow-hidden rounded-2xl border border-[#D9E3F0] bg-white shadow-[0_8px_35px_rgba(22,49,83,.05)]">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E0E8F3] px-5 py-4">
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#EAF2FF] text-[#225AA3]"><FileText className="h-5 w-5" /></span>
+            <div>
+              <h1 className="text-[17px] font-bold text-[#102B54]">Claim Details</h1>
+              <p className="text-[11px] text-[#61748F]">{claim.claim_no || "Claim"} · {source} claim · Read-only document</p>
+            </div>
+          </div>
         <div className="flex flex-wrap items-center gap-2">
           {allNineCompleted ? <a href={documentUrl + "&preview=1"} target="_blank" rel="noopener noreferrer"
             className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#B9CBE2] bg-white px-4 text-[12px] font-semibold text-[#174A87]">
@@ -60,25 +64,14 @@ export default async function CustomerClaimDetailPage({
             <Pencil className="h-4 w-4" /> Edit Claim
           </Link>
         </div>
-      </div>
-      <section className="overflow-hidden rounded-2xl border border-[#D9E3F0] bg-white shadow-[0_8px_35px_rgba(22,49,83,.05)]">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E0E8F3] px-5 py-4">
-          <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#EAF2FF] text-[#225AA3]"><FileText className="h-5 w-5" /></span>
-            <div>
-              <h1 className="text-[17px] font-bold text-[#102B54]">Claim Details</h1>
-              <p className="text-[11px] text-[#61748F]">{claim.claim_no || "Claim"} · {source} claim · Read-only document</p>
-            </div>
-          </div>
-          <span className="rounded-full bg-[#EFF5FC] px-3 py-1.5 text-[11px] font-semibold text-[#31557F]">{claim.current_status || "Pending"}</span>
         </header>
         {allNineCompleted ? <div className="bg-[#EEF2F8] p-3 sm:p-6">
-          <div className="mx-auto max-w-[850px] overflow-hidden rounded-lg border border-[#D7DFEA] bg-white shadow-[0_12px_40px_rgba(15,35,65,.11)]">
+          <div className="w-full min-w-0 overflow-hidden rounded-lg border border-[#D7DFEA] bg-white shadow-[0_12px_40px_rgba(15,35,65,.11)]">
             <iframe title="Claim Form PDF Preview" src={documentUrl + "&preview=1#toolbar=0&navpanes=0"}
               className="block h-[76vh] min-h-[570px] w-full border-0" />
           </div>
           <p className="mt-3 text-center text-[11px] text-[#64748B]">
-            If the document preview is not supported in your browser, use Open PDF or Download Claim Form above.
+            If the document preview is not supported in your browser, use Open PDF or Download Claim Form in the header.
           </p>
         </div> : <div className="space-y-4 p-4">
           <p className="text-xs text-[#64748B]">Read-only claim details. The final PDF is available once all nine stages are complete.</p>
