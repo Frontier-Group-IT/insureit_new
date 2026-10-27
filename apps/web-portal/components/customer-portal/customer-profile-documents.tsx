@@ -19,7 +19,7 @@ const categories = [
 export function CustomerProfileDocuments({ customerId, documents }: { customerId: string; documents: Document[] }) {
   const [expanded, setExpanded] = useState(false);
   return (
-    <section id="customer-profile-vault" className="customer-profile-vault scroll-mt-24 overflow-hidden rounded-[22px] border border-[#E6E0F5] bg-[linear-gradient(105deg,#FBF9FF_0%,#F8F5FF_53%,#EAE3FF_100%)] shadow-[0_9px_24px_rgba(79,56,139,0.06)]">
+    <section id="customer-profile-vault" className="customer-profile-vault scroll-mt-24 overflow-hidden rounded-[22px] border border-[#E6E0F5] bg-white shadow-[0_9px_24px_rgba(79,56,139,0.06)]">
       <div className="relative isolate overflow-hidden px-4 py-4 sm:px-5 sm:py-5">
         <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full border-[35px] border-white/45" />
         <div className="relative flex items-center gap-3">
