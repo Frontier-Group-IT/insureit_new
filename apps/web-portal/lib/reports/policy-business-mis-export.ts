@@ -80,6 +80,7 @@ type PolicyRow = {
 export type PolicyBusinessMisRow = {
   policyId: string;
   issuanceDate: string;
+  businessType: string;
   rmName: string;
   intermediaryType: string;
   leadSource: string;
@@ -197,6 +198,15 @@ function normalizeRow(row: PolicyRow): PolicyBusinessMisRow {
   return {
     policyId: row.id,
     issuanceDate: text(row.issuance_date),
+    businessType: (() => {
+      const value = text(row.business_line).trim();
+      const normalized = value.toLowerCase().replace(/[_-]/g, " ").replace(/\s+/g, " ");
+      if (normalized === "motor") return "Motor";
+      if (normalized === "non motor" || normalized === "nonmotor") return "Non Motor";
+      if (normalized === "life") return "Life";
+      if (normalized === "health") return "Health";
+      return value || "Unclassified";
+    })(),
     rmName: text(row.rm_name),
     intermediaryType: text(row.intermediary_type),
     leadSource: text(row.lead_source),
