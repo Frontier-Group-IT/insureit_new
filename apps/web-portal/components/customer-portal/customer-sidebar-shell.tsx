@@ -58,7 +58,7 @@ export function CustomerSidebarShell({ children, headerActions, breadcrumbs }: {
             ) : (
               <CustomerTopNavigation onSwitchToSidebar={() => switchLayout("sidebar")} />
             )}
-            <div className={sidebar ? "shrink-0" : "shrink-0 rounded-xl bg-white px-1 py-0.5"}>
+            <div className={sidebar ? "shrink-0" : "shrink-0 rounded-xl bg-transparent px-1 py-0.5"}>
               {headerActions}
             </div>
           </div>

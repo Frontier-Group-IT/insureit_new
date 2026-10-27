@@ -59,6 +59,7 @@ export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadS
       return {error:"Unable to register "+file.name+"; "+uploadedCount+" previous file(s) saved.",uploadedCount};
     }
     uploadedCount++;
+    if(files.length===1) return { error: null, uploaded: saved.data };
     lastUploaded=saved.data;
   }
   // Preserve the current-main no-redirect contract: unsaved stage fields must not reset.

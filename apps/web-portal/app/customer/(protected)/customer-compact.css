@@ -161,3 +161,16 @@
   .customer-compact :is(.customer-profile-hero,.customer-profile-detail-section,.customer-profile-vault,.customer-profile-vault-content) { animation: none !important; }
   .customer-compact :is(.customer-profile-detail-card,.customer-profile-category) { transition: none !important; transform: none !important; }
 }
+
+/* The purple Customer top bar has transparent brand/action containers.
+   Sidebar header and interactive menus retain their existing appearance. */
+[data-customer-nav-layout="top"] .customer-header-notification {
+  background-color: transparent;
+  color: #fff;
+}
+[data-customer-nav-layout="top"] .customer-header-notification:hover {
+  background-color: rgba(255, 255, 255, .15);
+}
+[data-customer-nav-layout="top"] .customer-header-action-divider {
+  background-color: rgba(255, 255, 255, .25);
+}
