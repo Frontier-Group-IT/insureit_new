@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Ban, Pencil, Send, CheckCircle2 } from "lucide-react";
 import { PermanentDeleteButton } from "@/components/permanent-delete-button";
@@ -13,7 +13,7 @@ export function BranchActionMenu({ branch }: { branch: Branch }) {
   const [saved,setSaved] = useState(false);
   const [saving,startSaving] = useTransition();
   const router = useRouter();
-  function submitEdit(event: React.FormEvent<HTMLFormElement>) {
+  function submitEdit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setEditError("");
     const data = new FormData(event.currentTarget);
@@ -32,7 +32,6 @@ export function BranchActionMenu({ branch }: { branch: Branch }) {
   const [confirmDisable,setConfirmDisable] = useState(false);
   const [statusPending,setStatusPending] = useState(false);
   const [statusError,setStatusError] = useState<string | null>(null);
-  const router = useRouter();
   async function submitLoginStatus(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (statusPending) return;
