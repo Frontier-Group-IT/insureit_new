@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, FileText, Upload, Video } from "lucide-react";
+import { ChevronDown, ChevronUp, FileText, LoaderCircle, Upload, Video } from "lucide-react";
 import { uploadCustomerClaimDocument } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/upload-action";
 
 // These images are the same artwork used by the Customer mobile app.
@@ -75,7 +75,7 @@ export function CustomerClaimCompactDocument({label,type,documents,accountId,cla
       {allowUpload?<form action={uploadAction} ref={form}>
         <input type="hidden" name="account" value={accountId}/><input type="hidden" name="claim" value={claimId}/><input type="hidden" name="stage" value={stage}/><input type="hidden" name="type" value={type}/><input type="hidden" name="returnToSpotIntimation" value={returnToSpotIntimation?"1":"0"}/>
         <input ref={input} type="file" name="file" required accept={accept} className="sr-only" aria-label={`Choose ${label}`} onChange={e=>{if(e.currentTarget.files?.length)form.current?.requestSubmit();}}/>
-        <button type="button" disabled={uploading} onClick={()=>input.current?.click()} aria-label={`Upload ${label}`} title={`Upload ${label}`} className="grid h-8 w-8 place-items-center rounded-md border border-[#BCD1F1] text-[#2460B8] hover:bg-[#EDF4FF] disabled:opacity-50"><Upload className="h-4 w-4"/></button>
+        <button type="button" disabled={uploading} onClick={()=>input.current?.click()} aria-label={`Upload ${label}`} title={`Upload ${label}`} className="customer-claim-motion-upload grid h-8 w-8 place-items-center rounded-md border border-[#BCD1F1] text-[#2460B8] hover:bg-[#EDF4FF] disabled:opacity-50" aria-busy={uploading}>{uploading?<LoaderCircle className="customer-claim-motion-spinner h-4 w-4" aria-hidden="true"/>:<Upload className="h-4 w-4" aria-hidden="true"/>}</button>
       </form>:null}
     </div>
     {uploadState.error?<p role="alert" className="mt-2 text-[11px] font-medium text-red-700">{uploadState.error}</p>:null}
