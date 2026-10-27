@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, type FormEvent } from "react";
+import { useEffect, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Ban, Pencil, Send, CheckCircle2 } from "lucide-react";
 import { PermanentDeleteButton } from "@/components/permanent-delete-button";
@@ -32,6 +32,13 @@ export function BranchActionMenu({ branch }: { branch: Branch }) {
   const [confirmDisable,setConfirmDisable] = useState(false);
   const [statusPending,setStatusPending] = useState(false);
   const [statusError,setStatusError] = useState<string | null>(null);
+  const [resendPending, setResendPending] = useState(false);
+  const [resendFeedback, setResendFeedback] = useState<{type:"success"|"error";message:string}|null>(null);
+  useEffect(() => {
+    if (!resendFeedback) return;
+    const handle = setTimeout(() => setResendFeedback(null), 3000);
+    return () => clearTimeout(handle);
+  }, [resendFeedback]);
   async function submitLoginStatus(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (statusPending) return;
@@ -48,11 +55,30 @@ export function BranchActionMenu({ branch }: { branch: Branch }) {
       setStatusPending(false);
     }
   }
+  async function submitResend(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (resendPending) return;
+    setResendPending(true);
+    setResendFeedback(null);
+    try {
+      await resendSuperBranchLink(new FormData(event.currentTarget));
+      setResendFeedback({type:"success",message:"Login link email requested successfully."});
+      router.refresh();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      setResendFeedback({type:"error",message:/IT Super User permission required|Enable branch login before resending|Invalid branch ID|rate limit|too many requests/i.test(message)
+        ? message
+        : "Unable to send the login link. Please check branch login access or retry later."});
+    } finally {
+      setResendPending(false);
+    }
+  }
   const iconButton = "inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 disabled:cursor-not-allowed disabled:opacity-35";
   return <div className="inline-flex items-center justify-center gap-2">
     <button type="button" aria-label={`Edit ${branch.branch_name}`} title="Edit" className={iconButton+" text-slate-800"} onClick={()=>{setEditError("");setSaved(false);setEdit(true);}}><Pencil className="h-4 w-4"/></button>
     <button type="button" aria-label={`${branch.login_disabled?"Enable":"Disable"} ${branch.branch_name}`} title={branch.login_disabled?"Enable":"Disable"} className={iconButton} onClick={()=>{setStatusError(null);setConfirmDisable(true);}}>{branch.login_disabled?<CheckCircle2 className="h-4 w-4"/>:<Ban className="h-4 w-4"/>}</button>
-    <form action={resendSuperBranchLink} className="inline-flex"><input type="hidden" name="entity_id" value={branch.id}/><button type="submit" aria-label={`Resend invitation to ${branch.branch_name}`} title={branch.login_disabled?"Enable account before resending":"Resend Link"} disabled={branch.login_disabled} className={iconButton}><Send className="h-4 w-4"/></button></form>
+    <form onSubmit={submitResend} className="inline-flex"><input type="hidden" name="entity_id" value={branch.id}/><button type="submit" aria-label={`Resend invitation to ${branch.branch_name}`} title={branch.login_disabled?"Enable account before resending":"Resend Link"} disabled={branch.login_disabled || resendPending} className={iconButton}>{resendPending ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" aria-hidden="true"/> : <Send className="h-4 w-4"/>}</button></form>
+    {resendFeedback ? <div role={resendFeedback.type==="error"?"alert":"status"} className={`fixed bottom-6 right-6 z-[100] max-w-sm rounded-lg border bg-white px-4 py-3 text-xs shadow-lg ${resendFeedback.type==="error"?"border-red-200 text-red-700":"border-green-200 text-green-700"}`}><span>{resendFeedback.message}</span><button type="button" className="ml-3 font-bold" onClick={()=>setResendFeedback(null)} aria-label="Dismiss message">×</button></div> : null}
     <PermanentDeleteButton kind="branch" id={branch.id} name={branch.branch_name} compact iconOnly />
     {confirmDisable && <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
       <div className="w-full max-w-sm rounded-xl bg-white p-5 text-left shadow-xl">
