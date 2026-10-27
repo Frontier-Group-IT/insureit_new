@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { Ban, Pencil, Send, CheckCircle2 } from "lucide-react";
 import { PermanentDeleteButton } from "@/components/permanent-delete-button";
 import { editSuperBranch, resendSuperBranchLink, setSuperBranchLoginStatus } from "./super-actions";
@@ -9,21 +10,43 @@ type Branch = { id: string; branch_name: string; email: string | null; phone: st
 export function BranchActionMenu({ branch }: { branch: Branch }) {
   const [edit,setEdit] = useState(false);
   const [confirmDisable,setConfirmDisable] = useState(false);
+  const [statusPending,setStatusPending] = useState(false);
+  const [statusError,setStatusError] = useState<string | null>(null);
+  const router = useRouter();
+  async function submitLoginStatus(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (statusPending) return;
+    const form = new FormData(event.currentTarget);
+    setStatusPending(true);
+    setStatusError(null);
+    try {
+      await setSuperBranchLoginStatus(form);
+      setConfirmDisable(false);
+      router.refresh();
+    } catch (error) {
+      setStatusError(error instanceof Error ? error.message : "Unable to update branch login. Please retry.");
+    } finally {
+      setStatusPending(false);
+    }
+  }
   const iconButton = "inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 disabled:cursor-not-allowed disabled:opacity-35";
   return <div className="inline-flex items-center justify-center gap-2">
     <button type="button" aria-label={`Edit ${branch.branch_name}`} title="Edit" className={iconButton+" text-slate-800"} onClick={()=>setEdit(true)}><Pencil className="h-4 w-4"/></button>
-    <button type="button" aria-label={`${branch.login_disabled?"Enable":"Disable"} ${branch.branch_name}`} title={branch.login_disabled?"Enable":"Disable"} className={iconButton} onClick={()=>setConfirmDisable(true)}>{branch.login_disabled?<CheckCircle2 className="h-4 w-4"/>:<Ban className="h-4 w-4"/>}</button>
+    <button type="button" aria-label={`${branch.login_disabled?"Enable":"Disable"} ${branch.branch_name}`} title={branch.login_disabled?"Enable":"Disable"} className={iconButton} onClick={()=>{setStatusError(null);setConfirmDisable(true);}}>{branch.login_disabled?<CheckCircle2 className="h-4 w-4"/>:<Ban className="h-4 w-4"/>}</button>
     <form action={resendSuperBranchLink} className="inline-flex"><input type="hidden" name="entity_id" value={branch.id}/><button type="submit" aria-label={`Resend invitation to ${branch.branch_name}`} title={branch.login_disabled?"Enable account before resending":"Resend Link"} disabled={branch.login_disabled} className={iconButton}><Send className="h-4 w-4"/></button></form>
     <PermanentDeleteButton kind="branch" id={branch.id} name={branch.branch_name} compact iconOnly />
     {confirmDisable && <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
       <div className="w-full max-w-sm rounded-xl bg-white p-5 text-left shadow-xl">
         <h3 className="font-bold">{branch.login_disabled?"Enable":"Disable"} branch login?</h3>
         <p className="mt-2 text-sm text-slate-600">The branch and its business history will be preserved.</p>
-        <form action={setSuperBranchLoginStatus} className="mt-4 flex justify-end gap-2">
+        <form onSubmit={submitLoginStatus} className="mt-4 space-y-3">
           <input type="hidden" name="entity_id" value={branch.id}/>
           <input type="hidden" name="next_status" value={branch.login_disabled?"active":"disabled"}/>
-          <button type="button" onClick={()=>setConfirmDisable(false)} className="rounded border px-3 py-2 text-xs">Cancel</button>
-          <button className="rounded bg-slate-900 px-3 py-2 text-xs text-white">Confirm</button>
+          {statusError ? <p role="alert" className="text-xs text-red-700">{statusError}</p> : null}
+          <div className="flex justify-end gap-2">
+            <button type="button" disabled={statusPending} onClick={()=>{setStatusError(null);setConfirmDisable(false);}} className="rounded border px-3 py-2 text-xs disabled:opacity-50">Cancel</button>
+            <button type="submit" disabled={statusPending} className="rounded bg-slate-900 px-3 py-2 text-xs text-white disabled:opacity-50">{statusPending ? "Updating…" : "Confirm"}</button>
+          </div>
         </form>
       </div>
     </div>}
