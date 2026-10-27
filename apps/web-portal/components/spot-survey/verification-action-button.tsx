@@ -8,9 +8,9 @@ import { createPortal } from "react-dom";
 
 const verifyHoverOnlyClass = "[&_button]:!rounded-none [&_button]:!border-transparent [&_button]:!bg-transparent [&_button]:transition-colors [&_button:hover]:!rounded-md [&_button:hover]:!border-green-200 [&_button:hover]:!bg-[#F2FBF7]";
 const verifyHeaderPillClass = "[&_button]:!h-auto [&_button]:!w-auto [&_button]:!rounded-full [&_button]:!border [&_button]:!border-slate-200 [&_button]:!bg-slate-100 [&_button]:!px-1.5 [&_button]:!py-0.5 [&_button]:!text-[9px] [&_button]:!font-semibold [&_button]:!text-slate-600 [&_button:hover]:!bg-slate-100";
-const verifyHeaderAttentionPillClass = "[&_button]:!h-auto [&_button]:!w-auto [&_button]:!rounded-full [&_button]:!border [&_button]:!border-red-200 [&_button]:!bg-red-50 [&_button]:!px-1.5 [&_button]:!py-0.5 [&_button]:!text-[9px] [&_button]:!font-semibold [&_button]:!text-red-600 [&_button:hover]:!bg-red-100";
+const verifyHeaderAttentionPillClass = "motion-safe:[&_button]:animate-pulse [&_button]:!h-auto [&_button]:!w-auto [&_button]:!rounded-full [&_button]:!border [&_button]:!border-red-200 [&_button]:!bg-red-50 [&_button]:!px-1.5 [&_button]:!py-0.5 [&_button]:!text-[9px] [&_button]:!font-semibold [&_button]:!text-red-600 [&_button:hover]:!bg-red-100";
 const verifyHeaderDisabledClass = "h-auto w-auto rounded-full border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold text-slate-600";
-const verifyHeaderAttentionDisabledClass = "h-auto w-auto rounded-full border border-red-200 bg-red-50 px-1.5 py-0.5 text-[9px] font-semibold text-red-600";
+const verifyHeaderAttentionDisabledClass = "motion-safe:animate-pulse h-auto w-auto rounded-full border border-red-200 bg-red-50 px-1.5 py-0.5 text-[9px] font-semibold text-red-600";
 
 type Props = {
   claimId: string;
@@ -65,7 +65,7 @@ function EmptySelectionVerifyButton({ attention }: { attention: boolean }) {
       <div className="fixed inset-0 z-[120] grid place-items-center bg-[#071D49]/40 px-4">
         <div role="alertdialog" aria-modal="true" aria-labelledby="verify-selection-warning" className="w-[min(420px,calc(100vw-32px))] rounded-2xl bg-white p-5 shadow-[0_24px_70px_rgba(7,29,73,.24)]">
           <h2 id="verify-selection-warning" className="text-[17px] font-semibold text-[#071D49]">Select a document</h2>
-          <p className="mt-2 text-[12px] leading-5 text-[#526178]">Please select a document to verify by clicking the document icon beside its file name.</p>
+          <p className="mt-2 text-[12px] leading-5 text-[#526178]">Select a document using the blue shield beside its category heading or the document icon beside its file name. A blue checkmark means selected; verification happens only after you complete the Verify action.</p>
           <div className="mt-4 flex justify-end"><button type="button" onClick={() => setOpen(false)} className="h-9 rounded-lg bg-[#17365D] px-5 text-[11px] font-semibold text-white">OK</button></div>
         </div>
       </div>,
