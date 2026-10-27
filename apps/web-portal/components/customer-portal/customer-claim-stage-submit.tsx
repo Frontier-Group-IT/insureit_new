@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { LoaderCircle } from "lucide-react";
-import { saveCustomerExternalStage, saveCustomerClaimIntimationDraft } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/actions";
+import { saveCustomerClaimStageWithFeedback } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/actions";
 
 export function CustomerClaimStageSubmit({ formId }: { formId: string }) {
   const [saving, setSaving] = useState<"draft" | "details" | null>(null);
@@ -17,14 +17,12 @@ export function CustomerClaimStageSubmit({ formId }: { formId: string }) {
     const data = new FormData(form);
     setSaving(mode);
     try {
-      if (mode === "draft") {
-        await saveCustomerClaimIntimationDraft(data);
-      } else {
-        await saveCustomerExternalStage(data);
+      const result = await saveCustomerClaimStageWithFeedback(mode, data);
+      if (result.error) {
+        setFeedback(result.error);
+        return;
       }
-      // Server actions normally redirect on success. If not, don't leave an
-      // indefinite spinner or imply that completion occurred.
-      setFeedback(mode === "draft" ? "Draft saved. Your information is preserved." : "Details saved.");
+      setFeedback(mode === "draft" ? "Draft saved." : "Details saved.");
     } catch (error) {
       setFeedback(error instanceof Error && error.message && !error.message.includes("NEXT_REDIRECT")
         ? error.message
@@ -46,7 +44,7 @@ export function CustomerClaimStageSubmit({ formId }: { formId: string }) {
         {saving === "details" ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
         {saving === "details" ? "Saving..." : "Save Details"}
       </button>
-      {feedback ? <p role="status" aria-live="polite" className="w-full text-right text-[11px] font-medium text-[#315582]">{feedback}</p> : null}
+      {feedback ? <p role="status" aria-live="polite" className="w-full rounded-lg border border-[#F4C3C3] bg-[#FFF3F3] px-3 py-2 text-left text-[12px] font-semibold text-[#AD2732]">{feedback}</p> : null}
     </div>
   );
 }
