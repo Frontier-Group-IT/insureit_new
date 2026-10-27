@@ -19,14 +19,14 @@
 .customer-claim-ref-journey .customer-workflow-step a[aria-current="step"] {color:#2559b5;}
 .customer-claim-ref-details {background:linear-gradient(120deg,#f8f6ff,#f5f7ff);box-shadow:inset 0 0 0 1px rgba(213,214,250,.25);}
 .customer-claim-ref-details input {box-shadow:0 2px 6px rgba(63,82,150,.03);}
-.customer-claim-ref-docs {background:linear-gradient(165deg,#fff 20%,#fbfaff);}
+.customer-claim-ref-docs {background:#fff;}
 .customer-claim-ref-docs-heading {display:flex;align-items:center;gap:9px;}
 .customer-claim-ref-docs-title-icon {width:33px;height:33px;display:grid;place-items:center;background:linear-gradient(125deg,#6c5afa,#2e95c8);color:white;border-radius:9px;box-shadow:0 3px 8px rgba(57,92,207,.2);}
 .customer-claim-ref-docs .customer-claim-ref-tablist {border:none;gap:5px;background:transparent;}
 .customer-claim-ref-docs .customer-claim-ref-tab {border:1px solid #e5e9f9;border-radius:8px;overflow:hidden;min-width:0;}
 .customer-claim-ref-docs .customer-claim-ref-tab[aria-selected="true"] {border-color:#6455ee;box-shadow:0 3px 9px rgba(93,83,211,.16);}
-.customer-claim-ref-docs .customer-claim-ref-card {background:linear-gradient(135deg,#fbfcff,#f4f8ff);border-color:#e0e8f7;box-shadow:0 2px 9px rgba(44,68,141,.04);}
-.customer-claim-ref-docs .customer-claim-ref-card:has(a[href]) {background:linear-gradient(112deg,#f1fcf9,#f5f8ff);}
+.customer-claim-ref-docs .customer-claim-ref-card {background:#fff;border-color:#e0e8f7;box-shadow:0 2px 9px rgba(44,68,141,.04);}
+.customer-claim-ref-docs .customer-claim-ref-card:has(a[href]) {background:#fff;}
 .customer-claim-ref-docs .customer-claim-ref-file {border:none;background:rgba(255,255,255,.6);min-height:37px;}
 .customer-claim-ref-docs .customer-claim-ref-file:hover {background:white;}
 @media (min-width:1200px) {.customer-claim-ref-summary-cell:nth-child(5),.customer-claim-ref-summary-cell:nth-child(10) {padding-right:75px;}}
