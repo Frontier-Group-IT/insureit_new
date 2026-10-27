@@ -17,5 +17,6 @@ export function CustomerClaimMultipleUpload({claimId,accountId,stage,returnToSpo
       {pending?<Loader2 className="h-5 w-5 animate-spin text-[#1952A1]"/>:<Plus className="h-5 w-5 text-[#1952A1]"/>}
     </button>
     {state.error?<p role="alert" className="mt-2 text-[11px] text-red-700">{state.error}</p>:null}
+    {!state.error && state.uploadedCount ? <p role="status" className="mt-2 text-[11px] text-emerald-700">{state.uploadedCount} document(s) uploaded successfully. Reload to see them in the document list.</p> : null}
   </form>;
 }
