@@ -12,7 +12,12 @@ const claimWorkflow = await readFile(new URL("../lib/claim-workflow.ts", import.
 
 assert.doesNotMatch(stage1Group, /type="checkbox"/, "Stage 1 pending files must use document-icon selection instead of checkboxes.");
 assert.match(stage1Group, /aria-label=.*Select .*document\.file_name.*verification/, "Stage 1 existing document icon must select the exact file.");
-assert.match(stage3Group, /type="checkbox"/, "Stage 3 retains checkbox selection for pending files.");
+assert.doesNotMatch(stage3Group, /type="checkbox"/, "Stage 3 uses its existing uploaded-file shield instead of a separate checkbox.");
+assert.match(stage3Group, /onClick=\{\(\) => onSelectedChange\(!selected\)\}/, "Stage 3 shield toggles select and deselect with one click.");
+assert.match(stage3Group, /aria-pressed=\{selected\}/, "Stage 3 selected shield exposes accessible pressed state.");
+assert.match(stage3Group, /<ShieldCheck[^>]*className="text-\[#2563EB\]"/, "Selected shield is blue with a checkmark.");
+assert.match(stage3Group, /<ShieldCheck[^>]*className="text-\[#16A34A\]"/, "Verified shield is green with a checkmark.");
+assert.match(stage3Group, /\{selectable \? \(/, "Only pending files can toggle their shield.");
 
 for (const source of [stage1Group, stage3Group]) {
   assert.match(source, /documentIds=\{selectedDocumentIds\}/, "Verify must receive the selected files as one group.");
