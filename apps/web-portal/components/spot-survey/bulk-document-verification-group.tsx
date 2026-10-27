@@ -79,12 +79,6 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
   const hasMultipleFiles = item.documents.length > 1;
   const showDocumentRows = hasSingleFile || (hasMultipleFiles && isExpanded);
   const contentId = `claim-document-group-${claim.id}-${item.key}`;
-  const selectedForVerification = selectedDocumentIds.length > 0;
-  const selectGroup = () => {
-    if (!selectableIds.length) return;
-    setSelectedIds(new Set(selectableIds));
-  };
-  const deselectGroup = () => setSelectedIds(new Set());
   const toggleExpanded = () => {
     if (hasMultipleFiles) setIsExpanded((expanded) => !expanded);
   };
@@ -115,23 +109,7 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
           ) : (
             <h2 className="truncate text-[13px] font-semibold leading-tight text-[#071D49]">{item.title}</h2>
           )}
-          {allVerified ? (
-            <ShieldCheck aria-label="Verified" className="h-5 w-5 shrink-0 text-green-600" strokeWidth={2.2} />
-          ) : selectableIds.length ? (
-            <button
-              type="button"
-              onClick={(event) => { event.stopPropagation(); selectGroup(); }}
-              onDoubleClick={(event) => { event.stopPropagation(); deselectGroup(); }}
-              aria-pressed={selectedForVerification}
-              aria-label={selectedForVerification ? `${item.title} selected for verification; double-click to deselect` : `Select ${item.title} for verification`}
-              title={selectedForVerification ? "Selected for verification — double-click to deselect" : "Click to select for verification"}
-              className="grid h-7 w-7 shrink-0 place-items-center rounded-md transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
-            >
-              <DocumentVerificationIcon verified={false} selected={selectedForVerification} />
-            </button>
-          ) : (
-            <Shield aria-label="No selectable documents" className="h-5 w-5 shrink-0 text-slate-400" strokeWidth={2.2} />
-          )}
+
         </div>
         <div className="flex shrink-0 items-center gap-0.5">
           <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentType={item.documentType} label={item.title} actionLabel="Upload" iconOnly />
@@ -171,6 +149,7 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
                   rejected={rejected}
                   selected={selected}
                   onSelect={() => setSelectedIds(new Set([document.id]))}
+                  onDeselect={() => setSelectedIds((previous) => { const next = new Set(previous); next.delete(document.id); return next; })}
                 />
               );
             })}
@@ -189,7 +168,7 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
   );
 }
 
-function DocumentFileRow({ item, claim, document, verification, verified, rejected, selected, onSelect }: { item: BulkDocumentGroupItem; claim: ClaimContext; document: DocumentRow; verification?: VerificationRow; verified: boolean; rejected: boolean; selected: boolean; onSelect: () => void }) {
+function DocumentFileRow({ item, claim, document, verification, verified, rejected, selected, onSelect, onDeselect }: { item: BulkDocumentGroupItem; claim: ClaimContext; document: DocumentRow; verification?: VerificationRow; verified: boolean; rejected: boolean; selected: boolean; onSelect: () => void; onDeselect: () => void }) {
   const router = useRouter();
   const [deletePending, setDeletePending] = useState(false);
   const normalizedDocumentType = document.document_type?.toLowerCase() ?? "";
@@ -203,12 +182,13 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
         <button
           type="button"
           onClick={onSelect}
+          onDoubleClick={(event) => { event.stopPropagation(); onDeselect(); }}
           aria-pressed={selected}
           aria-label={`Select ${document.file_name} for verification`}
-          title="Select document for verification"
+          title={selected ? "Selected — double-click to deselect" : "Click to select for verification"}
           className={`grid h-8 w-8 place-items-center rounded-md border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/30 ${selected ? "border-[#174EA6] bg-[#EAF2FF]" : "border-transparent bg-transparent hover:border-[#B9D2FF] hover:bg-[#F4F8FF]"}`}
         >
-          <DocumentVerificationIcon verified={verified} />
+          <DocumentVerificationIcon verified={verified} selected={selected} />
         </button>
       ) : (
         <div className="grid h-8 w-8 place-items-center"><DocumentVerificationIcon verified={verified} /></div>
