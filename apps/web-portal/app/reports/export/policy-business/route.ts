@@ -11,17 +11,33 @@ const HEADERS = [
   "Month", "Policy Issuance Date", "RM Name", "Intermediary Type", "Lead Source", "Intermediary Code",
   "Vehicle Class", "Registration No.", "Insured Name", "Phone No.", "Class Description", "Capacity Type",
   "Make", "Model", "Fuel Type", "Capacity / GVW", "Year of Mfg", "Chassis No.", "Engine No.",
-  "Policy Product", "IDV / SI", "OD Premium", "Third Party Premium", "CPA", "Net Premium", "GST", "Gross Premium",
+  "Policy Product", "IDV / SI", "OD Premium", "Third Party Premium", "CPA", "Add-On Premium", "Net Premium", "GST", "Gross Premium",
   "Policy Number", "Insurance Company", "Valid From", "Valid Upto", "RTO State", "RTO Name", "Pay-in Basis",
   "Pay-in % OD (NET PAYIN % FOR NM)", "OD Pay-in Amount", "Pay-in % TP", "Base", "Insurance Scheme / Incentive",
   "TP Pay-in Amount", "Total Pay-in", "TDS", "Pay-in after TDS", "Payout Basis",
   "Payout OD % (NET PAYOUT % FOR NM)", "Payout TP %", "Gross Payout", "Retention",
 ] as const;
 
-const MONEY_COLUMNS = new Set(["U", "V", "W", "X", "Y", "Z", "AA", "AJ", "AL", "AM", "AN", "AO", "AP", "AQ", "AU", "AV"]);
-const PERCENT_COLUMNS = new Set(["AI", "AK", "AS", "AT"]);
-const NUMERIC_COLUMNS = new Set(["P", "Q"]);
-const SUMMARY_COLUMNS = ["V", "W", "X", "Y", "Z", "AA", "AJ", "AL", "AM", "AN", "AO", "AP", "AQ", "AU", "AV"] as const;
+// Resolve Excel letters from header positions so adding a column cannot silently
+// misalign currency formats, totals, filters, or percentage columns.
+const MONEY_HEADERS = [
+  "IDV / SI", "OD Premium", "Third Party Premium", "CPA", "Add-On Premium",
+  "Net Premium", "GST", "Gross Premium", "OD Pay-in Amount", "Base",
+  "Insurance Scheme / Incentive", "TP Pay-in Amount", "Total Pay-in", "TDS",
+  "Pay-in after TDS", "Gross Payout", "Retention",
+];
+const PERCENT_HEADERS = ["Pay-in % OD (NET PAYIN % FOR NM)", "Pay-in % TP", "Payout OD % (NET PAYOUT % FOR NM)", "Payout TP %"];
+const MONEY_COLUMNS = new Set(MONEY_HEADERS.map(headerColumn));
+const PERCENT_COLUMNS = new Set(PERCENT_HEADERS.map(headerColumn));
+const NUMERIC_COLUMNS = new Set(["Capacity / GVW", "Year of Mfg"].map(headerColumn));
+const SUMMARY_HEADERS = MONEY_HEADERS.filter((header) => header !== "IDV / SI");
+const SUMMARY_COLUMNS = SUMMARY_HEADERS.map(headerColumn);
+
+function headerColumn(header: string) {
+  const index = HEADERS.indexOf(header as typeof HEADERS[number]);
+  if (index < 0) throw new Error(`Business MIS header missing: ${header}`);
+  return XLSX.utils.encode_col(index);
+}
 
 export async function GET(request: NextRequest) {
   const profile = await requireCapability("view_reports");
@@ -64,8 +80,9 @@ function buildWorkbook(rows: PolicyBusinessMisRow[]) {
     const property = summaryProperty(column);
     sheet[`${column}1`] = { t: "n", f: `SUM(${column}3:${column}${lastRow})`, v: totals[property] };
   }
-  sheet["!ref"] = `A1:AV${Math.max(rows.length + 2, 2)}`;
-  sheet["!autofilter"] = { ref: `A2:AV${Math.max(rows.length + 2, 2)}` };
+  const lastColumn = XLSX.utils.encode_col(HEADERS.length - 1);
+  sheet["!ref"] = `A1:${lastColumn}${Math.max(rows.length + 2, 2)}`;
+  sheet["!autofilter"] = { ref: `A2:${lastColumn}${Math.max(rows.length + 2, 2)}` };
   sheet["!cols"] = columnWidths();
   sheet["!rows"] = [{ hpt: 22 }, { hpt: 38 }];
 
@@ -82,7 +99,7 @@ function toSpreadsheetRow(row: PolicyBusinessMisRow) {
     monthName(row.issuanceDate), row.issuanceDate, row.rmName, row.intermediaryType, row.leadSource, row.intermediaryCode,
     row.vehicleClass, row.registrationNo, row.insuredName, row.phoneNo, row.classDescription, row.capacityType,
     row.make, row.model, row.fuelType, row.capacity, row.manufacturingYear, row.chassisNo, row.engineNo,
-    row.policyProduct, row.idv, row.odPremium, row.tpPremium, row.cpa, row.netPremium, row.gst, row.grossPremium,
+    row.policyProduct, row.idv, row.odPremium, row.tpPremium, row.cpa, row.addOnPremium, row.netPremium, row.gst, row.grossPremium,
     row.policyNumber, row.insuranceCompany, row.validFrom, row.validUpto, row.rtoState, row.rtoName, row.payinBasis,
     row.payinOdPercent / 100, row.payinOdAmount, row.payinTpPercent / 100, row.payinBase, row.insurerScheme,
     row.payinTpAmount, row.totalPayin, row.tds, row.payinAfterTds, row.payoutBasis,
@@ -95,6 +112,7 @@ function totalsFor(rows: PolicyBusinessMisRow[]) {
     odPremium: total.odPremium + row.odPremium,
     tpPremium: total.tpPremium + row.tpPremium,
     cpa: total.cpa + row.cpa,
+    addOnPremium: total.addOnPremium + row.addOnPremium,
     netPremium: total.netPremium + row.netPremium,
     gst: total.gst + row.gst,
     grossPremium: total.grossPremium + row.grossPremium,
@@ -107,15 +125,28 @@ function totalsFor(rows: PolicyBusinessMisRow[]) {
     payinAfterTds: total.payinAfterTds + row.payinAfterTds,
     grossPayout: total.grossPayout + row.grossPayout,
     retention: total.retention + row.retention,
-  }), { odPremium: 0, tpPremium: 0, cpa: 0, netPremium: 0, gst: 0, grossPremium: 0, payinOdAmount: 0, payinBase: 0, insurerScheme: 0, payinTpAmount: 0, totalPayin: 0, tds: 0, payinAfterTds: 0, grossPayout: 0, retention: 0 });
+  }), { odPremium: 0, tpPremium: 0, cpa: 0, addOnPremium: 0, netPremium: 0, gst: 0, grossPremium: 0, payinOdAmount: 0, payinBase: 0, insurerScheme: 0, payinTpAmount: 0, totalPayin: 0, tds: 0, payinAfterTds: 0, grossPayout: 0, retention: 0 });
 }
 
-function summaryProperty(column: typeof SUMMARY_COLUMNS[number]): keyof ReturnType<typeof totalsFor> {
-  return ({ V: "odPremium", W: "tpPremium", X: "cpa", Y: "netPremium", Z: "gst", AA: "grossPremium", AJ: "payinOdAmount", AL: "payinBase", AM: "insurerScheme", AN: "payinTpAmount", AO: "totalPayin", AP: "tds", AQ: "payinAfterTds", AU: "grossPayout", AV: "retention" } as const)[column];
+function summaryProperty(column: string): keyof ReturnType<typeof totalsFor> {
+  const properties: Record<string, keyof ReturnType<typeof totalsFor>> = {
+    "OD Premium": "odPremium", "Third Party Premium": "tpPremium",
+    "CPA": "cpa", "Add-On Premium": "addOnPremium",
+    "Net Premium": "netPremium", "GST": "gst", "Gross Premium": "grossPremium",
+    "OD Pay-in Amount": "payinOdAmount", "Base": "payinBase",
+    "Insurance Scheme / Incentive": "insurerScheme",
+    "TP Pay-in Amount": "payinTpAmount", "Total Pay-in": "totalPayin",
+    "TDS": "tds", "Pay-in after TDS": "payinAfterTds",
+    "Gross Payout": "grossPayout", "Retention": "retention",
+  };
+  const header = HEADERS[XLSX.utils.decode_col(column)];
+  const property = properties[header];
+  if (!property) throw new Error(`Missing summary mapping for ${header}`);
+  return property;
 }
 
 function columnWidths() {
-  const widths = [10, 14, 20, 17, 24, 18, 13, 18, 28, 15, 24, 18, 18, 30, 14, 16, 12, 24, 22, 18, 14, 14, 16, 12, 14, 12, 14, 25, 30, 14, 14, 18, 24, 18, 25, 16, 13, 14, 22, 16, 15, 13, 16, 18, 28, 13, 16, 16];
+  const widths = [10, 14, 20, 17, 24, 18, 13, 18, 28, 15, 24, 18, 18, 30, 14, 16, 12, 24, 22, 18, 14, 14, 16, 12, 16, 14, 12, 14, 25, 30, 14, 14, 18, 24, 18, 25, 16, 13, 14, 22, 16, 15, 13, 16, 18, 28, 13, 16, 16];
   return widths.map((wch) => ({ wch }));
 }
 
