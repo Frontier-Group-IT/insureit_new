@@ -1,3 +1,4 @@
+import "./customer-home-modern.css";
 import Link from "next/link";
 import { AlertTriangle, CarFront, ClipboardList, ShieldPlus, ShieldCheck, FileText, ArrowLeftRight, Truck, CalendarDays, ClipboardPlus, ShieldX, Headset } from "lucide-react";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
@@ -37,7 +38,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
   const latestPolicies = policies.slice(0, 4);
   const latestClaims = claims.slice(0, 4);
   return (
-    <div data-customer-home className="space-y-4 pb-6">
+    <div data-customer-home className="customer-home-modern space-y-4 pb-6">
       <style>{`
         @keyframes customerHomeEnter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0) scale(1); } }
         @keyframes customerCardEnter { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -78,11 +79,20 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
       `}</style>
       <CustomerHomeScrollMotion />
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/home" />
-      <section className="customer-home-enter relative isolate overflow-hidden rounded-[22px] border border-[#D6E7FA] bg-[#DDEEFF] p-5 text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.06)] sm:p-7">
-        <div className="customer-home-hero-image pointer-events-none absolute inset-0 bg-[url('/assets/home.jpeg')] bg-cover bg-center opacity-95"/>
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EAF5FF]/85 via-[#EAF5FF]/45 via-40% to-transparent"/>
-        <div className="relative flex min-h-[155px] max-w-[560px] items-center py-2 sm:min-h-[185px] sm:py-4">
-          <h1 className="text-[clamp(27px,3vw,38px)] font-bold tracking-tight">Good morning, {account.contact_name?.split(" ")[0] || "Customer"}!</h1>
+      <section className="customer-modern-hero customer-home-enter relative isolate overflow-hidden rounded-[28px] border border-[#DCD3FF] p-5 text-[#102B54] shadow-[0_14px_36px_rgba(63,42,145,.12)] sm:p-7 lg:p-9">
+        <div className="customer-home-hero-image pointer-events-none absolute inset-0 bg-[url('/assets/home.jpeg')] bg-cover bg-[center_55%] opacity-90" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F3F0FF] via-[#F1EEFF]/95 via-50% to-[#E8F5FF]/25" />
+        <div className="customer-modern-hero-orb pointer-events-none absolute -left-20 -top-28 h-60 w-60 rounded-full bg-[#A18BFF]/25 blur-3xl" />
+        <div className="relative flex min-h-[230px] max-w-[650px] flex-col justify-center gap-3 py-3 sm:min-h-[260px] sm:gap-4">
+          <span className="customer-modern-eyebrow inline-flex w-fit items-center gap-2 rounded-full border border-[#DDD4FF] bg-white/80 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[.14em] text-[#6349CA] shadow-sm"><ShieldCheck className="h-3.5 w-3.5"/> Your protection hub</span>
+          <div className="space-y-2">
+            <h1 className="max-w-[530px] text-[clamp(26px,3.1vw,43px)] font-black leading-[1.12] tracking-[-.035em] text-[#182E60]">Good morning, <span className="customer-modern-gradient-text">{account.contact_name?.split(" ")[0] || "Customer"}!</span></h1>
+            <p className="max-w-[390px] text-[12px] font-medium leading-relaxed text-[#526481] sm:text-[14px]">Every vehicle. Every policy. Every journey — confidently protected with INSUREIT.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Link href={{ pathname: "/customer/policies", query: accountQuery }} className="customer-modern-primary-action inline-flex min-h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-[#6347DD] to-[#438CFA] px-4 py-2 text-[12px] font-bold text-white shadow-[0_7px_18px_rgba(93,73,203,.24)]">Explore policies <ShieldCheck className="h-4 w-4"/></Link>
+            <Link href={{ pathname: "/customer/start-claim", query: accountQuery }} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[#CFC6F6] bg-white/85 px-4 py-2 text-[12px] font-bold text-[#5946B3] transition-colors hover:bg-white">Start a claim <ClipboardPlus className="h-4 w-4"/></Link>
+          </div>
         </div>
       </section>
       <section aria-label="Account overview" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -92,14 +102,14 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
           { label: "Open claims", count: openClaims.length, href: "/customer/claims", icon: ClipboardList },
           { label: "Needs attention", count: attentionCount, href: "/customer/renewals", icon: AlertTriangle },
         ].map(({ label, count, href, icon: Icon }, index) => (
-          <Link key={label} href={{ pathname: href, query: accountQuery }} className="customer-home-breathe group flex min-w-0 items-center gap-3 rounded-xl border border-[#E2E8F4] bg-white px-3 py-3 shadow-[0_3px_12px_rgba(20,58,100,.04)] focus-visible:outline-offset-2" style={{ animationDelay: `${index * 55}ms` }}>
-            <span className="customer-home-icon-breathe grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#F0EBFF] text-[#6650BE] transition-transform group-hover:scale-105"><Icon className="h-5 w-5" /></span>
-            <span className="min-w-0"><span className="block text-[18px] font-black leading-6 text-[#19345F]"><CustomerHomeCount value={count} /></span><span className="block truncate text-[10px] font-semibold text-[#7383A1]">{label}</span></span>
+          <Link key={label} href={{ pathname: href, query: accountQuery }} className={`customer-home-breathe customer-modern-kpi customer-modern-kpi-${index + 1} group flex min-w-0 items-center gap-3 rounded-2xl border border-[#E2E8F4] bg-white px-3 py-4 shadow-[0_5px_16px_rgba(50,39,112,.07)] focus-visible:outline-offset-2 sm:px-4 sm:py-5`} style={{ animationDelay: `${index * 55}ms` }}>
+            <span className="customer-home-icon-breathe customer-modern-kpi-icon grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F0EBFF] text-[#6650BE] transition-transform group-hover:scale-110"><Icon className="h-5 w-5" /></span>
+            <span className="min-w-0"><span className="block text-[22px] font-black leading-7 tracking-tight text-[#19345F] sm:text-[26px]"><CustomerHomeCount value={count} /></span><span className="block truncate text-[11px] font-bold text-[#657794]">{label}</span></span>
           </Link>
         ))}
       </section>
       <section className="px-1 py-2">
-        <h2 className="mb-2 text-[14px] font-black text-[#10284A]">Quick actions</h2>
+        <h2 className="mb-3 text-[16px] font-black tracking-tight text-[#172E5C]">Quick actions</h2>
         <nav aria-label="Quick actions" className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
           {[
             {title:"Renew policies",href:"/customer/renewals",icon:CalendarDays,background:"bg-[#EAF3FF]",color:"text-[#1769DC]"},
@@ -108,7 +118,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
             {title:"My vehicles",href:"/customer/vehicles",icon:Truck,background:"bg-[#E7F8EF]",color:"text-[#087A57]"},
             {title:"Vehicle exchange",href:"/customer/exchange",icon:ArrowLeftRight,background:"bg-[#F1ECFF]",color:"text-[#7546CE]"},
             {title:"Support",href:"/customer/support",icon:Headset,background:"bg-[#EAF3FF]",color:"text-[#1769DC]"},
-          ].map(({title,href,icon:Icon,background,color})=><Link key={href} href={href === "/customer/start-claim" ? { pathname: "/customer/start-claim", query: accountQuery } : { pathname: href, query: accountQuery }} className="customer-home-quick-action group flex min-w-0 flex-col items-center gap-2 rounded-xl px-2 py-3 text-center hover:bg-[#F3F8FE]"><span className={`grid h-11 w-11 place-items-center rounded-xl ${background} ${color}`}><Icon className="h-[22px] w-[22px] stroke-[2]"/></span><span className="text-[12px] font-semibold text-[#244771]">{title}</span></Link>)}
+          ].map(({title,href,icon:Icon,background,color})=><Link key={href} href={href === "/customer/start-claim" ? { pathname: "/customer/start-claim", query: accountQuery } : { pathname: href, query: accountQuery }} className="customer-home-quick-action customer-modern-quick-action group flex min-w-0 flex-col items-center gap-2 rounded-2xl border border-[#ECEBFA] bg-white px-2 py-4 text-center shadow-[0_4px_12px_rgba(28,35,85,.04)] hover:bg-[#F7F5FF]"><span className={`grid h-12 w-12 place-items-center rounded-2xl ${background} ${color}`}><Icon className="h-[22px] w-[22px] stroke-[2]"/></span><span className="text-[12px] font-semibold text-[#244771]">{title}</span></Link>)}
         </nav>
       </section>
       <div className="grid gap-3 lg:grid-cols-2">
