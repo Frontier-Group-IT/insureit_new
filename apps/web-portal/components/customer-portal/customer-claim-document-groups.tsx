@@ -11,10 +11,33 @@ const groups = [
     { label: "Spot Report", type: "Spot Report" },
     { label: "Estimate Copy", type: "Estimate Copy" },
   ] },
-  { name: "Driver Docs", types: [{ label: "Driver Licence", type: "Driver Licence" }] },
-  { name: "Permit / Tax", types: [{ label: "Permit Copy", type: "Permit Copy" }, { label: "Tax Receipt", type: "Tax Receipt" }, { label: "PUC Copy", type: "PUC Copy" }] },
-  { name: "KYC / Other", types: [{ label: "KYC Document", type: "KYC Document" }, { label: "Other Document", type: "Other Document" }] },
-  { name: "Forms", types: [{ label: "Claim Form", type: "Claim Form" }, { label: "Discharge Voucher", type: "Discharge Voucher" }] },
+  { name: "Driver Docs", types: [
+    { label: "Driver Licence", type: "Driver Licence" },
+    { label: "Driver Aadhaar front", type: "Driver Aadhaar Front" },
+    { label: "Driver Aadhaar back", type: "Driver Aadhaar Back" },
+    { label: "Driver Statement", type: "Driver Statement" },
+  ] },
+  { name: "Permit / Tax", types: [
+    { label: "Road Tax", type: "Road Tax" },
+    { label: "Local Permit A", type: "Local Permit A" },
+    { label: "Local Permit B", type: "Local Permit B" },
+    { label: "National Permit", type: "National Permit" },
+    { label: "Authorization Letter", type: "Authorization Letter" },
+  ] },
+  { name: "KYC / Other", types: [
+    { label: "Aadhaar", type: "Aadhaar" },
+    { label: "PAN", type: "PAN" },
+    { label: "GST", type: "GST" },
+    { label: "Cancelled Cheque", type: "Cancelled Cheque" },
+    { label: "KYC Form", type: "KYC Form" },
+  ] },
+  { name: "Forms", types: [
+    { label: "Claim Form", type: "Claim Form" },
+    { label: "TP Affidavit", type: "TP Affidavit" },
+    { label: "Towing Bill", type: "Towing Bill" },
+    { label: "Repair Estimate", type: "Repair Estimate" },
+    { label: "NCB Verification", type: "NCB Verification" },
+  ] },
 ] as const;
 
 const normalized=(s:string)=>s.toLowerCase().replace(/[^a-z0-9]/g,"");
@@ -22,14 +45,25 @@ export function CustomerClaimDocumentGroups({documents,claimId,accountId,stage,s
   documents:CustomerClaimFile[];claimId:string;accountId:string;stage:string;showSaveDetails?:boolean;showDraftAction?:boolean;draftAction?:(form:FormData)=>Promise<void>;allowUpload?:boolean;
 }) {
   const [active,setActive]=useState(0);
+  const expectedTypes = new Set(groups.flatMap(group => group.types.map(item => normalized(item.type))));
+  const uploadedTypes = new Set(documents.filter(doc => expectedTypes.has(normalized(doc.document_type))).map(doc => normalized(doc.document_type)));
+  const legacyDocuments = documents.filter(doc => !expectedTypes.has(normalized(doc.document_type)));
   return <section className="rounded-2xl border border-[#DCE5F3] bg-white p-4">
-    <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-[17px] font-semibold text-[#071D49]">Document Verification</h2><span className="rounded-lg bg-[#F3F6FC] px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">Documents verified {documents.filter(doc=>doc.verification_status==="verified").length} / {groups.reduce((sum, group)=>sum+group.types.length,0)}</span></div>
+    <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-[17px] font-semibold text-[#071D49]">Document Verification</h2><span className="rounded-lg bg-[#F3F6FC] px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">Documents uploaded {uploadedTypes.size} / {groups.reduce((sum, group)=>sum+group.types.length,0)}</span></div>
     <div role="tablist" aria-label="Claim document groups" className="grid grid-cols-2 overflow-hidden rounded-lg border border-[#D9E3F0] sm:grid-cols-5">
       {groups.map((group,i)=><button key={group.name} type="button" role="tab" aria-selected={i===active} onClick={()=>setActive(i)} className={`flex min-h-11 items-center gap-2 border-r border-[#D9E3F0] px-3 text-left text-[11px] font-semibold ${i===active?"bg-gradient-to-r from-[#6042E8] to-[#4F90EA] text-white":"bg-[#FAFCFF] text-[#183257] hover:bg-[#EDF4FF]"}`}><span className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] ${i===active?"bg-white text-[#5144D8]":"bg-[#EAF1FF] text-[#1D3C6B]"}`}>{i+1}</span>{group.name}</button>)}
     </div>
-    <div role="tabpanel" className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <div role="tabpanel" className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
       {groups[active].types.map(item=><CustomerClaimCompactDocument key={item.type} label={item.label} type={item.type} documents={documents.filter(doc=>normalized(doc.document_type)===normalized(item.type))} claimId={claimId} accountId={accountId} stage={stage} allowUpload={allowUpload}/>)}
     </div>
+    {active===4 && legacyDocuments.length>0 ? <div className="mt-4 border-t border-[#E5EBF5] pt-3">
+      <p className="mb-2 text-[11px] font-semibold text-[#536781]">Previously uploaded document types</p>
+      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+        {Array.from(new Set(legacyDocuments.map(doc=>doc.document_type))).map(type=>(
+          <CustomerClaimCompactDocument key={type} label={type} type={type} documents={legacyDocuments.filter(doc=>doc.document_type===type)} claimId={claimId} accountId={accountId} stage={stage} allowUpload={false}/>
+        ))}
+      </div>
+    </div> : null}
     {showSaveDetails?<div className="mt-4 flex justify-end gap-3 border-t border-[#E5EBF5] pt-4">{showDraftAction && draftAction ? <button type="submit" form="customer-claim-stage-details-form" formAction={draftAction} formNoValidate className="rounded-lg border border-[#BCD1F1] bg-white px-5 py-2.5 text-[12px] font-semibold text-[#163C72] hover:bg-[#F1F6FF]">Save as Draft</button> : null}<button type="submit" form="customer-claim-stage-details-form" className="rounded-lg bg-gradient-to-r from-[#6042E8] to-[#4F90EA] px-5 py-2.5 text-[12px] font-semibold text-white">Save Details</button></div>:null}
   </section>;
 }
