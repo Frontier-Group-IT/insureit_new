@@ -7,7 +7,7 @@ import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/cus
 import { CustomerClaimVoiceRecorder } from "@/components/customer-portal/customer-claim-voice-recorder";
 import { CustomerClaimDocumentGroups } from "@/components/customer-portal/customer-claim-document-groups";
 import { CustomerClaimBooleanChoice } from "@/components/customer-portal/customer-claim-boolean-choice";
-import { Check, Circle, LockKeyhole, CarFront, FileText, ShieldCheck, CalendarDays } from "lucide-react";
+import { Check, Circle, LockKeyhole, CarFront, FileText, ShieldCheck, CalendarDays, Clock3 } from "lucide-react";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
@@ -72,12 +72,23 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
             ["Driver Name",milestone?.details?.driver_name||(claim.accident_description?.match(/Driver:\\s*([^\\n]+)/)?.[1]??null)],
             ["Driver Number",milestone?.details?.driver_phone||(claim.accident_description?.match(/Driver phone:\\s*([^\\n]+)/)?.[1]??null)],
             ["Location",claim.accident_location||milestone?.details?.location],
-          ] as Array<[string,unknown]>).map(([label,value])=><div key={label} className="min-w-0">
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{label}</p>
-            <div className="flex min-h-10 items-center overflow-hidden rounded-md border border-[#D9E3F0] bg-white px-3 text-[12px] font-medium text-[#071D49]">
-              <span className="truncate" title={typeof value==="string"?value:""}>{typeof value==="string"&&value?(label.includes("Date")?new Date(value).toLocaleString("en-IN"):value):"—"}</span>
-            </div>
-          </div>)}
+          ] as Array<[string,unknown]>).map(([label,value])=>{
+            const isDateTime=label==="Accident Date & Time"||label==="Spot Intimation Date & Time";
+            const parsed=isDateTime&&typeof value==="string"&&value?new Date(value):null;
+            const valid=parsed&&!Number.isNaN(parsed.getTime());
+            const date=valid?new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Kolkata",day:"2-digit",month:"2-digit",year:"numeric"}).format(parsed).replaceAll("/","-"):"";
+            const time=valid?new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(parsed):"";
+            return <div key={label} className={isDateTime?"min-w-0 md:col-span-1 xl:col-span-1":"min-w-0"}>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{label}{isDateTime?<span className="ml-1 text-red-500">*</span>:null}</p>
+              {isDateTime?<div className="grid min-h-10 grid-cols-2 overflow-hidden rounded-xl border border-[#CAD8EE] bg-white text-[12px] font-medium text-[#18345C]" aria-label={label+" saved date and time"}>
+                <div className="flex min-w-0 items-center justify-between gap-1 border-r border-[#D9E3F0] px-2.5"><span className="truncate">{date||"DD-MM-YYYY"}</span><CalendarDays className="h-3.5 w-3.5 shrink-0 text-[#182B45]"/></div>
+                <div className="flex min-w-0 items-center justify-between gap-1 px-2.5"><span className="truncate">{time||"HH:MM"}</span><Clock3 className="h-3.5 w-3.5 shrink-0 text-[#182B45]"/></div>
+              </div>:<div className="flex min-h-10 items-center overflow-hidden rounded-md border border-[#D9E3F0] bg-white px-3 text-[12px] font-medium text-[#071D49]">
+                <span className="truncate" title={typeof value==="string"?value:""}>{typeof value==="string"&&value?value:"—"}</span>
+              </div>}
+            </div>;
+          })}
+
         </div>
       ):(
         <div className="p-4">
