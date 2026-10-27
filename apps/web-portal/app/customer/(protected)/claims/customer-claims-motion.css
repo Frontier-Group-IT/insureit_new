@@ -1,0 +1,35 @@
+/* Scoped Customer Claims Register motion: purely visual, no changes to data or navigation. */
+@keyframes claimsEnter { from {opacity:0;transform:translate3d(0,9px,0)} to {opacity:1;transform:translate3d(0,0,0)} }
+@keyframes claimsResultsEnter { from {opacity:.72;transform:translate3d(0,5px,0)} to {opacity:1;transform:translate3d(0,0,0)} }
+@keyframes claimsSoftGlow { 0%,100% {opacity:.38;transform:translateX(-14%)} 50% {opacity:.55;transform:translateX(14%)} }
+@keyframes claimsAttentionPulse { 0%,100% {box-shadow:0 0 0 0 rgba(210,137,33,0)} 50% {box-shadow:0 0 0 3px rgba(210,137,33,.12)} }
+.customer-claims-motion .claims-motion-hero { animation:claimsEnter 320ms ease-out both; }
+.customer-claims-motion .claims-motion-panel { animation:claimsEnter 360ms 65ms ease-out both; transition:border-color 200ms ease,box-shadow 200ms ease; }
+.customer-claims-motion .claims-motion-panel:hover { border-color:#C8DDF5;box-shadow:0 10px 28px rgba(32,79,140,.075); }
+.customer-claims-motion .claims-motion-hero-photo { animation:claimsHeroDrift 24s ease-in-out infinite alternate;transform-origin:center; }
+@keyframes claimsHeroDrift {from {transform:scale(1.008)}to {transform:scale(1.033)}}
+.customer-claims-motion .claims-motion-hero-overlay::after {content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 8%,rgba(255,255,255,.17) 38%,transparent 61%);pointer-events:none;animation:claimsSoftGlow 19s ease-in-out infinite;}
+.customer-claims-motion .claims-motion-toolbar h2 { animation:claimsEnter 320ms 100ms ease-out both; }
+.customer-claims-motion .claims-motion-toolbar label { animation:claimsEnter 320ms 145ms ease-out both; }
+.customer-claims-motion .claims-motion-filters { animation:claimsEnter 320ms 185ms ease-out both; }
+.customer-claims-motion .claims-motion-results { animation:claimsResultsEnter 260ms ease-out both; }
+.customer-claims-motion .claims-motion-panel > .claims-motion-results {animation-delay:225ms;}
+.customer-claims-motion .claims-motion-new-claim {animation:claimsEnter 320ms 225ms ease-out both;transition:background-color 190ms ease,box-shadow 190ms ease,transform 190ms ease;}
+.customer-claims-motion .claims-motion-filter {transition:background-color 180ms ease,color 180ms ease,border-color 180ms ease,box-shadow 180ms ease,transform 180ms ease;}
+.customer-claims-motion .claims-motion-filter-open:hover {border-color:#7BB2F6;background:#EAF4FF;color:#124A9C;}
+.customer-claims-motion .claims-motion-filter-action:hover {border-color:#E5BD7A;background:#FFF5E5;color:#8A5417;}
+.customer-claims-motion .claims-motion-filter-completed:hover {border-color:#9BDEC0;background:#EAF9F0;color:#146D4A;}
+.customer-claims-motion .claims-motion-filter-action[aria-current="page"] {border-color:#D6A350;background:#FFF2D7;color:#85501A;}
+.customer-claims-motion .claims-motion-filter-completed[aria-current="page"] {border-color:#91CFAE;background:#E7F8EE;color:#136C49;}
+.customer-claims-motion .claims-motion-filter-open[aria-current="page"] {border-color:#2A70C8;background:#E5F1FF;color:#16539D;}
+.customer-claims-motion .claims-motion-filter-action[aria-current="page"] {animation:claimsAttentionPulse 3.8s ease-in-out infinite;}
+@media (hover:hover) { .customer-claims-motion .claims-motion-filter:hover {transform:translateY(-1px);box-shadow:0 3px 9px rgba(29,75,136,.09)} .customer-claims-motion .claims-motion-new-claim:hover {background:#2077EF;box-shadow:0 7px 18px rgba(23,105,220,.22);transform:scale(1.018)} }
+.customer-claims-motion .claims-motion-filter:active,.customer-claims-motion .claims-motion-new-claim:active {transform:scale(.985);}
+.customer-claims-motion .claims-motion-table tbody tr {transition:background-color 180ms ease,box-shadow 180ms ease;}
+.customer-claims-motion .claims-motion-table tbody tr:hover {background:#EEF6FF;box-shadow:inset 3px 0 #8ABDF8;}
+.customer-claims-motion .claims-motion-table tbody tr :is(a,svg) {transition:color 180ms ease,transform 180ms ease;}
+.customer-claims-motion .claims-motion-table tbody tr:hover svg {transform:translateX(1px);}
+.customer-claims-motion .claims-motion-pagination a {transition:background-color 180ms ease,border-color 180ms ease,transform 180ms ease;}
+.customer-claims-motion .claims-motion-pagination a:hover {background:#EFF6FF;border-color:#B8D5F8;}
+.customer-claims-motion .claims-motion-pagination a:active {transform:scale(.98);}
+@media (prefers-reduced-motion:reduce) {.customer-claims-motion :is(.claims-motion-hero,.claims-motion-panel,.claims-motion-results,.claims-motion-new-claim,.claims-motion-filter,.claims-motion-toolbar h2,.claims-motion-toolbar label,.claims-motion-filters,.claims-motion-hero-photo,.claims-motion-hero-overlay::after) {animation:none!important;} .customer-claims-motion *,.customer-claims-motion *::after,.customer-claims-motion *::before {transition:none!important;scroll-behavior:auto!important;}}
