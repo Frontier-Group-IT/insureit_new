@@ -25,9 +25,9 @@ assert.doesNotMatch(bulkVerificationGroup, /type="checkbox"/, "Stage 1 pending f
 assert.match(bulkVerificationGroup, /documentIds=\{selectedDocumentIds\}/, "Verify must receive only the icon-selected file ids.");
 assert.match(bulkVerificationGroup, /disabled=\{false\}/, "Stage 1 Verify must remain clickable so an empty selection can show a warning.");
 assert.match(bulkVerificationGroup, /aria-label=\{`Select \$\{document\.file_name\} for verification`\}/, "The existing document icon must select the exact pending file.");
-assert.match(bulkVerificationGroup, /onDoubleClick=\\{\\(event\\) => \\{ event\\.stopPropagation\\(\\); onDeselect\\(\\); \\}\\}/, "Double-click on the uploaded-file shield must deselect it.");
-assert.match(bulkVerificationGroup, /<DocumentVerificationIcon verified=\\{verified\\} selected=\\{selected\\} \\/>/, "The uploaded-file shield must display the blue selection checkmark.");
-assert.doesNotMatch(bulkVerificationGroup, /selectGroup\\(\\)|deselectGroup\\(\\)/, "Do not add another selection shield to category headings.");
+assert.match(bulkVerificationGroup, /onDoubleClick=\{\(event\) => \{ event\.stopPropagation\(\); onDeselect\(\); \}\}/, "Double-click on the uploaded-file shield must deselect it.");
+assert.match(bulkVerificationGroup, /<DocumentVerificationIcon verified=\{verified\} selected=\{selected\} \/>/, "The uploaded-file shield must display the blue selection checkmark.");
+assert.doesNotMatch(bulkVerificationGroup, /selectGroup\(\)|deselectGroup\(\)/, "Do not add another selection shield to category headings.");
 assert.match(verificationAction, /Please select a document to verify by clicking the document icon beside its file name\./, "Empty Stage 1 verification must show the document-selection warning.");
 assert.match(bulkVerificationGroup, /document\.verification_status !== "rejected"/, "Rejected files cannot be selected before replacement.");
 assert.match(bulkVerificationGroup, /documentId=\{document\.id\}[\s\S]*?actionLabel="Replace"/, "Replace must target the exact row.");
