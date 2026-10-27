@@ -12,6 +12,10 @@ const documentTypes=[
   "Estimate Copy","Fitness Copy","Spot Report",
   "Fasttag report last 15 days","Permit Copy","Tax Receipt","PUC Copy",
   "KYC Document","Other Document","Claim Form","Discharge Voucher",
+  "Driver Aadhaar Front","Driver Aadhaar Back","Driver Statement",
+  "Road Tax","Local Permit A","Local Permit B","National Permit","Authorization Letter",
+  "Aadhaar","PAN","GST","Cancelled Cheque","KYC Form",
+  "TP Affidavit","Towing Bill","Repair Estimate","NCB Verification",
 ];
 
 export type CustomerClaimUploadState = { error: string | null };
