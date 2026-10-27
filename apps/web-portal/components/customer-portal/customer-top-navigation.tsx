@@ -48,7 +48,7 @@ export function CustomerTopNavigation({ onSwitchToSidebar }: { onSwitchToSidebar
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
       <Link href="/customer/home" aria-label="INSUREIT Customer home" className="shrink-0 rounded-lg bg-transparent px-2 py-1.5">
-        <BrandLockup compact />
+        <BrandLockup compact inverse />
       </Link>
       <button type="button" onClick={onSwitchToSidebar} title="Switch to sidebar navigation" aria-label="Switch to sidebar navigation" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-white/90 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
         <PanelLeftOpen className="h-[19px] w-[19px]" />
