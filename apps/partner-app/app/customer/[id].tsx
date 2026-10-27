@@ -104,18 +104,7 @@ export default function CustomerDetailScreen() {
                       <Logo source={getPartnerManufacturerLogoSource(vehicle.make)} fallback={PartnerAssets.products.motorInsurance} />
                       <View style={{ flex: 1 }}><Text style={redesign.recordTitle}>{vehicle.vehicle_no || 'Vehicle number not recorded'}</Text><Text style={redesign.label}>{displayParts(vehicle.make, vehicle.model, vehicle.year) || 'Not recorded'}</Text></View>
                     </View>
-                    <View style={redesign.twoColumns}>
-                      <DetailCell icon="business-outline" label="Make" value={vehicle.make} />
-                      <DetailCell icon="cube-outline" label="Model" value={vehicle.model} />
-                      <DetailCell icon="car-outline" label="Vehicle Type" value={vehicle.vehicle_type} />
-                      <DetailCell icon="calendar-outline" label="Year" value={vehicle.year == null ? null : String(vehicle.year)} />
-                      <DetailCell icon="water-outline" label="Fuel Type" value={null} />
-                      <DetailCell icon="barcode-outline" label="Chassis No." value={null} />
-                      <DetailCell icon="settings-outline" label="Engine No." value={null} />
-                      <DetailCell icon="color-palette-outline" label="Color" value={null} />
-                      <DetailCell icon="location-outline" label="RTO" value={null} />
-                      <DetailCell icon="shield-checkmark-outline" label="Fitness Valid Till" value={formatDate(vehicle.fitness_expiry_date)} />
-                    </View>
+
                   </View>
                 )) : <EmptyCard icon="car-sport-outline" title="No vehicles recorded." subtitle="Vehicles linked to this customer will appear here." />}
               </>
