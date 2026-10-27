@@ -8,7 +8,7 @@ import type { PolicyBusinessQuery } from "@/lib/reports/policy-business";
 export const runtime = "nodejs";
 
 const HEADERS = [
-  "Month", "Policy Issuance Date", "RM Name", "Intermediary Type", "Lead Source", "Intermediary Code",
+  "Month", "Policy Issuance Date", "Business Type", "RM Name", "Intermediary Type", "Lead Source", "Intermediary Code",
   "Vehicle Class", "Registration No.", "Insured Name", "Phone No.", "Class Description", "Capacity Type",
   "Make", "Model", "Fuel Type", "Capacity / GVW", "Year of Mfg", "Chassis No.", "Engine No.",
   "Policy Product", "IDV / SI", "OD Premium", "Third Party Premium", "CPA", "Add-On Premium", "Net Premium", "GST", "Gross Premium",
@@ -96,7 +96,7 @@ function buildWorkbook(rows: PolicyBusinessMisRow[]) {
 
 function toSpreadsheetRow(row: PolicyBusinessMisRow) {
   return [
-    monthName(row.issuanceDate), row.issuanceDate, row.rmName, row.intermediaryType, row.leadSource, row.intermediaryCode,
+    monthName(row.issuanceDate), row.issuanceDate, row.businessType, row.rmName, row.intermediaryType, row.leadSource, row.intermediaryCode,
     row.vehicleClass, row.registrationNo, row.insuredName, row.phoneNo, row.classDescription, row.capacityType,
     row.make, row.model, row.fuelType, row.capacity, row.manufacturingYear, row.chassisNo, row.engineNo,
     row.policyProduct, row.idv, row.odPremium, row.tpPremium, row.cpa, row.addOnPremium, row.netPremium, row.gst, row.grossPremium,
