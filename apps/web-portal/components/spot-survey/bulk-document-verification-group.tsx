@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Shield, ShieldCheck, Trash2 } from "lucide-react";
+import { Camera, CarFront, FileCheck2, IdCard, Shield, ShieldCheck, Trash2, Truck, Video, Mic } from "lucide-react";
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { ClaimDocumentCollapsedStatus } from "@/components/claim-manager/claim-document-collapsed-status";
 import { ReplaceDocumentButton } from "./replace-document-button";
@@ -79,6 +79,12 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
   const hasMultipleFiles = item.documents.length > 1;
   const showDocumentRows = hasSingleFile || (hasMultipleFiles && isExpanded);
   const contentId = `claim-document-group-${claim.id}-${item.key}`;
+  const selectedForVerification = selectedDocumentIds.length > 0;
+  const selectGroup = () => {
+    if (!selectableIds.length) return;
+    setSelectedIds(new Set(selectableIds));
+  };
+  const deselectGroup = () => setSelectedIds(new Set());
   const toggleExpanded = () => {
     if (hasMultipleFiles) setIsExpanded((expanded) => !expanded);
   };
@@ -95,27 +101,38 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
       className={`rounded-xl border bg-white ${hasNoFiles ? "px-2.5 py-2" : "p-2.5"} shadow-[0_6px_16px_rgba(7,29,73,0.028)] ${allVerified ? "border-green-200" : "border-[#E2EAF4]"} ${hasMultipleFiles ? "cursor-pointer" : ""}`}
     >
       <div className={`flex items-center justify-between gap-2 ${showDocumentRows ? "mb-2" : ""}`}>
-        {hasMultipleFiles ? (
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              toggleExpanded();
-            }}
-            aria-expanded={isExpanded}
-            aria-controls={contentId}
-            aria-label={`${isExpanded ? "Collapse" : "Expand"} ${item.title}`}
-            className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/30 focus-visible:ring-offset-1"
-          >
-            <DocumentVerificationIcon verified={allVerified} />
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <DocumentCategoryIcon category={item.key} />
+          {hasMultipleFiles ? (
+            <button
+              type="button"
+              onClick={(event) => { event.stopPropagation(); toggleExpanded(); }}
+              aria-expanded={isExpanded}
+              aria-controls={contentId}
+              aria-label={`${isExpanded ? "Collapse" : "Expand"} ${item.title}`}
+              className="min-w-0 truncate rounded-lg text-left text-[13px] font-semibold leading-tight text-[#071D49] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/30"
+            >{item.title}</button>
+          ) : (
             <h2 className="truncate text-[13px] font-semibold leading-tight text-[#071D49]">{item.title}</h2>
-          </button>
-        ) : (
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <DocumentVerificationIcon verified={allVerified} />
-            <h2 className="truncate text-[13px] font-semibold leading-tight text-[#071D49]">{item.title}</h2>
-          </div>
-        )}
+          )}
+          {allVerified ? (
+            <ShieldCheck aria-label="Verified" className="h-5 w-5 shrink-0 text-green-600" strokeWidth={2.2} />
+          ) : selectableIds.length ? (
+            <button
+              type="button"
+              onClick={(event) => { event.stopPropagation(); selectGroup(); }}
+              onDoubleClick={(event) => { event.stopPropagation(); deselectGroup(); }}
+              aria-pressed={selectedForVerification}
+              aria-label={selectedForVerification ? `${item.title} selected for verification; double-click to deselect` : `Select ${item.title} for verification`}
+              title={selectedForVerification ? "Selected for verification — double-click to deselect" : "Click to select for verification"}
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-md transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+            >
+              <DocumentVerificationIcon verified={false} selected={selectedForVerification} />
+            </button>
+          ) : (
+            <Shield aria-label="No selectable documents" className="h-5 w-5 shrink-0 text-slate-400" strokeWidth={2.2} />
+          )}
+        </div>
         <div className="flex shrink-0 items-center gap-0.5">
           <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentType={item.documentType} label={item.title} actionLabel="Upload" iconOnly />
           {allVerified ? <StatusBadge tone="green" label="Verified" /> : (
@@ -234,8 +251,23 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
   );
 }
 
-function DocumentVerificationIcon({ verified }: { verified: boolean }) {
-  const Icon = verified ? ShieldCheck : Shield;
+const categoryIcons = {
+  spot: Camera,
+  rc: CarFront,
+  insurance: FileCheck2,
+  dl: IdCard,
+  gr: Truck,
+  video: Video,
+  audio: Mic,
+} as const;
+
+function DocumentCategoryIcon({ category }: { category: string }) {
+  const Icon = categoryIcons[category as keyof typeof categoryIcons] ?? FileCheck2;
+  return <Icon aria-hidden="true" className="h-5 w-5 shrink-0 text-[#2563EB]" strokeWidth={2.1} />;
+}
+
+function DocumentVerificationIcon({ verified, selected = false }: { verified: boolean; selected?: boolean }) {
+  const Icon = verified || selected ? ShieldCheck : Shield;
   return <Icon aria-hidden="true" className={`h-5 w-5 shrink-0 ${verified ? "text-green-600" : "text-[#2563EB]"}`} strokeWidth={2.2} />;
 }
 
