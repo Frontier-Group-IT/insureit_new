@@ -20,4 +20,7 @@ assert.match(menu, /<form action=\{togglePartnerAssociateAccountStatus\}>/);
 assert.match(menu, /<form action=\{deletePartnerAssociateAccount\}/);
 assert.match(actions, /await assertPartnerAccess\(reviewer, applicationId, intermediaryId, returnPath\)/);
 assert.match(page, /canManageAssociates \? \(/);
+const branchEdit = readFileSync(resolve(root, "../../../groups/branches/super-actions.ts"), "utf8");
+assert.ok(branchEdit.includes(String.raw`!/^\+?[0-9 ()-]{7,20}$/.test(phone)`), "Branch edit must accept normal and +prefixed phone numbers.");
+assert.ok(!branchEdit.includes(String.raw`!/^\\+?[0-9 ()-]{7,20}$/.test(phone)`), "Do not regress to the accidentally double-escaped phone regex.");
 console.log("Associate account action wiring and access guard regression checks passed.");
