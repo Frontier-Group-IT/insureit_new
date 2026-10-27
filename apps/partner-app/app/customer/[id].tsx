@@ -20,10 +20,7 @@ export default function CustomerDetailScreen() {
   const [data, setData] = useState<PartnerCustomerDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showAllVehicles, setShowAllVehicles] = useState(false);
-  const [expandedVehicles, setExpandedVehicles] = useState<Record<string, boolean>>({});
-  const [expandedClaims, setExpandedClaims] = useState<Record<string, boolean>>({});
-
+  const [activeTab, setActiveTab] = useState<'overview' | 'vehicles' | 'policies'>('overview');
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
@@ -39,18 +36,6 @@ export default function CustomerDetailScreen() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const visibleVehicles = data ? (showAllVehicles ? data.vehicles : data.vehicles.slice(0, 2)) : [];
-  const unlinkedPolicies = data ? data.policies.filter((policy) => !policy.vehicle_id) : [];
-  const externalPolicyClaims = data ? data.claims.filter((claim) => !claim.policy_id && claim.external_policy_id) : [];
-  const unlinkedClaims = data ? data.claims.filter((claim) => !claim.policy_id && !claim.external_policy_id) : [];
-
-  const toggleVehicle = (vehicleId: string) => {
-    setExpandedVehicles((current) => ({ ...current, [vehicleId]: !current[vehicleId] }));
-  };
-
-  const toggleClaims = (policyId: string) => {
-    setExpandedClaims((current) => ({ ...current, [policyId]: !current[policyId] }));
-  };
 
   return (
     <PartnerScreen title="Customer" hideTopBar>
@@ -60,170 +45,105 @@ export default function CustomerDetailScreen() {
         <PartnerStateView state="error" title="Customer unavailable" message={error || 'This customer could not be loaded.'} actionLabel="Try again" onAction={() => void load()} />
       ) : (
         <>
-          <View style={styles.headerWrap}>
-            <View style={styles.headerOrbLarge} />
-            <View style={styles.headerOrbSmall} />
-            <View style={styles.headerRow}>
-              <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
-                <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+
+          <View style={redesign.header}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()}><Ionicons name="arrow-back" size={22} color="#111B37" /></Pressable>
+            <Text style={redesign.headerTitle}>Customer Details</Text>
+          </View>
+          <View style={redesign.profile}>
+            <View style={redesign.avatar}><Text style={redesign.avatarText}>{initials(data.customer.customer_name)}</Text></View>
+            <View style={redesign.profileNameWrap}>
+              <Text style={redesign.profileName}>{data.customer.customer_name}</Text>
+              {customerTone(data.customer.status) === 'success' ? <Ionicons name="checkmark-circle" size={19} color="#0CB76B" /> : null}
+            </View>
+            <View style={redesign.actions}>
+              <PartnerContactActions phone={data.customer.phone} email={data.customer.email} />
+            </View>
+          </View>
+          <View style={redesign.tabs}>
+            {([
+              ['overview', 'person-outline', 'Overview'],
+              ['vehicles', 'car-sport-outline', 'Vehicles'],
+              ['policies', 'shield-checkmark-outline', 'Policies'],
+            ] as const).map(([key, icon, title]) => (
+              <Pressable key={key} accessibilityRole="tab" accessibilityState={{ selected: activeTab === key }} onPress={() => setActiveTab(key)} style={[redesign.tab, activeTab === key && redesign.activeTab]}>
+                <Ionicons name={icon} size={17} color={activeTab === key ? '#0879F1' : '#69758A'} />
+                <Text style={[redesign.tabText, activeTab === key && redesign.activeTabText]}>{title}</Text>
               </Pressable>
-              <View style={styles.headerIcon}><Ionicons name="people" size={22} color="#1767E8" /></View>
-              <Text style={styles.headerTitle}>Customer</Text>
-            </View>
+            ))}
           </View>
-
-          <View style={styles.identityCard}>
-            <View style={styles.identityMainRow}>
-              <View style={styles.avatar}><Text style={styles.avatarText}>{initials(data.customer.customer_name)}</Text></View>
-              <View style={styles.identityBody}>
-                <View style={styles.identityTitleRow}>
-                  <Text numberOfLines={1} style={styles.identityName}>{data.customer.customer_name}</Text>
-                  <PartnerStatusBadge label={humanize(data.customer.status || 'active')} tone={customerTone(data.customer.status)} />
-                </View>
-                <Text style={styles.identityMeta}>{[data.customer.city, data.customer.state].filter(Boolean).join(', ') || 'Location not recorded'}{data.customer.customer_code ? ` · ${data.customer.customer_code}` : ''}</Text>
-              </View>
-            </View>
-            <View style={styles.contactActions}><PartnerContactActions phone={data.customer.phone} email={data.customer.email} /></View>
-            <View style={styles.relationshipInline}>
-              <Info label="Customer Type" value={humanize(data.customer.customer_type || 'not recorded')} />
-              <Info label="Fleet" value={humanize(data.customer.fleet_size_band || 'not recorded')} />
-              <Info label="Intermediary" value={data.customer.intermediary_code || 'Organization / unassigned'} />
-              <Info label="Customer Record Since" value={formatMonthYear(data.customer.created_at)} />
-            </View>
-          </View>
-
-          {data.summary.renewals_30_days > 0 ? <View style={styles.attention}><PartnerBanner tone="warning" title="Renewal attention" message={`${data.summary.renewals_30_days} ${data.summary.renewals_30_days === 1 ? 'policy is' : 'policies are'} due within 30 days.`} /></View> : null}
-
-          <View style={styles.vehiclesSection}>
-            <View style={styles.vehiclesHeader}>
-              <View style={styles.sectionTitleRow}><Ionicons name="car-sport-outline" size={19} color="#1767E8" /><Text style={styles.sectionTitle}>Vehicles</Text></View>
-              <Text style={styles.vehiclesCount}>{data.summary.vehicles} total</Text>
-            </View>
-            {data.vehicles.length ? (
-              <View style={styles.stack}>{visibleVehicles.map((vehicle) => {
-                const logo = getPartnerManufacturerLogoSource(vehicle.make);
-                const policies = data.policies.filter((policy) => policy.vehicle_id === vehicle.vehicle_id);
-                const expanded = Boolean(expandedVehicles[vehicle.vehicle_id]);
-                return (
-                  <View key={vehicle.vehicle_id} style={styles.vehicleCard}>
-                    <View style={styles.vehicleTopRow}>
-                      <Logo source={logo} fallback={PartnerAssets.products.motorInsurance} />
-                      <View style={styles.itemBody}>
-                        <View style={styles.vehicleIdentity}>
-                          <Text style={styles.itemTitle}>{vehicle.vehicle_no || 'Vehicle'}</Text>
-                          <Text style={styles.vehicleDetailText}>{displayParts(vehicle.make, vehicle.model, vehicle.year) || humanize(vehicle.vehicle_type || 'vehicle')}</Text>
-                        </View>
-                        <View style={styles.expiryRow}><Expiry label="PUC" date={vehicle.puc_expiry_date} /><Expiry label="Fitness" date={vehicle.fitness_expiry_date} /><Expiry label="Road tax" date={vehicle.road_tax_expiry_date} /><Expiry label="National permit" date={vehicle.national_permit_expiry_date} /><Expiry label="Local permit" date={vehicle.local_permit_expiry_date} /></View>
-                      </View>
-                      {policies.length ? (
-                        <Pressable accessibilityRole="button" accessibilityLabel={expanded ? 'Hide policy details' : 'View policy details'} onPress={() => toggleVehicle(vehicle.vehicle_id)} style={({ pressed }) => [styles.viewPolicyButton, pressed && styles.pressed]}>
-                          <Text style={styles.viewPolicyText}>{expanded ? 'Hide Policy' : 'View Policy'}</Text>
-                          <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color="#FFFFFF" />
-                        </Pressable>
-                      ) : null}
+          <View style={redesign.content}>
+            {activeTab === 'overview' ? (
+              <>
+                <Text style={redesign.sectionTitle}>Customer Information</Text>
+                <DetailLine icon="person-outline" label="Customer Type" value={humanize(data.customer.customer_type || 'Not recorded')} />
+                <DetailLine icon="document-text-outline" label="Customer ID" value={data.customer.customer_code || 'Not recorded'} />
+                <DetailLine icon="people-outline" label="Intermediary" value={data.customer.intermediary_code || 'Not recorded'} />
+                <DetailLine icon="calendar-outline" label="Customer Since" value={formatMonthYear(data.customer.created_at)} />
+                <DetailLine icon="car-outline" label="Fleet" value={humanize(data.customer.fleet_size_band || 'Not recorded')} />
+                <DetailLine icon="checkmark-circle-outline" label="Status" value={humanize(data.customer.status || 'Not recorded')} />
+                {data.summary.renewals_30_days > 0 ? <PartnerBanner tone="warning" title="Renewal attention" message={`${data.summary.renewals_30_days} policies due within 30 days.`} /> : null}
+                {data.claims.length ? (
+                  <View style={redesign.claimsSection}>
+                    <Text style={redesign.sectionTitle}>Claims</Text>
+                    {data.claims.map((claim) => (
+                      <Pressable key={claim.claim_id} accessibilityRole="button" onPress={() => router.push(`/claim/${claim.claim_id}` as never)} style={redesign.simpleRow}>
+                        <Ionicons name="shield-outline" size={19} color="#0879F1" />
+                        <View style={{ flex: 1 }}><Text style={redesign.value}>{claim.claim_no || 'Claim'}</Text><Text style={redesign.label}>{humanize(claim.current_status || 'Not recorded')}</Text></View>
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : null}
+              </>
+            ) : activeTab === 'vehicles' ? (
+              <>
+                <View style={redesign.sectionHeading}><Ionicons name="car-sport-outline" size={20} color="#0879F1" /><Text style={redesign.sectionTitle}>Vehicle Details</Text></View>
+                {data.vehicles.length ? data.vehicles.map((vehicle) => (
+                  <View key={vehicle.vehicle_id} style={redesign.recordCard}>
+                    <View style={redesign.vehicleIdentity}>
+                      <Logo source={getPartnerManufacturerLogoSource(vehicle.make)} fallback={PartnerAssets.products.motorInsurance} />
+                      <View style={{ flex: 1 }}><Text style={redesign.recordTitle}>{vehicle.vehicle_no || 'Vehicle number not recorded'}</Text><Text style={redesign.label}>{displayParts(vehicle.make, vehicle.model, vehicle.year) || 'Not recorded'}</Text></View>
                     </View>
-
-                    {expanded ? (
-                      <View style={styles.policyStack}>{policies.map((policy) => {
-                        const policyClaims = data.claims.filter((claim) => claim.policy_id === policy.policy_id);
-                        const claimsExpanded = Boolean(expandedClaims[policy.policy_id]);
-                        const insurerLogo = getPartnerInsurerLogoSource(policy.insurer_name);
-                        return (
-                          <View key={policy.policy_id} style={styles.policyCard}>
-                            <View style={styles.policyRow}>
-                              <Logo source={insurerLogo} fallback={PartnerAssets.products.motorInsurance} compact />
-                              <Pressable accessibilityRole="button" accessibilityLabel={`Open policy ${policy.policy_no || policy.policy_code || ''}`} onPress={() => router.push(`/policy/${policy.policy_id}` as never)} style={({ pressed }) => [styles.policyBody, pressed && styles.pressed]}>
-                                <View style={styles.policyIdentity}>
-                                  <Text style={styles.policyNumber}>{policy.policy_no || policy.policy_code || 'Policy'}</Text>
-                                  <Text style={styles.policyExpiry}>Ends {formatDate(policy.end_date)} · {formatIndianCurrency(policy.premium_amount)}</Text>
-                                </View>
-                              </Pressable>
-                              <Pressable accessibilityRole="button" accessibilityLabel={`Open policy ${policy.policy_no || policy.policy_code || ''}`} onPress={() => router.push(`/policy/${policy.policy_id}` as never)} style={({ pressed }) => [styles.policyDetailsButton, pressed && styles.pressed]}>
-                                <Text style={styles.policyDetailsButtonText}>Policy Details</Text>
-                                <Ionicons name="chevron-forward" size={13} color="#FFFFFF" />
-                              </Pressable>
-                              {policyClaims.length ? (
-                                <Pressable accessibilityRole="button" accessibilityLabel={claimsExpanded ? `Collapse ${policyClaims.length} claims` : `Expand ${policyClaims.length} claims`} onPress={() => toggleClaims(policy.policy_id)} style={({ pressed }) => [styles.claimToggle, pressed && styles.pressed]}>
-                                  <Text style={styles.claimToggleText}>Claims {policyClaims.length}</Text>
-                                  <Ionicons name={claimsExpanded ? 'chevron-up' : 'chevron-down'} size={13} color="#163F79" />
-                                </Pressable>
-                              ) : null}
-                            </View>
-
-                            {claimsExpanded ? (
-                              <View style={styles.claimStack}>{policyClaims.map((claim) => (
-                                <Pressable accessibilityRole="button" accessibilityLabel={`Open claim ${claim.claim_no || ''}`} key={claim.claim_id} onPress={() => router.push(`/claim/${claim.claim_id}` as never)} style={({ pressed }) => [styles.claimCard, pressed && styles.pressed]}>
-                                  <View style={styles.claimIcon}><Ionicons name="shield-checkmark-outline" size={17} color="#F59E0B" /></View>
-                                  <View style={styles.itemBody}>
-                                    <View style={styles.itemHeading}><Text style={styles.itemTitle}>{claim.claim_no || 'Claim'}</Text><PartnerStatusBadge label={humanize(claim.current_status || 'active')} tone={claimTone(claim.current_status)} /></View>
-                                    <Text numberOfLines={1} style={styles.itemText}>{claim.insurer_name || 'Claim details'}</Text>
-                                  </View>
-                                  <Ionicons name="chevron-forward" size={17} color="#5A35EE" />
-                                </Pressable>
-                              ))}</View>
-                            ) : null}
-                          </View>
-                        );
-                      })}</View>
-                    ) : null}
-                  </View>
-                );
-              })}</View>
-            ) : <EmptyCard icon="car-sport-outline" title="No vehicles recorded." subtitle="Vehicles linked to this customer will appear here." />}
-            {data.vehicles.length > 2 ? <ExpandToggle expanded={showAllVehicles} total={data.vehicles.length} label="vehicles" onPress={() => setShowAllVehicles((value) => !value)} /> : null}
-          </View>
-
-          {unlinkedPolicies.length ? (
-            <>
-              <SectionHeader icon="albums-outline" title="Other Policies" meta={`${unlinkedPolicies.length} without a linked vehicle`} />
-              <View style={styles.stack}>{unlinkedPolicies.map((policy) => {
-                const logo = getPartnerInsurerLogoSource(policy.insurer_name);
-                return (
-                  <Pressable accessibilityRole="button" accessibilityLabel={`Open policy ${policy.policy_no || policy.policy_code || ''}`} key={policy.policy_id} onPress={() => router.push(`/policy/${policy.policy_id}` as never)} style={({ pressed }) => [styles.itemCard, pressed && styles.pressed]}>
-                    <Logo source={logo} fallback={PartnerAssets.products.motorInsurance} />
-                    <View style={styles.itemBody}>
-                      <View style={styles.itemHeading}><Text style={styles.itemTitle}>{policy.policy_no || policy.policy_code || 'Policy'}</Text><PartnerStatusBadge label={policyCategory(policy)} tone="brand" /></View>
-                      <Text numberOfLines={1} style={styles.itemText}>{policy.insurer_name || 'Insurer not recorded'}</Text>
-                      <Text style={styles.itemMeta}>Ends {formatDate(policy.end_date)} · {formatIndianCurrency(policy.premium_amount)}</Text>
+                    <View style={redesign.twoColumns}>
+                      <DetailCell icon="business-outline" label="Make" value={vehicle.make} />
+                      <DetailCell icon="cube-outline" label="Model" value={vehicle.model} />
+                      <DetailCell icon="car-outline" label="Vehicle Type" value={vehicle.vehicle_type} />
+                      <DetailCell icon="calendar-outline" label="Year" value={vehicle.year == null ? null : String(vehicle.year)} />
+                      <DetailCell icon="water-outline" label="Fuel Type" value={null} />
+                      <DetailCell icon="barcode-outline" label="Chassis No." value={null} />
+                      <DetailCell icon="settings-outline" label="Engine No." value={null} />
+                      <DetailCell icon="color-palette-outline" label="Color" value={null} />
+                      <DetailCell icon="location-outline" label="RTO" value={null} />
+                      <DetailCell icon="shield-checkmark-outline" label="Fitness Valid Till" value={formatDate(vehicle.fitness_expiry_date)} />
                     </View>
-                    <Ionicons name="chevron-forward" size={18} color="#5A35EE" />
-                  </Pressable>
-                );
-              })}</View>
-            </>
-          ) : null}
-
-          {externalPolicyClaims.length ? (
-            <>
-              <SectionHeader icon="shield-checkmark-outline" title="External Policy Claims" meta={`${externalPolicyClaims.length} linked to external policies`} />
-              <View style={styles.stack}>{externalPolicyClaims.map((claim) => (
-                <Pressable accessibilityRole="button" accessibilityLabel={`Open claim ${claim.claim_no || ''}`} key={claim.claim_id} onPress={() => router.push(`/claim/${claim.claim_id}` as never)} style={({ pressed }) => [styles.itemCard, pressed && styles.pressed]}>
-                  <Logo source={getPartnerInsurerLogoSource(claim.insurer_name)} fallback={PartnerAssets.navigation.claims} />
-                  <View style={styles.itemBody}>
-                    <View style={styles.itemHeading}><Text style={styles.itemTitle}>{claim.claim_no || 'Claim'}</Text><PartnerStatusBadge label={humanize(claim.current_status || 'active')} tone={claimTone(claim.current_status)} /></View>
-                    <Text numberOfLines={1} style={styles.itemText}>{[claim.vehicle_no, claim.insurer_name].filter(Boolean).join(' · ') || 'External policy claim'}</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color="#5A35EE" />
-                </Pressable>
-              ))}</View>
-            </>
-          ) : null}
-
-          {unlinkedClaims.length ? (
-            <>
-              <SectionHeader icon="shield-checkmark-outline" title="Other Claims" meta={`${unlinkedClaims.length} without a linked policy`} />
-              <View style={styles.stack}>{unlinkedClaims.map((claim) => (
-                <Pressable accessibilityRole="button" accessibilityLabel={`Open claim ${claim.claim_no || ''}`} key={claim.claim_id} onPress={() => router.push(`/claim/${claim.claim_id}` as never)} style={({ pressed }) => [styles.itemCard, pressed && styles.pressed]}>
-                  <Logo source={getPartnerInsurerLogoSource(claim.insurer_name)} fallback={PartnerAssets.navigation.claims} />
-                  <View style={styles.itemBody}>
-                    <View style={styles.itemHeading}><Text style={styles.itemTitle}>{claim.claim_no || 'Claim'}</Text><PartnerStatusBadge label={humanize(claim.current_status || 'active')} tone={claimTone(claim.current_status)} /></View>
-                    <Text numberOfLines={1} style={styles.itemText}>{[claim.vehicle_no, claim.insurer_name].filter(Boolean).join(' · ') || 'Claim details'}</Text>
+                )) : <EmptyCard icon="car-sport-outline" title="No vehicles recorded." subtitle="Vehicles linked to this customer will appear here." />}
+              </>
+            ) : (
+              <>
+                <View style={redesign.sectionHeading}><Ionicons name="shield-checkmark-outline" size={20} color="#0879F1" /><Text style={redesign.sectionTitle}>Policy Details</Text></View>
+                {data.policies.length ? data.policies.map((policy) => (
+                  <View key={policy.policy_id} style={redesign.recordCard}>
+                    <Pressable accessibilityRole="button" accessibilityLabel={`Open policy ${policy.policy_no || policy.policy_code || ''}`} onPress={() => router.push(`/policy/${policy.policy_id}` as never)} style={redesign.vehicleIdentity}>
+                      <Logo source={getPartnerInsurerLogoSource(policy.insurer_name)} fallback={PartnerAssets.products.motorInsurance} />
+                      <Text style={[redesign.recordTitle, { flex: 1 }]}>{policy.vehicle_no || policy.policy_no || policy.policy_code || 'Policy'}</Text>
+                    </Pressable>
+                    <DetailLine icon="document-text-outline" label="Policy Type" value={displayParts(policy.policy_type, policy.policy_product) || policyCategory(policy)} />
+                    <View style={redesign.twoColumns}>
+                      <DetailCell icon="calendar-outline" label="Policy Start" value={null} />
+                      <DetailCell icon="calendar-outline" label="Policy End" value={formatDate(policy.end_date)} />
+                      <DetailCell icon="shield-outline" label="Insurer" value={policy.insurer_name} />
+                      <DetailCell icon="document-text-outline" label="Policy Number" value={policy.policy_no || policy.policy_code} />
+                      <DetailCell icon="cash-outline" label="Premium Amount" value={policy.premium_amount == null ? null : formatIndianCurrency(policy.premium_amount)} />
+                      <DetailCell icon="card-outline" label="Payment Mode" value={null} />
+                      <DetailCell icon="checkmark-circle-outline" label="Status" value={null} />
+                      <DetailCell icon="calendar-outline" label="Last Payment Date" value={null} />
+                    </View>
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color="#5A35EE" />
-                </Pressable>
-              ))}</View>
-            </>
-          ) : null}
+                )) : <EmptyCard icon="shield-checkmark-outline" title="No policies recorded." subtitle="Policies linked to this customer will appear here." />}
+              </>
+            )}
+          </View>
         </>
       )}
     </PartnerScreen>
@@ -258,6 +178,44 @@ function formatDate(value: string | null) { if (!value) return '—'; const d = 
 function formatMonthYear(value: string) { const d = new Date(value); return Number.isNaN(d.getTime()) ? 'recorded date' : new Intl.DateTimeFormat('en-IN', { month: 'short', year: 'numeric' }).format(d); }
 function daysUntil(value: string) { const end = new Date(`${value}T00:00:00`); const today = new Date(); today.setHours(0, 0, 0, 0); return Math.ceil((end.getTime() - today.getTime()) / 86400000); }
 
+
+function DetailLine({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
+  return <View style={redesign.detailLine}><View style={redesign.iconCircle}><Ionicons name={icon} size={17} color="#66758B" /></View><Text style={redesign.lineLabel}>{label}</Text><Text style={redesign.lineValue}>{value}</Text></View>;
+}
+function DetailCell({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string | null | undefined }) {
+  return <View style={redesign.detailCell}><View style={redesign.iconCircle}><Ionicons name={icon} size={16} color="#1477DE" /></View><View style={{ flex: 1 }}><Text style={redesign.label}>{label}</Text><Text style={redesign.value}>{value && value !== '—' ? value : 'Not recorded'}</Text></View></View>;
+}
+const redesign = StyleSheet.create({
+  header: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 15, paddingHorizontal: 12, backgroundColor: '#FFFFFF' },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: '#111B37' },
+  profile: { backgroundColor: '#E5F1FF', flexDirection: 'row', alignItems: 'center', gap: 9, padding: 12 },
+  avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#EEE1FF', alignItems: 'center', justifyContent: 'center' },
+  avatarText: { color: '#6B28CE', fontSize: 20, fontWeight: '700' },
+  profileNameWrap: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 5 },
+  profileName: { color: '#111B37', fontSize: 13, fontWeight: '700', flexShrink: 1 },
+  actions: { maxWidth: 120 },
+  tabs: { flexDirection: 'row', backgroundColor: '#FFFFFF' },
+  tab: { flex: 1, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderBottomWidth: 3, borderBottomColor: 'transparent' },
+  activeTab: { borderBottomColor: '#0879F1' },
+  tabText: { fontSize: 11, color: '#69758A', fontWeight: '500' },
+  activeTabText: { color: '#0879F1', fontWeight: '700' },
+  content: { backgroundColor: '#FFFFFF', padding: 12, gap: 10, minHeight: 350 },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#111B37' },
+  sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  detailLine: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E8EDF4' },
+  iconCircle: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#EDF5FF', alignItems: 'center', justifyContent: 'center' },
+  lineLabel: { color: '#66758B', fontSize: 11, flex: 1 },
+  lineValue: { color: '#111B37', fontSize: 11, fontWeight: '600', flex: 1, textAlign: 'right' },
+  recordCard: { borderRadius: 12, borderWidth: 1, borderColor: '#E2EAF4', padding: 10, gap: 10 },
+  vehicleIdentity: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5 },
+  recordTitle: { fontSize: 12, fontWeight: '700', color: '#111B37' },
+  label: { color: '#66758B', fontSize: 9.5, lineHeight: 13 },
+  value: { color: '#111B37', fontSize: 10.5, fontWeight: '600', marginTop: 2 },
+  twoColumns: { flexDirection: 'row', flexWrap: 'wrap' },
+  detailCell: { width: '50%', minHeight: 60, flexDirection: 'row', alignItems: 'flex-start', gap: 7, paddingVertical: 10, paddingRight: 5, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E8EDF4' },
+  claimsSection: { marginTop: 12, gap: 8 },
+  simpleRow: { flexDirection: 'row', alignItems: 'center', gap: 9, padding: 10, borderWidth: 1, borderColor: '#E2EAF4', borderRadius: 9 },
+});
 const styles = StyleSheet.create({
   headerWrap: { height: 72, marginHorizontal: -partnerTheme.spacing.lg, paddingHorizontal: 16, overflow: 'hidden', backgroundColor: '#0865CC' },
   headerOrbLarge: { position: 'absolute', right: -45, top: -80, width: 190, height: 190, borderRadius: 95, backgroundColor: 'rgba(51,153,255,0.28)' },
