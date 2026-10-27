@@ -88,8 +88,8 @@ export default function CustomerDetailScreen() {
                     <Text style={redesign.sectionTitle}>Claims</Text>
                     {data.claims.map((claim) => (
                       <Pressable key={claim.claim_id} accessibilityRole="button" onPress={() => router.push(`/claim/${claim.claim_id}` as never)} style={redesign.simpleRow}>
-                        <Ionicons name="shield-outline" size={19} color="#0879F1" />
-                        <View style={{ flex: 1 }}><Text style={redesign.value}>{claim.claim_no || 'Claim'}</Text><Text style={redesign.label}>{humanize(claim.current_status || 'Not recorded')}</Text></View>
+                        <Logo source={getPartnerInsurerLogoSource(claim.insurer_name)} fallback={PartnerAssets.navigation.claims} compact />
+                        <View style={{ flex: 1 }}><Text style={redesign.value}>{claim.claim_no || 'Claim'}</Text><Text style={redesign.label}>{displayParts(claim.insurer_name, humanize(claim.current_status || 'Not recorded'))}</Text></View>
                       </Pressable>
                     ))}
                   </View>
