@@ -40,7 +40,13 @@ const distribution = read("components/partner-portal/scoped-report-distribution.
 assert.doesNotMatch(distribution, /createSupabaseAdminClient|payin|retention|margin/i, "Shared distribution must remain presentation-only");
 assert.match(read(pages[2][0]), /ScopedReportDistribution/, "Portfolio must reuse scoped distribution chart");
 assert.match(read(pages[3][0]), /ScopedReportDistribution/, "Operations must reuse scoped distribution chart");
-assert.match(read(pages[1][0]), /BusinessTrendCard/, "Business trend must reuse reference report chart");
+assert.match(read(pages[1][0]), /buildBusinessRows\(filtered\)/, "Business must use filtered authorized policy rows");
+assert.match(read(pages[1][0]), /canShowPayout && payout\?\.available/, "Payout must be gated by partner role and RPC authorization");
+assert.match(read("app/partner/business/page.tsx"), /redirect\(/, "Legacy My Business URL must redirect to Reports");
+assert.doesNotMatch(read("components/partner-portal/partner-navigation.tsx"), /label: "My Business"/, "My Business must not appear in desktop menu");
+assert.doesNotMatch(read("components/partner-portal/partner-mobile-navigation.tsx"), /label: "My Business"/, "My Business must not appear in mobile menu");
+assert.match(read(pages[1][0]), /const pageSize = 100/, "Business loading must match RPC page cap");
+assert.match(read("app/partner/business/export/route.ts"), /const pageSize = 100/, "Business export must match RPC page cap");
 const overview = read(pages[0][0]);
 assert.match(overview, /payout\.available && canShowPayout/, "Payout output must require existing payout authorization");
 assert.match(overview, /reportScope\.role === "partner"/, "Partner payout must not be inherited by Group/Branch");
