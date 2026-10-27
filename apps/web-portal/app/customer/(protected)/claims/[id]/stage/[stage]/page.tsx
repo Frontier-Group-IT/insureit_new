@@ -9,7 +9,7 @@ import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/cus
 import { CustomerClaimVoiceRecorder } from "@/components/customer-portal/customer-claim-voice-recorder";
 import { CustomerClaimDocumentGroups } from "@/components/customer-portal/customer-claim-document-groups";
 import { CustomerClaimBooleanChoice } from "@/components/customer-portal/customer-claim-boolean-choice";
-import { Check, Circle, LockKeyhole, CarFront, FileText, ShieldCheck, CalendarDays, Clock3, ClipboardList, IndianRupee } from "lucide-react";
+import { Check, Circle, LockKeyhole, CalendarDays, Clock3, ClipboardList } from "lucide-react";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
@@ -39,32 +39,6 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
   const allowEdit = canEditStage || canUploadStage;
   return <div className="customer-claim-ref-page space-y-3">
     {q.saved==="claim_intimation" && selected.key==="work_approval" ? <div role="status" className="rounded-xl border border-[#B8E2CA] bg-[#F0FBF5] px-4 py-3 text-[12px] font-bold text-[#08744A]">Stage details saved successfully</div> : null}
-    <section className="customer-claim-ref-summary relative overflow-hidden rounded-2xl border border-[#D9E3F0] bg-white">
-      <div className="customer-claim-ref-summary-grid relative z-10 grid grid-cols-2 lg:grid-cols-5">
-        {([
-          ["Customer", "Account holder", ""],
-          ["Vehicle No.", claim.vehicle_no || "—", "car"],
-          ["Make & Model", [claim.vehicle_make, claim.vehicle_model].filter(Boolean).join(" ") || "—", "car"],
-          ["Insurer", claim.insurer_name || "—", "insurer"],
-          ["Loss Date", claim.accident_at ? new Date(claim.accident_at).toLocaleDateString("en-GB") : "—", "date"],
-          ["Policy No.", claim.policy_no || "—", "policy"],
-          ["Control No.", claim.claim_no || "—", "policy"],
-          ["Claim No.", claim.insurer_claim_no || "—", "policy"],
-          ["Claim Status", claim.current_status, "insurer"],
-          ["Spot Intimation Date & Time", claim.spot_intimation_at ? new Date(claim.spot_intimation_at).toLocaleString("en-IN") : "—", "date"],
-        ] as const).map(([label,value,icon]) => <div key={label} className="customer-claim-ref-summary-cell flex min-h-[69px] items-start gap-2 border-b border-r border-[#E0E7F4] p-3">
-          <span className="customer-claim-ref-summary-icon mt-1 text-[#1673D2]">{icon==="car"?<CarFront className="h-5 w-5"/>:icon==="insurer"?<ShieldCheck className="h-5 w-5"/>:icon==="date"?<CalendarDays className="h-5 w-5"/>:<FileText className="h-5 w-5"/>}</span>
-          <div className="min-w-0"><p className="text-[10px] font-medium text-[#7791B7]">{label}</p><p className={`break-words text-[12px] font-bold text-[#17345D] ${label==="Claim Status"?"customer-claim-ref-claim-status":""}`}>{value}</p></div>
-        </div>)}
-      </div>
-      <div className="customer-claim-ref-summary-footer relative z-10 grid gap-2 px-4 py-2.5 text-[10px] text-[#667A96] sm:grid-cols-2 lg:grid-cols-4">
-        <span><FileText className="mr-1 inline h-3.5 w-3.5 text-[#416FAE]"/>Policy source: <strong>{external ? "External policy" : "Internal policy"}</strong></span>
-        <span><CalendarDays className="mr-1 inline h-3.5 w-3.5 text-[#416FAE]"/>Cover dates: <strong>Not available</strong></span>
-        <span><IndianRupee className="mr-1 inline h-3.5 w-3.5 text-[#416FAE]"/>Premium / IDV: <strong>Not available</strong></span>
-        <span><FileText className="mr-1 inline h-3.5 w-3.5 text-[#416FAE]"/>Policy copy: <strong>Not available</strong></span>
-      </div>
-      <div aria-hidden="true" className="customer-claim-ref-summary-art"><div className="customer-claim-ref-sun"/><CarFront className="customer-claim-ref-car"/><ShieldCheck className="customer-claim-ref-shield"/></div>
-    </section>
     <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey={selected.key} currentKey={INTERNAL_JOURNEY_STAGES[currentIndex]?.key || "spot_intimation"} editMode completedKeys={INTERNAL_JOURNEY_STAGES.filter((stage,i)=>external?projection?.stages.some(x=>x.key===stage.key&&x.completed):i<(internal_projection?.completedStageCount??0)).map(stage=>stage.key)} />
     {!(editMode && canEditStage) ? <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white">
       <h2 className="border-b border-[#D9E3F0] px-5 py-4 text-[17px] font-semibold text-[#071D49]">{selected.key==="spot_intimation"?"Accident & Spot Intimation Details":selected.label+" Details"}</h2>
