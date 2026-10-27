@@ -75,15 +75,13 @@ export default async function CustomerSupportPage({
       </section>
 
       <section id="support-activity" className="space-y-3">
-        <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
-          <h2 className="flex items-center gap-2 whitespace-nowrap text-[15px] font-bold text-[#29305D]"><ClipboardList className="h-4 w-4 text-[#673BEE]"/>My Support Requests</h2>
+        <CustomerSupportTicketPanel customerId={account.id} claims={claims.map(claim=>({id:claim.id,claim_no:claim.claim_no,status:claim.current_status}))} search={
           <form className="flex h-9 w-full max-w-[465px] items-center gap-2 rounded-lg border border-[#E6E8F4] bg-white px-3 focus-within:border-[#AB9BF5]">
             <Search className="h-3.5 w-3.5 shrink-0 text-[#939AB3]"/>
             <input type="hidden" name="account" value={account.id}/>
             <CustomerAnimatedSearchInput name="q" defaultValue={params.q ?? ""} aria-label="Search support requests" hints={["Search by ticket number or subject…","Search request status…"]} className="text-[10px] text-[#252B5E]"/>
           </form>
-          <CustomerSupportTicketPanel customerId={account.id} claims={claims.map(claim=>({id:claim.id,claim_no:claim.claim_no,status:claim.current_status}))}/>
-        </div>
+        }/>
         <div className="rounded-xl border border-[#EBEDF7] bg-white p-3 sm:p-4">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {rows.length ? rows.map(item=>(
