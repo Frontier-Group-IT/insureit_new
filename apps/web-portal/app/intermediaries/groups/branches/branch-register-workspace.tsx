@@ -45,6 +45,7 @@ export function BranchRegisterWorkspace({
   loadError,
   embedded = false,
   hideParentPartner = false,
+  applicationBranchView = false,
 }: {
   rows: BranchRegisterRow[];
   canManage: boolean;
@@ -52,6 +53,7 @@ export function BranchRegisterWorkspace({
   loadError: boolean;
   embedded?: boolean;
   hideParentPartner?: boolean;
+  applicationBranchView?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewKey>("all");
@@ -75,13 +77,14 @@ export function BranchRegisterWorkspace({
         view === "all"
         || (view === "assigned" && Boolean(row.parent_partner_id))
         || (view === "unassigned" && !row.parent_partner_id);
-      const matchesGroup = group === "all" || row.group_code === group;
+      const matchesGroup = applicationBranchView || group === "all" || row.group_code === group;
       const haystack = [
         row.branch_name,
         row.branch_code,
         row.branch_kind,
         row.email,
         row.phone,
+        row.contact_name,
         ...(!hideParentPartner ? [row.parent_partner_name, row.parent_partner_code] : []),
         row.group_name,
         row.group_code,
@@ -93,7 +96,7 @@ export function BranchRegisterWorkspace({
         .toLowerCase();
       return matchesView && matchesGroup && (!normalized || haystack.includes(normalized));
     });
-  }, [group, hideParentPartner, query, rows, view]);
+  }, [applicationBranchView, group, hideParentPartner, query, rows, view]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -103,19 +106,19 @@ export function BranchRegisterWorkspace({
     <BrokerRegisterShell
       eyebrow="Intermediary hierarchy"
       title="Branch Register"
-      description={hideParentPartner ? "View accessible Branches with their Business Group and assigned employee." : "View every accessible Branch together with its parent Partner, inherited Business Group and assigned employee."}
+      description={applicationBranchView ? "View this Partner’s branches and their contact information." : hideParentPartner ? "View accessible Branches with their Business Group and assigned employee." : "View every accessible Branch together with its parent Partner, inherited Business Group and assigned employee."}
       icon={<Store className="h-5 w-5" />}
       metrics={[
         { label: "Branches", value: rows.length, hint: "Accessible records", tone: "navy" },
         { label: "Assigned", value: assignedCount, hint: "Linked to a Partner", tone: "green" },
         { label: "Unassigned", value: unassignedCount, hint: "Need parent Partner", tone: unassignedCount ? "amber" : "slate" },
-        { label: "Groups", value: groupOptions.length, hint: "Inherited groups", tone: "slate" },
+        ...(!applicationBranchView ? [{ label: "Groups", value: groupOptions.length, hint: "Inherited groups", tone: "slate" as const }] : []),
       ]}
     >
       <BrokerRegisterToolbar
         query={query}
         onQueryChange={(value) => { setQuery(value); setPage(1); }}
-        searchPlaceholder={hideParentPartner ? "Search branch, email, phone, code, Group or employee" : "Search branch, email, phone, code, parent Partner, Group or employee"}
+        searchPlaceholder={applicationBranchView ? "Search branch, contact name, email, phone or code" : hideParentPartner ? "Search branch, email, phone, code, Group or employee" : "Search branch, email, phone, code, parent Partner, Group or employee"}
         activeViewLabel={`${filteredRows.length} in current view`}
         action={canManage && !embedded ? (
           <Link
@@ -136,10 +139,10 @@ export function BranchRegisterWorkspace({
             { value: "unassigned", label: "Unassigned", count: unassignedCount },
           ]}
         />
-        <RegisterSelect value={group} onChange={(value) => { setGroup(value); setPage(1); }} label="Business Group">
+        {!applicationBranchView ? <RegisterSelect value={group} onChange={(value) => { setGroup(value); setPage(1); }} label="Business Group">
           <option value="all">All groups</option>
           {groupOptions.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
-        </RegisterSelect>
+        </RegisterSelect> : null}
         {!embedded ? <Link
           prefetch={false}
           href="/intermediaries/groups"
@@ -156,18 +159,17 @@ export function BranchRegisterWorkspace({
       ) : null}
 
       <div className="mobile-card-list p-3 md:hidden">
-        {pageRows.map((branch) => <BranchMobileCard key={branch.id} branch={branch} canPermanentDelete={canPermanentDelete} hideParentPartner={hideParentPartner} />)}
-        {!pageRows.length ? <RegisterEmpty title="No matching branches" description="Adjust the search, assignment view or Business Group filter." /> : null}
+        {pageRows.map((branch) => <BranchMobileCard key={branch.id} branch={branch} canPermanentDelete={canPermanentDelete} hideParentPartner={hideParentPartner} applicationBranchView={applicationBranchView} />)}
+        {!pageRows.length ? <RegisterEmpty title="No matching branches" description={applicationBranchView ? "Adjust the search or assignment view." : "Adjust the search, assignment view or Business Group filter."} /> : null}
       </div>
 
       <div className="hidden overflow-x-auto md:block">
-        <table className={`w-full ${hideParentPartner ? "min-w-[820px]" : "min-w-[1040px]"} table-fixed text-left text-[11px] text-[#1E293B]`}>
+        <table className={`w-full ${applicationBranchView ? "min-w-[880px]" : hideParentPartner ? "min-w-[820px]" : "min-w-[1040px]"} table-fixed text-left text-[11px] text-[#1E293B]`}>
           <thead className="sticky top-0 z-10 border-b border-[#E2E8F0] bg-[#F8FAFC] text-[9px] font-bold uppercase tracking-[0.06em] text-[#64748B]">
             <tr>
               <th className="w-[220px] px-3 py-2.5">Branch</th>
               {!hideParentPartner ? <th className="w-[220px] px-3 py-2.5">Parent Partner</th> : null}
-              <th className="w-[190px] px-3 py-2.5">Business Group</th>
-              <th className="w-[190px] px-3 py-2.5">Assigned Employee</th>
+              {applicationBranchView ? <th className="w-[160px] px-3 py-2.5">Contact Name</th> : <><th className="w-[190px] px-3 py-2.5">Business Group</th><th className="w-[190px] px-3 py-2.5">Assigned Employee</th></>}
               <th className="w-[190px] px-3 py-2.5">Email</th>
               <th className="w-[140px] px-3 py-2.5">Phone Number</th>
               <th className="w-[110px] px-3 py-2.5">Status</th>{canPermanentDelete ? <th className="w-[110px] px-3 py-2.5 text-center">Action</th> : null}
@@ -190,7 +192,7 @@ export function BranchRegisterWorkspace({
                     </div>
                   ) : <UnassignedLabel />}
                 </td> : null}
-                <td className="px-3">
+                {applicationBranchView ? <td className="px-3 text-[#475569]">{branch.contact_name || "—"}</td> : <><td className="px-3">
                   {branch.group_name ? (
                     <div className="min-w-0">
                       <p className="truncate font-semibold text-[#334155]">{branch.group_name}</p>
@@ -206,6 +208,7 @@ export function BranchRegisterWorkspace({
                     </div>
                   ) : <span className="text-[#94A3B8]">—</span>}
                 </td>
+                </>}
                 <td className="px-3 break-all text-[#475569]">{branch.email || "—"}</td>
                 <td className="px-3 text-[#475569]">{branch.phone || "—"}</td>
                 <td className="px-3"><StatusPill status={branch.login_disabled ? "disabled" : branch.invitation_status} /></td>{canPermanentDelete ? <td className="px-3 text-center"><BranchActionMenu branch={branch} /></td> : null}
@@ -229,7 +232,7 @@ export function BranchRegisterWorkspace({
   );
 }
 
-function BranchMobileCard({ branch, canPermanentDelete, hideParentPartner }: { branch: BranchRegisterRow; canPermanentDelete: boolean; hideParentPartner: boolean }) {
+function BranchMobileCard({ branch, canPermanentDelete, hideParentPartner, applicationBranchView }: { branch: BranchRegisterRow; canPermanentDelete: boolean; hideParentPartner: boolean; applicationBranchView: boolean }) {
   return (
     <article className="mobile-record-card">
       <div className="flex items-start gap-3">
@@ -250,8 +253,7 @@ function BranchMobileCard({ branch, canPermanentDelete, hideParentPartner }: { b
               <span className="truncate">{branch.parent_partner_name ?? "Unassigned parent Partner"}</span>
             </div> : null}
             <div className="grid grid-cols-2 gap-2 text-[11px]">
-              <Info label="Group" value={branch.group_name ?? "—"} />
-              <Info label="Employee" value={branch.employee_name ?? "—"} />
+              {applicationBranchView ? <Info label="Contact Name" value={branch.contact_name ?? "—"} /> : <><Info label="Group" value={branch.group_name ?? "—"} /><Info label="Employee" value={branch.employee_name ?? "—"} /></>}
               <Info label="Email" value={branch.email ?? "—"} />
               <Info label="Phone" value={branch.phone ?? "—"} />
             </div>
