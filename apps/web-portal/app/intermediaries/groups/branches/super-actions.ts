@@ -67,7 +67,7 @@ export async function editSuperBranch(form: FormData) {
   const phone = field(form,"phone");
   const contactName = field(form,"contact_name");
   const address = field(form,"address");
-  if (branchName.length < 2 || branchName.length > 120 || contactName.length < 2 || contactName.length > 120 || address.length < 3 || address.length > 500 || !/^\\+?[0-9 ()-]{7,20}$/.test(phone)) throw new Error("Enter valid branch details.");
+  if (branchName.length < 2 || branchName.length > 120 || contactName.length < 2 || contactName.length > 120 || address.length < 3 || address.length > 500 || !/^\+?[0-9 ()-]{7,20}$/.test(phone)) throw new Error("Enter valid branch details.");
   const admin = createSupabaseAdminClient();
   const { data: current } = await admin.from("partner_branch_profiles").select("partner_id").eq("partner_id",branchId).single();
   if (!current) throw new Error("Branch profile not found.");
