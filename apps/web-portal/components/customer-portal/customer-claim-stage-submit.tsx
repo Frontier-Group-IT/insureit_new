@@ -1,17 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { LoaderCircle } from "lucide-react";
+import { AlertCircle, LoaderCircle, X } from "lucide-react";
 import { saveCustomerClaimStageWithFeedback } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/actions";
 
 export function CustomerClaimStageSubmit({ formId }: { formId: string }) {
   const [saving, setSaving] = useState<"draft" | "details" | null>(null);
   const [feedback, setFeedback] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function submit(mode: "draft" | "details") {
     const form = document.getElementById(formId);
     if (!(form instanceof HTMLFormElement) || saving) return;
     setFeedback("");
+    setErrorMessage("");
     // Drafts deliberately allow empty required fields; final saves do not.
     if (mode === "details" && !form.reportValidity()) return;
     const data = new FormData(form);
@@ -19,12 +21,12 @@ export function CustomerClaimStageSubmit({ formId }: { formId: string }) {
     try {
       const result = await saveCustomerClaimStageWithFeedback(mode, data);
       if (result.error) {
-        setFeedback(result.error);
+        setErrorMessage(result.error);
         return;
       }
       setFeedback(mode === "draft" ? "Draft saved." : "Details saved.");
     } catch (error) {
-      setFeedback(error instanceof Error && error.message && !error.message.includes("NEXT_REDIRECT")
+      setErrorMessage(error instanceof Error && error.message && !error.message.includes("NEXT_REDIRECT")
         ? error.message
         : "The save could not be completed. Your entries remain on this page. Please try again.");
     } finally {
@@ -44,7 +46,22 @@ export function CustomerClaimStageSubmit({ formId }: { formId: string }) {
         {saving === "details" ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
         {saving === "details" ? "Saving..." : "Save Details"}
       </button>
-      {feedback ? <p role="status" aria-live="polite" className="w-full rounded-lg border border-[#F4C3C3] bg-[#FFF3F3] px-3 py-2 text-left text-[12px] font-semibold text-[#AD2732]">{feedback}</p> : null}
+      {feedback ? <p role="status" aria-live="polite" className="w-full text-right text-[11px] font-semibold text-[#08744A]">{feedback}</p> : null}
+      {errorMessage ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#101828]/40 p-4">
+          <div role="alertdialog" aria-modal="true" aria-labelledby="claim-save-error-title" aria-describedby="claim-save-error-description" className="w-full max-w-[370px] rounded-2xl border border-[#E5EAF2] bg-white p-4 shadow-2xl">
+            <div className="flex items-start gap-2.5">
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#FFF0F0] text-[#C72F3B]"><AlertCircle className="h-5 w-5" aria-hidden="true"/></div>
+              <div className="min-w-0 flex-1">
+                <h2 id="claim-save-error-title" className="text-[14px] font-bold text-[#18243D]">Action Required</h2>
+                <p id="claim-save-error-description" className="mt-1 text-[11px] leading-[1.5] text-[#53627A]">{errorMessage}</p>
+              </div>
+              <button type="button" aria-label="Close error" onClick={()=>setErrorMessage("")} className="rounded-md p-1 text-[#718096] hover:bg-[#F1F5F9]"><X className="h-4 w-4"/></button>
+            </div>
+            <div className="mt-4"><button type="button" autoFocus onClick={()=>setErrorMessage("")} className="w-full rounded-lg bg-[#1253A7] px-4 py-2.5 text-[11px] font-bold text-white hover:bg-[#0B3884]">OK</button></div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
