@@ -57,7 +57,7 @@ export default function CustomerDetailScreen() {
               {customerTone(data.customer.status) === 'success' ? <Ionicons name="checkmark-circle" size={19} color="#0CB76B" /> : null}
             </View>
             <View style={redesign.actions}>
-              <PartnerContactActions phone={data.customer.phone} email={data.customer.email} />
+              <PartnerContactActions phone={data.customer.phone} email={data.customer.email} iconOnlyVertical />
             </View>
           </View>
           <View style={redesign.tabs}>
