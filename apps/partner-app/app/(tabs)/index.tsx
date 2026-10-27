@@ -101,6 +101,7 @@ export default function PartnerHomeScreen() {
   const { identity } = context;
   const periodLabel = BUSINESS_PERIODS.find((item) => item.key === businessPeriod)?.label ?? 'MTD';
   const rangeData = business.data;
+  const showBusinessFilterSkeleton = business.loading && !rangeData;
 
   return (
     <PartnerScreen
@@ -240,6 +241,7 @@ export default function PartnerHomeScreen() {
                 </Pressable>
               </View>
 
+              {showBusinessFilterSkeleton ? <BusinessFilterSkeleton /> : (<>
               <View style={styles.businessMainRow}>
                 <View style={styles.businessMainCopy}>
                   <Text style={styles.businessPremium}>{rangeData ? formatWholeIndianCurrency(rangeData.net_premium) : '—'}</Text>
@@ -291,6 +293,7 @@ export default function PartnerHomeScreen() {
                   label={identity.actor_kind === 'employee' ? 'Projected Retention' : 'Commission Earned'}
                 />
               </View>
+              </>)}
           </View>
 
           <PartnerEnter delay={70}>
@@ -733,6 +736,56 @@ function greeting(name: string) {
 function formatCacheTime(value: number | null) {
   if (!value) return 'earlier';
   return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
+}
+
+// Show only when a newly selected period has no cached figures.
+// The business-card header stays interactive and all other Home content stays visible.
+function BusinessFilterSkeleton() {
+  const opacity = useRef(new Animated.Value(0.55)).current;
+
+  useEffect(() => {
+    const pulse = Animated.loop(Animated.sequence([
+      Animated.timing(opacity, { toValue: 1, duration: 650, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 0.55, duration: 650, useNativeDriver: true }),
+    ]));
+    pulse.start();
+    return () => pulse.stop();
+  }, [opacity]);
+
+  return (
+    <Animated.View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ opacity }}>
+      <View style={styles.businessMainRow}>
+        <View style={[styles.businessMainCopy, { gap: 7, justifyContent: 'center' }]}>
+          <PartnerSkeleton width="78%" height={30} radius={8} />
+          <PartnerSkeleton width="72%" height={12} radius={5} />
+          <PartnerSkeleton width="52%" height={11} radius={5} />
+        </View>
+        <View style={[styles.chartSide, { flexDirection: 'row', alignItems: 'flex-end', gap: 5, justifyContent: 'flex-end' }]}>
+          {[13, 20, 27, 39, 49, 34].map((height, index) => (
+            <PartnerSkeleton key={index} width={11} height={height} radius={4} />
+          ))}
+        </View>
+      </View>
+      <View style={styles.businessDivider} />
+      <View style={styles.businessBottomRow}>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9 }}>
+          <PartnerSkeleton width={36} height={36} radius={18} />
+          <View style={{ flex: 1, gap: 7 }}>
+            <PartnerSkeleton width="75%" height={17} radius={6} />
+            <PartnerSkeleton width="90%" height={10} radius={5} />
+          </View>
+        </View>
+        <View style={styles.metricDivider} />
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9 }}>
+          <PartnerSkeleton width={36} height={36} radius={18} />
+          <View style={{ flex: 1, gap: 7 }}>
+            <PartnerSkeleton width="75%" height={17} radius={6} />
+            <PartnerSkeleton width="90%" height={10} radius={5} />
+          </View>
+        </View>
+      </View>
+    </Animated.View>
+  );
 }
 
 function HomeSkeleton() {
