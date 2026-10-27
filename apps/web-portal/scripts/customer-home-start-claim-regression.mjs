@@ -62,7 +62,10 @@ assert.match(stagePage,/selected\.key==="spot_intimation" && claim\.current_stat
 assert.match(stagePage,/redirect\("\/customer\/spot-intimation\?account="/,"Draft Stage 1 must route to editable form");
 assert.match(stagePage,/const canEditStage = external && Boolean\(CUSTOMER_EXTERNAL_STAGE_FIELDS\[selected\.key\]\)/,"Stage editing must stay gated to external claims with configured fields");
 assert.match(stagePage,/!completed && activeIndex===currentIndex/,"Completed and noncurrent stages must stay read-only");
-assert.match(stagePage,/Save &amp; Continue/,"Eligible stages must have a submit action");
+assert.match(stagePage,/<CustomerClaimStageSubmit formId="customer-claim-stage-details-form" variant="continue"\s*\/>/,"Eligible stages must render the shared Save & Continue submit action");
+const stageSubmit=fs.readFileSync("components/customer-portal/customer-claim-stage-submit.tsx","utf8");
+assert.match(stageSubmit,/variant === "continue" \? "Save & Continue"/,"Shared action must display Save & Continue for eligible stages");
+assert.match(stageSubmit,/saveCustomerClaimStageWithFeedback/,"Shared action must preserve the authenticated stage save path");
 assert.match(stageActions,/const next=INTERNAL_JOURNEY_STAGES\[index\+1\]/,"Successful stage submissions should route to the next stage");
 console.log("Customer nine-stage editing permissions and navigation regression passed.");
 

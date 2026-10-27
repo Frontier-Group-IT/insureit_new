@@ -153,7 +153,7 @@ export async function saveCustomerClaimStageWithFeedback(mode: "draft" | "detail
         typeof error.digest === "string" && error.digest.startsWith("NEXT_REDIRECT")) throw error;
     const reason = error instanceof Error ? error.message : "";
     if (reason === "Stage date precedes the previous stage") {
-      return {error:"The Claim Intimation date must be on or after the previous claim stage date. Check the saved Spot Intimation date and correct this date before saving."};
+      return {error:"The stage date must be on or after the previous stage date. Check the entered date before saving."};
     }
     const safeMessages = [
       "Complete all mandatory stage fields", "Invalid stage date", "Invalid monetary amount",
