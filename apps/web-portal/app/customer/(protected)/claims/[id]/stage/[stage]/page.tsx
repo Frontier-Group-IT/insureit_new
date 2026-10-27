@@ -4,6 +4,7 @@ import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import { CUSTOMER_EXTERNAL_STAGE_FIELDS } from "@/lib/customer-claim-stage-fields";
 import { saveCustomerExternalStage, saveCustomerClaimIntimationDraft } from "./actions";
 import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/customer-claim-evidence-workspace";
+import { CustomerClaimVoiceRecorder } from "@/components/customer-portal/customer-claim-voice-recorder";
 import { CustomerClaimDocumentGroups } from "@/components/customer-portal/customer-claim-document-groups";
 import { CustomerClaimBooleanChoice } from "@/components/customer-portal/customer-claim-boolean-choice";
 import { Check, Circle, LockKeyhole, CarFront, FileText, ShieldCheck, CalendarDays } from "lucide-react";
@@ -112,6 +113,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       </form>
     ):null}
     {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} allowUpload={editMode}/> : null}
+    {selected.key==="spot_intimation" ? <CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id}/> : null}
     <CustomerClaimDocumentGroups documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} showSaveDetails={false} allowUpload={editMode && external && !completed && activeIndex===currentIndex} />
     {selected.key==="claim_intimation" && editMode && canEditStage ? (
       <div className="flex flex-wrap items-center justify-end gap-3 rounded-xl border border-[#D9E6F7] bg-white px-5 py-4">
