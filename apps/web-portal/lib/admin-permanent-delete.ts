@@ -155,32 +155,31 @@ async function deleteBranch(partnerId: string): Promise<PermanentDeleteResult> {
   if (!branch) return { status: "error", message: "The branch record could not be found." };
 
   const allBlockers = await blockers("partners", partnerId);
-  // Branch onboarding creates its own application and links it to the branch.
-  // This *one* verified back-reference may be detached while preserving the
-  // application itself. All other references remain hard-delete blockers.
-  const applicationId = branch.partner_branch_profiles[0]?.source_application_id;
+  // Onboarding-only references are administrative history, not business activity.
+  // Preserve those applications by removing their branch link before deletion.
   const onboardingReferences = allBlockers.filter((item) =>
     item.table === "intermediary_onboarding_applications" && item.column === "partner_record_id"
   );
-  let detachableApplicationId: string | null = null;
-  if (applicationId && branch.source_application_id === applicationId && onboardingReferences.length === 1
-      && onboardingReferences[0].count === 1) {
-    const { data: onboarding, error: onboardingError } = await admin
-      .from("intermediary_onboarding_applications")
-      .select("id,source,partner_record_id")
-      .eq("id", applicationId)
-      .maybeSingle<{ id: string; source: string; partner_record_id: string | null }>();
-    if (onboardingError) return { status: "error", message: "The branch onboarding link could not be verified safely." };
-    if (onboarding?.source === "branch_onboarding" && onboarding.partner_record_id === partnerId) {
-      detachableApplicationId = applicationId;
-    }
+  const { data: onboardingRows, error: onboardingError } = await admin
+    .from("intermediary_onboarding_applications")
+    .select("id,source,partner_record_id")
+    .eq("partner_record_id", partnerId)
+    .returns<Array<{ id: string; source: string; partner_record_id: string | null }>>();
+  if (onboardingError) {
+    return { status: "error", message: "The branch onboarding references could not be verified." };
   }
+  const detachableApplicationIds = (onboardingRows ?? [])
+    .filter((row) => row.source === "branch_onboarding")
+    .map((row) => row.id);
+  const referencedCount = onboardingReferences.reduce((total, item) => total + item.count, 0);
+  // Any unexpected onboarding reference remains protected, as do business records.
+  const allOnboardingReferencesVerified = referencedCount === detachableApplicationIds.length;
   const blocking = allBlockers.filter((item) =>
     item.table !== "partner_branch_profiles"
-    && !(detachableApplicationId && item.table === "intermediary_onboarding_applications" && item.column === "partner_record_id")
+    && !(allOnboardingReferencesVerified && item.table === "intermediary_onboarding_applications" && item.column === "partner_record_id")
   );
   if (blocking.length) {
-    return { status: "error", message: `Cannot permanently delete this branch because protected history exists in ${formatBlockers(blocking)}.` };
+    return { status: "error", message: `Cannot permanently delete this branch because protected business history exists in ${formatBlockers(blocking)}.` };
   }
 
   // Snapshot the branch profile so a late FK error cannot silently remove it.
@@ -205,18 +204,21 @@ async function deleteBranch(partnerId: string): Promise<PermanentDeleteResult> {
     await deleteAuthBackedProfile(portal.profile_id);
   }
 
-  // Preserve onboarding/audit history; only clear the branch FK.
-  // Reattach it if a later delete is rejected by a different constraint.
-  if (detachableApplicationId) {
+  // Keep the application rows and remove only their branch references.
+  if (detachableApplicationIds.length) {
     const { error: detachError } = await admin.from("intermediary_onboarding_applications")
-      .update({ partner_record_id: null }).eq("id", detachableApplicationId).eq("partner_record_id", partnerId);
+      .update({ partner_record_id: null }).in("id", detachableApplicationIds).eq("partner_record_id", partnerId);
     if (detachError) return { status: "error", message: "The branch onboarding link could not be detached safely." };
   }
+  const restoreOnboardingLinks = async () => {
+    if (!detachableApplicationIds.length) return;
+    await admin.from("intermediary_onboarding_applications")
+      .update({ partner_record_id: partnerId }).in("id", detachableApplicationIds).is("partner_record_id", null);
+  };
 
   const { error: profileError } = await admin.from("partner_branch_profiles").delete().eq("partner_id", partnerId);
   if (profileError) {
-    if (detachableApplicationId) await admin.from("intermediary_onboarding_applications")
-      .update({ partner_record_id: partnerId }).eq("id", detachableApplicationId).is("partner_record_id", null);
+    await restoreOnboardingLinks();
     return { status: "error", message: "The branch profile could not be removed." };
   }
 
@@ -224,8 +226,7 @@ async function deleteBranch(partnerId: string): Promise<PermanentDeleteResult> {
   if (partnerError) {
     // Restore saved profile and its onboarding back-reference on a late FK failure.
     const { error: restoreError } = await admin.from("partner_branch_profiles").insert(savedBranchProfile);
-    if (!restoreError && detachableApplicationId) await admin.from("intermediary_onboarding_applications")
-      .update({ partner_record_id: partnerId }).eq("id", detachableApplicationId).is("partner_record_id", null);
+    if (!restoreError) await restoreOnboardingLinks();
     return { status: "error", message: restoreError
       ? "Deletion was blocked and restoring the branch profile failed. Contact IT administration."
       : "The branch is still referenced by protected records and cannot be permanently deleted." };
@@ -233,6 +234,7 @@ async function deleteBranch(partnerId: string): Promise<PermanentDeleteResult> {
 
   revalidatePath("/intermediaries/groups/branches");
   revalidatePath("/intermediaries/groups");
+  revalidatePath("/intermediaries/applications");
   return { status: "success", message: `${branch.display_name} was permanently deleted.` };
 }
 

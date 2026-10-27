@@ -34,13 +34,14 @@ function yearsFromTerm(value:string){
   const years=Number(match[1]);
   return Number.isFinite(years)&&years>0?years:null;
 }
-function addYearsMinusDay(start:string,term:string){
+type DateCalculationMode="minusOne"|"sameDay";
+function addYearsByMode(start:string,term:string,mode:DateCalculationMode){
   if(!validIso(start))return"";
   const years=yearsFromTerm(term);
   if(!years||!Number.isInteger(years))return"";
   const date=new Date(`${start}T00:00:00Z`);
   date.setUTCFullYear(date.getUTCFullYear()+years);
-  date.setUTCDate(date.getUTCDate()-1);
+  if(mode==="minusOne")date.setUTCDate(date.getUTCDate()-1);
   return date.toISOString().slice(0,10);
 }
 function addMonthsClamped(start:string,months:number){
@@ -79,10 +80,12 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
   const[form,setForm]=useState({customerName:caseData.customerName,customerPhone:caseData.customerPhone,customerAddress:caseData.customerAddress,insurerId:caseData.insurerId,productName:caseData.productName,proposalNumber:caseData.proposalNumber,ppt:caseData.ppt,pd:caseData.pd,paymentFrequency:canonicalPaymentFrequency(caseData.paymentFrequency),paymentMode:normalizeCasePaymentMode(caseData.paymentMode),premiumAmount:String(caseData.premiumAmount||""),sourcingDate:caseData.sourcingDate,remarks:caseData.remarks});
   const[issue,setIssue]=useState<IssueState>({policyNumber:"",issuanceDate:"",startDate:"",endDate:"",pptEndDate:"",nextInstallmentDate:"",finalPremium:String(caseData.premiumAmount||""),sumInsured:""});
   const[overrides,setOverrides]=useState<OverrideState>({endDate:false,pptEndDate:false,nextInstallmentDate:false});
+  const[endDateMode,setEndDateMode]=useState<DateCalculationMode>("minusOne");
+  const[pptEndDateMode,setPptEndDateMode]=useState<DateCalculationMode>("minusOne");
   const set=(k:string,v:string)=>setForm(x=>({...x,[k]:v}));
   const setI=(k:keyof IssueState,v:string)=>setIssue(x=>({...x,[k]:v}));
-  const expectedEnd=useMemo(()=>addYearsMinusDay(issue.startDate,form.pd),[issue.startDate,form.pd]);
-  const expectedPptEnd=useMemo(()=>addYearsMinusDay(issue.startDate,form.ppt),[issue.startDate,form.ppt]);
+  const expectedEnd=useMemo(()=>addYearsByMode(issue.startDate,form.pd,endDateMode),[issue.startDate,form.pd,endDateMode]);
+  const expectedPptEnd=useMemo(()=>addYearsByMode(issue.startDate,form.ppt,pptEndDateMode),[issue.startDate,form.ppt,pptEndDateMode]);
   const expectedNext=useMemo(()=>nextInstallmentFrom(issue.startDate,form.paymentFrequency),[issue.startDate,form.paymentFrequency]);
   const pptSinglePay=form.ppt.trim().toLowerCase().includes("single");
   const oneTimePayment=canonicalPaymentFrequency(form.paymentFrequency)==="One Time";
@@ -137,8 +140,8 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
       <FieldWrap title="Policy number" required><input className={field} value={issue.policyNumber} onChange={e=>setI("policyNumber",e.target.value.toUpperCase())}/></FieldWrap>
       <FieldWrap title="Issuance date"><DateInput value={issue.issuanceDate} onChange={value=>setI("issuanceDate",value)}/></FieldWrap>
       <FieldWrap title="Policy start date"><DateInput value={issue.startDate} onChange={value=>{setOverrides({endDate:false,pptEndDate:false,nextInstallmentDate:false});setI("startDate",value)}}/></FieldWrap>
-      <CalculatedDateField title="Policy end / maturity date" value={issue.endDate} expected={expectedEnd} overridden={overrides.endDate} onChange={value=>{setOverrides(x=>({...x,endDate:true}));setI("endDate",value)}} missingHint={!expectedEnd&&Boolean(issue.startDate)?"Enter Policy Duration / Term in years to calculate automatically.":undefined}/>
-      {pptSinglePay?<ReadOnlyTextField title="PPT end date" value="Not applicable · Single Pay"/>:<CalculatedDateField title="PPT end date" value={issue.pptEndDate} expected={expectedPptEnd} overridden={overrides.pptEndDate} onChange={value=>{setOverrides(x=>({...x,pptEndDate:true}));setI("pptEndDate",value)}} missingHint={!expectedPptEnd&&Boolean(issue.startDate)?"Enter PPT in years to calculate automatically.":undefined}/>}
+      <CalculatedDateField title="Policy end / maturity date" value={issue.endDate} expected={expectedEnd} overridden={overrides.endDate} mode={endDateMode} onModeChange={setEndDateMode} onChange={value=>{setOverrides(x=>({...x,endDate:true}));setI("endDate",value)}} missingHint={!expectedEnd&&Boolean(issue.startDate)?"Enter Policy Duration / Term in years to calculate automatically.":undefined}/>
+      {pptSinglePay?<ReadOnlyTextField title="PPT end date" value="Not applicable · Single Pay"/>:<CalculatedDateField title="PPT end date" value={issue.pptEndDate} expected={expectedPptEnd} overridden={overrides.pptEndDate} mode={pptEndDateMode} onModeChange={setPptEndDateMode} onChange={value=>{setOverrides(x=>({...x,pptEndDate:true}));setI("pptEndDate",value)}} missingHint={!expectedPptEnd&&Boolean(issue.startDate)?"Enter PPT in years to calculate automatically.":undefined}/>}
       {oneTimePayment?<ReadOnlyTextField title="Next installment date" value="Not applicable · One Time"/>:<CalculatedDateField title="Next installment date" value={issue.nextInstallmentDate} expected={expectedNext} overridden={overrides.nextInstallmentDate} onChange={value=>{setOverrides(x=>({...x,nextInstallmentDate:true}));setI("nextInstallmentDate",value)}}/>}
       <FieldWrap title="Final premium"><input className={field} value={issue.finalPremium} onChange={e=>setI("finalPremium",e.target.value.replace(/[^0-9.]/g,""))}/></FieldWrap>
       <FieldWrap title="Sum assured / insured"><input className={field} value={issue.sumInsured} onChange={e=>setI("sumInsured",e.target.value.replace(/[^0-9.]/g,""))}/></FieldWrap>
@@ -156,7 +159,17 @@ function Section({number,title,children,highlight=false,contentClassName="md:gri
 function FieldWrap({title,children,required=false}:{title:string;children:ReactNode;required?:boolean}){return <label><span className={label}>{title}{required?<span className="text-red-500">*</span>:null}</span>{children}</label>}
 function MetaLine({left,right}:{left:string;right:string}){if(!left&&!right)return null;return <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 text-[9px] font-semibold text-[#315B6B]"><span>{left}</span>{right?<span>{right}</span>:null}</div>}
 function ReadOnlyTextField({title,value}:{title:string;value:string}){return <FieldWrap title={title}><div className={`${readOnlyField} flex items-center`}>{value}</div></FieldWrap>}
-function CalculatedDateField({title,value,expected,overridden,onChange,missingHint}:{title:string;value:string;expected:string;overridden:boolean;onChange:(value:string)=>void;missingHint?:string}){const differs=Boolean(overridden&&expected&&value&&value!==expected);return <FieldWrap title={title}><DateInput value={value} onChange={onChange}/>{differs?<p className="mt-1 text-[8px] leading-3 text-[#9A6700]">Manually changed from the calculated date {formatDate(expected)}. Please verify before issuing.</p>:missingHint?<p className="mt-1 text-[8px] leading-3 text-[#7A869A]">{missingHint}</p>:<p className="mt-1 text-[8px] leading-3 text-[#7A869A]">Auto-calculated and editable.</p>}</FieldWrap>}
+function CalculatedDateField({title,value,expected,overridden,mode,onModeChange,onChange,missingHint}:{title:string;value:string;expected:string;overridden:boolean;mode?:DateCalculationMode;onModeChange?:(mode:DateCalculationMode)=>void;onChange:(value:string)=>void;missingHint?:string}){
+  const differs=Boolean(overridden&&expected&&value&&value!==expected);
+  return <FieldWrap title={title}>
+    <DateInput value={value} onChange={onChange}/>
+    {mode&&onModeChange?<div className="mt-1.5 flex flex-wrap items-center gap-1.5" role="group" aria-label={`${title} calculation method`}>
+      <button type="button" aria-pressed={mode==="minusOne"} onClick={()=>onModeChange("minusOne")} className={`rounded-md border px-2 py-1 text-[9px] font-semibold ${mode==="minusOne"?"border-[#6C4FC7] bg-[#F2EDFF] text-[#5031A3]":"border-[#D8DEE9] bg-white text-[#667085]"}`}>Term − 1 day (default)</button>
+      <button type="button" aria-pressed={mode==="sameDay"} onClick={()=>onModeChange("sameDay")} className={`rounded-md border px-2 py-1 text-[9px] font-semibold ${mode==="sameDay"?"border-[#6C4FC7] bg-[#F2EDFF] text-[#5031A3]":"border-[#D8DEE9] bg-white text-[#667085]"}`}>Same calendar date</button>
+    </div>:null}
+    {differs?<p className="mt-1 text-[8px] leading-3 text-[#9A6700]">Manually changed from the calculated date {formatDate(expected)}. Please verify before issuing.</p>:missingHint?<p className="mt-1 text-[8px] leading-3 text-[#7A869A]">{missingHint}</p>:<p className="mt-1 text-[8px] leading-3 text-[#7A869A]">Auto-calculated and manually editable. Manual dates stay unchanged when switching methods.</p>}
+  </FieldWrap>
+}
 function DateInput({value,onChange}:{value:string;onChange:(value:string)=>void}){
   const[display,setDisplay]=useState(()=>formatDate(value));
   useEffect(()=>setDisplay(formatDate(value)),[value]);

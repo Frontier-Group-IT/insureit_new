@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, LockKeyhole, FolderKanban, ArrowUpRight, ChevronRight } from "lucide-react";
+import { Check, LockKeyhole, FolderKanban } from "lucide-react";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 
 export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, completedKeys, currentKey, editMode = false }: {
@@ -17,9 +17,9 @@ export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, compl
       <div className="customer-claim-ref-journey-header flex flex-wrap items-center justify-between gap-3 px-5 py-3">
         <div className="flex items-center gap-3">
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/20 text-white"><FolderKanban className="h-5 w-5" /></span>
-          <div><h2 className="text-[16px] font-bold text-white">Claim Journey</h2><p className="text-[11px] text-white/85">Track and manage your claim progress</p></div>
+          <div><h2 className="text-[16px] font-bold text-white">Claim Journey</h2></div>
         </div>
-        <span className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white px-3.5 py-2 text-[11px] font-semibold text-[#275CAC]"><ArrowUpRight className="h-3.5 w-3.5" />{selected?.label ?? "Spot Intimation"}<ChevronRight className="h-3.5 w-3.5" /></span>
+        <span className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white px-3.5 py-2 text-[11px] font-semibold text-[#275CAC]">{selected?.label ?? "Spot Intimation"}</span>
       </div>
       <nav aria-label="Nine-stage claim journey" className="overflow-x-auto">
         <ol className="customer-claim-ref-stage-grid grid min-w-[1080px] grid-cols-9 gap-1.5 border-y border-[#E7EBF6] bg-[#FBFAFF] p-2">
