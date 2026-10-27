@@ -98,17 +98,20 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
           </Link>
         ))}
       </section>
-      <section className="px-1 py-2">
-        <h2 className="mb-2 text-[14px] font-black text-[#10284A]">Quick actions</h2>
-        <nav aria-label="Quick actions" className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+      <section aria-label="Quick actions" className="rounded-2xl border border-[#E0E8F3] bg-white px-3 py-3 shadow-[0_3px_12px_rgba(20,58,100,.04)] sm:px-4">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-[14px] font-black text-[#10284A]">Quick actions</h2>
+          <span className="text-[10px] font-semibold text-[#7186A0]">One tap services</span>
+        </div>
+        <nav aria-label="Customer quick actions" className="grid grid-cols-3 gap-2 sm:grid-cols-3 xl:grid-cols-6">
           {[
-            {title:"Renew policies",href:"/customer/renewals",icon:CalendarDays,background:"bg-[#EAF3FF]",color:"text-[#1769DC]"},
-            {title:"Start New Claim",href:"/customer/start-claim",icon:ClipboardPlus,background:"bg-[#E7F8EF]",color:"text-[#087A57]"},
-            {title:"Get a quote",href:"/customer/insurance-quote",icon:FileText,background:"bg-[#EAF3FF]",color:"text-[#1769DC]"},
-            {title:"My vehicles",href:"/customer/vehicles",icon:Truck,background:"bg-[#E7F8EF]",color:"text-[#087A57]"},
-            {title:"Vehicle exchange",href:"/customer/exchange",icon:ArrowLeftRight,background:"bg-[#F1ECFF]",color:"text-[#7546CE]"},
-            {title:"Support",href:"/customer/support",icon:Headset,background:"bg-[#EAF3FF]",color:"text-[#1769DC]"},
-          ].map(({title,href,icon:Icon,background,color})=><Link key={href} href={href === "/customer/start-claim" ? { pathname: "/customer/start-claim", query: accountQuery } : { pathname: href, query: accountQuery }} className="customer-home-quick-action group flex min-w-0 flex-col items-center gap-2 rounded-xl px-2 py-3 text-center hover:bg-[#F3F8FE]"><span className={`grid h-11 w-11 place-items-center rounded-xl ${background} ${color}`}><Icon className="h-[22px] w-[22px] stroke-[2]"/></span><span className="text-[12px] font-semibold text-[#244771]">{title}</span></Link>)}
+            {title:"Renew policies",href:"/customer/renewals",icon:CalendarDays,background:"bg-[#FFF6E8]",color:"text-[#C98918]",art:"/assets/Custom-Icons/optimized-128/renewal.png"},
+            {title:"Start New Claim",href:"/customer/start-claim",icon:ClipboardPlus,background:"bg-[#E8F8F0]",color:"text-[#10A66F]",art:"/assets/Custom-Icons/optimized-128/claims.png"},
+            {title:"Get a quote",href:"/customer/insurance-quote",icon:FileText,background:"bg-[#EAF3FF]",color:"text-[#174EA6]",art:null},
+            {title:"My vehicles",href:"/customer/vehicles",icon:Truck,background:"bg-[#E7F8EF]",color:"text-[#087A57]",art:"/assets/Custom-Icons/optimized-128/fleet-vehicle.png"},
+            {title:"Vehicle exchange",href:"/customer/exchange",icon:ArrowLeftRight,background:"bg-[#F1ECFF]",color:"text-[#7546CE]",art:null},
+            {title:"Support",href:"/customer/support",icon:Headset,background:"bg-[#EAF3FF]",color:"text-[#1769DC]",art:null},
+          ].map(({title,href,icon:Icon,background,color,art})=><Link key={href} href={{pathname:href,query:accountQuery}} className="group flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl px-1.5 py-2.5 text-center transition hover:bg-[#F3F8FE] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1769DC]"><span className={`grid h-11 w-11 place-items-center rounded-xl shadow-[0_2px_7px_rgba(18,37,68,.08)] transition-transform group-hover:scale-105 ${background} ${color}`}>{art?<img src={art} alt="" aria-hidden="true" className="h-8 w-8 object-contain"/>:<Icon aria-hidden="true" className="h-[23px] w-[23px] stroke-[2]"/>}</span><span className="text-[11px] font-bold leading-4 text-[#244771]">{title}</span></Link>)}
         </nav>
       </section>
       <div className="grid gap-3 lg:grid-cols-2">
