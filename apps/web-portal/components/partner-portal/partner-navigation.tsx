@@ -30,7 +30,6 @@ type PartnerNavItem = { href: string; label: string; icon: PartnerCustomIconName
 
 const primaryItems: PartnerNavItem[] = [
   { href: "/partner", label: "Home", icon: "home" },
-  { href: "/partner/business", label: "My Business", icon: "business" },
   { href: "/partner/reports", label: "Reports", icon: "business" },
   { href: "/partner/customers", label: "Customers", icon: "customers" },
   { href: "/partner/vehicles", label: "Vehicle", icon: "vehicle" },
@@ -85,7 +84,7 @@ function isActive(pathname: string, href: string) {
 
 const intentPrefetchRoutes = new Set([
   "/partner",
-  "/partner/business",
+  "/partner/reports",
   "/partner/customers",
   "/partner/vehicles",
   "/partner/policies",
