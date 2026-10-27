@@ -8,6 +8,21 @@ import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim } from "@/lib/customer-web-phase2-data";
 import { CUSTOMER_EXTERNAL_STAGE_FIELDS } from "@/lib/customer-claim-stage-fields";
 
+/** Surface only known, actionable database errors; never expose raw SQL or authorization details. */
+function claimStageDatabaseError(message: string | undefined): string {
+  const detail = message ?? "";
+  if (detail.includes("Delivery Order amount cannot exceed bill amount")) {
+    return "Delivery Order amount cannot exceed the saved Bill Amount. Check the Billing stage and enter an amount up to the bill value.";
+  }
+  if (detail.includes("Only self-managed claims can be updated here") || detail.includes("This claim is now managed by Sankalp")) {
+    return "This claim is not available for self-managed stage updates. Please contact support.";
+  }
+  if (detail.includes("Claim not available") || detail.includes("Authentication required")) {
+    return "You no longer have access to save this claim. Please sign in again or contact support.";
+  }
+  return "Could not save claim stage";
+}
+
 const stageDates:Record<string,string>={
   spot_status:"spot_survey_done_date",claim_intimation:"claim_intimation_date",
   work_approval:"approval_received_date",repair_ri:"ri_done_date",
@@ -82,14 +97,20 @@ export async function saveCustomerExternalStage(form:FormData) {
       details:values,completed_at:done?(current?.completed_at||new Date().toISOString()):null,
       recorded_by:session.user.id,recorded_by_actor:"customer",
     },{onConflict:"claim_id,milestone_key"});
-    if(error)throw new Error("Could not save claim stage");
+    if(error){
+      console.error("Customer claim stage save rejected", { stage: key, code: error.code, message: error.message });
+      throw new Error(claimStageDatabaseError(error.message));
+    }
   }else{
     if(key==="repair_ri")values.ri_required="yes";
     const {error}=await (db.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>)("save_self_managed_milestone",{
       p_claim_id:claim.id,p_milestone_key:key,p_details:values,
       p_completed_at:current?.completed_at||new Date().toISOString(),
     });
-    if(error)throw new Error("Could not save claim stage");
+    if(error){
+      console.error("Customer claim stage save rejected", { stage: key, code: error.code, message: error.message });
+      throw new Error(claimStageDatabaseError(error.message));
+    }
   }
   const next=INTERNAL_JOURNEY_STAGES[index+1];
   redirect(next
@@ -161,7 +182,10 @@ export async function saveCustomerClaimStageWithFeedback(mode: "draft" | "detail
       "RI done date must not precede repair complete date", "Payment date must not precede document submission",
       "Enter the vehicle received date", "Complete the preceding claim stage first",
       "Claim Intimation cannot be edited", "Claim stage editing is not available",
-      "Could not save claim stage", "Could not save Claim Intimation draft"
+      "Could not save claim stage", "Could not save Claim Intimation draft",
+      "Delivery Order amount cannot exceed the saved Bill Amount. Check the Billing stage and enter an amount up to the bill value.",
+      "This claim is not available for self-managed stage updates. Please contact support.",
+      "You no longer have access to save this claim. Please sign in again or contact support."
     ];
     return {error:safeMessages.includes(reason)?reason:"Unable to save claim details. Your entries are preserved; please try again."};
   }
