@@ -21,7 +21,7 @@ export function ClaimDocumentCollapsedStatus({ verifiedCount, pendingCount, show
         <span className="text-[12px] font-semibold leading-none">{verifiedCount}{showLabels ? " Verified" : ""}</span>
       </span>
       <span
-        className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-[#FFF6EA] px-2.5 text-[#071D49]"
+        className={`inline-flex h-8 items-center gap-1.5 rounded-xl bg-[#FFF6EA] px-2.5 text-[#071D49] ${pendingCount > 0 ? "ring-1 ring-orange-300 shadow-[0_0_12px_rgba(249,115,22,0.28)] motion-safe:animate-pulse" : ""}`}
         aria-label={`${pendingCount} pending files`}
       >
         <Clock aria-hidden="true" size={17} strokeWidth={2.4} className="text-[#F97316]" />
