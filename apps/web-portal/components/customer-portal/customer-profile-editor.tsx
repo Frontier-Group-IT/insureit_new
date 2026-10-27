@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { FileText, Loader2, Mail, MapPin, Pencil, Phone, Save, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -103,9 +104,9 @@ export function CustomerProfileEditor({
             </div>
           </div>
         </>
-      ) : (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#061B3B]/55 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-labelledby="customer-profile-edit-title">
-          <div className="w-full max-w-[620px] rounded-2xl border border-[#D9E3EF] bg-white shadow-[0_24px_70px_rgba(6,27,59,.24)]">
+      ) : typeof document !== "undefined" ? createPortal(
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-y-auto bg-[#061B3B]/65 px-3 py-5 backdrop-blur-[2px] sm:px-5" role="dialog" aria-modal="true" aria-labelledby="customer-profile-edit-title">
+          <div className="my-auto w-full max-w-[620px] max-h-[calc(100dvh-40px)] overflow-y-auto rounded-2xl border border-[#D9E3EF] bg-white shadow-[0_24px_70px_rgba(6,27,59,.24)]">
             <div className="flex items-center justify-between border-b border-[#E6EDF5] px-5 py-4">
               <div>
                 <h3 id="customer-profile-edit-title" className="text-[16px] font-black text-[#2D2352]">Edit Profile</h3>
@@ -136,8 +137,9 @@ export function CustomerProfileEditor({
               </div>
             </div>
           </div>
-        </div>
-      )}
+        </div>,
+        document.body
+      ) : null}
     </>
   );
 }
