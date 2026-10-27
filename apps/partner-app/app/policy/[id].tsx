@@ -23,7 +23,6 @@ export default function PolicyDetailScreen() {
   const [showOverviewDetails, setShowOverviewDetails] = useState(false);
   const [showPremiumDetails, setShowPremiumDetails] = useState(false);
   const [showCommercialDetails, setShowCommercialDetails] = useState(false);
-  const [showVehicleDetails, setShowVehicleDetails] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -145,7 +144,7 @@ export default function PolicyDetailScreen() {
           </Card>
 
           <Card>
-            <CardHeader iconKind="premium" title="Premium" actionLabel="View Breakup" onAction={() => setShowPremiumDetails((value) => !value)} />
+            <CardHeader iconKind="premium" title="Premium" />
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showPremiumDetails }} onPress={() => setShowPremiumDetails((value) => !value)} style={({ pressed }) => [styles.premiumDisclosure, pressed && styles.pressed]}>
               <PartnerPolicyDetailIcon kind="premium-breakup" size={25} />
               <View style={styles.disclosureText}><Text style={styles.disclosureTitle}>Premium breakup</Text><Text style={styles.disclosureSummary}>{formatIndianCurrency(data.premium.gross_premium)}</Text></View>
@@ -163,40 +162,24 @@ export default function PolicyDetailScreen() {
           </Card>
 
           <Card>
-            <CardHeader iconKind="customer-vehicle" title="Customer Details" actionLabel="View Details" onAction={data.customer.id ? () => router.push(`/customer/${data.customer.id}` as never) : undefined} />
+            <CardHeader iconKind="customer-vehicle" title="Customer Details" />
             <View style={styles.entityStack}>
               <EntityRow icon="person-outline" title={data.customer.name} subtitle={data.customer.customer_code || 'Customer'} onPress={data.customer.id ? () => router.push(`/customer/${data.customer.id}` as never) : undefined} />
             </View>
           </Card>
-          <Card>
-            <CardHeader iconKind="customer-vehicle" title={data.vehicle ? 'Vehicle Details' : 'Insured Risk Details'} actionLabel="View Details" onAction={() => setShowVehicleDetails((value) => !value)} />
+          <Card onPress={data.vehicle && data.customer.id ? () => router.push(`/customer/${data.customer.id}` as never) : undefined} accessibilityLabel="Open customer details for this vehicle">
+            <CardHeader iconKind="customer-vehicle" title={data.vehicle ? 'Vehicle Details' : 'Insured Risk Details'} />
             <View style={styles.entityStack}>
               {data.vehicle ? (
-                <EntityRow image={manufacturerLogo || PartnerAssets.products.motorInsurance} title={data.vehicle.vehicle_no || 'Vehicle'} subtitle={displayParts(data.vehicle.make, data.vehicle.model, data.vehicle.year) || humanize(data.vehicle.vehicle_type || 'vehicle')} onPress={() => setShowVehicleDetails((value) => !value)} />
+                <EntityRow image={manufacturerLogo || PartnerAssets.products.motorInsurance} title={data.vehicle.vehicle_no || 'Vehicle'} subtitle={displayParts(data.vehicle.make, data.vehicle.model, data.vehicle.year) || humanize(data.vehicle.vehicle_type || 'vehicle')} />
               ) : (
                 <EntityRow image={PartnerAssets.products.commercialInsurance} title={data.policy.policy_product || data.policy.policy_type || data.policy.business_line || 'Non-motor insured risk'} subtitle="No vehicle is linked to this policy." />
               )}
             </View>
-            {showVehicleDetails ? (
-              <View style={styles.detailGrid}>
-                {data.vehicle ? (
-                  <>
-                    <MiniInfo label="Vehicle number" value={data.vehicle.vehicle_no || "Not recorded"} />
-                    <MiniInfo label="Manufacturer" value={data.vehicle.make || "Not recorded"} />
-                    <MiniInfo label="Model" value={data.vehicle.model || "Not recorded"} />
-                    <MiniInfo label="Year" value={data.vehicle.year != null ? String(data.vehicle.year) : "Not recorded"} />
-                    <MiniInfo label="Vehicle type" value={humanize(data.vehicle.vehicle_type || "")} />
-                    <MiniInfo label="Commercial vehicle" value={data.vehicle.is_commercial == null ? "Not recorded" : data.vehicle.is_commercial ? "Yes" : "No"} />
-                  </>
-                ) : (
-                  <MiniInfo label="Insured risk" value="No vehicle is linked to this policy." />
-                )}
-              </View>
-            ) : null}
           </Card>
 
           <Card>
-            <CardHeader iconKind="commercial-attribution" title="Commercial Attribution" actionLabel="View Details" onAction={() => setShowCommercialDetails((value) => !value)} />
+            <CardHeader iconKind="commercial-attribution" title="Commercial Attribution" />
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }} onPress={() => setShowCommercialDetails((value) => !value)} style={({ pressed }) => [styles.commercialRow, pressed && styles.pressed]}>
               <PartnerPolicyDetailIcon kind="sales-ownership" size={25} />
               <View style={styles.disclosureText}><Text style={styles.disclosureTitle}>Sales ownership</Text><Text numberOfLines={1} style={styles.disclosureSummary}>{[data.commercial.rm_name, data.commercial.intermediary_code].filter(Boolean).join(' · ') || 'View details'}</Text></View>
@@ -217,7 +200,10 @@ export default function PolicyDetailScreen() {
   );
 }
 
-function Card({ children }: { children: ReactNode }) { return <View style={styles.card}>{children}</View>; }
+function Card({ children, onPress, accessibilityLabel }: { children: ReactNode; onPress?: () => void; accessibilityLabel?: string }) {
+  if (onPress) return <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>{children}</Pressable>;
+  return <View style={styles.card}>{children}</View>;
+}
 
 function CardHeader({ iconKind, title, actionLabel, onAction }: { iconKind: PartnerPolicyDetailIconKind; title: string; actionLabel?: string; onAction?: () => void }) {
   return (
