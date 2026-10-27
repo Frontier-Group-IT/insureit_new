@@ -112,7 +112,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       </form>
     ):null}
     {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} allowUpload={editMode}/> : null}
-    {selected.key==="claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} showSaveDetails={false} allowUpload={editMode && external} /> : null}
+    <CustomerClaimDocumentGroups documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} showSaveDetails={false} allowUpload={editMode && external && !completed && activeIndex===currentIndex} />
     {selected.key==="claim_intimation" && editMode && canEditStage ? (
       <div className="flex flex-wrap items-center justify-end gap-3 rounded-xl border border-[#D9E6F7] bg-white px-5 py-4">
         <Link href={{pathname:"/customer/claims",query:{account:account.id}}} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] px-5 text-[12px] font-semibold text-[#174A87]">Cancel</Link>
