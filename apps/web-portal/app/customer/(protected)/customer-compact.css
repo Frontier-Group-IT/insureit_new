@@ -174,3 +174,29 @@
 [data-customer-nav-layout="top"] .customer-header-action-divider {
   background-color: rgba(255, 255, 255, .25);
 }
+
+/* A single, white, responsive Profile information strip rather than four cards. */
+.customer-compact .customer-profile-joined-details .customer-profile-detail-card {
+  border: 0;
+  border-bottom: 1px solid #e6e0f5;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: none;
+  transform: none;
+}
+.customer-compact .customer-profile-joined-details .customer-profile-detail-card:last-child { border-bottom: 0; }
+@media (min-width:640px) and (max-width:1279px) {
+  .customer-compact .customer-profile-joined-details .customer-profile-detail-card:nth-child(odd) { border-right: 1px solid #e6e0f5; }
+  .customer-compact .customer-profile-joined-details .customer-profile-detail-card:nth-child(n+3) { border-bottom: 0; }
+}
+@media (min-width:1280px) {
+  .customer-compact .customer-profile-joined-details .customer-profile-detail-card { border-bottom: 0; border-right: 1px solid #e6e0f5; }
+  .customer-compact .customer-profile-joined-details .customer-profile-detail-card:last-child { border-right: 0; }
+}
+@media (hover:hover) and (pointer:fine) {
+  .customer-compact .customer-profile-joined-details .customer-profile-detail-card:hover {
+    transform: none;
+    box-shadow: none;
+    background: #faf9ff;
+  }
+}
