@@ -28,6 +28,23 @@ const documentArtwork: Record<string, string> = {
   otherdocument: "glossy_blue_secure_policy_document_icon.png",
   claimform: "glossy_blue_secure_policy_document_icon.png",
   dischargevoucher: "glossy_orange_delivery_document_icon.png",
+  driveraadhaarfront: "glossy_purple_id_card_icon.png",
+  driveraadhaarback: "glossy_purple_id_card_icon.png",
+  driverstatement: "glossy_purple_id_card_icon.png",
+  roadtax: "glossy_orange_delivery_document_icon.png",
+  localpermita: "glossy_green_vehicle_document_icon.png",
+  localpermitb: "glossy_green_vehicle_document_icon.png",
+  nationalpermit: "glossy_green_vehicle_document_icon.png",
+  authorizationletter: "glossy_blue_secure_policy_document_icon.png",
+  aadhaar: "glossy_purple_id_card_icon.png",
+  pan: "glossy_purple_id_card_icon.png",
+  gst: "glossy_blue_secure_policy_document_icon.png",
+  cancelledcheque: "glossy_blue_secure_policy_document_icon.png",
+  kycform: "glossy_purple_id_card_icon.png",
+  tpaffidavit: "glossy_blue_secure_policy_document_icon.png",
+  towingbill: "glossy_orange_delivery_document_icon.png",
+  repairestimate: "glossy_orange_delivery_document_icon.png",
+  ncbverification: "glossy_blue_secure_policy_document_icon.png",
 };
 function documentIcon(type: string): string {
   const name = type.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -44,9 +61,9 @@ export function CustomerClaimCompactDocument({label,type,documents,accountId,cla
   const form=useRef<HTMLFormElement>(null);
   const ordered=[...documents].sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at));
   const openFile=(file:CustomerClaimFile)=><a key={file.id} href={`/customer/claim-documents/${encodeURIComponent(file.id)}/open?account=${encodeURIComponent(accountId)}&claim=${encodeURIComponent(claimId)}`} target="_blank" rel="noopener noreferrer" className="flex min-w-0 items-center gap-2 rounded-md border border-[#E4ECF7] bg-[#F9FBFF] px-2 py-2 text-[11px] text-[#204D83] hover:bg-[#EEF5FF] focus-visible:outline-2 focus-visible:outline-[#1769DC]" title={file.file_name||label}><FileText className="h-4 w-4 shrink-0"/><span className="truncate">{file.file_name||label}</span></a>;
-  return <article className="customer-workflow customer-workflow-document min-w-0 rounded-xl border border-[#DCE5F4] bg-white p-3">
+  return <article className="customer-workflow customer-workflow-document min-w-0 rounded-xl border border-[#DCE5F4] bg-white px-3 py-2.5">
     <div className="flex items-center justify-between gap-2">
-      <div className="flex min-w-0 flex-1 items-center gap-2"><img src={documentIcon(type)} alt="" aria-hidden="true" loading="lazy" className="h-9 w-9 shrink-0 object-contain" /><h3 className="min-w-0 text-[12px] font-semibold text-[#102B54]">{label}</h3></div>
+      <div className="flex min-w-0 flex-1 items-center gap-2"><img src={documentIcon(type)} alt="" aria-hidden="true" loading="lazy" className="h-7 w-7 shrink-0 object-contain" /><h3 className="min-w-0 text-[12px] font-semibold text-[#102B54]">{label}</h3></div>
       {ordered.length>0?<button type="button" aria-expanded={ordered.length>1?expanded:undefined} aria-label={ordered.length>1?`${ordered.length} uploaded, ${expanded?'collapse':'expand'} documents`:`${ordered.length} uploaded`} onClick={ordered.length>1?()=>setExpanded(v=>!v):undefined} className={`inline-flex shrink-0 items-center gap-1 rounded-full bg-[#EDF8F2] px-2 py-0.5 text-[10px] font-semibold text-[#087A57] ${ordered.length>1?'cursor-pointer transition hover:bg-[#DFF3E8] focus-visible:outline-2 focus-visible:outline-[#16835D]':'cursor-default'}`}>{ordered.length} Uploaded{ordered.length>1?(expanded?<ChevronUp className="h-3 w-3"/>:<ChevronDown className="h-3 w-3"/>):null}</button>:null}
       {allowUpload?<form action={uploadAction} ref={form}>
         <input type="hidden" name="account" value={accountId}/><input type="hidden" name="claim" value={claimId}/><input type="hidden" name="stage" value={stage}/><input type="hidden" name="type" value={type}/><input type="hidden" name="returnToSpotIntimation" value={returnToSpotIntimation?"1":"0"}/>
