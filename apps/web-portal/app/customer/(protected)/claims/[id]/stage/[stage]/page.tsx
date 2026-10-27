@@ -2,12 +2,12 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import { CUSTOMER_EXTERNAL_STAGE_FIELDS } from "@/lib/customer-claim-stage-fields";
-import { saveCustomerExternalStage } from "./actions";
-import { CustomerClaimStageSubmit } from "@/components/customer-portal/customer-claim-stage-submit";
+import { saveCustomerExternalStage, saveCustomerClaimIntimationDraft } from "./actions";
 import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/customer-claim-evidence-workspace";
+import { CustomerClaimVoiceRecorder } from "@/components/customer-portal/customer-claim-voice-recorder";
 import { CustomerClaimDocumentGroups } from "@/components/customer-portal/customer-claim-document-groups";
 import { CustomerClaimBooleanChoice } from "@/components/customer-portal/customer-claim-boolean-choice";
-import { Check, Circle, LockKeyhole, CarFront, FileText, ShieldCheck, CalendarDays } from "lucide-react";
+import { Check, Circle, LockKeyhole, CarFront, FileText, ShieldCheck, CalendarDays, Clock3 } from "lucide-react";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
@@ -15,7 +15,7 @@ import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimPro
 export const dynamic="force-dynamic";
 export const revalidate=0;
 
-export default async function CustomerClaimStage({params,searchParams}:{params:Promise<{id:string;stage:string}>;searchParams?:Promise<{account?:string;mode?:string;saved?:string}>}) {
+export default async function CustomerClaimStage({params,searchParams}:{params:Promise<{id:string;stage:string}>;searchParams?:Promise<{account?:string;mode?:string}>}) {
   const p=await params;const q=searchParams?await searchParams:{};
   const {account}=await resolveCustomerWebScope(q.account);
   const {claim,milestones,documents,internal_projection}=await loadCustomerClaimDetail(account.id,p.id);
@@ -36,7 +36,6 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
   const canUploadStage = selected.key==="spot_intimation" || selected.key==="claim_intimation";
   const allowEdit = canEditStage || canUploadStage;
   return <div className="space-y-3">
-    {q.saved==="claim_intimation" && selected.key==="work_approval" ? <div role="status" className="rounded-xl border border-[#B8E2CA] bg-[#F0FBF5] px-4 py-3 text-[12px] font-bold text-[#08744A]">Stage details saved successfully</div> : null}
     <section className="overflow-hidden rounded-2xl border border-[#D9E3F0] bg-white">
       <div className="grid grid-cols-2 lg:grid-cols-5">
         {([
@@ -73,12 +72,23 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
             ["Driver Name",milestone?.details?.driver_name||(claim.accident_description?.match(/Driver:\\s*([^\\n]+)/)?.[1]??null)],
             ["Driver Number",milestone?.details?.driver_phone||(claim.accident_description?.match(/Driver phone:\\s*([^\\n]+)/)?.[1]??null)],
             ["Location",claim.accident_location||milestone?.details?.location],
-          ] as Array<[string,unknown]>).map(([label,value])=><div key={label} className="min-w-0">
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{label}</p>
-            <div className="flex min-h-10 items-center overflow-hidden rounded-md border border-[#D9E3F0] bg-white px-3 text-[12px] font-medium text-[#071D49]">
-              <span className="truncate" title={typeof value==="string"?value:""}>{typeof value==="string"&&value?(label.includes("Date")?new Date(value).toLocaleString("en-IN"):value):"—"}</span>
-            </div>
-          </div>)}
+          ] as Array<[string,unknown]>).map(([label,value])=>{
+            const isDateTime=label==="Accident Date & Time"||label==="Spot Intimation Date & Time";
+            const parsed=isDateTime&&typeof value==="string"&&value?new Date(value):null;
+            const valid=parsed&&!Number.isNaN(parsed.getTime());
+            const date=valid?new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Kolkata",day:"2-digit",month:"2-digit",year:"numeric"}).format(parsed).replaceAll("/","-"):"";
+            const time=valid?new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(parsed):"";
+            return <div key={label} className={isDateTime?"min-w-0 md:col-span-1 xl:col-span-1":"min-w-0"}>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{label}{isDateTime?<span className="ml-1 text-red-500">*</span>:null}</p>
+              {isDateTime?<div className="grid min-h-10 grid-cols-2 overflow-hidden rounded-xl border border-[#CAD8EE] bg-white text-[12px] font-medium text-[#18345C]" aria-label={label+" saved date and time"}>
+                <div className="flex min-w-0 items-center justify-between gap-1 border-r border-[#D9E3F0] px-2.5"><span className="truncate">{date||"DD-MM-YYYY"}</span><CalendarDays className="h-3.5 w-3.5 shrink-0 text-[#182B45]"/></div>
+                <div className="flex min-w-0 items-center justify-between gap-1 px-2.5"><span className="truncate">{time||"HH:MM"}</span><Clock3 className="h-3.5 w-3.5 shrink-0 text-[#182B45]"/></div>
+              </div>:<div className="flex min-h-10 items-center overflow-hidden rounded-md border border-[#D9E3F0] bg-white px-3 text-[12px] font-medium text-[#071D49]">
+                <span className="truncate" title={typeof value==="string"?value:""}>{typeof value==="string"&&value?value:"—"}</span>
+              </div>}
+            </div>;
+          })}
+
         </div>
       ):(
         <div className="p-4">
@@ -93,7 +103,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       )}
     </section> : null}
     {editMode && canEditStage ? (
-      <form id="customer-claim-stage-details-form" action={saveCustomerExternalStage} className="mt-2 rounded-2xl border border-[#D9E6F7] bg-white p-5">
+      <form id="customer-claim-stage-details-form" action={selected.key==="claim_intimation"?saveCustomerClaimIntimationDraft:saveCustomerExternalStage} className="mt-2 rounded-2xl border border-[#D9E6F7] bg-white p-5">
         <div className="mb-4 flex items-start justify-between gap-3"><div><h2 className="text-[17px] font-semibold text-[#071D49]">Stage Details</h2><p className="text-[12px] text-[#75869A]">Record {selected.label.toLowerCase()} details.</p></div></div><div className={`grid gap-3 sm:grid-cols-2 ${selected.key==="claim_intimation"?"lg:grid-cols-5":selected.key==="work_approval"||selected.key==="payment_encashment"?"lg:grid-cols-5":selected.key==="repair_ri"||selected.key==="delivery_order"?"lg:grid-cols-3":selected.key==="billing"||selected.key==="vehicle_delivery"?"lg:grid-cols-2":"lg:grid-cols-4"}`}>
         <input type="hidden" name="account" value={account.id}/>
         <input type="hidden" name="claim" value={claim.id}/>
@@ -114,11 +124,12 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       </form>
     ):null}
     {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} allowUpload={editMode}/> : null}
+    {selected.key==="spot_intimation" ? <CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id}/> : null}
     <CustomerClaimDocumentGroups documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} showSaveDetails={false} allowUpload={editMode && external && !completed && activeIndex===currentIndex} />
     {selected.key==="claim_intimation" && editMode && canEditStage ? (
       <div className="flex flex-wrap items-center justify-end gap-3 rounded-xl border border-[#D9E6F7] bg-white px-5 py-4">
         <Link href={{pathname:"/customer/claims",query:{account:account.id}}} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] px-5 text-[12px] font-semibold text-[#174A87]">Cancel</Link>
-        <CustomerClaimStageSubmit formId="customer-claim-stage-details-form" />
+        <button type="submit" form="customer-claim-stage-details-form" formAction={saveCustomerClaimIntimationDraft} formNoValidate className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#1253A7] px-6 text-[12px] font-bold text-white hover:bg-[#0B3884]">Save</button>
       </div>
     ) : null}
   </div>;
