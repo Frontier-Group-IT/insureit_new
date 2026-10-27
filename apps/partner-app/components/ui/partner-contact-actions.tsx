@@ -7,35 +7,39 @@ export function PartnerContactActions({
   phone,
   email,
   compact = false,
+  iconOnlyVertical = false,
 }: {
   phone?: string | null;
   email?: string | null;
   compact?: boolean;
+  iconOnlyVertical?: boolean;
 }) {
   const normalizedPhone = lastTen(phone || '');
 
+  const iconMode = compact || iconOnlyVertical;
+
   return (
-    <View style={[styles.row, compact && styles.compactRow]}>
+    <View style={[styles.row, compact && styles.compactRow, iconOnlyVertical && styles.verticalRow]}>
       <Action
         icon="call-outline"
         label="Call"
         disabled={!normalizedPhone}
-        compact={compact}
+        compact={iconMode}
         onPress={() => normalizedPhone ? void Linking.openURL(`tel:+91${normalizedPhone}`) : undefined}
       />
       <Action
         icon="logo-whatsapp"
         label="WhatsApp"
         disabled={!normalizedPhone}
-        compact={compact}
+        compact={iconMode}
         onPress={() => normalizedPhone ? void Linking.openURL(`https://wa.me/91${normalizedPhone}`) : undefined}
       />
-      {!compact ? (
+      {!compact || iconOnlyVertical ? (
         <Action
           icon="mail-outline"
           label="Email"
           disabled={!email}
-          compact={compact}
+          compact={iconMode}
           onPress={() => email ? void Linking.openURL(`mailto:${email}`) : undefined}
         />
       ) : null}
@@ -76,7 +80,7 @@ function Action({
     >
       <Ionicons
         name={icon}
-        size={compact ? 15 : 18}
+        size={compact ? 20 : 18}
         color={disabled ? partnerTheme.colors.inkSubtle : partnerTheme.colors.brandStrong}
       />
       {!compact ? <Text style={styles.label}>{label}</Text> : null}
@@ -91,6 +95,7 @@ function lastTen(value: string) {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 8 },
   compactRow: { gap: 2 },
+  verticalRow: { flexDirection: 'column', alignItems: 'center', gap: 2 },
   action: {
     flex: 1,
     minHeight: partnerTheme.control.minTouchTarget,
@@ -105,9 +110,9 @@ const styles = StyleSheet.create({
   },
   compactAction: {
     flex: 0,
-    width: 34,
-    height: 34,
-    minHeight: 34,
+    width: 36,
+    height: 32,
+    minHeight: 32,
     borderRadius: partnerTheme.radius.pill,
     borderWidth: 0,
     backgroundColor: 'transparent',
