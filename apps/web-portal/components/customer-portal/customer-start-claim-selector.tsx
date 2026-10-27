@@ -109,7 +109,8 @@ export function CustomerStartClaimSelector({
               <Image src={getInsurerLogo(displayPolicy.insurer_name)!} alt={`${displayPolicy.insurer_name} logo`} width={36} height={36} unoptimized className="h-full w-full object-contain" />
             ) : <ShieldCheck className="h-5 w-5" aria-hidden="true" />}
           </span>
-          <h2 className="text-[16px] font-bold text-[#111E4A]">{displayPolicy?.source === "external" ? "Self Tracked Policy" : "Insurance Policy"}</h2>
+          <h2 className="min-w-0 text-[16px] font-bold text-[#111E4A]">{displayPolicy?.source === "external" ? "Self Tracked Policy" : "Insurance Policy"}</h2>
+          {policyExpired ? <span role="status" className="ml-auto inline-flex shrink-0 items-center rounded-full border border-[#F5D7A8] bg-[#FFF6E8] px-3 py-1 text-[11px] font-bold text-[#AA681C] motion-safe:animate-pulse">Policy expired</span> : null}
         </div>
         {displayPolicy ? (
           <>
@@ -132,7 +133,7 @@ export function CustomerStartClaimSelector({
                 </div>
               ))}
             </div>
-            {!hasActivePolicy ? <p className="mt-4 border-t border-[#E8EAF2] pt-3 text-[12px] text-[#AA681C]">{policyExpired ? "Policy expired" : "Policy not currently active"} · Claim registration is still permitted, subject to coverage review.</p> : null}
+            {!hasActivePolicy && !policyExpired ? <p className="mt-4 border-t border-[#E8EAF2] pt-3 text-[12px] text-[#AA681C]">Policy not currently active</p> : null}
           </>
         ) : (
           <div className="pt-4">
