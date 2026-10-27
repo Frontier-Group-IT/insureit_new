@@ -81,7 +81,7 @@ export function CustomerProfileEditor({
             {message ? <p className="mt-2 text-right text-[10px] font-bold text-[#0B7A54]">{message}</p> : null}
           </div>
 
-          <div className="mt-5 grid overflow-hidden rounded-2xl border border-[#E6E0F5] bg-white sm:grid-cols-2 xl:grid-cols-4">
+          <div className="customer-profile-joined-details mt-5 grid overflow-hidden rounded-2xl border border-[#E6E0F5] bg-white sm:grid-cols-2 xl:grid-cols-4">
             <div className="customer-profile-detail-card flex min-w-0 items-center gap-2.5 border-b border-[#E6E0F5] bg-white px-3.5 py-3.5 sm:border-r xl:border-b-0 xl:last:border-r-0">
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#EBE3FF] text-[#7246D3]"><Phone className="h-3.5 w-3.5" /></span>
               <div className="min-w-0"><p className="text-[9.5px] font-bold text-[#81739B]">Mobile Number</p><p className="mt-0.5 break-all text-[11px] font-black text-[#2D2352]">{phone || "—"}</p></div>
