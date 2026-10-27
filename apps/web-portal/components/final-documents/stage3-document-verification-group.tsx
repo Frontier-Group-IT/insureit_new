@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Camera, Check, ContactRound, FileText, Mic, ShieldCheck, Truck, Video } from "lucide-react";
+import { Camera, Check, ContactRound, FileText, Mic, Shield, ShieldCheck, Truck, Video } from "lucide-react";
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { ClaimDocumentCollapsedStatus } from "@/components/claim-manager/claim-document-collapsed-status";
 import { DocumentVerificationDetailsButton } from "@/components/spot-survey/document-verification-details-button";
@@ -147,18 +147,23 @@ export function Stage3DocumentVerificationGroup({ item, claim, verifications }: 
 function DocumentFileRow({ item, claim, document, verification, verified, rejected, selected, onSelectedChange }: { item: Stage3DocumentVerificationItem; claim: ClaimContext; document: FinalVerificationDocument; verification?: FinalVerificationRow; verified: boolean; rejected: boolean; selected: boolean; onSelectedChange: (checked: boolean) => void }) {
   const selectable = !verified && !rejected;
   return (
-    <div className="grid grid-cols-[24px_32px_1fr] items-start gap-2 rounded-lg border border-[#E2EAF4] bg-white/80 p-2">
-      <div className="grid min-h-8 place-items-center">
-        {verified ? (
-          <span className="grid h-5 w-5 place-items-center rounded border border-green-300 bg-green-50 text-green-700" aria-label="Verified file"><Check aria-hidden="true" size={14} strokeWidth={2.6} /></span>
-        ) : (
-          <label className={`grid h-5 w-5 place-items-center rounded border transition ${selectable ? selected ? "cursor-pointer border-[#174EA6] bg-[#174EA6] text-white" : "cursor-pointer border-[#AFC0D5] bg-white text-transparent hover:border-[#174EA6]" : "cursor-not-allowed border-slate-200 bg-slate-100 text-transparent"}`}>
-            <input type="checkbox" className="sr-only" checked={selected} disabled={!selectable} onChange={(event) => onSelectedChange(event.target.checked)} aria-label={`Select ${document.file_name} for verification`} />
-            <Check aria-hidden="true" size={13} strokeWidth={2.6} />
-          </label>
-        )}
-      </div>
-      <div className="grid h-8 w-8 place-items-center"><DocumentTypeHeaderIcon itemKey={item.visualKey} /></div>
+    <div className={`grid grid-cols-[32px_1fr] items-start gap-2 rounded-lg border p-2 transition ${verified ? "border-green-200 bg-green-50/75" : selected ? "border-[#8CB6FF] bg-[#F3F7FF]" : "border-[#E2EAF4] bg-white/80"}`}>
+      {selectable ? (
+        <button
+          type="button"
+          onClick={() => onSelectedChange(!selected)}
+          aria-pressed={selected}
+          aria-label={`${selected ? "Deselect" : "Select"} ${document.file_name} for verification`}
+          title={selected ? "Click to deselect" : "Click to select for verification"}
+          className={`grid h-8 w-8 place-items-center rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/40 ${selected ? "bg-[#EAF2FF]" : "hover:bg-[#F4F8FF]"}`}
+        >
+          {selected ? <ShieldCheck aria-hidden="true" size={22} strokeWidth={2.2} className="text-[#2563EB]" /> : <Shield aria-hidden="true" size={22} strokeWidth={2.2} className="text-[#2563EB]" />}
+        </button>
+      ) : (
+        <span className="grid h-8 w-8 place-items-center" aria-label={verified ? "Verified document" : "Document unavailable for selection"} title={verified ? "Verified" : "Reupload requested"}>
+          {verified ? <ShieldCheck aria-hidden="true" size={22} strokeWidth={2.2} className="text-[#16A34A]" /> : <Shield aria-hidden="true" size={22} strokeWidth={2.2} className="text-slate-400" />}
+        </span>
+      )}
       <div className="min-w-0">
         <p className="flex min-h-8 items-center truncate text-[11px] font-semibold text-[#071D49]">{document.file_name}</p>
         <div className="mt-1 flex flex-wrap items-center gap-1">
