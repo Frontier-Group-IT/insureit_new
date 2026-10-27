@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, FileText, Upload } from "lucide-react";
 import { uploadCustomerClaimDocument } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/upload-action";
 
@@ -57,9 +57,16 @@ export function CustomerClaimCompactDocument({label,type,documents,accountId,cla
 }) {
   const [expanded,setExpanded]=useState(false);
   const [uploadState,uploadAction,uploading]=useActionState(uploadCustomerClaimDocument,{error:null});
+  const [recentUploads,setRecentUploads]=useState<CustomerClaimFile[]>([]);
+  useEffect(()=>{
+    if(uploadState.uploaded){
+      setRecentUploads(current=>current.some(doc=>doc.id===uploadState.uploaded!.id)?current:[uploadState.uploaded!,...current]);
+      if(input.current)input.current.value="";
+    }
+  },[uploadState.uploaded]);
   const input=useRef<HTMLInputElement>(null);
   const form=useRef<HTMLFormElement>(null);
-  const ordered=[...documents].sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at));
+  const ordered=[...recentUploads,...documents.filter(doc=>!recentUploads.some(recent=>recent.id===doc.id))].sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at));
   const openFile=(file:CustomerClaimFile)=><a key={file.id} href={`/customer/claim-documents/${encodeURIComponent(file.id)}/open?account=${encodeURIComponent(accountId)}&claim=${encodeURIComponent(claimId)}`} target="_blank" rel="noopener noreferrer" className="flex min-w-0 items-center gap-2 rounded-md border border-[#E4ECF7] bg-[#F9FBFF] px-2 py-2 text-[11px] text-[#204D83] hover:bg-[#EEF5FF] focus-visible:outline-2 focus-visible:outline-[#1769DC]" title={file.file_name||label}><FileText className="h-4 w-4 shrink-0"/><span className="truncate">{file.file_name||label}</span></a>;
   return <article className="customer-workflow customer-workflow-document min-w-0 rounded-xl border border-[#DCE5F4] bg-white px-3 py-2.5">
     <div className="flex items-center justify-between gap-2">

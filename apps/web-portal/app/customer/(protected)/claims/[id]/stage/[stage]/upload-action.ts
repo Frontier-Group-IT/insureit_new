@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getCustomerWebSession } from "@/lib/customer-web";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
@@ -18,14 +17,12 @@ const documentTypes=[
   "TP Affidavit","Towing Bill","Repair Estimate","NCB Verification",
 ];
 
-export type CustomerClaimUploadState = { error: string | null };
+export type CustomerClaimUploadState = { error: string | null; uploaded?: { id: string; document_type: string; created_at: string; file_name: string; verification_status: string | null } | null };
 
 export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadState, form:FormData):Promise<CustomerClaimUploadState> {
   const accountId=String(form.get("account")||"");
   const claimId=String(form.get("claim")||"");
-  const stage=String(form.get("stage")||"");
   const type=String(form.get("type")||"");
-  const returnToSpotIntimation=form.get("returnToSpotIntimation")==="1";
   if(!documentTypes.includes(type))return {error:"Unsupported claim document category."};
   const file=form.get("file");
   if(!(file instanceof File)||file.size===0)return {error:"Select a file to upload."};
@@ -52,13 +49,12 @@ export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadS
     claim_id:claim.id,customer_id:account.id,document_type:type,
     file_name:file.name.slice(0,180),storage_bucket:"claim-documents",storage_path:path,
     mime_type:file.type,file_size:file.size,uploaded_by:session.user.id,
-  });
+  }).select("id, document_type, created_at, file_name, verification_status").single();
   if(saved.error){
     await db.storage.from("claim-documents").remove([path]);
     return {error:"Document uploaded but could not be registered; please retry."};
   }
-  if (returnToSpotIntimation && stage==="spot_intimation" && claim.current_status==="Draft") {
-    redirect("/customer/spot-intimation?account="+encodeURIComponent(account.id)+"&id="+encodeURIComponent(claim.id));
-  }
-  redirect("/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(stage)+"?account="+encodeURIComponent(account.id));
+  // Do not redirect or revalidate here: the parent stage form can contain unsaved values.
+  // The document card updates itself from the returned metadata, without remounting the stage.
+  return { error: null, uploaded: saved.data };
 }
