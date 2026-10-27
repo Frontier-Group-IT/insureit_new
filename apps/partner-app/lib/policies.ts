@@ -186,3 +186,9 @@ export async function getPartnerPolicyDetail(policyId: string) {
   if (!data) throw new Error('Policy detail is unavailable.');
   return data as PartnerPolicyDetail;
 }
+/** Returns the master intermediary name only when the policy is in the signed-in Partner's scope. */
+export async function getPartnerPolicyIntermediaryName(policyId: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('partner_app_policy_intermediary_name', { p_policy_id: policyId });
+  if (error) throw error;
+  return typeof data === 'string' && data.trim() ? data.trim() : null;
+}
