@@ -9,6 +9,13 @@ import { ArrowRight, CalendarDays, CarFront, FileText, Headphones, Landmark, Loa
 import type { CustomerPolicyRow, CustomerVehicleRow } from "@/lib/customer-web-data";
 import { prepareCustomerClaim } from "@/app/customer/(protected)/start-claim/actions";
 
+function shortInsurerName(name: string): string {
+  return name.trim()
+    .replace(/\s+(?:(?:Private|Pvt\.?)\s+)?(?:Limited|Ltd\.?)$/i, "")
+    .replace(/\s+(?:(?:General|Life|Health)\s+)?Insurance(?:\s+Company)?$/i, "")
+    .trim();
+}
+
 function ClaimSubmitButton({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
   return <button type="submit" disabled={disabled || pending} className="customer-workflow-choice inline-flex min-h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8737F4] via-[#6741F5] to-[#2477F3] px-4 text-[14px] font-semibold text-white shadow-[0_8px_18px_rgba(93,72,220,.14)] disabled:cursor-not-allowed disabled:opacity-50">
@@ -109,7 +116,7 @@ export function CustomerStartClaimSelector({
             <div className="grid grid-cols-2 gap-x-4 gap-y-4 pt-4 lg:grid-cols-4 lg:gap-x-0">
               {[
                 { label: "Policy No.", value: displayPolicy.policy_no || "—", icon: FileText },
-                { label: "Insurer", value: displayPolicy.insurer_name || "Insurer not recorded", detail: displayPolicy.policy_product || displayPolicy.policy_type, icon: Landmark },
+                { label: "Insurer", value: displayPolicy.insurer_name ? shortInsurerName(displayPolicy.insurer_name) : "Insurer not recorded", detail: displayPolicy.policy_product || displayPolicy.policy_type, icon: Landmark },
                 { label: "Start Date", value: formatPolicyDate(displayPolicy.start_date), icon: CalendarDays },
                 { label: "End Date", value: formatPolicyDate(displayPolicy.end_date), icon: CalendarDays },
               ].map(({ label, value, detail, icon: Icon }, index) => (
@@ -117,8 +124,10 @@ export function CustomerStartClaimSelector({
                   <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[#8737F4]" aria-hidden="true" />
                   <div className="min-w-0">
                     <p className="text-[11px] text-[#7B8191]">{label}</p>
-                    <p className="break-words text-[13px] font-bold leading-5 text-[#1B1D27]" title={value}>{value}</p>
-                    {detail ? <p className="text-[11px] text-[#777E90]">{detail}</p> : null}
+                    <div className="flex min-w-0 items-center gap-1.5 whitespace-nowrap" title={detail ? `${value} · ${detail}` : value}>
+                      <span className="min-w-0 truncate text-[13px] font-bold leading-5 text-[#1B1D27]">{value}</span>
+                      {detail ? <span className="shrink-0 text-[11px] text-[#777E90]">· {detail}</span> : null}
+                    </div>
                   </div>
                 </div>
               ))}
