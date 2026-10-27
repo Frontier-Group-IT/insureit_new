@@ -149,15 +149,45 @@ async function deleteBranch(partnerId: string): Promise<PermanentDeleteResult> {
   const admin = createSupabaseAdminClient();
   const { data: branch } = await admin
     .from("partners")
-    .select("id,display_name,partner_branch_profiles!inner(id)")
+    .select("id,display_name,source_application_id,partner_branch_profiles!inner(id,source_application_id)")
     .eq("id", partnerId)
-    .maybeSingle<{ id: string; display_name: string; partner_branch_profiles: Array<{ id: string }> }>();
+    .maybeSingle<{ id: string; display_name: string; source_application_id: string | null; partner_branch_profiles: Array<{ id: string; source_application_id: string }> }>();
   if (!branch) return { status: "error", message: "The branch record could not be found." };
 
   const allBlockers = await blockers("partners", partnerId);
-  const blocking = allBlockers.filter((item) => item.table !== "partner_branch_profiles");
+  // Branch onboarding creates its own application and links it to the branch.
+  // This *one* verified back-reference may be detached while preserving the
+  // application itself. All other references remain hard-delete blockers.
+  const applicationId = branch.partner_branch_profiles[0]?.source_application_id;
+  const onboardingReferences = allBlockers.filter((item) =>
+    item.table === "intermediary_onboarding_applications" && item.column === "partner_record_id"
+  );
+  let detachableApplicationId: string | null = null;
+  if (applicationId && branch.source_application_id === applicationId && onboardingReferences.length === 1
+      && onboardingReferences[0].count === 1) {
+    const { data: onboarding, error: onboardingError } = await admin
+      .from("intermediary_onboarding_applications")
+      .select("id,source,partner_record_id")
+      .eq("id", applicationId)
+      .maybeSingle<{ id: string; source: string; partner_record_id: string | null }>();
+    if (onboardingError) return { status: "error", message: "The branch onboarding link could not be verified safely." };
+    if (onboarding?.source === "branch_onboarding" && onboarding.partner_record_id === partnerId) {
+      detachableApplicationId = applicationId;
+    }
+  }
+  const blocking = allBlockers.filter((item) =>
+    item.table !== "partner_branch_profiles"
+    && !(detachableApplicationId && item.table === "intermediary_onboarding_applications" && item.column === "partner_record_id")
+  );
   if (blocking.length) {
     return { status: "error", message: `Cannot permanently delete this branch because protected history exists in ${formatBlockers(blocking)}.` };
+  }
+
+  // Snapshot the branch profile so a late FK error cannot silently remove it.
+  const { data: savedBranchProfile, error: savedProfileError } = await admin
+    .from("partner_branch_profiles").select("*").eq("partner_id", partnerId).maybeSingle();
+  if (savedProfileError || !savedBranchProfile) {
+    return { status: "error", message: "The branch profile could not be loaded for safe deletion." };
   }
 
   const { data: portal } = await admin
@@ -175,11 +205,31 @@ async function deleteBranch(partnerId: string): Promise<PermanentDeleteResult> {
     await deleteAuthBackedProfile(portal.profile_id);
   }
 
+  // Preserve onboarding/audit history; only clear the branch FK.
+  // Reattach it if a later delete is rejected by a different constraint.
+  if (detachableApplicationId) {
+    const { error: detachError } = await admin.from("intermediary_onboarding_applications")
+      .update({ partner_record_id: null }).eq("id", detachableApplicationId).eq("partner_record_id", partnerId);
+    if (detachError) return { status: "error", message: "The branch onboarding link could not be detached safely." };
+  }
+
   const { error: profileError } = await admin.from("partner_branch_profiles").delete().eq("partner_id", partnerId);
-  if (profileError) return { status: "error", message: "The branch profile could not be removed." };
+  if (profileError) {
+    if (detachableApplicationId) await admin.from("intermediary_onboarding_applications")
+      .update({ partner_record_id: partnerId }).eq("id", detachableApplicationId).is("partner_record_id", null);
+    return { status: "error", message: "The branch profile could not be removed." };
+  }
 
   const { error: partnerError } = await admin.from("partners").delete().eq("id", partnerId);
-  if (partnerError) return { status: "error", message: "The branch is still referenced by protected records and cannot be permanently deleted." };
+  if (partnerError) {
+    // Restore saved profile and its onboarding back-reference on a late FK failure.
+    const { error: restoreError } = await admin.from("partner_branch_profiles").insert(savedBranchProfile);
+    if (!restoreError && detachableApplicationId) await admin.from("intermediary_onboarding_applications")
+      .update({ partner_record_id: partnerId }).eq("id", detachableApplicationId).is("partner_record_id", null);
+    return { status: "error", message: restoreError
+      ? "Deletion was blocked and restoring the branch profile failed. Contact IT administration."
+      : "The branch is still referenced by protected records and cannot be permanently deleted." };
+  }
 
   revalidatePath("/intermediaries/groups/branches");
   revalidatePath("/intermediaries/groups");
