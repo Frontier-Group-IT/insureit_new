@@ -1,6 +1,6 @@
 import "./customer-claims-motion.css";
 import Link from "next/link";
-import { ClipboardList, Plus } from "lucide-react";
+import { ClipboardList, Plus, ShieldCheck } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
 import { CustomerClaimClickableRow } from "./customer-claim-clickable-row";
@@ -82,7 +82,9 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
         <div className="claims-motion-hero-overlay pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EEF7FF]/85 via-[#EEF7FF]/45 via-45% to-transparent" />
         <div className="relative flex min-h-[170px] items-center px-5 py-6 sm:px-7">
           <div className="max-w-[520px]">
-            <h1 className="text-[clamp(28px,3.2vw,40px)] font-bold tracking-tight">Claims</h1>
+            <div className="flex items-center gap-3"><span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#E4E8FF]/90 text-[#6550D9] shadow-sm"><ShieldCheck className="h-7 w-7" aria-hidden="true"/></span><h1 className="text-[clamp(28px,3.2vw,40px)] font-bold tracking-tight text-[#242C89]">Claims</h1></div>
+            <p className="mt-2 text-[12px] font-medium leading-5 text-[#5D6F8F] sm:text-[13px]">Track and manage your claims easily.<span className="block">Stay updated at every step.</span></p>
+            <span className="mt-3 block h-1 w-14 rounded-full bg-gradient-to-r from-[#6953DC] to-[#B5B4F7]" aria-hidden="true"/>
           </div>
         </div>
       </section>
@@ -138,7 +140,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
                     <td className="max-w-[180px] break-words border-r border-[#E1E9F4] px-3 py-3">{claim.policy_no || "—"}</td>
                     <td className="max-w-[210px] break-words border-r border-[#E1E9F4] px-3 py-3 font-medium">{claim.claim_no || "—"}</td>
                     <td className="border-r border-[#E1E9F4] px-3 py-3">{claim.insurer_claim_no || "Pending insurer claim number"}</td>
-                    <td className="px-3 py-3 text-left"><span className="block font-medium">{stage || "—"}</span><span className="block text-[11px] text-[#627691]">{claim.current_status || "—"}</span></td>
+                    <td className="px-3 py-3 text-left"><span className="block font-medium">{stage || "—"}</span></td>
                   </CustomerClaimClickableRow>;
                 })}
               </tbody>
