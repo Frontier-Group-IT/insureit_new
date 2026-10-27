@@ -52,7 +52,8 @@ assert.match(spotLayout,/<CustomerClaimVoiceRecorder/,"Spot Intimation must offe
 assert.match(spotLayout,/\/stage\/spot_status\?account=/,"Spot Intimation should continue to stage 2");
 assert.match(voiceRecorder,/MediaRecorder/,"Voice note recording must use supported browser recording");
 assert.match(voiceRecorder,/uploadCustomerClaimDocument/,"Voice note must use existing authorized upload action");
-assert.match(claimUpload,/returnToSpotIntimation && stage==="spot_intimation"/,"Evidence uploads must stay on draft intimation");
+assert.doesNotMatch(claimUpload,/redirect\(/,"Evidence uploads must not navigate away or reset unsaved stage form values");
+assert.match(claimUpload,/return \{ error: null, uploaded: saved\.data \}/,"Successful evidence uploads must return metadata for local document-card updates");
 console.log("Spot Intimation nine-stage layout, evidence and voice note regression passed.");
 
 const stagePage=fs.readFileSync("app/customer/(protected)/claims/[id]/stage/[stage]/page.tsx","utf8");
