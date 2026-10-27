@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { FolderOpen, CarFront, UserRound, ScrollText, ShieldCheck, ClipboardList } from "lucide-react";
 import { CustomerClaimCompactDocument, type CustomerClaimFile } from "./customer-claim-compact-document";
 const groups = [
   { name: "Vehicle Docs", types: [
@@ -40,6 +41,7 @@ const groups = [
   ] },
 ] as const;
 
+const groupIcons=[CarFront,UserRound,ScrollText,ShieldCheck,ClipboardList];
 const normalized=(s:string)=>s.toLowerCase().replace(/[^a-z0-9]/g,"");
 export function CustomerClaimDocumentGroups({documents,claimId,accountId,stage,showSaveDetails=false,showDraftAction=false,draftAction,allowUpload=true}:{
   documents:CustomerClaimFile[];claimId:string;accountId:string;stage:string;showSaveDetails?:boolean;showDraftAction?:boolean;draftAction?:(form:FormData)=>Promise<void>;allowUpload?:boolean;
@@ -48,10 +50,10 @@ export function CustomerClaimDocumentGroups({documents,claimId,accountId,stage,s
   const expectedTypes = new Set(groups.flatMap(group => group.types.map(item => normalized(item.type))));
   const uploadedTypes = new Set(documents.filter(doc => expectedTypes.has(normalized(doc.document_type))).map(doc => normalized(doc.document_type)));
   const legacyDocuments = documents.filter(doc => !expectedTypes.has(normalized(doc.document_type)));
-  return <section className="rounded-2xl border border-[#DCE5F3] bg-white p-4">
-    <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-[17px] font-semibold text-[#071D49]">Document Verification</h2><span className="rounded-lg bg-[#F3F6FC] px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">Documents uploaded {uploadedTypes.size} / {groups.reduce((sum, group)=>sum+group.types.length,0)}</span></div>
-    <div role="tablist" aria-label="Claim document groups" className="grid grid-cols-2 overflow-hidden rounded-lg border border-[#D9E3F0] sm:grid-cols-5">
-      {groups.map((group,i)=><button key={group.name} type="button" role="tab" aria-selected={i===active} onClick={()=>setActive(i)} className={`flex min-h-11 items-center gap-2 border-r border-[#D9E3F0] px-3 text-left text-[11px] font-semibold ${i===active?"bg-gradient-to-r from-[#6042E8] to-[#4F90EA] text-white":"bg-[#FAFCFF] text-[#183257] hover:bg-[#EDF4FF]"}`}><span className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] ${i===active?"bg-white text-[#5144D8]":"bg-[#EAF1FF] text-[#1D3C6B]"}`}>{i+1}</span>{group.name}</button>)}
+  return <section className="customer-claim-ref-docs rounded-2xl border border-[#DCE5F3] bg-white p-4">
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div className="customer-claim-ref-docs-heading"><span className="customer-claim-ref-docs-title-icon"><FolderOpen className="h-5 w-5" /></span><div><h2 className="text-[16px] font-bold text-[#071D49]">Document Verification</h2><p className="text-[11px] text-[#71819E]">Upload and verify required documents.</p></div></div><span className="rounded-lg bg-[#F3F6FC] px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-[#64748B]">Documents uploaded {uploadedTypes.size} / {groups.reduce((sum, group)=>sum+group.types.length,0)}</span></div>
+    <div role="tablist" aria-label="Claim document groups" className="customer-claim-ref-tablist grid grid-cols-2 rounded-lg sm:grid-cols-5">
+      {groups.map((group,i)=><button key={group.name} type="button" role="tab" aria-selected={i===active} onClick={()=>setActive(i)} className={`customer-claim-ref-tab flex min-h-10 items-center gap-2 px-3 text-left text-[11px] font-semibold ${i===active?"bg-gradient-to-r from-[#6042E8] to-[#4F90EA] text-white":"bg-[#FAFCFF] text-[#183257] hover:bg-[#EDF4FF]"}`}>{(() => { const Icon=groupIcons[i];return <Icon className="h-4 w-4 shrink-0" />;})()}<span className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] ${i===active?"bg-white text-[#5144D8]":"bg-[#EAF1FF] text-[#1D3C6B]"}`}>{i+1}</span>{group.name}</button>)}
     </div>
     <div role="tabpanel" className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
       {groups[active].types.map(item=><CustomerClaimCompactDocument key={item.type} label={item.label} type={item.type} documents={documents.filter(doc=>normalized(doc.document_type)===normalized(item.type))} claimId={claimId} accountId={accountId} stage={stage} allowUpload={allowUpload}/>)}

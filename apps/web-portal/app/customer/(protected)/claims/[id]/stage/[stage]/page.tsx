@@ -1,3 +1,4 @@
+import "./customer-claim-reference.css";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
@@ -8,7 +9,7 @@ import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/cus
 import { CustomerClaimVoiceRecorder } from "@/components/customer-portal/customer-claim-voice-recorder";
 import { CustomerClaimDocumentGroups } from "@/components/customer-portal/customer-claim-document-groups";
 import { CustomerClaimBooleanChoice } from "@/components/customer-portal/customer-claim-boolean-choice";
-import { Check, Circle, LockKeyhole, CarFront, FileText, ShieldCheck, CalendarDays, Clock3 } from "lucide-react";
+import { Check, Circle, LockKeyhole, CarFront, FileText, ShieldCheck, CalendarDays, Clock3, ClipboardList, IndianRupee } from "lucide-react";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
@@ -36,10 +37,10 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
   const editMode = true;
   const canUploadStage = selected.key==="spot_intimation" || selected.key==="claim_intimation";
   const allowEdit = canEditStage || canUploadStage;
-  return <div className="space-y-3">
+  return <div className="customer-claim-ref-page space-y-3">
     {q.saved==="claim_intimation" && selected.key==="work_approval" ? <div role="status" className="rounded-xl border border-[#B8E2CA] bg-[#F0FBF5] px-4 py-3 text-[12px] font-bold text-[#08744A]">Stage details saved successfully</div> : null}
-    <section className="overflow-hidden rounded-2xl border border-[#D9E3F0] bg-white">
-      <div className="grid grid-cols-2 lg:grid-cols-5">
+    <section className="customer-claim-ref-summary relative overflow-hidden rounded-2xl border border-[#D9E3F0] bg-white">
+      <div className="customer-claim-ref-summary-grid relative z-10 grid grid-cols-2 lg:grid-cols-5">
         {([
           ["Customer", "Account holder", ""],
           ["Vehicle No.", claim.vehicle_no || "—", "car"],
@@ -51,17 +52,18 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
           ["Claim No.", claim.insurer_claim_no || "—", "policy"],
           ["Claim Status", claim.current_status, "insurer"],
           ["Spot Intimation Date & Time", claim.spot_intimation_at ? new Date(claim.spot_intimation_at).toLocaleString("en-IN") : "—", "date"],
-        ] as const).map(([label,value,icon]) => <div key={label} className="flex min-h-[74px] items-start gap-2 border-b border-r border-[#D9E3F0] p-3">
-          <span className="mt-1 text-[#174EA6]">{icon==="car"?<CarFront className="h-5 w-5"/>:icon==="insurer"?<ShieldCheck className="h-5 w-5"/>:icon==="date"?<CalendarDays className="h-5 w-5"/>:<FileText className="h-5 w-5"/>}</span>
-          <div className="min-w-0"><p className="text-[10px] uppercase tracking-wide text-[#7386A2]">{label}</p><p className="break-words text-[12px] font-semibold text-[#17345D]">{value}</p></div>
+        ] as const).map(([label,value,icon]) => <div key={label} className="customer-claim-ref-summary-cell flex min-h-[69px] items-start gap-2 border-b border-r border-[#E0E7F4] p-3">
+          <span className="customer-claim-ref-summary-icon mt-1 text-[#1673D2]">{icon==="car"?<CarFront className="h-5 w-5"/>:icon==="insurer"?<ShieldCheck className="h-5 w-5"/>:icon==="date"?<CalendarDays className="h-5 w-5"/>:<FileText className="h-5 w-5"/>}</span>
+          <div className="min-w-0"><p className="text-[10px] font-medium text-[#7791B7]">{label}</p><p className={`break-words text-[12px] font-bold text-[#17345D] ${label==="Claim Status"?"customer-claim-ref-claim-status":""}`}>{value}</p></div>
         </div>)}
       </div>
-      <div className="grid gap-2 px-4 py-2 text-[10px] text-[#667A96] sm:grid-cols-2 lg:grid-cols-4">
-        <span>Policy source: <strong>{external ? "External policy" : "Internal policy"}</strong></span>
-        <span>Cover dates: <strong>Not available</strong></span>
-        <span>Premium / IDV: <strong>Not available</strong></span>
-        <span>Policy copy: <strong>Not available</strong></span>
+      <div className="customer-claim-ref-summary-footer relative z-10 grid gap-2 px-4 py-2.5 text-[10px] text-[#667A96] sm:grid-cols-2 lg:grid-cols-4">
+        <span><FileText className="mr-1 inline h-3.5 w-3.5 text-[#416FAE]"/>Policy source: <strong>{external ? "External policy" : "Internal policy"}</strong></span>
+        <span><CalendarDays className="mr-1 inline h-3.5 w-3.5 text-[#416FAE]"/>Cover dates: <strong>Not available</strong></span>
+        <span><IndianRupee className="mr-1 inline h-3.5 w-3.5 text-[#416FAE]"/>Premium / IDV: <strong>Not available</strong></span>
+        <span><FileText className="mr-1 inline h-3.5 w-3.5 text-[#416FAE]"/>Policy copy: <strong>Not available</strong></span>
       </div>
+      <div aria-hidden="true" className="customer-claim-ref-summary-art"><div className="customer-claim-ref-sun"/><CarFront className="customer-claim-ref-car"/><ShieldCheck className="customer-claim-ref-shield"/></div>
     </section>
     <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey={selected.key} currentKey={INTERNAL_JOURNEY_STAGES[currentIndex]?.key || "spot_intimation"} editMode completedKeys={INTERNAL_JOURNEY_STAGES.filter((stage,i)=>external?projection?.stages.some(x=>x.key===stage.key&&x.completed):i<(internal_projection?.completedStageCount??0)).map(stage=>stage.key)} />
     {!(editMode && canEditStage) ? <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white">
@@ -105,17 +107,17 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       )}
     </section> : null}
     {editMode && canEditStage ? (
-      <form id="customer-claim-stage-details-form" action={saveCustomerExternalStage} className="mt-2 rounded-2xl border border-[#D9E6F7] bg-white p-5">
-        <div className="mb-4 flex items-start justify-between gap-3"><div><h2 className="text-[17px] font-semibold text-[#071D49]">Stage Details</h2><p className="text-[12px] text-[#75869A]">Record {selected.label.toLowerCase()} details.</p></div></div><div className={`grid gap-3 sm:grid-cols-2 ${selected.key==="claim_intimation"?"lg:grid-cols-5":selected.key==="work_approval"||selected.key==="payment_encashment"?"lg:grid-cols-5":selected.key==="repair_ri"||selected.key==="delivery_order"?"lg:grid-cols-3":selected.key==="billing"||selected.key==="vehicle_delivery"?"lg:grid-cols-2":"lg:grid-cols-4"}`}>
+      <form id="customer-claim-stage-details-form" action={saveCustomerExternalStage} className="customer-claim-ref-details mt-2 rounded-2xl border border-[#D9E6F7] bg-[#F7F6FF] p-4">
+        <div className="mb-3 flex items-start justify-between gap-3"><div className="flex items-center gap-2"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-[#6F5AF1] to-[#3697D5] text-white"><ClipboardList className="h-4 w-4"/></span><div><h2 className="text-[15px] font-bold text-[#071D49]">Stage Details</h2><p className="text-[12px] text-[#75869A]">Record {selected.label.toLowerCase()} details.</p></div></div></div><div className={`grid gap-3 sm:grid-cols-2 ${selected.key==="claim_intimation"?"lg:grid-cols-5":selected.key==="work_approval"||selected.key==="payment_encashment"?"lg:grid-cols-5":selected.key==="repair_ri"||selected.key==="delivery_order"?"lg:grid-cols-3":selected.key==="billing"||selected.key==="vehicle_delivery"?"lg:grid-cols-2":"lg:grid-cols-4"}`}>
         <input type="hidden" name="account" value={account.id}/>
         <input type="hidden" name="claim" value={claim.id}/>
         <input type="hidden" name="stage" value={selected.key}/>
         {CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key].map(field=>(
-          <label key={field.key} className="min-w-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{field.label}{field.optional?"":" *"}
+          <label key={field.key} className="customer-claim-ref-field min-w-0 text-[10px] font-semibold uppercase tracking-[0.04em] text-[#5673B0]">{field.label}{field.optional?"":" *"}
             {field.type==="boolean"||field.type==="yesno"?(
 <CustomerClaimBooleanChoice name={field.key} kind={field.type} value={typeof milestone?.details?.[field.key]==="boolean"?String(milestone.details[field.key]):typeof milestone?.details?.[field.key]==="string"?String(milestone.details[field.key]):""}/>
             ):(
-              <input name={field.key} type={field.type} required={!field.optional} maxLength={field.type==="number"?undefined:500} min={field.type==="number"?"0":undefined} step={field.type==="number"?"0.01":undefined} defaultValue={typeof milestone?.details?.[field.key]==="string"||typeof milestone?.details?.[field.key]==="number"?String(milestone.details[field.key]):""} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49]"/>
+              <input name={field.key} type={field.type} required={!field.optional} maxLength={field.type==="number"?undefined:500} min={field.type==="number"?"0":undefined} step={field.type==="number"?"0.01":undefined} defaultValue={typeof milestone?.details?.[field.key]==="string"||typeof milestone?.details?.[field.key]==="number"?String(milestone.details[field.key]):""} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold normal-case tracking-normal text-[#071D49]"/>
             )}
           </label>
         ))}</div>

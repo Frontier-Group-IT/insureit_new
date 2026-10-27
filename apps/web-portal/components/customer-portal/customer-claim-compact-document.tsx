@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, FileText, Upload, Video } from "lucide-react";
+import { ChevronDown, ChevronUp, FileText, LoaderCircle, Upload, Video } from "lucide-react";
 import { uploadCustomerClaimDocument } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/upload-action";
 
 // These images are the same artwork used by the Customer mobile app.
@@ -67,15 +67,15 @@ export function CustomerClaimCompactDocument({label,type,documents,accountId,cla
   const input=useRef<HTMLInputElement>(null);
   const form=useRef<HTMLFormElement>(null);
   const ordered=[...recentUploads,...documents.filter(doc=>!recentUploads.some(recent=>recent.id===doc.id))].sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at));
-  const openFile=(file:CustomerClaimFile)=><a key={file.id} href={`/customer/claim-documents/${encodeURIComponent(file.id)}/open?account=${encodeURIComponent(accountId)}&claim=${encodeURIComponent(claimId)}`} target="_blank" rel="noopener noreferrer" className="flex min-w-0 items-center gap-2 rounded-md border border-[#E4ECF7] bg-[#F9FBFF] px-2 py-2 text-[11px] text-[#204D83] hover:bg-[#EEF5FF] focus-visible:outline-2 focus-visible:outline-[#1769DC]" title={file.file_name||label}><FileText className="h-4 w-4 shrink-0"/><span className="truncate">{file.file_name||label}</span></a>;
-  return <article className="customer-workflow customer-workflow-document min-w-0 rounded-xl border border-[#DCE5F4] bg-white px-3 py-2.5">
+  const openFile=(file:CustomerClaimFile)=><a key={file.id} href={`/customer/claim-documents/${encodeURIComponent(file.id)}/open?account=${encodeURIComponent(accountId)}&claim=${encodeURIComponent(claimId)}`} target="_blank" rel="noopener noreferrer" className="customer-claim-ref-file flex min-w-0 items-center gap-2 rounded-md border border-[#E4ECF7] bg-[#F9FBFF] px-2 py-2 text-[11px] text-[#204D83] hover:bg-[#EEF5FF] focus-visible:outline-2 focus-visible:outline-[#1769DC]" title={file.file_name||label}><FileText className="h-4 w-4 shrink-0"/><span className="truncate">{file.file_name||label}</span></a>;
+  return <article className="customer-claim-ref-card customer-workflow customer-workflow-document min-w-0 rounded-xl border border-[#DCE5F4] bg-white px-3 py-2.5">
     <div className="flex items-center justify-between gap-2">
       <div className="flex min-w-0 flex-1 items-center gap-2">{type.toLowerCase().replace(/[^a-z0-9]/g,"")==="accidentvideo"?<span aria-hidden="true" className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-[#F21E38] text-white"><Video className="h-4 w-4 fill-current"/></span>:<img src={documentIcon(type)} alt="" aria-hidden="true" loading="lazy" className="h-7 w-7 shrink-0 object-contain" />}<h3 className="min-w-0 text-[12px] font-semibold text-[#102B54]">{label}</h3></div>
       {ordered.length>0?<button type="button" aria-expanded={ordered.length>1?expanded:undefined} aria-label={ordered.length>1?`${ordered.length} uploaded, ${expanded?'collapse':'expand'} documents`:`${ordered.length} uploaded`} onClick={ordered.length>1?()=>setExpanded(v=>!v):undefined} className={`inline-flex shrink-0 items-center gap-1 rounded-full bg-[#EDF8F2] px-2 py-0.5 text-[10px] font-semibold text-[#087A57] ${ordered.length>1?'cursor-pointer transition hover:bg-[#DFF3E8] focus-visible:outline-2 focus-visible:outline-[#16835D]':'cursor-default'}`}>{ordered.length} Uploaded{ordered.length>1?(expanded?<ChevronUp className="h-3 w-3"/>:<ChevronDown className="h-3 w-3"/>):null}</button>:null}
       {allowUpload?<form action={uploadAction} ref={form}>
         <input type="hidden" name="account" value={accountId}/><input type="hidden" name="claim" value={claimId}/><input type="hidden" name="stage" value={stage}/><input type="hidden" name="type" value={type}/><input type="hidden" name="returnToSpotIntimation" value={returnToSpotIntimation?"1":"0"}/>
         <input ref={input} type="file" name="file" required accept={accept} className="sr-only" aria-label={`Choose ${label}`} onChange={e=>{if(e.currentTarget.files?.length)form.current?.requestSubmit();}}/>
-        <button type="button" disabled={uploading} onClick={()=>input.current?.click()} aria-label={`Upload ${label}`} title={`Upload ${label}`} className="grid h-8 w-8 place-items-center rounded-md border border-[#BCD1F1] text-[#2460B8] hover:bg-[#EDF4FF] disabled:opacity-50"><Upload className="h-4 w-4"/></button>
+        <button type="button" disabled={uploading} onClick={()=>input.current?.click()} aria-label={`Upload ${label}`} title={`Upload ${label}`} className="customer-claim-motion-upload grid h-8 w-8 place-items-center rounded-md border border-[#BCD1F1] text-[#2460B8] hover:bg-[#EDF4FF] disabled:opacity-50" aria-busy={uploading}>{uploading?<LoaderCircle className="customer-claim-motion-spinner h-4 w-4" aria-hidden="true"/>:<Upload className="h-4 w-4" aria-hidden="true"/>}</button>
       </form>:null}
     </div>
     {uploadState.error?<p role="alert" className="mt-2 text-[11px] font-medium text-red-700">{uploadState.error}</p>:null}
