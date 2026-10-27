@@ -1,0 +1,28 @@
+/* INSUREIT Customer Home Modern 2.0 — scoped, presentation-only pilot. */
+.customer-home-modern { --home-ink:#172E5C; --home-violet:#6550D9; --home-blue:#438CF4; }
+.customer-home-modern .customer-modern-hero { background:linear-gradient(112deg,#F0EBFF 0%,#F0F3FF 52%,#DCEFFF 100%); }
+.customer-home-modern .customer-modern-gradient-text { background:linear-gradient(105deg,#6341CE 6%,#3185E7 94%); background-clip:text; -webkit-background-clip:text; color:transparent; }
+.customer-home-modern .customer-modern-primary-action { transition:transform 180ms ease, box-shadow 180ms ease; }
+@media (hover:hover) { .customer-home-modern .customer-modern-primary-action:hover { transform:translateY(-2px); box-shadow:0 11px 25px rgba(93,73,203,.28); } }
+.customer-home-modern .customer-modern-kpi { position:relative; overflow:hidden; isolation:isolate; transition:transform 220ms ease,box-shadow 220ms ease,border-color 220ms ease; }
+.customer-home-modern .customer-modern-kpi::before { content:""; position:absolute; inset:0; opacity:.7; z-index:-1; pointer-events:none; }
+.customer-home-modern .customer-modern-kpi-1 { border-color:#CFE5FF; }
+.customer-home-modern .customer-modern-kpi-1::before { background:linear-gradient(135deg,#E9F5FF 0%,#FFF 80%); }
+.customer-home-modern .customer-modern-kpi-2 { border-color:#E2D8FF; }
+.customer-home-modern .customer-modern-kpi-2::before { background:linear-gradient(135deg,#F0EAFF 0%,#FFF 80%); }
+.customer-home-modern .customer-modern-kpi-3 { border-color:#CCEEE5; }
+.customer-home-modern .customer-modern-kpi-3::before { background:linear-gradient(135deg,#E8FAF3 0%,#FFF 80%); }
+.customer-home-modern .customer-modern-kpi-4 { border-color:#FFE2D3; }
+.customer-home-modern .customer-modern-kpi-4::before { background:linear-gradient(135deg,#FFF0E7 0%,#FFF 80%); }
+.customer-home-modern .customer-modern-kpi-1 .customer-modern-kpi-icon { background:#D7EBFF; color:#2068C3; }
+.customer-home-modern .customer-modern-kpi-2 .customer-modern-kpi-icon { background:#E5DCFF; color:#6B45D8; }
+.customer-home-modern .customer-modern-kpi-3 .customer-modern-kpi-icon { background:#D1F5E9; color:#10866A; }
+.customer-home-modern .customer-modern-kpi-4 .customer-modern-kpi-icon { background:#FFE3D1; color:#CB6239; }
+.customer-home-modern .customer-modern-quick-action { transition:transform 220ms ease,background-color 220ms ease,box-shadow 220ms ease,border-color 220ms ease; }
+@media (hover:hover) { .customer-home-modern .customer-modern-quick-action:hover { border-color:#C7B8FF; box-shadow:0 11px 25px rgba(54,41,137,.11); } }
+.customer-home-modern [data-home-reveal] { border-radius:20px; box-shadow:0 6px 20px rgba(44,51,101,.055); }
+.customer-home-modern [data-home-reveal] h2 { letter-spacing:-.015em; }
+.customer-home-modern [data-home-reveal] thead { background:#F5F4FF; }
+.customer-home-modern [data-home-reveal] tbody tr { transition:background-color 180ms ease; }
+@media (max-width:639px) { .customer-home-modern .customer-modern-hero { min-height:280px; } .customer-home-modern .customer-modern-hero .customer-home-hero-image { opacity:.35; } .customer-home-modern .customer-modern-hero-orb { opacity:.5; } }
+@media (prefers-reduced-motion:reduce) { .customer-home-modern *, .customer-home-modern *::before, .customer-home-modern *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; scroll-behavior:auto !important; } }
