@@ -42,8 +42,8 @@ export default async function CustomerSupportPage({
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/support" />
 
       <section className="relative isolate min-h-[172px] overflow-hidden rounded-xl border border-[#E3E7F4] bg-[#F4F5FF] px-5 py-5 sm:px-7">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[url('/assets/supclaim.jpeg')] bg-no-repeat bg-right-center bg-[length:auto_100%]" />
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F5F7FF]/96 via-[#F5F7FF]/82 via-40% to-transparent" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[url('/assets/supclaim.jpeg')] bg-cover bg-center bg-no-repeat" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F5F7FF]/94 via-[#F5F7FF]/72 via-45% to-[#F5F7FF]/14" />
         <div className="relative z-10 max-w-[530px]">
           <h1 className="text-[29px] font-extrabold leading-tight tracking-tight text-[#212755]">Need Help?</h1>
           <p className="mt-1 max-w-[360px] text-[11px] font-medium leading-4 text-[#7781A5]">Get quick support, track your requests<br/>and resolve your queries — all in one place.</p>
@@ -75,15 +75,13 @@ export default async function CustomerSupportPage({
       </section>
 
       <section id="support-activity" className="space-y-3">
-        <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
-          <h2 className="flex items-center gap-2 whitespace-nowrap text-[15px] font-bold text-[#29305D]"><ClipboardList className="h-4 w-4 text-[#673BEE]"/>My Support Requests</h2>
+        <CustomerSupportTicketPanel customerId={account.id} claims={claims.map(claim=>({id:claim.id,claim_no:claim.claim_no,status:claim.current_status}))} search={
           <form className="flex h-9 w-full max-w-[465px] items-center gap-2 rounded-lg border border-[#E6E8F4] bg-white px-3 focus-within:border-[#AB9BF5]">
             <Search className="h-3.5 w-3.5 shrink-0 text-[#939AB3]"/>
             <input type="hidden" name="account" value={account.id}/>
             <CustomerAnimatedSearchInput name="q" defaultValue={params.q ?? ""} aria-label="Search support requests" hints={["Search by ticket number or subject…","Search request status…"]} className="text-[10px] text-[#252B5E]"/>
           </form>
-          <CustomerSupportTicketPanel customerId={account.id} claims={claims.map(claim=>({id:claim.id,claim_no:claim.claim_no,status:claim.current_status}))}/>
-        </div>
+        }/>
         <div className="rounded-xl border border-[#EBEDF7] bg-white p-3 sm:p-4">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {rows.length ? rows.map(item=>(
@@ -91,7 +89,11 @@ export default async function CustomerSupportPage({
               <div className="flex items-start gap-2">
                 <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEEAFE] text-[#6942EB]"><FileText className="h-4 w-4"/></span>
                 <span className="min-w-0 flex-1"><b className="block truncate text-[10.5px] text-[#252B5C]">{item.subject}</b><small className="text-[9px] text-[#7D86A5]">{item.enquiry_no}</small></span>
-                <StatusPill tone={serviceActivityTone(item.status)}>{item.status.replace("_"," ")}</StatusPill>
+                {item.status.trim().toLowerCase() === "open" ? (
+                  <span className="inline-flex shrink-0 origin-center items-center rounded-full border border-[#E8D39C] bg-white px-3 py-1 text-[9px] font-extrabold uppercase tracking-[0.08em] text-[#B88317] shadow-[0_4px_14px_rgba(184,131,23,0.14)] motion-safe:animate-[customerSupportOpenPulse_2.2s_ease-in-out_infinite]">OPEN</span>
+                ) : (
+                  <StatusPill tone={serviceActivityTone(item.status)}>{item.status.replace("_"," ")}</StatusPill>
+                )}
               </div>
               <p className="mt-2 text-[9px] leading-4 text-[#8189A5]">{item.vehicle_no?`Vehicle: ${item.vehicle_no} · `:""}{formatCustomerCompactDate(item.updated_at || item.created_at)}</p>
                           </Link>
@@ -99,7 +101,12 @@ export default async function CustomerSupportPage({
           </div>
         </div>
       </section>
-
+      <style>{`
+        @keyframes customerSupportOpenPulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.07); }
+        }
+      `}</style>
     </div>
   );
 }
