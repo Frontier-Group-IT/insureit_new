@@ -419,6 +419,7 @@ export default function BusinessScreen() {
           <View style={styles.selectorAnchor}>
             <SectionHeader
               title="Month-wise Trend"
+              titleStyle={styles.trendHeadingBold}
               action={(
                 <View style={styles.sectionActions}>
                   <PartnerAnchoredDropdown
@@ -525,7 +526,6 @@ export default function BusinessScreen() {
               <View style={styles.networkBody}>
                 <Text style={styles.networkValue}>{network.total_partners}</Text>
                 <Text style={styles.networkLabel}>Partner Family</Text>
-                <Text style={styles.networkMeta}>{network.total_groups} active group{network.total_groups === 1 ? '' : 's'}</Text>
               </View>
               <Ionicons name="chevron-forward" size={14} color="#3156B8" />
             </Pressable>
@@ -574,10 +574,10 @@ function DropdownMenu<T extends string>({
   );
 }
 
-function SectionHeader({ title, action }: { title: string; action?: ReactNode }) {
+function SectionHeader({ title, action, titleStyle }: { title: string; action?: ReactNode; titleStyle?: TextStyle }) {
   return (
     <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text style={[styles.sectionTitle, titleStyle]}>{title}</Text>
       {action ? <View>{action}</View> : null}
     </View>
   );
@@ -826,6 +826,7 @@ const styles = StyleSheet.create({
   selectorAnchor: { position: 'relative', zIndex: 20 },
   sectionHeader: { minHeight: 18, marginTop: 5, marginBottom: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   sectionTitle: { color: '#15377D', fontSize: 9, lineHeight: 12, fontWeight: Platform.OS === 'ios' ? '400' : '800', letterSpacing: 0.35 },
+  trendHeadingBold: { fontWeight: '700' },
   sectionActions: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   periodButton: { minHeight: 20, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 6 },
   periodText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: Platform.OS === 'ios' ? '400' : '700' },
@@ -885,8 +886,8 @@ const styles = StyleSheet.create({
   quickLabel: { marginTop: 3, color: '#14367B', textAlign: 'center', ...partnerTheme.typography.meta, fontWeight: Platform.OS === 'ios' ? '400' : '800' },
   quickMeta: { marginTop: 1, color: '#718198', textAlign: 'center', ...partnerTheme.typography.meta, fontWeight: Platform.OS === 'ios' ? '400' : '500' },
   networkGrid: { flexDirection: 'row', gap: 5, marginBottom: 2 },
-  networkTile: { flex: 1, minHeight: 53, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 16, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
-  networkIcon: { width: 27, height: 27 },
+  networkTile: { flex: 1, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 16, paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
+  networkIcon: { width: 24, height: 24 },
   networkBody: { flex: 1, minWidth: 0 },
   networkValue: { color: '#14367B', fontSize: 13, lineHeight: 16, fontWeight: Platform.OS === 'ios' ? '400' : '800' },
   networkLabel: { marginTop: 1, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption, fontWeight: Platform.OS === 'ios' ? '400' : '700' },
