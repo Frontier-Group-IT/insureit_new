@@ -38,7 +38,7 @@ export default function CustomerDetailScreen() {
 
 
   return (
-    <PartnerScreen title="Customer" hideTopBar>
+    <PartnerScreen title="Customer" hideTopBar fullWidth>
       {loading ? (
         <PartnerStateView state="loading" title="Loading customer" />
       ) : error || !data ? (
