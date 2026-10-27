@@ -1,3 +1,4 @@
+import { CustomerClaimMultipleUpload } from "./customer-claim-multiple-upload";
 import { CustomerClaimCompactDocument, type CustomerClaimFile } from "./customer-claim-compact-document";
 
 const definitions=[
@@ -23,5 +24,6 @@ documents:CustomerClaimFile[];claimId:string;accountId:string;stage:string;retur
     <div className="grid gap-3 p-3 md:grid-cols-2 xl:grid-cols-3">
       {definitions.map(item=><CustomerClaimCompactDocument key={item.type} label={item.label} type={item.type} accept={item.accept} documents={documents.filter(doc=>match(doc.document_type,item.type))} claimId={claimId} accountId={accountId} stage={stage} returnToSpotIntimation={returnToSpotIntimation} allowUpload={allowUpload}/>)}
     </div>
+    {allowUpload?<div className="px-3 pb-3"><CustomerClaimMultipleUpload claimId={claimId} accountId={accountId} stage={stage} returnToSpotIntimation={returnToSpotIntimation}/></div>:null}
   </section>;
 }
