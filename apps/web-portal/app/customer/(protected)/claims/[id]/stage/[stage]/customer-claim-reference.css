@@ -32,3 +32,57 @@
 @media (min-width:1200px) {.customer-claim-ref-summary-cell:nth-child(5),.customer-claim-ref-summary-cell:nth-child(10) {padding-right:75px;}}
 @media (max-width:650px) {.customer-claim-ref-summary-art {opacity:.2;width:120px;} .customer-claim-ref-summary-cell {min-height:65px;} .customer-claim-ref-docs .customer-claim-ref-tablist {grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media (prefers-reduced-motion:reduce) {.customer-claim-ref-page * {animation:none!important;transition:none!important;}}
+
+
+/* Status-driven claim motion. Indicators never change workflow state. */
+@keyframes customerClaimActiveRing {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(96,82,232,.2), 0 2px 7px rgba(40,98,211,.18); }
+  50% { box-shadow: 0 0 0 5px rgba(96,82,232,.09), 0 2px 7px rgba(40,98,211,.18); }
+}
+@keyframes customerClaimCheckAppear {
+  from { opacity: 0; transform: scale(.72); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes customerClaimUploading {
+  to { transform: rotate(360deg); }
+}
+.customer-claim-ref-page .customer-claim-motion-active .customer-claim-motion-indicator {
+  animation: customerClaimActiveRing 3s ease-in-out infinite;
+}
+.customer-claim-ref-page .customer-claim-motion-completed .customer-claim-motion-check {
+  transform-origin: center;
+  animation: customerClaimCheckAppear 330ms cubic-bezier(.2,.8,.25,1) both;
+}
+.customer-claim-ref-page .customer-claim-motion-step,
+.customer-claim-ref-page .customer-claim-ref-summary-cell,
+.customer-claim-ref-page .customer-claim-ref-card,
+.customer-claim-ref-page .customer-claim-motion-upload {
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease, background-color 200ms ease;
+}
+.customer-claim-ref-page .customer-claim-motion-spinner { animation: customerClaimUploading 850ms linear infinite; }
+@media (hover:hover) and (pointer:fine) {
+  .customer-claim-ref-page .customer-claim-motion-step:hover,
+  .customer-claim-ref-page .customer-claim-ref-card:hover,
+  .customer-claim-ref-page .customer-claim-ref-summary-cell:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 7px 16px rgba(55,75,149,.10);
+  }
+  .customer-claim-ref-page .customer-claim-motion-upload:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 3px rgba(99,89,230,.10);
+  }
+  .customer-claim-ref-page .customer-claim-motion-upload:not(:disabled):hover svg {
+    transform: scale(1.07);
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  .customer-claim-ref-page .customer-claim-motion-active .customer-claim-motion-indicator,
+  .customer-claim-ref-page .customer-claim-motion-completed .customer-claim-motion-check,
+  .customer-claim-ref-page .customer-claim-motion-spinner {
+    animation: none !important;
+  }
+  .customer-claim-ref-page :is(.customer-claim-motion-step,.customer-claim-ref-summary-cell,.customer-claim-ref-card,.customer-claim-motion-upload) {
+    transition: none !important;
+    transform: none !important;
+  }
+}
