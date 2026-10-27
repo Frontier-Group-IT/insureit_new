@@ -419,7 +419,6 @@ export default function BusinessScreen() {
           <View style={styles.selectorAnchor}>
             <SectionHeader
               title="Month-wise Trend"
-              titleStyle={styles.trendHeadingBold}
               action={(
                 <View style={styles.sectionActions}>
                   <PartnerAnchoredDropdown
@@ -574,10 +573,10 @@ function DropdownMenu<T extends string>({
   );
 }
 
-function SectionHeader({ title, action, titleStyle }: { title: string; action?: ReactNode; titleStyle?: TextStyle }) {
+function SectionHeader({ title, action }: { title: string; action?: ReactNode }) {
   return (
     <View style={styles.sectionHeader}>
-      <Text style={[styles.sectionTitle, titleStyle]}>{title}</Text>
+      <Text style={styles.sectionTitle}>{title}</Text>
       {action ? <View>{action}</View> : null}
     </View>
   );
@@ -825,8 +824,7 @@ const styles = StyleSheet.create({
   feedback: { marginBottom: 8 },
   selectorAnchor: { position: 'relative', zIndex: 20 },
   sectionHeader: { minHeight: 18, marginTop: 5, marginBottom: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  sectionTitle: { color: '#15377D', fontSize: 9, lineHeight: 12, fontWeight: Platform.OS === 'ios' ? '400' : '800', letterSpacing: 0.35 },
-  trendHeadingBold: { fontWeight: '700' },
+  sectionTitle: { color: '#15377D', fontSize: 9, lineHeight: 12, fontWeight: '700', letterSpacing: 0.35 },
   sectionActions: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   periodButton: { minHeight: 20, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 6 },
   periodText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: Platform.OS === 'ios' ? '400' : '700' },
