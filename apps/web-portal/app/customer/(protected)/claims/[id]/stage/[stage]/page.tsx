@@ -10,6 +10,7 @@ import { CustomerClaimVoiceRecorder } from "@/components/customer-portal/custome
 import { CustomerClaimDocumentGroups } from "@/components/customer-portal/customer-claim-document-groups";
 import { CustomerClaimBooleanChoice } from "@/components/customer-portal/customer-claim-boolean-choice";
 import { Check, Circle, LockKeyhole, CalendarDays, Clock3, ClipboardList } from "lucide-react";
+import { CustomerClaimStageSuccessToast } from "@/components/customer-portal/customer-claim-stage-success-toast";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
@@ -38,7 +39,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
   const canUploadStage = selected.key==="spot_intimation" || selected.key==="claim_intimation";
   const allowEdit = canEditStage || canUploadStage;
   return <div className="customer-claim-ref-page space-y-3">
-    {q.saved==="claim_intimation" && selected.key==="work_approval" ? <div role="status" className="rounded-xl border border-[#B8E2CA] bg-[#F0FBF5] px-4 py-3 text-[12px] font-bold text-[#08744A]">Stage details saved successfully</div> : null}
+    {q.saved==="claim_intimation" && selected.key==="work_approval" ? <CustomerClaimStageSuccessToast /> : null}
     <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey={selected.key} currentKey={INTERNAL_JOURNEY_STAGES[currentIndex]?.key || "spot_intimation"} editMode completedKeys={INTERNAL_JOURNEY_STAGES.filter((stage,i)=>external?projection?.stages.some(x=>x.key===stage.key&&x.completed):i<(internal_projection?.completedStageCount??0)).map(stage=>stage.key)} />
     {!(editMode && canEditStage) ? <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white">
       <h2 className="border-b border-[#D9E3F0] px-5 py-4 text-[17px] font-semibold text-[#071D49]">{selected.key==="spot_intimation"?"Accident & Spot Intimation Details":selected.label+" Details"}</h2>
