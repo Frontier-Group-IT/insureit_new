@@ -58,7 +58,7 @@ export function CustomerClaimStageSubmit({ formId }: { formId: string }) {
               </div>
               <button type="button" aria-label="Close error" onClick={()=>setErrorMessage("")} className="rounded-md p-1 text-[#718096] hover:bg-[#F1F5F9]"><X className="h-4 w-4"/></button>
             </div>
-            <div className="mt-4 flex justify-end"><button type="button" autoFocus onClick={()=>setErrorMessage("")} className="min-w-[72px] rounded-lg bg-[#1253A7] px-4 py-2 text-[11px] font-bold text-white hover:bg-[#0B3884]">OK</button></div>
+            <div className="mt-4"><button type="button" autoFocus onClick={()=>setErrorMessage("")} className="w-full rounded-lg bg-[#1253A7] px-4 py-2.5 text-[11px] font-bold text-white hover:bg-[#0B3884]">OK</button></div>
           </div>
         </div>
       ) : null}
