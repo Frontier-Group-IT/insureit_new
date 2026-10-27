@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Camera, Check, ContactRound, FileText, Mic, ShieldCheck, Truck, Video } from "lucide-react";
+import Image from "next/image";
+import { Check } from "lucide-react";
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { ClaimDocumentCollapsedStatus } from "@/components/claim-manager/claim-document-collapsed-status";
 import { DocumentVerificationDetailsButton } from "@/components/spot-survey/document-verification-details-button";
@@ -79,7 +80,7 @@ export function Stage3DocumentVerificationGroup({ item, claim, verifications }: 
             aria-label={`${isExpanded ? "Collapse" : "Expand"} ${item.title}`}
             className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/30 focus-visible:ring-offset-1"
           >
-            <DocumentTypeHeaderIcon itemKey={item.visualKey} />
+            <Stage3DocumentArtwork documentType={item.documentType} />
             <h2 className="truncate text-[13px] font-semibold leading-tight text-[#071D49]">{item.title}</h2>
           </button>
         ) : (
@@ -177,16 +178,40 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
   );
 }
 
-function DocumentTypeHeaderIcon({ itemKey }: { itemKey: Stage3DocumentVerificationItem["visualKey"] }) {
-  const baseClassName = "h-5 w-5 shrink-0";
-  if (itemKey === "spot") return <Camera aria-hidden="true" className={`${baseClassName} text-[#F037A5]`} strokeWidth={2.2} />;
-  if (itemKey === "rc") return <FileText aria-hidden="true" className={`${baseClassName} text-[#16A36A]`} strokeWidth={2.2} />;
-  if (itemKey === "insurance") return <ShieldCheck aria-hidden="true" className={`${baseClassName} text-[#2563EB]`} strokeWidth={2.2} />;
-  if (itemKey === "dl") return <ContactRound aria-hidden="true" className={`${baseClassName} text-[#9333EA]`} strokeWidth={2.2} />;
-  if (itemKey === "gr") return <Truck aria-hidden="true" className={`${baseClassName} text-[#EA7A16]`} strokeWidth={2.2} />;
-  if (itemKey === "video") return <Video aria-hidden="true" className={`${baseClassName} text-[#EF233C]`} strokeWidth={2.2} />;
-  if (itemKey === "audio") return <Mic aria-hidden="true" className={`${baseClassName} text-[#0A43A3]`} strokeWidth={2.2} />;
-  return <FileText aria-hidden="true" className={`${baseClassName} text-[#071D49]`} strokeWidth={2.2} />;
+// Exact existing Customer App artwork; scoped exclusively to Operations Claim Intimation (Stage 3).
+const STAGE3_DOCUMENT_ARTWORK: Record<string, string> = {
+  "rccopy": "/assets/customer-claim/stage3-document-icons/glossy_green_vehicle_document_icon.png",
+  "insurancecopy": "/assets/customer-claim/stage3-document-icons/glossy_blue_secure_policy_document_icon.png",
+  "driverlicence": "/assets/customer-claim/stage3-document-icons/glossy_purple_id_card_icon.png",
+  "grloadbill": "/assets/customer-claim/stage3-document-icons/glossy_orange_delivery_document_icon.png",
+  "fitnesscopy": "/assets/customer-claim/stage3-document-icons/tasks-completed.png",
+  "fasttagreportlast15days": "/assets/customer-claim/stage3-document-icons/reports-analytics.png",
+  "spotreport": "/assets/customer-claim/stage3-document-icons/claim-survey.png",
+  "estimatecopy": "/assets/customer-claim/stage3-document-icons/claim-assessment.png",
+  "repairestimate": "/assets/customer-claim/stage3-document-icons/claim-assessment.png",
+  "towingbill": "/assets/customer-claim/stage3-document-icons/fleet-vehicle.png",
+  "ncbverification": "/assets/customer-claim/stage3-document-icons/claim-approval.png",
+  "roadtax": "/assets/customer-claim/stage3-document-icons/receipts-posted.png",
+  "localpermita": "/assets/customer-claim/stage3-document-icons/policy.png",
+  "localpermitb": "/assets/customer-claim/stage3-document-icons/policy.png",
+  "nationalpermit": "/assets/customer-claim/stage3-document-icons/policy.png",
+  "driveraadhaarfront": "/assets/customer-claim/stage3-document-icons/kyc.png",
+  "driveraadhaarback": "/assets/customer-claim/stage3-document-icons/kyc.png",
+  "aadhaar": "/assets/customer-claim/stage3-document-icons/kyc.png",
+  "pan": "/assets/customer-claim/stage3-document-icons/kyc.png",
+  "kycform": "/assets/customer-claim/stage3-document-icons/kyc-completed.png",
+  "gst": "/assets/customer-claim/stage3-document-icons/accounts-finance.png",
+  "cancelledcheque": "/assets/customer-claim/stage3-document-icons/accounts-finance.png",
+  "tpaffidavit": "/assets/customer-claim/stage3-document-icons/documents.png",
+  "authorizationletter": "/assets/customer-claim/stage3-document-icons/claim-documents.png",
+  "driverstatement": "/assets/customer-claim/stage3-document-icons/claim-documents.png",
+  "claimform": "/assets/customer-claim/stage3-document-icons/claim-documents.png",
+};
+
+function Stage3DocumentArtwork({ documentType }: { documentType: string }) {
+  const normalized = documentType.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const src = STAGE3_DOCUMENT_ARTWORK[normalized] ?? "/assets/customer-claim/stage3-document-icons/claim-documents.png";
+  return <Image src={src} alt="" aria-hidden="true" width={28} height={28} className="h-7 w-7 shrink-0 object-contain" unoptimized />;
 }
 
 function StatusBadge({ tone, label }: { tone: "green" | "amber" | "slate"; label: string }) {
