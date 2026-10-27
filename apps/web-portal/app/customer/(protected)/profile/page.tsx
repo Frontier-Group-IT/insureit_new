@@ -24,7 +24,7 @@ export default async function CustomerProfilePage({
     <div className="space-y-4 pb-4">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/profile" />
 
-      <section className="customer-profile-hero relative isolate overflow-hidden rounded-[22px] border border-[#E4DDFB] bg-[linear-gradient(110deg,#F3EEFF_0%,#FAF7FF_47%,#D5D1FF_100%)] shadow-[0_10px_30px_rgba(83,58,151,0.08)]">
+      <section className="customer-profile-hero relative isolate overflow-hidden rounded-[22px] border border-[#E4DDFB] bg-white shadow-[0_10px_30px_rgba(83,58,151,0.08)]">
         <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-40 h-[330px] w-[520px] rounded-full border-[60px] border-white/30" />
         <div aria-hidden="true" className="pointer-events-none absolute bottom-[-125px] right-[18%] h-[270px] w-[340px] rotate-[-25deg] rounded-[80px] bg-[#A99EF8]/15" />
         <div className="relative flex min-h-[174px] items-center justify-between gap-5 px-5 py-5 sm:px-7 lg:px-9">
@@ -37,7 +37,6 @@ export default async function CustomerProfilePage({
                 <h1 className="break-words text-[22px] font-black tracking-[-0.02em] text-[#2D205E] sm:text-[26px]">{customer.contact_name}</h1>
                 <BadgeCheck className="h-5 w-5 shrink-0 text-[#6E42D5]" aria-label="Verified customer" />
               </div>
-              <p className="mt-0.5 text-[12px] font-semibold text-[#74669D]">Customer</p>
               <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] font-semibold text-[#55437E]">
                 <span className="inline-flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-[#6743C6]" />{customer.phone || "—"}</span>
                 <span className="inline-flex min-w-0 items-center gap-1.5"><Mail className="h-3.5 w-3.5 shrink-0 text-[#6743C6]" /><span className="break-all">{customer.email || "—"}</span></span>
