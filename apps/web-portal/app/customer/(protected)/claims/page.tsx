@@ -119,9 +119,9 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
               </thead>
               <tbody>
                 {rows.map(({ claim, stage, stageHref }) => {
-                  const detailHref = stageHref;
+                  const detailHref = `/customer/claims/${encodeURIComponent(claim.id)}?account=${encodeURIComponent(account.id)}`;
                   const lossDate = claim.accident_at ? new Date(claim.accident_at) : null;
-                  return <CustomerClaimClickableRow key={claim.id} href={stageHref} label={`Open claim ${claim.claim_no || claim.vehicle_no || ""}`}>
+                  return <CustomerClaimClickableRow key={claim.id} href={detailHref} label={`Open claim ${claim.claim_no || claim.vehicle_no || ""}`}>
                     <td className="border-r border-[#E1E9F4] px-3 py-3 text-left">
                       <Link href={detailHref} aria-label={`Open claim ${claim.claim_no || claim.vehicle_no || ""}`} className="block rounded outline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1769DC]">
                         <span className="block font-medium">{customerName}</span>
