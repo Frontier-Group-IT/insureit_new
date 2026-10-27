@@ -27,6 +27,7 @@ type PremiumRow = {
   od_premium: number | string | null;
   tp_premium: number | string | null;
   cpa_amount: number | string | null;
+  add_on_premium: number | string | null;
   net_premium: number | string | null;
   gst_amount: number | string | null;
   gross_premium: number | string | null;
@@ -101,6 +102,7 @@ export type PolicyBusinessMisRow = {
   odPremium: number;
   tpPremium: number;
   cpa: number;
+  addOnPremium: number;
   netPremium: number;
   gst: number;
   grossPremium: number;
@@ -134,7 +136,7 @@ const SELECT = `
   customers!policies_customer_id_fkey(contact_name,phone,customer_code),
   vehicles!policies_vehicle_id_fkey(vehicle_no,vehicle_class_code,vehicle_class_description,make,model,fuel_type,gvw_kg,engine_capacity_cc,seating_capacity,year,chassis_no,engine_no,rto_state,rto_name),
   insurance_companies!policies_insurance_company_id_fkey(name),
-  policy_premium_details(od_premium,tp_premium,cpa_amount,net_premium,gst_amount,gross_premium),
+  policy_premium_details(od_premium,tp_premium,cpa_amount,add_on_premium,net_premium,gst_amount,gross_premium),
   policy_payin_details(payout_basis,commercial_basis,projected_od_percent,projected_od_amount,projected_tp_percent,projected_tp_amount,projected_commission_percent,projected_commission_amount,insurer_scheme_amount,total_projected_payin,tds_amount,payin_after_tds),
   policy_intermediary_payouts(payout_basis,od_payout_percent,tp_payout_percent,partner_payout_percent,partner_payout_amount,gross_payout,retention_amount)
 `;
@@ -217,6 +219,7 @@ function normalizeRow(row: PolicyRow): PolicyBusinessMisRow {
     odPremium: number(premium?.od_premium),
     tpPremium: number(premium?.tp_premium),
     cpa: number(premium?.cpa_amount),
+    addOnPremium: number(premium?.add_on_premium),
     netPremium: number(premium?.net_premium),
     gst: number(premium?.gst_amount),
     grossPremium: number(premium?.gross_premium),
