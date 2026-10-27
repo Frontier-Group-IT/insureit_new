@@ -183,6 +183,13 @@ async function deleteBranch(partnerId: string): Promise<PermanentDeleteResult> {
     return { status: "error", message: `Cannot permanently delete this branch because protected history exists in ${formatBlockers(blocking)}.` };
   }
 
+  // Snapshot the branch profile so a late FK error cannot silently remove it.
+  const { data: savedBranchProfile, error: savedProfileError } = await admin
+    .from("partner_branch_profiles").select("*").eq("partner_id", partnerId).maybeSingle();
+  if (savedProfileError || !savedBranchProfile) {
+    return { status: "error", message: "The branch profile could not be loaded for safe deletion." };
+  }
+
   const { data: portal } = await admin
     .from("portal_access_identities")
     .select("profile_id")
@@ -215,10 +222,13 @@ async function deleteBranch(partnerId: string): Promise<PermanentDeleteResult> {
 
   const { error: partnerError } = await admin.from("partners").delete().eq("id", partnerId);
   if (partnerError) {
-    // Restore the profile and onboarding link if the final partner delete fails.
-    // The original branch profile fields are not available here, so do not
-    // recreate it with guessed data; report the failure for administrative repair.
-    return { status: "error", message: "The branch is still referenced by protected records; the branch profile was removed before this constraint was detected. Contact IT administration for recovery." };
+    // Restore saved profile and its onboarding back-reference on a late FK failure.
+    const { error: restoreError } = await admin.from("partner_branch_profiles").insert(savedBranchProfile);
+    if (!restoreError && detachableApplicationId) await admin.from("intermediary_onboarding_applications")
+      .update({ partner_record_id: partnerId }).eq("id", detachableApplicationId).is("partner_record_id", null);
+    return { status: "error", message: restoreError
+      ? "Deletion was blocked and restoring the branch profile failed. Contact IT administration."
+      : "The branch is still referenced by protected records and cannot be permanently deleted." };
   }
 
   revalidatePath("/intermediaries/groups/branches");
