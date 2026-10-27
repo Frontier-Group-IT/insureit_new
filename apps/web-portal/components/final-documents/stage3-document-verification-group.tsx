@@ -148,7 +148,7 @@ export function Stage3DocumentVerificationGroup({ item, claim, verifications }: 
 function DocumentFileRow({ item, claim, document, verification, verified, rejected, selected, onSelectedChange }: { item: Stage3DocumentVerificationItem; claim: ClaimContext; document: FinalVerificationDocument; verification?: FinalVerificationRow; verified: boolean; rejected: boolean; selected: boolean; onSelectedChange: (checked: boolean) => void }) {
   const selectable = !verified && !rejected;
   return (
-    <div className={`grid grid-cols-[32px_1fr] items-start gap-2 rounded-lg border p-2 transition ${verified ? "border-green-200 bg-green-50/75" : selected ? "border-[#8CB6FF] bg-[#F3F7FF]" : "border-[#E2EAF4] bg-white/80"}`}>
+    <div className={`grid grid-cols-[32px_1fr] items-start gap-2 rounded-lg border p-2 transition ${verified ? "border-green-200 bg-green-50/75" : "border-[#E2EAF4] bg-white/80"}`}>
       {selectable ? (
         <button
           type="button"
@@ -156,7 +156,7 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
           aria-pressed={selected}
           aria-label={`${selected ? "Deselect" : "Select"} ${document.file_name} for verification`}
           title={selected ? "Click to deselect" : "Click to select for verification"}
-          className={`grid h-8 w-8 place-items-center rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/40 ${selected ? "bg-[#EAF2FF]" : "hover:bg-[#F4F8FF]"}`}
+          className="grid h-8 w-8 place-items-center rounded-md bg-transparent transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/40"
         >
           {selected ? <ShieldCheck aria-hidden="true" size={22} strokeWidth={2.2} className="text-[#2563EB]" /> : <Shield aria-hidden="true" size={22} strokeWidth={2.2} className="text-[#2563EB]" />}
         </button>
