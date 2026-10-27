@@ -16,6 +16,7 @@ import { getPartnerBusinessRange, getPartnerHome, type PartnerHomeData } from '@
 import { getPartnerActivity, type PartnerActivityData } from '@/lib/engagement';
 import { getPartnerBusinessPerformance, type PartnerBusinessPerformance } from '@/lib/business';
 import { usePartnerQuery } from '@/lib/use-partner-query';
+import { getPartnerQueryCache } from '@/lib/partner-query-cache';
 import { formatIndianCurrency } from '@/lib/format';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
@@ -36,6 +37,7 @@ export default function PartnerHomeScreen() {
   const { context, cacheScopeKey, avatarUri } = usePartnerSession();
   const [businessPeriod, setBusinessPeriod] = useState<BusinessPeriod>('mtd');
   const [periodOpen, setPeriodOpen] = useState(false);
+  const [filterSkeletonVisible, setFilterSkeletonVisible] = useState(false);
   const homeScrollY = useRef(new Animated.Value(0)).current;
 
   const fetchHomeWorkspace = useCallback(async (): Promise<{
@@ -62,13 +64,14 @@ export default function PartnerHomeScreen() {
   });
 
   const businessRange = businessDateRange(businessPeriod);
+  const businessQueryKey = `home:business:${businessPeriod}:${businessRange.from}:${businessRange.to}`;
   const fetchBusinessRange = useCallback(
     () => getPartnerBusinessRange(businessRange.from, businessRange.to),
     [businessRange.from, businessRange.to],
   );
   const business = usePartnerQuery({
     scopeKey: cacheScopeKey,
-    key: `home:business:${businessPeriod}:${businessRange.from}:${businessRange.to}`,
+    key: businessQueryKey,
     fetcher: fetchBusinessRange,
     staleTimeMs: 60_000,
   });
@@ -93,6 +96,14 @@ export default function PartnerHomeScreen() {
     }, [workspace.ensureFresh, business.ensureFresh, previousMonthMtd.ensureFresh, businessPeriod]),
   );
 
+  // Show a short visible pulse even for cached periods, without forcing a network call.
+  // Uncached periods remain in the skeleton state until their own figures arrive.
+  useEffect(() => {
+    if (!filterSkeletonVisible) return;
+    const timeout = setTimeout(() => setFilterSkeletonVisible(false), 450);
+    return () => clearTimeout(timeout);
+  }, [businessPeriod, filterSkeletonVisible]);
+
   if (!context) return null;
 
   const data = workspace.data?.home ?? null;
@@ -100,8 +111,10 @@ export default function PartnerHomeScreen() {
   const trend = workspace.data?.performance?.trend ?? [];
   const { identity } = context;
   const periodLabel = BUSINESS_PERIODS.find((item) => item.key === businessPeriod)?.label ?? 'MTD';
-  const rangeData = business.data;
-  const showBusinessFilterSkeleton = business.loading && !rangeData;
+  // Resolve the selected period from its own cache key. The query hook can still hold
+  // figures from the previously selected period during the first render after a switch.
+  const rangeData = getPartnerQueryCache<NonNullable<typeof business.data>>(cacheScopeKey, businessQueryKey)?.data ?? null;
+  const showBusinessFilterSkeleton = filterSkeletonVisible || (!rangeData && (business.loading || !business.error));
 
   return (
     <PartnerScreen
@@ -187,7 +200,10 @@ export default function PartnerHomeScreen() {
                           <Pressable
                             key={item.key}
                             onPress={() => {
-                              setBusinessPeriod(item.key);
+                              if (item.key !== businessPeriod) {
+                                setFilterSkeletonVisible(true);
+                                setBusinessPeriod(item.key);
+                              }
                               setPeriodOpen(false);
                             }}
                             style={({ pressed }) => [
