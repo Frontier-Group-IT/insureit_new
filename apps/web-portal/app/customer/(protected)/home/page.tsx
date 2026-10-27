@@ -84,15 +84,11 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F3F0FF] via-[#F1EEFF]/95 via-50% to-[#E8F5FF]/25" />
         <div className="customer-modern-hero-orb pointer-events-none absolute -left-20 -top-28 h-60 w-60 rounded-full bg-[#A18BFF]/25 blur-3xl" />
         <div className="relative flex min-h-[230px] max-w-[650px] flex-col justify-center gap-3 py-3 sm:min-h-[260px] sm:gap-4">
-          <span className="customer-modern-eyebrow inline-flex w-fit items-center gap-2 rounded-full border border-[#DDD4FF] bg-white/80 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[.14em] text-[#6349CA] shadow-sm"><ShieldCheck className="h-3.5 w-3.5"/> Your protection hub</span>
           <div className="space-y-2">
             <h1 className="max-w-[530px] text-[clamp(26px,3.1vw,43px)] font-black leading-[1.12] tracking-[-.035em] text-[#182E60]">Good morning, <span className="customer-modern-gradient-text">{account.contact_name?.split(" ")[0] || "Customer"}!</span></h1>
             <p className="max-w-[390px] text-[12px] font-medium leading-relaxed text-[#526481] sm:text-[14px]">Every vehicle. Every policy. Every journey — confidently protected with INSUREIT.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <Link href={{ pathname: "/customer/policies", query: accountQuery }} className="customer-modern-primary-action inline-flex min-h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-[#6347DD] to-[#438CFA] px-4 py-2 text-[12px] font-bold text-white shadow-[0_7px_18px_rgba(93,73,203,.24)]">Explore policies <ShieldCheck className="h-4 w-4"/></Link>
-            <Link href={{ pathname: "/customer/start-claim", query: accountQuery }} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[#CFC6F6] bg-white/85 px-4 py-2 text-[12px] font-bold text-[#5946B3] transition-colors hover:bg-white">Start a claim <ClipboardPlus className="h-4 w-4"/></Link>
-          </div>
+
         </div>
       </section>
       <section aria-label="Account overview" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
