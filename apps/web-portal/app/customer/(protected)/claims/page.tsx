@@ -1,3 +1,4 @@
+import "./customer-claims-motion.css";
 import Link from "next/link";
 import { ClipboardList, Plus } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/auth-server";
@@ -73,12 +74,12 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
     query: { account: account.id, ...(params.q ? { q: params.q } : {}), ...(statusFilter !== "all" ? { filter: statusFilter } : {}), ...changes },
   });
   return (
-    <div className="space-y-4 pb-6">
+    <div className="customer-claims-motion space-y-4 pb-6">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/claims" />
 
-      <section className="relative isolate overflow-hidden rounded-2xl border border-[#D6E7FA] bg-[#DDEEFF] text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.05)]">
-        <div className="pointer-events-none absolute inset-0 bg-[url('/assets/claim%20(2).jpeg')] bg-cover bg-center bg-no-repeat opacity-95" />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EEF7FF]/85 via-[#EEF7FF]/45 via-45% to-transparent" />
+      <section className="claims-motion-hero relative isolate overflow-hidden rounded-2xl border border-[#D6E7FA] bg-[#DDEEFF] text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.05)]">
+        <div className="claims-motion-hero-photo pointer-events-none absolute inset-0 bg-[url('/assets/claim%20(2).jpeg')] bg-cover bg-center bg-no-repeat opacity-95" />
+        <div className="claims-motion-hero-overlay pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EEF7FF]/85 via-[#EEF7FF]/45 via-45% to-transparent" />
         <div className="relative flex min-h-[170px] items-center px-5 py-6 sm:px-7">
           <div className="max-w-[520px]">
             <h1 className="text-[clamp(28px,3.2vw,40px)] font-bold tracking-tight">Claims</h1>
@@ -86,21 +87,21 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white">
-        <div className="flex flex-wrap items-center gap-2 border-b border-[#E6ECF4] p-4 xl:flex-nowrap">
+      <section className="claims-motion-panel overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white">
+        <div className="claims-motion-toolbar flex flex-wrap items-center gap-2 border-b border-[#E6ECF4] p-4 xl:flex-nowrap">
           <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><ClipboardList className="h-5 w-5 text-[#1769DC]"/>My Claims <span className="rounded-full bg-[#E7F0FD] px-2.5 py-1 text-[11px] text-[#205BA3]">{enriched.length} claims</span></h2>
           <CustomerClaimsSearch initialQuery={params.q ?? ""} accountId={account.id} />
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            <nav aria-label="Claim status" className="flex flex-wrap items-center gap-1.5">
-              {filterOptions.map(({ key, label, count }) => <Link key={key} href={href({filter:key,page:"1"})} aria-current={statusFilter === key ? "page" : undefined} className={`rounded-full border px-3 py-2 text-[12px] font-semibold transition-colors ${statusFilter === key ? "border-[#071E45] bg-[#071E45] text-white" : "border-[#DCE4EE] bg-white text-[#344767] hover:bg-[#F0F6FF]"}`}>{label} ({count})</Link>)}
+            <nav aria-label="Claim status" className="claims-motion-filters flex flex-wrap items-center gap-1.5">
+              {filterOptions.map(({ key, label, count }) => <Link key={key} href={href({filter:key,page:"1"})} aria-current={statusFilter === key ? "page" : undefined} className={`claims-motion-filter claims-motion-filter-${key} rounded-full border px-3 py-2 text-[12px] font-semibold transition-colors ${statusFilter === key ? "border-[#071E45] bg-[#071E45] text-white" : "border-[#DCE4EE] bg-white text-[#344767] hover:bg-[#F0F6FF]"}`}>{label} ({count})</Link>)}
             </nav>
-            <Link href={{ pathname: "/customer/start-claim", query: { account: account.id } }} className="inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-[#1769DC] px-3 py-2.5 text-[12px] font-semibold text-white hover:bg-[#1058BD]"><Plus className="h-4 w-4"/>Start a new claim</Link>
+            <Link href={{ pathname: "/customer/start-claim", query: { account: account.id } }} className="claims-motion-new-claim inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-[#1769DC] px-3 py-2.5 text-[12px] font-semibold text-white hover:bg-[#1058BD]"><Plus className="h-4 w-4"/>Start a new claim</Link>
           </div>
         </div>
 
         {rows.length ? (
-          <div className="w-full overflow-x-auto">
-            <table className="w-full min-w-[1280px] border-collapse text-center text-[12px] text-[#263F67]">
+          <div key={statusFilter + ":" + query + ":" + page} className="claims-motion-results w-full overflow-x-auto">
+            <table className="claims-motion-table w-full min-w-[1280px] border-collapse text-center text-[12px] text-[#263F67]">
               <thead className="bg-[#073A7D] text-[12px] font-semibold text-white">
                 <tr>
                   <th scope="col" className="border-r border-white/15 px-3 py-3 text-left">Customer / Mobile</th>
@@ -145,7 +146,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
           </div>
         ) : <div className="py-8"><EmptyCustomerState title="No matching claims" body="Try another search or status filter." /></div>}
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E2E9F3] px-5 py-4 text-[12px] text-[#536681]">
+        <div className="claims-motion-pagination flex flex-wrap items-center justify-between gap-3 border-t border-[#E2E9F3] px-5 py-4 text-[12px] text-[#536681]">
           <span>Showing {filtered.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}</span>
           <div className="flex items-center gap-3">
             {page > 1 ? <Link href={href({ page: String(page - 1) })} className="rounded-lg border px-3 py-2">Previous</Link> : <span className="rounded-lg border px-3 py-2 opacity-40">Previous</span>}
