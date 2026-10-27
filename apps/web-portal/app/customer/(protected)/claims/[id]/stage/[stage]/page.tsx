@@ -70,7 +70,22 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
         </div>
       ):(
         <div className="p-4">
-          {milestone?.details && Object.entries(milestone.details).length ? <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key] ? (
+            <div className={`grid gap-3 md:grid-cols-2 ${selected.key==="work_approval"||selected.key==="payment_encashment"?"xl:grid-cols-5":selected.key==="repair_ri"||selected.key==="delivery_order"?"xl:grid-cols-3":selected.key==="billing"||selected.key==="vehicle_delivery"?"xl:grid-cols-2":"xl:grid-cols-4"}`}>
+              {CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key].map(field=>{
+                const value=milestone?.details?.[field.key];
+                const present=value!==undefined&&value!==null&&value!=="";
+                const display=present?(typeof value==="boolean"?(value?"Yes":"No"):String(value)):"—";
+                return <div key={field.key} className="min-w-0">
+                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.04em] text-[#5673B0]">{field.label}{field.optional?"":" *"}</p>
+                  <div aria-label={field.label+" (read only)"} className="flex min-h-9 items-center gap-2 rounded-md border border-[#D9E3F0] bg-[#F1F4F9] px-3 py-2 text-[12px] font-medium text-[#536781]">
+                    {!completed && activeIndex>currentIndex?<LockKeyhole aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-[#94A3B8]"/>:null}
+                    <span className="min-w-0 break-words">{display}</span>
+                  </div>
+                </div>;
+              })}
+            </div>
+          ) : milestone?.details && Object.entries(milestone.details).length ? <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {Object.entries(milestone.details).filter(([,value])=>["string","number","boolean"].includes(typeof value)).map(([key,value])=><div key={key}>
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{key.replace(/_/g," ")}</p>
               <div className="min-h-9 rounded-md border border-[#D9E3F0] bg-white px-3 py-2 text-[12px] font-medium text-[#071D49]">{String(value)}</div>
