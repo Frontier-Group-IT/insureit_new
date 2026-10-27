@@ -237,7 +237,7 @@ function QuickAction({ iconKind, label, onPress }: { iconKind: PartnerPolicyDeta
 }
 
 function OverviewItem({ iconKind, label, value, insurerName }: { iconKind: PartnerPolicyDetailIconKind; label: string; value: string; insurerName?: string | null }) {
-  return <View style={styles.overviewItem}>{insurerName ? <View style={styles.overviewLogoWrap}><PartnerInsurerLogo name={insurerName} fallback={PartnerAssets.products.motorInsurance} style={styles.overviewLogo} /></View> : <PartnerPolicyDetailIcon kind={iconKind} size={21} tone="neutral" />}<View style={styles.overviewCopy}><Text style={styles.overviewLabel}>{label}</Text><Text numberOfLines={2} style={styles.overviewValue}>{value}</Text></View></View>;
+  return <View style={styles.overviewItem}>{insurerName ? <View style={styles.overviewLogoWrap}><PartnerInsurerLogo name={insurerName} fallback={PartnerAssets.products.motorInsurance} style={styles.overviewLogo} /></View> : <PartnerPolicyDetailIcon kind={iconKind} size={17} tone="neutral" />}<View style={styles.overviewCopy}><Text style={styles.overviewLabel}>{label}</Text><Text numberOfLines={2} style={styles.overviewValue}>{value}</Text></View></View>;
 }
 
 function EntityRow({ image, icon, title, subtitle, onPress }: { image?: ImageSourcePropType; icon?: keyof typeof Ionicons.glyphMap; title: string; subtitle: string; onPress?: () => void }) {
@@ -287,8 +287,8 @@ const styles = StyleSheet.create({
   quickBlue: { backgroundColor: '#EAF5FF' }, quickGreen: { backgroundColor: '#E9F8F2' }, quickOrange: { backgroundColor: '#FFF1E6' }, quickPurple: { backgroundColor: '#F0EBFF' },
   quickLabel: { color: '#17304F', textAlign: 'center', fontSize: 8.5, lineHeight: 11, fontWeight: '700' },
   overviewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, paddingHorizontal: 9, paddingBottom: 9 },
-  overviewItem: { width: '49%', flexGrow: 1, minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 7, paddingHorizontal: 7, borderWidth: StyleSheet.hairlineWidth, borderColor: '#DCE7F3', borderRadius: 9 },
-  overviewLogoWrap: { width: 32, height: 32, borderRadius: 9, backgroundColor: '#F0F5FC', alignItems: 'center', justifyContent: 'center' }, overviewLogo: { width: 27, height: 27 }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { color: '#8A95A6', fontSize: 8.5, lineHeight: 10 }, overviewValue: { marginTop: 2, color: '#192B46', fontSize: 10, lineHeight: 13, fontWeight: '700' },
+  overviewItem: { width: '31%', flexGrow: 1, minWidth: 0, minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: '#DCE7F3', borderRadius: 9 },
+  overviewLogoWrap: { width: 23, height: 23, borderRadius: 9, backgroundColor: '#F0F5FC', alignItems: 'center', justifyContent: 'center' }, overviewLogo: { width: 20, height: 20 }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { color: '#8A95A6', fontSize: 8.5, lineHeight: 10 }, overviewValue: { marginTop: 2, color: '#192B46', fontSize: 10, lineHeight: 13, fontWeight: '700' },
   premiumDisclosure: { minHeight: 47, marginHorizontal: 9, marginBottom: 8, paddingHorizontal: 9, borderRadius: 9, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFFFF' },
   commercialRow: { minHeight: 47, marginHorizontal: 9, marginBottom: 8, paddingHorizontal: 9, borderRadius: 9, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFFFF' },
   disclosureText: { flex: 1, minWidth: 0 }, disclosureTitle: { color: '#152945', fontSize: 10.5, lineHeight: 13, fontWeight: '700' }, disclosureSummary: { marginTop: 2, color: '#6F7F94', fontSize: 8.5, lineHeight: 11 },
