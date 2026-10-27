@@ -140,3 +140,29 @@ export async function saveCustomerClaimIntimationDraft(form: FormData) {
     encodeURIComponent(account.id) + "&mode=edit");
 }
 
+
+/** Action boundary: user-correctable validation failures must not become RSC render errors. */
+export async function saveCustomerClaimStageWithFeedback(mode: "draft" | "details", form: FormData): Promise<{error: string | null}> {
+  try {
+    if (mode === "draft") await saveCustomerClaimIntimationDraft(form);
+    else await saveCustomerExternalStage(form);
+    return {error:null};
+  } catch (error) {
+    // Next.js redirects are thrown internally; preserve successful navigation.
+    if (error && typeof error === "object" && "digest" in error &&
+        typeof error.digest === "string" && error.digest.startsWith("NEXT_REDIRECT")) throw error;
+    const reason = error instanceof Error ? error.message : "";
+    if (reason === "Stage date precedes the previous stage") {
+      return {error:"The Claim Intimation date must be on or after the previous claim stage date. Check the saved Spot Intimation date and correct this date before saving."};
+    }
+    const safeMessages = [
+      "Complete all mandatory stage fields", "Invalid stage date", "Invalid monetary amount",
+      "Invalid choice", "Value too long", "RI requested date must not precede repair complete date",
+      "RI done date must not precede repair complete date", "Payment date must not precede document submission",
+      "Enter the vehicle received date", "Complete the preceding claim stage first",
+      "Claim Intimation cannot be edited", "Claim stage editing is not available",
+      "Could not save claim stage", "Could not save Claim Intimation draft"
+    ];
+    return {error:safeMessages.includes(reason)?reason:"Unable to save claim details. Your entries are preserved; please try again."};
+  }
+}
