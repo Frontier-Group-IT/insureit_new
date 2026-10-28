@@ -1,13 +1,15 @@
 "use client";
 import "../customer-register-motion.css";
 import Link from "next/link";
+import Image from "next/image";
+import { getInsurerLogo } from "@/lib/insurer-logo";
 import motion from "./renewals-motion.module.css";
 import { useMemo, useState } from "react";
-import { CalendarDays, ChevronDown, FileText, Search, ShieldCheck, CarFront, ArrowRight, Clock3 } from "lucide-react";
+import { CalendarDays, ChevronDown, FileText, Search, ShieldCheck, CarFront, Clock3 } from "lucide-react";
 
 export type RenewalRegisterItem = {
   id: string; title: string; key: string; vehicleId: string; vehicleNo: string;
-  reference: string; expiry: string; daysUntil: number; status: string;
+  reference: string; insurerName?: string | null; expiry: string; daysUntil: number; status: string;
 };
 export type RenewalCategory = { key: string; title: string; count: number };
 
@@ -82,21 +84,20 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] table-fixed border-collapse">
               <thead className="bg-[#F8FAFE] text-left text-[10px] font-semibold text-[#93A1BB]"><tr>
-                <th className="w-[30%] px-5 py-2.5">Policy / Ref. No.</th><th className="w-[31%] px-4 py-2.5">Vehicle No. / Policy Type</th><th className="w-[24%] px-4 py-2.5">Expiry Date</th><th className="w-[10%] px-3 py-2.5">Status</th><th className="w-[5%] px-2 py-2.5"/>
+                <th className="w-[35%] px-5 py-2.5">Policy / Ref. No.</th><th className="w-[28%] px-4 py-2.5">Vehicle No.</th><th className="w-[21%] px-4 py-2.5">Expiry Date</th><th className="w-[16%] px-3 py-2.5">Status</th>
               </tr></thead>
               <tbody className="divide-y divide-[#E8EDF6]">
                 {cat.records.map((item,index)=>{
                   const expired=item.daysUntil<0;const due=item.daysUntil<=45&&!expired;
                   const href=item.key==="insurance_policy"&&item.reference?{pathname:"/customer/policies",query:{account:accountId,q:item.reference}}:{pathname:`/customer/vehicles/${item.vehicleId}`,query:{account:accountId}};
                   return <tr key={item.id} style={{animationDelay:`${Math.min(index,8)*45}ms`}} className={`customer-register-row text-[11px] ${motion.renewalRow}`}>
-                    <td className="px-4 py-3"><div className="flex items-center gap-2.5"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#EFF0FF] text-[#6255E9]"><FileText className="h-4 w-4"/></span><div className="min-w-0"><Link href={href} className="block truncate font-bold text-[#3B568D] hover:underline">{item.vehicleNo}</Link><p className="truncate text-[9.5px] text-[#8C99B2]">{item.title}{item.reference?` · Ref: ${item.reference}`:""}</p></div></div></td>
-                    <td className="px-4 py-3"><div className="flex items-center gap-2"><CarFront className="h-4 w-4 shrink-0 text-[#5979AF]"/><div><b className="text-[10.5px] text-[#3C578A]">{item.vehicleNo}</b><p className="text-[9.5px] text-[#8B99B2]">Policy Type: {cat.title}</p></div></div></td>
-                    <td className="px-4 py-3"><div className="flex items-start gap-2"><CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-[#6159ED]"/><div><b className="text-[10.5px] text-[#455B85]">{item.expiry}</b><p className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold ${!expired?motion.upcomingBadge:""} ${expired?"bg-[#FFF0F2] text-[#D34358]":due?"bg-[#FFF5E3] text-[#C98E29]":"bg-[#EAF9F0] text-[#239B68]"}`}><Clock3 className="h-3 w-3"/>{expired?"Expired":due?`Due in ${item.daysUntil} days`:`In ${item.daysUntil} days`}</p></div></div></td>
-                    <td className="px-3 py-3 text-[10px] text-[#8190A9]">{item.status||"—"}</td>
-                    <td className="px-2 py-3"><Link href={href} aria-label={`View renewal for ${item.vehicleNo}`} className={`customer-register-action inline-flex p-1 text-[#5B6D9A] ${motion.rowArrow}`}><ArrowRight className="h-4 w-4"/></Link></td>
+                    <td className="px-4 py-3"><div className="flex min-w-0 items-center gap-2.5"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#EFF0FF] text-[#6255E9]">{item.key === "insurance_policy" && getInsurerLogo(item.insurerName) ? <Image src={getInsurerLogo(item.insurerName)!} alt={item.insurerName ? `${item.insurerName} logo` : "Insurer logo"} width={24} height={24} unoptimized className="h-6 w-6 object-contain" /> : <FileText className="h-4 w-4"/>}</span><div className="min-w-0"><Link href={href} className="block truncate font-bold text-[#3B568D] hover:underline">{item.key === "insurance_policy" ? item.reference || item.vehicleNo : item.vehicleNo}</Link>{item.key !== "insurance_policy" && item.reference ? <p className="truncate text-[9.5px] text-[#8C99B2]">Ref: {item.reference}</p> : null}</div></div></td>
+                    <td className="px-4 py-3"><div className="flex items-center gap-2"><CarFront className="h-4 w-4 shrink-0 text-[#5979AF]"/><b className="text-[10.5px] text-[#3C578A]">{item.vehicleNo}</b></div></td>
+                    <td className="px-4 py-3"><div className="flex items-center gap-2"><CalendarDays className="h-4 w-4 shrink-0 text-[#6159ED]"/><b className="text-[10.5px] text-[#455B85]">{item.expiry}</b></div></td>
+                    <td className="px-3 py-3"><span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${!expired ? motion.upcomingBadge : ""} ${expired ? "bg-[#FFF0F2] text-[#D34358]" : due ? "bg-[#FFF5E3] text-[#C98E29]" : "bg-[#EAF9F0] text-[#239B68]"}`}><Clock3 className="h-3 w-3"/>{expired ? "Expired" : due ? `Due in ${item.daysUntil} days` : `In ${item.daysUntil} days`}</span></td>
                   </tr>;
                 })}
-                {!cat.records.length?<tr><td colSpan={5} className="p-4 text-center text-[11px] text-[#8492AC]">No renewals in this category.</td></tr>:null}
+                {!cat.records.length?<tr><td colSpan={4} className="p-4 text-center text-[11px] text-[#8492AC]">No renewals in this category.</td></tr>:null}
               </tbody>
             </table>
           </div>
