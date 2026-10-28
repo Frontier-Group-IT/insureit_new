@@ -89,7 +89,7 @@ export default function PartnerNewClaimScreen() {
           <View style={styles.docsHeading}><Text style={styles.sectionTitle}>Upload claim documents</Text><View style={styles.optional}><Text style={styles.optionalText}>Unavailable</Text></View></View>
           <View style={styles.tiles}>{DOCUMENTS.map(item=><View key={item.title} accessibilityLabel={`${item.title}, upload unavailable`} style={styles.tile}>
             <View style={[styles.documentIcon,{backgroundColor:item.color}]}><MaterialCommunityIcons name={item.icon} color="#FFF" size={24}/></View>
-            <Text style={styles.tileTitle}>{item.title}</Text><Text style={styles.tileSub}>Unavailable</Text>
+            <Text style={styles.tileTitle}>{item.title}</Text><Text style={styles.tileSub}>Upload unavailable</Text>
           </View>)}</View>
           <View style={styles.bulk}><Ionicons name="documents-outline" size={27} color="#245CB0"/><View style={styles.bulkText}><Text style={styles.bulkTitle}>Upload multiple documents</Text><Text style={styles.bulkHint}>Available after secure claim upload authorization</Text></View><Ionicons name="add-circle-outline" size={25} color="#8EA3C4"/></View>
         </View>
