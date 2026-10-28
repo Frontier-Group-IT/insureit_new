@@ -75,8 +75,8 @@ export default function InsurerListScreen() {
                   <Text style={[styles.metricColumn, styles.number]}>{formatIndianCurrency(insurer.premium)}</Text>
                   {employee ? (
                     <>
-                      <Text style={[styles.metricColumn, styles.number]}>—</Text>
-                      <Text style={[styles.metricColumn, styles.number]}>—</Text>
+                      <Text style={[styles.metricColumn, styles.number]}>{insurer.payin == null ? '—' : formatIndianCurrency(insurer.payin)}</Text>
+                      <Text style={[styles.metricColumn, styles.number]}>{insurer.retention == null ? '—' : formatIndianCurrency(insurer.retention)}</Text>
                     </>
                   ) : <Text style={[styles.metricColumn, styles.number]}>{insurer.payout == null ? '—' : formatIndianCurrency(insurer.payout)}</Text>}
                 </View>
