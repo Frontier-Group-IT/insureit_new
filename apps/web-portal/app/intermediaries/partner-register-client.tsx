@@ -69,7 +69,7 @@ export function PartnerRegisterClient({
   const normalized = search.trim().toLowerCase();
 
   const rmOptions = useMemo(() => Array.from(new Set(rows.map((row) => row.assignedRm).filter(Boolean))).sort((a, b) => a.localeCompare(b)), [rows]);
-  const searchedRows = useMemo(() => normalized ? rows.filter((row) => row.searchText.includes(normalized)) : rows, [normalized, rows]);
+  const searchedRows = useMemo(() => normalized ? rows.filter((row) => row.searchText.includes(normalized) || (normalized.replace(/\\D/g, "").length >= 3 && row.mobile.replace(/\\D/g, "").includes(normalized.replace(/\\D/g, "")))) : rows, [normalized, rows]);
   const scopedRows = useMemo(() => searchedRows.filter((row) => {
     if (rmFilter && row.assignedRm !== rmFilter) return false;
     const date = indiaDateKey(row.onboardingDate);
@@ -135,7 +135,7 @@ export function PartnerRegisterClient({
           <h2 className="mr-1 whitespace-nowrap text-[12.5px] font-semibold text-[#17203A]">Partner Register</h2>
           <form onSubmit={(event) => event.preventDefault()} className="relative min-w-[240px] flex-1 lg:max-w-[380px]">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94A3B8]" />
-            <input value={search} onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }} placeholder="Search partner name, mobile, email or ID" className="h-9 w-full rounded-lg border border-[#D8E1EC] bg-white pl-9 pr-3 text-[10.5px] text-[#17203A] outline-none placeholder:text-[#94A3B8] focus:border-[#315FEA] focus:ring-2 focus:ring-[#E6ECFF]" />
+            <input value={search} onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }} placeholder="Search partner, mobile, email, ID or RM" className="h-9 w-full rounded-lg border border-[#D8E1EC] bg-white pl-9 pr-3 text-[10.5px] text-[#17203A] outline-none placeholder:text-[#94A3B8] focus:border-[#315FEA] focus:ring-2 focus:ring-[#E6ECFF]" />
           </form>
           <select aria-label="Assigned RM" value={rmFilter} onChange={(event) => { setRmFilter(event.target.value); setCurrentPage(1); }} className="h-9 min-w-[150px] rounded-lg border border-[#D8E1EC] bg-white px-2.5 text-[9.5px] font-semibold text-[#26374F] outline-none focus:border-[#315FEA]">
             <option value="">All RMs</option>
