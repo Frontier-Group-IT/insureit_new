@@ -3,6 +3,7 @@ import "./customer-exchange-premium.css";
 import "../customer-register-motion.css";
 import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 import Link from "next/link";
+import { CustomerExchangeSellWorkspace } from "@/components/customer-portal/customer-exchange-sell-workspace";
 import type { ReactNode } from "react";
 import { Activity, ArrowLeftRight, BadgeCheck, Heart, MapPin, MoreVertical, Search, ShoppingBag, Store, Truck } from "lucide-react";
 import {
@@ -95,16 +96,16 @@ export default async function CustomerExchangePage({
     <div className="customer-register-motion customer-exchange-premium exchange-reference space-y-3">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/exchange" />
 
-      <section className="exchange-premium-hero customer-register-hero relative isolate overflow-hidden rounded-2xl border border-[#DCE6F2] bg-[#EAF4FF] px-5 py-6 shadow-[0_10px_28px_rgba(28,50,82,.05)] sm:px-7 sm:py-7">
-        <div aria-hidden="true" className="exchange-premium-hero-art pointer-events-none absolute inset-0 bg-[url('/assets/PT.jpeg')] bg-cover bg-center opacity-95" />
-        <div aria-hidden="true" className="exchange-premium-hero-shade pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F7FBFF]/85 via-[#F7FBFF]/45 via-45% to-transparent" />
+      <section className={`${tab === "sell" ? "exchange-sell-hero" : ""} exchange-premium-hero customer-register-hero relative isolate overflow-hidden rounded-2xl border border-[#DCE6F2] bg-[#EAF4FF] px-5 py-6 shadow-[0_10px_28px_rgba(28,50,82,.05)] sm:px-7 sm:py-7`}>
+        <div aria-hidden="true" className={`exchange-premium-hero-art pointer-events-none absolute inset-0 bg-cover bg-center opacity-95 ${tab === "sell" ? "bg-[url('/assets/Exchange.jpeg')]" : "bg-[url('/assets/PT.jpeg')]"}`} />
+        <div aria-hidden="true" className={`exchange-premium-hero-shade pointer-events-none absolute inset-0 ${tab === "sell" ? "bg-gradient-to-r from-[#0C315C]/95 via-[#133E6C]/80 to-[#133E6C]/5" : "bg-gradient-to-r from-[#F7FBFF]/85 via-[#F7FBFF]/45 via-45% to-transparent"}`} />
         <div className="relative z-10 max-w-[650px]">
-          <div className="flex items-center gap-3"><span className="exchange-reference-hero-icon grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#E8E5FF] text-[#6950E8]"><ArrowLeftRight className="h-7 w-7" /></span><div><h1 className="text-[clamp(25px,3vw,34px)] font-black leading-tight text-[#15234A]">
+          {tab === "sell" ? <div className="space-y-2"><p className="text-[10px] font-extrabold uppercase tracking-widest text-[#B7D8FB]">InsureIt Exchange</p><h1 className="text-[clamp(23px,3vw,32px)] font-black text-white">Sell Your Commercial Vehicle</h1><p className="text-[12px] text-[#DBE8FA]">Turn your existing vehicle into new opportunities.</p><div className="flex flex-wrap gap-x-6 gap-y-2 pt-3 text-[10px] font-semibold text-white"><span>✓ List Easily</span><span>✓ Reach Buyers</span><span>✓ Trusted Platform</span></div></div> : <div className="flex items-center gap-3"><span className="exchange-reference-hero-icon grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#E8E5FF] text-[#6950E8]"><ArrowLeftRight className="h-7 w-7" /></span><div><h1 className="text-[clamp(25px,3vw,34px)] font-black leading-tight text-[#15234A]">
             Vehicle <span className="exchange-reference-gradient-text">Exchange</span>
           </h1>
           <p className="mt-2 text-[12px] leading-6 text-[#647995]">
             Buy, sell and track commercial vehicle Exchange activity from the same customer account.
-          </p></div></div>
+          </p></div></div>}
         </div>
       </section>
 
@@ -195,35 +196,8 @@ export default async function CustomerExchangePage({
       ) : null}
 
       {tab === "sell" ? (
-        sellUnavailable ? (
-          <ExchangeRecovery accountId={account.id} tab="sell" />
-        ) : sellableVehicles.length === 0 ? (
-          <EmptyCustomerState title="No vehicles available to sell" body="Vehicles linked to this customer account will appear here when eligible for Exchange." />
-        ) : (
-          <section className="exchange-premium-sell exchange-sell-redesign space-y-3">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div><h2 className="text-[17px] font-black text-[#10213D]">Sell from your Fleet</h2>
-                <p className="mt-1 text-[11px] text-[#71839A]">Choose an eligible vehicle to start your Exchange listing.</p></div>
-              <span className="rounded-full border border-[#E0DDF8] bg-[#F2F0FF] px-3 py-1.5 text-[10px] font-bold text-[#6555D9]">{sellableVehicles.length} vehicle{sellableVehicles.length===1?"":"s"} available</span>
-            </div>
-            <div className="exchange-sell-grid grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {sellableVehicles.map(vehicle => {
-                const name=[vehicle.make,vehicle.model].filter(Boolean).join(" ")||vehicle.vehicle_type;
-                const location=[vehicle.city,vehicle.state].filter(Boolean).join(", ")||"Location on request";
-                return <article key={vehicle.vehicle_id} className="exchange-sell-card group min-w-0 overflow-hidden rounded-xl border border-[#DFE5F5] bg-white p-3 shadow-[0_5px_18px_rgba(34,70,120,.05)]">
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#EAE7FF] to-[#E9F3FF] text-[#5C5BDF]"><Truck className="h-6 w-6"/></span>
-                    <span className={`rounded-full px-2 py-1 text-[9px] font-bold ${vehicle.has_active_listing?"bg-[#FFF3E7] text-[#A66A27]":"bg-[#E7F8EF] text-[#17805A]"}`}>{vehicle.has_active_listing?"Already listed":"Ready to list"}</span>
-                  </div>
-                  <h3 className="mt-3 truncate text-[12px] font-extrabold text-[#183D7B]" title={name}>{name}</h3>
-                  <p className="mt-1 text-[11px] font-semibold text-[#546D97]">{vehicle.vehicle_no}</p>
-                  <div className="mt-3 flex items-center gap-1.5 border-t border-[#EDF0F7] pt-3 text-[10px] text-[#7185A1]"><MapPin className="h-3.5 w-3.5 shrink-0"/><span className="truncate">{location}</span></div>
-                  <div className="mt-2 flex justify-between gap-2 text-[10px]"><span className="text-[#8491AA]">{vehicle.vehicle_type||"Commercial vehicle"}</span><span className={vehicle.has_active_listing?"font-semibold text-[#B47D36]":"font-semibold text-[#278B69]"}>{vehicle.has_active_listing?"Listing active":"Eligible"}</span></div>
-                </article>;
-              })}
-            </div>
-          </section>
-        )
+        sellUnavailable ? <ExchangeRecovery accountId={account.id} tab="sell" /> :
+        <CustomerExchangeSellWorkspace accountId={account.id} vehicles={sellableVehicles} />
       ) : null}
 
       {tab === "activity" ? (
