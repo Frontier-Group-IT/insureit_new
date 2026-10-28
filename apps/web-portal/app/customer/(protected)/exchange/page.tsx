@@ -96,7 +96,7 @@ export default async function CustomerExchangePage({
     <div className="customer-register-motion customer-exchange-premium exchange-reference space-y-3">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/exchange" />
 
-      <section className={`${tab === "sell" ? "exchange-sell-hero" : ""} exchange-premium-hero customer-register-hero relative isolate overflow-hidden rounded-2xl border border-[#DCE6F2] bg-[#EAF4FF] px-5 py-6 shadow-[0_10px_28px_rgba(28,50,82,.05)] sm:px-7 sm:py-7">
+      <section className={`${tab === "sell" ? "exchange-sell-hero" : ""} exchange-premium-hero customer-register-hero relative isolate overflow-hidden rounded-2xl border border-[#DCE6F2] bg-[#EAF4FF] px-5 py-6 shadow-[0_10px_28px_rgba(28,50,82,.05)] sm:px-7 sm:py-7`}>
         <div aria-hidden="true" className={`exchange-premium-hero-art pointer-events-none absolute inset-0 bg-cover bg-center opacity-95 ${tab === "sell" ? "bg-[url('/assets/Exchange.jpeg')]" : "bg-[url('/assets/PT.jpeg')]"}`} />
         <div aria-hidden="true" className={`exchange-premium-hero-shade pointer-events-none absolute inset-0 ${tab === "sell" ? "bg-gradient-to-r from-[#0C315C]/95 via-[#133E6C]/80 to-[#133E6C]/5" : "bg-gradient-to-r from-[#F7FBFF]/85 via-[#F7FBFF]/45 via-45% to-transparent"}`} />
         <div className="relative z-10 max-w-[650px]">
