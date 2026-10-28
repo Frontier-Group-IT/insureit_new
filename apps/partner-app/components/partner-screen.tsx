@@ -38,6 +38,7 @@ export function PartnerScreen({
   artwork,
   action,
   hideTopBar,
+  fullWidth = false,
   children,
   scrollProps,
   heroSearch,
@@ -55,6 +56,8 @@ export function PartnerScreen({
   artwork?: ImageSourcePropType;
   action?: ReactNode;
   hideTopBar?: boolean;
+  /** Opt-in edge-to-edge content without changing other Partner screens. */
+  fullWidth?: boolean;
   scrollProps?: Omit<ScrollViewProps, 'contentContainerStyle'>;
   /** Retained for existing callers; all PartnerScreen pages now reset on focus. */
   resetScrollOnFocus?: boolean;
@@ -221,7 +224,7 @@ export function PartnerScreen({
         automaticallyAdjustContentInsets={false}
         automaticallyAdjustsScrollIndicatorInsets={false}
         stickyHeaderIndices={undefined}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, fullWidth && styles.fullWidthContent]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps={scrollProps?.keyboardShouldPersistTaps ?? 'handled'}
       >
@@ -338,6 +341,7 @@ function homeInitials(title: string) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F5F7FB' },
+  fullWidthContent: { paddingHorizontal: 0 },
   content: {
     flexGrow: 1,
     paddingHorizontal: partnerTheme.spacing.lg,
