@@ -11,7 +11,7 @@ const HEADERS = [
   "Month", "Policy Issuance Date", "Business Type", "RM Name", "Intermediary Type", "Lead Source", "Intermediary Code",
   "Vehicle Class", "Registration No.", "Insured Name", "Phone No.", "Class Description", "Capacity Type",
   "Make", "Model", "Fuel Type", "Capacity / GVW", "Year of Mfg", "Chassis No.", "Engine No.",
-  "Policy Product", "IDV / SI", "OD Premium", "Third Party Premium", "CPA", "Add-On Premium", "Net Premium", "GST", "Gross Premium",
+  "Policy Product", "IDV / SI", "OD Premium", "Add-On Premium", "Third Party Premium", "CPA", "Net Premium", "GST", "Gross Premium",
   "Policy Number", "Insurance Company", "Valid From", "Valid Upto", "RTO State", "RTO Name", "Pay-in Basis",
   "Pay-in % OD (NET PAYIN % FOR NM)", "OD Pay-in Amount", "Pay-in % TP", "Base", "Insurance Scheme / Incentive",
   "TP Pay-in Amount", "Total Pay-in", "TDS", "Pay-in after TDS", "Payout Basis",
@@ -99,7 +99,7 @@ function toSpreadsheetRow(row: PolicyBusinessMisRow) {
     monthName(row.issuanceDate), row.issuanceDate, row.businessType, row.rmName, row.intermediaryType, row.leadSource, row.intermediaryCode,
     row.vehicleClass, row.registrationNo, row.insuredName, row.phoneNo, row.classDescription, row.capacityType,
     row.make, row.model, row.fuelType, row.capacity, row.manufacturingYear, row.chassisNo, row.engineNo,
-    row.policyProduct, row.idv, row.odPremium, row.tpPremium, row.cpa, row.addOnPremium, row.netPremium, row.gst, row.grossPremium,
+    row.policyProduct, row.idv, row.odPremium, row.addOnPremium, row.tpPremium, row.cpa, row.netPremium, row.gst, row.grossPremium,
     row.policyNumber, row.insuranceCompany, row.validFrom, row.validUpto, row.rtoState, row.rtoName, row.payinBasis,
     row.payinOdPercent / 100, row.payinOdAmount, row.payinTpPercent / 100, row.payinBase, row.insurerScheme,
     row.payinTpAmount, row.totalPayin, row.tds, row.payinAfterTds, row.payoutBasis,
@@ -146,7 +146,7 @@ function summaryProperty(column: string): keyof ReturnType<typeof totalsFor> {
 }
 
 function columnWidths() {
-  const widths = [10, 14, 20, 17, 24, 18, 13, 18, 28, 15, 24, 18, 18, 30, 14, 16, 12, 24, 22, 18, 14, 14, 16, 12, 16, 14, 12, 14, 25, 30, 14, 14, 18, 24, 18, 25, 16, 13, 14, 22, 16, 15, 13, 16, 18, 28, 13, 16, 16];
+  const widths = [10, 14, 20, 17, 24, 18, 13, 18, 28, 15, 24, 18, 18, 30, 14, 16, 12, 24, 22, 18, 14, 14, 16, 14, 12, 16, 12, 14, 25, 30, 14, 14, 18, 24, 18, 25, 16, 13, 14, 22, 16, 15, 13, 16, 18, 28, 13, 16, 16];
   return widths.map((wch) => ({ wch }));
 }
 
