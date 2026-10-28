@@ -109,10 +109,10 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
                 const stageIndex = INTERNAL_JOURNEY_STAGES.findIndex((item) => item.label.toLowerCase() === stage.toLowerCase());
                 const progress = completed ? INTERNAL_JOURNEY_STAGES.length : Math.max(1, stageIndex + 1);
                 return (
-                  <Link key={claim.id} href={stageHref} aria-label={`Open claim ${claim.claim_no || claim.vehicle_no || "details"} journey`} className="group flex min-w-0 flex-col rounded-[22px] border border-[#E3E8F1] bg-white p-5 shadow-[0_8px_24px_rgba(31,48,89,.06)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(31,48,89,.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1769DC]">
+                  <Link key={claim.id} href={stageHref} aria-label={`Open claim ${claim.claim_no || claim.vehicle_no || "details"} journey`} className="group flex min-w-0 flex-col rounded-[18px] border border-[#E3E8F1] bg-white p-3.5 shadow-[0_8px_24px_rgba(31,48,89,.06)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(31,48,89,.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1769DC]">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 flex-1 items-start gap-3">
-                        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[#F1F5FF]"><CustomerClaimLogo value={claim.vehicle_make} size={38}/></span>
+                      <div className="flex min-w-0 flex-1 items-start gap-2.5">
+                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#F1F5FF]"><CustomerClaimLogo value={claim.vehicle_make} size={32}/></span>
                         <div className="min-w-0 pt-1">
                           <h3 className="truncate text-[15px] font-bold text-[#142B51]">{claim.vehicle_no || "Vehicle not recorded"}</h3>
                           <p className="mt-1 line-clamp-2 text-[12px] font-medium text-[#647590]">{claim.vehicle_model || claim.vehicle_make || "Vehicle claim"}</p>
@@ -120,8 +120,8 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
                       </div>
                       <span className="max-w-[40%] shrink-0 truncate rounded-full border border-[#E0EAF8] bg-[#F5F8FF] px-3 py-1.5 text-[11px] font-semibold text-[#31649F]" title={claim.claim_no || "Control number not recorded"}>{claim.claim_no || "—"}</span>
                     </div>
-                    <div className="mt-4 border-t border-[#E8EDF4] pt-4">
-                      <div className="grid grid-cols-2 gap-3 text-left">
+                    <div className="mt-3 border-t border-[#E8EDF4] pt-3">
+                      <div className="grid grid-cols-2 gap-2 text-left">
                         <div className="flex min-w-0 items-start gap-2">
                           <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-[#2768B4]" aria-hidden="true"/>
                           <div><p className="text-[11px] text-[#71809A]">Loss Date</p><p className="mt-1 text-[12px] font-semibold text-[#243A60]">{lossDate && !Number.isNaN(lossDate.getTime()) ? lossDate.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : "—"}</p></div>
@@ -132,10 +132,9 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
                         </div>
                       </div>
                     </div>
-                    <p className="mt-4 text-[11px] text-[#62718F]">Insurer Claim No. <span className="font-semibold">{claim.insurer_claim_no || "Pending insurer claim number"}</span></p>
-                    <div className="mt-auto pt-5">
+                    <div className="mt-auto pt-3">
                       <div className="h-1.5 overflow-hidden rounded-full bg-[#E4E9F3]"><div className="h-full rounded-full bg-[#1769DC]" style={{width:`${Math.round(progress / INTERNAL_JOURNEY_STAGES.length * 100)}%`}}/></div>
-                      <div className="mt-3 flex items-center justify-between gap-2 text-[11px]">
+                      <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
                         <span className="flex min-w-0 items-center gap-2 font-semibold text-[#244673]"><span className="h-2 w-2 shrink-0 rounded-full bg-[#1769DC]"/><span className="truncate">{completed ? "Claim Complete" : stage}</span></span>
                         <span className="shrink-0 text-[#6D7D99]">{progress}/{INTERNAL_JOURNEY_STAGES.length}</span>
                       </div>
