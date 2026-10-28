@@ -92,7 +92,7 @@ export default async function PartnerReportsPage({searchParams}:{searchParams:Pr
    </section>
    <section className="ov-grid ov-grid--top">
     <BusinessTrendCard activePeriod="last_6_months" options={[{value:"last_6_months",label:"Last 6 Months",href:"/partner/reports"}]} points={trendPoints}/>
-    <article className="ov-card ov-section"><div className="ov-section-head"><h2>Attention</h2><Link href="/partner/reports/operations" className="ov-view-link">View all <ArrowRight className="h-3 w-3"/></Link></div><div className="ov-attention">
+    <article className="ov-card ov-section"><div className="ov-section-head"><h2>Attention</h2><Link href="/partner/reports" className="ov-view-link">View all <ArrowRight className="h-3 w-3"/></Link></div><div className="ov-attention">
      <AttentionRow label="Renewals due (30 days)" count={Number(policies.expiring_30_days)} detail="Policies requiring renewal attention" href="/partner/renewals" alert/>
      <AttentionRow label="Overdue renewals" count={Number(renewals.overdue_count)} detail="Renewals past expiry" href="/partner/renewals" alert/>
      <AttentionRow label="Active claims" count={Number(claims.active_claims)} detail="Claims currently in process" href="/partner/claims"/>
@@ -110,7 +110,7 @@ export default async function PartnerReportsPage({searchParams}:{searchParams:Pr
       <div className="space-y-2 px-4 py-4">{[["Overdue",renewals.overdue_count],["Due 0–7 days",renewals.due_0_7_count],["Due 8–15 days",renewals.due_8_15_count],["Due 16–30 days",renewals.due_16_30_count]].map(([label,value])=><div key={String(label)} className="flex items-center justify-between border-b border-[#e6ebf2] py-2 text-[12px]"><span className="text-[#526780]">{label}</span><strong className="text-[#183d6b]">{number(value)}</strong></div>)}</div>
     </article>
    </section>
-   <section className="ov-card ov-section ov-recent"><div className="ov-section-head"><h2>Recent / filtered records</h2><Link href="/partner/reports/portfolio" className="ov-view-link">View all <ArrowRight className="h-3 w-3"/></Link></div>
+   <section className="ov-card ov-section ov-recent"><div className="ov-section-head"><h2>Recent / filtered records</h2><Link href="/partner/reports/business" className="ov-view-link">View all <ArrowRight className="h-3 w-3"/></Link></div>
     <div className="ov-table-wrap"><table className="ov-table"><thead><tr><th>Customer</th><th>Policy</th><th>Insurer</th><th>Status</th><th className="ov-num">Premium (₹)</th></tr></thead><tbody>
       {recent.map(row=><tr key={row.policy_id}><td><strong>{row.customer_name||"—"}</strong></td><td>{row.policy_no||"—"}</td><td><span className="ov-insurer-cell">{getInsurerLogo(row.insurer_name||"")?<Image src={getInsurerLogo(row.insurer_name||"")!} alt="" width={18} height={18} className="ov-insurer-logo"/>:null}{row.insurer_name||"—"}</span></td><td>{row.lifecycle_status||"—"}</td><td className="ov-num">{row.premium_amount==null?"—":money(row.premium_amount)}</td></tr>)}
       {!recent.length?<tr><td colSpan={5} className="r2-empty">No policy records in your reporting scope</td></tr>:null}
