@@ -189,7 +189,7 @@ function manufacturerLogoAdjustment(make: string | null | undefined) {
 
 const styles = StyleSheet.create({
  root:{flex:1,backgroundColor:'#EDF5FF'},
- header:{height:67,paddingHorizontal:15,flexDirection:'row',alignItems:'center',gap:13,backgroundColor:'#1261C4'},
+ header:{height:67,paddingHorizontal:15,flexDirection:'row',alignItems:'center',gap:13,backgroundColor:'#081F4C'},
  back:{width:34,height:40,justifyContent:'center',alignItems:'center'},
  headerIcon:{width:40,height:40,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,0.16)',borderWidth:1,borderColor:'rgba(255,255,255,0.18)'},
 
