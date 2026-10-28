@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireVerifiedClaimDocuments } from "@/lib/claim-pending-document-guard";
 import { isClaimStatus, managerTransitions, type ClaimStatus } from "@/lib/claim-workflow";
 import { insertAuthorizedClaimStageDetail, requireClaimWorkflowAccess } from "@/lib/claim-workflow-access";
 import { validateInternalSpotIntimation } from "@/lib/internal-spot-intimation";
@@ -89,6 +90,7 @@ export async function advanceInternalSpotIntimation(claimId: string, formData: F
   const allowedStatus = managerTransitions[claim.current_status];
   if (!nextStatus || nextStatus !== allowedStatus) throw new Error("This status change is not allowed for the current claim stage.");
 
+  await requireVerifiedClaimDocuments(supabase, claimId);
   const { normalized, location, accidentDescription, details } = normalizedDetails(claim, formData);
   const { error: updateError } = await supabase.from("claims").update({ current_status: nextStatus, accident_at: normalized.incidentAt, spot_intimation_at: normalized.spotIntimationAt, accident_location: location, accident_description: accidentDescription }).eq("id", claimId);
   if (updateError) throw new Error(updateError.message);

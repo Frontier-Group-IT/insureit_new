@@ -3,6 +3,7 @@
 import { isClaimStatus, type ClaimStatus } from "@/lib/claim-workflow";
 import { insertAuthorizedClaimStageDetail, requireClaimWorkflowAccess } from "@/lib/claim-workflow-access";
 import { revalidatePath } from "next/cache";
+import { requireVerifiedClaimDocuments } from "@/lib/claim-pending-document-guard";
 
 type OperationsStageKey =
   | "spot_status"
@@ -182,6 +183,7 @@ export async function completeClaimJourneyStage(claimId: string, formData: FormD
     if (!externalSaveOnlyEdit) throw new Error("This stage is not available yet. Complete the current stage first.");
   }
 
+  await requireVerifiedClaimDocuments(supabase, claimId);
   const details = stageDetailsFromForm(formData, stageKey);
   const vehicleDeliveryReady = stageKey !== "vehicle_delivery" || booleanValue(formData, "vehicle_received");
   const shouldAdvance = !saveOnly && !terminal && stageKey === activeKey && vehicleDeliveryReady;

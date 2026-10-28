@@ -6,7 +6,7 @@ type ClaimDocumentCollapsedStatusProps = {
   showLabels?: boolean;
 };
 
-export function ClaimDocumentCollapsedStatus({ verifiedCount, pendingCount, showLabels = false }: ClaimDocumentCollapsedStatusProps) {
+export function ClaimDocumentCollapsedStatus({ verifiedCount, pendingCount, showLabels = true }: ClaimDocumentCollapsedStatusProps) {
   return (
     <div
       className="flex min-h-11 items-center gap-2 px-1 py-1.5"
