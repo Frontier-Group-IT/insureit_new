@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=767247c3912fc0858f4d52db5d7fb4ff180484ff
-reason=publish-merged-pr-3685-partner-claims-renewals-customer-headers
+source_main=65cdb67938f995a36a17340c48d29d8bb5f706b9
+reason=publish-insurer-employee-payin-retention-pr-3686
