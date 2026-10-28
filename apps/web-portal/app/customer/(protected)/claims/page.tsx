@@ -1,6 +1,6 @@
 import "./customer-claims-motion.css";
 import Link from "next/link";
-import { ClipboardList, Plus, ShieldCheck, CircleCheck, ArrowRight, FileText } from "lucide-react";
+import { ClipboardList, Plus, ShieldCheck, ArrowRight, FileText, CalendarDays } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
 import { CustomerClaimsSearch } from "./customer-claims-search";
@@ -104,39 +104,43 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
         {rows.length ? (
           <div key={statusFilter + ":" + query + ":" + page} className="claims-motion-results bg-[#F4F2FF]/60 px-4 py-7 sm:px-6">
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
-              {rows.map(({ claim, stage, stageHref, completed, external }) => {
+              {rows.map(({ claim, stage, stageHref, completed }) => {
                 const detailHref = `/customer/claims/${encodeURIComponent(claim.id)}?account=${encodeURIComponent(account.id)}`;
                 const lossDate = claim.accident_at ? new Date(claim.accident_at) : null;
                 const stageIndex = INTERNAL_JOURNEY_STAGES.findIndex((item) => item.label.toLowerCase() === stage.toLowerCase());
                 const progress = completed ? INTERNAL_JOURNEY_STAGES.length : Math.max(1, stageIndex + 1);
                 return (
-                  <article key={claim.id} className="group relative flex min-w-0 flex-col rounded-[28px] border border-[#E3E3F5] bg-white p-4 pt-8 shadow-[0_12px_28px_rgba(31,48,89,.06)] transition hover:-translate-y-1 hover:shadow-[0_16px_34px_rgba(31,48,89,.12)]">
-                    <span className="absolute left-1/2 top-0 grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-[7px] border-[#E9E7FF] bg-[#F4F2FF] text-[#5544C7] shadow-sm" aria-hidden="true">
-                      {completed ? <CircleCheck className="h-5 w-5"/> : <span className="text-sm font-bold">{progress}</span>}
-                    </span>
-                    <div className="flex flex-1 flex-col rounded-[22px] bg-[#F5F5FA] px-4 py-5 text-center">
-                      <div className="mb-2 flex items-center justify-center gap-2">
-                        <CustomerClaimLogo value={claim.vehicle_make} size={34}/>
-                        <span className="min-w-0 truncate text-[13px] font-bold text-[#132451]">{claim.vehicle_no || "Vehicle not recorded"}</span>
+                  <article key={claim.id} className="group flex min-w-0 flex-col rounded-[22px] border border-[#E3E8F1] bg-white p-5 shadow-[0_8px_24px_rgba(31,48,89,.06)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(31,48,89,.12)]">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 flex-1 items-start gap-3">
+                        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[#F1F5FF]"><CustomerClaimLogo value={claim.vehicle_make} size={38}/></span>
+                        <div className="min-w-0 pt-1">
+                          <h3 className="truncate text-[15px] font-bold text-[#142B51]">{claim.vehicle_no || "Vehicle not recorded"}</h3>
+                          <p className="mt-1 line-clamp-2 text-[12px] font-medium text-[#647590]">{claim.vehicle_model || claim.vehicle_make || "Vehicle claim"}</p>
+                        </div>
                       </div>
-                      <h3 className="line-clamp-2 min-h-9 text-[13px] font-semibold text-[#142650]">{claim.vehicle_model || claim.vehicle_make || "Vehicle claim"}</h3>
-                      <p className="mt-1 text-[12px] font-medium text-[#62718F]">Control No. {claim.claim_no || "—"}</p>
-                      <div className="mt-4 flex items-center justify-center gap-2">
-                        <CustomerClaimLogo value={claim.insurer_name} kind="insurer" size={30}/>
-                        <span className="line-clamp-2 text-left text-[11px] text-[#536687]">{claim.insurer_name || "Insurer not recorded"}</span>
+                      <span className="max-w-[40%] shrink-0 truncate rounded-full border border-[#E0EAF8] bg-[#F5F8FF] px-3 py-1.5 text-[11px] font-semibold text-[#31649F]" title={claim.claim_no || "Control number not recorded"}>{claim.claim_no || "—"}</span>
+                    </div>
+                    <div className="mt-4 border-t border-[#E8EDF4] pt-4">
+                      <div className="grid grid-cols-2 gap-3 text-left">
+                        <div className="flex min-w-0 items-start gap-2">
+                          <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-[#2768B4]" aria-hidden="true"/>
+                          <div><p className="text-[11px] text-[#71809A]">Loss Date</p><p className="mt-1 text-[12px] font-semibold text-[#243A60]">{lossDate && !Number.isNaN(lossDate.getTime()) ? lossDate.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : "—"}</p></div>
+                        </div>
+                        <div className="flex min-w-0 items-start gap-2 border-l border-[#E9EDF5] pl-3">
+                          <span className="shrink-0"><CustomerClaimLogo value={claim.insurer_name} kind="insurer" size={24}/></span>
+                          <div className="min-w-0"><p className="text-[11px] text-[#71809A]">Policy No.</p><p className="mt-1 break-all text-[12px] font-semibold text-[#243A60]">{claim.policy_no || "—"}</p></div>
+                        </div>
                       </div>
-                      <p className="mt-2 text-[11px] text-[#62718F]">Insurer Claim No. <span className="font-semibold">{claim.insurer_claim_no || "Pending insurer claim number"}</span></p>
-                      <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-white/90 p-3 text-left text-[11px]">
-                        <div><span className="block text-[#7A86A3]">Loss Date</span><span className="font-semibold text-[#233657]">{lossDate && !Number.isNaN(lossDate.getTime()) ? lossDate.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : "—"}</span></div>
-                        <div><span className="block text-[#7A86A3]">Policy No.</span><span className="break-all font-semibold text-[#233657]">{claim.policy_no || "—"}</span></div>
+                    </div>
+                    <p className="mt-4 text-[11px] text-[#62718F]">Insurer Claim No. <span className="font-semibold">{claim.insurer_claim_no || "Pending insurer claim number"}</span></p>
+                    <div className="mt-auto pt-5">
+                      <div className="h-1.5 overflow-hidden rounded-full bg-[#E4E9F3]"><div className="h-full rounded-full bg-[#1769DC]" style={{width:`${Math.round(progress / INTERNAL_JOURNEY_STAGES.length * 100)}%`}}/></div>
+                      <div className="mt-3 flex items-center justify-between gap-2 text-[11px]">
+                        <span className="flex min-w-0 items-center gap-2 font-semibold text-[#244673]"><span className="h-2 w-2 shrink-0 rounded-full bg-[#1769DC]"/><span className="truncate">{completed ? "Claim Complete" : stage}</span></span>
+                        <span className="shrink-0 text-[#6D7D99]">{progress}/{INTERNAL_JOURNEY_STAGES.length}</span>
                       </div>
-                      <div className="mt-4">
-                        <p className="text-[11px] text-[#6A7896]">Current stage</p>
-                        <p className="mt-1 text-[13px] font-bold text-[#142B61]">{completed ? "Claim Complete" : stage}</p>
-                        {external ? <p className="mt-1 text-[11px] text-[#6A7896]">{progress} of {INTERNAL_JOURNEY_STAGES.length} stages</p> : null}
-                      </div>
-                      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#E2E2F2]"><div className="h-full rounded-full bg-[#4D57CF]" style={{width:`${Math.round(progress / INTERNAL_JOURNEY_STAGES.length * 100)}%`}}/></div>
-                      <div className="mt-5 flex flex-wrap justify-center gap-2">
+                      <div className="mt-4 flex flex-wrap gap-2">
                         <Link href={detailHref} className="inline-flex items-center gap-1.5 rounded-lg border border-[#C7D7EF] bg-white px-3 py-2 text-[11px] font-semibold text-[#174B86] hover:bg-[#ECF4FF]"><FileText className="h-3.5 w-3.5"/>View Details</Link>
                         {!completed ? <Link href={stageHref} className="inline-flex items-center gap-1.5 rounded-lg bg-[#1769DC] px-3 py-2 text-[11px] font-semibold text-white hover:bg-[#1058BD]">Continue <ArrowRight className="h-3.5 w-3.5"/></Link> : null}
                       </div>
