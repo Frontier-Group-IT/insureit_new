@@ -6,14 +6,12 @@ import {
   Download,
   SlidersHorizontal,
   UsersRound,
-  WalletCards,
 } from "lucide-react";
 
 import { PartnerReportsShell } from "@/components/partner-portal/partner-reports-shell";
 import { requirePartnerReportScope } from "@/lib/reports/partner-report-scope";
 import {
   getPartnerWebBusinessPerformance,
-  getPartnerWebPayoutSummary,
   listPartnerWebPolicies,
   type PartnerPolicyRow,
 } from "@/lib/partner-web";
@@ -197,11 +195,9 @@ function queryHref(query: BusinessSearchParams, overrides: Record<string, string
 export default async function PartnerBusinessPage({ searchParams }: { searchParams: Promise<BusinessSearchParams> }) {
   const query = await searchParams;
   const reportScope = await requirePartnerReportScope();
-  const canShowPayout = reportScope.role === "partner" || reportScope.role === "partner_associate";
-  const [performance, policies, payout] = await Promise.all([
+  const [performance, policies] = await Promise.all([
     getPartnerWebBusinessPerformance(),
     loadPartnerPolicies(),
-    canShowPayout ? getPartnerWebPayoutSummary().catch(() => null) : Promise.resolve(null),
   ]);
 
   const generatedDay = validIsoDate(performance.generated_at?.slice(0, 10))
@@ -237,7 +233,6 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
   const mixMode: MixMode = query.mix === "insurer" || query.mix === "rm" ? query.mix : "business-type";
   const mixRows = mixMode === "insurer" ? insurerRows : mixMode === "rm" ? rmRows : businessRows;
   const mixLabel = mixMode === "insurer" ? "Insurer" : mixMode === "rm" ? "RM" : "Business Type";
-  const payoutValue = canShowPayout && payout?.available ? numeric(payout.paid_amount) : null;
 
   const exportHref = `/partner/business/export?${new URLSearchParams(
     Object.entries({
@@ -314,7 +309,6 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
 
         <section className="grid overflow-hidden rounded-xl border border-[#dfe6ef] bg-white md:grid-cols-4">
           <Metric label="Business Premium" value={currency(totalPremium)} note={`${integer(filtered.length)} policies`} icon={BarChart3} />
-          <Metric label="Partner Payout" value={payoutValue === null ? "Restricted" : currency(payoutValue)} note={payout?.available ? `${integer(payout.paid_count)} paid` : "Based on your authorized payout scope"} icon={WalletCards} />
           <Metric label="Policies" value={integer(filtered.length)} note={`${bounds.from} to ${bounds.to}`} icon={BriefcaseBusiness} />
           <Metric label="Customers" value={integer(uniqueCustomers)} note="Unique customers in selected period" icon={UsersRound} last />
         </section>

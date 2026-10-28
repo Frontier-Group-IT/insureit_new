@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { PartnerReportTabs } from "@/components/partner-portal/partner-report-tabs";
 import type { PartnerReportScope } from "@/lib/reports/partner-report-scope";
-type Tab = "Overview" | "Business" | "Portfolio" | "Operations";
+type Tab = "Overview" | "Business";
 /** Presentation only. Data remains in account-scoped Partner RPCs, never employee/admin loaders. */
 export function PartnerReportsShell({ active, scope, children }: { active: Tab; scope: PartnerReportScope; children: ReactNode }) {
   const label = scope.role === "group" || scope.role === "group_associate" ? "Assigned group" : scope.role === "branch" ? "Your branch" : "Assigned partner";
