@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import * as Updates from 'expo-updates';
 import { useState } from 'react';
-import { ImageBackground, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { checkForCustomerUpdate } from '@/lib/customer-updates';
@@ -47,8 +47,7 @@ export default function CustomerSettingsAppInfoScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <ImageBackground source={require('../../assets/settings.jpeg')} resizeMode="cover" style={styles.header} imageStyle={styles.headerImage}>
-          <View pointerEvents="none" style={styles.headerOverlay} />
+        <View style={styles.header}>
           <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.back()} style={styles.backButton}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={palette.ink} />
           </Pressable>
@@ -59,7 +58,7 @@ export default function CustomerSettingsAppInfoScreen() {
             <Text style={styles.eyebrow}>ACCOUNT</Text>
             <Text style={styles.title}>Settings & app info</Text>
           </View>
-        </ImageBackground>
+        </View>
 
         <SectionLabel>DEVICE SECURITY</SectionLabel>
         <View style={styles.card}>
@@ -128,7 +127,6 @@ function InfoRow({ label, value, last = false }: { label: string; value: string;
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F5F7FB' },
   content: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 32 },
-  headerImage: { borderRadius: 16, opacity: 0.95 }, headerOverlay: { ...StyleSheet.absoluteFillObject, borderRadius: 16, backgroundColor: 'rgba(5,30,65,0.28)' },
   header: { minHeight: 62, flexDirection: 'row', alignItems: 'center', gap: 10 },
   backButton: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   headerIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF5FF' },
