@@ -5,7 +5,7 @@ import Image from "next/image";
 import { getInsurerLogo } from "@/lib/insurer-logo";
 import motion from "./renewals-motion.module.css";
 import { useMemo, useState } from "react";
-import { CalendarDays, FileText, Search, ShieldCheck, CarFront, Clock3, ClipboardCheck, Leaf, ReceiptText, BadgeCheck } from "lucide-react";
+import { CalendarDays, FileText, Search, Clock3 } from "lucide-react";
 
 export type RenewalRegisterItem = {
   id: string; title: string; key: string; vehicleId: string; vehicleNo: string;
@@ -13,14 +13,17 @@ export type RenewalRegisterItem = {
 };
 export type RenewalCategory = { key: string; title: string; count: number };
 
+const RENEWAL_ICON_BASE = "/assets/customer-renewals/icons/";
+
 function CategoryIcon({ title }: { title: string }) {
-  if (/insurance/i.test(title)) return <ShieldCheck className="h-5 w-5"/>;
-  if (/national permit/i.test(title)) return <BadgeCheck className="h-5 w-5"/>;
-  if (/local permit/i.test(title)) return <ClipboardCheck className="h-5 w-5"/>;
-  if (/road tax/i.test(title)) return <ReceiptText className="h-5 w-5"/>;
-  if (/puc/i.test(title)) return <Leaf className="h-5 w-5"/>;
-  if (/fitness/i.test(title)) return <CarFront className="h-5 w-5"/>;
-  return <FileText className="h-5 w-5"/>;
+  const icon = /insurance/i.test(title) ? "policy.png"
+    : /national permit/i.test(title) ? "national-permit.png"
+    : /local permit/i.test(title) ? "local-permit.png"
+    : /road tax/i.test(title) ? "road-tax.png"
+    : /puc/i.test(title) ? "puc.png"
+    : /fitness/i.test(title) ? "fitness.png"
+    : /driver.*licen[cs]e/i.test(title) ? "drivers-licence.png" : null;
+  return icon ? <Image src={`${RENEWAL_ICON_BASE}${icon}`} alt="" aria-hidden="true" width={32} height={32} unoptimized className="h-8 w-8 object-contain" /> : <FileText className="h-5 w-5" />;
 }
 
 export function CustomerRenewalsRegister({accountId,items,categories}:{
@@ -32,7 +35,7 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
   const groups=useMemo(()=>{
     const filtered=items.filter(item=>{
       const matches=[item.vehicleNo,item.title,item.reference,item.expiry,item.status].some(v=>v.toLowerCase().includes(query.trim().toLowerCase()));
-      return matches && (status==="all" || (status==="expired"?item.daysUntil<0:status==="due"?item.daysUntil>=0&&item.daysUntil<=45:item.daysUntil>45));
+      return matches && (status==="all" || (status==="expired"?item.daysUntil<0:item.daysUntil>=0&&item.daysUntil<=45));
     });
     const known=new Set(categories.map(cat=>cat.key));
     const groupList=[...categories,...(filtered.some(item=>!known.has(item.key))?[{key:"__other__",title:"Other renewals",count:0}]:[])];
@@ -59,7 +62,7 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
     <div className={`customer-register-panel grid gap-2 sm:grid-cols-[minmax(0,1fr)_190px] ${motion.controls}`}>
       <label className="customer-register-control flex h-10 min-w-0 items-center gap-2 rounded-lg border border-[#E0E7F4] bg-white px-3 text-[#8090B0]"><Search className="h-4 w-4 shrink-0"/><input aria-label="Search renewals" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by reference number, vehicle number or policy..." className="min-w-0 flex-1 border-0 bg-transparent text-[11px] text-[#253760] outline-none placeholder:text-[#9BA9C0]"/></label>
       <select aria-label="Filter by status" value={status} onChange={e=>setStatus(e.target.value)} className={`customer-register-control h-10 rounded-lg border border-[#E0E7F4] bg-white px-3 text-[11px] font-semibold text-[#53648C] ${motion.filterControl}`}>
-        <option value="all">All Status</option><option value="due">Due</option><option value="expired">Expired</option><option value="upcoming">Upcoming</option>
+        <option value="all">All Status</option><option value="due">Due</option><option value="expired">Expired</option>
       </select>
     </div>
     <div className="space-y-3">
@@ -68,7 +71,7 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
           const selected = activeCategory === cat.key;
           return <button key={cat.key} type="button" aria-pressed={selected} aria-expanded={selected} onClick={() => setActiveCategory(selected ? null : cat.key)}
             className={`flex min-w-0 flex-col items-center justify-center gap-2 rounded-xl border px-1.5 py-3 text-center transition hover:bg-[#F7F8FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6050E5] ${selected ? "border-[#6050E5] bg-[#F1F0FF] shadow-sm" : "border-[#E2E9F5] bg-white"}`}>
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#ECEEFF] text-[#6050E5]"><CategoryIcon title={cat.title}/></span>
+            <span className="grid h-9 w-9 place-items-center rounded-lg"><CategoryIcon title={cat.title}/></span>
             <strong className="w-full truncate text-[10px] font-semibold text-[#28346A]" title={cat.title}>{cat.title}</strong>
           </button>;
         })}
