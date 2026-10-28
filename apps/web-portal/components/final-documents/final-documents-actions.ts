@@ -134,6 +134,41 @@ export async function saveFinalDealershipDetails(formData: FormData): Promise<Ac
   }
 }
 
+
+// Operations-only insurer reference update. The existing claim workflow access
+// gate enforces the same permissions as Stage 3 details; never use a client-side
+// direct table write for insurer claim numbers.
+export async function saveOperationsInsurerClaimNumber(formData: FormData): Promise<ActionResult> {
+  try {
+    const claimId = clean(formData.get("claimId"));
+    const claimNumber = clean(formData.get("insurer_claim_no"));
+    if (!claimId) throw new Error("Missing claim id.");
+    if (!claimNumber || claimNumber.length > 120) throw new Error("Enter a valid insurer claim number (up to 120 characters).");
+    const { supabase } = await requireClaimWorkflowAccess(claimId, "You do not have permission to update this claim.");
+    const { data: claim, error: readError } = await supabase
+      .from("claims")
+      .select("id, insurer_claim_no, policy_service_source")
+      .eq("id", claimId)
+      .single<{ id: string; insurer_claim_no: string | null; policy_service_source: string | null }>();
+    if (readError || !claim) throw new Error(readError?.message ?? "Claim not found.");
+    if (claim.policy_service_source === "external") throw new Error("This action is only available for Internal Claims.");
+    if (claim.insurer_claim_no?.trim()) throw new Error("An insurer claim number is already recorded. Refresh to view it.");
+    const { data: updated, error } = await supabase.from("claims")
+      .update({ insurer_claim_no: claimNumber })
+      .eq("id", claimId)
+      .is("insurer_claim_no", null)
+      .select("id")
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!updated) throw new Error("The insurer claim number was already updated. Refresh the claim.");
+    revalidateClaimPaths(claimId);
+    return { ok: true, message: "Insurer claim number saved." };
+  } catch (error) {
+    console.error("saveOperationsInsurerClaimNumber failed", error);
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to save insurer claim number." };
+  }
+}
+
 export async function uploadFinalDocument(formData: FormData): Promise<ActionResult> {
   try {
     const claimId = clean(formData.get("claimId"));
