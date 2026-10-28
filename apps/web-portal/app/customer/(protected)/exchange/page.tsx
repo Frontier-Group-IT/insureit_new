@@ -1,3 +1,4 @@
+import "./customer-exchange-premium.css";
 import "../customer-register-motion.css";
 import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 import Link from "next/link";
@@ -90,13 +91,13 @@ export default async function CustomerExchangePage({
   });
 
   return (
-    <div className="customer-register-motion space-y-5">
+    <div className="customer-register-motion customer-exchange-premium space-y-5">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/exchange" />
 
-      <section className="customer-register-hero relative isolate overflow-hidden rounded-2xl border border-[#DCE6F2] bg-[#EAF4FF] px-5 py-6 shadow-[0_10px_28px_rgba(28,50,82,.05)] sm:px-7 sm:py-7">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[url('/assets/PT.jpeg')] bg-cover bg-center opacity-95" />
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F7FBFF]/85 via-[#F7FBFF]/45 via-45% to-transparent" />
-        <div className="relative z-10">
+      <section className="exchange-premium-hero customer-register-hero relative isolate overflow-hidden rounded-2xl border border-[#DCE6F2] bg-[#EAF4FF] px-5 py-6 shadow-[0_10px_28px_rgba(28,50,82,.05)] sm:px-7 sm:py-7">
+        <div aria-hidden="true" className="exchange-premium-hero-art pointer-events-none absolute inset-0 bg-[url('/assets/PT.jpeg')] bg-cover bg-center opacity-95" />
+        <div aria-hidden="true" className="exchange-premium-hero-shade pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F7FBFF]/85 via-[#F7FBFF]/45 via-45% to-transparent" />
+        <div className="relative z-10 max-w-[650px]">
           <h1 className="text-[clamp(27px,3.5vw,40px)] font-black leading-tight text-[#10213D]">
             Vehicle <span className="text-[#267AFF]">Exchange</span>
           </h1>
@@ -106,7 +107,7 @@ export default async function CustomerExchangePage({
         </div>
       </section>
 
-      <section className="customer-register-panel grid grid-cols-3 gap-2 rounded-2xl border border-[#DCE4EE] bg-white p-2 shadow-[0_8px_24px_rgba(28,50,82,.04)]">
+      <section className="exchange-premium-tabs customer-register-panel grid grid-cols-3 gap-2 rounded-2xl border border-[#DCE4EE] bg-white p-2 shadow-[0_8px_24px_rgba(28,50,82,.04)]">
         <Link href={tabHref("buy")} className={tabClass(tab === "buy")}>
           <ShoppingBag className="h-4 w-4" /> Buy
         </Link>
@@ -120,8 +121,8 @@ export default async function CustomerExchangePage({
 
       {tab === "buy" ? (
         <>
-          <section className="space-y-3">
-            <form className="customer-register-control flex w-full items-center gap-2 rounded-xl border border-[#D8E1EC] bg-white px-3 py-2.5 shadow-[0_4px_14px_rgba(28,50,82,.03)]">
+          <section className="exchange-premium-search-section space-y-3">
+            <form className="exchange-premium-search customer-register-control flex w-full items-center gap-2 rounded-xl border border-[#D8E1EC] bg-white px-3 py-2.5 shadow-[0_4px_14px_rgba(28,50,82,.03)]">
               <Search className="h-4 w-4 shrink-0 text-[#73829A]" />
               <input type="hidden" name="account" value={account.id} />
               <input type="hidden" name="tab" value="buy" />
@@ -130,7 +131,7 @@ export default async function CustomerExchangePage({
               <button className="customer-register-action rounded-lg bg-[#142746] px-4 py-2 text-[10px] font-black text-white">Search</button>
             </form>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="exchange-premium-categories flex flex-wrap gap-2">
               {categories.map((item) => (
                 <Link
                   key={item}
@@ -160,7 +161,7 @@ export default async function CustomerExchangePage({
           ) : rows.length === 0 ? (
             <EmptyCustomerState title="No Exchange listings found" body="Try another category or search term." />
           ) : (
-            <section>
+            <section className="exchange-premium-listings">
               <div className="mb-3 flex items-end justify-between gap-3">
                 <div>
                   <h2 className="text-[18px] font-black text-[#10213D]">Available Vehicles</h2>
@@ -168,7 +169,7 @@ export default async function CustomerExchangePage({
                 </div>
               </div>
 
-              <div className="overflow-x-auto rounded-2xl border border-[#DCE4EE] bg-white shadow-[0_8px_24px_rgba(28,50,82,.04)]">
+              <div className="exchange-premium-table-wrap overflow-x-auto rounded-2xl border border-[#DCE4EE] bg-white shadow-[0_8px_24px_rgba(28,50,82,.04)]">
                 <table className="w-full min-w-[1040px] table-fixed border-collapse text-left">
                   <thead className="border-b border-[#E8ECF2] bg-[#F8FAFC] text-[9px] font-black uppercase tracking-[.09em] text-[#6C778C]">
                     <tr>
@@ -187,7 +188,7 @@ export default async function CustomerExchangePage({
                       const hasPrice = Number(row.asking_price || 0) > 0;
                       const href = { pathname: `/customer/exchange/${row.listing_id}`, query: { account: account.id } };
                       return (
-                        <tr key={row.listing_id} className="customer-register-row group transition-colors hover:bg-[#FBFCFE]">
+                        <tr key={row.listing_id} className="exchange-premium-listing customer-register-row group transition-colors hover:bg-[#FBFCFE]">
                           <td className="px-5 py-4 align-top">
                             <div className="flex min-w-0 items-start gap-3">
                               <Link href={href} className="customer-register-image grid h-[75px] w-[88px] shrink-0 place-items-center overflow-hidden rounded-xl border border-[#E1E8F2] bg-[#EEF3F8]">
@@ -196,7 +197,7 @@ export default async function CustomerExchangePage({
                               <div className="min-w-0 pt-0.5">
                                 <div className="flex items-center gap-2">
                                   <Link href={href} className="truncate text-[12px] font-black text-[#173A7D] hover:underline">{row.listing_no}</Link>
-                                  <span className="shrink-0 rounded-full bg-[#E7F7EF] px-2 py-0.5 text-[9px] font-black text-[#087A4B]">LIVE</span>
+                                  <span className="exchange-premium-live shrink-0 rounded-full bg-[#E7F7EF] px-2 py-0.5 text-[9px] font-black text-[#087A4B]">LIVE</span>
                                 </div>
                                 <Link href={href} className="mt-1 block truncate text-[12px] font-extrabold text-[#273752] hover:text-[#176BD4]">{vehicleName}</Link>
                                 <p className="mt-1 truncate text-[10px] font-semibold text-[#72819B]">{row.masked_registration} · {row.year || "—"} · {row.category}</p>
@@ -227,7 +228,7 @@ export default async function CustomerExchangePage({
                             </div>
                           </td>
                           <td className="px-4 py-4 align-top">
-                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold ${row.owner_verified && row.documents_verified ? "text-[#13805C]" : "text-[#73839B]"}`}>
+                            <span className={`exchange-premium-verification inline-flex items-center gap-1 text-[10px] font-bold ${row.owner_verified && row.documents_verified ? "text-[#13805C]" : "text-[#73839B]"}`}>
                               <BadgeCheck className="h-4 w-4" />
                               {row.owner_verified && row.documents_verified ? "Verified" : "Review pending"}
                             </span>
@@ -252,7 +253,7 @@ export default async function CustomerExchangePage({
         ) : sellableVehicles.length === 0 ? (
           <EmptyCustomerState title="No vehicles available to sell" body="Vehicles linked to this customer account will appear here when eligible for Exchange." />
         ) : (
-          <section className="space-y-3">
+          <section className="exchange-premium-sell space-y-3">
             <div>
               <h2 className="text-[18px] font-black text-[#10213D]">Sell from your Fleet</h2>
               <p className="mt-1 text-[10px] font-semibold text-[#71839A]">The same eligible fleet used by the Customer App Exchange seller journey.</p>
@@ -282,7 +283,7 @@ export default async function CustomerExchangePage({
         activityUnavailable ? (
           <ExchangeRecovery accountId={account.id} tab="activity" />
         ) : (
-          <section className="space-y-4">
+          <section className="exchange-premium-activity space-y-4">
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
               <ActivityMetric icon={<Heart className="h-4 w-4" />} label="Saved" value={activity.favorites.length} />
               <ActivityMetric icon={<ShoppingBag className="h-4 w-4" />} label="Offers / Bids" value={activity.bids.length} />
@@ -304,7 +305,7 @@ export default async function CustomerExchangePage({
 }
 
 function tabClass(active: boolean) {
-  return `flex items-center justify-center gap-2 rounded-xl px-3 py-3 text-[11px] font-black transition ${
+  return `exchange-premium-tab flex items-center justify-center gap-2 rounded-xl px-3 py-3 text-[11px] font-black transition ${
     active ? "bg-[#173B68] text-white" : "text-[#63738A] hover:bg-[#F3F7FC]"
   }`;
 }
@@ -341,7 +342,7 @@ function ExchangeRecovery({
 
 function ActivityMetric({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-[#DCE4EE] bg-white p-4 shadow-[0_8px_24px_rgba(28,50,82,.04)]">
+    <div className="exchange-premium-activity-card rounded-2xl border border-[#DCE4EE] bg-white p-4 shadow-[0_8px_24px_rgba(28,50,82,.04)]">
       <div className="flex items-center gap-2 text-[#3156B8]">{icon}<span className="text-[10px] font-black">{label}</span></div>
       <p className="mt-2 text-[24px] font-black text-[#10213D]">{value.toLocaleString("en-IN")}</p>
     </div>
