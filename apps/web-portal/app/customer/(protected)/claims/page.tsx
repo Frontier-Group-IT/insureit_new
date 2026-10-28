@@ -125,6 +125,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
                         <CustomerClaimLogo value={claim.insurer_name} kind="insurer" size={30}/>
                         <span className="line-clamp-2 text-left text-[11px] text-[#536687]">{claim.insurer_name || "Insurer not recorded"}</span>
                       </div>
+                      <p className="mt-2 text-[11px] text-[#62718F]">Insurer Claim No. <span className="font-semibold">{claim.insurer_claim_no || "Pending insurer claim number"}</span></p>
                       <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-white/90 p-3 text-left text-[11px]">
                         <div><span className="block text-[#7A86A3]">Loss Date</span><span className="font-semibold text-[#233657]">{lossDate && !Number.isNaN(lossDate.getTime()) ? lossDate.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : "—"}</span></div>
                         <div><span className="block text-[#7A86A3]">Policy No.</span><span className="break-all font-semibold text-[#233657]">{claim.policy_no || "—"}</span></div>
