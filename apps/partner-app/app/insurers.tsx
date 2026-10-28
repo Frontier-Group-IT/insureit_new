@@ -43,6 +43,7 @@ export default function InsurerListScreen() {
   return (
     <PartnerScreen
       title="Insurance Company List"
+      navyTopBar
       scrollProps={{
         refreshControl: <RefreshControl refreshing={query.refreshing} onRefresh={() => void query.refresh()} />,
       }}

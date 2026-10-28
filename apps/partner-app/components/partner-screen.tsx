@@ -46,6 +46,7 @@ export function PartnerScreen({
   stickyHeading,
   stickyControls,
   stickyHeaderNavy = false,
+  navyTopBar = false,
   stickyStartY = 100,
 }: PropsWithChildren<{
   title: string;
@@ -66,6 +67,8 @@ export function PartnerScreen({
   stickyHeading?: string;
   stickyControls?: ReactNode;
   stickyHeaderNavy?: boolean;
+  /** Use the existing bottom-navigation navy for this screen's top heading only. */
+  navyTopBar?: boolean;
   stickyStartY?: number;
   heroSearch?: {
     value: string;
@@ -296,6 +299,7 @@ export function PartnerScreen({
         {!hideTopBar && !isHomeHero ? (
           <PartnerTopBar
             title={title}
+            navy={navyTopBar}
             eyebrow={eyebrow}
             subtitle={subtitle}
             onBack={onBack}

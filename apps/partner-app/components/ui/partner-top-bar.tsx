@@ -19,8 +19,10 @@ export function PartnerTopBar({
   actionLabel = 'Action',
   onAction,
   showArtwork = true,
+  navy = false,
 }: {
   title: string;
+  navy?: boolean;
   eyebrow?: string;
   subtitle?: string;
   onBack?: () => void;
@@ -35,7 +37,7 @@ export function PartnerTopBar({
   const resolvedArtwork = showArtwork ? (artwork ?? resolvePartnerScreenArtwork({ title, eyebrow })) : undefined;
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, navy && styles.navyRoot]}>
       {onBack ? (
         <Pressable
           accessibilityLabel="Back"
@@ -46,7 +48,7 @@ export function PartnerTopBar({
           onPress={onBack}
           style={({ pressed }) => [styles.iconButton, backDisabled && styles.disabled, pressed && !backDisabled && styles.pressed]}
         >
-          <Ionicons name="arrow-back" size={20} color={backDisabled ? partnerTheme.colors.inkSubtle : partnerTheme.colors.ink} />
+          <Ionicons name="arrow-back" size={20} color={navy ? "#FFFFFF" : backDisabled ? partnerTheme.colors.inkSubtle : partnerTheme.colors.ink} />
         </Pressable>
       ) : null}
 
@@ -57,9 +59,9 @@ export function PartnerTopBar({
       ) : null}
 
       <View style={styles.copy}>
-        {eyebrow ? <Text numberOfLines={1} style={styles.eyebrow}>{eyebrow}</Text> : null}
-        <Text accessibilityRole="header" numberOfLines={1} style={styles.title}>{title}</Text>
-        {subtitle ? <Text numberOfLines={1} style={styles.subtitle}>{subtitle}</Text> : null}
+        {eyebrow ? <Text numberOfLines={1} style={[styles.eyebrow, navy && styles.navyText]}>{eyebrow}</Text> : null}
+        <Text accessibilityRole="header" numberOfLines={1} style={[styles.title, navy && styles.navyText]}>{title}</Text>
+        {subtitle ? <Text numberOfLines={1} style={[styles.subtitle, navy && styles.navyText]}>{subtitle}</Text> : null}
       </View>
 
       {action ? <View style={styles.action}>{action}</View> : null}
@@ -71,7 +73,7 @@ export function PartnerTopBar({
           onPress={onAction}
           style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
         >
-          <Ionicons name={actionIcon} size={20} color={partnerTheme.colors.ink} />
+          <Ionicons name={actionIcon} size={20} color={navy ? "#FFFFFF" : partnerTheme.colors.ink} />
         </Pressable>
       ) : null}
     </View>
@@ -85,6 +87,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: partnerTheme.spacing.sm,
   },
+  navyRoot: { backgroundColor: '#071E49', marginHorizontal: -partnerTheme.spacing.lg, paddingHorizontal: partnerTheme.spacing.lg },
+  navyText: { color: '#FFFFFF' },
   artworkWrap: {
     width: 40,
     height: 40,
