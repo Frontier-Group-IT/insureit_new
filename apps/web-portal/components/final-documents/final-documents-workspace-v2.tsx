@@ -52,6 +52,7 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
   const [result, setResult] = useState<ActionResult | null>(null);
   const [claimNumberPromptOpen, setClaimNumberPromptOpen] = useState(false);
   const [claimNumberInput, setClaimNumberInput] = useState("");
+  const [advanceAfterClaimNumber, setAdvanceAfterClaimNumber] = useState(false);
   const [claimNumberError, setClaimNumberError] = useState("");
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -190,6 +191,15 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
   }
 
 
+  function closeClaimNumberPrompt() {
+    setClaimNumberPromptOpen(false);
+    if (advanceAfterClaimNumber) {
+      setAdvanceAfterClaimNumber(false);
+      router.replace(`/claims/${claimId}?stage=work_approval`);
+    }
+    router.refresh();
+  }
+
   function addClaimNumber() {
     const entered = claimNumberInput.trim();
     if (!entered) {
@@ -208,9 +218,8 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
           setClaimNumberError(saved.message ?? "Unable to save claim number.");
           return;
         }
-        setClaimNumberPromptOpen(false);
         setSuccessNotice(saved.message ?? "Claim number saved.");
-        router.refresh();
+        closeClaimNumberPrompt();
       } catch (error) {
         setPendingAction(null);
         setClaimNumberError(error instanceof Error ? error.message : "Unable to save claim number.");
@@ -252,8 +261,14 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
         setPendingAction(null);
         setResult(null);
         setSuccessNotice(response.advanced ? "Claim Intimation completed. Work Approval is now open." : "Stage details saved.");
-        router.replace(`/claims/${claimId}?stage=work_approval`);
-        router.refresh();
+        if (showClaimNumberPrompt) {
+          setClaimNumberError("");
+          setAdvanceAfterClaimNumber(true);
+          setClaimNumberPromptOpen(true);
+        } else {
+          router.replace(`/claims/${claimId}?stage=work_approval`);
+          router.refresh();
+        }
       } catch (error) {
         setPendingAction(null);
         setResult({ ok: false, message: error instanceof Error ? error.message : "Unable to complete Claim Intimation." });
@@ -273,7 +288,7 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
             </label>
             {claimNumberError ? <p role="alert" className="mt-2 text-[11px] font-medium text-red-700">{claimNumberError}</p> : null}
             <div className="mt-5 grid grid-cols-2 gap-3">
-              <button type="button" disabled={isPending} onClick={() => setClaimNumberPromptOpen(false)} className="h-10 rounded-lg border border-[#CFD9E8] bg-white text-[12px] font-semibold text-[#071D49] disabled:opacity-50">Not Now</button>
+              <button type="button" disabled={isPending} onClick={closeClaimNumberPrompt} className="h-10 rounded-lg border border-[#CFD9E8] bg-white text-[12px] font-semibold text-[#071D49] disabled:opacity-50">Not Now</button>
               <button type="button" disabled={isPending} onClick={addClaimNumber} className="h-10 rounded-lg bg-[#071D49] text-[12px] font-semibold text-white disabled:opacity-50">{pendingAction === "claim-number" ? "Saving..." : "Add"}</button>
             </div>
           </section>
