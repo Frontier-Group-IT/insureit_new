@@ -109,4 +109,7 @@ assert.ok(lifeCaseDetail.includes('onClick={saveDetails}'), "Case details requir
 assert.ok(lifeCaseDetail.includes('updateLifeHealthCaseDetails(editData())'), "Save must use existing authorized server action");
 assert.ok(lifeCaseDetail.includes('"Save Case Details"'), "Standalone save button must be visible");
 assert.ok(lifeCaseDetail.includes('onClick={convert}'), "Issue Policy workflow must remain available");
+const issuedCustomerSave = read("app/policies/life-health-issued-customer-edit-actions.ts");
+assert.match(issuedCustomerSave, /const policyId = clean\(formData\.get\("policyId"\)\);[\s\S]*?await requirePolicyEditor\(policyId\);/, "Issued Life/Health customer edit must authorize its exact policy record");
+assert.doesNotMatch(issuedCustomerSave, /requirePolicyEditor\(\)/, "Never call scoped Life/Health editor authorization without policy ID");
 console.log("Operations Head Life all-Life/Health visibility and downline-only writes regression passed.");

@@ -7,8 +7,10 @@ export type LifeHealthCustomerEditResult = { ok: true } | { ok: false; error: st
 const clean = (value: unknown) => String(value ?? "").trim();
 
 export async function updateIssuedLifeHealthCustomer(formData: FormData): Promise<LifeHealthCustomerEditResult> {
-  await requirePolicyEditor();
   const policyId = clean(formData.get("policyId"));
+  // Operations Head – Life requires the exact policy ID for record-scoped edit authorization.
+  // Never fall back to a global edit grant for this customer mutation.
+  await requirePolicyEditor(policyId);
   const caseId = clean(formData.get("caseId"));
   const customerName = clean(formData.get("customerName"));
   const customerPhone = clean(formData.get("customerPhone")).replace(/\D/g, "");
