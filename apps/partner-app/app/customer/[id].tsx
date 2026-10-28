@@ -38,7 +38,7 @@ export default function CustomerDetailScreen() {
 
 
   return (
-    <PartnerScreen title="Customer" hideTopBar fullWidth>
+    <PartnerScreen title="Customer" hideTopBar fullWidth scrollProps={{ style: { backgroundColor: '#FFFFFF' } }}>
       {loading ? (
         <PartnerStateView state="loading" title="Loading customer" />
       ) : error || !data ? (
