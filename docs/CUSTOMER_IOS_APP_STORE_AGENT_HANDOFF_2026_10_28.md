@@ -70,7 +70,13 @@ User requested native push for BOTH currently-live Android and first upcoming iO
 - Separate test/release gates for Android AAB and iOS TestFlight. Keep Customer iOS PR #3508 draft until native QA.
 - Reference: https://docs.expo.dev/push-notifications/push-notifications-setup/ .
 
+## Decision update — 2026-10-28 (latest)
+User explicitly deferred native push notifications for both Android and first iOS release. **Do not add expo-notifications, APNs, FCM, Push Notifications entitlement, or Broadcast Capability in the first iOS build**. Keep existing Supabase Realtime/in-app bell only. Native push is a separate future release proposal. On Apple Developer App ID registration, leave Push Notifications and Broadcast Capability unchecked. If Apple App ID was already registered with push, remove unnecessary push capabilities before generating the definitive distribution provisioning profile and avoid any push entitlement in the binary.
+User's Apple session timed out and screenshot shows Certificates list, with one valid same-team iOS Distribution certificate expiring 2027-10-14. Exact status of Customer App ID registration remains **unconfirmed**; next visit Apple Developer > Identifiers and check for INSUREIT Customer / com.insureit.mobile; register if missing, then create App Store Connect provisioning profile. Do NOT create/revoke a distribution certificate or reuse Partner provisioning profile.
+
 ## Change log
 - 2026-10-28: Created comprehensive first-iOS publishing handoff on OTA-inclusive release branch. Identified current App ID capability selection and recommended disabling Broadcast and standard Push Notifications pending verified native APNs support. Apple App ID registration not yet confirmed complete.
 
 - 2026-10-28: Native cross-platform push requested. Documented revised iOS App ID capability recommendation (standard Push ON, Broadcast OFF) conditional on implementation, and Android native AAB requirement. No signing changes performed by assistant.
+
+- 2026-10-28: User deferred native push. Reverted first-iOS capability recommendation to Push OFF and Broadcast OFF; Certificates screenshot shows existing certificate, but Customer App ID registration is unconfirmed. Next check Identifiers.
