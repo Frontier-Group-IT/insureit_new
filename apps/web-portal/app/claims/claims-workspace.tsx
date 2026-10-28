@@ -3,7 +3,7 @@
 import { INTERNAL_JOURNEY_STAGES, projectInternalClaim } from "@insureit/claim-journey";
 import Image from "next/image";
 import { FileText, ShieldCheck } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ExternalClaimOperationsEntry } from "@/components/claims/external-claim-operations-entry";
@@ -20,6 +20,19 @@ const workflowStages = INTERNAL_JOURNEY_STAGES.map((stage) => ({
 }));
 
 export function ClaimsWorkspace({ rows, initialParams, loadError, canAddClaim }: { rows: QueueClaimRow[]; initialParams: SearchParams; loadError: string | null; canAddClaim: boolean }) {
+  const openingClaimRef = useRef<string | null>(null);
+  const [openingClaimId, setOpeningClaimId] = useState<string | null>(null);
+  const startOpeningClaim = (claimId: string) => {
+    if (openingClaimRef.current) return false;
+    openingClaimRef.current = claimId;
+    setOpeningClaimId(claimId);
+    return true;
+  };
+  const releaseOpeningClaim = (claimId: string) => {
+    if (openingClaimRef.current !== claimId) return;
+    openingClaimRef.current = null;
+    setOpeningClaimId(null);
+  };
   const [query, setQuery] = useState(initialParams.q ?? "");
   const [selectedStatus, setSelectedStatus] = useState(initialParams.status && initialParams.status !== "all" ? initialParams.status : "");
   const [selectedStage, setSelectedStage] = useState(initialParams.journey ?? "");
@@ -100,7 +113,7 @@ function LocalClaimQueueTable({ rows, page, onPageChange }: { rows: QueueClaimRo
             const customer = claim.customers?.company_name ?? claim.customers?.contact_name ?? "-";
             const insurerName = claim.insurance_companies?.name ?? null;
             const insurerLogo = getInsurerLogo(insurerName);
-            return <tr key={claim.id} className="group bg-white align-middle shadow-[0_1px_0_rgba(226,232,240,0.86)] transition hover:bg-[#F8FBFF]"><td className="border-r border-[#E7ECF3] px-2 py-2"><div className="min-w-0"><span className="block truncate font-medium">{customer}</span><span className="block truncate text-[10px] text-[#344256]">{claim.customers?.phone ?? "-"}</span></div></td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.vehicles?.vehicle_no ?? "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{[claim.vehicles?.make, claim.vehicles?.model].filter(Boolean).join(" ") || "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{formatDate(claim.accident_at ?? claim.created_at)}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center"><span className="flex items-center justify-center">{insurerLogo ? <Image src={insurerLogo} alt={insurerName ? `${insurerName} logo` : "Insurance company"} width={32} height={32} className="max-h-7 max-w-[34px] w-auto object-contain" /> : <ShieldCheck className="h-4 w-4 text-[#7E91A8]" />}</span></td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.policies?.policy_no ?? "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.claim_no}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.insurer_claim_no ?? "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2"><span className="block">{customerProjection.stageLabel}</span></td><td className="px-2 py-2 text-center">{isExternalClaim(claim) ? <ExternalClaimOperationsEntry claimId={claim.id} /> : <Link prefetch={false} href={`/claims/${claim.id}`} className="inline-flex h-7 items-center justify-center rounded-md bg-[#003A83] px-3 text-[10.5px] font-medium text-white">Proceed</Link>}</td></tr>;
+            return <tr key={claim.id} className="group bg-white align-middle shadow-[0_1px_0_rgba(226,232,240,0.86)] transition hover:bg-[#F8FBFF]"><td className="border-r border-[#E7ECF3] px-2 py-2"><div className="min-w-0"><span className="block truncate font-medium">{customer}</span><span className="block truncate text-[10px] text-[#344256]">{claim.customers?.phone ?? "-"}</span></div></td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.vehicles?.vehicle_no ?? "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{[claim.vehicles?.make, claim.vehicles?.model].filter(Boolean).join(" ") || "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{formatDate(claim.accident_at ?? claim.created_at)}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center"><span className="flex items-center justify-center">{insurerLogo ? <Image src={insurerLogo} alt={insurerName ? `${insurerName} logo` : "Insurance company"} width={32} height={32} className="max-h-7 max-w-[34px] w-auto object-contain" /> : <ShieldCheck className="h-4 w-4 text-[#7E91A8]" />}</span></td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.policies?.policy_no ?? "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.claim_no}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.insurer_claim_no ?? "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2"><span className="block">{customerProjection.stageLabel}</span></td><td className="px-2 py-2 text-center">{isExternalClaim(claim) ? <ExternalClaimOperationsEntry claimId={claim.id} activeClaimId={openingClaimId} onClaimStart={startOpeningClaim} onClaimFailure={releaseOpeningClaim} /> : <Link prefetch={false} href={`/claims/${claim.id}`} className="inline-flex h-7 items-center justify-center rounded-md bg-[#003A83] px-3 text-[10.5px] font-medium text-white">Proceed</Link>}</td></tr>;
           }) : <tr><td className="px-3 py-8 text-center text-sm text-slate-500" colSpan={10}>No matching claims found.</td></tr>}</tbody>
         </table>
       </div>
