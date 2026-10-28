@@ -58,7 +58,7 @@ export default function CustomerDetailScreen() {
                 {customerTone(data.customer.status) === 'success' ? <Ionicons name="checkmark-circle" size={19} color="#0CB76B" /> : null}
               </View>
               <View style={redesign.actions}>
-                <PartnerContactActions phone={data.customer.phone} email={data.customer.email} inlineLabeled />
+                <PartnerContactActions phone={data.customer.phone} email={data.customer.email} inlineLabeled customerDetailLayout />
               </View>
             </View>
           </View>
@@ -171,7 +171,7 @@ function DetailCell({ icon, label, value }: { icon: keyof typeof Ionicons.glyphM
   return <View style={redesign.detailCell}><View style={redesign.iconCircle}><Ionicons name={icon} size={16} color="#1477DE" /></View><View style={{ flex: 1 }}><Text style={redesign.label}>{label}</Text><Text style={redesign.value}>{value && value !== '—' ? value : 'Not recorded'}</Text></View></View>;
 }
 const redesign = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 15, paddingHorizontal: 12, backgroundColor: partnerTheme.colors.nav },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 15, paddingHorizontal: 12, backgroundColor: '#071E49' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#FFFFFF' },
   profile: { backgroundColor: '#E5F1FF', flexDirection: 'row', alignItems: 'center', gap: 9, padding: 12 },
   avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#EEE1FF', alignItems: 'center', justifyContent: 'center' },
@@ -179,7 +179,7 @@ const redesign = StyleSheet.create({
   profileContent: { flex: 1, minWidth: 0, gap: 6 },
   profileNameWrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 5 },
   profileName: { color: '#111B37', fontSize: 13, fontWeight: '700', flexShrink: 1 },
-  actions: { alignItems: 'center' },
+  actions: { alignItems: 'flex-start', width: '100%' },
   tabs: { flexDirection: 'row', backgroundColor: '#FFFFFF' },
   tab: { flex: 1, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderBottomWidth: 3, borderBottomColor: 'transparent' },
   activeTab: { borderBottomColor: '#0879F1' },
