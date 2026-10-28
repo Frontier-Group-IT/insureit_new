@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=c4f2197657aacee1a976413f17a96d479f9ae0d5
-reason=publish-insurer-list-and-spot-intimation-20261028
+source_main=3bad045f7f949d76c097ba7c827fdcd3d894afae
+reason=publish-merged-pr-3682-insurer-register
