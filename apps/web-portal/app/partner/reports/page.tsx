@@ -3,7 +3,7 @@ import { ArrowRight, Info, AlertCircle, Clock3, Download } from "lucide-react";
 import { BusinessTrendCard } from "@/components/reports/business-trend-card";
 import { PartnerReportsShell } from "@/components/partner-portal/partner-reports-shell";
 import { requirePartnerReportScope } from "@/lib/reports/partner-report-scope";
-import { getPartnerWebBusinessPerformance, getPartnerWebPolicySummary, getPartnerWebClaimSummary, getPartnerWebRenewalSummary, getPartnerWebPayoutSummary, listPartnerWebPolicies, type PartnerPolicyRow } from "@/lib/partner-web";
+import { getPartnerWebBusinessPerformance, getPartnerWebPolicySummary, getPartnerWebClaimSummary, getPartnerWebRenewalSummary, listPartnerWebPolicies, type PartnerPolicyRow } from "@/lib/partner-web";
 import { getInsurerLogo } from "@/lib/insurer-logo";
 import Image from "next/image";
 
@@ -42,13 +42,12 @@ async function scopedPolicyRows(){
 }
 export default async function PartnerReportsPage({searchParams}:{searchParams:Promise<Query>}){
  const reportScope=await requirePartnerReportScope();
- const canShowPayout=reportScope.role === "partner" || reportScope.role === "partner_associate";
  const query=await searchParams;
  const period:Period=["mtd","last-month","last-6-months","custom"].includes(query.period||"") ? query.period as Period : "mtd";
  const business=["all","motor","non motor","life","health"].includes(query.business||"")?query.business!:"all";
- const [performance,policies,claims,renewals,payout,allRows]=await Promise.all([
+ const [performance,policies,claims,renewals,allRows]=await Promise.all([
   getPartnerWebBusinessPerformance(),getPartnerWebPolicySummary(),getPartnerWebClaimSummary(),
-  getPartnerWebRenewalSummary(),canShowPayout?getPartnerWebPayoutSummary():Promise.resolve({available:false as const}),
+  getPartnerWebRenewalSummary(),
   scopedPolicyRows(),
  ]);
  const day=/^\d{4}-\d{2}-\d{2}$/.test(performance.generated_at?.slice(0,10)||"")?performance.generated_at.slice(0,10):new Date().toISOString().slice(0,10);
@@ -117,7 +116,6 @@ export default async function PartnerReportsPage({searchParams}:{searchParams:Pr
       {!recent.length?<tr><td colSpan={5} className="r2-empty">No policy records in your reporting scope</td></tr>:null}
     </tbody></table></div>
    </section>
-   {payout.available && canShowPayout?<section className="ov-card ov-section p-3"><h2 className="text-[12px] font-bold">Authorized partner payout</h2><p className="text-[11px] text-slate-600">Recorded {money(payout.recorded_amount)} · Pending {money(payout.pending_amount)}</p></section>:null}
   </div>
  </PartnerReportsShell>;
 }
