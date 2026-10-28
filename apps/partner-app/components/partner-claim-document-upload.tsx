@@ -1,6 +1,6 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { useState } from 'react';
-import { Alert, Image, Modal, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { attachPartnerClaimDocument, removePartnerClaimDocument, type PartnerClaimDetail } from '@/lib/claims';
 import { supabase } from '@/lib/supabase';
@@ -94,7 +94,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
   const progressDialog = (
     <Modal transparent visible={uploadProgress !== null} animationType="fade" onRequestClose={() => {}}>
       <View style={styles.modalDim}><View style={styles.progressDialog}>
-        <Ionicons name="cloud-upload-outline" size={30} color="#1768C9" />
+        <ActivityIndicator size="large" color="#1768C9" />
         <Text style={styles.progressTitle}>Uploading Documents</Text>
         <Text style={styles.progressSubtitle}>Please keep this screen open while your files upload.</Text>
         <Text style={styles.progressCount}>{uploadProgress ? `Uploading file ${Math.min(uploadProgress.completed + 1, uploadProgress.total)} of ${uploadProgress.total}` : ''}</Text>
@@ -217,6 +217,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
       <Ionicons name={busy ? 'hourglass-outline' : 'cloud-upload-outline'} size={compact ? 16 : 18} color="#FFFFFF" />
       <Text numberOfLines={1} style={styles.text}>{busy ? 'Uploading…' : count ? `Add more (${count})` : 'Upload'}</Text>
     </Pressable>
+    {progressDialog}
     {successDialog}
     </>
   );
