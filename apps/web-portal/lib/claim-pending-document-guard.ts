@@ -1,6 +1,8 @@
+import { requireClaimWorkflowAccess } from "@/lib/claim-workflow-access";
+
 /** Operations must verify every uploaded, non-rejected claim document before saving a stage. */
 export async function requireVerifiedClaimDocuments(
-  supabase: { from: (table: string) => any },
+  supabase: Awaited<ReturnType<typeof requireClaimWorkflowAccess>>["supabase"],
   claimId: string,
 ) {
   const { data, error } = await supabase
