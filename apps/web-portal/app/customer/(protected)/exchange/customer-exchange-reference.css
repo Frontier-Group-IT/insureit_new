@@ -1,0 +1,24 @@
+/* Screenshot-aligned, compact marketplace presentation. Scoped to Customer Exchange only. */
+.exchange-reference.exchange-reference{--exchange-violet:#6655ed;--exchange-line:#dee5f3;gap:12px}
+.exchange-reference .exchange-premium-hero{min-height:125px;padding:17px 20px;border-color:#e0e3f5;background:linear-gradient(110deg,#f3f2ff,#e9efff);box-shadow:0 6px 18px rgba(49,61,130,.045)}
+.exchange-reference .exchange-premium-hero-art{background-position:center 48%;opacity:.72}
+.exchange-reference .exchange-premium-hero-shade{background:linear-gradient(90deg,#f2f2ff 0%,rgba(242,243,255,.96) 31%,rgba(242,244,255,.54) 53%,rgba(242,244,255,.05) 85%)}
+.exchange-reference .exchange-reference-gradient-text{background:linear-gradient(90deg,#554de4,#478af2);background-clip:text;-webkit-background-clip:text;color:transparent}
+.exchange-reference .exchange-premium-hero p{max-width:320px;margin-top:4px;font-size:11px;line-height:1.5;color:#71809e}
+.exchange-reference .exchange-premium-tabs{padding:4px;gap:6px;border-color:#e6eaf5;box-shadow:0 4px 14px rgba(46,66,119,.03)}
+.exchange-reference .exchange-premium-tab{min-height:38px;padding:8px;font-size:11px}
+.exchange-reference .exchange-premium-tab.bg-\\[\\#173B68\\]{background:linear-gradient(100deg,#7657f7,#526cef);color:white;box-shadow:0 5px 14px rgba(101,85,232,.22)}
+.exchange-reference .exchange-reference-controls{align-items:center}
+.exchange-reference .exchange-premium-search{min-height:39px;padding:4px 8px;border-color:#e6ebf6}
+.exchange-reference .exchange-reference-search-button{background:linear-gradient(100deg,#7159f1,#5072f1);box-shadow:0 3px 10px rgba(95,88,222,.16)}
+.exchange-reference .exchange-reference-category{min-height:30px;transition:background-color .18s,border-color .18s,transform .18s,box-shadow .18s}
+.exchange-reference .exchange-reference-category:hover{border-color:#c5c0f9;background:#f2f0ff}
+.exchange-reference .exchange-reference-category[aria-current="page"]{background:#172e5d;color:#fff;border-color:#172e5d}
+.exchange-reference .exchange-premium-listings h2{font-size:16px}
+.exchange-reference .exchange-reference-grid{align-items:stretch}
+.exchange-reference .exchange-reference-card{transition:border-color .2s,box-shadow .2s,transform .2s;animation:exchangeEnter .35s ease-out both}
+.exchange-reference .exchange-reference-card:hover{border-color:#c3c7fa;box-shadow:0 9px 23px rgba(80,86,165,.13);transform:translateY(-2px)}
+.exchange-reference .exchange-reference-card:focus-within{outline:2px solid #6c65dd;outline-offset:2px}
+@media(max-width:600px){.exchange-reference .exchange-premium-hero{padding:15px;min-height:130px}.exchange-reference .exchange-premium-hero p{max-width:260px}.exchange-reference .exchange-reference-controls{display:block}.exchange-reference .exchange-premium-categories{margin-top:8px}.exchange-reference .exchange-reference-grid{grid-template-columns:repeat(1,minmax(0,1fr))}}
+@media(min-width:601px) and (max-width:900px){.exchange-reference .exchange-reference-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){.exchange-reference *, .exchange-reference *:before,.exchange-reference *:after{animation:none!important;transition:none!important;transform:none!important}}
