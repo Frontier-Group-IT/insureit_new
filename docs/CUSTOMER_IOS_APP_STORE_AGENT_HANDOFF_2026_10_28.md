@@ -59,5 +59,18 @@ Last updated: 2026-10-28. Owner: INSUREIT project. **Update this file after EVER
 ## Next agent instructions
 Read this file first and verify latest GitHub/EAS/Apple state rather than relying on stale assumptions. Append a dated change log after each actual step, marking its evidence and the next action. Do not claim asynchronous/background monitoring. If a step requires a user action in Apple UI, provide exact scoped steps and continue from resulting screenshot. Do NOT repeatedly ask for information already recorded here.
 
+## Proposed native push expansion — 2026-10-28
+User requested native push for BOTH currently-live Android and first upcoming iOS binary. Status: **approved in principle for planning; NOT implemented or deployed**.
+- Preserve Supabase SMS OTP; FCM for Android push is NOT Firebase Auth/OTP.
+- Proposed shared `expo-notifications` client, ExpoPushToken registration per user/device (secure RLS), scoped server-side dispatch from approved notification events, foreground handling, tap/deep-link routing, deduplication and send receipt cleanup.
+- Android: FCM V1 service-account credential in EAS, explicit user consent, notification channel, NEW Android AAB with version code >9; do not modify current live production until tested.
+- iOS: ENABLE standard Push Notifications capability for `com.insureit.mobile` if implementing now; DISABLE Broadcast Capability (Live Activities are not used). Create APNs key under team 455GGC36YS and configure EAS; recreate/regenerate App Store provisioning profile after capability changes if required, then first signed iOS build.
+- Existing Customer app currently uses Supabase Realtime in-app notifications; `expo-notifications` not in package.json. No actual native push implementation yet.
+- Before build: audit duplication, authorization boundaries, notification data minimization, foreground/background handling, opt-out, simulator/device tests, token expiry and delivery receipts.
+- Separate test/release gates for Android AAB and iOS TestFlight. Keep Customer iOS PR #3508 draft until native QA.
+- Reference: https://docs.expo.dev/push-notifications/push-notifications-setup/ .
+
 ## Change log
 - 2026-10-28: Created comprehensive first-iOS publishing handoff on OTA-inclusive release branch. Identified current App ID capability selection and recommended disabling Broadcast and standard Push Notifications pending verified native APNs support. Apple App ID registration not yet confirmed complete.
+
+- 2026-10-28: Native cross-platform push requested. Documented revised iOS App ID capability recommendation (standard Push ON, Broadcast OFF) conditional on implementation, and Android native AAB requirement. No signing changes performed by assistant.
