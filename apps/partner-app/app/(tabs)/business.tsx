@@ -489,7 +489,7 @@ export default function BusinessScreen() {
             )}
           </View>
 
-          <SectionHeader title="Top Insurers" action={<Pressable onPress={() => router.push('/business-report')}><Text style={styles.viewAll}>View All ›</Text></Pressable>} />
+          <SectionHeader title="Top Insurers" action={<Pressable accessibilityRole="button" accessibilityLabel="View all insurers" onPress={() => { if (overviewRange === 'custom' && !customInsurerDatesApplied) { setOverviewCustomOpen(true); return; } router.push({ pathname: '/insurers', params: { from: insurerDates.from, to: insurerDates.to } } as never); }}><Text style={styles.viewAll}>View All ›</Text></Pressable>} />
           {topInsurers?.length ? (
             <View style={styles.insurerGrid}>
               {topInsurers.slice(0, 5).map((insurer) => (
