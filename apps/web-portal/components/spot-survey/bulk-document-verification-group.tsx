@@ -148,8 +148,7 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
                   verified={verified}
                   rejected={rejected}
                   selected={selected}
-                  onSelect={() => setSelectedIds(new Set([document.id]))}
-                  onDeselect={() => setSelectedIds((previous) => { const next = new Set(previous); next.delete(document.id); return next; })}
+                  onToggle={() => setSelectedIds((previous) => { const next = new Set(previous); if (next.has(document.id)) next.delete(document.id); else next.add(document.id); return next; })}
                 />
               );
             })}
@@ -168,7 +167,7 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
   );
 }
 
-function DocumentFileRow({ item, claim, document, verification, verified, rejected, selected, onSelect, onDeselect }: { item: BulkDocumentGroupItem; claim: ClaimContext; document: DocumentRow; verification?: VerificationRow; verified: boolean; rejected: boolean; selected: boolean; onSelect: () => void; onDeselect: () => void }) {
+function DocumentFileRow({ item, claim, document, verification, verified, rejected, selected, onToggle }: { item: BulkDocumentGroupItem; claim: ClaimContext; document: DocumentRow; verification?: VerificationRow; verified: boolean; rejected: boolean; selected: boolean; onToggle: () => void }) {
   const router = useRouter();
   const [deletePending, setDeletePending] = useState(false);
   const normalizedDocumentType = document.document_type?.toLowerCase() ?? "";
@@ -177,16 +176,15 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
   const selectable = !verified && !rejected;
 
   return (
-    <div className={`grid grid-cols-[32px_1fr] items-start gap-2 rounded-lg border p-2 transition ${verified ? "border-green-200 bg-green-50/75" : selected ? "border-[#8CB6FF] bg-[#F3F7FF]" : "border-[#E2EAF4] bg-white/80"}`}>
+    <div className={`grid grid-cols-[32px_1fr] items-start gap-2 rounded-lg border p-2 transition ${verified ? "border-green-200 bg-green-50/75" : "border-[#E2EAF4] bg-white/80"}`}>
       {selectable ? (
         <button
           type="button"
-          onClick={onSelect}
-          onDoubleClick={(event) => { event.stopPropagation(); onDeselect(); }}
+          onClick={onToggle}
           aria-pressed={selected}
-          aria-label={`Select ${document.file_name} for verification`}
-          title={selected ? "Selected — double-click to deselect" : "Click to select for verification"}
-          className={`grid h-8 w-8 place-items-center rounded-md border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/30 ${selected ? "border-[#174EA6] bg-[#EAF2FF]" : "border-transparent bg-transparent hover:border-[#B9D2FF] hover:bg-[#F4F8FF]"}`}
+          aria-label={`${selected ? "Deselect" : "Select"} ${document.file_name} for verification`}
+          title={selected ? "Click to deselect" : "Click to select for verification"}
+          className="grid h-8 w-8 place-items-center rounded-md bg-transparent transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/30"
         >
           <DocumentVerificationIcon verified={verified} selected={selected} />
         </button>

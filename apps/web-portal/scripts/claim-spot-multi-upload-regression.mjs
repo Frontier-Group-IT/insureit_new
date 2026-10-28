@@ -24,8 +24,10 @@ assert.match(workspace, /item\.documents\.length > 0 && item\.documents\.every/,
 assert.doesNotMatch(bulkVerificationGroup, /type="checkbox"/, "Stage 1 pending files must use the document icon rather than checkbox selection.");
 assert.match(bulkVerificationGroup, /documentIds=\{selectedDocumentIds\}/, "Verify must receive only the icon-selected file ids.");
 assert.match(bulkVerificationGroup, /disabled=\{false\}/, "Stage 1 Verify must remain clickable so an empty selection can show a warning.");
-assert.match(bulkVerificationGroup, /aria-label=\{`Select \$\{document\.file_name\} for verification`\}/, "The existing document icon must select the exact pending file.");
-assert.match(bulkVerificationGroup, /onDoubleClick=\{\(event\) => \{ event\.stopPropagation\(\); onDeselect\(\); \}\}/, "Double-click on the uploaded-file shield must deselect it.");
+assert.match(bulkVerificationGroup, /aria-label=\{`\$\{selected \? "Deselect" : "Select"\} \$\{document\.file_name\} for verification`\}/, "The document icon must label both select and deselect states for the exact pending file.");
+assert.match(bulkVerificationGroup, /onClick=\{onToggle\}/, "A single click on the uploaded-file shield must toggle selection.");
+assert.doesNotMatch(bulkVerificationGroup, /onDoubleClick=/, "Deselect must not require a double-click.");
+assert.match(bulkVerificationGroup, /if \(next\.has\(document\.id\)\) next\.delete\(document\.id\); else next\.add\(document\.id\);/, "Selection must toggle each document independently.");
 assert.match(bulkVerificationGroup, /<DocumentVerificationIcon verified=\{verified\} selected=\{selected\} \/>/, "The uploaded-file shield must display the blue selection checkmark.");
 assert.doesNotMatch(bulkVerificationGroup, /selectGroup\(\)|deselectGroup\(\)/, "Do not add another selection shield to category headings.");
 assert.match(verificationAction, /Please select a document to verify by clicking the document icon beside its file name\./, "Empty Stage 1 verification must show the document-selection warning.");
