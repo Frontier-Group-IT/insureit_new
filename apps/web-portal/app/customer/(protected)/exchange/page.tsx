@@ -1,9 +1,10 @@
+import "./customer-exchange-reference.css";
 import "./customer-exchange-premium.css";
 import "../customer-register-motion.css";
 import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Activity, BadgeCheck, Heart, Search, ShoppingBag, Store, Truck } from "lucide-react";
+import { Activity, ArrowLeftRight, BadgeCheck, Heart, MapPin, MoreVertical, Search, ShoppingBag, Store, Truck } from "lucide-react";
 import {
   CustomerAccountTabs,
   EmptyCustomerState,
@@ -91,19 +92,19 @@ export default async function CustomerExchangePage({
   });
 
   return (
-    <div className="customer-register-motion customer-exchange-premium space-y-5">
+    <div className="customer-register-motion customer-exchange-premium exchange-reference space-y-3">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/exchange" />
 
       <section className="exchange-premium-hero customer-register-hero relative isolate overflow-hidden rounded-2xl border border-[#DCE6F2] bg-[#EAF4FF] px-5 py-6 shadow-[0_10px_28px_rgba(28,50,82,.05)] sm:px-7 sm:py-7">
         <div aria-hidden="true" className="exchange-premium-hero-art pointer-events-none absolute inset-0 bg-[url('/assets/PT.jpeg')] bg-cover bg-center opacity-95" />
         <div aria-hidden="true" className="exchange-premium-hero-shade pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F7FBFF]/85 via-[#F7FBFF]/45 via-45% to-transparent" />
         <div className="relative z-10 max-w-[650px]">
-          <h1 className="text-[clamp(27px,3.5vw,40px)] font-black leading-tight text-[#10213D]">
-            Vehicle <span className="text-[#267AFF]">Exchange</span>
+          <div className="flex items-center gap-3"><span className="exchange-reference-hero-icon grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#E8E5FF] text-[#6950E8]"><ArrowLeftRight className="h-7 w-7" /></span><div><h1 className="text-[clamp(25px,3vw,34px)] font-black leading-tight text-[#15234A]">
+            Vehicle <span className="exchange-reference-gradient-text">Exchange</span>
           </h1>
           <p className="mt-2 text-[12px] leading-6 text-[#647995]">
             Buy, sell and track commercial vehicle Exchange activity from the same customer account.
-          </p>
+          </p></div></div>
         </div>
       </section>
 
@@ -122,37 +123,20 @@ export default async function CustomerExchangePage({
       {tab === "buy" ? (
         <>
           <section className="exchange-premium-search-section space-y-3">
-            <form className="exchange-premium-search customer-register-control flex w-full items-center gap-2 rounded-xl border border-[#D8E1EC] bg-white px-3 py-2.5 shadow-[0_4px_14px_rgba(28,50,82,.03)]">
-              <Search className="h-4 w-4 shrink-0 text-[#73829A]" />
-              <input type="hidden" name="account" value={account.id} />
-              <input type="hidden" name="tab" value="buy" />
-              {category !== "All" ? <input type="hidden" name="category" value={category} /> : null}
-              <CustomerAnimatedSearchInput name="q" defaultValue={query} aria-label="Search exchange listings" hints={["Search manufacturer…", "Search model…", "Search location…", "Search category…"]} className="text-[12px] font-semibold text-[#10213D]"/>
-              <button className="customer-register-action rounded-lg bg-[#142746] px-4 py-2 text-[10px] font-black text-white">Search</button>
-            </form>
-
-            <div className="exchange-premium-categories flex flex-wrap gap-2">
-              {categories.map((item) => (
-                <Link
-                  key={item}
-                  href={{
-                    pathname: "/customer/exchange",
-                    query: {
-                      account: account.id,
-                      tab: "buy",
-                      ...(query ? { q: query } : {}),
-                      ...(item !== "All" ? { category: item } : {}),
-                    },
-                  }}
-                  className={`customer-register-filter rounded-full border px-3.5 py-2 text-[10px] font-black transition ${
-                    category === item
-                      ? "border-[#142746] bg-[#142746] text-white"
-                      : "border-[#D8E1EC] bg-white text-[#64748B] hover:border-[#AFC5DE]"
-                  }`}
-                >
-                  {item}
-                </Link>
-              ))}
+            <div className="exchange-reference-controls flex flex-wrap items-center gap-2">
+              <form className="exchange-premium-search customer-register-control flex min-w-[180px] flex-[2] items-center gap-2 rounded-xl border border-[#D8E1EC] bg-white px-3 py-2 shadow-sm">
+                <Search className="h-4 w-4 shrink-0 text-[#73829A]" />
+                <input type="hidden" name="account" value={account.id} />
+                <input type="hidden" name="tab" value="buy" />
+                {category !== "All" ? <input type="hidden" name="category" value={category} /> : null}
+                <CustomerAnimatedSearchInput name="q" defaultValue={query} aria-label="Search exchange listings" hints={["Search model, vehicle, brand…", "Search location…", "Search category…"]} className="text-[12px] font-semibold text-[#10213D]"/>
+                <button className="exchange-reference-search-button customer-register-action inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#6255EE] px-4 py-2 text-[11px] font-bold text-white"><Search className="h-3.5 w-3.5"/>Search</button>
+              </form>
+              <div className="exchange-premium-categories flex flex-wrap items-center gap-1.5">
+                {categories.map(item => <Link key={item} href={{pathname:"/customer/exchange",query:{account:account.id,tab:"buy",...(query?{q:query}:{}),...(item!=="All"?{category:item}:{})}}} aria-current={category===item?"page":undefined} className={`exchange-reference-category inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-[10px] font-bold ${category===item?"border-[#142746] bg-[#142746] text-white":"border-[#E0E6F2] bg-white text-[#63738B]"}`}>
+                  {item==="Truck"||item==="Tipper"||item==="Pickup"||item==="Bus" ? <Truck className="h-3.5 w-3.5"/> : null}{item}
+                </Link>)}
+              </div>
             </div>
           </section>
 
@@ -169,78 +153,41 @@ export default async function CustomerExchangePage({
                 </div>
               </div>
 
-              <div className="exchange-premium-table-wrap overflow-x-auto rounded-2xl border border-[#DCE4EE] bg-white shadow-[0_8px_24px_rgba(28,50,82,.04)]">
-                <table className="w-full min-w-[1040px] table-fixed border-collapse text-left">
-                  <thead className="border-b border-[#E8ECF2] bg-[#F8FAFC] text-[9px] font-black uppercase tracking-[.09em] text-[#6C778C]">
-                    <tr>
-                      <th scope="col" className="w-[32%] px-5 py-4">Listing / Vehicle</th>
-                      <th scope="col" className="w-[14%] px-4 py-4">Location</th>
-                      <th scope="col" className="w-[16%] px-4 py-4">Commercials</th>
-                      <th scope="col" className="w-[19%] px-4 py-4">Evidence</th>
-                      <th scope="col" className="w-[12%] px-4 py-4">Verification</th>
-                      <th scope="col" className="w-[7%] px-3 py-4 text-center">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E8EDF5]">
-                    {rows.map((row) => {
-                      const vehicleName = [row.make, row.model].filter(Boolean).join(" ") || row.title;
-                      const location = [row.city, row.state].filter(Boolean).join(", ") || "Location on request";
-                      const hasPrice = Number(row.asking_price || 0) > 0;
-                      const href = { pathname: `/customer/exchange/${row.listing_id}`, query: { account: account.id } };
-                      return (
-                        <tr key={row.listing_id} className="exchange-premium-listing customer-register-row group transition-colors hover:bg-[#FBFCFE]">
-                          <td className="px-5 py-4 align-top">
-                            <div className="flex min-w-0 items-start gap-3">
-                              <Link href={href} className="customer-register-image grid h-[75px] w-[88px] shrink-0 place-items-center overflow-hidden rounded-xl border border-[#E1E8F2] bg-[#EEF3F8]">
-                                {row.cover_url ? <img src={row.cover_url} alt={vehicleName} className="h-full w-full object-cover" /> : <Truck className="h-8 w-8 text-[#8295B0]" />}
-                              </Link>
-                              <div className="min-w-0 pt-0.5">
-                                <div className="flex items-center gap-2">
-                                  <Link href={href} className="truncate text-[12px] font-black text-[#173A7D] hover:underline">{row.listing_no}</Link>
-                                  <span className="exchange-premium-live shrink-0 rounded-full bg-[#E7F7EF] px-2 py-0.5 text-[9px] font-black text-[#087A4B]">LIVE</span>
-                                </div>
-                                <Link href={href} className="mt-1 block truncate text-[12px] font-extrabold text-[#273752] hover:text-[#176BD4]">{vehicleName}</Link>
-                                <p className="mt-1 truncate text-[10px] font-semibold text-[#72819B]">{row.masked_registration} · {row.year || "—"} · {row.category}</p>
-                                <p className="mt-1 truncate text-[9.5px] text-[#8291A8]">{row.vehicle_type || "Commercial vehicle"}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 align-top">
-                            <p className="text-[11px] font-bold text-[#34435C]">{location}</p>
-                            <p className="mt-1 text-[10px] text-[#7A899F]">{row.odometer_km != null ? `${Number(row.odometer_km).toLocaleString("en-IN")} km` : "Mileage unavailable"}</p>
-                          </td>
-                          <td className="px-4 py-4 align-top">
-                            <p className="text-[14px] font-black text-[#182B4B]">{hasPrice ? formatCustomerCompactMoney(Number(row.asking_price)) : "On request"}</p>
-                            <p className="mt-1 text-[9px] font-bold uppercase text-[#7687A0]">{row.selling_mode.replaceAll("_", " ")}</p>
-                            {row.bid_count > 0 ? <p className="mt-2 text-[10px] font-semibold text-[#59749A]">{row.bid_count} offer{row.bid_count === 1 ? "" : "s"}</p> : null}
-                          </td>
-                          <td className="px-4 py-4 align-top">
-                            <div className="flex items-center gap-2">
-                              <div className="customer-register-image grid h-12 w-14 shrink-0 place-items-center overflow-hidden rounded-lg border border-[#E1E8F2] bg-[#F1F5FA]">
-                                {row.cover_url ? <img src={row.cover_url} alt="Listing cover" className="h-full w-full object-cover" /> : <Truck className="h-5 w-5 text-[#8C9BB0]" />}
-                              </div>
-                              <span className="text-[10px] font-semibold text-[#70819A]">Vehicle image</span>
-                            </div>
-                            <div className="mt-2 flex flex-wrap gap-1">
-                              <span className={`rounded-full px-2 py-1 text-[9px] font-bold ${row.owner_verified ? "bg-[#E7F8F0] text-[#0B8456]" : "bg-[#F2F4F7] text-[#8994A5]"}`}>{row.owner_verified ? "●" : "○"} Owner</span>
-                              <span className={`rounded-full px-2 py-1 text-[9px] font-bold ${row.documents_verified ? "bg-[#E7F8F0] text-[#0B8456]" : "bg-[#F2F4F7] text-[#8994A5]"}`}>{row.documents_verified ? "●" : "○"} Docs</span>
-                              <span className={`rounded-full px-2 py-1 text-[9px] font-bold ${row.inspected ? "bg-[#E7F8F0] text-[#0B8456]" : "bg-[#F2F4F7] text-[#8994A5]"}`}>{row.inspected ? "●" : "○"} Inspection</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 align-top">
-                            <span className={`exchange-premium-verification inline-flex items-center gap-1 text-[10px] font-bold ${row.owner_verified && row.documents_verified ? "text-[#13805C]" : "text-[#73839B]"}`}>
-                              <BadgeCheck className="h-4 w-4" />
-                              {row.owner_verified && row.documents_verified ? "Verified" : "Review pending"}
-                            </span>
-                          </td>
-                          <td className="px-3 py-4 text-center align-top">
-                            <Link href={href} aria-label={`View listing ${row.listing_no}`} className="customer-register-action inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#D8E2F0] text-lg font-extrabold text-[#1C3B72] transition hover:bg-[#E9F2FF]">⋮</Link>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              <div className="exchange-reference-grid grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {rows.map(row => {
+                  const vehicleName=[row.make,row.model].filter(Boolean).join(" ")||row.title;
+                  const location=[row.city,row.state].filter(Boolean).join(", ")||"Location on request";
+                  const hasPrice=Number(row.asking_price||0)>0;
+                  const href={pathname:`/customer/exchange/${row.listing_id}`,query:{account:account.id}};
+                  const verified=row.owner_verified&&row.documents_verified;
+                  return <article key={row.listing_id} className="exchange-reference-card group min-w-0 overflow-hidden rounded-xl border border-[#DEE6F5] bg-white p-2 shadow-[0_5px_18px_rgba(34,70,120,.06)]">
+                    <div className="relative h-[104px] overflow-hidden rounded-lg bg-[#EAF1FA]">
+                      <Link href={href} aria-label={`View ${vehicleName}`} className="block h-full w-full">
+                        {row.cover_url?<img src={row.cover_url} alt={vehicleName} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.035]"/>:<div className="flex h-full items-center justify-center bg-gradient-to-br from-[#EDF3FC] to-[#D4E4FA]"><Truck className="h-12 w-12 text-[#6583B0]"/></div>}
+                      </Link>
+                      <span className={`absolute left-2 top-2 rounded-full px-2 py-1 text-[9px] font-extrabold text-white ${verified?"bg-[#15966D]":"bg-[#7460E8]"}`}>{verified?"● VERIFIED":"● LIVE"}</span>
+                      <Link href={href} aria-label={`Open listing ${row.listing_no}`} className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-white/90 text-[#7163C5] shadow-sm"><Heart className="h-3.5 w-3.5"/></Link>
+                    </div>
+                    <div className="px-1 pb-1 pt-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0"><Link href={href} className="block truncate text-[11px] font-extrabold text-[#173A7D]">{row.listing_no}</Link><Link href={href} title={vehicleName} className="mt-1 block truncate text-[11px] font-bold text-[#263758]">{vehicleName}</Link></div>
+                        <div className="shrink-0 text-right"><p className="text-[13px] font-black text-[#162E57]">{hasPrice?formatCustomerCompactMoney(Number(row.asking_price)):"On request"}</p><p className="mt-1 text-[8px] font-bold uppercase text-[#8796AB]">{row.selling_mode.replaceAll("_"," ")}</p></div>
+                      </div>
+                      <p className="mt-1 truncate text-[9px] text-[#8490AB]">{row.masked_registration} · {row.year||"—"} · {row.category}</p>
+                      <div className="mt-2 flex items-center justify-between gap-2 text-[9px] text-[#637995]">
+                        <span className="inline-flex min-w-0 items-center gap-1 truncate"><MapPin className="h-3 w-3 shrink-0"/>{location}</span>
+                        <span className="shrink-0 text-[#6955D8]">{row.bid_count} offer{row.bid_count===1?"":"s"}</span>
+                      </div>
+                      <div className="mt-1 flex items-center gap-1 text-[9px] text-[#8390A6]"><Truck className="h-3 w-3"/>{row.odometer_km!=null?`${Number(row.odometer_km).toLocaleString("en-IN")} km`:"Mileage unavailable"}</div>
+                      <div className="mt-2 flex flex-wrap items-center gap-1 border-t border-[#EDF0F7] pt-2">
+                        <span className={`rounded-full px-1.5 py-1 text-[8px] font-semibold ${row.owner_verified?"bg-[#E4F8EC] text-[#17815B]":"bg-[#F2F4F9] text-[#8391A7]"}`}>● Owner</span>
+                        <span className={`rounded-full px-1.5 py-1 text-[8px] font-semibold ${row.documents_verified?"bg-[#E4F8EC] text-[#17815B]":"bg-[#F2F4F9] text-[#8391A7]"}`}>● Docs</span>
+                        <span className={`rounded-full px-1.5 py-1 text-[8px] font-semibold ${row.inspected?"bg-[#E4F8EC] text-[#17815B]":"bg-[#F2F4F9] text-[#8391A7]"}`}>● Inspection</span>
+                        <Link href={href} aria-label={`View listing ${row.listing_no}`} className="ml-auto grid h-7 w-7 place-items-center rounded-lg border border-[#E0E7F4] text-[#244A87] hover:bg-[#EFF4FF]"><MoreVertical className="h-4 w-4"/></Link>
+                      </div>
+                    </div>
+                  </article>;
+                })}
               </div>
             </section>
           )}
