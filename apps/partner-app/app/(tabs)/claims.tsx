@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
   stickyTitle: { marginLeft: 18, marginTop: 12, marginBottom: 12, color: "#FFFFFF", fontSize: 15, lineHeight: 18, fontWeight: "400", letterSpacing: -0.2 },
   stickySearchBody: { paddingHorizontal: 10, paddingBottom: 10, backgroundColor: "#082657" },
 
-  hero: { height: 98, overflow: 'hidden', backgroundColor: '#0752A2' },
+  hero: { height: 98, overflow: 'hidden', backgroundColor: '#071E49' },
   heroBackdrop: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%', opacity: 0.92 },
   heroShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(1,42,95,0.10)' },
   heroTopRow: {
