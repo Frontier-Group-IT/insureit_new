@@ -6,7 +6,7 @@ import { matchesClaimIntimationDocument } from "@insureit/claim-journey";
 import { completeClaimJourneyStage } from "@/app/claims/stage-actions";
 import { ClaimStageSuccessPopup } from "@/components/claim-manager/claim-stage-success-popup";
 import { finalDocumentDefinitions, finalDocumentTabs } from "./final-document-groups";
-import { loadFinalClaimIntimationDetails, saveFinalDealershipDetails, submitFinalDocumentsDraft } from "./final-documents-actions";
+import { loadFinalClaimIntimationDetails, saveFinalDealershipDetails, saveOperationsInsurerClaimNumber, submitFinalDocumentsDraft } from "./final-documents-actions";
 import { loadFinalDocumentVerificationData, type FinalVerificationData, type FinalVerificationDocument } from "./final-document-verification-data-actions";
 import { Stage3DocumentVerificationGroup, type Stage3DocumentVerificationItem } from "./stage3-document-verification-group";
 import { classifyStage3BulkAttachment, loadStage3UnclassifiedAttachments, type Stage3UnclassifiedAttachment } from "./stage3-bulk-classify-actions";
@@ -45,11 +45,14 @@ type DocumentVisual = {
   fallbackIcon: string;
 };
 
-export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, allowStageAdvance = true }: { claimId: string; rows: FinalDocumentRowV2[]; dealershipDetails?: DealershipDetailsV2 | null; allowStageAdvance?: boolean }) {
+export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, allowStageAdvance = true, showClaimNumberPrompt = false }: { claimId: string; rows: FinalDocumentRowV2[]; dealershipDetails?: DealershipDetailsV2 | null; allowStageAdvance?: boolean; showClaimNumberPrompt?: boolean }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState(0);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [result, setResult] = useState<ActionResult | null>(null);
+  const [claimNumberPromptOpen, setClaimNumberPromptOpen] = useState(false);
+  const [claimNumberInput, setClaimNumberInput] = useState("");
+  const [claimNumberError, setClaimNumberError] = useState("");
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [unclassifiedAttachments, setUnclassifiedAttachments] = useState<Stage3UnclassifiedAttachment[]>([]);
@@ -178,7 +181,41 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
   }
 
   function saveStageDetails() {
-    run("stage-details", () => saveFinalDealershipDetails(stageDetailsForm()));
+    run("stage-details", () => saveFinalDealershipDetails(stageDetailsForm()), () => {
+      if (showClaimNumberPrompt) {
+        setClaimNumberError("");
+        setClaimNumberPromptOpen(true);
+      }
+    });
+  }
+
+
+  function addClaimNumber() {
+    const entered = claimNumberInput.trim();
+    if (!entered) {
+      setClaimNumberError("Enter the insurer claim number.");
+      return;
+    }
+    const data = baseForm();
+    data.set("insurer_claim_no", entered);
+    setClaimNumberError("");
+    setPendingAction("claim-number");
+    startTransition(async () => {
+      try {
+        const saved = await saveOperationsInsurerClaimNumber(data);
+        setPendingAction(null);
+        if (!saved.ok) {
+          setClaimNumberError(saved.message ?? "Unable to save claim number.");
+          return;
+        }
+        setClaimNumberPromptOpen(false);
+        setSuccessNotice(saved.message ?? "Claim number saved.");
+        router.refresh();
+      } catch (error) {
+        setPendingAction(null);
+        setClaimNumberError(error instanceof Error ? error.message : "Unable to save claim number.");
+      }
+    });
   }
 
   function saveAndContinue() {
@@ -226,6 +263,22 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
 
   return (
     <div className="space-y-3">
+      {claimNumberPromptOpen ? (
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-[#07152F]/60 px-4" role="presentation">
+          <section role="dialog" aria-modal="true" aria-labelledby="claim-number-modal-title" aria-describedby="claim-number-modal-subtitle" className="w-full max-w-sm rounded-2xl border border-[#D9E6F7] bg-white p-5 shadow-2xl">
+            <div className="mb-3 flex items-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#EAF2FF] text-[#174EA6]">#</span><h2 id="claim-number-modal-title" className="text-[16px] font-bold text-[#071D49]">Claim Number</h2></div>
+            <p id="claim-number-modal-subtitle" className="mb-4 text-[12px] leading-5 text-[#52647C]">Have you received the claim number from the insurance company? Add it now, or update it later.</p>
+            <label className="block text-[11px] font-semibold text-[#174EA6]">Insurance Claim Number
+              <input autoFocus type="text" value={claimNumberInput} maxLength={120} onChange={(event) => { setClaimNumberInput(event.target.value); setClaimNumberError(""); }} placeholder="Enter claim number" className="mt-1.5 h-10 w-full rounded-lg border border-[#D9E3F0] bg-white px-3 text-[12px] font-medium text-[#071D49] outline-none focus:border-[#174EA6]" />
+            </label>
+            {claimNumberError ? <p role="alert" className="mt-2 text-[11px] font-medium text-red-700">{claimNumberError}</p> : null}
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <button type="button" disabled={isPending} onClick={() => setClaimNumberPromptOpen(false)} className="h-10 rounded-lg border border-[#CFD9E8] bg-white text-[12px] font-semibold text-[#071D49] disabled:opacity-50">Not Now</button>
+              <button type="button" disabled={isPending} onClick={addClaimNumber} className="h-10 rounded-lg bg-[#071D49] text-[12px] font-semibold text-white disabled:opacity-50">{pendingAction === "claim-number" ? "Saving..." : "Add"}</button>
+            </div>
+          </section>
+        </div>
+      ) : null}
       <section className="rounded-2xl border border-[#DFE8F4] bg-white p-4 shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
         <div className="flex items-center justify-between gap-3">
           <div>
