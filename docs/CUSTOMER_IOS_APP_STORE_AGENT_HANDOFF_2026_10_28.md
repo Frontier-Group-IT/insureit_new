@@ -46,7 +46,7 @@ Last updated: 2026-10-28. Owner: INSUREIT project. **Update this file after EVER
 - Expo Customer project is under personal account `antnish`, GitHub repo under `Frontier-Group-IT` org. Expo direct GitHub linking UI requested an Expo organization. Workaround is manual GitHub Actions EAS workflow using existing personal Expo project, NOT moving repositories/accounts.
 
 ## Pending gates to release
-- [ ] Register new Customer App ID correctly on Apple Developer; verify explicit bundle ID and capabilities.
+- [x] Register Customer App ID in Apple Developer: screenshot 2026-10-28 confirms INSUREIT Customer / com.insureit.mobile listed under Sankalp Insurance Brokers team 455GGC36YS. Capabilities (Push/Broadcast disabled) still to inspect.
 - [ ] Generate Customer App Store Connect provisioning profile for `com.insureit.mobile`, using same-team distribution certificate.
 - [ ] Verify Customer Expo stored signing certificates and profile in project credentials.
 - [ ] Check latest OTA/channel and freeze verified release candidate commit, ensure no Firebase OTP or inadvertent Android changes.
@@ -80,3 +80,5 @@ User's Apple session timed out and screenshot shows Certificates list, with one 
 - 2026-10-28: Native cross-platform push requested. Documented revised iOS App ID capability recommendation (standard Push ON, Broadcast OFF) conditional on implementation, and Android native AAB requirement. No signing changes performed by assistant.
 
 - 2026-10-28: User deferred native push. Reverted first-iOS capability recommendation to Push OFF and Broadcast OFF; Certificates screenshot shows existing certificate, but Customer App ID registration is unconfirmed. Next check Identifiers.
+
+- 2026-10-28: User screenshot confirms Customer App ID successfully registered in Apple Developer identifiers alongside Partner. Next inspect capabilities, then generate Customer-specific App Store Connect provisioning profile and import into Customer Expo. Native push deferred.
