@@ -50,3 +50,14 @@ export async function getPartnerTopInsurers(fromDate: string, toDate: string): P
   if (error) throw error;
   return Array.isArray(data) ? data as PartnerTopInsurer[] : [];
 }
+
+export type PartnerInsurerRegisterRow = PartnerTopInsurer & { payout: number | string | null };
+
+export async function getPartnerInsurerRegister(fromDate: string, toDate: string): Promise<PartnerInsurerRegisterRow[]> {
+  const { data, error } = await supabase.rpc('partner_app_insurer_register_range', {
+    p_from_date: fromDate,
+    p_to_date: toDate,
+  });
+  if (error) throw error;
+  return Array.isArray(data) ? data as PartnerInsurerRegisterRow[] : [];
+}
