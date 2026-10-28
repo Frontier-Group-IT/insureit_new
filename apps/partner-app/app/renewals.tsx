@@ -299,7 +299,7 @@ function renewalTone(value: string | null): 'warning' | 'info' { return daysUnti
 function formatUpdatedAt(value: number | null) { if (!value) return 'earlier'; return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value)); }
 
 const styles = StyleSheet.create({
-  referenceHeader: { minHeight: 82, marginHorizontal: -partnerTheme.spacing.lg, marginBottom: 14, paddingHorizontal: 18, backgroundColor: '#075BC6', flexDirection: 'row', alignItems: 'center', gap: 12 },
+  referenceHeader: { minHeight: 64, marginHorizontal: -partnerTheme.spacing.lg, marginBottom: 14, paddingHorizontal: 18, backgroundColor: '#071E49', flexDirection: 'row', alignItems: 'center', gap: 12 },
   referenceTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '800', flexShrink: 1 },
   summaryPanel: { marginTop: 0, padding: 16, borderRadius: 15, backgroundColor: '#092D69', shadowColor: '#0A285F', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 2 },
   summaryLead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
