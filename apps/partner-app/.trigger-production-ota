@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=3d0bb78bb4a4edb2879210c92bc8ac618974b9e1
-reason=publish-merged-pr-3684-customer-detail-compact-policy
+source_main=767247c3912fc0858f4d52db5d7fb4ff180484ff
+reason=publish-merged-pr-3685-partner-claims-renewals-customer-headers
