@@ -45,6 +45,9 @@ export type BusinessGroupPartner = {
   parent_partner_id: string | null;
   owner_employee_id: string | null;
   is_branch_profile: boolean;
+  email?: string | null;
+  phone?: string | null;
+  contact_name?: string | null;
 };
 
 export type BusinessGroupMembership = {
@@ -133,7 +136,7 @@ export function BusinessGroupWorkspace({
 
   const visibleGroups = groups.filter((group) => {
     if (!normalizedQuery) return true;
-    if (group.group_name.toLowerCase().includes(normalizedQuery) || group.group_code.toLowerCase().includes(normalizedQuery)) return true;
+    if (group.group_name.toLowerCase().includes(normalizedQuery) || group.group_code.toLowerCase().includes(normalizedQuery) || group.description?.toLowerCase().includes(normalizedQuery)) return true;
     const memberIds = memberships.filter((membership) => membership.group_id === group.id).map((membership) => membership.partner_id);
     return memberIds.some((partnerId) => {
       const root = partners.find((partner) => partner.id === partnerId);
@@ -156,7 +159,7 @@ export function BusinessGroupWorkspace({
           <h2 className="shrink-0 text-[13px] font-bold text-[#17365D]">Group Register</h2>
           <div className="relative min-w-[260px] flex-1 lg:max-w-2xl">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B9AAF]" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search Group, Partner or Branch" className="h-10 w-full rounded-xl border border-[#D7E0EA] bg-white pl-10 pr-3 text-[10px] text-[#1E344F] shadow-sm outline-none focus:border-[#7D94E6] focus:ring-2 focus:ring-[#E8EDFF]" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search group, branch, contact, mobile, email or code" className="h-10 w-full rounded-xl border border-[#D7E0EA] bg-white pl-10 pr-3 text-[10px] text-[#1E344F] shadow-sm outline-none focus:border-[#7D94E6] focus:ring-2 focus:ring-[#E8EDFF]" />
           </div>
           {canManage ? <Link href="/intermediaries/groups/new" aria-disabled={!hierarchyReady} className={`ml-auto inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#315FEA] px-3 text-[10px] font-bold text-white ${!hierarchyReady?"pointer-events-none opacity-45":""}`}><Plus className="h-3.5 w-3.5" /> Create Group</Link> : null}
         </div>
@@ -241,7 +244,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 
 function partnerMatches(partner: BusinessGroupPartner | undefined, query: string) {
   if (!partner) return false;
-  return partner.display_name.toLowerCase().includes(query) || partner.partner_code.toLowerCase().includes(query);
+  return [partner.display_name, partner.partner_code, partner.contact_name, partner.email, partner.phone].some((value) => value?.toLowerCase().includes(query) || value?.replace(/\\D/g, "").includes(query.replace(/\\D/g, "")) && /\\d/.test(query));
 }
 
 const inputClass = "h-9 w-full rounded-lg border border-[#D7E0EA] bg-white px-3 text-[8.5px] text-[#30465F] outline-none focus:border-[#7892E8] focus:ring-2 focus:ring-[#E9EEFF]";
