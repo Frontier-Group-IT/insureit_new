@@ -5,7 +5,7 @@ import Image from "next/image";
 import { getInsurerLogo } from "@/lib/insurer-logo";
 import motion from "./renewals-motion.module.css";
 import { useMemo, useState } from "react";
-import { CalendarDays, FileText, Search, Clock3 } from "lucide-react";
+import { CalendarDays, CarFront, FileText, Search, Clock3 } from "lucide-react";
 
 export type RenewalRegisterItem = {
   id: string; title: string; key: string; vehicleId: string; vehicleNo: string;
