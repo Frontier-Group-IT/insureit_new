@@ -21,6 +21,7 @@ export default async function CustomerRenewalsPage({
     vehicleId: item.vehicle_id,
     vehicleNo: item.vehicle_no,
     reference: item.meta || "",
+    insurerName: item.insurer_name,
     expiry: formatRenewalExpiry(item.expiry_date),
     daysUntil: item.days_until,
     status: item.status,
