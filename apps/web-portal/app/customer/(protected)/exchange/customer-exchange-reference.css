@@ -22,3 +22,9 @@
 @media(max-width:600px){.exchange-reference .exchange-premium-hero{padding:15px;min-height:130px}.exchange-reference .exchange-premium-hero p{max-width:260px}.exchange-reference .exchange-reference-controls{display:block}.exchange-reference .exchange-premium-categories{margin-top:8px}.exchange-reference .exchange-reference-grid{grid-template-columns:repeat(1,minmax(0,1fr))}}
 @media(min-width:601px) and (max-width:900px){.exchange-reference .exchange-reference-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){.exchange-reference *, .exchange-reference *:before,.exchange-reference *:after{animation:none!important;transition:none!important;transform:none!important}}
+
+/* Sell fleet: compact vehicle cards with subtle professional motion. */
+.exchange-reference .exchange-sell-grid{align-items:stretch}
+.exchange-reference .exchange-sell-card{transition:transform 190ms ease,border-color 190ms ease,box-shadow 190ms ease;animation:exchangeEnter .35s ease-out both}
+@media(hover:hover){.exchange-reference .exchange-sell-card:hover{transform:translateY(-2px);border-color:#C7C4F6;box-shadow:0 10px 25px rgba(78,83,160,.12)}}
+@media(prefers-reduced-motion:reduce){.exchange-reference .exchange-sell-card{animation:none!important;transition:none!important}}

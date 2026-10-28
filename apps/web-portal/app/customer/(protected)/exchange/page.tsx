@@ -200,27 +200,27 @@ export default async function CustomerExchangePage({
         ) : sellableVehicles.length === 0 ? (
           <EmptyCustomerState title="No vehicles available to sell" body="Vehicles linked to this customer account will appear here when eligible for Exchange." />
         ) : (
-          <section className="exchange-premium-sell space-y-3">
-            <div>
-              <h2 className="text-[18px] font-black text-[#10213D]">Sell from your Fleet</h2>
-              <p className="mt-1 text-[10px] font-semibold text-[#71839A]">The same eligible fleet used by the Customer App Exchange seller journey.</p>
+          <section className="exchange-premium-sell exchange-sell-redesign space-y-3">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div><h2 className="text-[17px] font-black text-[#10213D]">Sell from your Fleet</h2>
+                <p className="mt-1 text-[11px] text-[#71839A]">Choose an eligible vehicle to start your Exchange listing.</p></div>
+              <span className="rounded-full border border-[#E0DDF8] bg-[#F2F0FF] px-3 py-1.5 text-[10px] font-bold text-[#6555D9]">{sellableVehicles.length} vehicle{sellableVehicles.length===1?"":"s"} available</span>
             </div>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {sellableVehicles.map((vehicle) => (
-                <div key={vehicle.vehicle_id} className="customer-register-card rounded-2xl border border-[#DCE4EE] bg-white p-4 shadow-[0_8px_24px_rgba(28,50,82,.04)]">
-                  <div className="flex items-start gap-3">
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#EEF4FF]"><Truck className="h-6 w-6 text-[#3156B8]" /></div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[14px] font-black text-[#173A7D]">{[vehicle.make, vehicle.model].filter(Boolean).join(" ") || vehicle.vehicle_type}</p>
-                      <p className="mt-1 text-[10px] font-bold text-[#6E7E94]">{vehicle.vehicle_no}</p>
-                      <p className="mt-1 text-[9.5px] font-semibold text-[#8A97A9]">{[vehicle.city, vehicle.state].filter(Boolean).join(", ") || "Location on request"}</p>
-                    </div>
-                    <span className={`rounded-full px-2.5 py-1 text-[9px] font-black ${vehicle.has_active_listing ? "bg-[#FFF4E5] text-[#B66B00]" : "bg-[#E9F8F0] text-[#0C7A52]"}`}>
-                      {vehicle.has_active_listing ? "Already listed" : "Ready to list"}
-                    </span>
+            <div className="exchange-sell-grid grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {sellableVehicles.map(vehicle => {
+                const name=[vehicle.make,vehicle.model].filter(Boolean).join(" ")||vehicle.vehicle_type;
+                const location=[vehicle.city,vehicle.state].filter(Boolean).join(", ")||"Location on request";
+                return <article key={vehicle.vehicle_id} className="exchange-sell-card group min-w-0 overflow-hidden rounded-xl border border-[#DFE5F5] bg-white p-3 shadow-[0_5px_18px_rgba(34,70,120,.05)]">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#EAE7FF] to-[#E9F3FF] text-[#5C5BDF]"><Truck className="h-6 w-6"/></span>
+                    <span className={`rounded-full px-2 py-1 text-[9px] font-bold ${vehicle.has_active_listing?"bg-[#FFF3E7] text-[#A66A27]":"bg-[#E7F8EF] text-[#17805A]"}`}>{vehicle.has_active_listing?"Already listed":"Ready to list"}</span>
                   </div>
-                </div>
-              ))}
+                  <h3 className="mt-3 truncate text-[12px] font-extrabold text-[#183D7B]" title={name}>{name}</h3>
+                  <p className="mt-1 text-[11px] font-semibold text-[#546D97]">{vehicle.vehicle_no}</p>
+                  <div className="mt-3 flex items-center gap-1.5 border-t border-[#EDF0F7] pt-3 text-[10px] text-[#7185A1]"><MapPin className="h-3.5 w-3.5 shrink-0"/><span className="truncate">{location}</span></div>
+                  <div className="mt-2 flex justify-between gap-2 text-[10px]"><span className="text-[#8491AA]">{vehicle.vehicle_type||"Commercial vehicle"}</span><span className={vehicle.has_active_listing?"font-semibold text-[#B47D36]":"font-semibold text-[#278B69]"}>{vehicle.has_active_listing?"Listing active":"Eligible"}</span></div>
+                </article>;
+              })}
             </div>
           </section>
         )
