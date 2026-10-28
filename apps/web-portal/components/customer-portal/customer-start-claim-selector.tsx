@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useMemo, useRef, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { getInsurerLogo } from "@/lib/insurer-logo";
 import { ArrowRight, CalendarDays, CarFront, FileText, Headphones, Landmark, LoaderCircle, Plus, ShieldAlert, ShieldCheck, TriangleAlert, X } from "lucide-react";
@@ -40,12 +41,15 @@ export function CustomerStartClaimSelector({
       : vehicles[0]?.id || "",
   );
 
+  const router = useRouter();
   const [claimState, claimAction] = useActionState(prepareCustomerClaim, { error: null });
+  const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
   const [policyDialogOpen, setPolicyDialogOpen] = useState(false);
   const [existingClaimDialogOpen, setExistingClaimDialogOpen] = useState(false);
   const claimFormRef = useRef<HTMLFormElement>(null);
   const confirmationGrantedRef = useRef(false);
   const [confirming, setConfirming] = useState(false);
+  useEffect(() => { if (claimState.error) { confirmationGrantedRef.current = false; setConfirming(false); } }, [claimState.error]);
   const vehicle = vehicles.find((item) => item.id === vehicleId);
   const vehiclePolicies = useMemo(
     () => policies.filter((policy) => policy.vehicle_id === vehicleId).sort((a, b) => b.end_date.localeCompare(a.end_date)),
@@ -85,7 +89,7 @@ export function CustomerStartClaimSelector({
           <select
             id="claim-vehicle"
             value={vehicleId}
-            onChange={(event) => { setVehicleId(event.target.value); setPolicyDialogOpen(false); setExistingClaimDialogOpen(false); confirmationGrantedRef.current = false; setConfirming(false); }}
+            onChange={(event) => { setVehicleId(event.target.value); setPolicyDialogOpen(false); setExistingClaimDialogOpen(false); setConfirmationDialogOpen(false); confirmationGrantedRef.current = false; setConfirming(false); }}
             className="h-[46px] w-full rounded-lg border border-[#D6DDFC] bg-white px-4 text-[13px] font-medium text-[#19294D] outline-none transition focus:border-[#7546F5] focus:ring-2 focus:ring-[#F0EBFF]"
           >
             {vehicles.map((item) => (
@@ -152,7 +156,7 @@ export function CustomerStartClaimSelector({
             Continue to Claim <ArrowRight className="h-5 w-5"/>
           </button>
         ) : (
-          <form ref={claimFormRef} action={claimAction} className="flex" onSubmit={(event) => { if (!hasActivePolicy && !confirmationGrantedRef.current) { event.preventDefault(); setPolicyDialogOpen(true); } }}>
+          <form ref={claimFormRef} action={claimAction} className="flex" onSubmit={(event) => { if (!confirmationGrantedRef.current) { event.preventDefault(); setConfirmationDialogOpen(true); } }}>
             <input type="hidden" name="account" value={accountId}/>
             <input type="hidden" name="vehicle" value={vehicleId}/>
             <input type="hidden" name="policy" value={policy?.id || ""}/>
@@ -160,6 +164,30 @@ export function CustomerStartClaimSelector({
           </form>
         )}
       </div>
+      {confirmationDialogOpen && (
+        <div className="fixed inset-0 z-[115] flex items-center justify-center bg-[#071B39]/60 p-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="claim-confirm-title" aria-describedby="claim-confirm-description" className="w-full max-w-[420px] rounded-2xl bg-white p-6 text-center shadow-2xl">
+            <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-[#F0EEFF] text-[#6337F6]"><ShieldCheck className="h-7 w-7" /></span>
+            <h2 id="claim-confirm-title" className="mt-4 text-[20px] font-bold text-[#102B54]">Are you sure?</h2>
+            <p id="claim-confirm-description" className="mt-2 text-[13px] text-[#5A6D86]">Are you sure you want to continue to claim?</p>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button type="button" onClick={() => setConfirmationDialogOpen(false)} className="min-h-11 rounded-xl border border-[#B7CEE8] bg-white text-[13px] font-bold text-[#174A87]">Cancel</button>
+              <button type="button" onClick={() => { setConfirmationDialogOpen(false); if (!hasActivePolicy) { setPolicyDialogOpen(true); return; } confirmationGrantedRef.current = true; setConfirming(true); claimFormRef.current?.requestSubmit(); }} className="min-h-11 rounded-xl bg-[#0B3884] text-[13px] font-bold text-white">Continue</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {claimState.controlNo && claimState.destination && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-[#071B39]/60 p-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="claim-control-title" aria-describedby="claim-control-description" className="w-full max-w-[420px] rounded-2xl bg-white p-6 text-center shadow-2xl">
+            <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-[#ECFDF3] text-[#16804A]"><ShieldCheck className="h-7 w-7" /></span>
+            <h2 id="claim-control-title" className="mt-4 text-[20px] font-bold text-[#102B54]">Control No. Generated</h2>
+            <p id="claim-control-description" className="mt-2 text-[13px] text-[#5A6D86]">Your claim has been registered successfully.</p>
+            <div className="mt-5 rounded-xl bg-[#F3F6FF] p-4"><p className="text-[12px] text-[#60738E]">Control Number</p><p className="mt-1 break-all text-[18px] font-extrabold text-[#0B3884]">{claimState.controlNo}</p></div>
+            <button type="button" autoFocus onClick={() => router.push(claimState.destination!)} className="mt-6 min-h-12 w-full rounded-xl bg-[#0B3884] px-4 text-[13px] font-bold text-white">OK — Continue to Spot Intimation</button>
+          </div>
+        </div>
+      )}
       {claimState.error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-800">{claimState.error}</p>}
       {existingClaim && existingClaimDialogOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#071B39]/60 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setExistingClaimDialogOpen(false); }}>
