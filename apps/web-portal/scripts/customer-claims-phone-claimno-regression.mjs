@@ -5,6 +5,6 @@ assert.match(source, /from\("customers"\)\.select\("id,phone"\)\.eq\("id", accou
 assert.match(source, /customerContact\?\.phone/, "Customer mobile column must display the phone field");
 assert.doesNotMatch(source, /customerContact\?\.mobile|customerContact\.mobile|select\("id,mobile"\)/, "Legacy nonexistent mobile column must not be referenced");
 assert.doesNotMatch(source, /Insurer Claim No\. <span/, "Customer Claims cards must not show insurer claim number line");
-assert.match(source, /const detailHref = `\/customer\/claims\//, "Every claim must retain its details link where insurer claim information is available");
+assert.match(source, /<Link key=\{claim\.id\} href=\{stageHref\}/, "Claim cards must retain navigation to their journey stage");
 assert.match(source, /claim\.claim_no \|\| "—"/, "Internal control number must remain unchanged");
 console.log("Customer Claims phone and missing insurer claim number regression passed");
