@@ -5,7 +5,7 @@ import Image from "next/image";
 import { getInsurerLogo } from "@/lib/insurer-logo";
 import motion from "./renewals-motion.module.css";
 import { useMemo, useState } from "react";
-import { CalendarDays, ChevronDown, FileText, Search, ShieldCheck, CarFront, Clock3 } from "lucide-react";
+import { CalendarDays, FileText, Search, ShieldCheck, CarFront, Clock3, ClipboardCheck, Leaf, ReceiptText, BadgeCheck } from "lucide-react";
 
 export type RenewalRegisterItem = {
   id: string; title: string; key: string; vehicleId: string; vehicleNo: string;
@@ -14,9 +14,13 @@ export type RenewalRegisterItem = {
 export type RenewalCategory = { key: string; title: string; count: number };
 
 function CategoryIcon({ title }: { title: string }) {
-  if (/insurance/i.test(title)) return <ShieldCheck className="h-4 w-4"/>;
-  if (/fitness/i.test(title)) return <CarFront className="h-4 w-4"/>;
-  return <FileText className="h-4 w-4"/>;
+  if (/insurance/i.test(title)) return <ShieldCheck className="h-5 w-5"/>;
+  if (/national permit/i.test(title)) return <BadgeCheck className="h-5 w-5"/>;
+  if (/local permit/i.test(title)) return <ClipboardCheck className="h-5 w-5"/>;
+  if (/road tax/i.test(title)) return <ReceiptText className="h-5 w-5"/>;
+  if (/puc/i.test(title)) return <Leaf className="h-5 w-5"/>;
+  if (/fitness/i.test(title)) return <CarFront className="h-5 w-5"/>;
+  return <FileText className="h-5 w-5"/>;
 }
 
 export function CustomerRenewalsRegister({accountId,items,categories}:{
@@ -24,7 +28,6 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
 }) {
   const [query,setQuery]=useState("");
   const [status,setStatus]=useState("all");
-  const [sort,setSort]=useState<"nearest"|"latest">("nearest");
   const [activeCategory,setActiveCategory]=useState<string | null>(null);
   const groups=useMemo(()=>{
     const filtered=items.filter(item=>{
@@ -35,9 +38,9 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
     const groupList=[...categories,...(filtered.some(item=>!known.has(item.key))?[{key:"__other__",title:"Other renewals",count:0}]:[])];
     return {filtered,groupList:groupList.map(cat=>({
       ...cat,records:filtered.filter(item=>cat.key==="__other__"?!known.has(item.key):item.key===cat.key)
-        .sort((a,b)=>sort==="nearest"?a.daysUntil-b.daysUntil:b.daysUntil-a.daysUntil)
+        .sort((a,b)=>a.daysUntil-b.daysUntil)
     }))};
-  },[items,categories,query,status,sort]);
+  },[items,categories,query,status]);
   const selectedGroup = groups.groupList.find(cat=>cat.key===activeCategory);
   return <div className={`customer-register-motion space-y-4 text-[#293461] ${motion.pageEnter}`}>
     <section className="customer-register-hero relative isolate min-h-[175px] overflow-hidden rounded-xl border border-[#E1E8F9] bg-[#EDF4FF]">
@@ -53,34 +56,26 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
         </div>
       </div>
     </section>
-    <div className={`customer-register-panel grid gap-2 sm:grid-cols-[minmax(0,1fr)_190px_180px] ${motion.controls}`}>
+    <div className={`customer-register-panel grid gap-2 sm:grid-cols-[minmax(0,1fr)_190px] ${motion.controls}`}>
       <label className="customer-register-control flex h-10 min-w-0 items-center gap-2 rounded-lg border border-[#E0E7F4] bg-white px-3 text-[#8090B0]"><Search className="h-4 w-4 shrink-0"/><input aria-label="Search renewals" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by reference number, vehicle number or policy..." className="min-w-0 flex-1 border-0 bg-transparent text-[11px] text-[#253760] outline-none placeholder:text-[#9BA9C0]"/></label>
       <select aria-label="Filter by status" value={status} onChange={e=>setStatus(e.target.value)} className={`customer-register-control h-10 rounded-lg border border-[#E0E7F4] bg-white px-3 text-[11px] font-semibold text-[#53648C] ${motion.filterControl}`}>
         <option value="all">All Status</option><option value="due">Due</option><option value="expired">Expired</option><option value="upcoming">Upcoming</option>
       </select>
-      <label className="customer-register-control flex h-10 items-center gap-2 rounded-lg border border-[#E0E7F4] bg-white px-3 text-[11px] text-[#8B98AE]">Sort by
-        <select aria-label="Sort renewals" value={sort} onChange={e=>setSort(e.target.value as "nearest"|"latest")} className={`min-w-0 flex-1 border-0 bg-transparent font-bold text-[#4F5E87] outline-none ${motion.filterControl}`}><option value="nearest">Nearest Expiry</option><option value="latest">Latest Expiry</option></select>
-      </label>
     </div>
     <div className="space-y-3">
       <div className="grid grid-cols-6 gap-2" role="group" aria-label="Renewal categories">
         {groups.groupList.slice(0, 6).map(cat => {
           const selected = activeCategory === cat.key;
           return <button key={cat.key} type="button" aria-pressed={selected} aria-expanded={selected} onClick={() => setActiveCategory(selected ? null : cat.key)}
-            className={`flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl border px-1.5 py-3 text-center transition hover:bg-[#F7F8FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6050E5] ${selected ? "border-[#6050E5] bg-[#F1F0FF] shadow-sm" : "border-[#E2E9F5] bg-white"}`}>
+            className={`flex min-w-0 flex-col items-center justify-center gap-2 rounded-xl border px-1.5 py-3 text-center transition hover:bg-[#F7F8FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6050E5] ${selected ? "border-[#6050E5] bg-[#F1F0FF] shadow-sm" : "border-[#E2E9F5] bg-white"}`}>
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#ECEEFF] text-[#6050E5]"><CategoryIcon title={cat.title}/></span>
             <strong className="w-full truncate text-[10px] font-semibold text-[#28346A]" title={cat.title}>{cat.title}</strong>
-            <span className="text-[10px] text-[#7265D9]">{cat.records.length} Renewal{cat.records.length === 1 ? "" : "s"}</span>
           </button>;
         })}
       </div>
       {selectedGroup ? (() => {
         const cat = selectedGroup;
         return <section className={`customer-register-card overflow-hidden rounded-xl border border-[#E2E9F5] bg-white shadow-[0_3px_12px_rgba(43,65,120,.035)] ${motion.section}`}>
-          <div className="flex items-center justify-between border-b border-[#ECF0F8] px-4 py-3">
-            <h2 className="text-[13px] font-bold text-[#28346A]">{cat.title} Records</h2>
-            <button type="button" onClick={() => setActiveCategory(null)} aria-label="Close renewal records" className="rounded-md px-2 py-1 text-[11px] text-[#53648C] hover:bg-[#F3F5FC]">Close</button>
-          </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] table-fixed border-collapse">
               <thead className="bg-[#F8FAFE] text-left text-[10px] font-semibold text-[#93A1BB]"><tr>
