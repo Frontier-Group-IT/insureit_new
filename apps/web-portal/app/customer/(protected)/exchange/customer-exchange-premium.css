@@ -1,0 +1,38 @@
+/* Customer Exchange: scoped, lightweight visual enhancements. All data, links and actions unchanged. */
+@keyframes exchangeEnter {from{opacity:0;transform:translate3d(0,10px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+@keyframes exchangeShimmer {0%,100%{transform:translateX(-22%);opacity:.22}50%{transform:translateX(25%);opacity:.42}}
+@keyframes exchangeFloat {from{transform:scale(1.005)}to{transform:scale(1.035)}}
+.customer-exchange-premium {--ex-blue:#1769dc;--ex-navy:#142e55;--ex-line:#dbe6f4}
+.customer-exchange-premium .exchange-premium-hero{min-height:166px;background:linear-gradient(120deg,#edf6ff,#f7f9ff 60%,#e6f1ff);border-color:#cfdef2;box-shadow:0 12px 30px rgba(30,76,135,.075);animation:exchangeEnter .4s ease-out both}
+.customer-exchange-premium .exchange-premium-hero-art{animation:exchangeFloat 27s ease-in-out infinite alternate;transform-origin:70% 50%}
+.customer-exchange-premium .exchange-premium-hero-shade:after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 15%,rgba(255,255,255,.2) 42%,transparent 62%);animation:exchangeShimmer 20s ease-in-out infinite;pointer-events:none}
+.customer-exchange-premium .exchange-premium-hero h1{letter-spacing:-.04em}
+.customer-exchange-premium .exchange-premium-tabs{animation:exchangeEnter .36s .09s ease-out both;border-color:var(--ex-line);box-shadow:0 8px 25px rgba(27,63,109,.055)}
+.customer-exchange-premium .exchange-premium-tab{min-height:46px;transition:background .2s ease,color .2s ease,box-shadow .2s ease,transform .2s ease}
+.customer-exchange-premium .exchange-premium-tab:has(svg){gap:9px}
+.customer-exchange-premium .exchange-premium-tab.bg-\\[\\#173B68\\]{background:linear-gradient(110deg,#173b68,#2468ba);box-shadow:0 4px 12px rgba(28,86,153,.2)}
+.customer-exchange-premium .exchange-premium-search-section{animation:exchangeEnter .36s .15s ease-out both}
+.customer-exchange-premium .exchange-premium-search{transition:border-color .2s ease,box-shadow .2s ease}
+.customer-exchange-premium .exchange-premium-search:focus-within{border-color:#76aef4;box-shadow:0 0 0 3px rgba(68,145,237,.12)}
+.customer-exchange-premium .exchange-premium-categories a{transition:background-color .18s ease,border-color .18s ease,color .18s ease,box-shadow .18s ease,transform .18s ease}
+.customer-exchange-premium .exchange-premium-listings,.customer-exchange-premium .exchange-premium-sell,.customer-exchange-premium .exchange-premium-activity{animation:exchangeEnter .4s .2s ease-out both}
+.customer-exchange-premium .exchange-premium-table-wrap{border-color:var(--ex-line);box-shadow:0 9px 25px rgba(28,64,113,.065);transition:border-color .2s ease,box-shadow .2s ease}
+.customer-exchange-premium .exchange-premium-table-wrap:hover{border-color:#c2d6f1;box-shadow:0 12px 30px rgba(28,64,113,.085)}
+.customer-exchange-premium .exchange-premium-table-wrap thead{background:#f0f5fc;color:#546b8d}
+.customer-exchange-premium .exchange-premium-listing{transition:background-color .2s ease,box-shadow .2s ease}
+.customer-exchange-premium .exchange-premium-listing:hover{background:#eff6ff;box-shadow:inset 3px 0 #80b1f2}
+.customer-exchange-premium .exchange-premium-listing .customer-register-image img{transition:transform .4s cubic-bezier(.2,.7,.2,1)}
+.customer-exchange-premium .exchange-premium-listing:hover .customer-register-image img{transform:scale(1.055)}
+.customer-exchange-premium .exchange-premium-listing .customer-register-action{transition:transform .16s ease,background-color .16s ease,border-color .16s ease,box-shadow .16s ease}
+.customer-exchange-premium .exchange-premium-listing .customer-register-action:hover{background:#e7f1ff;border-color:#9ec4f4;box-shadow:0 4px 12px rgba(36,100,183,.14)}
+.customer-exchange-premium .exchange-premium-live{transition:background-color .2s ease,transform .2s ease}
+.customer-exchange-premium .exchange-premium-verification{transition:color .2s ease,transform .2s ease}
+.customer-exchange-premium .exchange-premium-listing:hover .exchange-premium-verification svg{transform:scale(1.06);transition:transform .2s ease}
+.customer-exchange-premium .customer-register-card,.customer-exchange-premium .exchange-premium-activity-card{transition:box-shadow .22s ease,border-color .22s ease,transform .22s ease}
+.customer-exchange-premium .customer-register-action{transition:background-color .18s ease,box-shadow .18s ease,transform .18s ease}
+.customer-exchange-premium .exchange-premium-sell .customer-register-card:hover,.customer-exchange-premium .exchange-premium-activity-card:hover{border-color:#b9d3f4;box-shadow:0 10px 27px rgba(28,75,139,.1)}
+@media(hover:hover){.customer-exchange-premium .exchange-premium-tab:hover{transform:translateY(-1px)}.customer-exchange-premium .exchange-premium-categories a:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(34,85,150,.09)}.customer-exchange-premium .customer-register-action:hover{box-shadow:0 5px 13px rgba(28,80,155,.16);transform:translateY(-1px)}.customer-exchange-premium .exchange-premium-sell .customer-register-card:hover{transform:translateY(-2px)}}
+.customer-exchange-premium :is(.exchange-premium-tab,.customer-register-action,.exchange-premium-categories a):active{transform:scale(.98)}
+.customer-exchange-premium :is(a,button,input):focus-visible{outline:2px solid #287cde;outline-offset:3px}
+@media(max-width:640px){.customer-exchange-premium .exchange-premium-hero{min-height:145px}.customer-exchange-premium .exchange-premium-hero h1{font-size:29px}.customer-exchange-premium .exchange-premium-tabs{gap:4px;padding:5px}.customer-exchange-premium .exchange-premium-tab{padding:10px 5px}}
+@media(prefers-reduced-motion:reduce){.customer-exchange-premium *,.customer-exchange-premium *::before,.customer-exchange-premium *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
