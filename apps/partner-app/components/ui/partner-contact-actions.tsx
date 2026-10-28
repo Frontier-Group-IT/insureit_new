@@ -8,23 +8,26 @@ export function PartnerContactActions({
   email,
   compact = false,
   iconOnlyVertical = false,
+  inlineLabeled = false,
 }: {
   phone?: string | null;
   email?: string | null;
   compact?: boolean;
   iconOnlyVertical?: boolean;
+  inlineLabeled?: boolean;
 }) {
   const normalizedPhone = lastTen(phone || '');
 
-  const iconMode = compact || iconOnlyVertical;
+  const iconMode = compact || iconOnlyVertical || inlineLabeled;
 
   return (
-    <View style={[styles.row, compact && styles.compactRow, iconOnlyVertical && styles.verticalRow]}>
+    <View style={[styles.row, compact && styles.compactRow, iconOnlyVertical && styles.verticalRow, inlineLabeled && styles.inlineLabeledRow]}>
       <Action
         icon="call-outline"
         label="Call"
         disabled={!normalizedPhone}
         compact={iconMode}
+        inlineLabeled={inlineLabeled}
         onPress={() => normalizedPhone ? void Linking.openURL(`tel:+91${normalizedPhone}`) : undefined}
       />
       <Action
@@ -32,14 +35,16 @@ export function PartnerContactActions({
         label="WhatsApp"
         disabled={!normalizedPhone}
         compact={iconMode}
+        inlineLabeled={inlineLabeled}
         onPress={() => normalizedPhone ? void Linking.openURL(`https://wa.me/91${normalizedPhone}`) : undefined}
       />
-      {!compact || iconOnlyVertical ? (
+      {!compact || iconOnlyVertical || inlineLabeled ? (
         <Action
           icon="mail-outline"
           label="Email"
           disabled={!email}
           compact={iconMode}
+        inlineLabeled={inlineLabeled}
           onPress={() => email ? void Linking.openURL(`mailto:${email}`) : undefined}
         />
       ) : null}
@@ -52,12 +57,14 @@ function Action({
   label,
   disabled,
   compact,
+  inlineLabeled = false,
   onPress,
 }: {
   icon: 'call-outline' | 'logo-whatsapp' | 'mail-outline';
   label: string;
   disabled: boolean;
   compact: boolean;
+  inlineLabeled?: boolean;
   onPress: () => void;
 }) {
   return (
@@ -74,16 +81,17 @@ function Action({
       style={({ pressed }) => [
         styles.action,
         compact && styles.compactAction,
+        inlineLabeled && styles.inlineLabeledAction,
         pressed && !disabled && styles.pressed,
         disabled && styles.disabled,
       ]}
     >
       <Ionicons
         name={icon}
-        size={compact ? 20 : 18}
+        size={inlineLabeled ? 23 : compact ? 20 : 18}
         color={disabled ? partnerTheme.colors.inkSubtle : partnerTheme.colors.brandStrong}
       />
-      {!compact ? <Text style={styles.label}>{label}</Text> : null}
+      {(!compact || inlineLabeled) ? <Text style={[styles.label, inlineLabeled && styles.inlineLabeledText]}>{label === "Email" && inlineLabeled ? "Mail" : label}</Text> : null}
     </Pressable>
   );
 }
@@ -96,6 +104,9 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 8 },
   compactRow: { gap: 2 },
   verticalRow: { flexDirection: 'column', alignItems: 'center', gap: 2 },
+  inlineLabeledRow: { justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+  inlineLabeledAction: { flexDirection: 'row', width: 'auto', height: 42, minHeight: 42, gap: 4, paddingHorizontal: 3 },
+  inlineLabeledText: { color: partnerTheme.colors.brandStrong, fontSize: 11, fontWeight: '700' },
   action: {
     flex: 1,
     minHeight: partnerTheme.control.minTouchTarget,

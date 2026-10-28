@@ -47,17 +47,19 @@ export default function CustomerDetailScreen() {
         <>
 
           <View style={redesign.header}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()}><Ionicons name="arrow-back" size={22} color="#111B37" /></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()}><Ionicons name="arrow-back" size={22} color="#FFFFFF" /></Pressable>
             <Text style={redesign.headerTitle}>Customer Details</Text>
           </View>
           <View style={redesign.profile}>
             <View style={redesign.avatar}><Text style={redesign.avatarText}>{initials(data.customer.customer_name)}</Text></View>
-            <View style={redesign.profileNameWrap}>
-              <Text style={redesign.profileName}>{data.customer.customer_name}</Text>
-              {customerTone(data.customer.status) === 'success' ? <Ionicons name="checkmark-circle" size={19} color="#0CB76B" /> : null}
-            </View>
-            <View style={redesign.actions}>
-              <PartnerContactActions phone={data.customer.phone} email={data.customer.email} iconOnlyVertical />
+            <View style={redesign.profileContent}>
+              <View style={redesign.profileNameWrap}>
+                <Text style={redesign.profileName}>{data.customer.customer_name}</Text>
+                {customerTone(data.customer.status) === 'success' ? <Ionicons name="checkmark-circle" size={19} color="#0CB76B" /> : null}
+              </View>
+              <View style={redesign.actions}>
+                <PartnerContactActions phone={data.customer.phone} email={data.customer.email} inlineLabeled />
+              </View>
             </View>
           </View>
           <View style={redesign.tabs}>
@@ -112,23 +114,17 @@ export default function CustomerDetailScreen() {
               <>
                 <View style={redesign.sectionHeading}><Ionicons name="shield-checkmark-outline" size={20} color="#0879F1" /><Text style={redesign.sectionTitle}>Policy Details</Text></View>
                 {data.policies.length ? data.policies.map((policy) => (
-                  <View key={policy.policy_id} style={redesign.recordCard}>
-                    <Pressable accessibilityRole="button" accessibilityLabel={`Open policy ${policy.policy_no || policy.policy_code || ''}`} onPress={() => router.push(`/policy/${policy.policy_id}` as never)} style={redesign.vehicleIdentity}>
-                      <Logo source={getPartnerInsurerLogoSource(policy.insurer_name)} fallback={PartnerAssets.products.motorInsurance} />
-                      <Text style={[redesign.recordTitle, { flex: 1 }]}>{policy.vehicle_no || policy.policy_no || policy.policy_code || 'Policy'}</Text>
-                    </Pressable>
-                    <DetailLine icon="document-text-outline" label="Policy Type" value={displayParts(policy.policy_type, policy.policy_product) || policyCategory(policy)} />
-                    <View style={redesign.twoColumns}>
-                      <DetailCell icon="calendar-outline" label="Policy Start" value={null} />
-                      <DetailCell icon="calendar-outline" label="Policy End" value={formatDate(policy.end_date)} />
-                      <DetailCell icon="shield-outline" label="Insurer" value={policy.insurer_name} />
-                      <DetailCell icon="document-text-outline" label="Policy Number" value={policy.policy_no || policy.policy_code} />
-                      <DetailCell icon="cash-outline" label="Premium Amount" value={policy.premium_amount == null ? null : formatIndianCurrency(policy.premium_amount)} />
-                      <DetailCell icon="card-outline" label="Payment Mode" value={null} />
-                      <DetailCell icon="checkmark-circle-outline" label="Status" value={null} />
-                      <DetailCell icon="calendar-outline" label="Last Payment Date" value={null} />
+                  <Pressable key={policy.policy_id} accessibilityRole="button" accessibilityLabel={`Open policy ${policy.policy_no || policy.policy_code || policy.vehicle_no || ''}`} onPress={() => router.push(`/policy/${policy.policy_id}` as never)} style={redesign.compactPolicyRow}>
+                    <Logo source={getPartnerInsurerLogoSource(policy.insurer_name)} fallback={PartnerAssets.products.motorInsurance} compact />
+                    <View style={redesign.policyMain}>
+                      {policy.vehicle_no ? <Text style={redesign.recordTitle}>{policy.vehicle_no}</Text> : null}
+                      {policy.policy_no || policy.policy_code ? <Text style={policy.vehicle_no ? redesign.label : redesign.recordTitle}>{policy.policy_no || policy.policy_code}</Text> : null}
                     </View>
-                  </View>
+                    <View style={redesign.policyRight}>
+                      {displayParts(policy.policy_type, policy.policy_product) ? <Text style={redesign.policyTypeBadge}>{displayParts(policy.policy_type, policy.policy_product)}</Text> : null}
+                      {policy.end_date ? <Text style={redesign.policyExpiryText}>Exp: {formatDate(policy.end_date)}</Text> : null}
+                    </View>
+                  </Pressable>
                 )) : <EmptyCard icon="shield-checkmark-outline" title="No policies recorded." subtitle="Policies linked to this customer will appear here." />}
               </>
             )}
@@ -175,14 +171,15 @@ function DetailCell({ icon, label, value }: { icon: keyof typeof Ionicons.glyphM
   return <View style={redesign.detailCell}><View style={redesign.iconCircle}><Ionicons name={icon} size={16} color="#1477DE" /></View><View style={{ flex: 1 }}><Text style={redesign.label}>{label}</Text><Text style={redesign.value}>{value && value !== '—' ? value : 'Not recorded'}</Text></View></View>;
 }
 const redesign = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 15, paddingHorizontal: 12, backgroundColor: '#FFFFFF' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#111B37' },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 15, paddingHorizontal: 12, backgroundColor: partnerTheme.colors.nav },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: '#FFFFFF' },
   profile: { backgroundColor: '#E5F1FF', flexDirection: 'row', alignItems: 'center', gap: 9, padding: 12 },
   avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#EEE1FF', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#6B28CE', fontSize: 20, fontWeight: '700' },
-  profileNameWrap: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 5 },
+  profileContent: { flex: 1, minWidth: 0, gap: 6 },
+  profileNameWrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 5 },
   profileName: { color: '#111B37', fontSize: 13, fontWeight: '700', flexShrink: 1 },
-  actions: { maxWidth: 120 },
+  actions: { alignItems: 'center' },
   tabs: { flexDirection: 'row', backgroundColor: '#FFFFFF' },
   tab: { flex: 1, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderBottomWidth: 3, borderBottomColor: 'transparent' },
   activeTab: { borderBottomColor: '#0879F1' },
@@ -196,6 +193,11 @@ const redesign = StyleSheet.create({
   lineLabel: { color: '#66758B', fontSize: 11, flex: 1 },
   lineValue: { color: '#111B37', fontSize: 11, fontWeight: '600', flex: 1, textAlign: 'right' },
   recordCard: { borderRadius: 12, borderWidth: 1, borderColor: '#E2EAF4', padding: 10, gap: 10 },
+  compactPolicyRow: { minHeight: 62, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 12, borderWidth: 1, borderColor: '#E2EAF4', paddingHorizontal: 10, paddingVertical: 8 },
+  policyMain: { flex: 1, minWidth: 0, gap: 3 },
+  policyRight: { alignItems: 'flex-end', gap: 5, maxWidth: '43%' },
+  policyTypeBadge: { overflow: 'hidden', borderRadius: 12, backgroundColor: '#EAF2FF', color: '#174EA6', fontSize: 10, fontWeight: '700', paddingHorizontal: 9, paddingVertical: 4 },
+  policyExpiryText: { color: '#66758B', fontSize: 10, fontWeight: '600' },
   vehicleIdentity: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5 },
   recordTitle: { fontSize: 12, fontWeight: '700', color: '#111B37' },
   label: { color: '#66758B', fontSize: 9.5, lineHeight: 13 },
