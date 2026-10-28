@@ -239,7 +239,7 @@ function formatDate(value: string | null) { if (!value) return '—'; const d = 
 function nullableMoney(value: number | string | null) { return value == null ? 'Not recorded' : formatIndianCurrency(value); }
 
 const styles = StyleSheet.create({
-  pageHeader: { height: 64, marginHorizontal: -partnerTheme.spacing.lg, overflow: 'hidden', paddingHorizontal: 16, justifyContent: 'center', backgroundColor: '#0756BB' },
+  pageHeader: { height: 64, marginHorizontal: -partnerTheme.spacing.lg, overflow: 'hidden', paddingHorizontal: 16, justifyContent: 'center', backgroundColor: '#081F4C' },
   headerGlowOne: { position: 'absolute', width: 210, height: 150, borderRadius: 120, right: -42, top: -76, backgroundColor: 'rgba(38,142,238,0.30)' },
   headerGlowTwo: { position: 'absolute', width: 170, height: 120, borderRadius: 100, right: 68, top: 34, backgroundColor: 'rgba(14,99,197,0.28)' },
   headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
