@@ -83,13 +83,7 @@ export async function saveCustomerExternalStage(form:FormData) {
   const db=await createServerSupabaseClient();
   const session=await getCustomerWebSession();
   const current=milestones.find(m=>m.milestone_key===key);
-  if (current && ["completed","not_applicable"].includes(current.milestone_status)) {
-    // A repeated Save must not overwrite a completed stage or strand the user.
-    const next=INTERNAL_JOURNEY_STAGES[index+1];
-    redirect(next
-      ? "/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(next.key)+"?account="+encodeURIComponent(account.id)+"&mode=edit"
-      : "/customer/claims/"+encodeURIComponent(claim.id)+"?account="+encodeURIComponent(account.id));
-  }
+  const editingCompleted = Boolean(current && ["completed","not_applicable"].includes(current.milestone_status));
   if(key==="vehicle_delivery"||key==="spot_status"){
     const done=key!=="vehicle_delivery"||(values.vehicle_received==="yes"&&Boolean(values.vehicle_received_date));
     const {error}=await db.from("claim_milestones").upsert({
@@ -113,9 +107,11 @@ export async function saveCustomerExternalStage(form:FormData) {
     }
   }
   const next=INTERNAL_JOURNEY_STAGES[index+1];
-  redirect(next
-    ? "/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(next.key)+"?account="+encodeURIComponent(account.id)+"&mode=edit"+(key==="claim_intimation"?"&saved=claim_intimation":"")
-    : "/customer/claims/"+encodeURIComponent(claim.id)+"?account="+encodeURIComponent(account.id));
+  redirect(editingCompleted
+    ? "/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(key)+"?account="+encodeURIComponent(account.id)+"&mode=edit&saved=updated"
+    : next
+      ? "/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(next.key)+"?account="+encodeURIComponent(account.id)+"&mode=edit"+(key==="claim_intimation"?"&saved=claim_intimation":"")
+      : "/customer/claims/"+encodeURIComponent(claim.id)+"?account="+encodeURIComponent(account.id));
 }
 
 /** Save incomplete Stage 3 details without completing the claim milestone. */
@@ -132,7 +128,7 @@ export async function saveCustomerClaimIntimationDraft(form: FormData) {
   const previous = milestones.find(m => m.milestone_key === INTERNAL_JOURNEY_STAGES[index - 1].key);
   const current = milestones.find(m => m.milestone_key === key);
   if (!previous || !["completed", "not_applicable"].includes(previous.milestone_status) ||
-      (current && ["completed", "not_applicable"].includes(current.milestone_status)))
+      false)
     throw new Error("Claim Intimation cannot be edited");
   const values: Record<string, string | number> = {};
   for (const field of CUSTOMER_EXTERNAL_STAGE_FIELDS[key]) {
@@ -152,9 +148,9 @@ export async function saveCustomerClaimIntimationDraft(form: FormData) {
   const db = await createServerSupabaseClient();
   const session = await getCustomerWebSession();
   const { error } = await db.from("claim_milestones").upsert({
-    claim_id: claim.id, milestone_key: key, milestone_status: "in_progress",
+    claim_id: claim.id, milestone_key: key, milestone_status: current && ["completed","not_applicable"].includes(current.milestone_status) ? "completed" : "in_progress",
     details: { ...(current?.details ?? {}), ...values },
-    completed_at: null, recorded_by: session.user.id, recorded_by_actor: "customer",
+    completed_at: current?.completed_at ?? null, recorded_by: session.user.id, recorded_by_actor: "customer",
   }, { onConflict: "claim_id,milestone_key" });
   if (error) throw new Error("Could not save Claim Intimation draft");
   redirect("/customer/claims/" + encodeURIComponent(claim.id) + "/stage/claim_intimation?account=" +
