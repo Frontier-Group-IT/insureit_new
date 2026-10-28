@@ -1,4 +1,3 @@
 triggered_by=chatgpt
-source_pr=1250
-source_commit=9fba9929d5eeefc67a95a5a8f0e06c55386615b5
-purpose=republish current main after exact internal Stage 1 external-header match
+source_commit=b26481e940701a41331b9f776ed60314e128f0ad
+purpose=customer-production-ota-upload-image-video-labels-2026-10-28

@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import * as XLSX from "xlsx";
 
 import {
   getPartnerWebBusinessPerformance,
@@ -7,6 +8,7 @@ import {
 } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 function numeric(value: number | string | null | undefined) {
   const amount = Number(value ?? 0);
@@ -54,11 +56,6 @@ async function loadPartnerPolicies() {
     if (batch.length < pageSize) break;
   }
   return rows;
-}
-
-function csvCell(value: unknown) {
-  const text = String(value ?? "");
-  return `"${text.replaceAll('"', '""')}"`;
 }
 
 export async function GET(request: NextRequest) {
@@ -111,31 +108,35 @@ export async function GET(request: NextRequest) {
     "Intermediary Type",
   ];
 
-  const lines = [
-    headers.map(csvCell).join(","),
-    ...rows.map((row) => [
-      row.policy_no,
-      row.policy_code,
-      row.customer_name,
-      row.insurer_name,
-      normalizedBusinessType(row),
-      row.policy_product,
-      row.issuance_date,
-      row.start_date,
-      row.end_date,
-      numeric(row.premium_amount),
-      row.rm_name,
-      row.intermediary_code,
-      row.intermediary_type,
-    ].map(csvCell).join(",")),
-  ];
-
-  return new NextResponse(lines.join("\r\n"), {
+  // Generate partner-only columns directly. Never add internal pay-in / payout
+  // fields to the workbook, including hidden sheets or cells.
+  const data = rows.map((row) => [
+    row.policy_no, row.policy_code, row.customer_name, row.insurer_name,
+    normalizedBusinessType(row), row.policy_product, row.issuance_date,
+    row.start_date, row.end_date, numeric(row.premium_amount), row.rm_name,
+    row.intermediary_code, row.intermediary_type,
+  ]);
+  const sheet = XLSX.utils.aoa_to_sheet([[], headers, ...data]);
+  const lastColumn = XLSX.utils.encode_col(headers.length - 1);
+  sheet["!ref"] = `A1:${lastColumn}${Math.max(2, data.length + 2)}`;
+  sheet["!autofilter"] = { ref: `A2:${lastColumn}${Math.max(2, data.length + 2)}` };
+  sheet["!cols"] = headers.map((header) => ({ wch: Math.min(34, Math.max(15, header.length + 5)) }));
+  sheet["!rows"] = [{ hpt: 22 }, { hpt: 38 }];
+  sheet["J1"] = { t: "n", f: `SUM(J3:J${Math.max(3, data.length + 2)})`, v: data.reduce((sum, row) => sum + Number(row[9] || 0), 0) };
+  for (let index = 0; index < data.length; index++) {
+    const cell = sheet[`J${index + 3}`];
+    if (cell) cell.z = '₹#,##0.00;[Red]-₹#,##0.00';
+  }
+  const book = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(book, sheet, "Business MIS");
+  book.Props = { Title: "INSUREIT Partner Business MIS", Subject: "Authorized partner policy production", Company: "InsureIt" };
+  const file = XLSX.write(book, { type: "array", bookType: "xlsx", compression: true }) as ArrayBuffer;
+  return new Response(file, {
     status: 200,
     headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="partner-business-${bounds.from}-to-${bounds.to}.csv"`,
-      "Cache-Control": "no-store",
+      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Disposition": `attachment; filename="partner-business-${bounds.from}-to-${bounds.to}.xlsx"`,
+      "Cache-Control": "private, no-store, max-age=0",
     },
   });
 }

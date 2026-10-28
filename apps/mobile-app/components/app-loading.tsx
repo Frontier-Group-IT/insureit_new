@@ -103,6 +103,8 @@ export function useLoadingRouter(): ReturnType<typeof useRouter> {
 }
 
 function loadingSubtitle(label: string) {
+  if (label === 'Uploading image') return 'Please wait while InsureIT uploads the image.';
+  if (label === 'Uploading video') return 'Please wait while InsureIT uploads the video.';
   if (label === 'Uploading document') return 'Please wait while InsureIT uploads the document.';
   if (label === 'Deleting document') return 'Please wait while InsureIT deletes the document.';
   if (label === 'Updating document') return 'Please wait while InsureIT updates the document.';
@@ -111,8 +113,8 @@ function loadingSubtitle(label: string) {
 }
 
 function uploadProgress(entries: TrackedLoadingEntry[], activeLabel: string) {
-  if (activeLabel !== 'Uploading document') return null;
-  const uploadEntries = entries.filter((entry) => entry.label === 'Uploading document' && typeof entry.progress === 'number');
+  if (!['Uploading document', 'Uploading image', 'Uploading video'].includes(activeLabel)) return null;
+  const uploadEntries = entries.filter((entry) => entry.label === activeLabel && typeof entry.progress === 'number');
   if (!uploadEntries.length) return null;
   return uploadEntries.reduce((total, entry) => total + (entry.progress ?? 0), 0) / uploadEntries.length;
 }

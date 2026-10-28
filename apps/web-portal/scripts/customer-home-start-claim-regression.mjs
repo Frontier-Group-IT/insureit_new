@@ -14,7 +14,7 @@ const selector=fs.readFileSync("components/customer-portal/customer-start-claim-
 const claimAction=fs.readFileSync("app/customer/(protected)/start-claim/actions.ts","utf8");
 assert.match(selector,/confirmationGrantedRef\.current = true/,"Confirmation must grant form submission independently of React render state");
 assert.match(selector,/claimFormRef\.current\?\.requestSubmit\(\)/,"Confirmation must submit the selected vehicle form");
-assert.match(selector,/!hasActivePolicy && !confirmationGrantedRef\.current/,"No-policy claims must proceed after confirmation");
+assert.match(selector,/if \(!hasActivePolicy\) \{ setPolicyDialogOpen\(true\); return; \}/,"No-policy claims must preserve the active-policy warning");
 assert.match(selector,/disabled=\{confirming\}/,"Confirmation must block repeat clicks");
 assert.match(selector,/Preparing claim\.\.\./,"Show a loading state during submission");
 assert.match(claimAction,/\.eq\("vehicle_id", vehicleId\)\.is\("policy_id", null\)\.is\("external_policy_id", null\)/,"No-policy draft recovery must remain scoped to vehicle and policy-free drafts");
@@ -30,7 +30,7 @@ const startClaimPage=fs.readFileSync("app/customer/(protected)/start-claim/page.
 assert.match(startClaimPage,/vehicle_id: claim\.vehicle_id/,"Selected-vehicle draft detection must include vehicle ID");
 assert.match(selector,/claim\.vehicle_id === vehicleId && !claim\.policy_id && !claim\.external_policy_id/,"Policy-free existing claims must be discovered");
 assert.match(selector,/existingClaim\.current_status === "Draft" \? "\/customer\/spot-intimation"/,"Existing drafts should resume at Spot Intimation");
-assert.match(claimAction,/active\.current_status === "Draft"/,"Server must resume drafts at Spot Intimation");
+assert.match(claimAction,/existingClaimResult\(active\.id, active\.current_status, account\.id\)/,"Server must resume drafts through scoped result");
 assert.match(claimAction,/recoveryCode: recoveryError\?\.code/,"Log the actual recovery failure code");
 console.log("Policy-free claim draft resume and recovery diagnostics regression passed.");
 
@@ -60,7 +60,7 @@ const stageActions=fs.readFileSync("app/customer/(protected)/claims/[id]/stage/[
 assert.match(stagePage,/selected\.key==="spot_intimation" && claim\.current_status==="Draft"/,"Draft Stage 1 should use editable incident form");
 assert.match(stagePage,/redirect\("\/customer\/spot-intimation\?account="/,"Draft Stage 1 must route to editable form");
 assert.match(stagePage,/const canEditStage = external && Boolean\(CUSTOMER_EXTERNAL_STAGE_FIELDS\[selected\.key\]\)/,"Stage editing must stay gated to external claims with configured fields");
-assert.match(stagePage,/!completed && activeIndex===currentIndex/,"Completed and noncurrent stages must stay read-only");
+assert.match(stagePage,/completed \|\| activeIndex===currentIndex/,"Completed external claim stages must remain editable while upcoming stages stay gated");
 assert.match(stagePage,/<CustomerClaimStageSubmit formId="customer-claim-stage-details-form" variant="continue"\s*\/>/,"Eligible stages must render the shared Save & Continue submit action");
 const stageSubmit=fs.readFileSync("components/customer-portal/customer-claim-stage-submit.tsx","utf8");
 assert.match(stageSubmit,/variant === "continue" \? "Save & Continue"/,"Shared action must display Save & Continue for eligible stages");

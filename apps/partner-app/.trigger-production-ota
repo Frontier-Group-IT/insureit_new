@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=b7d9a7831575ccf5e487482d9b9ca38f6a618c0b
-reason=publish-merged-pr-3699-claim-document-ui
+source_main=f4693f6f044459a39c16d9ededccbcada5737335
+reason=publish-merged-pr-3708-claim-upload-progress
