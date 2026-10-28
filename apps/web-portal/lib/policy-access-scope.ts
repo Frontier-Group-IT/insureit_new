@@ -155,12 +155,20 @@ export async function canAccessPolicy(
   }
 
   if (role === "operations_head_life") {
-    const downline = await getOperationsHeadDownlinePolicyScope(profileId);
-    // All Life/Health records are authorized for case processing and issued-policy edits; other verticals stay downline-only.
-    void write;
-    const filter = operationsHeadVisiblePolicyFilter(downline);
-    if (!filter) return false;
+    // Life/Health authorization is vertical-wide, regardless of RM or partner.
+    // Resolve the target record first: a downline scope query must never be a
+    // prerequisite for reading or editing a Life/Health policy.
     const admin = createSupabaseAdminClient();
+    const { data: target, error: targetError } = await admin.from("policies")
+      .select("id,business_line").eq("id", policyId)
+      .maybeSingle<{ id: string; business_line: string | null }>();
+    if (targetError || !target) return false;
+    if (target.business_line === "Life" || target.business_line === "Health") return true;
+
+    // Preserve legacy RM/intermediary downline scope for other verticals.
+    const downline = await getOperationsHeadDownlinePolicyScope(profileId);
+    const filter = operationsHeadPolicyFilter(downline);
+    if (!filter) return false;
     const { data, error } = await admin.from("policies")
       .select("id").eq("id", policyId).or(filter).maybeSingle<{ id: string }>();
     return !error && Boolean(data?.id);
