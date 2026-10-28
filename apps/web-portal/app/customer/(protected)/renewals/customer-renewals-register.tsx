@@ -3,7 +3,7 @@ import "../customer-register-motion.css";
 import Link from "next/link";
 import motion from "./renewals-motion.module.css";
 import { useMemo, useState } from "react";
-import { CalendarDays, ChevronDown, FileText, Search, ShieldCheck, CarFront, ArrowRight, ArrowUpDown, Clock3 } from "lucide-react";
+import { CalendarDays, ChevronDown, FileText, Search, ShieldCheck, CarFront, ArrowRight, Clock3 } from "lucide-react";
 
 export type RenewalRegisterItem = {
   id: string; title: string; key: string; vehicleId: string; vehicleNo: string;
@@ -23,7 +23,7 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
   const [query,setQuery]=useState("");
   const [status,setStatus]=useState("all");
   const [sort,setSort]=useState<"nearest"|"latest">("nearest");
-  const [collapsed,setCollapsed]=useState<string[]>([]);
+  const [activeCategory,setActiveCategory]=useState<string | null>(null);
   const groups=useMemo(()=>{
     const filtered=items.filter(item=>{
       const matches=[item.vehicleNo,item.title,item.reference,item.expiry,item.status].some(v=>v.toLowerCase().includes(query.trim().toLowerCase()));
@@ -36,7 +36,7 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
         .sort((a,b)=>sort==="nearest"?a.daysUntil-b.daysUntil:b.daysUntil-a.daysUntil)
     }))};
   },[items,categories,query,status,sort]);
-  const toggle=(key:string)=>setCollapsed(prev=>prev.includes(key)?prev.filter(k=>k!==key):[...prev,key]);
+  const selectedGroup = groups.groupList.find(cat=>cat.key===activeCategory);
   return <div className={`customer-register-motion space-y-4 text-[#293461] ${motion.pageEnter}`}>
     <section className="customer-register-hero relative isolate min-h-[175px] overflow-hidden rounded-xl border border-[#E1E8F9] bg-[#EDF4FF]">
       <div aria-hidden="true" className={`pointer-events-none absolute -inset-2 bg-[url('/assets/renewal.jpeg')] bg-cover bg-center ${motion.heroParallax}`}/>
@@ -52,26 +52,34 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
       </div>
     </section>
     <div className={`customer-register-panel grid gap-2 sm:grid-cols-[minmax(0,1fr)_190px_180px] ${motion.controls}`}>
-      <label className="customer-register-control flex h-10 min-w-0 items-center gap-2 rounded-lg border border-[#E0E7F4] bg-white px-3 text-[#8090B0]"><Search className="h-4 w-4 shrink-0"/><input aria-label="Search renewals" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by reference number, vehicle number or policy..." className="min-w-0 flex-1 bg-transparent text-[11px] text-[#253760] outline-none placeholder:text-[#9BA9C0]"/></label>
+      <label className="customer-register-control flex h-10 min-w-0 items-center gap-2 rounded-lg border border-[#E0E7F4] bg-white px-3 text-[#8090B0]"><Search className="h-4 w-4 shrink-0"/><input aria-label="Search renewals" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by reference number, vehicle number or policy..." className="min-w-0 flex-1 border-0 bg-transparent text-[11px] text-[#253760] outline-none placeholder:text-[#9BA9C0]"/></label>
       <select aria-label="Filter by status" value={status} onChange={e=>setStatus(e.target.value)} className={`customer-register-control h-10 rounded-lg border border-[#E0E7F4] bg-white px-3 text-[11px] font-semibold text-[#53648C] ${motion.filterControl}`}>
         <option value="all">All Status</option><option value="due">Due</option><option value="expired">Expired</option><option value="upcoming">Upcoming</option>
       </select>
       <label className="customer-register-control flex h-10 items-center gap-2 rounded-lg border border-[#E0E7F4] bg-white px-3 text-[11px] text-[#8B98AE]">Sort by
-        <select aria-label="Sort renewals" value={sort} onChange={e=>setSort(e.target.value as "nearest"|"latest")} className={`min-w-0 flex-1 bg-transparent font-bold text-[#4F5E87] outline-none ${motion.filterControl}`}><option value="nearest">Nearest Expiry</option><option value="latest">Latest Expiry</option></select>
-        <ArrowUpDown className="h-3.5 w-3.5 text-[#5A53C9]"/>
+        <select aria-label="Sort renewals" value={sort} onChange={e=>setSort(e.target.value as "nearest"|"latest")} className={`min-w-0 flex-1 border-0 bg-transparent font-bold text-[#4F5E87] outline-none ${motion.filterControl}`}><option value="nearest">Nearest Expiry</option><option value="latest">Latest Expiry</option></select>
       </label>
     </div>
     <div className="space-y-3">
-      {groups.groupList.filter(cat=>cat.records.length>0 || (!query.trim()&&status==="all"&&cat.count>0)).map(cat=>{
-        const open=!collapsed.includes(cat.key);
-        return <section key={cat.key} className={`customer-register-card overflow-hidden rounded-xl border border-[#E2E9F5] bg-white shadow-[0_3px_12px_rgba(43,65,120,.035)] ${motion.section}`}>
-          <button type="button" onClick={()=>toggle(cat.key)} aria-expanded={open} className="flex w-full items-center gap-2.5 px-4 py-3 text-left hover:bg-[#FAFBFF]">
+      <div className="grid grid-cols-6 gap-2" role="group" aria-label="Renewal categories">
+        {groups.groupList.slice(0, 6).map(cat => {
+          const selected = activeCategory === cat.key;
+          return <button key={cat.key} type="button" aria-pressed={selected} aria-expanded={selected} onClick={() => setActiveCategory(selected ? null : cat.key)}
+            className={`flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl border px-1.5 py-3 text-center transition hover:bg-[#F7F8FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6050E5] ${selected ? "border-[#6050E5] bg-[#F1F0FF] shadow-sm" : "border-[#E2E9F5] bg-white"}`}>
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#ECEEFF] text-[#6050E5]"><CategoryIcon title={cat.title}/></span>
-            <strong className="min-w-0 flex-1 text-[13px] text-[#28346A]">{cat.title}</strong>
-            <span className="rounded-full bg-[#F0F1FF] px-2 py-1 text-[10px] font-bold text-[#7265D9]">{cat.records.length} Renewal{cat.records.length===1?"":"s"}</span>
-            <ChevronDown className={`h-4 w-4 text-[#6575A1] ${motion.chevron} ${open?motion.chevronOpen:""}`}/>
-          </button>
-          <div aria-hidden={!open} className={`${motion.collapse} ${open?motion.collapseOpen:""}`}><div className="min-h-0 overflow-hidden"><div className="overflow-x-auto border-t border-[#ECF0F8]">
+            <strong className="w-full truncate text-[10px] font-semibold text-[#28346A]" title={cat.title}>{cat.title}</strong>
+            <span className="text-[10px] text-[#7265D9]">{cat.records.length} Renewal{cat.records.length === 1 ? "" : "s"}</span>
+          </button>;
+        })}
+      </div>
+      {selectedGroup ? (() => {
+        const cat = selectedGroup;
+        return <section className={`customer-register-card overflow-hidden rounded-xl border border-[#E2E9F5] bg-white shadow-[0_3px_12px_rgba(43,65,120,.035)] ${motion.section}`}>
+          <div className="flex items-center justify-between border-b border-[#ECF0F8] px-4 py-3">
+            <h2 className="text-[13px] font-bold text-[#28346A]">{cat.title} Records</h2>
+            <button type="button" onClick={() => setActiveCategory(null)} aria-label="Close renewal records" className="rounded-md px-2 py-1 text-[11px] text-[#53648C] hover:bg-[#F3F5FC]">Close</button>
+          </div>
+          <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] table-fixed border-collapse">
               <thead className="bg-[#F8FAFE] text-left text-[10px] font-semibold text-[#93A1BB]"><tr>
                 <th className="w-[30%] px-5 py-2.5">Policy / Ref. No.</th><th className="w-[31%] px-4 py-2.5">Vehicle No. / Policy Type</th><th className="w-[24%] px-4 py-2.5">Expiry Date</th><th className="w-[10%] px-3 py-2.5">Status</th><th className="w-[5%] px-2 py-2.5"/>
@@ -91,9 +99,9 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
                 {!cat.records.length?<tr><td colSpan={5} className="p-4 text-center text-[11px] text-[#8492AC]">No renewals in this category.</td></tr>:null}
               </tbody>
             </table>
-          </div></div></div>
+          </div>
         </section>;
-      })}
+      })() : null}
       {!groups.filtered.length?<p className="rounded-xl border border-[#E2E9F5] bg-white px-4 py-8 text-center text-[12px] text-[#7889A6]">No renewal records match your search or filters.</p>:null}
     </div>
   </div>;
