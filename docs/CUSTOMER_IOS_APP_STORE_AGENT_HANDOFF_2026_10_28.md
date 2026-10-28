@@ -48,7 +48,7 @@ Last updated: 2026-10-28. Owner: INSUREIT project. **Update this file after EVER
 ## Pending gates to release
 - [x] Register Customer App ID in Apple Developer: screenshot 2026-10-28 confirms INSUREIT Customer / com.insureit.mobile listed under Sankalp Insurance Brokers team 455GGC36YS. Capabilities (Push/Broadcast disabled) still to inspect.
 - [ ] Generate Customer App Store Connect provisioning profile for `com.insureit.mobile`, using same-team distribution certificate.
-- [ ] Verify Customer Expo stored signing certificates and profile in project credentials.
+- [x] Verify Customer Expo stored signing certificate and provisioning profile: screenshot 2026-10-28 17:29 shows both Valid under iOS com.insureit.mobile; profile team 455GGC36YS.
 - [ ] Check latest OTA/channel and freeze verified release candidate commit, ensure no Firebase OTP or inadvertent Android changes.
 - [ ] Validate latest CI/Expo doctor, ios signing/native EAS build succeeds; capture EAS build ID and signing logs, not secrets.
 - [ ] Test actual iPhone/TestFlight binary: Supabase OTP, persistent sessions, policy/vehicles/claims, uploads, voice, location, permissions, support, deletion request, auth, privacy/links.
@@ -92,3 +92,5 @@ User's Apple session timed out and screenshot shows Certificates list, with one 
 - 2026-10-28: Expo Customer iOS credentials wizard reached Step 7/8, 'Choose App Store Connect API Key for EAS Submit', after skipping APNs key. ASC key is optional for first signed compilation; instructed user to choose 'Skip this step' and Next, then verify Step 8 and completed credentials. Step 7 completion and final saved credentials not yet confirmed.
 
 - 2026-10-28: Expo credentials wizard reached Step 8/8 'Confirm changes'. Screenshot contains standard warning and Submit button. User advised Submit only after ensuring imported .p12 and Customer App Store .mobileprovision match. Submission and credential validity NOT yet confirmed; next verify Expo iOS credentials overview shows valid certificate and provisioning profile. No app build or Apple App Review submission has occurred.
+
+- 2026-10-28 17:29 IST: Expo Customer project iOS credentials configuration submitted successfully. Screenshot confirms App Store distribution certificate serial 7F76D79307BB308BBF11A4DBEF769163 status VALID and provisioning profile UUID 33be6e5d-1710-498d-952a-cc74661baa16 status VALID under com.insureit.mobile; profile Apple team 455GGC36YS. APNs and ASC submit key intentionally omitted. Signing setup completed; signed IPA build, device testing and App Store upload remain pending. Certificate Team UI shows None, but profile team present; validate native signing at EAS build. Next verify fresh PR CI, make manual iOS build workflow runnable in GitHub without prematurely merging draft PR, start signed iOS EAS build when ready.
