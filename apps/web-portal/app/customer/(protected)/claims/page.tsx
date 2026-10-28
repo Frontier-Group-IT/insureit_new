@@ -1,6 +1,6 @@
 import "./customer-claims-motion.css";
 import Link from "next/link";
-import { ClipboardList, Plus, ShieldCheck, ArrowRight, FileText, CalendarDays } from "lucide-react";
+import { ClipboardList, Plus, ShieldCheck, CalendarDays } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
 import { CustomerClaimsSearch } from "./customer-claims-search";
@@ -105,12 +105,11 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
           <div key={statusFilter + ":" + query + ":" + page} className="claims-motion-results bg-[#F4F2FF]/60 px-4 py-7 sm:px-6">
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
               {rows.map(({ claim, stage, stageHref, completed }) => {
-                const detailHref = `/customer/claims/${encodeURIComponent(claim.id)}?account=${encodeURIComponent(account.id)}`;
                 const lossDate = claim.accident_at ? new Date(claim.accident_at) : null;
                 const stageIndex = INTERNAL_JOURNEY_STAGES.findIndex((item) => item.label.toLowerCase() === stage.toLowerCase());
                 const progress = completed ? INTERNAL_JOURNEY_STAGES.length : Math.max(1, stageIndex + 1);
                 return (
-                  <article key={claim.id} className="group flex min-w-0 flex-col rounded-[22px] border border-[#E3E8F1] bg-white p-5 shadow-[0_8px_24px_rgba(31,48,89,.06)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(31,48,89,.12)]">
+                  <Link key={claim.id} href={stageHref} aria-label={`Open claim ${claim.claim_no || claim.vehicle_no || "details"} journey`} className="group flex min-w-0 flex-col rounded-[22px] border border-[#E3E8F1] bg-white p-5 shadow-[0_8px_24px_rgba(31,48,89,.06)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(31,48,89,.12)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1769DC]">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 flex-1 items-start gap-3">
                         <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[#F1F5FF]"><CustomerClaimLogo value={claim.vehicle_make} size={38}/></span>
@@ -140,12 +139,9 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
                         <span className="flex min-w-0 items-center gap-2 font-semibold text-[#244673]"><span className="h-2 w-2 shrink-0 rounded-full bg-[#1769DC]"/><span className="truncate">{completed ? "Claim Complete" : stage}</span></span>
                         <span className="shrink-0 text-[#6D7D99]">{progress}/{INTERNAL_JOURNEY_STAGES.length}</span>
                       </div>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <Link href={detailHref} className="inline-flex items-center gap-1.5 rounded-lg border border-[#C7D7EF] bg-white px-3 py-2 text-[11px] font-semibold text-[#174B86] hover:bg-[#ECF4FF]"><FileText className="h-3.5 w-3.5"/>View Details</Link>
-                        {!completed ? <Link href={stageHref} className="inline-flex items-center gap-1.5 rounded-lg bg-[#1769DC] px-3 py-2 text-[11px] font-semibold text-white hover:bg-[#1058BD]">Continue <ArrowRight className="h-3.5 w-3.5"/></Link> : null}
-                      </div>
                     </div>
-                  </article>
+                    </div>
+                  </Link>
                 );
               })}
             </div>
