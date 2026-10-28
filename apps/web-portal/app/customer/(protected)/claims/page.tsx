@@ -140,7 +140,6 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
                         <span className="shrink-0 text-[#6D7D99]">{progress}/{INTERNAL_JOURNEY_STAGES.length}</span>
                       </div>
                     </div>
-                    </div>
                   </Link>
                 );
               })}
