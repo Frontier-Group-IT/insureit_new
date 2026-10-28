@@ -171,6 +171,21 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
   const [form,setForm]=useState<FormState>(()=>stateFrom(initialValues));
   const [vehicleRegistrationMode,setVehicleRegistrationMode]=useState<VehicleRegistrationMode>(initialRegistrationMode);
   const draftRevisionRef=useRef<number>(initialDraftRevision ?? 1);
+  // Serialize draft writes from autosave, Save & Return, and Book Active Policy.
+  // Each write must read the revision only after the preceding write settles.
+  const draftSaveQueueRef=useRef<Promise<void>>(Promise.resolve());
+  const saveDraftInOrder=(draft:PolicyIntakeDraft)=>{
+    if(!sourceIntakeId)throw new Error("Policy Intake ID is required to save the draft.");
+    const save=async()=>{
+      const result=await savePolicyIntakeOnboardingDraft(sourceIntakeId,draftRevisionRef.current,draft);
+      if(result.ok){draftRevisionRef.current=result.revision;setDraftSaveError(null);}
+      else if(result.conflict){setDraftSaveError(result.error);}
+      return result;
+    };
+    const operation=draftSaveQueueRef.current.then(save);
+    draftSaveQueueRef.current=operation.then(()=>undefined,()=>undefined);
+    return operation;
+  };
   const [draftSaveError,setDraftSaveError]=useState<string|null>(null);
   const [commercialModal,setCommercialModal]=useState<CommercialModal>(null);
   const [activeSection,setActiveSection]=useState(0);
@@ -252,7 +267,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
   },[form,vehicleRegistrationMode,isEdit,sourceIntakeId,authoritativeInitialValues]);
   useEffect(()=>{
     if(isEdit||!sourceIntakeId||!draftHydrated.current||isSubmitting)return;
-    const timer=window.setTimeout(()=>{void savePolicyIntakeOnboardingDraft(sourceIntakeId,draftRevisionRef.current,{...form,registrationMode:vehicleRegistrationMode} as PolicyIntakeDraft).then(result=>{if(result.ok){draftRevisionRef.current=result.revision;setDraftSaveError(null);}else if(result.conflict){setDraftSaveError(result.error);}});},900);
+    const timer=window.setTimeout(()=>{void saveDraftInOrder({...form,registrationMode:vehicleRegistrationMode} as PolicyIntakeDraft).then(result=>{if(result.ok){draftRevisionRef.current=result.revision;setDraftSaveError(null);}else if(result.conflict){setDraftSaveError(result.error);}});},900);
     return()=>window.clearTimeout(timer);
   },[form,vehicleRegistrationMode,isEdit,sourceIntakeId,isSubmitting]);
   useEffect(()=>{setActiveSection(0);},[form.businessLine]);
@@ -302,7 +317,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
       try {
         let finalPayload=payload;
         if(sourceIntakeId){
-          const saved=await savePolicyIntakeOnboardingDraft(sourceIntakeId,draftRevisionRef.current,{...form,registrationMode:vehicleRegistrationMode} as PolicyIntakeDraft);
+          const saved=await saveDraftInOrder({...form,registrationMode:vehicleRegistrationMode} as PolicyIntakeDraft);
           if(!saved.ok){setDraftSaveError(saved.error);return;}
           draftRevisionRef.current=saved.revision;
           finalPayload={...payload,draftRevision:saved.revision};
@@ -523,7 +538,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
         </Section>
       </div><LiveSummary completion={completion} net={calculations.net} gst={calculations.gst} gross={calculations.gross} access={commercialAccess} payinEntered={payinEntered} payoutEntered={payoutEntered} totalPayin={calculations.totalPayin} totalPayout={calculations.grossPayout} payinOd={form.projectedOdPercent} payinTp={form.projectedTpPercent} payoutOd={form.payoutOdPercent} payoutTp={form.payoutTpPercent} onOpen={setCommercialModal}/></div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#D9E2F0] bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur"><div className="mx-auto flex max-w-[1480px] justify-end gap-2">{draftSaveError?<span className="mr-auto text-[9px] font-semibold text-red-600">{draftSaveError}</span>:null}{sourceIntakeId?<button type="button" onClick={()=>{void savePolicyIntakeOnboardingDraft(sourceIntakeId,draftRevisionRef.current,{...form,registrationMode:vehicleRegistrationMode} as PolicyIntakeDraft).then(result=>{if(result.ok){draftRevisionRef.current=result.revision;router.push(`/policy-intakes/${encodeURIComponent(sourceIntakeId)}`);}else setDraftSaveError(result.error);});}} className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Save &amp; Return to Intake</button>:<Link href="/policies" onClick={()=>{if(!isEdit)try{sessionStorage.removeItem(POLICY_DRAFT_KEY);}catch{}}} className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Cancel</Link>}<button type="button" onClick={submitPolicy} disabled={isSubmitting||Boolean(draftSaveError)} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-60">{isSubmitting?pendingText:submitText}</button></div></div>
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#D9E2F0] bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur"><div className="mx-auto flex max-w-[1480px] justify-end gap-2">{draftSaveError?<span className="mr-auto text-[9px] font-semibold text-red-600">{draftSaveError}</span>:null}{sourceIntakeId?<button type="button" onClick={()=>{void saveDraftInOrder({...form,registrationMode:vehicleRegistrationMode} as PolicyIntakeDraft).then(result=>{if(result.ok){draftRevisionRef.current=result.revision;router.push(`/policy-intakes/${encodeURIComponent(sourceIntakeId)}`);}else setDraftSaveError(result.error);});}} className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Save &amp; Return to Intake</button>:<Link href="/policies" onClick={()=>{if(!isEdit)try{sessionStorage.removeItem(POLICY_DRAFT_KEY);}catch{}}} className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Cancel</Link>}<button type="button" onClick={submitPolicy} disabled={isSubmitting||Boolean(draftSaveError)} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-60">{isSubmitting?pendingText:submitText}</button></div></div>
     </>:isLifeHealthPolicy?<div className="space-y-3">{sourceSection}<LifeHealthPolicyForm key={form.businessLine} policyType={form.businessLine as "Life"|"Health"} insurers={lifeHealthInsurers} source={{sourcingDate:form.issuanceDate,intermediaryType:form.intermediaryType,sourceId:selectedSourceId,leadSource:form.leadSource,intermediaryCode:form.intermediaryCode,rmName:form.rmName,rmCode:selectedSource?.rmCode??""}}/></div>:null}
 
     {submitError?<ValidationErrorDialog message={submitError} onClose={()=>setSubmitError(null)}/>:null}

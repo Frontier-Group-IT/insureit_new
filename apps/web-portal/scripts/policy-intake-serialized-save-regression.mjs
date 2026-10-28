@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+const source=readFileSync(fileURLToPath(new URL("../components/policy-unified-form.tsx",import.meta.url)),"utf8");
+assert.match(source,/draftSaveQueueRef=useRef<Promise<void>>\(Promise\.resolve\(\)\)/,"Draft saves must be serialized");
+assert.match(source,/draftSaveQueueRef\.current\.then\(save\)/,"Queue should wait for previous save");
+assert.match(source,/draftRevisionRef\.current=result\.revision/,"Revision should advance only on success");
+assert.match(source,/draftSaveQueueRef\.current=operation\.then\(\(\)=>undefined,\(\)=>undefined\)/,"Rejected saves must not poison queue");
+assert.equal((source.match(/saveDraftInOrder\(\{\.\.\.form,registrationMode:vehicleRegistrationMode\} as PolicyIntakeDraft\)/g)||[]).length,3,"Autosave, submission and return should share queue");
+assert.doesNotMatch(source,/savePolicyIntakeOnboardingDraft\(sourceIntakeId,draftRevisionRef\.current,\{\.\.\.form/,"No unqueued draft write");
+console.log("Policy Intake serialized draft save regression passed");
