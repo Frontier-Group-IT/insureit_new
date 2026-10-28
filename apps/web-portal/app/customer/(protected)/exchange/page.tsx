@@ -3,8 +3,9 @@ import "./customer-exchange-premium.css";
 import "../customer-register-motion.css";
 import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 import Link from "next/link";
+import { CustomerExchangeSellWorkspace } from "@/components/customer-portal/customer-exchange-sell-workspace";
 import type { ReactNode } from "react";
-import { Activity, ArrowLeftRight, BadgeCheck, Heart, MapPin, MoreVertical, Search, ShoppingBag, Store, Truck } from "lucide-react";
+import { Activity, ArrowLeftRight, BadgeCheck, Heart, MapPin, MoreVertical, Search, ShoppingBag, Store, Truck, Gavel, Handshake, FileText, ChevronRight, Clock3, ShieldCheck } from "lucide-react";
 import {
   CustomerAccountTabs,
   EmptyCustomerState,
@@ -27,7 +28,7 @@ type ExchangeTab = (typeof tabs)[number];
 export default async function CustomerExchangePage({
   searchParams,
 }: {
-  searchParams?: Promise<{ account?: string; q?: string; category?: string; tab?: string }>;
+  searchParams?: Promise<{ account?: string; q?: string; category?: string; tab?: string; activityFilter?: string }>;
 }) {
   const params = searchParams ? await searchParams : {};
   const { account, accounts } = await resolveCustomerWebScope(params.account);
@@ -35,6 +36,8 @@ export default async function CustomerExchangePage({
     ? (params.category ?? "All")
     : "All";
   const query = params.q?.trim() ?? "";
+  const activityFilters = ["all", "offers", "bids", "listings", "deals", "requests", "saved"] as const;
+  const activityFilter = activityFilters.includes(params.activityFilter as typeof activityFilters[number]) ? params.activityFilter! : "all";
   const requestedTab = params.tab ?? "buy";
   const tab: ExchangeTab = tabs.includes(requestedTab as ExchangeTab)
     ? (requestedTab as ExchangeTab)
@@ -95,16 +98,16 @@ export default async function CustomerExchangePage({
     <div className="customer-register-motion customer-exchange-premium exchange-reference space-y-3">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/exchange" />
 
-      <section className="exchange-premium-hero customer-register-hero relative isolate overflow-hidden rounded-2xl border border-[#DCE6F2] bg-[#EAF4FF] px-5 py-6 shadow-[0_10px_28px_rgba(28,50,82,.05)] sm:px-7 sm:py-7">
-        <div aria-hidden="true" className="exchange-premium-hero-art pointer-events-none absolute inset-0 bg-[url('/assets/PT.jpeg')] bg-cover bg-center opacity-95" />
-        <div aria-hidden="true" className="exchange-premium-hero-shade pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F7FBFF]/85 via-[#F7FBFF]/45 via-45% to-transparent" />
+      <section className={`${tab === "sell" ? "exchange-sell-hero" : ""} exchange-premium-hero customer-register-hero relative isolate overflow-hidden rounded-2xl border border-[#DCE6F2] bg-[#EAF4FF] px-5 py-6 shadow-[0_10px_28px_rgba(28,50,82,.05)] sm:px-7 sm:py-7`}>
+        <div aria-hidden="true" className={`exchange-premium-hero-art pointer-events-none absolute inset-0 bg-cover bg-center opacity-95 ${tab === "sell" ? "bg-[url('/assets/Exchange.jpeg')]" : "bg-[url('/assets/PT.jpeg')]"}`} />
+        <div aria-hidden="true" className={`exchange-premium-hero-shade pointer-events-none absolute inset-0 ${tab === "sell" ? "bg-gradient-to-r from-[#0C315C]/95 via-[#133E6C]/80 to-[#133E6C]/5" : "bg-gradient-to-r from-[#F7FBFF]/85 via-[#F7FBFF]/45 via-45% to-transparent"}`} />
         <div className="relative z-10 max-w-[650px]">
-          <div className="flex items-center gap-3"><span className="exchange-reference-hero-icon grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#E8E5FF] text-[#6950E8]"><ArrowLeftRight className="h-7 w-7" /></span><div><h1 className="text-[clamp(25px,3vw,34px)] font-black leading-tight text-[#15234A]">
+          {tab === "sell" ? <div className="space-y-2"><p className="text-[10px] font-extrabold uppercase tracking-widest text-[#B7D8FB]">InsureIt Exchange</p><h1 className="text-[clamp(23px,3vw,32px)] font-black text-white">Sell Your Commercial Vehicle</h1><p className="text-[12px] text-[#DBE8FA]">Turn your existing vehicle into new opportunities.</p><div className="flex flex-wrap gap-x-6 gap-y-2 pt-3 text-[10px] font-semibold text-white"><span>✓ List Easily</span><span>✓ Reach Buyers</span><span>✓ Trusted Platform</span></div></div> : <div className="flex items-center gap-3"><span className="exchange-reference-hero-icon grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#E8E5FF] text-[#6950E8]"><ArrowLeftRight className="h-7 w-7" /></span><div><h1 className="text-[clamp(25px,3vw,34px)] font-black leading-tight text-[#15234A]">
             Vehicle <span className="exchange-reference-gradient-text">Exchange</span>
           </h1>
           <p className="mt-2 text-[12px] leading-6 text-[#647995]">
-            Buy, sell and track commercial vehicle Exchange activity from the same customer account.
-          </p></div></div>
+            Buy, sell and track your commercial vehicle activity from one place.
+          </p></div></div>}
         </div>
       </section>
 
@@ -195,35 +198,8 @@ export default async function CustomerExchangePage({
       ) : null}
 
       {tab === "sell" ? (
-        sellUnavailable ? (
-          <ExchangeRecovery accountId={account.id} tab="sell" />
-        ) : sellableVehicles.length === 0 ? (
-          <EmptyCustomerState title="No vehicles available to sell" body="Vehicles linked to this customer account will appear here when eligible for Exchange." />
-        ) : (
-          <section className="exchange-premium-sell exchange-sell-redesign space-y-3">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div><h2 className="text-[17px] font-black text-[#10213D]">Sell from your Fleet</h2>
-                <p className="mt-1 text-[11px] text-[#71839A]">Choose an eligible vehicle to start your Exchange listing.</p></div>
-              <span className="rounded-full border border-[#E0DDF8] bg-[#F2F0FF] px-3 py-1.5 text-[10px] font-bold text-[#6555D9]">{sellableVehicles.length} vehicle{sellableVehicles.length===1?"":"s"} available</span>
-            </div>
-            <div className="exchange-sell-grid grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {sellableVehicles.map(vehicle => {
-                const name=[vehicle.make,vehicle.model].filter(Boolean).join(" ")||vehicle.vehicle_type;
-                const location=[vehicle.city,vehicle.state].filter(Boolean).join(", ")||"Location on request";
-                return <article key={vehicle.vehicle_id} className="exchange-sell-card group min-w-0 overflow-hidden rounded-xl border border-[#DFE5F5] bg-white p-3 shadow-[0_5px_18px_rgba(34,70,120,.05)]">
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#EAE7FF] to-[#E9F3FF] text-[#5C5BDF]"><Truck className="h-6 w-6"/></span>
-                    <span className={`rounded-full px-2 py-1 text-[9px] font-bold ${vehicle.has_active_listing?"bg-[#FFF3E7] text-[#A66A27]":"bg-[#E7F8EF] text-[#17805A]"}`}>{vehicle.has_active_listing?"Already listed":"Ready to list"}</span>
-                  </div>
-                  <h3 className="mt-3 truncate text-[12px] font-extrabold text-[#183D7B]" title={name}>{name}</h3>
-                  <p className="mt-1 text-[11px] font-semibold text-[#546D97]">{vehicle.vehicle_no}</p>
-                  <div className="mt-3 flex items-center gap-1.5 border-t border-[#EDF0F7] pt-3 text-[10px] text-[#7185A1]"><MapPin className="h-3.5 w-3.5 shrink-0"/><span className="truncate">{location}</span></div>
-                  <div className="mt-2 flex justify-between gap-2 text-[10px]"><span className="text-[#8491AA]">{vehicle.vehicle_type||"Commercial vehicle"}</span><span className={vehicle.has_active_listing?"font-semibold text-[#B47D36]":"font-semibold text-[#278B69]"}>{vehicle.has_active_listing?"Listing active":"Eligible"}</span></div>
-                </article>;
-              })}
-            </div>
-          </section>
-        )
+        sellUnavailable ? <ExchangeRecovery accountId={account.id} tab="sell" /> :
+        <CustomerExchangeSellWorkspace accountId={account.id} vehicles={sellableVehicles} />
       ) : null}
 
       {tab === "activity" ? (
@@ -232,18 +208,28 @@ export default async function CustomerExchangePage({
         ) : (
           <section className="exchange-premium-activity space-y-4">
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-              <ActivityMetric icon={<Heart className="h-4 w-4" />} label="Saved" value={activity.favorites.length} />
-              <ActivityMetric icon={<ShoppingBag className="h-4 w-4" />} label="Offers / Bids" value={activity.bids.length} />
-              <ActivityMetric icon={<Store className="h-4 w-4" />} label="My Listings" value={activity.listings.length} />
-              <ActivityMetric icon={<BadgeCheck className="h-4 w-4" />} label="Deals" value={activity.deals.length} />
-              <ActivityMetric icon={<Activity className="h-4 w-4" />} label="Requests" value={activity.contact_requests.length} />
+              <ActivityMetric icon={<Heart className="h-5 w-5" />} label="Saved" value={activity.favorites.length} description="Vehicles saved for later" tone="pink" />
+              <ActivityMetric icon={<Gavel className="h-5 w-5" />} label="Offers / Bids" value={activity.bids.length} description="Active offers and bids" tone="blue" />
+              <ActivityMetric icon={<Store className="h-5 w-5" />} label="My Listings" value={activity.listings.length} description="Vehicles you have listed" tone="green" />
+              <ActivityMetric icon={<Handshake className="h-5 w-5" />} label="Deals" value={activity.deals.length} description="Successful transactions" tone="orange" />
+              <ActivityMetric icon={<FileText className="h-5 w-5" />} label="Requests" value={activity.contact_requests.length} description="Purchase / sale requests" tone="purple" />
             </div>
-
-            <ActivitySection title="My Listings" rows={activity.listings} />
-            <ActivitySection title="Offers / Bids" rows={activity.bids} />
-            <ActivitySection title="Deals" rows={activity.deals} />
-            <ActivitySection title="Saved Vehicles" rows={activity.favorites} />
-            <ActivitySection title="Contact Requests" rows={activity.contact_requests} />
+            <div className="rounded-2xl border border-[#DEE6F3] bg-white p-3 shadow-[0_8px_28px_rgba(27,50,88,.045)] sm:p-4">
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div><h2 className="text-[17px] font-extrabold text-[#11254B]">Your Activity</h2><p className="mt-1 text-[11px] text-[#788BA8]">Track your offers, bids, listings and more in one place.</p></div>
+                <nav aria-label="Exchange activity filters" className="flex flex-wrap items-center gap-1.5">
+                  {([["all","All",activity.bids.length+activity.listings.length+activity.deals.length+activity.favorites.length+activity.contact_requests.length],["offers","Offers",activity.bids.length],["bids","Bids",activity.bids.length],["listings","Listings",activity.listings.length],["deals","Deals",activity.deals.length],["requests","Requests",activity.contact_requests.length],["saved","Saved",activity.favorites.length]] as const).map(([key,label,count])=><Link key={key} href={{pathname:"/customer/exchange",query:{account:account.id,tab:"activity",activityFilter:key}}} aria-current={activityFilter===key?"page":undefined} className={`rounded-full border px-3 py-2 text-[10px] font-bold transition ${activityFilter===key?"border-[#123967] bg-[#123967] text-white":"border-[#E7ECF7] bg-[#F4F7FD] text-[#6880A4] hover:bg-[#EAF1FB]"}`}>{label} <span className="ml-1 opacity-80">{count}</span></Link>)}
+                </nav>
+              </div>
+              <div className="space-y-2">
+                {(activityFilter==="all"||activityFilter==="bids"||activityFilter==="offers") ? <ActivitySection title="Offers / Bids" rows={activity.bids} accountId={account.id} /> : null}
+                {(activityFilter==="all"||activityFilter==="listings") ? <ActivitySection title="My Listings" rows={activity.listings} accountId={account.id} /> : null}
+                {(activityFilter==="all"||activityFilter==="deals") ? <ActivitySection title="Deals" rows={activity.deals} accountId={account.id} /> : null}
+                {(activityFilter==="all"||activityFilter==="saved") ? <ActivitySection title="Saved Vehicles" rows={activity.favorites} accountId={account.id} /> : null}
+                {(activityFilter==="all"||activityFilter==="requests") ? <ActivitySection title="Contact Requests" rows={activity.contact_requests} accountId={account.id} /> : null}
+                {(activityFilter!=="all" && (activityFilter==="bids"||activityFilter==="offers"?activity.bids:activityFilter==="listings"?activity.listings:activityFilter==="deals"?activity.deals:activityFilter==="saved"?activity.favorites:activity.contact_requests).length===0) ? <div className="rounded-xl bg-[#F7F9FD] py-10 text-center text-[12px] text-[#64748B]">No {activityFilter} activity yet.</div> : null}
+              </div>
+            </div>
           </section>
         )
       ) : null}
@@ -287,38 +273,40 @@ function ExchangeRecovery({
   );
 }
 
-function ActivityMetric({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
-  return (
-    <div className="exchange-premium-activity-card rounded-2xl border border-[#DCE4EE] bg-white p-4 shadow-[0_8px_24px_rgba(28,50,82,.04)]">
-      <div className="flex items-center gap-2 text-[#3156B8]">{icon}<span className="text-[10px] font-black">{label}</span></div>
-      <p className="mt-2 text-[24px] font-black text-[#10213D]">{value.toLocaleString("en-IN")}</p>
-    </div>
-  );
+function ActivityMetric({ icon, label, value, description, tone }: { icon: ReactNode; label: string; value: number; description: string; tone: "pink"|"blue"|"green"|"orange"|"purple" }) {
+  const tones = {pink:"bg-[#FFF7FC] text-[#EB249B]",blue:"bg-[#F6FAFF] text-[#1776E8]",green:"bg-[#F4FCF9] text-[#009B70]",orange:"bg-[#FFF9F2] text-[#F08219]",purple:"bg-[#FCF8FF] text-[#7543ED]"};
+  return <div className={`rounded-xl border border-[#E3E9F4] p-4 shadow-[0_6px_18px_rgba(35,62,95,.045)] ${tones[tone]}`}>
+    <div className="flex items-start justify-between gap-2"><span className="grid h-10 w-10 place-items-center rounded-xl bg-white/80">{icon}</span><ChevronRight className="h-4 w-4 opacity-60"/></div>
+    <p className="mt-2 text-[11px] font-bold text-[#173157]">{label}</p>
+    <p className="mt-1 text-[25px] font-black text-[#0C2147]">{value.toLocaleString("en-IN")}</p>
+    <p className="mt-1 text-[10px] text-[#8394B1]">{description}</p>
+  </div>;
 }
 
-function ActivitySection({ title, rows }: { title: string; rows: Array<Record<string, unknown>> }) {
+function ActivitySection({ title, rows, accountId }: { title: string; rows: Array<Record<string, unknown>>; accountId: string }) {
   if (!rows.length) return null;
-  return (
-    <div className="rounded-2xl border border-[#DCE4EE] bg-white p-4 shadow-[0_8px_24px_rgba(28,50,82,.04)]">
-      <h3 className="text-[13px] font-black text-[#10213D]">{title}</h3>
-      <div className="mt-3 divide-y divide-[#E7EDF5]">
-        {rows.slice(0, 20).map((row, index) => {
-          const titleText = valueText(row.title) || valueText(row.listing_no) || valueText(row.deal_no) || valueText(row.request_type) || title;
-          const status = valueText(row.status);
-          const amount = Number(row.amount ?? row.agreed_price ?? row.asking_price ?? 0);
-          return (
-            <div key={valueText(row.listing_id) || valueText(row.deal_id) || valueText(row.bid_id) || valueText(row.request_id) || index} className="flex items-center justify-between gap-3 py-3">
-              <div className="min-w-0">
-                <p className="truncate text-[11px] font-black text-[#173A7D]">{titleText}</p>
-                {status ? <p className="mt-1 text-[9.5px] font-semibold capitalize text-[#7B899C]">{status.replaceAll("_", " ")}</p> : null}
-              </div>
-              {amount > 0 ? <p className="shrink-0 text-[11px] font-black text-[#10213D]">{formatCustomerCompactMoney(amount)}</p> : null}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+  return <div className="space-y-2">
+    {rows.slice(0, 20).map((row,index)=>{
+      const vehicleName=valueText(row.title)||[valueText(row.make),valueText(row.model)].filter(Boolean).join(" ")||valueText(row.listing_no)||valueText(row.deal_no)||valueText(row.request_type)||title;
+      const status=valueText(row.status).replaceAll("_"," ");
+      const low=status.toLowerCase();
+      const leading=low.includes("leading")||low.includes("winning");
+      const outbid=low.includes("outbid");
+      const listingId=valueText(row.listing_id);
+      const href=listingId?{pathname:`/customer/exchange/${encodeURIComponent(listingId)}`,query:{account:accountId}}:null;
+      const amount=Number(row.amount??row.agreed_price??row.asking_price??0);
+      const cover=valueText(row.cover_url);
+      const meta=[row.year,row.odometer_km!=null?`${Number(row.odometer_km).toLocaleString("en-IN")} km`:null,row.fuel_type,row.masked_registration].filter(v=>v!=null&&v!=="").join("  |  ");
+      return <div key={valueText(row.bid_id)||valueText(row.listing_id)||valueText(row.deal_id)||valueText(row.request_id)||index} className="flex flex-wrap items-center gap-3 rounded-xl border border-[#E4EAF3] bg-white px-3 py-2.5 transition hover:border-[#C8D8F1] hover:shadow-sm md:flex-nowrap">
+        <div className="grid h-[58px] w-[94px] shrink-0 place-items-center overflow-hidden rounded-lg bg-gradient-to-br from-[#EAF2FD] to-[#D6E5F7]">{cover?<img src={cover} alt="" className="h-full w-full object-cover"/>:<Truck className="h-8 w-8 text-[#6D8AB2]"/>}</div>
+        <div className="min-w-[160px] flex-1"><p className="truncate text-[12px] font-extrabold text-[#15386F]">{vehicleName}</p><p className="mt-1 truncate text-[10px] text-[#8B9AB2]">{meta||title}</p></div>
+        <div className="min-w-[90px]"><span className={`inline-flex rounded-lg px-2.5 py-1.5 text-[10px] font-bold capitalize ${leading?"bg-[#E1F8EE] text-[#11986A]":outbid?"bg-[#FFF0F2] text-[#DF3A58]":"bg-[#EAF1FF] text-[#426BCA]"}`}>{status||title}</span></div>
+        <div className="hidden min-w-[130px] flex-1 text-[10px] text-[#7A8CA9] lg:block">{leading?"You are leading on this vehicle.":outbid?"A higher bid has been placed.":status?`Status: ${status}`:title}</div>
+        <div className="min-w-[90px] text-right"><p className="text-[12px] font-black text-[#10264C]">{amount>0?formatCustomerCompactMoney(amount):"—"}</p><p className="mt-1 text-[9px] text-[#8B9AB2]">{title==="Offers / Bids"?"Your bid":"Amount"}</p></div>
+        {href?<Link href={href} className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-[#EDF3FF] px-3 py-2 text-[10px] font-bold text-[#245FD1] hover:bg-[#DAE8FF]">View Details <ChevronRight className="h-3.5 w-3.5"/></Link>:<span className="text-[10px] text-[#94A3B8]">Details unavailable</span>}
+      </div>;
+    })}
+  </div>;
 }
 
 function valueText(value: unknown) {

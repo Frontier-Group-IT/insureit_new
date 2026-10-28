@@ -43,7 +43,7 @@ function platformFetch(input: RequestInfo | URL, init?: RequestInit) {
   const url = requestUrl(input);
   const method = requestMethod(input, init);
   const tracked = shouldTrackRequest(url, method);
-  const token = tracked ? beginTrackedLoading(requestLabel(url, method)) : null;
+  const token = tracked ? beginTrackedLoading(requestLabel(url, method, input, init)) : null;
   const claimDocumentUpload = isClaimDocumentUpload(url, method);
   const canUseXhr = typeof XMLHttpRequest !== 'undefined' && (Platform.OS === 'web' || claimDocumentUpload);
   if (token && claimDocumentUpload) updateTrackedLoading(token, 0);
@@ -88,7 +88,17 @@ function isClaimDocumentUpload(url: string, method: string) {
   return method === 'POST' && url.includes('/storage/v1/object/claim-documents/');
 }
 
-function requestLabel(url: string, method: string) {
+function requestLabel(url: string, method: string, input: RequestInfo | URL, init?: RequestInit) {
+  if (isClaimDocumentUpload(url, method)) {
+    const headers = new Headers(input instanceof Request ? input.headers : undefined);
+    if (init?.headers) new Headers(init.headers).forEach((value, key) => headers.set(key, value));
+    const mime = headers.get('content-type')?.toLowerCase() ?? '';
+    // Supabase storage uploads can supply their media MIME type either in
+    // Content-Type or x-upsert/storage metadata; file extension is a fallback.
+    const decodedPath = (() => { try { return decodeURIComponent(new URL(url).pathname).toLowerCase(); } catch { return url.toLowerCase(); } })();
+    if (mime.startsWith('video/') || /\\.(mp4|mov|m4v|webm|avi|mkv)(?:$|[/?])/.test(decodedPath)) return 'Uploading video';
+    if (mime.startsWith('image/') || /\\.(jpe?g|png|webp|heic|heif|gif)(?:$|[/?])/.test(decodedPath)) return 'Uploading image';
+  }
   if (!url.includes('/storage/v1/object')) return 'Processing request';
   if (method === 'DELETE') return 'Deleting document';
   if (method === 'PUT' || method === 'PATCH') return 'Updating document';

@@ -42,8 +42,6 @@ export default function ClaimTrackerScreen() {
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <View style={styles.headerOrbLarge} />
-        <View style={styles.headerOrbSmall} />
         <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.back()} style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.8 }]}>
           <Ionicons name="arrow-back" size={21} color="#FFFFFF" />
         </Pressable>
@@ -96,9 +94,7 @@ export default function ClaimTrackerScreen() {
 function Field({ label, value }: { label: string; value: string | null | undefined }) {return <View style={styles.field}><Text style={styles.fieldLabel}>{label}</Text><Text style={styles.fieldValue}>{value || 'Not recorded'}</Text></View>}
 function Nav({label,icon,onPress,active=false}:{label:string;icon:keyof typeof Ionicons.glyphMap;onPress:()=>void;active?:boolean}) {return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.navItem}><View style={[styles.navIcon,active && styles.navActive]}><Ionicons name={icon} size={19} color={active?'#102F6C':'#7386A4'}/></View><Text style={[styles.navText,active && styles.navTextActive]}>{label}</Text></Pressable>}
 const styles=StyleSheet.create({
-root:{flex:1,backgroundColor:'#EDF6FE'},  header: { height: 50, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', backgroundColor: '#0860C8' },
-  headerOrbLarge: { position: 'absolute', right: -40, top: -45, width: 150, height: 120, borderRadius: 80, backgroundColor: '#0C74DF', opacity: 0.9 },
-  headerOrbSmall: { position: 'absolute', right: 48, top: -18, width: 70, height: 70, borderRadius: 35, backgroundColor: '#0A68D3', opacity: 0.75 },
+root:{flex:1,backgroundColor:'#EDF6FE'},  header: { height: 50, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', backgroundColor: '#081F4C' },
   backButton: { width: 32, height: 36, alignItems: 'center', justifyContent: 'center', marginRight: 5 },
   headerIcon: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: 'transparent' },
   headerIconImage: { width: 22, height: 22 },

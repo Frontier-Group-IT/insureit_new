@@ -23,7 +23,7 @@ export function IntermediaryPortalUsersWorkspace({ rows, extraRows, initialQuery
     ...rows.map(row=>({kind:"partner" as const,key:`partner:${row.intermediary.id}`,row,type:"Partner",status:resolvedStatus(row),
       search:[row.intermediary.display_name,row.intermediary.email,row.account?.email,row.intermediary.intermediary_code,row.intermediary.application_id].filter(Boolean).join(" ").toLowerCase()})),
     ...extraRows.map(row=>({kind:"extra" as const,key:row.id,row,type:row.type,status:row.status,
-      search:[row.name,row.code,row.email,row.context].filter(Boolean).join(" ").toLowerCase()})),
+      search:[row.name,row.code,row.email,row.loginEmail,row.phone,row.context].filter(Boolean).join(" ").toLowerCase()})),
   ],[rows,extraRows]);
   const searchedRows=allItems.filter(item=>item.search.includes(normalizedQuery)&&(accountType==="all"||item.type===accountType));
   const activeCount=searchedRows.filter(item=>item.status==="active").length;
@@ -62,7 +62,7 @@ export function IntermediaryPortalUsersWorkspace({ rows, extraRows, initialQuery
       <div className="flex flex-col gap-3 border-b bg-[#F8FAFC] px-4 py-3 lg:flex-row lg:items-center">
         <div className="shrink-0"><h2 className="text-[12px] font-semibold text-[#0F172A]">Portal Users</h2></div>
         <form onSubmit={(event) => event.preventDefault()} className="w-full lg:max-w-[460px]">
-          <input value={query} onChange={(event) => { setQuery(event.target.value); setCurrentPage(1); }} aria-label="Search intermediary user accounts" placeholder="Search account, email, code or group" className="h-10 w-full rounded-lg border border-[#CBD5E1] bg-white px-3 text-[11.5px] outline-none transition focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#DBEAFE]" />
+          <input value={query} onChange={(event) => { setQuery(event.target.value); setCurrentPage(1); }} aria-label="Search intermediary user accounts" placeholder="Search name, group, branch, mobile, email or code" className="h-10 w-full rounded-lg border border-[#CBD5E1] bg-white px-3 text-[11.5px] outline-none transition focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#DBEAFE]" />
         </form>
         <select aria-label="Account type" value={accountType} onChange={e=>{setAccountType(e.target.value);setCurrentPage(1);}} className="h-9 rounded-lg border border-[#CBD5E1] bg-white px-2 text-[10px]"><option value="all">All account types</option>{["Partner","Group","Branch","Group Associate","Partner Associate"].map(type=><option key={type} value={type}>{type}</option>)}</select>
         <div className="flex-1" />

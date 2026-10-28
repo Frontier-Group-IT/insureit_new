@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, LockKeyhole, FolderKanban } from "lucide-react";
+import { Check, LockKeyhole, FolderKanban, ExternalLink, FileDown } from "lucide-react";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 
 export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, completedKeys, currentKey, editMode = false }: {
@@ -12,6 +12,8 @@ export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, compl
 }) {
   const activeIndex = INTERNAL_JOURNEY_STAGES.findIndex(stage => stage.key === currentKey);
   const selected = INTERNAL_JOURNEY_STAGES.find(stage => stage.key === selectedKey);
+  const allNineCompleted = INTERNAL_JOURNEY_STAGES.every(stage => completedKeys.includes(stage.key));
+  const pdfUrl = `/customer/claims/${encodeURIComponent(claimId)}/download?account=${encodeURIComponent(accountId)}`;
   return (
     <div className="customer-workflow customer-claim-ref-journey overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
       <div className="customer-claim-ref-journey-header flex flex-wrap items-center justify-between gap-3 px-5 py-3">
@@ -19,7 +21,10 @@ export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, compl
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/20 text-white"><FolderKanban className="h-5 w-5" /></span>
           <div><h2 className="text-[16px] font-bold text-white">Claim Journey</h2></div>
         </div>
-        <span className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white px-3.5 py-2 text-[11px] font-semibold text-[#275CAC]">{selected?.label ?? "Spot Intimation"}</span>
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+          {allNineCompleted ? <a href={pdfUrl + "&preview=1"} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-white/60 bg-white px-3 text-[11px] font-semibold text-[#174A87]"><ExternalLink className="h-3.5 w-3.5" />Open PDF</a> : <span aria-disabled="true" title="Available after all nine stages are complete" className="inline-flex min-h-9 cursor-not-allowed items-center gap-1.5 rounded-lg border border-white/20 bg-white/20 px-3 text-[11px] font-semibold text-white/70"><ExternalLink className="h-3.5 w-3.5" />Open PDF</span>}
+          {allNineCompleted ? <a href={pdfUrl} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-white/60 bg-white px-3 text-[11px] font-semibold text-[#174A87]"><FileDown className="h-3.5 w-3.5" />Download PDF</a> : <span aria-disabled="true" title="Available after all nine stages are complete" className="inline-flex min-h-9 cursor-not-allowed items-center gap-1.5 rounded-lg border border-white/20 bg-white/20 px-3 text-[11px] font-semibold text-white/70"><FileDown className="h-3.5 w-3.5" />Download PDF</span>}
+        </div>
       </div>
       <nav aria-label="Nine-stage claim journey" className="overflow-x-auto">
         <ol className="customer-claim-ref-stage-grid grid min-w-[1080px] grid-cols-9 gap-1.5 border-y border-[#E7EBF6] bg-[#FBFAFF] p-2">

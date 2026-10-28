@@ -1,0 +1,16 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+const root=new URL("../",import.meta.url);
+const ui=readFileSync(fileURLToPath(new URL("components/customer-portal/customer-start-claim-selector.tsx",root)),"utf8");
+const action=readFileSync(fileURLToPath(new URL("app/customer/(protected)/start-claim/actions.ts",root)),"utf8");
+assert.match(ui,/Are you sure you want to continue to claim\?/);
+assert.match(ui,/Control No\. Generated/);
+assert.match(ui,/confirmationGrantedRef\.current = true/);
+assert.match(ui,/claimState\.controlNo/);
+assert.match(ui,/router\.push\(claimState\.destination!/);
+assert.match(action,/\.select\("claim_no"\)\.eq\("id", claimId\)\.eq\("customer_id", accountId\)/);
+assert.match(action,/const \{ account \} = await resolveCustomerWebScope\(customerId\)/);
+assert.match(action,/const active = claims\.find/);
+assert.doesNotMatch(action,/redirect\(/);
+console.log("Customer claim confirmation and control-number regression passed");

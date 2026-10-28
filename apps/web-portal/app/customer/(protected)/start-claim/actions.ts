@@ -1,13 +1,12 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getCustomerWebSession } from "@/lib/customer-web";
 import { loadCustomerWebPolicies, loadCustomerWebVehicles, resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaims } from "@/lib/customer-web-phase2-data";
 
-export type PrepareCustomerClaimState = { error: string | null };
+export type PrepareCustomerClaimState = { error: string | null; claimId?: string; controlNo?: string; accountId?: string; destination?: string };
 
 export async function prepareCustomerClaim(_previous: PrepareCustomerClaimState, form: FormData): Promise<PrepareCustomerClaimState> {
   const customerId = String(form.get("account") || "");
@@ -22,9 +21,7 @@ export async function prepareCustomerClaim(_previous: PrepareCustomerClaimState,
   const policy = policies.find(p => p.id === policyId && p.vehicle_id === vehicleId);
   if (policyId && !policy) return { error: "This policy is not linked to the selected vehicle." };
   const active = claims.find(c => (policy ? (policy.source === "external" ? c.external_policy_id === policy.id : c.policy_id === policy.id) : c.vehicle_id === vehicleId && !c.policy_id && !c.external_policy_id) && !["Settled","Closed","Claim Complete","Rejected"].includes(c.current_status));
-  if (active) {
-    redirect((active.current_status === "Draft" ? "/customer/spot-intimation" : "/customer/claims/" + encodeURIComponent(active.id)) + "?account=" + encodeURIComponent(account.id) + (active.current_status === "Draft" ? "&id=" + encodeURIComponent(active.id) : ""));
-  }
+  if (active) return await existingClaimResult(active.id, active.current_status, account.id);
   const supabase = await createServerSupabaseClient();
   if (policy?.source === "external") {
     const { data, error } = await supabase.rpc("ensure_self_managed_external_claim_draft", {
@@ -34,7 +31,7 @@ export async function prepareCustomerClaim(_previous: PrepareCustomerClaimState,
     const value = Array.isArray(data) ? data[0] : data;
     const claimId = value && typeof value === "object" && "claim_id" in value ? String(value.claim_id) : "";
     if (!claimId) return { error: "We could not confirm your claim draft. Please try again." };
-    redirect("/customer/spot-intimation?account=" + encodeURIComponent(account.id) + "&id=" + encodeURIComponent(claimId));
+    return await existingClaimResult(claimId, "Draft", account.id);
   }
   const stamp = new Date();
   const claimNo = "CLM-" + stamp.toISOString().slice(0, 10).replace(/-/g, "") + "-" + stamp.getTime().toString().slice(-6);
@@ -56,7 +53,17 @@ export async function prepareCustomerClaim(_previous: PrepareCustomerClaimState,
       console.error("Customer claim draft creation failed", { code: error?.code, message: error?.message, details: error?.details, hint: error?.hint, recoveryCode: recoveryError?.code, recoveryMessage: recoveryError?.message });
       return { error: error?.code === "42501" || error?.code === "PGRST301" ? "Your account is not authorized to register this claim. Check vehicle ownership or contact support." : error?.code === "23514" ? "Claim registration is restricted by a database rule. Please contact support." : "Your claim could not be registered. Please try again or contact support." };
     }
-    redirect("/customer/spot-intimation?account=" + encodeURIComponent(account.id) + "&id=" + encodeURIComponent(recovered.id));
+    return await existingClaimResult(recovered.id, recovered.current_status, account.id);
   }
-  redirect("/customer/spot-intimation?account=" + encodeURIComponent(account.id) + "&id=" + encodeURIComponent(created.id));
+  return { error: null, claimId: created.id, controlNo: claimNo, accountId: account.id, destination: "/customer/spot-intimation?account=" + encodeURIComponent(account.id) + "&id=" + encodeURIComponent(created.id) };
+}
+
+async function existingClaimResult(claimId: string, status: string, accountId: string): Promise<PrepareCustomerClaimState> {
+  // Fetch the persisted control number; do not infer it from the claim UUID.
+  const { data, error } = await createSupabaseAdminClient().from("claims").select("claim_no").eq("id", claimId).eq("customer_id", accountId).single();
+  if (error || !data?.claim_no) return { error: "The claim was located, but its control number could not be confirmed. Please try again." };
+  const destination = status === "Draft"
+    ? "/customer/spot-intimation?account=" + encodeURIComponent(accountId) + "&id=" + encodeURIComponent(claimId)
+    : "/customer/claims/" + encodeURIComponent(claimId) + "?account=" + encodeURIComponent(accountId);
+  return { error: null, claimId, controlNo: data.claim_no, accountId, destination };
 }

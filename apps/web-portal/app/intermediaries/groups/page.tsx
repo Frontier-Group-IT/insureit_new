@@ -50,6 +50,9 @@ type PartnerRow = {
 type BranchProfileRow = {
   partner_id: string;
   created_by: string | null;
+  email?: string | null;
+  phone?: string | null;
+  contact_name?: string | null;
 };
 type GroupRow = {
   id: string;
@@ -128,7 +131,7 @@ async function renderBusinessWorkspace({
       .returns<GroupRow[]>(),
     admin
       .from("partner_branch_profiles")
-      .select("partner_id,created_by")
+      .select("partner_id,created_by,email,phone,contact_name")
       .returns<BranchProfileRow[]>(),
   ]);
 
@@ -186,6 +189,9 @@ async function renderBusinessWorkspace({
       parent_partner_id: partner.parent_partner_id ?? null,
       owner_employee_id: ownerEmployeeId,
       is_branch_profile: isBranchProfile,
+      email: branchProfileByPartner.get(partner.id)?.email ?? null,
+      phone: branchProfileByPartner.get(partner.id)?.phone ?? null,
+      contact_name: branchProfileByPartner.get(partner.id)?.contact_name ?? null,
     }];
   });
 

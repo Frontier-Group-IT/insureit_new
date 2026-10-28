@@ -7,25 +7,36 @@ import { beginExternalOperationsWorkflow } from "@/app/claims/external-operation
 type Props = {
   claimId: string;
   auto?: boolean;
+  activeClaimId?: string | null;
+  onClaimStart?: (claimId: string) => boolean;
+  onClaimFailure?: (claimId: string) => void;
 };
 
-export function ExternalClaimOperationsEntry({ claimId, auto = false }: Props) {
+export function ExternalClaimOperationsEntry({ claimId, auto = false, activeClaimId, onClaimStart, onClaimFailure }: Props) {
   const router = useRouter();
   const started = useRef(false);
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
 
   function enterWorkflow() {
-    if (pending) return;
+    if (pending || (activeClaimId && activeClaimId !== claimId)) return;
+    // The parent lock is set synchronously before the transition starts, so
+    // simultaneous clicks on different rows cannot start multiple takeovers.
+    if (onClaimStart && !onClaimStart(claimId)) return;
     setMessage("");
     startTransition(async () => {
-      const result = await beginExternalOperationsWorkflow(claimId);
-      if (!result.ok) {
-        setMessage(result.message ?? "Unable to open this External Claim.");
-        return;
+      try {
+        const result = await beginExternalOperationsWorkflow(claimId);
+        if (!result.ok) {
+          setMessage(result.message ?? "Unable to open this External Claim.");
+          onClaimFailure?.(claimId);
+          return;
+        }
+        router.replace(`/claims/${claimId}`);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Unable to open this External Claim.");
+        onClaimFailure?.(claimId);
       }
-      router.replace(`/claims/${claimId}`);
-      router.refresh();
     });
   }
 
@@ -42,11 +53,11 @@ export function ExternalClaimOperationsEntry({ claimId, auto = false }: Props) {
       <div className="inline-flex flex-col items-center gap-1">
         <button
           type="button"
-          disabled={pending}
+          disabled={pending || Boolean(activeClaimId && activeClaimId !== claimId)}
           onClick={enterWorkflow}
           className="inline-flex h-7 items-center justify-center rounded-md bg-[#003A83] px-3 text-[10.5px] font-medium text-white disabled:cursor-wait disabled:opacity-60"
         >
-          {pending ? "Opening..." : "Proceed"}
+          {pending || activeClaimId === claimId ? "Opening..." : "Proceed"}
         </button>
         {message ? <span className="max-w-[180px] text-[9px] font-medium text-red-600">{message}</span> : null}
       </div>
