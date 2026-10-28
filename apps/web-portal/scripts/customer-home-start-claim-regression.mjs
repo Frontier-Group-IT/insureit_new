@@ -60,7 +60,7 @@ const stageActions=fs.readFileSync("app/customer/(protected)/claims/[id]/stage/[
 assert.match(stagePage,/selected\.key==="spot_intimation" && claim\.current_status==="Draft"/,"Draft Stage 1 should use editable incident form");
 assert.match(stagePage,/redirect\("\/customer\/spot-intimation\?account="/,"Draft Stage 1 must route to editable form");
 assert.match(stagePage,/const canEditStage = external && Boolean\(CUSTOMER_EXTERNAL_STAGE_FIELDS\[selected\.key\]\)/,"Stage editing must stay gated to external claims with configured fields");
-assert.match(stagePage,/!completed && activeIndex===currentIndex/,"Completed and noncurrent stages must stay read-only");
+assert.match(stagePage,/completed \|\| activeIndex===currentIndex/,"Completed external claim stages must remain editable while upcoming stages stay gated");
 assert.match(stagePage,/<CustomerClaimStageSubmit formId="customer-claim-stage-details-form" variant="continue"\s*\/>/,"Eligible stages must render the shared Save & Continue submit action");
 const stageSubmit=fs.readFileSync("components/customer-portal/customer-claim-stage-submit.tsx","utf8");
 assert.match(stageSubmit,/variant === "continue" \? "Save & Continue"/,"Shared action must display Save & Continue for eligible stages");
