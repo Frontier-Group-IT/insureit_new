@@ -120,7 +120,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
                         <span className="min-w-0 truncate text-[13px] font-bold text-[#132451]">{claim.vehicle_no || "Vehicle not recorded"}</span>
                       </div>
                       <h3 className="line-clamp-2 min-h-9 text-[13px] font-semibold text-[#142650]">{claim.vehicle_model || claim.vehicle_make || "Vehicle claim"}</h3>
-                      <p className="mt-1 text-[12px] font-medium text-[#62718F]">Control No. {claim.claim_no || "Pending"}</p>
+                      <p className="mt-1 text-[12px] font-medium text-[#62718F]">Control No. {claim.claim_no || "—"}</p>
                       <div className="mt-4 flex items-center justify-center gap-2">
                         <CustomerClaimLogo value={claim.insurer_name} kind="insurer" size={30}/>
                         <span className="line-clamp-2 text-left text-[11px] text-[#536687]">{claim.insurer_name || "Insurer not recorded"}</span>
