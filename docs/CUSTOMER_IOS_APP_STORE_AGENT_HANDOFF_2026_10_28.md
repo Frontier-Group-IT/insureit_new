@@ -82,3 +82,5 @@ User's Apple session timed out and screenshot shows Certificates list, with one 
 - 2026-10-28: User deferred native push. Reverted first-iOS capability recommendation to Push OFF and Broadcast OFF; Certificates screenshot shows existing certificate, but Customer App ID registration is unconfirmed. Next check Identifiers.
 
 - 2026-10-28: User screenshot confirms Customer App ID successfully registered in Apple Developer identifiers alongside Partner. Next inspect capabilities, then generate Customer-specific App Store Connect provisioning profile and import into Customer Expo. Native push deferred.
+
+- 2026-10-28: Apple provisioning wizard reached Select Certificates. Screenshot shows Sankalp Insurance Brokers Private Limited iOS Distribution certificate selected, expires 2027-10-14. User instructed to Continue, name profile INSUREIT Customer App Store, Generate and download; not yet confirmed generated. Verify profile bundle ID com.insureit.mobile before import into Expo.
