@@ -10,7 +10,7 @@ import { formatIndianCurrency } from '@/lib/format';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
-const DATE_PATTERN = /^\\d{4}-\\d{2}-\\d{2}$/;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const NAME_WIDTH = 215;
 const METRIC_WIDTH = 106;
 
