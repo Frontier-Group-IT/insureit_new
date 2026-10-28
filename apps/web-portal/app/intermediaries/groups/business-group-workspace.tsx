@@ -244,7 +244,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 
 function partnerMatches(partner: BusinessGroupPartner | undefined, query: string) {
   if (!partner) return false;
-  return [partner.display_name, partner.partner_code, partner.contact_name, partner.email, partner.phone].some((value) => value?.toLowerCase().includes(query) || value?.replace(/\\D/g, "").includes(query.replace(/\\D/g, "")) && /\\d/.test(query));
+  return [partner.display_name, partner.partner_code, partner.contact_name, partner.email, partner.phone].some((value) => value?.toLowerCase().includes(query) || value?.replace(/\D/g, "").includes(query.replace(/\D/g, "")) && /\d/.test(query));
 }
 
 const inputClass = "h-9 w-full rounded-lg border border-[#D7E0EA] bg-white px-3 text-[8.5px] text-[#30465F] outline-none focus:border-[#7892E8] focus:ring-2 focus:ring-[#E9EEFF]";
