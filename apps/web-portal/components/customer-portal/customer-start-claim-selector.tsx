@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useRef, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -49,6 +49,7 @@ export function CustomerStartClaimSelector({
   const claimFormRef = useRef<HTMLFormElement>(null);
   const confirmationGrantedRef = useRef(false);
   const [confirming, setConfirming] = useState(false);
+  useEffect(() => { if (claimState.error) { confirmationGrantedRef.current = false; setConfirming(false); } }, [claimState.error]);
   const vehicle = vehicles.find((item) => item.id === vehicleId);
   const vehiclePolicies = useMemo(
     () => policies.filter((policy) => policy.vehicle_id === vehicleId).sort((a, b) => b.end_date.localeCompare(a.end_date)),
