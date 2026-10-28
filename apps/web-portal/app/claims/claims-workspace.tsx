@@ -88,7 +88,7 @@ export function ClaimsWorkspace({ rows, initialParams, loadError, canAddClaim }:
     </div>
     {loadError ? <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">{loadError}</div> : null}
     <ClaimSection title={activeMode === "external" ? "External claims" : "Internal claims"} count={activeRows.length} tone={activeMode === "external" ? "secondary" : "primary"} assistanceRequested={activeMode === "external" ? assistanceRequested : 0}>
-      <LocalClaimQueueTable rows={activeRows} page={page} onPageChange={setPage} />
+      <LocalClaimQueueTable rows={activeRows} page={page} onPageChange={setPage} openingClaimId={openingClaimId} onClaimStart={startOpeningClaim} onClaimFailure={releaseOpeningClaim} />
     </ClaimSection>
   </>;
 }
@@ -98,7 +98,7 @@ function ClaimSection({ title, count, tone, assistanceRequested = 0, children }:
   return <section className={`overflow-hidden rounded-xl border ${sectionClass}`}><div className={`flex flex-wrap items-center gap-2 border-b border-inherit px-3 py-2.5 ${tone === "primary" ? "justify-start" : "justify-between"}`}><h2 className="text-[14px] font-semibold text-[#071D49]">{title}</h2><span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${assistanceRequested ? "bg-amber-100 text-amber-800" : "bg-[#EEF4FC] text-[#174EA6]"}`}>{count} claim{count === 1 ? "" : "s"}{assistanceRequested ? ` • ${assistanceRequested} assistance` : ""}</span></div>{children}</section>;
 }
 
-function LocalClaimQueueTable({ rows, page, onPageChange }: { rows: QueueClaimRow[]; page: number; onPageChange: (page: number) => void }) {
+function LocalClaimQueueTable({ rows, page, onPageChange, openingClaimId, onClaimStart, onClaimFailure }: { rows: QueueClaimRow[]; page: number; onPageChange: (page: number) => void; openingClaimId: string | null; onClaimStart: (claimId: string) => boolean; onClaimFailure: (claimId: string) => void }) {
   const totalPages = Math.max(1, Math.ceil(rows.length / CLAIMS_PAGE_SIZE));
   const safePage = Math.min(Math.max(page, 1), totalPages);
   const start = (safePage - 1) * CLAIMS_PAGE_SIZE;
