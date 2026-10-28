@@ -11,7 +11,7 @@ const claimPage = await readFile(new URL("../app/claims/[id]/page.tsx", import.m
 const claimWorkflow = await readFile(new URL("../lib/claim-workflow.ts", import.meta.url), "utf8");
 
 assert.doesNotMatch(stage1Group, /type="checkbox"/, "Stage 1 pending files must use document-icon selection instead of checkboxes.");
-assert.match(stage1Group, /aria-label=.*Select .*document\.file_name.*verification/, "Stage 1 existing document icon must select the exact file.");
+assert.match(stage1Group, /aria-label=.*selected \? "Deselect" : "Select".*document\.file_name.*verification/, "Stage 1 existing document icon must label single-click selection and deselection for the exact file.");
 assert.doesNotMatch(stage3Group, /type="checkbox"/, "Stage 3 uses its existing uploaded-file shield instead of a separate checkbox.");
 assert.match(stage3Group, /onClick=\{\(\) => onSelectedChange\(!selected\)\}/, "Stage 3 shield toggles select and deselect with one click.");
 assert.match(stage3Group, /aria-pressed=\{selected\}/, "Stage 3 selected shield exposes accessible pressed state.");
