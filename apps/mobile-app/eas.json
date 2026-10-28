@@ -10,7 +10,11 @@
     },
     "production": {
       "channel": "production",
-      "autoIncrement": false
+      "autoIncrement": false,
+      "distribution": "store",
+      "ios": {
+        "simulator": false
+      }
     }
   }
 }
