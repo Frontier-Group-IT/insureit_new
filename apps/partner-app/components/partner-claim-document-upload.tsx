@@ -45,7 +45,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
     if (busy) return;
     const picked = await DocumentPicker.getDocumentAsync({
       copyToCacheDirectory: true,
-      multiple: documentType === 'Accident Photo' || documentType === 'Accident Video' || documentType === 'Spot Intimation Attachment',
+      multiple: documentType === 'Accident Photo' || documentType === 'Accident Video' || documentType === 'Spot Intimation Attachment' || documentType.endsWith(' Additional Documents'),
       type: ['application/pdf', 'image/*', 'video/*', 'audio/*'],
     });
     if (picked.canceled) return;
