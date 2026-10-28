@@ -22,8 +22,9 @@ function intakeOwner(identity: PartnerIdentity) {
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const token = await getServerAccessToken();
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const bearer = request.headers.get("authorization");
+  const token = bearer?.match(/^Bearer\\s+(.+)$/i)?.[1] ?? await getServerAccessToken();
   if (!token) return json({ ok: false, error: "Authentication required." }, 401);
 
   const scoped = createSupabaseWithAccessToken(token);
