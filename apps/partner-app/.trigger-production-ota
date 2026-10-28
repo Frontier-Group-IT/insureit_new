@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=91338bb6d900415f9fb634c3b6cdaebd92036ec1
-reason=user-request-partner-production-ota-20261027
+source_main=3416e3b70b91af3a6b6e88897dd7a94ce0b2559f
+reason=publish-merged-pr-3666-customer-detail-full-width-android-ios
