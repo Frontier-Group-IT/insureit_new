@@ -152,11 +152,23 @@ export function PartnerPolicyIntakeDetailClient({ intakeId }: { intakeId: string
   function openDocument() {
     if (!row || openingDocument) return;
     setDocumentError("");
+    // Reserve the tab synchronously during the click; browsers block tabs opened after an async fetch.
+    const documentTab = window.open("about:blank", "_blank");
+    if (documentTab) {
+      documentTab.opener = null;
+      documentTab.document.title = "Opening policy copy…";
+    }
     startDocumentTransition(async () => {
       try {
         const url = await openPartnerPolicyIntakeDocumentWeb(row.id);
-        window.open(url, "_blank", "noopener,noreferrer");
+        if (documentTab && !documentTab.closed) {
+          documentTab.location.replace(url);
+        } else {
+          // If the browser blocked the new tab, let the user open the signed link directly.
+          setDocumentError("Your browser blocked the policy copy tab. Please allow pop-ups for this site and try again.");
+        }
       } catch (cause) {
+        if (documentTab && !documentTab.closed) documentTab.close();
         setDocumentError(cause instanceof Error ? cause.message : "Could not open the policy copy.");
       }
     });
