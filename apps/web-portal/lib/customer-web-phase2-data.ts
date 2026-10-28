@@ -31,6 +31,7 @@ export type CustomerRenewalItem = {
   days_until: number;
   status: "due" | "expired";
   meta: string | null;
+  insurer_name: string | null;
 };
 
 export type CustomerRenewalSummary = {
@@ -92,6 +93,7 @@ export const loadCustomerRenewals = cache(async (customerId: string) => {
         days_until: days,
         status,
         meta: descriptor.meta?.(vehicle, policy) ?? null,
+        insurer_name: descriptor.key === "insurance_policy" ? policy?.insurer_name ?? null : null,
       });
     }
   }
