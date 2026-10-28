@@ -127,8 +127,7 @@ export async function saveCustomerClaimIntimationDraft(form: FormData) {
   const index = INTERNAL_JOURNEY_STAGES.findIndex(stage => stage.key === key);
   const previous = milestones.find(m => m.milestone_key === INTERNAL_JOURNEY_STAGES[index - 1].key);
   const current = milestones.find(m => m.milestone_key === key);
-  if (!previous || !["completed", "not_applicable"].includes(previous.milestone_status) ||
-      false)
+  if (!previous || !["completed", "not_applicable"].includes(previous.milestone_status))
     throw new Error("Claim Intimation cannot be edited");
   const values: Record<string, string | number> = {};
   for (const field of CUSTOMER_EXTERNAL_STAGE_FIELDS[key]) {
