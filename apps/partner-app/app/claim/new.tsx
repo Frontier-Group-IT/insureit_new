@@ -91,7 +91,7 @@ export default function PartnerNewClaimScreen() {
             <View style={[styles.documentIcon,{backgroundColor:item.color}]}><MaterialCommunityIcons name={item.icon} color="#FFF" size={24}/></View>
             <Text style={styles.tileTitle}>{item.title}</Text><Text style={styles.tileSub}>Upload unavailable</Text>
           </View>)}</View>
-          <View style={styles.bulk}><Ionicons name="documents-outline" size={27} color="#245CB0"/><View style={styles.bulkText}><Text style={styles.bulkTitle}>Upload multiple documents</Text><Text style={styles.bulkHint}>Available after secure claim upload authorization</Text></View><Ionicons name="add-circle-outline" size={25} color="#8EA3C4"/></View>
+          <View style={styles.bulk}><Ionicons name="documents-outline" size={27} color="#245CB0"/><View style={styles.bulkText}><Text style={styles.bulkTitle}>Upload multiple documents</Text><Text style={styles.bulkHint}>Available after secure claim upload authorization</Text></View></View>
         </View>
         <View style={styles.voice}>
           <View style={styles.voiceTop}><View style={styles.mic}><Ionicons name="mic-outline" size={27} color="#1A56A3"/></View><View style={styles.headingCopy}><Text style={styles.sectionTitle}>Incident Voice Note</Text><Text style={styles.subtitle}>Describe what happened in your own words. Maximum recording time is 2 minutes.</Text></View></View>
