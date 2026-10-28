@@ -5,7 +5,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
-import { getPartnerTopInsurers, type PartnerTopInsurer } from '@/lib/business';
+import { getPartnerInsurerRegister, type PartnerInsurerRegisterRow } from '@/lib/business';
 import { formatIndianCurrency } from '@/lib/format';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
@@ -17,20 +17,23 @@ const METRIC_WIDTH = 106;
 export default function InsurerListScreen() {
   const params = useLocalSearchParams<{ from?: string; to?: string }>();
   const { context, cacheScopeKey } = usePartnerSession();
-  const from = typeof params.from === 'string' && DATE_PATTERN.test(params.from) ? params.from : '';
-  const to = typeof params.to === 'string' && DATE_PATTERN.test(params.to) ? params.to : '';
-  const validRange = Boolean(from && to && from <= to);
+  const today = new Date();
+  const defaultFrom = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+  const defaultTo = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const from = typeof params.from === 'string' && DATE_PATTERN.test(params.from) ? params.from : defaultFrom;
+  const to = typeof params.to === 'string' && DATE_PATTERN.test(params.to) ? params.to : defaultTo;
+  const validRange = Boolean(from && to && from <= to && (Date.parse(to) - Date.parse(from)) / 86400000 <= 366);
   const employee = context?.identity.actor_kind === 'employee';
   const columns = employee
     ? ['POLICIES', 'NET PREMIUM', 'PAY-IN', 'RETENTION']
     : ['POLICIES', 'NET PREMIUM', 'PAYOUT'];
 
   const fetchInsurers = useCallback(() => {
-    if (!validRange) return Promise.resolve([] as PartnerTopInsurer[]);
-    return getPartnerTopInsurers(from, to);
+    if (!validRange) return Promise.resolve([] as PartnerInsurerRegisterRow[]);
+    return getPartnerInsurerRegister(from, to);
   }, [from, to, validRange]);
 
-  const query = usePartnerQuery<PartnerTopInsurer[]>({
+  const query = usePartnerQuery<PartnerInsurerRegisterRow[]>({
     scopeKey: cacheScopeKey,
     key: `business:insurers:range:${from}:${to}`,
     fetcher: fetchInsurers,
@@ -75,14 +78,14 @@ export default function InsurerListScreen() {
                       <Text style={[styles.metricColumn, styles.number]}>—</Text>
                       <Text style={[styles.metricColumn, styles.number]}>—</Text>
                     </>
-                  ) : <Text style={[styles.metricColumn, styles.number]}>—</Text>}
+                  ) : <Text style={[styles.metricColumn, styles.number]}>{insurer.payout == null ? '—' : formatIndianCurrency(insurer.payout)}</Text>}
                 </View>
               ))}
               {!query.data?.length ? <Text style={styles.empty}>No insurers found for the selected reporting period.</Text> : null}
             </View>
           </ScrollView>
         )}
-        <Text style={styles.note}>Pay-in, retention and payout are not available from the existing insurer summary service; values are left blank rather than estimated.</Text>
+
       </View>
     </PartnerScreen>
   );
