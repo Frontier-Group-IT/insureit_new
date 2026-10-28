@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+const compression=readFileSync(fileURLToPath(new URL('../lib/video-compression.ts',import.meta.url)),'utf8');
+const upload=readFileSync(fileURLToPath(new URL('../components/internal-claim-stage-one.tsx',import.meta.url)),'utf8');
+assert.match(compression,/try\s*\{\s*compressedUri = await Video\.compress/,'Attempt native compression');
+assert.match(compression,/catch \(error\)\s*\{[\s\S]*return \{ uri, compressed: false \};/,'Fallback to original video if native compressor fails');
+assert.match(upload,/if \(body\.byteLength > maxUploadSizeBytes\)/,'Preserve post-read file-size check');
+assert.match(upload,/MAX_VIDEO_UPLOAD_SIZE_BYTES = 50 \* 1024 \* 1024/,'Retain 50 MB video limit');
+assert.match(upload,/resolveClaimUploadDescriptor/,'Retain MIME validation');
+console.log('Android accident-video compression fallback regression passed');
