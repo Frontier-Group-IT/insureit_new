@@ -48,6 +48,12 @@ assert.doesNotMatch(read("components/partner-portal/partner-mobile-navigation.ts
 assert.match(read(pages[1][0]), /const pageSize = 100/, "Business loading must match RPC page cap");
 assert.match(read("app/partner/business/export/route.ts"), /const pageSize = 100/, "Business export must match RPC page cap");
 const overview = read(pages[0][0]);
+assert.match(overview, /name="period"/, "Overview must expose a date period filter");
+assert.match(overview, /name="business"/, "Overview must expose a business category filter");
+assert.match(overview, /scopedPolicyRows\(\)/, "Overview must use scoped policy rows");
+assert.match(overview, /filtered\.reduce/, "Premium must derive from filtered scoped rows");
+assert.match(overview, /points={trendPoints}/, "Trend must respond to the chosen scope");
+assert.match(overview, /mixRows\.map/, "Business Mix must respond to the chosen scope");
 assert.match(overview, /payout\.available && canShowPayout/, "Payout output must require existing payout authorization");
 assert.match(overview, /reportScope\.role === "partner"/, "Partner payout must not be inherited by Group/Branch");
 assert.match(read("components/partner-portal/partner-navigation.tsx"), /href: "\/partner\/reports"/, "Sidebar navigation missing");
