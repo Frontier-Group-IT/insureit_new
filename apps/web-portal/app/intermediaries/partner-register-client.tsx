@@ -69,7 +69,7 @@ export function PartnerRegisterClient({
   const normalized = search.trim().toLowerCase();
 
   const rmOptions = useMemo(() => Array.from(new Set(rows.map((row) => row.assignedRm).filter(Boolean))).sort((a, b) => a.localeCompare(b)), [rows]);
-  const searchedRows = useMemo(() => normalized ? rows.filter((row) => row.searchText.includes(normalized) || (normalized.replace(/\\D/g, "").length >= 3 && row.mobile.replace(/\\D/g, "").includes(normalized.replace(/\\D/g, "")))) : rows, [normalized, rows]);
+  const searchedRows = useMemo(() => normalized ? rows.filter((row) => row.searchText.includes(normalized) || (normalized.replace(/\D/g, "").length >= 3 && row.mobile.replace(/\D/g, "").includes(normalized.replace(/\D/g, "")))) : rows, [normalized, rows]);
   const scopedRows = useMemo(() => searchedRows.filter((row) => {
     if (rmFilter && row.assignedRm !== rmFilter) return false;
     const date = indiaDateKey(row.onboardingDate);
