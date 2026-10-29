@@ -91,7 +91,13 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
   const config=CONFIG[stage];
   const stageIndex=CLAIM_STAGES.findIndex(item=>item.key===stage);
   const restored=useMemo(()=>latestStageValues(data,stage),[data,stage]);
+  const billingValues=useMemo(()=>latestStageValues(data,'billing'),[data]);
+  const deliveryOrderValues=useMemo(()=>latestStageValues(data,'delivery_order'),[data]);
+  const billAmount=finiteAmount(billingValues.bill_amount);
   const [values,setValues]=useState<Record<string,string>>(restored);
+  const doAmount=finiteAmount(values.do_amount);
+  const savedDoAmount=finiteAmount(deliveryOrderValues.do_amount);
+  const receivedAmount=finiteAmount(values.payment_received_amount);
   const [saving,setSaving]=useState(false);
   const [documentTab,setDocumentTab]=useState('Vehicle Docs');
   const [claimNumberOpen,setClaimNumberOpen]=useState(false);
@@ -175,8 +181,30 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
         <View style={styles.sectionHeading}><View style={styles.sectionIcon}><MaterialCommunityIcons name="clipboard-check-outline" size={23} color="#0B58A7"/></View><View style={{flex:1}}><Text style={styles.sectionTitle}>Stage Details</Text><Text style={styles.sectionSubtitle}>{config.subtitle}</Text></View></View>
         {CONFIG.work_approval.fields.map(field=><View key={field.key} style={approvalStyles.fieldBlock}><EditableField field={field.key.startsWith('surveyor_')?{...field,label:`${field.label} (Optional)`}:field} value={values[field.key]||''} onChange={value=>setValue(field.key,value)} displayDate={field.kind==='date'}/></View>)}
       </View> : <View style={styles.card}>
-        <View style={styles.sectionHeading}><View style={styles.sectionIcon}><MaterialCommunityIcons name={config.icon} size={23} color="#0B58A7"/></View><View style={{flex:1}}><Text style={styles.sectionTitle}>Stage Details</Text><Text style={styles.sectionSubtitle}>{config.subtitle}</Text></View></View>
-        {config.fields.map(field=><View key={field.key}>{field.key==='dealership_location'?<View style={locationStyles.action}><Pressable accessibilityRole="button" accessibilityLabel="Use Current Location" disabled={locating||saving} onPress={()=>void fillCurrentLocation()} style={locationStyles.button}><Ionicons name="locate-outline" size={16} color="#0B4DA3"/><Text style={locationStyles.text}>{locating?"Locating…":"Use Current Location"}</Text></Pressable></View>:null}<EditableField field={field} value={values[field.key]||''} onChange={(value)=>setValue(field.key,value)}/></View>)}
+        <View style={[styles.sectionHeading,(stage==='vehicle_delivery'||stage==='payment_encashment')&&styles.vehicleStageHeading]}><View style={(stage==='vehicle_delivery'||stage==='payment_encashment')?styles.vehicleStageIcon:styles.sectionIcon}><MaterialCommunityIcons name={config.icon} size={stage==='vehicle_delivery'||stage==='payment_encashment'?25:23} color="#0B58A7"/></View><View style={{flex:1}}><Text style={styles.sectionTitle}>Stage Details</Text><Text style={styles.sectionSubtitle}>{stage==='vehicle_delivery'?'Confirm whether the repaired vehicle has been received.':config.subtitle}</Text></View></View>
+        {config.fields.map(field=><View key={field.key} style={stage==='delivery_order' ? styles.deliveryField : stage==='vehicle_delivery'||stage==='payment_encashment' ? styles.vehicleDeliveryField : undefined}>{field.key==='dealership_location'?<View style={locationStyles.action}><Pressable accessibilityRole="button" accessibilityLabel="Use Current Location" disabled={locating||saving} onPress={()=>void fillCurrentLocation()} style={locationStyles.button}><Ionicons name="locate-outline" size={16} color="#0B4DA3"/><Text style={locationStyles.text}>{locating?"Locating…":"Use Current Location"}</Text></Pressable></View>:null}<View style={(stage==='delivery_order'||stage==='vehicle_delivery'||stage==='payment_encashment')&&field.kind==='choice'?styles.deliveryChoice:undefined}><EditableField field={stage==='vehicle_delivery'&&field.key==='vehicle_received_date'&&['yes','true','1'].includes((values.vehicle_received||'').toLowerCase())?{...field,required:true}:field} value={values[field.key]||''} onChange={(value)=>setValue(field.key,value)} displayDate={(stage==='delivery_order'||stage==='vehicle_delivery'||stage==='payment_encashment')&&field.kind==='date'}/></View></View>)}
+        {stage === 'delivery_order' ? <>
+          <View style={styles.deliveryUpload}>
+            <Text style={styles.billingLabel}>Assistance Upload</Text>
+            <PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="Assessment Sheet" milestoneKey="delivery_order" documents={data.documents} variant="assessment" label="Assessment Report (Optional)" />
+          </View>
+          <View style={styles.financialCard}>
+            <View style={styles.financialHeader}><MaterialCommunityIcons name="cash-multiple" color="#FFFFFF" size={23}/><View><Text style={styles.financialHeading}>FINANCIAL PROGRESS</Text><Text style={styles.financialSubtitle}>Claim value movement</Text></View></View>
+            <View style={styles.financialRow}><Text style={styles.financialText}>Bill Amount</Text><Text style={styles.financialValue}>{formatClaimAmount(billAmount)}</Text></View>
+            <View style={styles.financialRow}><Text style={styles.financialText}>DO Amount</Text><Text style={styles.financialValue}>{formatClaimAmount(doAmount)}</Text></View>
+            <View style={styles.financialContribution}><Text style={styles.financialValue}>Customer Contribution</Text><Text style={styles.financialValue}>{billAmount!==null&&doAmount!==null&&billAmount>=doAmount?formatClaimAmount(billAmount-doAmount):'—'}</Text></View>
+          </View>
+        </> : null}
+        {stage === 'payment_encashment' ? <View style={styles.financialCard}>
+          <View style={styles.financialHeader}><MaterialCommunityIcons name="cash-multiple" color="#FFFFFF" size={23}/><View><Text style={styles.financialHeading}>FINANCIAL PROGRESS</Text><Text style={styles.financialSubtitle}>Claim value movement</Text></View></View>
+          <View style={styles.financialRow}><Text style={styles.financialText}>DO Amount</Text><Text style={styles.financialValue}>{formatClaimAmount(savedDoAmount)}</Text></View>
+          <View style={styles.financialRow}><Text style={styles.financialText}>Amount Received</Text><Text style={styles.financialValue}>{formatClaimAmount(receivedAmount)}</Text></View>
+          <View style={styles.financialContribution}><Text style={styles.financialValue}>Further Deduction</Text><Text style={styles.financialValue}>{savedDoAmount!==null&&receivedAmount!==null&&savedDoAmount>=receivedAmount?formatClaimAmount(savedDoAmount-receivedAmount):'—'}</Text></View>
+        </View> : null}
+        {stage === 'billing' ? <View style={styles.billingUpload}>
+          <Text style={styles.billingLabel}>Bill Upload</Text>
+          <PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="Final Invoice" milestoneKey="billing" documents={data.documents} variant="billing" label="Upload final workshop bill" />
+        </View> : null}
         {stage === 'billing' ? <View style={styles.billingUpload}>
           <Text style={styles.billingLabel}>Bill Upload</Text>
           <PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="Final Invoice" milestoneKey="billing" documents={data.documents} variant="billing" label="Upload final workshop bill" />
@@ -266,6 +294,14 @@ function ClaimHero({data,title,icon}:{data:PartnerClaimDetail;title:string;icon:
   return <View style={styles.hero}><View style={styles.heroHeading}><View style={styles.heroCircle}><MaterialCommunityIcons name={icon} size={20} color="#FFF"/></View><Text style={styles.heroTitle}>{title}</Text><Text numberOfLines={1} style={styles.control}>{data.claim.claim_no||'Not recorded'}</Text></View><View style={styles.heroRule}/><View style={styles.identityRow}><View style={styles.identity}><View style={styles.logo}><Image source={getPartnerManufacturerLogoSource(data.vehicle.make)??PartnerAssets.navigation.claims} resizeMode="contain" style={styles.logoImage}/></View><View style={styles.identityCopy}><Text numberOfLines={1} style={styles.identityTitle}>{data.vehicle.vehicle_no||'Vehicle not recorded'}</Text><Text numberOfLines={1} style={styles.identitySub}>{data.vehicle.make||'Manufacturer not recorded'}</Text></View></View><View style={styles.identityDivider}/><View style={styles.identity}><View style={styles.logo}><PartnerInsurerLogo name={data.insurer.name} style={styles.logoImage} fallback={PartnerAssets.navigation.claims}/></View><View style={styles.identityCopy}><Text numberOfLines={1} style={styles.identityTitle}>{data.policy.policy_no||'Policy not recorded'}</Text><Text numberOfLines={2} style={styles.identitySub}>{data.insurer.name||'Insurer not recorded'}</Text></View></View></View></View>;
 }
 
+function finiteAmount(value?:string):number|null {
+  if(!value?.trim())return null;
+  const amount=Number(value.replace(/[,₹\s]/g,''));
+  return Number.isFinite(amount)&&amount>=0?amount:null;
+}
+function formatClaimAmount(value:number|null):string {
+  return value===null?'—':'₹'+value.toLocaleString('en-IN',{maximumFractionDigits:2});
+}
 function latestStageValues(data:PartnerClaimDetail,stage:ClaimStageKey){
   const result:Record<string,string>={};
   for(const item of data.stages){
@@ -284,6 +320,9 @@ function latestStageValues(data:PartnerClaimDetail,stage:ClaimStageKey){
 function Nav({label,icon,onPress}:{label:string;icon:keyof typeof Ionicons.glyphMap;onPress:()=>void}){return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.navItem}><View style={styles.navIcon}><Ionicons name={icon} size={19} color="#D8E5F8"/></View><Text style={styles.navLabel}>{label}</Text></Pressable>;}
 
 const styles=StyleSheet.create({
+  vehicleStageHeading:{marginBottom:8},vehicleStageIcon:{width:36,height:36,alignItems:'center',justifyContent:'center'},vehicleDeliveryField:{marginTop:8},
+  deliveryField:{marginTop:3},deliveryChoice:{maxWidth:260},deliveryUpload:{gap:7,marginTop:12},financialCard:{backgroundColor:'#0B3271',borderRadius:16,padding:13,gap:9,marginTop:3},financialHeader:{flexDirection:'row',alignItems:'center',gap:9,borderBottomWidth:1,borderBottomColor:'#345688',paddingBottom:11},financialHeading:{color:'#FFF',fontSize:10,fontWeight:'900',letterSpacing:1},financialSubtitle:{color:'#CCD9EB',fontSize:9,marginTop:3},financialRow:{flexDirection:'row',justifyContent:'space-between',paddingVertical:5,borderBottomWidth:1,borderBottomColor:'#345688'},financialText:{color:'#D4E0EF',fontSize:11},financialValue:{color:'#FFF',fontSize:11,fontWeight:'900'},financialContribution:{backgroundColor:'#1C437E',flexDirection:'row',justifyContent:'space-between',alignItems:'center',paddingHorizontal:9,paddingVertical:12},
+
   billingUpload:{gap:6,marginTop:2},billingLabel:{fontSize:10.5,fontWeight:'800',color:'#203859'},
   docTab:{paddingHorizontal:10,paddingVertical:12,borderBottomWidth:2,borderBottomColor:'transparent',backgroundColor:'#F8FBFF'},docTabSelected:{borderBottomColor:'#0877EB',backgroundColor:'#EAF4FF'},docTabText:{fontSize:9,color:'#718099',fontWeight:'700'},docTabTextSelected:{color:'#0B58B2'},
   documentHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8},
