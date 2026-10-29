@@ -55,8 +55,10 @@ assert(!operationsStages.includes('externalVisualCurrentIndex'), 'External curre
 assert(operationsStages.includes('const isCurrent = !journeyComplete && stage.key === active?.key;'), 'Operations current-stage styling must use the shared claims.current_status stage.');
 assert(operationsStages.includes('const isCompleted = journeyComplete || index < activeIndex || (externalStageCompleted && !isCurrent);'), 'Completed Customer milestones may supplement completion styling without replacing the shared current stage.');
 assert(operationsStages.includes('nextStageKey: nextStageKeyFor(milestoneKey)'), 'Successful Stage 2 and Stage 4-8 saves must navigate to the next visible stage even when the save itself is non-advancing.');
-assert((/if \(!spotState\.ok\) return;[\s\S]*?router\.refresh\(\);/.test(operationsStages)), 'Spot Intimation Save Details must refresh without advancing to Stage 2.');
-assert(!(/if \(!spotState\.ok\) return;[\s\S]*?setSelectedKey\("spot_status"\);\s*router\.replace\(`\/claims\/\$\{claimId\}\?stage=spot_status`\);/.test(operationsStages)), 'A save-only action must not navigate past pending document verification.');
+const saveOnlyEffect = operationsStages.slice(operationsStages.indexOf('if (!spotState.ok) return;'), operationsStages.indexOf('}, [claimId, router, spotState.ok]);'));
+assert(saveOnlyEffect.includes('router.refresh();'), 'Spot Intimation Save Details should refresh without advancing.');
+assert(!saveOnlyEffect.includes('setSelectedKey("spot_status")') && !saveOnlyEffect.includes('router.replace('), 'Save-only must not change the visible stage.');
+
 assert(finalDocumentsWorkspace.includes('setSuccessNotice(response.advanced ? "Claim Intimation completed. Work Approval is now open." : "Stage details saved.");'), 'Claim Intimation Save Details must provide successful confirmation.');
 assert(finalDocumentsWorkspace.includes('setAdvanceAfterClaimNumber(true);') && finalDocumentsWorkspace.includes('setClaimNumberPromptOpen(true);'), 'Internal Claim Stage 3 must prompt for claim number after a successful save.');
 assert(finalDocumentsWorkspace.includes('router.replace(`/claims/${claimId}?stage=work_approval`);'), 'Claim Intimation must still navigate to Stage 4 after saving or dismissing the optional claim-number prompt.');
