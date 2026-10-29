@@ -1,0 +1,52 @@
+name: Apply Partner branch policy scope
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: insureit-partner-branch-scope-migration
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    name: Apply and verify branch policy scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate target configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::Missing Supabase access token"; exit 1; }
+          test -n "$SUPABASE_DB_PASSWORD" || { echo "::error::Missing Supabase DB password"; exit 1; }
+          test -n "$SUPABASE_PROJECT_REF" || { echo "::error::Missing production project ref"; exit 1; }
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Connect to configured Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+      - name: Review migration state
+        run: supabase migration list
+      - name: Apply authorized Partner code policy scope
+        run: supabase db query --linked --file supabase/migrations/20261028190000_partner_policy_scoped_partner_codes.sql
+      - name: Apply active child branch commercial scope
+        run: supabase db query --linked --file supabase/migrations/20261028190100_partner_branch_commercial_scope.sql
+      - name: Verify policy functions contain scoped branch logic
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db query --linked --file supabase/verification/20261029_partner_branch_policy_scope_applied.sql
+      - name: Record verified migrations
+        run: |
+          supabase migration repair --linked --status applied 20261028190000
+          supabase migration repair --linked --status applied 20261028190100
+      - name: Display migration history
+        run: supabase migration list
