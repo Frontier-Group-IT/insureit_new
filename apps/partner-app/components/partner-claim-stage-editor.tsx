@@ -177,6 +177,10 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
       </View> : <View style={styles.card}>
         <View style={styles.sectionHeading}><View style={styles.sectionIcon}><MaterialCommunityIcons name={config.icon} size={23} color="#0B58A7"/></View><View style={{flex:1}}><Text style={styles.sectionTitle}>Stage Details</Text><Text style={styles.sectionSubtitle}>{config.subtitle}</Text></View></View>
         {config.fields.map(field=><View key={field.key}>{field.key==='dealership_location'?<View style={locationStyles.action}><Pressable accessibilityRole="button" accessibilityLabel="Use Current Location" disabled={locating||saving} onPress={()=>void fillCurrentLocation()} style={locationStyles.button}><Ionicons name="locate-outline" size={16} color="#0B4DA3"/><Text style={locationStyles.text}>{locating?"Locating…":"Use Current Location"}</Text></Pressable></View>:null}<EditableField field={field} value={values[field.key]||''} onChange={(value)=>setValue(field.key,value)}/></View>)}
+        {stage === 'billing' ? <View style={styles.billingUpload}>
+          <Text style={styles.billingLabel}>Bill Upload</Text>
+          <PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="Final Invoice" milestoneKey="billing" documents={data.documents} variant="billing" label="Upload final workshop bill" />
+        </View> : null}
       </View>}
 
       {stage === 'work_approval' ? <View style={approvalStyles.documentsCard}>
@@ -280,6 +284,7 @@ function latestStageValues(data:PartnerClaimDetail,stage:ClaimStageKey){
 function Nav({label,icon,onPress}:{label:string;icon:keyof typeof Ionicons.glyphMap;onPress:()=>void}){return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.navItem}><View style={styles.navIcon}><Ionicons name={icon} size={19} color="#D8E5F8"/></View><Text style={styles.navLabel}>{label}</Text></Pressable>;}
 
 const styles=StyleSheet.create({
+  billingUpload:{gap:6,marginTop:2},billingLabel:{fontSize:10.5,fontWeight:'800',color:'#203859'},
   docTab:{paddingHorizontal:10,paddingVertical:12,borderBottomWidth:2,borderBottomColor:'transparent',backgroundColor:'#F8FBFF'},docTabSelected:{borderBottomColor:'#0877EB',backgroundColor:'#EAF4FF'},docTabText:{fontSize:9,color:'#718099',fontWeight:'700'},docTabTextSelected:{color:'#0B58B2'},
   documentHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8},
   optionalChip:{backgroundColor:'#EFF5FF',borderRadius:18,paddingHorizontal:9,paddingVertical:6},
