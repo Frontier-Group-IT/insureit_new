@@ -154,6 +154,13 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
       : Promise.resolve({ data: [] as NonMotorPolicyDocumentRow[], error: null }),
   ]);
 
+  // Insurer pay-in received amounts come from recorded policy pay-in bills.
+  const {data:payinReceiptRows,error:payinReceiptError}=commercialAccess
+    ? await admin.from("policy_payin_bills").select("received_amount,received_date").eq("policy_id",id).returns<Array<{received_amount:number|null;received_date:string|null}>>()
+    : {data:[] as Array<{received_amount:number|null;received_date:string|null}>,error:null};
+  if(payinReceiptError)throw new Error(`Unable to load pay-in receipts: ${payinReceiptError.message}`);
+  const payinReceipts=(payinReceiptRows??[]).filter(row=>Number(row.received_amount??0)>0).map(row=>({date:row.received_date??"",amount:Number(row.received_amount)}));
+
   const billingResult = commercialAccess
     ? await loadPolicyPayinBilling(id)
     : { ok: true as const, billing: { billNumber: "", billedAmount: "", billDate: "", status: "Unbilled" } };
@@ -444,6 +451,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     payoutBasis: commercialAccess ? (payout?.payout_basis === "FIXED_AMOUNT" ? "FLAT" : (payin?.payout_basis ?? "NET")) : "",
     projectedOdPercent: commercialAccess && payinHasConfirmedEntry ? stringValue(payin?.projected_od_percent) : "",
     projectedTpPercent: commercialAccess && payinHasConfirmedEntry ? stringValue(payin?.projected_tp_percent) : "",
+    payinReceipts,
     partialTp: Boolean(commercialAccess && payin?.partial_tp),
     partialCpa: Boolean(commercialAccess && payin?.partial_cpa),
     insurerScheme: commercialAccess && payinHasConfirmedEntry ? stringValue(payin?.insurer_scheme_amount) : "",
