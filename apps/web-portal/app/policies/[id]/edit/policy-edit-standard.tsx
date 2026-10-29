@@ -36,7 +36,7 @@ type VehicleRow = {
 };
 type PremiumRow = { od_premium: number | null; tp_premium: number | null; cpa_opted: boolean | null; cpa_amount: number | null; add_on_premium: number | null; net_premium: number | null; gst_amount: number | null; gross_premium: number | null };
 type PayinRow = { partial_tp: boolean | null; partial_cpa: boolean | null; payout_basis: string | null; projected_od_percent: number | null; projected_tp_percent: number | null; insurer_scheme_amount: number | null; commercial_basis: string | null; projected_commission_percent: number | null; projected_commission_amount: number | null; commercial_status: string | null };
-type PayoutRow = { retention_amount: number | null; od_payout_percent: number | null; tp_payout_percent: number | null; status: string | null; payout_date: string | null; voucher_number: string | null; payout_basis: string | null; partner_payout_percent: number | null; partner_payout_amount: number | null; gross_payout: number | null; commercial_status: string | null };
+type PayoutRow = { id: string; partial_tp: boolean | null; partial_cpa: boolean | null; retention_amount: number | null; od_payout_percent: number | null; tp_payout_percent: number | null; status: string | null; payout_date: string | null; voucher_number: string | null; payout_basis: string | null; partner_payout_percent: number | null; partner_payout_amount: number | null; gross_payout: number | null; commercial_status: string | null };
 type NonMotorDetailsRow = {
   category: string | null; risk_title: string | null; risk_location: string | null; occupancy_type: string | null;
   transit_from: string | null; transit_to: string | null; transit_mode: string | null; nature_of_business: string | null;
@@ -124,7 +124,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
       : Promise.resolve({ data: null as VehicleRow | null, error: null }),
     admin.from("policy_premium_details").select("od_premium,tp_premium,cpa_opted,cpa_amount,add_on_premium,net_premium,gst_amount,gross_premium").eq("policy_id", id).maybeSingle<PremiumRow>(),
     admin.from("policy_payin_details").select("payout_basis,projected_od_percent,projected_tp_percent,partial_tp,partial_cpa,insurer_scheme_amount,commercial_basis,projected_commission_percent,projected_commission_amount,commercial_status").eq("policy_id", id).maybeSingle<PayinRow>(),
-    admin.from("policy_intermediary_payouts").select("retention_amount,od_payout_percent,tp_payout_percent,status,payout_date,voucher_number,payout_basis,partner_payout_percent,partner_payout_amount,gross_payout,commercial_status").eq("policy_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle<PayoutRow>(),
+    admin.from("policy_intermediary_payouts").select("id,retention_amount,od_payout_percent,tp_payout_percent,partial_tp,partial_cpa,status,payout_date,voucher_number,payout_basis,partner_payout_percent,partner_payout_amount,gross_payout,commercial_status").eq("policy_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle<PayoutRow>(),
     getActiveInsuranceCompanyOptions(),
     admin.from("insurance_companies").select("id,name,is_active").eq("id", policy.insurance_company_id).maybeSingle<InsurerOption>(),
     loadPospMispAssociates(admin),
@@ -191,6 +191,21 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
   const payin = payinResult.data;
   const payout = payoutResult.data;
   const billing = billingResult.billing;
+  // Actual received is sourced only from allocated payments attached to this policy.
+  let recordedPayments: Array<{date:string;amount:number}> = [];
+  if (commercialAccess && payout?.id) {
+    const {data:payableRows}=await admin.from("partner_payables").select("id").eq("policy_id",id).returns<Array<{id:string}>>();
+    const payableIds=(payableRows??[]).map(row=>row.id);
+    if(payableIds.length){
+      const {data:allocations}=await admin.from("partner_payment_allocations").select("payment_id,allocated_amount").in("payable_id",payableIds).returns<Array<{payment_id:string;allocated_amount:number}>>();
+      const paymentIds=[...new Set((allocations??[]).map(row=>row.payment_id))];
+      if(paymentIds.length){
+        const {data:payments}=await admin.from("partner_payments").select("id,payment_date").in("id",paymentIds).returns<Array<{id:string;payment_date:string}>>();
+        const dates=new Map((payments??[]).map(row=>[row.id,row.payment_date]));
+        recordedPayments=(allocations??[]).filter(row=>dates.has(row.payment_id)).map(row=>({date:dates.get(row.payment_id)!,amount:Number(row.allocated_amount||0)}));
+      }
+    }
+  }
 
   const payinHasConfirmedEntry = Boolean(payin) && (
     payin?.commercial_status === "entered"
@@ -435,6 +450,9 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     retention: commercialAccess ? stringValue(payout?.retention_amount) : "",
     payoutOdPercent: commercialAccess && payoutHasConfirmedEntry ? stringValue(payout?.od_payout_percent) : "",
     payoutTpPercent: commercialAccess && payoutHasConfirmedEntry ? stringValue(payout?.tp_payout_percent) : "",
+    payoutPartialTp: Boolean(commercialAccess && payout?.partial_tp),
+    payoutPartialCpa: Boolean(commercialAccess && payout?.partial_cpa),
+    payoutPayments: recordedPayments,
     flatPayoutAmount: commercialAccess && payout?.payout_basis === "FIXED_AMOUNT" ? stringValue(payout?.partner_payout_amount ?? payout?.gross_payout) : "",
     payoutStatus: commercialAccess ? (payout?.status ?? "Pending") : "Pending",
     payoutDate: commercialAccess ? (payout?.payout_date ?? "") : "",
