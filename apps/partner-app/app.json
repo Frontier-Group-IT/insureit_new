@@ -20,7 +20,8 @@
       "bundleIdentifier": "com.insureit.partner",
       "supportsTablet": false,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "INSUREIT Partner uses your location only when you tap Use Current Location to fill a claim location."
       },
       "buildNumber": "2",
       "icon": "./assets/partner-app-icon.jpg"
@@ -43,6 +44,14 @@
         "expo-local-authentication",
         {
           "faceIDPermission": "Use Face ID to unlock INSUREIT Partner on this device."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow INSUREIT Partner to use your location when you request claim location autofill.",
+          "isAndroidBackgroundLocationEnabled": false,
+          "isIosBackgroundLocationEnabled": false
         }
       ]
     ],

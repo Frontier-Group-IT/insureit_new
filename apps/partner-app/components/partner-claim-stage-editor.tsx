@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
@@ -8,9 +8,10 @@ import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { CLAIM_STAGES, type ClaimStageKey } from '@/lib/claim-tracker';
-import { savePartnerClaimStage, type PartnerClaimDetail, type PartnerClaimStageKey } from '@/lib/claims';
+import { savePartnerClaimStage, savePartnerInsurerClaimNumber, type PartnerClaimDetail, type PartnerClaimStageKey } from '@/lib/claims';
 import { PartnerClaimStepFooter } from '@/components/partner-claim-step-footer';
 import { PartnerClaimDocumentUpload } from '@/components/partner-claim-document-upload';
+import { getPartnerCurrentLocation } from '@/lib/current-location';
 
 type EditableStage = Exclude<PartnerClaimStageKey, never>;
 type Field = { key:string; label:string; required?:boolean; kind?:'text'|'date'|'number'|'choice'; options?:Array<{label:string;value:string}>; placeholder?:string };
@@ -93,11 +94,45 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
   const [values,setValues]=useState<Record<string,string>>(restored);
   const [saving,setSaving]=useState(false);
   const [documentTab,setDocumentTab]=useState('Vehicle Docs');
+  const [claimNumberOpen,setClaimNumberOpen]=useState(false);
+  const [claimNumber,setClaimNumber]=useState(data.claim.insurer_claim_no ?? '');
+  const [claimNumberSaving,setClaimNumberSaving]=useState(false);
+  const [locating,setLocating]=useState(false);
+  async function fillCurrentLocation(){
+    if(locating||saving)return;
+    setLocating(true);
+    try {setValue('dealership_location',await getPartnerCurrentLocation());}
+    catch(error){Alert.alert('Location unavailable',error instanceof Error?error.message:'Please enter the location manually.');}
+    finally{setLocating(false);}
+  }
 
   function setValue(key:string,value:string){setValues(current=>({...current,[key]:value}));}
   function previous(){
     const previousStage=CLAIM_STAGES[Math.max(0,stageIndex-1)];
     router.replace({pathname:'/claim/stage',params:{id:data.claim.id,key:previousStage.key}} as never);
+  }
+  function advance() {
+    const next=CLAIM_STAGES[stageIndex+1];
+    if(next) router.replace({pathname:'/claim/stage',params:{id:data.claim.id,key:next.key}} as never);
+    else router.replace({pathname:'/claim/[id]',params:{id:data.claim.id}} as never);
+  }
+  function skipClaimNumber(){
+    if(claimNumberSaving)return;
+    setClaimNumberOpen(false);
+    advance();
+  }
+  async function continueClaimNumber(){
+    if(claimNumberSaving)return;
+    const value=claimNumber.trim();
+    if(!value||value.length>80){Alert.alert('Action required','Enter a valid insurer claim number (up to 80 characters).');return;}
+    setClaimNumberSaving(true);
+    try{
+      await savePartnerInsurerClaimNumber(data.claim.id,value);
+      setClaimNumberOpen(false);
+      advance();
+    }catch(error){
+      Alert.alert('Unable to save',error instanceof Error?error.message:'Please try again.');
+    }finally{setClaimNumberSaving(false);}
   }
   async function save(){
     if(saving)return;
@@ -115,9 +150,10 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
         payload[key]=/amount/i.test(key)&&Number.isFinite(Number(trimmed.replace(/,/g,'')))?Number(trimmed.replace(/,/g,'')):trimmed;
       }
       await savePartnerClaimStage(data.claim.id,stage,payload,true);
-      const next=CLAIM_STAGES[stageIndex+1];
-      if(next) router.replace({pathname:'/claim/stage',params:{id:data.claim.id,key:next.key}} as never);
-      else router.replace({pathname:'/claim/[id]',params:{id:data.claim.id}} as never);
+      if(stage==='claim_intimation'){
+        setClaimNumber(data.claim.insurer_claim_no ?? '');
+        setClaimNumberOpen(true);
+      }else advance();
     }catch(error){Alert.alert('Unable to save',error instanceof Error?error.message:'Please try again.');}
     finally{setSaving(false);}
   }
@@ -126,10 +162,31 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
     <View style={styles.header}><Pressable accessibilityRole="button" accessibilityLabel="Back to Claim Tracker" onPress={()=>router.back()} style={styles.back}><Ionicons name="chevron-back" color="#FFF" size={23}/></Pressable><View style={styles.headerCopy}><Text style={styles.headerTitle}>{config.title}</Text><Text style={styles.headerSubtitle}>Claim Tracker</Text></View></View>
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
       <ClaimHero data={data} title={config.title} icon={config.icon}/>
-      <View style={styles.card}>
+      {stage==='spot_status' ? <>
+        <View style={spotStyles.card}>
+          <View style={spotStyles.heading}><Image source={require('../../mobile-app/assets/brand/spot-intimation/glossy_pink_camera_document_icon.png')} style={spotStyles.artwork} resizeMode="contain"/><Text style={spotStyles.headingText}>Spot Survey</Text></View>
+          <EditableField field={{...CONFIG.spot_status.fields[0],label:'Spot Survey Done Date'}} value={values.spot_survey_done_date||''} onChange={(value)=>setValue('spot_survey_done_date',value)} displayDate />
+        </View>
+        <View style={spotStyles.card}>
+          <View style={spotStyles.heading}><MaterialCommunityIcons name="clipboard-account-outline" color="#1558A5" size={27}/><Text style={spotStyles.headingText}>Surveyor Details</Text><Text style={spotStyles.optional}>Optional</Text></View>
+          {CONFIG.spot_status.fields.slice(1).map(field=><EditableField key={field.key} field={{...field,label:`${field.label} (Optional)`}} value={values[field.key]||''} onChange={(value)=>setValue(field.key,value)}/>)}
+        </View>
+      </> : stage==='work_approval' ? <View style={approvalStyles.card}>
+        <View style={styles.sectionHeading}><View style={styles.sectionIcon}><MaterialCommunityIcons name="clipboard-check-outline" size={23} color="#0B58A7"/></View><View style={{flex:1}}><Text style={styles.sectionTitle}>Stage Details</Text><Text style={styles.sectionSubtitle}>{config.subtitle}</Text></View></View>
+        {CONFIG.work_approval.fields.map(field=><View key={field.key} style={approvalStyles.fieldBlock}><EditableField field={field.key.startsWith('surveyor_')?{...field,label:`${field.label} (Optional)`}:field} value={values[field.key]||''} onChange={value=>setValue(field.key,value)} displayDate={field.kind==='date'}/></View>)}
+      </View> : <View style={styles.card}>
         <View style={styles.sectionHeading}><View style={styles.sectionIcon}><MaterialCommunityIcons name={config.icon} size={23} color="#0B58A7"/></View><View style={{flex:1}}><Text style={styles.sectionTitle}>Stage Details</Text><Text style={styles.sectionSubtitle}>{config.subtitle}</Text></View></View>
-        {config.fields.map(field=><EditableField key={field.key} field={field} value={values[field.key]||''} onChange={(value)=>setValue(field.key,value)}/>)}
-      </View>
+        {config.fields.map(field=><View key={field.key}>{field.key==='dealership_location'?<View style={locationStyles.action}><Pressable accessibilityRole="button" accessibilityLabel="Use Current Location" disabled={locating||saving} onPress={()=>void fillCurrentLocation()} style={locationStyles.button}><Ionicons name="locate-outline" size={16} color="#0B4DA3"/><Text style={locationStyles.text}>{locating?"Locating…":"Use Current Location"}</Text></Pressable></View>:null}<EditableField field={field} value={values[field.key]||''} onChange={(value)=>setValue(field.key,value)}/></View>)}
+      </View>}
+
+      {stage === 'work_approval' ? <View style={approvalStyles.documentsCard}>
+        <View style={approvalStyles.documentsHeading}><MaterialCommunityIcons name="file-document-check-outline" size={24} color="#1459A6"/><Text style={approvalStyles.documentsTitle}>Approval Documents</Text><Text style={approvalStyles.optionalPill}>Optional</Text></View>
+        <View style={approvalStyles.documentsRow}>
+          <View style={approvalStyles.documentHalf}><PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="Work Approval Letter" tileFullWidth milestoneKey="work_approval" documents={data.documents} variant="tile" artwork={DOCUMENT_ARTWORK[1]} label="Insurer Approval Letter"/></View>
+          <View style={approvalStyles.documentHalf}><PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="Surveyor Approval" tileFullWidth milestoneKey="work_approval" documents={data.documents} variant="tile" artwork={DOCUMENT_ARTWORK[2]} label="Surveyor Approval / Report"/></View>
+        </View>
+        <PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="work_approval Additional Documents" milestoneKey="work_approval" documents={data.documents} variant="bulk" artwork={BULK_ARTWORK} label="Upload Multiple Documents" subtitle="Select several files now, or tap again later to add more."/>
+      </View> : null}
 
       {stage === 'claim_intimation' ? <View style={styles.card}>
         <View style={styles.documentHeader}><Text style={styles.sectionTitle}>Documents for verification</Text><View style={styles.optionalChip}><Text style={styles.optionalText}>Claims desk review</Text></View></View>
@@ -141,6 +198,22 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
       </View> : null}
       <PartnerClaimStepFooter index={stageIndex} busy={saving} canContinue onPrevious={previous} onContinue={()=>void save()} continueLabel={stage==='payment_encashment'?'Complete Claim':'Save & Continue'}/>
     </ScrollView>
+    <Modal visible={claimNumberOpen} transparent animationType="fade" onRequestClose={skipClaimNumber}>
+      <View style={claimPopupStyles.backdrop}>
+        <View style={claimPopupStyles.card}>
+          <View style={claimPopupStyles.icon}><Ionicons name="shield-checkmark-outline" size={28} color="#0B347A"/></View>
+          <Text style={claimPopupStyles.title}>Add insurer claim</Text>
+          <View style={claimPopupStyles.inputWrap}>
+            <Ionicons name="document-text-outline" size={20} color="#0B347A"/>
+            <TextInput accessibilityLabel="Enter claim number" placeholder="Enter claim number" placeholderTextColor="#8994A7" style={claimPopupStyles.input} value={claimNumber} onChangeText={setClaimNumber} editable={!claimNumberSaving} maxLength={80} autoCapitalize="characters" returnKeyType="done"/>
+          </View>
+          <View style={claimPopupStyles.actions}>
+            <Pressable accessibilityRole="button" disabled={claimNumberSaving} onPress={skipClaimNumber} style={claimPopupStyles.notNow}><Text style={claimPopupStyles.notNowText}>Not now</Text></Pressable>
+            <Pressable accessibilityRole="button" disabled={claimNumberSaving} onPress={()=>void continueClaimNumber()} style={claimPopupStyles.continue}>{claimNumberSaving?<ActivityIndicator color="#FFF"/>:<><Text style={claimPopupStyles.continueText}>Continue</Text><Ionicons name="arrow-forward" size={20} color="#FFF"/></>}</Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
     <View style={styles.nav}><Nav label="Home" icon="home" onPress={()=>router.push('/(tabs)' as never)}/><Nav label="Business" icon="briefcase-outline" onPress={()=>router.push('/(tabs)/business' as never)}/><Nav label="Policies" icon="document-text-outline" onPress={()=>router.push('/(tabs)/policies' as never)}/><Nav label="Claims" icon="shield-checkmark-outline" onPress={()=>router.push('/(tabs)/claims' as never)}/><Nav label="More" icon="grid-outline" onPress={()=>router.push('/(tabs)/more' as never)}/></View>
   </SafeAreaView>;
 }
@@ -153,7 +226,7 @@ function claimDocumentCategory(label:string){
   return 'Forms';
 }
 
-function EditableField({field,value,onChange}:{field:Field;value:string;onChange:(value:string)=>void}){
+function EditableField({field,value,onChange,displayDate=false}:{field:Field;value:string;onChange:(value:string)=>void;displayDate?:boolean}){
   const [pickerVisible,setPickerVisible]=useState(false);
   const [draftPickerValue,setDraftPickerValue]=useState<Date>(()=>new Date());
   const isDate=field.kind==='date';
@@ -164,7 +237,7 @@ function EditableField({field,value,onChange}:{field:Field;value:string;onChange
     {field.kind==='choice'?<View style={styles.choiceRow}>{(field.options||[]).map(option=><Pressable key={option.value} accessibilityRole="button" accessibilityState={{selected:value===option.value}} onPress={()=>onChange(option.value)} style={[styles.choice,value===option.value&&styles.choiceSelected]}><Text style={[styles.choiceText,value===option.value&&styles.choiceTextSelected]}>{option.label}</Text></Pressable>)}</View>
     :<>
       <View style={styles.inputShell}>
-        <TextInput accessibilityLabel={field.label} value={value} onChangeText={onChange} placeholder={field.placeholder||(isDate?'YYYY-MM-DD':`Enter ${field.label.toLowerCase()}`)} placeholderTextColor="#A1ADBC" keyboardType={field.kind==='number'?'decimal-pad':'default'} style={styles.input}/>
+        <TextInput accessibilityLabel={field.label} value={isDate&&displayDate&&/^\d{4}-\d{2}-\d{2}$/.test(value)?value.split('-').reverse().join('-'):value} onChangeText={text=>{if(isDate&&displayDate&&/^\d{2}-\d{2}-\d{4}$/.test(text))onChange(text.split('-').reverse().join('-'));else if(!displayDate)onChange(text);}} editable={!displayDate} placeholder={field.placeholder||(isDate?(displayDate?'DD-MM-YYYY':'YYYY-MM-DD'):`Enter ${field.label.toLowerCase()}`)} placeholderTextColor="#A1ADBC" keyboardType={field.kind==='number'?'decimal-pad':'default'} style={styles.input}/>
         {isDate?<Pressable accessibilityRole="button" accessibilityLabel={`Choose ${field.label}`} onPress={()=>{setDraftPickerValue(pickerValue);setPickerVisible(true);}} hitSlop={10} style={styles.calendarButton}><Ionicons name="calendar-outline" size={20} color="#1857A9"/></Pressable>:null}
       </View>
       {isDate&&pickerVisible?<Modal transparent animationType="fade" visible={pickerVisible} onRequestClose={()=>setPickerVisible(false)}>
@@ -225,4 +298,39 @@ const pickerModalStyles = StyleSheet.create({
   sheet: { borderRadius: 18, backgroundColor: '#FFFFFF', padding: 14, overflow: 'hidden' },
   done: { alignSelf: 'flex-end', paddingHorizontal: 14, paddingVertical: 12 },
   doneText: { color: '#1857A9', fontWeight: '800', fontSize: 16 },
+});
+
+const claimPopupStyles=StyleSheet.create({
+  backdrop:{flex:1,backgroundColor:'rgba(3,16,43,0.58)',justifyContent:'center',paddingHorizontal:34},
+  card:{backgroundColor:'#FFFFFF',borderRadius:24,paddingHorizontal:20,paddingTop:22,paddingBottom:20,alignItems:'center',gap:22},
+  icon:{height:48,width:48,borderRadius:15,backgroundColor:'#EDF4FF',alignItems:'center',justifyContent:'center',borderColor:'#D5E3F6',borderWidth:1},
+  title:{fontSize:18,fontWeight:'900',color:'#0C244D',textAlign:'center'},
+  inputWrap:{width:'100%',height:61,borderColor:'#16519B',borderWidth:1.5,borderRadius:15,flexDirection:'row',alignItems:'center',paddingHorizontal:16,gap:12},
+  input:{flex:1,color:'#142A4D',fontSize:13,fontWeight:'700'},
+  actions:{width:'100%',flexDirection:'row',gap:10},
+  notNow:{flex:1,minHeight:56,borderRadius:14,borderColor:'#D6DCE5',borderWidth:1,alignItems:'center',justifyContent:'center'},
+  notNowText:{fontSize:12,color:'#273955',fontWeight:'800'},
+  continue:{flex:1.2,minHeight:56,borderRadius:14,backgroundColor:'#104AA5',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:10},
+  continueText:{fontSize:12,color:'#FFF',fontWeight:'800'}
+});
+
+const spotStyles=StyleSheet.create({
+ card:{backgroundColor:'#FFFFFF',borderRadius:20,borderWidth:1,borderColor:'#D6E2EC',padding:16,gap:17},
+ heading:{flexDirection:'row',alignItems:'center',gap:10,minHeight:37,marginBottom:4},
+ artwork:{width:34,height:34},
+ headingText:{fontSize:13,fontWeight:'900',color:'#152D50'},
+ optional:{color:'#8290A1',fontSize:10,fontWeight:'700'},
+});
+
+const locationStyles=StyleSheet.create({action:{alignItems:'flex-end',marginBottom:2},button:{flexDirection:'row',alignItems:'center',gap:5,paddingVertical:3},text:{fontSize:10,color:'#0B4DA3',fontWeight:'800'}});
+
+const approvalStyles=StyleSheet.create({
+ card:{backgroundColor:'#FFF',borderRadius:19,borderWidth:1,borderColor:'#D7E2EC',padding:14,gap:13},
+ fieldBlock:{marginTop:2},
+ documentsCard:{backgroundColor:'#FFF',borderRadius:19,borderWidth:1,borderColor:'#D7E2EC',padding:13,gap:12},
+ documentsHeading:{flexDirection:'row',alignItems:'center',gap:9},
+ documentsTitle:{fontSize:12,fontWeight:'900',color:'#14284B',flex:1},
+ optionalPill:{backgroundColor:'#EDF4FF',borderRadius:16,paddingHorizontal:9,paddingVertical:5,color:'#1554A1',fontSize:9,fontWeight:'800'},
+ documentsRow:{flexDirection:'row',gap:10},
+ documentHalf:{flex:1,minWidth:0},
 });

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
-import { getPartnerClaimDetail, type PartnerClaimDetail } from '@/lib/claims';
+import { getPartnerClaimDetail, savePartnerInsurerClaimNumber, type PartnerClaimDetail } from '@/lib/claims';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { PartnerClaimDocuments } from '@/components/partner-claim-documents';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
@@ -27,6 +27,9 @@ export default function ClaimTrackerScreen() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [journeyOpen, setJourneyOpen] = useState(true);
   const [documentsOpen, setDocumentsOpen] = useState(false);
+  const [claimNumberOpen, setClaimNumberOpen] = useState(false);
+  const [claimNumber, setClaimNumber] = useState('');
+  const [claimNumberSaving, setClaimNumberSaving] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) { setError('Claim ID is missing.'); setLoading(false); return; }
@@ -38,6 +41,21 @@ export default function ClaimTrackerScreen() {
   useEffect(() => { void load(); }, [load]);
 
   const tracker = data ? getClaimTrackerState(data) : null;
+  const canAddClaimNumber = Boolean(tracker?.completedKeys.has('claim_intimation'));
+  const openClaimNumber = () => { setClaimNumber(data?.claim.insurer_claim_no || ''); setClaimNumberOpen(true); };
+  const saveClaimNumber = async () => {
+    if (!data || claimNumberSaving) return;
+    const value = claimNumber.trim();
+    if (!value || value.length > 80) { Alert.alert('Action required', 'Enter a valid insurer claim number (up to 80 characters).'); return; }
+    setClaimNumberSaving(true);
+    try {
+      await savePartnerInsurerClaimNumber(data.claim.id, value);
+      setData(await getPartnerClaimDetail(data.claim.id));
+      setClaimNumberOpen(false);
+      Alert.alert('Saved', 'Insurer claim number updated successfully.');
+    } catch (error) { Alert.alert('Unable to save', error instanceof Error ? error.message : 'Please try again.'); }
+    finally { setClaimNumberSaving(false); }
+  };
   const openStage = (key: string) => router.push({ pathname: '/claim/stage', params: { id, key } } as never);
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
@@ -73,6 +91,7 @@ export default function ClaimTrackerScreen() {
                 <Field label="Accident Location" value={data.claim.accident_location}/>
                 <Field label="Assistance" value={data.claim.assistance_status?.replaceAll('_', ' ')}/>
               </View>}
+            {canAddClaimNumber && <Pressable accessibilityRole="button" accessibilityLabel={data.claim.insurer_claim_no ? 'View or edit claim number' : 'Add Claim Number'} onPress={openClaimNumber} style={styles.claimNumberButton}><View style={styles.claimNumberIcon}><Ionicons name="document-text-outline" size={17} color="#0B347A"/></View><Text style={styles.claimNumberButtonText}>{data.claim.insurer_claim_no ? 'View / Edit Claim Number' : 'Add Claim Number'}</Text><Ionicons name="chevron-forward" size={18} color="#0B347A"/></Pressable>}
             </View>
             <View style={styles.panel}>
               <Pressable accessibilityRole="button" accessibilityState={{ expanded: journeyOpen }} onPress={() => setJourneyOpen(v => !v)} style={styles.panelHeader}><View style={styles.insurerJourneyLogo}><PartnerInsurerLogo name={data.insurer.name} style={styles.insurerJourneyImage} fallback={PartnerAssets.actions.quickClaims}/></View><View style={styles.panelCopy}><Text style={styles.panelTitle}>Claim Journey</Text><Text style={styles.panelSubtitle}>{tracker.progress}% complete • {tracker.current.label}</Text></View><Ionicons name={journeyOpen ? 'chevron-up' : 'chevron-down'} color="#526987" size={17}/></Pressable>
@@ -81,6 +100,19 @@ export default function ClaimTrackerScreen() {
             <View style={styles.panel}><Pressable accessibilityRole="button" accessibilityState={{ expanded: documentsOpen }} onPress={() => setDocumentsOpen(v => !v)} style={styles.panelHeader}><Image source={PartnerAssets.actions.claimDocumentsFolder} resizeMode="contain" style={styles.documentsIcon}/><View style={styles.panelCopy}><Text style={styles.panelTitle}>Documents</Text><Text style={styles.panelSubtitle}>Claim documents</Text></View><Ionicons name={documentsOpen ? 'chevron-up' : 'chevron-down'} size={18} color="#526987"/></Pressable>{documentsOpen && <View style={styles.documentBody}><PartnerClaimDocuments documents={data.documents} /></View>}</View>
           </>}
       </ScrollView>
+      <Modal transparent visible={claimNumberOpen} animationType="fade" onRequestClose={() => { if (!claimNumberSaving) setClaimNumberOpen(false); }}>
+        <View style={styles.claimModalBackdrop}>
+          <View style={styles.claimModalCard}>
+            <View style={styles.claimModalIcon}><Ionicons name="shield-checkmark-outline" size={29} color="#0B347A" /></View>
+            <Text style={styles.claimModalTitle}>{data?.claim.insurer_claim_no ? 'Edit insurer claim number?' : 'Add insurer claim number?'}</Text>
+            <View style={styles.claimInputRow}><Ionicons name="document-text-outline" size={20} color="#0B347A"/><TextInput accessibilityLabel="Enter claim number" style={styles.claimNumberInput} placeholder="Enter claim number" placeholderTextColor="#75839A" value={claimNumber} onChangeText={setClaimNumber} autoCapitalize="characters" maxLength={80} editable={!claimNumberSaving} returnKeyType="done" /></View>
+            <View style={styles.claimModalActions}>
+              <Pressable accessibilityRole="button" disabled={claimNumberSaving} onPress={() => setClaimNumberOpen(false)} style={styles.claimCancel}><Text style={styles.claimCancelText}>Not now</Text></Pressable>
+              <Pressable accessibilityRole="button" disabled={claimNumberSaving} onPress={() => void saveClaimNumber()} style={styles.claimContinue}>{claimNumberSaving ? <ActivityIndicator color="#FFF"/> : <><Text style={styles.claimContinueText}>Continue</Text><Ionicons name="arrow-forward" size={19} color="#FFF"/></>}</Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
       <View style={styles.nav}>
         <Nav label="Home" icon="home" onPress={() => router.push('/(tabs)' as never)}/>
         <Nav label="Business" icon="briefcase-outline" onPress={() => router.push('/(tabs)/business' as never)}/>
@@ -99,6 +131,7 @@ root:{flex:1,backgroundColor:'#EDF6FE'},  header: { height: 50, paddingHorizonta
   headerIcon: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: 'transparent' },
   headerIconImage: { width: 22, height: 22 },
   headerCopy: { flex: 1, justifyContent: 'center' }, headerTitle: { color: '#FFFFFF', fontSize: 15, lineHeight: 18, fontWeight: '800' },
+claimNumberButton:{backgroundColor:'#FFFFFF',borderRadius:12,borderWidth:1,borderColor:'#D2E2F4',minHeight:45,flexDirection:'row',alignItems:'center',paddingHorizontal:12,gap:9},claimNumberIcon:{width:28,height:28,borderRadius:9,backgroundColor:'#E8F1FF',alignItems:'center',justifyContent:'center'},claimNumberButtonText:{flex:1,fontSize:11,fontWeight:'800',color:'#0B347A'},claimModalBackdrop:{flex:1,backgroundColor:'rgba(6,24,58,0.65)',justifyContent:'center',paddingHorizontal:25},claimModalCard:{backgroundColor:'#FFFFFF',borderRadius:25,padding:20,alignItems:'center',gap:20},claimModalIcon:{height:60,width:60,borderRadius:18,backgroundColor:'#EEF5FF',alignItems:'center',justifyContent:'center'},claimModalTitle:{fontSize:18,fontWeight:'900',color:'#0B244C',textAlign:'center'},claimInputRow:{width:'100%',height:62,borderWidth:1.5,borderColor:'#0D459D',borderRadius:15,flexDirection:'row',alignItems:'center',gap:12,paddingHorizontal:16},claimNumberInput:{flex:1,color:'#10284B',fontSize:14,fontWeight:'700'},claimModalActions:{flexDirection:'row',gap:12,width:'100%'},claimCancel:{flex:1,borderWidth:1.5,borderColor:'#0D459D',borderRadius:14,minHeight:56,alignItems:'center',justifyContent:'center'},claimCancelText:{color:'#0D459D',fontSize:13,fontWeight:'800'},claimContinue:{flex:1.15,borderRadius:14,minHeight:56,backgroundColor:'#0D459D',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:12},claimContinueText:{color:'#FFF',fontSize:13,fontWeight:'800'},
 scroll:{flex:1},content:{paddingHorizontal:13,paddingTop:12,paddingBottom:30,gap:12},title:{color:'#0D2857',fontSize:24,fontWeight:'900',marginBottom:5},hero:{backgroundColor:'#07347E',borderRadius:18,padding:12,shadowColor:'#142E58',shadowOpacity:.18,shadowRadius:6,elevation:4},heroTop:{flexDirection:'row',alignItems:'center',gap:8},logo:{width:43,height:43,borderRadius:9,backgroundColor:'#FFF',alignItems:'center',justifyContent:'center'},logoImage:{width:36,height:36},heroMain:{flex:1},stageEyebrow:{color:'#BCD1EF',fontSize:9,fontWeight:'700'},vehicle:{color:'#FFF',fontSize:21,fontWeight:'900',marginTop:2},heroControl:{color:'#D9E7FA',fontSize:10,fontWeight:'700'},ring:{width:45,height:45,borderRadius:25,borderWidth:4,borderColor:'#527BAC',justifyContent:'center',alignItems:'center'},ringText:{color:'#FFF',fontWeight:'800',fontSize:12},heroDivider:{height:1,backgroundColor:'#6481AF',marginVertical:12},heroMiddle:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},heroMinor:{fontSize:9,color:'#B8C9E5',fontWeight:'700'},heroDate:{color:'#FFF',fontSize:11,fontWeight:'800',marginTop:3},toggle:{flexDirection:'row',alignItems:'center',gap:6,backgroundColor:'#2E528C',borderRadius:10,borderWidth:1,borderColor:'#6483B0',padding:10},toggleText:{color:'#FFF',fontSize:10,fontWeight:'700'},details:{marginTop:10,backgroundColor:'#FFF',borderRadius:13,padding:11,flexDirection:'row',flexWrap:'wrap',rowGap:10},field:{width:'50%',paddingHorizontal:2},fieldLabel:{fontSize:9,color:'#7B889E',fontWeight:'600'},fieldValue:{fontSize:10.5,color:'#162C50',fontWeight:'800',marginTop:3},
 panel:{borderRadius:18,borderColor:'#CFDDEC',borderWidth:1,overflow:'hidden',backgroundColor:'#F7FAFF'},panelHeader:{minHeight:62,flexDirection:'row',gap:11,paddingHorizontal:13,paddingVertical:10,alignItems:'center'},panelCopy:{flex:1},panelTitle:{fontSize:13,fontWeight:'900',color:'#10294D'},panelSubtitle:{fontSize:9,color:'#8793A4',fontWeight:'600',marginTop:3},stageList:{backgroundColor:'#FFF',paddingHorizontal:6,paddingBottom:4},stageRow:{minHeight:58,flexDirection:'row',alignItems:'center',paddingRight:10,borderBottomWidth:1,borderBottomColor:'#ECF1F6',gap:8},currentRow:{backgroundColor:'#EBF5FE',borderWidth:1,borderColor:'#D5E4F5',borderRadius:9},rail:{alignItems:'center',width:20,height:53,justifyContent:'flex-start',paddingTop:15},dot:{width:18,height:18,borderRadius:10,borderWidth:1,borderColor:'#E0E6EE',backgroundColor:'#F4F6F9',alignItems:'center',justifyContent:'center'},doneDot:{backgroundColor:'#20A56B',borderColor:'#20A56B'},currentDot:{backgroundColor:'#1455B0',borderColor:'#1455B0'},innerDot:{backgroundColor:'#FFF',height:7,width:7,borderRadius:4},line:{width:1,height:19,backgroundColor:'#E3E8EE',marginTop:3},stageCopy:{flex:1},stageName:{fontSize:11,fontWeight:'900',color:'#10284B'},stageStatus:{fontSize:9,fontWeight:'700',color:'#8D99A9',marginTop:3},doneStatus:{color:'#8D99A9'},currentStatus:{color:'#1153A2'},insurerJourneyLogo:{width:39,height:39,borderRadius:10,backgroundColor:"#FFFFFF",alignItems:"center",justifyContent:"center",overflow:"hidden"},insurerJourneyImage:{width:33,height:33},documentsIcon:{width:43,height:43},documentBody:{padding:15,borderTopWidth:1,borderColor:'#D6E1EF'},documentNote:{fontSize:11,lineHeight:17,color:'#61748D'},nav:{height:61,backgroundColor:'#081F4C',flexDirection:'row',alignItems:'center',justifyContent:'space-around',paddingHorizontal:7,borderTopLeftRadius:18,borderTopRightRadius:18},navItem:{alignItems:'center',flex:1,gap:2},navIcon:{width:35,height:33,borderRadius:12,backgroundColor:'#183461',justifyContent:'center',alignItems:'center'},navActive:{backgroundColor:'#FFF'},navText:{color:'#CEDAEE',fontSize:9,fontWeight:'700'},navTextActive:{color:'#FFF'}
 });
