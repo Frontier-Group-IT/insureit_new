@@ -153,10 +153,19 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
     <View style={styles.header}><Pressable accessibilityRole="button" accessibilityLabel="Back to Claim Tracker" onPress={()=>router.back()} style={styles.back}><Ionicons name="chevron-back" color="#FFF" size={23}/></Pressable><View style={styles.headerCopy}><Text style={styles.headerTitle}>{config.title}</Text><Text style={styles.headerSubtitle}>Claim Tracker</Text></View></View>
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
       <ClaimHero data={data} title={config.title} icon={config.icon}/>
-      <View style={styles.card}>
+      {stage==='spot_status' ? <>
+        <View style={spotStyles.card}>
+          <View style={spotStyles.heading}><Image source={require('../../mobile-app/assets/brand/spot-intimation/glossy_pink_camera_document_icon.png')} style={spotStyles.artwork} resizeMode="contain"/><Text style={spotStyles.headingText}>Spot Survey</Text></View>
+          <EditableField field={{...CONFIG.spot_status.fields[0],label:'Spot Survey Done Date'}} value={values.spot_survey_done_date||''} onChange={(value)=>setValue('spot_survey_done_date',value)} displayDate />
+        </View>
+        <View style={spotStyles.card}>
+          <View style={spotStyles.heading}><MaterialCommunityIcons name="clipboard-account-outline" color="#1558A5" size={27}/><Text style={spotStyles.headingText}>Surveyor Details</Text><Text style={spotStyles.optional}>Optional</Text></View>
+          {CONFIG.spot_status.fields.slice(1).map(field=><EditableField key={field.key} field={{...field,label:`${field.label} (Optional)`}} value={values[field.key]||''} onChange={(value)=>setValue(field.key,value)}/>)}
+        </View>
+      </> : <View style={styles.card}>
         <View style={styles.sectionHeading}><View style={styles.sectionIcon}><MaterialCommunityIcons name={config.icon} size={23} color="#0B58A7"/></View><View style={{flex:1}}><Text style={styles.sectionTitle}>Stage Details</Text><Text style={styles.sectionSubtitle}>{config.subtitle}</Text></View></View>
         {config.fields.map(field=><EditableField key={field.key} field={field} value={values[field.key]||''} onChange={(value)=>setValue(field.key,value)}/>)}
-      </View>
+      </View>}
 
       {stage === 'claim_intimation' ? <View style={styles.card}>
         <View style={styles.documentHeader}><Text style={styles.sectionTitle}>Documents for verification</Text><View style={styles.optionalChip}><Text style={styles.optionalText}>Claims desk review</Text></View></View>
@@ -196,7 +205,7 @@ function claimDocumentCategory(label:string){
   return 'Forms';
 }
 
-function EditableField({field,value,onChange}:{field:Field;value:string;onChange:(value:string)=>void}){
+function EditableField({field,value,onChange,displayDate=false}:{field:Field;value:string;onChange:(value:string)=>void;displayDate?:boolean}){
   const [pickerVisible,setPickerVisible]=useState(false);
   const [draftPickerValue,setDraftPickerValue]=useState<Date>(()=>new Date());
   const isDate=field.kind==='date';
@@ -207,7 +216,7 @@ function EditableField({field,value,onChange}:{field:Field;value:string;onChange
     {field.kind==='choice'?<View style={styles.choiceRow}>{(field.options||[]).map(option=><Pressable key={option.value} accessibilityRole="button" accessibilityState={{selected:value===option.value}} onPress={()=>onChange(option.value)} style={[styles.choice,value===option.value&&styles.choiceSelected]}><Text style={[styles.choiceText,value===option.value&&styles.choiceTextSelected]}>{option.label}</Text></Pressable>)}</View>
     :<>
       <View style={styles.inputShell}>
-        <TextInput accessibilityLabel={field.label} value={value} onChangeText={onChange} placeholder={field.placeholder||(isDate?'YYYY-MM-DD':`Enter ${field.label.toLowerCase()}`)} placeholderTextColor="#A1ADBC" keyboardType={field.kind==='number'?'decimal-pad':'default'} style={styles.input}/>
+        <TextInput accessibilityLabel={field.label} value={isDate&&displayDate&&/^\\d{4}-\\d{2}-\\d{2}$/.test(value)?value.split('-').reverse().join('-'):value} onChangeText={text=>{if(isDate&&displayDate&&/^\\d{2}-\\d{2}-\\d{4}$/.test(text))onChange(text.split('-').reverse().join('-'));else if(!displayDate)onChange(text);}} editable={!displayDate} placeholder={field.placeholder||(isDate?(displayDate?'DD-MM-YYYY':'YYYY-MM-DD'):`Enter ${field.label.toLowerCase()}`)} placeholderTextColor="#A1ADBC" keyboardType={field.kind==='number'?'decimal-pad':'default'} style={styles.input}/>
         {isDate?<Pressable accessibilityRole="button" accessibilityLabel={`Choose ${field.label}`} onPress={()=>{setDraftPickerValue(pickerValue);setPickerVisible(true);}} hitSlop={10} style={styles.calendarButton}><Ionicons name="calendar-outline" size={20} color="#1857A9"/></Pressable>:null}
       </View>
       {isDate&&pickerVisible?<Modal transparent animationType="fade" visible={pickerVisible} onRequestClose={()=>setPickerVisible(false)}>
@@ -282,4 +291,12 @@ const claimPopupStyles=StyleSheet.create({
   notNowText:{fontSize:12,color:'#273955',fontWeight:'800'},
   continue:{flex:1.2,minHeight:56,borderRadius:14,backgroundColor:'#104AA5',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:10},
   continueText:{fontSize:12,color:'#FFF',fontWeight:'800'}
+});
+
+const spotStyles=StyleSheet.create({
+ card:{backgroundColor:'#FFFFFF',borderRadius:20,borderWidth:1,borderColor:'#D6E2EC',padding:16,gap:17},
+ heading:{flexDirection:'row',alignItems:'center',gap:10,minHeight:37,marginBottom:4},
+ artwork:{width:34,height:34},
+ headingText:{fontSize:13,fontWeight:'900',color:'#152D50'},
+ optional:{color:'#8290A1',fontSize:10,fontWeight:'700'},
 });
