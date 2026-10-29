@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { createServerSupabaseClient } from "@/lib/auth-server";
-import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import {
   getPartnerWebBusinessPerformance,
   getPartnerWebBusinessRange,
@@ -237,7 +236,7 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
     && "portal_access_type" in scope && scope.portal_access_type === "branch";
   let branchContactName: string | null = null;
   if (isBranchLogin && identity.actor_kind === "intermediary") {
-    const { data: branchProfile, error: branchProfileError } = await createSupabaseAdminClient()
+    const { data: branchProfile, error: branchProfileError } = await (await createServerSupabaseClient())
       .from("partner_branch_profiles")
       .select("contact_name")
       .eq("partner_id", identity.partner_id)
