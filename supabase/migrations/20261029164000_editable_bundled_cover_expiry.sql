@@ -287,5 +287,4 @@ BEGIN
     PERFORM set_config('insureit.cover_dates_override','off',true);
   END IF;
   RETURN v_result;
-END; $function$
-
+END; $function$;
