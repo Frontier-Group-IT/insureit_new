@@ -9,6 +9,7 @@ on:
       - '.github/workflows/verify-partner-app.yml'
       - '.github/workflows/build-partner-preview.yml'
       - '.github/workflows/publish-partner-preview-ota.yml'
+      - '.github/workflows/publish-partner-production-ota.yml'
   workflow_dispatch:
 
 permissions:
