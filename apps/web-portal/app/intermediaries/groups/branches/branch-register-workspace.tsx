@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Building2, GitBranch, Plus, Store } from "lucide-react";
+import { Building2, GitBranch, Plus, Search, Store } from "lucide-react";
 import { BranchActionMenu } from "./branch-action-menu";
 import {
   BrokerRegisterShell,
@@ -57,6 +57,7 @@ export function BranchRegisterWorkspace({
 }) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewKey>("all");
+  const [activationFilter, setActivationFilter] = useState<"all" | "active" | "invited">("all");
   const [group, setGroup] = useState("all");
   const [page, setPage] = useState(1);
 
@@ -78,6 +79,7 @@ export function BranchRegisterWorkspace({
         || (view === "assigned" && Boolean(row.parent_partner_id))
         || (view === "unassigned" && !row.parent_partner_id);
       const matchesGroup = applicationBranchView || group === "all" || row.group_code === group;
+      const matchesActivation = !applicationBranchView || activationFilter === "all" || (!row.login_disabled && row.invitation_status === activationFilter);
       const haystack = [
         row.branch_name,
         row.branch_code,
@@ -94,9 +96,9 @@ export function BranchRegisterWorkspace({
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
-      return matchesView && matchesGroup && (!normalized || haystack.includes(normalized));
+      return matchesView && matchesGroup && matchesActivation && (!normalized || haystack.includes(normalized));
     });
-  }, [applicationBranchView, group, hideParentPartner, query, rows, view]);
+  }, [activationFilter, applicationBranchView, group, hideParentPartner, query, rows, view]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -108,6 +110,24 @@ export function BranchRegisterWorkspace({
       title="Branch Register"
       description={applicationBranchView ? "View this Partner’s branches and their contact information." : hideParentPartner ? "View accessible Branches with their Business Group and assigned employee." : "View every accessible Branch together with its parent Partner, inherited Business Group and assigned employee."}
       icon={<Store className="h-5 w-5" />}
+      branchHeaderActions={applicationBranchView ? (
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+          <label className="relative min-w-[220px] max-w-[520px] flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B93AA]" />
+            <input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }}
+              placeholder="Search branch, contact name, email, phone or code"
+              aria-label="Search Partner branches"
+              className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white pl-10 pr-3 text-[12px] text-[#0F172A] outline-none focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10" />
+          </label>
+          <div className="ml-auto">
+            <RegisterSelect value={activationFilter} onChange={(value) => { setActivationFilter(value as "all" | "active" | "invited"); setPage(1); }} label="Filter branches by activation status">
+              <option value="all">All</option>
+              <option value="active">Active</option>
+              <option value="invited">Invitation Sent</option>
+            </RegisterSelect>
+          </div>
+        </div>
+      ) : undefined}
       metrics={[
         { label: "Branches", value: rows.length, hint: "Accessible records", tone: "navy" },
         { label: "Assigned", value: assignedCount, hint: "Linked to a Partner", tone: "green" },
@@ -115,7 +135,7 @@ export function BranchRegisterWorkspace({
         ...(!applicationBranchView ? [{ label: "Groups", value: groupOptions.length, hint: "Inherited groups", tone: "slate" as const }] : []),
       ]}
     >
-      <BrokerRegisterToolbar
+      {!applicationBranchView ? <BrokerRegisterToolbar
         query={query}
         onQueryChange={(value) => { setQuery(value); setPage(1); }}
         searchPlaceholder={applicationBranchView ? "Search branch, contact name, email, phone or code" : hideParentPartner ? "Search branch, email, phone, code, Group or employee" : "Search branch, email, phone, code, parent Partner, Group or employee"}
@@ -150,7 +170,7 @@ export function BranchRegisterWorkspace({
         >
           <GitBranch className="h-4 w-4" /> Business Groups
         </Link> : null}
-      </BrokerRegisterToolbar>
+      </BrokerRegisterToolbar> : null}
 
       {loadError ? (
         <div className="border-b border-[#F4D6D6] bg-[#FFF7F7] px-4 py-3 text-[11px] font-semibold text-[#9B2C2C]">
@@ -160,7 +180,7 @@ export function BranchRegisterWorkspace({
 
       <div className="mobile-card-list p-3 md:hidden">
         {pageRows.map((branch) => <BranchMobileCard key={branch.id} branch={branch} canPermanentDelete={canPermanentDelete} hideParentPartner={hideParentPartner} applicationBranchView={applicationBranchView} />)}
-        {!pageRows.length ? <RegisterEmpty title="No matching branches" description={applicationBranchView ? "Adjust the search or assignment view." : "Adjust the search, assignment view or Business Group filter."} /> : null}
+        {!pageRows.length ? <RegisterEmpty title="No matching branches" description={applicationBranchView ? "Adjust the search or status filter." : "Adjust the search, assignment view or Business Group filter."} /> : null}
       </div>
 
       <div className="hidden overflow-x-auto md:block">
@@ -216,7 +236,7 @@ export function BranchRegisterWorkspace({
             ))}
           </tbody>
         </table>
-        {!pageRows.length ? <RegisterEmpty title="No matching branches" description="Adjust the search, assignment view or Business Group filter." /> : null}
+        {!pageRows.length ? <RegisterEmpty title="No matching branches" description={applicationBranchView ? "Adjust the search or status filter." : "Adjust the search, assignment view or Business Group filter."} /> : null}
       </div>
 
       <RegisterPagination
