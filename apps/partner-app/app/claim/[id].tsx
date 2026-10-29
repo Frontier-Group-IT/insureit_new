@@ -41,7 +41,6 @@ export default function ClaimTrackerScreen() {
   useEffect(() => { void load(); }, [load]);
 
   const tracker = data ? getClaimTrackerState(data) : null;
-  const canAddClaimNumber = Boolean(tracker?.completedKeys.has('claim_intimation'));
   const openClaimNumber = () => { setClaimNumber(data?.claim.insurer_claim_no || ''); setClaimNumberOpen(true); };
   const saveClaimNumber = async () => {
     if (!data || claimNumberSaving) return;
