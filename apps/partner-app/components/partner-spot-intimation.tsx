@@ -10,6 +10,7 @@ import { PartnerAssets } from '@/lib/partner-assets';
 import { savePartnerClaimSpot, type PartnerClaimDetail } from '@/lib/claims';
 import { PartnerClaimStepFooter } from '@/components/partner-claim-step-footer';
 import { PartnerClaimDocumentUpload } from '@/components/partner-claim-document-upload';
+import { getPartnerCurrentLocation } from '@/lib/current-location';
 
 const DOCUMENTS = [
   { title: 'RC Copy', artwork: require('../../mobile-app/assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png') },
@@ -36,6 +37,14 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
   const [phone, setPhone] = useState(initialDriver.phone);
   const [location, setLocation] = useState(data.claim.accident_location || '');
   const [saving, setSaving] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const useCurrentLocation = async () => {
+    if (!editable || locating) return;
+    setLocating(true);
+    try { setLocation(await getPartnerCurrentLocation()); }
+    catch (error) { Alert.alert('Location unavailable', error instanceof Error ? error.message : 'Please enter the location manually.'); }
+    finally { setLocating(false); }
+  };
   const save = async () => {
     if (saving) return;
     const accident = parseLocalDateTime(incidentDate, incidentTime);
@@ -77,7 +86,8 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
           <EditableField label="Spot Intimation Time" required value={spotTime} onChange={setSpotTime} placeholder="HH:mm" editable={editable} icon="time-outline"/>
           <EditableField label="Driver Name" required value={driver} onChange={setDriver} placeholder="Enter driver name" editable={editable}/>
           <EditableField label="Driver Number" required value={phone} onChange={setPhone} placeholder="Enter mobile number" editable={editable} keyboard="phone-pad"/>
-          <EditableField label="Location" required value={location} onChange={setLocation} placeholder="Enter accident location" editable={editable}/>
+          <View style={styles.locationHeading}><Text style={styles.fieldLabel}>Location <Text style={styles.locationRequired}>*</Text></Text><Pressable accessibilityRole="button" accessibilityLabel="Use Current Location" accessibilityState={{disabled:!editable||locating}} disabled={!editable||locating} style={styles.locationButton} onPress={()=>void useCurrentLocation()}><Ionicons name="locate-outline" size={16} color="#0B4DA3"/><Text style={styles.locationButtonText}>{locating?"Locating…":"Use Current Location"}</Text></Pressable></View>
+          <EditableField label="" value={location} onChange={setLocation} placeholder="Enter accident location" editable={editable}/>
           {!editable ? <Text style={styles.restricted}>This completed stage remains visible for reference. Current claim progression determines whether it can be edited.</Text> : null}
         </View>
         <View style={styles.documentReadyCard}>
@@ -141,6 +151,7 @@ const styles=StyleSheet.create({
 screen:{flex:1,backgroundColor:'#EDF6FE'},header:{height:50,backgroundColor:'#081F4C',flexDirection:'row',alignItems:'center',paddingHorizontal:12,gap:10},back:{width:34,height:34,alignItems:'center',justifyContent:'center'},headerCopy:{flex:1,justifyContent:'center'},headerTitle:{color:'#FFF',fontSize:15,fontWeight:'800'},headerSubtitle:{color:'#DDEBFA',fontSize:10},scroll:{flex:1},content:{paddingHorizontal:13,paddingTop:23,paddingBottom:30,gap:13},
 hero:{position:'relative',overflow:'hidden',backgroundColor:'#062D70',borderRadius:18,paddingHorizontal:12,paddingTop:10,paddingBottom:10,shadowColor:'#062D70',shadowOpacity:.16,shadowRadius:10,shadowOffset:{width:0,height:5},elevation:3},heroGlowLarge:{position:'absolute',width:180,height:180,borderRadius:90,backgroundColor:'#0C58C8',right:-95,top:-105,opacity:.26},heroGlowSmall:{position:'absolute',width:110,height:110,borderRadius:55,borderWidth:1,borderColor:'rgba(120,169,255,0.16)',right:-20,top:-62},heroHeading:{flexDirection:'row',alignItems:'center',gap:8,minHeight:32},heroCircle:{height:30,width:30,borderRadius:15,backgroundColor:'#0B51BE',alignItems:'center',justifyContent:'center'},heroIconArtwork:{width:21,height:21},heroTitle:{flex:1,minWidth:0,color:'#FFF',fontSize:17,lineHeight:21,fontWeight:'900'},control:{maxWidth:'38%',color:'#FFF',fontSize:13.5,lineHeight:17,fontWeight:'900',textAlign:'right'},heroRule:{height:1,backgroundColor:'rgba(174,204,255,0.24)',marginTop:8,marginBottom:8},identityRow:{flexDirection:'row',alignItems:'stretch',minWidth:0},identity:{flex:1,minWidth:0,flexDirection:'row',alignItems:'center',gap:6,paddingHorizontal:4},identityDivider:{width:1,backgroundColor:'rgba(174,204,255,0.18)',marginHorizontal:5,marginVertical:1},logo:{backgroundColor:'#FFF',height:44,width:44,borderRadius:11,alignItems:'center',justifyContent:'center'},logoImage:{width:37,height:37},identityCopy:{flex:1,minWidth:0},identityTitle:{color:'#FFF',fontSize:10.4,lineHeight:14,fontWeight:'900'},identitySub:{color:'#EAF2FF',fontSize:8.8,lineHeight:11.5,fontWeight:'700',marginTop:3},
 card:{backgroundColor:'#FFF',borderRadius:18,borderColor:'#D7E2EF',borderWidth:1,padding:12,gap:10,shadowColor:'#14375F',shadowOpacity:.04,shadowRadius:7,shadowOffset:{width:0,height:3},elevation:1},sectionHeading:{flexDirection:'row',alignItems:'center',gap:10,marginBottom:8,paddingVertical:2},sectionArtworkWrap:{width:38,height:38,alignItems:'center',justifyContent:'center'},sectionArtwork:{width:34,height:34},headingCopy:{flex:1},sectionTitle:{fontSize:12.5,fontWeight:'900',color:'#071D49'},subtitle:{fontSize:9.5,color:'#718198',lineHeight:13,marginTop:2},fieldWrap:{gap:6},fieldLabel:{fontSize:10.5,color:'#172E51',fontWeight:'800'},field:{minHeight:52,borderRadius:14,borderColor:'#D3E0EC',borderWidth:1,backgroundColor:'#FBFDFF',paddingHorizontal:12,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},fieldValue:{fontSize:12,color:'#183052',fontWeight:'800'},editableInput:{flex:1,height:47,fontSize:12,color:'#183052',fontWeight:'700'},subheading:{borderTopWidth:1,borderTopColor:'#E3EAF1',paddingTop:15,marginTop:5},subheadingText:{color:'#183052',fontSize:12,fontWeight:'900'},restricted:{fontSize:9,color:'#8191A6',lineHeight:14,marginTop:5},
+locationHeading:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:8},locationRequired:{color:"#D74747"},locationButton:{flexDirection:"row",alignItems:"center",gap:4,paddingVertical:5},locationButtonText:{fontSize:9.5,fontWeight:"800",color:"#0B4DA3"},
 documentReadyCard:{borderRadius:18,borderWidth:1,borderColor:'#D7E2EF',backgroundColor:'#FFF',padding:12,shadowColor:'#14375F',shadowOpacity:.05,shadowRadius:9,shadowOffset:{width:0,height:4},elevation:1},docsHeading:{flexDirection:'row',justifyContent:'space-between',alignItems:'flex-start',gap:10,marginBottom:10},optional:{backgroundColor:'#EEF5FF',paddingVertical:5,paddingHorizontal:9,borderRadius:999},optionalText:{fontSize:8.5,color:'#0A43A3',fontWeight:'900'},tiles:{flexDirection:'row',flexWrap:'wrap',gap:8},
 voice:{borderRadius:18,backgroundColor:'#F4F8FE',borderWidth:1,borderColor:'#D3E0EC',padding:12,gap:12},voiceTop:{flexDirection:'row',alignItems:'center',gap:10},mic:{height:48,width:48,backgroundColor:'#E7F0FC',borderRadius:12,alignItems:'center',justifyContent:'center'},disabledRecording:{minHeight:46,backgroundColor:'#315C9F',borderRadius:13,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8},disabledText:{color:'#FFF',fontSize:11,fontWeight:'800'},nav:{height:61,backgroundColor:'#081F4C',flexDirection:'row',alignItems:'center',justifyContent:'space-around',borderTopLeftRadius:18,borderTopRightRadius:18},navItem:{flex:1,alignItems:'center',gap:3},navIcon:{width:36,height:32,borderRadius:10,backgroundColor:'#193666',alignItems:'center',justifyContent:'center'},navLabel:{fontSize:9,color:'#D1DFF1',fontWeight:'700'}
 });
