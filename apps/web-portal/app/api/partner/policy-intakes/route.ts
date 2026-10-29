@@ -81,9 +81,6 @@ export async function GET(request: Request) {
     ...(submitterId ? [`submitted_by_profile_id.eq.${submitterId}`] : []),
     ...(!submitterId && isLegacyPartnerIdentity(identity) ? [`submitted_by_portal_account_id.eq.${portalAccountId}`] : []),
   ].join(",");
-  if (!intakeReadScope) {
-    return json({ ok: true, intakes: [], total: 0, counts: { active: 0, attention: 0, progress: 0, completed: 0 } });
-  }
 
 
   if (view === "sources") {
@@ -99,6 +96,12 @@ export async function GET(request: Request) {
 
     if (sourcesError) return json({ ok: false, error: "Authorized lead sources could not be loaded." }, 500);
     return json({ ok: true, sources: sources ?? [] });
+  }
+
+  if (!intakeReadScope) {
+    return requestedId
+      ? json({ ok: false, error: "This Policy Intake is not available in your Partner account." }, 404)
+      : json({ ok: true, intakes: [], total: 0, counts: { active: 0, attention: 0, progress: 0, completed: 0 } });
   }
 
   if (requestedId) {
