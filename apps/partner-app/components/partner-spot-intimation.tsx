@@ -18,7 +18,7 @@ const DOCUMENTS = [
   { title: 'Driver Licence', artwork: require('../../mobile-app/assets/brand/spot-intimation/glossy_purple_id_card_icon.png') },
   { title: 'GR / Load Bill', artwork: require('../../mobile-app/assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png') },
   { title: 'Accident Photo', artwork: require('../../mobile-app/assets/brand/spot-intimation/glossy_pink_camera_document_icon.png') },
-  { title: 'Accident Video', artwork: undefined },
+  { title: 'Accident Video', artwork: require('../../mobile-app/assets/brand/spot-intimation/glossy_red_video_document_icon.png') },
 ] as const;
 
 const CUSTOMER_STAGE_ICON = require('../../mobile-app/assets/claims/claim-intimation.png');

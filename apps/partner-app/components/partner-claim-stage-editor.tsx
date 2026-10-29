@@ -84,6 +84,7 @@ const DOCUMENT_ARTWORK = [
   require('../../mobile-app/assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png'),
   require('../../mobile-app/assets/brand/spot-intimation/glossy_pink_camera_document_icon.png'),
 ];
+const ACCIDENT_VIDEO_ARTWORK = require('../../mobile-app/assets/brand/spot-intimation/glossy_red_video_document_icon.png');
 const BULK_ARTWORK = require('../../mobile-app/assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png');
 
 export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;stage:EditableStage}) {
@@ -225,7 +226,7 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginVertical:10}}>
           {['Vehicle Docs','Driver Docs','Permit / Tax','KYC / Other','Forms'].map((tab,index)=><Pressable key={tab} accessibilityRole="tab" accessibilityState={{selected:documentTab===tab}} onPress={()=>setDocumentTab(tab)} style={[styles.docTab,documentTab===tab&&styles.docTabSelected]}><Text style={[styles.docTabText,documentTab===tab&&styles.docTabTextSelected]}>{index+1}. {tab}</Text></Pressable>)}
         </ScrollView>
-        <View style={styles.documentGrid}>{STAGE_DOCUMENTS[stage].filter(label=>claimDocumentCategory(label)===documentTab).map(label=><PartnerClaimDocumentUpload key={label} claimId={data.claim.id} customerId={data.customer.id} documentType={label} milestoneKey={stage} documents={data.documents} variant="tile" artwork={DOCUMENT_ARTWORK[STAGE_DOCUMENTS[stage].indexOf(label)%DOCUMENT_ARTWORK.length]} label={label}/>)}</View>
+        <View style={styles.documentGrid}>{STAGE_DOCUMENTS[stage].filter(label=>claimDocumentCategory(label)===documentTab).map(label=><PartnerClaimDocumentUpload key={label} claimId={data.claim.id} customerId={data.customer.id} documentType={label} milestoneKey={stage} documents={data.documents} variant="tile" artwork={label === 'Accident Video' ? ACCIDENT_VIDEO_ARTWORK : DOCUMENT_ARTWORK[STAGE_DOCUMENTS[stage].indexOf(label)%DOCUMENT_ARTWORK.length]} label={label}/>)}</View>
         <PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType={`${stage} Additional Documents`} milestoneKey={stage} documents={data.documents} variant="bulk" artwork={BULK_ARTWORK} label="Upload multiple documents" subtitle="Select several files now, or tap again later to add more."/>
       </View> : null}
       <PartnerClaimStepFooter index={stageIndex} busy={saving} canContinue onPrevious={previous} onContinue={()=>void save()} continueLabel={stage==='payment_encashment'?'Complete Claim':'Save & Continue'}/>
