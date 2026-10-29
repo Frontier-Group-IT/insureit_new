@@ -53,3 +53,83 @@
 @media(max-width:640px) {
   .customer-exchange-premium .exchange-premium-hero.exchange-sell-hero { min-height: 172px; }
 }
+
+/* Exchange reference palette: scoped styling, no changes to marketplace behavior. */
+.customer-exchange-premium.exchange-reference {
+  --ex-blue: #6259ef;
+  --ex-navy: #172e5d;
+  --ex-line: #e2e5f4;
+}
+.exchange-reference .exchange-premium-hero:not(.exchange-sell-hero) {
+  background: linear-gradient(110deg, #f3f2ff 0%, #eef2ff 60%, #f7faff 100%);
+  border-color: #dfe2f7;
+  box-shadow: 0 7px 22px rgba(68, 73, 156, .06);
+}
+.exchange-reference .exchange-premium-hero:not(.exchange-sell-hero) .exchange-premium-hero-shade {
+  background: linear-gradient(90deg, #f3f2ff 0%, rgba(243, 243, 255, .97) 29%, rgba(243, 244, 255, .72) 48%, rgba(242, 244, 255, .04) 85%);
+}
+.exchange-reference .exchange-premium-hero:not(.exchange-sell-hero) .exchange-premium-hero-art {
+  background-position: center right;
+  opacity: .94;
+}
+.exchange-reference .exchange-premium-tabs {
+  background: #fdfdff;
+  border-color: #e5e8f6;
+  box-shadow: 0 5px 18px rgba(79, 85, 158, .055);
+}
+.exchange-reference .exchange-premium-tab.exchange-reference-active-tab {
+  background: linear-gradient(105deg, #7657f7, #526cf0);
+  color: #fff;
+  box-shadow: 0 5px 14px rgba(102, 85, 235, .19);
+}
+.exchange-reference .exchange-premium-tab:not(.exchange-reference-active-tab):hover {
+  background: #f1f0ff;
+  color: #5649cd;
+}
+.exchange-reference .exchange-premium-search {
+  border-color: #e2e6f4;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(65, 74, 149, .045);
+}
+.exchange-reference .exchange-reference-search-button {
+  background: linear-gradient(100deg, #7159f1, #5072f1);
+  box-shadow: 0 4px 12px rgba(95, 88, 222, .17);
+}
+.exchange-reference .exchange-reference-category {
+  border-color: #e0e5f3;
+  background: #fff;
+  color: #63738b;
+}
+.exchange-reference .exchange-reference-category:hover {
+  border-color: #c9c1f9;
+  background: #f3f1ff;
+  color: #5548bd;
+}
+.exchange-reference .exchange-reference-category[aria-current="page"] {
+  background: #172e5d;
+  border-color: #172e5d;
+  color: #fff;
+}
+.exchange-reference .exchange-reference-card {
+  border-color: #e0e5f3;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(48, 63, 125, .055);
+}
+.exchange-reference .exchange-reference-card:hover {
+  border-color: #c4bdfa;
+  box-shadow: 0 11px 25px rgba(84, 77, 165, .13);
+}
+.exchange-reference .exchange-reference-card a:focus-visible,
+.exchange-reference .exchange-premium-tab:focus-visible,
+.exchange-reference .exchange-reference-search-button:focus-visible {
+  outline-color: #6655ed;
+}
+.exchange-reference .exchange-premium-activity-card,
+.exchange-reference .exchange-sell-card {
+  border-color: #e2e5f4;
+  box-shadow: 0 5px 16px rgba(65, 73, 145, .045);
+}
+@media (prefers-reduced-motion: reduce) {
+  .exchange-reference .exchange-premium-hero-art,
+  .exchange-reference .exchange-reference-card { animation: none; transition: none; }
+}
