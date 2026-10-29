@@ -239,7 +239,7 @@ export default async function CustomerExchangePage({
 
 function tabClass(active: boolean) {
   return `exchange-premium-tab flex items-center justify-center gap-2 rounded-xl px-3 py-3 text-[11px] font-black transition ${
-    active ? "bg-[#173B68] text-white" : "text-[#63738A] hover:bg-[#F3F7FC]"
+    active ? "exchange-reference-active-tab bg-[#173B68] text-white" : "text-[#63738A] hover:bg-[#F3F7FC]"
   }`;
 }
 
