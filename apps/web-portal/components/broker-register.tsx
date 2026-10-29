@@ -36,6 +36,7 @@ export function BrokerRegisterShell({
   icon,
   metrics,
   compactMetrics = false,
+  branchHeaderActions,
   children
 }: {
   title: string;
@@ -44,6 +45,7 @@ export function BrokerRegisterShell({
   icon: ReactNode;
   metrics: Array<{ label: string; value: string | number; hint: string; tone?: MetricTone }>;
   compactMetrics?: boolean;
+  branchHeaderActions?: ReactNode;
   children: ReactNode;
 }) {
   const branchRegisterTitleOnly = title === "Branch Register";
@@ -105,7 +107,7 @@ export function BrokerRegisterShell({
     <section className="mx-auto max-w-[1480px] overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
       <div className={`border-b border-[#E5ECF5] bg-[#F8FAFC] px-4 sm:px-5 ${branchRegisterTitleOnly || compactReferenceLayout || useCompactMetrics ? "py-3" : "py-4"}`}>
         {branchRegisterTitleOnly ? (
-          <h2 className="text-[18px] font-semibold leading-tight text-[#0F172A]">{title}</h2>
+          <div className="flex flex-wrap items-center gap-3"><h2 className="shrink-0 text-[18px] font-semibold leading-tight text-[#0F172A]">{title}</h2>{branchHeaderActions}</div>
         ) : compactReferenceLayout ? (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-2.5">
