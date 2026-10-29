@@ -28,7 +28,7 @@ export type PolicyEditPayload = {
   };
   premium: { od: string; tp: string; addOnPremium: string; cpaOpted: boolean; cpa: string };
   payin: { basis: string; odPercent: string; tpPercent: string; scheme: string; partialTp?: boolean; partialCpa?: boolean; provided: boolean };
-  payout: { retention: string; odPercent: string; tpPercent: string; flatAmount: string; status: string; date: string; voucherNumber: string; provided: boolean };
+  payout: { retention: string; odPercent: string; tpPercent: string; partialTp?: boolean; partialCpa?: boolean; flatAmount: string; status: string; date: string; voucherNumber: string; provided: boolean };
 };
 
 export type PolicyEditResult =
