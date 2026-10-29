@@ -182,8 +182,8 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
       {stage === 'work_approval' ? <View style={approvalStyles.documentsCard}>
         <View style={approvalStyles.documentsHeading}><MaterialCommunityIcons name="file-document-check-outline" size={24} color="#1459A6"/><Text style={approvalStyles.documentsTitle}>Approval Documents</Text><Text style={approvalStyles.optionalPill}>Optional</Text></View>
         <View style={approvalStyles.documentsRow}>
-          <View style={approvalStyles.documentHalf}><PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="Work Approval Letter" milestoneKey="work_approval" documents={data.documents} variant="tile" artwork={DOCUMENT_ARTWORK[1]} label="Insurer Approval Letter"/></View>
-          <View style={approvalStyles.documentHalf}><PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="Surveyor Approval" milestoneKey="work_approval" documents={data.documents} variant="tile" artwork={DOCUMENT_ARTWORK[2]} label="Surveyor Approval / Report"/></View>
+          <View style={approvalStyles.documentHalf}><PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="Work Approval Letter" tileFullWidth milestoneKey="work_approval" documents={data.documents} variant="tile" artwork={DOCUMENT_ARTWORK[1]} label="Insurer Approval Letter"/></View>
+          <View style={approvalStyles.documentHalf}><PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="Surveyor Approval" tileFullWidth milestoneKey="work_approval" documents={data.documents} variant="tile" artwork={DOCUMENT_ARTWORK[2]} label="Surveyor Approval / Report"/></View>
         </View>
         <PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="work_approval Additional Documents" milestoneKey="work_approval" documents={data.documents} variant="bulk" artwork={BULK_ARTWORK} label="Upload Multiple Documents" subtitle="Select several files now, or tap again later to add more."/>
       </View> : null}
