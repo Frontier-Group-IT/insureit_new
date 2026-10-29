@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=48e22da56a74ff62da522a1f96aa862acf03d503
-reason=publish-merged-pr-3726-transparent-claim-select-vehicle-header
+source_main=97ce1f375173cc6c423a47ec62823cbe94933088
+reason=publish-merged-pr-3735-partner-claim-verification-card-layout
