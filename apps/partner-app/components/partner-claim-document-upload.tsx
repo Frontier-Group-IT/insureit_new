@@ -1,9 +1,34 @@
 import * as DocumentPicker from 'expo-document-picker';
-import { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { AccessibilityInfo, ActivityIndicator, Alert, Animated, Image, Modal, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { attachPartnerClaimDocument, removePartnerClaimDocument, type PartnerClaimDetail } from '@/lib/claims';
 import { supabase } from '@/lib/supabase';
+
+/** Subtle icon-only pulse. No background, and disabled when reduced motion is requested. */
+function VerificationPulse({ children, active, tint }: { children: ReactNode; active: boolean; tint: string }) {
+  const animation = useRef(new Animated.Value(1)).current;
+  const [reduceMotion, setReduceMotion] = useState(false);
+  useEffect(() => {
+    void AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
+  useEffect(() => {
+    if (!active || reduceMotion) {
+      animation.stopAnimation();
+      animation.setValue(1);
+      return;
+    }
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(animation, { toValue: 1.09, duration: 850, useNativeDriver: true }),
+      Animated.timing(animation, { toValue: 1, duration: 850, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => { loop.stop(); animation.setValue(1); };
+  }, [active, reduceMotion, animation]);
+  return <Animated.View style={{ transform: [{ scale: animation }], borderColor: tint }}>{children}</Animated.View>;
+}
 
 type Props = {
   claimId: string;
@@ -30,6 +55,9 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
   const count = uploaded.length;
   const latest = uploaded[uploaded.length - 1];
   const [bulkFilesOpen, setBulkFilesOpen] = useState(false);
+  const [verificationOpen, setVerificationOpen] = useState(false);
+  const [selectedForReview, setSelectedForReview] = useState<string[]>([]);
+  const allVerified = count > 0 && uploaded.every(file => 'verification_status' in file && file.verification_status === 'verified');
   const deleting = async () => {
     if (!deleteTarget || busy) return;
     setBusy(true);
@@ -151,24 +179,79 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
   if (variant === 'tile') {
     return (
       <>
-      <View style={[styles.tile, tileFullWidth && styles.tileFullWidth, count > 0 && styles.tileReady]}><Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`${label ?? documentType}, ${busy ? 'uploading' : count ? 'uploaded, tap to add more' : 'tap to upload'}`}
-        accessibilityState={{ busy }}
-        disabled={busy}
-        onPress={() => void pickAndUpload()}
-        style={({ pressed }) => [styles.tileInner, busy && styles.disabled, pressed && !busy && styles.pressed]}
-      >
-        <View style={styles.artworkWrap}>{artwork ? <Image source={artwork} style={styles.artwork} resizeMode="contain" /> : documentType === "Accident Video" ? <View style={styles.videoIcon}><Ionicons name="videocam" size={24} color="#FFFFFF" /></View> : <Ionicons name="document-outline" size={34} color="#0A43A3" />}</View>
-        <Text numberOfLines={2} style={styles.tileTitle}>{label ?? documentType}</Text>
-        {count > 1 ? <Text style={styles.fileName}>{count} files uploaded</Text> : null}
-        <Text numberOfLines={1} style={[styles.tileStatus, count > 0 && styles.tileStatusReady]}>{busy ? 'Uploading…' : count > 0 ? 'Saved' : 'Tap to upload'}</Text>
-      </Pressable>
-      {latest && !busy ? <Pressable accessibilityRole="button" accessibilityLabel={`Delete ${latest.name}`} onPress={()=>setDeleteTarget({ id: latest.id, name: latest.name })} style={styles.removeIcon}><Ionicons name="close-circle" size={22} color="#D64545" /></Pressable> : null}
-      <Modal transparent visible={Boolean(deleteTarget)} animationType="fade" onRequestClose={()=>!busy && setDeleteTarget(null)}><View style={styles.modalDim}><View style={styles.dialog}><View style={styles.trashCircle}><Ionicons name="trash-outline" color="#CD3939" size={24}/></View><Text style={styles.dialogTitle}>Delete document?</Text><Text style={styles.dialogBody}>Are you sure you want to delete {deleteTarget?.name}?</Text><View style={styles.dialogActions}><Pressable disabled={busy} accessibilityRole="button" onPress={()=>setDeleteTarget(null)} style={styles.cancelButton}><Text style={styles.cancelText}>Cancel</Text></Pressable><Pressable disabled={busy} accessibilityRole="button" onPress={()=>void deleting()} style={styles.deleteButton}><Text style={styles.deleteText}>{busy ? 'Deleting…' : 'Delete'}</Text></Pressable></View></View></View></Modal>
-      </View>
-      {progressDialog}
-      {successDialog}
+        <View style={[styles.tile, tileFullWidth && styles.tileFullWidth, count > 0 && styles.tileReady]}>
+          {count > 0 && !busy ? (
+            <Pressable accessibilityRole="button" accessibilityLabel={`Review ${label ?? documentType} uploaded files`}
+              style={styles.tileVerify} onPress={() => { setSelectedForReview([]); setVerificationOpen(true); }}>
+              <VerificationPulse active tint="#1769DC"><Text style={styles.tileVerifyText}>Verify</Text></VerificationPulse>
+            </Pressable>
+          ) : null}
+          <Pressable accessibilityRole="button"
+            accessibilityLabel={`${label ?? documentType}, ${busy ? 'uploading' : count ? 'uploaded, tap to add more' : 'tap to upload'}`}
+            accessibilityState={{ busy }} disabled={busy}
+            onPress={() => void pickAndUpload()}
+            style={({ pressed }) => [styles.tileInner, busy && styles.disabled, pressed && !busy && styles.pressed]}>
+            <View style={styles.artworkWrap}>{artwork ? <Image source={artwork} style={styles.artwork} resizeMode="contain" /> : <Ionicons name="document-outline" size={34} color="#0A43A3" />}</View>
+            <Text numberOfLines={2} style={styles.tileTitle}>{label ?? documentType}</Text>
+            {count > 1 ? <Text style={styles.fileName}>{count} files uploaded</Text> : null}
+            {busy ? <Text style={styles.tileStatus}>Uploading…</Text> : count ? (
+              <VerificationPulse active={!allVerified} tint={allVerified ? '#18965D' : '#E68B17'}>
+                <Ionicons accessibilityLabel={allVerified ? 'Verified' : 'Pending verification'} name={allVerified ? 'checkmark-circle-outline' : 'time-outline'} size={21} color={allVerified ? '#18965D' : '#E68B17'} />
+              </VerificationPulse>
+            ) : <Text style={styles.tileStatus}>Tap to upload</Text>}
+          </Pressable>
+          {latest && !busy ? (
+            <Pressable accessibilityRole="button" accessibilityLabel={`Delete ${latest.name}`}
+              onPress={() => setDeleteTarget({ id: latest.id, name: latest.name })} style={styles.tileRemoveBottom}>
+              <Ionicons name="close-circle" size={20} color="#D64545" />
+            </Pressable>
+          ) : null}
+        </View>
+        <Modal transparent visible={verificationOpen} animationType="fade" onRequestClose={() => setVerificationOpen(false)}>
+          <View style={styles.modalDim}><View style={styles.dialog}>
+            <Text style={styles.dialogTitle}>Verify {label ?? documentType}</Text>
+            <Text style={styles.dialogBody}>Select uploaded files for verification review.</Text>
+            {uploaded.map(file => {
+              const selected = selectedForReview.includes(file.id);
+              const verified = 'verification_status' in file && file.verification_status === 'verified';
+              return (
+                <Pressable key={file.id} accessibilityRole="checkbox" accessibilityState={{ checked: selected }}
+                  accessibilityLabel={`Select ${file.name}`} onPress={() => setSelectedForReview(current => selected ? current.filter(id => id !== file.id) : [...current, file.id])}
+                  style={styles.verifyFileRow}>
+                  <VerificationPulse active={selected} tint="#1769DC">
+                    <Ionicons name={selected ? 'shield-checkmark' : 'shield-outline'} size={22} color={selected ? '#1769DC' : '#718198'} />
+                  </VerificationPulse>
+                  <Text style={styles.verifyFileName} numberOfLines={2}>{file.name}</Text>
+                  {verified ? <Ionicons name="checkmark-circle-outline" size={18} color="#18965D" accessibilityLabel="Verified" /> : null}
+                </Pressable>
+              );
+            })}
+            <View style={styles.dialogActions}>
+              <Pressable accessibilityRole="button" onPress={() => setVerificationOpen(false)} style={styles.cancelButton}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" onPress={() => {
+                if (!selectedForReview.length) { Alert.alert('Action required', 'Please select a file.'); return; }
+                Alert.alert('Verification pending', 'Selected files must be verified by the Claims Desk. Their status has not been changed.');
+                setVerificationOpen(false);
+              }} style={styles.verifyConfirm}>
+                <Text style={styles.verifyConfirmText}>Verify Selected</Text>
+              </Pressable>
+            </View>
+          </View></View>
+        </Modal>
+        <Modal transparent visible={Boolean(deleteTarget)} animationType="fade" onRequestClose={() => !busy && setDeleteTarget(null)}>
+          <View style={styles.modalDim}><View style={styles.dialog}>
+            <Text style={styles.dialogTitle}>Delete document?</Text>
+            <Text style={styles.dialogBody}>Are you sure you want to delete {deleteTarget?.name}?</Text>
+            <View style={styles.dialogActions}>
+              <Pressable disabled={busy} accessibilityRole="button" onPress={() => setDeleteTarget(null)} style={styles.cancelButton}><Text style={styles.cancelText}>Cancel</Text></Pressable>
+              <Pressable disabled={busy} accessibilityRole="button" onPress={() => void deleting()} style={styles.deleteButton}><Text style={styles.deleteText}>{busy ? 'Deleting…' : 'Delete'}</Text></Pressable>
+            </View>
+          </View></View>
+        </Modal>
+        {progressDialog}
+        {successDialog}
       </>
     );
   }
@@ -270,6 +353,13 @@ const styles=StyleSheet.create({
   text:{color:'#FFF',fontSize:9.5,fontWeight:'900'},
   tile:{position:'relative',width:'31.5%',minWidth:0,minHeight:109,borderRadius:13,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#DDE6EF',paddingVertical:6,paddingHorizontal:4,alignItems:'center',justifyContent:'center'},
   tileFullWidth:{width:'100%'},
+  tileVerify:{position:'absolute',top:3,right:3,zIndex:6,paddingHorizontal:4,paddingVertical:3,borderColor:'#1769DC',borderWidth:1,borderRadius:5},
+  tileVerifyText:{color:'#1769DC',fontSize:8,fontWeight:'700'},
+  tileRemoveBottom:{position:'absolute',bottom:3,right:3,zIndex:5,padding:2},
+  verifyFileRow:{flexDirection:'row',alignItems:'center',gap:10,borderWidth:1,borderColor:'#DCE4EE',borderRadius:10,padding:10,marginBottom:8},
+  verifyFileName:{flex:1,minWidth:0,fontSize:11,color:'#243A60'},
+  verifyConfirm:{borderRadius:9,backgroundColor:'#1769DC',paddingHorizontal:12,paddingVertical:11,alignItems:'center',justifyContent:'center',flex:1},
+  verifyConfirmText:{color:'#FFFFFF',fontSize:11,fontWeight:'700'},
   tileReady:{backgroundColor:'#EFFAF4',borderColor:'#B5DCC7',borderWidth:1},
   tileInner:{width:'100%',minHeight:96,alignItems:'center',justifyContent:'center'},
   savedCheck:{position:'absolute',top:0,left:0},
