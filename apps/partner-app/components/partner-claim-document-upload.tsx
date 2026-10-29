@@ -1,12 +1,12 @@
 import * as DocumentPicker from 'expo-document-picker';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, ActivityIndicator, Alert, Animated, Image, Modal, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { attachPartnerClaimDocument, removePartnerClaimDocument, type PartnerClaimDetail } from '@/lib/claims';
 import { supabase } from '@/lib/supabase';
 
 /** Subtle icon-only pulse. No background, and disabled when reduced motion is requested. */
-function VerificationPulse({ children, active, tint }: { children: React.ReactNode; active: boolean; tint: string }) {
+function VerificationPulse({ children, active, tint }: { children: ReactNode; active: boolean; tint: string }) {
   const animation = useRef(new Animated.Value(1)).current;
   const [reduceMotion, setReduceMotion] = useState(false);
   useEffect(() => {
