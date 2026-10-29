@@ -4,7 +4,7 @@ import "../customer-register-motion.css";
 import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 import Link from "next/link";
 import { CustomerExchangeSellWorkspace } from "@/components/customer-portal/customer-exchange-sell-workspace";
-import { Activity, ArrowLeftRight, BadgeCheck, MapPin, MoreVertical, Search, ShoppingBag, Store, Truck, ChevronRight, Clock3, ShieldCheck } from "lucide-react";
+import { Activity, Heart, ArrowLeftRight, BadgeCheck, MapPin, MoreVertical, Search, ShoppingBag, Store, Truck, ChevronRight, Clock3, ShieldCheck } from "lucide-react";
 import {
   CustomerAccountTabs,
   EmptyCustomerState,
