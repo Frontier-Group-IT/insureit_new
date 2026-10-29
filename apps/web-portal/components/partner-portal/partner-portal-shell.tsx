@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { UserMenu } from "@/components/user-menu";
 import { getPartnerWebSession } from "@/lib/partner-web";
+import { createServerSupabaseClient } from "@/lib/auth-server";
 import { PartnerMobileNavigation } from "./partner-mobile-navigation";
 import { PartnerBreadcrumbs } from "./partner-breadcrumbs";
 import { PartnerBusinessTrendResponsiveFix } from "./partner-business-trend-responsive-fix";
@@ -20,10 +21,21 @@ export async function PartnerPortalShell({ title, children, headerVariant = "def
       || partnerSession.identity.partner_name
       || partnerSession.identity.display_name
     : null;
-  const partnerRoleDisplay = partnerSession.identity.actor_kind === "intermediary"
-    ? partnerSession.identity.associate_role ?? null
-    : null;
-  const branchPortal = "portal_access_type" in partnerSession.scope && partnerSession.scope.portal_access_type === "branch";
+  const branchPortal = partnerSession.identity.actor_kind === "intermediary"
+    && partnerSession.scope.portal_access_type === "branch";
+  let branchContactName: string | null = null;
+  if (branchPortal) {
+    const { data: contactName, error } = await (await createServerSupabaseClient())
+      .rpc("partner_web_current_branch_contact_name");
+    if (!error && typeof contactName === "string") {
+      branchContactName = contactName.trim() || null;
+    }
+  }
+  const partnerRoleDisplay = branchPortal
+    ? "Branch"
+    : partnerSession.identity.actor_kind === "intermediary"
+      ? partnerSession.identity.associate_role ?? null
+      : null;
   const hideAccount = partnerSession.scope.scope_mode === "hierarchy" || branchPortal;
 
   return (
@@ -49,6 +61,8 @@ export async function PartnerPortalShell({ title, children, headerVariant = "def
                 homeHref="/partner"
                 displayNameOverride={partnerDisplayName}
                 roleDisplayOverride={partnerRoleDisplay}
+                branchContactName={branchContactName}
+                showBranchContact={branchPortal}
               />
             </div>
           </div>
