@@ -66,6 +66,21 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const requestedId = url.searchParams.get("id")?.trim();
   const view = url.searchParams.get("view")?.trim().toLowerCase();
+  // Read access follows the authenticated Partner's permitted lead sources,
+  // including records submitted by Operations on behalf of that Partner.
+  // Write operations below deliberately remain submitter-scoped.
+  const readableSourceIds = await authorizedSourceIds(identity, scope);
+  const submitterId = submittedByProfileId(identity);
+  const portalAccountId = legacyPortalAccountId(identity);
+  const intakeReadScope = [
+    ...(readableSourceIds.length ? [`lead_source_id.in.(${readableSourceIds.join(",")})`] : []),
+    ...(submitterId ? [`submitted_by_profile_id.eq.${submitterId}`] : []),
+    ...(!submitterId && isLegacyPartnerIdentity(identity) ? [`submitted_by_portal_account_id.eq.${portalAccountId}`] : []),
+  ].join(",");
+  if (!intakeReadScope) {
+    return json({ ok: true, intakes: [], total: 0, counts: { active: 0, attention: 0, progress: 0, completed: 0 } });
+  }
+
 
   if (view === "sources") {
     const sourceIds = await authorizedSourceIds(identity, scope);
@@ -88,10 +103,7 @@ export async function GET(request: Request) {
       .select(intakeSelect)
       .eq("id", requestedId);
 
-    const profileSubmitterId = submittedByProfileId(identity);
-    detailQuery = profileSubmitterId
-      ? detailQuery.eq("submitted_by_profile_id", profileSubmitterId)
-      : detailQuery.eq("submitted_by_portal_account_id", legacyPortalAccountId(identity));
+    detailQuery = detailQuery.or(intakeReadScope);
 
     const { data: intake, error: intakeError } = await detailQuery.maybeSingle();
     if (intakeError) {
@@ -120,10 +132,7 @@ export async function GET(request: Request) {
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
-  const profileSubmitterId = submittedByProfileId(identity);
-  query = profileSubmitterId
-    ? query.eq("submitted_by_profile_id", profileSubmitterId)
-    : query.eq("submitted_by_portal_account_id", legacyPortalAccountId(identity));
+  query = query.or(intakeReadScope);
 
   if (filter === "attention") query = query.eq("status", "needs_attention");
   if (filter === "completed") query = query.eq("status", "completed");
@@ -134,9 +143,7 @@ export async function GET(request: Request) {
       .from("policy_intake_requests")
       .select("id", { count: "exact", head: true });
 
-    countQuery = profileSubmitterId
-      ? countQuery.eq("submitted_by_profile_id", profileSubmitterId)
-      : countQuery.eq("submitted_by_portal_account_id", legacyPortalAccountId(identity));
+    countQuery = countQuery.or(intakeReadScope);
 
     if (statuses.length) {
       countQuery = excluded
