@@ -90,7 +90,6 @@ export default function ClaimTrackerScreen() {
                 <Field label="Accident Location" value={data.claim.accident_location}/>
                 <Field label="Assistance" value={data.claim.assistance_status?.replaceAll('_', ' ')}/>
               </View>}
-            </View>
             {tracker.completedKeys.has('claim_intimation') ? (
               <Pressable accessibilityRole="button" onPress={openClaimNumber} style={styles.addNumber}>
                 <View style={styles.addNumberIcon}><Ionicons name="create-outline" size={17} color="#1452A1"/></View>
@@ -98,6 +97,7 @@ export default function ClaimTrackerScreen() {
                 <Ionicons name="chevron-forward" size={17} color="#1452A1"/>
               </Pressable>
             ) : null}
+            </View>
             <View style={styles.panel}>
               <Pressable accessibilityRole="button" accessibilityState={{ expanded: journeyOpen }} onPress={() => setJourneyOpen(v => !v)} style={styles.panelHeader}><View style={styles.insurerJourneyLogo}><PartnerInsurerLogo name={data.insurer.name} style={styles.insurerJourneyImage} fallback={PartnerAssets.actions.quickClaims}/></View><View style={styles.panelCopy}><Text style={styles.panelTitle}>Claim Journey</Text><Text style={styles.panelSubtitle}>{tracker.progress}% complete • {tracker.current.label}</Text></View><Ionicons name={journeyOpen ? 'chevron-up' : 'chevron-down'} color="#526987" size={17}/></Pressable>
               {journeyOpen && <View style={styles.stageList}>{CLAIM_STAGES.map((stage, index) => {const done=tracker.completedKeys.has(stage.key), current=!done && index===tracker.index;return <Pressable key={stage.key} accessibilityRole="button" accessibilityLabel={`Open ${stage.label} details`} onPress={() => openStage(stage.key)} style={[styles.stageRow,current && styles.currentRow]}><View style={styles.rail}><View style={[styles.dot,done && styles.doneDot,current && styles.currentDot]}>{done ? <Ionicons name="checkmark" size={10} color="#FFF"/> : current ? <View style={styles.innerDot}/> : <Ionicons name="eye-outline" size={11} color="#A8B2C1"/>}</View>{index<8 && <View style={styles.line}/>}</View><View style={styles.stageCopy}><Text style={styles.stageName}>{stage.label}</Text><Text style={[styles.stageStatus,done && styles.doneStatus,current && styles.currentStatus]}>{done ? (stage.key === 'spot_intimation' ? 'Insurer informed' : stage.key === 'spot_status' ? 'Survey completed' : 'Completed') : current ? tracker.substage : 'Upcoming'}</Text></View><Ionicons name="chevron-forward" color="#607C9E" size={16}/></Pressable>})}</View>}
@@ -134,7 +134,7 @@ export default function ClaimTrackerScreen() {
 function Field({ label, value }: { label: string; value: string | null | undefined }) {return <View style={styles.field}><Text style={styles.fieldLabel}>{label}</Text><Text style={styles.fieldValue}>{value || 'Not recorded'}</Text></View>}
 function Nav({label,icon,onPress,active=false}:{label:string;icon:keyof typeof Ionicons.glyphMap;onPress:()=>void;active?:boolean}) {return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.navItem}><View style={[styles.navIcon,active && styles.navActive]}><Ionicons name={icon} size={19} color={active?'#102F6C':'#7386A4'}/></View><Text style={[styles.navText,active && styles.navTextActive]}>{label}</Text></Pressable>}
 const styles=StyleSheet.create({
-addNumber:{minHeight:45,backgroundColor:'#FFF',borderRadius:10,borderWidth:1,borderColor:'#CADAEA',flexDirection:'row',alignItems:'center',paddingHorizontal:12,gap:10},
+addNumber:{minHeight:45,marginTop:12,backgroundColor:'#FFF',borderRadius:10,borderWidth:1,borderColor:'#CADAEA',flexDirection:'row',alignItems:'center',paddingHorizontal:12,gap:10},
 addNumberIcon:{width:28,height:28,backgroundColor:'#EAF2FF',borderRadius:8,alignItems:'center',justifyContent:'center'},
 addNumberLabel:{flex:1,color:'#0B347A',fontSize:12,fontWeight:'800'},
 numberBackdrop:{flex:1,backgroundColor:'rgba(3,15,39,0.66)',alignItems:'center',justifyContent:'center',paddingHorizontal:26},
