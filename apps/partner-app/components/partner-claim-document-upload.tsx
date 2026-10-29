@@ -38,7 +38,7 @@ type Props = {
   documents?: PartnerClaimDetail['documents'];
   compact?: boolean;
   tileFullWidth?: boolean;
-  variant?: 'button' | 'tile' | 'bulk' | 'voice' | 'billing';
+  variant?: 'button' | 'tile' | 'bulk' | 'voice' | 'billing' | 'assessment';
   artwork?: ImageSourcePropType;
   label?: string;
   subtitle?: string;
@@ -75,11 +75,11 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
     const picked = await DocumentPicker.getDocumentAsync({
       copyToCacheDirectory: true,
       multiple: documentType === 'Accident Photo' || documentType === 'Accident Video' || documentType === 'Spot Intimation Attachment' || documentType.endsWith(' Additional Documents'),
-      type: variant === 'billing' ? ['application/pdf', 'image/jpeg', 'image/png'] : ['application/pdf', 'image/*', 'video/*', 'audio/*'],
+      type: (variant === 'billing' || variant === 'assessment') ? ['application/pdf', 'image/jpeg', 'image/png'] : ['application/pdf', 'image/*', 'video/*', 'audio/*'],
     });
     if (picked.canceled) return;
-    if (variant === 'billing' && picked.assets.some(asset => !/\.(pdf|jpe?g|png)$/i.test(asset.name ?? ''))) {
-      Alert.alert('Unsupported file', 'Choose a PDF, JPG, or PNG workshop bill.');
+    if ((variant === 'billing' || variant === 'assessment') && picked.assets.some(asset => !/\.(pdf|jpe?g|png)$/i.test(asset.name ?? ''))) {
+      Alert.alert('Unsupported file', 'Choose a PDF, JPG, or PNG document.');
       return;
     }
     setBusy(true);
@@ -157,17 +157,17 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
     </Modal>
   );
 
-  if (variant === 'billing') {
+  if (variant === 'billing' || variant === 'assessment') {
     return (
       <>
         <View style={styles.billingShell}>
-          <Ionicons name="document-text-outline" size={28} color="#1857A9" />
+          <Ionicons name={variant === "assessment" ? "clipboard-outline" : "document-text-outline"} size={28} color="#1857A9" />
           <View style={styles.billingCopy}>
-            <Text style={styles.billingTitle} numberOfLines={1}>{busy ? 'Uploading workshop bill…' : 'Upload final workshop bill'}</Text>
+            <Text style={styles.billingTitle} numberOfLines={1}>{busy ? 'Uploading document…' : variant === 'assessment' ? 'Assessment Report (Optional)' : 'Upload final workshop bill'}</Text>
             <Text style={styles.billingSubtitle} numberOfLines={1}>{count ? `${count} uploaded • ${latest?.name ?? 'Saved'}` : 'PDF, JPG, PNG'}</Text>
           </View>
-          <Pressable accessibilityRole="button" accessibilityLabel="Choose final workshop bill" accessibilityState={{ busy }} disabled={busy} onPress={() => void pickAndUpload()} style={({ pressed }) => [styles.billingChoose, busy && styles.disabled, pressed && !busy && styles.pressed]}>
-            <Text style={styles.billingChooseText}>{busy ? 'Uploading…' : 'Choose File'}</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel={variant === "assessment" ? "Upload assessment report" : "Choose final workshop bill"} accessibilityState={{ busy }} disabled={busy} onPress={() => void pickAndUpload()} style={({ pressed }) => [styles.billingChoose, busy && styles.disabled, pressed && !busy && styles.pressed]}>
+            <Text style={styles.billingChooseText}>{busy ? 'Uploading…' : variant === 'assessment' ? 'Upload' : 'Choose File'}</Text>
           </Pressable>
         </View>
         {progressDialog}
