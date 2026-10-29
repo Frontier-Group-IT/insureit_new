@@ -266,12 +266,9 @@ BEGIN
   THEN
     IF coalesce(p_payload #>> '{policy,tpValidUpto}','') = ''
        OR coalesce(p_payload #>> '{policy,cpaValidUpto}','') = ''
-       OR p_payload #>> '{policy,odValidUpto}' !~ '^\\d{4}-\\d{2}-\\d{2} $function$
-
-       OR p_payload #>> '{policy,tpValidUpto}' !~ '^\\d{4}-\\d{2}-\\d{2} $function$
-
-       OR p_payload #>> '{policy,cpaValidUpto}' !~ '^\\d{4}-\\d{2}-\\d{2} $function$
-
+       OR p_payload #>> '{policy,odValidUpto}' !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+       OR p_payload #>> '{policy,tpValidUpto}' !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+       OR p_payload #>> '{policy,cpaValidUpto}' !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
     THEN RAISE EXCEPTION 'OD, TP and CPA validity expiry dates are required'; END IF;
     IF (p_payload #>> '{policy,odValidUpto}')::date <
         (SELECT start_date FROM public.policies WHERE id=v_id)
