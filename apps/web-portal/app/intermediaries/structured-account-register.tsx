@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/shell";
+import { isActivatedIntermediaryRegistration } from "./legacy-intermediary-activation";
 import { getAccessibleIntermediaryIds } from "@/lib/employee-access-scope";
 import { requirePospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -24,6 +25,7 @@ type IntermediaryRow = {
 type ApplicationRow = {
   id: string;
   registration_status: string;
+  status: string;
   draft_data: Record<string, unknown> | null;
   partner_record_id: string | null;
   registration_record_id: string | null;
@@ -33,7 +35,7 @@ type ProfileRow = { application_id: string; external_onboarding_id: string | nul
 type RegistrationRow = { id: string; registration_code: string | null };
 type PartnerApplicationLink = { id: string; partner_record_id: string | null; account_context: string | null };
 
-const APP_SELECT = "id,registration_status,draft_data,partner_record_id,registration_record_id";
+const APP_SELECT = "id,registration_status,status,draft_data,partner_record_id,registration_record_id";
 
 export async function StructuredAccountRegister({
   type,
@@ -154,7 +156,7 @@ export async function StructuredAccountRegister({
 
 function stageFor(app: ApplicationRow | undefined) {
   const status = app?.registration_status?.toLowerCase() ?? "";
-  if (status === "iib_registered") return "Active";
+  if (isActivatedIntermediaryRegistration(app)) return "Active";
   if (status === "iib_submitted") return "IIB submitted";
   if (status.includes("iib")) return "IIB pending";
   if (status === "agreement_signed") return "Agreement signed";
