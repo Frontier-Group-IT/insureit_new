@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { Capability } from "@/lib/roles";
-import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
+import { getAccessibleIntermediaryIds, getEmployeeAccessScope } from "@/lib/employee-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 /** Explicit, fail-closed scope for Anjana; includes RM ownership and sourced intermediary codes. */
@@ -52,13 +52,26 @@ export async function getOperationsHeadDownlinePolicyScope(profileId: string) {
   const profileIds = scope.profileIds;
   const filters = [`associate_employee_id.in.(${employeeIds.join(",")})`];
   if (profileIds.length) filters.push(`associate_profile_id.in.(${profileIds.join(",")})`);
-  const { data, error } = await admin.from("intermediaries")
-    .select("intermediary_code").or(filters.join(","))
-    .returns<Array<{ intermediary_code: string | null }>>();
-  if (error) return { employeeIds: [], intermediaryCodes: [] };
+  // Include intermediaries linked to downline RMs via their onboarding profiles,
+  // not only the associate fields materialized on the intermediary row.
+  // Reuse the established scoped intermediary authorization instead of widening
+  // the Life Head's lead-source list to all organization Partners.
+  const accessibleIds = await getAccessibleIntermediaryIds(profileId, "operations_head_life", "view_intermediaries");
+  const [directResult, linkedResult] = await Promise.all([
+    admin.from("intermediaries")
+      .select("intermediary_code").or(filters.join(","))
+      .returns<Array<{ intermediary_code: string | null }>>(),
+    accessibleIds?.length
+      ? admin.from("intermediaries")
+          .select("intermediary_code").in("id", accessibleIds)
+          .returns<Array<{ intermediary_code: string | null }>>()
+      : Promise.resolve({ data: [] as Array<{ intermediary_code: string | null }>, error: null }),
+  ]);
+  if (directResult.error || linkedResult.error) return { employeeIds: [], intermediaryCodes: [] };
   return {
     employeeIds,
-    intermediaryCodes: Array.from(new Set((data ?? []).map(item => item.intermediary_code?.trim()).filter((code): code is string => Boolean(code)))),
+    intermediaryCodes: Array.from(new Set([...(directResult.data ?? []), ...(linkedResult.data ?? [])]
+      .map(item => item.intermediary_code?.trim()).filter((code): code is string => Boolean(code)))),
   };
 }
 

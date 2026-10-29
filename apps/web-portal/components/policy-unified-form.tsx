@@ -577,22 +577,23 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
 
 function ProjectedPayinModal({form,update,calculations,onClose}:{form:FormState;update:<K extends keyof FormState>(key:K,value:FormState[K])=>void;calculations:{projectedOd:number;projectedTp:number;totalPayin:number};onClose:()=>void}){
  const bundled=["TWP","PCP"].includes(form.vehicleClass)&&form.policyProduct==="Bundled";
- const years=form.vehicleClass==="TWP"?5:3;
  return <ModalShell title="Projected Insurer Pay-in" subtitle="Projected pay-in only. This does not create billing or confirm what the insurer will actually pay." onClose={onClose} footer={<div className="flex justify-end"><button type="button" onClick={onClose} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white">Save & Close</button></div>}>
  <div className="grid gap-3 sm:grid-cols-2">
-  <div><PercentField label="OD Pay-in %" value={form.projectedOdPercent} onChange={v=>update("projectedOdPercent",v)}/><CalculatedSubline value={money.format(calculations.projectedOd)}/></div>
-  <div><PercentField label="TP/CPA Pay-in %" value={form.projectedTpPercent} onChange={v=>update("projectedTpPercent",v)}/>
-   {bundled?<div className="mt-2 flex flex-wrap items-center gap-3">
-    <label className="flex items-center gap-1.5 text-[9px] font-medium text-[#344054]"><input type="checkbox" checked={form.partialTp} onChange={e=>update("partialTp",e.target.checked)} className="accent-[#17365D]"/>Partial TP</label>
-    <label className="flex items-center gap-1.5 text-[9px] font-medium text-[#344054]"><input type="checkbox" checked={form.partialCpa} onChange={e=>update("partialCpa",e.target.checked)} className="accent-[#17365D]"/>Partial CPA</label>
-    <span className="text-[8px] text-[#667085]">{years}-year validity</span>
-   </div>:null}
-   <CalculatedSubline value={money.format(calculations.projectedTp)}/>
+  <div><PercentField label="OD Pay-in %" value={form.projectedOdPercent} onChange={v=>update("projectedOdPercent",v)}/></div>
+  <div>
+   <div className="mb-1.5 flex flex-wrap items-center justify-between gap-1">
+    <label className="text-[9px] font-bold uppercase tracking-[0.055em] text-[#475467]">TP/CPA Pay-in %</label>
+    {bundled?<div className="flex items-center gap-2 text-[9px] font-semibold text-[#475467]"><span className="text-[8px] uppercase tracking-wide">Partial</span>
+     <label className="flex items-center gap-1">TP <input aria-label="Partial TP pay-in" type="checkbox" checked={form.partialTp} onChange={e=>update("partialTp",e.target.checked)} className="accent-green-600"/></label>
+     <label className="flex items-center gap-1">CPA <input aria-label="Partial CPA pay-in" type="checkbox" checked={form.partialCpa} onChange={e=>update("partialCpa",e.target.checked)} className="accent-green-600"/></label>
+    </div>:null}
+   </div>
+   <input aria-label="TP/CPA Pay-in %" type="number" min="0" max="100" step="0.01" value={form.projectedTpPercent} onChange={e=>update("projectedTpPercent",e.target.value)} placeholder="0.00" className={inputClass}/>
   </div>
   <Field label="Insurer scheme" type="number" min="0" step="0.01" value={form.insurerScheme} onChange={e=>update("insurerScheme",e.target.value)} placeholder="₹ 0.00"/>
   <CalculatedField label="Projected total pay-in" value={money.format(calculations.totalPayin)}/>
  </div>
- <p className="mt-4 rounded-xl border border-[#DCE6F2] bg-[#F8FAFD] px-3 py-2.5 text-[9px] leading-4 text-[#667085]">Blank means the pay-in has not been entered. Entering 0 explicitly is valid and is preserved as 0%. {bundled?"Selected partial covers are divided by their validity years.":""}</p>
+
  </ModalShell>;
 }
 function PartnerPayoutModal({form,update,calculations,payments,onClose}:{form:FormState;update:<K extends keyof FormState>(key:K,value:FormState[K])=>void;calculations:{payoutOd:number;payoutTp:number;grossPayout:number};payments:Array<{date:string;amount:number}>;onClose:()=>void}){
@@ -612,13 +613,16 @@ function PartnerPayoutModal({form,update,calculations,payments,onClose}:{form:Fo
  const breakdown=rows.map(row=>{const value=Math.min(row.expected,Math.max(0,received-allocated));allocated+=row.expected;return {...row,received:value,pending:Math.max(0,row.expected-value)}});
  return <ModalShell title="Partner Payout" subtitle="Actual agreed partner payout for this policy. It remains independent from insurer actual pay-in." onClose={onClose} footer={<div className="flex justify-end"><button type="button" onClick={onClose} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white">Save & Close</button></div>}>
  <div className="grid gap-3 sm:grid-cols-2">
-  <div><PercentField label="Payout OD %" value={form.payoutOdPercent} onChange={v=>update("payoutOdPercent",v)} disabled={form.payoutBasis==="FLAT"}/><CalculatedSubline value={money.format(calculations.payoutOd)}/></div>
-  <div><PercentField label="Payout TP/CPA %" value={form.payoutTpPercent} onChange={v=>update("payoutTpPercent",v)} disabled={form.payoutBasis!=="NET"}/>
-   {net&&bundled?<div className="mt-2 flex items-center justify-end gap-3">
-    <label className="flex items-center gap-1 text-[9px]"><input type="checkbox" checked={form.payoutPartialTp} onChange={e=>update("payoutPartialTp",e.target.checked)}/>Partial TP</label>
-    <label className="flex items-center gap-1 text-[9px]"><input type="checkbox" checked={form.payoutPartialCpa} onChange={e=>update("payoutPartialCpa",e.target.checked)}/>Partial CPA</label>
-   </div>:null}
-   <CalculatedSubline value={money.format(calculations.payoutTp)}/>
+  <div><PercentField label="Payout OD %" value={form.payoutOdPercent} onChange={v=>update("payoutOdPercent",v)} disabled={form.payoutBasis==="FLAT"}/></div>
+  <div>
+   <div className="mb-1.5 flex flex-wrap items-center justify-between gap-1">
+    <label className="text-[9px] font-bold uppercase tracking-[0.055em] text-[#475467]">Payout TP/CPA %</label>
+    {net&&bundled?<div className="flex items-center gap-2 text-[9px] font-semibold text-[#475467]"><span className="text-[8px] uppercase tracking-wide">Partial</span>
+     <label className="flex items-center gap-1">TP <input aria-label="Partial TP payout" type="checkbox" checked={form.payoutPartialTp} onChange={e=>update("payoutPartialTp",e.target.checked)} className="accent-green-600"/></label>
+     <label className="flex items-center gap-1">CPA <input aria-label="Partial CPA payout" type="checkbox" checked={form.payoutPartialCpa} onChange={e=>update("payoutPartialCpa",e.target.checked)} className="accent-green-600"/></label>
+    </div>:null}
+   </div>
+   <input aria-label="Payout TP/CPA %" type="number" min="0" max="100" step="0.01" value={form.payoutTpPercent} onChange={e=>update("payoutTpPercent",e.target.value)} disabled={!net} placeholder="0.00" className={inputClass}/>
   </div>
   <Select label="Payout basis" value={form.payoutBasis} onChange={e=>update("payoutBasis",e.target.value)} options={["NET","OD","FLAT"]} placeholder="Select basis"/>
   {form.payoutBasis==="FLAT"?<Field label="Total agreed payout" type="number" min="0" step="0.01" value={form.flatPayoutAmount} onChange={e=>update("flatPayoutAmount",e.target.value)}/>:<CalculatedField label="Total agreed payout" value={money.format(total)}/>}
