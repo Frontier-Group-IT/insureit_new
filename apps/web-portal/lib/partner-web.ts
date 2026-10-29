@@ -33,6 +33,7 @@ export type PartnerIdentity =
 export type PartnerCommercialScope = {
   actor_kind: "employee" | "intermediary";
   scope_mode: "organization" | "hierarchy" | "self" | "partner_family" | "none";
+  portal_access_type?: "group" | "branch" | "partner" | "associate" | string;
   employee_ids: string[];
   partner_ids: string[];
   intermediary_ids: string[];
