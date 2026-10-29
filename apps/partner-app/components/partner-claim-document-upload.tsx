@@ -12,7 +12,7 @@ type Props = {
   milestoneKey?: string;
   documents?: PartnerClaimDetail['documents'];
   compact?: boolean;
-  variant?: 'button' | 'tile' | 'bulk' | 'voice';
+  variant?: 'button' | 'tile' | 'bulk' | 'voice' | 'billing';
   artwork?: ImageSourcePropType;
   label?: string;
   subtitle?: string;
@@ -46,9 +46,13 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
     const picked = await DocumentPicker.getDocumentAsync({
       copyToCacheDirectory: true,
       multiple: documentType === 'Accident Photo' || documentType === 'Accident Video' || documentType === 'Spot Intimation Attachment' || documentType.endsWith(' Additional Documents'),
-      type: ['application/pdf', 'image/*', 'video/*', 'audio/*'],
+      type: variant === 'billing' ? ['application/pdf', 'image/jpeg', 'image/png'] : ['application/pdf', 'image/*', 'video/*', 'audio/*'],
     });
     if (picked.canceled) return;
+    if (variant === 'billing' && picked.assets.some(asset => !/\.(pdf|jpe?g|png)$/i.test(asset.name ?? ''))) {
+      Alert.alert('Unsupported file', 'Choose a PDF, JPG, or PNG workshop bill.');
+      return;
+    }
     setBusy(true);
     setUploadProgress({ completed: 0, total: picked.assets.length });
     try {
@@ -123,6 +127,25 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
       </View>
     </Modal>
   );
+
+  if (variant === 'billing') {
+    return (
+      <>
+        <View style={styles.billingShell}>
+          <Ionicons name="document-text-outline" size={28} color="#1857A9" />
+          <View style={styles.billingCopy}>
+            <Text style={styles.billingTitle} numberOfLines={1}>{busy ? 'Uploading workshop bill…' : 'Upload final workshop bill'}</Text>
+            <Text style={styles.billingSubtitle} numberOfLines={1}>{count ? `${count} uploaded • ${latest?.name ?? 'Saved'}` : 'PDF, JPG, PNG'}</Text>
+          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel="Choose final workshop bill" accessibilityState={{ busy }} disabled={busy} onPress={() => void pickAndUpload()} style={({ pressed }) => [styles.billingChoose, busy && styles.disabled, pressed && !busy && styles.pressed]}>
+            <Text style={styles.billingChooseText}>{busy ? 'Uploading…' : 'Choose File'}</Text>
+          </Pressable>
+        </View>
+        {progressDialog}
+        {successDialog}
+      </>
+    );
+  }
 
   if (variant === 'tile') {
     return (
@@ -235,6 +258,12 @@ function safeExtension(name: string, mimeType?: string | null) {
 }
 
 const styles=StyleSheet.create({
+  billingShell:{minHeight:64,borderWidth:1,borderColor:'#D7E1EC',borderRadius:12,backgroundColor:'#F7FAFD',paddingHorizontal:12,paddingVertical:10,flexDirection:'row',alignItems:'center',gap:10},
+  billingCopy:{flex:1,minWidth:0,gap:3},
+  billingTitle:{fontSize:11,fontWeight:'800',color:'#183052'},
+  billingSubtitle:{fontSize:9,color:'#7C8A9E'},
+  billingChoose:{minHeight:38,paddingHorizontal:13,borderRadius:9,backgroundColor:'#104A9B',alignItems:'center',justifyContent:'center'},
+  billingChooseText:{color:'#FFF',fontSize:10,fontWeight:'800'},
   button:{minHeight:38,borderRadius:10,backgroundColor:'#145CB8',paddingHorizontal:10,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5},
   compact:{minHeight:32,paddingHorizontal:8},
   text:{color:'#FFF',fontSize:9.5,fontWeight:'900'},
