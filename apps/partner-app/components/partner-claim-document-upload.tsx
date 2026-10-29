@@ -194,10 +194,8 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
             <View style={styles.artworkWrap}>{artwork ? <Image source={artwork} style={styles.artwork} resizeMode="contain" /> : <Ionicons name="document-outline" size={34} color="#0A43A3" />}</View>
             <Text numberOfLines={2} style={styles.tileTitle}>{label ?? documentType}</Text>
             {count > 1 ? <Text style={styles.fileName}>{count} files uploaded</Text> : null}
-            {busy ? <Text style={styles.tileStatus}>Uploading…</Text> : count ? (
-              <VerificationPulse active={!allVerified} tint={allVerified ? '#18965D' : '#E68B17'}>
-                <Ionicons accessibilityLabel={allVerified ? 'Verified' : 'Pending verification'} name={allVerified ? 'checkmark-circle-outline' : 'time-outline'} size={21} color={allVerified ? '#18965D' : '#E68B17'} />
-              </VerificationPulse>
+            {busy ? <Text style={styles.tileStatus}>Uploading…</Text> : count > 0 ? (
+              <Text accessibilityLabel="Document saved" style={[styles.tileStatus, styles.tileStatusReady]}>Saved</Text>
             ) : <Text style={styles.tileStatus}>Tap to upload</Text>}
           </Pressable>
           {latest && !busy ? (
