@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isActivatedIntermediaryRegistration } from "./legacy-intermediary-activation";
 import { Search } from "lucide-react";
 import { compactDarkActionClassName, compactPrimaryActionClassName, compactSecondaryActionClassName } from "@/components/action-styles";
 import { AppShell } from "@/components/shell";
@@ -35,6 +36,8 @@ type IntermediaryRow = {
 type ApplicationState = {
   id: string;
   registration_status: string;
+  status: string;
+  registration_record_id: string | null;
   partner_status: string | null;
   requested_type: "posp" | "misp";
   final_type: string | null;
@@ -52,7 +55,7 @@ type Filters = {
   error?: string;
 };
 const REGISTERED_STATUS = "iib_registered";
-const APPLICATION_SELECT = "id,registration_status,partner_status,requested_type,final_type,draft_data,partner_record_id,created_at";
+const APPLICATION_SELECT = "id,registration_status,status,registration_record_id,partner_status,requested_type,final_type,draft_data,partner_record_id,created_at";
 
 export async function IntermediaryRegister({
   selectedType,
@@ -170,7 +173,7 @@ export async function IntermediaryRegister({
       const partnerComplete = app?.partner_status === "active_partner";
       const partnerId = displayIdentity(row, app, "partner");
       const metric = app?.partner_record_id && !partnerBusinessError ? partnerBusinessMap.get(app.partner_record_id) : undefined;
-      const linkedLabel = linked ? linkedAccountLabel(linkedType, linked.registration_status) : "Not created";
+      const linkedLabel = linked ? linkedAccountLabel(linkedType, linked) : "Not created";
       return {
         id: row.id,
         applicationId: row.application_id as string,
@@ -185,7 +188,7 @@ export async function IntermediaryRegister({
         linkedHref: linked ? `/intermediaries/applications/${linked.id}` : null,
         portalAccess: portalAccessLabel(row.portal_access_status),
         partnerStatus: linked
-          ? (linked.registration_status === REGISTERED_STATUS ? "Active" : "Onboarding")
+          ? (isActivatedIntermediaryRegistration(linked) ? "Active" : "Onboarding")
           : "Not Created",
         customerCount: metric ? Number(metric.customer_count) : null,
         netPremium: metric ? Number(metric.net_premium) : null,
@@ -252,7 +255,7 @@ function PartnerTable({ rows, applicationMap, linkedApplicationMap, canReview }:
     const assignedRm = textValue(app?.draft_data?.associate_name) ?? "Not assigned";
     const partnerComplete = app?.partner_status === "active_partner";
     const action = !partnerComplete ? <FreshAccountReviewLink href={`/intermediaries/applications/${row.application_id}`} className={compactDarkActionClassName}>Open</FreshAccountReviewLink> : linked ? <FreshAccountReviewLink href={`/intermediaries/applications/${linked.id}`} className={compactDarkActionClassName}>Open {linkedType.toUpperCase()}</FreshAccountReviewLink> : canReview ? <form action={createLinkedIntermediaryAccount}><input type="hidden" name="application_id" value={row.application_id as string} /><input type="hidden" name="registration_type" value={allowedType} /><FormSubmitButton label={`Create ${allowedType.toUpperCase()}`} pendingLabel={`Creating ${allowedType.toUpperCase()}...`} className={compactPrimaryActionClassName} /></form> : <span className="text-[#94A3B8]">—</span>;
-    return <tr key={row.id} className="h-[52px] transition hover:bg-[#F8FAFF]"><td className="truncate px-4 py-3"><FreshAccountReviewLink href={`/intermediaries/applications/${row.application_id}`} className="font-semibold text-[#0F2A55] hover:text-[#315FEA] hover:underline">{row.display_name}</FreshAccountReviewLink></td><td className="truncate px-3 py-3 font-medium text-[#17203A]" title={mobile10(row.mobile)}>{mobile10(row.mobile)}</td><td className="truncate px-3 py-3 font-semibold text-[#0F2A55]" title={displayIdentity(row, app, "partner")}>{displayIdentity(row, app, "partner")}</td><td className="px-3 py-3">{allowedType === "misp" ? "Business" : "Individual"}</td><td className={`truncate px-3 py-3 ${assignedRm === "Not assigned" ? "font-medium text-amber-700" : "text-[#17203A]"}`} title={assignedRm}>{assignedRm}</td><td className="px-3 py-3"><Status value={linked ? linkedAccountLabel(linkedType, linked.registration_status) : "Not created"} tone="linked" /></td><td className="px-3 py-3"><Status value={portalAccessLabel(row.portal_access_status)} tone="portal" /></td><td className="px-3 py-3"><Status value={partnerStatusLabel(app?.partner_status ?? row.account_status)} tone="account" /></td><td className="px-3 py-3 pr-8 text-right">{action}</td></tr>;
+    return <tr key={row.id} className="h-[52px] transition hover:bg-[#F8FAFF]"><td className="truncate px-4 py-3"><FreshAccountReviewLink href={`/intermediaries/applications/${row.application_id}`} className="font-semibold text-[#0F2A55] hover:text-[#315FEA] hover:underline">{row.display_name}</FreshAccountReviewLink></td><td className="truncate px-3 py-3 font-medium text-[#17203A]" title={mobile10(row.mobile)}>{mobile10(row.mobile)}</td><td className="truncate px-3 py-3 font-semibold text-[#0F2A55]" title={displayIdentity(row, app, "partner")}>{displayIdentity(row, app, "partner")}</td><td className="px-3 py-3">{allowedType === "misp" ? "Business" : "Individual"}</td><td className={`truncate px-3 py-3 ${assignedRm === "Not assigned" ? "font-medium text-amber-700" : "text-[#17203A]"}`} title={assignedRm}>{assignedRm}</td><td className="px-3 py-3"><Status value={linked ? linkedAccountLabel(linkedType, linked) : "Not created"} tone="linked" /></td><td className="px-3 py-3"><Status value={portalAccessLabel(row.portal_access_status)} tone="portal" /></td><td className="px-3 py-3"><Status value={partnerStatusLabel(app?.partner_status ?? row.account_status)} tone="account" /></td><td className="px-3 py-3 pr-8 text-right">{action}</td></tr>;
   })}</tbody></table></div>;
 }
 
@@ -275,7 +278,7 @@ function permanentCodes(row: IntermediaryRow) { return [row.intermediary_code?.t
 function displayIdentity(row: IntermediaryRow, app: ApplicationState | undefined, selectedType: IntermediaryType | null) { const context = selectedType ?? accountContext(app); const codes = permanentCodes(row); if (context === "partner") return codes[0] ?? textValue(app?.draft_data?.legacy_partner_code) ?? "Partner ID pending"; return codes[0] ?? textValue(app?.draft_data?.legacy_registration_code) ?? textValue(app?.draft_data?.existing_registration_code) ?? `${context.toUpperCase()} ID pending`; }
 function parentPartnerId(row: IntermediaryRow, app: ApplicationState | undefined) { const context = accountContext(app); const codes = permanentCodes(row); const prefixedPartnerId = codes.find((code) => code.startsWith("PART-")); const linkedCode = textValue(app?.draft_data?.linked_partner_code) ?? textValue(app?.draft_data?.legacy_partner_code); if (context === "partner") return "Self"; return linkedCode ?? prefixedPartnerId ?? "Partner ID pending"; }
 function partnerLocation(row: IntermediaryRow, app: ApplicationState | undefined) { const city = textValue(app?.draft_data?.city) ?? row.city; const state = textValue(app?.draft_data?.state); return [city, state].filter(Boolean).join(", ") || "—"; }
-function linkedAccountLabel(type: IntermediaryType, status: string) { if (status === REGISTERED_STATUS) return `${type.toUpperCase()} active`; return `${type.toUpperCase()} onboarding`; }
+function linkedAccountLabel(type: IntermediaryType, app: ApplicationState) { if (isActivatedIntermediaryRegistration(app)) return `${type.toUpperCase()} active`; return `${type.toUpperCase()} onboarding`; }
 function portalAccessLabel(status: string) { if (status === "active") return "Active"; if (status === "invited") return "Invitation sent"; if (status === "disabled" || status === "suspended") return "Disabled"; return "Not created"; }
 function partnerStatusLabel(status: string) { if (status === "active_partner" || status === "active") return "Active"; if (status === "suspended_partner" || status === "suspended") return "Suspended"; if (status === "inactive_partner" || status === "inactive") return "Inactive"; if (status === "rejected") return "Rejected"; return "Pending"; }
 function registerFilterHref(base: string, search: string, status: string) { const params = new URLSearchParams(); if (search) params.set("q", search); if (status) params.set("account_status", status); const query = params.toString(); return `${base}${query ? `?${query}` : ""}`; }
