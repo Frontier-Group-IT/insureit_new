@@ -634,7 +634,7 @@ function PartnerPayoutModal({form,update,calculations,onClose}:{form:FormState;u
    <input aria-label="Payout TP/CPA %" type="number" min="0" max="100" step="0.01" value={form.payoutTpPercent} onChange={e=>update("payoutTpPercent",e.target.value)} disabled={!net} placeholder="0.00" className={inputClass}/>
   </div>
   <Select label="Payout basis" value={form.payoutBasis} onChange={e=>update("payoutBasis",e.target.value)} options={["NET","OD","FLAT"]} placeholder="Select basis"/>
-  {form.payoutBasis==="FLAT"?<Field label="Total agreed payout" type="number" min="0" step="0.01" value={form.flatPayoutAmount} onChange={e=>update("flatPayoutAmount",e.target.value)}/>:<CalculatedField label="Total agreed payout" value={money.format(total)}/>}
+  {form.payoutBasis==="FLAT"?<Field label="Total agreed payout" type="number" min="0" step="0.01" value={form.flatPayoutAmount} onChange={e=>update("flatPayoutAmount",e.target.value)}/>:<CalculatedField label="Total agreed payout" value={money.format(calculations.grossPayout)}/> }
  </div>
 
  </ModalShell>;
