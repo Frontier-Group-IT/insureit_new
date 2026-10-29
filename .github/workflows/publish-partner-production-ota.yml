@@ -32,19 +32,22 @@ jobs:
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
       EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
     steps:
-      - name: Check out current main
+      # Pin each queued publication to the verified merged commit that triggered it.
+      # main can advance while workflows wait; publishing its newer HEAD would mix
+      # unrelated commits into an older release and fail the exact-HEAD race guard.
+      - name: Check out verified release commit
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.sha }}
           fetch-depth: 0
 
-      - name: Require exact current main
+      - name: Require release commit to belong to main
         shell: bash
         run: |
           set -euo pipefail
           git fetch origin main
-          [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || {
-            echo "Refusing Partner production OTA: checkout is not current origin/main." >&2
+          git merge-base --is-ancestor HEAD origin/main || {
+            echo "Refusing Partner production OTA: source commit is not in origin/main." >&2
             exit 1
           }
 
@@ -178,7 +181,7 @@ jobs:
           {
             echo "## INSUREIT Partner production OTA"
             echo
-            echo "- Source: current \`main\` only"
+            echo "- Source: verified merged commit in \`main\` (pinned to event SHA)"
             echo "- Channel: \`production\`"
             echo "- Runtime: \`0.2.0\`"
             echo "- Runtime policy: \`appVersion\`"
