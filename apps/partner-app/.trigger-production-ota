@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=a015a21b89d59ef3d56a7c751d8763b690e410c7
-reason=republish-partner-claim-verification-pr-3748-confirmed-request
+source_main=5404c94f74d988f08b730f320d9361d6a79e4917
+reason=publish-merged-pr-3758-claim-journey-documents-redesign
