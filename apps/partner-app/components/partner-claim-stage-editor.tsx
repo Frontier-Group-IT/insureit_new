@@ -93,8 +93,8 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
   const restored=useMemo(()=>latestStageValues(data,stage),[data,stage]);
   const billingValues=useMemo(()=>latestStageValues(data,'billing'),[data]);
   const billAmount=finiteAmount(billingValues.bill_amount);
-  const doAmount=finiteAmount(values?.do_amount);
   const [values,setValues]=useState<Record<string,string>>(restored);
+  const doAmount=finiteAmount(values.do_amount);
   const [saving,setSaving]=useState(false);
   const [documentTab,setDocumentTab]=useState('Vehicle Docs');
   const [claimNumberOpen,setClaimNumberOpen]=useState(false);
