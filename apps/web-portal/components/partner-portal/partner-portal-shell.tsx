@@ -62,6 +62,7 @@ export async function PartnerPortalShell({ title, children, headerVariant = "def
                 displayNameOverride={partnerDisplayName}
                 roleDisplayOverride={partnerRoleDisplay}
                 branchContactName={branchContactName}
+                showBranchContact={branchPortal}
               />
             </div>
           </div>
