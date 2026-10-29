@@ -1,6 +1,6 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Alert, Animated, Image, Modal, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Alert, Animated, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ImageSourcePropType } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { attachPartnerClaimDocument, removePartnerClaimDocument, type PartnerClaimDetail } from '@/lib/claims';
 import { supabase } from '@/lib/supabase';
@@ -30,6 +30,82 @@ function VerificationPulse({ children, active, tint }: { children: ReactNode; ac
   return <Animated.View style={{ transform: [{ scale: animation }], borderColor: tint }}>{children}</Animated.View>;
 }
 
+type VerificationField = { key: string; label: string; required?: boolean; placeholder?: string };
+function documentVerificationFields(category: string): VerificationField[] {
+  const name = category.toLowerCase();
+  if (/\brc\b|registration certificate/.test(name)) return [
+    { key: 'registration_number', label: 'Registration number', required: true },
+    { key: 'registration_valid_upto', label: 'Registration valid up to (DD/MM/YYYY)', required: true },
+    { key: 'registered_owner', label: 'Registered owner', required: true },
+  ];
+  if (/insurance|policy copy/.test(name)) return [
+    { key: 'policy_number', label: 'Policy number', required: true },
+    { key: 'policy_start', label: 'Policy start date (DD/MM/YYYY)', required: true },
+    { key: 'policy_end', label: 'Policy end date (DD/MM/YYYY)', required: true },
+    { key: 'ncb_percent', label: 'NCB percentage' },
+  ];
+  if (/driving licen[cs]e|\bdl\b/.test(name)) return [
+    { key: 'licence_number', label: 'Licence number', required: true },
+    { key: 'licence_valid_upto', label: 'Licence valid up to (DD/MM/YYYY)', required: true },
+    { key: 'vehicle_class', label: 'Authorized vehicle class', required: true },
+  ];
+  if (/\bgr\b|load bill/.test(name)) return [
+    { key: 'consignment_number', label: 'GR / Load bill number', required: true },
+    { key: 'transport_name', label: 'Transporter name', required: true },
+    { key: 'consignment_date', label: 'Consignment date (DD/MM/YYYY)' },
+  ];
+  if (/spot photo|spot image|accident photo/.test(name)) return [
+    { key: 'photo_details', label: 'Accident / photo details', required: true },
+    { key: 'incident_date', label: 'Incident date (DD/MM/YYYY)' },
+  ];
+  return [
+    { key: 'document_reference', label: 'Document reference / number' },
+    { key: 'document_date', label: 'Document date (DD/MM/YYYY)' },
+    { key: 'review_details', label: 'Document review details', required: true },
+  ];
+}
+
+function VerificationReviewForm({ category, filenames, onBack }: { category: string; filenames: string[]; onBack: () => void }) {
+  const fields = documentVerificationFields(category);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [result, setResult] = useState<'valid' | 'invalid'>('valid');
+  const [remarks, setRemarks] = useState('');
+  return (
+    <>
+      <Text style={styles.dialogTitle}>{category} Verification</Text>
+      <Text style={styles.dialogBody}>Review the selected document details. Only an authorized Claims Desk user can finalize verification.</Text>
+      <ScrollView style={styles.reviewScroll} keyboardShouldPersistTaps="handled">
+        {filenames.map(name => <View key={name} style={styles.verifyFileRow}><Ionicons name="shield-checkmark-outline" size={19} color="#1769DC" /><Text style={styles.verifyFileName}>{name}</Text></View>)}
+        {fields.map(field => (
+          <View key={field.key} style={styles.reviewField}>
+            <Text style={styles.reviewFieldLabel}>{field.label}{field.required ? ' *' : ''}</Text>
+            <TextInput style={styles.reviewInput} placeholder={field.placeholder ?? field.label} value={answers[field.key] ?? ''}
+              onChangeText={value => setAnswers(current => ({ ...current, [field.key]: value }))} autoCapitalize="sentences" />
+          </View>
+        ))}
+        <Text style={styles.reviewFieldLabel}>Review result</Text>
+        <View style={styles.reviewChoices}>
+          {(['valid', 'invalid'] as const).map(value => <Pressable key={value} accessibilityRole="radio" accessibilityState={{ selected: result === value }}
+            onPress={() => setResult(value)} style={[styles.reviewChoice, result === value && styles.reviewChoiceSelected]}>
+            <Text style={styles.reviewFieldLabel}>{value === 'valid' ? 'Valid' : 'Invalid'}</Text>
+          </Pressable>)}
+        </View>
+        <Text style={styles.reviewFieldLabel}>Remarks{result === 'invalid' ? ' *' : ''}</Text>
+        <TextInput style={[styles.reviewInput, styles.reviewRemarks]} multiline value={remarks} onChangeText={setRemarks} placeholder="Enter review remarks" />
+      </ScrollView>
+      <View style={styles.dialogActions}>
+        <Pressable accessibilityRole="button" onPress={onBack} style={styles.cancelButton}><Text style={styles.cancelText}>Back</Text></Pressable>
+        <Pressable accessibilityRole="button" style={styles.verifyConfirm} onPress={() => {
+          if (fields.some(field => field.required && !answers[field.key]?.trim()) || (result === 'invalid' && !remarks.trim())) {
+            Alert.alert('Action required', 'Please complete all required verification fields.'); return;
+          }
+          Alert.alert('Claims Desk approval required', 'This Partner App form is for review only. No verification details or status have been saved. The Claims Desk must complete verification through the Operations Portal.');
+        }}><Text style={styles.verifyConfirmText}>Submit Review</Text></Pressable>
+      </View>
+    </>
+  );
+}
+
 type Props = {
   claimId: string;
   customerId: string;
@@ -56,6 +132,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
   const latest = uploaded[uploaded.length - 1];
   const [bulkFilesOpen, setBulkFilesOpen] = useState(false);
   const [verificationOpen, setVerificationOpen] = useState(false);
+  const [verificationFormOpen, setVerificationFormOpen] = useState(false);
   const [selectedForReview, setSelectedForReview] = useState<string[]>([]);
   const allVerified = count > 0 && uploaded.every(file => 'verification_status' in file && file.verification_status === 'verified');
   const deleting = async () => {
@@ -182,7 +259,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
         <View style={[styles.tile, tileFullWidth && styles.tileFullWidth, count > 0 && styles.tileReady]}>
           {count > 0 && !busy ? (
             <Pressable accessibilityRole="button" accessibilityLabel={`Review ${label ?? documentType} uploaded files`}
-              style={styles.tileVerify} onPress={() => { setSelectedForReview([]); setVerificationOpen(true); }}>
+              style={styles.tileVerify} onPress={() => { setSelectedForReview([]); setVerificationFormOpen(false); setVerificationOpen(true); }}>
               <VerificationPulse active tint="#1769DC"><Text style={styles.tileVerifyText}>Verify</Text></VerificationPulse>
             </Pressable>
           ) : null}
@@ -209,6 +286,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
         </View>
         <Modal transparent visible={verificationOpen} animationType="fade" onRequestClose={() => setVerificationOpen(false)}>
           <View style={styles.modalDim}><View style={styles.dialog}>
+            {verificationFormOpen ? <VerificationReviewForm category={documentType} filenames={uploaded.filter(file => selectedForReview.includes(file.id)).map(file => file.name)} onBack={() => setVerificationFormOpen(false)} /> : <>
             <Text style={styles.dialogTitle}>Verify {label ?? documentType}</Text>
             <Text style={styles.dialogBody}>Select uploaded files for verification review.</Text>
             {uploaded.map(file => {
@@ -232,12 +310,12 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
               </Pressable>
               <Pressable accessibilityRole="button" onPress={() => {
                 if (!selectedForReview.length) { Alert.alert('Action required', 'Please select a file.'); return; }
-                Alert.alert('Verification pending', 'Selected files must be verified by the Claims Desk. Their status has not been changed.');
-                setVerificationOpen(false);
+                setVerificationFormOpen(true);
               }} style={styles.verifyConfirm}>
                 <Text style={styles.verifyConfirmText}>Verify Selected</Text>
               </Pressable>
             </View>
+            </>}
           </View></View>
         </Modal>
         <Modal transparent visible={Boolean(deleteTarget)} animationType="fade" onRequestClose={() => !busy && setDeleteTarget(null)}>
@@ -358,6 +436,14 @@ const styles=StyleSheet.create({
   tileRemoveBottom:{position:'absolute',bottom:3,right:3,zIndex:5,padding:2},
   verifyFileRow:{flexDirection:'row',alignItems:'center',gap:10,borderWidth:1,borderColor:'#DCE4EE',borderRadius:10,padding:10,marginBottom:8},
   verifyFileName:{flex:1,minWidth:0,fontSize:11,color:'#243A60'},
+  reviewScroll:{maxHeight:370,width:'100%'},
+  reviewField:{marginBottom:10,gap:4},
+  reviewFieldLabel:{fontSize:11,fontWeight:'700',color:'#264267'},
+  reviewInput:{borderWidth:1,borderColor:'#CCD9E7',borderRadius:9,minHeight:40,paddingHorizontal:10,color:'#152B4B',fontSize:12},
+  reviewRemarks:{minHeight:70,textAlignVertical:'top',paddingVertical:10},
+  reviewChoices:{flexDirection:'row',gap:10,marginVertical:9},
+  reviewChoice:{flex:1,borderWidth:1,borderColor:'#CCD9E7',padding:9,borderRadius:9,alignItems:'center'},
+  reviewChoiceSelected:{borderColor:'#1769DC'},
   verifyConfirm:{borderRadius:9,backgroundColor:'#1769DC',paddingHorizontal:12,paddingVertical:11,alignItems:'center',justifyContent:'center',flex:1},
   verifyConfirmText:{color:'#FFFFFF',fontSize:11,fontWeight:'700'},
   tileReady:{backgroundColor:'#EFFAF4',borderColor:'#B5DCC7',borderWidth:1},
