@@ -134,7 +134,6 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
   const [verificationOpen, setVerificationOpen] = useState(false);
   const [verificationFormOpen, setVerificationFormOpen] = useState(false);
   const [selectedForReview, setSelectedForReview] = useState<string[]>([]);
-  const allVerified = count > 0 && uploaded.every(file => 'verification_status' in file && file.verification_status === 'verified');
   const deleting = async () => {
     if (!deleteTarget || busy) return;
     setBusy(true);
@@ -257,30 +256,36 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
     return (
       <>
         <View style={[styles.tile, tileFullWidth && styles.tileFullWidth, count > 0 && styles.tileReady]}>
+          <View style={styles.tileHeading}>
+            <View style={styles.tileHeadingIdentity}>
+              {artwork ? <Image source={artwork} style={styles.tileHeadingArtwork} resizeMode="contain" /> : <Ionicons name="document-outline" size={23} color="#0A43A3" />}
+              <Text style={styles.tileHeadingName} numberOfLines={2}>{label ?? documentType}</Text>
+            </View>
+            {latest && !busy ? (
+              <Pressable accessibilityRole="button" accessibilityLabel={`Delete ${latest.name}`}
+                onPress={() => setDeleteTarget({ id: latest.id, name: latest.name })} style={styles.tileHeadingDelete}>
+                <Ionicons name="close-circle" size={20} color="#D64545" />
+              </Pressable>
+            ) : null}
+          </View>
+          {count ? (
+            <View style={styles.tileCounts}>
+              <View style={styles.tileCountItem}>
+                <VerificationPulse active tint="#E68B17"><Ionicons name="time-outline" size={19} color="#E68B17" accessibilityLabel="Pending verification" /></VerificationPulse>
+                <Text style={styles.tileCountText}>{uploaded.filter(file => !('verification_status' in file && file.verification_status === 'verified')).length}</Text>
+              </View>
+              <View style={styles.tileCountItem}>
+                <Ionicons name="checkmark-circle-outline" size={19} color="#18965D" accessibilityLabel="Verified" />
+                <Text style={styles.tileCountText}>{uploaded.filter(file => 'verification_status' in file && file.verification_status === 'verified').length}</Text>
+              </View>
+            </View>
+          ) : <Pressable accessibilityRole="button" disabled={busy} onPress={() => void pickAndUpload()} style={styles.tileEmpty}>
+            <Text style={styles.tileStatus}>{busy ? 'Uploading…' : 'Tap to upload'}</Text>
+          </Pressable>}
           {count > 0 && !busy ? (
-            <Pressable accessibilityRole="button" accessibilityLabel={`Review ${label ?? documentType} uploaded files`}
-              style={styles.tileVerify} onPress={() => { setSelectedForReview([]); setVerificationFormOpen(false); setVerificationOpen(true); }}>
+            <Pressable accessibilityRole="button" accessibilityLabel={`Verify ${label ?? documentType} documents`}
+              style={styles.tileVerifyBottom} onPress={() => { setSelectedForReview([]); setVerificationFormOpen(false); setVerificationOpen(true); }}>
               <VerificationPulse active tint="#1769DC"><Text style={styles.tileVerifyText}>Verify</Text></VerificationPulse>
-            </Pressable>
-          ) : null}
-          <Pressable accessibilityRole="button"
-            accessibilityLabel={`${label ?? documentType}, ${busy ? 'uploading' : count ? 'uploaded, tap to add more' : 'tap to upload'}`}
-            accessibilityState={{ busy }} disabled={busy}
-            onPress={() => void pickAndUpload()}
-            style={({ pressed }) => [styles.tileInner, busy && styles.disabled, pressed && !busy && styles.pressed]}>
-            <View style={styles.artworkWrap}>{artwork ? <Image source={artwork} style={styles.artwork} resizeMode="contain" /> : <Ionicons name="document-outline" size={34} color="#0A43A3" />}</View>
-            <Text numberOfLines={2} style={styles.tileTitle}>{label ?? documentType}</Text>
-            {count > 1 ? <Text style={styles.fileName}>{count} files uploaded</Text> : null}
-            {busy ? <Text style={styles.tileStatus}>Uploading…</Text> : count ? (
-              <VerificationPulse active={!allVerified} tint={allVerified ? '#18965D' : '#E68B17'}>
-                <Ionicons accessibilityLabel={allVerified ? 'Verified' : 'Pending verification'} name={allVerified ? 'checkmark-circle-outline' : 'time-outline'} size={21} color={allVerified ? '#18965D' : '#E68B17'} />
-              </VerificationPulse>
-            ) : <Text style={styles.tileStatus}>Tap to upload</Text>}
-          </Pressable>
-          {latest && !busy ? (
-            <Pressable accessibilityRole="button" accessibilityLabel={`Delete ${latest.name}`}
-              onPress={() => setDeleteTarget({ id: latest.id, name: latest.name })} style={styles.tileRemoveBottom}>
-              <Ionicons name="close-circle" size={20} color="#D64545" />
             </Pressable>
           ) : null}
         </View>
@@ -431,6 +436,16 @@ const styles=StyleSheet.create({
   text:{color:'#FFF',fontSize:9.5,fontWeight:'900'},
   tile:{position:'relative',width:'31.5%',minWidth:0,minHeight:109,borderRadius:13,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#DDE6EF',paddingVertical:6,paddingHorizontal:4,alignItems:'center',justifyContent:'center'},
   tileFullWidth:{width:'100%'},
+  tileHeading:{width:'100%',flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between',gap:3,minHeight:43},
+  tileHeadingIdentity:{flex:1,minWidth:0,flexDirection:'row',alignItems:'center',gap:3},
+  tileHeadingArtwork:{width:23,height:26},
+  tileHeadingName:{flex:1,minWidth:0,fontSize:9,fontWeight:'800',color:'#0B2248'},
+  tileHeadingDelete:{padding:1},
+  tileCounts:{flexDirection:'row',justifyContent:'center',alignItems:'center',gap:12,width:'100%',minHeight:31},
+  tileCountItem:{flexDirection:'row',alignItems:'center',gap:3},
+  tileCountText:{fontSize:12,fontWeight:'800',color:'#173354'},
+  tileEmpty:{flex:1,alignItems:'center',justifyContent:'center'},
+  tileVerifyBottom:{borderWidth:1,borderColor:'#1769DC',borderRadius:6,minHeight:25,alignItems:'center',justifyContent:'center',width:'100%',marginTop:3},
   tileVerify:{position:'absolute',top:3,right:3,zIndex:6,paddingHorizontal:4,paddingVertical:3,borderColor:'#1769DC',borderWidth:1,borderRadius:5},
   tileVerifyText:{color:'#1769DC',fontSize:8,fontWeight:'700'},
   tileRemoveBottom:{position:'absolute',bottom:3,right:3,zIndex:5,padding:2},
