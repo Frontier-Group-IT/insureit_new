@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - 'apps/partner-app/.trigger-production-ota'
+      - '.github/workflows/verify-partner-app.yml'
       - 'apps/partner-app/app/**'
       - 'apps/partner-app/components/**'
       - 'apps/partner-app/lib/**'
@@ -19,6 +20,7 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   publish:
@@ -46,6 +48,25 @@ jobs:
             exit 1
           }
 
+      - name: Require merged PR for automatic publication
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" > /tmp/partner-ota-merged-pr.json
+          node <<'NODE'
+          const fs = require('fs');
+          const matches = JSON.parse(fs.readFileSync('/tmp/partner-ota-merged-pr.json', 'utf8'));
+          if (!Array.isArray(matches) || !matches.some(pr =>
+            pr.merged_at && pr.base?.ref === 'main' && pr.merge_commit_sha === process.env.GITHUB_SHA
+          )) throw new Error('Auto OTA refused: main commit is not a verified merged PR');
+          NODE
+
       - name: Gate automatic publishing to OTA-compatible changes
         if: github.event_name == 'push'
         shell: bash
@@ -63,6 +84,7 @@ jobs:
           for (const file of files) {
             const approved = file === 'apps/partner-app/.trigger-production-ota'
               || file === '.github/workflows/publish-partner-production-ota.yml'
+              || file === '.github/workflows/verify-partner-app.yml'
               || /^apps\/partner-app\/(app|components|lib|assets)\//.test(file);
             const native = /(^|\/)(android|ios)\//.test(file)
               || /\.(gradle|podspec|xcworkspace|xcodeproj|entitlements)$/.test(file);
