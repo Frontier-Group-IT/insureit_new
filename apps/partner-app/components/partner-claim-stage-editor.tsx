@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
@@ -8,7 +8,7 @@ import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { CLAIM_STAGES, type ClaimStageKey } from '@/lib/claim-tracker';
-import { savePartnerClaimStage, type PartnerClaimDetail, type PartnerClaimStageKey } from '@/lib/claims';
+import { savePartnerClaimStage, savePartnerInsurerClaimNumber, type PartnerClaimDetail, type PartnerClaimStageKey } from '@/lib/claims';
 import { PartnerClaimStepFooter } from '@/components/partner-claim-step-footer';
 import { PartnerClaimDocumentUpload } from '@/components/partner-claim-document-upload';
 
@@ -93,11 +93,37 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
   const [values,setValues]=useState<Record<string,string>>(restored);
   const [saving,setSaving]=useState(false);
   const [documentTab,setDocumentTab]=useState('Vehicle Docs');
+  const [claimNumberOpen,setClaimNumberOpen]=useState(false);
+  const [claimNumber,setClaimNumber]=useState(data.claim.insurer_claim_no ?? '');
+  const [claimNumberSaving,setClaimNumberSaving]=useState(false);
 
   function setValue(key:string,value:string){setValues(current=>({...current,[key]:value}));}
   function previous(){
     const previousStage=CLAIM_STAGES[Math.max(0,stageIndex-1)];
     router.replace({pathname:'/claim/stage',params:{id:data.claim.id,key:previousStage.key}} as never);
+  }
+  function advance() {
+    const next=CLAIM_STAGES[stageIndex+1];
+    if(next) router.replace({pathname:'/claim/stage',params:{id:data.claim.id,key:next.key}} as never);
+    else router.replace({pathname:'/claim/[id]',params:{id:data.claim.id}} as never);
+  }
+  function skipClaimNumber(){
+    if(claimNumberSaving)return;
+    setClaimNumberOpen(false);
+    advance();
+  }
+  async function continueClaimNumber(){
+    if(claimNumberSaving)return;
+    const value=claimNumber.trim();
+    if(!value||value.length>80){Alert.alert('Action required','Enter a valid insurer claim number (up to 80 characters).');return;}
+    setClaimNumberSaving(true);
+    try{
+      await savePartnerInsurerClaimNumber(data.claim.id,value);
+      setClaimNumberOpen(false);
+      advance();
+    }catch(error){
+      Alert.alert('Unable to save',error instanceof Error?error.message:'Please try again.');
+    }finally{setClaimNumberSaving(false);}
   }
   async function save(){
     if(saving)return;
@@ -115,9 +141,10 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
         payload[key]=/amount/i.test(key)&&Number.isFinite(Number(trimmed.replace(/,/g,'')))?Number(trimmed.replace(/,/g,'')):trimmed;
       }
       await savePartnerClaimStage(data.claim.id,stage,payload,true);
-      const next=CLAIM_STAGES[stageIndex+1];
-      if(next) router.replace({pathname:'/claim/stage',params:{id:data.claim.id,key:next.key}} as never);
-      else router.replace({pathname:'/claim/[id]',params:{id:data.claim.id}} as never);
+      if(stage==='claim_intimation'){
+        setClaimNumber(data.claim.insurer_claim_no ?? '');
+        setClaimNumberOpen(true);
+      }else advance();
     }catch(error){Alert.alert('Unable to save',error instanceof Error?error.message:'Please try again.');}
     finally{setSaving(false);}
   }
@@ -141,6 +168,22 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
       </View> : null}
       <PartnerClaimStepFooter index={stageIndex} busy={saving} canContinue onPrevious={previous} onContinue={()=>void save()} continueLabel={stage==='payment_encashment'?'Complete Claim':'Save & Continue'}/>
     </ScrollView>
+    <Modal visible={claimNumberOpen} transparent animationType="fade" onRequestClose={skipClaimNumber}>
+      <View style={claimPopupStyles.backdrop}>
+        <View style={claimPopupStyles.card}>
+          <View style={claimPopupStyles.icon}><Ionicons name="shield-checkmark-outline" size={28} color="#0B347A"/></View>
+          <Text style={claimPopupStyles.title}>Add insurer claim</Text>
+          <View style={claimPopupStyles.inputWrap}>
+            <Ionicons name="document-text-outline" size={20} color="#0B347A"/>
+            <TextInput accessibilityLabel="Enter claim number" placeholder="Enter claim number" placeholderTextColor="#8994A7" style={claimPopupStyles.input} value={claimNumber} onChangeText={setClaimNumber} editable={!claimNumberSaving} maxLength={80} autoCapitalize="characters" returnKeyType="done"/>
+          </View>
+          <View style={claimPopupStyles.actions}>
+            <Pressable accessibilityRole="button" disabled={claimNumberSaving} onPress={skipClaimNumber} style={claimPopupStyles.notNow}><Text style={claimPopupStyles.notNowText}>Not now</Text></Pressable>
+            <Pressable accessibilityRole="button" disabled={claimNumberSaving} onPress={()=>void continueClaimNumber()} style={claimPopupStyles.continue}>{claimNumberSaving?<ActivityIndicator color="#FFF"/>:<><Text style={claimPopupStyles.continueText}>Continue</Text><Ionicons name="arrow-forward" size={20} color="#FFF"/></>}</Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
     <View style={styles.nav}><Nav label="Home" icon="home" onPress={()=>router.push('/(tabs)' as never)}/><Nav label="Business" icon="briefcase-outline" onPress={()=>router.push('/(tabs)/business' as never)}/><Nav label="Policies" icon="document-text-outline" onPress={()=>router.push('/(tabs)/policies' as never)}/><Nav label="Claims" icon="shield-checkmark-outline" onPress={()=>router.push('/(tabs)/claims' as never)}/><Nav label="More" icon="grid-outline" onPress={()=>router.push('/(tabs)/more' as never)}/></View>
   </SafeAreaView>;
 }
@@ -225,4 +268,18 @@ const pickerModalStyles = StyleSheet.create({
   sheet: { borderRadius: 18, backgroundColor: '#FFFFFF', padding: 14, overflow: 'hidden' },
   done: { alignSelf: 'flex-end', paddingHorizontal: 14, paddingVertical: 12 },
   doneText: { color: '#1857A9', fontWeight: '800', fontSize: 16 },
+});
+
+const claimPopupStyles=StyleSheet.create({
+  backdrop:{flex:1,backgroundColor:'rgba(3,16,43,0.58)',justifyContent:'center',paddingHorizontal:34},
+  card:{backgroundColor:'#FFFFFF',borderRadius:24,paddingHorizontal:20,paddingTop:22,paddingBottom:20,alignItems:'center',gap:22},
+  icon:{height:48,width:48,borderRadius:15,backgroundColor:'#EDF4FF',alignItems:'center',justifyContent:'center',borderColor:'#D5E3F6',borderWidth:1},
+  title:{fontSize:18,fontWeight:'900',color:'#0C244D',textAlign:'center'},
+  inputWrap:{width:'100%',height:61,borderColor:'#16519B',borderWidth:1.5,borderRadius:15,flexDirection:'row',alignItems:'center',paddingHorizontal:16,gap:12},
+  input:{flex:1,color:'#142A4D',fontSize:13,fontWeight:'700'},
+  actions:{width:'100%',flexDirection:'row',gap:10},
+  notNow:{flex:1,minHeight:56,borderRadius:14,borderColor:'#D6DCE5',borderWidth:1,alignItems:'center',justifyContent:'center'},
+  notNowText:{fontSize:12,color:'#273955',fontWeight:'800'},
+  continue:{flex:1.2,minHeight:56,borderRadius:14,backgroundColor:'#104AA5',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:10},
+  continueText:{fontSize:12,color:'#FFF',fontWeight:'800'}
 });
