@@ -1,5 +1,6 @@
-import { isBundledMotorCover, motorBundledExpiry } from "@/lib/motor-bundled-validity";
 "use server";
+
+import { isBundledMotorCover, motorBundledExpiry } from "@/lib/motor-bundled-validity";
 
 import { revalidatePath } from "next/cache";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
