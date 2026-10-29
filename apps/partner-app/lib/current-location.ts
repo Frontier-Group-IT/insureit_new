@@ -1,5 +1,11 @@
 /** GPS must not be imported at module scope: older OTA runtimes do not contain expo-location. */
 export async function getPartnerCurrentLocation(): Promise<string> {
+  // iOS can terminate the process if ExpoLocation is required before its native module exists.
+  // Check the native module registry first, without importing expo-location.
+  const nativeModules = require('expo-modules-core') as { NativeModulesProxy?: Record<string, unknown> };
+  if (!nativeModules.NativeModulesProxy?.ExpoLocation) {
+    throw new Error('GPS requires a newer version of INSUREIT Partner. Please enter the location manually.');
+  }
   let location: typeof import('expo-location');
   try {
     // Evaluate only after a user action; the optional native module may be absent on older builds.
