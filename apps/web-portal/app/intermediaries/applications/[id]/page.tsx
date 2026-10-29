@@ -29,6 +29,7 @@ type Application = {
   draft_data: Record<string, unknown> | null;
   partner_record_id: string | null;
   registration_record_id: string | null;
+  partner_activated_at: string | null;
 };
 type Profile = {
   partner_id: string | null;
@@ -133,7 +134,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
   const admin = createSupabaseAdminClient();
 
   const [{ data: application }, { data: profile }, { data: assignment }, { data: documents }, { data: intermediary }, { data: panJob }] = await Promise.all([
-    admin.from("intermediary_onboarding_applications").select("id,requested_type,final_type,status,registration_status,partner_status,created_at,updated_at,draft_data,partner_record_id,registration_record_id").eq("id", id).maybeSingle<Application>(),
+    admin.from("intermediary_onboarding_applications").select("id,requested_type,final_type,status,registration_status,partner_status,created_at,updated_at,draft_data,partner_record_id,registration_record_id,partner_activated_at").eq("id", id).maybeSingle<Application>(),
     admin.from("posp_misp_onboarding_profiles").select("partner_id,partner_type,external_onboarding_id,pos_name,misp_name,applicant_phone,applicant_email,date_of_birth,aadhaar_last_four,pan_number,dp_pan_number,gst_number,address,city,state,postal_code,bank_name,bank_account_number,bank_ifsc_code,oem_name,dp_name,dp_phone,dp_email,dp_date_of_birth,dp_aadhaar_last_four,workflow_stage,iib_remarks,iib_uploaded,iib_uploaded_at,training_status,training_certificate_number,exam_status,onboarding_date,associate_name,document_received_at").eq("application_id", id).maybeSingle<Profile>(),
     admin.from("intermediary_training_exam_assignments").select("training_status,training_completed_at,exam_status,exam_score,exam_completed_at,agreement_status,agreement_signed_at").eq("application_id", id).maybeSingle<Assignment>(),
     admin.from("intermediary_onboarding_documents").select("id,document_type,file_name,storage_bucket,storage_path,verification_status,created_at").eq("application_id", id).order("created_at").returns<Document[]>(),
@@ -178,10 +179,20 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
   const linkedType = linked ? linkedAccountType(linked) : profile.partner_type;
   const linkedAccountId = permanentCode(linkedIntermediary?.intermediary_code) ?? "Not Created";
   const linkedAccountStatus = linked ? pretty(linked.registration_status) : "Not Created";
-  const activationDate = intermediary?.activated_at;
+  // Previously active POSPs imported before the new training/agreement flow are
+  // not new applicants. Preserve actual evidence fields instead of fabricating
+  // training, exam, agreement or IIB completion timestamps.
+  const legacyPreviouslyActive = !isPartner
+    && draft.onboarding_mode === "legacy_existing_partner"
+    && draft.legacy_reconciliation === "pre_existing_posp_activation"
+    && application.status === "approved"
+    && application.registration_status === "partner_active"
+    && Boolean(application.registration_record_id)
+    && intermediary?.account_status === "active";
+  const activationDate = intermediary?.activated_at ?? application.partner_activated_at;
   const journey = isPartner ? partnerJourney(profile, documents ?? [], activePartner) : registrationJourney(accountContext, profile, assignment, application);
-  const onboardingComplete = isPartner ? activePartner : application.registration_status === "iib_registered" || Boolean(profile.iib_uploaded || profile.iib_uploaded_at);
-  const accountActivated = isPartner ? activePartner : application.registration_status === "iib_registered";
+  const onboardingComplete = isPartner ? activePartner : legacyPreviouslyActive || application.registration_status === "iib_registered" || Boolean(profile.iib_uploaded || profile.iib_uploaded_at);
+  const accountActivated = isPartner ? activePartner : legacyPreviouslyActive || application.registration_status === "iib_registered";
   const returnPath = `/intermediaries/applications/${id}`;
   const accountType = isPartner ? (profile.partner_type === "misp" ? "Business Partner" : "Individual Partner") : `${kind} account`;
 
@@ -200,7 +211,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
         { icon: "link" as IconName, label: "Parent Partner", value: partnerId ?? "Pending", href: parentApplication ? `/intermediaries/applications/${parentApplication.id}` : undefined, showViewIcon: Boolean(parentApplication) },
         { icon: "rm" as IconName, label: "Assigned RM", value: profile.associate_name ?? "Not assigned" },
         { icon: "portal" as IconName, label: "Portal Access", value: portalAccessLabel(intermediary?.portal_access_status), portalAction: limitedLifeHead ? undefined : portalAccessAction(intermediary?.portal_access_status), intermediaryId: intermediary?.id, returnPath },
-        { icon: "calendar" as IconName, label: "Activation Date", value: accountActivated ? date(intermediary?.activated_at) : "-" },
+        { icon: "calendar" as IconName, label: "Activation Date", value: accountActivated ? date(activationDate) : "-" },
       ];
 
   return (
@@ -246,7 +257,12 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
         </section>
 
         <section id="overview" className={!isPartner && !onboardingComplete ? "-mt-2 space-y-4" : "space-y-4"}>
-          {!isPartner && !onboardingComplete ? <JourneyCard title={`${kind} account journey`} journey={journey} /> : null}
+          {legacyPreviouslyActive ? (
+            <div className="rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-[12px] text-slate-700">
+              <span className="font-semibold text-emerald-700">Legacy POSP account — active</span>
+              <span className="ml-2">This registration predates the Training, Exam, Agreement and IIB workflow. These newer steps are not applicable to the historical onboarding, and are not recorded as passed or verified.</span>
+            </div>
+          ) : !isPartner && !onboardingComplete ? <JourneyCard title={`${kind} account journey`} journey={journey} /> : null}
           {!activePartner && isPartner ? (
             <section className="overflow-hidden rounded-2xl border border-[#C7D2FE] bg-gradient-to-r from-[#EEF2FF] via-white to-[#EFF6FF] shadow-[0_12px_28px_rgba(79,70,229,.10)]">
               <div className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
