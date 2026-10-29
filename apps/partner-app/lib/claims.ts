@@ -146,6 +146,18 @@ export async function getPartnerClaimDetail(claimId: string) {
   };
 }
 
+/** Secure, claim-scoped save; the database validates Partner access and milestone completion. */
+export async function savePartnerInsurerClaimNumber(claimId: string, claimNumber: string) {
+  const number = claimNumber.trim();
+  if (!number || number.length > 100) throw new Error('Enter a valid insurer claim number.');
+  const { data, error } = await supabase.rpc('partner_app_save_insurer_claim_number', {
+    p_claim_id: claimId,
+    p_insurer_claim_no: number,
+  });
+  if (error) throw error;
+  if (data !== true) throw new Error('Claim number could not be saved.');
+}
+
 /** Creates or resumes an authorized Partner claim draft. Authorization is enforced inside the RPC. */
 export async function createPartnerClaim(customerId: string, vehicleId: string, policyId: string | null) {
   const { data, error } = await supabase.rpc('partner_app_create_claim', {
