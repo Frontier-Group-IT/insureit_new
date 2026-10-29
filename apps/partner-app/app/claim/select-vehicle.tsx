@@ -70,9 +70,7 @@ export default function PartnerClaimVehicleSelector() {
       <Pressable accessibilityRole="button" accessibilityLabel="Back to claims" onPress={() => router.back()} style={styles.back}>
         <Ionicons name="arrow-back" color="#FFF" size={24}/>
       </Pressable>
-      <View style={styles.headerIcon}>
-        <MaterialCommunityIcons name="truck" size={27} color="#FFFFFF" />
-      </View>
+      <Image source={require("../../assets/partner/icons/select-vehicle-claim.png")} resizeMode="contain" style={styles.headerArtwork} />
       <Text style={styles.headerTitle}>Select Vehicle</Text>
     </View>
     <ImageBackground source={require('../../assets/partner/backgrounds/CLAIMBG.jpeg')} resizeMode="cover" style={styles.background} imageStyle={styles.backgroundImage}>
