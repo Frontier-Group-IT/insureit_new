@@ -38,7 +38,7 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
   const [location, setLocation] = useState(data.claim.accident_location || '');
   const [saving, setSaving] = useState(false);
   const [locating, setLocating] = useState(false);
-  const useCurrentLocation = async () => {
+  const fillCurrentLocation = async () => {
     if (!editable || locating) return;
     setLocating(true);
     try { setLocation(await getPartnerCurrentLocation()); }
@@ -86,7 +86,7 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
           <EditableField label="Spot Intimation Time" required value={spotTime} onChange={setSpotTime} placeholder="HH:mm" editable={editable} icon="time-outline"/>
           <EditableField label="Driver Name" required value={driver} onChange={setDriver} placeholder="Enter driver name" editable={editable}/>
           <EditableField label="Driver Number" required value={phone} onChange={setPhone} placeholder="Enter mobile number" editable={editable} keyboard="phone-pad"/>
-          <View style={styles.locationHeading}><Text style={styles.fieldLabel}>Location <Text style={styles.locationRequired}>*</Text></Text><Pressable accessibilityRole="button" accessibilityLabel="Use Current Location" accessibilityState={{disabled:!editable||locating}} disabled={!editable||locating} style={styles.locationButton} onPress={()=>void useCurrentLocation()}><Ionicons name="locate-outline" size={16} color="#0B4DA3"/><Text style={styles.locationButtonText}>{locating?"Locating…":"Use Current Location"}</Text></Pressable></View>
+          <View style={styles.locationHeading}><Text style={styles.fieldLabel}>Location <Text style={styles.locationRequired}>*</Text></Text><Pressable accessibilityRole="button" accessibilityLabel="Use Current Location" accessibilityState={{disabled:!editable||locating}} disabled={!editable||locating} style={styles.locationButton} onPress={()=>void fillCurrentLocation()}><Ionicons name="locate-outline" size={16} color="#0B4DA3"/><Text style={styles.locationButtonText}>{locating?"Locating…":"Use Current Location"}</Text></Pressable></View>
           <EditableField label="" value={location} onChange={setLocation} placeholder="Enter accident location" editable={editable}/>
           {!editable ? <Text style={styles.restricted}>This completed stage remains visible for reference. Current claim progression determines whether it can be edited.</Text> : null}
         </View>
