@@ -1,3 +1,3 @@
 Partner production OTA trigger
-source_main=9ccfcc0adb77617196d7eed7cd648d27006b353d
-reason=user-request-partner-production-ota-20261029-repeat
+source_main=48e22da56a74ff62da522a1f96aa862acf03d503
+reason=publish-merged-pr-3726-transparent-claim-select-vehicle-header
