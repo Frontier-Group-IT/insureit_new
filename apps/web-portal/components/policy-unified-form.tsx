@@ -125,7 +125,7 @@ type Props = {
   authoritativeInitialValues?: boolean;
 };
 
-type FormState = Required<Omit<PolicyUnifiedInitialValues, "policyId" | "policyCode" | "payoutReceived" | "payoutPayments">>;
+type FormState = Required<Omit<PolicyUnifiedInitialValues, "policyId" | "policyCode" | "payoutReceived" | "payoutPayments" | "payinReceipts">>;
 type ApplyGroups = { ownerIdentity: boolean; ownerAddress: boolean; vehicleIdentity: boolean; technical: boolean; compliance: boolean; finance: boolean };
 type VehicleRegistrationMode = "registered" | "unregistered";
 type CommercialModal = "payin" | "payout" | null;
@@ -618,20 +618,8 @@ function ProjectedPayinModal({form,update,calculations,receipts,onClose}:{form:F
  </ModalShell>;
 }
 function PartnerPayoutModal({form,update,calculations,payments,onClose}:{form:FormState;update:<K extends keyof FormState>(key:K,value:FormState[K])=>void;calculations:{payoutOd:number;payoutTp:number;grossPayout:number};payments:Array<{date:string;amount:number}>;onClose:()=>void}){
- const [expanded,setExpanded]=useState(false);
  const net=form.payoutBasis==="NET";
  const bundled=["PCP","TWP"].includes(form.vehicleClass)&&form.policyProduct==="Bundled";
- const years=bundled?(form.vehicleClass==="TWP"?5:3):1;
- const total=calculations.grossPayout;
- const received=payments.reduce((sum,p)=>sum+Math.max(0,p.amount),0);
- const pending=Math.max(0,total-received);
- // OD is year one; TP/CPA expected shares continue for the full cover term.
- const tp=Number(form.tp||0),cpa=form.cpaOpted==="Yes"?Number(form.cpa||0):0;
- const rate=Number(form.payoutTpPercent||0)/100;
- const annualTp=net&&bundled?((form.payoutPartialTp?tp/years:tp)+(form.payoutPartialCpa?cpa/years:cpa))*rate:calculations.payoutTp;
- const rows=Array.from({length:years},(_,i)=>({year:i+1,expected:i===0?Math.max(0,total-annualTp)+annualTp:net&&bundled&&(form.payoutPartialTp||form.payoutPartialCpa)?annualTp:0}));
- let allocated=0;
- const breakdown=rows.map(row=>{const value=Math.min(row.expected,Math.max(0,received-allocated));allocated+=row.expected;return {...row,received:value,pending:Math.max(0,row.expected-value)}});
  return <ModalShell title="Partner Payout" subtitle="Actual agreed partner payout for this policy. It remains independent from insurer actual pay-in." onClose={onClose} footer={<div className="flex justify-end"><button type="button" onClick={onClose} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white">Save & Close</button></div>}>
  <div className="grid gap-3 sm:grid-cols-2">
   <div><PercentField label="Payout OD %" value={form.payoutOdPercent} onChange={v=>update("payoutOdPercent",v)} disabled={form.payoutBasis==="FLAT"}/></div>
