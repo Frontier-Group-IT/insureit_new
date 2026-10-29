@@ -69,7 +69,11 @@ export async function GET(request: Request) {
   // Read access follows the authenticated Partner's permitted lead sources,
   // including records submitted by Operations on behalf of that Partner.
   // Write operations below deliberately remain submitter-scoped.
-  const readableSourceIds = await authorizedSourceIds(identity, scope);
+  // A branch may select its parent Partner for new submissions, but that shared
+  // parent source must not expose sibling branches' existing submissions.
+  const readableSourceIds = isExplicitPortalIdentity(identity) && identity.portal_access_type === "branch"
+    ? (scope.intermediary_ids ?? [])
+    : await authorizedSourceIds(identity, scope);
   const submitterId = submittedByProfileId(identity);
   const portalAccountId = legacyPortalAccountId(identity);
   const intakeReadScope = [
