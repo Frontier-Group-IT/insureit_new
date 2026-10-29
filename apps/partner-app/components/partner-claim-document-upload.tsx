@@ -12,13 +12,14 @@ type Props = {
   milestoneKey?: string;
   documents?: PartnerClaimDetail['documents'];
   compact?: boolean;
+  tileFullWidth?: boolean;
   variant?: 'button' | 'tile' | 'bulk' | 'voice';
   artwork?: ImageSourcePropType;
   label?: string;
   subtitle?: string;
 };
 
-export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, milestoneKey, documents, compact = false, variant = 'button', artwork, label, subtitle }: Props) {
+export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, milestoneKey, documents, compact = false, tileFullWidth = false, variant = 'button', artwork, label, subtitle }: Props) {
   const [busy, setBusy] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ completed: number; total: number } | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState<{ fileName: string; count: number } | null>(null);
@@ -127,7 +128,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
   if (variant === 'tile') {
     return (
       <>
-      <View style={[styles.tile, count > 0 && styles.tileReady]}><Pressable
+      <View style={[styles.tile, tileFullWidth && styles.tileFullWidth, count > 0 && styles.tileReady]}><Pressable
         accessibilityRole="button"
         accessibilityLabel={`${label ?? documentType}, ${busy ? 'uploading' : count ? 'uploaded, tap to add more' : 'tap to upload'}`}
         accessibilityState={{ busy }}
@@ -239,6 +240,7 @@ const styles=StyleSheet.create({
   compact:{minHeight:32,paddingHorizontal:8},
   text:{color:'#FFF',fontSize:9.5,fontWeight:'900'},
   tile:{position:'relative',width:'31.5%',minWidth:0,minHeight:109,borderRadius:13,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#DDE6EF',paddingVertical:6,paddingHorizontal:4,alignItems:'center',justifyContent:'center'},
+  tileFullWidth:{width:'100%'},
   tileReady:{backgroundColor:'#EFFAF4',borderColor:'#B5DCC7',borderWidth:1},
   tileInner:{width:'100%',minHeight:96,alignItems:'center',justifyContent:'center'},
   savedCheck:{position:'absolute',top:0,left:0},
