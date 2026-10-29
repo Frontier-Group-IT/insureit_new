@@ -121,7 +121,7 @@ function EditableField({label,required,value,onChange,placeholder,editable,icon,
   const openPicker=()=>{if(editable&&mode){setDraftPickerValue(pickerValue);setPickerVisible(true);}};
   const pad=(n:number)=>String(n).padStart(2,'0');
   return <View style={styles.fieldWrap}>
-    <Text style={styles.fieldLabel}>{label}{required?<Text style={{color:'#D74747'}}> *</Text>:null}</Text>
+    {label ? <Text style={styles.fieldLabel}>{label}{required?<Text style={{color:'#D74747'}}> *</Text>:null}</Text> : null}
     <View style={[styles.field,!editable&&{opacity:.65}]}>
       <TextInput accessibilityLabel={label} editable={editable} value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor="#9EABBC" keyboardType={keyboard} style={styles.editableInput}/>
       {icon?<Pressable accessibilityRole="button" accessibilityLabel={`Choose ${label}`} accessibilityState={{disabled:!editable}} disabled={!editable} onPress={openPicker} hitSlop={10} style={{minWidth:36,minHeight:36,alignItems:'center',justifyContent:'center'}}><Ionicons name={icon} color="#1857A9" size={20}/></Pressable>:null}
