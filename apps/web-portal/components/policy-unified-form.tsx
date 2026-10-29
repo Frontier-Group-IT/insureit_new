@@ -96,6 +96,7 @@ export type PolicyUnifiedInitialValues = {
   payoutPartialCpa?: boolean;
   payoutReceived?: number;
   payoutPayments?: Array<{date:string;amount:number}>;
+  payinReceipts?: Array<{date:string;amount:number}>;
   flatPayoutAmount?: string;
   payoutStatus?: string;
   payoutDate?: string;
@@ -565,7 +566,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
     </>:isLifeHealthPolicy?<div className="space-y-3">{sourceSection}<LifeHealthPolicyForm key={form.businessLine} policyType={form.businessLine as "Life"|"Health"} insurers={lifeHealthInsurers} source={{sourcingDate:form.issuanceDate,intermediaryType:form.intermediaryType,sourceId:selectedSourceId,leadSource:form.leadSource,intermediaryCode:form.intermediaryCode,rmName:form.rmName,rmCode:selectedSource?.rmCode??""}}/></div>:null}
 
     {submitError?<ValidationErrorDialog message={submitError} onClose={()=>setSubmitError(null)}/>:null}
-    {commercialModal==="payin"?<ProjectedPayinModal form={form} update={update} calculations={calculations} onClose={()=>setCommercialModal(null)}/>:null}
+    {commercialModal==="payin"?<ProjectedPayinModal form={form} update={update} calculations={calculations} receipts={initialValues?.payinReceipts??[]} onClose={()=>setCommercialModal(null)}/>:null}
     {commercialModal==="payout"?<PartnerPayoutModal form={form} update={update} calculations={calculations} payments={initialValues?.payoutPayments??[]} onClose={()=>setCommercialModal(null)}/>:null}
     {!isEdit&&rcReview?<RcModal review={rcReview} groups={applyGroups} setGroups={setApplyGroups} manufacturers={manufacturers} selectedMake={rcReviewMake} setSelectedMake={setRcReviewMake} onCancel={()=>{setRcReview(null);setRcReviewMake("");}} onUse={useRcDetails}/>:null}
     {!isEdit&&customerCandidates?<CustomerMatchModal candidates={customerCandidates} onChoose={chooseCustomer} onCancel={()=>setCustomerCandidates(null)}/>:null}
@@ -575,25 +576,45 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
   </div>;
 }
 
-function ProjectedPayinModal({form,update,calculations,onClose}:{form:FormState;update:<K extends keyof FormState>(key:K,value:FormState[K])=>void;calculations:{projectedOd:number;projectedTp:number;totalPayin:number};onClose:()=>void}){
+function ProjectedPayinModal({form,update,calculations,receipts,onClose}:{form:FormState;update:<K extends keyof FormState>(key:K,value:FormState[K])=>void;calculations:{projectedOd:number;projectedTp:number;totalPayin:number};receipts:Array<{date:string;amount:number}>;onClose:()=>void}){
+ const [expanded,setExpanded]=useState(false);
  const bundled=["TWP","PCP"].includes(form.vehicleClass)&&form.policyProduct==="Bundled";
+ const years=bundled?(form.vehicleClass==="TWP"?5:3):1;
+ const total=calculations.totalPayin;
+ const received=receipts.reduce((sum,item)=>sum+Math.max(0,item.amount),0);
+ const pending=Math.max(0,total-received);
+ const tp=Number(form.tp||0),cpa=form.cpaOpted==="Yes"?Number(form.cpa||0):0,rate=Number(form.projectedTpPercent||0)/100;
+ const recurring=bundled?((form.partialTp?tp/years:0)+(form.partialCpa?cpa/years:0))*rate:0;
+ const firstYearAmount=total;
+ let consumed=0;
+ const dates=Array.from({length:years},(_,i)=>{
+   const base=form.validFrom||form.issuanceDate;
+   const date=i===0?base:coverExpiry(base,i).replace(/^(\\d{4})-(\\d{2})-(\\d{2})$/,(_,y,month,day)=>{const d=new Date(Date.UTC(Number(y),Number(month)-1,Number(day)+1));return d.toISOString().slice(0,10);});
+   const expected=i===0?firstYearAmount:recurring;
+   const got=Math.min(expected,Math.max(0,received-consumed));consumed+=expected;
+   return {date,expected,received:got,pending:Math.max(0,expected-got)};
+ });
  return <ModalShell title="Projected Insurer Pay-in" subtitle="Projected pay-in only. This does not create billing or confirm what the insurer will actually pay." onClose={onClose} footer={<div className="flex justify-end"><button type="button" onClick={onClose} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white">Save & Close</button></div>}>
- <div className="grid gap-3 sm:grid-cols-2">
-  <div><PercentField label="OD Pay-in %" value={form.projectedOdPercent} onChange={v=>update("projectedOdPercent",v)}/></div>
-  <div>
-   <div className="mb-1.5 flex flex-wrap items-center justify-between gap-1">
-    <label className="text-[9px] font-bold uppercase tracking-[0.055em] text-[#475467]">TP/CPA Pay-in %</label>
-    {bundled?<div className="flex items-center gap-2 text-[9px] font-semibold text-[#475467]"><span className="text-[8px] uppercase tracking-wide">Partial</span>
-     <label className="flex items-center gap-1">TP <input aria-label="Partial TP pay-in" type="checkbox" checked={form.partialTp} onChange={e=>update("partialTp",e.target.checked)} className="accent-green-600"/></label>
-     <label className="flex items-center gap-1">CPA <input aria-label="Partial CPA pay-in" type="checkbox" checked={form.partialCpa} onChange={e=>update("partialCpa",e.target.checked)} className="accent-green-600"/></label>
-    </div>:null}
+  <div className="grid gap-3 sm:grid-cols-2">
+   <div><PercentField label="OD Pay-in %" value={form.projectedOdPercent} onChange={v=>update("projectedOdPercent",v)}/></div>
+   <div>
+    <div className="mb-1.5 flex items-center justify-between gap-1">
+     <label className="text-[9px] font-bold uppercase tracking-[0.055em] text-[#475467]">TP/CPA Pay-in %</label>
+     {bundled?<div className="flex items-center gap-1.5 text-[8px] font-semibold text-[#475467]"><span className="text-[7px] uppercase">Partial</span>
+      <label className="flex items-center gap-0.5">TP <input aria-label="Partial TP pay-in" type="checkbox" checked={form.partialTp} onChange={e=>update("partialTp",e.target.checked)} className="h-3 w-3 accent-green-600"/></label>
+      <label className="flex items-center gap-0.5">CPA <input aria-label="Partial CPA pay-in" type="checkbox" checked={form.partialCpa} onChange={e=>update("partialCpa",e.target.checked)} className="h-3 w-3 accent-green-600"/></label>
+     </div>:null}
+    </div>
+    <input aria-label="TP/CPA Pay-in %" type="number" min="0" max="100" step="0.01" value={form.projectedTpPercent} onChange={e=>update("projectedTpPercent",e.target.value)} placeholder="0.00" className={inputClass}/>
    </div>
-   <input aria-label="TP/CPA Pay-in %" type="number" min="0" max="100" step="0.01" value={form.projectedTpPercent} onChange={e=>update("projectedTpPercent",e.target.value)} placeholder="0.00" className={inputClass}/>
+   <Field label="Insurer scheme" type="number" min="0" step="0.01" value={form.insurerScheme} onChange={e=>update("insurerScheme",e.target.value)} placeholder="₹ 0.00"/>
+   <CalculatedField label="Projected total pay-in" value={money.format(total)}/>
   </div>
-  <Field label="Insurer scheme" type="number" min="0" step="0.01" value={form.insurerScheme} onChange={e=>update("insurerScheme",e.target.value)} placeholder="₹ 0.00"/>
-  <CalculatedField label="Projected total pay-in" value={money.format(calculations.totalPayin)}/>
- </div>
-
+  <div className="mt-4 rounded-xl border border-[#E4DFF2] bg-[#FAF8FF] p-3">
+   <div className="flex items-center justify-between gap-2"><span className="text-[10px] font-semibold text-[#17365D]">Pay-in summary</span><button type="button" onClick={()=>setExpanded(v=>!v)} className="text-[9px] font-bold text-[#315B9A]">{expanded?"Show Less":"Show More"}</button></div>
+   <div className="mt-2 grid grid-cols-3 gap-2">{[["Total Projected Payin",total],["Total Payin Received",received],["Payin Pending",pending]].map(([label,value])=><div key={String(label)}><p className="text-[8px] text-[#667085]">{label}</p><p className="text-[11px] font-bold text-[#17365D]">{money.format(Number(value))}</p></div>)}</div>
+   {expanded?<div className="mt-3 overflow-auto"><table className="w-full text-left text-[9px]"><thead><tr>{["Date","Projected Payin","Received Payin","Pending Payin"].map(h=><th key={h} className="border-b py-2">{h}</th>)}</tr></thead><tbody>{dates.map((row,i)=><tr key={i}><td className="py-2">{displayDate(row.date)||"—"}</td><td>{money.format(row.expected)}</td><td>{money.format(row.received)}</td><td>{money.format(row.pending)}</td></tr>)}</tbody></table><p className="mt-1 text-[8px] text-[#667085]">Year 1 is the current projected pay-in; future dates are indicative partial-cover renewals, not booked receivables. Actual receipts are displayed oldest first.</p></div>:null}
+  </div>
  </ModalShell>;
 }
 function PartnerPayoutModal({form,update,calculations,payments,onClose}:{form:FormState;update:<K extends keyof FormState>(key:K,value:FormState[K])=>void;calculations:{payoutOd:number;payoutTp:number;grossPayout:number};payments:Array<{date:string;amount:number}>;onClose:()=>void}){
@@ -617,9 +638,9 @@ function PartnerPayoutModal({form,update,calculations,payments,onClose}:{form:Fo
   <div>
    <div className="mb-1.5 flex flex-wrap items-center justify-between gap-1">
     <label className="text-[9px] font-bold uppercase tracking-[0.055em] text-[#475467]">Payout TP/CPA %</label>
-    {net&&bundled?<div className="flex items-center gap-2 text-[9px] font-semibold text-[#475467]"><span className="text-[8px] uppercase tracking-wide">Partial</span>
-     <label className="flex items-center gap-1">TP <input aria-label="Partial TP payout" type="checkbox" checked={form.payoutPartialTp} onChange={e=>update("payoutPartialTp",e.target.checked)} className="accent-green-600"/></label>
-     <label className="flex items-center gap-1">CPA <input aria-label="Partial CPA payout" type="checkbox" checked={form.payoutPartialCpa} onChange={e=>update("payoutPartialCpa",e.target.checked)} className="accent-green-600"/></label>
+    {net&&bundled?<div className="flex items-center gap-1.5 text-[8px] font-semibold text-[#475467]"><span className="text-[7px] uppercase tracking-wide">Partial</span>
+     <label className="flex items-center gap-1">TP <input aria-label="Partial TP payout" type="checkbox" checked={form.payoutPartialTp} onChange={e=>update("payoutPartialTp",e.target.checked)} className="h-3 w-3 accent-green-600"/></label>
+     <label className="flex items-center gap-1">CPA <input aria-label="Partial CPA payout" type="checkbox" checked={form.payoutPartialCpa} onChange={e=>update("payoutPartialCpa",e.target.checked)} className="h-3 w-3 accent-green-600"/></label>
     </div>:null}
    </div>
    <input aria-label="Payout TP/CPA %" type="number" min="0" max="100" step="0.01" value={form.payoutTpPercent} onChange={e=>update("payoutTpPercent",e.target.value)} disabled={!net} placeholder="0.00" className={inputClass}/>
@@ -627,13 +648,7 @@ function PartnerPayoutModal({form,update,calculations,payments,onClose}:{form:Fo
   <Select label="Payout basis" value={form.payoutBasis} onChange={e=>update("payoutBasis",e.target.value)} options={["NET","OD","FLAT"]} placeholder="Select basis"/>
   {form.payoutBasis==="FLAT"?<Field label="Total agreed payout" type="number" min="0" step="0.01" value={form.flatPayoutAmount} onChange={e=>update("flatPayoutAmount",e.target.value)}/>:<CalculatedField label="Total agreed payout" value={money.format(total)}/>}
  </div>
- <div className="mt-4 rounded-xl border border-[#E4DFF2] bg-[#FAF8FF] p-3">
-  <div className="flex items-center justify-between gap-2"><span className="text-[10px] font-semibold text-[#17365D]">Payout summary</span><button type="button" onClick={()=>setExpanded(x=>!x)} className="text-[9px] font-bold text-[#315B9A]">{expanded?"Show Less":"Show More"}</button></div>
-  <div className="mt-2 grid grid-cols-3 gap-2">
-   {[["Total Agreed Payout",total],["Total Payout Received",received],["Remaining Payout Pending",pending]].map(([label,value])=><div key={String(label)}><p className="text-[8px] text-[#667085]">{label}</p><p className="text-[11px] font-bold text-[#17365D]">{money.format(Number(value))}</p></div>)}
-  </div>
-  {expanded?<div className="mt-3 overflow-auto"><table className="w-full text-left text-[9px]"><thead><tr>{["Year","Expected Payout","Payout Received","Pending Payout"].map(s=><th key={s} className="border-b py-2">{s}</th>)}</tr></thead><tbody>{breakdown.map(row=><tr key={row.year}><td className="py-2">Year {row.year}</td><td>{money.format(row.expected)}</td><td>{money.format(row.received)}</td><td>{money.format(row.pending)}</td></tr>)}</tbody></table><p className="text-[8px] text-[#667085]">Year 1 includes the currently agreed payout. Later years are projections only, not additional booked payables. Received amounts reflect actual allocated payments, assigned oldest year first for display.</p></div>:null}
- </div>
+
  </ModalShell>;
 }
 function Section({number,title,subtitle,badge,action,children}:{number:string;title:string;subtitle?:string;badge?:string;action?:ReactNode;children:ReactNode}){const index=Math.max(0,Number(number)-1);return <section id={`policy-section-${index+1}`} data-section-index={index} className="scroll-mt-[148px] overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="flex min-h-12 items-center justify-between border-b bg-[#FBFCFE] px-4 py-2.5"><div className="flex items-center gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#17365D] text-[9px] font-bold text-white">{number}</span><div className="flex min-h-8 flex-col justify-center"><h2 className="text-[13px] font-semibold leading-tight">{title}</h2>{subtitle?<p className="mt-0.5 text-[9px] leading-tight text-[#667085]">{subtitle}</p>:null}</div></div><div className="flex items-center gap-2">{badge?<span className="rounded-full border bg-white px-2.5 py-1 text-[8px] text-[#667085]">{badge}</span>:null}{action}</div></div><div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">{children}</div></section>;}
