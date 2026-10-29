@@ -98,7 +98,7 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
   const [claimNumber,setClaimNumber]=useState(data.claim.insurer_claim_no ?? '');
   const [claimNumberSaving,setClaimNumberSaving]=useState(false);
   const [locating,setLocating]=useState(false);
-  async function useCurrentLocation(){
+  async function fillCurrentLocation(){
     if(locating||saving)return;
     setLocating(true);
     try {setValue('dealership_location',await getPartnerCurrentLocation());}
@@ -176,7 +176,7 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
         {CONFIG.work_approval.fields.map(field=><View key={field.key} style={approvalStyles.fieldBlock}><EditableField field={field.key.startsWith('surveyor_')?{...field,label:`${field.label} (Optional)`}:field} value={values[field.key]||''} onChange={value=>setValue(field.key,value)} displayDate={field.kind==='date'}/></View>)}
       </View> : <View style={styles.card}>
         <View style={styles.sectionHeading}><View style={styles.sectionIcon}><MaterialCommunityIcons name={config.icon} size={23} color="#0B58A7"/></View><View style={{flex:1}}><Text style={styles.sectionTitle}>Stage Details</Text><Text style={styles.sectionSubtitle}>{config.subtitle}</Text></View></View>
-        {config.fields.map(field=><View key={field.key}>{field.key==='dealership_location'?<View style={locationStyles.action}><Pressable accessibilityRole="button" accessibilityLabel="Use Current Location" disabled={locating||saving} onPress={()=>void useCurrentLocation()} style={locationStyles.button}><Ionicons name="locate-outline" size={16} color="#0B4DA3"/><Text style={locationStyles.text}>{locating?"Locating…":"Use Current Location"}</Text></Pressable></View>:null}<EditableField field={field} value={values[field.key]||''} onChange={(value)=>setValue(field.key,value)}/></View>)}
+        {config.fields.map(field=><View key={field.key}>{field.key==='dealership_location'?<View style={locationStyles.action}><Pressable accessibilityRole="button" accessibilityLabel="Use Current Location" disabled={locating||saving} onPress={()=>void fillCurrentLocation()} style={locationStyles.button}><Ionicons name="locate-outline" size={16} color="#0B4DA3"/><Text style={locationStyles.text}>{locating?"Locating…":"Use Current Location"}</Text></Pressable></View>:null}<EditableField field={field} value={values[field.key]||''} onChange={(value)=>setValue(field.key,value)}/></View>)}
       </View>}
 
       {stage === 'work_approval' ? <View style={approvalStyles.documentsCard}>
