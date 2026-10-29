@@ -57,7 +57,6 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
   const [bulkFilesOpen, setBulkFilesOpen] = useState(false);
   const [verificationOpen, setVerificationOpen] = useState(false);
   const [selectedForReview, setSelectedForReview] = useState<string[]>([]);
-  const allVerified = count > 0 && uploaded.every(file => 'verification_status' in file && file.verification_status === 'verified');
   const deleting = async () => {
     if (!deleteTarget || busy) return;
     setBusy(true);
