@@ -1,6 +1,6 @@
 import "./customer-claims-motion.css";
 import Link from "next/link";
-import { ClipboardList, Plus, ShieldCheck, CalendarDays } from "lucide-react";
+import { ClipboardList, Plus, ShieldCheck } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
 import { CustomerClaimsSearch } from "./customer-claims-search";
@@ -89,16 +89,32 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
       </section>
 
       <section className="claims-motion-panel overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white">
-        <div className="claims-motion-toolbar flex flex-col gap-3 border-b border-[#E6ECF4] p-4">
-          <div className="flex w-full flex-wrap items-center justify-between gap-3"><h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><ClipboardList className="h-5 w-5 text-[#1769DC]"/>My Claims <span className="rounded-full bg-[#E7F0FD] px-2.5 py-1 text-[11px] text-[#205BA3]">{enriched.length} claims</span></h2>
-          <Link href={{ pathname: "/customer/start-claim", query: { account: account.id } }} className="claims-motion-new-claim inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-[#1769DC] px-3 py-2.5 text-[12px] font-semibold text-white hover:bg-[#1058BD]"><Plus className="h-4 w-4"/>Start a New Claim</Link></div>
-          <div className="flex w-full flex-wrap items-center justify-between gap-3"><CustomerClaimsSearch initialQuery={params.q ?? ""} accountId={account.id} />
-          <div className="flex flex-wrap items-center gap-2">
-            <nav aria-label="Claim status" className="claims-motion-filters flex flex-wrap items-center gap-1.5">
-              {filterOptions.map(({ key, label, count }) => <Link key={key} href={href({filter:key,page:"1"})} aria-current={statusFilter === key ? "page" : undefined} className={`claims-motion-filter claims-motion-filter-${key} rounded-full border px-3 py-2 text-[12px] font-semibold transition-colors ${statusFilter === key ? "border-[#071E45] bg-[#071E45] text-white" : "border-[#DCE4EE] bg-white text-[#344767] hover:bg-[#F0F6FF]"}`}>{label} ({count})</Link>)}
-            </nav>
-
-          </div></div>
+        <div className="claims-motion-toolbar flex flex-wrap items-center gap-3 border-b border-[#E6ECF4] p-4">
+          <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]">
+            <ClipboardList className="h-5 w-5 text-[#1769DC]"/>My Claims
+          </h2>
+          <div className="min-w-[190px] flex-1 lg:mx-auto lg:max-w-[390px]">
+            <CustomerClaimsSearch initialQuery={params.q ?? ""} accountId={account.id} />
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <details className="group relative">
+              <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg border border-[#DCE4EE] bg-white px-3 py-2.5 text-[12px] font-semibold text-[#344767] [&::-webkit-details-marker]:hidden">
+                <span>{filterOptions.find((option) => option.key === statusFilter)?.label ?? "All"}</span>
+                <span aria-hidden="true">⌄</span>
+              </summary>
+              <nav aria-label="Claim status" className="absolute right-0 z-30 mt-2 min-w-[180px] overflow-hidden rounded-xl border border-[#DCE4EE] bg-white p-1 shadow-lg">
+                {filterOptions.map(({key,label,count}) => (
+                  <Link key={key} href={href({filter:key,page:"1"})} aria-current={statusFilter === key ? "page" : undefined}
+                    className={`block rounded-lg px-3 py-2 text-[12px] hover:bg-[#F0F6FF] ${statusFilter === key ? "bg-[#E7F0FD] font-semibold text-[#1769DC]" : "text-[#344767]"}`}>
+                    {label} ({count})
+                  </Link>
+                ))}
+              </nav>
+            </details>
+            <Link href={{ pathname: "/customer/start-claim", query: { account: account.id } }} className="claims-motion-new-claim inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-[#1769DC] px-3 py-2.5 text-[12px] font-semibold text-white hover:bg-[#1058BD]">
+              <Plus className="h-4 w-4"/>Start a New Claim
+            </Link>
+          </div>
         </div>
 
         {rows.length ? (
@@ -118,25 +134,34 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
                           <p className="mt-1 line-clamp-2 text-[12px] font-medium text-[#647590]">{claim.vehicle_model || claim.vehicle_make || "Vehicle claim"}</p>
                         </div>
                       </div>
-                      <span className="max-w-[40%] shrink-0 truncate rounded-full border border-[#E0EAF8] bg-[#F5F8FF] px-3 py-1.5 text-[11px] font-semibold text-[#31649F]" title={claim.claim_no || "Control number not recorded"}>{claim.claim_no || "—"}</span>
-                    </div>
-                    <div className="mt-3 border-t border-[#E8EDF4] pt-3">
-                      <div className="grid grid-cols-2 gap-2 text-left">
-                        <div className="flex min-w-0 items-start gap-2">
-                          <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-[#2768B4]" aria-hidden="true"/>
-                          <div><p className="text-[11px] text-[#71809A]">Loss Date</p><p className="mt-1 text-[12px] font-semibold text-[#243A60]">{lossDate && !Number.isNaN(lossDate.getTime()) ? lossDate.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : "—"}</p></div>
+                      <div className="flex w-[94px] shrink-0 flex-col items-center gap-1 text-center">
+                        <div role="img" aria-label={`Claim journey ${Math.round(progress / INTERNAL_JOURNEY_STAGES.length * 100)} percent`}
+                          className="grid h-[66px] w-[66px] place-items-center rounded-full"
+                          style={{background: `conic-gradient(#1769DC ${Math.round(progress / INTERNAL_JOURNEY_STAGES.length * 100)}%, #E4E9F3 0)`}}>
+                          <span className="grid h-[54px] w-[54px] place-items-center rounded-full bg-white text-[14px] font-bold text-[#1769DC]">
+                            {Math.round(progress / INTERNAL_JOURNEY_STAGES.length * 100)}%
+                          </span>
                         </div>
-                        <div className="flex min-w-0 items-start gap-2 border-l border-[#E9EDF5] pl-3">
-                          <span className="shrink-0"><CustomerClaimLogo value={claim.insurer_name} kind="insurer" size={24}/></span>
-                          <div className="min-w-0"><p className="text-[11px] text-[#71809A]">Policy No.</p><p className="mt-1 break-all text-[12px] font-semibold text-[#243A60]">{claim.policy_no || "—"}</p></div>
-                        </div>
+                        <span className="line-clamp-2 text-[10px] font-semibold leading-3 text-[#536681]">{completed ? "Claim Complete" : stage}</span>
                       </div>
                     </div>
-                    <div className="mt-auto pt-3">
-                      <div className="h-1.5 overflow-hidden rounded-full bg-[#E4E9F3]"><div className="h-full rounded-full bg-[#1769DC]" style={{width:`${Math.round(progress / INTERNAL_JOURNEY_STAGES.length * 100)}%`}}/></div>
-                      <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
-                        <span className="flex min-w-0 items-center gap-2 font-semibold text-[#244673]"><span className="h-2 w-2 shrink-0 rounded-full bg-[#1769DC]"/><span className="truncate">{completed ? "Claim Complete" : stage}</span></span>
-                        <span className="shrink-0 text-[#6D7D99]">{progress}/{INTERNAL_JOURNEY_STAGES.length}</span>
+                    <div className="mt-3 border-t border-[#E8EDF4] pt-3">
+                      <div className="grid grid-cols-3 gap-2 text-left">
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-[#71809A]">Loss Date</p>
+                          <p className="mt-1 text-[11px] font-semibold text-[#243A60]">{lossDate && !Number.isNaN(lossDate.getTime()) ? lossDate.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : "—"}</p>
+                        </div>
+                        <div className="min-w-0 border-l border-[#E9EDF5] pl-2">
+                          <p className="text-[10px] text-[#71809A]">Control No.</p>
+                          <p className="mt-1 break-all text-[11px] font-semibold text-[#243A60]">{claim.claim_no || "—"}</p>
+                        </div>
+                        <div className="min-w-0 border-l border-[#E9EDF5] pl-2">
+                          <p className="text-[10px] text-[#71809A]">Policy No.</p>
+                          <div className="mt-1 flex min-w-0 items-start gap-1">
+                            <CustomerClaimLogo value={claim.insurer_name} kind="insurer" size={18}/>
+                            <p className="min-w-0 break-all text-[11px] font-semibold text-[#243A60]">{claim.policy_no || "—"}</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </Link>
