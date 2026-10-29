@@ -30,7 +30,7 @@ assert.doesNotMatch(bulkVerificationGroup, /onDoubleClick=/, "Deselect must not 
 assert.match(bulkVerificationGroup, /if \(next\.has\(document\.id\)\) next\.delete\(document\.id\); else next\.add\(document\.id\);/, "Selection must toggle each document independently.");
 assert.match(bulkVerificationGroup, /<DocumentVerificationIcon verified=\{verified\} selected=\{selected\} \/>/, "The uploaded-file shield must display the blue selection checkmark.");
 assert.doesNotMatch(bulkVerificationGroup, /selectGroup\(\)|deselectGroup\(\)/, "Do not add another selection shield to category headings.");
-assert.match(verificationAction, /Please select a document to verify by clicking the document icon beside its file name\./, "Empty Stage 1 verification must show the document-selection warning.");
+assert.match(verificationAction, /Please select a document before verifying\./, "Empty Stage 1 verification must show the document-selection warning.");
 assert.match(bulkVerificationGroup, /document\.verification_status !== "rejected"/, "Rejected files cannot be selected before replacement.");
 assert.match(bulkVerificationGroup, /documentId=\{document\.id\}[\s\S]*?actionLabel="Replace"/, "Replace must target the exact row.");
 assert.match(bulkVerificationGroup, /actionLabel="Upload" iconOnly/, "Populated categories retain Upload New.");

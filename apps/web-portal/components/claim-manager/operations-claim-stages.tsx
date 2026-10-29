@@ -438,10 +438,10 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
       {successNotice ? <ClaimStageSuccessPopup message={successNotice} /> : null}
       {errorNotice ? (
         <div className="fixed inset-0 z-[1000] grid place-items-center bg-[#07152F]/60 px-4" role="presentation">
-          <div role="alertdialog" aria-modal="true" aria-labelledby="spot-error-title" aria-describedby="spot-error-description" className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
+          <div role="alertdialog" aria-modal="true" aria-labelledby="spot-error-title" aria-describedby="spot-error-description" className="w-full max-w-[370px] rounded-xl bg-white p-4 shadow-2xl">
             <h2 id="spot-error-title" className="text-[16px] font-semibold text-[#9F253A]">Action required</h2>
-            <p id="spot-error-description" className="mt-2 text-[12px] leading-5 text-[#334155]">{errorNotice}</p>
-            <div className="mt-5 flex justify-end"><button type="button" autoFocus onClick={() => setErrorNotice(null)} className="rounded-lg bg-[#071D49] px-6 py-2 text-[12px] font-semibold text-white">OK</button></div>
+            <p id="spot-error-description" className="mt-2 text-[12px] leading-5 text-[#334155]">{summarizeClaimActionError(errorNotice)}</p>
+            <div className="mt-3 flex justify-end"><button type="button" autoFocus onClick={() => setErrorNotice(null)} className="rounded-lg bg-[#071D49] px-6 py-2 text-[12px] font-semibold text-white">OK</button></div>
           </div>
         </div>
       ) : null}
@@ -623,4 +623,11 @@ function toDateTimeLocal(value: string, type?: string) {
   if (type === "time") return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
   if (type === "datetime-local") return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
   return value;
+}
+function summarizeClaimActionError(message: string): string {
+  if (/server components render|digest property|specific message is omitted/i.test(message)) {
+    return "Unable to complete the action. Please try again.";
+  }
+  const firstLine = message.split(/[\r\n]+/)[0]?.trim() || "";
+  return firstLine.length > 105 ? "Unable to complete the action. Please try again." : firstLine || "Unable to complete the action. Please try again.";
 }
