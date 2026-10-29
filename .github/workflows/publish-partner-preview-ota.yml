@@ -1,8 +1,14 @@
 name: Publish Partner preview OTA
 
-# Partner updates require an explicit workflow dispatch until native compatibility is verified.
+# Publish preview OTA automatically for Partner app changes on main; native builds remain manual.
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/partner-app/**'
+      - '.github/workflows/publish-partner-preview-ota.yml'
 
 concurrency:
   group: publish-partner-preview-ota
