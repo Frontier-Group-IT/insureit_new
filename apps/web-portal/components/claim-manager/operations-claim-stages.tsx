@@ -276,8 +276,9 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
 
   useEffect(() => {
     if (!spotState.ok) return;
-    setSelectedKey("spot_status");
-    router.replace(`/claims/${claimId}?stage=spot_status`);
+    // Saving Stage 1 details is not a verification or workflow advancement.
+    // Keep the user on Spot Intimation until an authorized transition succeeds.
+    router.refresh();
     try { window.sessionStorage.removeItem(`insureit:spot-intimation-draft:${claimId}`); } catch { /* optional storage */ }
   }, [claimId, router, spotState.ok]);
 
