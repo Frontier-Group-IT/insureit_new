@@ -567,7 +567,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
 
     {submitError?<ValidationErrorDialog message={submitError} onClose={()=>setSubmitError(null)}/>:null}
     {commercialModal==="payin"?<ProjectedPayinModal form={form} update={update} calculations={calculations} receipts={initialValues?.payinReceipts??[]} onClose={()=>setCommercialModal(null)}/>:null}
-    {commercialModal==="payout"?<PartnerPayoutModal form={form} update={update} calculations={calculations} payments={initialValues?.payoutPayments??[]} onClose={()=>setCommercialModal(null)}/>:null}
+    {commercialModal==="payout"?<PartnerPayoutModal form={form} update={update} calculations={calculations} onClose={()=>setCommercialModal(null)}/>:null}
     {!isEdit&&rcReview?<RcModal review={rcReview} groups={applyGroups} setGroups={setApplyGroups} manufacturers={manufacturers} selectedMake={rcReviewMake} setSelectedMake={setRcReviewMake} onCancel={()=>{setRcReview(null);setRcReviewMake("");}} onUse={useRcDetails}/>:null}
     {!isEdit&&customerCandidates?<CustomerMatchModal candidates={customerCandidates} onChoose={chooseCustomer} onCancel={()=>setCustomerCandidates(null)}/>:null}
     {!isEdit&&ownershipConflict?<OwnershipModal conflict={ownershipConflict} onResolve={resolveOwnership} onCancel={()=>setOwnershipConflict(null)}/>:null}
@@ -617,7 +617,7 @@ function ProjectedPayinModal({form,update,calculations,receipts,onClose}:{form:F
   </div>
  </ModalShell>;
 }
-function PartnerPayoutModal({form,update,calculations,payments,onClose}:{form:FormState;update:<K extends keyof FormState>(key:K,value:FormState[K])=>void;calculations:{payoutOd:number;payoutTp:number;grossPayout:number};payments:Array<{date:string;amount:number}>;onClose:()=>void}){
+function PartnerPayoutModal({form,update,calculations,onClose}:{form:FormState;update:<K extends keyof FormState>(key:K,value:FormState[K])=>void;calculations:{payoutOd:number;payoutTp:number;grossPayout:number};onClose:()=>void}){
  const net=form.payoutBasis==="NET";
  const bundled=["PCP","TWP"].includes(form.vehicleClass)&&form.policyProduct==="Bundled";
  return <ModalShell title="Partner Payout" subtitle="Actual agreed partner payout for this policy. It remains independent from insurer actual pay-in." onClose={onClose} footer={<div className="flex justify-end"><button type="button" onClick={onClose} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white">Save & Close</button></div>}>
