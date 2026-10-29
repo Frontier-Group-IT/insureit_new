@@ -1,0 +1,40 @@
+name: Customer iOS EAS Submit (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type SUBMIT_TESTFLIGHT to upload the existing signed IPA to App Store Connect (not publish)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  submit-ios:
+    name: Submit existing Customer IPA to TestFlight
+    if: ${{ inputs.confirm == 'SUBMIT_TESTFLIGHT' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout approved iOS release branch
+        uses: actions/checkout@v4
+        with:
+          ref: release/customer-ios-current-main-20261028
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify Expo token
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: test -n "$EXPO_TOKEN" || (echo "::error::EXPO_TOKEN is missing" && exit 1)
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Submit verified signed IPA to App Store Connect
+        working-directory: apps/mobile-app
+        run: eas submit --platform ios --id caaa8af4-2b41-4a0d-9354-b87b1d3e4c84 --profile production --non-interactive
