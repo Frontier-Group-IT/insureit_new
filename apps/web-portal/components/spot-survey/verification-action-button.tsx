@@ -63,10 +63,13 @@ function EmptySelectionVerifyButton({ attention }: { attention: boolean }) {
     <button type="button" onClick={() => setOpen(true)} className={className}>Verify</button>
     {open && typeof document !== "undefined" ? createPortal(
       <div className="fixed inset-0 z-[120] grid place-items-center bg-[#071D49]/40 px-4">
-        <div role="alertdialog" aria-modal="true" aria-labelledby="verify-selection-warning" className="w-[min(360px,calc(100vw-32px))] rounded-xl bg-white p-4 shadow-[0_24px_70px_rgba(7,29,73,.24)]">
-          <h2 id="verify-selection-warning" className="text-[17px] font-semibold text-[#071D49]">Select a document</h2>
-          <p className="mt-2 text-[12px] leading-5 text-[#526178]">Please select a document before verifying.</p>
-          <div className="mt-3 flex justify-end"><button type="button" onClick={() => setOpen(false)} className="h-9 rounded-lg bg-[#17365D] px-5 text-[11px] font-semibold text-white">OK</button></div>
+        <div role="alertdialog" aria-modal="true" aria-labelledby="verify-selection-warning" aria-describedby="verify-selection-message" className="w-full max-w-[525px] overflow-hidden rounded-[20px] bg-white shadow-[0_24px_70px_rgba(7,29,73,.24)]">
+          <div className="flex flex-col items-center px-5 pb-6 pt-7 text-center">
+            <div aria-hidden="true" className="flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#FFF1E6] text-[24px] font-medium text-[#E87525]">!</div>
+            <h2 id="verify-selection-warning" className="mt-5 text-[18px] font-semibold text-[#142C4B]">Select a document</h2>
+            <p id="verify-selection-message" className="mt-3 text-[13px] leading-5 text-[#77849A]">Please select a document before verifying.</p>
+          </div>
+          <div className="border-t border-[#E4E9F0] px-6 py-4"><button type="button" autoFocus onClick={() => setOpen(false)} className="h-[50px] w-full rounded-xl bg-[#19385E] text-[13px] font-semibold text-white">OK</button></div>
         </div>
       </div>,
       document.body,
