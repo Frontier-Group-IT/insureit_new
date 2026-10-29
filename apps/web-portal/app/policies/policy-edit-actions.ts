@@ -1,3 +1,4 @@
+import { isBundledMotorCover, motorBundledExpiry } from "@/lib/motor-bundled-validity";
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -71,6 +72,9 @@ function textNumber(value: number | null | undefined) {
 }
 
 export async function updatePolicyOnboarding(policyId: string, payload: PolicyEditPayload): Promise<PolicyEditResult> {
+  if (isBundledMotorCover(payload.vehicleClass, payload.policy.policyType)) {
+    payload = {...payload, policy:{...payload.policy,validUpto:motorBundledExpiry(payload.policy.validFrom,1)}};
+  }
   const profile = await requirePolicyEditor(policyId);
 
   if (!/^[0-9a-f-]{36}$/i.test(policyId)) return { ok: false, error: "Invalid policy reference." };
