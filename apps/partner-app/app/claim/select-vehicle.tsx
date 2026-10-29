@@ -70,9 +70,7 @@ export default function PartnerClaimVehicleSelector() {
       <Pressable accessibilityRole="button" accessibilityLabel="Back to claims" onPress={() => router.back()} style={styles.back}>
         <Ionicons name="arrow-back" color="#FFF" size={24}/>
       </Pressable>
-      <View style={styles.headerIcon}>
-        <MaterialCommunityIcons name="truck" size={27} color="#FFFFFF" />
-      </View>
+      <Image source={require("../../assets/partner/icons/select-vehicle-claim.png")} resizeMode="contain" style={styles.headerArtwork} />
       <Text style={styles.headerTitle}>Select Vehicle</Text>
     </View>
     <ImageBackground source={require('../../assets/partner/backgrounds/CLAIMBG.jpeg')} resizeMode="cover" style={styles.background} imageStyle={styles.backgroundImage}>
@@ -191,6 +189,7 @@ const styles = StyleSheet.create({
  root:{flex:1,backgroundColor:'#EDF5FF'},
  header:{height:67,paddingHorizontal:15,flexDirection:'row',alignItems:'center',gap:13,backgroundColor:'#081F4C'},
  back:{width:34,height:40,justifyContent:'center',alignItems:'center'},
+ headerArtwork:{width:44,height:44},
  headerIcon:{width:40,height:40,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,0.16)',borderWidth:1,borderColor:'rgba(255,255,255,0.18)'},
 
  headerTitle:{color:'#FFF',fontSize:18,fontWeight:'900'},
