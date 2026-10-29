@@ -1,0 +1,139 @@
+name: Apply and verify Partner Branch policy visibility
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type APPLY_BRANCH_POLICY_SCOPE to authorize migration'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: partner-branch-policy-scope-migration
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Apply verified branch-scoped Partner policy RPCs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Require explicit approval
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: test "$CONFIRMATION" = "APPLY_BRANCH_POLICY_SCOPE"
+
+      - name: Checkout exact current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Ensure exact current main and configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/20261028190100_partner_branch_commercial_scope.sql
+          test -f supabase/migrations/20261028190000_partner_policy_scoped_partner_codes.sql
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link configured project
+        shell: bash
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply missing scope migrations in dependency order
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Scope first: never expose a widened policy selector before its ownership boundary.
+          for version in 20261028190100 20261028190000; do
+            case "$version" in
+              20261028190100) file=supabase/migrations/20261028190100_partner_branch_commercial_scope.sql ;;
+              20261028190000) file=supabase/migrations/20261028190000_partner_policy_scoped_partner_codes.sql ;;
+            esac
+            applied=$(supabase db query --linked --output-format json "
+              select exists(select 1 from supabase_migrations.schema_migrations where version='$version') as applied;
+            ")
+            if echo "$applied" | grep -Eq '"applied"[[:space:]]*:[[:space:]]*true'; then
+              echo "$version already recorded; verifying live definitions in the next step."
+            else
+              supabase db query --linked --file "$file"
+              supabase migration repair --linked --status applied "$version"
+            fi
+          done
+
+      - name: Verify live function scope and policy visibility contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/verify_partner_branch_policy_scope.sql <<'SQL'
+          do $verify$
+          declare
+            scope_sql text;
+            list_sql text;
+            summary_sql text;
+          begin
+            if to_regprocedure('public.partner_app_commercial_scope()') is null
+              or to_regprocedure('public.partner_app_list_policies(integer,integer,text,text)') is null
+              or to_regprocedure('public.partner_app_policy_summary()') is null then
+              raise exception 'Required Partner policy functions are missing';
+            end if;
+
+            scope_sql := pg_get_functiondef('public.partner_app_commercial_scope()'::regprocedure);
+            list_sql := pg_get_functiondef('public.partner_app_list_policies(integer,integer,text,text)'::regprocedure);
+            summary_sql := pg_get_functiondef('public.partner_app_policy_summary()'::regprocedure);
+
+            if position('partner_portal_access_context()' in scope_sql) = 0
+              or position('child.parent_partner_id = any(v_partner_ids)' in scope_sql) = 0
+              or position('child.partner_status' in scope_sql) = 0 then
+              raise exception 'Branch ownership scope is not installed';
+            end if;
+
+            if position('partner_app_commercial_scope()' in list_sql) = 0
+              or position('partner_app_commercial_scope()' in summary_sql) = 0
+              or position('scoped_partner.id=any(v_partner_ids)' in list_sql) = 0
+              or position('scoped_partner.id=any(v_partner_ids)' in summary_sql) = 0 then
+              raise exception 'Policy list and summary do not both use the authorized partner code scope';
+            end if;
+
+            if position('p.intermediary_code' in list_sql) = 0
+              or position('p.intermediary_code' in summary_sql) = 0 then
+              raise exception 'Scoped policy code matching is missing';
+            end if;
+            if not has_function_privilege('authenticated', 'public.partner_app_list_policies(integer,integer,text,text)', 'EXECUTE')
+              or not has_function_privilege('authenticated', 'public.partner_app_policy_summary()', 'EXECUTE') then
+              raise exception 'Authenticated Partner RPC privileges unavailable';
+            end if;
+          end
+          $verify$;
+          SQL
+          supabase db query --linked --file /tmp/verify_partner_branch_policy_scope.sql
+
+      - name: Report sanitized policy mapping coverage (no customer details)
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db query --linked --output-format json "
+            select
+              count(*) filter (where p.intermediary_code is not null) as coded_policies,
+              count(*) filter (where exists (
+                select 1 from public.partners owner
+                where owner.partner_code = p.intermediary_code
+              )) as policies_with_partner_code_match
+            from public.policies p;
+          "
