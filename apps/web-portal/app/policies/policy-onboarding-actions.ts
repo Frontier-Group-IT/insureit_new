@@ -1,5 +1,7 @@
 "use server";
 
+import { isBundledMotorCover, motorBundledExpiry } from "@/lib/motor-bundled-validity";
+
 import { revalidatePath } from "next/cache";
 import { requirePolicyIntakeFinalizer } from "@/lib/policy-intake-server";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
@@ -458,6 +460,9 @@ export async function loadExistingVehicleForPolicyOnboarding(vehicleId: string):
 }
 
 export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<PolicyOnboardingResult> {
+  if (isBundledMotorCover(String(payload.vehicle.classCode ?? ""), String(payload.policy.policyType ?? ""))) {
+    payload = {...payload, policy:{...payload.policy,validUpto:motorBundledExpiry(String(payload.policy.validFrom ?? ""),1)}};
+  }
   const profile = await requirePolicyCreator(String(payload.policy.intermediaryCode ?? ""));
   const selectedExistingVehicleId = payload.resolution?.selectedExistingVehicleId?.trim() || null;
   if (selectedExistingVehicleId) {

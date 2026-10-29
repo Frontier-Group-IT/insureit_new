@@ -12,13 +12,14 @@ type Props = {
   milestoneKey?: string;
   documents?: PartnerClaimDetail['documents'];
   compact?: boolean;
+  tileFullWidth?: boolean;
   variant?: 'button' | 'tile' | 'bulk' | 'voice' | 'billing';
   artwork?: ImageSourcePropType;
   label?: string;
   subtitle?: string;
 };
 
-export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, milestoneKey, documents, compact = false, variant = 'button', artwork, label, subtitle }: Props) {
+export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, milestoneKey, documents, compact = false, tileFullWidth = false, variant = 'button', artwork, label, subtitle }: Props) {
   const [busy, setBusy] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ completed: number; total: number } | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState<{ fileName: string; count: number } | null>(null);
@@ -150,7 +151,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
   if (variant === 'tile') {
     return (
       <>
-      <View style={[styles.tile, count > 0 && styles.tileReady]}><Pressable
+      <View style={[styles.tile, tileFullWidth && styles.tileFullWidth, count > 0 && styles.tileReady]}><Pressable
         accessibilityRole="button"
         accessibilityLabel={`${label ?? documentType}, ${busy ? 'uploading' : count ? 'uploaded, tap to add more' : 'tap to upload'}`}
         accessibilityState={{ busy }}
@@ -267,9 +268,10 @@ const styles=StyleSheet.create({
   button:{minHeight:38,borderRadius:10,backgroundColor:'#145CB8',paddingHorizontal:10,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5},
   compact:{minHeight:32,paddingHorizontal:8},
   text:{color:'#FFF',fontSize:9.5,fontWeight:'900'},
-  tile:{position:'relative',width:'31.5%',minWidth:0,minHeight:134,borderRadius:14,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#DDE6EF',paddingVertical:10,paddingHorizontal:5,alignItems:'center',justifyContent:'center'},
+  tile:{position:'relative',width:'31.5%',minWidth:0,minHeight:109,borderRadius:13,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#DDE6EF',paddingVertical:6,paddingHorizontal:4,alignItems:'center',justifyContent:'center'},
+  tileFullWidth:{width:'100%'},
   tileReady:{backgroundColor:'#EFFAF4',borderColor:'#B5DCC7',borderWidth:1},
-  tileInner:{width:'100%',minHeight:112,alignItems:'center',justifyContent:'center'},
+  tileInner:{width:'100%',minHeight:96,alignItems:'center',justifyContent:'center'},
   savedCheck:{position:'absolute',top:0,left:0},
   removeIcon:{position:'absolute',top:2,right:2,zIndex:5,padding:2},
   fileName:{color:'#53647A',fontSize:7,marginTop:2,maxWidth:'95%'},
@@ -296,19 +298,19 @@ const styles=StyleSheet.create({
   cancelButton:{flex:1,alignItems:'center',paddingVertical:14,borderRadius:12,borderWidth:1,borderColor:'#CCD6E1'},
   deleteButton:{flex:1,alignItems:'center',paddingVertical:14,borderRadius:12,backgroundColor:'#C73535'},
   cancelText:{color:'#1A2F4F',fontWeight:'700'},deleteText:{color:'#FFFFFF',fontWeight:'700'},
-  artworkWrap:{width:49,height:49,overflow:'hidden',alignItems:'center',justifyContent:'center'},
-  artwork:{width:39,height:39},
-  videoIcon:{width:39,height:39,borderRadius:9,backgroundColor:'#F31E35',alignItems:'center',justifyContent:'center'},
-  tileTitle:{color:'#071D49',fontSize:8.5,lineHeight:11,fontWeight:'800',textAlign:'center',marginTop:3},
-  tileStatus:{color:'#718198',fontSize:8,fontWeight:'700',marginTop:8,textAlign:'center'},
+  artworkWrap:{width:39,height:39,overflow:'hidden',alignItems:'center',justifyContent:'center'},
+  artwork:{width:32,height:32},
+  videoIcon:{width:33,height:33,borderRadius:9,backgroundColor:'#F31E35',alignItems:'center',justifyContent:'center'},
+  tileTitle:{color:'#071D49',fontSize:8.2,lineHeight:10,fontWeight:'800',textAlign:'center',marginTop:3},
+  tileStatus:{color:'#718198',fontSize:7.8,fontWeight:'700',marginTop:4,textAlign:'center'},
   tileStatusReady:{color:'#16865B'},
-  bulk:{minHeight:58,marginTop:10,marginRight:0,borderRadius:14,borderWidth:1.5,borderStyle:'dashed',borderColor:'#AFC8E8',backgroundColor:'#F7FAFF',paddingHorizontal:10,flexDirection:'row',alignItems:'center',gap:9},
+  bulk:{minHeight:49,marginTop:8,marginRight:0,borderRadius:14,borderWidth:1.5,borderStyle:'dashed',borderColor:'#AFC8E8',backgroundColor:'#F7FAFF',paddingHorizontal:10,flexDirection:'row',alignItems:'center',gap:9},
   bulkReady:{borderStyle:'solid',borderColor:'#52B57F',backgroundColor:'#EFFAF4'},
   bulkWrapper:{position:'relative'},
   bulkRemoveIcon:{position:'absolute',right:13,top:24,zIndex:2},
   bulkFileRow:{width:'100%',flexDirection:'row',alignItems:'center',paddingVertical:9,gap:8},
   bulkFileLabel:{flex:1,fontSize:12,color:'#173354'},
-  bulkArtwork:{width:34,height:34},
+  bulkArtwork:{width:29,height:29},
   bulkCopy:{flex:1,minWidth:0},
   bulkTitle:{color:'#071D49',fontSize:10.5,fontWeight:'900'},
   bulkSubtitle:{color:'#718198',fontSize:8.5,lineHeight:12,fontWeight:'600',marginTop:2},

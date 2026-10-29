@@ -231,3 +231,16 @@ export async function removePartnerClaimDocument(claimId: string, documentId: st
   const result = await supabase.storage.from('claim-documents').remove([data]);
   if (result.error) console.warn('Claim document storage cleanup could not finish', result.error.message);
 }
+
+/** Store insurer-issued claim number only for a claim in the Partner user's authorized scope. */
+export async function savePartnerInsurerClaimNumber(claimId: string, claimNumber: string) {
+  const value = claimNumber.trim();
+  if (!value || value.length > 80) throw new Error('Enter a valid insurer claim number (up to 80 characters).');
+  const { data, error } = await supabase.rpc('partner_app_save_insurer_claim_number', {
+    p_claim_id: claimId,
+    p_insurer_claim_no: value,
+  });
+  if (error) throw error;
+  if (!data || data.ok !== true) throw new Error('Claim number was not saved.');
+  return data as { ok: true; insurer_claim_no: string };
+}
