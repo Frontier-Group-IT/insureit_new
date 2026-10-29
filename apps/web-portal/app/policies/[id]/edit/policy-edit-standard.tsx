@@ -21,7 +21,7 @@ import { getActiveInsuranceCompanyOptions } from "@/lib/reference-data-cache";
 type PolicyRow = {
   id: string; customer_id: string; vehicle_id: string | null; insurance_company_id: string;
   policy_no: string; policy_type: string; policy_product: string | null; premium_amount: number | null; insured_declared_value: number | null;
-  start_date: string; end_date: string; policy_code: string | null;
+  start_date: string; end_date: string; tp_valid_upto: string | null; cpa_valid_upto: string | null; policy_code: string | null;
   intermediary_type: string | null; intermediary_code: string | null; lead_source: string | null;
   rm_name: string | null; business_line: string | null; issuance_date: string | null; remarks: string | null;
   status: string | null; created_by: string | null; created_at: string | null; updated_at: string | null;
@@ -363,6 +363,8 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
       insurerId: policy.insurance_company_id,
       validFrom: policy.start_date,
       validUpto: policy.end_date,
+    tpValidUpto: policy.tp_valid_upto ?? "",
+    cpaValidUpto: policy.cpa_valid_upto ?? "",
       remarks: policy.remarks ?? "",
     };
 
@@ -437,6 +439,8 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     insurerId: policy.insurance_company_id,
     validFrom: policy.start_date,
     validUpto: policy.end_date,
+    tpValidUpto: policy.tp_valid_upto ?? "",
+    cpaValidUpto: policy.cpa_valid_upto ?? "",
     payoutBasis: commercialAccess ? (payout?.payout_basis === "FIXED_AMOUNT" ? "FLAT" : (payin?.payout_basis ?? "NET")) : "",
     projectedOdPercent: commercialAccess && payinHasConfirmedEntry ? stringValue(payin?.projected_od_percent) : "",
     projectedTpPercent: commercialAccess && payinHasConfirmedEntry ? stringValue(payin?.projected_tp_percent) : "",
