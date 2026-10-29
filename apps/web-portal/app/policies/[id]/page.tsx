@@ -14,6 +14,12 @@ type PolicyDetail = {
   business_line: string | null;
   start_date: string;
   end_date: string;
+  od_valid_from: string | null;
+  od_valid_upto: string | null;
+  tp_valid_from: string | null;
+  tp_valid_upto: string | null;
+  cpa_valid_from: string | null;
+  cpa_valid_upto: string | null;
   issuance_date: string | null;
   insured_declared_value: number | null;
   premium_amount: number | null;
@@ -39,7 +45,7 @@ export default async function PolicyReadOnlyPage({ params }: { params: Promise<{
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from("policies")
-    .select("id,customer_id,policy_no,policy_type,business_line,start_date,end_date,issuance_date,insured_declared_value,premium_amount,intermediary_type,intermediary_code,customers(customer_code,contact_name),vehicles(vehicle_no),insurance_companies(name)")
+    .select("id,customer_id,policy_no,policy_type,business_line,start_date,end_date,od_valid_from,od_valid_upto,tp_valid_from,tp_valid_upto,cpa_valid_from,cpa_valid_upto,issuance_date,insured_declared_value,premium_amount,intermediary_type,intermediary_code,customers(customer_code,contact_name),vehicles(vehicle_no),insurance_companies(name)")
     .eq("id", id)
     .maybeSingle<PolicyDetail>();
   if (error || !data) notFound();
@@ -76,8 +82,10 @@ export default async function PolicyReadOnlyPage({ params }: { params: Promise<{
           <Info label="Customer code" value={data.customers?.customer_code} />
           <Info label="Vehicle" value={data.vehicles?.vehicle_no} />
           <Info label="Issuance date" value={formatDate(data.issuance_date)} />
-          <Info label="Valid from" value={formatDate(data.start_date)} />
-          <Info label="Valid upto" value={formatDate(data.end_date)} />
+          <Info label="OD Valid from" value={formatDate(data.od_valid_from ?? data.start_date)} />
+          <Info label="OD Valid upto" value={formatDate(data.od_valid_upto ?? data.end_date)} />
+          {data.tp_valid_from && data.tp_valid_upto ? <><Info label="TP Valid from" value={formatDate(data.tp_valid_from)} /><Info label="TP Valid upto" value={formatDate(data.tp_valid_upto)} /></> : null}
+          {data.cpa_valid_from && data.cpa_valid_upto ? <><Info label="CPA Valid from" value={formatDate(data.cpa_valid_from)} /><Info label="CPA Valid upto" value={formatDate(data.cpa_valid_upto)} /></> : null}
           <Info label="IDV" value={money(data.insured_declared_value)} />
           <Info label="Premium" value={money(data.premium_amount)} />
           <Info label="Intermediary type" value={pretty(data.intermediary_type)} />
