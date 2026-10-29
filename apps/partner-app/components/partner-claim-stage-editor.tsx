@@ -171,10 +171,22 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
           <View style={spotStyles.heading}><MaterialCommunityIcons name="clipboard-account-outline" color="#1558A5" size={27}/><Text style={spotStyles.headingText}>Surveyor Details</Text><Text style={spotStyles.optional}>Optional</Text></View>
           {CONFIG.spot_status.fields.slice(1).map(field=><EditableField key={field.key} field={{...field,label:`${field.label} (Optional)`}} value={values[field.key]||''} onChange={(value)=>setValue(field.key,value)}/>)}
         </View>
-      </> : <View style={styles.card}>
+      </> : stage==='work_approval' ? <View style={approvalStyles.card}>
+        <View style={styles.sectionHeading}><View style={styles.sectionIcon}><MaterialCommunityIcons name="clipboard-check-outline" size={23} color="#0B58A7"/></View><View style={{flex:1}}><Text style={styles.sectionTitle}>Stage Details</Text><Text style={styles.sectionSubtitle}>{config.subtitle}</Text></View></View>
+        {CONFIG.work_approval.fields.map(field=><View key={field.key} style={approvalStyles.fieldBlock}><EditableField field={field.key.startsWith('surveyor_')?{...field,label:`${field.label} (Optional)`}:field} value={values[field.key]||''} onChange={value=>setValue(field.key,value)} displayDate={field.kind==='date'}/></View>)}
+      </View> : <View style={styles.card}>
         <View style={styles.sectionHeading}><View style={styles.sectionIcon}><MaterialCommunityIcons name={config.icon} size={23} color="#0B58A7"/></View><View style={{flex:1}}><Text style={styles.sectionTitle}>Stage Details</Text><Text style={styles.sectionSubtitle}>{config.subtitle}</Text></View></View>
         {config.fields.map(field=><View key={field.key}>{field.key==='dealership_location'?<View style={locationStyles.action}><Pressable accessibilityRole="button" accessibilityLabel="Use Current Location" disabled={locating||saving} onPress={()=>void useCurrentLocation()} style={locationStyles.button}><Ionicons name="locate-outline" size={16} color="#0B4DA3"/><Text style={locationStyles.text}>{locating?"Locating…":"Use Current Location"}</Text></Pressable></View>:null}<EditableField field={field} value={values[field.key]||''} onChange={(value)=>setValue(field.key,value)}/></View>)}
       </View>}
+
+      {stage === 'work_approval' ? <View style={approvalStyles.documentsCard}>
+        <View style={approvalStyles.documentsHeading}><MaterialCommunityIcons name="file-document-check-outline" size={24} color="#1459A6"/><Text style={approvalStyles.documentsTitle}>Approval Documents</Text><Text style={approvalStyles.optionalPill}>Optional</Text></View>
+        <View style={approvalStyles.documentsRow}>
+          <View style={approvalStyles.documentHalf}><PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="Work Approval Letter" milestoneKey="work_approval" documents={data.documents} variant="tile" artwork={DOCUMENT_ARTWORK[1]} label="Insurer Approval Letter"/></View>
+          <View style={approvalStyles.documentHalf}><PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="Surveyor Approval" milestoneKey="work_approval" documents={data.documents} variant="tile" artwork={DOCUMENT_ARTWORK[2]} label="Surveyor Approval / Report"/></View>
+        </View>
+        <PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="work_approval Additional Documents" milestoneKey="work_approval" documents={data.documents} variant="bulk" artwork={BULK_ARTWORK} label="Upload Multiple Documents" subtitle="Select several files now, or tap again later to add more."/>
+      </View> : null}
 
       {stage === 'claim_intimation' ? <View style={styles.card}>
         <View style={styles.documentHeader}><Text style={styles.sectionTitle}>Documents for verification</Text><View style={styles.optionalChip}><Text style={styles.optionalText}>Claims desk review</Text></View></View>
@@ -311,3 +323,14 @@ const spotStyles=StyleSheet.create({
 });
 
 const locationStyles=StyleSheet.create({action:{alignItems:'flex-end',marginBottom:2},button:{flexDirection:'row',alignItems:'center',gap:5,paddingVertical:3},text:{fontSize:10,color:'#0B4DA3',fontWeight:'800'}});
+
+const approvalStyles=StyleSheet.create({
+ card:{backgroundColor:'#FFF',borderRadius:19,borderWidth:1,borderColor:'#D7E2EC',padding:14,gap:13},
+ fieldBlock:{marginTop:2},
+ documentsCard:{backgroundColor:'#FFF',borderRadius:19,borderWidth:1,borderColor:'#D7E2EC',padding:13,gap:12},
+ documentsHeading:{flexDirection:'row',alignItems:'center',gap:9},
+ documentsTitle:{fontSize:12,fontWeight:'900',color:'#14284B',flex:1},
+ optionalPill:{backgroundColor:'#EDF4FF',borderRadius:16,paddingHorizontal:9,paddingVertical:5,color:'#1554A1',fontSize:9,fontWeight:'800'},
+ documentsRow:{flexDirection:'row',gap:10},
+ documentHalf:{flex:1,minWidth:0},
+});
