@@ -257,10 +257,10 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
       <>
         <View style={[styles.tile, tileFullWidth && styles.tileFullWidth, count > 0 && styles.tileReady]}>
           <View style={styles.tileHeading}>
-            <View style={styles.tileHeadingIdentity}>
+            <Pressable accessibilityRole="button" accessibilityLabel={`Add more ${label ?? documentType} documents`} disabled={busy} onPress={() => void pickAndUpload()} style={styles.tileHeadingIdentity}>
               {artwork ? <Image source={artwork} style={styles.tileHeadingArtwork} resizeMode="contain" /> : <Ionicons name="document-outline" size={23} color="#0A43A3" />}
               <Text style={styles.tileHeadingName} numberOfLines={2}>{label ?? documentType}</Text>
-            </View>
+            </Pressable>
             {latest && !busy ? (
               <Pressable accessibilityRole="button" accessibilityLabel={`Delete ${latest.name}`}
                 onPress={() => setDeleteTarget({ id: latest.id, name: latest.name })} style={styles.tileHeadingDelete}>
