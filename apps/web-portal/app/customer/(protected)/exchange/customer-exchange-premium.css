@@ -161,3 +161,12 @@
     background: linear-gradient(90deg, rgba(8, 28, 64, .97) 0%, rgba(13, 40, 80, .92) 53%, rgba(17, 49, 92, .3) 100%);
   }
 }
+
+/* Sell workspace: one clean search surface, with no nested input outline or border. */
+.customer-exchange-premium .exchange-sell-search {border:1px solid #e2e5f4;box-shadow:0 3px 12px rgba(58,72,136,.035)}
+.customer-exchange-premium .exchange-sell-search input {border:0!important;box-shadow:none!important;outline:0!important;background:transparent!important;padding:0;min-width:0}
+.customer-exchange-premium .exchange-sell-search:focus-within {border-color:#9c93f5;box-shadow:0 0 0 2px rgba(102,85,237,.14)}
+/* Maintain readable white Sell hero copy over the right-hand vehicle artwork. */
+.customer-exchange-premium.exchange-reference .exchange-sell-hero .exchange-premium-hero-shade {background:linear-gradient(90deg,rgba(8,28,64,.99) 0%,rgba(11,35,73,.97) 35%,rgba(14,43,83,.75) 58%,rgba(17,49,92,.12) 92%)}
+.customer-exchange-premium.exchange-reference .exchange-sell-hero :is(h1,p) {color:#fff;text-shadow:0 1px 3px rgba(2,15,37,.25)}
+@media(max-width:640px){.customer-exchange-premium.exchange-reference .exchange-sell-hero .exchange-premium-hero-shade {background:linear-gradient(90deg,rgba(8,28,64,.99) 0%,rgba(11,35,73,.97) 57%,rgba(17,49,92,.40) 100%)}}
