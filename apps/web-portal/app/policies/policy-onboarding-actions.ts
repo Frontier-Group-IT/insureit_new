@@ -461,7 +461,7 @@ export async function loadExistingVehicleForPolicyOnboarding(vehicleId: string):
 
 export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<PolicyOnboardingResult> {
   if (isBundledMotorCover(String(payload.vehicle.classCode ?? ""), String(payload.policy.policyType ?? ""))) {
-    payload = {...payload, policy:{...payload.policy,validUpto:motorBundledExpiry(String(payload.policy.validFrom ?? ""),1)}};
+    payload = {...payload, policy:{...payload.policy,validUpto: String(payload.policy.odValidUpto || motorBundledExpiry(String(payload.policy.validFrom ?? ""),1))}};
   }
   const profile = await requirePolicyCreator(String(payload.policy.intermediaryCode ?? ""));
   const selectedExistingVehicleId = payload.resolution?.selectedExistingVehicleId?.trim() || null;
