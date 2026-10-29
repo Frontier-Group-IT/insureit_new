@@ -37,7 +37,7 @@ export function CustomerExchangeSellWorkspace({ vehicles, accountId }: { vehicle
   return (
     <section className="exchange-sell-v2 space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <label className="flex min-w-[190px] flex-[3] items-center gap-2 rounded-lg bg-white px-3 py-2">
+        <label className="exchange-sell-search flex min-w-[190px] flex-[3] items-center gap-2 rounded-lg bg-white px-3 py-2">
           <Search className="h-4 w-4 text-[#7186A5]" />
           <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search vehicle number, make, model or type..." aria-label="Search fleet vehicles" className="w-full bg-transparent text-[11px] outline-none" />
         </label>
