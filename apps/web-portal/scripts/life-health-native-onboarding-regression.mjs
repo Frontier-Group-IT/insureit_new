@@ -15,6 +15,7 @@ const unified = read("components/policy-unified-form.tsx");
 const lifeHealth = read("components/life-health-policy-form.tsx");
 const guard = read("components/policy-onboarding-product-guard.tsx");
 const page = read("app/policies/new/page.tsx");
+const policyScope = read("lib/policy-access-scope.ts");
 const routeLayout = read("app/policies/new/layout.tsx");
 const summaryCss = read("app/policy-summary-stability.css");
 const issuedEdit = read("components/life-health-issued-policy-edit-form.tsx");
@@ -42,6 +43,8 @@ assert(!guard.includes('data-life-health-native-portal'), "product guard must no
 assert(!guard.includes('ensureLifeHealthMount'), "legacy Life/Health mount helper must be removed");
 assert(!guard.includes('restoreLifeHealthMount'), "legacy Life/Health mount cleanup must be removed");
 
+assert(policyScope.includes('getAccessibleIntermediaryIds(profileId, "operations_head_life", "view_intermediaries")'), "Life Head policy lead-source scope must include authorized Partners linked through onboarding RM assignments");
+assert(policyScope.includes('if (directResult.error || linkedResult.error) return { employeeIds: [], intermediaryCodes: [] };'), "Life Head source scope must fail closed when RM-linked intermediary lookup fails");
 assert(!page.includes("PolicyLifeHealthOnboardingEnhancements"), "new policy page must not install the old Life/Health DOM enhancement observer");
 assert(!routeLayout.includes("policy-summary-width.css"), "new policy route must not load the old Life/Health width rescue stylesheet");
 assert(!summaryCss.includes("data-life-health"), "global summary stability CSS must not contain Life/Health portal rescue selectors");
