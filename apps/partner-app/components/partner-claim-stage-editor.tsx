@@ -98,8 +98,6 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
   const doAmount=finiteAmount(values.do_amount);
   const savedDoAmount=finiteAmount(deliveryOrderValues.do_amount);
   const receivedAmount=finiteAmount(values.payment_received_amount);
-
-  const [values,setValues]=useState<Record<string,string>>(restored);
   const [saving,setSaving]=useState(false);
   const [documentTab,setDocumentTab]=useState('Vehicle Docs');
   const [claimNumberOpen,setClaimNumberOpen]=useState(false);
@@ -323,7 +321,7 @@ function Nav({label,icon,onPress}:{label:string;icon:keyof typeof Ionicons.glyph
 
 const styles=StyleSheet.create({
   vehicleStageHeading:{marginBottom:8},vehicleStageIcon:{width:36,height:36,alignItems:'center',justifyContent:'center'},vehicleDeliveryField:{marginTop:8},
-  deliveryField:{marginTop:3},deliveryChoice:{maxWidth:260},deliveryUpload:{gap:7,marginTop:12},financialCard:{backgroundColor:'#0B3271',borderRadius:16,padding:13,gap:9,marginTop:3},financialHeader:{flexDirection:'row',alignItems:'center',gap:9,borderBottomWidth:1,borderBottomColor:'#345688',paddingBottom:11},financialHeading:{color:'#FFF',fontSize:10,fontWeight:'900',letterSpacing:1},financialSubtitle:{color:'#CCD9EB',fontSize:9,marginTop:3},financialRow:{flexDirection:'row',justifyContent:'space-between',paddingVertical:5,borderBottomWidth:1,borderBottomColor:'#345688'},financialText:{color:'#D4E0EF',fontSize:11},financialValue:{color:'#FFF',fontSize:11,fontWeight:'900'},financialContribution:{backgroundColor:'#1C437E',flexDirection:'row',justifyContent:'space-between',alignItems:'center',paddingHorizontal:9,paddingVertical:12},billingUpload:{gap:6,marginTop:2},billingLabel:{fontSize:10.5,fontWeight:'800',color:'#203859'},
+  deliveryField:{marginTop:3},deliveryChoice:{maxWidth:260},deliveryUpload:{gap:7,marginTop:12},financialCard:{backgroundColor:'#0B3271',borderRadius:16,padding:13,gap:9,marginTop:3},financialHeader:{flexDirection:'row',alignItems:'center',gap:9,borderBottomWidth:1,borderBottomColor:'#345688',paddingBottom:11},financialHeading:{color:'#FFF',fontSize:10,fontWeight:'900',letterSpacing:1},financialSubtitle:{color:'#CCD9EB',fontSize:9,marginTop:3},financialRow:{flexDirection:'row',justifyContent:'space-between',paddingVertical:5,borderBottomWidth:1,borderBottomColor:'#345688'},financialText:{color:'#D4E0EF',fontSize:11},financialValue:{color:'#FFF',fontSize:11,fontWeight:'900'},financialContribution:{backgroundColor:'#1C437E',flexDirection:'row',justifyContent:'space-between',alignItems:'center',paddingHorizontal:9,paddingVertical:12},
 
   billingUpload:{gap:6,marginTop:2},billingLabel:{fontSize:10.5,fontWeight:'800',color:'#203859'},
   docTab:{paddingHorizontal:10,paddingVertical:12,borderBottomWidth:2,borderBottomColor:'transparent',backgroundColor:'#F8FBFF'},docTabSelected:{borderBottomColor:'#0877EB',backgroundColor:'#EAF4FF'},docTabText:{fontSize:9,color:'#718099',fontWeight:'700'},docTabTextSelected:{color:'#0B58B2'},
