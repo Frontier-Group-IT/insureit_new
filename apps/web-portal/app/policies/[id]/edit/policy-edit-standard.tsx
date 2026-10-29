@@ -99,7 +99,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
   const admin = createSupabaseAdminClient();
 
   const policyResult = await admin.from("policies")
-    .select("id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,policy_product,premium_amount,insured_declared_value,start_date,end_date,policy_code,intermediary_type,intermediary_code,lead_source,rm_name,business_line,issuance_date,remarks,status,created_by,created_at,updated_at")
+    .select("id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,policy_product,premium_amount,insured_declared_value,start_date,end_date,tp_valid_upto,cpa_valid_upto,policy_code,intermediary_type,intermediary_code,lead_source,rm_name,business_line,issuance_date,remarks,status,created_by,created_at,updated_at")
     .eq("id", id).maybeSingle<PolicyRow>();
   if (policyResult.error) throw new Error(`Unable to load policy details: ${policyResult.error.message}`);
   if (!policyResult.data) notFound();
