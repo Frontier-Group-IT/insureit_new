@@ -34,7 +34,7 @@ export type PortalUserRow = {
 };
 
 export type AdditionalPortalAccount = {
- id:string; name:string; code:string; email:string|null; type:"Group"|"Branch"|"Group Associate"|"Partner Associate"; status:string; manageHref:string; reviewHref?:string; context:string; invitationStatus?:string; loginEmail?:string; phone?:string; branchId?:string;
+ id:string; name:string; code:string; email:string|null; type:"Group"|"Branch"|"Group Associate"|"Partner Associate"; status:string; manageHref:string; reviewHref?:string; context:string; invitationStatus?:string; loginEmail?:string; phone?:string; contactName?:string; branchName?:string; branchId?:string;
 };
 
 type StatusFilter = "all" | "active" | "inactive";
@@ -76,10 +76,10 @@ export default async function IntermediaryPortalUsersPage({
     const [{data: groups,error:groupError},{data:partners,error:partnerError},{data:branches,error:branchError},{data:identities,error:identityError},{data:groupAssociates,error:groupAssociateError},{data:partnerAssociates,error:partnerAssociateError}] = await Promise.all([
       admin.from("intermediary_groups").select("id,group_name,group_code,status").eq("status","active"),
       admin.from("partners").select("id,display_name,partner_code,parent_partner_id,source_application_id"),
-      admin.from("partner_branch_profiles").select("partner_id,email,phone"),
+      admin.from("partner_branch_profiles").select("partner_id,branch_name,contact_name,email,phone"),
       admin.from("portal_access_identities").select("entity_type,entity_id,login_email,status,created_at"),
-      admin.from("group_portal_associate_accounts").select("id,group_id,name,email,status"),
-      admin.from("partner_portal_associate_accounts").select("id,intermediary_id,name,email,status"),
+      admin.from("group_portal_associate_accounts").select("id,group_id,name,phone_number,email,status"),
+      admin.from("partner_portal_associate_accounts").select("id,intermediary_id,name,phone_number,email,status"),
     ]);
     extraLoadError = Boolean(groupError||partnerError||branchError||identityError||groupAssociateError||partnerAssociateError);
     if (!extraLoadError) {
@@ -98,18 +98,18 @@ export default async function IntermediaryPortalUsersPage({
         const parent = partnerById.get(p.parent_partner_id??"");
         const applicationId = parent?.source_application_id ?? p.source_application_id;
         const branchProfile = branchById.get(p.id);
-        extraRows.push({id:`branch:${p.id}`,name:p.display_name,code:p.partner_code,email:login?.login_email??branchProfile?.email??null,type:"Branch",status:login?.status??"not_created",manageHref:"/intermediaries/groups/login-access",reviewHref:applicationId?`/intermediaries/applications/${applicationId}`:undefined,context:parent?.display_name??"Branch login",invitationStatus:login?.created_at?"Sent":"Not Sent",loginEmail:branchProfile?.email??null,phone:branchProfile?.phone??null,branchId:p.id});
+        extraRows.push({id:`branch:${p.id}`,name:p.display_name,code:p.partner_code,email:login?.login_email??branchProfile?.email??null,type:"Branch",status:login?.status??"not_created",manageHref:"/intermediaries/groups/login-access",reviewHref:applicationId?`/intermediaries/applications/${applicationId}`:undefined,context:parent?.display_name??"Branch login",invitationStatus:login?.created_at?"Sent":"Not Sent",loginEmail:branchProfile?.email??null,phone:branchProfile?.phone??null,contactName:branchProfile?.contact_name??null,branchName:branchProfile?.branch_name??null,branchId:p.id});
       }
       for (const a of groupAssociates??[]) {
         const group=groupById.get(a.group_id);
         if (!group) continue;
-        extraRows.push({id:`group-associate:${a.id}`,name:a.name,code:group.group_code,email:a.email,type:"Group Associate",status:a.status,manageHref:`/intermediaries/groups/${a.group_id}/associate-accounts`,context:group.group_name});
+        extraRows.push({id:`group-associate:${a.id}`,name:a.name,code:group.group_code,email:a.email,phone:a.phone_number,type:"Group Associate",status:a.status,manageHref:`/intermediaries/groups/${a.group_id}/associate-accounts`,context:group.group_name});
       }
       const partnerByIntermediary = new Map((intermediariesResult.data??[]).map(p=>[p.id,p]));
       for (const a of partnerAssociates??[]) {
         const partner=partnerByIntermediary.get(a.intermediary_id);
         if (!partner?.application_id) continue;
-        extraRows.push({id:`partner-associate:${a.id}`,name:a.name,code:partner.intermediary_code??"",email:a.email,type:"Partner Associate",status:a.status,manageHref:`/intermediaries/applications/${partner.application_id}/associate-accounts`,context:partner.display_name});
+        extraRows.push({id:`partner-associate:${a.id}`,name:a.name,code:partner.intermediary_code??"",email:a.email,phone:a.phone_number,type:"Partner Associate",status:a.status,manageHref:`/intermediaries/applications/${partner.application_id}/associate-accounts`,context:partner.display_name});
       }
     }
   }
