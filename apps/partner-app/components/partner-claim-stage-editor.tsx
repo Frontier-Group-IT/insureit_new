@@ -92,9 +92,12 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
   const stageIndex=CLAIM_STAGES.findIndex(item=>item.key===stage);
   const restored=useMemo(()=>latestStageValues(data,stage),[data,stage]);
   const billingValues=useMemo(()=>latestStageValues(data,'billing'),[data]);
+  const deliveryOrderValues=useMemo(()=>latestStageValues(data,'delivery_order'),[data]);
   const billAmount=finiteAmount(billingValues.bill_amount);
   const [values,setValues]=useState<Record<string,string>>(restored);
   const doAmount=finiteAmount(values.do_amount);
+  const savedDoAmount=finiteAmount(deliveryOrderValues.do_amount);
+  const receivedAmount=finiteAmount(values.payment_received_amount);
   const [saving,setSaving]=useState(false);
   const [documentTab,setDocumentTab]=useState('Vehicle Docs');
   const [claimNumberOpen,setClaimNumberOpen]=useState(false);
@@ -178,8 +181,8 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
         <View style={styles.sectionHeading}><View style={styles.sectionIcon}><MaterialCommunityIcons name="clipboard-check-outline" size={23} color="#0B58A7"/></View><View style={{flex:1}}><Text style={styles.sectionTitle}>Stage Details</Text><Text style={styles.sectionSubtitle}>{config.subtitle}</Text></View></View>
         {CONFIG.work_approval.fields.map(field=><View key={field.key} style={approvalStyles.fieldBlock}><EditableField field={field.key.startsWith('surveyor_')?{...field,label:`${field.label} (Optional)`}:field} value={values[field.key]||''} onChange={value=>setValue(field.key,value)} displayDate={field.kind==='date'}/></View>)}
       </View> : <View style={styles.card}>
-        <View style={[styles.sectionHeading,stage==='vehicle_delivery'&&styles.vehicleStageHeading]}><View style={stage==='vehicle_delivery'?styles.vehicleStageIcon:styles.sectionIcon}><MaterialCommunityIcons name={config.icon} size={stage==='vehicle_delivery'?25:23} color="#0B58A7"/></View><View style={{flex:1}}><Text style={styles.sectionTitle}>Stage Details</Text><Text style={styles.sectionSubtitle}>{stage==='vehicle_delivery'?'Confirm whether the repaired vehicle has been received.':config.subtitle}</Text></View></View>
-        {config.fields.map(field=><View key={field.key} style={stage==='delivery_order' ? styles.deliveryField : stage==='vehicle_delivery' ? styles.vehicleDeliveryField : undefined}>{field.key==='dealership_location'?<View style={locationStyles.action}><Pressable accessibilityRole="button" accessibilityLabel="Use Current Location" disabled={locating||saving} onPress={()=>void fillCurrentLocation()} style={locationStyles.button}><Ionicons name="locate-outline" size={16} color="#0B4DA3"/><Text style={locationStyles.text}>{locating?"Locating…":"Use Current Location"}</Text></Pressable></View>:null}<View style={(stage==='delivery_order'||stage==='vehicle_delivery')&&field.kind==='choice'?styles.deliveryChoice:undefined}><EditableField field={stage==='vehicle_delivery'&&field.key==='vehicle_received_date'&&['yes','true','1'].includes((values.vehicle_received||'').toLowerCase())?{...field,required:true}:field} value={values[field.key]||''} onChange={(value)=>setValue(field.key,value)} displayDate={(stage==='delivery_order'||stage==='vehicle_delivery')&&field.kind==='date'}/></View></View>)}
+        <View style={[styles.sectionHeading,(stage==='vehicle_delivery'||stage==='payment_encashment')&&styles.vehicleStageHeading]}><View style={(stage==='vehicle_delivery'||stage==='payment_encashment')?styles.vehicleStageIcon:styles.sectionIcon}><MaterialCommunityIcons name={config.icon} size={stage==='vehicle_delivery'||stage==='payment_encashment'?25:23} color="#0B58A7"/></View><View style={{flex:1}}><Text style={styles.sectionTitle}>Stage Details</Text><Text style={styles.sectionSubtitle}>{stage==='vehicle_delivery'?'Confirm whether the repaired vehicle has been received.':config.subtitle}</Text></View></View>
+        {config.fields.map(field=><View key={field.key} style={stage==='delivery_order' ? styles.deliveryField : stage==='vehicle_delivery'||stage==='payment_encashment' ? styles.vehicleDeliveryField : undefined}>{field.key==='dealership_location'?<View style={locationStyles.action}><Pressable accessibilityRole="button" accessibilityLabel="Use Current Location" disabled={locating||saving} onPress={()=>void fillCurrentLocation()} style={locationStyles.button}><Ionicons name="locate-outline" size={16} color="#0B4DA3"/><Text style={locationStyles.text}>{locating?"Locating…":"Use Current Location"}</Text></Pressable></View>:null}<View style={(stage==='delivery_order'||stage==='vehicle_delivery'||stage==='payment_encashment')&&field.kind==='choice'?styles.deliveryChoice:undefined}><EditableField field={stage==='vehicle_delivery'&&field.key==='vehicle_received_date'&&['yes','true','1'].includes((values.vehicle_received||'').toLowerCase())?{...field,required:true}:field} value={values[field.key]||''} onChange={(value)=>setValue(field.key,value)} displayDate={(stage==='delivery_order'||stage==='vehicle_delivery'||stage==='payment_encashment')&&field.kind==='date'}/></View></View>)}
         {stage === 'delivery_order' ? <>
           <View style={styles.deliveryUpload}>
             <Text style={styles.billingLabel}>Assistance Upload</Text>
@@ -192,6 +195,12 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
             <View style={styles.financialContribution}><Text style={styles.financialValue}>Customer Contribution</Text><Text style={styles.financialValue}>{billAmount!==null&&doAmount!==null&&billAmount>=doAmount?formatClaimAmount(billAmount-doAmount):'—'}</Text></View>
           </View>
         </> : null}
+        {stage === 'payment_encashment' ? <View style={styles.financialCard}>
+          <View style={styles.financialHeader}><MaterialCommunityIcons name="cash-multiple" color="#FFFFFF" size={23}/><View><Text style={styles.financialHeading}>FINANCIAL PROGRESS</Text><Text style={styles.financialSubtitle}>Claim value movement</Text></View></View>
+          <View style={styles.financialRow}><Text style={styles.financialText}>DO Amount</Text><Text style={styles.financialValue}>{formatClaimAmount(savedDoAmount)}</Text></View>
+          <View style={styles.financialRow}><Text style={styles.financialText}>Amount Received</Text><Text style={styles.financialValue}>{formatClaimAmount(receivedAmount)}</Text></View>
+          <View style={styles.financialContribution}><Text style={styles.financialValue}>Further Deduction</Text><Text style={styles.financialValue}>{savedDoAmount!==null&&receivedAmount!==null&&savedDoAmount>=receivedAmount?formatClaimAmount(savedDoAmount-receivedAmount):'—'}</Text></View>
+        </View> : null}
         {stage === 'billing' ? <View style={styles.billingUpload}>
           <Text style={styles.billingLabel}>Bill Upload</Text>
           <PartnerClaimDocumentUpload claimId={data.claim.id} customerId={data.customer.id} documentType="Final Invoice" milestoneKey="billing" documents={data.documents} variant="billing" label="Upload final workshop bill" />
