@@ -7,6 +7,15 @@ on:
       - main
     paths:
       - 'apps/partner-app/.trigger-production-ota'
+      - 'apps/partner-app/app/**'
+      - 'apps/partner-app/components/**'
+      - 'apps/partner-app/lib/**'
+      - 'apps/partner-app/assets/**'
+      - '.github/workflows/publish-partner-production-ota.yml'
+
+concurrency:
+  group: partner-production-ota
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -36,6 +45,30 @@ jobs:
             echo "Refusing Partner production OTA: checkout is not current origin/main." >&2
             exit 1
           }
+
+      - name: Gate automatic publishing to OTA-compatible changes
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Workflow updates and explicit release trigger are intentional release controls.
+          # Block any mixed changes involving native configuration, dependencies,
+          # migrations, or unrelated app surfaces instead of silently publishing them.
+          git diff --name-only "${{ github.event.before }}" HEAD > /tmp/partner-ota-changes
+          cat /tmp/partner-ota-changes
+          node <<'NODE'
+          const fs = require('fs');
+          const files = fs.readFileSync('/tmp/partner-ota-changes', 'utf8').trim().split('\n').filter(Boolean);
+          if (!files.length) throw new Error('No changes to publish');
+          for (const file of files) {
+            const approved = file === 'apps/partner-app/.trigger-production-ota'
+              || file === '.github/workflows/publish-partner-production-ota.yml'
+              || /^apps\/partner-app\/(app|components|lib|assets)\//.test(file);
+            const native = /(^|\/)(android|ios)\//.test(file)
+              || /\.(gradle|podspec|xcworkspace|xcodeproj|entitlements)$/.test(file);
+            if (!approved || native) throw new Error('Auto OTA refused: requires release review for ' + file);
+          }
+          NODE
 
       - name: Validate Partner production OTA linkage
         shell: bash
@@ -84,6 +117,16 @@ jobs:
 
       - name: Typecheck Partner app
         run: npm --workspace apps/partner-app run typecheck
+
+      - name: Verify Partner release contracts
+        run: |
+          npm --workspace apps/partner-app run verify:routes
+          npm --workspace apps/partner-app run verify:phase5
+          npm --workspace apps/partner-app run verify:visual
+          npm --workspace apps/partner-app run verify:pre-apk
+          npm --workspace apps/partner-app run verify:phase6
+          npm --workspace apps/partner-app run verify:uat
+          npm run lint:partner
 
       - name: Verify Expo token can access Partner project
         working-directory: apps/partner-app
