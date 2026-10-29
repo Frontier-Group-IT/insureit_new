@@ -230,23 +230,24 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
       : businessPerformance.trend.slice(-6);
   const trendPeriodLabel = trendPeriodOptions.find((option) => option.value === trendPeriod)?.label ?? "Last 6 Months";
 
-  // Branch-only greeting: resolve the designated contact of the authenticated branch.
-  // The lookup is restricted to the authenticated partner ID; all other actors retain their existing greeting.
+  // Use the authenticated branch's designated contact, never its business/branch name.
+  // Associate logins already expose the individual associate's name in the identity RPC.
   const isBranchLogin = identity.actor_kind === "intermediary"
-    && "portal_access_type" in scope && scope.portal_access_type === "branch";
-  let branchContactName: string | null = null;
-  if (isBranchLogin && identity.actor_kind === "intermediary") {
-    const { data: branchProfile, error: branchProfileError } = await (await createServerSupabaseClient())
-      .from("partner_branch_profiles")
-      .select("contact_name")
-      .eq("partner_id", identity.partner_id)
-      .maybeSingle<{ contact_name: string | null }>();
-    if (!branchProfileError) branchContactName = branchProfile?.contact_name?.trim() || null;
+    && scope.portal_access_type === "branch";
+  let greetingName: string | null = null;
+  if (isBranchLogin) {
+    const { data: contactName, error: greetingError } = await (await createServerSupabaseClient())
+      .rpc("partner_web_current_branch_contact_name");
+    if (!greetingError && typeof contactName === "string") {
+      greetingName = contactName.trim() || null;
+    }
   }
 
-  const name = branchContactName || (identity.actor_kind === "intermediary"
-    ? identity.associate_name?.trim() || identity.display_name?.trim() || "Partner"
-    : identity.display_name?.trim() || "Partner");
+  const name = isBranchLogin
+    ? greetingName || "Partner"
+    : identity.actor_kind === "intermediary"
+      ? identity.associate_name?.trim() || identity.display_name?.trim() || "Partner"
+      : identity.display_name?.trim() || "Partner";
   const updatedTime = formatUpdatedTime(new Date());
   const schemeDeadline = activeScheme ? formatSchemeDeadline(activeScheme.ends_at) : null;
   const payoutValue = payout.available ? formatIndianCurrency(payout.paid_amount) : "Restricted";
