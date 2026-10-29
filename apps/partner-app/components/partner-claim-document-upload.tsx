@@ -129,6 +129,9 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const uploaded = [...(documents ?? []), ...added].filter(item => item.category === documentType && !removedIds.includes(item.id));
   const count = uploaded.length;
+  const verifiedCount = uploaded.filter(file => 'verification_status' in file && file.verification_status === 'verified').length;
+  const pendingCount = count - verifiedCount;
+  const fullyVerified = count > 0 && pendingCount === 0;
   const latest = uploaded[uploaded.length - 1];
   const [bulkFilesOpen, setBulkFilesOpen] = useState(false);
   const [verificationOpen, setVerificationOpen] = useState(false);
@@ -270,22 +273,22 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
           </View>
           {count ? (
             <View style={styles.tileCounts}>
-              <View style={styles.tileCountItem}>
+              {pendingCount > 0 ? <View style={styles.tileCountItem}>
                 <VerificationPulse active tint="#E68B17"><Ionicons name="time-outline" size={19} color="#E68B17" accessibilityLabel="Pending verification" /></VerificationPulse>
-                <Text style={styles.tileCountText}>{uploaded.filter(file => !('verification_status' in file && file.verification_status === 'verified')).length}</Text>
-              </View>
-              <View style={styles.tileCountItem}>
+                <Text style={styles.tileCountText}>{pendingCount}</Text>
+              </View> : null}
+              {verifiedCount > 0 ? <View style={styles.tileCountItem}>
                 <Ionicons name="checkmark-circle-outline" size={19} color="#18965D" accessibilityLabel="Verified" />
-                <Text style={styles.tileCountText}>{uploaded.filter(file => 'verification_status' in file && file.verification_status === 'verified').length}</Text>
-              </View>
+                <Text style={styles.tileCountText}>{verifiedCount}</Text>
+              </View> : null}
             </View>
           ) : <Pressable accessibilityRole="button" disabled={busy} onPress={() => void pickAndUpload()} style={styles.tileEmpty}>
             <Text style={styles.tileStatus}>{busy ? 'Uploading…' : 'Tap to upload'}</Text>
           </Pressable>}
           {count > 0 && !busy ? (
             <Pressable accessibilityRole="button" accessibilityLabel={`Verify ${label ?? documentType} documents`}
-              style={styles.tileVerifyBottom} onPress={() => { setSelectedForReview([]); setVerificationFormOpen(false); setVerificationOpen(true); }}>
-              <VerificationPulse active tint="#1769DC"><Text style={styles.tileVerifyText}>Verify</Text></VerificationPulse>
+              style={[styles.tileVerifyBottom, fullyVerified && styles.tileVerifiedBottom]} onPress={() => { setSelectedForReview([]); setVerificationFormOpen(false); setVerificationOpen(true); }}>
+              <VerificationPulse active={!fullyVerified} tint={fullyVerified ? "#18965D" : "#E68B17"}><Text style={[styles.tileVerifyText, fullyVerified && styles.tileVerifiedText]}>{fullyVerified ? "Verified" : "Verify"}</Text></VerificationPulse>
             </Pressable>
           ) : null}
         </View>
@@ -298,15 +301,22 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
               const selected = selectedForReview.includes(file.id);
               const verified = 'verification_status' in file && file.verification_status === 'verified';
               return (
-                <Pressable key={file.id} accessibilityRole="checkbox" accessibilityState={{ checked: selected }}
-                  accessibilityLabel={`Select ${file.name}`} onPress={() => setSelectedForReview(current => selected ? current.filter(id => id !== file.id) : [...current, file.id])}
-                  style={styles.verifyFileRow}>
-                  <VerificationPulse active={selected} tint="#1769DC">
-                    <Ionicons name={selected ? 'shield-checkmark' : 'shield-outline'} size={22} color={selected ? '#1769DC' : '#718198'} />
-                  </VerificationPulse>
-                  <Text style={styles.verifyFileName} numberOfLines={2}>{file.name}</Text>
-                  {verified ? <Ionicons name="checkmark-circle-outline" size={18} color="#18965D" accessibilityLabel="Verified" /> : null}
-                </Pressable>
+                <View key={file.id} style={styles.verifyFileRow}>
+                  <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: selected }}
+                    accessibilityLabel={`Select ${file.name} for review`}
+                    onPress={() => setSelectedForReview(current => selected ? current.filter(id => id !== file.id) : [...current, file.id])}
+                    style={styles.verifyShield}>
+                    <VerificationPulse active={selected} tint="#1769DC">
+                      <Ionicons name={selected ? 'shield-checkmark' : 'shield-outline'} size={22} color={selected ? '#1769DC' : '#718198'} />
+                    </VerificationPulse>
+                  </Pressable>
+                  <Pressable accessibilityRole="button" accessibilityLabel={`Open ${file.name}`}
+                    onPress={() => Alert.alert('Preview unavailable', 'The authorized Partner claim API does not yet provide a secure document preview link. The Claims Desk can access the uploaded file through the Operations Portal.')}
+                    style={styles.verifyFileOpen}>
+                    <Text style={styles.verifyFileName} numberOfLines={2}>{file.name}</Text>
+                    {verified ? <Ionicons name="checkmark-circle-outline" size={18} color="#18965D" accessibilityLabel="Verified" /> : null}
+                  </Pressable>
+                </View>
               );
             })}
             <View style={styles.dialogActions}>
@@ -445,11 +455,15 @@ const styles=StyleSheet.create({
   tileCountItem:{flexDirection:'row',alignItems:'center',gap:3},
   tileCountText:{fontSize:12,fontWeight:'800',color:'#173354'},
   tileEmpty:{flex:1,alignItems:'center',justifyContent:'center'},
-  tileVerifyBottom:{borderWidth:1,borderColor:'#1769DC',borderRadius:6,minHeight:25,alignItems:'center',justifyContent:'center',width:'100%',marginTop:3},
+  tileVerifyBottom:{borderWidth:1,borderColor:'#E68B17',borderRadius:6,minHeight:25,alignItems:'center',justifyContent:'center',width:'100%',marginTop:3},
+  tileVerifiedBottom:{borderColor:'#18965D',backgroundColor:'#EDF9F2'},
+  tileVerifiedText:{color:'#18965D'},
   tileVerify:{position:'absolute',top:3,right:3,zIndex:6,paddingHorizontal:4,paddingVertical:3,borderColor:'#1769DC',borderWidth:1,borderRadius:5},
-  tileVerifyText:{color:'#1769DC',fontSize:8,fontWeight:'700'},
+  tileVerifyText:{color:'#C57812',fontSize:8,fontWeight:'700'},
   tileRemoveBottom:{position:'absolute',bottom:3,right:3,zIndex:5,padding:2},
   verifyFileRow:{flexDirection:'row',alignItems:'center',gap:10,borderWidth:1,borderColor:'#DCE4EE',borderRadius:10,padding:10,marginBottom:8},
+  verifyShield:{minWidth:34,minHeight:38,justifyContent:'center',alignItems:'center'},
+  verifyFileOpen:{flex:1,minWidth:0,flexDirection:'row',alignItems:'center',gap:6,minHeight:38},
   verifyFileName:{flex:1,minWidth:0,fontSize:11,color:'#243A60'},
   reviewScroll:{maxHeight:370,width:'100%'},
   reviewField:{marginBottom:10,gap:4},
