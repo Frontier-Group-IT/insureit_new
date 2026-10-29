@@ -91,7 +91,6 @@ export default function ClaimTrackerScreen() {
                 <Field label="Accident Location" value={data.claim.accident_location}/>
                 <Field label="Assistance" value={data.claim.assistance_status?.replaceAll('_', ' ')}/>
               </View>}
-            {canAddClaimNumber && <Pressable accessibilityRole="button" accessibilityLabel={data.claim.insurer_claim_no ? 'View or edit claim number' : 'Add Claim Number'} onPress={openClaimNumber} style={styles.claimNumberButton}><View style={styles.claimNumberIcon}><Ionicons name="document-text-outline" size={17} color="#0B347A"/></View><Text style={styles.claimNumberButtonText}>{data.claim.insurer_claim_no ? 'View / Edit Claim Number' : 'Add Claim Number'}</Text><Ionicons name="chevron-forward" size={18} color="#0B347A"/></Pressable>}
             </View>
             <View style={styles.panel}>
               <Pressable accessibilityRole="button" accessibilityState={{ expanded: journeyOpen }} onPress={() => setJourneyOpen(v => !v)} style={styles.panelHeader}><View style={styles.insurerJourneyLogo}><PartnerInsurerLogo name={data.insurer.name} style={styles.insurerJourneyImage} fallback={PartnerAssets.actions.quickClaims}/></View><View style={styles.panelCopy}><Text style={styles.panelTitle}>Claim Journey</Text><Text style={styles.panelSubtitle}>{tracker.progress}% complete • {tracker.current.label}</Text></View><Ionicons name={journeyOpen ? 'chevron-up' : 'chevron-down'} color="#526987" size={17}/></Pressable>
