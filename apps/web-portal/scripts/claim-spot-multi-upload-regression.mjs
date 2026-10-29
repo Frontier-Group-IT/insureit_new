@@ -31,6 +31,15 @@ assert.match(bulkVerificationGroup, /if \(next\.has\(document\.id\)\) next\.dele
 assert.match(bulkVerificationGroup, /<DocumentVerificationIcon verified=\{verified\} selected=\{selected\} \/>/, "The uploaded-file shield must display the blue selection checkmark.");
 assert.doesNotMatch(bulkVerificationGroup, /selectGroup\(\)|deselectGroup\(\)/, "Do not add another selection shield to category headings.");
 assert.match(verificationAction, /Please select a document before verifying\./, "Empty Stage 1 verification must show the document-selection warning.");
+assert.match(verificationAction, /aria-describedby="verify-selection-message"/, "Document warning must describe the reference popup accessibly.");
+assert.match(verificationAction, /h-\[50px\] w-full rounded-xl/, "Document warning must keep the full-width reference OK button.");
+const operationsStages = await readFile(new URL("../components/claim-manager/operations-claim-stages.tsx", import.meta.url), "utf8");
+assert.match(operationsStages, />Check details<\/h2>/, "Claim action errors must use the Check details reference title.");
+assert.match(operationsStages, /summarizeClaimActionError\(errorNotice\)/, "Production server errors must use a short safe message.");
+assert.match(operationsStages, /onClick=\{\(\) => setErrorNotice\(null\)\}/, "Dismissing an error must only close the popup.");
+assert.match(operationsStages, /onInput=\{preserveDraft\} onChange=\{preserveDraft\}/, "Claim edits must be preserved as unsaved drafts.");
+assert.match(operationsStages, /if \(state\.ok \|\| !state\.message\) return;/, "Failed stage actions must retain form state.");
+
 assert.match(bulkVerificationGroup, /document\.verification_status !== "rejected"/, "Rejected files cannot be selected before replacement.");
 assert.match(bulkVerificationGroup, /documentId=\{document\.id\}[\s\S]*?actionLabel="Replace"/, "Replace must target the exact row.");
 assert.match(bulkVerificationGroup, /actionLabel="Upload" iconOnly/, "Populated categories retain Upload New.");
