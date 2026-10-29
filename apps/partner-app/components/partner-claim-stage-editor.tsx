@@ -11,6 +11,7 @@ import { CLAIM_STAGES, type ClaimStageKey } from '@/lib/claim-tracker';
 import { savePartnerClaimStage, savePartnerInsurerClaimNumber, type PartnerClaimDetail, type PartnerClaimStageKey } from '@/lib/claims';
 import { PartnerClaimStepFooter } from '@/components/partner-claim-step-footer';
 import { PartnerClaimDocumentUpload } from '@/components/partner-claim-document-upload';
+import { getPartnerCurrentLocation } from '@/lib/current-location';
 
 type EditableStage = Exclude<PartnerClaimStageKey, never>;
 type Field = { key:string; label:string; required?:boolean; kind?:'text'|'date'|'number'|'choice'; options?:Array<{label:string;value:string}>; placeholder?:string };
@@ -96,6 +97,14 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
   const [claimNumberOpen,setClaimNumberOpen]=useState(false);
   const [claimNumber,setClaimNumber]=useState(data.claim.insurer_claim_no ?? '');
   const [claimNumberSaving,setClaimNumberSaving]=useState(false);
+  const [locating,setLocating]=useState(false);
+  async function useCurrentLocation(){
+    if(locating||saving)return;
+    setLocating(true);
+    try {setValue('dealership_location',await getPartnerCurrentLocation());}
+    catch(error){Alert.alert('Location unavailable',error instanceof Error?error.message:'Please enter the location manually.');}
+    finally{setLocating(false);}
+  }
 
   function setValue(key:string,value:string){setValues(current=>({...current,[key]:value}));}
   function previous(){
@@ -164,7 +173,7 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
         </View>
       </> : <View style={styles.card}>
         <View style={styles.sectionHeading}><View style={styles.sectionIcon}><MaterialCommunityIcons name={config.icon} size={23} color="#0B58A7"/></View><View style={{flex:1}}><Text style={styles.sectionTitle}>Stage Details</Text><Text style={styles.sectionSubtitle}>{config.subtitle}</Text></View></View>
-        {config.fields.map(field=><EditableField key={field.key} field={field} value={values[field.key]||''} onChange={(value)=>setValue(field.key,value)}/>)}
+        {config.fields.map(field=><View key={field.key}>{field.key==='dealership_location'?<View style={locationStyles.action}><Pressable accessibilityRole="button" accessibilityLabel="Use Current Location" disabled={locating||saving} onPress={()=>void useCurrentLocation()} style={locationStyles.button}><Ionicons name="locate-outline" size={16} color="#0B4DA3"/><Text style={locationStyles.text}>{locating?"Locating…":"Use Current Location"}</Text></Pressable></View>:null}<EditableField field={field} value={values[field.key]||''} onChange={(value)=>setValue(field.key,value)}/></View>)}
       </View>}
 
       {stage === 'claim_intimation' ? <View style={styles.card}>
@@ -300,3 +309,5 @@ const spotStyles=StyleSheet.create({
  headingText:{fontSize:13,fontWeight:'900',color:'#152D50'},
  optional:{color:'#8290A1',fontSize:10,fontWeight:'700'},
 });
+
+const locationStyles=StyleSheet.create({action:{alignItems:'flex-end',marginBottom:2},button:{flexDirection:'row',alignItems:'center',gap:5,paddingVertical:3},text:{fontSize:10,color:'#0B4DA3',fontWeight:'800'}});
