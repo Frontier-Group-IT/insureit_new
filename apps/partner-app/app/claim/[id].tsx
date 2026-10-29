@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
-import { getPartnerClaimDetail, type PartnerClaimDetail } from '@/lib/claims';
+import { getPartnerClaimDetail, savePartnerInsurerClaimNumber, type PartnerClaimDetail } from '@/lib/claims';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { PartnerClaimDocuments } from '@/components/partner-claim-documents';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
@@ -27,6 +27,9 @@ export default function ClaimTrackerScreen() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [journeyOpen, setJourneyOpen] = useState(true);
   const [documentsOpen, setDocumentsOpen] = useState(false);
+  const [numberModalOpen, setNumberModalOpen] = useState(false);
+  const [numberDraft, setNumberDraft] = useState('');
+  const [savingNumber, setSavingNumber] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) { setError('Claim ID is missing.'); setLoading(false); return; }
@@ -39,6 +42,20 @@ export default function ClaimTrackerScreen() {
 
   const tracker = data ? getClaimTrackerState(data) : null;
   const openStage = (key: string) => router.push({ pathname: '/claim/stage', params: { id, key } } as never);
+  const openClaimNumber = () => { setNumberDraft(data?.claim.insurer_claim_no ?? ''); setNumberModalOpen(true); };
+  const saveClaimNumber = async () => {
+    if (!data || savingNumber) return;
+    if (!numberDraft.trim() || numberDraft.trim().length > 100) {
+      Alert.alert('Claim number required', 'Enter a valid insurer claim number.'); return;
+    }
+    setSavingNumber(true);
+    try {
+      await savePartnerInsurerClaimNumber(data.claim.id, numberDraft);
+      setData(await getPartnerClaimDetail(data.claim.id));
+      setNumberModalOpen(false);
+    } catch (e) { Alert.alert('Unable to save', e instanceof Error ? e.message : 'Please try again.'); }
+    finally { setSavingNumber(false); }
+  };
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.header}>
@@ -74,6 +91,13 @@ export default function ClaimTrackerScreen() {
                 <Field label="Assistance" value={data.claim.assistance_status?.replaceAll('_', ' ')}/>
               </View>}
             </View>
+            {tracker.completedKeys.has('claim_intimation') ? (
+              <Pressable accessibilityRole="button" onPress={openClaimNumber} style={styles.addNumber}>
+                <View style={styles.addNumberIcon}><Ionicons name="create-outline" size={17} color="#1452A1"/></View>
+                <Text style={styles.addNumberLabel}>{data.claim.insurer_claim_no ? 'Edit Claim Number' : 'Add Claim Number'}</Text>
+                <Ionicons name="chevron-forward" size={17} color="#1452A1"/>
+              </Pressable>
+            ) : null}
             <View style={styles.panel}>
               <Pressable accessibilityRole="button" accessibilityState={{ expanded: journeyOpen }} onPress={() => setJourneyOpen(v => !v)} style={styles.panelHeader}><View style={styles.insurerJourneyLogo}><PartnerInsurerLogo name={data.insurer.name} style={styles.insurerJourneyImage} fallback={PartnerAssets.actions.quickClaims}/></View><View style={styles.panelCopy}><Text style={styles.panelTitle}>Claim Journey</Text><Text style={styles.panelSubtitle}>{tracker.progress}% complete • {tracker.current.label}</Text></View><Ionicons name={journeyOpen ? 'chevron-up' : 'chevron-down'} color="#526987" size={17}/></Pressable>
               {journeyOpen && <View style={styles.stageList}>{CLAIM_STAGES.map((stage, index) => {const done=tracker.completedKeys.has(stage.key), current=!done && index===tracker.index;return <Pressable key={stage.key} accessibilityRole="button" accessibilityLabel={`Open ${stage.label} details`} onPress={() => openStage(stage.key)} style={[styles.stageRow,current && styles.currentRow]}><View style={styles.rail}><View style={[styles.dot,done && styles.doneDot,current && styles.currentDot]}>{done ? <Ionicons name="checkmark" size={10} color="#FFF"/> : current ? <View style={styles.innerDot}/> : <Ionicons name="eye-outline" size={11} color="#A8B2C1"/>}</View>{index<8 && <View style={styles.line}/>}</View><View style={styles.stageCopy}><Text style={styles.stageName}>{stage.label}</Text><Text style={[styles.stageStatus,done && styles.doneStatus,current && styles.currentStatus]}>{done ? (stage.key === 'spot_intimation' ? 'Insurer informed' : stage.key === 'spot_status' ? 'Survey completed' : 'Completed') : current ? tracker.substage : 'Upcoming'}</Text></View><Ionicons name="chevron-forward" color="#607C9E" size={16}/></Pressable>})}</View>}
@@ -81,6 +105,22 @@ export default function ClaimTrackerScreen() {
             <View style={styles.panel}><Pressable accessibilityRole="button" accessibilityState={{ expanded: documentsOpen }} onPress={() => setDocumentsOpen(v => !v)} style={styles.panelHeader}><Image source={PartnerAssets.actions.claimDocumentsFolder} resizeMode="contain" style={styles.documentsIcon}/><View style={styles.panelCopy}><Text style={styles.panelTitle}>Documents</Text><Text style={styles.panelSubtitle}>Claim documents</Text></View><Ionicons name={documentsOpen ? 'chevron-up' : 'chevron-down'} size={18} color="#526987"/></Pressable>{documentsOpen && <View style={styles.documentBody}><PartnerClaimDocuments documents={data.documents} /></View>}</View>
           </>}
       </ScrollView>
+      <Modal transparent animationType="fade" visible={numberModalOpen} onRequestClose={() => { if (!savingNumber) setNumberModalOpen(false); }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.numberBackdrop}>
+          <View style={styles.numberCard}>
+            <View style={styles.numberShield}><Ionicons name="shield-checkmark-outline" size={29} color="#0B347A"/></View>
+            <Text style={styles.numberTitle}>{data?.claim.insurer_claim_no ? 'Edit insurer claim number?' : 'Add insurer claim number?'}</Text>
+            <View style={styles.numberField}>
+              <Ionicons name="document-text-outline" size={19} color="#1452A1"/>
+              <TextInput accessibilityLabel="Enter claim number" placeholder="Enter claim number" placeholderTextColor="#758093" value={numberDraft} onChangeText={setNumberDraft} maxLength={100} autoCapitalize="characters" autoCorrect={false} editable={!savingNumber} style={styles.numberInput}/>
+            </View>
+            <View style={styles.numberButtons}>
+              <Pressable disabled={savingNumber} onPress={() => setNumberModalOpen(false)} style={styles.numberCancel}><Text style={styles.numberCancelText}>Not now</Text></Pressable>
+              <Pressable disabled={savingNumber} onPress={() => void saveClaimNumber()} style={[styles.numberContinue, savingNumber && {opacity:0.6}]}><Text style={styles.numberContinueText}>{savingNumber ? 'Saving...' : 'Continue'}</Text><Ionicons name="arrow-forward" color="#FFF" size={19}/></Pressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
       <View style={styles.nav}>
         <Nav label="Home" icon="home" onPress={() => router.push('/(tabs)' as never)}/>
         <Nav label="Business" icon="briefcase-outline" onPress={() => router.push('/(tabs)/business' as never)}/>
@@ -94,6 +134,20 @@ export default function ClaimTrackerScreen() {
 function Field({ label, value }: { label: string; value: string | null | undefined }) {return <View style={styles.field}><Text style={styles.fieldLabel}>{label}</Text><Text style={styles.fieldValue}>{value || 'Not recorded'}</Text></View>}
 function Nav({label,icon,onPress,active=false}:{label:string;icon:keyof typeof Ionicons.glyphMap;onPress:()=>void;active?:boolean}) {return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.navItem}><View style={[styles.navIcon,active && styles.navActive]}><Ionicons name={icon} size={19} color={active?'#102F6C':'#7386A4'}/></View><Text style={[styles.navText,active && styles.navTextActive]}>{label}</Text></Pressable>}
 const styles=StyleSheet.create({
+addNumber:{minHeight:45,backgroundColor:'#FFF',borderRadius:10,borderWidth:1,borderColor:'#CADAEA',flexDirection:'row',alignItems:'center',paddingHorizontal:12,gap:10},
+addNumberIcon:{width:28,height:28,backgroundColor:'#EAF2FF',borderRadius:8,alignItems:'center',justifyContent:'center'},
+addNumberLabel:{flex:1,color:'#0B347A',fontSize:12,fontWeight:'800'},
+numberBackdrop:{flex:1,backgroundColor:'rgba(3,15,39,0.66)',alignItems:'center',justifyContent:'center',paddingHorizontal:26},
+numberCard:{backgroundColor:'#FFF',width:'100%',maxWidth:420,borderRadius:25,padding:22,alignItems:'center',gap:19},
+numberShield:{width:63,height:63,borderRadius:19,backgroundColor:'#F0F6FF',borderWidth:1,borderColor:'#D9E6F8',alignItems:'center',justifyContent:'center'},
+numberTitle:{color:'#0B2148',fontSize:19,fontWeight:'900',textAlign:'center'},
+numberField:{borderWidth:1.5,borderColor:'#1454AA',borderRadius:13,width:'100%',minHeight:53,flexDirection:'row',alignItems:'center',paddingHorizontal:14,gap:10},
+numberInput:{flex:1,fontSize:14,fontWeight:'600',color:'#0B2148',paddingVertical:10},
+numberButtons:{flexDirection:'row',width:'100%',gap:10},
+numberCancel:{flex:1,borderWidth:1.5,borderColor:'#1454AA',minHeight:49,borderRadius:13,alignItems:'center',justifyContent:'center'},
+numberCancelText:{color:'#0B347A',fontWeight:'800',fontSize:13},
+numberContinue:{flex:1.1,backgroundColor:'#1049A6',minHeight:49,borderRadius:13,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:9},
+numberContinueText:{color:'#FFF',fontWeight:'800',fontSize:13},
 root:{flex:1,backgroundColor:'#EDF6FE'},  header: { height: 50, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', backgroundColor: '#081F4C' },
   backButton: { width: 32, height: 36, alignItems: 'center', justifyContent: 'center', marginRight: 5 },
   headerIcon: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: 'transparent' },
