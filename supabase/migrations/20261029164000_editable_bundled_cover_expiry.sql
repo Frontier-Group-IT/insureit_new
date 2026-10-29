@@ -49,8 +49,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END
-$function$
-
+$function$;
 
 CREATE OR REPLACE FUNCTION public.save_motor_policy_with_addon_v1(p_operation text, p_payload jsonb, p_policy_id uuid DEFAULT NULL::uuid, p_intake_id uuid DEFAULT NULL::uuid, p_expected_revision integer DEFAULT NULL::integer, p_existing_policy_id uuid DEFAULT NULL::uuid, p_reason text DEFAULT NULL::text, p_effective_date date DEFAULT NULL::date)
  RETURNS jsonb
