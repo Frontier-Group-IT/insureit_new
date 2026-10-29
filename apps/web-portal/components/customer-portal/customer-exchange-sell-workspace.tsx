@@ -22,7 +22,6 @@ export function CustomerExchangeSellWorkspace({ vehicles, accountId }: { vehicle
   const [sort, setSort] = useState("default");
   const [view, setView] = useState<"grid" | "list">("grid");
   const vehicleTypes = useMemo(() => [...new Set(vehicles.map(v => v.vehicle_type).filter((v): v is string => Boolean(v)))].sort(), [vehicles]);
-  const active = vehicles.filter(v => v.has_active_listing).length;
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     const list = vehicles.filter(v => {
@@ -37,18 +36,8 @@ export function CustomerExchangeSellWorkspace({ vehicles, accountId }: { vehicle
 
   return (
     <section className="exchange-sell-v2 space-y-3">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {[
-          { label: "Total Fleet Vehicles", detail: "Vehicles in your account", value: vehicles.length, icon: <Truck /> },
-          { label: "Ready to Sell", detail: "Eligible for listing", value: vehicles.length - active, icon: <CheckCircle2 /> },
-          { label: "Active Listings", detail: "Already listed on Exchange", value: active, icon: <Tag /> },
-        ].map(item => <div key={item.label} className="flex items-center gap-4 rounded-xl border border-[#E0E8F3] bg-white p-4 shadow-sm">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-[#E7F1FD] text-[#2372C6]">{item.icon}</span>
-          <div><div className="text-[23px] font-black text-[#102C55]">{item.value.toLocaleString("en-IN")}</div><div className="text-[11px] font-extrabold text-[#19375D]">{item.label}</div><div className="text-[10px] text-[#7385A0]">{item.detail}</div></div>
-        </div>)}
-      </div>
       <div className="flex flex-wrap items-center gap-2">
-        <label className="flex min-w-[190px] flex-[3] items-center gap-2 rounded-lg border border-[#DCE5F1] bg-white px-3 py-2">
+        <label className="flex min-w-[190px] flex-[3] items-center gap-2 rounded-lg bg-white px-3 py-2">
           <Search className="h-4 w-4 text-[#7186A5]" />
           <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search vehicle number, make, model or type..." aria-label="Search fleet vehicles" className="w-full bg-transparent text-[11px] outline-none" />
         </label>
@@ -65,10 +54,6 @@ export function CustomerExchangeSellWorkspace({ vehicles, accountId }: { vehicle
           <button aria-label="Grid view" aria-pressed={view === "grid"} onClick={() => setView("grid")} className={`rounded-md p-2 ${view === "grid" ? "bg-[#17447F] text-white" : "text-[#657B99]"}`}><Grid2X2 className="h-4 w-4" /></button>
           <button aria-label="List view" aria-pressed={view === "list"} onClick={() => setView("list")} className={`rounded-md p-2 ${view === "list" ? "bg-[#17447F] text-white" : "text-[#657B99]"}`}><List className="h-4 w-4" /></button>
         </div>
-      </div>
-      <div className="flex items-end justify-between gap-3">
-        <div><h2 className="text-[17px] font-black text-[#122A50]">Your Vehicles</h2><p className="text-[11px] text-[#7485A0]">Select an eligible vehicle to start your Exchange listing.</p></div>
-        <span className="shrink-0 text-[11px] font-bold text-[#2768C1]">{filtered.length} vehicles</span>
       </div>
       {filtered.length === 0 ? <div className="rounded-xl border border-[#DFE7F3] bg-white p-10 text-center text-sm text-[#6D809B]">No vehicles match your search and filters.</div> : (
         <div className={view === "grid" ? "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" : "grid grid-cols-1 gap-3"}>
@@ -95,7 +80,6 @@ export function CustomerExchangeSellWorkspace({ vehicles, accountId }: { vehicle
           })}
         </div>
       )}
-      <p className="text-[10px] text-[#70839D]">New listing creation is not available on this web page yet. Existing listings can be reviewed under Activity. No vehicle data has been changed.</p>
     </section>
   );
 }
