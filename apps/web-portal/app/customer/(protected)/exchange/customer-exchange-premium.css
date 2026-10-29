@@ -133,3 +133,31 @@
   .exchange-reference .exchange-premium-hero-art,
   .exchange-reference .exchange-reference-card { animation: none; transition: none; }
 }
+
+/* Sell hero contrast: keep the artwork visible while protecting text readability. */
+.customer-exchange-premium.exchange-reference .exchange-premium-hero.exchange-sell-hero {
+  background: #13375f;
+  border-color: #31557d;
+}
+.customer-exchange-premium.exchange-reference .exchange-sell-hero .exchange-premium-hero-shade {
+  background: linear-gradient(90deg, rgba(8, 28, 64, .96) 0%, rgba(13, 40, 80, .92) 31%, rgba(17, 49, 92, .66) 52%, rgba(17, 49, 92, .08) 88%);
+}
+.customer-exchange-premium.exchange-reference .exchange-sell-hero .exchange-premium-hero-shade::after {
+  display: none;
+}
+.customer-exchange-premium.exchange-reference .exchange-sell-hero h1,
+.customer-exchange-premium.exchange-reference .exchange-sell-hero p {
+  color: #fff;
+}
+.customer-exchange-premium.exchange-reference .exchange-sell-hero p {
+  color: #e1eafa;
+}
+.customer-exchange-premium.exchange-reference .exchange-sell-hero .exchange-premium-hero-art {
+  opacity: .96;
+  background-position: center right;
+}
+@media (max-width: 640px) {
+  .customer-exchange-premium.exchange-reference .exchange-sell-hero .exchange-premium-hero-shade {
+    background: linear-gradient(90deg, rgba(8, 28, 64, .97) 0%, rgba(13, 40, 80, .92) 53%, rgba(17, 49, 92, .3) 100%);
+  }
+}
