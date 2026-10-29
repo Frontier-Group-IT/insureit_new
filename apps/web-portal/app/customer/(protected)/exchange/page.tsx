@@ -4,8 +4,7 @@ import "../customer-register-motion.css";
 import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 import Link from "next/link";
 import { CustomerExchangeSellWorkspace } from "@/components/customer-portal/customer-exchange-sell-workspace";
-import type { ReactNode } from "react";
-import { Activity, ArrowLeftRight, BadgeCheck, Heart, MapPin, MoreVertical, Search, ShoppingBag, Store, Truck, Gavel, Handshake, FileText, ChevronRight, Clock3, ShieldCheck } from "lucide-react";
+import { Activity, ArrowLeftRight, BadgeCheck, MapPin, MoreVertical, Search, ShoppingBag, Store, Truck, ChevronRight, Clock3, ShieldCheck } from "lucide-react";
 import {
   CustomerAccountTabs,
   EmptyCustomerState,
@@ -105,9 +104,7 @@ export default async function CustomerExchangePage({
           {tab === "sell" ? <div className="space-y-2"><p className="text-[10px] font-extrabold uppercase tracking-widest text-[#B7D8FB]">InsureIt Exchange</p><h1 className="text-[clamp(23px,3vw,32px)] font-black text-white">Sell Your Commercial Vehicle</h1><p className="text-[12px] text-[#DBE8FA]">Turn your existing vehicle into new opportunities.</p><div className="flex flex-wrap gap-x-6 gap-y-2 pt-3 text-[10px] font-semibold text-white"><span>✓ List Easily</span><span>✓ Reach Buyers</span><span>✓ Trusted Platform</span></div></div> : <div className="flex items-center gap-3"><span className="exchange-reference-hero-icon grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#E8E5FF] text-[#6950E8]"><ArrowLeftRight className="h-7 w-7" /></span><div><h1 className="text-[clamp(25px,3vw,34px)] font-black leading-tight text-[#15234A]">
             Vehicle <span className="exchange-reference-gradient-text">Exchange</span>
           </h1>
-          <p className="mt-2 text-[12px] leading-6 text-[#647995]">
-            Buy, sell and track your commercial vehicle activity from one place.
-          </p></div></div>}
+          </div></div>}
         </div>
       </section>
 
@@ -207,19 +204,24 @@ export default async function CustomerExchangePage({
           <ExchangeRecovery accountId={account.id} tab="activity" />
         ) : (
           <section className="exchange-premium-activity space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-              <ActivityMetric icon={<Heart className="h-5 w-5" />} label="Saved" value={activity.favorites.length} description="Vehicles saved for later" tone="pink" />
-              <ActivityMetric icon={<Gavel className="h-5 w-5" />} label="Offers / Bids" value={activity.bids.length} description="Active offers and bids" tone="blue" />
-              <ActivityMetric icon={<Store className="h-5 w-5" />} label="My Listings" value={activity.listings.length} description="Vehicles you have listed" tone="green" />
-              <ActivityMetric icon={<Handshake className="h-5 w-5" />} label="Deals" value={activity.deals.length} description="Successful transactions" tone="orange" />
-              <ActivityMetric icon={<FileText className="h-5 w-5" />} label="Requests" value={activity.contact_requests.length} description="Purchase / sale requests" tone="purple" />
-            </div>
             <div className="rounded-2xl border border-[#DEE6F3] bg-white p-3 shadow-[0_8px_28px_rgba(27,50,88,.045)] sm:p-4">
-              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                <div><h2 className="text-[17px] font-extrabold text-[#11254B]">Your Activity</h2><p className="mt-1 text-[11px] text-[#788BA8]">Track your offers, bids, listings and more in one place.</p></div>
-                <nav aria-label="Exchange activity filters" className="flex flex-wrap items-center gap-1.5">
-                  {([["all","All",activity.bids.length+activity.listings.length+activity.deals.length+activity.favorites.length+activity.contact_requests.length],["offers","Offers",activity.bids.length],["bids","Bids",activity.bids.length],["listings","Listings",activity.listings.length],["deals","Deals",activity.deals.length],["requests","Requests",activity.contact_requests.length],["saved","Saved",activity.favorites.length]] as const).map(([key,label,count])=><Link key={key} href={{pathname:"/customer/exchange",query:{account:account.id,tab:"activity",activityFilter:key}}} aria-current={activityFilter===key?"page":undefined} className={`rounded-full border px-3 py-2 text-[10px] font-bold transition ${activityFilter===key?"border-[#123967] bg-[#123967] text-white":"border-[#E7ECF7] bg-[#F4F7FD] text-[#6880A4] hover:bg-[#EAF1FB]"}`}>{label} <span className="ml-1 opacity-80">{count}</span></Link>)}
-                </nav>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-[17px] font-extrabold text-[#11254B]">Your Activity</h2>
+                <details className="group relative">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg border border-[#E7ECF7] bg-[#F4F7FD] px-3 py-2.5 text-[11px] font-bold text-[#123967] [&::-webkit-details-marker]:hidden">
+                    <span>Filter: {({all:"All",offers:"Offers",bids:"Bids",listings:"Listings",deals:"Deals",requests:"Requests",saved:"Saved"} as Record<string,string>)[activityFilter]}</span>
+                    <span aria-hidden="true">⌄</span>
+                  </summary>
+                  <nav aria-label="Exchange activity filters" className="absolute right-0 z-30 mt-2 min-w-[175px] rounded-xl border border-[#DCE4EE] bg-white p-1 shadow-lg">
+                    {([["all","All",activity.bids.length+activity.listings.length+activity.deals.length+activity.favorites.length+activity.contact_requests.length],["offers","Offers",activity.bids.length],["bids","Bids",activity.bids.length],["listings","Listings",activity.listings.length],["deals","Deals",activity.deals.length],["requests","Requests",activity.contact_requests.length],["saved","Saved",activity.favorites.length]] as const).map(([key,label,count]) => (
+                      <Link key={key} href={{pathname:"/customer/exchange",query:{account:account.id,tab:"activity",activityFilter:key}}}
+                        aria-current={activityFilter===key?"page":undefined}
+                        className={`block rounded-lg px-3 py-2 text-[11px] transition hover:bg-[#EAF1FB] ${activityFilter===key?"bg-[#E7F0FD] font-bold text-[#123967]":"text-[#6880A4]"}`}>
+                        {label} ({count})
+                      </Link>
+                    ))}
+                  </nav>
+                </details>
               </div>
               <div className="space-y-2">
                 {(activityFilter==="all"||activityFilter==="bids"||activityFilter==="offers") ? <ActivitySection title="Offers / Bids" rows={activity.bids} accountId={account.id} /> : null}
@@ -271,16 +273,6 @@ function ExchangeRecovery({
       </form>
     </section>
   );
-}
-
-function ActivityMetric({ icon, label, value, description, tone }: { icon: ReactNode; label: string; value: number; description: string; tone: "pink"|"blue"|"green"|"orange"|"purple" }) {
-  const tones = {pink:"bg-[#FFF7FC] text-[#EB249B]",blue:"bg-[#F6FAFF] text-[#1776E8]",green:"bg-[#F4FCF9] text-[#009B70]",orange:"bg-[#FFF9F2] text-[#F08219]",purple:"bg-[#FCF8FF] text-[#7543ED]"};
-  return <div className={`rounded-xl border border-[#E3E9F4] p-4 shadow-[0_6px_18px_rgba(35,62,95,.045)] ${tones[tone]}`}>
-    <div className="flex items-start justify-between gap-2"><span className="grid h-10 w-10 place-items-center rounded-xl bg-white/80">{icon}</span><ChevronRight className="h-4 w-4 opacity-60"/></div>
-    <p className="mt-2 text-[11px] font-bold text-[#173157]">{label}</p>
-    <p className="mt-1 text-[25px] font-black text-[#0C2147]">{value.toLocaleString("en-IN")}</p>
-    <p className="mt-1 text-[10px] text-[#8394B1]">{description}</p>
-  </div>;
 }
 
 function ActivitySection({ title, rows, accountId }: { title: string; rows: Array<Record<string, unknown>>; accountId: string }) {
