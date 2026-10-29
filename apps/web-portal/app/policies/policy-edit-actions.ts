@@ -24,6 +24,9 @@ export type PolicyEditPayload = {
     insuranceCompanyId: string;
     validFrom: string;
     validUpto: string;
+    odValidUpto?: string;
+    tpValidUpto?: string;
+    cpaValidUpto?: string;
     remarks: string;
   };
   premium: { od: string; tp: string; addOnPremium: string; cpaOpted: boolean; cpa: string };
@@ -74,7 +77,7 @@ function textNumber(value: number | null | undefined) {
 
 export async function updatePolicyOnboarding(policyId: string, payload: PolicyEditPayload): Promise<PolicyEditResult> {
   if (isBundledMotorCover(payload.vehicleClass, payload.policy.policyType)) {
-    payload = {...payload, policy:{...payload.policy,validUpto:motorBundledExpiry(payload.policy.validFrom,1)}};
+    payload = {...payload, policy:{...payload.policy,validUpto: String(payload.policy.odValidUpto || motorBundledExpiry(String(payload.policy.validFrom ?? ""),1))}};
   }
   const profile = await requirePolicyEditor(policyId);
 
