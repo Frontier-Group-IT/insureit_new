@@ -338,9 +338,31 @@ export async function listPartnerWebCustomers({
   return (data ?? []) as PartnerCustomerRow[];
 }
 
+// Additive safety assertion for authenticated canonical Branch sessions.
+// Enabled only during staged validation; never elevates existing scope.
+async function assertCanonicalBranchResourceAccess(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  resource: "customer" | "claim" | "policy",
+  id: string,
+) {
+  const session = await getPartnerWebSession();
+  if (session.scope.portal_access_type !== "branch" || process.env.INSUREIT_CANONICAL_RESOURCE_GUARD !== "enabled") return;
+  const rpc = resource === "customer"
+    ? "partner_branch_authorized_customer_ids"
+    : resource === "claim"
+      ? "partner_branch_authorized_claim_ids"
+      : "partner_branch_authorized_policy_ids";
+  const { data, error } = await supabase.rpc(rpc);
+  if (error || !Array.isArray(data)) redirect("/access-denied");
+  const idKey = resource === "customer" ? "customer_id" : resource === "claim" ? "claim_id" : "policy_id";
+  if (!data.some((row: Record<string, unknown>) => row[idKey] === id)) redirect("/access-denied");
+}
+
 export async function getPartnerWebCustomerDetail(customerId: string): Promise<PartnerCustomerDetail> {
   await getPartnerWebSession();
   const supabase = await createServerSupabaseClient();
+  await assertCanonicalBranchResourceAccess(supabase, "customer", customerId);
+
   const { data, error } = await supabase.rpc("partner_app_customer_detail", {
     p_customer_id: customerId,
   });
@@ -559,6 +581,8 @@ export async function getPartnerWebRenewalSummary(): Promise<PartnerRenewalSumma
 export async function getPartnerWebPolicyDetail(policyId: string): Promise<PartnerPolicyDetail> {
   await getPartnerWebSession();
   const supabase = await createServerSupabaseClient();
+  await assertCanonicalBranchResourceAccess(supabase, "policy", policyId);
+
   const { data, error } = await supabase.rpc("partner_app_policy_detail", { p_policy_id: policyId });
   if (error || !data) throw new Error(error?.message ?? "Policy detail is unavailable.");
   return data as PartnerPolicyDetail;
@@ -655,6 +679,8 @@ export async function listPartnerWebClaims({
 export async function getPartnerWebClaimDetail(claimId: string): Promise<PartnerClaimDetail> {
   await getPartnerWebSession();
   const supabase = await createServerSupabaseClient();
+  await assertCanonicalBranchResourceAccess(supabase, "claim", claimId);
+
   const { data, error } = await supabase.rpc("partner_app_claim_detail", { p_claim_id: claimId });
   if (error || !data) throw new Error(error?.message ?? "Claim detail is unavailable.");
   return data as PartnerClaimDetail;
