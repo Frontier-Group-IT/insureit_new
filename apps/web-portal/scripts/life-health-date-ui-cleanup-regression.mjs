@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const source = readFileSync("components/life-health-case-detail.tsx", "utf8");
+assert.doesNotMatch(source, />Term − 1 day \(default\)</, "Do not show term-minus-one controls");
+assert.doesNotMatch(source, />Same calendar date</, "Do not show same-day controls");
+assert.doesNotMatch(source, /Auto-calculated and manually editable\. Manual dates stay unchanged when switching methods\./, "Hide internal date handling guidance");
+assert.match(source, /function CalculatedDateField\(/, "Date input remains available");
+assert.match(source, /<DateInput value=\{value\} onChange=\{onChange\}\/>/, "Manual date entry must remain available");
+assert.match(source, /setEndDateMode/, "Internal end-date calculation handling remains");
+assert.match(source, /setPptEndDateMode/, "Internal PPT date calculation handling remains");
+console.log("Life and health case date UI regression passed.");

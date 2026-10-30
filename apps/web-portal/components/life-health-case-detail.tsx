@@ -163,15 +163,11 @@ function Section({number,title,children,highlight=false,contentClassName="md:gri
 function FieldWrap({title,children,required=false}:{title:string;children:ReactNode;required?:boolean}){return <label><span className={label}>{title}{required?<span className="text-red-500">*</span>:null}</span>{children}</label>}
 function MetaLine({left,right}:{left:string;right:string}){if(!left&&!right)return null;return <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 text-[9px] font-semibold text-[#315B6B]"><span>{left}</span>{right?<span>{right}</span>:null}</div>}
 function ReadOnlyTextField({title,value}:{title:string;value:string}){return <FieldWrap title={title}><div className={`${readOnlyField} flex items-center`}>{value}</div></FieldWrap>}
-function CalculatedDateField({title,value,expected,overridden,mode,onModeChange,onChange,missingHint}:{title:string;value:string;expected:string;overridden:boolean;mode?:DateCalculationMode;onModeChange?:(mode:DateCalculationMode)=>void;onChange:(value:string)=>void;missingHint?:string}){
+function CalculatedDateField({title,value,expected,overridden,onChange,missingHint}:{title:string;value:string;expected:string;overridden:boolean;mode?:DateCalculationMode;onModeChange?:(mode:DateCalculationMode)=>void;onChange:(value:string)=>void;missingHint?:string}){
   const differs=Boolean(overridden&&expected&&value&&value!==expected);
   return <FieldWrap title={title}>
     <DateInput value={value} onChange={onChange}/>
-    {mode&&onModeChange?<div className="mt-1.5 flex flex-wrap items-center gap-1.5" role="group" aria-label={`${title} calculation method`}>
-      <button type="button" aria-pressed={mode==="minusOne"} onClick={()=>onModeChange("minusOne")} className={`rounded-md border px-2 py-1 text-[9px] font-semibold ${mode==="minusOne"?"border-[#6C4FC7] bg-[#F2EDFF] text-[#5031A3]":"border-[#D8DEE9] bg-white text-[#667085]"}`}>Term − 1 day (default)</button>
-      <button type="button" aria-pressed={mode==="sameDay"} onClick={()=>onModeChange("sameDay")} className={`rounded-md border px-2 py-1 text-[9px] font-semibold ${mode==="sameDay"?"border-[#6C4FC7] bg-[#F2EDFF] text-[#5031A3]":"border-[#D8DEE9] bg-white text-[#667085]"}`}>Same calendar date</button>
-    </div>:null}
-    {differs?<p className="mt-1 text-[8px] leading-3 text-[#9A6700]">Manually changed from the calculated date {formatDate(expected)}. Please verify before issuing.</p>:missingHint?<p className="mt-1 text-[8px] leading-3 text-[#7A869A]">{missingHint}</p>:<p className="mt-1 text-[8px] leading-3 text-[#7A869A]">Auto-calculated and manually editable. Manual dates stay unchanged when switching methods.</p>}
+    {differs?<p className="mt-1 text-[8px] leading-3 text-[#9A6700]">Manually changed from the calculated date {formatDate(expected)}. Please verify before issuing.</p>:missingHint?<p className="mt-1 text-[8px] leading-3 text-[#7A869A]">{missingHint}</p>:null}
   </FieldWrap>
 }
 function DateInput({value,onChange}:{value:string;onChange:(value:string)=>void}){
