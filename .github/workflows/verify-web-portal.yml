@@ -41,6 +41,8 @@ jobs:
         run: node scripts/claim-payment-stage-authorized-write-regression.mjs
       - name: Partner hierarchy Reports security regression
         run: npm run partner-reports:security-regression
+      - name: Canonical Branch hierarchy security contract regression
+        run: node scripts/partner-canonical-branch-contract-regression.mjs
       - name: PostgREST high-volume row-cap audit
         run: node scripts/postgrest-row-cap-audit.mjs
       - name: Access control V2 catalogue regression
