@@ -56,4 +56,8 @@ assert.match(onboardingAction, /service_create_canonical_partner_branch/);
 assert.match(onboardingAction, /partner_branch_login_links/);
 assert.match(onboardingAction, /service_create_partner_branch_profile/);
 assert.match(onboardingAction, /canonicalBranchId/);
+const sessionSource = readFileSync(resolve(root, 'apps/web-portal/lib/partner-web.ts'), 'utf8');
+assert.match(sessionSource, /identity\.portal_access_type === "branch"/);
+assert.match(sessionSource, /resolvedScope\.partner_ids\.length !== 1/);
+assert.match(sessionSource, /resolvedScope\.partner_ids\[0\] !== identity\.partner_id/);
 console.log('Canonical Branch migration contract regression passed. Live database role tests remain required.');
