@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Files, LoaderCircle, RefreshCw, Trash2, Upload, X } from "lucide-react";
+import { FileText, Files, LoaderCircle, RefreshCw, Trash2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { DocumentDeleteConfirmation } from "@/components/document-delete-confirmation";
 
@@ -54,7 +54,6 @@ export function NonMotorDocumentPicker({
           onError={onError}
         />
       ))}
-      {showDeleteConfirmation && (file || existingDocument) ? <DocumentDeleteConfirmation fileName={shownName} onCancel={() => setShowDeleteConfirmation(false)} onConfirm={() => {setShowDeleteConfirmation(false);if(file)onRemoveStaged();else onDeleteExisting?.()}} busy={deleting}/> : null}
     </div>
   );
 }
@@ -194,6 +193,7 @@ function DocumentPickerControl({
           </button>
         </div>
       )}
+      {showDeleteConfirmation && (file || existingDocument) ? <DocumentDeleteConfirmation fileName={shownName} onCancel={() => setShowDeleteConfirmation(false)} onConfirm={() => {setShowDeleteConfirmation(false);if(file)onRemoveStaged();else onDeleteExisting?.()}} busy={deleting}/> : null}
     </div>
   );
 }
