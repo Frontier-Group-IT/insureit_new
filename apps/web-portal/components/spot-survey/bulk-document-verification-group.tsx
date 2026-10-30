@@ -210,7 +210,7 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
           <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${verified ? "bg-green-100 text-green-700" : rejected ? "bg-amber-50 text-amber-700" : "bg-[#F4F7FC] text-[#526178]"}`}>{verified ? "Verified" : statusLabel(documentStatus)}</span>
         </div>
         {rejected ? <p className="mt-1 text-[9px] font-semibold text-amber-700">{document.rejection_reason ?? "Customer reupload requested."}</p> : null}
-        <div className="mt-2 flex justify-end">
+        <div className="mt-2 flex items-center justify-end gap-2">
           <button
               type="button"
               disabled={deletePending}
@@ -221,6 +221,7 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
             >
               <Trash2 aria-hidden="true" size={16} strokeWidth={2} />
             </button>
+            <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentId={document.id} documentType={item.documentType} label={item.title} actionLabel="Replace" iconOnly />
 
 
         </div>
