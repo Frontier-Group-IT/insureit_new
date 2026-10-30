@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { getPartnerWebCustomerDetail, getPartnerWebSession, listPartnerWebCustomers } from "@/lib/partner-web";
@@ -53,7 +54,7 @@ export default async function PartnerStartClaim({ searchParams }: { searchParams
     create: "Unable to start this claim. Check eligibility or contact the claims desk.",
   };
   return (
-    <div className="mx-auto max-w-5xl space-y-4 p-4 sm:p-6">
+    <PartnerPortalShell title="Start Claim"><div className="mx-auto max-w-5xl space-y-4 p-4 sm:p-6">
       <div className="flex items-center justify-between gap-3">
         <div><h1 className="text-xl font-bold text-[#071D49]">Start Claim</h1><p className="text-sm text-slate-600">Only customers available to your partner account can be selected.</p></div>
         <Link href="/partner/claims" className="rounded-lg border border-slate-300 px-3 py-2 text-sm">Back to Claims</Link>
@@ -91,6 +92,6 @@ export default async function PartnerStartClaim({ searchParams }: { searchParams
           <button disabled={!vehicles.length} className="rounded-lg bg-[#003A83] px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">Start Claim & Continue</button>
         </form>
       </section> : null}
-    </div>
+    </div></PartnerPortalShell>
   );
 }
