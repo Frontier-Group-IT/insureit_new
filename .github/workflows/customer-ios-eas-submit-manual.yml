@@ -7,6 +7,10 @@ on:
         description: 'Type SUBMIT_TESTFLIGHT to upload the existing signed IPA to App Store Connect (not publish)'
         required: true
         type: string
+      asc_app_id:
+        description: 'Numeric Apple ID of INSUREIT Customer in App Store Connect > App Information (not bundle ID)'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -37,6 +41,17 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
+      - name: Configure iOS EAS Submit profile for the existing app record
+        working-directory: apps/mobile-app
+        env:
+          ASC_APP_ID: ${{ inputs.asc_app_id }}
+        shell: bash
+        run: |
+          if [[ ! "$ASC_APP_ID" =~ ^[0-9]+$ ]]; then
+            echo "::error::App Store Connect Apple ID must be numeric and correspond to INSUREIT Customer."
+            exit 1
+          fi
+          node -e 'const fs=require("fs");const p="eas.json";const c=JSON.parse(fs.readFileSync(p,"utf8"));c.submit??={};c.submit.production??={};c.submit.production.ios={ascAppId:process.env.ASC_APP_ID,appleTeamId:"455GGC36YS"};fs.writeFileSync(p,JSON.stringify(c,null,2)+"\\n")'
       - name: Submit verified signed IPA to App Store Connect
         working-directory: apps/mobile-app
         run: eas submit --platform ios --id caaa8af4-2b41-4a0d-9354-b87b1d3e4c84 --profile production --non-interactive
