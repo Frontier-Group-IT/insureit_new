@@ -110,7 +110,7 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
         router.refresh();
       } catch (cause) {
         console.error("Life/Health issued policy upload request failed",cause);
-        setError("Document upload request failed. Check your connection and try a smaller file. If it continues, contact support.");
+        setError(/UnrecognizedActionError|Server Action .* was not found|unexpected response was received from the server/i.test(cause instanceof Error ? `${cause.name} ${cause.message}` : String(cause)) ? "The portal was updated. Reload the page, check whether the document uploaded, then retry if needed." : "Document upload request failed. Reload this page before retrying; if the problem continues, contact support.");
       }
     });
   }

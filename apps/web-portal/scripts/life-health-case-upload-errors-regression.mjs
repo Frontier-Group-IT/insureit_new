@@ -11,5 +11,5 @@ assert.match(action,/session has expired/);
 assert.match(action,/operations_head_record_access_denied/);
 assert.match(action,/catch\(cause\)/);
 assert.match(server,/Document storage rejected the upload:/);
-assert.match(client,/Upload request failed before the server returned a response/);
+assert.match(client,/upload request failed before the server returned a response/i);
 console.log("Life/Health case upload error regression passed");

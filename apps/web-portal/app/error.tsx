@@ -8,13 +8,15 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
     reportClientRuntimeError("react-boundary", error);
   }, [error]);
 
+  const serverActionMismatch = /UnrecognizedActionError|Server Action .* was not found|unexpected response was received from the server/i.test(`${error.name} ${error.message}`);
+
   return (
     <main className="flex min-h-[60vh] items-center justify-center px-4 py-10">
       <section className="w-full max-w-md rounded-2xl border border-[#DFE7F2] bg-white p-6 text-center shadow-[0_16px_40px_rgba(30,58,110,0.08)]">
         <div className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-[#EEF4FF] text-[#1F5FC4]">!</div>
-        <h1 className="mt-4 text-lg font-extrabold text-[#172846]">This page could not finish loading</h1>
+        <h1 className="mt-4 text-lg font-extrabold text-[#172846]">{serverActionMismatch ? "This page needs to reload" : "This page could not finish loading"}</h1>
         <p className="mt-2 text-sm leading-6 text-[#6F8097]">
-          Your data has not been changed. You can retry the page, or reload it if the issue was temporary.
+          {serverActionMismatch ? "The portal was updated while this page was open, or the server returned an outdated action response. Reload the page to reconnect before retrying your action. Check whether your previous action succeeded before submitting it again." : "The page encountered an error. Retry or reload if the issue was temporary. Check whether an earlier submission succeeded before trying it again."}
         </p>
         <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
           <button
