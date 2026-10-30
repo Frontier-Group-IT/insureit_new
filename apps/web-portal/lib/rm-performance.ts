@@ -107,18 +107,45 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
     loadCompleteRegisterRows(profile, mtdQuery, mtdPayload.report),
   ]);
 
-  const todayByRm = new Map(
-    todayPayload.report.rms.map((row) => [
-      row.employee_id ?? row.name,
-      row,
-    ]),
-  );
-  const periodByRm = new Map(
-    mtdPayload.report.rms.map((row) => [
-      row.employee_id ?? row.name,
-      row,
-    ]),
-  );
+  // Resolve historical rows without rm_employee_id to a verified, unique RM
+  // identity with the same normalized name. Never combine ambiguous names.
+  const allRmRows = [...todayPayload.report.rms, ...mtdPayload.report.rms];
+  const nameIds = new Map<string, Set<string>>();
+  for (const rm of allRmRows) {
+    if (!rm.employee_id) continue;
+    const key = rm.name.trim().toLocaleLowerCase("en-IN");
+    const ids = nameIds.get(key) ?? new Set<string>();
+    ids.add(rm.employee_id);
+    nameIds.set(key, ids);
+  }
+  const rmKey = (rm: (typeof allRmRows)[number]) => {
+    if (rm.employee_id) return rm.employee_id;
+    const normalized = rm.name.trim().toLocaleLowerCase("en-IN");
+    const ids = nameIds.get(normalized);
+    return ids?.size === 1 ? [...ids][0] : `unassigned-name:${normalized}`;
+  };
+  const summarize = (items: typeof allRmRows) => {
+    const grouped = new Map<string, (typeof allRmRows)[number]>();
+    for (const item of items) {
+      const key = rmKey(item);
+      const current = grouped.get(key);
+      if (!current) {
+        grouped.set(key, { ...item, employee_id: item.employee_id ?? (key.startsWith("unassigned-name:") ? null : key) });
+      } else {
+        const policy_count = current.policy_count + item.policy_count;
+        const net_premium = current.net_premium + item.net_premium;
+        grouped.set(key, {
+          ...current,
+          policy_count,
+          net_premium,
+          average_net_premium: policy_count ? net_premium / policy_count : 0,
+        });
+      }
+    }
+    return grouped;
+  };
+  const todayByRm = summarize(todayPayload.report.rms);
+  const periodByRm = summarize(mtdPayload.report.rms);
   const totalMtdPremium = mtdPayload.report.rms.reduce((sum, row) => sum + row.net_premium, 0);
 
   const intermediaryNames = new Map(
