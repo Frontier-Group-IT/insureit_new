@@ -155,6 +155,20 @@ export const getPartnerWebSession = cache(async (): Promise<PartnerSessionContex
   return { identity, scope: resolvedScope };
 });
 
+export type PartnerCanonicalPolicySummary = {
+  policies: number;
+  recorded_premium: number | string;
+};
+
+// Staged read-only comparison. Never use parent IDs provided by a browser request.
+export async function getPartnerCanonicalPolicySummary(): Promise<PartnerCanonicalPolicySummary> {
+  await getPartnerWebSession();
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("partner_branch_policy_summary");
+  if (error || !data) throw new Error(error?.message ?? "Canonical policy summary is unavailable.");
+  return data as PartnerCanonicalPolicySummary;
+}
+
 export async function getPartnerWebHome(): Promise<PartnerHomeData> {
   await getPartnerWebSession();
   const supabase = await createServerSupabaseClient();
