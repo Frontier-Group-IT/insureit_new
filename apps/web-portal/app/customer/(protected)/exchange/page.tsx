@@ -4,6 +4,7 @@ import "../customer-register-motion.css";
 import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 import Link from "next/link";
 import { CustomerExchangeSellWorkspace } from "@/components/customer-portal/customer-exchange-sell-workspace";
+import { customerExchangeVehicleArt } from "@/lib/customer-exchange-vehicle-art";
 import { Activity, Heart, ArrowLeftRight, BadgeCheck, MapPin, MoreVertical, Search, ShoppingBag, Store, Truck, ChevronRight, Clock3, ShieldCheck } from "lucide-react";
 import {
   CustomerAccountTabs,
@@ -289,9 +290,10 @@ function ActivitySection({ title, rows, accountId, search }: { title: string; ro
       const href=listingId?{pathname:`/customer/exchange/${encodeURIComponent(listingId)}`,query:{account:accountId}}:null;
       const amount=Number(row.amount??row.agreed_price??row.asking_price??0);
       const cover=valueText(row.cover_url);
+      const fallbackArt=customerExchangeVehicleArt(valueText(row.vehicle_type),valueText(row.category));
       const meta=[row.year,row.odometer_km!=null?`${Number(row.odometer_km).toLocaleString("en-IN")} km`:null,row.fuel_type,row.masked_registration].filter(v=>v!=null&&v!=="").join("  |  ");
       return <div key={valueText(row.bid_id)||valueText(row.listing_id)||valueText(row.deal_id)||valueText(row.request_id)||index} className="flex flex-wrap items-center gap-2 rounded-xl border border-[#E4EAF3] bg-white px-2.5 py-1.5 transition hover:border-[#C8D8F1] hover:shadow-sm md:flex-nowrap">
-        <div className="grid h-[44px] w-[70px] shrink-0 place-items-center overflow-hidden rounded-lg bg-gradient-to-br from-[#EAF2FD] to-[#D6E5F7]">{cover?<img src={cover} alt="" className="h-full w-full object-cover"/>:<Truck className="h-6 w-6 text-[#6D8AB2]"/>}</div>
+        <div className="grid h-[44px] w-[70px] shrink-0 place-items-center overflow-hidden rounded-lg bg-gradient-to-br from-[#EAF2FD] to-[#D6E5F7]">{cover?<img src={cover} alt={vehicleName} className="h-full w-full object-cover"/>:<img src={fallbackArt} alt={`${vehicleName} vehicle illustration`} className="h-full w-full object-contain p-1"/>}</div>
         <div className="min-w-[160px] flex-1"><p className="truncate text-[12px] font-extrabold text-[#15386F]">{vehicleName}</p><p className="mt-1 truncate text-[10px] text-[#8B9AB2]">{meta||title}</p></div>
         <div className="min-w-[90px]"><span className={`inline-flex rounded-lg px-2 py-1 text-[10px] font-bold capitalize ${leading?"bg-[#E1F8EE] text-[#11986A]":outbid?"bg-[#FFF0F2] text-[#DF3A58]":"bg-[#EAF1FF] text-[#426BCA]"}`}>{status||title}</span></div>
         <div className="hidden min-w-[130px] flex-1 text-[10px] text-[#7A8CA9] lg:block">{leading?"You are leading on this vehicle.":outbid?"A higher bid has been placed.":status?`Status: ${status}`:title}</div>
