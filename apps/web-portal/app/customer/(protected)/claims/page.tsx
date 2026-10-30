@@ -93,14 +93,14 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
           <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]">
             <ClipboardList className="h-5 w-5 text-[#1769DC]"/>My Claims
           </h2>
-          <div className="min-w-[190px] flex-1 lg:mx-auto lg:max-w-[390px]">
+          <div className="min-w-[190px] flex-1 lg:ml-2 lg:max-w-[390px]">
             <CustomerClaimsSearch initialQuery={params.q ?? ""} accountId={account.id} />
           </div>
           <div className="ml-auto flex items-center gap-2">
             <details className="group relative">
-              <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg border border-[#DCE4EE] bg-white px-3 py-2.5 text-[12px] font-semibold text-[#344767] [&::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer list-none items-center justify-center gap-2 rounded-lg border border-[#DCE4EE] bg-white px-3 py-2.5 text-[12px] font-semibold text-[#344767] [&::-webkit-details-marker]:hidden">
                 <span>{filterOptions.find((option) => option.key === statusFilter)?.label ?? "All"}</span>
-                <span aria-hidden="true">⌄</span>
+                <span aria-hidden="true" className="inline-flex items-center justify-center leading-none">⌄</span>
               </summary>
               <nav aria-label="Claim status" className="absolute right-0 z-30 mt-2 min-w-[180px] overflow-hidden rounded-xl border border-[#DCE4EE] bg-white p-1 shadow-lg">
                 {filterOptions.map(({key,label,count}) => (
@@ -134,33 +134,33 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
                           <p className="mt-1 line-clamp-2 text-[12px] font-medium text-[#647590]">{claim.vehicle_model || claim.vehicle_make || "Vehicle claim"}</p>
                         </div>
                       </div>
-                      <div className="flex w-[94px] shrink-0 flex-col items-center gap-1 text-center">
+                      <div className="flex w-[90px] shrink-0 flex-col items-center gap-1 text-center">
                         <div role="img" aria-label={`Claim journey ${Math.round(progress / INTERNAL_JOURNEY_STAGES.length * 100)} percent`}
-                          className="grid h-[66px] w-[66px] place-items-center rounded-full"
+                          className="grid h-[33px] w-[33px] place-items-center rounded-full"
                           style={{background: `conic-gradient(#1769DC ${Math.round(progress / INTERNAL_JOURNEY_STAGES.length * 100)}%, #E4E9F3 0)`}}>
-                          <span className="grid h-[54px] w-[54px] place-items-center rounded-full bg-white text-[14px] font-bold text-[#1769DC]">
+                          <span className="grid h-[27px] w-[27px] place-items-center rounded-full bg-white text-[9px] font-bold text-[#1769DC]">
                             {Math.round(progress / INTERNAL_JOURNEY_STAGES.length * 100)}%
                           </span>
                         </div>
-                        <span className="line-clamp-2 text-[10px] font-semibold leading-3 text-[#536681]">{completed ? "Claim Complete" : stage}</span>
+                        <span className={`line-clamp-2 text-[10px] font-bold leading-3 ${completed ? "text-[#16865B]" : /action|pending|rejected|correction/i.test(stage) ? "text-[#B87817]" : "text-[#1769DC]"}`}>{completed ? "Claim Complete" : stage}</span>
                       </div>
                     </div>
                     <div className="mt-3 border-t border-[#E8EDF4] pt-3">
-                      <div className="grid grid-cols-3 gap-2 text-left">
+                      <div className="grid grid-cols-2 gap-2 text-left">
                         <div className="min-w-0">
                           <p className="text-[10px] text-[#71809A]">Loss Date</p>
                           <p className="mt-1 text-[11px] font-semibold text-[#243A60]">{lossDate && !Number.isNaN(lossDate.getTime()) ? lossDate.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : "—"}</p>
                         </div>
-                        <div className="min-w-0 border-l border-[#E9EDF5] pl-2">
+                        <div className="min-w-0 border-l border-[#E9EDF5] pl-3">
                           <p className="text-[10px] text-[#71809A]">Control No.</p>
                           <p className="mt-1 break-all text-[11px] font-semibold text-[#243A60]">{claim.claim_no || "—"}</p>
                         </div>
-                        <div className="min-w-0 border-l border-[#E9EDF5] pl-2">
+                      </div>
+                      <div className="mt-3 flex min-w-0 items-center gap-3 border-t border-[#E9EDF5] pt-3">
+                        <CustomerClaimLogo value={claim.insurer_name} kind="insurer" size={40}/>
+                        <div className="min-w-0 flex-1">
                           <p className="text-[10px] text-[#71809A]">Policy No.</p>
-                          <div className="mt-1 flex min-w-0 items-start gap-1">
-                            <CustomerClaimLogo value={claim.insurer_name} kind="insurer" size={18}/>
-                            <p className="min-w-0 break-all text-[11px] font-semibold text-[#243A60]">{claim.policy_no || "—"}</p>
-                          </div>
+                          <p className="mt-1 break-words text-[11px] font-semibold text-[#243A60] [overflow-wrap:anywhere]">{claim.policy_no || "—"}</p>
                         </div>
                       </div>
                     </div>
