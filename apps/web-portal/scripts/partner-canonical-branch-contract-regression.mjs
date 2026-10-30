@@ -32,4 +32,12 @@ assert.match(policyLinks, /parent_partner_id uuid NOT NULL REFERENCES public\.pa
 assert.match(policyLinks, /ON CONFLICT \(policy_id\) DO NOTHING/);
 assert.match(policyLinks, /REVOKE ALL ON public\.partner_branch_policy_links FROM PUBLIC, anon, authenticated/);
 assert.doesNotMatch(policyLinks, /UPDATE\s+public\.policies|DELETE\s+FROM\s+public\.policies/i);
+const policyAccess = read('20261030173000_partner_branch_authorized_policy_ids.sql');
+assert.match(policyAccess, /CREATE OR REPLACE FUNCTION public\.partner_branch_authorized_policy_ids\(\)/);
+assert.match(policyAccess, /a\.entity_type='branch'/);
+assert.match(policyAccess, /links\.branch_id=v_branch_id/);
+assert.match(policyAccess, /links\.parent_partner_id=v_parent_id/);
+assert.match(policyAccess, /UNION/);
+assert.match(policyAccess, /REVOKE ALL ON FUNCTION public\.partner_branch_authorized_policy_ids\(\) FROM PUBLIC, anon/);
+assert.doesNotMatch(policyAccess, /UPDATE\s+public\.policies|DELETE\s+FROM\s+public\.policies/i);
 console.log('Canonical Branch migration contract regression passed. Live database role tests remain required.');
