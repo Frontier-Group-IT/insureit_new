@@ -18,7 +18,8 @@ type PolicyIntakeListRow = Omit<PolicyIntakeWorkspaceRow, "submitted_by_name"> &
   submitted_by_portal_account_id: string | null;
 };
 type ProfileName = { id: string; full_name: string };
-type PortalAccount = { id: string; intermediary_id: string };
+type PortalAccount = { id: string; intermediary_id: string; auth_user_id: string | null };
+type BranchContact = { legacy_branch_profile_id: string | null; contact_name: string | null };
 type IntermediaryName = { id: string; display_name: string };
 type PolicyIntakeSearchParams = { view?: string };
 
@@ -65,29 +66,39 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
   const rows = data ?? [];
   const profileIds = Array.from(new Set(rows.map((row) => row.submitted_by_profile_id).filter(Boolean) as string[]));
   const portalAccountIds = Array.from(new Set(rows.map((row) => row.submitted_by_portal_account_id).filter(Boolean) as string[]));
-  const [{ data: profileRows }, { data: portalAccountRows }] = await Promise.all([
+  const [{ data: profileRows }, { data: portalAccountRows }, { data: branchContacts }] = await Promise.all([
     profileIds.length
       ? admin.from("profiles").select("id,full_name").in("id", profileIds).returns<ProfileName[]>()
       : Promise.resolve({ data: [] as ProfileName[] }),
     portalAccountIds.length
-      ? admin.from("intermediary_portal_accounts").select("id,intermediary_id").in("id", portalAccountIds).returns<PortalAccount[]>()
+      ? admin.from("intermediary_portal_accounts").select("id,intermediary_id,auth_user_id").in("id", portalAccountIds).returns<PortalAccount[]>()
       : Promise.resolve({ data: [] as PortalAccount[] }),
+    profileIds.length
+      ? admin.from("partner_branches").select("legacy_branch_profile_id,contact_name").in("legacy_branch_profile_id", profileIds).returns<BranchContact[]>()
+      : Promise.resolve({ data: [] as BranchContact[] }),
   ]);
-  const intermediaryIds = Array.from(new Set((portalAccountRows ?? []).map((account) => account.intermediary_id).filter(Boolean)));
-  const { data: intermediaryRows } = intermediaryIds.length
-    ? await admin.from("intermediaries").select("id,display_name").in("id", intermediaryIds).returns<IntermediaryName[]>()
-    : { data: [] as IntermediaryName[] };
-  const profileNameById = new Map((profileRows ?? []).map((item) => [item.id, item.full_name]));
+  const portalProfileIds = Array.from(new Set((portalAccountRows ?? []).map((account) => account.auth_user_id).filter(Boolean) as string[]));
+  const { data: portalProfiles } = portalProfileIds.length
+    ? await admin.from("profiles").select("id,full_name").in("id", portalProfileIds).returns<ProfileName[]>()
+    : { data: [] as ProfileName[] };
+  const profileNameById = new Map([...(profileRows ?? []), ...(portalProfiles ?? [])].map((item) => [item.id, item.full_name]));
   const portalAccountById = new Map((portalAccountRows ?? []).map((item) => [item.id, item]));
-  const intermediaryNameById = new Map((intermediaryRows ?? []).map((item) => [item.id, item.display_name]));
+  // An intake submitted by a branch's legacy profile must show the actual
+  // branch contact, not the branch / intermediary business display name.
+  const branchContactByProfileId = new Map((branchContacts ?? [])
+    .filter((branch) => branch.legacy_branch_profile_id && branch.contact_name?.trim())
+    .map((branch) => [branch.legacy_branch_profile_id!, branch.contact_name!.trim()]));
 
   const rowsWithSubmitters: PolicyIntakeWorkspaceRow[] = rows.map((row) => {
-    let submittedBy = row.submitted_by_profile_id ? profileNameById.get(row.submitted_by_profile_id)?.trim() || "Sales user" : "INSUREIT Partner user";
-    if (row.submitted_by_portal_account_id) {
-      const portalAccount = portalAccountById.get(row.submitted_by_portal_account_id);
-      const intermediaryName = portalAccount ? intermediaryNameById.get(portalAccount.intermediary_id)?.trim() : "";
-      if (intermediaryName) submittedBy = intermediaryName;
-    }
+    const profileId = row.submitted_by_profile_id;
+    const portalAccount = row.submitted_by_portal_account_id
+      ? portalAccountById.get(row.submitted_by_portal_account_id)
+      : null;
+    const portalProfileId = portalAccount?.auth_user_id ?? null;
+    const submittedBy = (profileId ? branchContactByProfileId.get(profileId) : null)
+      || (profileId ? profileNameById.get(profileId)?.trim() : null)
+      || (portalProfileId ? profileNameById.get(portalProfileId)?.trim() : null)
+      || (portalAccount ? "Partner contact unavailable" : "Sales user");
     return { ...row, submitted_by_name: submittedBy };
   });
   const duplicateCheck = error ? null : await loadPolicyIntakeDuplicateMatches(admin, rows);
