@@ -515,7 +515,7 @@ export default function BusinessScreen() {
             <QuickAction asset={PartnerAssets.actions.quickRenewals} label="Renewals" meta={`${renewals?.due_30_count ?? 0} due`} onPress={() => router.push('/renewals')} />
             <QuickAction asset={PartnerAssets.actions.quickClaims} label="Claims" meta={`${claims?.active_claims ?? 0} active`} onPress={() => router.push('/(tabs)/claims')} />
             <PayoutQuickAction payout={payout} onPress={() => router.push('/(tabs)/more')} />
-            <QuickAction asset={PartnerAssets.actions.quickCustomers} label="Add Customer" meta="Create new" onPress={() => router.push('/customers')} />
+            <QuickAction asset={PartnerAssets.actions.quickCustomers} label="Add Customer" meta="Create new" onPress={() => router.push('/customer-new' as never)} />
           </View>
 
           <SectionHeader title="My Network" action={<Pressable onPress={() => router.push('/network')}><Text style={styles.viewAll}>View All ›</Text></Pressable>} />

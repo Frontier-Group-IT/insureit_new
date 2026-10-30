@@ -143,3 +143,32 @@ export async function getPartnerCustomerDetail(customerId: string) {
     })),
   };
 }
+
+/** Partner registration request. The RPC must derive ownership from auth.uid(), never input. */
+export type NewPartnerCustomer = {
+  customer_name: string; mobile: string; email: string; street: string; locality: string;
+  city: string; state: string; pin_code: string; pan_number: string; aadhaar_number: string;
+  legal_trade_name: string; gst_registered: boolean;
+};
+export type PartnerCustomerDocument = {
+  type: 'pan_copy' | 'aadhaar_front' | 'aadhaar_back';
+  uri: string; name: string; mimeType: string; size: number;
+};
+export async function createPartnerCustomer(input: NewPartnerCustomer, documents: PartnerCustomerDocument[]): Promise<string> {
+  if (documents.length) throw new Error('KYC uploads are not configured yet. Please remove selected documents before saving.');
+  // Fail closed until the partner-scoped creation RPC is present and verified.
+  // No service-role API or direct INSERT is permitted from the mobile client.
+  const { data, error } = await supabase.rpc('partner_app_create_customer', {
+    p_customer: {
+      customer_name: input.customer_name.trim(), mobile: input.mobile.trim(), email: input.email.trim() || null,
+      street: input.street.trim() || null, locality: input.locality.trim() || null,
+      city: input.city.trim() || null, state: input.state.trim() || null, pin_code: input.pin_code.trim() || null,
+      pan_number: input.pan_number.trim().toUpperCase() || null,
+      aadhaar_number: input.aadhaar_number.replace(/\\s/g, '') || null,
+      legal_trade_name: input.legal_trade_name.trim() || null, gst_registered: input.gst_registered,
+    },
+  });
+  if (error) throw new Error(error.code === 'PGRST202' ? 'Customer creation is not configured yet. Contact the administrator.' : error.message);
+  if (typeof data !== 'string' || !data) throw new Error('Customer creation could not be confirmed.');
+  return data;
+}
