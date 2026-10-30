@@ -41,6 +41,8 @@ jobs:
         run: node scripts/claim-payment-stage-authorized-write-regression.mjs
       - name: Partner hierarchy Reports security regression
         run: npm run partner-reports:security-regression
+      - name: Operations Branch-parent policy register regression
+        run: node scripts/operations-branch-parent-policy-register-regression.mjs
       - name: Canonical Branch hierarchy security contract regression
         run: node scripts/partner-canonical-branch-contract-regression.mjs
       - name: PostgREST high-volume row-cap audit

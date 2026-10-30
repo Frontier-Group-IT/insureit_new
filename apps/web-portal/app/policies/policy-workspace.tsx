@@ -38,6 +38,7 @@ type PolicyRow = {
   rm_name: string | null;
   rm_employee_id: string | null;
   source_name: string | null;
+  branch_source_code?: string | null;
   policy_documents: PolicyDocument[];
   customers: { company_name: string | null; contact_name: string } | null;
   vehicles: { vehicle_no: string; chassis_no: string | null; engine_no: string | null } | null;
@@ -464,7 +465,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
                 <td className="px-2.5"><PolicyStatus policy={policy} /></td>
                 <td className="px-2.5 text-right"><InsuredValueCell policy={policy} /></td>
                 <td className="px-2.5 text-right font-semibold tabular-nums">{formatCurrency(policy.gross_premium)}</td>
-                <td className="px-2.5"><p className="truncate font-semibold capitalize">{policy.source_name ?? policy.intermediary_type?.replaceAll("_", " ") ?? "Direct"}</p><p className="truncate text-[9px] leading-4 text-[#64748B]">{policy.intermediary_code ?? "Sankalp"}</p></td>
+                <td className="px-2.5"><p className="truncate font-semibold capitalize">{policy.source_name ?? policy.intermediary_type?.replaceAll("_", " ") ?? "Direct"}</p><p className="truncate text-[9px] leading-4 text-[#64748B]">{policy.intermediary_code ?? "Sankalp"}{policy.branch_source_code ? ` · Branch ${policy.branch_source_code}` : ""}</p></td>
               </tr>
             ))}
           </tbody>
