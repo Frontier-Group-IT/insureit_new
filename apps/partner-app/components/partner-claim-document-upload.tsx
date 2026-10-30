@@ -261,7 +261,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
     return (
       <>
         <View style={styles.billingShell}>
-          <Ionicons name={variant === "assessment" ? "clipboard-outline" : "document-text-outline"} size={28} color="#1857A9" />
+          {variant === "billing" ? <Image source={require("../../mobile-app/assets/claims/accounts-finance.png")} style={styles.billingArtwork} resizeMode="contain" accessibilityLabel="Bill upload" /> : <Image source={require("../../mobile-app/assets/claims/claim-assessment.png")} style={styles.billingArtwork} resizeMode="contain" accessibilityLabel="Assessment report upload" />}
           <View style={styles.billingCopy}>
             <Text style={styles.billingTitle} numberOfLines={1}>{busy ? 'Uploading document…' : variant === 'assessment' ? 'Assessment Report (Optional)' : 'Upload final workshop bill'}</Text>
             <Text style={styles.billingSubtitle} numberOfLines={1}>{count ? `${count} uploaded • ${latest?.name ?? 'Saved'}` : 'PDF, JPG, PNG'}</Text>
@@ -461,6 +461,7 @@ function safeExtension(name: string, mimeType?: string | null) {
 
 const styles=StyleSheet.create({
   billingShell:{minHeight:64,borderWidth:1,borderColor:'#D7E1EC',borderRadius:12,backgroundColor:'#F7FAFD',paddingHorizontal:12,paddingVertical:10,flexDirection:'row',alignItems:'center',gap:10},
+  billingArtwork:{width:30,height:30},
   billingCopy:{flex:1,minWidth:0,gap:3},
   billingTitle:{fontSize:11,fontWeight:'800',color:'#183052'},
   billingSubtitle:{fontSize:9,color:'#7C8A9E'},
