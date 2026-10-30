@@ -2,7 +2,7 @@
 
 import { INTERNAL_JOURNEY_STAGES, projectInternalClaim } from "@insureit/claim-journey";
 import Image from "next/image";
-import { FileText, ShieldCheck } from "lucide-react";
+import { FileText, ShieldCheck, Plus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { claimStatuses, operationsQueueForStatus, type ClaimStatus } from "@/lib/claim-workflow";
@@ -95,6 +95,7 @@ export function PartnerClaimsPortfolio({ rows }: { rows: PartnerClaimPortfolioRo
                   <FileText className="h-5 w-5" />
                 </span>
                 <h2 className="shrink-0 text-[18px] font-semibold leading-tight text-[#0F172A]">Claim Portfolio</h2>
+                <Link href="/partner/claims/start" className="inline-flex items-center gap-1.5 rounded-lg bg-[#003A83] px-3 py-2 text-[11px] font-semibold text-white hover:bg-[#1558A0]"><Plus className="h-4 w-4" />Start Claim</Link>
               </div>
 
               <nav aria-label="Claim type" className="flex w-fit max-w-full items-center gap-0.5 rounded-lg border border-[#DCE5F1] bg-[#F8FAFD] p-0.5">
