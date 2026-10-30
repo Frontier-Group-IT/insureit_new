@@ -131,6 +131,17 @@ export const getPartnerWebSession = cache(async (): Promise<PartnerSessionContex
   // parent Partner's aggregate scope. Canonical-only Branch sessions remain blocked
   // until all downstream policy/customer/claim RPCs are converted.
   if (identity.portal_access_type === "branch") {
+    // Match the legacy Partner-backed Branch session to its canonical Branch identity.
+    // A missing, inconsistent or disabled mapping must never receive a wider scope.
+    const { data: canonicalBranch, error: canonicalError } = await supabase.rpc("partner_branch_portal_identity");
+    if (
+      canonicalError
+      || !canonicalBranch
+      || canonicalBranch.portal_access_type !== "branch"
+      || canonicalBranch.legacy_partner_id !== identity.partner_id
+    ) {
+      redirect("/access-denied");
+    }
     if (
       resolvedScope.portal_access_type !== "branch"
       || !identity.partner_id
