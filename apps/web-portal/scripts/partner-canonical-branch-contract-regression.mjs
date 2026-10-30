@@ -60,4 +60,10 @@ const sessionSource = readFileSync(resolve(root, 'apps/web-portal/lib/partner-we
 assert.match(sessionSource, /identity\.portal_access_type === "branch"/);
 assert.match(sessionSource, /resolvedScope\.partner_ids\.length !== 1/);
 assert.match(sessionSource, /resolvedScope\.partner_ids\[0\] !== identity\.partner_id/);
+const registerSource = readFileSync(resolve(root, 'apps/web-portal/app/intermediaries/groups/branches/page.tsx'), 'utf8');
+const registerUiSource = readFileSync(resolve(root, 'apps/web-portal/app/intermediaries/groups/branches/branch-register-workspace.tsx'), 'utf8');
+assert.match(registerSource, /canonicalEnabled/);
+assert.match(registerSource, /legacy_branch_profile_id/);
+assert.match(registerSource, /canonical_only: true/);
+assert.match(registerUiSource, /!branch\.canonical_only/);
 console.log('Canonical Branch migration contract regression passed. Live database role tests remain required.');
