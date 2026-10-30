@@ -155,6 +155,7 @@ export type PartnerCustomerDocument = {
   uri: string; name: string; mimeType: string; size: number;
 };
 export async function createPartnerCustomer(input: NewPartnerCustomer, documents: PartnerCustomerDocument[]): Promise<string> {
+  if (documents.length) throw new Error('KYC uploads are not configured yet. Please remove selected documents before saving.');
   // Fail closed until the partner-scoped creation RPC is present and verified.
   // No service-role API or direct INSERT is permitted from the mobile client.
   const { data, error } = await supabase.rpc('partner_app_create_customer', {
@@ -169,10 +170,5 @@ export async function createPartnerCustomer(input: NewPartnerCustomer, documents
   });
   if (error) throw new Error(error.code === 'PGRST202' ? 'Customer creation is not configured yet. Contact the administrator.' : error.message);
   if (typeof data !== 'string' || !data) throw new Error('Customer creation could not be confirmed.');
-  if (documents.length) {
-    // Do not silently drop selected KYC files or upload them to an unauthorized bucket.
-    // The document-upload endpoint must be verified before enabling attachments.
-    throw new Error('Customer created, but document upload is not configured. Customer ID: ' + data);
-  }
   return data;
 }
