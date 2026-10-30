@@ -80,8 +80,8 @@ BEGIN
     OR nullif(btrim(p_address),'') IS NULL THEN
    RAISE EXCEPTION 'All Branch contact fields required';
  END IF;
- IF NOT EXISTS (SELECT 1 FROM public.profiles pr WHERE pr.id=p_actor_profile_id AND pr.is_active) THEN
-   RAISE EXCEPTION 'Active staff profile required';
+ IF NOT EXISTS (SELECT 1 FROM public.profiles pr WHERE pr.id=p_actor_profile_id AND pr.is_active AND pr.role IN ('super_admin','admin','it_super_user')) THEN
+   RAISE EXCEPTION 'Authorized administrator profile required';
  END IF;
  v_code := 'BR' || nextval('public.partner_branch_code_seq')::text;
  INSERT INTO public.partner_branches(
