@@ -51,7 +51,10 @@ jobs:
             echo "::error::App Store Connect Apple ID must be numeric and correspond to INSUREIT Customer."
             exit 1
           fi
-          node -e 'const fs=require("fs");const p="eas.json";const c=JSON.parse(fs.readFileSync(p,"utf8"));c.submit??={};c.submit.production??={};c.submit.production.ios={ascAppId:process.env.ASC_APP_ID,appleTeamId:"455GGC36YS"};fs.writeFileSync(p,JSON.stringify(c,null,2)+"\\n")'
+          node -e 'const fs=require("fs");const p="eas.json";const c=JSON.parse(fs.readFileSync(p,"utf8"));c.submit??={};c.submit.production??={};c.submit.production.ios={ascAppId:process.env.ASC_APP_ID,appleTeamId:"455GGC36YS"};fs.writeFileSync(p,JSON.stringify(c,null,2)+String.fromCharCode(10))'
+      - name: Validate generated EAS configuration
+        working-directory: apps/mobile-app
+        run: node -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync("eas.json","utf8"));if(!c.submit?.production?.ios?.ascAppId)process.exit(1);console.log("EAS submit production profile valid")'
       - name: Submit verified signed IPA to App Store Connect
         working-directory: apps/mobile-app
         run: eas submit --platform ios --id caaa8af4-2b41-4a0d-9354-b87b1d3e4c84 --profile production --non-interactive
