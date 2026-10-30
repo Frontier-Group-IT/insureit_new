@@ -1,6 +1,6 @@
 import "./customer-claims-motion.css";
 import Link from "next/link";
-import { ClipboardList, Plus, ShieldCheck } from "lucide-react";
+import { ChevronDown, ClipboardList, Plus, ShieldCheck } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
 import { CustomerClaimsSearch } from "./customer-claims-search";
@@ -100,7 +100,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
             <details className="group relative">
               <summary className="flex cursor-pointer list-none items-center justify-center gap-2 rounded-lg border border-[#DCE4EE] bg-white px-3 py-2.5 text-[12px] font-semibold text-[#344767] [&::-webkit-details-marker]:hidden">
                 <span>{filterOptions.find((option) => option.key === statusFilter)?.label ?? "All"}</span>
-                <span aria-hidden="true" className="inline-flex items-center justify-center leading-none">⌄</span>
+                <ChevronDown aria-hidden="true" className="h-3.5 w-3.5 shrink-0 self-center" />
               </summary>
               <nav aria-label="Claim status" className="absolute right-0 z-30 mt-2 min-w-[180px] overflow-hidden rounded-xl border border-[#DCE4EE] bg-white p-1 shadow-lg">
                 {filterOptions.map(({key,label,count}) => (
@@ -146,21 +146,21 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
                       </div>
                     </div>
                     <div className="mt-3 border-t border-[#E8EDF4] pt-3">
-                      <div className="grid grid-cols-2 gap-2 text-left">
+                      <div className="grid grid-cols-3 gap-2 text-left">
                         <div className="min-w-0">
                           <p className="text-[10px] text-[#71809A]">Loss Date</p>
                           <p className="mt-1 text-[11px] font-semibold text-[#243A60]">{lossDate && !Number.isNaN(lossDate.getTime()) ? lossDate.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : "—"}</p>
                         </div>
-                        <div className="min-w-0 border-l border-[#E9EDF5] pl-3">
+                        <div className="min-w-0 border-l border-[#E9EDF5] pl-2">
                           <p className="text-[10px] text-[#71809A]">Control No.</p>
-                          <p className="mt-1 break-all text-[11px] font-semibold text-[#243A60]">{claim.claim_no || "—"}</p>
+                          <p className="mt-1 break-words text-[11px] font-semibold text-[#243A60] [overflow-wrap:anywhere]">{claim.claim_no || "—"}</p>
                         </div>
-                      </div>
-                      <div className="mt-3 flex min-w-0 items-center gap-3 border-t border-[#E9EDF5] pt-3">
-                        <CustomerClaimLogo value={claim.insurer_name} kind="insurer" size={40}/>
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0 border-l border-[#E9EDF5] pl-2">
                           <p className="text-[10px] text-[#71809A]">Policy No.</p>
-                          <p className="mt-1 break-words text-[11px] font-semibold text-[#243A60] [overflow-wrap:anywhere]">{claim.policy_no || "—"}</p>
+                          <div className="mt-1 flex min-w-0 items-start gap-1">
+                            <CustomerClaimLogo value={claim.insurer_name} kind="insurer" size={18}/>
+                            <p className="min-w-0 break-words text-[10px] font-semibold text-[#243A60] [overflow-wrap:anywhere]">{claim.policy_no || "—"}</p>
+                          </div>
                         </div>
                       </div>
                     </div>
