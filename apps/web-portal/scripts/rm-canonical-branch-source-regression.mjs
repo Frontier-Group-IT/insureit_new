@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const source=readFileSync(new URL("../lib/rm-performance.ts",import.meta.url),"utf8");
+assert.match(source,/loadCanonicalParentSources\(\[\.\.\.todayRegisterRows, \.\.\.mtdRegisterRows\]\)/);
+assert.match(source,/new Set\(rows\.map\(\(row\) => row\.id\)/);
+assert.match(source,/from\("partner_branch_policy_links"\)/);
+assert.match(source,/select\("id,partner_code,display_name"\)/);
+assert.match(source,/parentSourceByPolicy\.get\(row\.id\)/);
+assert.match(source,/const code = parent\?\.code \?\? row\.intermediary_code/);
+assert.match(source,/source\.policies \+= 1/);
+assert.match(source,/source\.netPremium \+= row\.net_premium/);
+assert.doesNotMatch(source,/\.from\("policies"\)\.update\(/);
+console.log("RM canonical parent attribution regression passed.");
