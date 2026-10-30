@@ -116,18 +116,32 @@ CREATE OR REPLACE FUNCTION public.partner_branch_canonical_access()
 RETURNS TABLE(branch_id uuid, parent_partner_id uuid, branch_code text, legacy_partner_id uuid)
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public','auth'
 AS $fn$
- SELECT b.id,b.parent_partner_id,b.branch_code,old.partner_id
- FROM public.partner_branch_login_links l
- JOIN public.profiles pr ON pr.id=l.profile_id AND pr.is_active=true
- JOIN public.partner_branches b ON b.id=l.branch_id AND b.status='active'
- LEFT JOIN public.partner_branch_profiles old ON old.id=b.legacy_branch_profile_id
- WHERE l.profile_id=auth.uid() AND l.status='active'
-   AND EXISTS (
-     SELECT 1 FROM public.partners p
-     WHERE p.id=b.parent_partner_id AND p.parent_partner_id IS NULL
-       AND p.partner_status='active_partner'
-   )
- LIMIT 1;
+ WITH authorized_branch AS (
+   -- Explicit canonical login link, or existing active Branch login mapped through its
+   -- immutable legacy partner ID. The latter keeps old Branch accounts working.
+   SELECT l.branch_id
+   FROM public.partner_branch_login_links l
+   WHERE l.profile_id = auth.uid() AND l.status='active'
+   UNION
+   SELECT b.id
+   FROM public.portal_access_identities a
+   JOIN public.partner_branch_profiles legacy ON legacy.partner_id=a.entity_id
+   JOIN public.partner_branches b ON b.legacy_branch_profile_id=legacy.id
+   WHERE a.profile_id=auth.uid() AND a.entity_type='branch' AND a.status='active'
+ ),
+ resolved AS (
+   SELECT b.id,b.parent_partner_id,b.branch_code,legacy.partner_id
+   FROM authorized_branch ab
+   JOIN public.partner_branches b ON b.id=ab.branch_id AND b.status='active'
+   LEFT JOIN public.partner_branch_profiles legacy ON legacy.id=b.legacy_branch_profile_id
+   JOIN public.profiles pr ON pr.id=auth.uid() AND pr.is_active
+   JOIN public.partners parent ON parent.id=b.parent_partner_id
+     AND parent.parent_partner_id IS NULL AND parent.partner_status='active_partner'
+ )
+ -- If multiple distinct active Branch links exist, fail closed rather than choose one.
+ SELECT r.id,r.parent_partner_id,r.branch_code,r.partner_id
+ FROM resolved r
+ WHERE (SELECT count(DISTINCT id) FROM resolved)=1;
 $fn$;
 REVOKE ALL ON FUNCTION public.partner_branch_canonical_access() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.partner_branch_canonical_access() TO authenticated, service_role;
