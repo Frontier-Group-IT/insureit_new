@@ -201,7 +201,7 @@ export default function ClaimTrackerScreen() {
               })}</View>}
             </View>
             <View style={styles.financeCard}>
-              <View style={styles.financeHeader}><Image source={require("../../mobile-app/assets/claims/accounts-finance.png")} resizeMode="contain" style={styles.financeArtwork} accessibilityLabel="Financial progress" /><View><Text style={styles.financeTitle}>FINANCIAL PROGRESS</Text><Text style={styles.financeSub}>Claim value movement</Text></View></View>
+              <View style={styles.financeHeader}><Image source={require("../../../mobile-app/assets/claims/accounts-finance.png")} resizeMode="contain" style={styles.financeArtwork} accessibilityLabel="Financial progress" /><View><Text style={styles.financeTitle}>FINANCIAL PROGRESS</Text><Text style={styles.financeSub}>Claim value movement</Text></View></View>
               {([{ label:'Estimate', key:'claim_intimation' },{label:'Bill',key:'billing'},{label:'DO',key:'delivery_order'},{label:'Received',key:'payment_encashment'}] as const).map(item => <View key={item.key} style={styles.financeRow}><Text style={styles.financeLabel}>{item.label}</Text><Text style={styles.financeValue}>{formatRupees(stageMoney(data,item.key))}</Text></View>)}
             </View>
             <View style={styles.panel}>
