@@ -251,11 +251,11 @@ async function loadCanonicalParentSources(rows: PolicyBusinessRow[]): Promise<Ma
   const parentIds = [...new Set(links.map((link) => link.parent_partner_id))];
   if (!parentIds.length) return new Map();
   const { data: parents, error: parentError } = await admin.from("partners")
-    .select("id,partner_code,partner_name").in("id", parentIds);
+    .select("id,partner_code,display_name").in("id", parentIds);
   if (parentError) throw new Error("Parent Partner attribution could not be loaded.");
   const owners = new Map((parents ?? []).map((p) => [p.id, {
     code: p.partner_code,
-    label: p.partner_name || p.partner_code,
+    label: p.display_name || p.partner_code,
   }]));
   const result = new Map<string, ParentSource>();
   for (const link of links) {
