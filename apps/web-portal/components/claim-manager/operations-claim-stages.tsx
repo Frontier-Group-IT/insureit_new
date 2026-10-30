@@ -198,7 +198,6 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const [spotSubmitting, setSpotSubmitting] = useState(false);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
-  const [spotFormVersion, setSpotFormVersion] = useState(0);
 
   useEffect(() => {
     if (!successNotice) return;
@@ -330,7 +329,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         {selected.key === "spot_intimation" ? (
           <>
             <StageOneForm
-              key={`${claimId}-${spotFormVersion}`}
+              key={claimId}
               claimId={claimId}
               stage={selected}
               active={active ?? stages[0]}
@@ -351,7 +350,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 onClick={() => {
                   try { window.sessionStorage.removeItem(`insureit:spot-intimation-draft:${claimId}`); } catch { /* optional storage */ }
                   setErrorNotice(null);
-                  setSpotFormVersion((version) => version + 1);
+                  router.push("/claims");
                 }}
                 className="rounded-lg border border-[#B8C5D6] bg-white px-4 py-2 text-[11px] font-semibold text-[#071D49] disabled:opacity-50"
               >Cancel</button>
