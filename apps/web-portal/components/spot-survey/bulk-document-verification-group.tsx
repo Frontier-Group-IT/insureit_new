@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ClaimDocumentDeleteConfirmation } from "@/components/claim-manager/claim-document-delete-confirmation";
 import Image from "next/image";
 import { Shield, ShieldCheck, Trash2, Mic } from "lucide-react";
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
@@ -170,6 +171,16 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
 function DocumentFileRow({ item, claim, document, verification, verified, rejected, selected, onToggle }: { item: BulkDocumentGroupItem; claim: ClaimContext; document: DocumentRow; verification?: VerificationRow; verified: boolean; rejected: boolean; selected: boolean; onToggle: () => void }) {
   const router = useRouter();
   const [deletePending, setDeletePending] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const confirmDelete = async () => {
+    setDeletePending(true);
+    try {
+      const result = await deleteVerifiedSpotSurveyDocument(claim.id, document.id);
+      if (!result.ok) window.alert(result.message ?? 'Document could not be deleted.');
+      else { setDeleteOpen(false); router.refresh(); }
+    } catch { window.alert('Document could not be deleted.'); }
+    finally { setDeletePending(false); }
+  };
   const normalizedDocumentType = document.document_type?.toLowerCase() ?? "";
   const legacyAdditionalUpload = isLegacyAdditionalUpload(document);
   const documentStatus = legacyAdditionalUpload || normalizedDocumentType.includes("intimation attachment") ? "pending" : document.verification_status ?? "pending";
@@ -199,30 +210,23 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
           <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${verified ? "bg-green-100 text-green-700" : rejected ? "bg-amber-50 text-amber-700" : "bg-[#F4F7FC] text-[#526178]"}`}>{verified ? "Verified" : statusLabel(documentStatus)}</span>
         </div>
         {rejected ? <p className="mt-1 text-[9px] font-semibold text-amber-700">{document.rejection_reason ?? "Customer reupload requested."}</p> : null}
-        <div className="mt-2 flex justify-end">
+        <div className="mt-2 flex items-center justify-end gap-2">
           <button
               type="button"
               disabled={deletePending}
-              onClick={() => {
-                if (!window.confirm(`Delete document "${document.file_name}"? This will remove it from this claim.`)) return;
-                setDeletePending(true);
-                void (async () => {
-                  const result = await deleteVerifiedSpotSurveyDocument(claim.id, document.id);
-                  if (!result.ok) window.alert(result.message ?? "Document could not be deleted.");
-                  else router.refresh();
-                  setDeletePending(false);
-                })();
-              }}
+              onClick={() => setDeleteOpen(true)}
               aria-label="Delete document"
               title="Delete document"
               className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30 disabled:opacity-50"
             >
               <Trash2 aria-hidden="true" size={16} strokeWidth={2} />
             </button>
+            <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentId={document.id} documentType={item.documentType} label={item.title} actionLabel="Replace" iconOnly />
 
 
         </div>
       </div>
+      {deleteOpen ? <ClaimDocumentDeleteConfirmation filename={document.file_name} pending={deletePending} onCancel={() => setDeleteOpen(false)} onConfirm={() => void confirmDelete()} /> : null}
     </div>
   );
 }
