@@ -187,7 +187,7 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
   const selectable = !verified && !rejected;
 
   return (
-    <div className={`grid grid-cols-[32px_1fr] items-start gap-2 rounded-lg border p-2 transition ${verified ? "border-green-200 bg-green-50/75" : "border-[#E2EAF4] bg-white/80"}`}>
+    <div className={`flex min-w-0 items-center gap-2 rounded-lg border px-3 py-2 transition ${verified ? "border-green-200 bg-green-50/75" : "border-[#E2EAF4] bg-white/80"}`}>
       {selectable ? (
         <button
           type="button"
@@ -202,30 +202,18 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
       ) : (
         <div className="grid h-8 w-8 place-items-center"><DocumentVerificationIcon verified={verified} /></div>
       )}
-      <div className="min-w-0">
-        <p className="flex min-h-8 items-center truncate text-[11px] font-semibold text-[#071D49]">{document.file_name}</p>
-        <div className="mt-1 flex flex-wrap items-center gap-1">
-          <span className="rounded bg-[#F4F7FC] px-1.5 py-0.5 text-[9px] font-semibold text-[#526178]">{item.documentType}</span>
-          {document.signedUrl ? <Link href={document.signedUrl} target="_blank" className="rounded bg-[#EAF7F0] px-1.5 py-0.5 text-[9px] font-semibold text-[#00875A]">Preview</Link> : null}
-          <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${verified ? "bg-green-100 text-green-700" : rejected ? "bg-amber-50 text-amber-700" : "bg-[#F4F7FC] text-[#526178]"}`}>{verified ? "Verified" : statusLabel(documentStatus)}</span>
-        </div>
-        {rejected ? <p className="mt-1 text-[9px] font-semibold text-amber-700">{document.rejection_reason ?? "Customer reupload requested."}</p> : null}
-        <div className="mt-2 flex items-center justify-end gap-2">
-          <button
-              type="button"
-              disabled={deletePending}
-              onClick={() => setDeleteOpen(true)}
-              aria-label="Delete document"
-              title="Delete document"
-              className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30 disabled:opacity-50"
-            >
-              <Trash2 aria-hidden="true" size={16} strokeWidth={2} />
-            </button>
-            <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentId={document.id} documentType={item.documentType} label={item.title} actionLabel="Replace" iconOnly />
-
-
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        {document.signedUrl ? <Link href={document.signedUrl} target="_blank" className="block min-w-0 flex-1 truncate text-[11px] font-semibold text-[#071D49] hover:text-[#174EA6]" title={document.file_name}>{document.file_name}</Link> : <span className="block min-w-0 flex-1 truncate text-[11px] font-semibold text-[#071D49]" title={document.file_name}>{document.file_name}</span>}
+        <span className="sr-only">{verified ? "Verified" : statusLabel(documentStatus)} — {item.documentType}</span>
+        <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-2">
+          <button type="button" disabled={deletePending} aria-label="Delete document" title="Delete document" className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30 disabled:opacity-50" onClick={() => setDeleteOpen(true)}>
+            <Trash2 aria-hidden="true" size={16} strokeWidth={2} />
+          </button>
+          <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentId={document.id} documentType={item.documentType} label={item.title} actionLabel="Replace" iconOnly />
+          
         </div>
       </div>
+      {rejected ? <p className="sr-only">{document.rejection_reason ?? "Customer reupload requested."}</p> : null}
       {deleteOpen ? <ClaimDocumentDeleteConfirmation filename={document.file_name} pending={deletePending} onCancel={() => setDeleteOpen(false)} onConfirm={() => void confirmDelete()} /> : null}
     </div>
   );
