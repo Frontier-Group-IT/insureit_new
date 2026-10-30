@@ -39,7 +39,8 @@ function stageDate(data: PartnerClaimDetail, key: string): string | null {
     const value = stage?.details?.[field];
     if (typeof value === 'string' && value.trim()) return value;
   }
-  return stage?.created_at || null;
+  // Stage record creation is not evidence of the actual milestone date.
+  return null;
 }
 function stageMoney(data: PartnerClaimDetail, key: string): number | null {
   const field = STAGE_AMOUNTS[key];
