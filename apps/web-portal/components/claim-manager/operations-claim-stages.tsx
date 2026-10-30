@@ -240,7 +240,11 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         setSuccessNotice("Spot Intimation details saved.");
         return { ok: true, message: "Spot Intimation details saved." };
       } catch (error) {
-        return { ok: false, message: error instanceof Error ? error.message : "Unable to save Spot Intimation details." };
+        const message = error instanceof Error && error.message && !error.message.includes("NEXT_REDIRECT")
+          ? error.message
+          : "The save request failed. Please refresh the claim to check whether the details were saved before trying again.";
+        console.error("Operations Spot Intimation save failed", { claimId, message });
+        return { ok: false, message };
       } finally {
         setSpotSubmitting(false);
       }
