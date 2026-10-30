@@ -107,6 +107,18 @@ export const getPartnerWebSession = cache(async (): Promise<PartnerSessionContex
   }
 
   const supabase = await createServerSupabaseClient();
+  // Canonical-only accounts must never fall through the legacy Partner account
+  // activation flow. Existing Branch accounts retain their legacy identity.
+  const { data: canonicalBranchIdentity, error: canonicalBranchError } =
+    await supabase.rpc("partner_branch_portal_identity");
+  if (canonicalBranchError) redirect("/access-denied");
+  if (canonicalBranchIdentity?.portal_access_type === "branch"
+      && canonicalBranchIdentity.legacy_partner_id == null) {
+    // Closed until every Partner RPC accepts an explicitly scoped canonical
+    // account instead of broadening identity to the parent Partner.
+    redirect("/access-denied");
+  }
+
   const { data: existingIdentity, error: identityError } = await supabase.rpc("partner_app_current_identity");
   if (identityError) redirect("/access-denied");
 
