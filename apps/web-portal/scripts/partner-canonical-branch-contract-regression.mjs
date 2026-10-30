@@ -52,6 +52,7 @@ assert.match(canonicalIdentity, /a\.status<>'active'/);
 assert.doesNotMatch(canonicalIdentity, /'partner_ids'\s*,|UPDATE\s+public\.policies/i);
 const onboardingAction = readFileSync(resolve(root, 'apps/web-portal/app/intermediaries/groups/branches/new/actions.ts'),'utf8');
 assert.match(onboardingAction, /INSUREIT_CANONICAL_BRANCH_ONBOARDING === "enabled"/);
+assert.match(onboardingAction, /INSUREIT_CANONICAL_BRANCH_AUTHORIZATION_VERIFIED === "enabled"/);
 assert.match(onboardingAction, /service_create_canonical_partner_branch/);
 assert.match(onboardingAction, /partner_branch_login_links/);
 assert.match(onboardingAction, /service_create_partner_branch_profile/);
