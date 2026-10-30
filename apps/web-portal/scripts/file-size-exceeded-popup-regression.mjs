@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const popup=readFileSync("components/file-size-exceeded-popup.tsx","utf8");
+const life=readFileSync("components/life-health-case-detail.tsx","utf8");
+const nonMotor=readFileSync("components/non-motor-document-picker.tsx","utf8");
+assert.match(popup,/File Size Exceeded \(Maximum allowed \{maxSizeMb\} MB\)/);
+assert.match(popup,/The selected file is larger than the permitted upload size\./);
+assert.match(popup,/min-h-11 w-full/);
+assert.match(popup,/createPortal\(/);
+assert.match(life,/setOversizedLimitMb\(20\)/);
+assert.match(nonMotor,/setShowSizePopup\(true\)/);
+assert.match(nonMotor,/maxSizeMb=\{50\}/);
+console.log("Compact file-size exceeded popup regression passed.");
