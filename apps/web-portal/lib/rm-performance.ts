@@ -63,10 +63,6 @@ export type RmPerformanceData = {
 
 const REPORT_PAGE_SIZE = 200;
 
-function normalizedRmDisplayName(name: string): string {
-  return name.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-IN') || 'unassigned';
-}
-
 export async function loadRmPerformance(profile: ViewerProfile, query: RmPerformanceQuery): Promise<RmPerformanceData> {
   const selectedRmId = validUuid(query.rm);
   const today = indiaDate(new Date());
@@ -134,7 +130,7 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
   const mtdSources = aggregateSources(mtdRegisterRows, intermediaryNames);
   const rowKeys = new Set([...periodByRm.keys(), ...todayByRm.keys()]);
 
-  const individualRows = [...rowKeys]
+  const rows = [...rowKeys]
     .map((key) => {
       const periodRow = periodByRm.get(key);
       const todayRow = todayByRm.get(key);
@@ -155,33 +151,6 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
       };
     })
     .sort((a, b) => b.mtdNetPremium - a.mtdNetPremium || b.mtdPolicies - a.mtdPolicies || b.todayNetPremium - a.todayNetPremium || a.name.localeCompare(b.name));
-
-  // The report RPC groups by employee ID (and name), so historical/duplicate
-  // employee IDs can produce several visually identical cards for one RM name.
-  // This is a presentation-only consolidation: never change employee/policy records.
-  // Preserve single-ID drilldown, but do not imply one employee ID owns a combined card.
-  const groupedRows = new Map<string, RmPerformanceRow & { employeeIds: Set<string> }>();
-  for (const row of individualRows) {
-    const key = normalizedRmDisplayName(row.name);
-    const current = groupedRows.get(key);
-    if (!current) {
-      groupedRows.set(key, { ...row, employeeIds: new Set(row.employeeId ? [row.employeeId] : []) });
-      continue;
-    }
-    if (row.employeeId) current.employeeIds.add(row.employeeId);
-    current.todayPolicies += row.todayPolicies;
-    current.todayNetPremium += row.todayNetPremium;
-    current.mtdPolicies += row.mtdPolicies;
-    current.mtdNetPremium += row.mtdNetPremium;
-    // Both rows use the same name-based source aggregate. Do not add it twice.
-    current.employeeId = null;
-  }
-  const rows = [...groupedRows.values()].map(({ employeeIds, ...row }) => ({
-    ...row,
-    employeeId: employeeIds.size === 1 ? [...employeeIds][0] : null,
-    averageNetPremium: row.mtdPolicies ? row.mtdNetPremium / row.mtdPolicies : 0,
-    contributionPercent: totalMtdPremium > 0 ? row.mtdNetPremium / totalMtdPremium * 100 : 0,
-  })).sort((a, b) => b.mtdNetPremium - a.mtdNetPremium || b.mtdPolicies - a.mtdPolicies || b.todayNetPremium - a.todayNetPremium || a.name.localeCompare(b.name));
 
   const selectedRmName =
     selectedRmId
