@@ -12,6 +12,7 @@ import { PartnerReportsShell } from "@/components/partner-portal/partner-reports
 import { requirePartnerReportScope } from "@/lib/reports/partner-report-scope";
 import {
   getPartnerWebBusinessPerformance,
+  getPartnerCanonicalPolicySummary,
   listPartnerWebPolicies,
   type PartnerPolicyRow,
 } from "@/lib/partner-web";
@@ -200,6 +201,12 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
     loadPartnerPolicies(),
   ]);
 
+  // Do not replace the existing report until every module and date filter has been
+  // reconciled. This is an opt-in lifetime hierarchy cross-check only.
+  const hierarchySummary = process.env.INSUREIT_BRANCH_REPORT_RECONCILIATION === "enabled"
+    ? await getPartnerCanonicalPolicySummary()
+    : null;
+
   const generatedDay = validIsoDate(performance.generated_at?.slice(0, 10))
     ? performance.generated_at.slice(0, 10)
     : new Date().toISOString().slice(0, 10);
@@ -249,6 +256,14 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
   return (
     <PartnerReportsShell active="Business" scope={reportScope}>
       <div className="space-y-3 pb-4">
+        {hierarchySummary ? (
+          <section className="rounded-xl border border-[#d4deeb] bg-white px-4 py-3 text-[11px] text-[#30445f]">
+            <p className="font-bold">Verified hierarchy — lifetime policy reference</p>
+            <p className="mt-1">Authorized unique policies: {integer(Number(hierarchySummary.policies))} · Recorded premium: {currency(hierarchySummary.recorded_premium)}</p>
+            <p className="mt-1 text-[#64748b]">Lifetime reference only; the filtered dashboard figures below use the selected period.</p>
+          </section>
+        ) : null}
+
         <section className="flex flex-wrap items-end justify-between gap-3 border-b border-[#dfe6ef] pb-3">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.09em] text-[#7b8ca4]">Reports</p>
