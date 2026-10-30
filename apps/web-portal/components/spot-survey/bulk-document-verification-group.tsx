@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ClaimDocumentDeleteConfirmation } from "@/components/claim-manager/claim-document-delete-confirmation";
 import Image from "next/image";
 import { Shield, ShieldCheck, Trash2, Mic } from "lucide-react";
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
@@ -170,6 +171,16 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
 function DocumentFileRow({ item, claim, document, verification, verified, rejected, selected, onToggle }: { item: BulkDocumentGroupItem; claim: ClaimContext; document: DocumentRow; verification?: VerificationRow; verified: boolean; rejected: boolean; selected: boolean; onToggle: () => void }) {
   const router = useRouter();
   const [deletePending, setDeletePending] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const confirmDelete = async () => {
+    setDeletePending(true);
+    try {
+      const result = await deleteVerifiedSpotSurveyDocument(claim.id, document.id);
+      if (!result.ok) window.alert(result.message ?? 'Document could not be deleted.');
+      else { setDeleteOpen(false); router.refresh(); }
+    } catch { window.alert('Document could not be deleted.'); }
+    finally { setDeletePending(false); }
+  };
   const normalizedDocumentType = document.document_type?.toLowerCase() ?? "";
   const legacyAdditionalUpload = isLegacyAdditionalUpload(document);
   const documentStatus = legacyAdditionalUpload || normalizedDocumentType.includes("intimation attachment") ? "pending" : document.verification_status ?? "pending";
@@ -203,16 +214,7 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
           <button
               type="button"
               disabled={deletePending}
-              onClick={() => {
-                if (!window.confirm(`Delete document "${document.file_name}"? This will remove it from this claim.`)) return;
-                setDeletePending(true);
-                void (async () => {
-                  const result = await deleteVerifiedSpotSurveyDocument(claim.id, document.id);
-                  if (!result.ok) window.alert(result.message ?? "Document could not be deleted.");
-                  else router.refresh();
-                  setDeletePending(false);
-                })();
-              }}
+              onClick={() => setDeleteOpen(true)}
               aria-label="Delete document"
               title="Delete document"
               className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30 disabled:opacity-50"
@@ -223,6 +225,7 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
 
         </div>
       </div>
+      {deleteOpen ? <ClaimDocumentDeleteConfirmation filename={document.file_name} pending={deletePending} onCancel={() => setDeleteOpen(false)} onConfirm={() => void confirmDelete()} /> : null}
     </div>
   );
 }
