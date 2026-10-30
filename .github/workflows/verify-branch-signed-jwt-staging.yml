@@ -1,0 +1,47 @@
+name: Verify canonical Branch signed-JWT isolation (staging)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: branch-signed-jwt-stage-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  branch-isolation:
+    if: github.ref_name != 'main'
+    name: Authenticated Branch A / Branch B / Parent authorization
+    runs-on: ubuntu-latest
+    environment: insureit-branch-security-staging
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/web-portal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Require staging-only credentials and execute signed-JWT checks
+        env:
+          SUPABASE_URL: ${{ secrets.BRANCH_TEST_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.BRANCH_TEST_SUPABASE_ANON_KEY }}
+          BRANCH_A_JWT: ${{ secrets.BRANCH_TEST_A_JWT }}
+          BRANCH_B_JWT: ${{ secrets.BRANCH_TEST_B_JWT }}
+          PARENT_JWT: ${{ secrets.BRANCH_TEST_PARENT_JWT }}
+          BRANCH_A_POLICY_ID: ${{ vars.BRANCH_TEST_A_POLICY_ID }}
+          BRANCH_A_CUSTOMER_ID: ${{ vars.BRANCH_TEST_A_CUSTOMER_ID }}
+          BRANCH_A_CLAIM_ID: ${{ vars.BRANCH_TEST_A_CLAIM_ID }}
+          PRODUCTION_SUPABASE_PROJECT_REF: ilzhsfqqjyppzzvfscmh
+        run: |
+          node --input-type=module <<'NODE'
+          const stageUrl=process.env.SUPABASE_URL || '';
+          const forbidden=process.env.PRODUCTION_SUPABASE_PROJECT_REF || '';
+          if (!stageUrl.startsWith('https://') || !new URL(stageUrl).hostname.endsWith('.supabase.co') || stageUrl.includes(forbidden)) {
+            throw new Error('Staging Supabase URL required; production target forbidden');
+          }
+          NODE
+          node scripts/partner-branch-signed-jwt-e2e.mjs
