@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+
 import {
   loadPolicyBusinessNetReport,
   type PolicyBusinessNetReport,
@@ -126,8 +128,9 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
     ]),
   );
 
-  const todaySources = aggregateSources(todayRegisterRows, intermediaryNames);
-  const mtdSources = aggregateSources(mtdRegisterRows, intermediaryNames);
+  const parentSourceByPolicy = await loadCanonicalParentSources([...todayRegisterRows, ...mtdRegisterRows]);
+  const todaySources = aggregateSources(todayRegisterRows, intermediaryNames, parentSourceByPolicy);
+  const mtdSources = aggregateSources(mtdRegisterRows, intermediaryNames, parentSourceByPolicy);
   const rowKeys = new Set([...periodByRm.keys(), ...todayByRm.keys()]);
 
   const rows = [...rowKeys]
@@ -230,6 +233,39 @@ async function loadCompleteRegisterRows(
   ];
 }
 
+type ParentSource = { code: string; label: string };
+
+// Resolve canonical attribution by policy ID, not by changing historic intermediary codes.
+// Restrict the lookup to the report's loaded policies and deduplicate across date windows.
+async function loadCanonicalParentSources(rows: PolicyBusinessRow[]): Promise<Map<string, ParentSource>> {
+  const policyIds = [...new Set(rows.map((row) => row.id).filter(Boolean))];
+  if (!policyIds.length) return new Map();
+  const admin = createSupabaseAdminClient();
+  const links: { policy_id: string; parent_partner_id: string }[] = [];
+  for (let offset = 0; offset < policyIds.length; offset += 200) {
+    const { data, error } = await admin.from("partner_branch_policy_links")
+      .select("policy_id,parent_partner_id").in("policy_id", policyIds.slice(offset, offset + 200));
+    if (error) throw new Error("Branch source attribution could not be loaded.");
+    links.push(...(data ?? []));
+  }
+  const parentIds = [...new Set(links.map((link) => link.parent_partner_id))];
+  if (!parentIds.length) return new Map();
+  const { data: parents, error: parentError } = await admin.from("partners")
+    .select("id,partner_code,partner_name").in("id", parentIds);
+  if (parentError) throw new Error("Parent Partner attribution could not be loaded.");
+  const owners = new Map((parents ?? []).map((p) => [p.id, {
+    code: p.partner_code,
+    label: p.partner_name || p.partner_code,
+  }]));
+  const result = new Map<string, ParentSource>();
+  for (const link of links) {
+    const parent = owners.get(link.parent_partner_id);
+    if (!parent?.code) throw new Error("Missing parent Partner attribution.");
+    result.set(link.policy_id, parent);
+  }
+  return result;
+}
+
 type SourceAggregate = {
   key: string;
   label: string;
@@ -241,16 +277,18 @@ type SourceAggregate = {
 function aggregateSources(
   rows: PolicyBusinessRow[],
   intermediaryNames: Map<string, { name: string; type: string | null }>,
+  parentSourceByPolicy: Map<string, ParentSource>,
 ) {
   const byRm = new Map<string, Map<string, SourceAggregate>>();
 
   for (const row of rows) {
     const rmName = row.rm_name?.trim() || "Unassigned";
-    const code = row.intermediary_code?.trim() || "";
+    const parent = parentSourceByPolicy.get(row.id);
+    const code = parent?.code ?? row.intermediary_code?.trim() ?? "";
     const type = row.intermediary_type?.trim() || null;
     const key = code || type || "direct-unassigned";
     const known = code ? intermediaryNames.get(code) : null;
-    const label = known?.name || code || type || "Direct / Unassigned";
+    const label = parent?.label || known?.name || code || type || "Direct / Unassigned";
 
     const rmSources = byRm.get(rmName) ?? new Map<string, SourceAggregate>();
     const source = rmSources.get(key) ?? {
