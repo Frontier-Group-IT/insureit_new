@@ -141,7 +141,12 @@ AS $fn$
  -- If multiple distinct active Branch links exist, fail closed rather than choose one.
  SELECT r.id,r.parent_partner_id,r.branch_code,r.partner_id
  FROM resolved r
- WHERE (SELECT count(DISTINCT id) FROM resolved)=1;
+ WHERE (SELECT count(DISTINCT id) FROM resolved)=1
+   AND NOT EXISTS (
+     SELECT 1 FROM public.portal_access_identities existing
+     WHERE existing.profile_id=auth.uid() AND existing.entity_type='branch'
+       AND existing.status<>'active'
+   );
 $fn$;
 REVOKE ALL ON FUNCTION public.partner_branch_canonical_access() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.partner_branch_canonical_access() TO authenticated, service_role;
