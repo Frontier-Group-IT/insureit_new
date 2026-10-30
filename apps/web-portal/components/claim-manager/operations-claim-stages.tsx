@@ -438,10 +438,13 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
       {successNotice ? <ClaimStageSuccessPopup message={successNotice} /> : null}
       {errorNotice ? (
         <div className="fixed inset-0 z-[1000] grid place-items-center bg-[#07152F]/60 px-4" role="presentation">
-          <div role="alertdialog" aria-modal="true" aria-labelledby="spot-error-title" aria-describedby="spot-error-description" className="w-full max-w-[370px] rounded-xl bg-white p-4 shadow-2xl">
-            <h2 id="spot-error-title" className="text-[16px] font-semibold text-[#9F253A]">Action required</h2>
-            <p id="spot-error-description" className="mt-2 text-[12px] leading-5 text-[#334155]">{summarizeClaimActionError(errorNotice)}</p>
-            <div className="mt-3 flex justify-end"><button type="button" autoFocus onClick={() => setErrorNotice(null)} className="rounded-lg bg-[#071D49] px-6 py-2 text-[12px] font-semibold text-white">OK</button></div>
+          <div role="alertdialog" aria-modal="true" aria-labelledby="spot-error-title" aria-describedby="spot-error-description" className="w-full max-w-[525px] overflow-hidden rounded-[20px] bg-white shadow-2xl">
+            <div className="flex flex-col items-center px-5 pb-6 pt-7 text-center">
+              <div aria-hidden="true" className="flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#FFF1E6] text-[24px] font-medium text-[#E87525]">!</div>
+              <h2 id="spot-error-title" className="mt-5 text-[18px] font-semibold text-[#142C4B]">Check details</h2>
+              <p id="spot-error-description" className="mt-3 text-[13px] leading-5 text-[#77849A]">{summarizeClaimActionError(errorNotice)}</p>
+            </div>
+            <div className="border-t border-[#E4E9F0] px-6 py-4"><button type="button" autoFocus onClick={() => setErrorNotice(null)} className="h-[50px] w-full rounded-xl bg-[#19385E] text-[13px] font-semibold text-white">OK</button></div>
           </div>
         </div>
       ) : null}
