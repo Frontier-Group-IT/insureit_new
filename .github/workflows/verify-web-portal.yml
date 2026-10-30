@@ -43,6 +43,8 @@ jobs:
         run: npm run partner-reports:security-regression
       - name: Operations Branch-parent policy register regression
         run: node scripts/operations-branch-parent-policy-register-regression.mjs
+      - name: RM historical Branch identity consolidation regression
+        run: node scripts/rm-branch-duplicate-identity-regression.mjs
       - name: RM canonical Branch source attribution regression
         run: node scripts/rm-canonical-branch-source-regression.mjs
       - name: Canonical Branch hierarchy security contract regression
