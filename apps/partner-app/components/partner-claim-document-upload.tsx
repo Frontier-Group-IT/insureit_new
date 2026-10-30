@@ -261,7 +261,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
     return (
       <>
         <View style={styles.billingShell}>
-          <Ionicons name={variant === "assessment" ? "clipboard-outline" : "document-text-outline"} size={28} color="#1857A9" />
+          {variant === "billing" ? <Image source={require("../../mobile-app/assets/claims/accounts-finance.png")} style={styles.billingArtwork} resizeMode="contain" accessibilityLabel="Bill upload" /> : <Image source={require("../../mobile-app/assets/claims/claim-assessment.png")} style={styles.billingArtwork} resizeMode="contain" accessibilityLabel="Assessment report upload" />}
           <View style={styles.billingCopy}>
             <Text style={styles.billingTitle} numberOfLines={1}>{busy ? 'Uploading document…' : variant === 'assessment' ? 'Assessment Report (Optional)' : 'Upload final workshop bill'}</Text>
             <Text style={styles.billingSubtitle} numberOfLines={1}>{count ? `${count} uploaded • ${latest?.name ?? 'Saved'}` : 'PDF, JPG, PNG'}</Text>
@@ -282,7 +282,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
         <View style={[styles.tile, tileFullWidth && styles.tileFullWidth, count > 0 && styles.tileReady]}>
           <View style={styles.tileHeading}>
             <Pressable accessibilityRole="button" accessibilityLabel={`Add more ${label ?? documentType} documents`} disabled={busy} onPress={() => void pickAndUpload()} style={styles.tileHeadingIdentity}>
-              {artwork ? <Image source={artwork} style={styles.tileHeadingArtwork} resizeMode="contain" /> : <Ionicons name="document-outline" size={23} color="#0A43A3" />}
+              {documentType === "Accident Video" ? <View style={styles.accidentVideoIcon} accessibilityLabel="Accident Video"><Ionicons name="videocam" size={17} color="#FFFFFF" /></View> : artwork ? <Image source={artwork} style={styles.tileHeadingArtwork} resizeMode="contain" /> : <Ionicons name="document-outline" size={23} color="#0A43A3" />}
               <Text style={styles.tileHeadingName} numberOfLines={2}>{label ?? documentType}</Text>
             </Pressable>
             {latest && !busy ? (
@@ -461,6 +461,7 @@ function safeExtension(name: string, mimeType?: string | null) {
 
 const styles=StyleSheet.create({
   billingShell:{minHeight:64,borderWidth:1,borderColor:'#D7E1EC',borderRadius:12,backgroundColor:'#F7FAFD',paddingHorizontal:12,paddingVertical:10,flexDirection:'row',alignItems:'center',gap:10},
+  billingArtwork:{width:30,height:30},
   billingCopy:{flex:1,minWidth:0,gap:3},
   billingTitle:{fontSize:11,fontWeight:'800',color:'#183052'},
   billingSubtitle:{fontSize:9,color:'#7C8A9E'},
@@ -474,6 +475,7 @@ const styles=StyleSheet.create({
   tileHeading:{width:'100%',flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between',gap:3,minHeight:43},
   tileHeadingIdentity:{flex:1,minWidth:0,flexDirection:'row',alignItems:'center',gap:3},
   tileHeadingArtwork:{width:23,height:26},
+  accidentVideoIcon:{width:26,height:26,borderRadius:6,backgroundColor:'#EF233C',justifyContent:'center',alignItems:'center'},
   tileHeadingName:{flex:1,minWidth:0,fontSize:9,fontWeight:'800',color:'#0B2248'},
   tileHeadingDelete:{padding:1},
   tileCounts:{flexDirection:'row',justifyContent:'center',alignItems:'center',gap:12,width:'100%',minHeight:31},

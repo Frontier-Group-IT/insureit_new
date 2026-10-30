@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Keyboard, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Animated, Image, Keyboard, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 
 import { ActiveClaimPopup } from '@/components/active-claim-popup';
 import { ClaimActionBar } from '@/components/external-claim-ui';
@@ -423,6 +423,18 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
   const anchorRef = useRef<View>(null);
   const searchInputRef = useRef<TextInput>(null);
   const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const { height: windowHeight } = useWindowDimensions();
+  const [keyboardTop, setKeyboardTop] = useState<number | null>(null);
+  useEffect(() => {
+    const shown = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillChangeFrame' : 'keyboardDidShow', (event) => {
+      setKeyboardTop(event.endCoordinates.screenY);
+    });
+    const hidden = Keyboard.addListener('keyboardDidHide', () => setKeyboardTop(null));
+    return () => { shown.remove(); hidden.remove(); };
+  }, []);
+  // Keep the menu's top anchored to its trigger; only shrink its scrollable height.
+  const menuTop = anchor.y + anchor.height + 4;
+  const availableHeight = Math.max(90, (keyboardTop ?? windowHeight) - menuTop - 10);
 
   function focusSearchInput() {
     requestAnimationFrame(() => {
@@ -481,6 +493,7 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
       visible={open}
       transparent
       animationType="none"
+      presentationStyle="overFullScreen"
       statusBarTranslucent
       onRequestClose={closeSelector}
       onShow={focusSearchInput}
@@ -494,6 +507,7 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
               left: anchor.x,
               top: anchor.y + anchor.height + 4,
               width: anchor.width,
+              maxHeight: Math.min(330, availableHeight),
             },
           ]}
         >

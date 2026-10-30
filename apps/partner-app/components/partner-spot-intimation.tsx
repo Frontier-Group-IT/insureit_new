@@ -10,7 +10,6 @@ import { PartnerAssets } from '@/lib/partner-assets';
 import { savePartnerClaimSpot, type PartnerClaimDetail } from '@/lib/claims';
 import { PartnerClaimStepFooter } from '@/components/partner-claim-step-footer';
 import { PartnerClaimDocumentUpload } from '@/components/partner-claim-document-upload';
-import { getPartnerCurrentLocation } from '@/lib/current-location';
 
 const DOCUMENTS = [
   { title: 'RC Copy', artwork: require('../../mobile-app/assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png') },
@@ -37,14 +36,6 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
   const [phone, setPhone] = useState(initialDriver.phone);
   const [location, setLocation] = useState(data.claim.accident_location || '');
   const [saving, setSaving] = useState(false);
-  const [locating, setLocating] = useState(false);
-  const fillCurrentLocation = async () => {
-    if (!editable || locating) return;
-    setLocating(true);
-    try { setLocation(await getPartnerCurrentLocation()); }
-    catch (error) { Alert.alert('Location unavailable', error instanceof Error ? error.message : 'Please enter the location manually.'); }
-    finally { setLocating(false); }
-  };
   const save = async () => {
     if (saving) return;
     const accident = parseLocalDateTime(incidentDate, incidentTime);
@@ -86,7 +77,7 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
           <EditableField label="Spot Intimation Time" required value={spotTime} onChange={setSpotTime} placeholder="HH:mm" editable={editable} icon="time-outline"/>
           <EditableField label="Driver Name" required value={driver} onChange={setDriver} placeholder="Enter driver name" editable={editable}/>
           <EditableField label="Driver Number" required value={phone} onChange={setPhone} placeholder="Enter mobile number" editable={editable} keyboard="phone-pad"/>
-          <View style={styles.locationHeading}><Text style={styles.fieldLabel}>Location <Text style={styles.locationRequired}>*</Text></Text><Pressable accessibilityRole="button" accessibilityLabel="Use Current Location" accessibilityState={{disabled:!editable||locating}} disabled={!editable||locating} style={styles.locationButton} onPress={()=>void fillCurrentLocation()}><Ionicons name="locate-outline" size={16} color="#0B4DA3"/><Text style={styles.locationButtonText}>{locating?"Locating…":"Use Current Location"}</Text></Pressable></View>
+          <View style={styles.locationHeading}><Text style={styles.fieldLabel}>Location <Text style={styles.locationRequired}>*</Text></Text></View>
           <EditableField label="" value={location} onChange={setLocation} placeholder="Enter accident location" editable={editable}/>
         </View>
         <View style={styles.documentReadyCard}>

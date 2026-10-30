@@ -1,5 +1,6 @@
 "use client";
 import { DocumentDeleteConfirmation } from "@/components/document-delete-confirmation";
+import { FileSizeExceededPopup } from "@/components/file-size-exceeded-popup";
 
 import { FileText, Files, LoaderCircle, RefreshCw, Trash2, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -81,6 +82,7 @@ function DocumentPickerControl({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [showDeleteConfirmation,setShowDeleteConfirmation] = useState(false);
+  const [showSizePopup,setShowSizePopup] = useState(false);
   const [stagedPreviewUrl,setStagedPreviewUrl] = useState<string|null>(null);
   useEffect(()=>{if(!file){setStagedPreviewUrl(null);return;}const url=URL.createObjectURL(file);setStagedPreviewUrl(url);return()=>URL.revokeObjectURL(url);},[file]);
   const shownName = file?.name ?? existingDocument?.fileName ?? "";
@@ -89,7 +91,7 @@ function DocumentPickerControl({
   function selectFile(fileValue?: File) {
     if (!fileValue) return;
     if (fileValue.size > MAX_FILE_SIZE) {
-      onError(`${label} must be 50 MB or smaller.`);
+      setShowSizePopup(true);
       return;
     }
     if (!["application/pdf", "image/jpeg", "image/png", "image/webp"].includes(fileValue.type)) {
@@ -172,6 +174,7 @@ function DocumentPickerControl({
           </button>
         </div>
       )}
+      {showSizePopup ? <FileSizeExceededPopup maxSizeMb={50} onClose={()=>setShowSizePopup(false)}/> : null}
       {showDeleteConfirmation && (file || existingDocument) ? <DocumentDeleteConfirmation fileName={shownName} onCancel={() => setShowDeleteConfirmation(false)} onConfirm={() => {setShowDeleteConfirmation(false);if(file)onRemoveStaged();else onDeleteExisting?.()}} busy={deleting}/> : null}
     </div>
   );

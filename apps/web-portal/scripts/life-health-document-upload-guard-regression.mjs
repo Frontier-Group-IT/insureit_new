@@ -11,9 +11,10 @@ const config = read("next.config.mjs");
 // Keep the file small enough that multipart/form-data overhead does not exhaust
 // the configured Next.js Server Action request limit.
 assert.match(config, /bodySizeLimit:\s*"25mb"/);
-assert.match(actions, /MAX_FILE_SIZE = 20 \* 1024 \* 1024/);
-assert.match(detail, /file\.size>20\*1024\*1024/);
-assert.match(detail, /Document exceeds the 20 MB upload limit/);
+assert.match(actions, /MAX_FILE_SIZE = 4 \* 1024 \* 1024/);
+assert.match(detail, /file\.size>4\*1024\*1024/);
+assert.match(detail, /setOversizedLimitMb\(4\)/);
+assert.match(detail, /FileSizeExceededPopup maxSizeMb=\{oversizedLimitMb\}/);
 assert.match(detail, /if\(!file\.size\)/);
 assert.match(detail, /image\/webp/);
 assert.match(detail, /catch\(error\)\{console\.error\("Life\/Health document upload failed"/);

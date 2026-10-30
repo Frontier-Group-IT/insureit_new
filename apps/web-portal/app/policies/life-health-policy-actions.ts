@@ -10,7 +10,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const DOCUMENT_BUCKET = "policy-documents";
 // Leave headroom under the 25 MB Next.js server-action request limit.
-const MAX_FILE_SIZE = 20 * 1024 * 1024;
+const MAX_FILE_SIZE = 4 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
 const DOCUMENT_TYPES = new Set(["proposal_form", "benefit_illustration", "premium_receipt", "policy_copy", "kyc", "other_document"]);
 const PAYMENT_FREQUENCIES = new Set(["Monthly", "Quarterly", "Half Yearly", "Annually", "One Time"]);
@@ -53,10 +53,10 @@ function commercialFromDetails(details:Record<string,unknown>|null):LifeHealthCo
 async function uploadCaseDocumentInternal(admin:ReturnType<typeof createSupabaseAdminClient>,profileId:string,caseId:string,documentType:string,fileValue:File){
   if(!DOCUMENT_TYPES.has(documentType))return{ok:false as const,error:"Unsupported Life/Health document type."};
   if(fileValue.size<=0)return{ok:false as const,error:"Choose a document to upload."};
-  if(fileValue.size>MAX_FILE_SIZE)return{ok:false as const,error:"Each document must be 20 MB or smaller."};
+  if(fileValue.size>MAX_FILE_SIZE)return{ok:false as const,error:"Each document must be 4 MB or smaller."};
   if(!ALLOWED_MIME_TYPES.has(fileValue.type))return{ok:false as const,error:"Upload a PDF, JPG, PNG or WebP document."};
   const fileName=safeFileName(fileValue.name),storagePath=`life-health-cases/${caseId}/${documentType}/${crypto.randomUUID()}-${fileName}`,bytes=Buffer.from(await fileValue.arrayBuffer());
-  const{error:storageError}=await admin.storage.from(DOCUMENT_BUCKET).upload(storagePath,bytes,{contentType:fileValue.type,upsert:false});if(storageError)return{ok:false as const,error:"The document could not be uploaded."};
+  const{error:storageError}=await admin.storage.from(DOCUMENT_BUCKET).upload(storagePath,bytes,{contentType:fileValue.type,upsert:false});if(storageError){console.error("Life/Health case storage upload failed",{caseId,documentType,code:storageError.name,message:storageError.message});return{ok:false as const,error:`Document storage rejected the upload: ${storageError.message}`}}
   const{data:existing}=await admin.from("life_health_case_documents").select("id,storage_bucket,storage_path").eq("case_id",caseId).eq("document_type",documentType).maybeSingle<{id:string;storage_bucket:string;storage_path:string}>();
   const values={file_name:fileValue.name,storage_bucket:DOCUMENT_BUCKET,storage_path:storagePath,mime_type:fileValue.type,file_size:fileValue.size,uploaded_by:profileId,updated_at:new Date().toISOString()};
   if(existing){const{error}=await admin.from("life_health_case_documents").update(values).eq("id",existing.id);if(error){await admin.storage.from(DOCUMENT_BUCKET).remove([storagePath]);return{ok:false as const,error:"The uploaded document record could not be saved."}}if(existing.storage_bucket===DOCUMENT_BUCKET&&existing.storage_path&&existing.storage_path!==storagePath)await admin.storage.from(DOCUMENT_BUCKET).remove([existing.storage_path]);return{ok:true as const,documentId:existing.id}}
@@ -81,7 +81,36 @@ export async function createLifeHealthCase(formData:FormData):Promise<LifeHealth
   }catch(error){if(createdCaseId)await admin.from("life_health_cases").delete().eq("id",createdCaseId);if(uploadedPaths.length)await admin.storage.from(DOCUMENT_BUCKET).remove(uploadedPaths);if(createdCustomerId)await admin.from("customers").delete().eq("id",createdCustomerId);return{ok:false,error:error instanceof Error&&error.message&&!error.message.includes("insert")?error.message:"We couldn't create the Life/Health case. Your form is still intact; please try again."}}
 }
 
-export async function uploadLifeHealthCaseDocument(formData:FormData):Promise<LifeHealthDocumentResult>{const caseId=clean(formData.get("caseId")),documentType=clean(formData.get("documentType")),file=formData.get("file");const {profile:requester}=await getAuthenticatedProfile(await getServerAccessToken());const profile=requester?.role==="operations_head_life"?await requireOperationsHeadRecordOwnership("life_health_case",caseId):await requirePolicyCreator();const admin=createSupabaseAdminClient();if(!caseId)return{ok:false,error:"The case reference is missing."};if(!(file instanceof File))return{ok:false,error:"Choose a document to upload."};const{data:caseRow,error}=await admin.from("life_health_cases").select("id,final_policy_id").eq("id",caseId).maybeSingle<{id:string;final_policy_id:string|null}>();if(error||!caseRow)return{ok:false,error:"This case is no longer available."};if(caseRow.final_policy_id)return{ok:false,error:"This case has already been converted to a policy."};const result=await uploadCaseDocumentInternal(admin,profile.id,caseId,documentType,file);if(!result.ok)return result;revalidatePath(`/policies/life-health-cases/${caseId}`);return result}
+export async function uploadLifeHealthCaseDocument(formData:FormData):Promise<LifeHealthDocumentResult>{
+  const caseId=clean(formData.get("caseId")),documentType=clean(formData.get("documentType")),file=formData.get("file");
+  if(!caseId)return{ok:false,error:"The case reference is missing."};
+  if(!(file instanceof File))return{ok:false,error:"Choose a document to upload."};
+  if(file.size<=0)return{ok:false,error:"Choose a non-empty document."};
+  if(file.size>MAX_FILE_SIZE)return{ok:false,error:"Document must be 4 MB or smaller."};
+  if(!ALLOWED_MIME_TYPES.has(file.type))return{ok:false,error:"Upload a PDF, JPG, PNG or WebP document."};
+  try{
+    const {profile:requester}=await getAuthenticatedProfile(await getServerAccessToken());
+    if(!requester?.id)return{ok:false,error:"Your session has expired. Sign in again and retry."};
+    const profile=requester.role==="operations_head_life"
+      ? await requireOperationsHeadRecordOwnership("life_health_case",caseId)
+      : await requirePolicyCreator();
+    const admin=createSupabaseAdminClient();
+    const{data:caseRow,error}=await admin.from("life_health_cases").select("id,final_policy_id").eq("id",caseId).maybeSingle<{id:string;final_policy_id:string|null}>();
+    if(error){console.error("Life/Health upload case lookup failed",{caseId,message:error.message});return{ok:false,error:"Could not verify this case. Please retry."}}
+    if(!caseRow)return{ok:false,error:"This case is no longer available."};
+    if(caseRow.final_policy_id)return{ok:false,error:"This case has already been converted to a policy."};
+    const result=await uploadCaseDocumentInternal(admin,profile.id,caseId,documentType,file);
+    if(!result.ok)return result;
+    revalidatePath(`/policies/life-health-cases/${caseId}`);
+    return result;
+  }catch(cause){
+    const message=cause instanceof Error?cause.message:String(cause);
+    console.error("Life/Health case document upload failed",{caseId,documentType,message});
+    if(message.includes("operations_head_record_access_denied"))return{ok:false,error:"You do not have permission to upload documents for this case. Contact your administrator."};
+    if(message.includes("JWT")||message.includes("session")||message.includes("Authentication"))return{ok:false,error:"Your session may have expired. Sign in again and retry."};
+    return{ok:false,error:"Document upload failed on the server. Please retry or contact support with the case reference."};
+  }
+}
 
 export async function deleteLifeHealthCaseDocument(caseId:string,documentId:string):Promise<{ok:true}|{ok:false;error:string}>{
   if(!caseId||!documentId)return{ok:false,error:"The document reference is missing."};

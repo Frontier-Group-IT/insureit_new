@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+const root=resolve(import.meta.dirname,"..");
+const server=readFileSync(resolve(root,"app/policies/life-health-issued-policy-document-actions.ts"),"utf8");
+const client=readFileSync(resolve(root,"components/life-health-issued-policy-edit-form.tsx"),"utf8");
+assert.match(server,/MAX_FILE_SIZE = 20 \* 1024 \* 1024/);
+assert.match(server,/requirePolicyEditor\(policyId\)/);
+assert.match(server,/\.eq\("final_policy_id", policyId\)/);
+assert.match(client,/file\.size > 20 \* 1024 \* 1024/);
+assert.match(client,/catch \(cause\)/);
+assert.match(client,/Document upload request failed/);
+console.log("Life/Health issued policy upload safeguards passed");

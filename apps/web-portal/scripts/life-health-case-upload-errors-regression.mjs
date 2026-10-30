@@ -1,0 +1,15 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+const root=resolve(import.meta.dirname,"..");
+const server=readFileSync(resolve(root,"app/policies/life-health-policy-actions.ts"),"utf8");
+const client=readFileSync(resolve(root,"components/life-health-case-detail.tsx"),"utf8");
+const action=server.slice(server.indexOf("export async function uploadLifeHealthCaseDocument("),server.indexOf("export async function deleteLifeHealthCaseDocument("));
+assert.match(action,/requester\.role==="operations_head_life"/);
+assert.match(action,/requireOperationsHeadRecordOwnership\("life_health_case",caseId\)/);
+assert.match(action,/session has expired/);
+assert.match(action,/operations_head_record_access_denied/);
+assert.match(action,/catch\(cause\)/);
+assert.match(server,/Document storage rejected the upload:/);
+assert.match(client,/upload request failed before the server returned a response/i);
+console.log("Life/Health case upload error regression passed");
