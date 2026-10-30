@@ -1,7 +1,9 @@
+import "./stage/[stage]/customer-claim-reference.css";
 import Link from "next/link";
 import { INTERNAL_JOURNEY_STAGES, projectInternalClaim } from "@insureit/claim-journey";
 import { ExternalLink, FileDown, FileText, Pencil } from "lucide-react";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
+import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +31,7 @@ export default async function CustomerClaimDetailPage({
   const editStage = externalProjection?.current_stage.key
     ?? INTERNAL_JOURNEY_STAGES[internalProjection?.stageIndex ?? 0]?.key
     ?? INTERNAL_JOURNEY_STAGES[INTERNAL_JOURNEY_STAGES.length - 1].key;
+  const internalCompletedKeys = INTERNAL_JOURNEY_STAGES.filter((stage,index) => index < (internalProjection?.completedStageCount ?? 0)).map(stage => stage.key);
   const documentSections = [
     { title: "CLAIM AND POLICY DETAILS", rows: [
       ["Control No.", claim.claim_no, "Insurer Claim No.", claim.insurer_claim_no],
@@ -48,7 +51,8 @@ export default async function CustomerClaimDetailPage({
 
 
   return (
-    <div className="w-full min-w-0 space-y-4 pb-8">
+    <div className="customer-claim-ref-page w-full min-w-0 space-y-4 pb-8">
+      {!externalProjection ? <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey={editStage} currentKey={editStage} completedKeys={internalCompletedKeys} editMode claimSummary={{controlNo:claim.claim_no,policyNo:claim.policy_no,makeModel:[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" - ")||null,vehicleNo:claim.vehicle_no,status:claim.current_status,manufacturer:claim.vehicle_make,insurer:claim.insurer_name,policySource:claim.policy_service_source==="sibl"?"Sankalp Policy":claim.policy_service_source==="external"||claim.external_policy_id?"External Policy":"—"}} /> : null}
       <section className="overflow-hidden rounded-2xl border border-[#D9E3F0] bg-white shadow-[0_8px_35px_rgba(22,49,83,.05)]">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E0E8F3] px-5 py-4">
           <div className="flex items-center gap-3">
@@ -62,11 +66,11 @@ export default async function CustomerClaimDetailPage({
           {allNineCompleted ? <a href={documentUrl + "&preview=1"} target="_blank" rel="noopener noreferrer"
             className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#B9CBE2] bg-white px-4 text-[12px] font-semibold text-[#174A87]">
             <ExternalLink className="h-4 w-4" /> Open PDF
-          </a> : <span aria-disabled="true" title="Available after all nine stages are complete" className="inline-flex min-h-10 cursor-not-allowed items-center gap-2 rounded-lg border border-[#D2DCE8] bg-[#F4F6F9] px-4 text-[12px] font-semibold text-[#8798AB]"><ExternalLink className="h-4 w-4" /> Open PDF</span>}
+          </a> : null}
           {allNineCompleted ? <a href={documentUrl}
             className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#B9CBE2] bg-white px-4 text-[12px] font-semibold text-[#174A87]">
             <FileDown className="h-4 w-4" /> Download Claim Form
-          </a> : <span aria-disabled="true" title="Available after all nine stages are complete" className="inline-flex min-h-10 cursor-not-allowed items-center gap-2 rounded-lg border border-[#D2DCE8] bg-[#F4F6F9] px-4 text-[12px] font-semibold text-[#8798AB]"><FileDown className="h-4 w-4" /> Download Claim Form</span>}
+          </a> : null}
           <Link href={{ pathname: `/customer/claims/${claim.id}/stage/${editStage}`, query: { account: account.id, mode:"edit" } }}
             className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#0B3884] px-4 text-[12px] font-semibold text-white">
             <Pencil className="h-4 w-4" /> Edit Claim
