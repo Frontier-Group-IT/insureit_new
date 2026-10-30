@@ -1,6 +1,6 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Alert, Animated, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ImageSourcePropType } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Alert, Animated, Image, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ImageSourcePropType } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { attachPartnerClaimDocument, removePartnerClaimDocument, type PartnerClaimDetail } from '@/lib/claims';
 import { supabase } from '@/lib/supabase';
@@ -137,6 +137,27 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
   const [verificationOpen, setVerificationOpen] = useState(false);
   const [verificationFormOpen, setVerificationFormOpen] = useState(false);
   const [selectedForReview, setSelectedForReview] = useState<string[]>([]);
+  const [openingFileId, setOpeningFileId] = useState<string | null>(null);
+  const openUploadedFile = async (fileId: string) => {
+    if (openingFileId) return;
+    setOpeningFileId(fileId);
+    try {
+      const { data: path, error: pathError } = await supabase.rpc('partner_app_claim_document_preview_path', {
+        p_claim_id: claimId,
+        p_document_id: fileId,
+      });
+      if (pathError) throw pathError;
+      if (typeof path !== 'string' || !path) throw new Error('The document is not available.');
+      const { data: signed, error: signError } = await supabase.storage.from('claim-documents').createSignedUrl(path, 120);
+      if (signError) throw signError;
+      if (!signed?.signedUrl) throw new Error('A secure preview link could not be generated.');
+      await Linking.openURL(signed.signedUrl);
+    } catch (error) {
+      Alert.alert('Unable to open document', error instanceof Error ? error.message : 'Please try again.');
+    } finally {
+      setOpeningFileId(null);
+    }
+  };
   const deleting = async () => {
     if (!deleteTarget || busy) return;
     setBusy(true);
@@ -310,11 +331,15 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
                       <Ionicons name={selected ? 'shield-checkmark' : 'shield-outline'} size={22} color={selected ? '#1769DC' : '#718198'} />
                     </VerificationPulse>
                   </Pressable>
-                  <Pressable accessibilityRole="button" accessibilityLabel={`Open ${file.name}`}
-                    onPress={() => Alert.alert('Preview unavailable', 'The authorized Partner claim API does not yet provide a secure document preview link. The Claims Desk can access the uploaded file through the Operations Portal.')}
-                    style={styles.verifyFileOpen}>
+                  <View style={styles.verifyFileOpen}>
                     <Text style={styles.verifyFileName} numberOfLines={2}>{file.name}</Text>
                     {verified ? <Ionicons name="checkmark-circle-outline" size={18} color="#18965D" accessibilityLabel="Verified" /> : null}
+                  </View>
+                  <Pressable accessibilityRole="button" accessibilityLabel={`Open ${file.name}`}
+                    disabled={openingFileId !== null}
+                    onPress={() => void openUploadedFile(file.id)}
+                    style={styles.verifyOpenAction}>
+                    {openingFileId === file.id ? <ActivityIndicator size="small" color="#1769DC"/> : <Ionicons name="open-outline" size={19} color="#1769DC"/>}
                   </Pressable>
                 </View>
               );
@@ -463,7 +488,7 @@ const styles=StyleSheet.create({
   tileRemoveBottom:{position:'absolute',bottom:3,right:3,zIndex:5,padding:2},
   verifyFileRow:{flexDirection:'row',alignItems:'center',gap:10,borderWidth:1,borderColor:'#DCE4EE',borderRadius:10,padding:10,marginBottom:8},
   verifyShield:{minWidth:34,minHeight:38,justifyContent:'center',alignItems:'center'},
-  verifyFileOpen:{flex:1,minWidth:0,flexDirection:'row',alignItems:'center',gap:6,minHeight:38},
+  verifyFileOpen:{flex:1,minWidth:0,flexDirection:'row',alignItems:'center',gap:6,minHeight:38},verifyOpenAction:{minHeight:38,minWidth:38,justifyContent:'center',alignItems:'center',borderRadius:8,backgroundColor:'#EFF6FF'},
   verifyFileName:{flex:1,minWidth:0,fontSize:11,color:'#243A60'},
   reviewScroll:{maxHeight:370,width:'100%'},
   reviewField:{marginBottom:10,gap:4},
