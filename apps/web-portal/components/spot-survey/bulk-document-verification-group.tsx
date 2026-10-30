@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Camera, CarFront, FileCheck2, IdCard, Shield, ShieldCheck, Trash2, Truck, Video, Mic } from "lucide-react";
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { ClaimDocumentCollapsedStatus } from "@/components/claim-manager/claim-document-collapsed-status";
@@ -200,12 +201,12 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
         </div>
         {rejected ? <p className="mt-1 text-[9px] font-semibold text-amber-700">{document.rejection_reason ?? "Customer reupload requested."}</p> : null}
         <div className={`mt-2 grid gap-1.5 ${verified ? "grid-cols-3" : "grid-cols-2"}`}>
-          {verified ? (
+          {true ? (
             <button
               type="button"
               disabled={deletePending}
               onClick={() => {
-                if (!window.confirm(`Delete verified document "${document.file_name}"? This will remove it from this claim.`)) return;
+                if (!window.confirm(`Delete document "${document.file_name}"? This will remove it from this claim.`)) return;
                 setDeletePending(true);
                 void (async () => {
                   const result = await deleteVerifiedSpotSurveyDocument(claim.id, document.id);
@@ -222,26 +223,26 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
             </button>
           ) : null}
           <RequestReuploadButton claimId={claim.id} documentId={document.id} documentTitle={item.title} />
-          <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentId={document.id} documentType={item.documentType} label={item.title} actionLabel="Replace" />
+
         </div>
       </div>
     </div>
   );
 }
 
-const categoryIcons = {
-  spot: Camera,
-  rc: CarFront,
-  insurance: FileCheck2,
-  dl: IdCard,
-  gr: Truck,
-  video: Video,
-  audio: Mic,
-} as const;
-
+const categoryArtwork: Record<string, string> = {
+  spot: "/assets/customer-claim/document-icons/glossy_pink_camera_document_icon.png",
+  rc: "/assets/customer-claim/document-icons/glossy_green_vehicle_document_icon.png",
+  insurance: "/assets/customer-claim/document-icons/glossy_blue_secure_policy_document_icon.png",
+  dl: "/assets/customer-claim/document-icons/glossy_purple_id_card_icon.png",
+  gr: "/assets/customer-claim/document-icons/glossy_orange_delivery_document_icon.png",
+  video: "/assets/customer-claim/document-icons/glossy_red_video_document_icon.png",
+};
 function DocumentCategoryIcon({ category }: { category: string }) {
-  const Icon = categoryIcons[category as keyof typeof categoryIcons] ?? FileCheck2;
-  return <Icon aria-hidden="true" className="h-5 w-5 shrink-0 text-[#2563EB]" strokeWidth={2.1} />;
+  const image = categoryArtwork[category];
+  return image
+    ? <Image src={image} alt="" aria-hidden="true" width={25} height={25} className="h-[25px] w-[25px] shrink-0 object-contain" />
+    : <Mic aria-hidden="true" className="h-5 w-5 shrink-0 text-[#2563EB]" strokeWidth={2.1} />;
 }
 
 function DocumentVerificationIcon({ verified, selected = false }: { verified: boolean; selected?: boolean }) {
