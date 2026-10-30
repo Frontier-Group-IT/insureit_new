@@ -119,4 +119,12 @@ assert.match(policylessSql, /c\.policy_id IS NULL/);
 assert.match(policylessSql, /access\.branch_id=b\.id/);
 assert.match(policylessSql, /NOT EXISTS\(SELECT 1 FROM public\.partner_branch_login_links/);
 assert.doesNotMatch(policylessSql, /UPDATE\s+public\.claims|DELETE\s+FROM\s+public\.claims/i);
+const centralScopes = read('20261030231500_partner_branch_central_scope_cutover.sql');
+for (const noun of ['policy','customer','claim']) {
+  assert.match(centralScopes,new RegExp('CREATE OR REPLACE FUNCTION public\\.partner_app_' + noun + '_in_scope\\('));
+  assert.match(centralScopes,new RegExp('partner_branch_authorized_' + noun + '_ids\\('));
+}
+assert.match(centralScopes,/FROM public\.portal_access_identities a WHERE a\.profile_id=auth\.uid\(\) AND a\.entity_type='branch'/);
+assert.match(centralScopes,/FROM public\.partner_branch_login_links b WHERE b\.profile_id=auth\.uid\(\)/);
+assert.doesNotMatch(centralScopes,/\b(?:INSERT|UPDATE|DELETE|TRUNCATE)\s+(?:FROM\s+)?public\./i);
 console.log('Canonical Branch migration contract regression passed. Live database role tests remain required.');
