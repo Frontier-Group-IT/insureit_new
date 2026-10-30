@@ -146,8 +146,8 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
     }
 
     const addOnAmount = Number(payload.premium.addOnPremium || 0);
-    if (!Number.isFinite(addOnAmount) || addOnAmount > 100000000 || Math.round(addOnAmount * 100) !== addOnAmount * 100) {
-      return { ok: false, error: "Add-on Premium must be non-negative and have at most two decimals." };
+    if (!Number.isFinite(addOnAmount) || addOnAmount > 100000000 || addOnAmount < 0) {
+      return { ok: false, error: "Add-on Premium must be a valid non-negative amount." };
     }
     const normalizedPayload = {
       ...payload,
