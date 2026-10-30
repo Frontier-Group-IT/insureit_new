@@ -1,7 +1,7 @@
 "use client";
 
 import { FileText, Files, LoaderCircle, RefreshCw, Trash2, Upload } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DocumentDeleteConfirmation } from "@/components/document-delete-confirmation";
 
 export type NonMotorDocumentType = "policy_copy" | "proposal_form" | "kyc" | "other_document";
@@ -81,6 +81,8 @@ function DocumentPickerControl({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [showDeleteConfirmation,setShowDeleteConfirmation] = useState(false);
+  const [stagedPreviewUrl,setStagedPreviewUrl] = useState<string|null>(null);
+  useEffect(()=>{if(!file){setStagedPreviewUrl(null);return;}const url=URL.createObjectURL(file);setStagedPreviewUrl(url);return()=>URL.revokeObjectURL(url);},[file]);
   const shownName = file?.name ?? existingDocument?.fileName ?? "";
   const stagedReplacement = Boolean(file && existingDocument);
 
@@ -122,37 +124,14 @@ function DocumentPickerControl({
 
       {file ? (
         <div className="flex min-w-0 flex-col items-start gap-1">
-          <div
-            role="group"
-            aria-label={`${label} selected file actions`}
-            className="inline-flex h-9 items-stretch overflow-hidden rounded-xl border border-[#BFD3F7] bg-[#F7FAFF] text-[#174EA6]"
-          >
-            <span className="inline-flex min-w-0 items-center gap-2 px-3 text-[10px] font-semibold">
-              <FileText className="h-3.5 w-3.5 shrink-0" />
-              {stagedReplacement ? `Replace ${label}` : `Add ${label}`}
-            </span>
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              aria-label={`Choose another ${label}`}
-              title={`Choose another ${label}`}
-              className="inline-flex w-9 items-center justify-center bg-[#DBEAFE] text-[#2563EB] transition hover:bg-[#BFDBFE]"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
+          <div role="group" aria-label={`${label} selected file actions`} className="inline-flex h-9 items-stretch overflow-hidden rounded-xl border border-[#BFD3F7] bg-[#F7FAFF] text-[#174EA6]">
+            <button type="button" onClick={() => inputRef.current?.click()} title={`Replace ${label}`} className="inline-flex min-w-0 items-center gap-2 px-3 text-[10px] font-semibold hover:bg-[#EEF5FF]">
+              <RefreshCw className="h-3.5 w-3.5"/>Replace {label}
             </button>
-            <button
-              type="button"
-              onClick={() => setShowDeleteConfirmation(true)}
-              aria-label={`Remove selected ${label}`}
-              title="Remove selected file"
-              className="inline-flex w-9 items-center justify-center border-l border-[#E3E8EF] bg-white text-[#667085] transition hover:bg-[#F8FAFC]"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
+            <button type="button" onClick={() => setShowDeleteConfirmation(true)} aria-label={`Delete selected ${label}`} className="inline-flex w-9 items-center justify-center border-l border-[#E3E8EF] text-red-600 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5"/></button>
+            {stagedPreviewUrl ? <button type="button" onClick={() => window.open(stagedPreviewUrl,"_blank","noopener,noreferrer")} aria-label={`View selected ${label}`} className="inline-flex w-9 items-center justify-center border-l border-[#E3E8EF] hover:bg-[#EEF5FF]"><Files className="h-3.5 w-3.5"/></button>:null}
           </div>
-          <span title={shownName} className="max-w-[220px] truncate pl-1 text-[8px] font-medium leading-3 text-[#6B7A90]">
-            {shownName}
-          </span>
+          <span title={shownName} className="max-w-[220px] truncate pl-1 text-[8px] font-medium leading-3 text-[#6B7A90]">{shownName}</span>
           {stagedReplacement ? <span className="pl-1 text-[8px] leading-3 text-[#667085]">Will replace the saved document after Save.</span> : null}
         </div>
       ) : existingDocument ? (
