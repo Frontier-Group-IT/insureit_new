@@ -129,4 +129,11 @@ assert.match(centralScopes,/FROM public\.partner_branch_login_links b WHERE b\.p
 assert.doesNotMatch(centralScopes,/\b(?:INSERT|UPDATE|DELETE|TRUNCATE)\s+(?:FROM\s+)?public\./i);
 assert.match(webSource, /canonicalBranchIdentity\.legacy_partner_id == null/);
 assert.match(webSource, /canonical-only accounts must never fall through|Canonical-only accounts must never fall through/);
+const canonicalPreview = readFileSync(resolve(root,'apps/web-portal/app/partner/branch-preview/page.tsx'),'utf8');
+assert.match(canonicalPreview, /INSUREIT_CANONICAL_BRANCH_PREVIEW !== "enabled"/);
+assert.match(canonicalPreview, /partner_branch_portal_identity/);
+assert.match(canonicalPreview, /partner_branch_canonical_access/);
+assert.match(canonicalPreview, /scope\.length !== 1/);
+assert.match(canonicalPreview, /partner_branch_authorized_policy_ids/);
+assert.doesNotMatch(canonicalPreview, /partner_app_activate_current_account|partner_app_commercial_scope/);
 console.log('Canonical Branch migration contract regression passed. Live database role tests remain required.');
