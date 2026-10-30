@@ -59,6 +59,8 @@ assert.match(onboardingAction, /service_create_partner_branch_profile/);
 assert.match(onboardingAction, /canonicalBranchId/);
 const sessionSource = readFileSync(resolve(root, 'apps/web-portal/lib/partner-web.ts'), 'utf8');
 assert.match(sessionSource, /identity\.portal_access_type === "branch"/);
+assert.match(sessionSource, /supabase\.rpc\("partner_branch_portal_identity"\)/);
+assert.match(sessionSource, /canonicalBranch\.legacy_partner_id !== identity\.partner_id/);
 assert.match(sessionSource, /resolvedScope\.partner_ids\.length !== 1/);
 assert.match(sessionSource, /resolvedScope\.partner_ids\[0\] !== identity\.partner_id/);
 const registerSource = readFileSync(resolve(root, 'apps/web-portal/app/intermediaries/groups/branches/page.tsx'), 'utf8');
