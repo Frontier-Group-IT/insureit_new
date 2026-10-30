@@ -28,7 +28,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
           </button>
           <button
             type="button"
-            onClick={() => window.location.assign(window.location.pathname + window.location.search)}
+            onClick={() => window.location.reload()}
             className="rounded-lg border border-[#CFD9E8] bg-white px-4 py-2.5 text-sm font-bold text-[#27415F] transition hover:bg-[#F6F9FD]"
           >
             Reload page
