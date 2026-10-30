@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, LockKeyhole, FolderKanban, ExternalLink, FileDown, ClipboardList, CarFront, BadgeCheck } from "lucide-react";
+import { Check, LockKeyhole, FolderKanban, ExternalLink, FileDown, ClipboardList, CarFront, BadgeCheck, ShieldCheck } from "lucide-react";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
 
@@ -10,7 +10,7 @@ export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, compl
   completedKeys: string[];
   currentKey: string;
   editMode?: boolean;
-  claimSummary?: { controlNo: string | null; policyNo: string | null; makeModel: string | null; vehicleNo: string | null; status: string | null; manufacturer: string | null; insurer: string | null };
+  claimSummary?: { controlNo: string | null; policyNo: string | null; makeModel: string | null; vehicleNo: string | null; status: string | null; manufacturer: string | null; insurer: string | null; policySource: string };
 }) {
   const activeIndex = INTERNAL_JOURNEY_STAGES.findIndex(stage => stage.key === currentKey);
   const selected = INTERNAL_JOURNEY_STAGES.find(stage => stage.key === selectedKey);
@@ -30,13 +30,14 @@ export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, compl
           </> : null}
         </div>
       </div>
-      {claimSummary ? <div className="customer-claim-review-grid grid grid-cols-2 border-b border-white/20 bg-[#102E63] text-white md:grid-cols-3 xl:grid-cols-5">
+      {claimSummary ? <div className="customer-claim-review-grid grid grid-cols-2 border-b border-white/20 bg-[#102E63] text-white md:grid-cols-3 xl:grid-cols-6">
         {([
           {label:"Control No.",value:claimSummary.controlNo,icon:<ClipboardList className="h-5 w-5"/>},
           {label:"Policy No.",value:claimSummary.policyNo,icon:<CustomerClaimLogo value={claimSummary.insurer} kind="insurer" size={32}/>},
           {label:"Make & Model",value:claimSummary.makeModel,icon:<CustomerClaimLogo value={claimSummary.manufacturer} kind="vehicle" size={32}/>},
           {label:"Vehicle No.",value:claimSummary.vehicleNo,icon:<CarFront className="h-5 w-5"/>},
           {label:"Claim Status",value:claimSummary.status,icon:<BadgeCheck className="h-5 w-5"/>},
+          {label:"Policy Source",value:claimSummary.policySource,icon:<ShieldCheck className="h-5 w-5"/>},
         ]).map(({label,value,icon})=><div key={label} className="flex min-w-0 items-center gap-3 border-b border-white/10 px-4 py-3 last:border-b-0 md:border-b-0 xl:border-r xl:border-white/15 xl:last:border-r-0"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/15 text-white">{icon}</span><div className="min-w-0"><p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.07em] text-white">{label}</p><p className="break-words text-[13px] font-bold leading-snug text-white" title={value||"—"}>{value||"—"}</p></div></div>)} 
       </div> : null}
       <nav aria-label="Nine-stage claim journey" className="customer-claim-stage-nav overflow-x-auto">
