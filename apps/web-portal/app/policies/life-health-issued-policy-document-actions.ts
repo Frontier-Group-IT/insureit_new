@@ -9,7 +9,8 @@ export type LifeHealthIssuedDocument = { id: string; type: LifeHealthIssuedDocum
 export type LifeHealthIssuedDocumentResult = { ok: true; document: LifeHealthIssuedDocument | null } | { ok: false; error: string };
 
 const DOCUMENT_BUCKET = "policy-documents";
-const MAX_FILE_SIZE = 50 * 1024 * 1024;
+// Keep multipart submissions below the configured 25 MB Server Action request limit.
+const MAX_FILE_SIZE = 20 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
 const DOCUMENT_TYPES = new Set<LifeHealthIssuedDocumentType>(["policy_copy", "proposal_form", "benefit_illustration", "premium_receipt", "kyc", "other_document"]);
 const clean = (value: unknown) => String(value ?? "").trim();
@@ -62,7 +63,7 @@ export async function replaceIssuedLifeHealthDocument(formData: FormData): Promi
   if (!ctx.valid || !ctx.admin) return { ok: false, error: "The linked Life/Health policy case or document type is invalid." };
   const file = formData.get("file");
   if (!(file instanceof File) || file.size <= 0) return { ok: false, error: "Choose a document to upload." };
-  if (file.size > MAX_FILE_SIZE) return { ok: false, error: "Document must be 50 MB or smaller." };
+  if (file.size > MAX_FILE_SIZE) return { ok: false, error: "Document must be 20 MB or smaller." };
   if (!ALLOWED_MIME_TYPES.has(file.type)) return { ok: false, error: "Upload a PDF, JPG, PNG or WebP document." };
 
   const existing = await loadExistingDocument(ctx);
@@ -72,7 +73,7 @@ export async function replaceIssuedLifeHealthDocument(formData: FormData): Promi
     : `life-health-cases/${ctx.caseId}/${ctx.type}/${crypto.randomUUID()}-${safeFileName(fileName)}`;
   const bytes = Buffer.from(await file.arrayBuffer());
   const { error: uploadError } = await ctx.admin.storage.from(DOCUMENT_BUCKET).upload(storagePath, bytes, { contentType: file.type, upsert: false });
-  if (uploadError) return { ok: false, error: "The document could not be uploaded." };
+  if (uploadError) { console.error("Life/Health issued policy document storage upload failed", { policyId:ctx.policyId, caseId:ctx.caseId, documentType:ctx.type, code:uploadError.name, message:uploadError.message }); return { ok: false, error: `The document could not be uploaded: ${uploadError.message}` }; }
 
   const values = { file_name: fileName, storage_bucket: DOCUMENT_BUCKET, storage_path: storagePath, mime_type: file.type, file_size: file.size, uploaded_by: ctx.profile.id, updated_at: new Date().toISOString() };
   let documentId = existing?.id || "";
