@@ -183,7 +183,7 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
         <Link href={document.signedUrl} target="_blank" className="block min-w-0 flex-1 truncate text-[11px] font-semibold text-[#071D49] hover:text-[#174EA6]" title={document.file_name}>{document.file_name}</Link>
         <span className="sr-only">{verified ? "Verified" : rejected ? "Reupload requested" : "Pending"} — {item.documentType}</span>
         <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-2">
-          <button type="button" disabled={deletePending} aria-label={`Delete ${document.file_name}`} title="Delete document" className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30 disabled:opacity-50" onClick={() => setDeleteOpen(true)}>
+          <button type="button" disabled={deletePending} aria-label="Delete document" title="Delete document" className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30 disabled:opacity-50" onClick={() => setDeleteOpen(true)}>
             <Trash2 aria-hidden="true" size={16} strokeWidth={2} />
           </button>
           <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentId={document.id} documentType={item.documentType} label={item.title} actionLabel="Replace" iconOnly />
