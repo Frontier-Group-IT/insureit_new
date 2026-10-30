@@ -537,7 +537,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
           <div><label className={labelClass}>Insurance company <Required/></label><select className={inputClass} value={form.insurerId} onChange={e=>update("insurerId",e.target.value)} required><option value="">Select insurer</option>{insurers.map(i=><option key={i.value} value={i.value}>{i.label}</option>)}</select></div>
           <Field label="IDV" type="number" min="0" value={isThirdPartyPolicy?"0":form.idv} onChange={e=>update("idv",e.target.value)} placeholder="₹ 0.00" disabled={isThirdPartyPolicy} required/>
           <Field label="OD premium" type="number" min="0" value={isThirdPartyPolicy?"0":form.od} onChange={e=>update("od",e.target.value)} placeholder="₹ 0.00" disabled={isThirdPartyPolicy} required/>
-          <Field label="Add-on premium (18% GST)" type="number" min="0" step="0.01" value={form.addOnPremium} onChange={e=>update("addOnPremium",e.target.value)} placeholder="₹ 0.00"/>
+          <Field label="Add-on premium (18% GST)" type="number" min="0" step="any" value={form.addOnPremium} onChange={e=>update("addOnPremium",e.target.value)} placeholder="₹ 0.00"/>
           {isCpmClass
             ? <BlockedPremiumField label="TP premium"/>
             : <Field label="TP premium" type="number" min="0" value={form.tp} onChange={e=>update("tp",e.target.value)} placeholder="₹ 0.00" required={form.policyProduct!=="SAOD"}/>}
