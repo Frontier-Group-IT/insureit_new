@@ -118,7 +118,7 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
           <button type="button" disabled={deleting} onClick={confirmDocumentDelete} className="flex h-12 items-center justify-center gap-2 rounded-xl bg-[#C42B31] text-[14px] font-bold text-white hover:bg-[#AC2329] disabled:opacity-60">{deleting?<><LoaderCircle className="h-4 w-4 animate-spin"/>Deleting…</>:"Delete"}</button>
         </div>
       </div>
-    </div>}
+    </div>:null}
     <div className="overflow-hidden rounded-t-xl border border-b-0 border-[#D9E2F0] bg-white shadow-[0_8px_22px_rgba(15,23,42,.05)]">
       <div className="flex min-h-[52px] items-center bg-[linear-gradient(135deg,#071D49_0%,#123B75_60%,#315B9A_100%)] px-4 py-2 text-white sm:px-5">
         <div className="flex w-full items-center justify-between gap-3"><div><h1 className="text-[15px] font-semibold tracking-[-0.01em]">Life / Health Case</h1><p className="mt-0.5 text-[9px] text-white/75">{caseData.customerName} · {caseData.proposalNumber}</p></div><Link href="/policies/life-health-cases" className="flex h-8 items-center justify-center rounded-lg border border-white/25 px-4 text-[9px] font-semibold hover:bg-white/10">Back</Link></div>
