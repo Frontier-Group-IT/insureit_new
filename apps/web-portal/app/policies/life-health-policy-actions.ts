@@ -9,8 +9,8 @@ import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-sourc
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const DOCUMENT_BUCKET = "policy-documents";
-// Leave headroom under the 25 MB Next.js server-action request limit.
-const MAX_FILE_SIZE = 20 * 1024 * 1024;
+// Keep Life/Health case documents safely below the hosting provider request limit.
+const MAX_FILE_SIZE = 4_000_000;
 const ALLOWED_MIME_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
 const DOCUMENT_TYPES = new Set(["proposal_form", "benefit_illustration", "premium_receipt", "policy_copy", "kyc", "other_document"]);
 const PAYMENT_FREQUENCIES = new Set(["Monthly", "Quarterly", "Half Yearly", "Annually", "One Time"]);
@@ -53,7 +53,7 @@ function commercialFromDetails(details:Record<string,unknown>|null):LifeHealthCo
 async function uploadCaseDocumentInternal(admin:ReturnType<typeof createSupabaseAdminClient>,profileId:string,caseId:string,documentType:string,fileValue:File){
   if(!DOCUMENT_TYPES.has(documentType))return{ok:false as const,error:"Unsupported Life/Health document type."};
   if(fileValue.size<=0)return{ok:false as const,error:"Choose a document to upload."};
-  if(fileValue.size>MAX_FILE_SIZE)return{ok:false as const,error:"Each document must be 20 MB or smaller."};
+  if(fileValue.size>MAX_FILE_SIZE)return{ok:false as const,error:"Maximum permitted document size is 4 MB. Please compress the file and retry."};
   if(!ALLOWED_MIME_TYPES.has(fileValue.type))return{ok:false as const,error:"Upload a PDF, JPG, PNG or WebP document."};
   const fileName=safeFileName(fileValue.name),storagePath=`life-health-cases/${caseId}/${documentType}/${crypto.randomUUID()}-${fileName}`,bytes=Buffer.from(await fileValue.arrayBuffer());
   const{error:storageError}=await admin.storage.from(DOCUMENT_BUCKET).upload(storagePath,bytes,{contentType:fileValue.type,upsert:false});if(storageError){console.error("Life/Health case storage upload failed",{caseId,documentType,code:storageError.name,message:storageError.message});return{ok:false as const,error:`Document storage rejected the upload: ${storageError.message}`}}
@@ -86,7 +86,7 @@ export async function uploadLifeHealthCaseDocument(formData:FormData):Promise<Li
   if(!caseId)return{ok:false,error:"The case reference is missing."};
   if(!(file instanceof File))return{ok:false,error:"Choose a document to upload."};
   if(file.size<=0)return{ok:false,error:"Choose a non-empty document."};
-  if(file.size>MAX_FILE_SIZE)return{ok:false,error:"Document must be 20 MB or smaller."};
+  if(file.size>MAX_FILE_SIZE)return{ok:false,error:"Maximum permitted document size is 4 MB. Please compress the file and retry."};
   if(!ALLOWED_MIME_TYPES.has(file.type))return{ok:false,error:"Upload a PDF, JPG, PNG or WebP document."};
   try{
     const {profile:requester}=await getAuthenticatedProfile(await getServerAccessToken());
@@ -108,7 +108,7 @@ export async function uploadLifeHealthCaseDocument(formData:FormData):Promise<Li
     console.error("Life/Health case document upload failed",{caseId,documentType,message});
     if(message.includes("operations_head_record_access_denied"))return{ok:false,error:"You do not have permission to upload documents for this case. Contact your administrator."};
     if(message.includes("JWT")||message.includes("session")||message.includes("Authentication"))return{ok:false,error:"Your session may have expired. Sign in again and retry."};
-    return{ok:false,error:"Document upload failed on the server. Please retry or contact support with the case reference."};
+    return{ok:false,error:"Document upload failed. The maximum permitted file size is 4 MB. Please check the file size and retry; if it is already under 4 MB, contact support with the case reference."};
   }
 }
 
