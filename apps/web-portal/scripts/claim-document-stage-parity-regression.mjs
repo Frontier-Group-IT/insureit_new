@@ -19,12 +19,14 @@ assert.match(stage3Group, /<ShieldCheck[^>]*className="text-\[#2563EB\]"/, "Sele
 assert.match(stage3Group, /<ShieldCheck[^>]*className="text-\[#16A34A\]"/, "Verified shield is green with a checkmark.");
 assert.match(stage3Group, /\{selectable \? \(/, "Only pending files can toggle their shield.");
 
+assert.match(stage1Group, /deleteVerifiedSpotSurveyDocument\(claim\.id, document\.id\)/, "Spot verification documents have exact-row delete.");
+assert.doesNotMatch(stage1Group, /<RequestReuploadButton/, "Spot documents replace refresh with delete.");
+assert.match(stage3Group, /<RequestReuploadButton claimId=\{claim\.id\} documentId=\{document\.id\}/, "Stage 3 retains scoped reupload.");
+assert.match(stage3Group, /actionLabel="Replace"/, "Stage 3 retains scoped replacement.");
 for (const source of [stage1Group, stage3Group]) {
   assert.match(source, /documentIds=\{selectedDocumentIds\}/, "Verify must receive the selected files as one group.");
   assert.match(source, /variant="header"/, "Verify must stay in the compact document-card header.");
   assert.match(source, /actionLabel="Upload" iconOnly/, "Populated document cards must keep the icon-only Upload New action.");
-  assert.match(source, /<RequestReuploadButton claimId=\{claim\.id\} documentId=\{document\.id\}/, "Each file must keep its row-specific Reupload action.");
-  assert.match(source, /<ReplaceDocumentButton claimId=\{claim\.id\} customerId=\{claim\.customer_id\} documentId=\{document\.id\}[\s\S]*?actionLabel="Replace"/, "Each file must keep exact-row Replace behavior.");
   assert.match(source, /item\.documents\.length > 1/, "Multiple files must use the compact collapsed category state.");
   assert.match(source, /ClaimDocumentCollapsedStatus/, "Collapsed multi-file cards must use the shared compact reference summary.");
   assert.match(source, /verifiedFileCount/, "Collapsed multi-file cards must calculate the verified-file count.");
