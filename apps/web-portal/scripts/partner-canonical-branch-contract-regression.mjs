@@ -113,4 +113,10 @@ assert.match(webSource, /if \(ids\.some\(\(id\) => !permitted\.has\(id\)\)\) red
 assert.match(webSource, /rows\.map\(\(row\) => row\.policy_id\)/);
 assert.match(webSource, /rows\.map\(\(row\) => row\.customer_id\)/);
 assert.match(webSource, /rows\.map\(\(row\) => row\.claim_id\)/);
+const policylessSql = read('20261030214500_partner_branch_verified_policyless_claim_ownership.sql');
+assert.match(policylessSql, /partner_branch_policyless_claim_ownership/);
+assert.match(policylessSql, /c\.policy_id IS NULL/);
+assert.match(policylessSql, /access\.branch_id=b\.id/);
+assert.match(policylessSql, /NOT EXISTS\(SELECT 1 FROM public\.partner_branch_login_links/);
+assert.doesNotMatch(policylessSql, /UPDATE\s+public\.claims|DELETE\s+FROM\s+public\.claims/i);
 console.log('Canonical Branch migration contract regression passed. Live database role tests remain required.');
