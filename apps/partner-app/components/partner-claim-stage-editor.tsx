@@ -82,7 +82,7 @@ const DOCUMENT_ARTWORK = [
   require('../../mobile-app/assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png'),
   require('../../mobile-app/assets/brand/spot-intimation/glossy_purple_id_card_icon.png'),
   require('../../mobile-app/assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png'),
-  require('../../mobile-app/assets/brand/spot-intimation/glossy_pink_camera_document_icon.png'),
+  require('../assets/partner/claim-stages/spot-survey-reference.png'),
 ];
 const ACCIDENT_VIDEO_ARTWORK = require('../../mobile-app/assets/brand/spot-intimation/glossy_red_video_document_icon.png');
 const BULK_ARTWORK = require('../../mobile-app/assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png');
@@ -175,7 +175,7 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
           <EditableField field={{...CONFIG.spot_status.fields[0],label:'Spot Survey Done Date'}} value={values.spot_survey_done_date||''} onChange={(value)=>setValue('spot_survey_done_date',value)} displayDate />
         </View>
         <View style={spotStyles.card}>
-          <View style={spotStyles.heading}><MaterialCommunityIcons name="clipboard-account-outline" color="#1558A5" size={27}/><Text style={spotStyles.headingText}>Surveyor Details</Text><Text style={spotStyles.optional}>Optional</Text></View>
+          <View style={spotStyles.heading}><Image source={require('../assets/partner/claim-stages/surveyor-details-reference.png')} style={spotStyles.artwork} resizeMode="contain"/><Text style={spotStyles.headingText}>Surveyor Details</Text><Text style={spotStyles.optional}>Optional</Text></View>
           {CONFIG.spot_status.fields.slice(1).map(field=><EditableField key={field.key} field={{...field,label:`${field.label} (Optional)`}} value={values[field.key]||''} onChange={(value)=>setValue(field.key,value)}/>)}
         </View>
       </> : stage==='work_approval' ? <View style={approvalStyles.card}>
