@@ -81,7 +81,7 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
   const { data: portalProfiles } = portalProfileIds.length
     ? await admin.from("profiles").select("id,full_name").in("id", portalProfileIds).returns<ProfileName[]>()
     : { data: [] as ProfileName[] };
-  const profileNameById = new Map([...profileRows ?? [], ...portalProfiles ?? []].map((item) => [item.id, item.full_name]));
+  const profileNameById = new Map([...(profileRows ?? []), ...(portalProfiles ?? [])].map((item) => [item.id, item.full_name]));
   const portalAccountById = new Map((portalAccountRows ?? []).map((item) => [item.id, item]));
   // An intake submitted by a branch's legacy profile must show the actual
   // branch contact, not the branch / intermediary business display name.
