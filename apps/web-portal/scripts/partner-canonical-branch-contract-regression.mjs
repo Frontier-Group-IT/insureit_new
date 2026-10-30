@@ -21,6 +21,8 @@ const access = phase3.split('CREATE OR REPLACE FUNCTION public.partner_branch_ca
 assert.match(access, /a\.entity_type='branch'/);
 assert.match(access, /a\.profile_id=auth\.uid\(\)/);
 assert.match(access, /count\(DISTINCT id\) FROM resolved/);
+assert.match(access, /existing\.status<>'active'/);
+assert.match(access, /NOT EXISTS/);
 assert.doesNotMatch(access, /parent_partner_id\s*=\s*any/i);
 assert.match(phase3, /REVOKE ALL ON public\.partner_branch_login_links FROM PUBLIC, anon, authenticated/);
 console.log('Canonical Branch migration contract regression passed. Live database role tests remain required.');
