@@ -9,7 +9,8 @@ import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-sourc
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const DOCUMENT_BUCKET = "policy-documents";
-// Leave headroom under the 25 MB Next.js server-action request limit.\nconst MAX_FILE_SIZE = 20 * 1024 * 1024;
+// Leave headroom under the 25 MB Next.js server-action request limit.
+const MAX_FILE_SIZE = 20 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
 const DOCUMENT_TYPES = new Set(["proposal_form", "benefit_illustration", "premium_receipt", "policy_copy", "kyc", "other_document"]);
 const PAYMENT_FREQUENCIES = new Set(["Monthly", "Quarterly", "Half Yearly", "Annually", "One Time"]);
