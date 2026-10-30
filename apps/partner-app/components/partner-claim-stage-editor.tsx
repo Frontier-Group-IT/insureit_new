@@ -171,7 +171,7 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
       <ClaimHero data={data} title={config.title} icon={config.icon}/>
       {stage==='spot_status' ? <>
         <View style={spotStyles.card}>
-          <View style={spotStyles.heading}><Image source={require('../../mobile-app/assets/brand/spot-intimation/glossy_pink_camera_document_icon.png')} style={spotStyles.artwork} resizeMode="contain"/><Text style={spotStyles.headingText}>Spot Survey</Text></View>
+          <View style={spotStyles.heading}><Image source={require('../assets/partner/claim-stages/spot-survey-reference.png')} style={spotStyles.artwork} resizeMode="contain"/><Text style={spotStyles.headingText}>Spot Survey</Text></View>
           <EditableField field={{...CONFIG.spot_status.fields[0],label:'Spot Survey Done Date'}} value={values.spot_survey_done_date||''} onChange={(value)=>setValue('spot_survey_done_date',value)} displayDate />
         </View>
         <View style={spotStyles.card}>
