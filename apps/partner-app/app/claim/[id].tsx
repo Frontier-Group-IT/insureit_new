@@ -13,15 +13,15 @@ import { CLAIM_STAGES, getClaimTrackerState, formatClaimDate } from '@/lib/claim
 
 
 const MILESTONE_ARTWORK = {
-  spot_intimation: require('../../mobile-app/assets/claims/claim-intimation.png'),
-  spot_status: require('../../mobile-app/assets/claims/claim-survey.png'),
-  claim_intimation: require('../../mobile-app/assets/claims/claim-intimation.png'),
-  work_approval: require('../../mobile-app/assets/claims/claim-approval.png'),
-  repair_ri: require('../../mobile-app/assets/claims/repair-ri-stage-icon.png'),
-  billing: require('../../mobile-app/assets/claims/accounts-finance.png'),
-  delivery_order: require('../../mobile-app/assets/claims/claim-assessment.png'),
-  vehicle_delivery: require('../../mobile-app/assets/claims/fleet-vehicle.png'),
-  payment_encashment: require('../../mobile-app/assets/claims/claim-settlement.png'),
+  spot_intimation: require('../../../mobile-app/assets/claims/claim-intimation.png'),
+  spot_status: require('../../../mobile-app/assets/claims/claim-survey.png'),
+  claim_intimation: require('../../../mobile-app/assets/claims/claim-intimation.png'),
+  work_approval: require('../../../mobile-app/assets/claims/claim-approval.png'),
+  repair_ri: require('../../../mobile-app/assets/claims/repair-ri-stage-icon.png'),
+  billing: require('../../../mobile-app/assets/claims/accounts-finance.png'),
+  delivery_order: require('../../../mobile-app/assets/claims/claim-assessment.png'),
+  vehicle_delivery: require('../../../mobile-app/assets/claims/fleet-vehicle.png'),
+  payment_encashment: require('../../../mobile-app/assets/claims/claim-settlement.png'),
 } as const;
 
 const STAGE_DESCRIPTIONS: Record<string, string> = {
