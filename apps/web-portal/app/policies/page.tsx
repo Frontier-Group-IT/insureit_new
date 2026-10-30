@@ -215,17 +215,38 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
   });
   const { data, error } = policyResult;
   const rows = data ?? [];
+  // Canonical owner attribution is display/filter metadata only. Never rewrite
+  // historic intermediary_code, policy values, or the original Branch identity.
+  const { data: branchPolicyLinks, error: branchLinksError } = await admin
+    .from("partner_branch_policy_links")
+    .select("policy_id,parent_partner_id,legacy_intermediary_code");
+  const parentIds = [...new Set((branchPolicyLinks ?? []).map((link) => link.parent_partner_id))];
+  const { data: owningPartners, error: ownersError } = parentIds.length
+    ? await admin.from("partners").select("id,partner_code").in("id", parentIds)
+    : { data: [] as { id: string; partner_code: string }[], error: null };
+  const parentCodes = new Map((owningPartners ?? []).map((partner) => [partner.id, partner.partner_code]));
+  const parentByPolicy = new Map<string, { code: string; branchCode: string }>();
+  if (!branchLinksError && !ownersError) {
+    for (const link of branchPolicyLinks ?? []) {
+      const code = parentCodes.get(link.parent_partner_id);
+      if (code) parentByPolicy.set(link.policy_id, { code, branchCode: link.legacy_intermediary_code });
+    }
+  }
+
   const allowedSourceKeys = new Set(rows.map((policy) => {
     const type = policySourceDatabaseType(policy.intermediary_type);
-    const code = policy.intermediary_code?.trim();
+    const code = parentByPolicy.get(policy.id)?.code ?? policy.intermediary_code?.trim();
     return type && code ? sourceLookupKey(type, code) : "";
   }).filter(Boolean));
   const { sourceNameByKey, sourceOptions } = buildPolicySourceOptions(sourceResult.error ? [] : (sourceResult.data ?? []), allowedSourceKeys);
   const workspaceRows = rows.map((policy) => {
     const sourceType = policySourceDatabaseType(policy.intermediary_type);
-    const sourceCode = policy.intermediary_code?.trim() ?? "";
+    const attribution = parentByPolicy.get(policy.id);
+    const sourceCode = attribution?.code ?? policy.intermediary_code?.trim() ?? "";
     return {
       ...policy,
+      intermediary_code: sourceCode,
+      branch_source_code: attribution?.branchCode ?? null,
       policy_documents: (policy.policy_documents ?? []).filter((document) => document.document_type === "policy_copy"),
       gross_premium: policy.policy_premium_details?.gross_premium ?? null,
       source_name: sourceType && sourceCode ? sourceNameByKey.get(sourceLookupKey(sourceType, sourceCode)) ?? null : null,
