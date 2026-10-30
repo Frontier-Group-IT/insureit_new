@@ -9,8 +9,7 @@ import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-sourc
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const DOCUMENT_BUCKET = "policy-documents";
-// Leave headroom under the 25 MB Next.js server-action request limit.
-const MAX_FILE_SIZE = 20 * 1024 * 1024;
+// Leave headroom under the 25 MB Next.js server-action request limit.\nconst MAX_FILE_SIZE = 20 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
 const DOCUMENT_TYPES = new Set(["proposal_form", "benefit_illustration", "premium_receipt", "policy_copy", "kyc", "other_document"]);
 const PAYMENT_FREQUENCIES = new Set(["Monthly", "Quarterly", "Half Yearly", "Annually", "One Time"]);
@@ -82,6 +81,29 @@ export async function createLifeHealthCase(formData:FormData):Promise<LifeHealth
 }
 
 export async function uploadLifeHealthCaseDocument(formData:FormData):Promise<LifeHealthDocumentResult>{const caseId=clean(formData.get("caseId")),documentType=clean(formData.get("documentType")),file=formData.get("file");const {profile:requester}=await getAuthenticatedProfile(await getServerAccessToken());const profile=requester?.role==="operations_head_life"?await requireOperationsHeadRecordOwnership("life_health_case",caseId):await requirePolicyCreator();const admin=createSupabaseAdminClient();if(!caseId)return{ok:false,error:"The case reference is missing."};if(!(file instanceof File))return{ok:false,error:"Choose a document to upload."};const{data:caseRow,error}=await admin.from("life_health_cases").select("id,final_policy_id").eq("id",caseId).maybeSingle<{id:string;final_policy_id:string|null}>();if(error||!caseRow)return{ok:false,error:"This case is no longer available."};if(caseRow.final_policy_id)return{ok:false,error:"This case has already been converted to a policy."};const result=await uploadCaseDocumentInternal(admin,profile.id,caseId,documentType,file);if(!result.ok)return result;revalidatePath(`/policies/life-health-cases/${caseId}`);return result}
+
+export async function deleteLifeHealthCaseDocument(caseId:string,documentId:string):Promise<{ok:true}|{ok:false;error:string}>{
+  if(!caseId||!documentId)return{ok:false,error:"The document reference is missing."};
+  const {profile:requester}=await getAuthenticatedProfile(await getServerAccessToken());
+  if(requester?.role==="operations_head_life"){
+    await requireOperationsHeadRecordOwnership("life_health_case",caseId);
+  }else{
+    await requirePolicyCreator();
+  }
+  const admin=createSupabaseAdminClient();
+  const{data:caseRow,error:caseError}=await admin.from("life_health_cases").select("id,final_policy_id").eq("id",caseId).maybeSingle<{id:string;final_policy_id:string|null}>();
+  if(caseError||!caseRow)return{ok:false,error:"This case is no longer available."};
+  if(caseRow.final_policy_id)return{ok:false,error:"Issued cases cannot have documents deleted."};
+  const{data:document,error:documentError}=await admin.from("life_health_case_documents").select("id,storage_bucket,storage_path").eq("case_id",caseId).eq("id",documentId).maybeSingle<{id:string;storage_bucket:string;storage_path:string}>();
+  if(documentError||!document)return{ok:false,error:"The document could not be found in this case."};
+  if(document.storage_bucket!==DOCUMENT_BUCKET||!document.storage_path.startsWith(`life-health-cases/${caseId}/`))return{ok:false,error:"This document has an invalid storage reference."};
+  const{error:storageError}=await admin.storage.from(DOCUMENT_BUCKET).remove([document.storage_path]);
+  if(storageError)return{ok:false,error:"The uploaded file could not be removed from storage."};
+  const{error:deleteError}=await admin.from("life_health_case_documents").delete().eq("case_id",caseId).eq("id",documentId);
+  if(deleteError)return{ok:false,error:"File removed, but the document record could not be cleared. Contact support."};
+  revalidatePath(`/policies/life-health-cases/${caseId}`);
+  return{ok:true};
+}
 
 export async function convertLifeHealthCaseToPolicy(formData:FormData):Promise<LifeHealthConversionResult>{
   const caseId=clean(formData.get("caseId"));const {profile:requester}=await getAuthenticatedProfile(await getServerAccessToken());const profile=requester?.role==="operations_head_life"?await requireOperationsHeadRecordOwnership("life_health_case",caseId):await requirePolicyCreator();const admin=createSupabaseAdminClient(),enteredPolicyNumber=clean(formData.get("policyNumber")).toUpperCase(),normalizedPolicy=normalizePolicyNumber(enteredPolicyNumber),issuanceDate=clean(formData.get("issuanceDate")),startDate=clean(formData.get("startDate")),endDate=clean(formData.get("endDate")),pptEndDate=clean(formData.get("pptEndDate")),nextInstallmentDate=clean(formData.get("nextInstallmentDate")),finalPremium=numberOrNull(formData.get("finalPremium")),sumInsured=numberOrNull(formData.get("sumInsured")),policyCopy=formData.get("policyCopy");

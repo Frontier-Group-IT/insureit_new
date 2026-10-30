@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, HandCoins, IndianRupee, Upload } from "lucide-react";
+import { CheckCircle2, Eye, HandCoins, IndianRupee, Upload } from "lucide-react";
 import { createLifeHealthCase } from "@/app/policies/life-health-policy-actions";
 import { usePolicyCommercialAccess } from "@/components/policy-commercial-access-context";
 
@@ -170,6 +170,30 @@ function Section({ number, title, children, contentClassName = "md:grid-cols-2 x
 function Required() { return <span className="text-red-500">*</span> }
 function Field({ label, required, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string }) { return <div><label className={labelClass}>{label}{required ? <Required/> : null}</label><input {...props} required={required} className={inputClass}/></div> }
 function Select({ label, required, children, ...props }: SelectHTMLAttributes<HTMLSelectElement> & { label: string; children: ReactNode }) { return <div><label className={labelClass}>{label}{required ? <Required/> : null}</label><select {...props} required={required} className={inputClass}>{children}</select></div> }
-function CompactDocumentUpload({ label, file, onChange }: { label: string; file: File | null; onChange: (file: File | null) => void }) { const id = `lh-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`; const documentName = label.replace(/^Add /, ""); const stateLabel = file ? `${documentName} Uploaded` : label; return <label htmlFor={id} className={`inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border px-4 text-[10px] font-semibold transition ${file ? "border-[#A7DCC3] bg-[#EFFAF4] text-[#18794E] hover:border-[#82C9A7] hover:bg-[#E5F7ED]" : "border-[#8BB8F5] bg-white text-[#0A43A3] hover:border-[#5E9DEB] hover:bg-[#F5F9FF]"}`} aria-label={`${file ? "Replace" : "Upload"} ${documentName}`} title={file?.name || label}>{file ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0"/> : <Upload className="h-3.5 w-3.5 shrink-0"/>}<span className="whitespace-nowrap">{stateLabel}</span><input id={id} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => onChange(event.target.files?.[0] ?? null)}/></label> }
+function CompactDocumentUpload({ label, file, onChange }: { label: string; file: File | null; onChange: (file: File | null) => void }) {
+  const id = `lh-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+  const documentName = label.replace(/^Add /, "");
+  const stateLabel = file ? `${documentName} Uploaded` : label;
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!file) {
+      setPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  return <div className="inline-flex h-10 items-center gap-1.5">
+    <label htmlFor={id} className={`inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border px-4 text-[10px] font-semibold transition ${file ? "border-[#A7DCC3] bg-[#EFFAF4] text-[#18794E] hover:border-[#82C9A7] hover:bg-[#E5F7ED]" : "border-[#8BB8F5] bg-white text-[#0A43A3] hover:border-[#5E9DEB] hover:bg-[#F5F9FF]"}`} aria-label={`${file ? "Replace" : "Upload"} ${documentName}`} title={file?.name || label}>
+      {file ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> : <Upload className="h-3.5 w-3.5 shrink-0" />}
+      <span className="whitespace-nowrap">{stateLabel}</span>
+      <input id={id} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => onChange(event.target.files?.[0] ?? null)} />
+    </label>
+    {file && previewUrl ? <button type="button" aria-label={`Preview ${documentName}`} title={`Preview ${file.name}`} onClick={() => window.open(previewUrl, "_blank", "noopener,noreferrer")} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[#A7DCC3] bg-white text-[#18794E] transition hover:bg-[#EFFAF4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#18794E]"><Eye className="h-4 w-4" aria-hidden="true" /></button> : null}
+  </div>;
+}
 function SummaryBlock({ title, rows }: { title: string; rows: Array<[string, string]> }) { return <div><p className="mb-1 text-[8px] font-bold uppercase tracking-[.1em] text-[#64748B]">{title}</p><div className="divide-y divide-[#E8EDF3]">{rows.map(([label, value]) => <div key={label} className="flex items-start justify-between gap-3 py-1.5 text-[9.5px]"><span className="text-[#667085]">{label}</span><span className="max-w-[190px] truncate text-right font-semibold text-[#17365D]" title={value}>{value}</span></div>)}</div></div> }
 function numeric(value: string) { const normalized = value.replace(/[^0-9.]/g, ""); const parts = normalized.split("."); return parts.length > 2 ? `${parts.shift()}.${parts.join("")}` : normalized }
