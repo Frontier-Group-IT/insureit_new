@@ -198,7 +198,6 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const [spotSubmitting, setSpotSubmitting] = useState(false);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
-  const [spotFormVersion, setSpotFormVersion] = useState(0);
 
   useEffect(() => {
     if (!successNotice) return;
@@ -330,7 +329,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         {selected.key === "spot_intimation" ? (
           <>
             <StageOneForm
-              key={`${claimId}-${spotFormVersion}`}
+              key={claimId}
               claimId={claimId}
               stage={selected}
               active={active ?? stages[0]}
