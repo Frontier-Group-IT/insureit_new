@@ -82,6 +82,29 @@ export async function createLifeHealthCase(formData:FormData):Promise<LifeHealth
 
 export async function uploadLifeHealthCaseDocument(formData:FormData):Promise<LifeHealthDocumentResult>{const caseId=clean(formData.get("caseId")),documentType=clean(formData.get("documentType")),file=formData.get("file");const {profile:requester}=await getAuthenticatedProfile(await getServerAccessToken());const profile=requester?.role==="operations_head_life"?await requireOperationsHeadRecordOwnership("life_health_case",caseId):await requirePolicyCreator();const admin=createSupabaseAdminClient();if(!caseId)return{ok:false,error:"The case reference is missing."};if(!(file instanceof File))return{ok:false,error:"Choose a document to upload."};const{data:caseRow,error}=await admin.from("life_health_cases").select("id,final_policy_id").eq("id",caseId).maybeSingle<{id:string;final_policy_id:string|null}>();if(error||!caseRow)return{ok:false,error:"This case is no longer available."};if(caseRow.final_policy_id)return{ok:false,error:"This case has already been converted to a policy."};const result=await uploadCaseDocumentInternal(admin,profile.id,caseId,documentType,file);if(!result.ok)return result;revalidatePath(`/policies/life-health-cases/${caseId}`);return result}
 
+export async function deleteLifeHealthCaseDocument(caseId:string,documentId:string):Promise<{ok:true}|{ok:false;error:string}>{
+  if(!caseId||!documentId)return{ok:false,error:"The document reference is missing."};
+  const {profile:requester}=await getAuthenticatedProfile(await getServerAccessToken());
+  if(requester?.role==="operations_head_life"){
+    await requireOperationsHeadRecordOwnership("life_health_case",caseId);
+  }else{
+    await requirePolicyCreator();
+  }
+  const admin=createSupabaseAdminClient();
+  const{data:caseRow,error:caseError}=await admin.from("life_health_cases").select("id,final_policy_id").eq("id",caseId).maybeSingle<{id:string;final_policy_id:string|null}>();
+  if(caseError||!caseRow)return{ok:false,error:"This case is no longer available."};
+  if(caseRow.final_policy_id)return{ok:false,error:"Issued cases cannot have documents deleted."};
+  const{data:document,error:documentError}=await admin.from("life_health_case_documents").select("id,storage_bucket,storage_path").eq("case_id",caseId).eq("id",documentId).maybeSingle<{id:string;storage_bucket:string;storage_path:string}>();
+  if(documentError||!document)return{ok:false,error:"The document could not be found in this case."};
+  if(document.storage_bucket!==DOCUMENT_BUCKET||!document.storage_path.startsWith(`life-health-cases/${caseId}/`))return{ok:false,error:"This document has an invalid storage reference."};
+  const{error:storageError}=await admin.storage.from(DOCUMENT_BUCKET).remove([document.storage_path]);
+  if(storageError)return{ok:false,error:"The uploaded file could not be removed from storage."};
+  const{error:deleteError}=await admin.from("life_health_case_documents").delete().eq("case_id",caseId).eq("id",documentId);
+  if(deleteError)return{ok:false,error:"File removed, but the document record could not be cleared. Contact support."};
+  revalidatePath(`/policies/life-health-cases/${caseId}`);
+  return{ok:true};
+}
+
 export async function convertLifeHealthCaseToPolicy(formData:FormData):Promise<LifeHealthConversionResult>{
   const caseId=clean(formData.get("caseId"));const {profile:requester}=await getAuthenticatedProfile(await getServerAccessToken());const profile=requester?.role==="operations_head_life"?await requireOperationsHeadRecordOwnership("life_health_case",caseId):await requirePolicyCreator();const admin=createSupabaseAdminClient(),enteredPolicyNumber=clean(formData.get("policyNumber")).toUpperCase(),normalizedPolicy=normalizePolicyNumber(enteredPolicyNumber),issuanceDate=clean(formData.get("issuanceDate")),startDate=clean(formData.get("startDate")),endDate=clean(formData.get("endDate")),pptEndDate=clean(formData.get("pptEndDate")),nextInstallmentDate=clean(formData.get("nextInstallmentDate")),finalPremium=numberOrNull(formData.get("finalPremium")),sumInsured=numberOrNull(formData.get("sumInsured")),policyCopy=formData.get("policyCopy");
   if(!caseId)return{ok:false,error:"The case reference is missing."};if(!enteredPolicyNumber)return{ok:false,error:"Enter the issued policy number."};if(!validDate(issuanceDate)||!validDate(startDate)||!validDate(endDate))return{ok:false,error:"Enter valid issuance and policy validity dates."};if(pptEndDate&&!validDate(pptEndDate))return{ok:false,error:"Enter a valid PPT end date."};if(nextInstallmentDate&&!validDate(nextInstallmentDate))return{ok:false,error:"Enter a valid next installment date."};if(endDate<startDate)return{ok:false,error:"Policy end date cannot be before the start date."};if(pptEndDate&&pptEndDate<startDate)return{ok:false,error:"PPT end date cannot be before the policy start date."};if(nextInstallmentDate&&nextInstallmentDate<startDate)return{ok:false,error:"Next installment date cannot be before the policy start date."};if(finalPremium===null||finalPremium<0)return{ok:false,error:"Enter a valid final premium."};
