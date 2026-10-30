@@ -351,7 +351,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 onClick={() => {
                   try { window.sessionStorage.removeItem(`insureit:spot-intimation-draft:${claimId}`); } catch { /* optional storage */ }
                   setErrorNotice(null);
-                  setSpotFormVersion((version) => version + 1);
+                  router.push("/claims");
                 }}
                 className="rounded-lg border border-[#B8C5D6] bg-white px-4 py-2 text-[11px] font-semibold text-[#071D49] disabled:opacity-50"
               >Cancel</button>
