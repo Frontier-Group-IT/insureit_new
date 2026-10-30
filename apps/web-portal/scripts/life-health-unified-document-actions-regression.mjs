@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";import {readFileSync} from "node:fs";
+const form=readFileSync("components/life-health-policy-form.tsx","utf8");
+const detail=readFileSync("components/life-health-case-detail.tsx","utf8");
+const modal=readFileSync("components/document-delete-confirmation.tsx","utf8");
+assert.match(form,/DocumentDeleteConfirmation/);
+assert.match(form,/Replace \$\{documentName\}/);
+assert.match(form,/Trash2/);
+assert.match(detail,/onDelete=\{setPendingDelete\}/);
+assert.match(detail,/DocumentDeleteConfirmation/);
+assert.doesNotMatch(detail,/window\.confirm\(/);
+assert.match(modal,/role="alertdialog"/);
+assert.match(modal,/Are you sure you want to delete/);
+console.log("Unified Life/Health document actions regression passed");
