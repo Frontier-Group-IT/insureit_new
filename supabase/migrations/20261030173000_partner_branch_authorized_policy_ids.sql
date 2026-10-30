@@ -36,7 +36,28 @@ BEGIN
   v_identity := public.partner_app_current_identity();
   IF v_identity IS NULL OR v_identity->>'actor_kind'<>'intermediary' THEN RETURN; END IF;
   IF v_identity->>'intermediary_type'<>'partner' THEN RETURN; END IF;
-  IF NOT (v_identity->>'partner_id' ~* '^[0-9a-f-]{36}$') THEN RETURN; END IF;
+  IF coalesce(v_identity->>'partner_id','') !~* '^[0-9a-f-]{36}
+  v_parent_id := (v_identity->>'partner_id')::uuid;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.partners p
+    WHERE p.id=v_parent_id AND p.parent_partner_id IS NULL
+      AND p.partner_status='active_partner'
+  ) THEN RETURN; END IF;
+
+  RETURN QUERY
+    SELECT p.id
+    FROM public.policies p
+    WHERE p.intermediary_code=(SELECT partner_code FROM public.partners WHERE id=v_parent_id)
+    UNION
+    SELECT links.policy_id
+    FROM public.partner_branch_policy_links links
+    WHERE links.parent_partner_id=v_parent_id;
+END;
+$fn$;
+REVOKE ALL ON FUNCTION public.partner_branch_authorized_policy_ids() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.partner_branch_authorized_policy_ids() TO authenticated, service_role;
+COMMIT;
+ THEN RETURN; END IF;
   v_parent_id := (v_identity->>'partner_id')::uuid;
   IF NOT EXISTS (
     SELECT 1 FROM public.partners p
