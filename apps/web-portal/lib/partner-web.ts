@@ -335,7 +335,29 @@ export async function listPartnerWebCustomers({
     p_search: search?.trim() || null,
   });
   if (error) throw error;
-  return (data ?? []) as PartnerCustomerRow[];
+  const rows = (data ?? []) as PartnerCustomerRow[];
+  await assertCanonicalBranchListAccess(supabase, "customer", rows.map((row) => row.customer_id));
+  return rows;
+}
+
+// In staged isolation testing, reject an entire legacy list response if any row
+// belongs to another Branch. Do not silently filter a paginated result (which
+// could leak counts or produce misleading pagination).
+async function assertCanonicalBranchListAccess(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  resource: "policy" | "customer" | "claim",
+  ids: string[],
+) {
+  const session = await getPartnerWebSession();
+  if (session.scope.portal_access_type !== "branch" || process.env.INSUREIT_CANONICAL_RESOURCE_GUARD !== "enabled") return;
+  const rpc = resource === "policy" ? "partner_branch_authorized_policy_ids"
+    : resource === "customer" ? "partner_branch_authorized_customer_ids"
+    : "partner_branch_authorized_claim_ids";
+  const key = resource === "policy" ? "policy_id" : resource === "customer" ? "customer_id" : "claim_id";
+  const { data, error } = await supabase.rpc(rpc);
+  if (error || !Array.isArray(data)) redirect("/access-denied");
+  const permitted = new Set(data.map((item: Record<string, unknown>) => item[key]));
+  if (ids.some((id) => !permitted.has(id))) redirect("/access-denied");
 }
 
 // Additive safety assertion for authenticated canonical Branch sessions.
@@ -537,7 +559,9 @@ export async function listPartnerWebPolicies({
     p_lifecycle: lifecycle,
   });
   if (error) throw error;
-  return (data ?? []) as PartnerPolicyRow[];
+  const rows = (data ?? []) as PartnerPolicyRow[];
+  await assertCanonicalBranchListAccess(supabase, "policy", rows.map((row) => row.policy_id));
+  return rows;
 }
 
 
@@ -567,7 +591,9 @@ export async function listPartnerWebRenewals({
     p_window: mode === "expired" ? "all" : window,
   });
   if (error) throw error;
-  return (data ?? []) as PartnerPolicyRow[];
+  const rows = (data ?? []) as PartnerPolicyRow[];
+  await assertCanonicalBranchListAccess(supabase, "policy", rows.map((row) => row.policy_id));
+  return rows;
 }
 
 export async function getPartnerWebRenewalSummary(): Promise<PartnerRenewalSummary> {
@@ -673,7 +699,9 @@ export async function listPartnerWebClaims({
     p_state: state,
   });
   if (error) throw error;
-  return (data ?? []) as PartnerClaimRow[];
+  const rows = (data ?? []) as PartnerClaimRow[];
+  await assertCanonicalBranchListAccess(supabase, "claim", rows.map((row) => row.claim_id));
+  return rows;
 }
 
 export async function getPartnerWebClaimDetail(claimId: string): Promise<PartnerClaimDetail> {
