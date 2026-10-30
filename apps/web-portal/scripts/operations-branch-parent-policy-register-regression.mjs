@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const page = readFileSync(new URL("../app/policies/page.tsx", import.meta.url), "utf8");
+const ui = readFileSync(new URL("../app/policies/policy-workspace.tsx", import.meta.url), "utf8");
+assert.match(page, /from\("partner_branch_policy_links"\)/);
+assert.match(page, /parentByPolicy\.get\(policy\.id\)\?\.code/);
+assert.match(page, /intermediary_code: sourceCode/);
+assert.match(page, /branch_source_code: attribution\?\.branchCode/);
+assert.match(ui, /branch_source_code\?: string \| null/);
+assert.match(ui, /Branch \$\{policy\.branch_source_code\}/);
+assert.doesNotMatch(page, /\.from\("policies"\)\.update\(/);
+console.log("Operations Partner/Branch policy register attribution contract passed.");
