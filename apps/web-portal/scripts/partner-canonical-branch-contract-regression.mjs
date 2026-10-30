@@ -127,4 +127,6 @@ for (const noun of ['policy','customer','claim']) {
 assert.match(centralScopes,/FROM public\.portal_access_identities a WHERE a\.profile_id=auth\.uid\(\) AND a\.entity_type='branch'/);
 assert.match(centralScopes,/FROM public\.partner_branch_login_links b WHERE b\.profile_id=auth\.uid\(\)/);
 assert.doesNotMatch(centralScopes,/\b(?:INSERT|UPDATE|DELETE|TRUNCATE)\s+(?:FROM\s+)?public\./i);
+assert.match(webSource, /canonicalBranchIdentity\.legacy_partner_id == null/);
+assert.match(webSource, /canonical-only accounts must never fall through|Canonical-only accounts must never fall through/);
 console.log('Canonical Branch migration contract regression passed. Live database role tests remain required.');
