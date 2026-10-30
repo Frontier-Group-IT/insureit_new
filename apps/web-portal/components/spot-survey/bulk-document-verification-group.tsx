@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Camera, CarFront, FileCheck2, IdCard, Shield, ShieldCheck, Trash2, Truck, Video, Mic } from "lucide-react";
+import Image from "next/image";
+import { Shield, ShieldCheck, Trash2, Mic } from "lucide-react";
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { ClaimDocumentCollapsedStatus } from "@/components/claim-manager/claim-document-collapsed-status";
 import { ReplaceDocumentButton } from "./replace-document-button";
-import { RequestReuploadButton } from "./request-reupload-button";
 import { VerificationActionButton } from "./verification-action-button";
 import { deleteVerifiedSpotSurveyDocument } from "@/app/claims/[id]/spot-survey-actions";
 import { useRouter } from "next/navigation";
@@ -199,13 +199,12 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
           <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${verified ? "bg-green-100 text-green-700" : rejected ? "bg-amber-50 text-amber-700" : "bg-[#F4F7FC] text-[#526178]"}`}>{verified ? "Verified" : statusLabel(documentStatus)}</span>
         </div>
         {rejected ? <p className="mt-1 text-[9px] font-semibold text-amber-700">{document.rejection_reason ?? "Customer reupload requested."}</p> : null}
-        <div className={`mt-2 grid gap-1.5 ${verified ? "grid-cols-3" : "grid-cols-2"}`}>
-          {verified ? (
-            <button
+        <div className="mt-2 flex justify-end">
+          <button
               type="button"
               disabled={deletePending}
               onClick={() => {
-                if (!window.confirm(`Delete verified document "${document.file_name}"? This will remove it from this claim.`)) return;
+                if (!window.confirm(`Delete document "${document.file_name}"? This will remove it from this claim.`)) return;
                 setDeletePending(true);
                 void (async () => {
                   const result = await deleteVerifiedSpotSurveyDocument(claim.id, document.id);
@@ -214,34 +213,33 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
                   setDeletePending(false);
                 })();
               }}
-              aria-label="Delete verified document"
-              title="Delete verified document"
+              aria-label="Delete document"
+              title="Delete document"
               className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30 disabled:opacity-50"
             >
               <Trash2 aria-hidden="true" size={16} strokeWidth={2} />
             </button>
-          ) : null}
-          <RequestReuploadButton claimId={claim.id} documentId={document.id} documentTitle={item.title} />
-          <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentId={document.id} documentType={item.documentType} label={item.title} actionLabel="Replace" />
+
+
         </div>
       </div>
     </div>
   );
 }
 
-const categoryIcons = {
-  spot: Camera,
-  rc: CarFront,
-  insurance: FileCheck2,
-  dl: IdCard,
-  gr: Truck,
-  video: Video,
-  audio: Mic,
-} as const;
-
+const categoryArtwork: Record<string, string> = {
+  spot: "/assets/customer-claim/document-icons/glossy_pink_camera_document_icon.png",
+  rc: "/assets/customer-claim/document-icons/glossy_green_vehicle_document_icon.png",
+  insurance: "/assets/customer-claim/document-icons/glossy_blue_secure_policy_document_icon.png",
+  dl: "/assets/customer-claim/document-icons/glossy_purple_id_card_icon.png",
+  gr: "/assets/customer-claim/document-icons/glossy_orange_delivery_document_icon.png",
+  video: "/assets/customer-claim/document-icons/glossy_red_video_document_icon.png",
+};
 function DocumentCategoryIcon({ category }: { category: string }) {
-  const Icon = categoryIcons[category as keyof typeof categoryIcons] ?? FileCheck2;
-  return <Icon aria-hidden="true" className="h-5 w-5 shrink-0 text-[#2563EB]" strokeWidth={2.1} />;
+  const image = categoryArtwork[category];
+  return image
+    ? <Image src={image} alt="" aria-hidden="true" width={25} height={25} className="h-[25px] w-[25px] shrink-0 object-contain" />
+    : <Mic aria-hidden="true" className="h-5 w-5 shrink-0 text-[#2563EB]" strokeWidth={2.1} />;
 }
 
 function DocumentVerificationIcon({ verified, selected = false }: { verified: boolean; selected?: boolean }) {

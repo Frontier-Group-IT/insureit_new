@@ -210,7 +210,7 @@ export async function deleteVerifiedSpotSurveyDocument(claimId: string, document
       .eq("id", documentId)
       .maybeSingle<{ id: string; document_type: string; file_name: string; storage_bucket: string; storage_path: string; verification_status: string }>();
     if (documentError || !document) throw new Error(documentError?.message ?? "Document not found.");
-    if (document.verification_status !== "verified") throw new Error("Only verified documents can be deleted from this action.");
+    // Keep the existing claim-scoped authorization and verification audit for all document states.
 
     // Preserve verification history while detaching it from the document row that is being removed.
     const { error: verificationDetachError } = await supabase
@@ -224,25 +224,24 @@ export async function deleteVerifiedSpotSurveyDocument(claimId: string, document
       .from("claim_documents")
       .delete()
       .eq("claim_id", claimId)
-      .eq("id", documentId)
-      .eq("verification_status", "verified");
+      .eq("id", documentId);
     if (deleteError) throw new Error(deleteError.message);
 
     if (document.storage_bucket && document.storage_path) {
       const { error: storageError } = await supabase.storage.from(document.storage_bucket).remove([document.storage_path]);
-      if (storageError) console.error("Verified claim document storage cleanup failed", storageError);
+      if (storageError) console.error("Claim document storage cleanup failed", storageError);
     }
 
     await supabase.from("claim_status_history").insert({
       claim_id: claimId,
       from_status: claim.current_status,
       to_status: claim.current_status,
-      notes: `Verified ${document.document_type} document "${document.file_name}" deleted by claim manager.`,
+      notes: `${document.verification_status} ${document.document_type} document "${document.file_name}" deleted by claim manager.`,
       changed_by: profile.id,
     });
 
     revalidateClaimPaths(claimId);
-    return { ok: true, message: "Verified document deleted." };
+    return { ok: true, message: "Document deleted." };
   } catch (error) {
     console.error("deleteVerifiedSpotSurveyDocument failed", error);
     return { ok: false, message: error instanceof Error ? error.message : "Verified document could not be deleted." };
