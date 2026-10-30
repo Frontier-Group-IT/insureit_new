@@ -48,7 +48,7 @@ export async function createBranchProfile(formData: FormData) {
   // Opt-in only: canonical onboarding must be enabled alongside the corresponding
   // authenticated policy/read scope and Branch portal route rollout.
   // Default remains the legacy path to avoid creating unusable Branch accounts.
-  if (process.env.INSUREIT_CANONICAL_BRANCH_ONBOARDING === "enabled") {
+  if (process.env.INSUREIT_CANONICAL_BRANCH_ONBOARDING === "enabled" && process.env.INSUREIT_CANONICAL_BRANCH_AUTHORIZATION_VERIFIED === "enabled") {
     const { data: canonicalBranchId, error: canonicalError } = await admin.rpc("service_create_canonical_partner_branch", {
       p_parent_partner_id: parentPartnerId,
       p_branch_name: branchName,
