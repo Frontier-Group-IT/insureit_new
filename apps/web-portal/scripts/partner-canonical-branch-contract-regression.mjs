@@ -102,7 +102,7 @@ assert.equal((linkedScopes.match(/public\.partner_branch_authorized_policy_ids\(
 assert.match(linkedScopes,/JOIN public\.claims c ON c\.policy_id=scope\.policy_id/);
 assert.doesNotMatch(linkedScopes,/\b(?:UPDATE|INSERT|DELETE|TRUNCATE)\s+(?:FROM\s+)?public\./i);
 const webSource = readFileSync(resolve(root,'apps/web-portal/lib/partner-web.ts'),'utf8');
-assert.match(webSource, /INSUREIT_CANONICAL_RESOURCE_GUARD === "enabled"/);
+assert.match(webSource, /INSUREIT_CANONICAL_RESOURCE_GUARD !== "enabled"/);
 assert.match(webSource, /partner_branch_authorized_customer_ids/);
 assert.match(webSource, /partner_branch_authorized_claim_ids/);
 assert.match(webSource, /assertCanonicalBranchResourceAccess\(supabase, "customer", customerId\)/);
