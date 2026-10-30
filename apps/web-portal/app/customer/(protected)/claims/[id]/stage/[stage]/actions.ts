@@ -8,6 +8,21 @@ import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim } from "@/lib/customer-web-phase2-data";
 import { CUSTOMER_EXTERNAL_STAGE_FIELDS } from "@/lib/customer-claim-stage-fields";
 
+/** Confirm Stage 1 data is persisted before returning to the customer's claim register.
+ * Stage 1 fields on the completed detail screen are read-only, and uploads are
+ * saved by their own upload actions. Never fabricate a stage transition here.
+ */
+export async function confirmCustomerSpotIntimationSaved(form: FormData) {
+  const accountId = String(form.get("account") || "");
+  const claimId = String(form.get("claim") || "");
+  const { account } = await resolveCustomerWebScope(accountId);
+  const { claim } = await loadCustomerClaimDetail(account.id, claimId);
+  if (claim.current_status === "Draft" || !claim.accident_at || !claim.spot_intimation_at) {
+    throw new Error("Complete and save Spot Intimation details before returning to Claims.");
+  }
+  redirect("/customer/claims?account=" + encodeURIComponent(account.id));
+}
+
 /** Surface only known, actionable database errors; never expose raw SQL or authorization details. */
 function claimStageDatabaseError(message: string | undefined): string {
   const detail = message ?? "";
