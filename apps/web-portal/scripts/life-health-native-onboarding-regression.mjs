@@ -30,6 +30,9 @@ assert(unified.includes('source={{sourcingDate:form.issuanceDate'), "Life/Health
 assert(unified.includes('ID · {selectedSource.rmCode}'), "RM employee ID must be rendered natively in the shared source section");
 assert(!unified.includes("PolicyTypeDevelopmentNotice"), "Life/Health must not fall back to the development notice");
 
+assert(lifeHealth.includes('aria-label={`Preview ${documentName}`}'), "uploaded Life/Health document must have an accessible eye-only preview control");
+assert(lifeHealth.includes('window.open(previewUrl, "_blank", "noopener,noreferrer")'), "uploaded Life/Health document preview must open without resubmitting");
+assert(lifeHealth.includes('URL.revokeObjectURL(url)'), "uploaded file preview object URLs must be cleaned up");
 assert(lifeHealth.includes("source: LifeHealthSourceSnapshot"), "LifeHealthPolicyForm must accept an explicit source snapshot prop");
 assert(!lifeHealth.includes("sourceSnapshot("), "LifeHealthPolicyForm must not reconstruct source state from the DOM");
 assert(!lifeHealth.includes("document.querySelector"), "LifeHealthPolicyForm must not query the document for source controls");
