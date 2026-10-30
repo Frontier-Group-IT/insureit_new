@@ -14,6 +14,7 @@ import {
   getPartnerWebHome,
   getPartnerWebNetwork,
   getPartnerWebPayoutSummary,
+  getPartnerWebPolicySummary,
   getPartnerWebRenewalSummary,
   getPartnerWebSession,
 } from "@/lib/partner-web";
@@ -181,6 +182,7 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
     claimOutstanding,
     renewalSummary,
     activeScheme,
+    scopedPolicySummary,
   ] = await Promise.all([
     getPartnerWebSession(),
     getPartnerWebHome(),
@@ -193,6 +195,7 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
     getPartnerWebClaimOutstanding(),
     getPartnerWebRenewalSummary(),
     getPartnerWebActiveScheme(),
+    getPartnerWebPolicySummary(),
   ]);
 
   const today = currentKolkataIsoDate();
@@ -262,6 +265,10 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
     const amount = Number(value ?? 0);
     return total + (Number.isFinite(amount) ? amount : 0);
   }, 0);
+  // Branch policy counts must use the same authorized scope as the Policy Register.
+  // The business-performance RPC can lag the expanded branch child-partner scope.
+  const homePolicyCount = isBranchLogin ? scopedPolicySummary.total_policies : businessPerformance.total_policies;
+  const homeActivePolicyCount = isBranchLogin ? scopedPolicySummary.in_force_policies : home.business.active_policies;
   const partnerFamilyCount = network.scope_mode === "self"
     ? network.partners.length
     : network.partners.filter((row) => !(row as typeof row & { parent_partner_id?: string | null }).parent_partner_id).length;
@@ -319,8 +326,8 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
           />
           <SummaryCard
             label="Policies"
-            value={businessPerformance.total_policies}
-            meta={`${home.business.active_policies} active`}
+            value={homePolicyCount}
+            meta={`${homeActivePolicyCount} active`}
             href="/partner/policies"
             iconSrc={homeIcons.policies}
           />
