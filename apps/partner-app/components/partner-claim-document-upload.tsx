@@ -282,7 +282,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
         <View style={[styles.tile, tileFullWidth && styles.tileFullWidth, count > 0 && styles.tileReady]}>
           <View style={styles.tileHeading}>
             <Pressable accessibilityRole="button" accessibilityLabel={`Add more ${label ?? documentType} documents`} disabled={busy} onPress={() => void pickAndUpload()} style={styles.tileHeadingIdentity}>
-              {artwork ? <Image source={artwork} style={styles.tileHeadingArtwork} resizeMode="contain" /> : <Ionicons name="document-outline" size={23} color="#0A43A3" />}
+              {documentType === "Accident Video" ? <View style={styles.accidentVideoIcon} accessibilityLabel="Accident Video"><Ionicons name="document-text" size={25} color="#E12D38" /><View style={styles.accidentVideoCamera}><Ionicons name="videocam" size={12} color="#FFFFFF" /></View></View> : artwork ? <Image source={artwork} style={styles.tileHeadingArtwork} resizeMode="contain" /> : <Ionicons name="document-outline" size={23} color="#0A43A3" />}
               <Text style={styles.tileHeadingName} numberOfLines={2}>{label ?? documentType}</Text>
             </Pressable>
             {latest && !busy ? (
@@ -474,6 +474,8 @@ const styles=StyleSheet.create({
   tileHeading:{width:'100%',flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between',gap:3,minHeight:43},
   tileHeadingIdentity:{flex:1,minWidth:0,flexDirection:'row',alignItems:'center',gap:3},
   tileHeadingArtwork:{width:23,height:26},
+  accidentVideoIcon:{width:26,height:27,justifyContent:'center',alignItems:'center',overflow:'visible'},
+  accidentVideoCamera:{position:'absolute',bottom:2,left:5,width:17,height:14,borderRadius:3,backgroundColor:'#E12D38',alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:'#FFFFFF'},
   tileHeadingName:{flex:1,minWidth:0,fontSize:9,fontWeight:'800',color:'#0B2248'},
   tileHeadingDelete:{padding:1},
   tileCounts:{flexDirection:'row',justifyContent:'center',alignItems:'center',gap:12,width:'100%',minHeight:31},
