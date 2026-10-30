@@ -34,6 +34,11 @@ export type PartnerCommercialScope = {
   actor_kind: "employee" | "intermediary";
   scope_mode: "organization" | "hierarchy" | "self" | "partner_family" | "none";
   portal_access_type?: "group" | "branch" | "partner" | "associate" | string;
+  // Canonical identifiers are additive; older sessions may omit these until migration rollout.
+  branch_id?: string | null;
+  branch_code?: string | null;
+  parent_partner_id?: string | null;
+  branch_ids?: string[];
   employee_ids: string[];
   partner_ids: string[];
   intermediary_ids: string[];
