@@ -5,7 +5,7 @@ import { CustomerAnimatedSearchInput } from "@/components/customer-portal/custom
 import Link from "next/link";
 import { CustomerExchangeSellWorkspace } from "@/components/customer-portal/customer-exchange-sell-workspace";
 import { customerExchangeVehicleArt } from "@/lib/customer-exchange-vehicle-art";
-import { Activity, Heart, ArrowLeftRight, BadgeCheck, MapPin, MoreVertical, Search, ShoppingBag, Store, Truck, ChevronRight, Clock3, ShieldCheck } from "lucide-react";
+import { Activity, Heart, ArrowLeftRight, BadgeCheck, MapPin, MoreVertical, Search, ShoppingBag, Store, Truck, ChevronDown, ChevronRight, Clock3, ShieldCheck } from "lucide-react";
 import {
   CustomerAccountTabs,
   EmptyCustomerState,
@@ -210,7 +210,7 @@ export default async function CustomerExchangePage({
                 <details className="group relative ml-auto">
                   <summary className="flex cursor-pointer list-none items-center justify-center gap-2 rounded-lg border border-[#E7ECF7] bg-[#F4F7FD] px-3 py-2.5 text-[11px] font-bold text-[#123967] [&::-webkit-details-marker]:hidden">
                     <span>{({all:"All",offers:"Offers",bids:"Bids",listings:"Listings",deals:"Deals",requests:"Requests",saved:"Saved"} as Record<string,string>)[activityFilter]}</span>
-                    <span aria-hidden="true" className="inline-flex items-center justify-center leading-none">⌄</span>
+                    <ChevronDown aria-hidden="true" className="h-3.5 w-3.5 shrink-0 self-center" strokeWidth={2} />
                   </summary>
                   <nav aria-label="Exchange activity filters" className="absolute right-0 z-30 mt-2 min-w-[175px] rounded-xl border border-[#DCE4EE] bg-white p-1 shadow-lg">
                     {([["all","All",activity.bids.length+activity.listings.length+activity.deals.length+activity.favorites.length+activity.contact_requests.length],["offers","Offers",activity.bids.length],["bids","Bids",activity.bids.length],["listings","Listings",activity.listings.length],["deals","Deals",activity.deals.length],["requests","Requests",activity.contact_requests.length],["saved","Saved",activity.favorites.length]] as const).map(([key,label,count]) => (
