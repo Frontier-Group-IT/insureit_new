@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const source=readFileSync("components/document-delete-confirmation.tsx","utf8");
+assert.match(source,/createPortal\(/,"Dialog must escape transformed page ancestors");
+assert.match(source,/document\.body/,"Dialog must render at document root");
+assert.match(source,/h-\[100dvh\] w-screen place-items-center/,"Dialog must center within viewport");
+assert.match(source,/max-w-\[360px\]/,"Dialog must stay compact");
+assert.match(source,/onClick=\{onCancel\}/);
+assert.match(source,/onClick=\{onConfirm\}/);
+console.log("Compact centered document delete confirmation regression passed");
