@@ -22,7 +22,10 @@ export type PartnerIdentity =
       associate_role?: "claim_head" | "insurance_head" | "bodyshop_manager" | "admin" | null;
       associate_designation?: string | null;
       intermediary_id: string;
-      intermediary_type: "partner" | "posp" | "misp";
+      intermediary_type: "partner" | "posp" | "misp" | "branch";
+      portal_access_type?: "branch" | "partner" | "group" | string;
+      branch_id?: string | null;
+      parent_partner_id?: string | null;
       intermediary_code: string | null;
       display_name: string;
       partner_id: string;
@@ -122,6 +125,20 @@ export const getPartnerWebSession = cache(async (): Promise<PartnerSessionContex
   const resolvedScope = scope as PartnerCommercialScope;
   if (resolvedScope.actor_kind !== "intermediary" || resolvedScope.scope_mode === "none") {
     redirect("/access-denied");
+  }
+
+  // Preserve existing Branch login behavior but reject accidental elevation into the
+  // parent Partner's aggregate scope. Canonical-only Branch sessions remain blocked
+  // until all downstream policy/customer/claim RPCs are converted.
+  if (identity.portal_access_type === "branch") {
+    if (
+      resolvedScope.portal_access_type !== "branch"
+      || !identity.partner_id
+      || resolvedScope.partner_ids.length !== 1
+      || resolvedScope.partner_ids[0] !== identity.partner_id
+    ) {
+      redirect("/access-denied");
+    }
   }
 
   return { identity, scope: resolvedScope };
