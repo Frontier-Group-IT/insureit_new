@@ -25,6 +25,7 @@ export type BranchRegisterRow = {
   login_disabled: boolean;
   invitation_status: "active" | "invited" | "pending" | "unknown";
   branch_status: string;
+  canonical_only?: boolean;
   parent_partner_id: string | null;
   parent_partner_code: string | null;
   parent_partner_name: string | null;
@@ -231,7 +232,7 @@ export function BranchRegisterWorkspace({
                 </>}
                 <td className="px-3 break-all text-[#475569]">{branch.email || "—"}</td>
                 <td className="px-3 text-[#475569]">{branch.phone || "—"}</td>
-                <td className="px-3"><StatusPill status={branch.login_disabled ? "disabled" : branch.invitation_status} /></td>{canPermanentDelete ? <td className="px-3 text-center"><BranchActionMenu branch={branch} /></td> : null}
+                <td className="px-3"><StatusPill status={branch.login_disabled ? "disabled" : branch.invitation_status} /></td>{canPermanentDelete ? <td className="px-3 text-center">{!branch.canonical_only ? <BranchActionMenu branch={branch} /> : null}</td> : null}
               </tr>
             ))}
           </tbody>
@@ -278,7 +279,7 @@ function BranchMobileCard({ branch, canPermanentDelete, hideParentPartner, appli
               <Info label="Phone" value={branch.phone ?? "—"} />
             </div>
           </div>
-          {canPermanentDelete ? <div className="mt-3"><BranchActionMenu branch={branch} /></div> : null}
+          {canPermanentDelete && !branch.canonical_only ? <div className="mt-3"><BranchActionMenu branch={branch} /></div> : null}
         </div>
       </div>
     </article>

@@ -22,7 +22,10 @@ export type PartnerIdentity =
       associate_role?: "claim_head" | "insurance_head" | "bodyshop_manager" | "admin" | null;
       associate_designation?: string | null;
       intermediary_id: string;
-      intermediary_type: "partner" | "posp" | "misp";
+      intermediary_type: "partner" | "posp" | "misp" | "branch";
+      portal_access_type?: "branch" | "partner" | "group" | string;
+      branch_id?: string | null;
+      parent_partner_id?: string | null;
       intermediary_code: string | null;
       display_name: string;
       partner_id: string;
@@ -34,6 +37,11 @@ export type PartnerCommercialScope = {
   actor_kind: "employee" | "intermediary";
   scope_mode: "organization" | "hierarchy" | "self" | "partner_family" | "none";
   portal_access_type?: "group" | "branch" | "partner" | "associate" | string;
+  // Canonical identifiers are additive; older sessions may omit these until migration rollout.
+  branch_id?: string | null;
+  branch_code?: string | null;
+  parent_partner_id?: string | null;
+  branch_ids?: string[];
   employee_ids: string[];
   partner_ids: string[];
   intermediary_ids: string[];
@@ -99,6 +107,18 @@ export const getPartnerWebSession = cache(async (): Promise<PartnerSessionContex
   }
 
   const supabase = await createServerSupabaseClient();
+  // Canonical-only accounts must never fall through the legacy Partner account
+  // activation flow. Existing Branch accounts retain their legacy identity.
+  const { data: canonicalBranchIdentity, error: canonicalBranchError } =
+    await supabase.rpc("partner_branch_portal_identity");
+  if (canonicalBranchError) redirect("/access-denied");
+  if (canonicalBranchIdentity?.portal_access_type === "branch"
+      && canonicalBranchIdentity.legacy_partner_id == null) {
+    // Closed until every Partner RPC accepts an explicitly scoped canonical
+    // account instead of broadening identity to the parent Partner.
+    redirect("/access-denied");
+  }
+
   const { data: existingIdentity, error: identityError } = await supabase.rpc("partner_app_current_identity");
   if (identityError) redirect("/access-denied");
 
@@ -119,8 +139,47 @@ export const getPartnerWebSession = cache(async (): Promise<PartnerSessionContex
     redirect("/access-denied");
   }
 
+  // Preserve existing Branch login behavior but reject accidental elevation into the
+  // parent Partner's aggregate scope. Canonical-only Branch sessions remain blocked
+  // until all downstream policy/customer/claim RPCs are converted.
+  if (identity.portal_access_type === "branch") {
+    // Match the legacy Partner-backed Branch session to its canonical Branch identity.
+    // A missing, inconsistent or disabled mapping must never receive a wider scope.
+    const { data: canonicalBranch, error: canonicalError } = await supabase.rpc("partner_branch_portal_identity");
+    if (
+      canonicalError
+      || !canonicalBranch
+      || canonicalBranch.portal_access_type !== "branch"
+      || canonicalBranch.legacy_partner_id !== identity.partner_id
+    ) {
+      redirect("/access-denied");
+    }
+    if (
+      resolvedScope.portal_access_type !== "branch"
+      || !identity.partner_id
+      || resolvedScope.partner_ids.length !== 1
+      || resolvedScope.partner_ids[0] !== identity.partner_id
+    ) {
+      redirect("/access-denied");
+    }
+  }
+
   return { identity, scope: resolvedScope };
 });
+
+export type PartnerCanonicalPolicySummary = {
+  policies: number;
+  recorded_premium: number | string;
+};
+
+// Staged read-only comparison. Never use parent IDs provided by a browser request.
+export async function getPartnerCanonicalPolicySummary(): Promise<PartnerCanonicalPolicySummary> {
+  await getPartnerWebSession();
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("partner_branch_policy_summary");
+  if (error || !data) throw new Error(error?.message ?? "Canonical policy summary is unavailable.");
+  return data as PartnerCanonicalPolicySummary;
+}
 
 export async function getPartnerWebHome(): Promise<PartnerHomeData> {
   await getPartnerWebSession();
@@ -288,12 +347,56 @@ export async function listPartnerWebCustomers({
     p_search: search?.trim() || null,
   });
   if (error) throw error;
-  return (data ?? []) as PartnerCustomerRow[];
+  const rows = (data ?? []) as PartnerCustomerRow[];
+  await assertCanonicalBranchListAccess(supabase, "customer", rows.map((row) => row.customer_id));
+  return rows;
+}
+
+// In staged isolation testing, reject an entire legacy list response if any row
+// belongs to another Branch. Do not silently filter a paginated result (which
+// could leak counts or produce misleading pagination).
+async function assertCanonicalBranchListAccess(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  resource: "policy" | "customer" | "claim",
+  ids: string[],
+) {
+  const session = await getPartnerWebSession();
+  if (session.scope.portal_access_type !== "branch" || process.env.INSUREIT_CANONICAL_RESOURCE_GUARD !== "enabled") return;
+  const rpc = resource === "policy" ? "partner_branch_authorized_policy_ids"
+    : resource === "customer" ? "partner_branch_authorized_customer_ids"
+    : "partner_branch_authorized_claim_ids";
+  const key = resource === "policy" ? "policy_id" : resource === "customer" ? "customer_id" : "claim_id";
+  const { data, error } = await supabase.rpc(rpc);
+  if (error || !Array.isArray(data)) redirect("/access-denied");
+  const permitted = new Set(data.map((item: Record<string, unknown>) => item[key]));
+  if (ids.some((id) => !permitted.has(id))) redirect("/access-denied");
+}
+
+// Additive safety assertion for authenticated canonical Branch sessions.
+// Enabled only during staged validation; never elevates existing scope.
+async function assertCanonicalBranchResourceAccess(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  resource: "customer" | "claim" | "policy",
+  id: string,
+) {
+  const session = await getPartnerWebSession();
+  if (session.scope.portal_access_type !== "branch" || process.env.INSUREIT_CANONICAL_RESOURCE_GUARD !== "enabled") return;
+  const rpc = resource === "customer"
+    ? "partner_branch_authorized_customer_ids"
+    : resource === "claim"
+      ? "partner_branch_authorized_claim_ids"
+      : "partner_branch_authorized_policy_ids";
+  const { data, error } = await supabase.rpc(rpc);
+  if (error || !Array.isArray(data)) redirect("/access-denied");
+  const idKey = resource === "customer" ? "customer_id" : resource === "claim" ? "claim_id" : "policy_id";
+  if (!data.some((row: Record<string, unknown>) => row[idKey] === id)) redirect("/access-denied");
 }
 
 export async function getPartnerWebCustomerDetail(customerId: string): Promise<PartnerCustomerDetail> {
   await getPartnerWebSession();
   const supabase = await createServerSupabaseClient();
+  await assertCanonicalBranchResourceAccess(supabase, "customer", customerId);
+
   const { data, error } = await supabase.rpc("partner_app_customer_detail", {
     p_customer_id: customerId,
   });
@@ -468,7 +571,9 @@ export async function listPartnerWebPolicies({
     p_lifecycle: lifecycle,
   });
   if (error) throw error;
-  return (data ?? []) as PartnerPolicyRow[];
+  const rows = (data ?? []) as PartnerPolicyRow[];
+  await assertCanonicalBranchListAccess(supabase, "policy", rows.map((row) => row.policy_id));
+  return rows;
 }
 
 
@@ -498,7 +603,9 @@ export async function listPartnerWebRenewals({
     p_window: mode === "expired" ? "all" : window,
   });
   if (error) throw error;
-  return (data ?? []) as PartnerPolicyRow[];
+  const rows = (data ?? []) as PartnerPolicyRow[];
+  await assertCanonicalBranchListAccess(supabase, "policy", rows.map((row) => row.policy_id));
+  return rows;
 }
 
 export async function getPartnerWebRenewalSummary(): Promise<PartnerRenewalSummary> {
@@ -512,6 +619,8 @@ export async function getPartnerWebRenewalSummary(): Promise<PartnerRenewalSumma
 export async function getPartnerWebPolicyDetail(policyId: string): Promise<PartnerPolicyDetail> {
   await getPartnerWebSession();
   const supabase = await createServerSupabaseClient();
+  await assertCanonicalBranchResourceAccess(supabase, "policy", policyId);
+
   const { data, error } = await supabase.rpc("partner_app_policy_detail", { p_policy_id: policyId });
   if (error || !data) throw new Error(error?.message ?? "Policy detail is unavailable.");
   return data as PartnerPolicyDetail;
@@ -602,12 +711,16 @@ export async function listPartnerWebClaims({
     p_state: state,
   });
   if (error) throw error;
-  return (data ?? []) as PartnerClaimRow[];
+  const rows = (data ?? []) as PartnerClaimRow[];
+  await assertCanonicalBranchListAccess(supabase, "claim", rows.map((row) => row.claim_id));
+  return rows;
 }
 
 export async function getPartnerWebClaimDetail(claimId: string): Promise<PartnerClaimDetail> {
   await getPartnerWebSession();
   const supabase = await createServerSupabaseClient();
+  await assertCanonicalBranchResourceAccess(supabase, "claim", claimId);
+
   const { data, error } = await supabase.rpc("partner_app_claim_detail", { p_claim_id: claimId });
   if (error || !data) throw new Error(error?.message ?? "Claim detail is unavailable.");
   return data as PartnerClaimDetail;

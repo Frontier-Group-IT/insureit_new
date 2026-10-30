@@ -45,6 +45,54 @@ export async function createBranchProfile(formData: FormData) {
     return fail("That Branch email is already assigned to another portal user.");
   }
 
+  // Opt-in only: canonical onboarding must be enabled alongside the corresponding
+  // authenticated policy/read scope and Branch portal route rollout.
+  // Default remains the legacy path to avoid creating unusable Branch accounts.
+  if (process.env.INSUREIT_CANONICAL_BRANCH_ONBOARDING === "enabled" && process.env.INSUREIT_CANONICAL_BRANCH_AUTHORIZATION_VERIFIED === "enabled") {
+    const { data: canonicalBranchId, error: canonicalError } = await admin.rpc("service_create_canonical_partner_branch", {
+      p_parent_partner_id: parentPartnerId,
+      p_branch_name: branchName,
+      p_contact_name: contactName,
+      p_phone: phone,
+      p_email: email,
+      p_address: address,
+      p_actor_profile_id: profile.id,
+    });
+    if (canonicalError || typeof canonicalBranchId !== "string") {
+      return fail(canonicalError?.message || "Canonical Branch could not be created.");
+    }
+
+    const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (productionHost ? `https://${productionHost}` : null);
+    const inviteOptions = siteUrl
+      ? { redirectTo: `${siteUrl}/auth/callback?next=/intermediary-portal`, data: { full_name: branchName, role: "intermediary", portal_account_type: "branch" } }
+      : { data: { full_name: branchName, role: "intermediary", portal_account_type: "branch" } };
+    const { data: invite, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, inviteOptions);
+    if (inviteError || !invite.user?.id) return branchCreatedButInviteFailed(inviteError?.message || "Branch created; invitation requires retry.");
+
+    const profileId = invite.user.id;
+    const now = new Date().toISOString();
+    const { error: profileError } = await admin.from("profiles").upsert({
+      id: profileId, full_name: branchName, role: "intermediary", email, phone, is_active: true, updated_at: now,
+    }, { onConflict: "id" });
+    if (profileError) {
+      await admin.auth.admin.deleteUser(profileId);
+      return branchCreatedButInviteFailed(`Branch created; profile setup requires retry: ${profileError.message}`);
+    }
+    const { error: linkError } = await admin.from("partner_branch_login_links").insert({
+      profile_id: profileId, branch_id: canonicalBranchId, status: "active",
+    });
+    if (linkError) {
+      await admin.from("profiles").delete().eq("id", profileId);
+      await admin.auth.admin.deleteUser(profileId);
+      return branchCreatedButInviteFailed(`Branch created; login mapping requires retry: ${linkError.message}`);
+    }
+    revalidatePath("/intermediaries/groups/branches");
+    revalidatePath("/intermediaries/groups/login-access");
+    if (returnPath) redirect(`${returnPath}&success=branch_created`);
+    redirect("/intermediaries/groups?success=branch_created");
+  }
+
   const { data: branchPartnerId, error } = await admin.rpc("service_create_partner_branch_profile", {
     p_branch_name: branchName,
     p_phone: phone,

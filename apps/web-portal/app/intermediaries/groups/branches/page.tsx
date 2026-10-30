@@ -40,6 +40,19 @@ type BranchProfileRow = {
   address: string | null;
 };
 
+type CanonicalBranchRow = {
+  id: string;
+  branch_code: string;
+  branch_name: string;
+  status: string;
+  email: string;
+  phone: string;
+  contact_name: string;
+  address: string;
+  created_by: string | null;
+  parent_partner_id: string;
+};
+
 type GroupRow = {
   id: string;
   group_code: string;
@@ -175,6 +188,54 @@ export default async function BranchRegisterPage() {
     }];
   });
 
+  // Canonical-only Branches are read separately; never pretend they are Partner
+  // rows or pass their IDs into legacy Partner-only mutation actions.
+  // This query stays disabled until the schema and secure Branch reader are deployed.
+  const canonicalEnabled = process.env.INSUREIT_CANONICAL_BRANCH_ONBOARDING === "enabled";
+  const canonicalResult = canonicalEnabled
+    ? await admin.from("partner_branches")
+        .select("id,branch_code,branch_name,status,email,phone,contact_name,address,created_by,parent_partner_id")
+        .is("legacy_branch_profile_id", null)
+        .returns<CanonicalBranchRow[]>()
+    : { data: [] as CanonicalBranchRow[], error: null };
+
+  for (const branch of canonicalResult.data ?? []) {
+    const parent = partnerById.get(branch.parent_partner_id);
+    if (!parent) continue;
+    const ownerApplicationId = parent.source_application_id;
+    const ownerEmployeeId = ownerApplicationId
+      ? parentOwnerByApplication.get(ownerApplicationId) ?? onboardingOwnerByApplication.get(ownerApplicationId) ?? null
+      : null;
+    if (scope.mode !== "organization"
+        && (!ownerEmployeeId || !allowedEmployeeIds.has(ownerEmployeeId))
+        && branch.created_by !== profile.id) continue;
+
+    const membership = membershipByPartner.get(parent.id);
+    const group = membership ? groupById.get(membership.group_id) : null;
+    const employee = ownerEmployeeId ? employeeById.get(ownerEmployeeId) : null;
+    rows.push({
+      id: branch.id,
+      branch_code: branch.branch_code,
+      branch_name: branch.branch_name,
+      branch_kind: "branch",
+      email: branch.email,
+      phone: branch.phone,
+      contact_name: branch.contact_name,
+      address: branch.address,
+      login_disabled: branch.status !== "active",
+      invitation_status: "pending",
+      branch_status: branch.status,
+      parent_partner_id: parent.id,
+      parent_partner_code: parent.partner_code,
+      parent_partner_name: parent.display_name,
+      group_code: group?.group_code ?? null,
+      group_name: group?.group_name ?? null,
+      employee_code: employee?.employee_code ?? null,
+      employee_name: employee?.full_name ?? null,
+      canonical_only: true,
+    });
+  }
+
   const loadError = Boolean(
     parentError
     || onboardingError
@@ -182,7 +243,8 @@ export default async function BranchRegisterPage() {
     || branchProfileError
     || groupError
     || employeeError
-    || membershipResult.error,
+    || membershipResult.error
+    || canonicalResult.error,
   );
 
   return (
