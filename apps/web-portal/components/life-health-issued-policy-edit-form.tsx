@@ -82,23 +82,36 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
     Object.entries(commercial).forEach(([key,value])=>data.set(key,String(value)));
     setError(null);
     startTransition(async()=>{
-      const customerResult = await updateIssuedLifeHealthCustomer(data);
-      if (!customerResult.ok) { setError(customerResult.error); return; }
-      const result = await updateIssuedLifeHealthPolicy(data);
-      if (!result.ok) { setError(result.error); return; }
-      router.push(`/policies?success=policy_updated&policy_id=${encodeURIComponent(form.policyId)}`); router.refresh();
+      try {
+        const customerResult = await updateIssuedLifeHealthCustomer(data);
+        if (!customerResult.ok) { setError(customerResult.error); return; }
+        const result = await updateIssuedLifeHealthPolicy(data);
+        if (!result.ok) { setError(result.error); return; }
+        router.push(`/policies?success=policy_updated&policy_id=${encodeURIComponent(form.policyId)}`); router.refresh();
+      } catch (cause) {
+        console.error("Life/Health issued policy update failed",cause);
+        setError("Unable to save this policy. Please retry or contact support.");
+      }
     });
   }
 
   function uploadDocument(type:LifeHealthIssuedDocumentType,file:File|undefined) {
     if (!file) return;
-    const data = new FormData(); data.set("policyId",form.policyId); data.set("caseId",form.caseId); data.set("documentType",type); data.set("file",file);
     setError(null);
+    if (file.size <= 0) { setError("Choose a non-empty document."); return; }
+    if (file.size > 20 * 1024 * 1024) { setError("Document must be 20 MB or smaller. Compress the document and try again."); return; }
+    if (!["application/pdf","image/jpeg","image/png","image/webp"].includes(file.type)) { setError("Upload a PDF, JPG, PNG or WebP document."); return; }
+    const data = new FormData(); data.set("policyId",form.policyId); data.set("caseId",form.caseId); data.set("documentType",type); data.set("file",file);
     startDocumentTransition(async()=>{
-      const result = await replaceIssuedLifeHealthDocument(data);
-      if (!result.ok) { setError(result.error); return; }
-      if (result.document) setDocumentState((current)=>[...current.filter((item)=>item.type!==type),result.document!]);
-      router.refresh();
+      try {
+        const result = await replaceIssuedLifeHealthDocument(data);
+        if (!result.ok) { setError(result.error); return; }
+        if (result.document) setDocumentState((current)=>[...current.filter((item)=>item.type!==type),result.document!]);
+        router.refresh();
+      } catch (cause) {
+        console.error("Life/Health issued policy upload request failed",cause);
+        setError("Document upload request failed. Check your connection and try a smaller file. If it continues, contact support.");
+      }
     });
   }
 
