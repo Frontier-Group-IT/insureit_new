@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const source=readFileSync("components/customer-portal/customer-claim-stage-strip.tsx","utf8");
+assert.match(source,/bg-\[linear-gradient\(102deg,#23469e_0%,#175da8_55%,#2892b7_100%\)\]/,"Summary shares Claim Journey header gradient");
+assert.match(source,/customer-claim-ref-stage-grid grid w-full min-w-0 grid-cols-9/,"Nine stages occupy full width");
+assert.doesNotMatch(source,/min-w-\[1080px\]/,"No forced wide stage strip");
+assert.match(source,/whitespace-nowrap/,"Stage titles remain on one line");
+assert.match(source,/min-h-\[42px\]/,"Stage cards remain compact");
+assert.match(source,/INTERNAL_JOURNEY_STAGES\.map/,"All stages remain intact");
+assert.match(source,/aria-label=\{stage\.label\}/,"Accessible labels retained");
+console.log("Compact full-width customer claim journey regression passed.");
