@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const source = readFileSync(new URL("../lib/rm-performance.ts",import.meta.url),"utf8");
+assert.match(source,/const nameIds = new Map<string, Set<string>>\(\)/);
+assert.match(source,/ids\?\.size === 1/);
+assert.match(source,/const todayByRm = summarize\(todayPayload\.report\.rms\)/);
+assert.match(source,/const periodByRm = summarize\(mtdPayload\.report\.rms\)/);
+assert.match(source,/policy_count: policy_count|policy_count,/);
+assert.match(source,/net_premium,/);
+assert.match(source,/loadCanonicalParentSources/);
+assert.doesNotMatch(source,/\.from\("policies"\)\.update\(/);
+console.log("RM historical Branch/parent RM consolidation contract passed.");
