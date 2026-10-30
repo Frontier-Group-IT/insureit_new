@@ -252,7 +252,7 @@ function validatePayload(payload: PolicyOnboardingPayload) {
   const rtoName = String(payload.vehicle.rtoName ?? "").trim();
   const cpaAmount = Number(numericPayloadValue(payload.premium.cpa, false, "0"));
   const addOnPremium = Number(numericPayloadValue(payload.premium.addOnPremium, false, "0"));
-  if (!Number.isFinite(addOnPremium) || addOnPremium < 0 || addOnPremium > 100000000 || Math.round(addOnPremium * 100) !== addOnPremium * 100) return "Enter a valid non-negative Add-on Premium (maximum two decimals).";
+  if (!Number.isFinite(addOnPremium) || addOnPremium < 0 || addOnPremium > 100000000) return "Enter a valid non-negative Add-on Premium.";
   if (!name) return "Enter the insured/customer name.";
   if (!/^[6-9][0-9]{9}$/.test(phone)) return "Enter a valid 10 digit Indian mobile number.";
   if (mode === "registered" && !isValidVehicleRegistrationNumber(rawRegistration)) return "Enter a valid vehicle registration number.";
