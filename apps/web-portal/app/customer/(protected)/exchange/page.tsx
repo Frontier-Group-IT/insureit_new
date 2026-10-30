@@ -146,13 +146,6 @@ export default async function CustomerExchangePage({
             <EmptyCustomerState title="No Exchange listings found" body="Try another category or search term." />
           ) : (
             <section className="exchange-premium-listings">
-              <div className="mb-3 flex items-end justify-between gap-3">
-                <div>
-                  <h2 className="text-[18px] font-black text-[#10213D]">Available Vehicles</h2>
-                  <p className="mt-1 text-[10px] font-semibold text-[#71839A]">{rows.length} listing{rows.length === 1 ? "" : "s"} found</p>
-                </div>
-              </div>
-
               <div className="exchange-reference-grid grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {rows.map(row => {
                   const vehicleName=[row.make,row.model].filter(Boolean).join(" ")||row.title;
