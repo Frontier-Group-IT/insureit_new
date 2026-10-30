@@ -110,7 +110,18 @@ export async function saveInternalSpotIntimationDetails(claimId: string, formDat
   const { data: persistedClaim, error: claimError } = await supabase.from("claims").update({ accident_at: normalized.incidentAt, spot_intimation_at: normalized.spotIntimationAt, accident_location: location, accident_description: accidentDescription }).eq("id", claimId).select("id").maybeSingle<{ id: string }>();
   if (claimError) throw new Error(claimError.message);
   if (!persistedClaim) throw new Error("The Spot Intimation changes could not be persisted. Refresh the claim and try again.");
-  await insertAuthorizedClaimStageDetail(access, { claim_id: claimId, stage: claim.current_status, details, created_by: profile.id });
+  try {
+    await insertAuthorizedClaimStageDetail(access, { claim_id: claimId, stage: claim.current_status, details, created_by: profile.id });
+  } catch (error) {
+    // The claim update has already committed. Report that partial result explicitly
+    // instead of implying the user's entered values were lost.
+    console.error("Operations Spot Intimation stage detail persistence failed", {
+      claimId, stage: claim.current_status,
+      reason: error instanceof Error ? error.message : String(error),
+    });
+    revalidateClaimPaths(claimId);
+    throw new Error("Accident details were saved, but the stage history could not be recorded. Please refresh the claim and retry Save Details. Do not advance the stage.");
+  }
   revalidateClaimPaths(claimId);
 }
 
