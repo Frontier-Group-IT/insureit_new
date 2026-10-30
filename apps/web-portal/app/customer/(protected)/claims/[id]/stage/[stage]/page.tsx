@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import { CUSTOMER_EXTERNAL_STAGE_FIELDS } from "@/lib/customer-claim-stage-fields";
-import { saveCustomerExternalStage } from "./actions";
+import { saveCustomerExternalStage, confirmCustomerSpotIntimationSaved } from "./actions";
 import { CustomerClaimStageSubmit } from "@/components/customer-portal/customer-claim-stage-submit";
 import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/customer-claim-evidence-workspace";
 import { CustomerClaimVoiceRecorder } from "@/components/customer-portal/customer-claim-voice-recorder";
@@ -119,6 +119,12 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
     ):null}
     {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} allowUpload={editMode}/> : null}
     {selected.key==="spot_intimation" ? <CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id}/> : null}
+    {selected.key==="spot_intimation" && completed ? (
+      <div className="flex flex-wrap items-center justify-end gap-2 rounded-xl border border-[#D9E6F7] bg-white px-4 py-3">
+        <Link href={{pathname:"/customer/claims",query:{account:account.id}}} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] px-5 text-[12px] font-semibold text-[#174A87]">Cancel</Link>
+        <form action={confirmCustomerSpotIntimationSaved}><input type="hidden" name="account" value={account.id}/><input type="hidden" name="claim" value={claim.id}/><button type="submit" className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#1253A7] px-6 text-[12px] font-bold text-white hover:bg-[#0B3884]">Save Details</button></form>
+      </div>
+    ) : null}
     {selected.key==="claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} showSaveDetails={false} allowUpload={editMode && external && canEditStage} /> : null}
     {selected.key==="claim_intimation" && editMode && canEditStage ? (
       <div className="flex flex-wrap items-center justify-end gap-3 rounded-xl border border-[#D9E6F7] bg-white px-5 py-4">
