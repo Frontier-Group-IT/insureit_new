@@ -56,7 +56,7 @@ function formattedStageDate(value: string | null, includeTime = false) {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return null;
   const date = new Intl.DateTimeFormat('en-IN', { day:'2-digit',month:'short',year:'numeric' }).format(parsed);
-  return includeTime && /T\\d{2}:\\d{2}/.test(value || '') ? `${date} · ${new Intl.DateTimeFormat('en-IN', { hour:'numeric',minute:'2-digit',hour12:true }).format(parsed).toLowerCase()}` : date;
+  return includeTime && /T\d{2}:\d{2}/.test(value || '') ? `${date} · ${new Intl.DateTimeFormat('en-IN', { hour:'numeric',minute:'2-digit',hour12:true }).format(parsed).toLowerCase()}` : date;
 }
 
 export default function ClaimTrackerScreen() {
