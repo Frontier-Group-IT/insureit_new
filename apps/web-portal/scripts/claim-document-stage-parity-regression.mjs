@@ -21,8 +21,8 @@ assert.match(stage3Group, /\{selectable \? \(/, "Only pending files can toggle t
 
 assert.match(stage1Group, /deleteVerifiedSpotSurveyDocument\(claim\.id, document\.id\)/, "Spot verification documents have exact-row delete.");
 assert.doesNotMatch(stage1Group, /<RequestReuploadButton/, "Spot documents replace refresh with delete.");
-assert.match(stage3Group, /<RequestReuploadButton claimId=\{claim\.id\} documentId=\{document\.id\}/, "Stage 3 retains scoped reupload.");
-assert.match(stage3Group, /actionLabel="Replace"/, "Stage 3 retains scoped replacement.");
+assert.match(stage3Group, /deleteVerifiedSpotSurveyDocument\(claim\.id, document\.id\)/, "Stage 3 delete must target the exact claim document.");
+assert.doesNotMatch(stage3Group, /<RequestReuploadButton/, "Stage 3 no longer shows the orange reupload icon.");
 for (const source of [stage1Group, stage3Group]) {
   assert.match(source, /documentIds=\{selectedDocumentIds\}/, "Verify must receive the selected files as one group.");
   assert.match(source, /variant="header"/, "Verify must stay in the compact document-card header.");
