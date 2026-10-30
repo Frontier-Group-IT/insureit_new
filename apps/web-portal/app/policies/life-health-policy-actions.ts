@@ -9,7 +9,8 @@ import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-sourc
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const DOCUMENT_BUCKET = "policy-documents";
-const MAX_FILE_SIZE = 50 * 1024 * 1024;
+// Leave headroom under the 25 MB Next.js server-action request limit.
+const MAX_FILE_SIZE = 20 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
 const DOCUMENT_TYPES = new Set(["proposal_form", "benefit_illustration", "premium_receipt", "policy_copy", "kyc", "other_document"]);
 const PAYMENT_FREQUENCIES = new Set(["Monthly", "Quarterly", "Half Yearly", "Annually", "One Time"]);
@@ -52,7 +53,7 @@ function commercialFromDetails(details:Record<string,unknown>|null):LifeHealthCo
 async function uploadCaseDocumentInternal(admin:ReturnType<typeof createSupabaseAdminClient>,profileId:string,caseId:string,documentType:string,fileValue:File){
   if(!DOCUMENT_TYPES.has(documentType))return{ok:false as const,error:"Unsupported Life/Health document type."};
   if(fileValue.size<=0)return{ok:false as const,error:"Choose a document to upload."};
-  if(fileValue.size>MAX_FILE_SIZE)return{ok:false as const,error:"Each document must be 50 MB or smaller."};
+  if(fileValue.size>MAX_FILE_SIZE)return{ok:false as const,error:"Each document must be 20 MB or smaller."};
   if(!ALLOWED_MIME_TYPES.has(fileValue.type))return{ok:false as const,error:"Upload a PDF, JPG, PNG or WebP document."};
   const fileName=safeFileName(fileValue.name),storagePath=`life-health-cases/${caseId}/${documentType}/${crypto.randomUUID()}-${fileName}`,bytes=Buffer.from(await fileValue.arrayBuffer());
   const{error:storageError}=await admin.storage.from(DOCUMENT_BUCKET).upload(storagePath,bytes,{contentType:fileValue.type,upsert:false});if(storageError)return{ok:false as const,error:"The document could not be uploaded."};
