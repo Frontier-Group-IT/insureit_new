@@ -261,7 +261,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
     return (
       <>
         <View style={styles.billingShell}>
-          {variant === "billing" ? <Image source={require("../../mobile-app/assets/claims/accounts-finance.png")} style={styles.billingArtwork} resizeMode="contain" accessibilityLabel="Bill upload" /> : <Ionicons name="clipboard-outline" size={28} color="#1857A9" />}
+          {variant === "billing" ? <Image source={require("../../mobile-app/assets/claims/accounts-finance.png")} style={styles.billingArtwork} resizeMode="contain" accessibilityLabel="Bill upload" /> : <Image source={require("../../mobile-app/assets/claims/claim-assessment.png")} style={styles.billingArtwork} resizeMode="contain" accessibilityLabel="Assessment report upload" />}
           <View style={styles.billingCopy}>
             <Text style={styles.billingTitle} numberOfLines={1}>{busy ? 'Uploading document…' : variant === 'assessment' ? 'Assessment Report (Optional)' : 'Upload final workshop bill'}</Text>
             <Text style={styles.billingSubtitle} numberOfLines={1}>{count ? `${count} uploaded • ${latest?.name ?? 'Saved'}` : 'PDF, JPG, PNG'}</Text>
