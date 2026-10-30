@@ -29,8 +29,8 @@ export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, compl
           </> : null}
         </div>
       </div>
-      {claimSummary ? <div className="customer-claim-review-grid grid grid-cols-2 border-b border-white/15 bg-gradient-to-r from-[#102E63] to-[#174D9A] text-white md:grid-cols-3 xl:grid-cols-5">
-        {([["Control No.",claimSummary.controlNo],["Policy No.",claimSummary.policyNo],["Make & Model",claimSummary.makeModel],["Vehicle No.",claimSummary.vehicleNo],["Claim Status",claimSummary.status]] as const).map(([label,value])=><div key={label} className="min-w-0 border-b border-white/10 px-4 py-3 last:border-b-0 md:border-b-0 xl:border-r xl:border-white/15 xl:last:border-r-0"><p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.07em] text-[#A8C7EE]">{label}</p><p className="break-words text-[13px] font-bold leading-snug text-white" title={value||"—"}>{value||"—"}</p></div>)}
+      {claimSummary ? <div className="customer-claim-review-grid grid grid-cols-2 border-b border-white/20 bg-[#102E63] text-white md:grid-cols-3 xl:grid-cols-5">
+        {([["Control No.",claimSummary.controlNo],["Policy No.",claimSummary.policyNo],["Make & Model",claimSummary.makeModel],["Vehicle No.",claimSummary.vehicleNo],["Claim Status",claimSummary.status]] as const).map(([label,value])=><div key={label} className="min-w-0 border-b border-white/10 px-4 py-3 last:border-b-0 md:border-b-0 xl:border-r xl:border-white/15 xl:last:border-r-0"><p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.07em] text-white">{label}</p><p className="break-words text-[13px] font-bold leading-snug text-white" title={value||"—"}>{value||"—"}</p></div>)}
       </div> : null}
       <nav aria-label="Nine-stage claim journey" className="customer-claim-stage-nav overflow-x-auto">
         <ol className="customer-claim-ref-stage-grid grid min-w-[1080px] grid-cols-9 gap-2 border-y border-[#D5E3F7] bg-[#EAF2FF] p-3">
