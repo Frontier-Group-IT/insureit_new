@@ -41,7 +41,9 @@ assert.match(operationsStages, /onInput=\{preserveDraft\} onChange=\{preserveDra
 assert.match(operationsStages, /if \(state\.ok \|\| !state\.message\) return;/, "Failed stage actions must retain form state.");
 
 assert.match(bulkVerificationGroup, /document\.verification_status !== "rejected"/, "Rejected files cannot be selected before replacement.");
-assert.match(bulkVerificationGroup, /deleteVerifiedSpotSurveyDocument\(claim\.id, document\.id\)/, "Delete must target the exact claim and document.");\nassert.match(bulkVerificationGroup, /aria-label="Delete document"/, "Delete action must have an accessible label.");\nassert.doesNotMatch(bulkVerificationGroup, /<RequestReuploadButton/, "Orange reupload action must be absent from document rows.");
+assert.match(bulkVerificationGroup, /deleteVerifiedSpotSurveyDocument\(claim\.id, document\.id\)/, "Delete must target the exact claim and document.");
+assert.match(bulkVerificationGroup, /aria-label="Delete document"/, "Delete action must have an accessible label.");
+assert.doesNotMatch(bulkVerificationGroup, /<RequestReuploadButton/, "Orange reupload action must be absent from document rows.");
 assert.match(bulkVerificationGroup, /actionLabel="Upload" iconOnly/, "Populated categories retain Upload New.");
 
 assert.match(uploader, /type="file"[\s\S]*multiple/, "Spot media selector must allow multiple files.");
