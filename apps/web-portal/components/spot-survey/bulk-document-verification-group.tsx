@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Camera, CarFront, FileCheck2, IdCard, Shield, ShieldCheck, Trash2, Truck, Video, Mic } from "lucide-react";
+import { Shield, ShieldCheck, Trash2, Mic } from "lucide-react";
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { ClaimDocumentCollapsedStatus } from "@/components/claim-manager/claim-document-collapsed-status";
 import { ReplaceDocumentButton } from "./replace-document-button";
-import { RequestReuploadButton } from "./request-reupload-button";
 import { VerificationActionButton } from "./verification-action-button";
 import { deleteVerifiedSpotSurveyDocument } from "@/app/claims/[id]/spot-survey-actions";
 import { useRouter } from "next/navigation";
@@ -200,9 +199,8 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
           <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${verified ? "bg-green-100 text-green-700" : rejected ? "bg-amber-50 text-amber-700" : "bg-[#F4F7FC] text-[#526178]"}`}>{verified ? "Verified" : statusLabel(documentStatus)}</span>
         </div>
         {rejected ? <p className="mt-1 text-[9px] font-semibold text-amber-700">{document.rejection_reason ?? "Customer reupload requested."}</p> : null}
-        <div className={`mt-2 grid gap-1.5 ${verified ? "grid-cols-3" : "grid-cols-2"}`}>
-          {true ? (
-            <button
+        <div className="mt-2 flex justify-end">
+          <button
               type="button"
               disabled={deletePending}
               onClick={() => {
@@ -215,14 +213,13 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
                   setDeletePending(false);
                 })();
               }}
-              aria-label="Delete verified document"
-              title="Delete verified document"
+              aria-label="Delete document"
+              title="Delete document"
               className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30 disabled:opacity-50"
             >
               <Trash2 aria-hidden="true" size={16} strokeWidth={2} />
             </button>
-          ) : null}
-          <RequestReuploadButton claimId={claim.id} documentId={document.id} documentTitle={item.title} />
+
 
         </div>
       </div>
