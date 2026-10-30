@@ -1,3 +1,4 @@
 Partner production OTA trigger
 release=partner-claim-stage-icons-and-tracker-pr-3798
-merged_commit=332f8a60765b8e8b9d990590b2f7b49a58d23f0b
+request=explicit-republish-20261030
+previous_release_commit=729fd20012582aea6e79c1f6cb189731ae767bd0
