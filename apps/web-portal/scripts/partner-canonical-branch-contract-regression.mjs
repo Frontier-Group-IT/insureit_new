@@ -93,4 +93,12 @@ assert.doesNotMatch(summarySql, /\b(?:INSERT|UPDATE|DELETE|TRUNCATE)\s+(?:FROM\s
 const businessReport = readFileSync(resolve(root,'apps/web-portal/app/partner/reports/business/page.tsx'),'utf8');
 assert.match(businessReport, /INSUREIT_BRANCH_REPORT_RECONCILIATION === "enabled"/);
 assert.match(businessReport, /getPartnerCanonicalPolicySummary/);
+const linkedScopes = read('20261030202000_partner_branch_linked_customer_claim_renewal_scopes.sql');
+for (const fn of ['customer_ids','claim_ids','renewal_policy_ids']) {
+  assert.match(linkedScopes, new RegExp('CREATE OR REPLACE FUNCTION public\\.partner_branch_authorized_' + fn + '\\(\\)'));
+  assert.match(linkedScopes, new RegExp('REVOKE ALL ON FUNCTION public\\.partner_branch_authorized_' + fn + '\\(\\) FROM PUBLIC,anon'));
+}
+assert.equal((linkedScopes.match(/public\.partner_branch_authorized_policy_ids\(\) scope/g) || []).length,3);
+assert.match(linkedScopes,/JOIN public\.claims c ON c\.policy_id=scope\.policy_id/);
+assert.doesNotMatch(linkedScopes,/\b(?:UPDATE|INSERT|DELETE|TRUNCATE)\s+(?:FROM\s+)?public\./i);
 console.log('Canonical Branch migration contract regression passed. Live database role tests remain required.');
