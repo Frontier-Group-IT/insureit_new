@@ -1,4 +1,3 @@
 Partner production OTA trigger
-source_pr=3758
-source_merge=5404c94f74d988f08b730f320d9361d6a79e4917
-reason=release-claim-journey-financial-progress-documents-via-approved-pr-20261030
+release=partner-claim-document-secure-preview-pr-3773
+migration=partner_claim_secure_preview_applied
