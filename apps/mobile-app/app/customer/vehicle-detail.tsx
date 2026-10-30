@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Card, EmptyState, LoadingState, Screen } from '@/components/ui';
@@ -35,39 +35,75 @@ export default function VehicleDetailScreen() {
   const [policies, setPolicies] = useState<VehiclePolicyDisplay[]>([]);
   const [companies, setCompanies] = useState<InsuranceCompany[]>([]);
   const [loading, setLoading] = useState(true);
+  const [policyLoadError, setPolicyLoadError] = useState<string | null>(null);
   const [alertsExpanded, setAlertsExpanded] = useState(false);
 
-  useEffect(() => {
+  // Refresh whenever the vehicle detail screen regains focus, including after a
+  // policy is added or when the active customer account changes.
+  useFocusEffect(useCallback(() => {
+    let active = true;
     async function load() {
       if (!id) return;
-      const session = await getCurrentSession();
-      if (!session?.user) return router.replace('/login');
-      const contexts = await getOperationalCustomerContexts();
-      const ids = contexts.map((context) => context.customer_id);
-      if (!ids.length) {
-        setLoading(false);
-        return;
-      }
+      setLoading(true);
+      setPolicyLoadError(null);
+      setPolicies([]);
+      try {
+        const session = await getCurrentSession();
+        if (!active) return;
+        if (!session?.user) {
+          router.replace('/login');
+          return;
+        }
+        const contexts = await getOperationalCustomerContexts();
+        if (!active) return;
+        const ids = contexts.map((context) => context.customer_id);
+        if (!ids.length) {
+          setVehicle(null);
+          return;
+        }
 
-      const vehicleResult = await supabase.from('vehicles').select('*').eq('id', id).in('customer_id', ids).maybeSingle();
-      setVehicle(vehicleResult.data);
-      if (vehicleResult.data) {
+        const vehicleResult = await supabase.from('vehicles').select('*').eq('id', id).in('customer_id', ids).maybeSingle();
+        if (vehicleResult.error) throw vehicleResult.error;
+        if (!active) return;
+        setVehicle(vehicleResult.data);
+        if (!vehicleResult.data) return;
+
         const [policyResult, externalPolicyResult, companyResult] = await Promise.all([
           supabase.from('policies').select('id,vehicle_id,insurance_company_id,policy_no,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', ids),
           (supabase as any).from('external_policies').select('id,vehicle_id,insurance_company_id,policy_no,start_date,end_date').eq('vehicle_id', vehicleResult.data.id).in('customer_id', ids),
           supabase.from('insurance_companies').select('*'),
         ]);
+        if (!active) return;
+        // Never silently turn a failed external-policy query into "No policy".
+        if (policyResult.error || externalPolicyResult.error) {
+          console.warn('[customer-vehicle-detail] Policy retrieval failed', {
+            internalCode: policyResult.error?.code ?? null,
+            externalCode: externalPolicyResult.error?.code ?? null,
+          });
+          setPolicyLoadError('Unable to load insurance policies. Please reopen this vehicle or try again.');
+        }
+        if (companyResult.error) {
+          console.warn('[customer-vehicle-detail] Insurer lookup failed', { code: companyResult.error.code });
+        }
         const nextPolicies: VehiclePolicyDisplay[] = [
           ...((policyResult.data ?? []).map((policy) => ({ ...policy, source: 'sibl' as const }))),
           ...(((externalPolicyResult.data ?? []) as Omit<VehiclePolicyDisplay, 'source'>[]).map((policy) => ({ ...policy, source: 'external' as const }))),
         ];
         setPolicies(nextPolicies);
         setCompanies(companyResult.data ?? []);
+      } catch (error) {
+        if (!active) return;
+        console.warn('[customer-vehicle-detail] Failed to load vehicle policies', {
+          code: error && typeof error === 'object' && 'code' in error ? String(error.code) : 'unexpected',
+        });
+        setPolicyLoadError('Unable to load vehicle information. Please reopen this vehicle.');
+      } finally {
+        if (active) setLoading(false);
       }
-      setLoading(false);
     }
     void load();
-  }, [id, router]);
+    return () => { active = false; };
+  }, [id, router]));
 
   const latestPolicy = useMemo(() => selectVehiclePolicy(policies), [policies]);
   const latestPolicyActive = latestPolicy ? isPolicyActive(latestPolicy) : false;
@@ -176,6 +212,12 @@ export default function VehicleDetailScreen() {
           <DetailCell icon="map-marker-radius-outline" label="Local permit expiry" value={storedDateOrClassFallback(vehicle, vehicle.local_permit_expiry_date)} status={complianceStatus(vehicle.local_permit_expiry_date).status} />
         </View>
       </Card>
+
+      {policyLoadError ? (
+        <Card>
+          <Text accessibilityRole="alert" style={{ color: palette.navy }}>{policyLoadError}</Text>
+        </Card>
+      ) : null}
 
       {latestPolicy ? (
         <Pressable
