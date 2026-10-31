@@ -15,7 +15,10 @@ BEGIN
   THEN RAISE EXCEPTION 'Unexpected coordinated deletion function shape'; END IF;
   definition := replace(definition,
     '  delete from public.policy_intake_requests',
-    E'  -- Remove only this policy\\'s association, after existing dependency guards.\\n  delete from public.partner_branch_policy_links where policy_id = p_policy_id;\\n\\n  delete from public.policy_intake_requests');
+    $replacement$  -- Remove only this policy's association after the existing dependency guards.
+  delete from public.partner_branch_policy_links where policy_id = p_policy_id;
+
+  delete from public.policy_intake_requests$replacement$);
   EXECUTE definition;
 END
 $migration$;
