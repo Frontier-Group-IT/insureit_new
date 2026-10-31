@@ -11,7 +11,7 @@ type Props = {
   periodShortLabel: string;
   selectedRmId: string | null;
 };
-const normalized = (name: string) => name.trim().toLocaleLowerCase("en-IN").replace(/\\s+/g, " ");
+const normalized = (name: string) => name.trim().toLocaleLowerCase("en-IN").replace(/\s+/g, " ");
 const money = (value: number) => "₹" + Math.round(value).toLocaleString("en-IN");
 
 // Initial organizational grouping is intentionally display-only: the canonical,
