@@ -164,8 +164,12 @@ export function PartnerPolicyIntakeListClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const dateFilterRef = useRef<HTMLDivElement>(null);
+  const requestVersionRef = useRef(0);
 
   const load = useCallback(async () => {
+    const requestVersion = ++requestVersionRef.current;
+    const isLatest = () => requestVersion === requestVersionRef.current;
+    setRows([]);
     setLoading(true);
     setError("");
     try {
@@ -181,7 +185,8 @@ export function PartnerPolicyIntakeListClient() {
           offset: (page - 1) * PAGE_SIZE,
           filter: serverFilterFor(filter),
         });
-        setRows(result.intakes);
+        if (!isLatest()) return;
+        setRows(result.intakes.filter((row) => matchesFilter(row, filter)));
         setTotal(result.total);
         setCounts((current) => ({
           ...current,
@@ -201,6 +206,7 @@ export function PartnerPolicyIntakeListClient() {
 
       do {
         const result = await getPartnerPolicyIntakesWeb({ limit: PAGE_SIZE, offset, filter: sourceFilter });
+        if (!isLatest()) return;
         if (offset === 0) {
           expectedTotal = result.total;
           activeCount = result.counts.active;
@@ -216,6 +222,7 @@ export function PartnerPolicyIntakeListClient() {
         && matchesDateRange(row, fromDate, toDate)
       ));
       const start = (page - 1) * PAGE_SIZE;
+      if (!isLatest()) return;
       setRows(matches.slice(start, start + PAGE_SIZE));
       setTotal(matches.length);
       setCounts((current) => ({
@@ -227,14 +234,15 @@ export function PartnerPolicyIntakeListClient() {
         rejected: filter === "rejected" ? matches.length : current.rejected,
       }));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Policy Intakes could not be loaded.");
+      if (isLatest()) setError(cause instanceof Error ? cause.message : "Policy Intakes could not be loaded.");
     } finally {
-      setLoading(false);
+      if (isLatest()) setLoading(false);
     }
   }, [filter, fromDate, page, search, toDate]);
 
   useEffect(() => {
     void load();
+    return () => { requestVersionRef.current += 1; };
   }, [load]);
 
   useEffect(() => {
