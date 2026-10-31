@@ -61,7 +61,7 @@ export async function POST(request: Request) {
   const expiresIn = Number.isFinite(body.expires_in)
     ? Math.max(60, Math.min(Math.trunc(body.expires_in as number), 60 * 60))
     : 60 * 60;
-  const response = NextResponse.json({ ok: true });
+  const response = NextResponse.json({ ok: true, role: profile.role });
   response.cookies.set(accessTokenCookie, body.access_token, {
     ...cookieOptions,
     maxAge: expiresIn
