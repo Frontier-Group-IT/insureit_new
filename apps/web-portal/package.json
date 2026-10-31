@@ -32,7 +32,7 @@
     "claim-journey:regression": "node --experimental-strip-types scripts/claim-journey-regression.mjs",
     "auth-phase-observability:regression": "node scripts/auth-phase-observability-regression.mjs",
     "portal-auth-email-flow:regression": "node scripts/portal-auth-email-flow-regression.mjs",
-    "dashboard-performance:regression": "node scripts/dashboard-performance-regression.mjs",
+    "dashboard-performance:regression": "node scripts/dashboard-performance-regression.mjs && node scripts/rm-dashboard-policy-scope-parity-regression.mjs",
     "portal-route-enhancements:regression": "node scripts/portal-route-enhancements-regression.mjs",
     "aadhaar-mask-performance:regression": "node scripts/aadhaar-mask-performance-regression.mjs",
     "policy-edit-helper-performance:regression": "node scripts/policy-edit-helper-performance-regression.mjs",
