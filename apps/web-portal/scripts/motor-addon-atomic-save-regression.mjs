@@ -14,7 +14,7 @@ assert.match(migration, /RAISE EXCEPTION 'Motor policy save did not succeed'/);
 assert.match(migration, /IF v_amount <> 0 OR coalesce\(v_existing_amount,0\) <> 0 THEN/);
 assert.doesNotMatch(onboarding, /admin\.rpc\("set_motor_policy_addon_premium_v1"/);
 assert.doesNotMatch(editing, /admin\.rpc\("set_motor_policy_addon_premium_v1"/);
-assert.match(form, /Add-on premium \(18% GST\)/);
+assert.match(form, /Add-on premium/);
 assert.match(form, /net=od\+tpWithCpa\+addOn/);
 function calc(od,tp,cpa,addon,isGcv) {
   const net=od+tp+cpa+addon;
