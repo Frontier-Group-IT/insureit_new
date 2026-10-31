@@ -34,7 +34,7 @@ BEGIN
       AND legacy_partner.parent_partner_id=b.parent_partner_id
       AND parent.parent_partner_id IS NULL AND parent.partner_status='active_partner'
   )
-  SELECT count(*),max(id),max(parent_partner_id),max(branch_code),max(legacy_code),max(parent_code)
+  SELECT count(*),max(id::text)::uuid,max(parent_partner_id::text)::uuid,max(branch_code),max(legacy_code),max(parent_code)
   INTO v_count,v_branch,v_parent,v_branch_code,v_legacy_code,v_parent_code
   FROM found;
   IF v_count=0 THEN RETURN NEW; END IF;
