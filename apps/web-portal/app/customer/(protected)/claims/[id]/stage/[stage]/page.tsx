@@ -12,6 +12,7 @@ import { CustomerClaimBooleanChoice } from "@/components/customer-portal/custome
 import { Check, Circle, LockKeyhole, CalendarDays, Clock3, ClipboardList } from "lucide-react";
 import { CustomerClaimStageSuccessToast } from "@/components/customer-portal/customer-claim-stage-success-toast";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
+import { CustomerInternalCompletedJourney } from "@/components/customer-portal/customer-internal-completed-journey";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
 
@@ -34,6 +35,45 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
     redirect("/customer/spot-intimation?account="+encodeURIComponent(account.id)+"&id="+encodeURIComponent(claim.id));
   }
   const canEditStage = external && Boolean(CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key]) && (completed || activeIndex===currentIndex);
+  // Internal claims use the original Spot Intimation form until their first stage is complete.
+  // External claims retain their existing stage navigation and edit/upload workflow.
+  const completedInternalStages = !external ? (internal_projection?.completedStageCount ?? 0) : 0;
+  if (!external && completedInternalStages > 0) {
+    return <div className="customer-claim-ref-page space-y-3">
+      <CustomerClaimStageStrip
+        claimId={claim.id}
+        accountId={account.id}
+        selectedKey={selected.key}
+        currentKey={INTERNAL_JOURNEY_STAGES[currentIndex]?.key || "spot_intimation"}
+        completedKeys={INTERNAL_JOURNEY_STAGES.slice(0,completedInternalStages).map(stage=>stage.key)}
+        hideStageNav
+        claimSummary={{
+          controlNo:claim.claim_no,
+          policyNo:claim.policy_no,
+          makeModel:[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" - ")||null,
+          vehicleNo:claim.vehicle_no,
+          status:claim.current_status,
+          manufacturer:claim.vehicle_make,
+          insurer:claim.insurer_name,
+          policySource:claim.policy_service_source==="sibl"?"Sankalp Policy":claim.policy_service_source==="external"||claim.external_policy_id?"External Policy":"—",
+        }}
+      />
+      <CustomerInternalCompletedJourney
+        claimId={claim.id}
+        accountId={account.id}
+        completedCount={completedInternalStages}
+        milestones={milestones}
+        documents={documents}
+        spot={{
+          accidentAt:claim.accident_at,
+          spotAt:claim.spot_intimation_at,
+          driverName:milestones.find(item=>item.milestone_key==="spot_intimation")?.details?.driver_name as string | undefined,
+          driverNumber:milestones.find(item=>item.milestone_key==="spot_intimation")?.details?.driver_phone as string | undefined,
+          location:claim.accident_location,
+        }}
+      />
+    </div>;
+  }
   if (q.mode !== "edit") redirect("/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(selected.key)+"?account="+encodeURIComponent(account.id)+"&mode=edit");
   const editMode = true;
   const canUploadStage = selected.key==="spot_intimation" || selected.key==="claim_intimation";

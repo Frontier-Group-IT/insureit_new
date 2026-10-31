@@ -3,13 +3,14 @@ import { Check, LockKeyhole, FolderKanban, ExternalLink, FileDown, ClipboardList
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
 
-export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, completedKeys, currentKey, editMode = false, claimSummary }: {
+export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, completedKeys, currentKey, editMode = false, hideStageNav = false, claimSummary }: {
   claimId: string;
   accountId: string;
   selectedKey: string;
   completedKeys: string[];
   currentKey: string;
   editMode?: boolean;
+  hideStageNav?: boolean;
   claimSummary?: { controlNo: string | null; policyNo: string | null; makeModel: string | null; vehicleNo: string | null; status: string | null; manufacturer: string | null; insurer: string | null; policySource: string };
 }) {
   const activeIndex = INTERNAL_JOURNEY_STAGES.findIndex(stage => stage.key === currentKey);
@@ -40,7 +41,7 @@ export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, compl
           {label:"Policy Source",value:claimSummary.policySource,icon:<ShieldCheck className="h-5 w-5"/>},
         ]).map(({label,value,icon})=><div key={label} className="flex min-w-0 items-center gap-3 border-b border-white/10 px-4 py-3 last:border-b-0 md:border-b-0 xl:border-r xl:border-white/15 xl:last:border-r-0"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/15 text-white">{icon}</span><div className="min-w-0"><p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.07em] text-white">{label}</p><p className="break-words text-[13px] font-bold leading-snug text-white" title={value||"—"}>{value||"—"}</p></div></div>)} 
       </div> : null}
-      <nav aria-label="Nine-stage claim journey" className="customer-claim-stage-nav w-full overflow-x-auto">
+      {!hideStageNav ? <nav aria-label="Nine-stage claim journey" className="customer-claim-stage-nav w-full overflow-x-auto">
         <ol className="customer-claim-ref-stage-grid grid w-full min-w-0 grid-cols-9 gap-1.5 border-y border-[#D5E3F7] bg-[#EAF2FF] p-2">
           {INTERNAL_JOURNEY_STAGES.map((stage,index) => {
             const completed = completedKeys.includes(stage.key);
@@ -62,7 +63,7 @@ export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, compl
             </li>;
           })}
         </ol>
-      </nav>
+      </nav> : null}
     </div>
   );
 }
