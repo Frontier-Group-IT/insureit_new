@@ -429,13 +429,12 @@ export function PartnerPolicyIntakeListClient() {
         ) : null}
 
         <div className="overflow-x-auto">
-          <div className="min-w-[1250px]">
-            <div className="grid grid-cols-[minmax(150px,.8fr)_minmax(150px,.9fr)_minmax(140px,.75fr)_minmax(220px,1.18fr)_minmax(135px,.76fr)_minmax(135px,.76fr)_minmax(100px,.58fr)_minmax(100px,.58fr)] items-center gap-4 border-b border-[#E3EAF3] bg-[#F7F9FC] px-4 py-2.5 text-[8px] font-black uppercase tracking-[0.055em] text-[#6D809A]">
+          <div className="min-w-[1120px]">
+            <div className="grid grid-cols-[minmax(150px,.8fr)_minmax(150px,.9fr)_minmax(140px,.75fr)_minmax(220px,1.18fr)_minmax(170px,1fr)_minmax(100px,.58fr)_minmax(100px,.58fr)] items-center gap-4 border-b border-[#E3EAF3] bg-[#F7F9FC] px-4 py-2.5 text-[8px] font-black uppercase tracking-[0.055em] text-[#6D809A]">
               <span>Intake #</span>
               <span>Customer</span>
               <span>Vehicle</span>
               <span>Policy / Insurer</span>
-              <span>Submitted By</span>
               <span>Submitted</span>
               <span>OCR</span>
               <span>Status</span>
@@ -461,7 +460,7 @@ export function PartnerPolicyIntakeListClient() {
                     <Link
                       key={row.id}
                       href={`/partner/policy-intakes/${encodeURIComponent(row.id)}`}
-                      className="group grid grid-cols-[minmax(150px,.8fr)_minmax(150px,.9fr)_minmax(140px,.75fr)_minmax(220px,1.18fr)_minmax(135px,.76fr)_minmax(135px,.76fr)_minmax(100px,.58fr)_minmax(100px,.58fr)] items-center gap-4 px-4 py-3 transition hover:bg-[#FAFCFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20"
+                      className="group grid grid-cols-[minmax(150px,.8fr)_minmax(150px,.9fr)_minmax(140px,.75fr)_minmax(220px,1.18fr)_minmax(170px,1fr)_minmax(100px,.58fr)_minmax(100px,.58fr)] items-center gap-4 px-4 py-3 transition hover:bg-[#FAFCFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20"
                     >
                       <div className="flex min-w-0 items-center gap-2.5">
                         <span className="flex h-9 w-10 shrink-0 items-center justify-center overflow-visible bg-transparent p-0">
@@ -500,10 +499,7 @@ export function PartnerPolicyIntakeListClient() {
                       </div>
                       <div className="min-w-0">
                         <p className="break-words text-[10px] font-semibold leading-4 text-[#304665]">{row.submitted_by_name || "Unknown submitter"}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-semibold text-[#304665]">{created.date}</p>
-                        <p className="mt-0.5 text-[8.5px] text-[#8392A7]">{created.time}</p>
+                        <p className="mt-0.5 text-[8.5px] leading-4 text-[#8392A7]">{created.date} · {created.time}</p>
                       </div>
                       <span className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-[8.5px] font-bold ${ocrTone(row)}`}>
                         <span className="h-1.5 w-1.5 rounded-full bg-current" />
