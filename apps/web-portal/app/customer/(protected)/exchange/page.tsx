@@ -4,6 +4,7 @@ import "../customer-register-motion.css";
 import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 import Link from "next/link";
 import { CustomerExchangeSellWorkspace } from "@/components/customer-portal/customer-exchange-sell-workspace";
+import { CustomerExchangeActivityFilter } from "@/components/customer-portal/customer-exchange-activity-filter";
 import { customerExchangeVehicleArt } from "@/lib/customer-exchange-vehicle-art";
 import { Activity, Heart, ArrowLeftRight, BadgeCheck, MapPin, MoreVertical, Search, ShoppingBag, Store, Truck, ChevronDown, ChevronRight, Clock3, ShieldCheck } from "lucide-react";
 import {
@@ -207,21 +208,11 @@ export default async function CustomerExchangePage({
                   <input type="hidden" name="account" value={account.id}/><input type="hidden" name="tab" value="activity"/><input type="hidden" name="activityFilter" value={activityFilter}/>
                   <CustomerAnimatedSearchInput name="activityQuery" defaultValue={activityQuery} aria-label="Search exchange activity" hints={["Search vehicle or listing…", "Search registration number…", "Search activity status…"]} className="text-[11px] text-[#183A66]"/>
                 </form>
-                <details className="group relative ml-auto">
-                  <summary className="flex cursor-pointer list-none items-center justify-center gap-2 rounded-lg border border-[#E7ECF7] bg-[#F4F7FD] px-3 py-2.5 text-[11px] font-bold text-[#123967] [&::-webkit-details-marker]:hidden">
-                    <span>{({all:"All",offers:"Offers",bids:"Bids",listings:"Listings",deals:"Deals",requests:"Requests",saved:"Saved"} as Record<string,string>)[activityFilter]}</span>
-                    <ChevronDown aria-hidden="true" className="h-3.5 w-3.5 shrink-0 self-center" strokeWidth={2} />
-                  </summary>
-                  <nav aria-label="Exchange activity filters" className="absolute right-0 z-30 mt-2 min-w-[175px] rounded-xl border border-[#DCE4EE] bg-white p-1 shadow-lg">
-                    {([["all","All",activity.bids.length+activity.listings.length+activity.deals.length+activity.favorites.length+activity.contact_requests.length],["offers","Offers",activity.bids.length],["bids","Bids",activity.bids.length],["listings","Listings",activity.listings.length],["deals","Deals",activity.deals.length],["requests","Requests",activity.contact_requests.length],["saved","Saved",activity.favorites.length]] as const).map(([key,label,count]) => (
-                      <Link key={key} href={{pathname:"/customer/exchange",query:{account:account.id,tab:"activity",activityFilter:key,...(activityQuery?{activityQuery}:{})}}}
-                        aria-current={activityFilter===key?"page":undefined}
-                        className={`block rounded-lg px-3 py-2 text-[11px] transition hover:bg-[#EAF1FB] ${activityFilter===key?"bg-[#E7F0FD] font-bold text-[#123967]":"text-[#6880A4]"}`}>
-                        {label} ({count})
-                      </Link>
-                    ))}
-                  </nav>
-                </details>
+                <CustomerExchangeActivityFilter accountId={account.id} activeFilter={activityFilter} search={activityQuery} options={[
+                  ["all","All",activity.bids.length+activity.listings.length+activity.deals.length+activity.favorites.length+activity.contact_requests.length],
+                  ["offers","Offers",activity.bids.length],["bids","Bids",activity.bids.length],["listings","Listings",activity.listings.length],
+                  ["deals","Deals",activity.deals.length],["requests","Requests",activity.contact_requests.length],["saved","Saved",activity.favorites.length]
+                ]} />
               </div>
               <div className="space-y-2">
                 {(activityFilter==="all"||activityFilter==="bids"||activityFilter==="offers") ? <ActivitySection title="Offers / Bids" rows={activity.bids} accountId={account.id} search={activityQuery} /> : null}
@@ -298,7 +289,7 @@ function ActivitySection({ title, rows, accountId, search }: { title: string; ro
         <div className="min-w-[90px]"><span className={`inline-flex rounded-lg px-2 py-1 text-[10px] font-bold capitalize ${leading?"bg-[#E1F8EE] text-[#11986A]":outbid?"bg-[#FFF0F2] text-[#DF3A58]":"bg-[#EAF1FF] text-[#426BCA]"}`}>{status||title}</span></div>
         <div className="hidden min-w-[130px] flex-1 text-[10px] text-[#7A8CA9] lg:block">{leading?"You are leading on this vehicle.":outbid?"A higher bid has been placed.":status?`Status: ${status}`:title}</div>
         <div className="min-w-[90px] text-right"><p className="text-[12px] font-black text-[#10264C]">{amount>0?formatCustomerCompactMoney(amount):"—"}</p><p className="mt-1 text-[9px] text-[#8B9AB2]">{title==="Offers / Bids"?"Your bid":"Amount"}</p></div>
-        {href?<Link href={href} className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-[#EDF3FF] px-2 py-1.5 text-[10px] font-bold text-[#245FD1] hover:bg-[#DAE8FF]">View Details <ChevronRight className="h-3.5 w-3.5"/></Link>:<span className="text-[10px] text-[#94A3B8]">Details unavailable</span>}
+        {href?<Link href={href} aria-label={`View ${vehicleName} details`} title="View details" className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EDF3FF] text-[#245FD1] hover:bg-[#DAE8FF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#245FD1]"><ChevronRight className="h-4 w-4"/></Link>:<span className="text-[10px] text-[#94A3B8]">Details unavailable</span>}
       </div>;
     })}
   </div>;
