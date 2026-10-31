@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 const read = p => readFileSync(new URL(p,import.meta.url),'utf8');
 const form=read('../components/policy-unified-form.tsx');
 const sql=read('../../../supabase/migrations/20261021224000_motor_addon_od_commissions.sql');
-const od=form.indexOf('label="OD premium"'), addon=form.indexOf('label="Add-on premium (18% GST)"'),tp=form.indexOf('label="TP premium"');
+const od=form.indexOf('label="OD premium"'), addon=form.indexOf('label="Add-on premium"'),tp=form.indexOf('label="TP premium"');
 assert.ok(od>=0 && addon>od && tp>addon,'OD → Add-on → TP order');
 assert.match(form,/projectedOd=\(od\+addOn\)\*numeric\(form.projectedOdPercent\)\/100/);
 assert.match(form,/payoutOd=flatPayout\?0:\(od\+addOn\)\*numeric\(form.payoutOdPercent\)\/100/);
