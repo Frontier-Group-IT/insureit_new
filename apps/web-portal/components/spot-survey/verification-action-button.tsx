@@ -4,8 +4,10 @@ import { DocumentVerificationModalButton } from "./document-verification-modal-v
 import { InsuranceVerificationModalButton } from "./insurance-verification-modal";
 import { VerifyDocumentButton } from "./verify-buttons";
 import { useState } from "react";
+import { RefreshCw } from "lucide-react";
 import { createPortal } from "react-dom";
 
+const reverifyIconClass = "absolute inset-0 [&_button]:!h-8 [&_button]:!w-8 [&_button]:!min-w-0 [&_button]:!p-0 [&_button]:!border-0 [&_button]:!bg-transparent [&_button]:!text-[0px] [&_button]:!shadow-none [&_button]:!rounded-md [&_button:hover]:!bg-amber-50";
 const verifyHoverOnlyClass = "[&_button]:!rounded-none [&_button]:!border-transparent [&_button]:!bg-transparent [&_button]:transition-colors [&_button:hover]:!rounded-md [&_button:hover]:!border-green-200 [&_button:hover]:!bg-[#F2FBF7]";
 const verifyHeaderPillClass = "[&_button]:!h-auto [&_button]:!w-auto [&_button]:!rounded-full [&_button]:!border [&_button]:!border-slate-200 [&_button]:!bg-slate-100 [&_button]:!px-1.5 [&_button]:!py-0.5 [&_button]:!text-[9px] [&_button]:!font-semibold [&_button]:!text-slate-600 [&_button:hover]:!bg-slate-100";
 const verifyHeaderAttentionPillClass = "motion-safe:[&_button]:animate-pulse [&_button]:!ring-1 [&_button]:!ring-red-300 [&_button]:!shadow-[0_0_12px_rgba(239,68,68,0.28)] [&_button]:!h-auto [&_button]:!w-auto [&_button]:!rounded-full [&_button]:!border [&_button]:!border-red-200 [&_button]:!bg-red-50 [&_button]:!px-1.5 [&_button]:!py-0.5 [&_button]:!text-[9px] [&_button]:!font-semibold [&_button]:!text-red-600 [&_button:hover]:!bg-red-100";
@@ -21,7 +23,7 @@ type Props = {
   policyStartDate?: string | null;
   policyEndDate?: string | null;
   disabled?: boolean;
-  variant?: "row" | "header";
+  variant?: "row" | "header" | "icon";
   attention?: boolean;
   prefillDetails?: Record<string, unknown> | null;
 };
@@ -52,6 +54,7 @@ export function VerificationActionButton({ claimId, documentId, documentIds, ite
   }
 
   const headerClassName = attention ? verifyHeaderAttentionPillClass : verifyHeaderPillClass;
+  if (variant === "icon") return <div title="Reverify document" className="relative h-8 w-8 shrink-0 text-[#B68A42]"><div className={reverifyIconClass}>{action}</div><RefreshCw aria-hidden="true" size={16} strokeWidth={2} className="pointer-events-none absolute left-2 top-2" /></div>;
   return <div className={variant === "row" ? verifyHoverOnlyClass : headerClassName}>{action}</div>;
 }
 
