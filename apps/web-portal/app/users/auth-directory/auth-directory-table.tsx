@@ -12,12 +12,12 @@ export type DirectoryRow = {
 };
 const compact = "rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500";
 function date(v:string|null) { return v ? new Date(v).toLocaleString("en-IN", {day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "Never"; }
-export function AuthDirectoryTable({rows}:{rows:DirectoryRow[]}) {
-  const [query,setQuery]=useState("");
+export function AuthDirectoryTable({rows,requestedUserId=null}:{rows:DirectoryRow[];requestedUserId?:string|null}) {
+  const [query,setQuery]=useState(()=>rows.find(row=>row.id===requestedUserId)?.id??"");
   const [type,setType]=useState("");
   const [role,setRole]=useState("");
   const [state,setState]=useState("");
-  const [selected,setSelected]=useState<DirectoryRow|null>(null);
+  const [selected,setSelected]=useState<DirectoryRow|null>(()=>rows.find(row=>row.id===requestedUserId)??null);
   const types=useMemo(()=>Array.from(new Set(rows.map(r=>r.accountType))).sort(),[rows]);
   const roles=useMemo(()=>Array.from(new Set(rows.map(r=>r.role))).sort(),[rows]);
   const filtered=useMemo(()=>rows.filter(r=>{
