@@ -20,7 +20,7 @@ const inputClass = "h-10 w-full rounded-xl border border-[#D8DEE9] bg-white px-3
 const labelClass = "mb-1.5 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.055em] text-[#475467]";
 const PAYMENT_FREQUENCIES = ["Monthly", "Quarterly", "Half Yearly", "Annually", "One Time"];
 const PAYMENT_MODES = ["Cheque", "NEFT/RTGS", "UPI", "Credit/Debit Card", "Net Banking"];
-const YEAR_OPTIONS = Array.from({ length: 50 }, (_, index) => `${index + 1} Year${index === 0 ? "" : "s"}`);
+const YEAR_OPTIONS = Array.from({ length: 100 }, (_, index) => `${index + 1} Year${index === 0 ? "" : "s"}`);
 const LIFE_HEALTH_SECTIONS = ["Source", "Customer / Proposer", "Policy Product & Case", "Premium & Payment"];
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
 
