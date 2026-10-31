@@ -166,7 +166,9 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
           : !agreementSigned
             ? "agreement"
             : "iib";
-  const viewStage: ViewStage = limitedLifeHead ? "primary" : requestedStage && unlocked.has(requestedStage) ? requestedStage : defaultView;
+  const viewStage: ViewStage = limitedLifeHead
+    ? (requestedStage === "documents" && unlocked.has("documents") ? "documents" : "primary")
+    : requestedStage && unlocked.has(requestedStage) ? requestedStage : defaultView;
   const docList = (documents ?? []).map((item) => ({ document_type: item.document_type, file_name: item.file_name }));
   const popupEvent = query.success && popupEvents.has(query.success) ? query.success : null;
   const verificationPan = (profile.partner_type === "misp" ? profile.dp_pan_number : profile.pan_number)?.replace(/\s/g, "").toUpperCase() ?? null;
@@ -210,7 +212,9 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
           </div>
         </section>
 
-        {!limitedLifeHead && !onboardingComplete ? (context === "partner" ? (
+        {!onboardingComplete ? (limitedLifeHead ? (
+          <PartnerTwoStepNavigation applicationId={id} viewStage={viewStage} documentsComplete={documentsComplete} partnerActive={application.partner_status === "active_partner"} />
+        ) : context === "partner" ? (
           <PartnerTwoStepNavigation applicationId={id} viewStage={viewStage} documentsComplete={documentsComplete} partnerActive={application.partner_status === "active_partner"} />
         ) : (
           <SixStepNavigation viewStage={viewStage} documentsComplete={documentsComplete} registrationComplete={registrationComplete} trainingExamComplete={trainingExamComplete} agreementSigned={agreementSigned} iibUploaded={iibUploaded} />
@@ -219,7 +223,7 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
 
         {query.success && !popupEvent ? <WorkflowSuccessToast message={successes[query.success] ?? "Saved successfully."} /> : null}
 
-        {!limitedLifeHead ? <IntermediaryDocumentUploadController applicationId={id} enabled={viewStage === "documents" && editable} showGst={Boolean(profile.gst_number)} /> : null}
+        <IntermediaryDocumentUploadController applicationId={id} enabled={viewStage === "documents" && editable} showGst={Boolean(profile.gst_number)} />
         <main className="overflow-hidden rounded-2xl border bg-white">
           {viewStage === "primary" || viewStage === "documents" ? (
             <div className="space-y-4 bg-[#F4F7FB]">

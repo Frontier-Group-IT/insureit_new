@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+const root = resolve(import.meta.dirname, "..");
+const workflow = readFileSync(resolve(root, "app/intermediaries/applications/[id]/workflow/page.tsx"), "utf8");
+const upload = readFileSync(resolve(root, "app/api/intermediary-documents/upload/route.ts"), "utf8");
+assert.match(workflow, /requestedStage === "documents" && unlocked\.has\("documents"\)/);
+assert.match(workflow, /<IntermediaryDocumentUploadController applicationId=\{id\} enabled=\{viewStage === "documents" && editable\}/);
+assert.match(workflow, /<PartnerTwoStepNavigation applicationId=\{id\} viewStage=\{viewStage\}/);
+assert.match(workflow, /const reviewer = await requireScopedPospMispManager\(id, true\)/);
+assert.match(upload, /getScopedPospMispManager\(applicationId\)/);
+assert.doesNotMatch(workflow, /limitedLifeHead \? "primary" : requestedStage/);
+console.log("POSP/MISP Life Head document stage regression passed");
