@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const shell = readFileSync("components/partner-portal/partner-portal-shell.tsx","utf8");
+const profile = readFileSync("app/partner/profile/page.tsx","utf8");
+assert.match(shell,/partnerSession\.identity\.associate_name\?\.trim\(\)/);
+assert.match(shell,/branchContactName \|\| partnerDisplayName/);
+assert.match(shell,/displayNameOverride=\{profileDisplayName\}/);
+assert.match(shell,/showBranchContact=\{branchPortal\}/);
+assert.match(profile,/intermediary\?\.portal_access_type === "branch"/);
+assert.match(profile,/partner_web_current_branch_contact_name/);
+assert.match(profile,/intermediary\?\.associate_name\?\.trim\(\)/);
+assert.match(profile,/\{personName\}/);
+console.log("Partner/Branch/Associate profile-person name regression passed.");

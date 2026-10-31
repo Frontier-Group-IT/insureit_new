@@ -31,6 +31,9 @@ export async function PartnerPortalShell({ title, children, headerVariant = "def
       branchContactName = contactName.trim() || null;
     }
   }
+  const profileDisplayName = branchPortal
+    ? branchContactName || partnerDisplayName
+    : partnerDisplayName;
   const partnerRoleDisplay = branchPortal
     ? "Branch"
     : partnerSession.identity.actor_kind === "intermediary"
@@ -59,7 +62,7 @@ export async function PartnerPortalShell({ title, children, headerVariant = "def
                 profile={profile}
                 user={user ? { id: user.id, email: user.email } : null}
                 homeHref="/partner"
-                displayNameOverride={partnerDisplayName}
+                displayNameOverride={profileDisplayName}
                 roleDisplayOverride={partnerRoleDisplay}
                 branchContactName={branchContactName}
                 showBranchContact={branchPortal}

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { getPartnerWebSession } from "@/lib/partner-web";
+import { createServerSupabaseClient } from "@/lib/auth-server";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -20,6 +21,13 @@ function humanize(value: string) {
 export default async function PartnerProfilePage() {
   const { identity, scope } = await getPartnerWebSession();
   const intermediary = identity.actor_kind === "intermediary" ? identity : null;
+  const branchPortal = intermediary?.portal_access_type === "branch";
+  const { data: branchContactName } = branchPortal
+    ? await (await createServerSupabaseClient()).rpc("partner_web_current_branch_contact_name")
+    : { data: null };
+  const personName = (branchPortal && typeof branchContactName === "string" ? branchContactName.trim() : "")
+    || intermediary?.associate_name?.trim()
+    || identity.display_name;
   const isGroupPortal = scope.scope_mode === "hierarchy" && scope.group_ids.length === 1;
   const isGroupAssociate = isGroupPortal && (identity as unknown as {account_subtype?:string}).account_subtype === "group_associate";
 
@@ -57,7 +65,7 @@ export default async function PartnerProfilePage() {
         {isGroupPortal ? (
           <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#DCE6F1] bg-white px-4 py-3">
             <div><p className="text-xs font-semibold text-[#172846]">{isGroupAssociate ? "Group Associate Account" : "Primary Group Account"}</p>
-              <p className="mt-1 text-[10px] text-[#64748B]">{identity.display_name} · Group Administrator</p></div>
+              <p className="mt-1 text-[10px] text-[#64748B]">{personName} · Group Administrator</p></div>
             <Link className="rounded-xl bg-[#17365D] px-4 py-2 text-xs font-semibold text-white" href="/partner/group-associates">Manage Associate Accounts</Link>
           </section>
         ) : null}
@@ -66,7 +74,7 @@ export default async function PartnerProfilePage() {
             <Building2 className="h-5 w-5 shrink-0 text-white" />
             <div className="flex min-w-0 items-center gap-2">
               <h1 className="truncate text-[16px] font-extrabold tracking-[-0.02em]">
-                {identity.display_name}
+                {personName}
               </h1>
               <span className="grid h-4 w-4 shrink-0 place-items-center rounded-full bg-[#16D398]">
                 <Check className="h-2.5 w-2.5 stroke-[3] text-white" />
