@@ -13,7 +13,7 @@ export type DirectoryRow = {
 const compact = "rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-blue-500";
 function date(v:string|null) { return v ? new Date(v).toLocaleString("en-IN", {day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "Never"; }
 export function AuthDirectoryTable({rows,requestedUserId=null}:{rows:DirectoryRow[];requestedUserId?:string|null}) {
-  const [query,setQuery]=useState(()=>rows.find(row=>row.id===requestedUserId)?.id??"");
+  const [query,setQuery]=useState("");
   const [type,setType]=useState("");
   const [role,setRole]=useState("");
   const [state,setState]=useState("");
