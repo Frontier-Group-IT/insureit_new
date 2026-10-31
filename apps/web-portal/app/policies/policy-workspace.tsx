@@ -383,7 +383,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
       </div>
 
       <div className="border-b border-[#E5ECF5] bg-white px-3 py-2 sm:px-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:grid xl:grid-cols-[minmax(135px,0.8fr)_minmax(235px,1.35fr)_minmax(135px,0.85fr)_minmax(155px,0.9fr)_minmax(410px,2.3fr)] xl:gap-2">
+        <div className={`flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:grid xl:gap-2 ${isRelationshipManager ? "xl:grid-cols-[minmax(135px,0.8fr)_minmax(250px,1.5fr)_minmax(155px,0.9fr)_minmax(410px,2.3fr)]" : "xl:grid-cols-[minmax(135px,0.8fr)_minmax(235px,1.35fr)_minmax(135px,0.85fr)_minmax(155px,0.9fr)_minmax(410px,2.3fr)]"}`}>
           <PolicyBusinessFilter
             business={business}
             onBusinessChange={(value) => {
