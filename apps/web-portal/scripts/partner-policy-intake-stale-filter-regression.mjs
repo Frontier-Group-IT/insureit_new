@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+const source=readFileSync("components/partner-portal/partner-policy-intake-list-client.tsx","utf8");
+assert.match(source,/requestVersionRef = useRef\(0\)/);
+assert.match(source,/requestVersion === requestVersionRef\.current/);
+assert.match(source,/if \(!isLatest\(\)\) return;/);
+assert.match(source,/result\.intakes\.filter\(\(row\) => matchesFilter\(row, filter\)\)/);
+assert.match(source,/if \(isLatest\(\)\) setLoading\(false\)/);
+assert.match(source,/return \(\) => \{ requestVersionRef\.current \+= 1; \}/);
+assert.match(source,/if \(filter === "completed"\) return row\.status === "completed"/);
+console.log("Policy Intake stale filter response regression passed");
