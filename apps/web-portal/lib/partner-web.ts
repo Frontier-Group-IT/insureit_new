@@ -173,6 +173,26 @@ export type PartnerCanonicalPolicySummary = {
 };
 
 // Staged read-only comparison. Never use parent IDs provided by a browser request.
+// Branch dashboard counts come from the same canonical policy-linked scope as its register.
+// The RPCs derive the branch from auth.uid(), never from a request-supplied branch ID.
+export async function getPartnerCanonicalBranchHomeCounts(today: string): Promise<{ customers: number; renewalsDue30d: number }> {
+  const session = await getPartnerWebSession();
+  if (session.scope.portal_access_type !== "branch") throw new Error("Canonical branch counts are branch-only.");
+  const supabase = await createServerSupabaseClient();
+  const [customers, renewals] = await Promise.all([
+    supabase.rpc("partner_branch_authorized_customer_ids"),
+    supabase.rpc("partner_branch_authorized_renewal_policy_ids"),
+  ]);
+  if (customers.error || renewals.error) throw new Error("Branch home scope counts are unavailable.");
+  const uniqueCustomers = new Set(((customers.data ?? []) as { customer_id: string }[]).map(row => row.customer_id));
+  const todayMs = Date.parse(today + "T00:00:00Z");
+  const endMs = todayMs + 30 * 86400000;
+  const due = new Set(((renewals.data ?? []) as { policy_id: string; end_date: string }[])
+    .filter(row => { const ms = Date.parse(row.end_date + "T00:00:00Z"); return ms >= todayMs && ms <= endMs; })
+    .map(row => row.policy_id));
+  return { customers: uniqueCustomers.size, renewalsDue30d: due.size };
+}
+
 export async function getPartnerCanonicalPolicySummary(): Promise<PartnerCanonicalPolicySummary> {
   await getPartnerWebSession();
   const supabase = await createServerSupabaseClient();
