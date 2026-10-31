@@ -11,6 +11,7 @@ import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { logPortalRoutePerformance } from "@/lib/performance-observability";
 import { PolicyWorkspace } from "./policy-workspace";
+import { resolveRmPartnerPolicyAttribution } from "@/lib/rm-partner-hierarchy";
 
 type PolicyRow = {
   id: string;
@@ -217,21 +218,12 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
   const rows = data ?? [];
   // Canonical owner attribution is display/filter metadata only. Never rewrite
   // historic intermediary_code, policy values, or the original Branch identity.
-  const { data: branchPolicyLinks, error: branchLinksError } = await admin
-    .from("partner_branch_policy_links")
-    .select("policy_id,parent_partner_id,legacy_intermediary_code");
-  const parentIds = [...new Set((branchPolicyLinks ?? []).map((link) => link.parent_partner_id))];
-  const { data: owningPartners, error: ownersError } = parentIds.length
-    ? await admin.from("partners").select("id,partner_code").in("id", parentIds)
-    : { data: [] as { id: string; partner_code: string }[], error: null };
-  const parentCodes = new Map((owningPartners ?? []).map((partner) => [partner.id, partner.partner_code]));
-  const parentByPolicy = new Map<string, { code: string; branchCode: string }>();
-  if (!branchLinksError && !ownersError) {
-    for (const link of branchPolicyLinks ?? []) {
-      const code = parentCodes.get(link.parent_partner_id);
-      if (code) parentByPolicy.set(link.policy_id, { code, branchCode: link.legacy_intermediary_code });
-    }
-  }
+  // Resolve only the policy IDs authorized by the existing RM ownership query.
+  // A parent-source selection must never broaden an RM's accessible policy rows.
+  const hierarchy = await resolveRmPartnerPolicyAttribution(rows.map((policy) => policy.id));
+  const parentByPolicy = new Map([...hierarchy].map(([id, value]) =>
+    [id, { code: value.parentCode, branchCode: value.branchCode }] as const,
+  ));
 
   const allowedSourceKeys = new Set(rows.map((policy) => {
     const type = policySourceDatabaseType(policy.intermediary_type);
