@@ -16,13 +16,13 @@ function match(type:string, expected:string) {
     (expected==="Accident Photo"&&["spotphoto","accidentphotos"].includes(normalize(type)));
 }
 
-export function CustomerClaimEvidenceWorkspace({documents,claimId,accountId,stage,returnToSpotIntimation=false,allowUpload=true}:{
-documents:CustomerClaimFile[];claimId:string;accountId:string;stage:string;returnToSpotIntimation?:boolean;allowUpload?:boolean
+export function CustomerClaimEvidenceWorkspace({documents,claimId,accountId,stage,returnToSpotIntimation=false,allowUpload=true,onlyUploaded=false}:{
+documents:CustomerClaimFile[];claimId:string;accountId:string;stage:string;returnToSpotIntimation?:boolean;allowUpload?:boolean;onlyUploaded?:boolean
 }) {
   return <section className="overflow-hidden rounded-2xl border border-[#D9E3F0] bg-white">
     <header className="border-b border-[#D9E3F0] px-4 py-3"><h2 className="text-[17px] font-semibold text-[#071D49]">Claim Documents</h2></header>
     <div className="grid gap-3 p-3 md:grid-cols-2 xl:grid-cols-3">
-      {definitions.map(item=><CustomerClaimCompactDocument key={item.type} label={item.label} type={item.type} accept={item.accept} documents={documents.filter(doc=>match(doc.document_type,item.type))} claimId={claimId} accountId={accountId} stage={stage} returnToSpotIntimation={returnToSpotIntimation} allowUpload={allowUpload}/>)}
+      {definitions.filter(item=>!onlyUploaded||documents.some(doc=>match(doc.document_type,item.type))).map(item=><CustomerClaimCompactDocument key={item.type} label={item.label} type={item.type} accept={item.accept} documents={documents.filter(doc=>match(doc.document_type,item.type))} claimId={claimId} accountId={accountId} stage={stage} returnToSpotIntimation={returnToSpotIntimation} allowUpload={allowUpload}/>)}
     </div>
     {allowUpload?<div className="px-3 pb-3"><CustomerClaimMultipleUpload claimId={claimId} accountId={accountId} stage={stage} returnToSpotIntimation={returnToSpotIntimation}/></div>:null}
   </section>;
