@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+const code = readFileSync(resolve(import.meta.dirname, "../lib/admin-permanent-delete.ts"), "utf8");
+const branch = code.slice(code.indexOf("async function deleteBranch("), code.indexOf("async function deletePartner("));
+assert.match(branch, /partner_branch_profiles!partner_branch_profiles_partner_id_fkey!inner/);
+assert.match(branch, /if \(branchError\)/);
+assert.match(branch, /if \(!branch\)/);
+assert.match(branch, /const allBlockers = await blockers\("partners", partnerId\)/);
+assert.match(branch, /const blocking = allBlockers\.filter/);
+console.log("Branch permanent-delete lookup FK and safety regression passed");

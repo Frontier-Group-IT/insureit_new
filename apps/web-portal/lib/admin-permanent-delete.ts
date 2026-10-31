@@ -147,11 +147,12 @@ async function deleteUser(profileId: string, actorId: string): Promise<Permanent
 
 async function deleteBranch(partnerId: string): Promise<PermanentDeleteResult> {
   const admin = createSupabaseAdminClient();
-  const { data: branch } = await admin
+  const { data: branch, error: branchError } = await admin
     .from("partners")
-    .select("id,display_name,source_application_id,partner_branch_profiles!inner(id,source_application_id)")
+    .select("id,display_name,source_application_id,partner_branch_profiles!partner_branch_profiles_partner_id_fkey!inner(id,source_application_id)")
     .eq("id", partnerId)
     .maybeSingle<{ id: string; display_name: string; source_application_id: string | null; partner_branch_profiles: Array<{ id: string; source_application_id: string }> }>();
+  if (branchError) return { status: "error", message: "The branch lookup failed. Please retry or contact IT support." };
   if (!branch) return { status: "error", message: "The branch record could not be found." };
 
   const allBlockers = await blockers("partners", partnerId);
