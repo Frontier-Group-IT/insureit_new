@@ -58,7 +58,7 @@ function TeamMetrics({ own, reports, periodLabel }: { own: RmPerformanceRow; rep
   </div>;
 }
 
-function HeadGroup({ head, reports, periodLabel }: { head: RmPerformanceRow; reports: RmPerformanceRow[]; periodLabel: string }) {
+function HeadGroup({ head, reports, periodLabel, periodShortLabel }: { head: RmPerformanceRow; reports: RmPerformanceRow[]; periodLabel: string; periodShortLabel: string }) {
   const [open, setOpen] = useState(false);
   const [directOpen, setDirectOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
@@ -92,7 +92,7 @@ function HeadGroup({ head, reports, periodLabel }: { head: RmPerformanceRow; rep
         <button type="button" className="flex w-full items-center justify-between" aria-expanded={reportsOpen} onClick={() => setReportsOpen((v) => !v)}>
           <span className="flex items-center gap-2 text-[12px] font-bold text-[#18365C]"><UsersRound className="h-4 w-4"/>Reporting RMs <span className="text-[10px] font-medium text-[#71839E]">{reports.length}</span></span><ChevronDown className={`h-4 w-4 transition ${reportsOpen ? "rotate-180" : ""}`}/>
         </button>
-        {reportsOpen ? <div className="mt-3 space-y-2">{reports.map((row) => <div key={row.employeeId ?? row.name} className="rounded-xl border border-[#E8EEF6]"><RmSummaryCard row={row} periodLabel={periodLabel} periodShortLabel={periodLabel}/></div>)}{!reports.length ? <p className="text-xs text-[#72829A]">No reporting RMs in this period.</p> : null}</div> : null}
+        {reportsOpen ? <div className="mt-3 space-y-2">{reports.map((row) => <div key={row.employeeId ?? row.name} className="rounded-xl border border-[#E8EEF6]"><RmSummaryCard row={row} periodLabel={periodLabel} periodShortLabel={periodShortLabel}/></div>)}{!reports.length ? <p className="text-xs text-[#72829A]">No reporting RMs in this period.</p> : null}</div> : null}
       </div>
       <TeamMetrics own={head} reports={reports} periodLabel={periodLabel}/>
     </div> : null}
@@ -113,8 +113,8 @@ export function RmHierarchySummary({ rows, periodLabel, periodShortLabel, select
 
   return <div className="space-y-2">
     {jayesh ? <RmSummaryCard row={jayesh} periodLabel={periodLabel} periodShortLabel={periodShortLabel}/> : null}
-    {jatin ? <HeadGroup head={jatin} reports={jatinReports} periodLabel={periodLabel}/> : null}
-    {gagan ? <HeadGroup head={gagan} reports={remaining} periodLabel={periodLabel}/> : null}
+    {jatin ? <HeadGroup head={jatin} reports={jatinReports} periodLabel={periodLabel} periodShortLabel={periodShortLabel}/> : null}
+    {gagan ? <HeadGroup head={gagan} reports={remaining} periodLabel={periodLabel} periodShortLabel={periodShortLabel}/> : null}
     {rows.filter((row) => normalized(row.name) !== JAYESH && !grouped.has(normalized(row.name))).map((row) => <RmSummaryCard key={row.employeeId ?? row.name} row={row} periodLabel={periodLabel} periodShortLabel={periodShortLabel}/>)}
   </div>;
 }
