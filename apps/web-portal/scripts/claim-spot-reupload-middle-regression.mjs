@@ -1,0 +1,18 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const group = readFileSync("components/spot-survey/bulk-document-verification-group.tsx", "utf8");
+const button = readFileSync("components/spot-survey/request-customer-document-reupload-button.tsx", "utf8");
+const actions = readFileSync("app/claims/[id]/spot-survey-actions.ts", "utf8");
+const row = group.slice(group.indexOf("function DocumentFileRow("));
+const customerRequest = row.indexOf("<RequestCustomerDocumentReuploadButton ");
+const verification = row.indexOf("<VerificationActionButton ");
+assert.ok(customerRequest >= 0 && verification > customerRequest, "Customer re-upload request must be center button before Verify");
+assert.match(button, /requestSpotSurveyDocumentReupload\(formData\)/);
+assert.match(button, /formData\.set\("claimId", claimId\)/);
+assert.match(button, /formData\.set\("documentId", documentId\)/);
+assert.match(button, /The customer will receive a re-upload request/);
+assert.doesNotMatch(button, /prepareClaimDocumentUpload|finalizeClaimDocumentUpload|type="file"/);
+assert.match(actions, /verification_status: "rejected"/);
+assert.match(actions, /customer_activity_events/);
+assert.match(actions, /Reupload request sent to customer/);
+console.log("Customer document re-upload request regression passed");
