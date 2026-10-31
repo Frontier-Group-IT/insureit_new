@@ -14,7 +14,7 @@ export default async function GroupDetailsPage({params,searchParams}:{params:Pro
  const {id}=await params;
  await requireGroupAssociateManager(id);
  const admin=createSupabaseAdminClient();
- const [{data:group},{data:memberships},{data:associateCount},{data:adminContact},{data:loginIdentity}]=await Promise.all([
+ const [{data:group},{data:memberships},{count:associateCount},{data:adminContact},{data:loginIdentity}]=await Promise.all([
    admin.from("intermediary_groups").select("id,group_code,group_name,description,status,group_mode,created_at").eq("id",id).maybeSingle(),
    admin.from("intermediary_group_memberships").select("partner_id").eq("group_id",id).is("effective_to",null),
    admin.from("group_portal_associate_accounts").select("id",{count:"exact",head:true}).eq("group_id",id),
