@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireGroupAssociateManager } from "../../group-associate-access";
 import { requireIntermediaryGroupManager } from "@/lib/intermediary-group-access";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { resendGroupBranchPortalInvite, setGroupBranchPortalLoginStatus } from "../../group-branch-login-actions";
+import { sendGroupBranchPortalPasswordReset, setGroupBranchPortalLoginStatus } from "../../group-branch-login-actions";
 
 const validId = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
@@ -30,8 +30,8 @@ export async function updateGroupAdministratorContact(formData: FormData) {
     state: String(formData.get("state") ?? "").trim(),
     postal_code: postal, updated_by: actor.actorId, updated_at: new Date().toISOString(),
   };
-  const { error } = await admin.from("group_administrator_contacts").update(values).eq("group_id", groupId);
-  if (error) redirect(`/intermediaries/groups/${groupId}?error=Unable to update administrator`);
+  const { data: saved, error } = await admin.from("group_administrator_contacts").upsert({group_id:groupId,...values},{onConflict:"group_id"}).select("group_id,admin_name,admin_mobile").maybeSingle();
+  if (error || !saved || saved.admin_name!==name || saved.admin_mobile!==phone) redirect(`/intermediaries/groups/${groupId}?error=Unable to save administrator details`);
   revalidatePath(`/intermediaries/groups/${groupId}`);
   redirect(`/intermediaries/groups/${groupId}?success=Administrator updated`);
 }
@@ -58,5 +58,5 @@ export async function resendGroupAdministratorInvite(formData: FormData) {
   actionData.set("entity_type", "group");
   actionData.set("entity_id", groupId);
   actionData.set("return_path", `/intermediaries/groups/${groupId}`);
-  return resendGroupBranchPortalInvite(actionData);
+  return sendGroupBranchPortalPasswordReset(actionData);
 }
