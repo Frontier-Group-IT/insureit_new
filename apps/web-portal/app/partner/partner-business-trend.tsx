@@ -85,7 +85,7 @@ export function PartnerBusinessTrend({
     const plotBottom = 150;
     const plotHeight = plotBottom - plotTop;
     const slotWidth = points.length > 1 ? (plotRight - plotLeft) / (points.length - 1) : 0;
-    const barWidth = points.length >= 10 ? 26 : points.length >= 7 ? 34 : 44;
+    const barWidth = points.length >= 10 ? 38 : points.length >= 7 ? 48 : 64;
 
     return {
       maxPremium,
