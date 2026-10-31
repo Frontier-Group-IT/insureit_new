@@ -28,6 +28,7 @@ export type PartnerPolicyIntake = {
   ocr_fields: PartnerPolicyIntakeField[];
   attention_reason: string | null;
   created_at: string;
+  submitted_by_name?: string;
   updated_at: string;
   final_policy_id: string | null;
 };
