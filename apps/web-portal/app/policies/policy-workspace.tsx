@@ -383,7 +383,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
       </div>
 
       <div className="border-b border-[#E5ECF5] bg-white px-3 py-2 sm:px-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:grid xl:grid-cols-[minmax(150px,0.86fr)_minmax(150px,0.9fr)_minmax(160px,1fr)_minmax(170px,0.9fr)_minmax(330px,auto)] xl:gap-1.5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:grid xl:grid-cols-[minmax(135px,0.8fr)_minmax(235px,1.35fr)_minmax(135px,0.85fr)_minmax(155px,0.9fr)_minmax(410px,2.3fr)] xl:gap-2">
           <PolicyBusinessFilter
             business={business}
             onBusinessChange={(value) => {
@@ -414,8 +414,8 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
             onQuickRange={changeQuickDateRange}
             onClear={() => { setTimeScope("all"); setFromDate(""); setToDate(""); setView("all"); setPage(1); }}
           />
-          <div className="min-w-0 max-w-full xl:min-w-[330px]">
-            <div className="flex w-full items-center gap-0.5 overflow-visible rounded-xl border border-[#D8E2EE] bg-[#F8FAFC] p-1">
+          <div className="min-w-0 w-full max-w-full">
+            <div className="flex w-full min-w-0 items-center gap-1 overflow-visible rounded-xl border border-[#D8E2EE] bg-[#F8FAFC] p-1">
               <PolicyPeriodFilter value={timeScope} mtdCount={mtdFiltered.length} allCount={controlFiltered.length} onChange={changeTimeScope} />
               <div className="min-w-0 flex-1 [&>div]:border-0 [&>div]:bg-transparent [&>div]:p-0 xl:[&_button]:px-2.5 xl:[&_button]:text-[10px]">
                 <RegisterViewTabs
