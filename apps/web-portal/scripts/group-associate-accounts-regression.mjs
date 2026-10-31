@@ -64,7 +64,11 @@ const adminMenu=read("app/intermediaries/groups/[id]/associate-accounts/group-ad
 assert.match(adminMenu,/Edit Group Administrator/);
 assert.match(adminMenu,/Resend Link/);
 assert.match(adminMenu,/changeGroupAdministratorAccess/);
-assert.match(adminMenu,/Deleting this login can orphan the Group/);
+assert.match(adminMenu,/This Group depends on its primary administrator\. Review dependencies before deletion\./);
+assert.match(adminMenu,/router\.push\(\`\/users\/auth-directory\?user_id=\$\{encodeURIComponent\(authUserId\)\}\`\)/);
+assert.match(adminMenu,/disabled=\{!authUserId\}/);
+assert.match(adminMenu,/onClick=\{\(\)=>setDialog\(null\)\}[^>]*>Cancel/);
+assert.doesNotMatch(adminMenu,/admin\.auth\.admin\.deleteUser/);
 assert.match(sections,/hasRegisterRecords/);
 assert.match(sections,/GroupAssociateCreateEntry/);
 assert.match(sharedForm,/Save Details/);
