@@ -13,6 +13,8 @@ assert.match(down,/drop policy if exists "customer_policyless_claim_draft_insert
 assert.match(action,/if \(!vehicles\.some\(v => v\.id === vehicleId\)\)/);
 assert.match(action,/policy\?\.id \?\? null/);
 assert.match(action,/code === "42501"/);
-assert.match(action,/destination: "\/customer\/spot-intimation/);
-assert.match(action,/controlNo: claimNo/);
+assert.match(action,/const destination = status === "Draft"/);
+assert.match(action,/\/customer\/spot-intimation\?account=/);
+assert.match(action,/return await existingClaimResult\(created\.id, "Draft", account\.id\)/);
+assert.doesNotMatch(action,/claim_no: claimNo/);
 console.log("Policyless claim draft RLS, rollback, and customer action contracts passed");

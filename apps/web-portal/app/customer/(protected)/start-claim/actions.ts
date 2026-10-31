@@ -33,14 +33,12 @@ export async function prepareCustomerClaim(_previous: PrepareCustomerClaimState,
     if (!claimId) return { error: "We could not confirm your claim draft. Please try again." };
     return await existingClaimResult(claimId, "Draft", account.id);
   }
-  const stamp = new Date();
-  const claimNo = "CLM-" + stamp.toISOString().slice(0, 10).replace(/-/g, "") + "-" + stamp.getTime().toString().slice(-6);
   // Customer scope and vehicle ownership were verified above. Customer-web
   // sessions are not Supabase Auth sessions, so the ordinary RLS client cannot
   // INSERT claims (42501). Use the trusted server client only for this scoped write.
   const claimWriter = createSupabaseAdminClient();
   const { data: created, error } = await claimWriter.from("claims").insert({
-    claim_no: claimNo, customer_id: account.id, vehicle_id: vehicleId,
+    customer_id: account.id, vehicle_id: vehicleId,
     policy_id: policy?.id ?? null, insurance_company_id: policy?.insurance_company_id ?? null,
     current_status: "Draft", created_by: session.user.id,
   }).select("id").single();
@@ -55,7 +53,9 @@ export async function prepareCustomerClaim(_previous: PrepareCustomerClaimState,
     }
     return await existingClaimResult(recovered.id, recovered.current_status, account.id);
   }
-  return { error: null, claimId: created.id, controlNo: claimNo, accountId: account.id, destination: "/customer/spot-intimation?account=" + encodeURIComponent(account.id) + "&id=" + encodeURIComponent(created.id) };
+  // The database trigger assigns the official SIBL/ or EXT/ control number.
+  // Read it back instead of displaying a temporary client-generated identifier.
+  return await existingClaimResult(created.id, "Draft", account.id);
 }
 
 async function existingClaimResult(claimId: string, status: string, accountId: string): Promise<PrepareCustomerClaimState> {
