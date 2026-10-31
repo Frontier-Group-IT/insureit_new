@@ -4,18 +4,15 @@ import { PartnerReportTabs } from "@/components/partner-portal/partner-report-ta
 import type { PartnerReportScope } from "@/lib/reports/partner-report-scope";
 type Tab = "Overview" | "Business";
 /** Presentation only. Data remains in account-scoped Partner RPCs, never employee/admin loaders. */
-export function PartnerReportsShell({ active, scope, children }: { active: Tab; scope: PartnerReportScope; children: ReactNode }) {
-  const label = scope.role === "group" || scope.role === "group_associate" ? "Assigned group" : scope.role === "branch" ? "Your branch" : "Assigned partner";
+export function PartnerReportsShell({ active, scope, toolbar, children }: { active: Tab; scope: PartnerReportScope; toolbar?: ReactNode; children: ReactNode }) {
   return <PartnerPortalShell title={active === "Overview" ? "Reports" : "Business Reports"}>
-    <div className="reports-reference-shell report-page-shell mx-auto w-full max-w-[1560px] space-y-3 bg-[#F6F8FC] text-[#11254A]">
+    <div className="reports-reference-shell report-page-shell mx-auto w-full max-w-[1560px] space-y-2 bg-[#F6F8FC] text-[#11254A]">
     <header className="reports-reference-header" aria-label="Reports">
-      <div className="reports-reference-topbar">
-        <div className="reports-reference-left">
-          <div className="reports-reference-heading"><h1>Reports</h1></div>
+      <div className="reports-reference-topbar !flex !flex-wrap !items-center !gap-3 !border-0 !pb-0">
+        <div className="reports-reference-left !flex !shrink-0 !items-center">
           <PartnerReportTabs active={active}/>
         </div>
-        <div className="reports-reference-toolbar"><span className="rounded-lg border border-[#DCE5F2] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#536889]">{label}</span>
-        </div>
+        {toolbar ? <div className="reports-reference-toolbar !ml-auto !min-w-0 !flex-1 !justify-end">{toolbar}</div> : null}
       </div>
     </header>
     {children}

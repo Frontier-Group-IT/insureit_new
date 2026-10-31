@@ -254,30 +254,15 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
   ).toString()}`;
 
   return (
-    <PartnerReportsShell active="Business" scope={reportScope}>
-      <div className="space-y-3 pb-4">
-        {hierarchySummary ? (
-          <section className="rounded-xl border border-[#d4deeb] bg-white px-4 py-3 text-[11px] text-[#30445f]">
-            <p className="font-bold">Verified hierarchy — lifetime policy reference</p>
-            <p className="mt-1">Authorized unique policies: {integer(Number(hierarchySummary.policies))} · Recorded premium: {currency(hierarchySummary.recorded_premium)}</p>
-            <p className="mt-1 text-[#64748b]">Lifetime reference only; the filtered dashboard figures below use the selected period.</p>
-          </section>
-        ) : null}
-
-        <section className="flex flex-wrap items-end justify-between gap-3 border-b border-[#dfe6ef] pb-3">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.09em] text-[#7b8ca4]">Reports</p>
-            <p className="mt-1 text-[12px] font-semibold text-[#405775]">Business performance for your authorized account</p>
-          </div>
-
-          <form method="get" className="flex flex-wrap items-center justify-end gap-2">
-            <select name="period" defaultValue={period} className="h-10 min-w-[146px] rounded-lg border border-[#d4deeb] bg-white px-3 text-[11px] font-bold text-[#30445f]">
+    <PartnerReportsShell active="Business" scope={reportScope} toolbar={
+          <form method="get" className="flex flex-wrap items-center justify-end gap-1.5">
+            <select name="period" defaultValue={period} className="h-9 min-w-[110px] rounded-lg border border-[#d4deeb] bg-white px-3 text-[11px] font-bold text-[#30445f]">
               <option value="mtd">MTD</option>
               <option value="last-month">Last Month</option>
               <option value="last-6-months">Last 6 Months</option>
               <option value="custom">Custom</option>
             </select>
-            <select name="business" defaultValue={business} className="h-10 min-w-[170px] rounded-lg border border-[#d4deeb] bg-white px-3 text-[11px] font-bold text-[#30445f]">
+            <select name="business" defaultValue={business} className="h-9 min-w-[135px] rounded-lg border border-[#d4deeb] bg-white px-3 text-[11px] font-bold text-[#30445f]">
               <option value="all">All Business</option>
               <option value="motor">Motor</option>
               <option value="non motor">Non Motor</option>
@@ -286,7 +271,7 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
             </select>
 
             <details className="relative">
-              <summary className="flex h-10 cursor-pointer list-none items-center gap-2 rounded-lg border border-[#d4deeb] bg-white px-3 text-[11px] font-bold text-[#30445f]">
+              <summary className="flex h-9 cursor-pointer list-none items-center gap-2 rounded-lg border border-[#d4deeb] bg-white px-3 text-[11px] font-bold text-[#30445f]">
                 <SlidersHorizontal size={15} /> Filters
               </summary>
               <div className="absolute right-0 z-30 mt-2 w-[280px] space-y-2 rounded-xl border border-[#dbe3ee] bg-white p-3 shadow-xl">
@@ -315,12 +300,22 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
               </div>
             </details>
 
-            <button type="submit" className="h-10 rounded-lg border border-[#d4deeb] bg-white px-4 text-[11px] font-bold text-[#30445f]">Apply</button>
-            <Link href={exportHref} className="flex h-10 items-center gap-2 rounded-lg bg-[#1166ad] px-4 text-[11px] font-extrabold text-white">
+            <button type="submit" className="h-9 rounded-lg border border-[#d4deeb] bg-white px-4 text-[11px] font-bold text-[#30445f]">Apply</button>
+            <Link href={exportHref} className="flex h-9 items-center gap-2 rounded-lg bg-[#1166ad] px-4 text-[11px] font-extrabold text-white">
               <Download size={15} /> Export
             </Link>
           </form>
-        </section>
+    }>
+      <div className="space-y-3 pb-4">
+        {hierarchySummary ? (
+          <section className="rounded-xl border border-[#d4deeb] bg-white px-4 py-3 text-[11px] text-[#30445f]">
+            <p className="font-bold">Verified hierarchy — lifetime policy reference</p>
+            <p className="mt-1">Authorized unique policies: {integer(Number(hierarchySummary.policies))} · Recorded premium: {currency(hierarchySummary.recorded_premium)}</p>
+            <p className="mt-1 text-[#64748b]">Lifetime reference only; the filtered dashboard figures below use the selected period.</p>
+          </section>
+        ) : null}
+
+
 
         <section className="grid overflow-hidden rounded-xl border border-[#dfe6ef] bg-white md:grid-cols-4">
           <Metric label="Business Premium" value={currency(totalPremium)} note={`${integer(filtered.length)} policies`} icon={BarChart3} />
