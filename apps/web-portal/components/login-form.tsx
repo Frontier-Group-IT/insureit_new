@@ -5,7 +5,6 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Eye, EyeOff, RefreshCw } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { isAllowedAdminRole } from "@/lib/auth-config";
 import { safePortalReturnPath } from "@/lib/portal-routes";
 import { createClient } from "@/lib/supabase";
 import { BlockingWorkPanel, InsureItButtonLoader } from "@/components/loading/insureit-loader";
@@ -92,18 +91,11 @@ export function LoginForm() {
       await loadCaptcha();
       return;
     }
-    const { data: profile, error: profileError } = await supabase.from("profiles").select("id, role, is_active").eq("id", data.user.id).maybeSingle<{ id: string; role: string; is_active: boolean }>();
-    if (profileError) { setIsSubmitting(false); setMessage(profileError.message); await loadCaptcha(); return; }
-    if (!profile?.is_active || !isAllowedAdminRole(profile.role)) {
-      await fetch("/auth/session", { method: "DELETE" });
-      await supabase.auth.signOut();
-      setIsSubmitting(false);
-      window.location.href = "/access-denied";
-      return;
-    }
     const sessionResponse = await fetch("/auth/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ access_token: data.session.access_token, refresh_token: data.session.refresh_token, expires_in: data.session.expires_in }) });
-    if (!sessionResponse.ok) { setIsSubmitting(false); setMessage("Signed in, but could not create the secure browser session. Please try again."); await loadCaptcha(); return; }
-    const nextPath = profile.role === "intermediary" ? "/partner" : requestedPath.startsWith("/partner") || requestedPath.startsWith("/intermediary-portal") ? "/dashboard" : requestedPath;
+    if (!sessionResponse.ok) { setIsSubmitting(false); setMessage(sessionResponse.status === 403 ? "This account is not authorized for portal access. Please contact your administrator." : "Signed in, but could not create the secure browser session. Please try again."); await loadCaptcha(); return; }
+    const verifiedSession = await sessionResponse.json() as { ok?: boolean; role?: string };
+    if (!verifiedSession.ok || !verifiedSession.role) { setIsSubmitting(false); setMessage("Unable to verify your workspace access. Please try again."); await loadCaptcha(); return; }
+    const nextPath = verifiedSession.role === "intermediary" ? "/partner" : requestedPath.startsWith("/partner") || requestedPath.startsWith("/intermediary-portal") ? "/dashboard" : requestedPath;
     window.location.replace(nextPath);
   }
 
