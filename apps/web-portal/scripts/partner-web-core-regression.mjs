@@ -102,7 +102,7 @@ const activity = read("app/partner/activity/page.tsx");
 assert(!activity.includes('"/partner/learn"'), "activity must not link to an unimplemented Partner Learn route");
 
 const login = read("components/login-form.tsx");
-assert(login.includes('profile.role === "intermediary"'), "login must explicitly route intermediary identities");
+assert(login.includes('verifiedSession.role === "intermediary"'), "login must route intermediary identities using the verified server session role");
 assert(login.includes('"/partner"'), "intermediary login must target /partner");
 
 const legacyPortal = read("app/intermediary-portal/page.tsx");
