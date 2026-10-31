@@ -98,8 +98,7 @@ export function PartnerPolicyIntakeNewClient({ externalRenewal }: { externalRene
       if (externalRenewal) {
         await linkExternalRenewalPolicyIntakeWeb({ opportunityId: externalRenewal.opportunityId, intakeId: result.id });
       }
-      const suffix = externalRenewal ? "?submitted=1&external_renewal=1" : "?submitted=1";
-      router.replace("/partner/policy-intakes/" + encodeURIComponent(result.id) + suffix);
+      router.replace("/partner/policy-intakes");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Policy Intake could not be submitted.");
       setProgress(null);
