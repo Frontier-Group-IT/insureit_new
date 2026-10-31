@@ -30,8 +30,27 @@ export async function updateGroupAdministratorContact(formData: FormData) {
     state: String(formData.get("state") ?? "").trim(),
     postal_code: postal, updated_by: actor.actorId, updated_at: new Date().toISOString(),
   };
-  const { data: saved, error } = await admin.from("group_administrator_contacts").upsert({group_id:groupId,...values},{onConflict:"group_id"}).select("group_id,admin_name,admin_mobile").maybeSingle();
-  if (error || !saved || saved.admin_name!==name || saved.admin_mobile!==phone) redirect(`/intermediaries/groups/${groupId}?error=Unable to save administrator details`);
+  // Contact rows can be absent on legacy Groups. Updates must prove a row was
+  // written; inserts must include every mandatory linked-identity field.
+  const {data:existing,error:readError}=await admin.from("group_administrator_contacts").select("group_id").eq("group_id",groupId).maybeSingle();
+  if(readError) redirect(`/intermediaries/groups/${groupId}?error=Unable to read administrator details`);
+  let saved:{group_id:string;admin_name:string;admin_mobile:string}|null=null;
+  let error: {message:string}|null=null;
+  if(existing){
+    const result=await admin.from("group_administrator_contacts").update(values).eq("group_id",groupId).select("group_id,admin_name,admin_mobile").maybeSingle();
+    saved=result.data;
+    error=result.error;
+  }else{
+    const {data:identity,error:identityError}=await admin.from("portal_access_identities").select("profile_id,login_email").eq("entity_type","group").eq("entity_id",groupId).maybeSingle();
+    if(identityError || !identity?.profile_id || !identity.login_email) redirect(`/intermediaries/groups/${groupId}?error=Administrator login mapping missing`);
+    const result=await admin.from("group_administrator_contacts").insert({
+      ...values,group_id:groupId,profile_id:identity.profile_id,admin_email:identity.login_email,
+    }).select("group_id,admin_name,admin_mobile").maybeSingle();
+    saved=result.data;
+    error=result.error;
+  }
+  if(error || !saved || saved.group_id!==groupId || saved.admin_name!==name || saved.admin_mobile!==phone)
+    redirect(`/intermediaries/groups/${groupId}?error=Unable to save administrator details`);
   revalidatePath(`/intermediaries/groups/${groupId}`);
   redirect(`/intermediaries/groups/${groupId}?success=Administrator updated`);
 }
