@@ -1,0 +1,38 @@
+name: Verify R2 backup code (no production secrets)
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/backup/**'
+      - '.github/workflows/insureit-supabase-storage-r2-backup.yml'
+      - '.github/workflows/verify-r2-backup-static.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install boto3==1.35.99 cryptography==44.0.2 pyyaml==6.0.2
+      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py
+      - run: python -m unittest discover -s scripts/backup -p 'test_*.py' -v
+      - name: Validate workflow safety guard
+        run: |
+          python - <<'PY'
+          import pathlib, yaml
+          p=pathlib.Path('.github/workflows/insureit-supabase-storage-r2-backup.yml')
+          data=yaml.safe_load(p.read_text())
+          assert 'schedule' not in str(data.get('on', data.get(True, {}))), 'Schedule must remain disabled'
+          job=data['jobs']['backup']
+          assert 'refs/heads/main' in job['if']
+          assert job['environment']=='insureit-production-backup'
+          assert data['permissions']['contents']=='read'
+          print('Manual-only production guard verified')
+          PY

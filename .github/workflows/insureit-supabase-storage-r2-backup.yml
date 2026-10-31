@@ -1,0 +1,57 @@
+name: INSUREIT Supabase Storage backup to R2 (manual safety gate)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: insureit-production-storage-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    environment: insureit-production-backup
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate encrypted backup configuration
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+        run: |
+          python - <<'PY'
+          import base64, os
+          names = ['SUPABASE_URL','R2_ACCOUNT_ID','R2_ACCESS_KEY_ID','R2_SECRET_ACCESS_KEY','SUPABASE_SERVICE_ROLE_KEY','BACKUP_ENCRYPTION_KEY']
+          missing = [name for name in names if not os.environ.get(name)]
+          if missing: raise SystemExit('Missing environment secrets: ' + ', '.join(missing))
+          if os.environ['SUPABASE_URL'].rstrip('/') != 'https://ilzhsfqqjyppzzvfscmh.supabase.co':
+              raise SystemExit('Production project reference does not match allowlist')
+          try:
+              assert len(base64.b64decode(os.environ['BACKUP_ENCRYPTION_KEY'], validate=True)) == 32
+          except (ValueError, AssertionError) as exc:
+              raise SystemExit('Invalid BACKUP_ENCRYPTION_KEY') from exc
+          print('Backup secrets present and project reference verified')
+          PY
+      - name: Install locked backup dependencies
+        run: python -m pip install boto3==1.35.99 cryptography==44.0.2
+      - name: Run encrypted incremental backup
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+          R2_BUCKET: insureit-production-backups
+        run: python scripts/backup/supabase_storage_to_r2.py
