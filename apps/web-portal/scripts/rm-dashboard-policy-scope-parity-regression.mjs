@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+const root=resolve(import.meta.dirname,"..");
+const dashboard=readFileSync(resolve(root,"app/dashboard-v2/dashboard-data.ts"),"utf8");
+const register=readFileSync(resolve(root,"app/policies/page.tsx"),"utf8");
+assert.match(dashboard,/profile\.role === "relationship_manager" && access\.viewPolicies/);
+assert.match(dashboard,/getAccessiblePolicyRmEmployeeIds\(profile\.id, profile\.role, "view_policies"\)/);
+assert.match(dashboard,/query\.in\("rm_employee_id", rmEmployeeIds\)/);
+assert.match(dashboard,/rmEmployeeIds !== undefined/);
+assert.match(register,/getAccessiblePolicyRmEmployeeIds\(profile\.id, profile\.role, "view_policies"\)/);
+assert.match(register,/query\.in\("rm_employee_id", accessibleRmEmployeeIds\)/);
+console.log("RM Dashboard and Policy Register ownership filter regression passed");
