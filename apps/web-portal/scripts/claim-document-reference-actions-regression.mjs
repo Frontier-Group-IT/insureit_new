@@ -1,0 +1,16 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const source=readFileSync("components/spot-survey/bulk-document-verification-group.tsx","utf8");
+const row=source.slice(source.indexOf("function DocumentFileRow("),source.indexOf("const categoryArtwork"));
+const deleteIndex=row.indexOf('aria-label="Delete document"');
+const reuploadIndex=row.indexOf("<RequestCustomerDocumentReuploadButton ");
+const replaceIndex=row.indexOf('actionLabel="Replace" iconOnly');
+assert.ok(deleteIndex>=0 && deleteIndex<reuploadIndex && reuploadIndex<replaceIndex, "Row buttons must be Delete → Request Re-upload → Replace");
+assert.doesNotMatch(row,/variant="icon"/);
+assert.match(source,/variant="header"/);
+assert.match(source,/actionLabel="Upload" iconOnly/);
+const request=readFileSync("components/spot-survey/request-customer-document-reupload-button.tsx","utf8");
+assert.match(request,/requestSpotSurveyDocumentReupload\(formData\)/);
+const replace=readFileSync("components/spot-survey/replace-document-button.tsx","utf8");
+assert.match(replace,/finalizeClaimDocumentUpload\(claimId,documentType/);
+console.log("Claim document actions reference layout regression passed");
