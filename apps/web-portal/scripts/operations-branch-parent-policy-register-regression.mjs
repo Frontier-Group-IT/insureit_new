@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 const page = readFileSync(new URL("../app/policies/page.tsx", import.meta.url), "utf8");
+const resolver = readFileSync(new URL("../lib/rm-partner-hierarchy.ts", import.meta.url), "utf8");
 const ui = readFileSync(new URL("../app/policies/policy-workspace.tsx", import.meta.url), "utf8");
-assert.match(page, /from\("partner_branch_policy_links"\)/);
+assert.match(resolver, /from\("partner_branch_policy_links"\)/);
+assert.match(page, /resolveRmPartnerPolicyAttribution\(rows\.map/);
+assert.match(resolver, /branchParents\.get\(link\.branch_id\) === link\.parent_partner_id/);
 assert.match(page, /parentByPolicy\.get\(policy\.id\)\?\.code/);
 assert.match(page, /intermediary_code: sourceCode/);
 assert.match(page, /branch_source_code: attribution\?\.branchCode/);
