@@ -105,7 +105,7 @@ export async function sendGroupBranchPortalPasswordReset(formData: FormData) {
   const admin = createSupabaseAdminClient();
   const { error } = await admin.auth.resetPasswordForEmail(mapping.login_email, resetOptions());
   if (error) authEmailFail(error.message, mapping.entity_type, mapping.entity_id);
-  done("portal_password_email_sent", mapping.entity_type, mapping.entity_id, 60);
+  done("portal_password_email_sent", mapping.entity_type, mapping.entity_id, 60, text(formData, "return_path"));
 }
 
 export async function setGroupBranchPortalLoginStatus(formData: FormData) {
@@ -135,7 +135,7 @@ export async function setGroupBranchPortalLoginStatus(formData: FormData) {
     fail(profileError.message);
   }
 
-  done(nextStatus === "active" ? "portal_login_enabled" : "portal_login_disabled");
+  done(nextStatus === "active" ? "portal_login_enabled" : "portal_login_disabled", undefined, undefined, 0, text(formData, "return_path"));
 }
 
 async function loadAuthorizedMapping(manager: ManagerProfile, formData: FormData) {
@@ -280,8 +280,10 @@ function done(
   entityType?: AccessEntityType,
   entityId?: string,
   cooldownSeconds = 0,
+  requestedReturnPath = "",
 ): never {
-  revalidatePath(returnPath);
+  const destination = /^\/intermediaries\/groups\/[0-9a-f-]{36}$/i.test(requestedReturnPath) ? requestedReturnPath : returnPath;
+  revalidatePath(destination);
   revalidatePath("/intermediaries/groups");
   revalidatePath("/intermediaries/groups/branches");
 
@@ -291,7 +293,7 @@ function done(
     params.set("cooldown_entity_id", entityId);
     params.set("cooldown_until", String(Date.now() + cooldownSeconds * 1000));
   }
-  redirect(`${returnPath}?${params.toString()}`);
+  redirect(`${destination}?${params.toString()}`);
 }
 
 function authEmailFail(message: string, entityType: AccessEntityType, entityId: string): never {
