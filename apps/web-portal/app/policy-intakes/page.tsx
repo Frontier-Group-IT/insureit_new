@@ -77,17 +77,51 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
       ? admin.from("partner_branches").select("legacy_branch_profile_id,contact_name").in("legacy_branch_profile_id", profileIds).returns<BranchContact[]>()
       : Promise.resolve({ data: [] as BranchContact[] }),
   ]);
+  // Resolve the branch from the submitting login, not the shared lead source.
+  // Both the current and legacy branch login relationships are supported.
+  const [loginLinksResult, branchAccessResult] = await Promise.all([
+    profileIds.length
+      ? admin.from("partner_branch_login_links").select("profile_id,branch_id").in("profile_id", profileIds)
+      : Promise.resolve({ data: [] as { profile_id: string; branch_id: string }[], error: null }),
+    profileIds.length
+      ? admin.from("portal_access_identities").select("profile_id,entity_id").in("profile_id", profileIds).eq("entity_type", "branch")
+      : Promise.resolve({ data: [] as { profile_id: string; entity_id: string }[], error: null }),
+  ]);
+  const legacyPartnerIds = [...new Set((branchAccessResult.data ?? []).map((row) => row.entity_id).filter(Boolean))];
+  const { data: legacyProfiles, error: legacyProfilesError } = legacyPartnerIds.length
+    ? await admin.from("partner_branch_profiles").select("id,partner_id,contact_name").in("partner_id", legacyPartnerIds)
+    : { data: [] as { id: string; partner_id: string; contact_name: string | null }[], error: null };
+  const branchIds = [...new Set((loginLinksResult.data ?? []).map((row) => row.branch_id).filter(Boolean))];
+  const legacyBranchProfileIds = [...new Set((legacyProfiles ?? []).map((row) => row.id))];
+  const branchPredicates = [
+    ...(branchIds.length ? [`id.in.(${branchIds.join(",")})`] : []),
+    ...(legacyBranchProfileIds.length ? [`legacy_branch_profile_id.in.(${legacyBranchProfileIds.join(",")})`] : []),
+  ];
+  const { data: linkedBranches, error: linkedBranchesError } = branchPredicates.length
+    ? await admin.from("partner_branches").select("id,legacy_branch_profile_id,contact_name").or(branchPredicates.join(","))
+    : { data: [] as { id: string; legacy_branch_profile_id: string | null; contact_name: string | null }[], error: null };
   const portalProfileIds = Array.from(new Set((portalAccountRows ?? []).map((account) => account.auth_user_id).filter(Boolean) as string[]));
   const { data: portalProfiles } = portalProfileIds.length
     ? await admin.from("profiles").select("id,full_name").in("id", portalProfileIds).returns<ProfileName[]>()
     : { data: [] as ProfileName[] };
   const profileNameById = new Map([...(profileRows ?? []), ...(portalProfiles ?? [])].map((item) => [item.id, item.full_name]));
   const portalAccountById = new Map((portalAccountRows ?? []).map((item) => [item.id, item]));
-  // An intake submitted by a branch's legacy profile must show the actual
-  // branch contact, not the branch / intermediary business display name.
+  const contactByBranchId = new Map((linkedBranches ?? []).map((row) => [row.id, row.contact_name?.trim() || ""]));
+  const contactByLegacyProfileId = new Map((linkedBranches ?? []).filter((row) => row.legacy_branch_profile_id).map((row) => [row.legacy_branch_profile_id!, row.contact_name?.trim() || ""]));
+  const legacyContactByPartnerId = new Map((legacyProfiles ?? []).map((row) => [row.partner_id, contactByLegacyProfileId.get(row.id) || row.contact_name?.trim() || ""]));
   const branchContactByProfileId = new Map((branchContacts ?? [])
     .filter((branch) => branch.legacy_branch_profile_id && branch.contact_name?.trim())
     .map((branch) => [branch.legacy_branch_profile_id!, branch.contact_name!.trim()]));
+  if (!loginLinksResult.error && !branchAccessResult.error && !legacyProfilesError && !linkedBranchesError) {
+    for (const link of loginLinksResult.data ?? []) {
+      const contact = contactByBranchId.get(link.branch_id);
+      if (contact) branchContactByProfileId.set(link.profile_id, contact);
+    }
+    for (const access of branchAccessResult.data ?? []) {
+      const contact = legacyContactByPartnerId.get(access.entity_id);
+      if (contact && !branchContactByProfileId.get(access.profile_id)) branchContactByProfileId.set(access.profile_id, contact);
+    }
+  }
 
   const rowsWithSubmitters: PolicyIntakeWorkspaceRow[] = rows.map((row) => {
     const profileId = row.submitted_by_profile_id;
