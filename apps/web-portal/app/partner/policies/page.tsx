@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  ArrowRight,
   FileText,
   Search,
   ShieldCheck,
@@ -198,7 +197,7 @@ export default async function PartnerPoliciesPage({
                   key={row.policy_id}
                   href={`/partner/policies/${encodeURIComponent(row.policy_id)}`}
                   prefetch={false}
-                  className="group grid gap-3 px-4 py-2.5 transition hover:bg-[#FBFDFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 xl:grid-cols-[1.05fr_1.05fr_.9fr_1.05fr_.85fr_.62fr_.7fr_.82fr_42px] xl:items-center xl:gap-4"
+                  className="group grid gap-3 px-4 py-2.5 transition hover:bg-[#FBFDFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 xl:grid-cols-[1.05fr_1.05fr_.9fr_1.05fr_.85fr_.62fr_.7fr_.82fr] xl:items-center xl:gap-4"
                 >
                   <div className="flex min-w-0 items-center gap-2.5">
                     {getInsurerLogo(row.insurer_name) ? (
@@ -250,9 +249,6 @@ export default async function PartnerPoliciesPage({
                     <p className="mt-0.5 truncate text-[7.8px] font-medium text-[#8391A3]">{row.intermediary_code || row.intermediary_type || "Direct"}</p>
                   </div>
 
-                  <span className="hidden h-7 w-7 place-items-center justify-self-end rounded-full bg-[#EEF4FA] text-[#6484A5] transition group-hover:bg-[#E3EDF8] group-hover:text-[#275E9A] xl:grid">
-                    <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
-                  </span>
                 </Link>
               );
             })}
