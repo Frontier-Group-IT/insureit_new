@@ -186,6 +186,7 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
           <button type="button" disabled={deletePending} aria-label="Delete document" title="Delete document" className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30 disabled:opacity-50" onClick={() => setDeleteOpen(true)}>
             <Trash2 aria-hidden="true" size={16} strokeWidth={2} />
           </button>
+          <VerificationActionButton claimId={claim.id} documentId={document.id} itemKey={item.verificationKey} incidentDate={claim.accident_at} policyStartDate={claim.policies?.start_date} policyEndDate={claim.policies?.end_date} prefillDetails={verification?.details ?? null} variant="icon" />
           <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentId={document.id} documentType={item.documentType} label={item.title} actionLabel="Replace" iconOnly />
           {verified ? <DocumentVerificationDetailsButton document={document} verification={verification ?? fallbackVerification(claim, item, document)} title={item.title} /> : null}
         </div>

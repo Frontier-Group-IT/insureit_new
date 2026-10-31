@@ -11,7 +11,7 @@ type Props = {
   periodShortLabel: string;
   selectedRmId: string | null;
 };
-const normalized = (name: string) => name.trim().toLocaleLowerCase("en-IN").replace(/\\s+/g, " ");
+const normalized = (name: string) => name.trim().toLocaleLowerCase("en-IN").replace(/\s+/g, " ");
 const money = (value: number) => "₹" + Math.round(value).toLocaleString("en-IN");
 
 // Initial organizational grouping is intentionally display-only: the canonical,
@@ -63,12 +63,24 @@ function HeadGroup({ head, reports, periodLabel, periodShortLabel }: { head: RmP
   const [directOpen, setDirectOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
   return <section className="overflow-hidden rounded-xl border border-[#D9E4F2] bg-white">
-    <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex w-full items-center justify-between gap-3 bg-[#F7FAFE] px-4 py-3 text-left">
-      <div><div className="flex items-center gap-2"><UsersRound className="h-4 w-4 text-[#244F86]"/><strong className="text-[13px] text-[#18365C]">{head.name}</strong><span className="text-[10px] font-bold text-[#71839E]">RM HEAD</span></div>
-      <p className="mt-1 text-[10px] text-[#71839E]">{head.contributionPercent.toFixed(1)}% period contribution · {reports.length} reporting RMs</p></div>
-      <ChevronDown className={`h-4 w-4 text-[#18365C] transition ${open ? "rotate-180" : ""}`}/>
+    <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="block w-full bg-[#F7FAFE] px-4 py-3 text-left hover:bg-[#F1F6FD]">
+      <div className="grid gap-2 xl:grid-cols-[minmax(190px,1.05fr)_minmax(260px,.9fr)_3px_minmax(260px,.9fr)_30px] xl:items-center">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2"><UsersRound className="h-4 w-4 shrink-0 text-[#244F86]"/><strong className="truncate text-[13px] text-[#18365C]">{head.name}</strong><span className="shrink-0 text-[9px] font-bold text-[#71839E]">RM HEAD</span></div>
+          <p className="mt-1 text-[10px] text-[#71839E]">{head.contributionPercent.toFixed(1)}% contribution · {reports.length} reporting RMs</p>
+        </div>
+        <div className="border-t border-[#DDE6F1] pt-1 xl:border-t-0 xl:pt-0">
+          <p className="text-[10px] font-bold uppercase text-[#607797]">Today</p>
+          <div className="grid grid-cols-2 gap-2"><div><span className="text-[9px] uppercase text-[#71839E]">Policies</span><p className="text-[12px] font-bold text-[#17345B]">{head.todayPolicies}</p></div><div><span className="text-[9px] uppercase text-[#71839E]">Net premium</span><p className="text-[12px] font-bold text-[#17345B]">{money(head.todayNetPremium)}</p></div></div>
+        </div>
+        <div className="hidden h-10 w-[3px] bg-[#A9BDD4] xl:block"/>
+        <div className="border-t border-[#DDE6F1] pt-1 xl:border-t-0 xl:pt-0">
+          <p className="text-[10px] font-bold uppercase text-[#607797]">{periodLabel}</p>
+          <div className="grid grid-cols-2 gap-2"><div><span className="text-[9px] uppercase text-[#71839E]">Policies</span><p className="text-[12px] font-bold text-[#17345B]">{head.mtdPolicies}</p></div><div><span className="text-[9px] uppercase text-[#71839E]">Net premium</span><p className="text-[12px] font-bold text-[#17345B]">{money(head.mtdNetPremium)}</p></div></div>
+        </div>
+        <ChevronDown className={`h-4 w-4 justify-self-end text-[#18365C] transition ${open ? "rotate-180" : ""}`}/>
+      </div>
     </button>
-    <div className="px-2 pb-2"><RmSummaryCard row={head} periodLabel={periodLabel} periodShortLabel={periodShortLabel}/></div>
     {open ? <div className="space-y-2 border-t border-[#E6EDF5] p-3">
       <div className="rounded-lg border border-[#E1EAF5] p-3">
         <button type="button" className="flex w-full items-center justify-between" aria-expanded={directOpen} onClick={() => setDirectOpen((v) => !v)}>
