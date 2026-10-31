@@ -62,7 +62,7 @@ export async function GET(request: Request) {
   const identity = auth.identity;
   const scope = auth.scope;
   const admin = createSupabaseAdminClient();
-  const intakeSelect = "id,intake_number,status,policy_type,lead_source_name,lead_source_type,lead_source_code,customer_mobile,file_name,ocr_status,ocr_fields,attention_reason,created_at,updated_at,final_policy_id";
+  const intakeSelect = "id,intake_number,status,policy_type,lead_source_name,lead_source_type,lead_source_code,customer_mobile,file_name,ocr_status,ocr_fields,attention_reason,created_at,updated_at,final_policy_id,submitted_by_profile_id,submitted_by_portal_account_id";
   const url = new URL(request.url);
   const requestedId = url.searchParams.get("id")?.trim();
   const view = url.searchParams.get("view")?.trim().toLowerCase();
@@ -180,9 +180,42 @@ export async function GET(request: Request) {
 
     if (listResult.error) throw listResult.error;
 
+    // Resolve submitter names only for records already authorized by intakeReadScope.
+    // Never infer the submitter from the lead source: multiple users share that source.
+    const intakes = listResult.data ?? [];
+    const profileIds = Array.from(new Set(intakes.map((row) => row.submitted_by_profile_id).filter((id): id is string => Boolean(id))));
+    const accountIds = Array.from(new Set(intakes.map((row) => row.submitted_by_portal_account_id).filter((id): id is string => Boolean(id))));
+    const [profilesResult, associatesResult, portalAccountsResult] = await Promise.all([
+      profileIds.length ? admin.from("profiles").select("id,full_name").in("id", profileIds) : Promise.resolve({ data: [] as Array<{id:string;full_name:string|null}>, error: null }),
+      accountIds.length ? admin.from("partner_portal_associate_accounts").select("id,name").in("id", accountIds) : Promise.resolve({ data: [] as Array<{id:string;name:string|null}>, error: null }),
+      accountIds.length ? admin.from("intermediary_portal_accounts").select("id,intermediary_id").in("id", accountIds) : Promise.resolve({ data: [] as Array<{id:string;intermediary_id:string|null}>, error: null }),
+    ]);
+    if (profilesResult.error || associatesResult.error || portalAccountsResult.error) {
+      throw new Error("Could not resolve policy intake submitters.");
+    }
+    const intermediaryIds = Array.from(new Set((portalAccountsResult.data ?? []).map((row) => row.intermediary_id).filter((id): id is string => Boolean(id))));
+    const intermediaryResult = intermediaryIds.length
+      ? await admin.from("intermediaries").select("id,display_name").in("id", intermediaryIds)
+      : { data: [] as Array<{id:string;display_name:string|null}>, error: null };
+    if (intermediaryResult.error) throw new Error("Could not resolve policy intake submitters.");
+    const profileNames = new Map((profilesResult.data ?? []).map((row) => [row.id, row.full_name?.trim() || ""]));
+    const accountNames = new Map((associatesResult.data ?? []).map((row) => [row.id, row.name?.trim() || ""]));
+    const intermediaryNames = new Map((intermediaryResult.data ?? []).map((row) => [row.id, row.display_name?.trim() || ""]));
+    for (const account of portalAccountsResult.data ?? []) {
+      if (account.intermediary_id && !accountNames.has(account.id)) {
+        accountNames.set(account.id, intermediaryNames.get(account.intermediary_id) || "");
+      }
+    }
+    const namedIntakes = intakes.map((row) => ({
+      ...row,
+      submitted_by_name: (row.submitted_by_profile_id ? profileNames.get(row.submitted_by_profile_id) : "")
+        || (row.submitted_by_portal_account_id ? accountNames.get(row.submitted_by_portal_account_id) : "")
+        || "Unknown submitter",
+    }));
+
     return json({
       ok: true,
-      intakes: listResult.data ?? [],
+      intakes: namedIntakes,
       total: listResult.count ?? 0,
       counts: { active, attention, progress, completed },
     });
