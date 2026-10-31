@@ -172,7 +172,7 @@ export default async function PartnerPoliciesPage({
           </div>
         </div>
 
-        <div className="hidden grid-cols-[1.05fr_1.05fr_.9fr_1.05fr_.85fr_.62fr_.7fr_.82fr_42px] items-center gap-4 border-b border-[#DFE6EE] bg-[#F4F7FA] px-4 py-2.5 xl:grid">
+        <div className="hidden grid-cols-[1.05fr_1.05fr_.9fr_1.05fr_.85fr_.62fr_.7fr_.82fr] items-center gap-4 border-b border-[#DFE6EE] bg-[#F4F7FA] px-4 py-2.5 xl:grid">
           {[
             "Policy / Product",
             "Customer",
@@ -182,7 +182,6 @@ export default async function PartnerPoliciesPage({
             "Status",
             "Gross Premium",
             "Source",
-            "",
           ].map((label, index) => (
             <p key={`${label}-${index}`} className="text-[8px] font-extrabold uppercase tracking-[0.035em] text-[#637B96]">{label}</p>
           ))}
