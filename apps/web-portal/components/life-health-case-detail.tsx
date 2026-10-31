@@ -20,7 +20,7 @@ const readOnlyField=`${field} bg-[#F8FAFC] text-[#64748B]`;
 const label="mb-1.5 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.055em] text-[#475467]";
 const frequencies=["Monthly","Quarterly","Half Yearly","Annually","One Time"];
 const modes=["Cheque","NEFT/RTGS","UPI","Credit/Debit Card","Net Banking"];
-const YEAR_OPTIONS=Array.from({length:50},(_,index)=>`${index+1} Year${index===0?"":"s"}`);
+const YEAR_OPTIONS=Array.from({length:100},(_,index)=>`${index+1} Year${index===0?"":"s"}`);
 const termOptions=(current:string,includeSinglePay:boolean)=>[...((current && current!=="Single Pay"&&!YEAR_OPTIONS.includes(current))?[current]:[]),...(includeSinglePay?["Single Pay"]:[]),...YEAR_OPTIONS];
 const normalizeCasePaymentMode=(value:string)=>{
   const normalized=value.trim().replace(/\s+/g," ").toLowerCase();
