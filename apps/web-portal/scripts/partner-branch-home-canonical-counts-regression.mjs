@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";import {readFileSync} from "node:fs";
+const home=readFileSync("app/partner/page.tsx","utf8");
+const scope=readFileSync("lib/partner-web.ts","utf8");
+assert.match(home,/getPartnerCanonicalBranchHomeCounts\(today\)/);
+assert.match(home,/branchCounts\?\.customers \?\? home\.business\.total_customers/);
+assert.match(home,/branchCounts\?\.renewalsDue30d \?\? home\.business\.renewals_30_days/);
+assert.match(scope,/partner_branch_authorized_customer_ids/);
+assert.match(scope,/partner_branch_authorized_renewal_policy_ids/);
+assert.match(scope,/session\.scope\.portal_access_type !== "branch"/);
+assert.doesNotMatch(scope,/\.eq\("branch_id",/);
+console.log("Canonical branch home customer and renewal scope regression passed");
