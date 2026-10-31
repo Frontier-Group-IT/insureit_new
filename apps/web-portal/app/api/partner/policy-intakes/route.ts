@@ -291,14 +291,23 @@ export async function POST(request: Request) {
 }
 
 async function authenticate(request: Request) {
-  const token = bearerToken(request.headers.get("authorization")) ?? await getServerAccessToken();
-  if (!token) return { ok: false as const, response: json({ ok: false, error: "Authentication required." }, 401) };
+  // Prefer the HttpOnly session installed by /auth/session. An older browser-side
+  // Supabase token can coexist with a valid server cookie after a password reset.
+  const cookieToken = await getServerAccessToken();
+  const bearer = bearerToken(request.headers.get("authorization"));
+  const candidates = [...new Set([cookieToken, bearer].filter((value): value is string => Boolean(value)))];
+  if (!candidates.length) return { ok: false as const, response: json({ ok: false, error: "Authentication required." }, 401) };
 
-  const scoped = createSupabaseWithAccessToken(token);
-  const { data: userData, error: userError } = await scoped.auth.getUser(token);
-  if (userError || !userData.user) {
-    return { ok: false as const, response: json({ ok: false, error: "Authentication required." }, 401) };
+  let scoped: ReturnType<typeof createSupabaseWithAccessToken> | null = null;
+  for (const token of candidates) {
+    const candidate = createSupabaseWithAccessToken(token);
+    const { data, error } = await candidate.auth.getUser(token);
+    if (!error && data.user) {
+      scoped = candidate;
+      break;
+    }
   }
+  if (!scoped) return { ok: false as const, response: json({ ok: false, error: "Authentication required." }, 401) };
 
   const [{ data: identityData, error: identityError }, { data: scopeData, error: scopeError }] = await Promise.all([
     scoped.rpc("partner_app_current_identity"),
