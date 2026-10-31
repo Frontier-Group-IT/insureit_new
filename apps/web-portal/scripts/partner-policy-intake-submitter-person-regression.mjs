@@ -5,4 +5,12 @@ const list=readFileSync("components/partner-portal/partner-policy-intake-list-cl
 for(const key of ["partner_branch_login_links","portal_access_identities","partner_branch_profiles","partner_branches","contact_name","branchContactByProfile","submitted_by_profile_id","submitted_by_portal_account_id"])assert.ok(route.includes(key),key);
 assert.match(route,/associatesResult\.data/);
 assert.match(list,/row\.submitted_by_name/);
-console.log("Partner Policy Intake submitter identity regression passed");
+const client=readFileSync("lib/partner-policy-intakes-client.ts","utf8");
+assert.match(route,/const cookieToken = await getServerAccessToken\(\)/,"API must read secure session cookie");
+assert.match(route,/const candidates = \[\.\.\.new Set/,"API must try distinct verified candidates");
+assert.match(route,/candidate\.auth\.getUser\(token\)/,"API must verify each token with Supabase");
+assert.match(client,/if \(response\.status === 401\)/,"Client must recover unauthorized intake request");
+assert.match(client,/supabase\.auth\.refreshSession\(\)/,"Client must refresh expired token");
+assert.match(client,/fetch\("\/auth\/session"/,"Client must synchronize secure cookie");
+assert.match(client,/if \(synced\.ok\)/,"Client must retry only after verified session sync");
+console.log("Partner Policy Intake submitter identity and session recovery regression passed");

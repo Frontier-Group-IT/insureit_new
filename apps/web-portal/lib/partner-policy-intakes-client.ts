@@ -229,15 +229,31 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   let response = await send(accessToken);
 
   if (response.status === 401) {
+    // A Partner page may still be open while its secure cookie has expired.
+    // Refresh once and synchronize the HttpOnly cookie before retrying.
     const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
-    const refreshedToken = refreshed.session?.access_token;
-    if (!refreshError && refreshedToken && refreshedToken !== accessToken) {
-      accessToken = refreshedToken;
-      response = await send(accessToken);
+    const session = refreshed.session;
+    if (!refreshError && session?.access_token && session.refresh_token) {
+      const synced = await fetch("/auth/session", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+          expires_in: session.expires_in,
+        }),
+        cache: "no-store",
+      });
+      if (synced.ok) {
+        accessToken = session.access_token;
+        response = await send(accessToken);
+      }
     }
   }
 
   const payload = await response.json().catch(() => null) as ({ ok?: boolean; error?: string } & Partial<T>) | null;
+  if (response.status === 401) throw new Error("Your session has expired. Please sign in again to continue.");
   if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Policy Intake request failed.");
   return payload as T;
 }
