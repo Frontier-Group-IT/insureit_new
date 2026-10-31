@@ -8,6 +8,7 @@ import {
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import {
+  getPartnerCanonicalPolicySummary,
   getPartnerWebBusinessPerformance,
   getPartnerWebBusinessRange,
   getPartnerWebClaimSummary,
@@ -183,6 +184,7 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
     renewalSummary,
     activeScheme,
     scopedPolicySummary,
+    canonicalPolicySummary,
   ] = await Promise.all([
     getPartnerWebSession(),
     getPartnerWebHome(),
@@ -196,6 +198,7 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
     getPartnerWebRenewalSummary(),
     getPartnerWebActiveScheme(),
     getPartnerWebPolicySummary(),
+    getPartnerCanonicalPolicySummary(),
   ]);
 
   const today = currentKolkataIsoDate();
@@ -265,9 +268,14 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
     const amount = Number(value ?? 0);
     return total + (Number.isFinite(amount) ? amount : 0);
   }, 0);
-  // Branch policy counts must use the same authorized scope as the Policy Register.
-  // The business-performance RPC can lag the expanded branch child-partner scope.
-  const homePolicyCount = isBranchLogin ? scopedPolicySummary.total_policies : businessPerformance.total_policies;
+  // Canonical policy IDs consolidate each Partner's own and authorized Branch policies,
+  // and isolate Branch sessions to their own policy IDs without duplicate counting.
+  // This does not change how active-policy counts or financial metrics are calculated.
+  const hasCanonicalPartnerScope = identity.actor_kind === "intermediary"
+    && (identity.intermediary_type === "partner" || isBranchLogin);
+  const homePolicyCount = hasCanonicalPartnerScope
+    ? canonicalPolicySummary.policies
+    : isBranchLogin ? scopedPolicySummary.total_policies : businessPerformance.total_policies;
   const homeActivePolicyCount = isBranchLogin ? scopedPolicySummary.in_force_policies : home.business.active_policies;
   const partnerFamilyCount = network.scope_mode === "self"
     ? network.partners.length
