@@ -20,7 +20,7 @@ const inputClass = "h-10 w-full rounded-xl border border-[#D8DEE9] bg-white px-3
 const labelClass = "mb-1.5 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.055em] text-[#475467]";
 const frequencies = ["Monthly","Quarterly","Half Yearly","Annually","One Time"];
 const modes = ["Cash","Cheque","NEFT/RTGS","UPI","Credit/Debit Card","Net Banking"];
-const years = Array.from({length:50},(_,i)=>`${i+1} Year${i?"s":""}`);
+const years = Array.from({length:100},(_,i)=>`${i+1} Year${i?"s":""}`);
 const documentLabels: Array<[LifeHealthIssuedDocumentType,string]> = [["policy_copy","Policy Copy"],["proposal_form","Proposal Form"],["benefit_illustration","Illustration Form"],["premium_receipt","Payment Receipt"],["other_document","Other Form"]];
 
 export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, activityItems, documents, commercialAccess, commercialSummary }: Props) {
