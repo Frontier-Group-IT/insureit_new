@@ -7,7 +7,7 @@ import { loadRmPerformance, type RmPerformanceQuery } from "@/lib/rm-performance
 import { loadFinanceReport } from "@/lib/reports/finance";
 import { RmPerformanceFilters } from "@/app/rm-performance/rm-performance-filters";
 import { RmPerformanceTrendChart } from "@/app/rm-performance/rm-performance-trend-chart";
-import { RmSummaryCard } from "@/app/rm-performance/rm-summary-card";
+import { RmHierarchySummary } from "@/app/rm-performance/rm-hierarchy-summary";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -56,7 +56,7 @@ export default async function RmPerformancePage({ searchParams }: { searchParams
 
         <section className="mt-3 overflow-hidden rounded-[18px] border border-[#DCE4EE] bg-white shadow-[0_10px_28px_rgba(30,49,80,.04)]">
           <div className="flex items-center justify-between border-b border-[#E9EDF3] px-5 py-3.5"><h2 className="text-[14px] font-bold text-[#172744]">RM Daily Summary</h2><span className="text-[10.5px] font-semibold text-[#647286]">{data.rows.length} RM{data.rows.length === 1 ? "" : "s"}</span></div>
-          <div className="space-y-2 bg-[#F7F9FC] p-2">{data.rows.length ? data.rows.map((row) => <RmSummaryCard key={row.employeeId ?? row.name} row={row} periodLabel={data.period.label} periodShortLabel={data.period.shortLabel} />) : <div className="rounded-xl border border-[#E4E9F1] bg-white"><Empty label="No RM production is available for the current scope." /></div>}</div>
+          <div className="space-y-2 bg-[#F7F9FC] p-2">{data.rows.length ? <RmHierarchySummary rows={data.rows} periodLabel={data.period.label} periodShortLabel={data.period.shortLabel} selectedRmId={data.selectedRmId} /> : <div className="rounded-xl border border-[#E4E9F1] bg-white"><Empty label="No RM production is available for the current scope." /></div>}</div>
         </section>
       </div>
     </AppShell>
