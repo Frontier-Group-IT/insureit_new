@@ -1,11 +1,13 @@
 import type { ReactNode } from "react";
+import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { PartnerReportTabs } from "@/components/partner-portal/partner-report-tabs";
 import type { PartnerReportScope } from "@/lib/reports/partner-report-scope";
 type Tab = "Overview" | "Business";
 /** Presentation only. Data remains in account-scoped Partner RPCs, never employee/admin loaders. */
 export function PartnerReportsShell({ active, scope, children }: { active: Tab; scope: PartnerReportScope; children: ReactNode }) {
   const label = scope.role === "group" || scope.role === "group_associate" ? "Assigned group" : scope.role === "branch" ? "Your branch" : "Assigned partner";
-  return <main className="reports-reference-shell report-page-shell mx-auto max-w-[1560px] min-h-screen space-y-3 bg-[#F6F8FC] px-3 pb-24 pt-3 text-[#11254A] sm:px-5 lg:ml-[268px] lg:pb-8">
+  return <PartnerPortalShell title={active === "Overview" ? "Reports" : "Business Reports"}>
+    <div className="reports-reference-shell report-page-shell mx-auto w-full max-w-[1560px] space-y-3 bg-[#F6F8FC] text-[#11254A]">
     <header className="reports-reference-header" aria-label="Reports">
       <div className="reports-reference-topbar">
         <div className="reports-reference-left">
@@ -17,5 +19,6 @@ export function PartnerReportsShell({ active, scope, children }: { active: Tab; 
       </div>
     </header>
     {children}
-  </main>;
+    </div>
+  </PartnerPortalShell>;
 }
