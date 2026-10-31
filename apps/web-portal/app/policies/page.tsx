@@ -222,7 +222,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
   // A parent-source selection must never broaden an RM's accessible policy rows.
   const hierarchy = await resolveRmPartnerPolicyAttribution(rows.map((policy) => policy.id));
   const parentByPolicy = new Map([...hierarchy].map(([id, value]) =>
-    [id, { code: value.parentCode, branchCode: value.branchCode }] as const,
+    [id, { code: value.parentCode, branchCode: value.legacyBranchCode }] as const,
   ));
 
   const allowedSourceKeys = new Set(rows.map((policy) => {
