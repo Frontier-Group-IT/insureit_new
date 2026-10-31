@@ -65,7 +65,7 @@ export function AssociateAccountActionsMenu({
         <button type="button" aria-label={`Edit ${associate.name}`} title="Edit" onClick={() => showDialog("edit")} className="grid h-8 w-8 place-items-center rounded-lg text-[#334155] transition hover:bg-[#E8F0FA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315FEA]">
           <Pencil className="h-4 w-4" aria-hidden="true" />
         </button>
-        <button type="button" aria-label={`${associate.status === "disabled" ? "Enable" : "Disable"} ${associate.name}`} title={associate.status === "disabled" ? "Enable" : "Disable"} onClick={() => showDialog("status")} className="grid h-8 w-8 place-items-center rounded-lg text-[#64748B] transition hover:bg-[#F1F5F9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315FEA]">
+        <button type="button" aria-label={`${associate.status === "disabled" ? "Enable" : "Disable"} ${associate.name}`} title={associate.status === "disabled" ? "Enable" : "Disable"} onClick={() => showDialog("status")} className={`grid h-8 w-8 place-items-center rounded-lg transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315FEA] ${associate.status === "disabled" ? "text-red-600 hover:bg-red-50" : "text-[#64748B] hover:bg-[#F1F5F9]"}`}>
           <Ban className="h-4 w-4" aria-hidden="true" />
         </button>
         <form action={resendPartnerAssociateInvite} className="inline-flex">

@@ -267,14 +267,36 @@ export async function deletePartnerAssociateAccount(formData: FormData) {
   const context = await loadManagedAssociate(formData);
   const admin = createSupabaseAdminClient();
 
+  // Fail closed: never remove related business records in order to force an Auth deletion.
+  // An Auth FK rejection indicates linked records; retain the account for investigation.
   const { error: authError } = await admin.auth.admin.deleteUser(context.associate.auth_user_id);
-  if (authError) redirect(`${context.returnPath}?error=associate_delete_failed`);
+  if (authError) {
+    console.error("[associate-delete] Auth deletion blocked", {
+      associateId: context.associate.id,
+      authUserId: context.associate.auth_user_id,
+      code: authError.code ?? null,
+      message: authError.message,
+    });
+    const dependencyBlocked = /foreign.key|constraint|referenc|dependenc|database error/i.test(authError.message);
+    redirect(`${context.returnPath}?error=${dependencyBlocked ? "associate_delete_dependencies" : "associate_delete_failed"}`);
+  }
 
-  // auth.users is the ownership root. The account FK cascades on auth deletion;
-  // explicit cleanup is idempotent and covers environments where the profile is not cascaded.
-  await admin.from("partner_portal_associate_accounts").delete().eq("id", context.associate.id);
-  await admin.from("profiles").delete().eq("id", context.associate.auth_user_id);
-
+  // The Auth user is the ownership root. Verify cascades and do not report success
+  // if either related record remains; do not run unchecked or forced deletes.
+  const [{ data: remainingAccount, error: accountCheckError }, { data: remainingProfile, error: profileCheckError }] = await Promise.all([
+    admin.from("partner_portal_associate_accounts").select("id").eq("id", context.associate.id).maybeSingle(),
+    admin.from("profiles").select("id").eq("id", context.associate.auth_user_id).maybeSingle(),
+  ]);
+  if (accountCheckError || profileCheckError || remainingAccount || remainingProfile) {
+    console.error("[associate-delete] Related record verification failed", {
+      associateId: context.associate.id,
+      accountCheckError: accountCheckError?.message ?? null,
+      profileCheckError: profileCheckError?.message ?? null,
+      accountRemains: Boolean(remainingAccount),
+      profileRemains: Boolean(remainingProfile),
+    });
+    redirect(`${context.returnPath}?error=associate_delete_incomplete`);
+  }
   finish(context.returnPath, context.applicationId, "associate_account_deleted");
 }
 

@@ -299,7 +299,7 @@ function StatusPill({ status }: { status: string }) {
   const active = status === "active";
   const invited = status === "invited";
   return (
-    <span className={`inline-flex rounded-full px-2.5 py-1 text-[8px] font-bold uppercase tracking-[0.05em] ${active ? "bg-[#EAF8EF] text-[#267A49]" : invited ? "bg-[#FFF4D9] text-[#A76600]" : "bg-[#F1F5F9] text-[#64748B]"}`}>
+    <span className={`inline-flex rounded-full px-2.5 py-1 text-[8px] font-bold uppercase tracking-[0.05em] ${active ? "bg-[#EAF8EF] text-[#267A49]" : invited ? "bg-[#FFF4D9] text-[#A76600]" : status === "disabled" ? "bg-red-50 text-red-700" : "bg-[#F1F5F9] text-[#64748B]"}`}>
       {active ? "Active" : invited ? "Invitation Sent" : status === "pending" ? "Invitation Pending" : status === "disabled" ? "Disabled" : "Status Unavailable"}
     </span>
   );

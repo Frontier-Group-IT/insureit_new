@@ -57,8 +57,8 @@ export function AssociateAccountResultToast({
         <div
           role="alertdialog"
           aria-modal="true"
-          aria-labelledby="associate-email-in-use-title"
-          aria-describedby="associate-email-in-use-message"
+          aria-labelledby="associate-result-error-title"
+          aria-describedby="associate-result-error-message"
           className="w-full max-w-[360px] rounded-2xl border border-[#E7ECF3] bg-white p-5 shadow-[0_24px_70px_rgba(15,23,42,0.22)]"
         >
           <div className="flex items-start gap-3">
@@ -67,14 +67,15 @@ export function AssociateAccountResultToast({
             </span>
             <div className="min-w-0 flex-1">
               <h2 id="associate-email-in-use-title" className="text-[13px] font-bold text-[#17203A]">
-                Email Already in Use
+                Check details
               </h2>
               <p id="associate-email-in-use-message" className="mt-1.5 text-[10.5px] leading-5 text-[#5B667A]">
                 {message}
               </p>
             </div>
           </div>
-          <div className="mt-5 flex justify-end">
+          <div className="mt-5 flex justify-end gap-2">
+            <button type="button" onClick={dismissAcknowledgement} className="h-9 min-w-[76px] rounded-xl border border-[#D5DCE7] px-5 text-[10px] font-bold text-[#334155]">Cancel</button>
             <button
               type="button"
               autoFocus
