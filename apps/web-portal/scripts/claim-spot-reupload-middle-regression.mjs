@@ -1,0 +1,15 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const group=readFileSync("components/spot-survey/bulk-document-verification-group.tsx","utf8");
+const button=readFileSync("components/spot-survey/replace-document-button.tsx","utf8");
+const actions=readFileSync("app/claims/[id]/claim-document-upload-actions.ts","utf8");
+const fileRow=group.slice(group.indexOf("function DocumentFileRow("));
+const replace=fileRow.indexOf('actionLabel="Replace" iconOnly reuploadIcon');
+const verify=fileRow.indexOf('variant="icon"');
+assert.ok(replace>=0 && verify>replace, "Re-upload must be the middle action, before separate verification");
+assert.match(button,/isReupload \? "reupload" : "replace"/);
+assert.match(button,/isReupload \? <RefreshCw/);
+assert.match(button,/prepareClaimDocumentUpload\(claimId, documentType/);
+assert.match(button,/finalizeClaimDocumentUpload\(claimId,documentType/);
+assert.match(actions,/verification_status: "pending"/);
+console.log("Spot document re-upload middle-action regression passed");
