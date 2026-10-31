@@ -127,7 +127,7 @@ export default async function PartnerAssociateAccountsPage({
           <AssociateAccountResultToast
             tone="error"
             message={query.error === "branch_parent_mismatch" ? "The Branch parent does not match this Partner. No Branch was created." : errorMessage(query.associate_error ?? query.error ?? "", query.retry_after)}
-            acknowledge={isAssociateEmailInUse(query.associate_error ?? query.error ?? "")}
+            acknowledge
           />
         ) : null}
 
@@ -288,7 +288,7 @@ function StatusPill({ value }: { value: Associate["status"] }) {
     ? "border-blue-200 bg-blue-50 text-blue-700"
     : value === "active"
       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-      : "border-slate-200 bg-slate-100 text-slate-600";
+      : "border-red-200 bg-red-50 text-red-700";
   return <span className={`inline-flex rounded-full border px-2.5 py-1 text-[8.5px] font-semibold ${style}`}>{label}</span>;
 }
 function UserIcon() {
@@ -346,7 +346,9 @@ function errorMessage(value: string, retryAfter?: string) {
   if (decoded === "associate_not_found") return "That associate account is no longer available.";
   if (decoded === "associate_update_failed") return "The associate details could not be updated.";
   if (decoded === "associate_status_failed") return "The associate login status could not be changed.";
-  if (decoded === "associate_delete_failed") return "The associate account could not be deleted.";
+  if (decoded === "associate_delete_dependencies") return "Deletion blocked: this account has linked records.";
+  if (decoded === "associate_delete_incomplete") return "Deletion could not be verified. Contact an administrator.";
+  if (decoded === "associate_delete_failed") return "Account deletion failed. No linked records were removed.";
   if (decoded === "associate_enable_before_resend") return "Enable this associate account before resending the invitation link.";
   if (decoded === "associate_email_cooldown") {
     const seconds = Number(retryAfter ?? "0");
