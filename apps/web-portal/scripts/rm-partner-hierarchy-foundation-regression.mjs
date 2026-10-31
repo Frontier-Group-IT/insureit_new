@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const resolver=readFileSync("lib/rm-partner-hierarchy.ts","utf8");
+const page=readFileSync("app/policies/page.tsx","utf8");
+assert.match(resolver,/\.in\("policy_id", ids\.slice\(start, start \+ 200\)\)/);
+assert.match(resolver,/const resolved = new Map/);
+assert.match(resolver,/filterAuthorizedPoliciesByParent/);
+assert.match(resolver,/authorizedRows\.filter\(/);
+assert.match(page,/resolveRmPartnerPolicyAttribution\(rows\.map\(\(policy\) => policy\.id\)\)/);
+assert.match(page,/getAccessiblePolicyRmEmployeeIds/);
+assert.match(page,/\.in\("rm_employee_id", accessibleRmEmployeeIds\)/);
+assert.match(page,/branch_source_code: attribution\?\.branchCode/);
+console.log("RM partner hierarchy foundation regression passed");
