@@ -1,5 +1,5 @@
 import type { OperationsDashboardData } from "@/lib/operations-dashboard";
-import { getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
+import { getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
 import {
   getAccessibleCustomerIds,
   getAccessibleIntermediaryApplicationIds,
@@ -316,8 +316,17 @@ export async function getDashboardCurrentData(
   const downlinePolicyFilter = isDownlineHead
     ? operationsHeadVisiblePolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))
     : null;
-  const policyRequest = access.viewPolicies && (isDownlineHead ? Boolean(downlinePolicyFilter) : policyCustomerIds?.length !== 0)
-    ? loadDashboardPolicies(admin, isDownlineHead ? null : policyCustomerIds, downlinePolicyFilter)
+  // For RMs, match the Policy Register's explicit RM policy ownership scope.
+  // Customer visibility must not grant access to another RM's policies.
+  const rmPolicyIds = profile.role === "relationship_manager" && access.viewPolicies
+    ? await getAccessiblePolicyRmEmployeeIds(profile.id, profile.role, "view_policies")
+    : undefined;
+  const policyRequest = access.viewPolicies && (
+    isDownlineHead ? Boolean(downlinePolicyFilter)
+      : rmPolicyIds !== undefined ? (rmPolicyIds === null || rmPolicyIds.length > 0)
+      : policyCustomerIds?.length !== 0
+  )
+    ? loadDashboardPolicies(admin, isDownlineHead ? null : policyCustomerIds, downlinePolicyFilter, rmPolicyIds)
     : Promise.resolve({ data: [] as PolicyRow[], error: null });
 
   const vehicleRequest = access.viewVehicles && vehicleCustomerIds?.length !== 0
@@ -853,6 +862,7 @@ async function loadDashboardPolicies(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   customerIds: string[] | null,
   downlineFilter?: string | null,
+  rmEmployeeIds?: string[] | null,
 ) {
   const rows: PolicyRow[] = [];
   for (let from = 0; ; from += dashboardPageSize) {
@@ -862,7 +872,9 @@ async function loadDashboardPolicies(
       .order("id", { ascending: true })
       .range(from, from + dashboardPageSize - 1);
     if (downlineFilter) query = query.or(downlineFilter);
-    else if (customerIds !== null) query = query.in("customer_id", customerIds);
+    else if (rmEmployeeIds !== undefined) {
+      if (rmEmployeeIds !== null) query = query.in("rm_employee_id", rmEmployeeIds);
+    } else if (customerIds !== null) query = query.in("customer_id", customerIds);
     const result = await query.returns<PolicyRow[]>();
     if (result.error) return { data: null, error: result.error };
     const page = result.data ?? [];
