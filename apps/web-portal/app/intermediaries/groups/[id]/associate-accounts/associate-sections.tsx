@@ -64,7 +64,7 @@ export async function GroupAssociateSections({id,query:q={},surface="operations"
       <td className="p-3">{[groupAdmin.address,groupAdmin.city,groupAdmin.state,groupAdmin.postal_code].filter(Boolean).join(", ")||"—"}</td>
       <td className="p-3"><span className="rounded-full border px-2 py-1">Group Administrator</span></td>
       <td className="p-3"><span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${identity?.status==="disabled"?"bg-red-100 text-red-700":"bg-green-100 text-green-700"}`}>{identity?.status==="disabled"?"Disabled":"Active"}</span></td>
-      <td className="p-3"><GroupAdminMenu groupId={id} contact={groupAdmin} loginStatus={identity?.status==="active"||identity?.status==="disabled"?identity.status:null}/></td>
+      <td className="p-3"><GroupAdminMenu groupId={id} contact={groupAdmin} loginStatus={identity?.status==="active"||identity?.status==="disabled"?identity.status:null} authUserId={identity?.profile_id??null}/></td>
     </tr> : null}{(associates??[]).map(a=><tr key={a.id} className="border-t">
       <td className="p-3">{a.name}</td><td className="p-3">{a.phone_number}</td><td className="p-3">{a.email}</td><td className="p-3">{a.designation}</td>
       <td className="p-3">{[a.address,a.city,a.state,a.postal_code].filter(Boolean).join(", ")||"–"}</td>
