@@ -53,7 +53,7 @@ export async function GroupAssociateSections({id,query:q={},surface="operations"
    </details>
    {headerPartnerAssignment ? <div className="border-t border-[#E7ECF3] px-4 py-2 lg:absolute lg:right-4 lg:top-1 lg:w-[395px] lg:border-0 lg:p-0">{headerPartnerAssignment}</div> : null}
    </div> : null}
-   <GroupRegisterTabs partners={partners} addPartner={surface==="operations"?headerPartnerAssignment:null} associates={<section className="overflow-x-auto bg-white">
+   <GroupRegisterTabs groupId={id} allowRemoval={surface==="operations"} partners={partners} addPartner={surface==="operations"?headerPartnerAssignment:null} associates={<section className="overflow-x-auto bg-white">
     <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><h2 className="text-sm font-semibold">Associate Accounts Register</h2>{createEntry}</div>
     {hasRegisterRecords ? <table className="w-full min-w-[1060px] text-left text-xs"><thead className="bg-slate-50"><tr>{["Name","Phone Number","Email","Designation","Address","Role","Status","Action"].map(h=><th key={h} className="p-3">{h}</th>)}</tr></thead>
     <tbody>{groupAdmin ? <tr className="border-t bg-[#F8FBFF]">
