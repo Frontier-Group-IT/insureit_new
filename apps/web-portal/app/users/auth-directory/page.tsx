@@ -13,7 +13,8 @@ async function fetchRows<T>(table:string,columns:string):Promise<T[]> {
   if(result.error) throw new Error("Cannot load identity directory data.");
   return (result.data??[]) as T[];
 }
-export default async function AuthDirectoryPage() {
+export default async function AuthDirectoryPage({searchParams}:{searchParams?:Promise<{user_id?:string}>}) {
+  const requestedUserId=(await searchParams)?.user_id??null;
   const { profile } = await getAuthenticatedProfile(await getServerAccessToken());
   if (!profile || profile.role !== "it_super_user" || !profile.is_active) redirect("/access-denied");
   const admin=createSupabaseAdminClient();
@@ -57,6 +58,6 @@ export default async function AuthDirectoryPage() {
   });
   return <AppShell title="Auth Password Management"><main className="mx-auto max-w-[1700px] space-y-4 pb-8">
     <header><h1 className="text-xl font-bold text-slate-900">Auth Password Management</h1><p className="text-xs text-slate-500">IT Super User · Complete Supabase Auth directory · customer phone numbers concealed</p></header>
-    <AuthDirectoryTable rows={rows}/>
+    <AuthDirectoryTable rows={rows} requestedUserId={requestedUserId}/>
   </main></AppShell>;
 }
