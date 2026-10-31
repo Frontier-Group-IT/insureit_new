@@ -43,63 +43,84 @@ function SourceColumns({ sources, periodLabel }: { sources: RmPerformanceRow["so
   </div>;
 }
 
-function TeamMetrics({ own, reports, periodLabel }: { own: RmPerformanceRow; reports: RmPerformanceRow[]; periodLabel: string }) {
-  const all = [own, ...reports];
-  const policies = all.reduce((sum, row) => sum + row.mtdPolicies, 0);
-  const net = all.reduce((sum, row) => sum + row.mtdNetPremium, 0);
-  const todayPolicies = all.reduce((sum, row) => sum + row.todayPolicies, 0);
-  const todayNet = all.reduce((sum, row) => sum + row.todayNetPremium, 0);
-  return <div className="rounded-lg border border-[#DCE5F0] bg-[#F5F8FD] px-3 py-2">
-    <div className="mb-2 flex items-center justify-between"><strong className="text-xs text-[#18365C]">RM Head Team Total</strong><span className="text-[10px] text-[#61738E]">Own + reporting RMs</span></div>
-    <div className="grid grid-cols-2 gap-3 text-xs">
-      <div><p className="text-[10px] font-semibold text-[#62758F]">TODAY</p><strong>{money(todayNet)}</strong><p>{todayPolicies} policies</p></div>
-      <div><p className="text-[10px] font-semibold uppercase text-[#62758F]">{periodLabel}</p><strong>{money(net)}</strong><p>{policies} policies</p></div>
-    </div>
-  </div>;
+
+type Metrics = Pick<RmPerformanceRow, "todayPolicies" | "todayNetPremium" | "mtdPolicies" | "mtdNetPremium">;
+function sumMetrics(rows: RmPerformanceRow[]): Metrics {
+  return rows.reduce<Metrics>((total, row) => ({
+    todayPolicies: total.todayPolicies + row.todayPolicies,
+    todayNetPremium: total.todayNetPremium + row.todayNetPremium,
+    mtdPolicies: total.mtdPolicies + row.mtdPolicies,
+    mtdNetPremium: total.mtdNetPremium + row.mtdNetPremium,
+  }), { todayPolicies: 0, todayNetPremium: 0, mtdPolicies: 0, mtdNetPremium: 0 });
 }
 
-function HeadGroup({ head, reports, periodLabel, periodShortLabel }: { head: RmPerformanceRow; reports: RmPerformanceRow[]; periodLabel: string; periodShortLabel: string }) {
-  const [open, setOpen] = useState(false);
-  const [directOpen, setDirectOpen] = useState(false);
-  const [reportsOpen, setReportsOpen] = useState(false);
+function PerformanceHeading({ name, description, metrics, periodLabel, open, onToggle, icon }: {
+  name: string; description?: string; metrics: Metrics; periodLabel: string; open: boolean; onToggle: () => void; icon: "head" | "direct" | "reports";
+}) {
+  return <button type="button" onClick={onToggle} aria-expanded={open}
+    className={`w-full px-4 py-3 text-left transition-colors ${open ? "bg-[#EAF3FF]" : "bg-white hover:bg-[#F7FAFE]"}`}>
+    <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_20px] items-center gap-2 md:gap-3">
+      <div className="min-w-0">
+        <div className="flex items-center gap-1.5">
+          {icon === "direct" ? <BriefcaseBusiness className="h-4 w-4 shrink-0 text-[#245AA1]"/> : <UsersRound className="h-4 w-4 shrink-0 text-[#245AA1]"/>}
+          <strong className="min-w-0 break-words text-[11px] text-[#173B70] md:text-[13px]">{name}</strong>
+        </div>
+        {description ? <p className="mt-1 text-[9px] text-[#617A9C]">{description}</p> : null}
+      </div>
+      <div className="min-w-0">
+        <p className="text-[9px] font-bold uppercase text-[#607797]">Today</p>
+        <p className="text-[10px] font-semibold text-[#17345B] md:text-[12px]">{metrics.todayPolicies} policies</p>
+        <p className="break-words text-[10px] font-bold text-[#17345B] md:text-[12px]">{money(metrics.todayNetPremium)}</p>
+      </div>
+      <div className="min-w-0">
+        <p className="text-[9px] font-bold uppercase text-[#607797]">{periodLabel}</p>
+        <p className="text-[10px] font-semibold text-[#17345B] md:text-[12px]">{metrics.mtdPolicies} policies</p>
+        <p className="break-words text-[10px] font-bold text-[#17345B] md:text-[12px]">{money(metrics.mtdNetPremium)}</p>
+      </div>
+      <ChevronDown className={`h-4 w-4 text-[#245AA1] transition-transform ${open ? "rotate-180" : ""}`}/>
+    </div>
+  </button>;
+}
+
+function HeadGroup({ head, reports, periodLabel, periodShortLabel, open, onToggle }: {
+  head: RmPerformanceRow; reports: RmPerformanceRow[]; periodLabel: string; periodShortLabel: string; open: boolean; onToggle: () => void;
+}) {
+  const [activeSection, setActiveSection] = useState<"direct" | "reports" | null>(null);
+  const [openReportId, setOpenReportId] = useState<string | null>(null);
+  const reportingMetrics = sumMetrics(reports);
+  const teamMetrics = sumMetrics([head, ...reports]);
   return <section className="overflow-hidden rounded-xl border border-[#D9E4F2] bg-white">
-    <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="block w-full bg-[#F7FAFE] px-4 py-3 text-left hover:bg-[#F1F6FD]">
-      <div className="grid gap-2 xl:grid-cols-[minmax(190px,1.05fr)_minmax(260px,.9fr)_3px_minmax(260px,.9fr)_30px] xl:items-center">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2"><UsersRound className="h-4 w-4 shrink-0 text-[#244F86]"/><strong className="truncate text-[13px] text-[#18365C]">{head.name}</strong><span className="shrink-0 text-[9px] font-bold text-[#71839E]">RM HEAD</span></div>
-          <p className="mt-1 text-[10px] text-[#71839E]">{head.contributionPercent.toFixed(1)}% contribution · {reports.length} reporting RMs</p>
-        </div>
-        <div className="border-t border-[#DDE6F1] pt-1 xl:border-t-0 xl:pt-0">
-          <p className="text-[10px] font-bold uppercase text-[#607797]">Today</p>
-          <div className="grid grid-cols-2 gap-2"><div><span className="text-[9px] uppercase text-[#71839E]">Policies</span><p className="text-[12px] font-bold text-[#17345B]">{head.todayPolicies}</p></div><div><span className="text-[9px] uppercase text-[#71839E]">Net premium</span><p className="text-[12px] font-bold text-[#17345B]">{money(head.todayNetPremium)}</p></div></div>
-        </div>
-        <div className="hidden h-10 w-[3px] bg-[#A9BDD4] xl:block"/>
-        <div className="border-t border-[#DDE6F1] pt-1 xl:border-t-0 xl:pt-0">
-          <p className="text-[10px] font-bold uppercase text-[#607797]">{periodLabel}</p>
-          <div className="grid grid-cols-2 gap-2"><div><span className="text-[9px] uppercase text-[#71839E]">Policies</span><p className="text-[12px] font-bold text-[#17345B]">{head.mtdPolicies}</p></div><div><span className="text-[9px] uppercase text-[#71839E]">Net premium</span><p className="text-[12px] font-bold text-[#17345B]">{money(head.mtdNetPremium)}</p></div></div>
-        </div>
-        <ChevronDown className={`h-4 w-4 justify-self-end text-[#18365C] transition ${open ? "rotate-180" : ""}`}/>
+    <PerformanceHeading name={head.name} description={`RM HEAD · ${head.contributionPercent.toFixed(1)}% contribution · ${reports.length} reporting RMs`}
+      metrics={teamMetrics} periodLabel={periodLabel} icon="head" open={open} onToggle={() => { setActiveSection(null); setOpenReportId(null); onToggle(); }}/>
+    {open ? <div className="space-y-2 border-t border-[#D2E2F5] p-2 md:p-3">
+      <div className="overflow-hidden rounded-lg border border-[#D9E4F2]">
+        <PerformanceHeading name="Direct Partners" description="Own business" metrics={head}
+          periodLabel={periodLabel} icon="direct" open={activeSection === "direct"}
+          onToggle={() => setActiveSection(activeSection === "direct" ? null : "direct")}/>
+        {activeSection === "direct" ? <div className="border-t border-[#D9E4F2] bg-white p-3">
+          <SourceColumns sources={head.sources} periodLabel={periodLabel}/>
+        </div> : null}
       </div>
-    </button>
-    {open ? <div className="space-y-2 border-t border-[#E6EDF5] p-3">
-      <div className="rounded-lg border border-[#E1EAF5] p-3">
-        <button type="button" className="flex w-full items-center justify-between" aria-expanded={directOpen} onClick={() => setDirectOpen((v) => !v)}>
-          <span className="flex items-center gap-2 text-[12px] font-bold text-[#18365C]"><BriefcaseBusiness className="h-4 w-4"/>Direct Partners</span><ChevronDown className={`h-4 w-4 transition ${directOpen ? "rotate-180" : ""}`}/>
-        </button>
-        {directOpen ? <div className="mt-3"><SourceColumns sources={head.sources} periodLabel={periodLabel}/></div> : null}
+      <div className="overflow-hidden rounded-lg border border-[#D9E4F2]">
+        <PerformanceHeading name={`Reporting RMs (${reports.length})`} description="Reporting team total"
+          metrics={reportingMetrics} periodLabel={periodLabel} icon="reports"
+          open={activeSection === "reports"}
+          onToggle={() => { setOpenReportId(null); setActiveSection(activeSection === "reports" ? null : "reports"); }}/>
+        {activeSection === "reports" ? <div className="space-y-2 border-t border-[#D9E4F2] bg-white p-3">
+          {reports.map((row) => {
+            const id = row.employeeId ?? row.name;
+            return <RmSummaryCard key={id} row={row} periodLabel={periodLabel} periodShortLabel={periodShortLabel}
+              expanded={openReportId === id} onToggle={() => setOpenReportId(openReportId === id ? null : id)}/>;
+          })}
+          {!reports.length ? <p className="text-xs text-[#72829A]">No reporting RMs in this period.</p> : null}
+        </div> : null}
       </div>
-      <div className="rounded-lg border border-[#E1EAF5] p-3">
-        <button type="button" className="flex w-full items-center justify-between" aria-expanded={reportsOpen} onClick={() => setReportsOpen((v) => !v)}>
-          <span className="flex items-center gap-2 text-[12px] font-bold text-[#18365C]"><UsersRound className="h-4 w-4"/>Reporting RMs <span className="text-[10px] font-medium text-[#71839E]">{reports.length}</span></span><ChevronDown className={`h-4 w-4 transition ${reportsOpen ? "rotate-180" : ""}`}/>
-        </button>
-        {reportsOpen ? <div className="mt-3 space-y-2">{reports.map((row) => <div key={row.employeeId ?? row.name} className="rounded-xl border border-[#E8EEF6]"><RmSummaryCard row={row} periodLabel={periodLabel} periodShortLabel={periodShortLabel}/></div>)}{!reports.length ? <p className="text-xs text-[#72829A]">No reporting RMs in this period.</p> : null}</div> : null}
-      </div>
-      <TeamMetrics own={head} reports={reports} periodLabel={periodLabel}/>
     </div> : null}
   </section>;
 }
 
 export function RmHierarchySummary({ rows, periodLabel, periodShortLabel, selectedRmId }: Props) {
+  const [openId, setOpenId] = useState<string | null>(null);
   // A selected RM retains the existing single-RM view and scope.
   if (selectedRmId) return <div className="space-y-2">{rows.map((row) => <RmSummaryCard key={row.employeeId ?? row.name} row={row} periodLabel={periodLabel} periodShortLabel={periodShortLabel}/>)}</div>;
 
@@ -110,11 +131,19 @@ export function RmHierarchySummary({ rows, periodLabel, periodShortLabel, select
   const protectedIds = new Set([JATIN, GAGAN, JAYESH, ...JATIN_REPORTS]);
   const remaining = rows.filter((row) => !protectedIds.has(normalized(row.name)));
   const grouped = new Set([...(jatin ? [JATIN] : []), ...(gagan ? [GAGAN] : []), ...(jatin ? JATIN_REPORTS : []), ...(gagan ? remaining.map((row) => normalized(row.name)) : [])]);
+  const toggle = (id: string) => setOpenId((current) => current === id ? null : id);
 
   return <div className="space-y-2">
-    {jayesh ? <RmSummaryCard row={jayesh} periodLabel={periodLabel} periodShortLabel={periodShortLabel}/> : null}
-    {jatin ? <HeadGroup head={jatin} reports={jatinReports} periodLabel={periodLabel} periodShortLabel={periodShortLabel}/> : null}
-    {gagan ? <HeadGroup head={gagan} reports={remaining} periodLabel={periodLabel} periodShortLabel={periodShortLabel}/> : null}
-    {rows.filter((row) => normalized(row.name) !== JAYESH && !grouped.has(normalized(row.name))).map((row) => <RmSummaryCard key={row.employeeId ?? row.name} row={row} periodLabel={periodLabel} periodShortLabel={periodShortLabel}/>)}
+    {jayesh ? <RmSummaryCard row={jayesh} periodLabel={periodLabel} periodShortLabel={periodShortLabel}
+      expanded={openId === JAYESH} onToggle={() => toggle(JAYESH)}/> : null}
+    {jatin ? <HeadGroup head={jatin} reports={jatinReports} periodLabel={periodLabel} periodShortLabel={periodShortLabel}
+      open={openId === JATIN} onToggle={() => toggle(JATIN)}/> : null}
+    {gagan ? <HeadGroup head={gagan} reports={remaining} periodLabel={periodLabel} periodShortLabel={periodShortLabel}
+      open={openId === GAGAN} onToggle={() => toggle(GAGAN)}/> : null}
+    {rows.filter((row) => normalized(row.name) !== JAYESH && !grouped.has(normalized(row.name))).map((row) => {
+      const id = row.employeeId ?? row.name;
+      return <RmSummaryCard key={id} row={row} periodLabel={periodLabel} periodShortLabel={periodShortLabel}
+        expanded={openId === id} onToggle={() => toggle(id)}/>;
+    })}
   </div>;
 }

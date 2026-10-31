@@ -6,8 +6,10 @@ import { useState } from "react";
 type Source = { key: string; label: string; todayPolicies: number; todayNetPremium: number; mtdPolicies: number; mtdNetPremium: number };
 type RmRow = { employeeId: string | null; name: string; contributionPercent: number; todayPolicies: number; todayNetPremium: number; mtdPolicies: number; mtdNetPremium: number; sources: Source[] };
 
-export function RmSummaryCard({ row, periodLabel, periodShortLabel }: { row: RmRow; periodLabel: string; periodShortLabel: string }) {
-  const [open, setOpen] = useState(false);
+export function RmSummaryCard({ row, periodLabel, periodShortLabel, expanded, onToggle }: { row: RmRow; periodLabel: string; periodShortLabel: string; expanded?: boolean; onToggle?: () => void }) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = expanded ?? internalOpen;
+  const toggle = onToggle ?? (() => setInternalOpen((value) => !value));
   const [otherOpen, setOtherOpen] = useState(false);
   const rankedSources = [...row.sources].sort((a, b) => b.mtdNetPremium - a.mtdNetPremium || b.mtdPolicies - a.mtdPolicies || a.label.localeCompare(b.label));
   const topSources = rankedSources.slice(0, 3);
@@ -22,8 +24,8 @@ export function RmSummaryCard({ row, periodLabel, periodShortLabel }: { row: RmR
   }), { key: "other", label: "Other", todayPolicies: 0, todayNetPremium: 0, mtdPolicies: 0, mtdNetPremium: 0 });
 
   return (
-    <article className={"overflow-hidden rounded-xl bg-white transition-colors " + (open ? "border-2 border-[#C5D1DF] shadow-[0_3px_12px_rgba(31,54,87,.06)]" : "border border-[#E5EAF0]")}>
-      <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} className={"w-full px-4 py-2 text-left transition-colors " + (open ? "border-b border-[#DDE4EC] bg-[#F9FAFC]" : "bg-white hover:bg-[#FAFBFD]")}>
+    <article className={"overflow-hidden rounded-xl bg-white transition-colors " + (open ? "border-2 border-[#B8D2F5] shadow-[0_3px_12px_rgba(31,54,87,.06)]" : "border border-[#E5EAF0]")}>
+      <button type="button" onClick={toggle} aria-expanded={open} className={"w-full px-4 py-2 text-left transition-colors " + (open ? "border-b border-[#BDD4F0] bg-[#EAF3FF]" : "bg-white hover:bg-[#FAFBFD]")}>
         <div className="grid gap-2.5 xl:grid-cols-[minmax(190px,1.05fr)_minmax(260px,.9fr)_3px_minmax(260px,.9fr)_30px] xl:items-center">
           <div className="min-w-0"><div className="flex items-center gap-2"><p className="truncate text-[13px] font-black text-[#172A46]">{row.name}</p><span className="rounded-full border border-[#D5DFEA] bg-white px-2 py-0.5 text-[8.5px] font-black text-[#315B9A]">{row.contributionPercent.toFixed(1)}%</span></div><p className="mt-0.5 text-[9.5px] font-medium text-[#687589]">{periodShortLabel} contribution</p></div>
           <MetricGroup label="TODAY" policies={row.todayPolicies} net={row.todayNetPremium} />
