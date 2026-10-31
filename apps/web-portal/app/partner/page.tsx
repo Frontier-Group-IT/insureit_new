@@ -16,6 +16,7 @@ import {
   getPartnerWebNetwork,
   getPartnerWebPayoutSummary,
   getPartnerWebPolicySummary,
+  getPartnerCanonicalBranchHomeCounts,
   getPartnerWebRenewalSummary,
   getPartnerWebSession,
 } from "@/lib/partner-web";
@@ -254,6 +255,7 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
     : identity.actor_kind === "intermediary"
       ? identity.associate_name?.trim() || identity.display_name?.trim() || "Partner"
       : identity.display_name?.trim() || "Partner";
+  const branchCounts = isBranchLogin ? await getPartnerCanonicalBranchHomeCounts(today) : null;
   const updatedTime = formatUpdatedTime(new Date());
   const schemeDeadline = activeScheme ? formatSchemeDeadline(activeScheme.ends_at) : null;
   const payoutValue = payout.available ? formatIndianCurrency(payout.paid_amount) : "Restricted";
@@ -327,8 +329,8 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
           />
           <SummaryCard
             label="Customers"
-            value={home.business.total_customers}
-            meta={`${home.business.customers_this_month} added this month`}
+            value={branchCounts?.customers ?? home.business.total_customers}
+            meta={branchCounts ? "Customers linked to branch policies" : `${home.business.customers_this_month} added this month`}
             href="/partner/customers"
             iconSrc={homeIcons.customers}
           />
@@ -379,7 +381,7 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
           />
           <SummaryCard
             label="Renewals Due 30D"
-            value={home.business.renewals_30_days}
+            value={branchCounts?.renewalsDue30d ?? home.business.renewals_30_days}
             meta="Policies due in 30 days"
             href="/partner/renewals"
             iconSrc={homeIcons.renewals}
