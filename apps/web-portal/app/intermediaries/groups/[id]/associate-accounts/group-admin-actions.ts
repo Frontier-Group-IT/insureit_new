@@ -47,6 +47,7 @@ export async function changeGroupAdministratorAccess(formData: FormData) {
   actionData.set("entity_type", "group");
   actionData.set("entity_id", groupId);
   actionData.set("next_status", next);
+  actionData.set("return_path", `/intermediaries/groups/${groupId}`);
   return setGroupBranchPortalLoginStatus(actionData);
 }
 export async function resendGroupAdministratorInvite(formData: FormData) {
@@ -56,5 +57,6 @@ export async function resendGroupAdministratorInvite(formData: FormData) {
   const actionData = new FormData();
   actionData.set("entity_type", "group");
   actionData.set("entity_id", groupId);
+  actionData.set("return_path", `/intermediaries/groups/${groupId}`);
   return resendGroupBranchPortalInvite(actionData);
 }

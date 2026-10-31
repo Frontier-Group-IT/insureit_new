@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { GroupEditFormActions } from "./form-actions";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -30,7 +30,7 @@ export default async function EditGroupPage({params}:{params:Promise<{id:string}
     <label className="text-xs">PIN Code<input className={input} name="postal_code" defaultValue={contact?.postal_code??""} maxLength={6}/></label>
     <label className="text-xs">Description<input className={input} name="description" defaultValue={group.description??""}/></label>
    </div>
-   <div className="flex justify-end gap-3"><Link href={`/intermediaries/groups/${id}`} className="rounded-lg border px-5 py-2">Cancel</Link><button className="rounded-lg bg-[#17365D] px-5 py-2 text-white">Save Changes</button></div>
+   <GroupEditFormActions returnHref={`/intermediaries/groups/${id}`} />
   </form>
  </main></AppShell>;
 }
