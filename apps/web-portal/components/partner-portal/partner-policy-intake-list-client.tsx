@@ -94,6 +94,7 @@ function matchesSearch(row: PartnerPolicyIntake, query: string) {
     row.intake_number,
     row.customer_mobile,
     row.status,
+    row.submitted_by_name || "",
     statusLabel(row),
     ocrLabel(row),
     field(row, "customer_name", "insured_name", "policy_holder_name"),
@@ -420,16 +421,16 @@ export function PartnerPolicyIntakeListClient() {
         ) : null}
 
         <div className="overflow-x-auto">
-          <div className="min-w-[1120px]">
-            <div className="grid grid-cols-[minmax(150px,.78fr)_minmax(170px,.9fr)_minmax(150px,.8fr)_minmax(230px,1.2fr)_minmax(150px,.8fr)_minmax(110px,.58fr)_minmax(110px,.58fr)_34px] items-center gap-4 border-b border-[#E3EAF3] bg-[#F7F9FC] px-4 py-2.5 text-[8px] font-black uppercase tracking-[0.055em] text-[#6D809A]">
+          <div className="min-w-[1250px]">
+            <div className="grid grid-cols-[minmax(150px,.8fr)_minmax(150px,.9fr)_minmax(140px,.75fr)_minmax(220px,1.18fr)_minmax(135px,.76fr)_minmax(135px,.76fr)_minmax(100px,.58fr)_minmax(100px,.58fr)] items-center gap-4 border-b border-[#E3EAF3] bg-[#F7F9FC] px-4 py-2.5 text-[8px] font-black uppercase tracking-[0.055em] text-[#6D809A]">
               <span>Intake #</span>
               <span>Customer</span>
               <span>Vehicle</span>
               <span>Policy / Insurer</span>
+              <span>Submitted By</span>
               <span>Submitted</span>
               <span>OCR</span>
               <span>Status</span>
-              <span className="text-right">Action</span>
             </div>
 
             {loading && !rows.length ? (
@@ -452,7 +453,7 @@ export function PartnerPolicyIntakeListClient() {
                     <Link
                       key={row.id}
                       href={`/partner/policy-intakes/${encodeURIComponent(row.id)}`}
-                      className="group grid grid-cols-[minmax(150px,.78fr)_minmax(170px,.9fr)_minmax(150px,.8fr)_minmax(230px,1.2fr)_minmax(150px,.8fr)_minmax(110px,.58fr)_minmax(110px,.58fr)_34px] items-center gap-4 px-4 py-3 transition hover:bg-[#FAFCFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20"
+                      className="group grid grid-cols-[minmax(150px,.8fr)_minmax(150px,.9fr)_minmax(140px,.75fr)_minmax(220px,1.18fr)_minmax(135px,.76fr)_minmax(135px,.76fr)_minmax(100px,.58fr)_minmax(100px,.58fr)] items-center gap-4 px-4 py-3 transition hover:bg-[#FAFCFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20"
                     >
                       <div className="flex min-w-0 items-center gap-2.5">
                         <span className="flex h-9 w-10 shrink-0 items-center justify-center overflow-visible bg-transparent p-0">
@@ -489,6 +490,9 @@ export function PartnerPolicyIntakeListClient() {
                         <p className="break-words text-[10px] font-semibold leading-4 text-[#304665]">{policy}</p>
                         <p className="mt-0.5 break-words text-[8.5px] leading-4 text-[#8392A7]">{insurer}</p>
                       </div>
+                      <div className="min-w-0">
+                        <p className="break-words text-[10px] font-semibold leading-4 text-[#304665]">{row.submitted_by_name || "Unknown submitter"}</p>
+                      </div>
                       <div>
                         <p className="text-[10px] font-semibold text-[#304665]">{created.date}</p>
                         <p className="mt-0.5 text-[8.5px] text-[#8392A7]">{created.time}</p>
@@ -501,7 +505,7 @@ export function PartnerPolicyIntakeListClient() {
                         <span className="h-1.5 w-1.5 rounded-full bg-current" />
                         {statusLabel(row)}
                       </span>
-                      <ArrowRight className="h-4 w-4 justify-self-end text-[#1768C5] transition group-hover:translate-x-0.5" />
+                      
                     </Link>
                   );
                 })}
