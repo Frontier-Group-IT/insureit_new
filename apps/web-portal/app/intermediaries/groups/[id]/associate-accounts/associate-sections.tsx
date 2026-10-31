@@ -41,6 +41,7 @@ export async function GroupAssociateSections({id,query:q={},surface="operations"
  // Every Group has a Group Administrator profile row, even before its
  // contact information has been completed. Missing values render as dashes.
  const hasRegisterRecords=Boolean(group)||Boolean(associates?.length);
+ const createEntry = !loadError ? <GroupAssociateCreateEntry hasRecords={hasRegisterRecords} error={q.error} form={<AssociateCreateForm groupId={id} surface={surface}/>} /> : null;
  return <div className="space-y-4">
    {loadError?<p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">Associate Accounts could not be loaded completely. Please retry; the register may be incomplete.</p>:null}
    {q.error?<p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{q.error}</p>:null}
@@ -53,7 +54,7 @@ export async function GroupAssociateSections({id,query:q={},surface="operations"
    {headerPartnerAssignment ? <div className="border-t border-[#E7ECF3] px-4 py-2 lg:absolute lg:right-4 lg:top-1 lg:w-[395px] lg:border-0 lg:p-0">{headerPartnerAssignment}</div> : null}
    </div> : null}
    <GroupRegisterTabs partners={partners} addPartner={surface==="operations"?headerPartnerAssignment:null} associates={<section className="overflow-x-auto bg-white">
-    <h2 className="border-b p-4 text-sm font-semibold">Associate Accounts Register</h2>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><h2 className="text-sm font-semibold">Associate Accounts Register</h2>{createEntry}</div>
     {hasRegisterRecords ? <table className="w-full min-w-[1060px] text-left text-xs"><thead className="bg-slate-50"><tr>{["Name","Phone Number","Email","Designation","Address","Role","Status","Action"].map(h=><th key={h} className="p-3">{h}</th>)}</tr></thead>
     <tbody>{groupAdmin ? <tr className="border-t bg-[#F8FBFF]">
       <td className="p-3 font-semibold">{groupAdmin.admin_name?.trim()||"—"}</td>
@@ -62,15 +63,15 @@ export async function GroupAssociateSections({id,query:q={},surface="operations"
       <td className="p-3">Group Administrator</td>
       <td className="p-3">{[groupAdmin.address,groupAdmin.city,groupAdmin.state,groupAdmin.postal_code].filter(Boolean).join(", ")||"—"}</td>
       <td className="p-3"><span className="rounded-full border px-2 py-1">Group Administrator</span></td>
-      <td className="p-3">{group?.status==="active"?"Group Active":"Group "+(group?.status??"—")}</td>
+      <td className="p-3"><span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${identity?.status==="disabled"?"bg-red-100 text-red-700":"bg-green-100 text-green-700"}`}>{identity?.status==="disabled"?"Disabled":"Active"}</span></td>
       <td className="p-3"><GroupAdminMenu groupId={id} contact={groupAdmin} loginStatus={identity?.status==="active"||identity?.status==="disabled"?identity.status:null}/></td>
     </tr> : null}{(associates??[]).map(a=><tr key={a.id} className="border-t">
       <td className="p-3">{a.name}</td><td className="p-3">{a.phone_number}</td><td className="p-3">{a.email}</td><td className="p-3">{a.designation}</td>
       <td className="p-3">{[a.address,a.city,a.state,a.postal_code].filter(Boolean).join(", ")||"–"}</td>
-      <td className="p-3"><span className="rounded-full border px-2 py-1">{{group_admin:"Group Administrator",insurance_head:"Insurance Head",claim_head:"Claim Head",bodyshop_manager:"Bodyshop Manager"}[a.role as "group_admin"|"insurance_head"|"claim_head"|"bodyshop_manager"]||a.role}</span></td><td className="p-3">{a.status}</td>
+      <td className="p-3"><span className="rounded-full border px-2 py-1">{{group_admin:"Group Administrator",insurance_head:"Insurance Head",claim_head:"Claim Head",bodyshop_manager:"Bodyshop Manager"}[a.role as "group_admin"|"insurance_head"|"claim_head"|"bodyshop_manager"]||a.role}</span></td><td className="p-3"><span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${a.status==="disabled"?"bg-red-100 text-red-700":"bg-green-100 text-green-700"}`}>{a.status==="disabled"?"Disabled":"Active"}</span></td>
       <td className="p-3"><AssociateControls groupId={id} associate={a} surface={surface}/></td>
     </tr>)}</tbody></table> : null}
-    {!loadError ? <GroupAssociateCreateEntry hasRecords={hasRegisterRecords} error={q.error} form={<AssociateCreateForm groupId={id} surface={surface}/>}/> : null}
+
    </section>} />
  </div>;
 }
