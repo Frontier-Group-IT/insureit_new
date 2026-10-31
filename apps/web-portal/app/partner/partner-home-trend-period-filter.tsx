@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -22,6 +22,9 @@ export function PartnerHomeTrendPeriodFilter({
   const router = useRouter();
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const [requestedPeriod, setRequestedPeriod] = useState<PartnerHomeTrendPeriod | null>(null);
+  const displayedPeriod = pending ? (requestedPeriod ?? period) : period;
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
@@ -42,7 +45,8 @@ export function PartnerHomeTrendPeriodFilter({
   const selectPeriod = (value: PartnerHomeTrendPeriod) => {
     setOpen(false);
     if (value === period) return;
-    router.push(value === "6m" ? "/partner" : `/partner?trend=${value}`);
+    setRequestedPeriod(value);
+    startTransition(() => router.push(value === "6m" ? "/partner" : `/partner?trend=${value}`));
   };
 
   return (
@@ -55,7 +59,7 @@ export function PartnerHomeTrendPeriodFilter({
           onClick={() => setOpen((current) => !current)}
           className="inline-flex items-center gap-1.5 rounded-lg border border-[#DDE5EF] bg-[#F9FBFE] px-2.5 py-1.5 text-[8.5px] font-semibold text-[#526784] transition hover:bg-[#F4F7FB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"
         >
-          <span>{label}</span>
+          <span aria-live="polite">{pending ? `${OPTIONS.find((option) => option.value === displayedPeriod)?.label ?? label} · Loading…` : label}</span>
           <ChevronDown className={`h-3 w-3 transition ${open ? "rotate-180" : ""}`} aria-hidden="true" />
         </button>
 
@@ -69,9 +73,9 @@ export function PartnerHomeTrendPeriodFilter({
                 key={option.value}
                 type="button"
                 role="menuitemradio"
-                aria-checked={period === option.value}
+                aria-checked={displayedPeriod === option.value}
                 onClick={() => selectPeriod(option.value)}
-                className={`block w-full rounded-md px-2.5 py-2 text-left text-[9px] font-semibold transition ${period === option.value ? "bg-[#EEF4FF] text-[#244F9E]" : "text-[#526784] hover:bg-[#F5F8FC]"}`}
+                className={`block w-full rounded-md px-2.5 py-2 text-left text-[9px] font-semibold transition ${displayedPeriod === option.value ? "bg-[#EEF4FF] text-[#244F9E]" : "text-[#526784] hover:bg-[#F5F8FC]"}`}
               >
                 {option.label}
               </button>
