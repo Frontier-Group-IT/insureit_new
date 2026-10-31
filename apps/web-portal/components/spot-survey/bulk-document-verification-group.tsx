@@ -7,6 +7,7 @@ import { Shield, ShieldCheck, Trash2, Mic } from "lucide-react";
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { ClaimDocumentCollapsedStatus } from "@/components/claim-manager/claim-document-collapsed-status";
 import { ReplaceDocumentButton } from "./replace-document-button";
+import { RequestCustomerDocumentReuploadButton } from "./request-customer-document-reupload-button";
 import { VerificationActionButton } from "./verification-action-button";
 import { deleteVerifiedSpotSurveyDocument } from "@/app/claims/[id]/spot-survey-actions";
 import { useRouter } from "next/navigation";
@@ -209,7 +210,7 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
           <button type="button" disabled={deletePending} aria-label="Delete document" title="Delete document" className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30 disabled:opacity-50" onClick={() => setDeleteOpen(true)}>
             <Trash2 aria-hidden="true" size={16} strokeWidth={2} />
           </button>
-          <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentId={document.id} documentType={item.documentType} label={item.title} actionLabel="Replace" iconOnly reuploadIcon />
+          <RequestCustomerDocumentReuploadButton claimId={claim.id} documentId={document.id} fileName={document.file_name} />
           <VerificationActionButton claimId={claim.id} documentId={document.id} itemKey={item.key} incidentDate={claim.accident_at} policyStartDate={claim.policies?.start_date} policyEndDate={claim.policies?.end_date} prefillDetails={verification?.details ?? null} variant="icon" />
           
         </div>
