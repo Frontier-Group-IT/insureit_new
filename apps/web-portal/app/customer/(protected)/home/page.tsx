@@ -91,19 +91,6 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
 
         </div>
       </section>
-      <section aria-label="Account overview" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {[
-          { label: "Vehicles", count: vehicles.length, href: "/customer/vehicles", icon: CarFront },
-          { label: "Policies", count: policies.length, href: "/customer/policies", icon: ShieldCheck },
-          { label: "Open claims", count: openClaims.length, href: "/customer/claims", icon: ClipboardList },
-          { label: "Needs attention", count: attentionCount, href: "/customer/renewals", icon: AlertTriangle },
-        ].map(({ label, count, href, icon: Icon }, index) => (
-          <Link key={label} href={{ pathname: href, query: accountQuery }} className={`customer-home-breathe customer-modern-kpi customer-modern-kpi-${index + 1} group flex min-w-0 items-center gap-3 rounded-2xl border border-[#E2E8F4] bg-white px-3 py-4 shadow-[0_5px_16px_rgba(50,39,112,.07)] focus-visible:outline-offset-2 sm:px-4 sm:py-5`} style={{ animationDelay: `${index * 55}ms` }}>
-            <span className="customer-home-icon-breathe customer-modern-kpi-icon grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F0EBFF] text-[#6650BE] transition-transform group-hover:scale-110"><Icon className="h-5 w-5" /></span>
-            <span className="min-w-0"><span className="block text-[22px] font-black leading-7 tracking-tight text-[#19345F] sm:text-[26px]"><CustomerHomeCount value={count} /></span><span className="block truncate text-[11px] font-bold text-[#657794]">{label}</span></span>
-          </Link>
-        ))}
-      </section>
       <section aria-label="Quick actions" className="rounded-2xl border border-[#E0E8F3] bg-white px-3 py-3 shadow-[0_3px_12px_rgba(20,58,100,.04)] sm:px-4">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-[14px] font-black text-[#10284A]">Quick actions</h2>
@@ -114,7 +101,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
             {title:"Renew policies",href:"/customer/renewals",art:"/assets/Custom-Icons/optimized-128/renewal.png"},
             {title:"Start New Claim",href:"/customer/start-claim",art:"/assets/Custom-Icons/optimized-128/claims.png"},
             {title:"Get a quote",href:"/customer/insurance-quote",art:"/assets/Custom-Icons/optimized-128/documents.png"},
-            {title:"My vehicles",href:"/customer/vehicles",art:null},
+            {title:"My vehicles",href:"/customer/vehicles",art:"/assets/Custom-Icons/optimized-128/fleet-vehicle.png"},
             {title:"Vehicle exchange",href:"/customer/exchange",art:"/assets/Custom-Icons/optimized-128/distribution-network.png"},
             {title:"Support",href:"/customer/support",art:"/assets/Custom-Icons/optimized-128/customers.png"},
           ].map(({title,href,art})=><Link key={href} href={href === "/customer/start-claim" ? { pathname: "/customer/start-claim", query: accountQuery } : { pathname: href, query: accountQuery }} className="customer-home-quick-action group flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl px-1.5 py-2.5 text-center transition hover:bg-[#F3F8FE] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1769DC]"><span className="grid h-11 w-11 place-items-center rounded-xl bg-[#EFF7F5] shadow-[0_2px_7px_rgba(18,37,68,.08)] transition-transform group-hover:scale-105">{art ? <img src={art} alt="" aria-hidden="true" className="h-9 w-9 object-contain" /> : <CarFront aria-hidden="true" className="h-9 w-9 text-[#1557A8]" strokeWidth={1.8} />}</span><span className="text-[11px] font-bold leading-4 text-[#244771]">{title}</span></Link>)}
