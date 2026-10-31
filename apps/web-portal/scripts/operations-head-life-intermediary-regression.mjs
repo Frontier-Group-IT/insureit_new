@@ -42,7 +42,11 @@ assert.ok(accountDetail.includes("isPartner && !limitedLifeHead && activePartner
 const workflow=read("app/intermediaries/applications/[id]/workflow/page.tsx");
 assert.ok(workflow.includes('requireScopedPospMispManager(id, true)'));
 assert.ok(workflow.includes('lifeScope.employeeIds.includes(item.id)'));
-assert.ok(workflow.includes('limitedLifeHead ? "primary"'));
+// Life Head may view the unlocked document stage, but never unrelated workflow stages.
+assert.ok(workflow.includes('requestedStage === "documents" && unlocked.has("documents")'));
+assert.ok(workflow.includes('"documents" : "primary"'));
+assert.ok(!workflow.includes('limitedLifeHead ? "primary"'));
+assert.ok(workflow.includes('enabled={viewStage === "documents" && editable}'));
 const manual=read("app/customers/posp-misp/manual-actions-v2.ts");
 assert.ok(manual.includes('currentManager(value(data, "associate_employee_id"))'));
 assert.ok(manual.includes('isEmployeeWithinAccessScope(profile.id,profile.role,employeeId)'));
