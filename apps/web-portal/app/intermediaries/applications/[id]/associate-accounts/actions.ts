@@ -267,6 +267,20 @@ export async function deletePartnerAssociateAccount(formData: FormData) {
   const context = await loadManagedAssociate(formData);
   const admin = createSupabaseAdminClient();
 
+  // Keep historical policy intake ownership intact. A linked intake holds a
+  // restrictive FK to profiles, so deleting Auth would fail and must not be forced.
+  const { count: linkedIntakes, error: dependencyCheckError } = await admin
+    .from("policy_intake_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("submitted_by_profile_id", context.associate.auth_user_id);
+  if (dependencyCheckError) {
+    console.error("[associate-delete] Dependency check failed", { code: dependencyCheckError.code ?? null });
+    redirect(`${context.returnPath}?error=associate_delete_dependency_check_failed`);
+  }
+  if ((linkedIntakes ?? 0) > 0) {
+    redirect(`${context.returnPath}?error=associate_delete_dependencies`);
+  }
+
   // Fail closed: never remove related business records in order to force an Auth deletion.
   // An Auth FK rejection indicates linked records; retain the account for investigation.
   const { error: authError } = await admin.auth.admin.deleteUser(context.associate.auth_user_id);

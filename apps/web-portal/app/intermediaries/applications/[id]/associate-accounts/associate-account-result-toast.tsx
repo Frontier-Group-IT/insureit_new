@@ -50,40 +50,22 @@ export function AssociateAccountResultToast({
 
   if (acknowledge && tone === "error") {
     return (
-      <div
-        className="fixed inset-0 z-[140] grid place-items-center bg-slate-950/20 px-4 backdrop-blur-[1px]"
-        role="presentation"
-      >
-        <div
-          role="alertdialog"
-          aria-modal="true"
-          aria-labelledby="associate-result-error-title"
+      <div className="fixed inset-0 z-[140] grid place-items-center bg-slate-950/35 px-4 backdrop-blur-[1px]" role="presentation">
+        <div role="alertdialog" aria-modal="true" aria-labelledby="associate-result-error-title"
           aria-describedby="associate-result-error-message"
-          className="w-full max-w-[360px] rounded-2xl border border-[#E7ECF3] bg-white p-5 shadow-[0_24px_70px_rgba(15,23,42,0.22)]"
-        >
-          <div className="flex items-start gap-3">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-amber-50 text-amber-600">
-              <AlertTriangle className="h-4.5 w-4.5" />
+          className="w-full max-w-[472px] overflow-hidden rounded-[18px] bg-white text-center shadow-[0_24px_70px_rgba(15,23,42,0.22)]">
+          <div className="px-6 pb-6 pt-7">
+            <span className="mx-auto grid h-[52px] w-[52px] place-items-center rounded-full bg-[#FFF2E7] text-[#E66A12]">
+              <AlertTriangle className="h-5 w-5" aria-hidden="true" />
             </span>
-            <div className="min-w-0 flex-1">
-              <h2 id="associate-email-in-use-title" className="text-[13px] font-bold text-[#17203A]">
-                Check details
-              </h2>
-              <p id="associate-email-in-use-message" className="mt-1.5 text-[10.5px] leading-5 text-[#5B667A]">
-                {message}
-              </p>
-            </div>
+            <h2 id="associate-result-error-title" className="mt-5 text-[16px] font-bold text-[#17365D]">Check details</h2>
+            <p id="associate-result-error-message" className="mt-3 text-[12px] leading-5 text-[#64748B]">{message}</p>
           </div>
-          <div className="mt-5 flex justify-end gap-2">
-            <button type="button" onClick={dismissAcknowledgement} className="h-9 min-w-[76px] rounded-xl border border-[#D5DCE7] px-5 text-[10px] font-bold text-[#334155]">Cancel</button>
-            <button
-              type="button"
-              autoFocus
-              onClick={dismissAcknowledgement}
-              className="h-9 min-w-[76px] rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white transition hover:bg-[#102A4C] focus:outline-none focus:ring-2 focus:ring-[#C9D8EE]"
-            >
-              OK
-            </button>
+          <div className="grid grid-cols-2 gap-3 border-t border-[#E7ECF3] bg-[#F8FAFC] px-5 py-4">
+            <button type="button" onClick={dismissAcknowledgement}
+              className="h-11 rounded-xl border border-[#CBD5E1] bg-white text-xs font-semibold text-[#17365D]">Cancel</button>
+            <button type="button" autoFocus onClick={dismissAcknowledgement}
+              className="h-11 rounded-xl bg-[#17365D] text-xs font-semibold text-white hover:bg-[#102A4C]">OK</button>
           </div>
         </div>
       </div>
