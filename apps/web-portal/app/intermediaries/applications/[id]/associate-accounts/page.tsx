@@ -346,7 +346,8 @@ function errorMessage(value: string, retryAfter?: string) {
   if (decoded === "associate_not_found") return "That associate account is no longer available.";
   if (decoded === "associate_update_failed") return "The associate details could not be updated.";
   if (decoded === "associate_status_failed") return "The associate login status could not be changed.";
-  if (decoded === "associate_delete_dependencies") return "Deletion blocked: this account has linked records.";
+  if (decoded === "associate_delete_dependencies") return "Account has linked policy records and cannot be permanently deleted.";
+  if (decoded === "associate_delete_dependency_check_failed") return "Unable to verify account dependencies. Please try again.";
   if (decoded === "associate_delete_incomplete") return "Deletion could not be verified. Contact an administrator.";
   if (decoded === "associate_delete_failed") return "Account deletion failed. No linked records were removed.";
   if (decoded === "associate_enable_before_resend") return "Enable this associate account before resending the invitation link.";
