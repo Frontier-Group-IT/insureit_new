@@ -58,7 +58,7 @@ function PerformanceHeading({ name, description, metrics, periodLabel, open, onT
   name: string; description?: string; metrics: Metrics; periodLabel: string; open: boolean; onToggle: () => void; icon: "head" | "direct" | "reports";
 }) {
   return <button type="button" onClick={onToggle} aria-expanded={open}
-    className={`w-full px-4 py-3 text-left transition-colors ${open ? "bg-[#EAF3FF]" : "bg-white hover:bg-[#F7FAFE]"}`}>
+    className={`w-full px-4 py-3 text-left transition-colors ${open ? icon === "head" ? "bg-[#D5E6FF]" : "bg-[#E8F2FF]" : "bg-white hover:bg-[#F7FAFE]"}`}>
     <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_20px] items-center gap-2 md:gap-3">
       <div className="min-w-0">
         <div className="flex items-center gap-1.5">
@@ -89,19 +89,19 @@ function HeadGroup({ head, reports, periodLabel, periodShortLabel, open, onToggl
   const [openReportId, setOpenReportId] = useState<string | null>(null);
   const reportingMetrics = sumMetrics(reports);
   const teamMetrics = sumMetrics([head, ...reports]);
-  return <section className="overflow-hidden rounded-xl border border-[#D9E4F2] bg-white">
+  return <section className={`overflow-hidden rounded-xl bg-white transition-colors ${open ? "border-2 border-[#3979CC]" : "border border-[#D9E4F2]"}`}>
     <PerformanceHeading name={head.name} description={`RM HEAD · ${head.contributionPercent.toFixed(1)}% contribution · ${reports.length} reporting RMs`}
       metrics={teamMetrics} periodLabel={periodLabel} icon="head" open={open} onToggle={() => { setActiveSection(null); setOpenReportId(null); onToggle(); }}/>
-    {open ? <div className="space-y-2 border-t border-[#D2E2F5] p-2 md:p-3">
-      <div className="overflow-hidden rounded-lg border border-[#D9E4F2]">
+    {open ? <div className="space-y-2 border-t border-[#8BB6E8] bg-[#F8FBFF] p-2 md:p-3">
+      <div className={`overflow-hidden rounded-lg ${activeSection === "direct" ? "border-2 border-[#8BB6E8]" : "border border-[#D9E4F2]"}`}>
         <PerformanceHeading name="Direct Partners" description="Own business" metrics={head}
           periodLabel={periodLabel} icon="direct" open={activeSection === "direct"}
           onToggle={() => setActiveSection(activeSection === "direct" ? null : "direct")}/>
-        {activeSection === "direct" ? <div className="border-t border-[#D9E4F2] bg-white p-3">
+        {activeSection === "direct" ? <div className="border-t border-[#8BB6E8] bg-[#F1F7FF] p-3">
           <SourceColumns sources={head.sources} periodLabel={periodLabel}/>
         </div> : null}
       </div>
-      <div className="overflow-hidden rounded-lg border border-[#D9E4F2]">
+      {reports.length > 0 ? <div className={`overflow-hidden rounded-lg ${activeSection === "reports" ? "border-2 border-[#8BB6E8]" : "border border-[#D9E4F2]"}`}>
         <PerformanceHeading name={`Reporting RMs (${reports.length})`} description="Reporting team total"
           metrics={reportingMetrics} periodLabel={periodLabel} icon="reports"
           open={activeSection === "reports"}
@@ -114,7 +114,7 @@ function HeadGroup({ head, reports, periodLabel, periodShortLabel, open, onToggl
           })}
           {!reports.length ? <p className="text-xs text-[#72829A]">No reporting RMs in this period.</p> : null}
         </div> : null}
-      </div>
+      </div> : null}
     </div> : null}
   </section>;
 }
@@ -134,12 +134,12 @@ export function RmHierarchySummary({ rows, periodLabel, periodShortLabel, select
   const toggle = (id: string) => setOpenId((current) => current === id ? null : id);
 
   return <div className="space-y-2">
-    {jayesh ? <RmSummaryCard row={jayesh} periodLabel={periodLabel} periodShortLabel={periodShortLabel}
-      expanded={openId === JAYESH} onToggle={() => toggle(JAYESH)}/> : null}
     {jatin ? <HeadGroup head={jatin} reports={jatinReports} periodLabel={periodLabel} periodShortLabel={periodShortLabel}
       open={openId === JATIN} onToggle={() => toggle(JATIN)}/> : null}
     {gagan ? <HeadGroup head={gagan} reports={remaining} periodLabel={periodLabel} periodShortLabel={periodShortLabel}
       open={openId === GAGAN} onToggle={() => toggle(GAGAN)}/> : null}
+    {jayesh ? <HeadGroup head={jayesh} reports={[]} periodLabel={periodLabel} periodShortLabel={periodShortLabel}
+      open={openId === JAYESH} onToggle={() => toggle(JAYESH)}/> : null}
     {rows.filter((row) => normalized(row.name) !== JAYESH && !grouped.has(normalized(row.name))).map((row) => {
       const id = row.employeeId ?? row.name;
       return <RmSummaryCard key={id} row={row} periodLabel={periodLabel} periodShortLabel={periodShortLabel}
