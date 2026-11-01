@@ -24,8 +24,8 @@ export function RmSummaryCard({ row, periodLabel, periodShortLabel, expanded, on
   }), { key: "other", label: "Other", todayPolicies: 0, todayNetPremium: 0, mtdPolicies: 0, mtdNetPremium: 0 });
 
   return (
-    <article className={"overflow-hidden rounded-xl bg-white transition-colors " + (open ? "border-2 border-[#B8D2F5] shadow-[0_3px_12px_rgba(31,54,87,.06)]" : "border border-[#E5EAF0]")}>
-      <button type="button" onClick={toggle} aria-expanded={open} className={"w-full px-4 py-2 text-left transition-colors " + (open ? "border-b border-[#BDD4F0] bg-[#EAF3FF]" : "bg-white hover:bg-[#FAFBFD]")}>
+    <article className={"overflow-hidden rounded-xl bg-white transition-colors " + (open ? "border-2 border-[#8BB6E8] shadow-[0_3px_12px_rgba(31,54,87,.06)]" : "border border-[#E5EAF0]")}>
+      <button type="button" onClick={toggle} aria-expanded={open} className={"w-full px-4 py-2 text-left transition-colors " + (open ? "border-b border-[#B8D2F5] bg-[#F1F7FF]" : "bg-white hover:bg-[#FAFBFD]")}>
         <div className="grid gap-2.5 xl:grid-cols-[minmax(190px,1.05fr)_minmax(260px,.9fr)_3px_minmax(260px,.9fr)_30px] xl:items-center">
           <div className="min-w-0"><div className="flex items-center gap-2"><p className="truncate text-[13px] font-black text-[#172A46]">{row.name}</p><span className="rounded-full border border-[#D5DFEA] bg-white px-2 py-0.5 text-[8.5px] font-black text-[#315B9A]">{row.contributionPercent.toFixed(1)}%</span></div><p className="mt-0.5 text-[9.5px] font-medium text-[#687589]">{periodShortLabel} contribution</p></div>
           <MetricGroup label="TODAY" policies={row.todayPolicies} net={row.todayNetPremium} />
@@ -35,7 +35,7 @@ export function RmSummaryCard({ row, periodLabel, periodShortLabel, expanded, on
         </div>
       </button>
       {open ? (
-        <div className="border-t border-[#E2E7ED] bg-[#FBFCFE] px-4 py-3">
+        <div className="border-t border-[#B8D2F5] bg-[#F8FBFF] px-4 py-3">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-[10px] font-black uppercase tracking-[.12em] text-[#566477]">Source Breakdown</p>
             <span className="text-[10px] font-semibold text-[#69778A]">{row.sources.length} source{row.sources.length === 1 ? "" : "s"}</span>
