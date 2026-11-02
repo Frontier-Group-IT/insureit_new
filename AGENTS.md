@@ -582,6 +582,8 @@ The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` 
 
 - **2026-09-21 — Dashboard Policy Intake workload count:** branch `fix/dashboard-policy-intake-workload-count`; the Needs attention Policy Intake card now uses the same queue logic as the Policy Intake workspace: Action Required (`ready_for_review` + failed OCR processing) + In Review + non-failed Processing, without double counting. The card label is `Policy Intakes pending` and shows the three-part breakdown. **IMPLEMENTED; PR/CI pending, not merged.**
 
+- **2026-09-21 — Dashboard mix basis switched to Net Premium:** PR #2241 merged as `5f65addb80e30fd5392eb5457fc9bffccdc14998`; Channel Contribution, Vehicle Class, Coverage Mix and shared Business Line mix now aggregate/sort by `net_premium` and display `By net premium`; gross-premium rankings remain unchanged. Production deployment continues through newer main commit `2001227469f0cd2a2362e8ef29cad39035a62084`, whose GitHub Actions deployment gates passed and Vercel build was triggered. **MERGED; DEPLOYMENT BUILDING / RUNTIME UNVERIFIED.**
+
 - **2026-09-21 — Dashboard pending intermediary count:** branch `fix/dashboard-pending-intermediary-count`; Home/Operations Overview “Intermediary onboarding” now counts only records meeting the Pending Applications queue conditions (open status, Partner context, IIB processing, documents pending, and at least one required document missing), excluding training-stage and active-partner records. **IMPLEMENTED; PR #2240 open; CI/merge/deployment pending.**
 
 
