@@ -227,40 +227,6 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
   const backHref = "/claims";
   const title = `Documents Verification - ${claimForVerification.claim_no}${claimForVerification.insurer_claim_no ? ` / ${claimForVerification.insurer_claim_no}` : ""}`;
 
-  if (claim.policy_service_source === "external" && claim.claim_service_mode === "self_managed") {
-    // Opening a claim is a read operation. Never initiate the Operations takeover
-    // RPC here: viewers can inspect their scoped External Claim without manage_claims.edit.
-    const { data: milestoneRows, error: milestoneError } = await admin
-      .from("claim_milestones")
-      .select("milestone_key,milestone_status,details,created_at")
-      .eq("claim_id", claim.id)
-      .order("created_at", { ascending: true });
-    if (milestoneError) throw new Error("External Claim stage details could not be loaded.");
-    const stageHistory = (milestoneRows ?? []).map(row => ({
-      stage: row.milestone_key,
-      details: row.details as Record<string, unknown> | null,
-      created_at: row.created_at,
-    }));
-    return (
-      <ClaimManagerShell title={`External Claim - ${claim.claim_no}`} backHref={backHref}>
-        <OperationsClaimStages
-          claimId={claim.id}
-          currentStatus={claim.current_status}
-          insurerClaimNo={claim.insurer_claim_no}
-          details={stageHistory}
-          spotContent={null}
-          claimIntimationContent={null}
-          initialStageKey={requestedStage}
-          accidentAt={claim.accident_at}
-          spotIntimationAt={claim.spot_intimation_at}
-          externalCustomerMilestones={(milestoneRows ?? []).map(row => ({ key: row.milestone_key, status: row.milestone_status }))}
-          unrestrictedStageEditing
-          partnerReadOnlyJourney
-        />
-      </ClaimManagerShell>
-    );
-  }
-
   if (claim.claim_service_mode === "self_managed") {
     const { data: milestoneRows } = await admin
       .from("claim_milestones")
