@@ -71,7 +71,7 @@ function PerformanceHeading({ name, description, metrics, periodLabel, open, onT
   name: string; description?: string; metrics: Metrics; periodLabel: string; open: boolean; onToggle: () => void; icon: "head" | "direct" | "reports";
 }) {
   return <button type="button" onClick={onToggle} aria-expanded={open}
-    className={`w-full px-4 py-3 text-left transition-colors ${open ? icon === "head" ? "bg-[#D5E6FF]" : "bg-[#E8F2FF]" : "bg-white hover:bg-[#F7FAFE]"}`}>
+    className={`w-full px-4 py-3 text-left transition-colors ${open ? "bg-[#D5E6FF]" : "bg-white hover:bg-[#F7FAFE]"}`}>
     <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_20px] items-center gap-2 md:gap-3">
       <div className="min-w-0">
         <div className="flex items-center gap-1.5">
@@ -96,12 +96,12 @@ function PerformanceHeading({ name, description, metrics, periodLabel, open, onT
 }
 
 
-function HierarchyNode({ row, childrenByManager, periodLabel, periodShortLabel, depth=0, visited=new Set<string>() }: {
+function HierarchyNode({ row, childrenByManager, periodLabel, periodShortLabel, depth=0, visited=new Set<string>(), open, onToggle }: {
   row: RmPerformanceRow;
   childrenByManager: Map<string,RmPerformanceRow[]>;
-  periodLabel:string; periodShortLabel:string; depth?:number; visited?:Set<string>;
+  periodLabel:string; periodShortLabel:string; depth?:number; visited?:Set<string>; open:boolean; onToggle:()=>void;
 }) {
-  const [open,setOpen] = useState(false);
+  const [openChildId,setOpenChildId] = useState<string|null>(null);
   const [section,setSection] = useState<"direct"|"reports"|null>(null);
   const id = row.employeeId ?? row.name;
   const nextVisited = new Set(visited);
@@ -118,19 +118,20 @@ function HierarchyNode({ row, childrenByManager, periodLabel, periodShortLabel, 
   const reporting=sumMetrics(reports.flatMap(child=>team(child,new Set())));
   return <section className={`overflow-hidden rounded-xl border bg-white transition-colors ${open ? depth === 0 ? "border-2 border-[#3979CC]" : "border-2 border-[#8BB6E8]" : "border-[#D9E4F2]"}`}>
     <PerformanceHeading name={row.name} description={`${row.designation??(depth?"Reporting RM":"RM Head")} · ${reports.length} direct reports`}
-      metrics={totals} periodLabel={periodLabel} icon="head" open={open} onToggle={()=>{setOpen(!open);setSection(null);}}/>
+      metrics={totals} periodLabel={periodLabel} icon="head" open={open} onToggle={()=>{setSection(null);setOpenChildId(null);onToggle();}}/>
     {open?<div className="relative space-y-2 border-t border-[#A9C7EB] bg-[#F8FBFF] py-3 pl-5 pr-2 before:pointer-events-none before:absolute before:bottom-3 before:left-2 before:top-3 before:border-l-2 before:border-dashed before:border-[#82ADE0] md:pl-6 md:pr-3">
       <div className={`relative overflow-visible rounded-lg border ${section==="direct"?"border-[#8BB6E8]":"border-[#D9E4F2]"} before:pointer-events-none before:absolute before:-left-3 before:top-6 before:w-3 before:border-t-2 before:border-dashed before:border-[#82ADE0] md:before:-left-4 md:before:w-4`}>
         <div className="overflow-hidden rounded-lg"><PerformanceHeading name="Direct Partners" description="Own attributed business" metrics={row}
-          periodLabel={periodLabel} icon="direct" open={section==="direct"} onToggle={()=>setSection(section==="direct"?null:"direct")}/>
+          periodLabel={periodLabel} icon="direct" open={open || section==="direct"} onToggle={()=>setSection(section==="direct"?null:"direct")}/>
         {section==="direct"?<div className="border-t border-[#A9C7EB] bg-[#F1F7FF] p-3"><SourceColumns sources={row.sources} periodLabel={periodLabel}/></div>:null}</div>
       </div>
       {reports.length?<div className={`relative rounded-lg border ${section==="reports"?"border-[#8BB6E8]":"border-[#D9E4F2]"} before:pointer-events-none before:absolute before:-left-3 before:top-6 before:w-3 before:border-t-2 before:border-dashed before:border-[#82ADE0] md:before:-left-4 md:before:w-4`}>
         <PerformanceHeading name={`Reporting RMs (${reports.length})`} description="Reporting team total" metrics={reporting}
-          periodLabel={periodLabel} icon="reports" open={section==="reports"} onToggle={()=>setSection(section==="reports"?null:"reports")}/>
+          periodLabel={periodLabel} icon="reports" open={open || section==="reports"} onToggle={()=>setSection(section==="reports"?null:"reports")}/>
         {section==="reports"?<div className="relative space-y-2 border-t border-[#A9C7EB] bg-[#F1F7FF] py-3 pl-5 pr-2 before:pointer-events-none before:absolute before:bottom-3 before:left-2 before:top-3 before:border-l-2 before:border-dashed before:border-[#A7C7EB] md:pl-6 md:pr-3">
           {reports.map(child=><div key={child.employeeId??child.name} className="relative before:pointer-events-none before:absolute before:-left-3 before:top-6 before:w-3 before:border-t-2 before:border-dashed before:border-[#A7C7EB] md:before:-left-4 md:before:w-4"><HierarchyNode row={child} childrenByManager={childrenByManager}
-            periodLabel={periodLabel} periodShortLabel={periodShortLabel} depth={depth+1} visited={nextVisited}/></div>)}
+            periodLabel={periodLabel} periodShortLabel={periodShortLabel} depth={depth+1} visited={nextVisited}
+            open={openChildId===(child.employeeId??child.name)} onToggle={()=>setOpenChildId(current=>current===(child.employeeId??child.name)?null:(child.employeeId??child.name))}/></div>)}
         </div>:null}
       </div>:null}
     </div>:null}
@@ -138,6 +139,7 @@ function HierarchyNode({ row, childrenByManager, periodLabel, periodShortLabel, 
 }
 
 export function RmHierarchySummary({ rows, periodLabel, periodShortLabel, selectedRmId }: Props) {
+  const [openRootId,setOpenRootId]=useState<string|null>(null);
   if (selectedRmId) return <div className="space-y-2">{rows.map(row=><RmSummaryCard key={row.employeeId??row.name} row={row}
     periodLabel={periodLabel} periodShortLabel={periodShortLabel}/>)}</div>;
   const childrenByManager = new Map<string,RmPerformanceRow[]>();
@@ -149,6 +151,7 @@ export function RmHierarchySummary({ rows, periodLabel, periodShortLabel, select
   const roots=rows.filter(row=>!row.managerId || !ids.has(row.managerId) || row.managerId===row.employeeId);
   return <div className="space-y-2">
     {roots.map(row=><HierarchyNode key={row.employeeId??row.name} row={row} childrenByManager={childrenByManager}
-      periodLabel={periodLabel} periodShortLabel={periodShortLabel}/>)}
+      periodLabel={periodLabel} periodShortLabel={periodShortLabel}
+      open={openRootId===(row.employeeId??row.name)} onToggle={()=>setOpenRootId(current=>current===(row.employeeId??row.name)?null:(row.employeeId??row.name))}/>)}
   </div>;
 }
