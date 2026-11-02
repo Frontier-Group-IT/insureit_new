@@ -66,7 +66,7 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
     // Review permission must not widen the list to unrelated organizations.
     const predicates = await getRmPolicyIntakePredicates(profile.id, profile.role);
     intakeOrFilter = predicates.join(",");
-  } else if (!organizationViewer && !reviewer) submitterFilter = profile.id;
+  } else if (!reviewer) submitterFilter = profile.id;
   // Fetch the entire authorized result set, not only the first 500/1000 records.
   const { data, error } = await fetchAllPages<PolicyIntakeListRow, unknown>((from, to) => {
     let page = admin.from("policy_intake_requests")
