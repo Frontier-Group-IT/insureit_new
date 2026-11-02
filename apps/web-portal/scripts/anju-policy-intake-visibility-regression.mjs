@@ -7,7 +7,7 @@ const workspace = readFileSync(new URL("../components/policy-intake-workspace.ts
 assert.match(page, /organizationViewer = \["super_admin", "admin", "it_super_user"\]/);
 assert.match(page, /if \(organizationViewer\) return "all"/);
 assert.match(page, /return reviewer \? "action" : "all"/);
-assert.match(page, /!organizationViewer && !reviewer/);
+assert.match(page, /else if \(!reviewer\) submitterFilter = profile\.id/);
 assert.match(page, /if \(intakeOrFilter\) page = page\.or\(intakeOrFilter\)/);
 assert.match(page, /resetView=\{organizationViewer \? "all" : undefined\}/);
 assert.match(workspace, /setView\(resetView \?\? \(reviewer \? "action" : "all"\)\)/);
