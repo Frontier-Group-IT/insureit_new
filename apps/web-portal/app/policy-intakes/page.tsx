@@ -79,8 +79,32 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
     return page.returns<PolicyIntakeListRow[]>();
   });
 
-  if (error) console.error("[policy-intakes] list query failed", { role: profile.role, code: (error as { code?: string }).code });
+  if (error) console.error("[policy-intakes] list query failed", {
+    profileId: profile.id,
+    role: profile.role,
+    code: (error as { code?: string }).code ?? "unknown",
+    scope: intakeOrFilter ? "hierarchy" : submitterFilter ? "submitter" : "organization",
+  });
   const rows = data ?? [];
+  // A privileged viewer with no rows must not be told the organization has no intakes
+  // without checking the underlying table independently. This is only a diagnostic
+  // consistency guard; it does not change authorization or widen any user's scope.
+  let zeroListMismatch = false;
+  let zeroListCheckFailed = false;
+  if (!error && organizationViewer && rows.length === 0) {
+    const { count, error: countError } = await admin
+      .from("policy_intake_requests")
+      .select("id", { count: "exact", head: true });
+    zeroListCheckFailed = Boolean(countError);
+    zeroListMismatch = !countError && (count ?? 0) > 0;
+    console.error("[policy-intakes] privileged zero-list verification", {
+      profileId: profile.id,
+      role: profile.role,
+      count: countError ? null : count,
+      countErrorCode: countError?.code ?? null,
+      listScope: intakeOrFilter ? "hierarchy" : submitterFilter ? "submitter" : "organization",
+    });
+  }
   const profileIds = Array.from(new Set(rows.map((row) => row.submitted_by_profile_id).filter(Boolean) as string[]));
   const portalAccountIds = Array.from(new Set(rows.map((row) => row.submitted_by_portal_account_id).filter(Boolean) as string[]));
   const [{ data: profileRows }, { data: portalAccountRows }, { data: branchContacts }] = await Promise.all([
@@ -156,7 +180,14 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
   const workspaceRows = duplicateCheck?.ok
     ? rowsWithSubmitters.map((row) => duplicateCheck.matches.has(row.id) ? { ...row, status: "Duplicate" } : row)
     : [];
-  const unavailable = Boolean(error || (duplicateCheck && !duplicateCheck.ok));
+  if (duplicateCheck && !duplicateCheck.ok) {
+    console.error("[policy-intakes] duplicate verification failed", {
+      profileId: profile.id,
+      role: profile.role,
+      rowCount: rows.length,
+    });
+  }
+  const unavailable = Boolean(error || zeroListMismatch || zeroListCheckFailed || (duplicateCheck && !duplicateCheck.ok));
 
   return <AppShell title={reviewer ? "Policy Intakes" : "My Policy Intakes"}>
     {profile.role === "it_super_user" && !unavailable ? <ItSuperUserDeletePanel
@@ -168,6 +199,6 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
         detail: [intake.status.replaceAll("_", " "), intake.lead_source_name, intake.customer_mobile].filter(Boolean).join(" • "),
       }))}
     /> : null}
-    {unavailable ? <div className="mx-auto max-w-[1480px] rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">Policy Intakes are temporarily unavailable.</div> : <PolicyIntakeWorkspace rows={workspaceRows} reviewer={reviewer} creator={creator} currentProfileId={profile.id} initialView={initialView} resetView={organizationViewer ? "all" : undefined} />}
+    {unavailable ? <div className="mx-auto max-w-[1480px] rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">Policy Intakes are temporarily unavailable. Please refresh this page. If the issue continues, contact support and mention the Policy Intake Queue.</div> : <PolicyIntakeWorkspace rows={workspaceRows} reviewer={reviewer} creator={creator} currentProfileId={profile.id} initialView={initialView} resetView={organizationViewer ? "all" : undefined} />}
   </AppShell>;
 }
