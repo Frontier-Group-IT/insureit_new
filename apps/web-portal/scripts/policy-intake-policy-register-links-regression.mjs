@@ -7,8 +7,10 @@ const policiesPage = read("app/policies/page.tsx");
 assert(policiesPage.includes('hasEffectiveCapability(profile, "review_policy_intakes", "edit")'), "Policy Register reviewer shortcuts must remain permission-gated to Policy Intake reviewers");
 assert(policiesPage.includes('hasEffectiveCapability(profile, "view_policy_intakes", "view")'), "Policy Register RM tracking must require Policy Intake view access");
 assert(policiesPage.includes('profile.role === "relationship_manager" && canViewPolicyIntakes'), "Only Relationship Managers with Policy Intake view access may receive the owner-scoped shortcut");
-assert(policiesPage.includes("loadPolicyIntakeReviewSummary(admin)"), "Policy Register reviewers must load the organization Policy Intake review summary");
-assert(policiesPage.includes("loadPolicyIntakeReviewSummary(admin, { submittedByProfileId: profile.id, includeActionRequired: false })"), "RM Policy Register summary must be scoped to the logged-in RM and omit reviewer-only Action Required");
+assert(policiesPage.includes("getRmPolicyIntakePredicates(profile.id, profile.role)"), "Hierarchy reviewers must use the Policy Intake Queue's authorized scope");
+assert(policiesPage.includes("intakeHierarchyScoped && !intakePredicates?.length"), "Empty hierarchy access must not become organization-wide");
+assert(policiesPage.includes("includeActionRequired: canReviewPolicyIntakes"), "Only reviewers may see Action Required counts");
+assert(policiesPage.includes("loadPolicyIntakeReviewSummary(admin, {"), "Policy Register must pass the authorized scope to intake summary");
 assert(policiesPage.includes("PolicyIntakePolicyRegisterLinksPortal"), "Policy Register must mount the Policy Intake quick-link portal");
 
 const summary = read("lib/policy-intake-review-summary.ts");
@@ -22,7 +24,9 @@ assert(summary.includes("loadPolicyIntakeDuplicateMatches(admin, rows)"), "Polic
 assert(summary.includes('status: "Duplicate"'), "Duplicate intakes must be excluded from actionable Policy Register counts");
 assert(summary.includes('row.status === "ready_for_review" || (row.status === "processing" && row.ocr_status === "failed")'), "Action Required count must match the Policy Intake queue definition");
 assert(summary.includes('row.status === "in_review"'), "In Review count must match the Policy Intake queue definition");
-assert(summary.includes(".limit(500)"), "Policy Register summary must use the same visible queue limit as Policy Intakes");
+assert(summary.includes("fetchAllPages<PolicyIntakeSummaryRow"), "Policy Register summary must count every authorized intake page");
+assert(!summary.includes(".limit(500)"), "Policy Register summary must not truncate counts to 500 records");
+assert(summary.includes("options.intakeOrFilter"), "Summary must honor authorization predicates");
 
 const caseSummary = read("lib/life-health-case-summary.ts");
 assert(caseSummary.includes('from("life_health_cases")'), "Shared Proposal counts must come from life_health_cases");
