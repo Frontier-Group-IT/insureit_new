@@ -36,7 +36,7 @@ export default function PolicyIntakesScreen() {
   const [rows, setRows] = useState<PartnerPolicyIntake[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState<IntakeFilter>('action_required');
+  const [filter, setFilter] = useState<IntakeFilter>('all');
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
 
