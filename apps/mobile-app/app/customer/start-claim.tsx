@@ -432,7 +432,8 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
     const hidden = Keyboard.addListener('keyboardDidHide', () => setKeyboardTop(null));
     return () => { shown.remove(); hidden.remove(); };
   }, []);
-  // Keep the menu's top anchored to its trigger; only shrink its scrollable height.
+  // Anchor the search menu directly under the Vehicle number label on both platforms.
+  // Keyboard appearance may reduce the available height, but must not move its top.
   const menuTop = anchor.y + anchor.height + 4;
   const availableHeight = Math.max(90, (keyboardTop ?? windowHeight) - menuTop - 10);
 
@@ -471,8 +472,10 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
       onPress={() => { console.warn('[claim-navigation] vehicle-selector-field-press'); toggleSelector(); }}
       style={({ pressed }) => [styles.vehicleField, pressed && styles.vehicleFieldPressed]}
     >
-      <Text style={styles.sectionLabel}>Vehicle number *</Text>
-      <View ref={anchorRef} collapsable={false} pointerEvents="none" style={[styles.selectButton, open && styles.selectButtonHidden]}>
+      <View ref={anchorRef} collapsable={false} pointerEvents="none">
+        <Text style={styles.sectionLabel}>Vehicle number *</Text>
+      </View>
+      <View pointerEvents="none" style={[styles.selectButton, open && styles.selectButtonHidden]}>
         <View style={styles.selectVehicleLogoShell}>
           <Image
             accessible={false}
@@ -505,7 +508,7 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
             styles.vehicleAnchoredMenu,
             {
               left: anchor.x,
-              top: anchor.y + anchor.height + 4,
+              top: menuTop,
               width: anchor.width,
               maxHeight: Math.min(330, availableHeight),
             },
