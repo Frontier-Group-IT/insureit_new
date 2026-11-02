@@ -167,6 +167,9 @@ export async function completeClaimJourneyStage(claimId: string, formData: FormD
   const { data: claim, error: claimError } = await supabase.from("claims").select("id,current_status,claim_service_mode,policy_service_source").eq("id", claimId).maybeSingle<ManagedClaim>();
   if (claimError || !claim) throw new Error(claimError?.message ?? "Claim not found.");
   if (claim.claim_service_mode !== "broker_managed") throw new Error("Operations can update only managed claims.");
+  if (access.isPartner && (claim.policy_service_source !== "external" || !saveOnly)) {
+    throw new Error("Partners may save External Claim stage details without advancing Operations stages.");
+  }
   if (!isClaimStatus(claim.current_status)) throw new Error("The claim has an unsupported workflow status.");
 
   if (stageKey === "spot_status" && claim.policy_service_source !== "external") {

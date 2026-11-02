@@ -28,6 +28,9 @@ type Props = {
   spotDetails?: InternalSpotIntimationDetails | null;
   externalCustomerMilestones?: CustomerMilestoneVisual[];
   unrestrictedStageEditing?: boolean;
+  partnerReadOnlyJourney?: boolean;
+  partnerManagedJourney?: boolean;
+  partnerInternalStageOne?: boolean;
 };
 
 const stages = [
@@ -169,7 +172,7 @@ function nextStageLabelFor(stageKey: StageKey) {
   return nextKey ? stages.find((stage) => stage.key === nextKey)?.label ?? "next stage" : "claim completion";
 }
 
-export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, spotContent, claimIntimationContent, initialStageKey, accidentAt, spotIntimationAt, spotDetails, externalCustomerMilestones, unrestrictedStageEditing = false }: Props) {
+export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, spotContent, claimIntimationContent, initialStageKey, accidentAt, spotIntimationAt, spotDetails, externalCustomerMilestones, unrestrictedStageEditing = false, partnerReadOnlyJourney = false, partnerManagedJourney = false, partnerInternalStageOne = false }: Props) {
   const router = useRouter();
   const active = stages.find((stage) => (stage.statuses as readonly string[]).includes(currentStatus));
   const activeIndex = active ? stages.findIndex((stage) => stage.key === active.key) : 0;
@@ -194,7 +197,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const stageTarget = stageCompletionTargets[selected.key];
   const nextStageLabel = nextStageLabelFor(selected.key);
   const spotCurrentEditable = Boolean(selected.key === "spot_intimation" && selectedIsCurrent && managerNext);
-  const stageEditable = Boolean(selected.key !== "spot_intimation" && selected.key !== "claim_intimation" && selectedAvailable && stageTarget);
+  const stageEditable = !partnerReadOnlyJourney && Boolean(selected.key !== "spot_intimation" && (selected.key !== "claim_intimation" || partnerManagedJourney) && selectedAvailable && stageTarget);
   const [spotSubmitting, setSpotSubmitting] = useState(false);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
@@ -266,7 +269,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
     try { window.sessionStorage.removeItem(`insureit:spot-intimation-draft:${claimId}`); } catch { /* optional storage */ }
     if (state.nextStageKey) {
       setSelectedKey(state.nextStageKey);
-      router.replace(`/claims/${claimId}?stage=${state.nextStageKey}`);
+      router.replace(`${partnerManagedJourney ? "/partner" : ""}/claims/${claimId}?stage=${state.nextStageKey}`);
       return;
     }
     router.refresh();
@@ -326,7 +329,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
       </ol>
 
       <div className="p-4">
-        {selected.key === "spot_intimation" ? (
+        {selected.key === "spot_intimation" && (!partnerReadOnlyJourney || partnerInternalStageOne) && !partnerManagedJourney ? (
           <>
             <StageOneForm
               key={claimId}
@@ -338,8 +341,8 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
               next={managerNext}
               accidentAt={accidentAt}
               spotIntimationAt={spotIntimationAt}
-              formAction={spotCurrentEditable ? formAction : spotFormAction}
-              standalone={!spotCurrentEditable}
+              formAction={spotCurrentEditable && !partnerInternalStageOne ? formAction : spotFormAction}
+              standalone={!spotCurrentEditable || partnerInternalStageOne}
               onSubmitStart={() => setSpotSubmitting(true)}
             />
             <div className="mt-3">{spotContent}</div>
@@ -350,7 +353,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 onClick={() => {
                   try { window.sessionStorage.removeItem(`insureit:spot-intimation-draft:${claimId}`); } catch { /* optional storage */ }
                   setErrorNotice(null);
-                  router.push("/claims");
+                  router.push(partnerManagedJourney ? "/partner/claims" : "/claims");
                 }}
                 className="rounded-lg border border-[#B8C5D6] bg-white px-4 py-2 text-[11px] font-semibold text-[#071D49] disabled:opacity-50"
               >Cancel</button>
@@ -365,13 +368,29 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
           </>
         ) : null}
 
-        {selected.key === "claim_intimation" ? <div className="mt-3">{claimIntimationContent}</div> : null}
+        {selected.key === "claim_intimation" && !partnerReadOnlyJourney && !partnerManagedJourney ? <div className="mt-3">{claimIntimationContent}</div> : null}
 
+        {partnerReadOnlyJourney ? (
+          <div className="rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-4">
+            <p className="text-xs font-semibold text-[#17365D]">{selected.label}</p>
+            <p className="mt-1 text-[11px] text-[#64748B]">Partner claim progress and saved details. Stage modifications are controlled by the Customer and Operations workflows.</p>
+            {selectedDetails.length ? selectedDetails.map((row, i) => (
+              <dl key={i} className="mt-3 grid gap-2 sm:grid-cols-2">
+                {Object.entries(row.details ?? {}).filter(([key, value]) => fields[selected.key]?.some((field) => field.name === key) && (typeof value === "string" || typeof value === "number" || typeof value === "boolean")).map(([key, value]) => (
+                  <div key={key} className="min-w-0 rounded-lg border border-[#E2EAF4] bg-white p-2">
+                    <dt className="text-[10px] text-[#64748B]">{key.replace(/_/g, " ")}</dt>
+                    <dd className="break-words text-xs font-medium text-[#17365D]">{String(value)}</dd>
+                  </div>
+                ))}
+              </dl>
+            )) : <p className="mt-3 text-xs text-[#64748B]">No saved stage details available.</p>}
+          </div>
+        ) : null}
         {stageEditable ? (
           <form action={formAction} className="mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
             <input type="hidden" name="milestone_key" value={selected.key} />
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
-            <input type="hidden" name="save_only" value={selectedSaveOnly ? "true" : "false"} />
+            <input type="hidden" name="save_only" value={partnerManagedJourney || selectedSaveOnly ? "true" : "false"} />
             <input type="hidden" name="notes" value={selectedSaveOnly ? `Operations edited ${selected.label} details.` : `Operations completed ${selected.label} and opened the next journey stage.`} />
             <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5" : selected.key === "repair_ri" || selected.key === "delivery_order" ? "lg:grid-cols-3" : selected.key === "billing" ? "lg:grid-cols-2" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : selected.key === "payment_encashment" ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
               {fields[selected.key].map((field) => {
