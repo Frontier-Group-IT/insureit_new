@@ -9,6 +9,8 @@ import { requireCapability } from "@/lib/master-data-server";
 import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
 import { getOperationsHeadDownlinePolicyScope, operationsHeadPolicyFilter } from "@/lib/policy-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
+import { getRmPolicyIntakePredicates } from "@/lib/rm-policy-intake-scope";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -39,11 +41,8 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
   ]);
   const initialView = resolveInitialView(params?.view, reviewer);
   const admin = createSupabaseAdminClient();
-  let query = admin
-    .from("policy_intake_requests")
-    .select("id,intake_number,status,policy_type,lead_source_name,lead_source_type,lead_source_code,customer_mobile,created_at,ocr_status,ocr_fields,file_name,assigned_to_profile_id,submitted_by_profile_id,submitted_by_portal_account_id")
-    .order("created_at", { ascending: false })
-    .limit(500);
+  let intakeOrFilter: string | null = null;
+  let submitterFilter: string | null = null;
   if (isDownlineHead) {
     const [scope, employeeScope] = await Promise.all([
       getOperationsHeadDownlinePolicyScope(profile.id),
@@ -58,10 +57,25 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
     if (scope.intermediaryCodes.length) predicates.push(`lead_source_code.in.(${scope.intermediaryCodes.join(",")})`);
     if (employeeScope.profileIds.length) predicates.push(`submitted_by_profile_id.in.(${employeeScope.profileIds.join(",")})`);
     if (allowedPolicies?.length) predicates.push(`final_policy_id.in.(${allowedPolicies.map(row => row.id).join(",")})`);
-    if (predicates.length) query = query.or(predicates.join(","));
-    else query = query.eq("id", "00000000-0000-0000-0000-000000000000");
-  } else if (!reviewer) query = query.eq("submitted_by_profile_id", profile.id);
-  const { data, error } = await query.returns<PolicyIntakeListRow[]>();
+    if (predicates.length) intakeOrFilter = predicates.join(",");
+    else submitterFilter = "00000000-0000-0000-0000-000000000000";
+  } else if (profile.role === "relationship_manager") {
+    // RM visibility includes own submissions plus verified Partner/Branch intakes.
+    // Review permission must not widen the list to unrelated organizations.
+    const predicates = await getRmPolicyIntakePredicates(profile.id, profile.role);
+    intakeOrFilter = predicates.join(",");
+  } else if (!reviewer) submitterFilter = profile.id;
+  // Fetch the entire authorized result set, not only the first 500/1000 records.
+  const { data, error } = await fetchAllPages<PolicyIntakeListRow, unknown>((from, to) => {
+    let page = admin.from("policy_intake_requests")
+      .select("id,intake_number,status,policy_type,lead_source_name,lead_source_type,lead_source_code,customer_mobile,created_at,ocr_status,ocr_fields,file_name,assigned_to_profile_id,submitted_by_profile_id,submitted_by_portal_account_id")
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, to);
+    if (intakeOrFilter) page = page.or(intakeOrFilter);
+    else if (submitterFilter) page = page.eq("submitted_by_profile_id", submitterFilter);
+    return page.returns<PolicyIntakeListRow[]>();
+  });
 
   const rows = data ?? [];
   const profileIds = Array.from(new Set(rows.map((row) => row.submitted_by_profile_id).filter(Boolean) as string[]));
