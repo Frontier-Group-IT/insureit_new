@@ -3,10 +3,9 @@
 import { INTERNAL_JOURNEY_STAGES, projectInternalClaim } from "@insureit/claim-journey";
 import Image from "next/image";
 import { FileText, ShieldCheck } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ExternalClaimOperationsEntry } from "@/components/claims/external-claim-operations-entry";
 import { type QueueClaimRow } from "@/components/claim-manager/claim-queue-table";
 import { claimStatuses, isCustomerActionAwaited, isDocumentVerificationPending, isManagerActionRequired, isOpenClaimStatus, operationsQueueForKey, terminalClaimStatuses, type ClaimStatus } from "@/lib/claim-workflow";
 import { getInsurerLogo } from "@/lib/insurer-logo";
@@ -20,19 +19,6 @@ const workflowStages = INTERNAL_JOURNEY_STAGES.map((stage) => ({
 }));
 
 export function ClaimsWorkspace({ rows, initialParams, loadError, canAddClaim }: { rows: QueueClaimRow[]; initialParams: SearchParams; loadError: string | null; canAddClaim: boolean }) {
-  const openingClaimRef = useRef<string | null>(null);
-  const [openingClaimId, setOpeningClaimId] = useState<string | null>(null);
-  const startOpeningClaim = (claimId: string) => {
-    if (openingClaimRef.current) return false;
-    openingClaimRef.current = claimId;
-    setOpeningClaimId(claimId);
-    return true;
-  };
-  const releaseOpeningClaim = (claimId: string) => {
-    if (openingClaimRef.current !== claimId) return;
-    openingClaimRef.current = null;
-    setOpeningClaimId(null);
-  };
   const [query, setQuery] = useState(initialParams.q ?? "");
   const [selectedStatus, setSelectedStatus] = useState(initialParams.status && initialParams.status !== "all" ? initialParams.status : "");
   const [selectedStage, setSelectedStage] = useState(initialParams.journey ?? "");
@@ -88,7 +74,7 @@ export function ClaimsWorkspace({ rows, initialParams, loadError, canAddClaim }:
     </div>
     {loadError ? <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">{loadError}</div> : null}
     <ClaimSection title={activeMode === "external" ? "External claims" : "Internal claims"} count={activeRows.length} tone={activeMode === "external" ? "secondary" : "primary"} assistanceRequested={activeMode === "external" ? assistanceRequested : 0}>
-      <LocalClaimQueueTable rows={activeRows} page={page} onPageChange={setPage} openingClaimId={openingClaimId} onClaimStart={startOpeningClaim} onClaimFailure={releaseOpeningClaim} />
+      <LocalClaimQueueTable rows={activeRows} page={page} onPageChange={setPage} />
     </ClaimSection>
   </>;
 }
@@ -98,7 +84,7 @@ function ClaimSection({ title, count, tone, assistanceRequested = 0, children }:
   return <section className={`overflow-hidden rounded-xl border ${sectionClass}`}><div className={`flex flex-wrap items-center gap-2 border-b border-inherit px-3 py-2.5 ${tone === "primary" ? "justify-start" : "justify-between"}`}><h2 className="text-[14px] font-semibold text-[#071D49]">{title}</h2><span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${assistanceRequested ? "bg-amber-100 text-amber-800" : "bg-[#EEF4FC] text-[#174EA6]"}`}>{count} claim{count === 1 ? "" : "s"}{assistanceRequested ? ` • ${assistanceRequested} assistance` : ""}</span></div>{children}</section>;
 }
 
-function LocalClaimQueueTable({ rows, page, onPageChange, openingClaimId, onClaimStart, onClaimFailure }: { rows: QueueClaimRow[]; page: number; onPageChange: (page: number) => void; openingClaimId: string | null; onClaimStart: (claimId: string) => boolean; onClaimFailure: (claimId: string) => void }) {
+function LocalClaimQueueTable({ rows, page, onPageChange }: { rows: QueueClaimRow[]; page: number; onPageChange: (page: number) => void }) {
   const totalPages = Math.max(1, Math.ceil(rows.length / CLAIMS_PAGE_SIZE));
   const safePage = Math.min(Math.max(page, 1), totalPages);
   const start = (safePage - 1) * CLAIMS_PAGE_SIZE;
