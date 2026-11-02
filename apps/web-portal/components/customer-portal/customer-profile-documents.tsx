@@ -23,7 +23,7 @@ export function CustomerProfileDocuments({ customerId, documents }: { customerId
       <div className="relative isolate overflow-hidden px-4 py-4 sm:px-5 sm:py-5">
         <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full border-[35px] border-white/45" />
         <div className="relative flex items-center gap-3">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#8B56EF] to-[#4D27B0] text-white shadow-[0_8px_20px_rgba(82,45,173,0.2)]"><FileText className="h-6 w-6" /></span>
+          <img src="/assets/Custom-Icons/optimized-128/documents.png" alt="" aria-hidden="true" width={48} height={48} className="h-12 w-12 shrink-0 object-contain" />
           <div className="min-w-0 flex-1">
             <h2 className="text-[17px] font-black text-[#2E2358]">Document Vault</h2>
             <p className="mt-0.5 text-[10.5px] font-medium text-[#81739B]">Access and manage your important documents.</p>
