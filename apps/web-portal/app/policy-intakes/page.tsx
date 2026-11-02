@@ -9,6 +9,7 @@ import { requireCapability } from "@/lib/master-data-server";
 import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
 import { getOperationsHeadDownlinePolicyScope, operationsHeadPolicyFilter } from "@/lib/policy-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { getRmPolicyIntakePredicates } from "@/lib/rm-policy-intake-scope";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -60,6 +61,11 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
     if (allowedPolicies?.length) predicates.push(`final_policy_id.in.(${allowedPolicies.map(row => row.id).join(",")})`);
     if (predicates.length) query = query.or(predicates.join(","));
     else query = query.eq("id", "00000000-0000-0000-0000-000000000000");
+  } else if (profile.role === "relationship_manager") {
+    // RM visibility includes own submissions plus verified Partner/Branch intakes.
+    // Review permission must not widen the list to unrelated organizations.
+    const predicates = await getRmPolicyIntakePredicates(profile.id, profile.role);
+    query = query.or(predicates.join(","));
   } else if (!reviewer) query = query.eq("submitted_by_profile_id", profile.id);
   const { data, error } = await query.returns<PolicyIntakeListRow[]>();
 
