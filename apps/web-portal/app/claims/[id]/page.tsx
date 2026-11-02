@@ -2,7 +2,6 @@ import { notFound, redirect } from "next/navigation";
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
 import { OperationsClaimStages } from "@/components/claim-manager/operations-claim-stages";
 import { AssistanceIntakePanel } from "@/components/claims/assistance-intake-panel";
-import { ExternalClaimOperationsEntry } from "@/components/claims/external-claim-operations-entry";
 import { finalDocumentDefinitions } from "@/components/final-documents/final-document-groups";
 import { FinalDocumentsWorkspaceV2, type DealershipDetailsV2, type FinalDocumentRowV2 } from "@/components/final-documents/final-documents-workspace-v2";
 import { SpotClaimHeader, SpotSurveyWorkspace, type SpotSurveyClaim, type SpotSurveyDocument, type SpotSurveyVerification, type SurveyorDetails } from "@/components/spot-survey/spot-survey-workspace-v2";
@@ -229,9 +228,35 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
   const title = `Documents Verification - ${claimForVerification.claim_no}${claimForVerification.insurer_claim_no ? ` / ${claimForVerification.insurer_claim_no}` : ""}`;
 
   if (claim.policy_service_source === "external" && claim.claim_service_mode === "self_managed") {
+    // Opening a claim is a read operation. Never initiate the Operations takeover
+    // RPC here: viewers can inspect their scoped External Claim without manage_claims.edit.
+    const { data: milestoneRows, error: milestoneError } = await admin
+      .from("claim_milestones")
+      .select("milestone_key,milestone_status,details,created_at")
+      .eq("claim_id", claim.id)
+      .order("created_at", { ascending: true });
+    if (milestoneError) throw new Error("External Claim stage details could not be loaded.");
+    const stageHistory = (milestoneRows ?? []).map(row => ({
+      stage: row.milestone_key,
+      details: row.details as Record<string, unknown> | null,
+      created_at: row.created_at,
+    }));
     return (
       <ClaimManagerShell title={`External Claim - ${claim.claim_no}`} backHref={backHref}>
-        <ExternalClaimOperationsEntry claimId={claim.id} auto />
+        <OperationsClaimStages
+          claimId={claim.id}
+          currentStatus={claim.current_status}
+          insurerClaimNo={claim.insurer_claim_no}
+          details={stageHistory}
+          spotContent={null}
+          claimIntimationContent={null}
+          initialStageKey={requestedStage}
+          accidentAt={claim.accident_at}
+          spotIntimationAt={claim.spot_intimation_at}
+          externalCustomerMilestones={(milestoneRows ?? []).map(row => ({ key: row.milestone_key, status: row.milestone_status }))}
+          unrestrictedStageEditing
+          partnerReadOnlyJourney
+        />
       </ClaimManagerShell>
     );
   }
