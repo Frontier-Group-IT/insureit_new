@@ -8,12 +8,13 @@ import { CustomerErrorDialog } from "@/components/customer-portal/customer-error
 export type SpotSaveState = { error: string | null };
 const initialState: SpotSaveState = { error: null };
 
-export function SpotIntimationSaveForm({ action, children, cancelHref, evidence, draftKey }: {
+export function SpotIntimationSaveForm({ action, children, cancelHref, evidence, draftKey, editMode = false }: {
   action: (state: SpotSaveState, form: FormData) => Promise<SpotSaveState>;
   children: React.ReactNode;
   cancelHref: string;
   evidence?: React.ReactNode;
   draftKey: string;
+  editMode?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, initialState);
   const formRef = useRef<HTMLFormElement>(null);
@@ -72,7 +73,7 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
         ? <span aria-disabled="true" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#B9CBE2] px-6 py-3 text-[13px] font-semibold text-[#9AAAC0] sm:min-w-32">Cancel</span>
         : <Link href={cancelHref} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#B9CBE2] bg-white px-6 py-3 text-[13px] font-semibold text-[#17365D] transition hover:bg-[#F0F6FE] sm:min-w-32">Cancel</Link>}
       <button type="submit" form="customer-spot-intimation-form" disabled={pending} aria-disabled={pending} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#1253A7] px-6 py-3 text-[13px] font-bold text-white transition hover:bg-[#0B3884] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1253A7] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:min-w-64">
-        {pending ? <><LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true"/>Saving...</> : <>Save &amp; Continue <ArrowRight className="h-4 w-4" aria-hidden="true"/></>}
+        {pending ? <><LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true"/>Saving...</> : <>{editMode ? "Save Changes" : "Save & Continue"} <ArrowRight className="h-4 w-4" aria-hidden="true"/></>}
       </button>
     </div></div>
   </div>;
