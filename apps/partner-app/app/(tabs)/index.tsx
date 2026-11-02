@@ -12,7 +12,7 @@ import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerSkeleton } from '@/components/ui/partner-skeleton';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
-import { getPartnerBusinessRange, getPartnerHome, type PartnerHomeData } from '@/lib/home';
+import { getPartnerBusinessRange, getPartnerCanonicalPolicyTotal, getPartnerHome, type PartnerHomeData } from '@/lib/home';
 import { getPartnerActivity, type PartnerActivityData } from '@/lib/engagement';
 import { getPartnerBusinessPerformance, type PartnerBusinessPerformance } from '@/lib/business';
 import { usePartnerQuery } from '@/lib/use-partner-query';
@@ -76,6 +76,13 @@ export default function PartnerHomeScreen() {
     staleTimeMs: 60_000,
   });
 
+  const canonicalPolicies = usePartnerQuery({
+    scopeKey: cacheScopeKey,
+    key: 'home:canonical-total-policies',
+    fetcher: getPartnerCanonicalPolicyTotal,
+    staleTimeMs: 60_000,
+  });
+
   const previousMonthMtdRange = previousMonthMtdDateRange();
   const fetchPreviousMonthMtd = useCallback(
     () => getPartnerBusinessRange(previousMonthMtdRange.from, previousMonthMtdRange.to),
@@ -92,6 +99,7 @@ export default function PartnerHomeScreen() {
     useCallback(() => {
       void workspace.ensureFresh();
       void business.ensureFresh();
+      void canonicalPolicies.ensureFresh();
       if (businessPeriod === 'mtd') void previousMonthMtd.ensureFresh();
     }, [workspace.ensureFresh, business.ensureFresh, previousMonthMtd.ensureFresh, businessPeriod]),
   );
@@ -153,6 +161,7 @@ export default function PartnerHomeScreen() {
             onRefresh={() => {
               void workspace.refresh();
               void business.refresh();
+              void canonicalPolicies.refresh();
               if (businessPeriod === 'mtd') void previousMonthMtd.refresh();
             }}
             tintColor={partnerTheme.colors.brand}
@@ -293,8 +302,10 @@ export default function PartnerHomeScreen() {
               <View style={styles.businessBottomRow}>
                 <MetricCell
                   icon={<PartnerPoliciesSoldIcon size={36} />}
-                  value={rangeData ? String(rangeData.policies) : '—'}
-                  label="Policies Sold"
+                  value={businessPeriod === 'all'
+                    ? (canonicalPolicies.data != null ? String(canonicalPolicies.data) : '—')
+                    : (rangeData ? String(rangeData.policies) : '—')}
+                  label={businessPeriod === 'all' ? 'Total Policies' : 'Policies Sold'}
                 />
                 <View style={styles.metricDivider} />
                 <MetricCell
