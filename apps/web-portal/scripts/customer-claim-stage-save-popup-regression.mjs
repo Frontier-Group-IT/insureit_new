@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const src = readFileSync(new URL("../components/customer-portal/customer-claim-stage-submit.tsx", import.meta.url), "utf8");
+assert.match(src, /role="alertdialog"/);
+assert.match(src, /aria-modal="true"/);
+assert.match(src, /setErrorPopup\(result.error\)/);
+assert.match(src, /setErrorPopup\(error instanceof Error/);
+assert.ok(src.includes('onClick={() => setErrorPopup("")}'));
+assert.doesNotMatch(src, /bg-\[#FFF3F3\]/);
+console.log("Customer claim save error popup regression passed");
