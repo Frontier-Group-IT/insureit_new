@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import { saveCustomerInternalSpotCorrection } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/actions";
+import { isExternalCustomerClaim } from "@/lib/customer-web-phase2-data";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail } from "@/lib/customer-web-phase2-data";
 import { createServerSupabaseClient } from "@/lib/auth-server";
@@ -19,11 +21,41 @@ function dateTime(form: FormData, name: string) {
   return timestamp;
 }
 
-export default async function CustomerSpotIntimation({searchParams}:{searchParams?:Promise<{account?:string;id?:string}>}) {
+export default async function CustomerSpotIntimation({searchParams}:{searchParams?:Promise<{account?:string;id?:string;mode?:string}>}) {
   const q=searchParams?await searchParams:{};
   const {account}=await resolveCustomerWebScope(q.account);
   if(!q.id) redirect("/customer/start-claim?account="+encodeURIComponent(account.id));
-  const {claim,documents}=await loadCustomerClaimDetail(account.id,q.id);
+  const {claim,documents,milestones,internal_projection}=await loadCustomerClaimDetail(account.id,q.id);
+  const editing=q.mode==="edit";
+  const eligible=editing && !isExternalCustomerClaim(claim) && claim.claim_service_mode==="broker_managed" &&
+    (internal_projection?.completedStageCount??0)===1 &&
+    !milestones.some(m=>m.milestone_key==="spot_status" && ["completed","not_applicable"].includes(m.milestone_status));
+  const detailsHref="/customer/claims/"+encodeURIComponent(claim.id)+"/stage/spot_intimation?account="+encodeURIComponent(account.id);
+  if(editing && !eligible) redirect(detailsHref);
+  const spotDetails=milestones.find(m=>m.milestone_key==="spot_intimation")?.details;
+  const description=claim.accident_description??"";
+  const driverName=typeof spotDetails?.driver_name==="string"?spotDetails.driver_name:description.match(/Driver:\s*([^\n]+)/)?.[1]??"";
+  const driverPhone=typeof spotDetails?.driver_phone==="string"?spotDetails.driver_phone:description.match(/Driver phone:\s*([^\n]+)/)?.[1]??"";
+  const existingDateTime=(input:string|null|undefined,field:"date"|"time")=>{
+    if(!input)return "";
+    const date=new Date(input);
+    if(!Number.isFinite(date.getTime()))return "";
+    const parts=new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(date);
+    const get=(key:string)=>parts.find(part=>part.type===key)?.value??"";
+    return field==="date"?get("year")+"-"+get("month")+"-"+get("day"):get("hour")+":"+get("minute");
+  };
+  async function submitCorrection(_state:SpotSaveState,form:FormData):Promise<SpotSaveState>{
+    "use server";
+    const update=new FormData();
+    update.set("account",String(form.get("account")??""));
+    update.set("claim",String(form.get("claim")??""));
+    update.set("accidentAt",String(form.get("accidentDate")??"")+"T"+String(form.get("accidentTime")??""));
+    update.set("spotAt",String(form.get("spotDate")??"")+"T"+String(form.get("spotTime")??""));
+    for(const key of ["driver","phone","location"])update.set(key,String(form.get(key)??""));
+    const result=await saveCustomerInternalSpotCorrection({error:null,saved:false},update);
+    if(!result.saved)return {error:result.error??"Changes could not be saved."};
+    redirect("/customer/claims/"+encodeURIComponent(String(form.get("claim")??""))+"/stage/spot_intimation?account="+encodeURIComponent(String(form.get("account")??""))+"&updated=1");
+  }
   const external=Boolean(claim.external_policy_id);
   async function submit(_state: SpotSaveState, form:FormData): Promise<SpotSaveState> {
     "use server";
@@ -94,7 +126,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
   const splitFieldClass = "block h-[42px] min-w-0 flex-1 bg-transparent px-3 text-[13px] font-medium text-[#193659] outline-none";
   return <div className="mx-auto w-full max-w-[90rem] space-y-3">
     <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey="spot_intimation" currentKey="spot_intimation" completedKeys={[]} claimSummary={{controlNo:claim.claim_no,policyNo:claim.policy_no,makeModel:[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" - ")||null,vehicleNo:claim.vehicle_no,status:claim.current_status,manufacturer:claim.vehicle_make,insurer:claim.insurer_name,policySource:claim.policy_service_source==="sibl"?"Sankalp Policy":claim.policy_service_source==="external"||claim.external_policy_id?"External Policy":"—"}}/>
-    <SpotIntimationSaveForm action={submit} draftKey={account.id+":"+claim.id} cancelHref={`/customer/start-claim?account=${encodeURIComponent(account.id)}`} evidence={<><CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage="spot_intimation" returnToSpotIntimation/><CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id}/></>}>
+    <SpotIntimationSaveForm action={editing?submitCorrection:submit} editMode={editing} draftKey={account.id+":"+claim.id+(editing?":edit":"")} cancelHref={editing?detailsHref:`/customer/start-claim?account=${encodeURIComponent(account.id)}`} evidence={<><CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage="spot_intimation" returnToSpotIntimation/><CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id}/></>}>
       <input type="hidden" name="account" value={account.id}/><input type="hidden" name="claim" value={claim.id}/>
       <div className="-mx-4 -mt-4 border-b border-[#D8E3F1] px-4 py-3 sm:-mx-5 sm:-mt-5 sm:px-5">
         <h2 className="text-[17px] font-bold text-[#112B51]">Accident &amp; Spot Intimation Details</h2>
@@ -103,30 +135,30 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
         <label className="min-w-0">
           <span className="block text-[10px] font-bold uppercase tracking-[.025em] text-[#245BB2]">Accident Date &amp; Time <span className="text-rose-500">*</span></span>
           <span className="mt-2 flex min-w-0 overflow-hidden rounded-lg border border-[#CAD8EA] bg-white">
-            <input name="accidentDate" type="date" required aria-label="Accident date" className={splitFieldClass}/>
+            <input name="accidentDate" type="date" defaultValue={editing?existingDateTime(claim.accident_at,"date"):undefined} required aria-label="Accident date" className={splitFieldClass}/>
             <span aria-hidden="true" className="my-1.5 w-px shrink-0 bg-[#D6E0ED]"/>
-            <AutoCloseTimeInput name="accidentTime" required ariaLabel="Accident time" className={splitFieldClass}/>
+            <AutoCloseTimeInput name="accidentTime" defaultValue={editing?existingDateTime(claim.accident_at,"time"):undefined} required ariaLabel="Accident time" className={splitFieldClass}/>
           </span>
         </label>
         <label className="min-w-0">
           <span className="block text-[10px] font-bold uppercase tracking-[.025em] text-[#245BB2]">Spot Intimation Date &amp; Time <span className="text-rose-500">*</span></span>
           <span className="mt-2 flex min-w-0 overflow-hidden rounded-lg border border-[#CAD8EA] bg-white">
-            <input name="spotDate" type="date" required aria-label="Spot intimation date" className={splitFieldClass}/>
+            <input name="spotDate" type="date" defaultValue={editing?existingDateTime(claim.spot_intimation_at,"date"):undefined} required aria-label="Spot intimation date" className={splitFieldClass}/>
             <span aria-hidden="true" className="my-1.5 w-px shrink-0 bg-[#D6E0ED]"/>
-            <AutoCloseTimeInput name="spotTime" required ariaLabel="Spot intimation time" className={splitFieldClass}/>
+            <AutoCloseTimeInput name="spotTime" defaultValue={editing?existingDateTime(claim.spot_intimation_at,"time"):undefined} required ariaLabel="Spot intimation time" className={splitFieldClass}/>
           </span>
         </label>
         <label className="min-w-0">
           <span className="block text-[10px] font-bold uppercase tracking-[.025em] text-[#245BB2]">Driver Name <span className="text-rose-500">{external?"":"*"}</span></span>
-          <input name="driver" required={!external} maxLength={120} placeholder="Enter driver name" autoComplete="name" className={"mt-2 "+textFieldClass}/>
+          <input name="driver" defaultValue={editing?driverName:undefined} required={!external} maxLength={120} placeholder="Enter driver name" autoComplete="name" className={"mt-2 "+textFieldClass}/>
         </label>
         <label className="min-w-0">
           <span className="block text-[10px] font-bold uppercase tracking-[.025em] text-[#245BB2]">Driver Number <span className="text-rose-500">{external?"":"*"}</span></span>
-          <input name="phone" required={!external} type="tel" maxLength={15} inputMode="tel" placeholder="Enter mobile number" autoComplete="tel" className={"mt-2 "+textFieldClass}/>
+          <input name="phone" defaultValue={editing?driverPhone:undefined} required={!external} type="tel" maxLength={15} inputMode="tel" placeholder="Enter mobile number" autoComplete="tel" className={"mt-2 "+textFieldClass}/>
         </label>
         <label className="min-w-0 md:col-span-2 xl:col-span-1">
           <span className="block text-[10px] font-bold uppercase tracking-[.025em] text-[#245BB2]">Location <span className="text-rose-500">{external?"":"*"}</span></span>
-          <input name="location" required={!external} maxLength={500} placeholder="Enter accident location" className={"mt-2 "+textFieldClass}/>
+          <input name="location" defaultValue={editing?claim.accident_location??"":undefined} required={!external} maxLength={500} placeholder="Enter accident location" className={"mt-2 "+textFieldClass}/>
         </label>
       </div>
     </SpotIntimationSaveForm>
