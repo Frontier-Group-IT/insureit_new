@@ -162,7 +162,7 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
   const mtdSources = aggregateSources(mtdRegisterRows, intermediaryNames, parentSourceByPolicy);
   const rowKeys = new Set([...periodByRm.keys(), ...todayByRm.keys()]);
 
-  const rows = [...rowKeys]
+  const rows: RmPerformanceRow[] = [...rowKeys]
     .map((key) => {
       const periodRow = periodByRm.get(key);
       const todayRow = todayByRm.get(key);
