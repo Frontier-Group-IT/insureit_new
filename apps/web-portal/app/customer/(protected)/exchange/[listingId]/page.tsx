@@ -20,13 +20,14 @@ export default async function CustomerExchangeListingPage({
   searchParams,
 }: {
   params: Promise<{ listingId: string }>;
-  searchParams?: Promise<{ account?: string }>;
+  searchParams?: Promise<{ account?: string; from?: string }>;
 }) {
   const { listingId } = await params;
   const query = searchParams ? await searchParams : {};
   const { account, accounts } = await resolveCustomerWebScope(query.account);
   const { listing, detail } = await loadCustomerExchangeListing(listingId);
-  const backHref = { pathname: "/customer/exchange", query: { account: account.id } };
+  const fromActivity = query.from === "activity";
+  const backHref = { pathname: "/customer/exchange", query: { account: account.id, ...(fromActivity ? { tab: "activity" } : {}) } };
   const location = [listing.city, listing.state].filter(Boolean).join(", ") || "Location on request";
   const vehicleName = [listing.year, listing.title].filter(Boolean).join(" ");
   const bike = /bike|motorcycle|scooter|two.?wheel|pulsar/i.test([listing.vehicle_type, listing.category, listing.title].join(" "));
@@ -60,7 +61,7 @@ export default async function CustomerExchangeListingPage({
   return (
     <div className="space-y-3 pb-8">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Link href={backHref} className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#536C8D] hover:text-[#17365D]"><ArrowLeft className="h-3.5 w-3.5" /> Back to Exchange</Link>
+        <Link href={backHref} className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#536C8D] hover:text-[#17365D]"><ArrowLeft className="h-3.5 w-3.5" /> {fromActivity ? "Back to Activity" : "Back to Exchange"}</Link>
         <span className="rounded-full border border-[#D9E3F0] bg-white px-3 py-1.5 text-[10px] font-semibold text-[#64748B]">Listing {listing.listing_no}</span>
       </div>
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/exchange" />
