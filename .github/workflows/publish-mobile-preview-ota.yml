@@ -1,6 +1,11 @@
 name: Publish mobile preview OTA
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile-app/**'
+      - '.github/workflows/publish-mobile-preview-ota.yml'
   workflow_dispatch:
 
 permissions:
