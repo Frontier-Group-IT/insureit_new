@@ -19,7 +19,7 @@ import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimPro
 export const dynamic="force-dynamic";
 export const revalidate=0;
 
-export default async function CustomerClaimStage({params,searchParams}:{params:Promise<{id:string;stage:string}>;searchParams?:Promise<{account?:string;mode?:string;saved?:string}>}) {
+export default async function CustomerClaimStage({params,searchParams}:{params:Promise<{id:string;stage:string}>;searchParams?:Promise<{account?:string;mode?:string;saved?:string;updated?:string}>}) {
   const p=await params;const q=searchParams?await searchParams:{};
   const {account}=await resolveCustomerWebScope(q.account);
   const {claim,milestones,documents,internal_projection}=await loadCustomerClaimDetail(account.id,p.id);
@@ -40,6 +40,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
   const completedInternalStages = !external ? (internal_projection?.completedStageCount ?? 0) : 0;
   if (!external && completedInternalStages > 0) {
     return <div className="customer-claim-ref-page space-y-3">
+      {q.updated==="1" ? <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-[12px] font-semibold text-emerald-800">Spot Intimation details updated successfully.</p> : null}
       <CustomerClaimStageStrip
         claimId={claim.id}
         accountId={account.id}
