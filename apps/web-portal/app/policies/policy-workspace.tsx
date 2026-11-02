@@ -383,38 +383,38 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
       </div>
 
       <div className="border-b border-[#E5ECF5] bg-white px-3 py-2 sm:px-4">
-        <div className="flex w-full min-w-0 flex-nowrap items-center gap-2 overflow-x-auto overscroll-x-contain pb-1 [&>*]:shrink-0" role="region" aria-label="Policy portfolio filters" tabIndex={0}>
-          <PolicyBusinessFilter
+        <div className="flex w-full min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto pb-1 lg:overflow-x-visible [&>*]:shrink-0" role="region" aria-label="Policy portfolio filters" tabIndex={0}>
+          <div className="w-[140px] min-w-[140px] [&_button]:!w-full [&_button]:!min-w-0 [&_button]:!max-w-full"><PolicyBusinessFilter
             business={business}
             onBusinessChange={(value) => {
               setBusiness(value);
               if (value === "Non Motor" && view === "claims") setView("all");
               setPage(1);
             }}
-          />
-          <div className="[&>label]:block [&>label]:w-full [&_select]:min-w-[170px] [&_select]:w-full">
+          /></div>
+          <div className="w-[145px] min-w-[145px] [&>label]:block [&>label]:w-full [&_select]:!min-w-0 [&_select]:w-full">
             <RegisterSelect value={sourceSelectValue} onChange={(value) => { setSource(value); setPage(1); }} label="Lead source">
               <option value="all">All Sources</option>
               {visibleSourceOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </RegisterSelect>
           </div>
           {!isRelationshipManager ? (
-          <div className="[&>label]:block [&>label]:w-full [&_select]:min-w-[180px] [&_select]:w-full">
+          <div className="w-[135px] min-w-[135px] [&>label]:block [&>label]:w-full [&_select]:!min-w-0 [&_select]:w-full">
             <RegisterSelect value={rm} onChange={(value) => { setRm(value); if (value === "all") setSource("all"); setPage(1); }} label="Relationship manager">
               <option value="all">All RMs</option>
               {rms.map((item) => <option key={item} value={item}>{item}</option>)}
             </RegisterSelect>
           </div>
           ) : null}
-          <PolicyDateRangeFilter
+          <div className="w-[150px] min-w-[150px] [&_summary]:!min-w-0 [&_summary]:!w-full"><PolicyDateRangeFilter
             fromDate={fromDate}
             toDate={toDate}
             onFromDateChange={changeCustomFromDate}
             onToDateChange={changeCustomToDate}
             onQuickRange={changeQuickDateRange}
             onClear={() => { setTimeScope("all"); setFromDate(""); setToDate(""); setView("all"); setPage(1); }}
-          />
-          <div className="w-max min-w-max shrink-0">
+          /></div>
+          <div className="min-w-[110px] flex-1 shrink overflow-x-auto overscroll-x-contain" role="region" aria-label="Policy period and status filters" tabIndex={0}>
             <div className="flex w-max min-w-max items-center gap-1 overflow-visible rounded-xl border border-[#D8E2EE] bg-[#F8FAFC] p-1">
               <PolicyPeriodFilter value={timeScope} mtdCount={mtdFiltered.length} allCount={controlFiltered.length} onChange={changeTimeScope} />
               <div className="min-w-max shrink-0 [&>div]:!w-max [&>div]:!flex-nowrap [&>div]:!overflow-visible [&>div>button]:!min-w-max [&>div>button]:!shrink-0 [&>div>button]:!whitespace-nowrap [&>div]:border-0 [&>div]:bg-transparent [&>div]:p-0 xl:[&_button]:px-2.5 xl:[&_button]:text-[10px]">
