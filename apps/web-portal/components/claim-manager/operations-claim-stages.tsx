@@ -375,7 +375,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             <p className="mt-1 text-[11px] text-[#64748B]">Partner claim progress and saved details. Stage modifications are controlled by the Customer and Operations workflows.</p>
             {selectedDetails.length ? selectedDetails.map((row, i) => (
               <dl key={i} className="mt-3 grid gap-2 sm:grid-cols-2">
-                {Object.entries(row.details ?? {}).filter(([key, value]) => key !== "external_customer_live_fallback" && key !== "milestone_key" && (typeof value === "string" || typeof value === "number" || typeof value === "boolean")).map(([key, value]) => (
+                {Object.entries(row.details ?? {}).filter(([key, value]) => fields[selected.key]?.some((field) => field.name === key) && (typeof value === "string" || typeof value === "number" || typeof value === "boolean")).map(([key, value]) => (
                   <div key={key} className="min-w-0 rounded-lg border border-[#E2EAF4] bg-white p-2">
                     <dt className="text-[10px] text-[#64748B]">{key.replace(/_/g, " ")}</dt>
                     <dd className="break-words text-xs font-medium text-[#17365D]">{String(value)}</dd>
