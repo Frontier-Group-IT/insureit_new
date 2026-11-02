@@ -1,0 +1,37 @@
+name: INSUREIT R2 backup failure and missed-run monitor
+
+on:
+  workflow_run:
+    workflows:
+      - INSUREIT Supabase Storage backup to R2 (daily 7 PM IST)
+    types: [completed]
+  schedule:
+    # Watch for a missing 19:00 IST backup at 22:47 IST (17:17 UTC).
+    - cron: '17 17 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+
+concurrency:
+  group: insureit-backup-alert-monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Report failed or missing backup through GitHub Issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python -u scripts/backup/monitor_github_backup.py
