@@ -274,9 +274,9 @@ def main():
         raise RuntimeError("Manifest cannot be published: object count mismatch")
     if not entries:
         raise RuntimeError("No source files discovered; refusing empty manifest")
-    document = {"version": 1, "created_at": today, "project_ref": SOURCE_REF,
+    document = {"version": 1, "created_at": snapshot, "project_ref": SOURCE_REF,
                 "buckets": source_buckets, "entries": entries}
-    manifest_key = f"{PREFIX}/manifests/{today}-{secrets.token_hex(6)}.json.aes"
+    manifest_key = f"{PREFIX}/manifests/{snapshot}-{secrets.token_hex(6)}.json.aes"
     manifest = json.dumps(document, separators=(",", ":"), sort_keys=True).encode()
     s3.put_object(Bucket=bucket, Key=manifest_key,
                   Body=encrypt(manifest, raw_key, "manifest"),
