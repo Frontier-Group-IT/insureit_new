@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Animated, Image, Linking, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, useWindowDimensions, type ImageSourcePropType } from 'react-native';
+import { Platform, Animated, Image, Linking, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
@@ -238,12 +238,10 @@ export default function CustomerMockupHomeScreen() {
 
 function DashboardIntro({ firstName, lastUpdated, attentionCount, groupName, onAttentionPress }: { firstName: string; lastUpdated: Date | null; attentionCount: number; groupName?: string | null; onAttentionPress: () => void }) {
   const hasAttention = attentionCount > 0;
-  const { width: screenWidth } = useWindowDimensions();
-  const compactPhone = screenWidth < 375;
   return (
     <View style={styles.greetingBlock}>
       <View>
-        <Text style={[styles.greeting, compactPhone && { fontSize: 18, lineHeight: 23 }]} numberOfLines={2}>{timeGreeting()}, {firstName}</Text>
+        <Text style={styles.greeting}>{timeGreeting()}, {firstName}</Text>
         <View style={styles.greetingMetaRow}>
           <Pressable disabled={!hasAttention} onPress={onAttentionPress} style={({ pressed }) => [styles.attentionLink, pressed && styles.textPressed]}>
             {hasAttention ? (
@@ -274,14 +272,12 @@ function DashboardIntro({ firstName, lastUpdated, attentionCount, groupName, onA
 
 function FleetSnapshot({ vehicles, protectedVehicles, protectionScore, onOpen }: { vehicles: Vehicle[]; protectedVehicles: number; protectionScore: number; onOpen: () => void }) {
   const unprotected = Math.max(vehicles.length - protectedVehicles, 0);
-  const { width: screenWidth } = useWindowDimensions();
-  const compactPhone = screenWidth < 375;
   return (
-    <Pressable onPress={onOpen} style={({ pressed }) => [styles.fleetCard, compactPhone && { paddingHorizontal: 10, paddingVertical: 11 }, pressed && styles.cardPressed]}>
+    <Pressable onPress={onOpen} style={({ pressed }) => [styles.fleetCard, pressed && styles.cardPressed]}>
       <Text style={styles.sectionEyebrow}>Your fleet summary</Text>
       <View style={styles.fleetMainRow}>
         <View style={styles.fleetCountBlock}>
-          <Text style={[styles.fleetCount, compactPhone && { fontSize: 28, lineHeight: 33 }]}>{vehicles.length}</Text>
+          <Text style={styles.fleetCount}>{vehicles.length}</Text>
           <Text style={styles.fleetCountLabel}>Vehicles</Text>
         </View>
         <Image source={fleetSketch} style={styles.fleetImageHero} resizeMode="contain" />
