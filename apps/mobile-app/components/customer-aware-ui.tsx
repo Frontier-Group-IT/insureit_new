@@ -20,7 +20,6 @@ import {
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -102,8 +101,6 @@ function CustomerFixedScreen({
   const pathname = usePathname();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
-  const { width: screenWidth } = useWindowDimensions();
-  const compactPhone = screenWidth < 375;
   const [profileInitial, setProfileInitial] = useState('I');
   const [customerContext, setCustomerContext] = useState<CustomerAccountContext | null | undefined>(undefined);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
@@ -214,7 +211,7 @@ function CustomerFixedScreen({
               // fixed-header logo Pressable, including touches well below the header.
               // Keep its appearance but remove the responder on Start Claim only.
               <View pointerEvents="none" style={baseStyles.fixedBrandStatic}>
-                <BrandLogo width={compactPhone ? 112 : 132} inverse />
+                <BrandLogo width={132} inverse />
               </View>
             ) : (
               <Pressable
@@ -224,7 +221,7 @@ function CustomerFixedScreen({
                 onPress={openDashboard}
                 style={baseStyles.fixedBrandPressable}
               >
-                <BrandLogo width={compactPhone ? 112 : 132} inverse />
+                <BrandLogo width={132} inverse />
               </Pressable>
             )}
           </View>
@@ -236,7 +233,7 @@ function CustomerFixedScreen({
 
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={baseStyles.keyboard}>
           <View
-            style={[localStyles.fixedPageArea, compactPhone && { paddingHorizontal: 10, paddingBottom: 4 }, { paddingTop: fixedTopPadding }]}
+            style={[localStyles.fixedPageArea, { paddingTop: fixedTopPadding }]}
             onTouchStart={(event) => traceStartClaimTouch('fixed-page-content', event)}
           >
             {showTitleHeader && !loadingOnly ? (
@@ -245,8 +242,8 @@ function CustomerFixedScreen({
                   <View style={[baseStyles.headerDot, { backgroundColor: roleTheme.customer.accent }]} />
                   <Text style={baseStyles.roleEyebrow}>Customer</Text>
                 </View>
-                <Text style={[baseStyles.title, compactPhone && { fontSize: 19, lineHeight: 24 }]}>{title}</Text>
-                {subtitle ? <Text style={[baseStyles.subtitle, compactPhone && { fontSize: 11, lineHeight: 16 }]}>{subtitle}</Text> : null}
+                <Text style={baseStyles.title}>{title}</Text>
+                {subtitle ? <Text style={baseStyles.subtitle}>{subtitle}</Text> : null}
               </View>
             ) : null}
             {split.sticky.length ? <View style={localStyles.stickyStack}>{split.sticky}</View> : null}
