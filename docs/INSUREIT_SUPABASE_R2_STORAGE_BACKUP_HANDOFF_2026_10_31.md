@@ -1,3 +1,14 @@
+## 2026-11-02 — Daily schedule at 19:00 Asia/Kolkata
+
+- Requested schedule: **7:00 PM IST daily**, equivalent to `30 13 * * *` UTC in GitHub Actions.
+- GitHub scheduled jobs are best-effort and can start late or occasionally be dropped; monitor failures, stale latest-manifest age and completed scheduled runs.
+- The backup workflow retains a `workflow_dispatch` manual trigger and uses environment `insureit-production-backup` on `main` only. The existing encrypted incremental process remains append-only; no R2 deletions or 30-day retention pruning is enabled.
+- A successful scheduled job must run isolated sample restoration after the manifest is committed. Any verification failure marks the run failed.
+- **GitHub environment required-reviewer protection can block unattended scheduled runs** until a reviewer approves. Verify environment settings before relying on automation: permit trusted `main` only, avoid human approval gates for this unattended environment while retaining strict branch restrictions, and safeguard secrets.
+- Failure reporting: GitHub Actions failed-run status and GitHub notification settings are available; no independent email/alert integration has been configured. Add stale-backup monitoring and notification after a separate review.
+- Once merged, verify the first scheduled run executes and its resulting R2 manifest/restore report; previous snapshot 3,107 entries is not itself proof of daily scheduling.
+- No API key changes, no database migrations, no application redeploy and no APK/AAB.
+
 ## 2026-11-02 — Complete encrypted snapshot and restore rehearsal
 
 - Manual backup run #41406855021 succeeded: 3,107 verified source-object entries, nine buckets, 3,098 reused and nine new uploads; encrypted manifest was committed.
