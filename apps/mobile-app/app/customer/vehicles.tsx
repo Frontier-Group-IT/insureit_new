@@ -238,8 +238,8 @@ export default function VehiclesScreen() {
         return (
           <Pressable key={vehicle.id} onPress={() => router.push({ pathname: '/customer/vehicle-detail', params: { id: vehicle.id } })} style={({ pressed }) => [styles.vehicleCard, compactPhone && { padding: 8, marginBottom: 8 }, pressed && styles.vehicleCardPressed]}>
             <View style={styles.accentBar} />
-            <View style={styles.cardMain}>
-              <View style={styles.leftPane}>
+            <View style={[styles.cardMain, compactPhone && { gap: 6 }]}>
+              <View style={[styles.leftPane, compactPhone && { width: 112, paddingRight: 0 }]}>
                 {accountName ? <Text style={styles.accountName} numberOfLines={1}>{accountName}</Text> : null}
                 <View style={styles.chipRow}>
                   <Pressable
@@ -256,15 +256,15 @@ export default function VehiclesScreen() {
                   </Pressable>
                 </View>
 
-                <Image source={vehicleImage} style={styles.truckImage} resizeMode="contain" />
+                <Image source={vehicleImage} style={[styles.truckImage, compactPhone && { width: 106, height: 62 }]} resizeMode="contain" />
 
-                <Text style={styles.vehicleMake} numberOfLines={2}>
+                <Text style={[styles.vehicleMake, compactPhone && { fontSize: 11, lineHeight: 14 }]} numberOfLines={2} ellipsizeMode="tail">
                   {vehicleMake}
                   {vehicleModelYear ? <Text style={styles.vehicleModel}> - {vehicleModelYear}</Text> : null}
                 </Text>
               </View>
 
-              <View style={styles.rightPane}>
+              <View style={[styles.rightPane, compactPhone && { paddingLeft: 7 }]}>
                 {policy ? (
                   <>
                     <InfoBlock
