@@ -188,7 +188,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const externalSelectedCompleted = hasExternalVisualProgress && externalVisualCompletedKeys.has(selected.key);
   const selectedAvailable = unrestrictedStageEditing || journeyComplete || selectedIndex <= activeIndex || externalSelectedCompleted;
   const selectedIsCurrent = !journeyComplete && selected.key === active?.key;
-  const selectedSaveOnly = partnerManagedJourney || partnerReadOnlyJourney || !selectedIsCurrent;
+  const selectedSaveOnly = !selectedIsCurrent;
   const selectedDetails = stageOwnedDetails(details, selected.key, selected.statuses);
   const detail = selectedDetails[0];
   const spotDetail = details.find((row) => row.details?.milestone_key === "spot_intimation" || typeof row.details?.incident_at === "string" || typeof row.details?.accident_at === "string" || typeof row.details?.spot_intimation_at === "string");
@@ -389,7 +389,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
           <form action={formAction} className="mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
             <input type="hidden" name="milestone_key" value={selected.key} />
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
-            <input type="hidden" name="save_only" value={selectedSaveOnly ? "true" : "false"} />
+            <input type="hidden" name="save_only" value={partnerManagedJourney || selectedSaveOnly ? "true" : "false"} />
             <input type="hidden" name="notes" value={selectedSaveOnly ? `Operations edited ${selected.label} details.` : `Operations completed ${selected.label} and opened the next journey stage.`} />
             <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5" : selected.key === "repair_ri" || selected.key === "delivery_order" ? "lg:grid-cols-3" : selected.key === "billing" ? "lg:grid-cols-2" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : selected.key === "payment_encashment" ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
               {fields[selected.key].map((field) => {
