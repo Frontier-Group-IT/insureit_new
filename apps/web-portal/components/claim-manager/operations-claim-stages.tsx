@@ -28,6 +28,8 @@ type Props = {
   spotDetails?: InternalSpotIntimationDetails | null;
   externalCustomerMilestones?: CustomerMilestoneVisual[];
   unrestrictedStageEditing?: boolean;
+  partnerReadOnlyJourney?: boolean;
+  partnerExternalJourney?: boolean;
 };
 
 const stages = [
@@ -169,7 +171,7 @@ function nextStageLabelFor(stageKey: StageKey) {
   return nextKey ? stages.find((stage) => stage.key === nextKey)?.label ?? "next stage" : "claim completion";
 }
 
-export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, spotContent, claimIntimationContent, initialStageKey, accidentAt, spotIntimationAt, spotDetails, externalCustomerMilestones, unrestrictedStageEditing = false }: Props) {
+export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, spotContent, claimIntimationContent, initialStageKey, accidentAt, spotIntimationAt, spotDetails, externalCustomerMilestones, unrestrictedStageEditing = false, partnerReadOnlyJourney = false, partnerExternalJourney = false }: Props) {
   const router = useRouter();
   const active = stages.find((stage) => (stage.statuses as readonly string[]).includes(currentStatus));
   const activeIndex = active ? stages.findIndex((stage) => stage.key === active.key) : 0;
@@ -184,7 +186,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const selected = stages.find((stage) => stage.key === selectedKey) ?? stages[0];
   const selectedIndex = stages.findIndex((stage) => stage.key === selected.key);
   const externalSelectedCompleted = hasExternalVisualProgress && externalVisualCompletedKeys.has(selected.key);
-  const selectedAvailable = unrestrictedStageEditing || journeyComplete || selectedIndex <= activeIndex || externalSelectedCompleted;
+  const selectedAvailable = partnerExternalJourney || unrestrictedStageEditing || journeyComplete || selectedIndex <= activeIndex || externalSelectedCompleted;
   const selectedIsCurrent = !journeyComplete && selected.key === active?.key;
   const selectedSaveOnly = !selectedIsCurrent;
   const selectedDetails = stageOwnedDetails(details, selected.key, selected.statuses);
@@ -194,7 +196,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const stageTarget = stageCompletionTargets[selected.key];
   const nextStageLabel = nextStageLabelFor(selected.key);
   const spotCurrentEditable = Boolean(selected.key === "spot_intimation" && selectedIsCurrent && managerNext);
-  const stageEditable = Boolean(selected.key !== "spot_intimation" && selected.key !== "claim_intimation" && selectedAvailable && stageTarget);
+  const stageEditable = !partnerReadOnlyJourney && Boolean(selected.key !== "spot_intimation" && selected.key !== "claim_intimation" && selectedAvailable && stageTarget);
   const [spotSubmitting, setSpotSubmitting] = useState(false);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
@@ -295,7 +297,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
       <ol className="grid border-y border-[#D9E3F0] md:grid-cols-3 xl:grid-cols-9">
         {stages.map((stage, index) => {
           const externalStageCompleted = hasExternalVisualProgress && externalVisualCompletedKeys.has(stage.key);
-          const available = unrestrictedStageEditing || journeyComplete || index <= activeIndex || externalStageCompleted;
+          const available = partnerExternalJourney || unrestrictedStageEditing || journeyComplete || index <= activeIndex || externalStageCompleted;
           const isCurrent = !journeyComplete && stage.key === active?.key;
           const isCompleted = journeyComplete || index < activeIndex || (externalStageCompleted && !isCurrent);
           const isSelected = stage.key === selected.key;
@@ -313,7 +315,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                   <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${isCompleted ? "bg-[#E8F8F0] text-[#0A9B72]" : isCurrent ? "bg-[#155EEF] text-white shadow-[0_2px_6px_rgba(21,94,239,0.18)]" : "bg-[#EEF2F7] text-[#58708F]"}`}>
                     {isCompleted ? (
                       <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[2.4]"><path d="m6 12 4 4 8-9" /></svg>
-                    ) : isCurrent || unrestrictedStageEditing ? <span className="text-[9px] font-semibold">{index + 1}</span> : (
+                    ) : isCurrent || partnerExternalJourney || unrestrictedStageEditing ? <span className="text-[9px] font-semibold">{index + 1}</span> : (
                       <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3 w-3 fill-none stroke-current stroke-[2]"><rect x="6.5" y="10.5" width="11" height="8" rx="1.5" /><path d="M9 10.5V8a3 3 0 0 1 6 0v2.5" /></svg>
                     )}
                   </span>
@@ -326,7 +328,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
       </ol>
 
       <div className="p-4">
-        {selected.key === "spot_intimation" ? (
+        {selected.key === "spot_intimation" && !partnerReadOnlyJourney ? (
           <>
             <StageOneForm
               key={claimId}
@@ -365,8 +367,24 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
           </>
         ) : null}
 
-        {selected.key === "claim_intimation" ? <div className="mt-3">{claimIntimationContent}</div> : null}
+        {selected.key === "claim_intimation" && !partnerReadOnlyJourney ? <div className="mt-3">{claimIntimationContent}</div> : null}
 
+        {partnerReadOnlyJourney ? (
+          <div className="rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-4">
+            <p className="text-xs font-semibold text-[#17365D]">{selected.label}</p>
+            <p className="mt-1 text-[11px] text-[#64748B]">Partner claim progress and saved details. Stage modifications are controlled by the Customer and Operations workflows.</p>
+            {selectedDetails.length ? selectedDetails.map((row, i) => (
+              <dl key={i} className="mt-3 grid gap-2 sm:grid-cols-2">
+                {Object.entries(row.details ?? {}).filter(([key, value]) => key !== "external_customer_live_fallback" && key !== "milestone_key" && (typeof value === "string" || typeof value === "number" || typeof value === "boolean")).map(([key, value]) => (
+                  <div key={key} className="min-w-0 rounded-lg border border-[#E2EAF4] bg-white p-2">
+                    <dt className="text-[10px] text-[#64748B]">{key.replace(/_/g, " ")}</dt>
+                    <dd className="break-words text-xs font-medium text-[#17365D]">{String(value)}</dd>
+                  </div>
+                ))}
+              </dl>
+            )) : <p className="mt-3 text-xs text-[#64748B]">No saved stage details available.</p>}
+          </div>
+        ) : null}
         {stageEditable ? (
           <form action={formAction} className="mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
             <input type="hidden" name="milestone_key" value={selected.key} />
