@@ -62,6 +62,8 @@ export default async function PartnerClaimDetailPage({
               />
             }
             initialStageKey={requestedStage}
+            partnerReadOnlyJourney
+            partnerExternalJourney={data.claim.policy_service_source === "external"}
             externalCustomerMilestones={data.externalCustomerMilestones?.map((milestone) => ({
               key: milestone.milestone_key,
               status: milestone.milestone_status,
