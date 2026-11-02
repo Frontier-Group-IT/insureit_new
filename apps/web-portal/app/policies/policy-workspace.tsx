@@ -383,7 +383,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
       </div>
 
       <div className="border-b border-[#E5ECF5] bg-white px-3 py-2 sm:px-4">
-        <div className="flex w-full min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto pb-1 lg:overflow-x-visible [&>*]:shrink-0" role="region" aria-label="Policy portfolio filters" tabIndex={0}>
+        <div className="flex w-full min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto overscroll-x-contain pb-1 [&>*]:shrink-0" role="region" aria-label="Policy portfolio filters" tabIndex={0}>
           <div className="w-[140px] min-w-[140px] [&_button]:!w-full [&_button]:!min-w-0 [&_button]:!max-w-full"><PolicyBusinessFilter
             business={business}
             onBusinessChange={(value) => {
