@@ -87,6 +87,27 @@ export function CustomerInternalCompletedJourney({
           </button> : null}
         </summary>
         <div className="space-y-3 border-t border-[#E5EBF4] px-4 py-3">
+          {stage.key === "spot_intimation" && editingSpot && stageOneEditable ? <form action={saveSpot} className="rounded-xl border border-[#D9E6F7] bg-[#F7FAFF] p-3">
+            <input type="hidden" name="claim" value={claimId}/>
+            <input type="hidden" name="account" value={accountId}/>
+            <h3 className="mb-3 text-[13px] font-semibold text-[#17365D]">Edit Spot Intimation details</h3>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                { name: "accidentAt", label: "Accident Date & Time", value: localDateTime(spot.accidentAt), type: "datetime-local" },
+                { name: "spotAt", label: "Spot Intimation Date & Time", value: localDateTime(spot.spotAt), type: "datetime-local" },
+                { name: "driver", label: "Driver Name", value: spot.driverName ?? "", type: "text" },
+                { name: "phone", label: "Driver Number", value: spot.driverNumber ?? "", type: "tel" },
+                { name: "location", label: "Accident Location", value: spot.location ?? "", type: "text" },
+              ].map(field => <label key={field.name} className="min-w-0"><span className="mb-1 block text-[10px] font-semibold text-[#47689B]">{field.label}</span>
+                <input name={field.name} type={field.type} defaultValue={field.value} required={field.name === "accidentAt" || field.name === "spotAt"}
+                  className="h-10 w-full min-w-0 rounded-lg border border-[#CCD9EA] bg-white px-3 text-[12px] text-[#17365D]"/>
+              </label>)}
+            </div>
+            {saveState.error ? <p role="alert" className="mt-2 text-[11px] font-medium text-red-700">{saveState.error}</p> : null}
+            <div className="mt-3 flex justify-end gap-2"><button type="button" onClick={() => setEditingSpot(false)} className="rounded-lg border border-[#CAD8EA] px-4 py-2 text-[11px] font-semibold text-[#17365D]">Cancel</button>
+              <button disabled={savingSpot} type="submit" className="rounded-lg bg-[#17365D] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-50">{savingSpot ? "Saving..." : "Save Changes"}</button>
+            </div>
+          </form> : null}
           {fields.length || extra.length ? <div className="rounded-xl border border-[#DFE7F2] bg-white">
             <h3 className="border-b border-[#DFE7F2] px-3 py-3 text-[15px] font-semibold text-[#102B54]">{stage.key === "spot_intimation" ? "Accident & Spot Intimation Details" : stage.label+" Details"}</h3>
             <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -96,7 +117,7 @@ export function CustomerInternalCompletedJourney({
               </div>)}
             </div>
           </div> : <p className="rounded-lg bg-[#F6F9FD] px-3 py-3 text-[12px] text-[#64748B]">No details recorded for this stage yet.</p>}
-          {stage.key === "spot_intimation" && spotDocuments.length > 0 ? <CustomerClaimEvidenceWorkspace documents={spotDocuments} claimId={claimId} accountId={accountId} stage="spot_intimation" allowUpload={false} onlyUploaded/> : null}
+          {stage.key === "spot_intimation" && true ? <CustomerClaimEvidenceWorkspace documents={spotDocuments} claimId={claimId} accountId={accountId} stage="spot_intimation" allowUpload={editingSpot && stageOneEditable} /> : null}
           {stage.key === "claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claimId} accountId={accountId} stage="claim_intimation" allowUpload={false} /> : null}
         </div>
       </details>;
