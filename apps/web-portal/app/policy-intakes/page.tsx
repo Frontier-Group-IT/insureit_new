@@ -44,7 +44,7 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
     .from("policy_intake_requests")
     .select("id,intake_number,status,policy_type,lead_source_name,lead_source_type,lead_source_code,customer_mobile,created_at,ocr_status,ocr_fields,file_name,assigned_to_profile_id,submitted_by_profile_id,submitted_by_portal_account_id")
     .order("created_at", { ascending: false })
-    .limit(500);
+    .limit(5000);
   if (isDownlineHead) {
     const [scope, employeeScope] = await Promise.all([
       getOperationsHeadDownlinePolicyScope(profile.id),
