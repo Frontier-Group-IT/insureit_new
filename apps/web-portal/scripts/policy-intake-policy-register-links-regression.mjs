@@ -39,9 +39,9 @@ assert(quickLinks.includes('href="/policies/life-health-cases"'), "Proposal Pend
 assert(quickLinks.includes('label="Proposal"'), "The left divider heading must be Proposal");
 assert(quickLinks.includes('label="Policy Intake" centered'), "Policy Intake heading must be centered between horizontal divider lines");
 assert(quickLinks.includes(">Pending</span>"), "The Proposal section must communicate its pending count");
-assert(quickLinks.includes("grid-cols-[118px_208px]"), "Proposal and Policy Intake must render as two grouped top-level sections");
+assert(quickLinks.includes("grid-cols-[125px_285px]"), "Proposal and Policy Intake must render as two grouped top-level sections with sufficient label and count width");
 assert(quickLinks.includes("grid-rows-[18px_30px]"), "Each grouped section must keep a compact divider-heading row above its metrics");
-assert(quickLinks.includes("grid min-w-0 grid-cols-2"), "Action Required and In Review must use equal-width centered columns beneath Policy Intake");
+assert(quickLinks.includes("grid min-w-0 grid-cols-[160px_125px]"), "Action Required and In Review must have individually sized non-overlapping columns beneath Policy Intake");
 assert(quickLinks.includes("border-r-2 border-[#AFC3DB]"), "Proposal and Policy Intake must retain a stronger center divider");
 assert(quickLinks.includes("function DividerHeading"), "Section headings must be embedded into horizontal divider lines");
 assert(quickLinks.includes('centered ? "min-w-0 flex-1" : "w-3 shrink-0"'), "Centered divider headings must use equal flexible rules on both sides");
