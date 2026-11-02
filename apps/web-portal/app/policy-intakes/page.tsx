@@ -27,7 +27,8 @@ type PolicyIntakeSearchParams = { view?: string };
 
 function resolveInitialView(value: string | undefined, reviewer: boolean, organizationViewer: boolean): PolicyIntakeViewKey {
   if (value === "in_review") return "in_review";
-  if (organizationViewer) return "all";
+  if (value === "all") return "all";
+  // Reviewers start with actionable work, including organization-wide reviewers.
   return reviewer ? "action" : "all";
 }
 
