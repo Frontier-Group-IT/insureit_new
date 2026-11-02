@@ -1,3 +1,4 @@
+import ast
 import importlib.util
 import unittest
 from pathlib import Path
@@ -61,6 +62,17 @@ class BackupCryptographyTests(unittest.TestCase):
                 "20261102T000000Z")
         self.assertEqual(result[2], "checkpoint")
         s3.head_object.assert_called_once_with(Bucket="r2", Key=entry["blob"])
+
+    def test_main_has_no_undefined_timestamp_references(self):
+        source = Path(module.__file__).read_text()
+        tree = ast.parse(source)
+        main = next(node for node in tree.body
+                    if isinstance(node, ast.FunctionDef) and node.name == "main")
+        names = {node.id for node in ast.walk(main)
+                 if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load)}
+        self.assertNotIn("today", names,
+                         "The backup must publish the latest pointer using snapshot")
+        self.assertIn('"created_at": snapshot', source)
 
     def test_missing_env_fails_closed(self):
         from unittest.mock import patch
