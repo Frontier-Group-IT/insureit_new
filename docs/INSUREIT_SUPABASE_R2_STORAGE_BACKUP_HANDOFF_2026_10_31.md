@@ -1,3 +1,15 @@
+## 2026-11-02 — Interrupted first backup and proposed recovery (NOT DEPLOYED)
+
+- First manual workflow run 41201242212 timed out after 120 minutes; setup, secrets check and dependency install passed; backup step emitted no progress; no completed manifest verified.
+- Cloudflare screenshot shows 862.31 MB encrypted blobs in a 20261031 snapshot prefix. **Do not delete these files.** Supabase Storage metadata indicated about 3,092 objects / 1.33 GB at inspection.
+- Branch fix/r2-backup-resume-progress-20261102 adds 8 concurrent workers, bounded HTTP/R2 timeouts/retries, and progress counters every 25 source objects.
+- Each verified object now writes an encrypted, authenticated checkpoint. A subsequent run validates metadata and R2 blob existence before reuse. If source changes, its checkpoint key changes.
+- Recovery of original uncheckpointed ciphertext matches SHA256 of the source object to decrypted candidate content under its exact identity; never assumes a matching filename alone means valid backup.
+- No source write/delete and no R2 delete. A new manifest and latest pointer are written **only after every object succeeds**.
+- **No automatic schedule or 30-day pruning.** Tests and recovery verification must pass before claiming protection.
+- First manual retry after merge requires explicit user authorization. CI checks require zero production secrets.
+- Outstanding: independent sample restoration and documented secret escrow, coverage audit, billing check, and schedule/retention approval.
+
 # INSUREIT — Supabase Storage → Cloudflare R2 (draft; disabled)
 
 ## Status (2026-10-31)
