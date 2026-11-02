@@ -1,4 +1,5 @@
 import type { PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { loadLifeHealthCaseSummary } from "@/lib/life-health-case-summary";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import type { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -23,6 +24,8 @@ export type PolicyIntakeReviewSummary = {
 type PolicyIntakeReviewSummaryOptions = {
   submittedByProfileId?: string;
   includeActionRequired?: boolean;
+  intakeOrFilter?: string;
+  denyAll?: boolean;
 };
 
 export async function loadPolicyIntakeReviewSummary(
@@ -30,18 +33,19 @@ export async function loadPolicyIntakeReviewSummary(
   options: PolicyIntakeReviewSummaryOptions = {},
 ): Promise<PolicyIntakeReviewSummary | null> {
   try {
-    let query = admin
-      .from("policy_intake_requests")
-      .select("id,intake_number,status,created_at,ocr_status,ocr_fields")
-      .order("created_at", { ascending: false })
-      .limit(500);
-
-    if (options.submittedByProfileId) {
-      query = query.eq("submitted_by_profile_id", options.submittedByProfileId);
-    }
-
+    if (options.denyAll) return null;
     const [{ data, error }, proposalSummary] = await Promise.all([
-      query.returns<PolicyIntakeSummaryRow[]>(),
+      fetchAllPages<PolicyIntakeSummaryRow, unknown>((from, to) => {
+        let query = admin
+          .from("policy_intake_requests")
+          .select("id,intake_number,status,created_at,ocr_status,ocr_fields")
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to);
+        if (options.intakeOrFilter) query = query.or(options.intakeOrFilter);
+        else if (options.submittedByProfileId) query = query.eq("submitted_by_profile_id", options.submittedByProfileId);
+        return query.returns<PolicyIntakeSummaryRow[]>();
+      }),
       loadLifeHealthCaseSummary(admin),
     ]);
     if (error) return null;

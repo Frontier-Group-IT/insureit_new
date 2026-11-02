@@ -7,6 +7,7 @@ import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter, getSalesExecutivePolicyIds, getAnjanaParsottamPolicyScope, operationsHeadPolicyFilter } from "@/lib/policy-access-scope";
 import { loadPolicyIntakeReviewSummary } from "@/lib/policy-intake-review-summary";
+import { getRmPolicyIntakePredicates, hierarchyIntakeRoles } from "@/lib/rm-policy-intake-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { logPortalRoutePerformance } from "@/lib/performance-observability";
@@ -127,10 +128,20 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
   }
 
   const canTrackOwnPolicyIntakes = profile.role === "relationship_manager" && canViewPolicyIntakes;
-  const policyIntakeSummaryPromise = profile.role === "operations_head_life" ? Promise.resolve(null) : canReviewPolicyIntakes
-    ? loadPolicyIntakeReviewSummary(admin)
-    : canTrackOwnPolicyIntakes
-      ? loadPolicyIntakeReviewSummary(admin, { submittedByProfileId: profile.id, includeActionRequired: false })
+  // Match the Policy Intake Queue's authorized population, not the review capability alone.
+  // Review access must never turn a hierarchy-scoped login into an organization-wide reader.
+  const intakeHierarchyScoped = Boolean(profile.role && hierarchyIntakeRoles.has(profile.role));
+  const intakePredicates = (canReviewPolicyIntakes || canTrackOwnPolicyIntakes) && intakeHierarchyScoped
+    ? await getRmPolicyIntakePredicates(profile.id, profile.role)
+    : null;
+  const policyIntakeSummaryPromise = profile.role === "operations_head_life" ? Promise.resolve(null)
+    : canReviewPolicyIntakes || canTrackOwnPolicyIntakes
+      ? loadPolicyIntakeReviewSummary(admin, {
+          intakeOrFilter: intakePredicates?.join(","),
+          denyAll: intakeHierarchyScoped && !intakePredicates?.length,
+          includeActionRequired: canReviewPolicyIntakes,
+          submittedByProfileId: canTrackOwnPolicyIntakes && !intakeHierarchyScoped ? profile.id : undefined,
+        })
       : Promise.resolve(null);
 
   if (profile.role === "backoffice_executive") {
