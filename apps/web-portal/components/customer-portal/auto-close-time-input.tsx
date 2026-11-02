@@ -7,11 +7,13 @@ export function AutoCloseTimeInput({
   required,
   ariaLabel,
   className,
+  defaultValue,
 }: {
   name: string;
   required?: boolean;
   ariaLabel: string;
   className?: string;
+  defaultValue?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -25,6 +27,7 @@ export function AutoCloseTimeInput({
       ref={inputRef}
       name={name}
       type="time"
+      defaultValue={defaultValue}
       required={required}
       aria-label={ariaLabel}
       className={className}
