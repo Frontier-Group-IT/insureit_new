@@ -30,6 +30,7 @@ type Props = {
   unrestrictedStageEditing?: boolean;
   partnerReadOnlyJourney?: boolean;
   partnerManagedJourney?: boolean;
+  partnerInternalStageOne?: boolean;
 };
 
 const stages = [
@@ -171,7 +172,7 @@ function nextStageLabelFor(stageKey: StageKey) {
   return nextKey ? stages.find((stage) => stage.key === nextKey)?.label ?? "next stage" : "claim completion";
 }
 
-export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, spotContent, claimIntimationContent, initialStageKey, accidentAt, spotIntimationAt, spotDetails, externalCustomerMilestones, unrestrictedStageEditing = false, partnerReadOnlyJourney = false, partnerManagedJourney = false }: Props) {
+export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, spotContent, claimIntimationContent, initialStageKey, accidentAt, spotIntimationAt, spotDetails, externalCustomerMilestones, unrestrictedStageEditing = false, partnerReadOnlyJourney = false, partnerManagedJourney = false, partnerInternalStageOne = false }: Props) {
   const router = useRouter();
   const active = stages.find((stage) => (stage.statuses as readonly string[]).includes(currentStatus));
   const activeIndex = active ? stages.findIndex((stage) => stage.key === active.key) : 0;
@@ -328,7 +329,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
       </ol>
 
       <div className="p-4">
-        {selected.key === "spot_intimation" && !partnerReadOnlyJourney && !partnerManagedJourney ? (
+        {selected.key === "spot_intimation" && (!partnerReadOnlyJourney || partnerInternalStageOne) && !partnerManagedJourney ? (
           <>
             <StageOneForm
               key={claimId}
@@ -340,8 +341,8 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
               next={managerNext}
               accidentAt={accidentAt}
               spotIntimationAt={spotIntimationAt}
-              formAction={spotCurrentEditable ? formAction : spotFormAction}
-              standalone={!spotCurrentEditable}
+              formAction={spotCurrentEditable && !partnerInternalStageOne ? formAction : spotFormAction}
+              standalone={!spotCurrentEditable || partnerInternalStageOne}
               onSubmitStart={() => setSpotSubmitting(true)}
             />
             <div className="mt-3">{spotContent}</div>
