@@ -25,6 +25,8 @@ export type RmSourcePerformance = {
 export type RmPerformanceRow = {
   employeeId: string | null;
   name: string;
+  managerId?: string | null;
+  designation?: string | null;
   todayPolicies: number;
   todayNetPremium: number;
   mtdPolicies: number;
@@ -160,7 +162,7 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
   const mtdSources = aggregateSources(mtdRegisterRows, intermediaryNames, parentSourceByPolicy);
   const rowKeys = new Set([...periodByRm.keys(), ...todayByRm.keys()]);
 
-  const rows = [...rowKeys]
+  const rows: RmPerformanceRow[] = [...rowKeys]
     .map((key) => {
       const periodRow = periodByRm.get(key);
       const todayRow = todayByRm.get(key);
@@ -181,6 +183,52 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
       };
     })
     .sort((a, b) => b.mtdNetPremium - a.mtdNetPremium || b.mtdPolicies - a.mtdPolicies || b.todayNetPremium - a.todayNetPremium || a.name.localeCompare(b.name));
+
+  // Use verified employee relationships, never hard-coded name buckets. The RM's own
+  // filtered report must remain isolated: do not load additional personnel for RM logins.
+  if (!selectedRmId && profile.role !== "relationship_manager") {
+    const { data: personnel, error: hierarchyError } = await createSupabaseAdminClient()
+      .from("employees").select("id,full_name,designation,reporting_manager_id");
+    if (hierarchyError) throw new Error("RM reporting hierarchy could not be loaded.");
+    const people = (personnel ?? []) as Array<{id:string;full_name:string|null;designation:string|null;reporting_manager_id:string|null}>;
+    const byId = new Map(people.map(p => [p.id,p]));
+    const norm = (s:string) => s.trim().toLocaleLowerCase("en-IN").replace(/\\s+/g," ");
+    const byName = new Map<string,typeof people>();
+    for (const p of people) {
+      const key = norm(p.full_name ?? "");
+      if (key) byName.set(key,[...(byName.get(key) ?? []),p]);
+    }
+    const resolved = new Map<string,string>();
+    for (const row of rows) {
+      const person = row.employeeId ? byId.get(row.employeeId) :
+        (byName.get(norm(row.name))?.length === 1 ? byName.get(norm(row.name))![0] : null);
+      if (!person) continue;
+      row.employeeId = person.id;
+      row.managerId = person.reporting_manager_id;
+      row.designation = person.designation;
+      resolved.set(person.id,person.id);
+    }
+    // Include management ancestors as zero-own-business rows so their teams appear
+    // even when no policy is attributed directly to the head this month.
+    for (const id of [...resolved.keys()]) {
+      const visited = new Set<string>([id]);
+      let parentId = byId.get(id)?.reporting_manager_id;
+      while (parentId && !visited.has(parentId)) {
+        visited.add(parentId);
+        const person = byId.get(parentId);
+        if (!person) break;
+        const isSalesHead = /sales head|sales manager|relationship manager|^rm$/i.test(person.designation ?? "");
+        if (!isSalesHead) break;
+        if (!resolved.has(parentId)) {
+          rows.push({employeeId:person.id,name:person.full_name ?? "Unnamed manager",managerId:person.reporting_manager_id,
+            designation:person.designation,todayPolicies:0,todayNetPremium:0,mtdPolicies:0,mtdNetPremium:0,
+            averageNetPremium:0,contributionPercent:0,sources:[]});
+          resolved.set(parentId,parentId);
+        }
+        parentId = person.reporting_manager_id;
+      }
+    }
+  }
 
   const selectedRmName =
     selectedRmId

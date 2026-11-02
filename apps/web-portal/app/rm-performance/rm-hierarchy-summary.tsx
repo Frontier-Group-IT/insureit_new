@@ -14,13 +14,6 @@ type Props = {
 const normalized = (name: string) => name.trim().toLocaleLowerCase("en-IN").replace(/\s+/g, " ");
 const money = (value: number) => "₹" + Math.round(value).toLocaleString("en-IN");
 
-// Initial organizational grouping is intentionally display-only: the canonical,
-// historical reporting relationships still need a verified personnel mapping.
-const JATIN = "jatin kumar buwaniwala";
-const JAYESH = "jayesh purohit";
-const GAGAN = "gagan singh";
-const JATIN_REPORTS = new Set(["parsottam", "pramod kumar nayak"]);
-
 function SourceColumns({ sources, periodLabel }: { sources: RmPerformanceRow["sources"]; periodLabel: string }) {
   const [otherOpen, setOtherOpen] = useState(false);
   const ranked = [...sources].sort((a,b)=>b.mtdNetPremium-a.mtdNetPremium||b.mtdPolicies-a.mtdPolicies||a.label.localeCompare(b.label));
@@ -102,68 +95,60 @@ function PerformanceHeading({ name, description, metrics, periodLabel, open, onT
   </button>;
 }
 
-function HeadGroup({ head, reports, periodLabel, periodShortLabel, open, onToggle }: {
-  head: RmPerformanceRow; reports: RmPerformanceRow[]; periodLabel: string; periodShortLabel: string; open: boolean; onToggle: () => void;
+
+function HierarchyNode({ row, childrenByManager, periodLabel, periodShortLabel, depth=0, visited=new Set<string>() }: {
+  row: RmPerformanceRow;
+  childrenByManager: Map<string,RmPerformanceRow[]>;
+  periodLabel:string; periodShortLabel:string; depth?:number; visited?:Set<string>;
 }) {
-  const [activeSection, setActiveSection] = useState<"direct" | "reports" | null>(null);
-  const [openReportId, setOpenReportId] = useState<string | null>(null);
-  const reportingMetrics = sumMetrics(reports);
-  const teamMetrics = sumMetrics([head, ...reports]);
-  return <section className={`overflow-hidden rounded-xl bg-white transition-colors ${open ? "border-2 border-[#3979CC]" : "border border-[#D9E4F2]"}`}>
-    <PerformanceHeading name={head.name} description={`RM HEAD · ${head.contributionPercent.toFixed(1)}% contribution · ${reports.length} reporting RMs`}
-      metrics={teamMetrics} periodLabel={periodLabel} icon="head" open={open} onToggle={() => { setActiveSection(null); setOpenReportId(null); onToggle(); }}/>
-    {open ? <div className="space-y-2 border-t border-[#8BB6E8] bg-[#F8FBFF] p-2 md:p-3">
-      <div className={`overflow-hidden rounded-lg ${activeSection === "direct" ? "border-2 border-[#8BB6E8]" : "border border-[#D9E4F2]"}`}>
-        <PerformanceHeading name="Direct Partners" description="Own business" metrics={head}
-          periodLabel={periodLabel} icon="direct" open={activeSection === "direct"}
-          onToggle={() => setActiveSection(activeSection === "direct" ? null : "direct")}/>
-        {activeSection === "direct" ? <div className="border-t border-[#8BB6E8] bg-[#F1F7FF] p-3">
-          <SourceColumns sources={head.sources} periodLabel={periodLabel}/>
-        </div> : null}
+  const [open,setOpen] = useState(false);
+  const [section,setSection] = useState<"direct"|"reports"|null>(null);
+  const id = row.employeeId ?? row.name;
+  const nextVisited = new Set(visited);
+  if (nextVisited.has(id)) return null;
+  nextVisited.add(id);
+  const reports = (childrenByManager.get(id) ?? []).filter(child=>!nextVisited.has(child.employeeId ?? child.name));
+  const team = (node:RmPerformanceRow, seen:Set<string>):RmPerformanceRow[] => {
+    const key=node.employeeId??node.name;
+    if(seen.has(key))return [];
+    const next=new Set(seen);next.add(key);
+    return [node,...(childrenByManager.get(key)??[]).flatMap(child=>team(child,next))];
+  };
+  const totals=sumMetrics(team(row,new Set()));
+  const reporting=sumMetrics(reports.flatMap(child=>team(child,new Set())));
+  return <section className={`overflow-hidden rounded-xl border ${open?"border-[#3979CC]":"border-[#D9E4F2]"} bg-white`}>
+    <PerformanceHeading name={row.name} description={`${row.designation??(depth?"Reporting RM":"RM Head")} · ${reports.length} direct reports`}
+      metrics={totals} periodLabel={periodLabel} icon="head" open={open} onToggle={()=>{setOpen(!open);setSection(null);}}/>
+    {open?<div className="space-y-2 border-t border-[#D9E4F2] bg-[#F8FBFF] p-2 md:p-3">
+      <div className="overflow-hidden rounded-lg border border-[#D9E4F2]">
+        <PerformanceHeading name="Direct Partners" description="Own attributed business" metrics={row}
+          periodLabel={periodLabel} icon="direct" open={section==="direct"} onToggle={()=>setSection(section==="direct"?null:"direct")}/>
+        {section==="direct"?<div className="border-t border-[#D9E4F2] p-3"><SourceColumns sources={row.sources} periodLabel={periodLabel}/></div>:null}
       </div>
-      {reports.length > 0 ? <div className={`overflow-hidden rounded-lg ${activeSection === "reports" ? "border-2 border-[#8BB6E8]" : "border border-[#D9E4F2]"}`}>
-        <PerformanceHeading name={`Reporting RMs (${reports.length})`} description="Reporting team total"
-          metrics={reportingMetrics} periodLabel={periodLabel} icon="reports"
-          open={activeSection === "reports"}
-          onToggle={() => { setOpenReportId(null); setActiveSection(activeSection === "reports" ? null : "reports"); }}/>
-        {activeSection === "reports" ? <div className="space-y-2 border-t border-[#D9E4F2] bg-white p-3">
-          {reports.map((row) => {
-            const id = row.employeeId ?? row.name;
-            return <RmSummaryCard key={id} row={row} periodLabel={periodLabel} periodShortLabel={periodShortLabel}
-              expanded={openReportId === id} onToggle={() => setOpenReportId(openReportId === id ? null : id)}/>;
-          })}
-          {!reports.length ? <p className="text-xs text-[#72829A]">No reporting RMs in this period.</p> : null}
-        </div> : null}
-      </div> : null}
-    </div> : null}
+      {reports.length?<div className="overflow-hidden rounded-lg border border-[#D9E4F2]">
+        <PerformanceHeading name={`Reporting RMs (${reports.length})`} description="Reporting team total" metrics={reporting}
+          periodLabel={periodLabel} icon="reports" open={section==="reports"} onToggle={()=>setSection(section==="reports"?null:"reports")}/>
+        {section==="reports"?<div className="space-y-2 border-t border-[#D9E4F2] p-2">
+          {reports.map(child=><HierarchyNode key={child.employeeId??child.name} row={child} childrenByManager={childrenByManager}
+            periodLabel={periodLabel} periodShortLabel={periodShortLabel} depth={depth+1} visited={nextVisited}/>)}
+        </div>:null}
+      </div>:null}
+    </div>:null}
   </section>;
 }
 
 export function RmHierarchySummary({ rows, periodLabel, periodShortLabel, selectedRmId }: Props) {
-  const [openId, setOpenId] = useState<string | null>(null);
-  // A selected RM retains the existing single-RM view and scope.
-  if (selectedRmId) return <div className="space-y-2">{rows.map((row) => <RmSummaryCard key={row.employeeId ?? row.name} row={row} periodLabel={periodLabel} periodShortLabel={periodShortLabel}/>)}</div>;
-
-  const jatin = rows.find((row) => normalized(row.name) === JATIN);
-  const gagan = rows.find((row) => normalized(row.name) === GAGAN);
-  const jayesh = rows.find((row) => normalized(row.name) === JAYESH);
-  const jatinReports = jatin ? rows.filter((row) => JATIN_REPORTS.has(normalized(row.name))) : [];
-  const protectedIds = new Set([JATIN, GAGAN, JAYESH, ...JATIN_REPORTS]);
-  const remaining = rows.filter((row) => !protectedIds.has(normalized(row.name)));
-  const grouped = new Set([...(jatin ? [JATIN] : []), ...(gagan ? [GAGAN] : []), ...(jatin ? JATIN_REPORTS : []), ...(gagan ? remaining.map((row) => normalized(row.name)) : [])]);
-  const toggle = (id: string) => setOpenId((current) => current === id ? null : id);
-
+  if (selectedRmId) return <div className="space-y-2">{rows.map(row=><RmSummaryCard key={row.employeeId??row.name} row={row}
+    periodLabel={periodLabel} periodShortLabel={periodShortLabel}/>)}</div>;
+  const childrenByManager = new Map<string,RmPerformanceRow[]>();
+  const ids=new Set(rows.filter(row=>row.employeeId).map(row=>row.employeeId));
+  for(const row of rows){
+    if(!row.managerId || !ids.has(row.managerId) || row.managerId===row.employeeId)continue;
+    childrenByManager.set(row.managerId,[...(childrenByManager.get(row.managerId)??[]),row]);
+  }
+  const roots=rows.filter(row=>!row.managerId || !ids.has(row.managerId) || row.managerId===row.employeeId);
   return <div className="space-y-2">
-    {jatin ? <HeadGroup head={jatin} reports={jatinReports} periodLabel={periodLabel} periodShortLabel={periodShortLabel}
-      open={openId === JATIN} onToggle={() => toggle(JATIN)}/> : null}
-    {gagan ? <HeadGroup head={gagan} reports={remaining} periodLabel={periodLabel} periodShortLabel={periodShortLabel}
-      open={openId === GAGAN} onToggle={() => toggle(GAGAN)}/> : null}
-    {jayesh ? <HeadGroup head={jayesh} reports={[]} periodLabel={periodLabel} periodShortLabel={periodShortLabel}
-      open={openId === JAYESH} onToggle={() => toggle(JAYESH)}/> : null}
-    {rows.filter((row) => normalized(row.name) !== JAYESH && !grouped.has(normalized(row.name))).map((row) => {
-      const id = row.employeeId ?? row.name;
-      return <RmSummaryCard key={id} row={row} periodLabel={periodLabel} periodShortLabel={periodShortLabel}
-        expanded={openId === id} onToggle={() => toggle(id)}/>;
-    })}
+    {roots.map(row=><HierarchyNode key={row.employeeId??row.name} row={row} childrenByManager={childrenByManager}
+      periodLabel={periodLabel} periodShortLabel={periodShortLabel}/>)}
   </div>;
 }
