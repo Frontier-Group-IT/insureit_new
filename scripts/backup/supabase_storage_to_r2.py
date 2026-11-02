@@ -283,7 +283,7 @@ def main():
                   ContentType="application/octet-stream")
     # Pointer published last: interrupted uploads never become the latest backup.
     s3.put_object(Bucket=bucket, Key=pointer_key,
-                  Body=json.dumps({"version": 1, "created_at": today,
+                  Body=json.dumps({"version": 1, "created_at": snapshot,
                                    "manifest_key": manifest_key}).encode(),
                   ContentType="application/json")
     print(f"Backup committed: {len(entries)} verified source objects across {len(source_buckets)} buckets", flush=True)
