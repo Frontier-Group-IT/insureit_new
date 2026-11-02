@@ -29,6 +29,7 @@ type Props = {
   externalCustomerMilestones?: CustomerMilestoneVisual[];
   unrestrictedStageEditing?: boolean;
   partnerReadOnlyJourney?: boolean;
+  partnerManagedJourney?: boolean;
 };
 
 const stages = [
@@ -170,7 +171,7 @@ function nextStageLabelFor(stageKey: StageKey) {
   return nextKey ? stages.find((stage) => stage.key === nextKey)?.label ?? "next stage" : "claim completion";
 }
 
-export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, spotContent, claimIntimationContent, initialStageKey, accidentAt, spotIntimationAt, spotDetails, externalCustomerMilestones, unrestrictedStageEditing = false, partnerReadOnlyJourney = false }: Props) {
+export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, spotContent, claimIntimationContent, initialStageKey, accidentAt, spotIntimationAt, spotDetails, externalCustomerMilestones, unrestrictedStageEditing = false, partnerReadOnlyJourney = false, partnerManagedJourney = false }: Props) {
   const router = useRouter();
   const active = stages.find((stage) => (stage.statuses as readonly string[]).includes(currentStatus));
   const activeIndex = active ? stages.findIndex((stage) => stage.key === active.key) : 0;
@@ -187,7 +188,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const externalSelectedCompleted = hasExternalVisualProgress && externalVisualCompletedKeys.has(selected.key);
   const selectedAvailable = unrestrictedStageEditing || journeyComplete || selectedIndex <= activeIndex || externalSelectedCompleted;
   const selectedIsCurrent = !journeyComplete && selected.key === active?.key;
-  const selectedSaveOnly = partnerReadOnlyJourney || !selectedIsCurrent;
+  const selectedSaveOnly = partnerManagedJourney || partnerReadOnlyJourney || !selectedIsCurrent;
   const selectedDetails = stageOwnedDetails(details, selected.key, selected.statuses);
   const detail = selectedDetails[0];
   const spotDetail = details.find((row) => row.details?.milestone_key === "spot_intimation" || typeof row.details?.incident_at === "string" || typeof row.details?.accident_at === "string" || typeof row.details?.spot_intimation_at === "string");
@@ -267,7 +268,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
     try { window.sessionStorage.removeItem(`insureit:spot-intimation-draft:${claimId}`); } catch { /* optional storage */ }
     if (state.nextStageKey) {
       setSelectedKey(state.nextStageKey);
-      router.replace(`/claims/${claimId}?stage=${state.nextStageKey}`);
+      router.replace(`${partnerManagedJourney ? "/partner" : ""}/claims/${claimId}?stage=${state.nextStageKey}`);
       return;
     }
     router.refresh();
@@ -327,7 +328,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
       </ol>
 
       <div className="p-4">
-        {selected.key === "spot_intimation" && !partnerReadOnlyJourney ? (
+        {selected.key === "spot_intimation" && !partnerReadOnlyJourney && !partnerManagedJourney ? (
           <>
             <StageOneForm
               key={claimId}
@@ -351,7 +352,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 onClick={() => {
                   try { window.sessionStorage.removeItem(`insureit:spot-intimation-draft:${claimId}`); } catch { /* optional storage */ }
                   setErrorNotice(null);
-                  router.push("/claims");
+                  router.push(partnerManagedJourney ? "/partner/claims" : "/claims");
                 }}
                 className="rounded-lg border border-[#B8C5D6] bg-white px-4 py-2 text-[11px] font-semibold text-[#071D49] disabled:opacity-50"
               >Cancel</button>
@@ -366,7 +367,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
           </>
         ) : null}
 
-        {selected.key === "claim_intimation" && !partnerReadOnlyJourney ? <div className="mt-3">{claimIntimationContent}</div> : null}
+        {selected.key === "claim_intimation" && !partnerReadOnlyJourney && !partnerManagedJourney ? <div className="mt-3">{claimIntimationContent}</div> : null}
 
         {partnerReadOnlyJourney ? (
           <div className="rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-4">
