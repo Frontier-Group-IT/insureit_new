@@ -27,7 +27,8 @@ type PolicyIntakeSearchParams = { view?: string };
 
 function resolveInitialView(value: string | undefined, reviewer: boolean, organizationViewer: boolean): PolicyIntakeViewKey {
   if (value === "in_review") return "in_review";
-  return organizationViewer ? "all" : reviewer ? "action" : "all";
+  if (organizationViewer) return "all";
+  return reviewer ? "action" : "all";
 }
 
 export default async function PolicyIntakesPage({ searchParams }: { searchParams?: Promise<PolicyIntakeSearchParams> }) {
