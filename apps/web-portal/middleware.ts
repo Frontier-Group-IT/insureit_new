@@ -5,7 +5,7 @@ import { isAccountsRolePortalPath, isProtectedPortalPath, safePortalReturnPath }
 import { hasCapability } from "@/lib/roles";
 
 type SessionStatus = "authorized" | "customer" | "forbidden" | "invalid";
-type SessionCheck = { status: SessionStatus; role: string | null };
+type SessionCheck = { status: SessionStatus; role: string | null; denialReason?: "profile_missing" | "account_inactive" | "role_not_enabled" };
 type RefreshedSession = { access_token: string; refresh_token: string; expires_in: number };
 const cookieOptions = { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/" };
 const accountsHome = "/accounts";
@@ -112,7 +112,9 @@ async function checkSession(accessToken: string): Promise<SessionCheck> {
   const profiles = (await profileResponse.json()) as Profile[];
   const profile = profiles[0] ?? null;
   if (profile?.is_active && profile.role === "customer") return { status: "customer", role: "customer" };
-  return { status: isAuthorizedProfile(profile) ? "authorized" : "forbidden", role: profile?.role ?? null };
+  if (!profile) return { status: "forbidden", role: null, denialReason: "profile_missing" };
+  if (!profile.is_active) return { status: "forbidden", role: profile.role, denialReason: "account_inactive" };
+  return { status: isAuthorizedProfile(profile) ? "authorized" : "forbidden", role: profile.role, denialReason: "role_not_enabled" };
 }
 
 async function refreshSession(refreshToken: string): Promise<RefreshedSession | null> {
@@ -156,6 +158,10 @@ function setRoleCookie(response: NextResponse, role?: string | null) {
 function redirect(request: NextRequest, pathname: string, session?: RefreshedSession | null, role?: string | null) {
   const response = NextResponse.redirect(new URL(pathname, request.url));
   return session ? applySessionCookies(response, session, role) : setRoleCookie(response, role);
+}
+
+function denialPath(reason: "profile_missing" | "account_inactive" | "role_not_enabled" | "customer_workspace" | "staff_workspace" | "module_permission") {
+  return `/access-denied?reason=${reason}`;
 }
 
 function continueRequest(request: NextRequest, session?: RefreshedSession | null, role?: string | null) {
@@ -221,7 +227,7 @@ export async function middleware(request: NextRequest) {
       if (check.role === "claims_head") return redirect(request, claimsHeadHome, refreshedSession, check.role);
       return redirect(request, check.role === "intermediary" ? "/partner" : internalLaunchHome, refreshedSession, check.role);
     }
-    if (check.status === "forbidden") return redirect(request, "/access-denied", refreshedSession, check.role);
+    if (check.status === "forbidden") return redirect(request, denialPath(check.denialReason ?? "role_not_enabled"), refreshedSession, check.role);
     return clearSessionCookies(continueRequest(request));
   }
 
@@ -230,7 +236,7 @@ export async function middleware(request: NextRequest) {
   if (pathname === "/customer/login" || pathname === "/customer/signup") {
     if (check.status === "customer") return redirect(request, "/customer/home", refreshedSession, check.role);
     if (check.status === "authorized" || check.status === "forbidden") {
-      return redirect(request, "/access-denied", refreshedSession, check.role);
+      return redirect(request, denialPath(check.status === "forbidden" ? (check.denialReason ?? "role_not_enabled") : "customer_workspace"), refreshedSession, check.role);
     }
     return clearSessionCookies(continueRequest(request));
   }
@@ -240,19 +246,19 @@ export async function middleware(request: NextRequest) {
       return clearSessionCookies(redirect(request, "/customer/login"));
     }
     if (check.status !== "customer") {
-      return redirect(request, "/access-denied", refreshedSession, check.role);
+      return redirect(request, denialPath(check.status === "forbidden" ? (check.denialReason ?? "role_not_enabled") : "staff_workspace"), refreshedSession, check.role);
     }
     return continueRequest(request, refreshedSession, check.role);
   }
 
   if (isProtectedPortalPath(pathname)) {
-    if (check.status === "customer") return redirect(request, "/access-denied", refreshedSession, check.role);
+    if (check.status === "customer") return redirect(request, denialPath("customer_workspace"), refreshedSession, check.role);
     if (check.status === "invalid") {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("next", safePortalReturnPath(`${pathname}${request.nextUrl.search}`));
       return clearSessionCookies(NextResponse.redirect(loginUrl));
     }
-    if (check.status === "forbidden") return redirect(request, "/access-denied", refreshedSession, check.role);
+    if (check.status === "forbidden") return redirect(request, denialPath(check.denialReason ?? "role_not_enabled"), refreshedSession, check.role);
     if (check.role === "accounts" && !isAccountsRolePortalPath(pathname)) {
       return redirect(request, accountsHome, refreshedSession, check.role);
     }
@@ -273,7 +279,7 @@ export async function middleware(request: NextRequest) {
     }
 
     if (isIntermediaryOnlyLaunch && check.role !== "intermediary") {
-      if (!hasCapability(check.role, "view_intermediaries")) return redirect(request, "/access-denied", refreshedSession, check.role);
+      if (!hasCapability(check.role, "view_intermediaries")) return redirect(request, denialPath("module_permission"), refreshedSession, check.role);
       if (!isRenewalVoiceLab && !isIntermediaryLaunchPath(pathname)) return redirect(request, internalLaunchHome, refreshedSession, check.role);
     }
 
