@@ -17,7 +17,8 @@ function requireText(source, needle, message) {
 requireText(service, 'listPartnerPolicyIntakeSources()', 'Policy Intake service must expose a dedicated source loader.');
 requireText(service, "'/api/partner/policy-intakes?view=sources'", 'Policy Intake source loader must call the dedicated ?view=sources endpoint.');
 requireText(service, 'Array.isArray(result.sources) ? result.sources : []', 'Policy Intake source response must be normalized defensively.');
-requireText(service, 'Array.isArray(result.intakes) ? result.intakes : []', 'Policy Intake list response must be normalized defensively.');
+requireText(service, 'Array.isArray(page.intakes) ? page.intakes : []', 'Each paginated Policy Intake response must be normalized defensively.');
+requireText(service, 'offset += items.length', 'Policy Intake list must advance through authorized pages.');
 
 requireText(screen, 'listPartnerPolicyIntakeSources()', 'New Policy Intake must load lead sources from the dedicated source endpoint.');
 requireText(screen, 'const nextSources = Array.isArray(result) ? result : [];', 'New Policy Intake must normalize source data before array operations.');
