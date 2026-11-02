@@ -10,7 +10,7 @@ import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
 import { getOperationsHeadDownlinePolicyScope, operationsHeadPolicyFilter } from "@/lib/policy-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
-import { getRmPolicyIntakePredicates } from "@/lib/rm-policy-intake-scope";
+import { getRmPolicyIntakePredicates, hierarchyIntakeRoles } from "@/lib/rm-policy-intake-scope";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -59,8 +59,8 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
     if (allowedPolicies?.length) predicates.push(`final_policy_id.in.(${allowedPolicies.map(row => row.id).join(",")})`);
     if (predicates.length) intakeOrFilter = predicates.join(",");
     else submitterFilter = "00000000-0000-0000-0000-000000000000";
-  } else if (profile.role === "relationship_manager") {
-    // RM visibility includes own submissions plus verified Partner/Branch intakes.
+  } else if (profile.role && hierarchyIntakeRoles.has(profile.role)) {
+    // Hierarchy visibility includes the entire reporting subtree, verified Partners and Branches.
     // Review permission must not widen the list to unrelated organizations.
     const predicates = await getRmPolicyIntakePredicates(profile.id, profile.role);
     intakeOrFilter = predicates.join(",");
