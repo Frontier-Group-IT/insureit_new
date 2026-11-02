@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { getCustomerWebSession } from "@/lib/customer-web";
@@ -199,4 +200,54 @@ export async function saveCustomerClaimStageWithFeedback(mode: "draft" | "detail
     ];
     return {error:safeMessages.includes(reason)?reason:"Unable to save claim details. Your entries are preserved; please try again."};
   }
+}
+
+/**
+ * Customer Internal Claim Stage 1 corrections. Saving existing data never
+ * advances workflow. The persisted Stage 2 completion is checked again at
+ * submission time; disabling the Edit control alone is insufficient.
+ */
+export async function saveCustomerInternalSpotCorrection(
+  _previous: { error: string | null; saved: boolean },
+  form: FormData,
+): Promise<{ error: string | null; saved: boolean }> {
+  const fail = (error: string) => ({ error, saved: false });
+  const { account } = await resolveCustomerWebScope(String(form.get("account") || ""));
+  const claimId = String(form.get("claim") || "");
+  const { claim, milestones, internal_projection } = await loadCustomerClaimDetail(account.id, claimId);
+  if (isExternalCustomerClaim(claim) || claim.claim_service_mode !== "broker_managed" || !internal_projection || internal_projection.completedStageCount < 1) {
+    return fail("Stage 1 corrections are not available for this claim.");
+  }
+  if (internal_projection.completedStageCount >= 2 || milestones.some(item =>
+    item.milestone_key === "spot_status" && ["completed", "not_applicable"].includes(item.milestone_status)
+  )) return fail("Spot Status is complete. Stage 1 details are locked.");
+
+  const accident = String(form.get("accidentAt") || "");
+  const spot = String(form.get("spotAt") || "");
+  // The browser submits local datetime values in the customer portal's IST timezone.
+  const asKolkataDate = (value: string) => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value) ? new Date(value + ":00+05:30") : new Date(NaN);
+  const incidentDate = asKolkataDate(accident);
+  const spotDate = asKolkataDate(spot);
+  if (!accident || !spot || !Number.isFinite(incidentDate.getTime()) || !Number.isFinite(spotDate.getTime()) ||
+    incidentDate.getTime() > Date.now() || spotDate.getTime() > Date.now() || spotDate < incidentDate)
+    return fail("Enter valid accident and spot intimation dates. Spot intimation must not precede the accident.");
+
+  const driver = String(form.get("driver") || "").trim().slice(0, 120);
+  const phone = String(form.get("phone") || "").trim().slice(0, 15);
+  const location = String(form.get("location") || "").trim().slice(0, 500);
+  if (phone && !/^\+?[0-9 ]{10,15}$/.test(phone)) return fail("Enter a valid driver contact number.");
+
+  const db = await createServerSupabaseClient();
+  const { data, error } = await db.from("claims").update({
+    accident_at: incidentDate.toISOString(),
+    spot_intimation_at: spotDate.toISOString(),
+    accident_location: location || null,
+    accident_description: [driver && "Driver: " + driver, phone && "Driver phone: " + phone].filter(Boolean).join("\n") || null,
+  }).eq("id", claim.id).eq("customer_id", account.id).eq("claim_service_mode", "broker_managed").select("id").maybeSingle();
+  if (error || !data) {
+    console.error("Customer Internal Stage 1 correction rejected", { code: error?.code ?? null });
+    return fail("Stage 1 details could not be saved. Please reload and try again.");
+  }
+  revalidatePath("/customer/claims/" + encodeURIComponent(claim.id) + "/stage/spot_intimation");
+  return { error: null, saved: true };
 }

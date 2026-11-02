@@ -33,7 +33,15 @@ export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadS
     if(file.size>(file.type.startsWith("video/")?50:5)*1024*1024)return {error:"Claim document exceeds allowed file size: "+file.name};
   }
   const {account}=await resolveCustomerWebScope(accountId);
-  const {claim}=await loadCustomerClaimDetail(account.id,claimId);
+  const {claim,milestones,internal_projection}=await loadCustomerClaimDetail(account.id,claimId);
+  // Customers cannot bypass the Stage 2 lock by submitting an old upload form.
+  if (String(form.get("stage") || "") === "spot_intimation" &&
+    claim.claim_service_mode === "broker_managed" && !claim.external_policy_id &&
+    ((internal_projection?.completedStageCount ?? 0) >= 2 ||
+      milestones.some(item => item.milestone_key === "spot_status" &&
+        ["completed", "not_applicable"].includes(item.milestone_status)))) {
+    return {error:"Spot Status is complete. Stage 1 documents are locked."};
+  }
   if(claim.claim_service_mode==="broker_managed" && ["Settled","Closed","Claim Complete"].includes(claim.current_status))
     return {error:"Completed managed claims cannot accept new customer documents."};
   const session=await getCustomerWebSession();
