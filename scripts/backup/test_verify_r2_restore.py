@@ -21,6 +21,26 @@ class RestoreVerificationTests(unittest.TestCase):
         self.assertEqual(len(sample), 5)
         self.assertIn(("claim", {}), sample)
 
+    def test_manifest_with_empty_bucket_can_be_verified(self):
+        manifest = {"buckets": ["policy-documents", "support-ticket-files"]}
+        grouped = {"policy-documents": [("sample-1", {})]}
+        self.assertEqual(
+            restore.validate_bucket_coverage(manifest, grouped),
+            {"support-ticket-files"}
+        )
+        self.assertEqual(len(restore.select_samples(grouped)), 1)
+
+    def test_bucket_coverage_rejects_missing_or_unknown_group(self):
+        with self.assertRaises(RuntimeError):
+            restore.validate_bucket_coverage(
+                {"buckets": ["support-ticket-files"]}, {}
+            )
+        with self.assertRaises(RuntimeError):
+            restore.validate_bucket_coverage(
+                {"buckets": ["policy-documents"]},
+                {"unknown-bucket": [("sample", {})]}
+            )
+
     def test_restore_hash_and_length(self):
         identity = json.dumps(["policy-documents", "a.pdf"], separators=(",", ":"))
         plaintext = b"%PDF-1.7 test"
