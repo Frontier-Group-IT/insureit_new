@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Modal, NativeModules, Platform, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Animated, Image, Modal, NativeModules, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
 
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
@@ -49,8 +49,6 @@ const insurerLogos = {
 
 export default function VehiclesScreen() {
   const router = useRouter();
-  const { width: screenWidth } = useWindowDimensions();
-  const compactPhone = screenWidth < 375;
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const vehiclePolicyActionLabel = 'Add Policy';
   const [policies, setPolicies] = useState<Policy[]>([]);
@@ -185,7 +183,7 @@ export default function VehiclesScreen() {
       <View style={styles.pageHeader}>
         <View style={Platform.OS === 'ios' ? styles.iosHeaderCopy : undefined}>
           <View style={styles.titleRow}>
-            <Text style={[styles.pageTitle, compactPhone && { fontSize: 19, lineHeight: 24 }]}>My Vehicles</Text>
+            <Text style={styles.pageTitle}>My Vehicles</Text>
             <View style={styles.countBadge}>
               <Text style={styles.countBadgeText}>{vehicles.length} Vehicle{vehicles.length === 1 ? '' : 's'}</Text>
             </View>
@@ -236,10 +234,10 @@ export default function VehiclesScreen() {
         const health = vehicleComplianceHealth(vehicle, policy);
 
         return (
-          <Pressable key={vehicle.id} onPress={() => router.push({ pathname: '/customer/vehicle-detail', params: { id: vehicle.id } })} style={({ pressed }) => [styles.vehicleCard, compactPhone && { padding: 8, marginBottom: 8 }, pressed && styles.vehicleCardPressed]}>
+          <Pressable key={vehicle.id} onPress={() => router.push({ pathname: '/customer/vehicle-detail', params: { id: vehicle.id } })} style={({ pressed }) => [styles.vehicleCard, pressed && styles.vehicleCardPressed]}>
             <View style={styles.accentBar} />
-            <View style={[styles.cardMain, compactPhone && { gap: 6 }]}>
-              <View style={[styles.leftPane, compactPhone && { width: 112, paddingRight: 0 }]}>
+            <View style={styles.cardMain}>
+              <View style={styles.leftPane}>
                 {accountName ? <Text style={styles.accountName} numberOfLines={1}>{accountName}</Text> : null}
                 <View style={styles.chipRow}>
                   <Pressable
@@ -256,15 +254,15 @@ export default function VehiclesScreen() {
                   </Pressable>
                 </View>
 
-                <Image source={vehicleImage} style={[styles.truckImage, compactPhone && { width: 106, height: 62 }]} resizeMode="contain" />
+                <Image source={vehicleImage} style={styles.truckImage} resizeMode="contain" />
 
-                <Text style={[styles.vehicleMake, compactPhone && { fontSize: 11, lineHeight: 14 }]} numberOfLines={2} ellipsizeMode="tail">
+                <Text style={styles.vehicleMake} numberOfLines={2}>
                   {vehicleMake}
                   {vehicleModelYear ? <Text style={styles.vehicleModel}> - {vehicleModelYear}</Text> : null}
                 </Text>
               </View>
 
-              <View style={[styles.rightPane, compactPhone && { paddingLeft: 7 }]}>
+              <View style={styles.rightPane}>
                 {policy ? (
                   <>
                     <InfoBlock

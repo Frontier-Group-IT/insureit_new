@@ -51,8 +51,6 @@ const COMPLETED_MILESTONE_STATUSES = new Set(['completed', 'not_applicable']);
 
 export default function StartClaimScreen() {
   const router = useRouter();
-  const { width: screenWidth } = useWindowDimensions();
-  const compactPhone = screenWidth < 375;
   const [contexts, setContexts] = useState<CustomerAccountContext[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [policies, setPolicies] = useState<PolicyChoice[]>([]);
@@ -234,13 +232,13 @@ export default function StartClaimScreen() {
 
   return (
     <Screen title="Start Claim" showTitleHeader={false} showBackNavigation={false} topSpacing="tight">
-      <View style={[styles.hero, compactPhone && { minHeight: 104 }]} onTouchStart={() => console.warn('[claim-navigation] touch-region', { region: 'hero' })}>
+      <View style={styles.hero} onTouchStart={() => console.warn('[claim-navigation] touch-region', { region: 'hero' })}>
         <View style={styles.heroCopy}>
           <Text style={styles.eyebrow}>START A CLAIM</Text>
-          <Text style={[styles.title, compactPhone && { fontSize: 19, lineHeight: 23 }]}>Select the vehicle</Text>
+          <Text style={styles.title}>Select the vehicle</Text>
           <Text style={styles.subtitle}>Choose the vehicle involved and we’ll use its active policy.</Text>
         </View>
-        <Image accessible={false} source={require('../../assets/brand/start-claim/start-claim-hero.png')} style={[styles.heroArtwork, compactPhone && { height: 100, width: '41%' }]} resizeMode="contain" />
+        <Image accessible={false} source={require('../../assets/brand/start-claim/start-claim-hero.png')} style={styles.heroArtwork} resizeMode="contain" />
       </View>
 
       {message ? <Message type="error">{message}</Message> : null}
@@ -279,7 +277,7 @@ export default function StartClaimScreen() {
 
       <View style={styles.section}>
         <View style={styles.sectionHeading}>
-          <Text style={[styles.sectionTitle, compactPhone && { fontSize: 13 }]}>Policy details</Text>
+          <Text style={styles.sectionTitle}>Policy details</Text>
           {selectedVehicle && !activePolicy ? <Pressable accessibilityRole="button" onPress={addPolicy} style={styles.addPolicyButton}><MaterialCommunityIcons name="plus" size={16} color="#0A43A3" /><Text style={styles.addPolicyText}>Add policy</Text></Pressable> : null}
         </View>
 
@@ -290,12 +288,12 @@ export default function StartClaimScreen() {
             onPress={() => router.push({ pathname: '/customer/policy-detail', params: { id: selectedPolicy.id, source: selectedPolicy.source } } as any)}
             style={({ pressed }) => [styles.policyCardShadow, pressed && styles.policyCardPressed]}
           >
-            <View style={[styles.policyCard, styles.policyCardCompact, compactPhone && { minHeight: 94 }]}>
+            <View style={[styles.policyCard, styles.policyCardCompact]}>
               <View pointerEvents="none" style={styles.policyDecoration}>
                 <View style={styles.policyArcOne} />
                 <View style={styles.policyArcTwo} />
               </View>
-              <View style={[styles.policyContent, styles.policyContentCompact, compactPhone && { minHeight: 94, paddingHorizontal: 8, gap: 6 }]}>
+              <View style={[styles.policyContent, styles.policyContentCompact]}>
                 <View style={[styles.policyIcon, styles.policyIconCompact]}>
                   <View style={[styles.policyLogoSurface, Boolean(getInsurerLogoSource(selectedInsurer?.name)) && styles.policyIconWhiteBadge]}>
                     <Image

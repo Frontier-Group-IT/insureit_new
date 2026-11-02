@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions, type ImageSourcePropType } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { SvgUri } from 'react-native-svg';
 
 import { AppSearchBar } from '@/components/design-system';
@@ -67,8 +67,6 @@ function masterLogoUrl(kind: 'manufacturer' | 'insurer', name: string | null | u
 
 export default function PoliciesScreen() {
   const router = useRouter();
-  const { width: screenWidth } = useWindowDimensions();
-  const compactPhone = screenWidth < 375;
   const [policies, setPolicies] = useState<PolicyRow[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [companies, setCompanies] = useState<InsuranceCompany[]>([]);
@@ -208,12 +206,12 @@ export default function PoliciesScreen() {
       ) : null}
 
       <View style={styles.searchSection}>
-        <View style={[styles.searchHeadingRow, compactPhone && { gap: 6 }]}>
+        <View style={styles.searchHeadingRow}>
           <View style={Platform.OS === 'ios' ? styles.iosSearchHeadingCopy : undefined}>
-            <Text style={[styles.searchHeading, compactPhone && { fontSize: 12 }]}>Find your policy</Text>
-            <Text numberOfLines={Platform.OS === 'ios' ? 1 : undefined} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.78} style={[styles.searchSubheading, compactPhone && { fontSize: 9.2, lineHeight: 12 }]}>Search by vehicle, insurer or policy number</Text>
+            <Text style={styles.searchHeading}>Find your policy</Text>
+            <Text numberOfLines={Platform.OS === 'ios' ? 1 : undefined} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.78} style={styles.searchSubheading}>Search by vehicle, insurer or policy number</Text>
           </View>
-          <Pressable accessibilityRole="button" onPress={() => router.push('/customer/add-policy')} style={({ pressed }) => [styles.addButton, compactPhone && { paddingHorizontal: 7, minHeight: 32 }, pressed && styles.addButtonPressed]}>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/customer/add-policy')} style={({ pressed }) => [styles.addButton, pressed && styles.addButtonPressed]}>
             <MaterialCommunityIcons name="plus" size={16} color="#FFFFFF" />
             <Text style={styles.addButtonText}>Add policy</Text>
           </Pressable>
