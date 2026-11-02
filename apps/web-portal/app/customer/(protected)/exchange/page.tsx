@@ -279,7 +279,7 @@ function ActivitySection({ title, rows, accountId, search }: { title: string; ro
       const leading=low.includes("leading")||low.includes("winning");
       const outbid=low.includes("outbid");
       const listingId=valueText(row.listing_id);
-      const href=listingId?{pathname:`/customer/exchange/${encodeURIComponent(listingId)}`,query:{account:accountId}}:null;
+      const href=listingId?{pathname:`/customer/exchange/${encodeURIComponent(listingId)}`,query:{account:accountId,from:"activity"}}:null;
       const amount=Number(row.amount??row.agreed_price??row.asking_price??0);
       const cover=valueText(row.cover_url);
       const fallbackArt=customerExchangeVehicleArt(valueText(row.vehicle_type),valueText(row.category));
@@ -290,7 +290,7 @@ function ActivitySection({ title, rows, accountId, search }: { title: string; ro
         <div className="min-w-[90px]"><span className={`inline-flex rounded-lg px-2 py-1 text-[10px] font-bold capitalize ${leading?"bg-[#E1F8EE] text-[#11986A]":outbid?"bg-[#FFF0F2] text-[#DF3A58]":"bg-[#EAF1FF] text-[#426BCA]"}`}>{status||title}</span></div>
         <div className="hidden min-w-[130px] flex-1 text-[10px] text-[#7A8CA9] lg:block">{leading?"You are leading on this vehicle.":outbid?"A higher bid has been placed.":status?`Status: ${status}`:title}</div>
         <div className="min-w-[90px] text-right"><p className="text-[12px] font-black text-[#10264C]">{amount>0?formatCustomerCompactMoney(amount):"—"}</p><p className="mt-1 text-[9px] text-[#8B9AB2]">{title==="Offers / Bids"?"Your bid":"Amount"}</p></div>
-        {href?<Link href={href} aria-label={`View ${vehicleName} details`} title="View details" className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EDF3FF] text-[#245FD1] hover:bg-[#DAE8FF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#245FD1]"><ChevronRight className="h-4 w-4"/></Link>:<span className="text-[10px] text-[#94A3B8]">Details unavailable</span>}
+        {href?<Link href={href} aria-label={`View ${vehicleName} details`} title="View details" className="inline-flex h-8 w-8 shrink-0 items-center justify-center text-[#245FD1] transition hover:text-[#17365D] focus-visible:rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#245FD1]"><ChevronRight className="h-4 w-4"/></Link>:<span className="text-[10px] text-[#94A3B8]">Details unavailable</span>}
       </div>;
     })}
   </div>;
