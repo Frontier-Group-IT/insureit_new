@@ -1,4 +1,4 @@
-# Permanent Policy Intake Access Hierarchy Rules — 2026-11-02
+- **2026-11-02 — Customer Exchange listing detail compact redesign:** branch `ui/compact-customer-exchange-detail-20261102` updates `apps/web-portal/app/customer/(protected)/exchange/[listingId]/page.tsx` to remove the redundant `Back to Exchange` link and listing-number chip, show vehicle essentials, price and key specifications in a compact hero, tighten gallery/thumbnail presentation, and reduce specifications/documents spacing and activity copy. Existing secure data fetching, signed media URLs, verification statuses, scoped account tabs and activity link remain unchanged. Presentation-only, no migrations, RLS, finance, APK/AAB, or deployment. PR requires green Verify web portal CI and visual QA before merge.\n# Permanent Policy Intake Access Hierarchy Rules — 2026-11-02
 
 These rules govern all future INSUREIT Policy Intake register, summary, API, and permission changes. Preserve existing security checks and verify the active deployment with authenticated sessions.
 
