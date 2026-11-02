@@ -9,7 +9,9 @@ const salesCreators=["director","sales_head","zonal_head","asm","sales_manager",
 for(const role of salesCreators){assert(roleCapabilities[role].includes("view_policy_intakes"),`${role} must view policy intakes`);assert(roleCapabilities[role].includes("create_policy_intakes"),`${role} must initiate policy intakes`);assert(!roleCapabilities[role].includes("review_policy_intakes"),`${role} must not review policy intakes`);assert(!roleCapabilities[role].includes("finalize_policy_intakes"),`${role} must not finalize policy intakes`);}
 for(const role of ["sales_operations_head","backoffice_executive"]){assert(roleCapabilities[role].includes("view_policy_intakes"),`${role} must view policy intakes`);assert(roleCapabilities[role].includes("review_policy_intakes"),`${role} must review policy intakes`);assert(roleCapabilities[role].includes("finalize_policy_intakes"),`${role} must explicitly finalize policy intakes`);}
 assert(roleCapabilities.sales_operations_head.includes("create_policies"),"Operations Head needs governed policy-create authority to finalize reviewed intakes");assert(!roleCapabilities.backoffice_executive.includes("create_policy_intakes"),"Backoffice must remain Operations-side, not sales submitter");
-for(const role of ["claims_head","claim_processor","field_executive"])assert(!roleCapabilities[role].includes("view_policy_intakes"),`${role} must not inherit policy intake access`);
+assert(roleCapabilities.claims_head.includes("view_policy_intakes") && roleCapabilities.claims_head.includes("create_policy_intakes"),"Claims Head must access Policy Intake");
+assert(!roleCapabilities.claims_head.includes("review_policy_intakes") && !roleCapabilities.claims_head.includes("finalize_policy_intakes"),"Claims Head must not gain Operations review/finalization rights");
+for(const role of ["claim_processor","field_executive"])assert(!roleCapabilities[role].includes("view_policy_intakes"),`${role} must not inherit policy intake access`);
 
 const duplicateGuard=read("lib/policy-intake-duplicate.ts");
 assert.equal(normalizePolicyNumber(" n-857/7606 "),"N8577606","Policy numbers must compare in canonical normalized form");
@@ -21,6 +23,8 @@ assert(duplicateGuard.includes('candidate.status === "completed"'),"Completed hi
 
 const actions=read("app/policy-intakes/actions.ts");
 assert(actions.includes('canAccessIntermediary(profile.id,profile.role,leadSourceId,"create_policy_intakes")'),"Submission must re-check lead-source scope server-side using Policy Intake creation scope");
+assert(actions.includes('profile.role === "claims_head" || await canAccessIntermediary'),"Claims Head may submit with any active lead source while other roles retain scope checks");
+assert(read("lib/policy-intake-server.ts").includes('profile.role === "claims_head"'),"Claims Head source list must include all active sources");
 assert(actions.includes('createSignedUploadUrl(storagePath,{upsert:false})'),"Large policy files must use direct signed storage upload instead of a Server Action request body");
 assert(actions.includes('.from("policy_intake_requests").insert('),"Submission must persist the intake before automatic extraction");
 assert(actions.includes('ocrStatus=proposal?"completed":"pending"'),"Motor/Non-Motor intake must still be stored with pending OCR while Life/Health proposal forms bypass OCR");
