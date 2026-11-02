@@ -25,7 +25,7 @@ type BranchContact = { legacy_branch_profile_id: string | null; contact_name: st
 type IntermediaryName = { id: string; display_name: string };
 type PolicyIntakeSearchParams = { view?: string };
 
-function resolveInitialView(value: string | undefined, reviewer: boolean, organizationViewer: boolean): PolicyIntakeViewKey {
+function resolveInitialView(value: string | undefined, reviewer: boolean, _organizationViewer: boolean): PolicyIntakeViewKey {
   if (value === "in_review") return "in_review";
   if (value === "all") return "all";
   // Reviewers start with actionable work, including organization-wide reviewers.
