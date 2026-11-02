@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseWithAccessToken } from "@/lib/auth";
 import { getServerAccessToken } from "@/lib/auth-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { canReadAllPartnerPolicyIntakes } from "@/lib/partner-policy-intake-read-access";
 
 type PartnerIdentity =
   | { actor_kind: "employee"; profile_id: string }
@@ -37,7 +38,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const identity = identityData as PartnerIdentity;
   const { id } = await params;
   const owner = intakeOwner(identity);
-  if (!owner.id) return json({ ok: false, error: "Partner account access is unavailable." }, 403);
+  const organizationRead = await canReadAllPartnerPolicyIntakes(identity);
+  if (!organizationRead && !owner.id) return json({ ok: false, error: "Partner account access is unavailable." }, 403);
   const admin = createSupabaseAdminClient();
 
   let query = admin
@@ -45,7 +47,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     .select("storage_bucket,storage_path")
     .eq("id", id);
 
-  query = query.eq(owner.field, owner.id);
+  if (!organizationRead) query = query.eq(owner.field, owner.id);
 
   const { data: intake, error: intakeError } = await query.maybeSingle<{ storage_bucket: string; storage_path: string }>();
   if (intakeError) return json({ ok: false, error: "Policy copy could not be loaded." }, 500);
