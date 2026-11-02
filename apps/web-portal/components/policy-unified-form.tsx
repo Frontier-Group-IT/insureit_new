@@ -177,8 +177,6 @@ const registrationValidationMessage="Enter a valid Registration number.";
 
 export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources, manufacturers = [], initialValues, nonMotorInitialValues, nonMotorExistingDocuments, nonMotorActivityStatus, commercialAccess = true, preselectedCustomerId = null, preselectedVehicleId = null, sourceIntakeId = null, initialDraftRevision = null, initialRegistrationMode = "registered", authoritativeInitialValues = false }: Props) {
   const router = useRouter();
-  const [footerMounted, setFooterMounted] = useState(false);
-  useEffect(() => { setFooterMounted(true); }, []);
   const [form,setForm]=useState<FormState>(()=>stateFrom(initialValues));
   const [vehicleRegistrationMode,setVehicleRegistrationMode]=useState<VehicleRegistrationMode>(initialRegistrationMode);
   const draftRevisionRef=useRef<number>(initialDraftRevision ?? 1);
@@ -500,7 +498,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
   const progressAt=(index:number):SectionProgress=>sectionProgress[index]??{filled:0,total:1,complete:false,empty:true,remaining:1};
   const showSectionNav=isMotorPolicy||isNonMotorPolicy;
 
-  return <div className="mx-auto w-full max-w-[1480px] pb-24">
+  return <div className="mx-auto w-full max-w-[1480px] pb-6">
     <div className="overflow-hidden rounded-t-xl border border-b-0 border-[#D9E2F0] bg-white shadow-[0_8px_22px_rgba(15,23,42,.05)]">
       <div className="flex min-h-[52px] items-center bg-[linear-gradient(135deg,#071D49_0%,#123B75_60%,#315B9A_100%)] px-4 py-2 text-white sm:px-5">
         <div className="flex w-full items-center justify-between gap-3"><h1 className="text-[15px] font-semibold tracking-[-0.01em]">{headerTitle}</h1>{isMotorPolicy?<PolicyOcrImportPanel variant="header" context={ocrImportContext} onApply={applyPolicyOcrFields} onClearForm={clearPolicyForm}/>:null}</div>
@@ -569,8 +567,8 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
         </Section>
       </div><LiveSummary completion={completion} net={calculations.net} gst={calculations.gst} gross={calculations.gross} access={commercialAccess} payinEntered={payinEntered} payoutEntered={payoutEntered} totalPayin={calculations.totalPayin} totalPayout={calculations.grossPayout} payinOd={form.projectedOdPercent} payinTp={form.projectedTpPercent} payoutOd={form.payoutOdPercent} payoutTp={form.payoutTpPercent} onOpen={setCommercialModal}/></div>
 
-      {footerMounted ? createPortal(<div role="region" aria-label="Policy save actions" className="fixed bottom-0 right-0 left-0 z-[60] border-t border-[#D9E2F0] bg-white/95 px-4 py-2 shadow-[0_-5px_18px_rgba(15,23,42,.06)] backdrop-blur lg:left-[230px]">
-        {/* Render outside animated/overflow-clipped page wrappers to keep actions visible on refresh. */}<div className="mx-auto flex max-w-[1480px] items-center justify-end gap-2">{draftSaveError?<span className="mr-auto text-[9px] font-semibold text-red-600">{draftSaveError}</span>:null}{sourceIntakeId?<button type="button" onClick={()=>{void saveDraftInOrder({...form,registrationMode:vehicleRegistrationMode} as PolicyIntakeDraft).then(result=>{if(result.ok){draftRevisionRef.current=result.revision;router.push(`/policy-intakes/${encodeURIComponent(sourceIntakeId)}`);}else setDraftSaveError(result.error);});}} className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Save &amp; Return to Intake</button>:<Link href="/policies" onClick={()=>{if(!isEdit)try{sessionStorage.removeItem(POLICY_DRAFT_KEY);}catch{}}} className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Cancel</Link>}<button type="button" onClick={submitPolicy} disabled={isSubmitting||Boolean(draftSaveError)} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-60">{isSubmitting?pendingText:submitText}</button></div></div>, document.body) : null}
+      <div role="region" aria-label="Policy save actions" className="mt-4 rounded-xl border border-[#D9E2F0] bg-white px-4 py-3 shadow-sm">
+        <div className="mx-auto flex max-w-[1480px] items-center justify-end gap-2">{draftSaveError?<span className="mr-auto text-[9px] font-semibold text-red-600">{draftSaveError}</span>:null}{sourceIntakeId?<button type="button" onClick={()=>{void saveDraftInOrder({...form,registrationMode:vehicleRegistrationMode} as PolicyIntakeDraft).then(result=>{if(result.ok){draftRevisionRef.current=result.revision;router.push(`/policy-intakes/${encodeURIComponent(sourceIntakeId)}`);}else setDraftSaveError(result.error);});}} className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Save &amp; Return to Intake</button>:<Link href="/policies" onClick={()=>{if(!isEdit)try{sessionStorage.removeItem(POLICY_DRAFT_KEY);}catch{}}} className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Cancel</Link>}<button type="button" onClick={submitPolicy} disabled={isSubmitting||Boolean(draftSaveError)} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-60">{isSubmitting?pendingText:submitText}</button></div></div>
     </>:isLifeHealthPolicy?<div className="space-y-3">{sourceSection}<LifeHealthPolicyForm key={form.businessLine} policyType={form.businessLine as "Life"|"Health"} insurers={lifeHealthInsurers} source={{sourcingDate:form.issuanceDate,intermediaryType:form.intermediaryType,sourceId:selectedSourceId,leadSource:form.leadSource,intermediaryCode:form.intermediaryCode,rmName:form.rmName,rmCode:selectedSource?.rmCode??""}}/></div>:null}
 
     {submitError?<ValidationErrorDialog message={submitError} onClose={()=>setSubmitError(null)}/>:null}
