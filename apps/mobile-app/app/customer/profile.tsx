@@ -379,7 +379,7 @@ export default function ProfileScreen() {
 
       <View style={[styles.hero, compactPhone && { minHeight: 136, paddingHorizontal: 12, paddingTop: 15, paddingBottom: 12, gap: 9 }]}>
         <Animated.View style={[styles.avatarStage, compactPhone && { width: 84, height: 84 }, { transform: [{ translateY: avatarLift }, { scale: avatarScale }] }]}>
-          <View style={[styles.avatarShell, !avatarUri && styles.avatarFallback]}>
+          <View style={[styles.avatarShell, compactPhone && { width: 80, height: 80, borderRadius: 40 }, !avatarUri && styles.avatarFallback]}>
             {avatarUri ? (
               <Image source={{ uri: avatarUri }} style={styles.avatarImage} resizeMode="cover" />
             ) : (
