@@ -67,11 +67,11 @@ function sumMetrics(rows: RmPerformanceRow[]): Metrics {
   }), { todayPolicies: 0, todayNetPremium: 0, mtdPolicies: 0, mtdNetPremium: 0 });
 }
 
-function PerformanceHeading({ name, description, metrics, periodLabel, open, onToggle, icon }: {
-  name: string; description?: string; metrics: Metrics; periodLabel: string; open: boolean; onToggle: () => void; icon: "head" | "direct" | "reports";
+function PerformanceHeading({ name, description, metrics, periodLabel, open, onToggle, icon, highlighted=false }: {
+  name: string; description?: string; metrics: Metrics; periodLabel: string; open: boolean; onToggle: () => void; icon: "head" | "direct" | "reports"; highlighted?:boolean;
 }) {
   return <button type="button" onClick={onToggle} aria-expanded={open}
-    className={`w-full px-4 py-3 text-left transition-colors ${open ? "bg-[#D5E6FF]" : "bg-white hover:bg-[#F7FAFE]"}`}>
+    className={`w-full px-4 py-3 text-left transition-colors ${open || highlighted ? "bg-[#D5E6FF]" : "bg-white hover:bg-[#F7FAFE]"}`}>
     <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_20px] items-center gap-2 md:gap-3">
       <div className="min-w-0">
         <div className="flex items-center gap-1.5">
@@ -122,12 +122,12 @@ function HierarchyNode({ row, childrenByManager, periodLabel, periodShortLabel, 
     {open?<div className="relative space-y-2 border-t border-[#A9C7EB] bg-[#F8FBFF] py-3 pl-5 pr-2 before:pointer-events-none before:absolute before:bottom-3 before:left-2 before:top-3 before:border-l-2 before:border-dashed before:border-[#82ADE0] md:pl-6 md:pr-3">
       <div className={`relative overflow-visible rounded-lg border ${section==="direct"?"border-[#8BB6E8]":"border-[#D9E4F2]"} before:pointer-events-none before:absolute before:-left-3 before:top-6 before:w-3 before:border-t-2 before:border-dashed before:border-[#82ADE0] md:before:-left-4 md:before:w-4`}>
         <div className="overflow-hidden rounded-lg"><PerformanceHeading name="Direct Partners" description="Own attributed business" metrics={row}
-          periodLabel={periodLabel} icon="direct" open={open || section==="direct"} onToggle={()=>setSection(section==="direct"?null:"direct")}/>
+          periodLabel={periodLabel} icon="direct" highlighted={open} open={section==="direct"} onToggle={()=>setSection(section==="direct"?null:"direct")}/>
         {section==="direct"?<div className="border-t border-[#A9C7EB] bg-[#F1F7FF] p-3"><SourceColumns sources={row.sources} periodLabel={periodLabel}/></div>:null}</div>
       </div>
       {reports.length?<div className={`relative rounded-lg border ${section==="reports"?"border-[#8BB6E8]":"border-[#D9E4F2]"} before:pointer-events-none before:absolute before:-left-3 before:top-6 before:w-3 before:border-t-2 before:border-dashed before:border-[#82ADE0] md:before:-left-4 md:before:w-4`}>
         <PerformanceHeading name={`Reporting RMs (${reports.length})`} description="Reporting team total" metrics={reporting}
-          periodLabel={periodLabel} icon="reports" open={open || section==="reports"} onToggle={()=>setSection(section==="reports"?null:"reports")}/>
+          periodLabel={periodLabel} icon="reports" highlighted={open} open={section==="reports"} onToggle={()=>setSection(section==="reports"?null:"reports")}/>
         {section==="reports"?<div className="relative space-y-2 border-t border-[#A9C7EB] bg-[#F1F7FF] py-3 pl-5 pr-2 before:pointer-events-none before:absolute before:bottom-3 before:left-2 before:top-3 before:border-l-2 before:border-dashed before:border-[#A7C7EB] md:pl-6 md:pr-3">
           {reports.map(child=><div key={child.employeeId??child.name} className="relative before:pointer-events-none before:absolute before:-left-3 before:top-6 before:w-3 before:border-t-2 before:border-dashed before:border-[#A7C7EB] md:before:-left-4 md:before:w-4"><HierarchyNode row={child} childrenByManager={childrenByManager}
             periodLabel={periodLabel} periodShortLabel={periodShortLabel} depth={depth+1} visited={nextVisited}
