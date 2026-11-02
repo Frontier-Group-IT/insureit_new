@@ -30,9 +30,13 @@ jobs:
           import pathlib, yaml
           p=pathlib.Path('.github/workflows/insureit-supabase-storage-r2-backup.yml')
           data=yaml.safe_load(p.read_text())
-          assert 'schedule' not in str(data.get('on', data.get(True, {}))), 'Schedule must remain disabled'
+          triggers = data.get('on', data.get(True, {}))
+          assert triggers['schedule'] == [{'cron': '30 13 * * *'}], 'Daily 19:00 IST cron required'
+          assert 'workflow_dispatch' in triggers, 'Manual recovery trigger must remain'
           job=data['jobs']['backup']
           assert 'refs/heads/main' in job['if']
+          assert 'schedule' in job['if'] and 'workflow_dispatch' in job['if']
+          assert 'verify_r2_restore.py' in str(job['steps'][-1]), 'Post-backup restoration required'
           assert job['environment']=='insureit-production-backup'
           assert data['permissions']['contents']=='read'
           restore = yaml.safe_load(pathlib.Path('.github/workflows/insureit-r2-restore-verify.yml').read_text())
@@ -42,5 +46,5 @@ jobs:
           assert verify['environment'] == 'insureit-production-backup'
           assert 'SUPABASE_SERVICE_ROLE_KEY' not in str(verify)
           assert restore['permissions']['contents'] == 'read'
-          print('Manual-only production and isolated restore guards verified')
+          print('Scheduled 19:00 IST backup + restore guard verified')
           PY
