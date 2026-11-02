@@ -74,6 +74,16 @@ def select_samples(grouped, per_bucket=DEFAULT_SAMPLES_PER_BUCKET):
     return chosen
 
 
+def validate_bucket_coverage(manifest, grouped):
+    recorded = set(manifest["buckets"])
+    populated = set(grouped)
+    if not populated or not populated.issubset(recorded):
+        raise RuntimeError("Unexpected populated bucket coverage")
+    if any(not grouped[bucket] for bucket in populated):
+        raise RuntimeError("Empty sample grouping for a populated bucket")
+    return recorded - populated
+
+
 def verify_sample(s3, bucket, key, identifier, entry):
     restored = decrypt(read_limited(s3, bucket, entry["blob"]), key, identifier)
     if len(restored) != entry["bytes"]:
@@ -100,8 +110,9 @@ def main():
     )
     manifest, grouped = validate_manifest(s3, bucket, key_raw)
     chosen = select_samples(grouped)
-    if not chosen or len(grouped) != len(manifest["buckets"]):
-        raise RuntimeError("Expected a non-empty sample from every bucket")
+    empty_buckets = validate_bucket_coverage(manifest, grouped)
+    if not chosen:
+        raise RuntimeError("No backup objects available to restore")
     count = 0
     bytes_checked = 0
     for identifier, entry in chosen:
@@ -110,7 +121,7 @@ def main():
     # No customer names, object paths, or data bytes are printed.
     print(f"RESTORE VERIFIED: {count} file samples across {len(grouped)} buckets; "
           f"{bytes_checked} decrypted bytes validated; "
-          f"manifest entries={len(manifest['entries'])}; "
+          f"manifest entries={len(manifest['entries'])}; empty buckets={len(empty_buckets)}; "
           f"snapshot={manifest['created_at']}", flush=True)
     print("No Supabase access; R2 operations read-only; no plaintext persisted.", flush=True)
 
