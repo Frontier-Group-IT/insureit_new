@@ -29,7 +29,6 @@ type Props = {
   externalCustomerMilestones?: CustomerMilestoneVisual[];
   unrestrictedStageEditing?: boolean;
   partnerReadOnlyJourney?: boolean;
-  partnerExternalJourney?: boolean;
 };
 
 const stages = [
@@ -171,7 +170,7 @@ function nextStageLabelFor(stageKey: StageKey) {
   return nextKey ? stages.find((stage) => stage.key === nextKey)?.label ?? "next stage" : "claim completion";
 }
 
-export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, spotContent, claimIntimationContent, initialStageKey, accidentAt, spotIntimationAt, spotDetails, externalCustomerMilestones, unrestrictedStageEditing = false, partnerReadOnlyJourney = false, partnerExternalJourney = false }: Props) {
+export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, spotContent, claimIntimationContent, initialStageKey, accidentAt, spotIntimationAt, spotDetails, externalCustomerMilestones, unrestrictedStageEditing = false, partnerReadOnlyJourney = false }: Props) {
   const router = useRouter();
   const active = stages.find((stage) => (stage.statuses as readonly string[]).includes(currentStatus));
   const activeIndex = active ? stages.findIndex((stage) => stage.key === active.key) : 0;
@@ -186,9 +185,9 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const selected = stages.find((stage) => stage.key === selectedKey) ?? stages[0];
   const selectedIndex = stages.findIndex((stage) => stage.key === selected.key);
   const externalSelectedCompleted = hasExternalVisualProgress && externalVisualCompletedKeys.has(selected.key);
-  const selectedAvailable = partnerExternalJourney || unrestrictedStageEditing || journeyComplete || selectedIndex <= activeIndex || externalSelectedCompleted;
+  const selectedAvailable = unrestrictedStageEditing || journeyComplete || selectedIndex <= activeIndex || externalSelectedCompleted;
   const selectedIsCurrent = !journeyComplete && selected.key === active?.key;
-  const selectedSaveOnly = !selectedIsCurrent;
+  const selectedSaveOnly = partnerReadOnlyJourney || !selectedIsCurrent;
   const selectedDetails = stageOwnedDetails(details, selected.key, selected.statuses);
   const detail = selectedDetails[0];
   const spotDetail = details.find((row) => row.details?.milestone_key === "spot_intimation" || typeof row.details?.incident_at === "string" || typeof row.details?.accident_at === "string" || typeof row.details?.spot_intimation_at === "string");
@@ -297,7 +296,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
       <ol className="grid border-y border-[#D9E3F0] md:grid-cols-3 xl:grid-cols-9">
         {stages.map((stage, index) => {
           const externalStageCompleted = hasExternalVisualProgress && externalVisualCompletedKeys.has(stage.key);
-          const available = partnerExternalJourney || unrestrictedStageEditing || journeyComplete || index <= activeIndex || externalStageCompleted;
+          const available = unrestrictedStageEditing || journeyComplete || index <= activeIndex || externalStageCompleted;
           const isCurrent = !journeyComplete && stage.key === active?.key;
           const isCompleted = journeyComplete || index < activeIndex || (externalStageCompleted && !isCurrent);
           const isSelected = stage.key === selected.key;
@@ -315,7 +314,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                   <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${isCompleted ? "bg-[#E8F8F0] text-[#0A9B72]" : isCurrent ? "bg-[#155EEF] text-white shadow-[0_2px_6px_rgba(21,94,239,0.18)]" : "bg-[#EEF2F7] text-[#58708F]"}`}>
                     {isCompleted ? (
                       <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[2.4]"><path d="m6 12 4 4 8-9" /></svg>
-                    ) : isCurrent || partnerExternalJourney || unrestrictedStageEditing ? <span className="text-[9px] font-semibold">{index + 1}</span> : (
+                    ) : isCurrent || unrestrictedStageEditing ? <span className="text-[9px] font-semibold">{index + 1}</span> : (
                       <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3 w-3 fill-none stroke-current stroke-[2]"><rect x="6.5" y="10.5" width="11" height="8" rx="1.5" /><path d="M9 10.5V8a3 3 0 0 1 6 0v2.5" /></svg>
                     )}
                   </span>
