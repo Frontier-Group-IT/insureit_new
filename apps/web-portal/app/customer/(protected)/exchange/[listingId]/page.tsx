@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, BadgeCheck, CalendarDays, CheckCircle2, CircleHelp, Clock3, FileText, Fuel, Gauge, Heart, ImageIcon, MapPin, ShieldCheck, Truck, Weight, Wallet } from "lucide-react";
+import { ArrowLeft, BadgeCheck, CalendarDays, CheckCircle2, Clock3, FileText, Fuel, Gauge, ImageIcon, MapPin, ShieldCheck, Truck } from "lucide-react";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { customerExchangeVehicleArt } from "@/lib/customer-exchange-vehicle-art";
