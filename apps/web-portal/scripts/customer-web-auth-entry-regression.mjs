@@ -13,7 +13,7 @@ const protectedCustomerGuard = middleware.match(/if \(isCustomerPortalPath\(path
 const checks = [
   [Boolean(customerEntryGuard), "Customer Signup must share the explicitly public Customer Login middleware entry boundary."],
   [customerEntryGuard.includes('check.status === "customer"') && customerEntryGuard.includes('"/customer/home"'), "Existing customer sessions must redirect to Customer Home."],
-  [customerEntryGuard.includes('check.status === "authorized" || check.status === "forbidden"') && customerEntryGuard.includes('"/access-denied"'), "Non-customer authenticated roles must remain denied on Customer auth-entry routes."],
+  [customerEntryGuard.includes('check.status === "authorized" || check.status === "forbidden"') && customerEntryGuard.includes('denialPath('), "Non-customer authenticated roles must remain denied on Customer auth-entry routes."],
   [customerEntryGuard.includes('clearSessionCookies(continueRequest(request))'), "Unauthenticated signup must be allowed without stale customer session cookies."],
   [protectedCustomerGuard.includes('check.status === "invalid"') && protectedCustomerGuard.includes('"/customer/login"') && protectedCustomerGuard.includes('check.status !== "customer"'), "All other Customer workspace routes must stay protected."],
   [phone.includes(">\n        +91\n      </div>"), "Customer Web mobile field must render +91 as a fixed visible prefix."],
