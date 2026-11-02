@@ -28,7 +28,13 @@ export async function getRmPolicyIntakePredicates(profileId: string, role: strin
   const familyIds = family.map(p => p.id);
   // Codes are canonical partner identifiers; no customer-name based expansion.
   const codes = [...new Set(family.map(p => p.partner_code?.trim()).filter((v): v is string => Boolean(v)))];
-  if (codes.length) predicates.push(`lead_source_code.in.(${codes.join(",")})`);
+  // Legacy intake imports use PART-2026-NNNNN while the partner master uses PTNNNNN.
+  // Expand aliases only from verified Partner/Branch codes (never user-entered names).
+  const sourceCodes = [...new Set(codes.flatMap(code => {
+    const match = /^PT(\\d{5})$/.exec(code);
+    return match ? [code, `PART-2026-${match[1]}`] : [code];
+  }))];
+  if (sourceCodes.length) predicates.push(`lead_source_code.in.(${sourceCodes.join(",")})`);
   const { data: identities, error: identityError } = await admin.from("portal_access_identities")
     .select("profile_id").in("entity_id", familyIds).in("entity_type", ["partner","branch"])
     .returns<Array<{ profile_id: string | null }>>();
