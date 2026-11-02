@@ -13,4 +13,9 @@ assert.match(client,/if \(response\.status === 401\)/,"Client must recover unaut
 assert.match(client,/supabase\.auth\.refreshSession\(\)/,"Client must refresh expired token");
 assert.match(client,/fetch\("\/auth\/session"/,"Client must synchronize secure cookie");
 assert.match(client,/if \(synced\.ok\)/,"Client must retry only after verified session sync");
+const mobile = readFileSync("../../apps/partner-app/lib/policy-intakes.ts","utf8");
+assert.match(route,/\.order\("created_at", \{ ascending: false \}\)\s*\.order\("id", \{ ascending: false \}\)/,"Partner intake API must order by ID for stable pagination");
+assert.match(mobile,/offset < total \|\| intakes\.length !== total/,"Mobile must reject incomplete or duplicate page results");
+assert.match(mobile,/cache: "no-store"/,"Mobile intake requests must bypass stale HTTP cache");
+assert.doesNotMatch(mobile,/items\.length < pageSize/,"Short pages must not silently truncate intakes");
 console.log("Partner Policy Intake submitter identity and session recovery regression passed");
