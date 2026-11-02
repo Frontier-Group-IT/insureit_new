@@ -101,7 +101,7 @@ export default function PartnerHomeScreen() {
       void business.ensureFresh();
       void canonicalPolicies.ensureFresh();
       if (businessPeriod === 'mtd') void previousMonthMtd.ensureFresh();
-    }, [workspace.ensureFresh, business.ensureFresh, previousMonthMtd.ensureFresh, businessPeriod]),
+    }, [workspace.ensureFresh, business.ensureFresh, canonicalPolicies.ensureFresh, previousMonthMtd.ensureFresh, businessPeriod]),
   );
 
   // Show a short visible pulse even for cached periods, without forcing a network call.
@@ -157,7 +157,7 @@ export default function PartnerHomeScreen() {
       scrollProps={{
         refreshControl: (
           <RefreshControl
-            refreshing={workspace.refreshing || business.refreshing || (businessPeriod === 'mtd' && previousMonthMtd.refreshing)}
+            refreshing={workspace.refreshing || business.refreshing || canonicalPolicies.refreshing || (businessPeriod === 'mtd' && previousMonthMtd.refreshing)}
             onRefresh={() => {
               void workspace.refresh();
               void business.refresh();
