@@ -30,7 +30,7 @@ export default async function CustomerInsuranceQuotePage({
         <div className="absolute inset-0 bg-gradient-to-r from-[#06152e]/85 via-[#061b38]/45 via-45% to-transparent" />
         <div className="relative flex min-h-[180px] items-center justify-between gap-2 px-4 py-4 sm:min-h-[205px] sm:px-6">
           <div className="max-w-[55%]">
-            <h1 className="mt-2 max-w-[360px] text-[clamp(21px,2.6vw,35px)] font-black leading-[1.06] tracking-tight">Protect <span className="text-[#46A6FF]">your</span><br/>business <span className="text-[#46A6FF]">journey.</span></h1>
+            <div className="flex items-center gap-3"><img src="/assets/Custom-Icons/optimized-128/policy-intake.png" alt="" aria-hidden="true" width={76} height={76} className="h-[64px] w-[64px] shrink-0 object-contain sm:h-[76px] sm:w-[76px]" /><h1 className="mt-2 max-w-[360px] text-[clamp(21px,2.6vw,35px)] font-black leading-[1.06] tracking-tight">Protect <span className="text-[#46A6FF]">your</span><br/>business <span className="text-[#46A6FF]">journey.</span></h1></div>
             <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-[9px] font-semibold text-[#E8F3FF]">
               <span className="flex items-center gap-1"><ShieldCheck className="h-4 w-4 text-[#58B3FF]"/>Quick request</span>
               <span className="flex items-center gap-1"><Headset className="h-4 w-4 text-[#58B3FF]"/>Expert callback</span>
@@ -42,7 +42,7 @@ export default async function CustomerInsuranceQuotePage({
         </div>
       </section>
       <section className="overflow-hidden rounded-xl border border-[#DCE5F1] bg-white p-3 shadow-[0_8px_26px_rgba(28,50,82,.06)] sm:p-5">
-        <h2 className="mb-3 flex items-center gap-2 text-[17px] font-black text-[#10213D]"><FileText className="h-5 w-5 text-[#175CA8]" aria-hidden="true" />Insurance Quote Request</h2>
+        <h2 className="mb-3 flex items-center gap-2 text-[17px] font-black text-[#10213D]"><img src="/assets/Custom-Icons/optimized-128/documents.png" alt="" aria-hidden="true" width={36} height={36} className="h-9 w-9 object-contain" />Insurance Quote Request</h2>
         <CustomerServiceRequestForm
           mode="insurance_quote"
           customerId={account.id}

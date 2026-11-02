@@ -44,7 +44,7 @@ export default function CustomerSettingsPage() {
           <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#9A66EC] to-[#5724C7] text-white shadow-sm"><Settings className="h-9 w-9" aria-hidden="true" /></span>
           <span aria-hidden="true" className="h-16 w-px shrink-0 bg-[#B8A7DF]" />
           <div className="max-w-[440px]">
-            <h1 className="text-[clamp(22px,2.3vw,29px)] font-extrabold leading-tight text-[#29265B]">Account Settings</h1>
+            <h1 className="text-[clamp(22px,2.3vw,29px)] font-extrabold leading-tight text-[#29265B]"><img src="/assets/Custom-Icons/optimized-128/kyc.png" alt="" aria-hidden="true" width={48} height={48} className="mr-2 inline-block h-12 w-12 align-middle object-contain" />Account Settings</h1>
             <p className="mt-1.5 max-w-[320px] text-[12px] leading-4 text-[#777896]">Manage your account and keep your information up to date.</p>
           </div>
         </div>
@@ -61,7 +61,7 @@ export default function CustomerSettingsPage() {
         <div className="space-y-2">
           {accountLinks.map(({ href, title, detail, Icon }) => (
             <Link key={href} href={href} className="flex items-center gap-3 rounded-lg border border-[#EAE5F4] bg-white px-3 py-2.5 transition hover:bg-[#F8F6FE] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7843DC]">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#EAE0FF] text-[#753CD4]"><Icon className="h-5 w-5" aria-hidden="true" /></span>
+              <img src={title === "My Profile" ? "/assets/Custom-Icons/optimized-128/customers.png" : title === "My Documents" ? "/assets/Custom-Icons/optimized-128/documents.png" : "/assets/Custom-Icons/optimized-128/tasks-work-queue.png"} alt="" aria-hidden="true" width={40} height={40} className="h-10 w-10 shrink-0 object-contain" />
               <span className="min-w-0 flex-1"><span className="block text-[12px] font-bold text-[#292655]">{title}</span><span className="mt-1 block text-[10px] leading-4 text-[#8783A0]">{detail}</span></span>
               <ChevronRight className="h-4 w-4 shrink-0 text-[#7842DA]" aria-hidden="true" />
             </Link>

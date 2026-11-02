@@ -90,7 +90,7 @@ export default async function CustomerPoliciesPage({
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EEF7FF]/85 via-[#EEF7FF]/45 via-45% to-transparent" />
         <div className="relative flex min-h-[170px] items-center px-5 py-6 sm:px-7">
           <div className="max-w-[520px]">
-            <h1 className="text-[clamp(28px,3.2vw,40px)] font-bold tracking-tight">My <span className="text-[#1769DC]">Policies</span></h1>
+            <h1 className="flex items-center gap-3 text-[clamp(28px,3.2vw,40px)] font-bold tracking-tight"><img src="/assets/Custom-Icons/optimized-128/policy.png" alt="" aria-hidden="true" width={72} height={72} className="h-[64px] w-[64px] shrink-0 object-contain sm:h-[72px] sm:w-[72px]" />My <span className="text-[#1769DC]">Policies</span></h1>
             <p className="mt-2 text-[14px] leading-relaxed text-[#4B6C94]">All your insurance covers and documents in one place.</p>
           </div>
         </div>
@@ -101,7 +101,7 @@ export default async function CustomerPoliciesPage({
       </section>:null}
       <section className="customer-register-panel overflow-hidden rounded-2xl border border-[#D9E2EF] bg-white shadow-[0_8px_30px_rgba(24,42,72,.04)]">
         <div className="flex flex-wrap items-center gap-2 border-b border-[#E4EAF2] px-3 py-3 sm:px-4 xl:flex-nowrap">
-          <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><ShieldCheck className="h-5 w-5 text-[#175CA8]" aria-hidden="true" />Policy Register</h2>
+          <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><img src="/assets/Custom-Icons/optimized-128/documents.png" alt="" aria-hidden="true" width={34} height={34} className="h-[34px] w-[34px] object-contain" />Policy Register</h2>
           <CustomerPolicyAnimatedSearch accountId={account.id} query={currentQuery} status={statusFilter ?? "all"} source={sourceFilter ?? "all"} />
           <div aria-label="Policy status filter" className="ml-auto flex flex-wrap items-center gap-1 rounded-lg border border-[#D8E2F0] bg-[#F8FAFD] p-1">
             {[
