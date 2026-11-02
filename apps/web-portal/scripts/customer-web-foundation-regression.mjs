@@ -245,7 +245,7 @@ assert(portalRoutes.includes('"/customer"'), "Customer Web must participate in p
 assert(middleware.includes('type SessionStatus = "authorized" | "customer" | "forbidden" | "invalid"'), "Customer sessions must remain distinct from employee/Partner authorization");
 assert(middleware.includes('profile?.is_active && profile.role === "customer"'), "middleware must recognize only active customer profiles");
 assert(middleware.includes('if (check.status !== "customer")'), "Customer routes must reject non-customer sessions");
-assert(middleware.includes('if (check.status === "customer") return redirect(request, "/access-denied"'), "Customer sessions must remain denied from existing protected employee/Partner routes");
+assert(middleware.includes('if (check.status === "customer") return redirect(request, denialPath("customer_workspace")'), "Customer sessions must remain denied from existing protected employee/Partner routes");
 assert(middleware.includes('"/customer/:path*"'), "Customer Web must remain inside middleware session-refresh coverage");
 assert(middleware.includes('pathname === "/customer/auth/session"'), "Customer session bootstrap must have an exact-path middleware bypass");
 assert(
