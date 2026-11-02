@@ -16,7 +16,7 @@ export function PolicyIntakePolicyRegisterLinksPortal({ summary }: { summary: Po
 
     const portalHost = document.createElement("div");
     portalHost.dataset.policyIntakeQuickLinksHost = "true";
-    portalHost.className = "shrink-0";
+    portalHost.className = "min-w-0 max-w-full shrink overflow-x-auto overscroll-x-contain";
     addPolicyAction.parentElement.insertBefore(portalHost, addPolicyAction);
     setHost(portalHost);
 
@@ -37,7 +37,7 @@ export function PolicyIntakePolicyRegisterLinksPortal({ summary }: { summary: Po
     : "text-[#66758B]";
 
   return createPortal(
-    <div className="grid h-12 shrink-0 grid-cols-[118px_208px] overflow-hidden">
+    <div className="grid h-12 w-max min-w-[410px] shrink-0 grid-cols-[125px_285px] overflow-hidden">
       <div className="grid grid-rows-[18px_30px] border-r-2 border-[#AFC3DB]">
         <DividerHeading label="Proposal" />
         <Link
@@ -53,7 +53,7 @@ export function PolicyIntakePolicyRegisterLinksPortal({ summary }: { summary: Po
 
       <div className="grid min-w-0 grid-rows-[18px_30px]">
         <DividerHeading label="Policy Intake" centered />
-        <div className="grid min-w-0 grid-cols-2">
+        <div className="grid min-w-0 grid-cols-[160px_125px]">
           {showActionRequired ? <PolicyIntakeQuickLink
             href="/policy-intakes?view=action"
             label="Action Required"
@@ -91,7 +91,7 @@ function PolicyIntakeQuickLink({ href, label, count, variant }: { href: string; 
     prefetch={false}
     href={href}
     aria-label={`${label}: ${count}. Open filtered Policy Intakes.`}
-    className="group/item flex min-w-0 items-center justify-center gap-2 border-r border-[#E1E8F2] px-2 last:border-r-0 transition-colors duration-150 hover:bg-[#F8FAFC] focus:outline-none focus-visible:bg-[#F8FAFC] motion-reduce:transition-none"
+    className="group/item flex min-w-max items-center justify-center gap-2 whitespace-nowrap border-r border-[#E1E8F2] px-2 last:border-r-0 transition-colors duration-150 hover:bg-[#F8FAFC] focus:outline-none focus-visible:bg-[#F8FAFC] motion-reduce:transition-none"
   >
     <span className={`min-w-0 whitespace-nowrap text-[8.5px] font-extrabold leading-3 ${active ? activeTone : "text-[#66758B]"}`}>{label}</span>
     <span className={`text-[14px] font-black leading-4 tabular-nums ${active ? activeTone : "text-[#64748B]"}`}>{count}</span>
