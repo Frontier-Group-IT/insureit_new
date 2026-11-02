@@ -1,0 +1,75 @@
+import importlib.util
+import json
+import unittest
+from pathlib import Path
+from unittest.mock import Mock
+
+import sys
+sys.path.insert(0, str(Path(__file__).parent))
+import verify_r2_restore as restore
+from supabase_storage_to_r2 import encrypt
+
+
+class RestoreVerificationTests(unittest.TestCase):
+    def test_select_samples_across_buckets(self):
+        grouped = {
+            "policy-documents": [(str(i), {}) for i in range(5)],
+            "claim-documents": [("claim", {})],
+            "customer-documents": [("customer", {}), ("customer2", {})],
+        }
+        sample = restore.select_samples(grouped)
+        self.assertEqual(len(sample), 5)
+        self.assertIn(("claim", {}), sample)
+
+    def test_restore_hash_and_length(self):
+        identity = json.dumps(["policy-documents", "a.pdf"], separators=(",", ":"))
+        plaintext = b"%PDF-1.7 test"
+        import hashlib
+        entry = {
+            "blob": "supabase-storage/v1/blobs/sample.aes",
+            "bytes": len(plaintext),
+            "sha256": hashlib.sha256(plaintext).hexdigest()
+        }
+        key = bytes(range(32))
+        s3 = Mock()
+        s3.get_object.return_value = {
+            "Body": Mock(read=Mock(return_value=encrypt(plaintext, key, identity)))}
+        self.assertEqual(restore.verify_sample(s3, "bucket", key, identity, entry),
+                         len(plaintext))
+        entry["sha256"] = "0" * 64
+        with self.assertRaises(RuntimeError):
+            restore.verify_sample(s3, "bucket", key, identity, entry)
+
+    def test_manifest_and_pointer_consistency(self):
+        import hashlib
+        key = bytes(range(32))
+        identifier = json.dumps(["claim-documents", "a.pdf"], separators=(",", ":"))
+        content = b"data"
+        manifest = {
+            "version": 1, "project_ref": restore.SOURCE_REF, "created_at": "20261102T000000Z",
+            "buckets": ["claim-documents"],
+            "entries": {identifier: {
+                "blob": "supabase-storage/v1/blobs/test.aes",
+                "bytes": len(content), "sha256": hashlib.sha256(content).hexdigest()
+            }}
+        }
+        pointer = {"manifest_key": "supabase-storage/v1/manifests/test.json.aes",
+                   "created_at": manifest["created_at"]}
+        s3 = Mock()
+        def get_object(*, Bucket, Key):
+            if Key.endswith("latest.json"):
+                body = json.dumps(pointer).encode()
+            else:
+                body = encrypt(json.dumps(manifest).encode(), key, "manifest")
+            return {"Body": Mock(read=Mock(return_value=body))}
+        s3.get_object.side_effect = get_object
+        verified, grouped = restore.validate_manifest(s3, "dest", key)
+        self.assertEqual(len(verified["entries"]), 1)
+        self.assertEqual(len(grouped), 1)
+        pointer["created_at"] = "wrong"
+        with self.assertRaises(RuntimeError):
+            restore.validate_manifest(s3, "dest", key)
+
+
+if __name__ == "__main__":
+    unittest.main()

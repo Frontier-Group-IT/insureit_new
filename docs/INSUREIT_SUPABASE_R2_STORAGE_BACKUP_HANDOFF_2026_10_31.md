@@ -1,3 +1,12 @@
+## 2026-11-02 — Complete encrypted snapshot and restore rehearsal
+
+- Manual backup run #41406855021 succeeded: 3,107 verified source-object entries, nine buckets, 3,098 reused and nine new uploads; encrypted manifest was committed.
+- Isolated restore verification proposed in branch `ops/r2-backup-isolated-restore-test-20261102`. **Not yet run against R2**.
+- A new manual-only GitHub workflow `.github/workflows/insureit-r2-restore-verify.yml` runs on trusted `main` with existing `insureit-production-backup` environment secrets. No Supabase API or service-role credential is needed in the restore job.
+- Checks R2 latest pointer and encrypted manifest, validates project reference, verifies two in-memory samples per nonempty bucket (one if bucket contains only one), validates exact decrypted byte count and SHA-256. No plaintext artifacts or object paths logged.
+- **Limit:** samples confirm recoverability only for sampled objects, not exhaustive byte-for-byte verification of all 3,107 source objects. A manifest containing only corrupted unselected objects would still pass. Supabase document content is not fetched by restore verification.
+- No schedule/retention modifications. Do not claim recovered samples until workflow run reports success. Future schedule and retention need explicit approval and protection against referenced-blob deletion.
+
 ## 2026-11-02 — Interrupted first backup and proposed recovery (NOT DEPLOYED)
 
 - First manual workflow run 41201242212 timed out after 120 minutes; setup, secrets check and dependency install passed; backup step emitted no progress; no completed manifest verified.
