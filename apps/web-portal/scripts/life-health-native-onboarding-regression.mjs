@@ -24,7 +24,9 @@ const issuedEditPage = read("app/policies/[id]/edit/page.tsx");
 
 assert(unified.includes('import { LifeHealthPolicyForm } from "@/components/life-health-policy-form";'), "PolicyUnifiedForm must own the Life/Health component import");
 assert(unified.includes('const isLifeHealthPolicy=form.businessLine==="Life"||form.businessLine==="Health";'), "PolicyUnifiedForm must have an explicit Life/Health render branch");
-assert(unified.includes('className="mx-auto w-full max-w-[1480px] pb-24"'), "shared onboarding workspace must explicitly occupy full available width");
+assert(/className="mx-auto w-full max-w-\[1480px\] pb-\d+"/.test(unified), "shared onboarding workspace must explicitly occupy full available width");
+assert(unified.includes('aria-label="Policy save actions" className="mt-4'), "Policy action footer must remain in form flow instead of covering fields");
+assert(!unified.includes('aria-label="Policy save actions" className="fixed'), "Policy action footer must never overlay the viewport");
 assert(unified.includes('<LifeHealthPolicyForm key={form.businessLine}'), "Life/Health form must be rendered directly by PolicyUnifiedForm");
 assert(unified.includes('source={{sourcingDate:form.issuanceDate'), "Life/Health must receive source state directly from React state");
 assert(unified.includes('ID · {selectedSource.rmCode}'), "RM employee ID must be rendered natively in the shared source section");
