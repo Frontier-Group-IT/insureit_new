@@ -155,7 +155,7 @@ export default async function CustomerExchangePage({
                   const vehicleName=[row.make,row.model].filter(Boolean).join(" ")||row.title;
                   const location=[row.city,row.state].filter(Boolean).join(", ")||"Location on request";
                   const hasPrice=Number(row.asking_price||0)>0;
-                  const href={pathname:`/customer/exchange/${row.listing_id}`,query:{account:account.id}};
+                  const href={pathname:`/customer/exchange/${row.listing_id}`,query:{account:account.id,tab:"buy"}};
                   const verified=row.owner_verified&&row.documents_verified;
                   return <article key={row.listing_id} className="exchange-reference-card group min-w-0 overflow-hidden rounded-xl border border-[#DEE6F5] bg-white p-2 shadow-[0_5px_18px_rgba(34,70,120,.06)]">
                     <div className="relative h-[82px] overflow-hidden rounded-lg bg-[#EAF1FA]">
@@ -216,11 +216,11 @@ export default async function CustomerExchangePage({
                 ]} />
               </div>
               <div className="space-y-2">
-                {(activityFilter==="all"||activityFilter==="bids"||activityFilter==="offers") ? <ActivitySection title="Offers / Bids" rows={activity.bids} accountId={account.id} search={activityQuery} /> : null}
-                {(activityFilter==="all"||activityFilter==="listings") ? <ActivitySection title="My Listings" rows={activity.listings} accountId={account.id} search={activityQuery} /> : null}
-                {(activityFilter==="all"||activityFilter==="deals") ? <ActivitySection title="Deals" rows={activity.deals} accountId={account.id} search={activityQuery} /> : null}
-                {(activityFilter==="all"||activityFilter==="saved") ? <ActivitySection title="Saved Vehicles" rows={activity.favorites} accountId={account.id} search={activityQuery} /> : null}
-                {(activityFilter==="all"||activityFilter==="requests") ? <ActivitySection title="Contact Requests" rows={activity.contact_requests} accountId={account.id} search={activityQuery} /> : null}
+                {(activityFilter==="all"||activityFilter==="bids"||activityFilter==="offers") ? <ActivitySection title="Offers / Bids" rows={activity.bids} accountId={account.id} search={activityQuery} activityFilter={activityFilter} /> : null}
+                {(activityFilter==="all"||activityFilter==="listings") ? <ActivitySection title="My Listings" rows={activity.listings} accountId={account.id} search={activityQuery} activityFilter={activityFilter} /> : null}
+                {(activityFilter==="all"||activityFilter==="deals") ? <ActivitySection title="Deals" rows={activity.deals} accountId={account.id} search={activityQuery} activityFilter={activityFilter} /> : null}
+                {(activityFilter==="all"||activityFilter==="saved") ? <ActivitySection title="Saved Vehicles" rows={activity.favorites} accountId={account.id} search={activityQuery} activityFilter={activityFilter} /> : null}
+                {(activityFilter==="all"||activityFilter==="requests") ? <ActivitySection title="Contact Requests" rows={activity.contact_requests} accountId={account.id} search={activityQuery} activityFilter={activityFilter} /> : null}
                 {(activityFilter!=="all" && (activityFilter==="bids"||activityFilter==="offers"?activity.bids:activityFilter==="listings"?activity.listings:activityFilter==="deals"?activity.deals:activityFilter==="saved"?activity.favorites:activity.contact_requests).length===0) ? <div className="rounded-xl bg-[#F7F9FD] py-10 text-center text-[12px] text-[#64748B]">No {activityFilter} activity yet.</div> : null}
               </div>
             </div>
@@ -267,7 +267,7 @@ function ExchangeRecovery({
   );
 }
 
-function ActivitySection({ title, rows, accountId, search }: { title: string; rows: Array<Record<string, unknown>>; accountId: string; search: string }) {
+function ActivitySection({ title, rows, accountId, search, activityFilter }: { title: string; rows: Array<Record<string, unknown>>; accountId: string; search: string; activityFilter: string }) {
   const normalized = search.toLowerCase();
   const matches = rows.filter(row => !normalized || [row.title,row.make,row.model,row.vehicle_no,row.masked_registration,row.listing_no,row.deal_no,row.request_type,row.status].some(value => valueText(value).toLowerCase().includes(normalized)));
   if (!matches.length) return null;
@@ -279,7 +279,7 @@ function ActivitySection({ title, rows, accountId, search }: { title: string; ro
       const leading=low.includes("leading")||low.includes("winning");
       const outbid=low.includes("outbid");
       const listingId=valueText(row.listing_id);
-      const href=listingId?{pathname:`/customer/exchange/${encodeURIComponent(listingId)}`,query:{account:accountId}}:null;
+      const href=listingId?{pathname:`/customer/exchange/${encodeURIComponent(listingId)}`,query:{account:accountId,tab:"activity",...(activityFilter!=="all"?{activityFilter}:{}),...(search?{activityQuery:search}:{})}}:null;
       const amount=Number(row.amount??row.agreed_price??row.asking_price??0);
       const cover=valueText(row.cover_url);
       const fallbackArt=customerExchangeVehicleArt(valueText(row.vehicle_type),valueText(row.category));
@@ -289,8 +289,8 @@ function ActivitySection({ title, rows, accountId, search }: { title: string; ro
         <div className="min-w-[160px] flex-1"><p className="truncate text-[12px] font-extrabold text-[#15386F]">{vehicleName}</p><p className="mt-1 truncate text-[10px] text-[#8B9AB2]">{meta||title}</p></div>
         <div className="min-w-[90px]"><span className={`inline-flex rounded-lg px-2 py-1 text-[10px] font-bold capitalize ${leading?"bg-[#E1F8EE] text-[#11986A]":outbid?"bg-[#FFF0F2] text-[#DF3A58]":"bg-[#EAF1FF] text-[#426BCA]"}`}>{status||title}</span></div>
         <div className="hidden min-w-[130px] flex-1 text-[10px] text-[#7A8CA9] lg:block">{leading?"You are leading on this vehicle.":outbid?"A higher bid has been placed.":status?`Status: ${status}`:title}</div>
-        <div className="min-w-[90px] text-right"><p className="text-[12px] font-black text-[#10264C]">{amount>0?formatCustomerCompactMoney(amount):"—"}</p><p className="mt-1 text-[9px] text-[#8B9AB2]">{title==="Offers / Bids"?"Your bid":"Amount"}</p></div>
-        {href?<Link href={href} aria-label={`View ${vehicleName} details`} title="View details" className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EDF3FF] text-[#245FD1] hover:bg-[#DAE8FF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#245FD1]"><ChevronRight className="h-4 w-4"/></Link>:<span className="text-[10px] text-[#94A3B8]">Details unavailable</span>}
+        <div className="min-w-[90px] text-right"><p className="text-[12px] font-black text-[#10264C]">{amount>0?formatCustomerCompactMoney(amount):"—"}</p></div>
+        {href?<Link href={href} aria-label={`View ${vehicleName} details`} title="View details" className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-transparent text-[#245FD1] hover:text-[#17365D] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#245FD1]"><ChevronRight className="h-4 w-4"/></Link>:<span className="text-[10px] text-[#94A3B8]">Details unavailable</span>}
       </div>;
     })}
   </div>;
