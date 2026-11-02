@@ -5,7 +5,7 @@ import { roleCapabilities } from "../lib/roles.ts";
 import { roleMatrixV2 } from "../lib/access-control-role-matrix-v2.ts";
 
 const read = (file) => readFileSync(resolve(process.cwd(), file), "utf8");
-const expected = ["view_claims","manage_claims","view_reports","view_notifications"];
+const expected = ["view_claims","manage_claims","view_reports","view_notifications","view_policy_intakes","create_policy_intakes"];
 assert.deepEqual(roleCapabilities.claims_head, expected, "Claims Head must not inherit dashboard or unrelated task capabilities");
 const target = roleMatrixV2.find(r => r.code === "claims_head");
 assert.equal(target?.defaultScope, "organization");
@@ -18,7 +18,7 @@ assert.doesNotMatch(scope.match(/const organizationWideRoles[\s\S]*?\];/)?.[0] ?
 const middleware = read("middleware.ts");
 assert.match(middleware, /check\.role === "claims_head" && !isClaimsHeadPortalPath\(pathname\)/);
 const allowed = middleware.match(/function isClaimsHeadPortalPath\([\s\S]*?\n\}/)?.[0] ?? "";
-for (const path of ['"/claims"','"/claim-documents"','"/reports/claims"','"/reports/export/claims"','"/notifications"']) assert.ok(allowed.includes(path), path);
+for (const path of ['"/claims"','"/claim-documents"','"/reports/claims"','"/reports/export/claims"','"/notifications"','"/policy-intakes"']) assert.ok(allowed.includes(path), path);
 for (const path of ['"/accounts"','"/policies"','"/customers"','"/reports"','"/dashboard"','"/tasks"']) assert.ok(!allowed.includes(path) || path === '"/reports"', "Claims Head allowlist must not enable " + path);
 const nav = read("components/claim-manager/app-navigation.tsx");
 assert.match(nav, /if\(role==="claims_head"\)/);
