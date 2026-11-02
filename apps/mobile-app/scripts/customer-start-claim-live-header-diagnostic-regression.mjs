@@ -32,7 +32,7 @@ assert.match(customerScreen, /router\.replace\('\/customer\/home'\)/, 'The diagn
 // The route-specific static logo must precede the interactive branch.
 assert.match(
   customerScreen,
-  /\{pathname === '\/customer\/start-claim' \? \([\s\S]*<View pointerEvents="none" style=\{baseStyles\.fixedBrandStatic\}>[\s\S]*<BrandLogo width=\{compactPhone \? 112 : 132\} inverse \/>[\s\S]*<\/View>[\s\S]*\) : \([\s\S]*<Pressable[\s\S]*onPress=\{openDashboard\}/,
+  /\{pathname === '\/customer\/start-claim' \? \([\s\S]*<View pointerEvents="none" style=\{baseStyles\.fixedBrandStatic\}>[\s\S]*<BrandLogo width=\{132\} inverse \/>[\s\S]*<\/View>[\s\S]*\) : \([\s\S]*<Pressable[\s\S]*onPress=\{openDashboard\}/,
   'Start Claim must render a noninteractive logo while other Customer pages retain the dashboard press handler.',
 );
 assert.match(
