@@ -4,7 +4,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Animated, Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Animated, Image, Linking, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LoadingState, Message, Screen } from '@/components/ui';
@@ -18,6 +18,8 @@ const documentsKycIcon = require('../../assets/custom-icons/profile/documents-ky
 const accountPrivacyIcon = require('../../assets/custom-icons/profile/account-privacy.png');
 export default function ProfileScreen() {
   const router = useRouter();
+  const { width: screenWidth } = useWindowDimensions();
+  const compactPhone = screenWidth < 375;
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -372,12 +374,12 @@ export default function ProfileScreen() {
   return (
     <View style={styles.profileRoot}>
       <Screen title="Profile" showTitleHeader={false} topSpacing="compact">
-      <View style={styles.pageHeading}><Text style={styles.pageTitle}>Profile</Text></View>
+      <View style={styles.pageHeading}><Text style={[styles.pageTitle, compactPhone && { fontSize: 17 }]}>Profile</Text></View>
       {message?.type === 'error' ? <Message type="error">{message.text}</Message> : null}
 
-      <View style={styles.hero}>
-        <Animated.View style={[styles.avatarStage, { transform: [{ translateY: avatarLift }, { scale: avatarScale }] }]}>
-          <View style={[styles.avatarShell, !avatarUri && styles.avatarFallback]}>
+      <View style={[styles.hero, compactPhone && { minHeight: 136, paddingHorizontal: 12, paddingTop: 15, paddingBottom: 12, gap: 9 }]}>
+        <Animated.View style={[styles.avatarStage, compactPhone && { width: 84, height: 84 }, { transform: [{ translateY: avatarLift }, { scale: avatarScale }] }]}>
+          <View style={[styles.avatarShell, compactPhone && { width: 80, height: 80, borderRadius: 40 }, !avatarUri && styles.avatarFallback]}>
             {avatarUri ? (
               <Image source={{ uri: avatarUri }} style={styles.avatarImage} resizeMode="cover" />
             ) : (
@@ -396,7 +398,7 @@ export default function ProfileScreen() {
             </Pressable>
           ) : null}
         </Animated.View>
-        <View style={styles.identity}><Text style={styles.customerName}>{displayName}</Text><Text style={styles.customerId}>{customer ? `Customer ID: ${customer.customer_code}` : 'Customer profile not activated'}</Text><View style={[styles.verified, !kycCompleted && styles.pendingVerification]}><MaterialCommunityIcons name={kycCompleted ? 'check-circle' : 'clock-outline'} size={15} color={kycCompleted ? '#69D6BA' : '#FFD27A'} /><Text style={[styles.verifiedText, !kycCompleted && styles.pendingVerificationText]}>{kycCompleted ? 'Verified account' : kycAwaitingReview ? 'KYC under review' : 'KYC pending'}</Text></View></View>
+        <View style={styles.identity}><Text numberOfLines={2} ellipsizeMode="tail" style={[styles.customerName, compactPhone && { fontSize: 17, lineHeight: 21 }]}>{displayName}</Text><Text style={styles.customerId}>{customer ? `Customer ID: ${customer.customer_code}` : 'Customer profile not activated'}</Text><View style={[styles.verified, !kycCompleted && styles.pendingVerification]}><MaterialCommunityIcons name={kycCompleted ? 'check-circle' : 'clock-outline'} size={15} color={kycCompleted ? '#69D6BA' : '#FFD27A'} /><Text style={[styles.verifiedText, !kycCompleted && styles.pendingVerificationText]}>{kycCompleted ? 'Verified account' : kycAwaitingReview ? 'KYC under review' : 'KYC pending'}</Text></View></View>
       </View>
 
       {!kycCompleted ? <Pressable accessibilityRole="button" disabled={kycAwaitingReview} onPress={() => router.push(kycRoute)} style={styles.kycActionCard}><View style={styles.kycActionIcon}><MaterialCommunityIcons name={kycAwaitingReview ? 'clipboard-clock-outline' : 'shield-account-outline'} size={25} color="#0A43A3" /></View><View style={styles.kycActionCopy}><Text style={styles.kycActionTitle}>{kycAwaitingReview ? 'Verification in progress' : kycStarted ? 'Continue KYC' : 'Complete your KYC'}</Text><Text style={styles.kycActionText}>{kycAwaitingReview ? 'Your submitted details are being reviewed.' : 'Complete your individual KYC details and documents.'}</Text></View>{kycAwaitingReview ? <View style={styles.reviewPill}><Text style={styles.reviewPillText}>Submitted</Text></View> : <MaterialCommunityIcons name="chevron-right" size={23} color="#0A43A3" />}</Pressable> : null}
