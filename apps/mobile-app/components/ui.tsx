@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Link, LinkProps, useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { PropsWithChildren, isValidElement, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Easing, Keyboard, KeyboardAvoidingView, Platform, Pressable, PressableProps, ScrollView, StyleSheet, Text, TextInput, TextInputProps, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Keyboard, KeyboardAvoidingView, Platform, Pressable, PressableProps, ScrollView, StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NotificationBell } from '@/components/realtime-notifications';
@@ -311,8 +311,6 @@ export function UniversalBottomTabs({ role, pathname, bottomInset, customerConte
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const tabs = tabsForRole(role, customerContext);
   const customerNavyTabs = role === 'customer';
-  const { width: screenWidth } = useWindowDimensions();
-  const compactCustomerTabs = customerNavyTabs && screenWidth < 375;
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
@@ -326,8 +324,8 @@ export function UniversalBottomTabs({ role, pathname, bottomInset, customerConte
   if (keyboardVisible) return null;
 
   return (
-    <View style={[styles.bottomTabsWrap, customerNavyTabs && styles.customerBottomTabsWrap, compactCustomerTabs && { paddingHorizontal: 6, paddingTop: 4 }, { paddingBottom: Math.max(bottomInset, 10) }]}>
-      <View style={[styles.bottomTabs, customerNavyTabs && styles.customerBottomTabs, compactCustomerTabs && { minHeight: 56, paddingVertical: 4, paddingHorizontal: 2, borderRadius: 16 }]}>
+    <View style={[styles.bottomTabsWrap, customerNavyTabs && styles.customerBottomTabsWrap, { paddingBottom: Math.max(bottomInset, 10) }]}>
+      <View style={[styles.bottomTabs, customerNavyTabs && styles.customerBottomTabs]}>
         {tabs.map((tab) => {
           const active = isTabActive(tab.href, pathname, customerContext);
           const isCustomerRootTab = role === 'customer'
@@ -343,11 +341,10 @@ export function UniversalBottomTabs({ role, pathname, bottomInset, customerConte
                 if (isAlreadyOnCustomerRootTab) return;
                 router.push(tab.href as LinkProps['href']);
               }}
-              style={[styles.bottomTab, compactCustomerTabs && { minHeight: 46, gap: 1 }]}
+              style={styles.bottomTab}
             >
               <View style={[
                 styles.bottomIconShell,
-                compactCustomerTabs && { width: 30, height: 27, borderRadius: 10 },
                 customerNavyTabs ? styles.customerBottomIconShell : { backgroundColor: tabTone(tab.label, tab).soft },
                 active && (customerNavyTabs
                   ? styles.customerBottomIconShellActive
@@ -355,7 +352,7 @@ export function UniversalBottomTabs({ role, pathname, bottomInset, customerConte
               ]}>
                 <MaterialCommunityIcons
                   name={tab.icon}
-                  size={compactCustomerTabs ? 17 : 19}
+                  size={19}
                   color={customerNavyTabs ? (active ? palette.navy : '#D6E0EF') : (active ? tabTone(tab.label, tab).accent : palette.slate)}
                 />
               </View>
@@ -363,7 +360,6 @@ export function UniversalBottomTabs({ role, pathname, bottomInset, customerConte
                 style={[
                   styles.bottomTabText,
                   customerNavyTabs && styles.customerBottomTabText,
-                  compactCustomerTabs && { fontSize: 8.5 },
                   active && (customerNavyTabs ? styles.customerBottomTabTextActive : { color: tabTone(tab.label, tab).accent }),
                 ]}
                 numberOfLines={1}
