@@ -22,24 +22,44 @@ const GAGAN = "gagan singh";
 const JATIN_REPORTS = new Set(["parsottam", "pramod kumar nayak"]);
 
 function SourceColumns({ sources, periodLabel }: { sources: RmPerformanceRow["sources"]; periodLabel: string }) {
-  const [all, setAll] = useState(false);
-  const visible = all ? sources : sources.slice(0, 3);
+  const [otherOpen, setOtherOpen] = useState(false);
+  const ranked = [...sources].sort((a,b)=>b.mtdNetPremium-a.mtdNetPremium||b.mtdPolicies-a.mtdPolicies||a.label.localeCompare(b.label));
+  const hasOverflow = ranked.length > 4;
+  const visible = ranked.slice(0,hasOverflow?3:4);
+  const extra = hasOverflow?ranked.slice(3):[];
+  const total = extra.reduce((value,source)=>({
+    todayPolicies:value.todayPolicies+source.todayPolicies,
+    todayNetPremium:value.todayNetPremium+source.todayNetPremium,
+    mtdPolicies:value.mtdPolicies+source.mtdPolicies,
+    mtdNetPremium:value.mtdNetPremium+source.mtdNetPremium,
+  }),{todayPolicies:0,todayNetPremium:0,mtdPolicies:0,mtdNetPremium:0});
+  const cell = (source:RmPerformanceRow["sources"][number]) => <div key={source.key} className="min-w-0 border-b border-r border-[#E7EDF5] bg-white px-3 py-3">
+    <p className="min-h-7 text-[11px] font-bold text-[#213D60]">{source.label}</p>
+    <div className="mt-1 grid grid-cols-2 gap-2">
+      <div><p className="text-[9px] font-bold uppercase text-[#71819A]">Today</p><p className="text-[11px] font-semibold">{money(source.todayNetPremium)}</p><p className="text-[10px] text-[#71819A]">{source.todayPolicies} policies</p></div>
+      <div><p className="text-[9px] font-bold uppercase text-[#71819A]">{periodLabel}</p><p className="text-[11px] font-semibold">{money(source.mtdNetPremium)}</p><p className="text-[10px] text-[#71819A]">{source.mtdPolicies} policies</p></div>
+    </div>
+  </div>;
   return <div className="space-y-2">
     <div className="flex items-center justify-between">
       <p className="text-[10px] font-bold uppercase tracking-wider text-[#65758C]">Direct partner / source breakdown</p>
       <span className="text-[10px] text-[#647286]">{sources.length} sources</span>
     </div>
-    <div className="grid overflow-hidden rounded-xl border border-[#DBE4F0] bg-white sm:grid-cols-2 xl:grid-cols-3">
-      {visible.map((source) => <div key={source.key} className="min-w-0 border-b border-r border-[#E7EDF5] px-3 py-3">
-        <p className="min-h-7 text-[11px] font-bold text-[#213D60]">{source.label}</p>
-        <div className="mt-1 grid grid-cols-2 gap-2">
-          <div><p className="text-[9px] font-bold uppercase text-[#71819A]">Today</p><p className="text-[11px] font-semibold">{money(source.todayNetPremium)}</p><p className="text-[10px] text-[#71819A]">{source.todayPolicies} policies</p></div>
-          <div><p className="text-[9px] font-bold uppercase text-[#71819A]">{periodLabel}</p><p className="text-[11px] font-semibold">{money(source.mtdNetPremium)}</p><p className="text-[10px] text-[#71819A]">{source.mtdPolicies} policies</p></div>
+    <div className="grid overflow-hidden rounded-xl border border-[#DBE4F0] bg-white sm:grid-cols-2 xl:grid-cols-4">
+      {visible.map(cell)}
+      {hasOverflow ? <button type="button" aria-expanded={otherOpen} onClick={()=>setOtherOpen(v=>!v)} className="min-w-0 border-b border-r border-[#8BB6E8] bg-[#E8F2FF] px-3 py-3 text-left">
+        <div className="flex items-center justify-between gap-2"><p className="text-[11px] font-bold text-[#173B70]">Other ({extra.length})</p><ChevronDown className={`h-4 w-4 text-[#245AA1] transition-transform ${otherOpen?"rotate-180":""}`}/></div>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <div><p className="text-[9px] font-bold uppercase text-[#71819A]">Today</p><p className="text-[11px] font-semibold">{money(total.todayNetPremium)}</p><p className="text-[10px] text-[#71819A]">{total.todayPolicies} policies</p></div>
+          <div><p className="text-[9px] font-bold uppercase text-[#71819A]">{periodLabel}</p><p className="text-[11px] font-semibold">{money(total.mtdNetPremium)}</p><p className="text-[10px] text-[#71819A]">{total.mtdPolicies} policies</p></div>
         </div>
-      </div>)}
+      </button> : null}
       {!sources.length ? <p className="p-3 text-xs text-[#71819A]">No attributed sources for this period.</p> : null}
     </div>
-    {sources.length > 3 ? <button type="button" onClick={() => setAll((v) => !v)} className="text-[11px] font-bold text-[#245CB0]">{all ? "Show fewer" : `View all ${sources.length} sources`}</button> : null}
+    {hasOverflow && otherOpen ? <div className="overflow-hidden rounded-xl border border-[#8BB6E8]">
+      <p className="border-b border-[#D9E4F2] bg-[#E8F2FF] px-3 py-2 text-[10px] font-bold uppercase text-[#245AA1]">Other Sources ({extra.length})</p>
+      <div className="grid bg-white sm:grid-cols-2 xl:grid-cols-4">{extra.map(cell)}</div>
+    </div> : null}
   </div>;
 }
 

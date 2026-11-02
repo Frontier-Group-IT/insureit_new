@@ -12,8 +12,9 @@ export function RmSummaryCard({ row, periodLabel, periodShortLabel, expanded, on
   const toggle = onToggle ?? (() => setInternalOpen((value) => !value));
   const [otherOpen, setOtherOpen] = useState(false);
   const rankedSources = [...row.sources].sort((a, b) => b.mtdNetPremium - a.mtdNetPremium || b.mtdPolicies - a.mtdPolicies || a.label.localeCompare(b.label));
-  const topSources = rankedSources.slice(0, 3);
-  const otherSources = rankedSources.slice(3);
+  const hasOverflow = rankedSources.length > 4;
+  const topSources = rankedSources.slice(0, hasOverflow ? 3 : 4);
+  const otherSources = hasOverflow ? rankedSources.slice(3) : [];
   const otherTotal = otherSources.reduce<Source>((total, source) => ({
     key: "other",
     label: "Other",
