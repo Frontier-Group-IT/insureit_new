@@ -15,7 +15,11 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections import deque
+from collections import deque, defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
+from botocore.config import Config
+from botocore.exceptions import ClientError
 
 import boto3
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -45,8 +49,18 @@ def api(method, path, key, base, payload=None):
             "Content-Type": "application/json",
         },
     )
-    with urllib.request.urlopen(req, timeout=90) as response:
-        return response.read()
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(req, timeout=35) as response:
+                data = response.read(MAX_BYTES + 1)
+                if len(data) > MAX_BYTES:
+                    raise RuntimeError("Object exceeds 250 MiB")
+                return data
+        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError) as exc:
+            status = getattr(exc, "code", None)
+            if attempt == 3 or (status is not None and status not in (408, 429, 500, 502, 503, 504)):
+                raise RuntimeError(f"Supabase request failed; status={status or 'network'}") from exc
+            time.sleep(min(2 ** attempt, 8))
 
 
 def list_buckets(key, base):
@@ -101,6 +115,89 @@ def decrypt(data, encryption_key, aad):
     return AESGCM(encryption_key).decrypt(nonce, data[21:], aad.encode("utf-8"))
 
 
+
+def optional_object(s3, bucket, key):
+    try:
+        return s3.get_object(Bucket=bucket, Key=key)["Body"].read()
+    except ClientError as exc:
+        if exc.response.get("Error", {}).get("Code") in ("404", "NoSuchKey", "NotFound"):
+            return None
+        raise
+
+
+def existing_blob_index(s3, bucket):
+    # Old cancelled run had no checkpoints, but its names contain SHA256(identifier).
+    index = defaultdict(list)
+    for page in s3.get_paginator("list_objects_v2").paginate(Bucket=bucket, Prefix=PREFIX + "/blobs/"):
+        for obj in page.get("Contents", []):
+            name = obj["Key"].rsplit("/", 1)[-1]
+            if len(name) > 65 and name[64] == "-" and name.endswith(".aes"):
+                index[name[:64]].append(obj["Key"])
+    return index
+
+
+def checkpoint_key(identifier, metadata):
+    identity_hash = hashlib.sha256(identifier.encode()).hexdigest()
+    version_hash = hashlib.sha256(json.dumps(metadata, sort_keys=True).encode()).hexdigest()
+    return f"{PREFIX}/checkpoints/{identity_hash}/{version_hash}.json.aes"
+
+
+def copy_one(task, s3, destination, base, source_key, encryption_key, previous, old_blobs, snapshot):
+    source_bucket, path, row = task
+    identifier = json.dumps([source_bucket, path], ensure_ascii=False, separators=(",", ":"))
+    meta = {"updated_at": row.get("updated_at"),
+            "size": (row.get("metadata") or {}).get("size")}
+    prior = previous.get(identifier)
+    if prior and meta["updated_at"] and prior.get("source") == meta:
+        return identifier, prior, "manifest"
+    ck = checkpoint_key(identifier, meta)
+    encrypted_checkpoint = optional_object(s3, destination, ck)
+    if encrypted_checkpoint is not None:
+        saved = json.loads(decrypt(encrypted_checkpoint, encryption_key, "checkpoint:" + identifier))
+        if saved.get("identifier") != identifier or saved.get("source") != meta:
+            raise RuntimeError("Checkpoint integrity mismatch")
+        entry = saved["entry"]
+        s3.head_object(Bucket=destination, Key=entry["blob"])
+        return identifier, entry, "checkpoint"
+
+    url_path = ("/storage/v1/object/authenticated/" +
+                urllib.parse.quote(source_bucket, safe="") + "/" +
+                urllib.parse.quote(path, safe="/"))
+    content = api("GET", url_path, source_key, base)
+    digest = hashlib.sha256(content).hexdigest()
+    if prior and prior.get("sha256") == digest:
+        blob = prior["blob"]
+        mode = "manifest"
+    else:
+        blob = None
+        mode = "uploaded"
+        key_hash = hashlib.sha256(identifier.encode()).hexdigest()
+        # Recover orphaned ciphertext ONLY after decrypting with its exact identity
+        # and comparing its hash against the current Supabase source.
+        for candidate in old_blobs.get(key_hash, ()):
+            old = decrypt(s3.get_object(Bucket=destination, Key=candidate)["Body"].read(),
+                          encryption_key, identifier)
+            if hashlib.sha256(old).hexdigest() == digest:
+                blob = candidate
+                mode = "recovered"
+                break
+        if blob is None:
+            blob = (f"{PREFIX}/blobs/{snapshot}/" + key_hash + "-" +
+                    secrets.token_hex(8) + ".aes")
+            s3.put_object(Bucket=destination, Key=blob,
+                          Body=encrypt(content, encryption_key, identifier),
+                          ContentType="application/octet-stream")
+            actual = s3.get_object(Bucket=destination, Key=blob)["Body"].read()
+            if hashlib.sha256(decrypt(actual, encryption_key, identifier)).hexdigest() != digest:
+                raise RuntimeError("R2 verification hash mismatch")
+    entry = {"blob": blob, "sha256": digest, "bytes": len(content), "source": meta}
+    checkpoint = {"identifier": identifier, "source": meta, "entry": entry}
+    s3.put_object(Bucket=destination, Key=ck,
+                  Body=encrypt(json.dumps(checkpoint, sort_keys=True).encode(),
+                               encryption_key, "checkpoint:" + identifier),
+                  ContentType="application/octet-stream")
+    return identifier, entry, mode
+
 def main():
     base = required("SUPABASE_URL").rstrip("/")
     if base != f"https://{SOURCE_REF}.supabase.co":
@@ -119,6 +216,7 @@ def main():
         aws_access_key_id=access_key,
         aws_secret_access_key=secret_key,
         region_name="auto",
+        config=Config(connect_timeout=15, read_timeout=45, retries={"mode":"standard","max_attempts":4}, max_pool_connections=12),
     )
     # If the pointer exists but cannot decrypt, fail closed (no overwrite).
     pointer_key = f"{PREFIX}/latest.json"
@@ -140,48 +238,40 @@ def main():
 
     old_entries = previous.get("entries", {})
     entries = {}
-    copied = 0
-    reused = 0
-    today = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    counts = defaultdict(int)
+    snapshot = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    print("Indexing prior R2 ciphertext for reuse...", flush=True)
+    old_blobs = existing_blob_index(s3, bucket)
+    print(f"Found {sum(len(v) for v in old_blobs.values())} existing encrypted blobs", flush=True)
     source_buckets = list_buckets(supabase_key, base)
     if not source_buckets:
         raise RuntimeError("No Supabase buckets found; refusing empty backup")
-    for source_bucket in source_buckets:
-        for path, row in list_files(source_bucket, supabase_key, base):
-            identifier = json.dumps([source_bucket, path], ensure_ascii=False, separators=(",", ":"))
-            metadata = {"updated_at": row.get("updated_at"),
-                        "size": (row.get("metadata") or {}).get("size")}
-            prior = old_entries.get(identifier)
-            if prior and metadata["updated_at"] and prior.get("source") == metadata:
-                entries[identifier] = prior
-                reused += 1
-                continue
-
-            url_path = ("/storage/v1/object/authenticated/" +
-                        urllib.parse.quote(source_bucket, safe="") + "/" +
-                        urllib.parse.quote(path, safe="/"))
-            content = api("GET", url_path, supabase_key, base)
-            if len(content) > MAX_BYTES:
-                raise RuntimeError("Object exceeds runner's safe size ceiling")
-            digest = hashlib.sha256(content).hexdigest()
-            if prior and prior.get("sha256") == digest:
-                entries[identifier] = {**prior, "source": metadata}
-                reused += 1
-                continue
-            blob_key = (f"{PREFIX}/blobs/{today}/" +
-                        hashlib.sha256(identifier.encode()).hexdigest() +
-                        "-" + secrets.token_hex(8) + ".aes")
-            s3.put_object(Bucket=bucket, Key=blob_key,
-                          Body=encrypt(content, raw_key, identifier),
-                          ContentType="application/octet-stream")
-            # Verify an actual R2 roundtrip before committing manifest.
-            roundtrip = s3.get_object(Bucket=bucket, Key=blob_key)["Body"].read()
-            if hashlib.sha256(decrypt(roundtrip, raw_key, identifier)).hexdigest() != digest:
-                raise RuntimeError("Encrypted blob round-trip mismatch")
-            entries[identifier] = {"blob": blob_key, "sha256": digest,
-                                   "bytes": len(content), "source": metadata}
-            copied += 1
-
+    tasks = [(source_bucket, path, row) for source_bucket in source_buckets
+             for path, row in list_files(source_bucket, supabase_key, base)]
+    if not tasks:
+        raise RuntimeError("No files discovered; refusing empty backup")
+    print(f"Discovered {len(tasks)} source files across {len(source_buckets)} buckets", flush=True)
+    failures = []
+    started = time.monotonic()
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures = {pool.submit(copy_one, task, s3, bucket, base, supabase_key,
+                               raw_key, old_entries, old_blobs, snapshot): task for task in tasks}
+        for done, future in enumerate(as_completed(futures), 1):
+            try:
+                identifier, entry, mode = future.result()
+                entries[identifier] = entry
+                counts[mode] += 1
+            except Exception as exc:
+                failures.append((futures[future][0], type(exc).__name__))
+            if done % 25 == 0 or done == len(tasks):
+                print(f"Progress {done}/{len(tasks)} | uploaded={counts['uploaded']} "
+                      f"recovered={counts['recovered']} reused={counts['checkpoint']+counts['manifest']} "
+                      f"errors={len(failures)} elapsed={int(time.monotonic()-started)}s", flush=True)
+    if failures:
+        raise RuntimeError(f"{len(failures)} files failed in buckets " +
+                           ",".join(sorted({item[0] for item, _ in failures})))
+    if len(entries) != len(tasks):
+        raise RuntimeError("Manifest cannot be published: object count mismatch")
     if not entries:
         raise RuntimeError("No source files discovered; refusing empty manifest")
     document = {"version": 1, "created_at": today, "project_ref": SOURCE_REF,
@@ -196,8 +286,7 @@ def main():
                   Body=json.dumps({"version": 1, "created_at": today,
                                    "manifest_key": manifest_key}).encode(),
                   ContentType="application/json")
-    print(f"Backup committed: {len(entries)} objects, {copied} new versions, "
-          f"{reused} reused; bucket count: {len(source_buckets)}")
+    print(f"Backup committed: {len(entries)} verified source objects across {len(source_buckets)} buckets", flush=True)
     print("R2 retention pruning is intentionally disabled pending approved recovery tests.")
 
 
