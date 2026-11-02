@@ -70,7 +70,7 @@ export async function getRmPolicyIntakePredicates(profileId: string, role: strin
   // Legacy intake imports use PART-2026-NNNNN while the partner master uses PTNNNNN.
   // Expand aliases only from verified Partner/Branch codes (never user-entered names).
   const sourceCodes = [...new Set(codes.flatMap(code => {
-    const match = /^PT(\\d{5})$/.exec(code);
+    const match = /^PT(\d{5})$/.exec(code);
     return match ? [code, `PART-2026-${match[1]}`] : [code];
   }))];
   if (sourceCodes.length) predicates.push(`lead_source_code.in.(${sourceCodes.join(",")})`);
