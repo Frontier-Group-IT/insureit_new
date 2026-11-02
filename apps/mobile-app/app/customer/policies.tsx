@@ -209,7 +209,7 @@ export default function PoliciesScreen() {
         <View style={styles.searchHeadingRow}>
           <View style={Platform.OS === 'ios' ? styles.iosSearchHeadingCopy : undefined}>
             <Text style={styles.searchHeading}>Find your policy</Text>
-            <Text numberOfLines={Platform.OS === 'ios' ? 2 : undefined} style={styles.searchSubheading}>Search by vehicle, insurer or policy number</Text>
+            <Text numberOfLines={Platform.OS === 'ios' ? 1 : undefined} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.78} style={styles.searchSubheading}>Search by vehicle, insurer or policy number</Text>
           </View>
           <Pressable accessibilityRole="button" onPress={() => router.push('/customer/add-policy')} style={({ pressed }) => [styles.addButton, pressed && styles.addButtonPressed]}>
             <MaterialCommunityIcons name="plus" size={16} color="#FFFFFF" />
@@ -659,7 +659,7 @@ const styles = StyleSheet.create({
   searchHeadingRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 8 },
   iosSearchHeadingCopy: { flex: 1, minWidth: 0 },
   searchHeading: { color: palette.navy, fontSize: 13, fontWeight: Platform.OS === 'ios' ? '700' : '900' },
-  searchSubheading: { color: palette.slate, fontSize: 10.5, lineHeight: 14, fontWeight: Platform.OS === 'ios' ? '600' : '700', marginTop: 2 },
+  searchSubheading: { color: palette.slate, fontSize: Platform.OS === 'ios' ? 9.6 : 10.5, lineHeight: 14, letterSpacing: Platform.OS === 'ios' ? -0.2 : 0, fontWeight: Platform.OS === 'ios' ? '500' : '700', marginTop: 2 },
   addButton: { ...(Platform.OS === 'ios' ? { flexShrink: 0, alignSelf: 'flex-start' as const } : {}), minHeight: 34, borderRadius: 12, backgroundColor: palette.navy, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 4 },
   addButtonPressed: { opacity: 0.84, transform: [{ scale: 0.96 }] },
   addButtonText: { color: '#FFFFFF', fontSize: 11.5, fontWeight: Platform.OS === 'ios' ? '700' : '900' },
