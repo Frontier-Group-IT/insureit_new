@@ -1,6 +1,11 @@
 name: Deploy production to Vercel
 
+# Deploy only on the protected main branch. The job independently verifies
+# that the tip is a merged PR with successful canonical PR checks.
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
