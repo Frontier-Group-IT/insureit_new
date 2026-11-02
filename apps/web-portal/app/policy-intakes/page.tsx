@@ -61,6 +61,9 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
     if (allowedPolicies?.length) predicates.push(`final_policy_id.in.(${allowedPolicies.map(row => row.id).join(",")})`);
     if (predicates.length) intakeOrFilter = predicates.join(",");
     else submitterFilter = "00000000-0000-0000-0000-000000000000";
+  } else if (profile.role === "super_admin") {
+    // Super Admin reviews all intakes regardless of reporting hierarchy.
+    // Leave both database filters unset for organization-wide visibility.
   } else if (profile.role && hierarchyIntakeRoles.has(profile.role)) {
     // Hierarchy visibility includes the entire reporting subtree, verified Partners and Branches.
     // Review permission must not widen the list to unrelated organizations.

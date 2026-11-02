@@ -20,5 +20,7 @@ assert.match(scope,/submitted_by_portal_account_id.in/);
 assert.match(scope,/hierarchyIntakeRoles.has\(role \?\? ""\)/);
 assert.match(scope,/reportingChainScope\(profileId\)/);
 assert.match(scope,/reporting_manager_id/);
+assert.doesNotMatch(scope.match(/export const hierarchyIntakeRoles = new Set\(\[[^\]]+\]\)/)?.[0] ?? "", /"super_admin"/);
+assert.match(page,/profile.role === "super_admin"/);
 assert.match(scope,/queue.push/);
 console.log("RM assigned Partner and Branch intake scope regression passed");

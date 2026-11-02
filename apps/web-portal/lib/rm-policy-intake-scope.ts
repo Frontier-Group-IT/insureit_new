@@ -3,7 +3,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
 
 /** Reporting-chain access is explicit for Policy Intakes only; never reuse a global admin scope. */
-export const hierarchyIntakeRoles = new Set(["relationship_manager", "sales_manager", "asm", "zonal_head", "sales_head", "manager", "super_admin", "director"]);
+export const hierarchyIntakeRoles = new Set(["relationship_manager", "sales_manager", "asm", "zonal_head", "sales_head", "manager", "director"]);
 
 async function reportingChainScope(profileId: string) {
   const admin = createSupabaseAdminClient();
