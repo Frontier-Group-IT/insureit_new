@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, LoaderCircle } from "lucide-react";
+import { CustomerErrorDialog } from "@/components/customer-portal/customer-error-dialog";
 
 export type SpotSaveState = { error: string | null };
 const initialState: SpotSaveState = { error: null };
@@ -16,6 +17,9 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
 }) {
   const [state, formAction, pending] = useActionState(action, initialState);
   const formRef = useRef<HTMLFormElement>(null);
+  const [dialogError, setDialogError] = useState<string | null>(null);
+  const closeError = useCallback(() => setDialogError(null), []);
+  useEffect(() => { if (state.error) setDialogError(state.error); }, [state]);
   const storageKey = "insureit:customer-spot-draft:" + draftKey;
   const fieldNames = ["accidentDate", "accidentTime", "spotDate", "spotTime", "driver", "phone", "location"] as const;
 
@@ -53,9 +57,14 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
     try { sessionStorage.setItem(storageKey, JSON.stringify({ savedAt: Date.now(), values })); }
     catch { /* Browser storage is optional. */ }
   };
-  return <div className="customer-workflow space-y-3"><form ref={formRef} id="customer-spot-intimation-form" onInput={saveDraft} onChange={saveDraft} action={formAction} aria-busy={pending} className="space-y-4 rounded-2xl border border-[#DBE4F0] bg-white p-4 shadow-[0_6px_24px_rgba(20,58,100,.04)] sm:p-5">
+  return <div className="customer-workflow space-y-3"><CustomerErrorDialog message={dialogError} onClose={closeError} /><form ref={formRef} id="customer-spot-intimation-form" noValidate onSubmit={(event) => {
+    const invalid = Array.from(event.currentTarget.elements).find((element) => element instanceof HTMLInputElement && !element.checkValidity());
+    if (invalid instanceof HTMLInputElement) {
+      event.preventDefault();
+      setDialogError(invalid.validity.valueMissing ? "Please complete " + (invalid.getAttribute("aria-label") || invalid.name || "the required field") + "." : invalid.validationMessage);
+    }
+  }} onInput={saveDraft} onChange={saveDraft} action={formAction} aria-busy={pending} className="space-y-4 rounded-2xl border border-[#DBE4F0] bg-white p-4 shadow-[0_6px_24px_rgba(20,58,100,.04)] sm:p-5">
     {children}
-    {state.error ? <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-800">{state.error}</p> : null}
     </form>
     {evidence}
     <div className="rounded-2xl border border-[#DBE4F0] bg-white p-3 sm:p-4"><div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">

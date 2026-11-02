@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const form = readFileSync("app/customer/(protected)/spot-intimation/spot-intimation-save-form.tsx","utf8");
+const dialog = readFileSync("components/customer-portal/customer-error-dialog.tsx","utf8");
+assert.match(form,/CustomerErrorDialog message=\{dialogError\}/,"Spot Intimation errors must use modal");
+assert.doesNotMatch(form,/state\.error \? <p role="alert"/,"Spot Intimation must not show inline error");
+assert.match(form,/noValidate onSubmit=/,"Client input validation must use modal, not browser inline tooltip");
+assert.match(form,/setDialogError\(invalid\.validity\.valueMissing/,"Invalid required fields must trigger modal");
+assert.match(dialog,/role="alertdialog" aria-modal="true"/,"Error dialog must be accessible");
+assert.match(dialog,/>\s*OK\s*<\/button>/,"Error dialog must expose OK action");
+console.log("Customer Spot Intimation error popup regression passed");
