@@ -64,6 +64,7 @@ export default async function PartnerClaimDetailPage({
             initialStageKey={requestedStage}
             partnerReadOnlyJourney={data.claim.policy_service_source !== "external" || data.claim.claim_service_mode !== "broker_managed"}
             unrestrictedStageEditing={data.claim.policy_service_source === "external" && data.claim.claim_service_mode === "broker_managed"}
+            partnerManagedJourney={data.claim.policy_service_source === "external" && data.claim.claim_service_mode === "broker_managed"}
             externalCustomerMilestones={data.externalCustomerMilestones?.map((milestone) => ({
               key: milestone.milestone_key,
               status: milestone.milestone_status,
