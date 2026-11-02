@@ -45,7 +45,9 @@ export async function loadEligiblePolicyIntakeSources(profile:{id:string;role:st
   const lifeHead = profile.role === "operations_head_life";
   const codes = lifeHead ? (await getOperationsHeadDownlinePolicyScope(profile.id)).intermediaryCodes : null;
   if (codes && !codes.length) return [] as PolicyIntakeSource[];
-  const ids = lifeHead ? null : await getAccessibleIntermediaryIds(profile.id,profile.role,"create_policy_intakes");
+  // Claims Head may select any active lead source for intake, without broadening other module scopes.
+  const allSourcesRole = profile.role === "claims_head";
+  const ids = lifeHead || allSourcesRole ? null : await getAccessibleIntermediaryIds(profile.id,profile.role,"create_policy_intakes");
   if (ids !== null && !ids?.length && !lifeHead) return [] as PolicyIntakeSource[];
   let query=admin.from("intermediaries").select("id,intermediary_type,display_name,intermediary_code")
     .in("intermediary_type",["posp","misp","partner"]).eq("account_status","active")
