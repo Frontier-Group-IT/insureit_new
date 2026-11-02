@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { BadgeCheck, CalendarDays, CheckCircle2, Clock3, FileText, Fuel, Gauge, ImageIcon, MapPin, ShieldCheck, Truck } from "lucide-react";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
@@ -20,11 +21,13 @@ export default async function CustomerExchangeListingPage({
   searchParams,
 }: {
   params: Promise<{ listingId: string }>;
-  searchParams?: Promise<{ account?: string }>;
+  searchParams?: Promise<{ account?: string; tab?: string; activityFilter?: string; activityQuery?: string }>;
 }) {
   const { listingId } = await params;
   const query = searchParams ? await searchParams : {};
   const { account, accounts } = await resolveCustomerWebScope(query.account);
+  const fromActivity = query.tab === "activity";
+  const backHref = { pathname: "/customer/exchange", query: { account: account.id, tab: fromActivity ? "activity" : "buy", ...(fromActivity && query.activityFilter ? { activityFilter: query.activityFilter } : {}), ...(fromActivity && query.activityQuery ? { activityQuery: query.activityQuery } : {}) } };
   const { listing, detail } = await loadCustomerExchangeListing(listingId);
   const location = [listing.city, listing.state].filter(Boolean).join(", ") || "Location on request";
   const vehicleName = [listing.year, listing.title].filter(Boolean).join(" ");
@@ -58,6 +61,7 @@ export default async function CustomerExchangeListingPage({
 
   return (
     <div className="space-y-2.5 pb-5">
+      <Link href={backHref} className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#536C8D] hover:text-[#17365D]"><ArrowLeft className="h-3.5 w-3.5" /> {fromActivity ? "Back to Activity" : "Back to Exchange"}</Link>
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/exchange" />
       <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#DCE5F1] bg-white px-3 py-2.5 shadow-[0_5px_24px_rgba(18,51,90,.04)]">
         <div className="min-w-0">
