@@ -1,3 +1,13 @@
+## 2026-11-02 — Failure and missed-backup alerts (GitHub Issues)
+
+- New `insureit-r2-backup-monitor.yml` observes each completed backup run via `workflow_run` and independently checks for missing/failed 19:00 IST scheduled runs at **22:47 IST** daily (17:17 UTC). A manual monitor trigger is available.
+- The monitor has **no Supabase/R2 service credentials**. Only `GITHUB_TOKEN` with scoped `actions: read`, `issues: write`, and `contents: read` permissions.
+- Failed, cancelled or otherwise non-successful backup runs open/update a single deduplicated GitHub Issue. A missed daily scheduled run also opens the same issue; a later successful run closes it.
+- Watch or subscribe to repository Issues and enable GitHub email/mobile notifications. GitHub issue creation by an automation **does not guarantee direct email** for every repository participant. Verify organization Actions settings allow issues write permissions. Test by manually dispatching the monitor only *after a scheduled backup has already succeeded* to avoid a deliberate missing-backup alert.
+- Independent watchdog is itself GitHub scheduled automation, so a GitHub-wide scheduling disruption could also skip the watchdog. External uptime monitoring can be added as a future defense.
+- No bucket lifecycle rules, R2 deletion or 30-day pruning has been configured. Existing encrypted blobs/checkpoints and snapshots remain untouched.
+- Cloudflare R2 Standard free monthly allowances: 10 GB-month storage, 1M Class A operations, 10M Class B operations. Changes are incremental; unchanged documents normally do not require downloads from Supabase, but each backup still enumerates source and performs checkpoint / R2 lookups. Supabase egress, GitHub Actions compute and usage overages should be monitored.
+
 ## 2026-11-02 — Daily schedule at 19:00 Asia/Kolkata
 
 - Requested schedule: **7:00 PM IST daily**, equivalent to `30 13 * * *` UTC in GitHub Actions.
