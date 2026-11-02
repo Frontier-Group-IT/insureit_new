@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { projectInternalClaim } from '@insureit/claim-journey';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Platform, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Platform, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppSearchBar } from '@/components/design-system';
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
@@ -24,8 +24,6 @@ type CustomerClaim = Claim & {
 
 export default function ClaimsScreen() {
   const router = useRouter();
-  const { width: screenWidth } = useWindowDimensions();
-  const compactPhone = screenWidth < 375;
   const params = useLocalSearchParams<{ filter?: string | string[] }>();
   const requestedFilter = validClaimFilter(Array.isArray(params.filter) ? params.filter[0] : params.filter);
   const [claims, setClaims] = useState<CustomerClaim[]>([]);
@@ -102,9 +100,9 @@ export default function ClaimsScreen() {
 
   return (
     <Screen title="My Claims" showLogout showTitleHeader={false}>
-      <View style={[styles.pageHeader, compactPhone && { marginBottom: 8 }]}>
-        <Text style={[styles.pageTitle, compactPhone && { fontSize: 20 }]}>My Claims</Text>
-        <Text style={[styles.pageSubtitle, compactPhone && { fontSize: 10.5, lineHeight: 15 }]}>Track active claims, actions and completed settlements.</Text>
+      <View style={styles.pageHeader}>
+        <Text style={styles.pageTitle}>My Claims</Text>
+        <Text style={styles.pageSubtitle}>Track active claims, actions and completed settlements.</Text>
       </View>
 
       <AppSearchBar value={query} onChangeText={setQuery} placeholder="Search vehicle, control or claim no." />
