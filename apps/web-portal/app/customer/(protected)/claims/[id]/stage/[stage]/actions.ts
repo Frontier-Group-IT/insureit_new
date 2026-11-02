@@ -225,7 +225,7 @@ export async function saveCustomerInternalSpotCorrection(
   const accident = String(form.get("accidentAt") || "");
   const spot = String(form.get("spotAt") || "");
   // The browser submits local datetime values in the customer portal's IST timezone.
-  const asKolkataDate = (value: string) => /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$/.test(value) ? new Date(value + ":00+05:30") : new Date(NaN);
+  const asKolkataDate = (value: string) => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value) ? new Date(value + ":00+05:30") : new Date(NaN);
   const incidentDate = asKolkataDate(accident);
   const spotDate = asKolkataDate(spot);
   if (!accident || !spot || !Number.isFinite(incidentDate.getTime()) || !Number.isFinite(spotDate.getTime()) ||
@@ -235,7 +235,7 @@ export async function saveCustomerInternalSpotCorrection(
   const driver = String(form.get("driver") || "").trim().slice(0, 120);
   const phone = String(form.get("phone") || "").trim().slice(0, 15);
   const location = String(form.get("location") || "").trim().slice(0, 500);
-  if (phone && !/^\\+?[0-9 ]{10,15}$/.test(phone)) return fail("Enter a valid driver contact number.");
+  if (phone && !/^\+?[0-9 ]{10,15}$/.test(phone)) return fail("Enter a valid driver contact number.");
 
   const db = await createServerSupabaseClient();
   const { data, error } = await db.from("claims").update({
