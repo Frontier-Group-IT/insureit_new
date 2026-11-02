@@ -460,3 +460,309 @@ Start here before making any optimization:
 6. Do not weaken the 17 Sep stale-role protection without a replacement that preserves immediate authorization correctness.
 7. For voice campaigns, use actual attempt-row counts per opportunity, not the `retry_attempt` field alone.
 8. Run full web verification before merging any PR.
+
+
+---
+
+# Consumption Reduction Plan — 2026-09-25
+
+This plan is intentionally staged so each optimization can be measured independently and rolled back without mixing security-sensitive changes with unrelated performance work.
+
+## Success criteria
+
+Primary target:
+- reduce daily Supabase Edge-log payload by **at least 50%** from the current high-usage baseline without changing user-visible permissions, authentication correctness, RLS behavior, or business outcomes.
+
+Stretch target:
+- reduce steady-state daily Edge-log payload by **60–70%** on normal non-campaign days.
+
+Mandatory safeguards:
+- no stale-role authorization regression
+- disabled users must still lose access promptly
+- no weakening of IT Super User / Accounts / Sales Executive / Intermediary route restrictions
+- no removal of employee or role overrides
+- no bypass of RLS
+- no storing of sensitive auth decisions in long-lived browser-readable state
+- no change to campaign DNC / terminal-status behavior
+- no loss of call-result persistence
+- every PR must run the full web verification workflow before merge
+
+## Phase 0 — Measurement harness before optimization
+
+Before changing production behavior, add lightweight measurement that does not log secrets, tokens, phone numbers, transcripts or payloads.
+
+Capture:
+- page/request identifier
+- number of Supabase calls per request
+- auth/profile call count
+- permission-resolution call count
+- selected high-cost business-query count
+- request duration
+- middleware execution count
+- campaign dispatch attempts per customer
+
+Keep metrics aggregate-only.
+
+Baseline windows:
+- normal business window with no large campaign
+- active voice-campaign window
+- one 24-hour comparison after every production optimization
+
+Decision gate:
+- do not proceed to the next phase until the previous phase's before/after effect is measurable.
+
+## Phase 1 — Secure middleware session/profile de-amplification
+
+Current problem:
+- each protected middleware execution performs `/auth/v1/user` and `/rest/v1/profiles`
+- latest evidence shows near one-to-one correspondence with middleware executions
+
+Do NOT revert the 17 Sep security change.
+
+Preferred design:
+1. Continue validating the JWT cryptographically on protected requests.
+2. Keep a short-lived server-signed authorization snapshot containing only the minimum routing claims needed by middleware:
+   - profile id
+   - role
+   - active/authorized state
+   - authorization version or issued-at marker
+3. Revalidate the database-backed profile on a bounded interval rather than every navigation.
+4. Force immediate revalidation on:
+   - login
+   - token refresh
+   - explicit role/account changes
+   - sensitive administration entry points
+   - stale/missing snapshot
+5. Invalidate the snapshot when an administrator changes a user's role or active state.
+6. Never trust a plain client-controlled role cookie.
+
+Initial TTL recommendation for design review:
+- **5 minutes maximum** for routine route routing
+- sensitive actions continue performing server-side capability checks against the authoritative permission model
+
+Expected effect:
+- middleware Auth/Profile network calls could fall by roughly **80–95%** during normal navigation while retaining bounded stale-role exposure and authoritative checks for protected actions.
+
+Validation:
+- role-change test
+- user-deactivation test
+- shared-browser account-switch test
+- expired token test
+- refresh-token test
+- Accounts/Sales Executive redirect tests
+- intermediary isolation test
+
+## Phase 2 — Permission resolver consolidation
+
+Current problem:
+- individual `hasEffectiveCapability()` calls can independently query employee and role override tables
+- pages that ask several capability questions multiply the same two table reads
+
+Preferred design:
+1. Resolve the full effective permission map once per request/render boundary using `getEffectivePermissionAccessMapForRole()`.
+2. Expose an in-memory permission context/helper for downstream checks during the same request.
+3. Convert `hasAnyEffectiveCapability()` to inspect the resolved map rather than launching independent database checks.
+4. Preserve:
+   - employee override precedence
+   - role override fallback
+   - backoffice permission ceilings
+   - protected IT Super User behavior
+   - scope semantics
+5. Continue fresh permission resolution on new requests; do not create a long-lived browser cache of the full permission map in the first iteration.
+
+Expected effect:
+- pages making multiple permission checks should reduce permission-table round trips from several pairs per request to **one employee query + one role query per request**, and often fewer when IT Super User/Accounts shortcuts apply.
+
+Target:
+- reduce permission-table request count by **60–80%**.
+
+Validation:
+- snapshot old/new effective access maps for every AppRole and capability
+- employee override regression
+- role override regression
+- backoffice ceiling regression
+- Accounts special-case regression
+- IT Super User protected capability regression
+
+## Phase 3 — Voice campaign query and retry governance
+
+Current problem:
+- large campaigns are generating a major burst of Supabase activity
+- some opportunities receive multiple local call attempts
+- current retry function has no explicit business-level maximum local attempt ceiling
+- campaign detail loads large member/opportunity/attempt sets
+- dispatch batch processes only 3 members per request, causing many serverless/API cycles
+
+Plan:
+
+### 3A. Add explicit local attempt governance
+Define an approved maximum number of INSUREIT call attempts per opportunity per campaign.
+
+Recommended initial policy for review:
+- initial attempt + maximum **2 retries**
+- retries only for approved retryable connectivity outcomes
+- no retry for terminal/customer-protection outcomes
+- preserve DNC and already-renewed suppression
+- persist a separate local attempt ordinal; do not depend on provider `retry_attempt`
+
+Do not implement the numeric limit until business owner approval.
+
+### 3B. Separate local attempt number from provider retry number
+Add or derive:
+- local campaign attempt ordinal
+- provider retry attempt
+
+Never overwrite one semantic with the other.
+
+### 3C. Reduce dispatch request count
+Current dispatch endpoint processes up to 3 members.
+
+Investigate safe increase to a bounded batch size such as 10–20, constrained by:
+- Vercel duration
+- Sarvam rate limits
+- calling-window policy
+- failure isolation
+- idempotency
+
+The goal is fewer serverless invocations and repeated queue-count reads, not uncontrolled bulk dispatch.
+
+### 3D. Make campaign detail scalable
+Avoid loading all rows on every campaign page request.
+
+Use:
+- database aggregate counts for KPI numbers
+- paginated member rows
+- latest-attempt projection instead of loading every attempt where only current state is displayed
+- full attempt history only on explicit detail/export requests
+
+### 3E. Avoid repeated invariant reads during a dispatch loop
+Cache/request-scope reuse where safe for:
+- operational settings
+- campaign lifecycle validation
+- partner/batch information
+- other values that are identical for every member in the same dispatch request
+
+Expected effect:
+- large-campaign Supabase traffic reduction of **40–70%**, depending on retry volume and chosen dispatch batch size.
+
+## Phase 4 — Claims background refresh
+
+Current problem:
+- claim detail uses Realtime and also polls sync-version every 2 seconds
+
+Plan:
+1. Keep Realtime as primary.
+2. Make fallback polling visibility-aware.
+3. Poll only when:
+   - tab is visible
+   - Realtime has been disconnected/stale
+4. Increase fallback interval substantially, e.g. 30–60 seconds.
+5. Trigger immediate refresh on reconnect/focus.
+
+Expected effect:
+- more than **90% reduction** in idle claim-sync polling while preserving recovery if Realtime fails.
+
+## Phase 5 — Customer App profile/context de-duplication
+
+Investigate repeated mobile requests for:
+- profiles
+- accessible customer contexts
+- vehicles
+- policies
+- insurer master
+
+Plan:
+- request-scope/session-scope reuse for stable identity/context data
+- avoid loading master/reference lists repeatedly on each screen
+- add explicit invalidation after account-switch/profile mutations
+- preserve customer context isolation
+
+Expected effect:
+- material reduction in `okhttp` Supabase traffic, secondary to portal savings.
+
+## Phase 6 — High-cost page query fan-out
+
+After Phases 1–5, re-rank logs instead of optimizing old assumptions.
+
+Inspect the then-current top endpoints and pages.
+
+Likely candidates based on current evidence:
+- intermediary onboarding application detail/workflow
+- policies register/detail
+- reports
+- dashboard
+- voice campaign detail
+
+For each page:
+- measure Supabase calls from one cold request
+- identify duplicate calls
+- combine parallel related reads where appropriate
+- move counts to aggregate RPCs where returning full rows is unnecessary
+- paginate large datasets
+- avoid repeated lookup/master-data queries in nested components
+
+## Deployment sequence
+
+Use independent reversible PRs:
+
+1. **PR-A:** measurement/baseline instrumentation
+2. **PR-B:** middleware secure revalidation redesign
+3. **PR-C:** permission-map consolidation
+4. **PR-D:** voice campaign retry/attempt semantics
+5. **PR-E:** voice campaign query/batching optimization
+6. **PR-F:** claim polling fallback redesign
+7. **PR-G:** Customer App context/profile de-duplication
+8. **PR-H onward:** page-specific query fan-out reductions based on fresh logs
+
+Do not bundle PR-B and PR-C. They are both authorization-sensitive and should be independently reviewable.
+
+## Before/after acceptance table
+
+For each production PR record:
+- deployment timestamp
+- previous 24h Supabase Edge request count
+- previous 24h log payload proxy
+- next comparable window request count
+- next comparable window payload proxy
+- auth/profile requests
+- employee/role permission requests
+- affected feature functional checks
+- security regression checks
+- rollback commit/PR reference
+
+## Recommended immediate order
+
+The safest/highest-value order is:
+
+1. **Permission consolidation first**
+   - very large footprint
+   - can preserve authoritative database evaluation every request
+   - lower security risk than changing middleware revalidation cadence
+
+2. **Middleware de-amplification second**
+   - very high savings potential
+   - highest security sensitivity
+   - implement only after explicit security regression tests are in place
+
+3. **Voice retry + campaign scalability third**
+   - today's major surge
+   - requires business decision on retry ceiling
+   - optimize both cost and customer experience
+
+4. **Claims polling fourth**
+   - simple, isolated, high-confidence reduction
+
+5. **Mobile and page fan-out afterward**
+
+## Estimated reduction potential
+
+These are engineering estimates, not guaranteed billing reductions:
+
+- Permission consolidation: **10–15 percentage points** of current total Edge-log payload
+- Middleware auth/profile optimization: **15–20 percentage points**
+- Voice campaign optimization on campaign-heavy days: **10–20+ percentage points**
+- Claims/mobile/page cleanup: additional **5–15 percentage points**
+
+Combined, a **50%+ reduction is realistic** if current usage patterns continue, with a plausible **60–70%** reduction on non-campaign steady-state days.
+
+The exact billed reduction must be verified against Supabase usage after deployment.
