@@ -137,6 +137,7 @@ export async function GET(request: Request) {
     .from("policy_intake_requests")
     .select(intakeSelect, { count: "exact" })
     .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
     .range(offset, offset + limit - 1);
 
   query = query.or(intakeReadScope);

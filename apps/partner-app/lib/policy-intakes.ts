@@ -85,9 +85,13 @@ export async function listPartnerPolicyIntakes(): Promise<IntakeListResponse> {
     }
     total = typeof page.total === 'number' ? page.total : offset + items.length;
     offset += items.length;
-    if (!items.length || items.length < pageSize || offset >= total) break;
+    // Do not treat a short page as the end while the server reports more records.
+    if (!items.length || offset >= total) break;
   } while (true);
 
+  if (offset < total || intakes.length !== total) {
+    throw new Error("Policy Intake list is incomplete. Pull down to retry; no records have been changed.");
+  }
   return { ...firstPage!, intakes, total };
 }
 
@@ -194,6 +198,7 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
 
   const response = await fetch(`${portalUrl}${path}`, {
     ...init,
+    cache: "no-store",
     headers: {
       Authorization: `Bearer ${session.access_token}`,
       'Content-Type': 'application/json',
