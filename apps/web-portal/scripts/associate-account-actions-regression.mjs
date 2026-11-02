@@ -23,4 +23,16 @@ assert.match(page, /canManageAssociates \? \(/);
 const branchEdit = readFileSync(resolve(root, "../../../groups/branches/super-actions.ts"), "utf8");
 assert.ok(branchEdit.includes(String.raw`!/^\+?[0-9 ()-]{7,20}$/.test(phone)`), "Branch edit must accept normal and +prefixed phone numbers.");
 assert.ok(!branchEdit.includes(String.raw`!/^\\+?[0-9 ()-]{7,20}$/.test(phone)`), "Do not regress to the accidentally double-escaped phone regex.");
+
+const toast = readFileSync(resolve(root, "associate-account-result-toast.tsx"), "utf8");
+const branchRegister = readFileSync(resolve(root, "../../../groups/branches/branch-register-workspace.tsx"), "utf8");
+const branchMenu = readFileSync(resolve(root, "../../../groups/branches/branch-action-menu.tsx"), "utf8");
+assert.match(toast, /title = "Check details"/, "Warnings share a standard title by default");
+assert.match(toast, /onClick={dismissAcknowledgement}/, "Informational error buttons must only dismiss");
+assert.match(page, /"Deletion blocked"/, "Delete failures must show a readable dialog title");
+assert.match(branchRegister, /border-red-200 bg-red-50 text-red-700/, "Disabled branch badge must be red");
+assert.match(branchMenu, /branch.login_disabled \? " text-red-600 hover:bg-red-50"/, "Disabled branch action must be red");
+assert.match(actions, /if \(\(linkedIntakes \?\? 0\) > 0\)/, "Linked intakes must block deletion");
+assert.match(actions, /if \(authError\)/, "Auth deletion failure must block success");
+assert.match(actions, /accountCheckError \|\| profileCheckError \|\| remainingAccount \|\| remainingProfile/, "Deletion must verify remaining records");
 console.log("Associate account action wiring and access guard regression checks passed.");

@@ -128,6 +128,7 @@ export default async function PartnerAssociateAccountsPage({
             tone="error"
             message={query.error === "branch_parent_mismatch" ? "The Branch parent does not match this Partner. No Branch was created." : errorMessage(query.associate_error ?? query.error ?? "", query.retry_after)}
             acknowledge
+            title={["associate_delete_dependencies", "associate_delete_dependency_check_failed", "associate_delete_incomplete", "associate_delete_failed"].includes(query.associate_error ?? query.error ?? "") ? "Deletion blocked" : "Check details"}
           />
         ) : null}
 
@@ -346,10 +347,10 @@ function errorMessage(value: string, retryAfter?: string) {
   if (decoded === "associate_not_found") return "That associate account is no longer available.";
   if (decoded === "associate_update_failed") return "The associate details could not be updated.";
   if (decoded === "associate_status_failed") return "The associate login status could not be changed.";
-  if (decoded === "associate_delete_dependencies") return "Account has linked policy records and cannot be permanently deleted.";
+  if (decoded === "associate_delete_dependencies") return "This account has linked records and cannot be deleted.";
   if (decoded === "associate_delete_dependency_check_failed") return "Unable to verify account dependencies. Please try again.";
   if (decoded === "associate_delete_incomplete") return "Deletion could not be verified. Contact an administrator.";
-  if (decoded === "associate_delete_failed") return "Account deletion failed. No linked records were removed.";
+  if (decoded === "associate_delete_failed") return "Account could not be deleted. Please contact an administrator.";
   if (decoded === "associate_enable_before_resend") return "Enable this associate account before resending the invitation link.";
   if (decoded === "associate_email_cooldown") {
     const seconds = Number(retryAfter ?? "0");
