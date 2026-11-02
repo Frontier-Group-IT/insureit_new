@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Modal, NativeModules, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Animated, Image, Modal, NativeModules, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
 
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
@@ -181,7 +181,7 @@ export default function VehiclesScreen() {
   return (
     <Screen title="My Vehicles" showLogout showTitleHeader={false}>
       <View style={styles.pageHeader}>
-        <View>
+        <View style={Platform.OS === 'ios' ? styles.iosHeaderCopy : undefined}>
           <View style={styles.titleRow}>
             <Text style={styles.pageTitle}>My Vehicles</Text>
             <View style={styles.countBadge}>
@@ -1156,13 +1156,14 @@ const styles = StyleSheet.create({
   okButton: { width: '100%', height: 58, borderRadius: 6, backgroundColor: '#0B50D4', alignItems: 'center', justifyContent: 'center' },
   okText: { color: '#FFFFFF', fontSize: 18, fontWeight: '900' },
   pageHeader: { marginTop: 0, marginBottom: 12, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  iosHeaderCopy: { flex: 1, minWidth: 0 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, ...(Platform.OS === 'ios' ? { flexWrap: 'wrap' as const } : {}) },
   pageTitle: { color: palette.navy, fontSize: 22, lineHeight: 27, fontWeight: '900' },
   countBadge: { height: 24, borderRadius: 7, backgroundColor: '#EAF3FF', paddingHorizontal: 9, alignItems: 'center', justifyContent: 'center' },
   countBadgeText: { color: '#2563EB', fontSize: 11, fontWeight: '900' },
   pageSub: { color: palette.slate, fontSize: 12, fontWeight: '700', marginTop: 3 },
-  addButton: { height: 40, borderRadius: 8, backgroundColor: palette.navy, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  addButtonText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' },
+  addButton: { ...(Platform.OS === 'ios' ? { flexShrink: 0, alignSelf: 'flex-start' as const } : {}), height: 40, borderRadius: 8, backgroundColor: palette.navy, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  addButtonText: { color: '#FFFFFF', fontSize: 12, fontWeight: Platform.OS === 'ios' ? '700' : '900' },
   filterPanel: { marginTop: -2, marginBottom: 10, gap: 7, zIndex: 20 },
   globalSearch: { width: '100%', height: 42, borderRadius: 13, borderWidth: 1.4, borderColor: '#9FC4F5', backgroundColor: '#F3F8FF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, shadowColor: '#0A43A3', shadowOpacity: 0.08, shadowRadius: 8, elevation: 1 },
   globalSearchInput: { flex: 1, height: 38, color: palette.navy, fontSize: 12, fontWeight: '700' },
