@@ -145,7 +145,7 @@ function PolicyIntakeDateRangeFilter({
   </details>;
 }
 
-export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileId, initialView }: { rows: PolicyIntakeWorkspaceRow[]; reviewer: boolean; creator: boolean; currentProfileId: string; initialView?: PolicyIntakeViewKey }) {
+export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileId, initialView, resetView }: { rows: PolicyIntakeWorkspaceRow[]; reviewer: boolean; creator: boolean; currentProfileId: string; initialView?: PolicyIntakeViewKey; resetView?: PolicyIntakeViewKey }) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewKey>(initialView ?? (reviewer ? "action" : "all"));
   const [source, setSource] = useState("all");
@@ -188,7 +188,7 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  function reset() { setQuery(""); setSource("all"); setOcr("all"); setFromDate(""); setToDate(""); setView(reviewer ? "action" : "all"); setPage(1); }
+  function reset() { setQuery(""); setSource("all"); setOcr("all"); setFromDate(""); setToDate(""); setView(resetView ?? (reviewer ? "action" : "all")); setPage(1); }
   function changeView(value: string) { setView(value as ViewKey); setPage(1); }
 
   return <section className="mx-auto max-w-[1480px] overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
