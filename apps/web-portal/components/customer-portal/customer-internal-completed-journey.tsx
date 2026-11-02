@@ -1,4 +1,8 @@
-import { Check, ChevronDown } from "lucide-react";
+"use client";
+import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { saveCustomerInternalSpotCorrection } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/actions";
+import { Check, ChevronDown, Pencil, X } from "lucide-react";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import { CUSTOMER_EXTERNAL_STAGE_FIELDS } from "@/lib/customer-claim-stage-fields";
 import { CustomerClaimEvidenceWorkspace } from "./customer-claim-evidence-workspace";
@@ -37,6 +41,20 @@ export function CustomerInternalCompletedJourney({
 }) {
   const completedStages = Math.max(0, Math.min(completedCount, INTERNAL_JOURNEY_STAGES.length));
   const spotDocuments = documents.filter(doc => spotTypes.has(normalize(doc.document_type)));
+  const stageOneEditable = completedStages === 1 &&
+    !milestones.some(item => item.milestone_key === "spot_status" && ["completed", "not_applicable"].includes(item.milestone_status));
+  const [editingSpot, setEditingSpot] = useState(false);
+  const [saveState, saveSpot, savingSpot] = useActionState(saveCustomerInternalSpotCorrection, { error: null, saved: false });
+  const router = useRouter();
+  useEffect(() => {
+    if (saveState.saved) { setEditingSpot(false); router.refresh(); }
+  }, [saveState.saved, router]);
+  const localDateTime = (value: string | null | undefined) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return "";
+    return new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(date).replace(" ", "T");
+  };
   return <section className="overflow-hidden rounded-2xl border border-[#DCE5F1] bg-white">
     <header className="border-b border-[#DCE5F1] bg-[#F6F9FD] px-4 py-3">
       <h2 className="text-[16px] font-bold text-[#102B54]">Claim Journey</h2>
@@ -63,6 +81,10 @@ export function CustomerInternalCompletedJourney({
           <span className="min-w-0 flex-1"><span className="block text-[14px] font-bold text-[#132D54]">{stage.label}</span><span className="text-[11px] text-[#71819A]">{status}</span></span>
           {milestone?.completed_at ? <span className="hidden text-[11px] text-[#536782] sm:inline">{new Date(milestone.completed_at).toLocaleDateString("en-GB",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric"})}</span> : null}
           <ChevronDown className="h-4 w-4 shrink-0 text-[#5D7490] transition group-open:rotate-180"/>
+          {stage.key === "spot_intimation" && stageOneEditable ? <button type="button" onClick={event => { event.preventDefault(); event.stopPropagation(); setEditingSpot(current => !current); }}
+            className="ml-2 inline-flex h-8 items-center gap-1 rounded-lg bg-[#17365D] px-3 text-[11px] font-semibold text-white">
+            {editingSpot ? <X className="h-3.5 w-3.5"/> : <Pencil className="h-3.5 w-3.5"/>}{editingSpot ? "Cancel" : "Edit"}
+          </button> : null}
         </summary>
         <div className="space-y-3 border-t border-[#E5EBF4] px-4 py-3">
           {fields.length || extra.length ? <div className="rounded-xl border border-[#DFE7F2] bg-white">
