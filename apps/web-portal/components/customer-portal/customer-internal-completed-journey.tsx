@@ -1,4 +1,4 @@
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Circle, LockKeyhole } from "lucide-react";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import { CUSTOMER_EXTERNAL_STAGE_FIELDS } from "@/lib/customer-claim-stage-fields";
 import { CustomerClaimEvidenceWorkspace } from "./customer-claim-evidence-workspace";
@@ -34,14 +34,16 @@ export function CustomerInternalCompletedJourney({
   documents: CustomerClaimDocument[];
   spot: SpotFields;
 }) {
-  const completed = INTERNAL_JOURNEY_STAGES.slice(0, Math.max(0, Math.min(completedCount, INTERNAL_JOURNEY_STAGES.length)));
+  const completedStages = Math.max(0, Math.min(completedCount, INTERNAL_JOURNEY_STAGES.length));
   const spotDocuments = documents.filter(doc => spotTypes.has(normalize(doc.document_type)));
   return <section className="overflow-hidden rounded-2xl border border-[#DCE5F1] bg-white">
     <header className="border-b border-[#DCE5F1] bg-[#F6F9FD] px-4 py-3">
       <h2 className="text-[16px] font-bold text-[#102B54]">Claim Journey</h2>
-      <p className="text-[11px] text-[#63748F]">{completed.length} completed {completed.length === 1 ? "stage" : "stages"}</p>
+      <p className="text-[11px] text-[#63748F]">{completedStages} completed {completedStages === 1 ? "stage" : "stages"} · {INTERNAL_JOURNEY_STAGES.length} total</p>
     </header>
-    {completed.map((stage, index) => {
+    {INTERNAL_JOURNEY_STAGES.map((stage, index) => {
+      const isCompleted = index < completedStages;
+      const status = isCompleted ? "Completed" : index === completedStages ? "In progress" : "Upcoming";
       const milestone = milestones.find(item => item.milestone_key === stage.key);
       const details = milestone?.details ?? {};
       const entries = stage.key === "spot_intimation" ? [
@@ -51,14 +53,14 @@ export function CustomerInternalCompletedJourney({
         ["Driver Number", spot.driverNumber ?? details.driver_phone],
         ["Location", spot.location ?? details.location],
       ] : (CUSTOMER_EXTERNAL_STAGE_FIELDS[stage.key] ?? []).map(field => [field.label, details[field.key]]);
-      const fields: Array<[string,unknown]> = entries.filter((entry): entry is [string,unknown] => present(entry[1]));
-      const extra = stage.key === "spot_intimation" ? [] : Object.entries(details)
-        .filter(([key,value]) => present(value) && !((CUSTOMER_EXTERNAL_STAGE_FIELDS[stage.key] ?? []).some(field => field.key === key)) && ["string","number","boolean"].includes(typeof value))
+      const fields: Array<[string,unknown]> = entries as Array<[string,unknown]>;
+      const extra = Object.entries(details)
+        .filter(([key,value]) => present(value) && !((CUSTOMER_EXTERNAL_STAGE_FIELDS[stage.key] ?? []).some(field => field.key === key)) && !(stage.key === "spot_intimation" && ["spot_intimation_at","driver_name","driver_phone","location"].includes(key)) && ["string","number","boolean"].includes(typeof value))
         .map(([key,value]):[string,unknown] => [key.replace(/_/g," "),value]);
       return <details key={stage.key} open={index === 0 ? true : undefined} className="group border-b border-[#E5EBF4] last:border-b-0">
         <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 hover:bg-[#F8FAFE] [&::-webkit-details-marker]:hidden">
-          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#188460] text-white"><Check className="h-4 w-4"/></span>
-          <span className="min-w-0 flex-1"><span className="block text-[14px] font-bold text-[#132D54]">{stage.label}</span><span className="text-[11px] text-[#71819A]">Completed</span></span>
+          <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full ${isCompleted ? "bg-[#188460] text-white" : index === completedStages ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"}`}>{isCompleted ? <Check className="h-4 w-4"/> : index === completedStages ? <Circle className="h-4 w-4"/> : <LockKeyhole className="h-3.5 w-3.5"/>}</span>
+          <span className="min-w-0 flex-1"><span className="block text-[14px] font-bold text-[#132D54]">{stage.label}</span><span className="text-[11px] text-[#71819A]">{status}</span></span>
           {milestone?.completed_at ? <span className="hidden text-[11px] text-[#536782] sm:inline">{new Date(milestone.completed_at).toLocaleDateString("en-GB",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric"})}</span> : null}
           <ChevronDown className="h-4 w-4 shrink-0 text-[#5D7490] transition group-open:rotate-180"/>
         </summary>
@@ -68,10 +70,10 @@ export function CustomerInternalCompletedJourney({
             <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {[...fields,...extra].map(([label,value]) => <div key={label} className="min-w-0">
                 <p className="mb-1 text-[10px] font-semibold uppercase text-[#5673B0]">{label}</p>
-                <div className="flex min-h-9 items-center rounded-md border border-[#D9E3F0] bg-[#F4F6FA] px-3 py-2 text-[12px] font-medium text-[#18345C] break-words">{display(value)}</div>
+                <div className="flex min-h-9 items-center rounded-md border border-[#D9E3F0] bg-[#F4F6FA] px-3 py-2 text-[12px] font-medium text-[#18345C] break-words">{present(value) ? display(value) : "Not provided"}</div>
               </div>)}
             </div>
-          </div> : null}
+          </div> : <p className="rounded-lg bg-[#F6F9FD] px-3 py-3 text-[12px] text-[#64748B]">No details recorded for this stage yet.</p>}
           {stage.key === "spot_intimation" && spotDocuments.length > 0 ? <CustomerClaimEvidenceWorkspace documents={spotDocuments} claimId={claimId} accountId={accountId} stage="spot_intimation" allowUpload={false} onlyUploaded/> : null}
         </div>
       </details>;
