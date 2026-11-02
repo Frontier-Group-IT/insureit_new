@@ -64,11 +64,31 @@ export type PartnerPolicyIntakeUploadProgress = {
 };
 
 export async function listPartnerPolicyIntakes(): Promise<IntakeListResponse> {
-  const result = await apiRequest<IntakeListResponse>('/api/partner/policy-intakes');
-  return {
-    ...result,
-    intakes: Array.isArray(result.intakes) ? result.intakes : [],
-  };
+  // The API returns 25 rows by default (maximum 50 per request). A single
+  // request silently hides older/completed submissions from the native app.
+  const pageSize = 50;
+  let offset = 0;
+  let total = 0;
+  const intakes: PartnerPolicyIntake[] = [];
+  const seen = new Set<string>();
+  let firstPage: IntakeListResponse | null = null;
+
+  do {
+    const page = await apiRequest<IntakeListResponse>(`/api/partner/policy-intakes?filter=all&limit=${pageSize}&offset=${offset}`);
+    if (!firstPage) firstPage = page;
+    const items = Array.isArray(page.intakes) ? page.intakes : [];
+    for (const intake of items) {
+      if (!seen.has(intake.id)) {
+        seen.add(intake.id);
+        intakes.push(intake);
+      }
+    }
+    total = typeof page.total === 'number' ? page.total : offset + items.length;
+    offset += items.length;
+    if (!items.length || items.length < pageSize || offset >= total) break;
+  } while (true);
+
+  return { ...firstPage!, intakes, total };
 }
 
 export async function listPartnerPolicyIntakeSources(): Promise<PartnerPolicyIntakeSource[]> {

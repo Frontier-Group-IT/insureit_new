@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const app = readFileSync('app/policy-intakes.tsx', 'utf8');
+const api = readFileSync('lib/policy-intakes.ts', 'utf8');
+assert.match(app, /useState<IntakeFilter>\('all'\)/, 'Intake screen should start with All');
+assert.match(api, /const pageSize = 50/);
+assert.match(api, /filter=all&limit=\$\{pageSize\}&offset=\$\{offset\}/);
+assert.match(api, /offset \+= items\.length/);
+assert.match(api, /offset >= total/);
+assert.match(api, /seen\.has\(intake\.id\)/);
+assert.doesNotMatch(api, /apiRequest<IntakeListResponse>\('\/api\/partner\/policy-intakes'\)/);
+console.log('Partner app policy intake full-list regression passed');
