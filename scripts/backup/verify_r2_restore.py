@@ -74,6 +74,16 @@ def select_samples(grouped, per_bucket=DEFAULT_SAMPLES_PER_BUCKET):
     return chosen
 
 
+def validate_bucket_coverage(manifest, grouped):
+    recorded = set(manifest["buckets"])
+    populated = set(grouped)
+    if not populated or not populated.issubset(recorded):
+        raise RuntimeError("Unexpected populated bucket coverage")
+    if any(not grouped[bucket] for bucket in populated):
+        raise RuntimeError("Empty sample grouping for a populated bucket")
+    return recorded - populated
+
+
 def verify_sample(s3, bucket, key, identifier, entry):
     restored = decrypt(read_limited(s3, bucket, entry["blob"]), key, identifier)
     if len(restored) != entry["bytes"]:
@@ -100,13 +110,9 @@ def main():
     )
     manifest, grouped = validate_manifest(s3, bucket, key_raw)
     chosen = select_samples(grouped)
-    recorded_buckets = set(manifest["buckets"])
-    populated_buckets = set(grouped)
-    empty_buckets = recorded_buckets - populated_buckets
+    empty_buckets = validate_bucket_coverage(manifest, grouped)
     if not chosen:
         raise RuntimeError("No backup objects available to restore")
-    if populated_buckets | empty_buckets != recorded_buckets:
-        raise RuntimeError("Backup manifest bucket coverage mismatch")
     count = 0
     bytes_checked = 0
     for identifier, entry in chosen:
