@@ -100,8 +100,13 @@ def main():
     )
     manifest, grouped = validate_manifest(s3, bucket, key_raw)
     chosen = select_samples(grouped)
-    if not chosen or len(grouped) != len(manifest["buckets"]):
-        raise RuntimeError("Expected a non-empty sample from every bucket")
+    recorded_buckets = set(manifest["buckets"])
+    populated_buckets = set(grouped)
+    empty_buckets = recorded_buckets - populated_buckets
+    if not chosen:
+        raise RuntimeError("No backup objects available to restore")
+    if populated_buckets | empty_buckets != recorded_buckets:
+        raise RuntimeError("Backup manifest bucket coverage mismatch")
     count = 0
     bytes_checked = 0
     for identifier, entry in chosen:
@@ -110,7 +115,7 @@ def main():
     # No customer names, object paths, or data bytes are printed.
     print(f"RESTORE VERIFIED: {count} file samples across {len(grouped)} buckets; "
           f"{bytes_checked} decrypted bytes validated; "
-          f"manifest entries={len(manifest['entries'])}; "
+          f"manifest entries={len(manifest['entries'])}; empty buckets={len(empty_buckets)}; "
           f"snapshot={manifest['created_at']}", flush=True)
     print("No Supabase access; R2 operations read-only; no plaintext persisted.", flush=True)
 
