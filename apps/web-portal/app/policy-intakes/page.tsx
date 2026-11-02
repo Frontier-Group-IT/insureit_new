@@ -25,9 +25,9 @@ type BranchContact = { legacy_branch_profile_id: string | null; contact_name: st
 type IntermediaryName = { id: string; display_name: string };
 type PolicyIntakeSearchParams = { view?: string };
 
-function resolveInitialView(value: string | undefined, reviewer: boolean): PolicyIntakeViewKey {
+function resolveInitialView(value: string | undefined, reviewer: boolean, organizationViewer: boolean): PolicyIntakeViewKey {
   if (value === "in_review") return "in_review";
-  return reviewer ? "action" : "all";
+  return organizationViewer ? "all" : reviewer ? "action" : "all";
 }
 
 export default async function PolicyIntakesPage({ searchParams }: { searchParams?: Promise<PolicyIntakeSearchParams> }) {
@@ -39,7 +39,8 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
     isDownlineHead ? Promise.resolve(true) : hasEffectiveCapability(profile, "review_policy_intakes", "edit"),
     isDownlineHead ? Promise.resolve(true) : hasEffectiveCapability(profile, "create_policy_intakes", "edit"),
   ]);
-  const initialView = resolveInitialView(params?.view, reviewer);
+  const organizationViewer = ["super_admin", "admin", "it_super_user"].includes(profile.role ?? "");
+  const initialView = resolveInitialView(params?.view, reviewer, organizationViewer);
   const admin = createSupabaseAdminClient();
   let intakeOrFilter: string | null = null;
   let submitterFilter: string | null = null;
@@ -64,7 +65,7 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
     // Review permission must not widen the list to unrelated organizations.
     const predicates = await getRmPolicyIntakePredicates(profile.id, profile.role);
     intakeOrFilter = predicates.join(",");
-  } else if (!reviewer) submitterFilter = profile.id;
+  } else if (!organizationViewer && !reviewer) submitterFilter = profile.id;
   // Fetch the entire authorized result set, not only the first 500/1000 records.
   const { data, error } = await fetchAllPages<PolicyIntakeListRow, unknown>((from, to) => {
     let page = admin.from("policy_intake_requests")
@@ -77,6 +78,7 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
     return page.returns<PolicyIntakeListRow[]>();
   });
 
+  if (error) console.error("[policy-intakes] list query failed", { role: profile.role, code: (error as { code?: string }).code });
   const rows = data ?? [];
   const profileIds = Array.from(new Set(rows.map((row) => row.submitted_by_profile_id).filter(Boolean) as string[]));
   const portalAccountIds = Array.from(new Set(rows.map((row) => row.submitted_by_portal_account_id).filter(Boolean) as string[]));
@@ -165,6 +167,6 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
         detail: [intake.status.replaceAll("_", " "), intake.lead_source_name, intake.customer_mobile].filter(Boolean).join(" • "),
       }))}
     /> : null}
-    {unavailable ? <div className="mx-auto max-w-[1480px] rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">Policy Intakes are temporarily unavailable.</div> : <PolicyIntakeWorkspace rows={workspaceRows} reviewer={reviewer} creator={creator} currentProfileId={profile.id} initialView={initialView} />}
+    {unavailable ? <div className="mx-auto max-w-[1480px] rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">Policy Intakes are temporarily unavailable.</div> : <PolicyIntakeWorkspace rows={workspaceRows} reviewer={reviewer} creator={creator} currentProfileId={profile.id} initialView={initialView} resetView={organizationViewer ? "all" : undefined} />}
   </AppShell>;
 }
