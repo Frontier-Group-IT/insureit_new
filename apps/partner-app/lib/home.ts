@@ -45,6 +45,14 @@ export type PartnerHomeData = {
   }[];
 };
 
+export async function getPartnerCanonicalPolicyTotal(): Promise<number> {
+  // The web Partner Home uses this same authenticated, canonical UUID-based RPC.
+  const { data, error } = await supabase.rpc('partner_branch_policy_summary');
+  if (error) throw error;
+  if (!data || typeof data.policies !== 'number') throw new Error('Partner policy total is unavailable.');
+  return data.policies;
+}
+
 export async function getPartnerHome() {
   const { data, error } = await supabase.rpc('partner_app_home');
   if (error) throw error;

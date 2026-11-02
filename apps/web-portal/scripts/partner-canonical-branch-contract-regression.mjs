@@ -137,3 +137,18 @@ assert.match(canonicalPreview, /scope\.length !== 1/);
 assert.match(canonicalPreview, /partner_branch_authorized_policy_ids/);
 assert.doesNotMatch(canonicalPreview, /partner_app_activate_current_account|partner_app_commercial_scope/);
 console.log('Canonical Branch migration contract regression passed. Live database role tests remain required.');
+
+
+// Partner mobile policy register and summary must honor the same canonical Branch
+// UUID ownership as the web portal, not only historical intermediary codes.
+const mobilePolicyParity = read('20261102113000_partner_app_branch_policy_list_summary_parity.sql');
+assert.equal((mobilePolicyParity.match(/when v_is_branch_login then exists/g) || []).length, 2);
+assert.equal((mobilePolicyParity.match(/public\.partner_branch_authorized_policy_ids\(\) authorized/g) || []).length, 2);
+assert.match(mobilePolicyParity,/a\.profile_id=auth\.uid\(\) and a\.entity_type='branch'/);
+assert.match(mobilePolicyParity,/l\.profile_id=auth\.uid\(\)/);
+assert.doesNotMatch(mobilePolicyParity,/UPDATE\s+public\.policies|DELETE\s+FROM\s+public\.policies/i);
+const mobileHomeParity = readFileSync(resolve(root,'apps/partner-app/app/(tabs)/index.tsx'),'utf8');
+const mobileHomeRpc = readFileSync(resolve(root,'apps/partner-app/lib/home.ts'),'utf8');
+assert.match(mobileHomeRpc,/supabase\.rpc\('partner_branch_policy_summary'\)/);
+assert.match(mobileHomeParity,/businessPeriod === 'all'/);
+assert.match(mobileHomeParity,/canonicalPolicies\.data/);
