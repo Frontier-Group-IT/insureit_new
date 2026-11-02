@@ -107,6 +107,7 @@ export default async function CustomerExchangePage({
           {tab === "sell" ? <div className="space-y-2"><p className="text-[10px] font-extrabold uppercase tracking-widest text-[#B7D8FB]">InsureIt Exchange</p><h1 className="text-[clamp(23px,3vw,32px)] font-black text-white">Sell Your Commercial Vehicle</h1><p className="text-[12px] text-[#DBE8FA]">Turn your existing vehicle into new opportunities.</p><div className="flex flex-wrap gap-x-6 gap-y-2 pt-3 text-[10px] font-semibold text-white"><span>✓ List Easily</span><span>✓ Reach Buyers</span><span>✓ Trusted Platform</span></div></div> : <div className="flex items-center gap-3"><span className="exchange-reference-hero-icon grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#E8E5FF] text-[#6950E8]"><ArrowLeftRight className="h-7 w-7" /></span><div><h1 className="text-[clamp(25px,3vw,34px)] font-black leading-tight text-[#15234A]">
             Vehicle <span className="exchange-reference-gradient-text">Exchange</span>
           </h1>
+          <p className="mt-2 max-w-[430px] text-[11px] font-medium leading-relaxed text-[#64748B] sm:text-[12px]">Buy, sell and track commercial vehicle Exchange activity from the same Customer account.</p>
           </div></div>}
         </div>
       </section>
