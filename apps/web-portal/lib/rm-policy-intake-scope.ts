@@ -1,12 +1,51 @@
 import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 
-/** Fail-closed RM intake scope: verified associated parent Partners and their Branches. */
-export async function getRmPolicyIntakePredicates(profileId: string, role: string | null | undefined) {
-  if (role !== "relationship_manager") return [];
+/** Reporting-chain access is explicit for Policy Intakes only; never reuse a global admin scope. */
+export const hierarchyIntakeRoles = new Set(["relationship_manager", "sales_manager", "asm", "zonal_head", "sales_head", "manager", "super_admin", "director"]);
+
+async function reportingChainScope(profileId: string) {
   const admin = createSupabaseAdminClient();
-  const scope = await getEmployeeAccessScope(profileId, role, "view_policy_intakes");
+  const { data: owner, error: ownerError } = await admin.from("profiles")
+    .select("employee_id").eq("id",profileId).eq("is_active",true).maybeSingle<{employee_id:string|null}>();
+  if (ownerError) throw new Error("policy_intake_reporting_owner_unavailable");
+  if (!owner?.employee_id) return { employeeIds: [] as string[], profileIds: [profileId] };
+  const { data: employees, error: employeeError } = await fetchAllPages<{id:string;reporting_manager_id:string|null}, unknown>((from,to) =>
+    admin.from("employees").select("id,reporting_manager_id").eq("employment_status","active")
+      .order("id", {ascending:true}).range(from,to));
+  if (employeeError) throw new Error("policy_intake_reporting_hierarchy_unavailable");
+  const children = new Map<string,string[]>();
+  for (const employee of employees??[]) {
+    if (!employee.reporting_manager_id) continue;
+    children.set(employee.reporting_manager_id,[...(children.get(employee.reporting_manager_id)??[]),employee.id]);
+  }
+  const employeeIds: string[] = [];
+  const seen = new Set<string>();
+  const queue = [owner.employee_id];
+  while(queue.length) {
+    const id = queue.shift()!;
+    if(seen.has(id)) continue;
+    seen.add(id);
+    employeeIds.push(id);
+    queue.push(...(children.get(id)??[]));
+  }
+  const { data: teamProfiles, error: profileError } = await fetchAllPages<{id:string}, unknown>((from,to) =>
+    admin.from("profiles").select("id").eq("is_active",true).in("employee_id",employeeIds)
+      .order("id",{ascending:true}).range(from,to));
+  if (profileError) throw new Error("policy_intake_reporting_profiles_unavailable");
+  return {employeeIds,profileIds:[...new Set([profileId,...(teamProfiles??[]).map(p=>p.id)])]};
+}
+
+/** Fail-closed reporting hierarchy: self, descendants, assigned Partners and Branches. */
+export async function getRmPolicyIntakePredicates(profileId: string, role: string | null | undefined) {
+  if (!hierarchyIntakeRoles.has(role ?? "")) return [];
+  const admin = createSupabaseAdminClient();
+  const scope = role === "relationship_manager"
+    ? await getEmployeeAccessScope(profileId, role, "view_policy_intakes")
+    : await reportingChainScope(profileId);
   const predicates = [`submitted_by_profile_id.eq.${profileId}`];
+  if (scope.profileIds.length) predicates.push(`submitted_by_profile_id.in.(${scope.profileIds.join(",")})`);
   if (!scope.employeeIds.length) return predicates;
   const { data: onboarding, error: onboardingError } = await admin.from("posp_misp_onboarding_profiles")
     .select("application_id").in("associate_employee_id", scope.employeeIds)
