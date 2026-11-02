@@ -1,4 +1,4 @@
-import { BadgeCheck, FileText, Mail, Phone, ShieldCheck, UserRound } from "lucide-react";
+import { BadgeCheck, Mail, Phone } from "lucide-react";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
 import { CustomerProfileDocuments } from "@/components/customer-portal/customer-profile-documents";
 import { CustomerProfileEditor } from "@/components/customer-portal/customer-profile-editor";
@@ -44,23 +44,13 @@ export default async function CustomerProfilePage({
               {customer.company_name ? <p className="mt-2 text-[10px] font-semibold text-[#7665A2]">{customer.company_name}</p> : null}
             </div>
           </div>
-          <div aria-hidden="true" className="relative hidden h-[134px] w-[215px] shrink-0 items-center justify-center lg:flex">
-            <div className="absolute bottom-1 right-0 h-[110px] w-[150px] rotate-[8deg] rounded-2xl border border-[#B5A6F6] bg-white/80 shadow-[0_12px_30px_rgba(81,51,157,0.18)]">
-              <div className="flex items-center gap-3 border-b border-[#DDD5FA] px-4 py-3">
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#E7DDFF] text-[#714AD0]"><UserRound className="h-5 w-5" /></span>
-                <div className="space-y-1.5"><div className="h-2 w-14 rounded-full bg-[#A28DE9]" /><div className="h-1.5 w-10 rounded-full bg-[#DFD6F8]" /></div>
-              </div>
-              <div className="space-y-2 px-4 py-3"><div className="h-2 w-20 rounded-full bg-[#D5C8F4]" /><div className="h-2 w-24 rounded-full bg-[#E3DBFA]" /></div>
-            </div>
-            <div className="absolute bottom-1 right-0 grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-[#8F63F1] to-[#4D27AF] text-white shadow-[0_9px_20px_rgba(91,50,175,0.28)]"><ShieldCheck className="h-8 w-8" /></div>
-            <FileText className="absolute left-3 top-3 h-10 w-10 -rotate-12 text-[#B3A1EF]" strokeWidth={1.25} />
-          </div>
+          <img src="/assets/Custom-Icons/optimized-128/customers.png" alt="" aria-hidden="true" width={132} height={132} className="hidden h-[132px] w-[132px] shrink-0 object-contain lg:block" />
         </div>
       </section>
 
       <section className="customer-profile-detail-section relative rounded-[22px] border border-[#E6E0F5] bg-white p-4 shadow-[0_9px_24px_rgba(79,56,139,0.055)] sm:p-5">
         <div className="flex items-start gap-3 pr-20 sm:pr-24">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[13px] bg-gradient-to-br from-[#8C5EF1] to-[#5734BD] text-white shadow-[0_5px_12px_rgba(97,61,191,0.18)]"><FileText className="h-5 w-5" /></span>
+          <img src="/assets/Custom-Icons/optimized-128/kyc-completed.png" alt="" aria-hidden="true" width={40} height={40} className="h-10 w-10 shrink-0 object-contain" />
           <div className="min-w-0">
             <h2 className="text-[16px] font-black text-[#2E2358]">Your Details</h2>
           </div>
