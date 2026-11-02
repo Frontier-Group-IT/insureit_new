@@ -7,6 +7,7 @@ on:
       - '.github/workflows/insureit-supabase-storage-r2-backup.yml'
       - '.github/workflows/insureit-r2-restore-verify.yml'
       - '.github/workflows/verify-r2-backup-static.yml'
+      - '.github/workflows/insureit-r2-backup-monitor.yml'
   workflow_dispatch:
 
 permissions:
@@ -22,7 +23,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install boto3==1.35.99 cryptography==44.0.2 pyyaml==6.0.2
-      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py
+      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py
       - run: python -m unittest discover -s scripts/backup -p 'test_*.py' -v
       - name: Validate workflow safety guard
         run: |
@@ -46,5 +47,14 @@ jobs:
           assert verify['environment'] == 'insureit-production-backup'
           assert 'SUPABASE_SERVICE_ROLE_KEY' not in str(verify)
           assert restore['permissions']['contents'] == 'read'
-          print('Scheduled 19:00 IST backup + restore guard verified')
+          monitor = yaml.safe_load(pathlib.Path('.github/workflows/insureit-r2-backup-monitor.yml').read_text())
+          triggers = monitor.get('on', monitor.get(True, {}))
+          assert triggers['schedule'] == [{'cron': '17 17 * * *'}]
+          assert triggers['workflow_run']['types'] == ['completed']
+          assert monitor['permissions']['actions'] == 'read'
+          assert monitor['permissions']['issues'] == 'write'
+          assert monitor['permissions']['contents'] == 'read'
+          assert 'secrets.' not in str(monitor), 'No production secrets in alert workflow'
+          assert monitor['jobs']['monitor']['if'] == "github.ref == 'refs/heads/main'"
+          print('Scheduled backup + alert monitor safety guards verified')
           PY
