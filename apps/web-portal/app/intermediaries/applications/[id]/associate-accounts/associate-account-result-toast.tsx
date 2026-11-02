@@ -8,10 +8,12 @@ export function AssociateAccountResultToast({
   tone,
   message,
   acknowledge = false,
+  title = "Check details",
 }: {
   tone: "success" | "error";
   message: string;
   acknowledge?: boolean;
+  title?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -58,7 +60,7 @@ export function AssociateAccountResultToast({
             <span className="mx-auto grid h-[52px] w-[52px] place-items-center rounded-full bg-[#FFF2E7] text-[#E66A12]">
               <AlertTriangle className="h-5 w-5" aria-hidden="true" />
             </span>
-            <h2 id="associate-result-error-title" className="mt-5 text-[16px] font-bold text-[#17365D]">Check details</h2>
+            <h2 id="associate-result-error-title" className="mt-5 text-[16px] font-bold text-[#17365D]">{title}</h2>
             <p id="associate-result-error-message" className="mt-3 text-[12px] leading-5 text-[#64748B]">{message}</p>
           </div>
           <div className="grid grid-cols-2 gap-3 border-t border-[#E7ECF3] bg-[#F8FAFC] px-5 py-4">
