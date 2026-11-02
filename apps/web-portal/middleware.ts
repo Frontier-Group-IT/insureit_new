@@ -42,6 +42,7 @@ function isClaimsHeadPortalPath(pathname: string) {
   return pathname === "/claims" || pathname.startsWith("/claims/") ||
     pathname === "/claim-documents" || pathname.startsWith("/claim-documents/") ||
     pathname === "/reports/claims" || pathname === "/reports/export/claims" ||
+    pathname === "/policy-intakes" || pathname.startsWith("/policy-intakes/") ||
     pathname === "/notifications" || pathname.startsWith("/notifications/") ||
     pathname === "/access-denied";
 }
