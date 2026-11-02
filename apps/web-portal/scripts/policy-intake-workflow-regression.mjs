@@ -59,6 +59,14 @@ assert(intakeForm.includes("fetched in the background"),"Sales must be told poli
 assert(intakeForm.includes("Proposal form"),"Life/Health intake must present the upload as a Proposal Form");
 assert(intakeForm.includes("without OCR or detail extraction"),"Life/Health helper messaging must state that proposal forms are stored without OCR/detail extraction");
 assert(intakeForm.includes("Upload couldn't be completed"),"Upload failures must stay on the form with a recoverable error");
+const reviewSummary=read("lib/policy-intake-review-summary.ts");
+const portfolioPage=read("app/policies/page.tsx");
+assert(reviewSummary.includes("fetchAllPages<PolicyIntakeSummaryRow"),"Policy Register intake summary must read all pages, not just 500 rows");
+assert(!reviewSummary.includes(".limit(500)"),"Policy Register intake counts must not have a fixed 500-record ceiling");
+assert(reviewSummary.includes('options.intakeOrFilter'),"Summary must honor the authorized intake scope");
+assert(reviewSummary.includes('options.denyAll'),"Summary must fail closed for empty hierarchy scope");
+assert(portfolioPage.includes("getRmPolicyIntakePredicates(profile.id, profile.role)"),"Portfolio counts must match Queue hierarchy authorization");
+assert(portfolioPage.includes("intakeHierarchyScoped && !intakePredicates?.length"),"Unresolved hierarchy predicates must never show organization totals");
 const queue=read("app/policy-intakes/page.tsx");
 assert(queue.includes("loadPolicyIntakeDuplicateMatches(admin, rows)"),"Policy Intake queue must use the shared duplicate detector");
 assert(queue.includes('status: "Duplicate"'),"Detected duplicates must be removed from Ready for review and shown in the Duplicate bucket");
