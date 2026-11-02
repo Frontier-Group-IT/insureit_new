@@ -6,8 +6,8 @@ on:
       - INSUREIT Supabase Storage backup to R2 (daily 7 PM IST)
     types: [completed]
   schedule:
-    # Watch for a missing 19:00 IST backup at 22:30 IST (17:00 UTC).
-    - cron: '0 17 * * *'
+    # Watch for a missing 19:00 IST backup at 22:47 IST (17:17 UTC).
+    - cron: '17 17 * * *'
   workflow_dispatch:
 
 permissions:
