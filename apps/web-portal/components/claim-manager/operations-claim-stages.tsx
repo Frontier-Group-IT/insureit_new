@@ -196,7 +196,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const stageTarget = stageCompletionTargets[selected.key];
   const nextStageLabel = nextStageLabelFor(selected.key);
   const spotCurrentEditable = Boolean(selected.key === "spot_intimation" && selectedIsCurrent && managerNext);
-  const stageEditable = !partnerReadOnlyJourney && Boolean(selected.key !== "spot_intimation" && selected.key !== "claim_intimation" && selectedAvailable && stageTarget);
+  const stageEditable = !partnerReadOnlyJourney && Boolean(selected.key !== "spot_intimation" && (selected.key !== "claim_intimation" || partnerManagedJourney) && selectedAvailable && stageTarget);
   const [spotSubmitting, setSpotSubmitting] = useState(false);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
