@@ -224,8 +224,10 @@ export async function saveCustomerInternalSpotCorrection(
 
   const accident = String(form.get("accidentAt") || "");
   const spot = String(form.get("spotAt") || "");
-  const incidentDate = new Date(accident);
-  const spotDate = new Date(spot);
+  // The browser submits local datetime values in the customer portal's IST timezone.
+  const asKolkataDate = (value: string) => /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$/.test(value) ? new Date(value + ":00+05:30") : new Date(NaN);
+  const incidentDate = asKolkataDate(accident);
+  const spotDate = asKolkataDate(spot);
   if (!accident || !spot || !Number.isFinite(incidentDate.getTime()) || !Number.isFinite(spotDate.getTime()) ||
     incidentDate.getTime() > Date.now() || spotDate.getTime() > Date.now() || spotDate < incidentDate)
     return fail("Enter valid accident and spot intimation dates. Spot intimation must not precede the accident.");
