@@ -297,7 +297,7 @@ export default function VehiclesScreen() {
                         <MaterialCommunityIcons name="shield-search" size={23} color="#0A43A3" />
                       </View>
                       <View style={styles.policyEmptyCopy}>
-                        <Text style={styles.policyEmptyTitle} numberOfLines={1}>Protection needed</Text>
+                        <Text style={styles.policyEmptyTitle} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>Protection needed</Text>
                       </View>
                     </View>
                     <Pressable
