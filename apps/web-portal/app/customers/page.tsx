@@ -91,7 +91,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
   }));
 
   return (
-    <AppShell title="Customers">
+    <AppShell title={registerTitle}>
       {profile.role !== "backoffice_executive" ? <DealershipEntryActivator /> : null}
       <div className="mx-auto max-w-[1480px]">
         {profile.role === "it_super_user" && !customersResult.error ? (
