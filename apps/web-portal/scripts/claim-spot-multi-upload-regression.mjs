@@ -140,4 +140,11 @@ assert.match(customerClaimDetail, /projectInternalClaim\(claim\?\.current_status
 assert.match(customerClaimDetail, /index < internalProjection\.completedStageCount/);
 assert.match(customerClaimDetail, /index === currentStageIndex/);
 
+const headerCss = await readFile(new URL("../components/spot-survey/claim-journey-header.module.css", import.meta.url), "utf8");
+const motionCss = await readFile(new URL("../components/spot-survey/claim-document-motion.module.css", import.meta.url), "utf8");
+assert.match(workspace, /Operations claim journey/, "Operations claim header title must match requested label");
+assert.match(workspace, /min-h-\[48px\]/, "Operations claim header and summary should remain compact");
+assert.match(headerCss, /\.header\s*\{[^}]*border: 0;/s, "Operations claim header must have no outer border");
+assert.match(bulkVerificationGroup, /motionStyles\.card/, "Document groups must use motion styling");
+assert.match(motionCss, /prefers-reduced-motion: reduce/, "Document animation must respect reduced-motion preference");
 console.log("Claim spot upload, scoped Partner authorization, bulk verification, direct storage, exact replacement and insurance validity regression passed.");

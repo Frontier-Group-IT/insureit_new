@@ -1,0 +1,26 @@
+/* Subtle interaction feedback for Operations claim document verification. */
+.card {
+  position: relative;
+  animation: documentEnter .32s ease-out both;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, background-color .2s ease;
+}
+.card:hover, .card:focus-within {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(21, 83, 161, .12);
+  border-color: #93BCEB;
+}
+.verified {
+  background: linear-gradient(120deg, #FFFFFF 75%, #F0FDF4 100%);
+}
+.verified:hover, .verified:focus-within {
+  border-color: #86D7AC;
+  box-shadow: 0 8px 22px rgba(11, 144, 94, .12);
+}
+@keyframes documentEnter {
+  from { opacity: .72; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card { animation: none; transition: none; }
+  .card:hover, .card:focus-within { transform: none; }
+}
