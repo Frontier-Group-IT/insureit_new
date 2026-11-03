@@ -30,3 +30,12 @@ Run `node apps/web-portal/scripts/partner-branch-associate-metrics-regression.mj
 - Authoritative mapping: currently active `intermediary_group_memberships` (`effective_to IS NULL`) scoped only to the Partner IDs the viewer could already see, joined to `intermediary_groups` for the name. Ambiguous or failed lookups do not select an arbitrary Group. Group detail page retains `requireGroupAssociateManager(id)` server authorization.
 - Files: `apps/web-portal/app/intermediaries/intermediary-register.tsx` and `apps/web-portal/app/intermediaries/partner-register-client.tsx`. Regression: `apps/web-portal/scripts/partner-register-group-link-regression.mjs`.
 - Source assertions checked verified mapping, link URL, display order, unassigned fallback, and authorization gate. Full typecheck/build, CI, authenticated UI testing are still pending; branch remains unmerged. No PR or deployment performed.
+
+## Partner Register Associate/Branch account counts (2026-11-03)
+- Added one combined read-only `Asso./Branch` column between Status and Customers, formatted as `2/2`. A missing result shows `—` for that metric, and a verified zero shows `0`.
+- Count active, invited and disabled accounts because the column reports registered accounts, not active logins.
+- Associates are counted distinctly from `partner_portal_associate_accounts` by the corresponding `intermediaries.id`, scoped to the already-authorized Partner Register rows.
+- Registered Branches are counted distinctly from `partners.parent_partner_id` child records that also have `partner_branch_profiles`, matching the Branch Register's inclusion rules.
+- Batched, paginated queries avoid N+1 work and prevent >1000 rows from being silently truncated.
+- No schema/data changes. Regression: `apps/web-portal/scripts/partner-register-associate-branch-count-regression.mjs`.
+- PR and CI verification required before any merge; no production deployment or database migration is authorized.
