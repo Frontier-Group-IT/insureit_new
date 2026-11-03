@@ -83,9 +83,9 @@ export async function buildRmPerformancePdf(profile:Profile, query:RmPerformance
     const c=accent?ink:muted;
     text(name,42+Math.min(indent,5)*12,y-5,9,accent,c,240-Math.min(indent,5)*12);
     text(String(todayCount),365,y-5,9,accent);
-    text(money(todayPremium),435,y-5,9,accent,110);
+    text(money(todayPremium),435,y-5,9,accent,accent?ink:muted,110);
     text(String(periodCount),584,y-5,9,accent);
-    text(money(periodPremium),659,y-5,9,accent,135);
+    text(money(periodPremium),659,y-5,9,accent,accent?ink:muted,135);
     y-=24;
   }
   function tableHeader(){
