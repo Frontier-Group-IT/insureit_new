@@ -8,12 +8,14 @@ export const POLICY_DATE_APPROVERS = [
 ] as const;
 
 export function indiaDate(now = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", {
+  const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Kolkata",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(now);
+  }).formatToParts(now);
+  const part = (type: string) => parts.find(item => item.type === type)?.value ?? "";
+  return part("year") + "-" + part("month") + "-" + part("day");
 }
 
 export function policyDateDecision(issuanceDate: string, currentIndiaDate = indiaDate()): PolicyDateDecision {
