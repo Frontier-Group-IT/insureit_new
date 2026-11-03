@@ -136,6 +136,12 @@ assert(partnerWeb.includes('supabase.rpc("partner_app_list_renewals"'), "Partner
 assert(partnerWeb.includes("policy_service_source: string | null"), "Partner claim rows must expose the canonical claim source");
 
 const insurerLogoResolver = read("lib/insurer-logo.ts");
+// Validate the actual decimal formatter in the CI regression path.
+const { normalizePolicyMoney } = await import("../lib/policy-money-precision.ts");
+assert.equal(normalizePolicyMoney("8179.549999999999"), "8179.55");
+assert.equal(normalizePolicyMoney("2607.000000000001"), "2607.00");
+assert.equal(normalizePolicyMoney("425"), "425.00");
+assert.equal(normalizePolicyMoney("0.005"), "0.01");
 const policyOnboardingAction = read("app/policies/policy-onboarding-actions.ts");
 assert(policyOnboardingAction.includes('addOnPremium: moneyOrZero(payload.premium.addOnPremium)'), "Policy booking must normalize Add-on Premium before RPC");
 assert(policyOnboardingAction.includes('lowerMessage.includes("invalid add-on premium")'), "Policy booking must identify Add-on Premium errors");
