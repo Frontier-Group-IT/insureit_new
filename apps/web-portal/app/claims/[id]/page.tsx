@@ -237,6 +237,7 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
 
     return (
       <ClaimManagerShell title={`Assistance Review - ${claim.claim_no}`} backHref={backHref}>
+        <SpotClaimHeader heading="Claim Journey" claim={{ ...claimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} />
         <AssistanceIntakePanel
           claimId={claim.id}
           claimNo={claim.claim_no}
