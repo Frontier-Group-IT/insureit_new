@@ -150,7 +150,7 @@ export default function ClaimsScreen() {
               ) : null}
               <View style={styles.claimTitleCopy}>
                 <Text style={[styles.modeLabel, { color: externalClaim ? externalStatusColor : tone.accent }]}>{externalClaim ? externalModeLabel : claimStageLabel(claim.current_status)}</Text>
-                <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle?.vehicle_no ?? 'Vehicle linked'}</Text>
+                <Text style={styles.vehicleNo} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>{vehicle?.vehicle_no ?? 'Vehicle linked'}</Text>
               </View>
               <View style={styles.milestoneRight}>
                 <Text
@@ -166,9 +166,9 @@ export default function ClaimsScreen() {
             </View>
 
             <View style={styles.identityRow}>
-              <View style={styles.identityBlock}><Text style={styles.identityLabel}>INCIDENT</Text><Text style={styles.identityValue} numberOfLines={1}>{claim.accident_at ? formatDate(claim.accident_at) : '-'}</Text></View>
-              <View style={[styles.identityBlock, styles.identityBlockCenter]}><Text style={styles.identityLabel}>CONTROL NO.</Text><Text style={styles.identityValue} numberOfLines={1}>{claim.claim_no}</Text></View>
-              <View style={[styles.identityBlock, styles.identityBlockRight]}><Text style={styles.identityLabel}>CLAIM NO.</Text><Text style={styles.identityValue} numberOfLines={1}>{claim.insurer_claim_no || 'Awaiting insurer'}</Text></View>
+              <View style={styles.identityBlock}><Text style={styles.identityLabel}>INCIDENT</Text><Text style={styles.identityValue} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>{claim.accident_at ? formatDate(claim.accident_at) : '-'}</Text></View>
+              <View style={[styles.identityBlock, styles.identityBlockCenter]}><Text style={styles.identityLabel}>CONTROL NO.</Text><Text style={styles.identityValue} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>{claim.claim_no}</Text></View>
+              <View style={[styles.identityBlock, styles.identityBlockRight]}><Text style={styles.identityLabel}>CLAIM NO.</Text><Text style={styles.identityValue} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>{claim.insurer_claim_no || 'Awaiting insurer'}</Text></View>
             </View>
 
             {assistanceRequested ? <View style={styles.assistancePill}><MaterialCommunityIcons name="clock-outline" size={13} color="#805700" /><Text style={styles.assistancePillText}>Assistance requested</Text></View> : null}
