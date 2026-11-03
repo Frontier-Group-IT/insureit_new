@@ -9,7 +9,7 @@ assert.match(footer, /<NonMotorDocumentPicker/);
 assert.match(footer, /border-b border-\[#E7ECF3\]/);
 assert.match(footer, /flex flex-wrap items-center justify-end gap-2/);
 assert.match(footer, />Cancel<\/Link>/);
-assert.match(footer, /onClick=\{submit\}/);
+assert.match(footer, /onClick=\{\(\)=>submit\(\)\}/, "Final-save action must remain available via submission wrapper");
 assert.ok(footer.indexOf("<NonMotorDocumentPicker") < footer.indexOf(">Cancel</Link>"), "Document uploads must precede final actions");
 assert.doesNotMatch(footer, /\bfixed\b|\bsticky\b|bottom-0|z-40/, "Footer controls must not be viewport-fixed");
 assert.match(src, /<NonMotorLiveSummary/, "Non-Motor summary must remain available");

@@ -28,7 +28,7 @@ assert.match(edit,/save_motor_policy_with_date_approval_v1/);
 assert.match(nonmotor,/consumePolicyDateApproval/);
 assert.match(life,/consumePolicyDateApproval/);
 assert.match(lifeEdit,/consumePolicyDateApproval/);
-assert.match(lifeEditUi,/PolicyDateApprovalWidget/);
+assert.match(lifeEditUi,/PolicyDateApprovalDialog/);
 assert.match(otp,/verify_policy_date_otp_v1/);
 assert.match(migration,/for update/i,"OTP attempts must be serialized");
 assert.match(otp,/randomInt\(100000, 1000000\)/);
@@ -37,4 +37,16 @@ assert.match(migration,/for update/i,"approval must be locked before motor save"
 assert.match(migration,/grant execute on function public.save_motor_policy_with_date_approval_v1[\s\S]*to service_role/i);
 assert.match(migration,/revoke all on public.policy_date_otp_approvals from public, anon, authenticated/i);
 assert.match(migration,/previous_month_policy_uploaded/);
+const unified = read("../components/policy-unified-form.tsx");
+const nonmotorUi = read("../components/non-motor-unified-mode.tsx");
+const caseUi = read("../components/life-health-case-detail.tsx");
+const approvalDialog = read("../components/policy-date-approval-dialog.tsx");
+for(const [name, source] of [["Motor",unified],["Non Motor",nonmotorUi],["Life Health conversion",caseUi],["Issued Life Health edit",lifeEditUi]]) {
+  assert.match(source,/PolicyDateApprovalDialog/,"Final-submit dialog is required in "+name);
+  assert.doesNotMatch(source,/<PolicyDateApprovalWidget/,"Inline OTP approval must not appear in "+name);
+}
+assert.match(approvalDialog,/policyNumber=\{props\.policyNumber\}/,"OTP remains bound to the policy number");
+assert.match(approvalDialog,/disabled=\{!props\.verifiedApprovalId \|\| props\.submitting\}/,"Saving requires verified approval");
+assert.match(unified,/motorSectionProgress\.findIndex/,"Motor policy completeness must be checked before approval");
+assert.match(nonmotorUi,/dateApprovalRequired\) \{ if \(!approvalConfirmed\)/,"Non Motor validates before opening approval");
 console.log("Policy issuance date OTP regression passed.");

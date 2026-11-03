@@ -12,5 +12,5 @@ assert.match(footer, /\[data-policy-edit-form\] \[data-policy-edit-original-acti
 assert.match(footer, /const original = findOriginalSaveButton\(\);[\s\S]*?original\.click\(\)/, "Bottom Save must still delegate to the actual form handler.");
 assert.match(footer, /observer\.observe\(original/, "Loading and disabled state must remain synced from the actual form.");
 assert.match(page, /<PolicyEditActionFooter \/>/, "Standard Edit Policy must keep the bottom action footer.");
-assert.match(unified, /onClick=\{submitPolicy\}/, "The original validated save handler must remain intact.");
+assert.match(unified, /onClick=\{\(\)=>submitPolicy\(\)\}/, "The original validated save handler must remain intact through its approval-aware wrapper.");
 console.log("Policy Edit single action-row regression passed.");
