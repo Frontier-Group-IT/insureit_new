@@ -26,6 +26,14 @@ function walk(relativeDir) {
   return out;
 }
 
+
+// Retired Intermediaries Overview must never render, including when navigating
+// back from Groups or opening an old /intermediaries bookmark.
+const intermediaryRoot = read("app/intermediaries/page.tsx");
+assert(intermediaryRoot.includes('redirect('), "legacy Intermediaries root must redirect");
+assert(intermediaryRoot.includes('"/intermediaries/partner"'), "Intermediaries root must default to Partner");
+assert(!intermediaryRoot.includes("OverviewIntermediaryRegister"), "removed Intermediaries Overview must not render");
+
 const requiredRoutes = [
   "app/partner/page.tsx",
   "app/partner/business/page.tsx",
