@@ -1,3 +1,4 @@
+import "../claims/[id]/stage/[stage]/customer-claim-reference.css";
 import { redirect } from "next/navigation";
 import { saveCustomerInternalSpotCorrection } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/actions";
 import { isExternalCustomerClaim } from "@/lib/customer-web-phase2-data";
