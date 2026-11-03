@@ -155,6 +155,8 @@ jobs:
         run: npm run vehicle-registration:regression
       - name: Full vehicle customer transfer regression
         run: npm run vehicle-transfer:regression
+      - name: Customer internal and external register segmentation regression
+        run: node scripts/customer-register-segmentation-regression.mjs
       - name: Register workflow prefetch regression
         run: npm run register-prefetch:regression
       - name: Commercial and reports prefetch regression
