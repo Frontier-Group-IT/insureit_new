@@ -77,6 +77,10 @@ jobs:
           assert restore_job['environment'] == 'insureit-production-backup'
           assert restoration['permissions']['contents'] == 'read'
           steps_text = str(restore_job['steps'])
+          fixture = pathlib.Path('scripts/backup/fixtures/isolated_supabase_roles.sql').read_text()
+          assert 'NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS' in fixture
+          assert 'NEVER apply to the managed INSUREIT database' in fixture
+          assert 'isolated_supabase_roles.sql' in steps_text
           assert '--network none' in steps_text
           assert 'verify_postgres_r2_restore.py' in steps_text
           assert 'docker rm --force --volumes' in steps_text
