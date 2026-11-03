@@ -53,7 +53,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
     });
     return (
       <AppShell title={registerTitle}>
-        {profile.role === "backoffice_executive" ? <div className="mx-auto max-w-[1480px]"><BackofficeCustomerRegister rows={[]} title={registerTitle} /></div> : <><DealershipEntryActivator /><div className="mx-auto max-w-[1480px]"><CustomerWorkspace rows={[]} title={registerTitle} /></div></>}
+        {profile.role === "backoffice_executive" ? <div className="mx-auto max-w-[1480px]"><BackofficeCustomerRegister key={registerTitle} rows={[]} title={registerTitle} /></div> : <><DealershipEntryActivator /><div className="mx-auto max-w-[1480px]"><CustomerWorkspace key={registerTitle} rows={[]} title={registerTitle} /></div></>}
       </AppShell>
     );
   }
@@ -108,9 +108,9 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
         {customersResult.error ? (
           <DataError message="The customer register could not be loaded." />
         ) : profile.role === "backoffice_executive" ? (
-          <BackofficeCustomerRegister rows={rows} title={registerTitle} />
+          <BackofficeCustomerRegister key={registerTitle} rows={rows} title={registerTitle} />
         ) : (
-          <CustomerWorkspace rows={rows} title={registerTitle} />
+          <CustomerWorkspace key={registerTitle} rows={rows} title={registerTitle} />
         )}
       </div>
     </AppShell>
