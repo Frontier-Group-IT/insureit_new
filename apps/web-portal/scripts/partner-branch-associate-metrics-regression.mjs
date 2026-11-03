@@ -1,0 +1,31 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const read = (path) => readFileSync(resolve(root, path), "utf8");
+const metrics = read("lib/partner-account-business-metrics.ts");
+const branchLoader = read("app/intermediaries/applications/[id]/associate-accounts/partner-branch-sections.tsx");
+const associateLoader = read("app/intermediaries/applications/[id]/associate-accounts/page.tsx");
+const branchRegister = read("app/intermediaries/groups/branches/branch-register-workspace.tsx");
+
+assert.match(metrics, /partner_branches/, "Branch totals must use canonical Branch identity");
+assert.match(metrics, /legacy_branch_profile_id/, "Branch must resolve a verified legacy relationship");
+assert.match(metrics, /partner_branch_policy_links/, "Branch policies must use canonical ownership links");
+assert.match(metrics, /eq\("parent_partner_id", parentId\)/, "Partner boundary must be checked server-side");
+assert.match(metrics, /submitted_by_profile_id/, "Associate attribution requires an authenticated submitter relationship");
+assert.match(metrics, /final_policy_id/, "Associate premium derives from finalized intake policies only");
+assert.match(metrics, /policy_premium_details/, "Net premium must use the premium details source");
+assert.match(metrics, /net_premium/, "Must not confuse net premium with gross premium");
+assert.match(metrics, /new Set/, "Policy IDs and customers must be deduplicated");
+assert.match(metrics, /\.range\(offset, offset \+ PAGE_SIZE - 1\)/, "Intake and Branch links must paginate");
+assert.match(metrics, /customerCount: null, netPremium: null/, "Unverified totals must fail closed");
+assert.match(branchLoader, /loadBranchAccountBusinessMetrics\(partner\.id,\[\.\.\.branchIds\]\)/);
+assert.match(associateLoader, /loadAssociateAccountBusinessMetrics\(associates \?\? \[\]\)/);
+assert.match(associateLoader, /select\("id,auth_user_id,name/);
+assert.match(associateLoader, /<th className="px-3 py-3 text-right">Customer Count<\/th>[\s\S]*?<th className="px-3 py-3 text-right">Net Premium<\/th>[\s\S]*?<th className="px-3 py-3">Status<\/th>/);
+assert.match(branchRegister, /Customer Count<\/th>[\s\S]*?Net Premium<\/th>[\s\S]*?Status<\/th>/);
+assert.match(branchRegister, /applicationBranchView \? <><Info label="Customer Count"/);
+assert.match(branchRegister, /style: "currency", currency: "INR"/);
+console.log("Branch/Associate business metric attribution and register placement checks passed.");
