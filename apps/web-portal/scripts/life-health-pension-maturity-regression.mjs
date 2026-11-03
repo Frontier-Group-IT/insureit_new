@@ -17,7 +17,7 @@ for (const [businessLine, productName, expected] of [
   ["Life", "Life Term Cover", false], ["Health", "Pension Plan", false],
   ["Life", "Pensioner Health", false],
 ]) {
-  const actual = businessLine.trim().toLowerCase() === "life" && /\\bpension\\b/i.test(productName);
+  const actual = businessLine.trim().toLowerCase() === "life" && /\bpension\b/i.test(productName);
   assert.equal(actual, expected, `Pension classification failed for ${businessLine}/${productName}`);
 }
 assert.match(casePage, /pensionPlan\?"":expectedEnd/, "Pension case date must not be forcibly auto-filled.");
