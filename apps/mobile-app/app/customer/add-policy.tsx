@@ -207,7 +207,7 @@ export default function AddPolicyScreen() {
           </View>
           <Pressable accessibilityRole="button" onPress={() => void pickPolicyCopy()} style={styles.policyCopyButton}>
             <MaterialCommunityIcons name="file-upload-outline" size={18} color="#0A43A3" />
-            <View style={styles.flex}><Text style={styles.policyCopyTitle}>{policyCopy ? 'Policy copy selected' : 'Upload policy copy'}</Text><Text style={styles.policyCopyText} numberOfLines={1}>{policyCopy?.name ?? 'PDF or image, up to 5 MB'}</Text></View>
+            <View style={styles.flex}><Text style={styles.policyCopyTitle}>{policyCopy ? 'Policy copy selected' : 'Upload policy copy'}</Text><Text style={styles.policyCopyText} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>{policyCopy?.name ?? 'PDF or image, up to 5 MB'}</Text></View>
             <MaterialCommunityIcons name="upload-outline" size={18} color="#0A43A3" />
           </Pressable>
         </FormSection>
@@ -246,7 +246,7 @@ function LockedVehicle({ vehicle, status }: { vehicle: Vehicle | null; status: {
       <View style={styles.lockedIcon}><MaterialCommunityIcons name="truck-check-outline" size={18} color="#0A43A3" /></View>
       <View style={styles.flex}>
         <Text style={styles.lockedLabel}>Vehicle number</Text>
-        <Text style={styles.lockedTitle} numberOfLines={1}>{vehicle?.vehicle_no ?? 'Loading vehicle'}</Text>
+        <Text style={styles.lockedTitle} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>{vehicle?.vehicle_no ?? 'Loading vehicle'}</Text>
       </View>
       <View style={[styles.lockedStatusPill, { backgroundColor: tone.soft }]}><Text style={[styles.lockedStatusText, { color: tone.accent }]}>{status.label}</Text></View>
     </View>
@@ -293,11 +293,11 @@ function VehicleDropdown({ vehicles, protection, query, selectedVehicle, open, o
       <View ref={anchorRef} collapsable={false} style={[styles.vehicleSelectButton, open && styles.vehicleSelectButtonHidden]}>
         <Image accessible={false} source={vehicleNumberIcon} style={styles.selectVehicleArtwork} resizeMode="contain" />
         <View pointerEvents="none" style={styles.vehicleSelectCopy}>
-          <Text style={[styles.vehicleSelectValue, !selectedVehicle && styles.placeholder]} numberOfLines={1}>
+          <Text style={[styles.vehicleSelectValue, !selectedVehicle && styles.placeholder]} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>
             {selectedVehicle ? selectedVehicle.vehicle_no : 'Select vehicle'}
           </Text>
           {selectedVehicle ? (
-            <Text style={styles.vehicleSelectMeta} numberOfLines={1}>
+            <Text style={styles.vehicleSelectMeta} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>
               {[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ') || selectedVehicle.vehicle_type}
             </Text>
           ) : null}
@@ -373,10 +373,10 @@ function VehicleDropdown({ vehicles, protection, query, selectedVehicle, open, o
                     ]}
                   >
                     <View style={styles.vehicleOptionCopy}>
-                      <Text style={[styles.vehicleOptionText, active && styles.vehicleOptionTextActive, vehicleStatus.blocking && styles.disabledOptionText]} numberOfLines={1}>
+                      <Text style={[styles.vehicleOptionText, active && styles.vehicleOptionTextActive, vehicleStatus.blocking && styles.disabledOptionText]} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>
                         {vehicle.vehicle_no}
                       </Text>
-                      <Text style={styles.vehicleOptionMeta} numberOfLines={1}>
+                      <Text style={styles.vehicleOptionMeta} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>
                         {[vehicle.make, vehicle.model].filter(Boolean).join(' · ') || vehicle.vehicle_type}
                       </Text>
                     </View>
@@ -431,7 +431,7 @@ function PolicyTypeDropdown({ value, options, open, onToggle, onSelect }: { valu
       <Text style={styles.fieldLabel}>Policy type *</Text>
       <Pressable accessibilityRole="button" onPress={onToggle} style={styles.selectButton}>
         <View style={styles.selectIcon}><MaterialCommunityIcons name="shield-car" size={18} color="#0A43A3" /></View>
-        <Text style={[styles.selectValue, !value && styles.placeholder]} numberOfLines={1}>{value || 'Select product'}</Text>
+        <Text style={[styles.selectValue, !value && styles.placeholder]} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>{value || 'Select product'}</Text>
         <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={21} color={palette.navy} />
       </Pressable>
       {open ? <View style={styles.selectMenu}>{options.map((type) => {
