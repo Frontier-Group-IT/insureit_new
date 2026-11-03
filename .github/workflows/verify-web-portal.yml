@@ -39,6 +39,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Operations claim payment-stage authorized write regression
         run: node scripts/claim-payment-stage-authorized-write-regression.mjs
+      - name: Operations claim Customer motion parity regression
+        run: node scripts/operations-claim-customer-motion-parity-regression.mjs
       - name: Partner Business Report instant date filter regression
         run: node scripts/partner-business-period-filter-regression.mjs
       - name: Partner hierarchy Reports security regression
