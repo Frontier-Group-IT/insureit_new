@@ -19,6 +19,8 @@ export type PartnerRegisterRow = {
   partnerId: string;
   groupId: string | null;
   groupName: string | null;
+  associateCount: number | null;
+  branchCount: number | null;
   accountType: string;
   assignedRm: string;
   onboardingDate: string;
@@ -218,15 +220,16 @@ function FilterButton({ label, count, active, onClick }: { label: string; count:
 function PartnerTable({ rows }: { rows: PartnerRegisterRow[] }) {
   const money = (value: number | null) => value === null ? "—" : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
   return <div className="overflow-x-auto">
-    <table className="w-full min-w-[1040px] table-fixed text-left text-[10.5px]">
+    <table className="w-full min-w-[1180px] table-fixed text-left text-[10.5px]">
       <thead className="border-b text-[8.5px] uppercase text-[#64748B]"><tr>
-        <th className="w-[20%] px-4 py-3">Partner Name</th>
-        <th className="w-[13%] px-3 py-3">Mobile Number</th>
-        <th className="w-[15%] px-3 py-3">Assigned RM</th>
-        <th className="w-[12%] px-3 py-3">Status</th>
-        <th className="w-[9%] px-3 py-3 text-right">Customers</th>
-        <th className="w-[11%] px-3 py-3 text-right">Net Premium</th>
-        <th className="w-[10%] px-3 py-3 text-right">Payout</th>
+        <th className="w-[18%] px-4 py-3">Partner Name</th>
+        <th className="w-[12%] px-3 py-3">Mobile Number</th>
+        <th className="w-[13%] px-3 py-3">Assigned RM</th>
+        <th className="w-[11%] px-3 py-3">Status</th>
+        <th className="w-[9%] px-3 py-3 text-center">Asso./Branch</th>
+        <th className="w-[8%] px-3 py-3 text-right">Customers</th>
+        <th className="w-[10%] px-3 py-3 text-right">Net Premium</th>
+        <th className="w-[9%] px-3 py-3 text-right">Payout</th>
         <th className="w-[10%] px-3 py-3 text-center">Action</th>
       </tr></thead>
       <tbody className="divide-y">{rows.map((row) => {
@@ -236,6 +239,7 @@ function PartnerTable({ rows }: { rows: PartnerRegisterRow[] }) {
           <td className="truncate px-3 py-3 font-medium text-[#17203A]" title={row.mobile}>{row.mobile}</td>
           <td className={`truncate px-3 py-3 ${row.assignedRm === "Not assigned" ? "font-medium text-amber-700" : "text-[#17203A]"}`} title={row.assignedRm}>{row.assignedRm}</td>
           <td className="px-3 py-3"><Status value={label} tone="account" /></td>
+          <td className="px-3 py-3 text-center font-semibold tabular-nums text-[#17365D]" title="Associate accounts / registered branches">{row.associateCount === null ? "—" : row.associateCount.toLocaleString("en-IN")}/{row.branchCount === null ? "—" : row.branchCount.toLocaleString("en-IN")}</td>
           <td className="px-3 py-3 text-right tabular-nums" title={row.customerCount === null ? "Customer attribution unavailable" : undefined}>{row.customerCount === null ? "—" : row.customerCount.toLocaleString("en-IN")}</td>
           <td className="px-3 py-3 text-right tabular-nums" title={row.netPremium === null ? "Net premium attribution unavailable" : undefined}>{money(row.netPremium)}</td>
           <td className="px-3 py-3 text-right tabular-nums" title={row.payout === null ? "Payout attribution unavailable" : undefined}>{money(row.payout)}</td>
