@@ -15,12 +15,15 @@ async function uploadSigned(signedUrl:string,file:File){const body=new FormData(
 
 export function PolicyIntakeForm({sources}:{sources:PolicyIntakeSource[]}){
   const router=useRouter();const formRef=useRef<HTMLFormElement>(null);const fileRef=useRef<HTMLInputElement>(null);
+  const submittingRef=useRef(false);
   const[fileName,setFileName]=useState("");const[policyType,setPolicyType]=useState<PolicyType>("motor");const[error,setError]=useState<string|null>(null);const[pending,startTransition]=useTransition();
   const proposalForm=policyType==="life"||policyType==="health";
   function submit(formData:FormData){
+    if(submittingRef.current)return;
     setError(null);const leadSourceId=String(formData.get("lead_source_id")??"");const selectedPolicyType=String(formData.get("policy_type")??"") as PolicyType;const customerMobile=String(formData.get("customer_mobile")??"");const file=fileRef.current?.files?.[0];
     const isProposal=selectedPolicyType==="life"||selectedPolicyType==="health";const documentName=isProposal?"proposal form":"policy copy";
     if(!file&&!isProposal){setError(`Upload the ${documentName} PDF or image.`);return;}if(file&&!ALLOWED_TYPES.has(file.type)){setError(`Upload a PDF, JPG, PNG or WebP ${documentName}.`);return;}if(file&&file.size>MAX_FILE_SIZE){setError(`${isProposal?"Proposal form":"Policy copy"} must be 15 MB or smaller.`);return;}
+    submittingRef.current=true;
     startTransition(async()=>{try{
       if(!file&&isProposal){const result=await submitLifeHealthIntakeWithoutProposal({leadSourceId,policyType:selectedPolicyType,customerMobile});if(!result.ok){setError(result.error);return;}formRef.current?.reset();setFileName("");setPolicyType("motor");router.push(`/policy-intakes/${result.id}?submitted=1`);router.refresh();return;}
       if(!file)return;
