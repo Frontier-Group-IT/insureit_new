@@ -142,6 +142,15 @@ assert.match(customerClaimDetail, /index === currentStageIndex/);
 
 const headerCss = await readFile(new URL("../components/spot-survey/claim-journey-header.module.css", import.meta.url), "utf8");
 const motionCss = await readFile(new URL("../components/spot-survey/claim-document-motion.module.css", import.meta.url), "utf8");
+const customerDocument = await readFile(new URL("../components/customer-portal/customer-claim-compact-document.tsx", import.meta.url), "utf8");
+assert.match(customerDocument, /bg-\[#F21E38\] text-white/, "Customer video icon reference must retain its red background");
+assert.match(bulkVerificationGroup, /category === "video"/, "Operations video icon must match Customer portal special case");
+assert.match(bulkVerificationGroup, /<Video className="h-4 w-4 fill-current"/, "Operations must reuse Customer video glyph and sizing");
+assert.match(bulkVerificationGroup, /bg-\[#F21E38\] text-white/, "Operations must reuse Customer video badge color");
+assert.match(motionCss, /\(hover:hover\) and \(pointer:fine\)/, "Document effects must match customer hover-capable device behavior");
+assert.match(motionCss, /\.card:hover \{[\s\S]*?translateY\(-2px\)/, "Document hover lift must match customer motion");
+assert.match(motionCss, /\.card:hover \.videoIcon/, "Video icon needs matching microinteraction");
+
 assert.match(workspace, /Operations claim journey/, "Operations claim header title must match requested label");
 assert.match(workspace, /min-h-\[48px\]/, "Operations claim header and summary should remain compact");
 assert.match(headerCss, /\.header\s*\{[^}]*border: 0;/s, "Operations claim header must have no outer border");
