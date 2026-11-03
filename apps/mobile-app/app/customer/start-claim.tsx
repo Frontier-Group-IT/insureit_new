@@ -325,6 +325,7 @@ export default function StartClaimScreen() {
       </View>
 
       <ClaimActionBar
+        customerIosText
         primaryDisabled={!selectedVehicle || checkingActiveClaim}
         primaryLabel={checkingActiveClaim ? 'Checking...' : 'Start Claim'}
         primaryIcon="arrow-right"
@@ -333,6 +334,7 @@ export default function StartClaimScreen() {
       />
 
       <ActiveClaimPopup
+        customerIosText
         visible={Boolean(existingActiveClaimId)}
         onViewClaim={viewExistingClaim}
         onCancel={() => setExistingActiveClaimId('')}
