@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isPensionLifePolicy } from "@/lib/life-health-pension-maturity";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -128,6 +129,7 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
   const sourceId = clean(formData.get("sourceId"));
   const insurerId = clean(formData.get("insurerId"));
   const productName = clean(formData.get("productName"));
+  const pensionPlan = isPensionLifePolicy(businessLine, productName);
   const proposalNumber = clean(formData.get("proposalNumber")).toUpperCase();
   const ppt = clean(formData.get("ppt"));
   const pd = clean(formData.get("pd"));
@@ -156,8 +158,8 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
   if (!policyId || !caseId) return { ok: false, error: "Policy edit reference is missing." };
   if (businessLine !== "Life" && businessLine !== "Health") return { ok: false, error: "Only Life and Health policies can use this editor." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(sourcingDate)) return { ok: false, error: "Enter a valid policy issuance date." };
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) return { ok: false, error: "Enter valid policy start and end dates." };
-  if (endDate < startDate) return { ok: false, error: "Policy end date cannot be before the start date." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || (!pensionPlan && !endDate) || (endDate && !/^\d{4}-\d{2}-\d{2}$/.test(endDate))) return { ok: false, error: "Enter valid policy start and end dates." };
+  if (endDate && endDate < startDate) return { ok: false, error: "Policy end date cannot be before the start date." };
   if (!sourceId || !insurerId || !productName || !proposalNumber || !paymentFrequency || !paymentMode || premiumAmount === null || finalPremium === null) return { ok: false, error: "Complete all required policy onboarding fields." };
   if (sumInsuredRaw && sumInsured === null) return { ok: false, error: "Enter a valid sum assured / insured amount." };
   if (commercialAccess) {
@@ -219,7 +221,7 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
     business_line: businessLine,
     issuance_date: sourcingDate,
     start_date: startDate,
-    end_date: endDate,
+    end_date: endDate || null,
     policy_term: pd || null,
     premium_amount: finalPremium,
     insured_declared_value: sumInsured,
