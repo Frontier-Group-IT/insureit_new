@@ -1,6 +1,6 @@
-import { Platform, useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppDatePicker } from '@/components/design-system';
 import { ExternalClaimErrorPopup } from '@/components/external-claim-error-popup';
