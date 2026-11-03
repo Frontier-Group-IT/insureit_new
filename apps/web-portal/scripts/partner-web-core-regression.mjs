@@ -144,8 +144,14 @@ assert(sharedClaimHeader.includes('label="Make & Model"') && sharedClaimHeader.i
 assert(sharedClaimHeader.includes('label="Insurer"') && sharedClaimHeader.includes('logo={<InsurerLogo name={insurer} />}'), "Claim Detail Insurer must show insurer logo");
 assert(!sharedClaimHeader.includes("const vehicleBrandLogos:"), "Shared Claim Detail header must not keep a duplicate vehicle brand logo map");
 assert(!sharedClaimHeader.includes("const insurerBrandLogos:"), "Shared Claim Detail header must not keep a duplicate insurer logo map");
-assert(sharedClaimHeader.includes('bg-white shadow-[0_8px_22px_rgba(15,23,42,0.06)]'), "Shared Claim Detail summary must use the light background treatment");
-assert(!sharedClaimHeader.includes('bg-[#071D49]'), "Shared Claim Detail summary must not use the old navy background");
+assert(sharedClaimHeader.includes('Claim Journey'), "Shared Claim Detail must show the Claim Journey reference title");
+assert(sharedClaimHeader.includes('claim-journey-header.module.css'), "Shared Claim Detail must use the scoped navy gradient header");
+assert(sharedClaimHeader.includes('href="/claims"'), "Claim Journey header must retain Back navigation");
+assert(sharedClaimHeader.includes('label="Vehicle No."') && sharedClaimHeader.includes('logo={<ManufacturerLogo name={make} />}'), "Claim Journey must keep vehicle logos");
+assert(sharedClaimHeader.includes('PolicyMeta label="Policy source"'), "Claim Journey must retain the policy metadata strip");
+const claimHeaderStyles = read("components/spot-survey/claim-journey-header.module.css");
+assert(claimHeaderStyles.includes("linear-gradient(112deg, #052658"), "Claim Journey header must use the navy-blue gradient treatment");
+assert(claimHeaderStyles.includes("prefers-reduced-motion"), "Claim Journey effects must respect reduced motion preferences");
 
 const partnerClaimDetailPage = read("app/partner/claims/[id]/page.tsx");
 const operationsClaimDetailPage = read("app/claims/[id]/page.tsx");

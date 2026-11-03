@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { FileText } from "lucide-react";
+import headerStyles from "./claim-journey-header.module.css";
 import { BulkDocumentVerificationGroup, type BulkDocumentGroupItem } from "./bulk-document-verification-group";
 import { ReusePolicyCopyButton } from "./reuse-policy-copy-button";
 import { SurveyDoneButton } from "./survey-done-button";
@@ -158,19 +160,66 @@ function InfoStrip({ claim }: { claim: SpotSurveyClaim }) {
   const makeModel = [make, model].filter((value) => value && value !== "-").join(" - ") || "-";
   const insurerDisplay = insurerRef && insurerRef !== "-" ? `${insurer} - ${insurerRef}` : insurer;
   const spotAt = claim.spotIntimationAt ?? claim.created_at;
-  return <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_8px_22px_rgba(15,23,42,0.06)]"><div className="grid md:grid-cols-3 xl:grid-cols-5"><Info label="Customer" title={customerName} subtitle={claim.customers?.phone ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.customer} alt="Customer" />} /><Info label="Vehicle No." title={claim.vehicles?.vehicle_no ?? "-"} logo={<ManufacturerLogo name={make} />} /><Info label="Make & Model" title={makeModel} logo={<ManufacturerLogo name={make} />} /><Info label="Insurer" title={insurerDisplay} logo={<InsurerLogo name={insurer} />} /><Info label="Loss Date" title={formatDateShort(claim.accident_at)} logo={<HeaderIcon src={claimHeaderIcons.lossDate} alt="Loss date" />} last /></div><div className="grid border-t border-[#E5ECF5] md:grid-cols-3 xl:grid-cols-5"><Info label="Policy No." title={claim.policies?.policy_no ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.policy} alt="Policy" />} /><Info label="Control No." title={claim.claim_no} logo={<HeaderIcon src={claimHeaderIcons.control} alt="Control number" />} /><Info label="Claim No." title={claim.insurer_claim_no ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.claim} alt="Claim number" />} /><Info label="Claim Status" title={claim.current_status ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.status} alt="Claim status" />} /><Info label="Spot Intimation Date & Time" title={`${formatIntimationDate(spotAt)} • ${formatIntimationTime(spotAt)}`} logo={<HeaderIcon src={claimHeaderIcons.intimation} alt="Spot intimation" />} last /></div><div className="grid gap-x-4 gap-y-1 border-t border-[#E5ECF5] px-3 py-1 text-[9px] sm:grid-cols-2 lg:grid-cols-4"><PolicyMeta label="Policy source" value={claim.policySource === "external" ? "External policy" : "Sankalp policy"} /><PolicyMeta label="Cover dates" value={`${formatDateShort(claim.policies?.start_date)} - ${formatDateShort(claim.policies?.end_date)}`} /><PolicyMeta label="Premium / IDV" value={`${formatAmount(claim.policies?.premium_amount)} / ${formatAmount(claim.policies?.insured_declared_value)}`} />{claim.policyCopy?.signedUrl ? <Link href={claim.policyCopy.signedUrl} target="_blank" className="min-w-0 truncate font-semibold text-[#315B9A]">Policy copy: {claim.policyCopy.fileName}</Link> : <PolicyMeta label="Policy copy" value="Not available" />}</div></section>;
+
+  return (
+    <section aria-label="Claim Journey summary" className={`${headerStyles.header} overflow-hidden rounded-[20px] text-white`}>
+      <div aria-hidden="true" className={headerStyles.sheen} />
+      <div className="relative flex min-h-[68px] items-center justify-between gap-3 border-b border-white/15 px-4 py-3 sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/15 shadow-inner sm:h-12 sm:w-12">
+            <FileText aria-hidden="true" className="h-6 w-6 text-white" />
+          </span>
+          <h1 className="text-[20px] font-bold leading-tight tracking-[-0.025em] text-white sm:text-[23px]">Claim Journey</h1>
+        </div>
+        <Link prefetch={false} href="/claims" className="inline-flex h-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-[#2086BF]/75 px-5 text-[12px] font-bold text-white transition duration-200 hover:bg-[#2A99D1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:px-6">Back</Link>
+      </div>
+      <div className={`${headerStyles.fields} relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5`}>
+        <Info label="Customer" title={customerName} subtitle={claim.customers?.phone ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.customer} alt="Customer" />} />
+        <Info label="Vehicle No." title={claim.vehicles?.vehicle_no ?? "-"} logo={<ManufacturerLogo name={make} />} />
+        <Info label="Make & Model" title={makeModel} logo={<ManufacturerLogo name={make} />} />
+        <Info label="Insurer" title={insurerDisplay} logo={<InsurerLogo name={insurer} />} />
+        <Info label="Loss Date" title={formatDateShort(claim.accident_at)} logo={<HeaderIcon src={claimHeaderIcons.lossDate} alt="Loss date" />} />
+      </div>
+      <div className={`${headerStyles.fields} relative grid grid-cols-1 border-t border-white/15 sm:grid-cols-2 lg:grid-cols-5`}>
+        <Info label="Policy No." title={claim.policies?.policy_no ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.policy} alt="Policy" />} />
+        <Info label="Control No." title={claim.claim_no} logo={<HeaderIcon src={claimHeaderIcons.control} alt="Control number" />} />
+        <Info label="Claim No." title={claim.insurer_claim_no ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.claim} alt="Claim number" />} />
+        <Info label="Claim Status" title={claim.current_status ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.status} alt="Claim status" />} />
+        <Info label="Spot Intimation Date & Time" title={`${formatIntimationDate(spotAt)} • ${formatIntimationTime(spotAt)}`} logo={<HeaderIcon src={claimHeaderIcons.intimation} alt="Spot intimation" />} />
+      </div>
+      <div className="relative grid gap-x-4 gap-y-2 border-t border-white/20 bg-[#052755]/55 px-4 py-2.5 text-[10px] sm:grid-cols-2 sm:px-5 lg:grid-cols-4">
+        <PolicyMeta label="Policy source" value={claim.policySource === "external" ? "External policy" : "Sankalp policy"} />
+        <PolicyMeta label="Cover dates" value={`${formatDateShort(claim.policies?.start_date)} - ${formatDateShort(claim.policies?.end_date)}`} />
+        <PolicyMeta label="Premium / IDV" value={`${formatAmount(claim.policies?.premium_amount)} / ${formatAmount(claim.policies?.insured_declared_value)}`} />
+        {claim.policyCopy?.signedUrl
+          ? <Link href={claim.policyCopy.signedUrl} target="_blank" rel="noopener noreferrer" title={claim.policyCopy.fileName} className="min-w-0 truncate font-medium text-white/95 underline-offset-2 hover:underline"><span className="mr-1 text-white/70">Policy copy:</span>{claim.policyCopy.fileName}</Link>
+          : <PolicyMeta label="Policy copy" value="Not available" />}
+      </div>
+    </section>
+  );
 }
 
 function PolicyMeta({ label, value }: { label: string; value: string }) {
-  return <div className="min-w-0"><span className="mr-1 uppercase tracking-[0.08em] text-[#71819A]">{label}:</span><span className="font-semibold text-[#17365D]">{value}</span></div>;
+  return <div className="min-w-0 truncate" title={`${label}: ${value}`}><span className="mr-1 uppercase tracking-[0.035em] text-white/70">{label}:</span><span className="font-semibold text-white/95">{value}</span></div>;
 }
 
 function formatAmount(value: number | null | undefined) {
   return typeof value === "number" ? value.toLocaleString("en-IN") : "Not available";
 }
 
-function Info({ icon, label, title, subtitle, logo, last = false }: { icon?: string; label: string; title: string; subtitle?: string | null; logo?: ReactNode; last?: boolean }) {
-  return <div className={`flex min-h-[58px] items-start gap-2 px-3 py-2 ${last ? "" : "border-b border-[#E5ECF5] md:border-b-0 md:border-r"}`}><div className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center text-[18px]">{logo ?? icon}</div><div className="min-w-0 flex-1"><p className="text-[9px] font-medium uppercase tracking-[0.04em] leading-3.5 text-[#71819A]">{label}</p><p className="mt-0.5 whitespace-normal break-words text-[13px] font-semibold leading-4 text-[#17365D]">{title}</p>{subtitle ? <p className="whitespace-normal break-words text-[11px] leading-3.5 text-[#64748B]">{subtitle}</p> : null}</div></div>;
+function Info({ icon, label, title, subtitle, logo }: { icon?: string; label: string; title: string; subtitle?: string | null; logo?: ReactNode }) {
+  return (
+    <div className={`flex min-h-[67px] min-w-0 items-center gap-2.5 px-3 py-2.5 ${headerStyles.field}`}>
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/15 shadow-[inset_0_1px_0_rgba(255,255,255,.12)]">
+        {logo ?? icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[9px] font-semibold uppercase leading-[1.25] tracking-[0.045em] text-white/75">{label}</span>
+        <span className="mt-0.5 block break-words text-[12px] font-bold leading-4 text-white">{title}</span>
+        {subtitle ? <span className="block break-words text-[10px] font-medium leading-4 text-white/80">{subtitle}</span> : null}
+      </span>
+    </div>
+  );
 }
 
 function SpotSurveyDetailsPanel({ driverName, driverMobile, lossLocation }: { driverName: string | null; driverMobile: string | null; lossLocation: string | null }) {

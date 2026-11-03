@@ -389,7 +389,12 @@ function QuickAction({ icon, image, label, badge, animateBadge, tone, color, onP
       <View style={[styles.quickIcon, { backgroundColor: tone }]}>
         {image ? <Image source={image} style={styles.quickIconArtwork} resizeMode="contain" /> : <MaterialCommunityIcons name={icon} size={22} color={color} />}
       </View>
-      <Text style={styles.quickLabel} numberOfLines={2}>{label}</Text>
+      <Text
+        style={styles.quickLabel}
+        numberOfLines={Platform.OS === 'ios' ? 1 : 2}
+        adjustsFontSizeToFit={Platform.OS === 'ios'}
+        minimumFontScale={0.65}
+      >{label}</Text>
     </Pressable>
   );
 }
