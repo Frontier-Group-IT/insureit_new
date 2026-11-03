@@ -22,6 +22,16 @@ assert(duplicateGuard.includes("firstIntakeByPolicyNumber"),"Duplicate detector 
 assert(duplicateGuard.includes('candidate.status === "completed"'),"Completed historical intakes must not be reclassified as duplicates");
 
 const actions=read("app/policy-intakes/actions.ts");
+
+assert(actions.includes("existingOriginalIntakeResult"),"Original intake completions must be idempotent");
+const originalCompletion = actions.slice(actions.indexOf("export async function completePolicyIntakeUpload("),actions.indexOf("async function processStoredOcr("));
+assert(!originalCompletion.includes(".remove("),"Original completion must never delete an uploaded file on database conflicts");
+assert(!originalCompletion.includes('.delete().eq("id",input.id)'),"Original completion must never delete an intake on a concurrent document conflict");
+assert(originalCompletion.includes("if(retry)return retry"),"Duplicate database inserts must resolve against the already-saved intake");
+assert(originalCompletion.includes("submitted_by_profile_id:profile.id"),"Original completion must maintain submitter ownership");
+assert(read("components/policy-intake-form.tsx").includes("if(submittingRef.current)return"),"Client must suppress concurrent duplicate submissions");
+assert(read("components/policy-intake-onboarding-context.tsx").includes('role="alertdialog"'),"Document open failures must appear in a dismissible dialog");
+
 assert(actions.includes('canAccessIntermediary(profile.id,profile.role,leadSourceId,"create_policy_intakes")'),"Submission must re-check lead-source scope server-side using Policy Intake creation scope");
 assert(actions.includes('profile.role === "claims_head" || await canAccessIntermediary'),"Claims Head may submit with any active lead source while other roles retain scope checks");
 assert(read("lib/policy-intake-server.ts").includes('profile.role === "claims_head"'),"Claims Head source list must include all active sources");
