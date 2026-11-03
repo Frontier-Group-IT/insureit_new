@@ -572,7 +572,7 @@ function PolicyMobileCard({ policy }: { policy: PolicyRow & { status: string; da
   );
 }
 
-function PolicyStatus({ policy }: { policy: PolicyRow & { status?: string; daysLeft?: number } }) {
+function PolicyStatus({ policy }: { policy: PolicyRow & { status?: string; daysLeft?: number | null } }) {
   const status = policy.status ?? policyStatus(policy.end_date);
   if (status === "No fixed maturity") return <RegisterStatusPill tone="slate">No fixed maturity</RegisterStatusPill>;
   if (status === "Expired") return <RegisterStatusPill tone="red">Expired</RegisterStatusPill>;
@@ -691,7 +691,7 @@ function firstText(...values: unknown[]) {
   return "—";
 }
 
-function validityHint(policy: PolicyRow & { daysLeft?: number }) {
+function validityHint(policy: PolicyRow & { daysLeft?: number | null }) {
   if (!policy.end_date) return "No fixed maturity date";
   const days = policy.daysLeft ?? daysUntil(policy.end_date);
   if (days === null) return "Maturity date unavailable";
