@@ -13,7 +13,7 @@ type PolicyDetail = {
   policy_type: string;
   business_line: string | null;
   start_date: string;
-  end_date: string;
+  end_date: string | null;
   od_valid_from: string | null;
   od_valid_upto: string | null;
   tp_valid_from: string | null;
