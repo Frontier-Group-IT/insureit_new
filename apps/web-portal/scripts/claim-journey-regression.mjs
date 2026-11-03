@@ -140,3 +140,14 @@ assert.match(surveyDoneMigration, /for update/);
 assert.match(surveyDoneMigration, /if not found then\s+raise exception 'The claim status could not be updated\.'/);
 
 console.log(`Claim journey regression passed for ${INTERNAL_CLAIM_STATUSES.length} internal statuses.`);
+
+const stageSync = await readFile(path.join(repoRoot, "supabase/migrations/20261103170000_sync_internal_spot_status_to_customer_milestones.sql"), "utf8");
+assert.match(stageSync, /after insert on public\.claim_stage_details/i, "Operations Stage 2 inserts must synchronize automatically");
+assert.match(stageSync, /on conflict \(claim_id, milestone_key\) do update/i, "Stage 2 synchronization must be idempotent");
+assert.match(stageSync, /c\.claim_service_mode = 'broker_managed'/i, "Only internal broker-managed claims may synchronize");
+assert.match(stageSync, /c\.external_policy_id is null/i, "External claims must remain untouched");
+assert.match(stageSync, /revoke all on function private\.sync_internal_spot_status_customer_milestone/i, "Privileged trigger function must not be callable by ordinary users");
+assert.match(stageSync, /spot_survey_done_date.*surveyor_name.*surveyor_email.*surveyor_phone/s, "All four customer-visible surveyor fields must be synchronized");
+assert.doesNotMatch(stageSync, /'internal_notes'|'notes'|'private_operational_flag'/, "Internal Operations-only fields must not be projected");
+const customerStageLoader = await readFile(path.join(repoRoot, "apps/web-portal/lib/customer-web-phase2-data.ts"), "utf8");
+assert.doesNotMatch(customerStageLoader, /createSupabaseAdminClient/, "Customer claim pages must continue using customer-scoped RLS");
