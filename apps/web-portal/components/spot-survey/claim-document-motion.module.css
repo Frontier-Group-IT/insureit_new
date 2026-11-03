@@ -1,20 +1,36 @@
-/* Subtle interaction feedback for Operations claim document verification. */
+/* Same compact document microinteractions as the Customer Claim Portal.
+   Keep all effects decorative: no changes to verification or uploads. */
 .card {
   position: relative;
+  isolation: isolate;
   animation: documentEnter .32s ease-out both;
-  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, background-color .2s ease;
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease, background-color 200ms ease;
 }
-.card:hover, .card:focus-within {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 22px rgba(21, 83, 161, .12);
+.card:focus-within {
+  box-shadow: 0 7px 16px rgba(55,75,149,.10);
   border-color: #93BCEB;
 }
-.verified {
-  background: linear-gradient(120deg, #FFFFFF 75%, #F0FDF4 100%);
-}
-.verified:hover, .verified:focus-within {
+.card:focus-visible { outline: 2px solid #2563EB; outline-offset: 2px; }
+.videoIcon { transition: transform 200ms ease, box-shadow 200ms ease; }
+.verified { background: linear-gradient(120deg, #FFFFFF 75%, #F0FDF4 100%); }
+.verified:focus-within {
   border-color: #86D7AC;
-  box-shadow: 0 8px 22px rgba(11, 144, 94, .12);
+  box-shadow: 0 7px 16px rgba(11,144,94,.12);
+}
+@media (hover:hover) and (pointer:fine) {
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 7px 16px rgba(55,75,149,.10);
+    border-color: #93BCEB;
+  }
+  .verified:hover {
+    border-color: #86D7AC;
+    box-shadow: 0 7px 16px rgba(11,144,94,.12);
+  }
+  .card:hover .videoIcon {
+    transform: scale(1.07);
+    box-shadow: 0 0 0 3px rgba(242,30,56,.10);
+  }
 }
 @keyframes documentEnter {
   from { opacity: .72; transform: translateY(5px); }
@@ -23,4 +39,6 @@
 @media (prefers-reduced-motion: reduce) {
   .card { animation: none; transition: none; }
   .card:hover, .card:focus-within { transform: none; }
+  .videoIcon { transition: none; }
+  .card:hover .videoIcon { transform: none; }
 }
