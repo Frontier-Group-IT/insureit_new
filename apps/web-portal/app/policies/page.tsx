@@ -23,7 +23,7 @@ type PolicyRow = {
   issuance_date: string | null;
   created_at: string;
   start_date: string;
-  end_date: string;
+  end_date: string | null;
   insured_declared_value: number | null;
   intermediary_type: string | null;
   intermediary_code: string | null;
@@ -43,7 +43,7 @@ type BackofficePolicyRow = {
   policy_no: string;
   policy_type: string;
   start_date: string;
-  end_date: string;
+  end_date: string | null;
   insured_declared_value: number | null;
   premium_amount: number | null;
   customers: PolicyRow["customers"];
