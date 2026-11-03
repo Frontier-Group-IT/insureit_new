@@ -24,7 +24,6 @@ type VehicleValues = { rto_name: string | null; rto_state: string | null; regist
   model: string | null;
   chassis_no: string | null;
   engine_no: string | null;
-  permit_no: string | null;
   year: number | null;
   engine_capacity_cc: number | null;
   seating_capacity: number | null;
@@ -69,7 +68,7 @@ export default async function EditVehiclePage({ params, searchParams }: { params
   const admin = createSupabaseAdminClient();
   let vehicleRequest = admin
     .from("vehicles")
-    .select("id, customer_id, vehicle_no, registration_status, vehicle_type, make, model, chassis_no, engine_no, permit_no, year, engine_capacity_cc, seating_capacity, gvw_kg, fuel_type, registration_date, fitness_expiry_date, puc_expiry_date, road_tax_expiry_date, national_permit_expiry_date, local_permit_expiry_date, rto_name, rto_state, registered_owner_name, registered_address, vehicle_category, body_type, manufacture_date, color, emission_norm, unladen_weight_kg, wheel_base_mm, standing_capacity, sleeper_capacity, permit_type, permit_no, blacklist_status, rc_insurance_company, rc_policy_number, rc_policy_start_date, rc_policy_expiry_date, rc_details_json, created_at, updated_at")
+    .select("id, customer_id, vehicle_no, registration_status, vehicle_type, make, model, chassis_no, engine_no, year, engine_capacity_cc, seating_capacity, gvw_kg, fuel_type, registration_date, fitness_expiry_date, puc_expiry_date, road_tax_expiry_date, national_permit_expiry_date, local_permit_expiry_date, rto_name, rto_state, registered_owner_name, registered_address, vehicle_category, body_type, manufacture_date, color, emission_norm, unladen_weight_kg, wheel_base_mm, standing_capacity, sleeper_capacity, permit_type, permit_no, blacklist_status, rc_insurance_company, rc_policy_number, rc_policy_start_date, rc_policy_expiry_date, rc_details_json, created_at, updated_at")
     .eq("id", id);
   if (accessibleCustomerIds !== null) vehicleRequest = vehicleRequest.in("customer_id", accessibleCustomerIds);
   const vehicleResult = await vehicleRequest.maybeSingle<VehicleRow>();
