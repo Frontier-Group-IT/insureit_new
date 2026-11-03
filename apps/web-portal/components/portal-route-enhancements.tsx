@@ -29,7 +29,11 @@ export function PortalRouteEnhancements() {
   const legacyImportRoute =
     LEGACY_IMPORT_ENABLED
     && /^\/intermediaries\/applications\/[^/]+\/?$/.test(pathname);
-  const hasPopupMessage = searchParams.has("success") || searchParams.has("error");
+  // Associate Accounts handles errors with its own actionable acknowledgement dialog.
+  // Avoid stacking the generic raw error popup over that dialog.
+  const hasPageSpecificAssociateError = /^\/intermediaries\/applications\/[^/]+\/associate-accounts\/?$/.test(pathname)
+    && (searchParams.has("error") || searchParams.has("associate_error"));
+  const hasPopupMessage = (searchParams.has("success") || searchParams.has("error")) && !hasPageSpecificAssociateError;
 
   return (
     <>
