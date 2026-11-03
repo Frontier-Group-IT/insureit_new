@@ -152,7 +152,7 @@ export async function finalizePolicyCopyUpload(
     const { data: storageFile, error: infoError } = await admin.storage
       .from(POLICY_DOCUMENT_BUCKET).info(path);
     if (infoError || !storageFile) return { ok: false, error: "The uploaded file was not found. Retry the upload." };
-    if (storageFile.size !== file.size || storageFile.mimeType !== file.type || storageFile.size > MAX_POLICY_COPY_BYTES) {
+    if (storageFile.size !== file.size || storageFile.contentType !== file.type || storageFile.size > MAX_POLICY_COPY_BYTES) {
       return { ok: false, error: "The uploaded file does not match the selected policy copy. Retry the upload." };
     }
 
@@ -163,7 +163,7 @@ export async function finalizePolicyCopyUpload(
         file_name: file.name,
         storage_bucket: POLICY_DOCUMENT_BUCKET,
         storage_path: path,
-        mime_type: storageFile.mimeType,
+        mime_type: storageFile.contentType,
         file_size: storageFile.size,
         uploaded_by: profile.id,
       })
