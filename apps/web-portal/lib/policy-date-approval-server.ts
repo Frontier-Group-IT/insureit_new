@@ -1,5 +1,5 @@
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { policyDateDecision } from "@/lib/policy-date-rule";
+import { indiaDate, policyDateDecision } from "@/lib/policy-date-rule";
 
 type Admin = ReturnType<typeof createSupabaseAdminClient>;
 type Request = {
@@ -20,7 +20,7 @@ export async function consumePolicyDateApproval(admin: Admin, input: Request): P
   }
   const changed = input.originalIssuanceDate !== input.issuanceDate;
   const previousMonth = changed && decision === "otp_required" || (
-    changed && input.issuanceDate.slice(0, 7) < new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Kolkata" }).slice(0, 7)
+    changed && input.issuanceDate.slice(0, 7) < indiaDate().slice(0, 7)
   );
   if (!changed || decision === "allowed") return { ok: true, approverName: null, previousMonth };
   if (!input.approvalId || !/^[0-9a-f-]{36}$/i.test(input.approvalId)) {
