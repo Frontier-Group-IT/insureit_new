@@ -85,8 +85,8 @@ const claimHeaderIcons = {
   intimation: "/assets/Custom-Icons/optimized-128/claim-intimation.png"
 } as const;
 
-export function SpotClaimHeader({ claim }: { claim: SpotSurveyClaim }) {
-  return <InfoStrip claim={claim} />;
+export function SpotClaimHeader({ claim, heading = "Operations claim journey" }: { claim: SpotSurveyClaim; heading?: string }) {
+  return <InfoStrip claim={claim} heading={heading} />;
 }
 
 export function SpotSurveyWorkspace({ claim, documents, verifications = [], surveyorDetails = null, showContext = true, showSpotDetails = true, canReusePolicyCopy = false }: { claim: SpotSurveyClaim; documents: SpotSurveyDocument[]; verifications?: SpotSurveyVerification[]; surveyorDetails?: SurveyorDetails | null; showContext?: boolean; showSpotDetails?: boolean; canReusePolicyCopy?: boolean }) {
@@ -151,7 +151,7 @@ function SurveyorColumn({ label, value, href, last = false }: { label: string; v
   return href ? <a href={href} className={`${className} transition hover:bg-[#F7FAFF]`}>{content}</a> : <div className={className}>{content}</div>;
 }
 
-function InfoStrip({ claim }: { claim: SpotSurveyClaim }) {
+function InfoStrip({ claim, heading = "Operations claim journey" }: { claim: SpotSurveyClaim; heading?: string }) {
   const customerName = claim.customers?.company_name || claim.customers?.contact_name || "-";
   const insurer = claim.insurance_companies?.name || "-";
   const insurerRef = claim.insurer_claim_no || claim.policies?.policy_no || claim.claim_no;
@@ -169,7 +169,7 @@ function InfoStrip({ claim }: { claim: SpotSurveyClaim }) {
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/15 shadow-inner">
             <FileText aria-hidden="true" className="h-4 w-4 text-white" />
           </span>
-          <h1 className="text-[16px] font-bold leading-tight tracking-[-0.025em] text-white sm:text-[18px]">Operations claim journey</h1>
+          <h1 className="text-[16px] font-bold leading-tight tracking-[-0.025em] text-white sm:text-[18px]">{heading}</h1>
         </div>
         <Link prefetch={false} href="/claims" className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg bg-[#2086BF]/75 px-3 text-[11px] font-bold text-white transition duration-200 hover:bg-[#2A99D1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">Back</Link>
       </div>
