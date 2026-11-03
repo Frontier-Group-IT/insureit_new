@@ -164,14 +164,14 @@ function InfoStrip({ claim }: { claim: SpotSurveyClaim }) {
   return (
     <section aria-label="Claim Journey summary" className={`${headerStyles.header} overflow-hidden rounded-[20px] text-white`}>
       <div aria-hidden="true" className={headerStyles.sheen} />
-      <div className="relative flex min-h-[68px] items-center justify-between gap-3 border-b border-white/15 px-4 py-3 sm:px-5">
+      <div className="relative flex min-h-[48px] items-center justify-between gap-2 px-3 py-2 sm:px-4">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/15 shadow-inner sm:h-12 sm:w-12">
-            <FileText aria-hidden="true" className="h-6 w-6 text-white" />
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/15 shadow-inner">
+            <FileText aria-hidden="true" className="h-4 w-4 text-white" />
           </span>
-          <h1 className="text-[20px] font-bold leading-tight tracking-[-0.025em] text-white sm:text-[23px]">Claim Journey</h1>
+          <h1 className="text-[16px] font-bold leading-tight tracking-[-0.025em] text-white sm:text-[18px]">Operations claim journey</h1>
         </div>
-        <Link prefetch={false} href="/claims" className="inline-flex h-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-[#2086BF]/75 px-5 text-[12px] font-bold text-white transition duration-200 hover:bg-[#2A99D1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:px-6">Back</Link>
+        <Link prefetch={false} href="/claims" className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg bg-[#2086BF]/75 px-3 text-[11px] font-bold text-white transition duration-200 hover:bg-[#2A99D1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">Back</Link>
       </div>
       <div className={`${headerStyles.fields} relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5`}>
         <Info label="Customer" title={customerName} subtitle={claim.customers?.phone ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.customer} alt="Customer" />} />
@@ -180,14 +180,14 @@ function InfoStrip({ claim }: { claim: SpotSurveyClaim }) {
         <Info label="Insurer" title={insurerDisplay} logo={<InsurerLogo name={insurer} />} />
         <Info label="Loss Date" title={formatDateShort(claim.accident_at)} logo={<HeaderIcon src={claimHeaderIcons.lossDate} alt="Loss date" />} />
       </div>
-      <div className={`${headerStyles.fields} relative grid grid-cols-1 border-t border-white/15 sm:grid-cols-2 lg:grid-cols-5`}>
+      <div className={`${headerStyles.fields} relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5`}>
         <Info label="Policy No." title={claim.policies?.policy_no ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.policy} alt="Policy" />} />
         <Info label="Control No." title={claim.claim_no} logo={<HeaderIcon src={claimHeaderIcons.control} alt="Control number" />} />
         <Info label="Claim No." title={claim.insurer_claim_no ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.claim} alt="Claim number" />} />
         <Info label="Claim Status" title={claim.current_status ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.status} alt="Claim status" />} />
         <Info label="Spot Intimation Date & Time" title={`${formatIntimationDate(spotAt)} • ${formatIntimationTime(spotAt)}`} logo={<HeaderIcon src={claimHeaderIcons.intimation} alt="Spot intimation" />} />
       </div>
-      <div className="relative grid gap-x-4 gap-y-2 border-t border-white/20 bg-[#052755]/55 px-4 py-2.5 text-[10px] sm:grid-cols-2 sm:px-5 lg:grid-cols-4">
+      <div className="relative grid gap-x-3 gap-y-1 bg-[#052755]/55 px-3 py-1.5 text-[10px] sm:grid-cols-2 sm:px-4 lg:grid-cols-4">
         <PolicyMeta label="Policy source" value={claim.policySource === "external" ? "External policy" : "Sankalp policy"} />
         <PolicyMeta label="Cover dates" value={`${formatDateShort(claim.policies?.start_date)} - ${formatDateShort(claim.policies?.end_date)}`} />
         <PolicyMeta label="Premium / IDV" value={`${formatAmount(claim.policies?.premium_amount)} / ${formatAmount(claim.policies?.insured_declared_value)}`} />
@@ -209,8 +209,8 @@ function formatAmount(value: number | null | undefined) {
 
 function Info({ icon, label, title, subtitle, logo }: { icon?: string; label: string; title: string; subtitle?: string | null; logo?: ReactNode }) {
   return (
-    <div className={`flex min-h-[67px] min-w-0 items-center gap-2.5 px-3 py-2.5 ${headerStyles.field}`}>
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/15 shadow-[inset_0_1px_0_rgba(255,255,255,.12)]">
+    <div className={`flex min-h-[48px] min-w-0 items-center gap-2 px-3 py-1.5 ${headerStyles.field}`}>
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/15 shadow-[inset_0_1px_0_rgba(255,255,255,.12)]">
         {logo ?? icon}
       </span>
       <span className="min-w-0 flex-1">
