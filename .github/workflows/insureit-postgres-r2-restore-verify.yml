@@ -1,0 +1,85 @@
+name: INSUREIT PostgreSQL R2 isolated restore verification (manual only)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: insureit-postgres-restore-rehearsal
+  cancel-in-progress: false
+
+jobs:
+  restore_test:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: insureit-production-backup
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned R2 and cryptography dependencies
+        run: python -m pip install boto3==1.35.99 cryptography==44.0.2
+      - name: Verify encrypted R2 archive and stage SQL on ephemeral runner
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          DB_BACKUP_ENCRYPTION_KEY: ${{ secrets.DB_BACKUP_ENCRYPTION_KEY }}
+          R2_BUCKET: insureit-production-backups
+          RESTORE_DIR: ${{ runner.temp }}/insureit-db-restore
+        run: python -u scripts/backup/verify_postgres_r2_restore.py
+      - name: Restore into isolated local PostgreSQL 17 container
+        run: |
+          set -euo pipefail
+          # No external network and no port mapping: never reachable by production.
+          docker run --detach --name insureit-restore-check --network none \
+            --env POSTGRES_PASSWORD=ephemeral-not-for-use \
+            postgres:17 >/dev/null
+          ready=0
+          for i in $(seq 1 40); do
+            if docker exec insureit-restore-check pg_isready -U postgres >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" != 1 ]; then
+            echo "ISOLATED RESTORE FAILED: target database did not become ready"
+            exit 1
+          fi
+          docker cp "$RUNNER_TEMP/insureit-db-restore/roles.sql" insureit-restore-check:/tmp/roles.sql
+          docker cp "$RUNNER_TEMP/insureit-db-restore/schema.sql" insureit-restore-check:/tmp/schema.sql
+          docker cp "$RUNNER_TEMP/insureit-db-restore/data.sql" insureit-restore-check:/tmp/data.sql
+          # Keep potentially sensitive SQL errors out of public GitHub logs.
+          # A plain Postgres 17 image may lack Supabase platform roles/extensions.
+          for part in roles schema data; do
+            if ! timeout 600 docker exec -u postgres insureit-restore-check \
+              psql -X --set ON_ERROR_STOP=1 --dbname postgres --file "/tmp/$part.sql" \
+              > "$RUNNER_TEMP/restore-$part.log" 2>&1; then
+              echo "ISOLATED RESTORE INCOMPLETE: component=$part; see handoff for platform compatibility limitations"
+              exit 1
+            fi
+            echo "Isolated restore component validated: $part"
+          done
+          docker exec -u postgres insureit-restore-check \
+            psql -X -A -t -d postgres -c \
+            "select count(*) from pg_tables where schemaname='public';" \
+            > "$RUNNER_TEMP/restored-tables.count"
+          count="$(cat "$RUNNER_TEMP/restored-tables.count")"
+          if ! [[ "$count" =~ ^[0-9]+$ ]] || [ "$count" -lt 1 ]; then
+            echo "ISOLATED RESTORE FAILED: no public tables restored"
+            exit 1
+          fi
+          echo "ISOLATED RESTORE PASSED: public_table_count=$count"
+      - name: Remove temporary SQL and isolated database
+        if: always()
+        run: |
+          docker rm --force --volumes insureit-restore-check >/dev/null 2>&1 || true
+          rm -rf "$RUNNER_TEMP/insureit-db-restore"
+          rm -f "$RUNNER_TEMP"/restore-*.log "$RUNNER_TEMP"/restored-tables.count
