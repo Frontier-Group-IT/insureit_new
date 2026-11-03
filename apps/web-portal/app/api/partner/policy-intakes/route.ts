@@ -5,7 +5,7 @@ import { createSupabaseWithAccessToken } from "@/lib/auth";
 import { getServerAccessToken } from "@/lib/auth-server";
 import { extractPolicyIntakeDocumentTrusted } from "@/lib/policy-intake-ocr-service";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { canReadAllPartnerPolicyIntakes } from "@/lib/partner-policy-intake-read-access";
+import { getPartnerEmployeeIntakeReadScope } from "@/lib/partner-policy-intake-read-access";
 
 const BUCKET = "policy-documents";
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
@@ -77,7 +77,9 @@ export async function GET(request: Request) {
     : await authorizedSourceIds(identity, scope);
   const submitterId = submittedByProfileId(identity);
   const portalAccountId = legacyPortalAccountId(identity);
-  const organizationRead = await canReadAllPartnerPolicyIntakes(identity);
+  const employeeRead = identity.actor_kind === "employee"
+    ? await getPartnerEmployeeIntakeReadScope(identity)
+    : null;
   const intakeReadScope = [
     ...(readableSourceIds.length ? [`lead_source_id.in.(${readableSourceIds.join(",")})`] : []),
     ...(submitterId ? [`submitted_by_profile_id.eq.${submitterId}`] : []),
@@ -100,7 +102,7 @@ export async function GET(request: Request) {
     return json({ ok: true, sources: sources ?? [] });
   }
 
-  if (!organizationRead && !intakeReadScope) {
+  if ((employeeRead?.mode === "none") || (!employeeRead && !intakeReadScope)) {
     return requestedId
       ? json({ ok: false, error: "This Policy Intake is not available in your Partner account." }, 404)
       : json({ ok: true, intakes: [], total: 0, counts: { active: 0, attention: 0, progress: 0, completed: 0 } });
@@ -112,7 +114,9 @@ export async function GET(request: Request) {
       .select(intakeSelect)
       .eq("id", requestedId);
 
-    if (!organizationRead) detailQuery = detailQuery.or(intakeReadScope);
+    if (employeeRead?.mode === "or") detailQuery = detailQuery.or(employeeRead.predicates);
+    else if (employeeRead?.mode === "submitter") detailQuery = detailQuery.eq("submitted_by_profile_id",employeeRead.profileId);
+    else if (!employeeRead) detailQuery = detailQuery.or(intakeReadScope);
 
     const { data: intake, error: intakeError } = await detailQuery.maybeSingle();
     if (intakeError) {
@@ -142,7 +146,9 @@ export async function GET(request: Request) {
     .order("id", { ascending: false })
     .range(offset, offset + limit - 1);
 
-  if (!organizationRead) query = query.or(intakeReadScope);
+  if (employeeRead?.mode === "or") query = query.or(employeeRead.predicates);
+  else if (employeeRead?.mode === "submitter") query = query.eq("submitted_by_profile_id",employeeRead.profileId);
+  else if (!employeeRead) query = query.or(intakeReadScope);
 
   if (filter === "attention") query = query.eq("status", "needs_attention");
   if (filter === "completed") query = query.eq("status", "completed");
@@ -153,7 +159,9 @@ export async function GET(request: Request) {
       .from("policy_intake_requests")
       .select("id", { count: "exact", head: true });
 
-    if (!organizationRead) countQuery = countQuery.or(intakeReadScope);
+    if (employeeRead?.mode === "or") countQuery = countQuery.or(employeeRead.predicates);
+    else if (employeeRead?.mode === "submitter") countQuery = countQuery.eq("submitted_by_profile_id",employeeRead.profileId);
+    else if (!employeeRead) countQuery = countQuery.or(intakeReadScope);
 
     if (statuses.length) {
       countQuery = excluded
