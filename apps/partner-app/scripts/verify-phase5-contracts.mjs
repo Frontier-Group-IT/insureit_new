@@ -83,6 +83,10 @@ expectAll('app/login.tsx', [
   [/accessibilityLiveRegion="assertive"/, 'authentication errors must be announced immediately'],
   [/PartnerField/, 'login must use the shared accessible field primitive'],
   [/PartnerButton/, 'login must use the shared accessible button primitive'],
+  [/Animated\.timing\(entrance/, 'login must have a smooth entrance'],
+  [/Animated\.loop/, 'decorative background motion must be bounded'],
+  [/Welcome back/, 'login must retain the reference welcome heading'],
+  [/router\.push\('\/forgot-password'\)/, 'login must retain password recovery'],
 ]);
 
 // Distinct loading/error/offline/unauthorized state contract.
