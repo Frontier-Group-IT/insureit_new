@@ -6,6 +6,7 @@ import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { recordPolicyActivity, POLICY_ACTIVITY_ACTIONS } from "@/lib/policy-activity";
+import { consumePolicyDateApproval, recordPreviousMonthPolicyUpload, linkConsumedPolicyDateApproval } from "@/lib/policy-date-approval-server";
 
 export type NonMotorCommercialBasis = "NET_PREMIUM_PERCENT" | "FIXED_AMOUNT";
 
@@ -20,6 +21,7 @@ type NonMotorCommercialPayload = {
 };
 
 export type NonMotorPolicyPayload = {
+  dateApprovalId?: string | null;
   source: { issuanceDate: string; intermediaryType: string; intermediaryCode: string; leadSource: string; rmName: string };
   customerId?: string;
   customer: { customerType: "Individual" | "Organisation"; insuredName: string; contactName?: string; phone: string; email?: string; address?: string };
@@ -58,9 +60,9 @@ export async function updateNonMotorPolicy(policyId: string, payload: NonMotorPo
   if (!id) return { ok:false, error:"Policy reference is missing." };
 
   const { data: existing, error: existingError } = await admin.from("policies")
-    .select("id,customer_id,policy_code,business_line")
+    .select("id,customer_id,policy_code,business_line,issuance_date")
     .eq("id", id)
-    .maybeSingle<{ id:string; customer_id:string; policy_code:string | null; business_line:string | null }>();
+    .maybeSingle<{ id:string; customer_id:string; policy_code:string | null; business_line:string | null; issuance_date: string | null }>();
   if (existingError || !existing) return { ok:false, error:"This policy is no longer available. Refresh the Policy Register and try again." };
   if (existing.business_line !== "Non Motor") return { ok:false, error:"This edit action is only available for Non-Motor policies." };
 
@@ -143,6 +145,8 @@ export async function updateNonMotorPolicy(policyId: string, payload: NonMotorPo
   const risk = payload.risk ?? {};
   const additional = payload.additional ?? {};
 
+  const dateGuard = await consumePolicyDateApproval(admin, { requesterId: profile.id, issuanceDate, policyNumber, operation: "edit", existingPolicyId: id, originalIssuanceDate: existing.issuance_date, approvalId: payload.dateApprovalId });
+  if (!dateGuard.ok) return { ok:false, error:dateGuard.error };
   const { error: policyError } = await admin.from("policies").update({
     insurance_company_id:insurerId,
     policy_no:policyNumber,
@@ -262,6 +266,8 @@ export async function updateNonMotorPolicy(policyId: string, payload: NonMotorPo
   revalidatePath("/policies");
   revalidatePath(`/policies/${id}`);
   await recordPolicyActivity(admin, id, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_EDITED);
+  if (dateGuard.previousMonth) await recordPreviousMonthPolicyUpload(admin, id, profile.id, issuanceDate, dateGuard.approverName);
+  if (dateGuard.approverName) await linkConsumedPolicyDateApproval(admin, payload.dateApprovalId, id, profile.id);
   revalidatePath(`/policies/${id}/edit`);
   return { ok:true, policyId:id, policyCode:existing.policy_code || policyNumber };
 }
@@ -371,6 +377,8 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
       }
     }
 
+    const dateGuard = await consumePolicyDateApproval(admin, { requesterId: profile.id, issuanceDate, policyNumber, operation: "create", approvalId: payload.dateApprovalId });
+    if (!dateGuard.ok) { if (createdCustomerId) await admin.from("customers").delete().eq("id", createdCustomerId); return { ok:false, error:dateGuard.error }; }
     const generatedPolicyCode = policyCode();
     const { data: policy, error: policyError } = await admin.from("policies").insert({
       customer_id:customerId, vehicle_id:null, insurance_company_id:insurerId, policy_no:policyNumber, policy_no_normalized:normalizedPolicy,
@@ -428,6 +436,8 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
     });
     if (payoutError) throw new Error(payoutError.message);
 
+    if (dateGuard.previousMonth) await recordPreviousMonthPolicyUpload(admin, policy.id, profile.id, issuanceDate, dateGuard.approverName);
+    if (dateGuard.approverName) await linkConsumedPolicyDateApproval(admin, payload.dateApprovalId, policy.id, profile.id);
     revalidatePath("/policies"); revalidatePath("/customers");
     return { ok:true, policyId:policy.id, policyCode:generatedPolicyCode };
   } catch {

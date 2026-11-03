@@ -1,6 +1,7 @@
 "use server";
 
 import { isBundledMotorCover, motorBundledExpiry } from "@/lib/motor-bundled-validity";
+import { policyDateDecision } from "@/lib/policy-date-rule";
 
 import { revalidatePath } from "next/cache";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
@@ -11,6 +12,7 @@ import { POLICY_ACTIVITY_ACTIONS, recordPolicyActivity } from "@/lib/policy-acti
 
 export type PolicyEditPayload = {
   vehicleClass: string;
+  dateApprovalId?: string | null;
   policy: {
     issuanceDate: string;
     rmName: string;
@@ -89,6 +91,8 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
     return { ok: false, error: "Enter valid policy issuance and validity dates." };
   }
   if (payload.policy.validUpto < payload.policy.validFrom) return { ok: false, error: "Policy Valid Upto cannot be before Valid From." };
+  const dateDecision = policyDateDecision(payload.policy.issuanceDate);
+  if (dateDecision === "invalid" || dateDecision === "future") return { ok: false, error: "Choose a valid issuance date within the current or an earlier month." };
   const cpaAmount = Number(payload.premium.cpa);
   if (payload.vehicleClass.trim().toUpperCase() === "GCV" && (!payload.premium.cpaOpted || !Number.isFinite(cpaAmount) || cpaAmount <= 0)) {
     return { ok: false, error: "CPA amount is mandatory for GCV policies and must be greater than 0." };
@@ -105,6 +109,9 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
     if (!sourceResolution.ok) return { ok: false, error: sourceResolution.error };
 
     const admin = createSupabaseAdminClient();
+    const { data: existingDate, error: existingDateError } = await admin.from("policies").select("issuance_date").eq("id", policyId).maybeSingle<{issuance_date: string | null}>();
+    if (existingDateError || !existingDate) return { ok: false, error: "Could not confirm the existing policy date." };
+    if (existingDate.issuance_date !== payload.policy.issuanceDate && dateDecision === "otp_required" && !payload.dateApprovalId) return { ok: false, error: "Email OTP approval is required to change this policy to an earlier-month date." };
     if (profile.role === "operations_head_life") {
       const { data: original } = await admin.from("policies")
         .select("intermediary_code,rm_name").eq("id", policyId)
@@ -155,7 +162,7 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
       payin: protectedPayin,
       payout: protectedPayout,
     };
-    const { data, error } = await admin.rpc("save_motor_policy_with_addon_v1", {
+    const { data, error } = await admin.rpc("save_motor_policy_with_date_approval_v1", { p_requester: profile.id, p_approval_id: payload.dateApprovalId ?? null, 
       p_operation: "edit",
       p_policy_id: policyId,
       p_payload: normalizedPayload,

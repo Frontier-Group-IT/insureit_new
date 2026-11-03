@@ -2,6 +2,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export const POLICY_ACTIVITY_ACTIONS = {
   POLICY_CREATED: "policy_created",
+  PREVIOUS_MONTH_POLICY_UPLOADED: "previous_month_policy_uploaded",
   POLICY_EDITED: "policy_edited",
   POLICY_DOC_UPLOADED: "policy_doc_uploaded",
   POLICY_DOC_REPLACED: "policy_doc_replaced",
@@ -21,6 +22,7 @@ type AuditedPolicyActivityAction = Exclude<PolicyActivityAction, "life_health_ca
 
 const ACTION_LABELS: Record<PolicyActivityAction, string> = {
   policy_created: "Policy Created",
+  previous_month_policy_uploaded: "Previous-month policy uploaded",
   policy_edited: "Policy Edited",
   policy_doc_uploaded: "Policy Doc. Uploaded",
   policy_doc_replaced: "Policy Doc. Replaced",
@@ -37,6 +39,7 @@ const ACTION_LABELS: Record<PolicyActivityAction, string> = {
 
 const TRACKED_ACTIONS: AuditedPolicyActivityAction[] = [
   POLICY_ACTIVITY_ACTIONS.POLICY_CREATED,
+  POLICY_ACTIVITY_ACTIONS.PREVIOUS_MONTH_POLICY_UPLOADED,
   POLICY_ACTIVITY_ACTIONS.POLICY_EDITED,
   POLICY_ACTIVITY_ACTIONS.POLICY_DOC_UPLOADED,
   POLICY_ACTIVITY_ACTIONS.POLICY_DOC_REPLACED,
@@ -52,7 +55,7 @@ const ACTIVITY_TABLE_NAME = "policies";
 const RECONCILIATION_ACTOR_NAME = "System Reconciliation";
 
 type AdminClient = ReturnType<typeof createSupabaseAdminClient>;
-type AuditRow = { id: string; actor_id: string | null; action: string; created_at: string };
+type AuditRow = { id: string; actor_id: string | null; action: string; created_at: string; new_data?: { approved_by?: string | null; issuance_date?: string } | null };
 type DocumentRow = { uploaded_by: string | null; created_at: string; updated_at: string };
 type ProfileRow = { id: string; full_name: string | null };
 type LifeHealthCaseActivityRow = {
@@ -68,6 +71,8 @@ type ActivityCandidate = {
   action: PolicyActivityAction;
   actorId: string | null;
   actorName?: string | null;
+  approvedBy?: string | null;
+  policyDate?: string | null;
   at: string;
 };
 
@@ -75,6 +80,7 @@ export type PolicyActivityDisplay = {
   id: string;
   action: string;
   actorName: string;
+  meta?: string;
   at: string;
 };
 
@@ -132,7 +138,7 @@ export async function loadPolicyActivityHistory({
   const [auditResult, documentResult, lifeHealthCaseResult] = await Promise.all([
     admin
       .from("audit_logs")
-      .select("id,actor_id,action,created_at")
+      .select("id,actor_id,action,created_at,new_data")
       .eq("table_name", ACTIVITY_TABLE_NAME)
       .eq("record_id", policyId)
       .in("action", TRACKED_ACTIONS)
@@ -168,6 +174,8 @@ export async function loadPolicyActivityHistory({
       action,
       actorId: row.actor_id,
       actorName: reconciliationActorName(action, row.actor_id),
+      approvedBy: action === POLICY_ACTIVITY_ACTIONS.PREVIOUS_MONTH_POLICY_UPLOADED ? row.new_data?.approved_by : null,
+      policyDate: action === POLICY_ACTIVITY_ACTIONS.PREVIOUS_MONTH_POLICY_UPLOADED ? row.new_data?.issuance_date : null,
       at: row.created_at,
     });
   }
@@ -250,6 +258,11 @@ export async function loadPolicyActivityHistory({
       id: candidate.id,
       action: ACTION_LABELS[candidate.action],
       actorName: candidate.actorName?.trim() || (candidate.actorId ? actorNames.get(candidate.actorId) : null) || "Not recorded",
+      meta: candidate.action === POLICY_ACTIVITY_ACTIONS.PREVIOUS_MONTH_POLICY_UPLOADED
+        ? (candidate.approvedBy ? "Approved by: " + candidate.approvedBy : "Uploaded within the permitted date window")
+          + " · Uploaded by: " + (candidate.actorId ? actorNames.get(candidate.actorId) ?? "Not recorded" : "Not recorded")
+          + (candidate.policyDate ? " · Insurance date: " + candidate.policyDate : "")
+        : undefined,
       at: candidate.at,
     }));
 }
