@@ -31,7 +31,7 @@ type PolicyRow = {
   issuance_date: string | null;
   created_at: string;
   start_date: string;
-  end_date: string;
+  end_date: string | null;
   insured_declared_value: number | null;
   gross_premium: number | null;
   intermediary_type: string | null;
@@ -524,7 +524,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
                 <td className="px-2.5"><p className="truncate font-semibold text-[#334155]">{policy.customers?.contact_name ?? "-"}</p><p className="truncate text-[9px] leading-4 text-[#64748B]">{policy.customers?.company_name ?? "Individual account"}</p></td>
                 <td className="px-2.5"><RiskAssetCell policy={policy} /></td>
                 <td className="px-2.5"><InsurerLogoCell insurerName={policy.insurance_companies?.name} /></td>
-                <td className="px-2.5"><p className="font-semibold">{formatDate(policy.start_date)} - {formatDate(policy.end_date)}</p><p className="text-[9px] leading-4 text-[#64748B]">{validityHint(policy)}</p></td>
+                <td className="px-2.5"><p className="font-semibold">{formatDate(policy.start_date)} - {policy.end_date ? formatDate(policy.end_date) : "No fixed maturity date"}</p><p className="text-[9px] leading-4 text-[#64748B]">{validityHint(policy)}</p></td>
                 <td className="px-2.5"><PolicyStatus policy={policy} /></td>
                 <td className="px-2.5 text-right"><InsuredValueCell policy={policy} /></td>
                 <td className="px-2.5 text-right font-semibold tabular-nums">{formatCurrency(policy.gross_premium)}</td>
@@ -541,7 +541,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
   );
 }
 
-function PolicyMobileCard({ policy }: { policy: PolicyRow & { status: string; daysLeft: number } }) {
+function PolicyMobileCard({ policy }: { policy: PolicyRow & { status: string; daysLeft: number | null } }) {
   const isNonMotor = policyBusinessLine(policy) === "Non Motor";
   return (
     <article className="mobile-record-card">
@@ -574,6 +574,7 @@ function PolicyMobileCard({ policy }: { policy: PolicyRow & { status: string; da
 
 function PolicyStatus({ policy }: { policy: PolicyRow & { status?: string; daysLeft?: number } }) {
   const status = policy.status ?? policyStatus(policy.end_date);
+  if (status === "No fixed maturity") return <RegisterStatusPill tone="slate">No fixed maturity</RegisterStatusPill>;
   if (status === "Expired") return <RegisterStatusPill tone="red">Expired</RegisterStatusPill>;
   if (status === "Expiring soon") return <RegisterStatusPill tone="amber">Due</RegisterStatusPill>;
   return <RegisterStatusPill tone="green">Active</RegisterStatusPill>;
@@ -691,7 +692,9 @@ function firstText(...values: unknown[]) {
 }
 
 function validityHint(policy: PolicyRow & { daysLeft?: number }) {
+  if (!policy.end_date) return "No fixed maturity date";
   const days = policy.daysLeft ?? daysUntil(policy.end_date);
+  if (days === null) return "Maturity date unavailable";
   if (days < 0) return `${Math.abs(days)} days overdue`;
   if (days === 0) return "Expires today";
   return `${days} days left`;
@@ -728,21 +731,25 @@ function quickDateRangeKey(fromDate: string, toDate: string): QuickDateRange | n
   }) ?? null;
 }
 
-function policyStatus(endDate: string) {
+function policyStatus(endDate: string | null) {
+  if (!endDate) return "No fixed maturity";
   const days = daysUntil(endDate);
+  if (days === null) return "No fixed maturity";
   return days < 0 ? "Expired" : days <= 30 ? "Expiring soon" : "Active";
 }
-function daysUntil(endDate: string) {
+function daysUntil(endDate: string | null): number | null {
+  if (!endDate) return null;
   const end = new Date(`${endDate}T23:59:59`);
   const now = new Date();
-  if (Number.isNaN(end.getTime())) return 0;
+  if (Number.isNaN(end.getTime())) return null;
   return Math.ceil((end.getTime() - now.getTime()) / 86400000);
 }
 function shortFilterDate(value: string) {
   const [, month, day] = value.split("-");
   return month && day ? `${day}/${month}` : value;
 }
-function formatDate(value: string) {
+function formatDate(value: string | null) {
+  if (!value) return "—";
   const [year, month, day] = value.split("-");
   return year && month && day ? day + "/" + month + "/" + year.slice(-2) : value;
 }
