@@ -1,14 +1,14 @@
 # INSUREIT — Internal VAPT & Cybersecurity Self-Audit Master Register
 
 > **Document ID:** INS-SEC-IAV-001  
-> **Version:** 0.4.0 (P0 production deployment binding verified)  
+> **Version:** 0.5.0 (C03/C04 privileged function and storage policy triage)  
 > **Created:** 2026-11-03 (Asia/Kolkata)  
 > **Owner:** Sankalp Insurance Brokers Private Limited — designated internal audit owner **TBD**  
 > **Target systems:** INSUREIT Customer App, Partner App, Operations Portal, APIs, database, storage, infrastructure, third-party integrations and related governance  
 > **Status:** **P0 READ-ONLY DISCOVERY IN PROGRESS — DATABASE METADATA REVIEWED; 61 CONTROLS NOT YET PASSED**  
 > **Classification:** Internal / Confidential — redact secrets, customer data and exploitable details before distribution  
 > **Next review:** On each completed audit work session; formal periodic review cadence TBD
-> **Latest checkpoint:** 2026-11-03: deployment `portal.insureit.in` and public Supabase project binding corroborated; see Sections 19–20 for evidence, review leads and next steps.
+> **Latest checkpoint:** 2026-11-03: web production mapping corroborated; C03/C04 metadata and policy review started. See Sections 19–21 for evidence and review leads; NO functional authorization tests or confirmed exploit.
 
 ## 0. Essential boundaries and claims
 
@@ -435,3 +435,35 @@ Master document version:
 | 2026-11-03 | Read-only audit assistant | P0 | Inspected Vercel project/domain/deployment and selected client-public Supabase URL, pinned GitHub source files, confirmed web-production binding. | P0-018 through P0-022; no sensitive env values fetched or production modifications. | Web production mapping verified; P0 scope remains open; 61 controls unpassed. | Continue C03 risk-ranked function/source authorization review and C04 object storage policy review. |
 
 **Pending CI check at writing:** The prior documentation update commit \`7220382cb1943497d99b5ce613b9d9411735d9b2\` had Verify web portal run #7898 in progress. A new documentation commit will trigger/check its own PR workflow; record the final result after it finishes, do not assume success.
+
+
+## 21. C03/C04 first-pass function and storage policy triage — 2026-11-03
+
+**Method:** Only read-only Postgres catalog and RLS policy-definition queries against the production-linked Supabase project, \`ilzhsfqqjyppzzvfscmh\`. No user objects, credentials or document bytes accessed; no RPCs executed or dynamic permission probes. This is **partial** verification of controls C03 and C04, not a PASS.
+
+| Evidence ID | Verified observation | Interpretation / further testing |
+|---|---|---|
+| P0-023 | All **380** public-schema \`SECURITY DEFINER\` functions have an explicit function-level \`search_path\` setting; **0/178** authenticated-executable definer functions lack that setting. | Positive static hardening property; a configured search path alone does **not** prove safe function resolution, authorization or tenant scoping. Review search-path values, schema CREATE grants, caller/argument validation and delegated functions. |
+| P0-024 | Coarse **name-based** triage of 178 authenticated-executable \`SECURITY DEFINER\` functions: **55 other**, **51 partner/branch**, **45 policies/claims/finance**, **27 identity/customer**. | Category assignment is heuristic (function name only), and the totals are not vulnerabilities. Use this as the prioritized manual review queue, starting with finance/policy/claims and identity/customer pathways. |
+| P0-025 | \`storage.objects\` has 35 RLS policies; role/operation breakdown includes **public-role SELECT (2), INSERT (2), DELETE (1)**. The customer-document public-role rules check a customer/profile-and-folder relationship. | \`roles={public}\` can still be constrained by RLS predicates; there is no demonstrated anonymous document access. Test only with synthetic authorized roles, owners and filenames. |
+| P0-026 | A claims-document storage SELECT rule and INSERT rule depend on the claim-portal staff-role predicate and target the claim-documents bucket, without a per-claim/path ownership predicate in those **specific** rules. Paired claims-table/document policies allow certain active internal claims staff roles broad access under the same predicate. | **Potentially overbroad authorization versus the intended business model**, not confirmed vulnerability. Obtain written policy-owner validation of which staff roles should see/upload any claim file; document expected restrictions. If narrower access is required, propose surgical per-claim scoping and staging-only negative tests before any change. |
+
+### Actionable triage notes
+
+- **REV-2026-002 expanded:** include claim-documents bucket read/upload behavior and determine whether each listed claims staff role is entitled to portfolio-wide access, including other staff/branches/partners. Do **not** infer that customer or anonymous users have this access.
+- **REV-2026-001 narrowed:** explicit search-path presence is confirmed for all 380 definers; functional privilege/tenant checks remain to inspect.
+- **Do not apply RLS patches yet.** Several policy paths support legitimate claims processing; altering them without authorized business rules and regression testing could disrupt policy/claim operations.
+
+### Next controlled examination
+
+1. Document expected claim-portal role visibility in a signed role-permission matrix; separately distinguish claim record view, document metadata view, object download and upload permissions.
+2. Continue function static review by function family, using a reproducible coverage register and capturing *counts/behavior*, not raw private customer data.
+3. Before test execution: establish synthetic cross-role/tenant fixtures in approved isolated staging, expected allow/deny outcomes, rate limits and a rollback/contact procedure.
+4. Inspect secret usage paths in server code without decrypting Vercel environment variables; verify client bundles and browser code cannot access privileged keys.
+5. Maintain **all 61 control checkboxes unchecked** until complete test coverage and documented evidence justify marking a specific control as passed.
+
+### Session 4 log
+
+| 2026-11-03 | Read-only audit assistant | P0 / C03 / C04 partial | Inventoried function search-path settings, grouped privileged functions by function-name pattern, reviewed the structure of storage object RLS policies and claim-portal access predicates. | P0-023 through P0-026; REV-2026-002 expanded; no real data accessed. | One priority authorization design review, no confirmed exploit, no changes to live policies. | Obtain business-owner scope, continue source/routine review, design synthetic staging tests. |
+
+**Current metrics:** Total controls 61; controls fully passed 0; independently validated security exploits 0; open **review leads** 6. The six review leads must not be presented as six confirmed defects. All identified risks remain subject to owner confirmation, threat analysis and authorized testing.
