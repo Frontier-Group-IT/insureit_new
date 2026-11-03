@@ -58,3 +58,13 @@ export async function recordPreviousMonthPolicyUpload(
   });
   if (error) console.error("policy_date_activity_failed", { code: error.code });
 }
+
+export async function linkConsumedPolicyDateApproval(
+  admin: Admin, approvalId: string | null | undefined, policyId: string, requesterId: string,
+) {
+  if (!approvalId) return;
+  const { error } = await admin.from("policy_date_otp_approvals")
+    .update({ resulting_policy_id: policyId }).eq("id", approvalId)
+    .eq("requester_id", requesterId).not("consumed_at", "is", null);
+  if (error) console.error("policy_date_approval_link_failed", { code: error.code });
+}
