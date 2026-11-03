@@ -1,6 +1,7 @@
 "use server";
 
 import { isBundledMotorCover, motorBundledExpiry } from "@/lib/motor-bundled-validity";
+import { policyDateDecision } from "@/lib/policy-date-rule";
 
 import { revalidatePath } from "next/cache";
 import { requirePolicyIntakeFinalizer } from "@/lib/policy-intake-server";
@@ -57,6 +58,7 @@ export type PolicyOnboardingPayload = {
   };
   sourceIntakeId?: string;
   draftRevision?: number;
+  dateApprovalId?: string | null;
 };
 export type PolicyOnboardingResult =
   | { ok: true; policyId: string; policyCode: string; customerId: string; vehicleId: string; status: "active" }
@@ -483,6 +485,9 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
   payload = operationalEntryPayload(payload, profile.role);
   const validationError = validatePayload(payload);
   if (validationError) return { ok: false, kind: "validation", error: validationError };
+  const dateDecision = policyDateDecision(String(payload.policy.issuanceDate ?? ""));
+  if (dateDecision === "invalid" || dateDecision === "future") return { ok: false, kind: "validation", error: "Choose a valid policy issuance date within the current or an earlier month." };
+  if (dateDecision === "otp_required" && !payload.dateApprovalId) return { ok: false, kind: "validation", error: "Email OTP approval is required before saving this earlier-month policy." };
   const sourceResolution = await resolvePolicyIntermediarySource(payload.policy);
   if (!sourceResolution.ok) return { ok: false, kind: "validation", error: sourceResolution.error };
   payload = { ...payload, policy: { ...payload.policy, ...sourceResolution.source }, customer: { ...payload.customer, source: sourceResolution.source.leadSource } };
@@ -601,7 +606,7 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     let rpcResult;
     if (replacementRequested && replacementPolicyId) {
       diagnosticStage = "rpc:replace_active_motor_policy_v1";
-      rpcResult = await admin.rpc("save_motor_policy_with_addon_v1", {
+      rpcResult = await admin.rpc("save_motor_policy_with_date_approval_v1", { p_requester: profile.id, p_approval_id: payload.dateApprovalId ?? null, 
         p_operation: "replace",
         p_existing_policy_id: replacementPolicyId,
         p_payload: rpcPayload,
@@ -653,10 +658,10 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       }
 
       diagnosticStage = "rpc:finalize_policy_intake_motor_v1";
-      rpcResult = await admin.rpc("save_motor_policy_with_addon_v1", { p_operation:"intake", p_intake_id:payload.sourceIntakeId, p_payload:rpcPayload, p_expected_revision:payload.draftRevision });
+      rpcResult = await admin.rpc("save_motor_policy_with_date_approval_v1", { p_requester: profile.id, p_approval_id: payload.dateApprovalId ?? null,  p_operation:"intake", p_intake_id:payload.sourceIntakeId, p_payload:rpcPayload, p_expected_revision:payload.draftRevision });
     } else {
       diagnosticStage = "rpc:onboard_motor_policy_commercial_status_v2";
-      rpcResult = await admin.rpc("save_motor_policy_with_addon_v1", { p_operation:"create", p_payload: rpcPayload });
+      rpcResult = await admin.rpc("save_motor_policy_with_date_approval_v1", { p_requester: profile.id, p_approval_id: payload.dateApprovalId ?? null,  p_operation:"create", p_payload: rpcPayload });
     }
     const { data, error } = rpcResult;
     if (error) {
