@@ -29,6 +29,14 @@ assert.match(loader, /payout: metric \? Number\(metric\.payout\) : null/);
 assert.match(client, /row\.customerCount === null \? "—"/);
 assert.match(client, /row\.netPremium === null/);
 assert.match(client, /row\.payout === null/);
+// Business-ranked page one must be drawn from the entire authorized Partner set.
+assert.match(loader, /selectedType === "partner"\s*\? await fetchAllPages<IntermediaryRow, unknown>/, "All authorized Partners must be paginated before ranking");
+assert.match(loader, /\.order\("id", \{ ascending: false \}\)/, "Partner backend pagination must use deterministic ordering");
+assert.match(client, /return \[\.\.\.filtered\]\.sort\(/, "Business ranking must use a copy, not mutate source data");
+assert.match(client, /row\.netPremium !== null && row\.netPremium > 0 \? 0/, "Positive Net Premium Partners rank first");
+assert.match(client, /row\.customerCount !== null && row\.customerCount > 0 \? 1/, "Customer-producing Partners without positive premium rank next");
+assert.match(client, /row\.netPremium === null \|\| row\.customerCount === null \? 3 : 2/, "Unavailable attribution is kept separate from genuine zero business");
+assert.ok(client.indexOf("return [...filtered].sort(") < client.indexOf("visibleRows.slice(pageStartIndex"), "Business priority must apply before page slicing");
 console.log("Partner Register business metrics migration and UI contract regression passed");
 
 assert.match(loader, /partnerStatus:\s*linked[\s\S]*"Not Created"/, "Unlinked POSP\/MISP status must be Not Created");
