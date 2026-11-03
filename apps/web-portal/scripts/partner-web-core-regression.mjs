@@ -136,6 +136,11 @@ assert(partnerWeb.includes('supabase.rpc("partner_app_list_renewals"'), "Partner
 assert(partnerWeb.includes("policy_service_source: string | null"), "Partner claim rows must expose the canonical claim source");
 
 const insurerLogoResolver = read("lib/insurer-logo.ts");
+const policyOnboardingAction = read("app/policies/policy-onboarding-actions.ts");
+assert(policyOnboardingAction.includes('addOnPremium: moneyOrZero(payload.premium.addOnPremium)'), "Policy booking must normalize Add-on Premium before RPC");
+assert(policyOnboardingAction.includes('lowerMessage.includes("invalid add-on premium")'), "Policy booking must identify Add-on Premium errors");
+const policyOnboardingForm = read("components/policy-unified-form.tsx");
+assert(policyOnboardingForm.includes('onBlur={()=>normalizePremiumField("addOnPremium")}'), "Add-on Premium must display normalized currency precision");
 const sharedClaimHeader = read("components/spot-survey/spot-survey-workspace-v2.tsx");
 assert(sharedClaimHeader.includes('from "@/lib/vehicle-brand-logo"'), "Shared Claim Detail header must use the shared vehicle brand logo resolver");
 assert(sharedClaimHeader.includes('from "@/lib/insurer-logo"'), "Shared Claim Detail header must use the shared insurer logo resolver");
