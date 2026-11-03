@@ -1,9 +1,9 @@
-import { Platform, MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { readClaimDocumentBytes, claimUploadCustomerError, claimUploadFileReadMessage, logClaimUploadFailure, resolveClaimUploadDescriptor } from '@/lib/claim-document-upload';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppBadge } from '@/components/design-system';
 import { LoadingState, Message, Screen } from '@/components/ui';
