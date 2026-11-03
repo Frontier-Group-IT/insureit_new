@@ -21,7 +21,7 @@ export default async function PartnerLayout({ children }: { children: ReactNode 
           opacity: 0.35;
         }
       `}</style>
-      <PartnerNavigation hideAccount={hideAccount} />
+      <PartnerNavigation hideAccount={hideAccount} hidePayout={branchPortal} />
       {children}
       <PartnerBottomNavigation hideAccount={hideAccount} />
     </>
