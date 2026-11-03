@@ -82,7 +82,18 @@ export function PartnerRegisterClient({
     else acc.onboarding += 1;
     return acc;
   }, { active: 0, onboarding: 0 }), [scopedRows]);
-  const visibleRows = status === "active" ? scopedRows.filter((row) => row.active) : status === "onboarding" ? scopedRows.filter((row) => !row.active) : scopedRows;
+  const visibleRows = useMemo(() => {
+    const filtered = status === "active" ? scopedRows.filter((row) => row.active) : status === "onboarding" ? scopedRows.filter((row) => !row.active) : scopedRows;
+    // Rank the full filtered set BEFORE pagination. Preserve the original order for ties.
+    return [...filtered].sort((a, b) => {
+      const rank = (row: PartnerRegisterRow) => row.netPremium !== null && row.netPremium > 0 ? 0 : row.customerCount !== null && row.customerCount > 0 ? 1 : row.netPremium === null || row.customerCount === null ? 3 : 2;
+      const priority = rank(a) - rank(b);
+      if (priority !== 0) return priority;
+      if (rank(a) === 0) return (b.netPremium ?? 0) - (a.netPremium ?? 0);
+      if (rank(a) === 1) return (b.customerCount ?? 0) - (a.customerCount ?? 0);
+      return 0;
+    });
+  }, [scopedRows, status]);
   const totalRecords = visibleRows.length;
   const totalPages = Math.max(1, Math.ceil(totalRecords / PARTNER_PAGE_SIZE));
   const pageStartIndex = (currentPage - 1) * PARTNER_PAGE_SIZE;
