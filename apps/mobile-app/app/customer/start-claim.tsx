@@ -238,12 +238,12 @@ export default function StartClaimScreen() {
           <>
             <View style={styles.iosHeroTopRow}>
               <View style={styles.heroCopy}>
-                <Text style={styles.eyebrow}>START A CLAIM</Text>
-                <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>Select the vehicle</Text>
+                <Text style={[styles.eyebrow, styles.iosEyebrow]}>START A CLAIM</Text>
+                <Text style={[styles.title, styles.iosTitle]}>Select the vehicle</Text>
               </View>
               <Image accessible={false} source={require('../../assets/brand/start-claim/start-claim-hero.png')} style={[styles.heroArtwork, styles.iosHeroArtwork]} resizeMode="contain" />
             </View>
-            <Text style={[styles.subtitle, styles.iosSubtitle]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+            <Text style={[styles.subtitle, styles.iosSubtitle]}>
               Choose the vehicle involved and we’ll use its active policy.
             </Text>
           </>
@@ -286,17 +286,17 @@ export default function StartClaimScreen() {
           />
         ) : (
           <>
-            <Text style={styles.sectionLabel}>Vehicle number *</Text>
+            <Text style={[styles.sectionLabel, Platform.OS === 'ios' && styles.iosSectionLabel]}>Vehicle number *</Text>
             <EmptyState title="No vehicle found" body="Add a vehicle before starting a claim." />
           </>
         )}
-        {!accountVehicles.length ? <Text style={styles.helper}>Start typing to find a vehicle.</Text> : null}
+        {!accountVehicles.length ? <Text style={[styles.helper, Platform.OS === 'ios' && styles.iosHelper]}>Start typing to find a vehicle.</Text> : null}
       </View>
 
       <View style={styles.section}>
         <View style={styles.sectionHeading}>
-          <Text style={styles.sectionTitle}>Policy details</Text>
-          {selectedVehicle && !activePolicy ? <Pressable accessibilityRole="button" onPress={addPolicy} style={styles.addPolicyButton}><MaterialCommunityIcons name="plus" size={16} color="#0A43A3" /><Text style={styles.addPolicyText}>Add policy</Text></Pressable> : null}
+          <Text style={[styles.sectionTitle, Platform.OS === 'ios' && styles.iosSectionTitle]}>Policy details</Text>
+          {selectedVehicle && !activePolicy ? <Pressable accessibilityRole="button" onPress={addPolicy} style={styles.addPolicyButton}><MaterialCommunityIcons name="plus" size={16} color="#0A43A3" /><Text style={[styles.addPolicyText, Platform.OS === 'ios' && styles.iosAddPolicyText]}>Add policy</Text></Pressable> : null}
         </View>
 
         {selectedPolicy ? (
@@ -327,10 +327,10 @@ export default function StartClaimScreen() {
                   </View>
                 </View>
                 <View style={styles.policyCopy}>
-                  <Text style={[styles.policyMode, styles.policyModeCompact]}>{selectedPolicy.source === 'external' ? 'SELF TRACKED CLAIM' : 'SANKALP MANAGED CLAIM'}</Text>
-                  <Text style={[styles.policyNo, styles.policyNoCompact]}>{selectedPolicy.source === 'external' ? formatExternalPolicyNumber(selectedPolicy.policy_no) : selectedPolicy.policy_no}</Text>
-                  <Text style={[styles.policyInsurer, styles.policyInsurerCompact]} numberOfLines={Platform.OS === 'ios' ? 1 : undefined}>{customerInsurerDisplayName(selectedInsurer?.name) || 'Insurance company'} · {selectedPolicy.policy_type}</Text>
-                  <Text style={[styles.policyDates, styles.policyDatesCompact]}>{formatDate(selectedPolicy.start_date)} – {formatDate(selectedPolicy.end_date)}</Text>
+                  <Text style={[styles.policyMode, styles.policyModeCompact, Platform.OS === 'ios' && styles.iosPolicyMode]}>{selectedPolicy.source === 'external' ? 'SELF TRACKED CLAIM' : 'SANKALP MANAGED CLAIM'}</Text>
+                  <Text style={[styles.policyNo, styles.policyNoCompact, Platform.OS === 'ios' && styles.iosPolicyNumber]}>{selectedPolicy.source === 'external' ? formatExternalPolicyNumber(selectedPolicy.policy_no) : selectedPolicy.policy_no}</Text>
+                  <Text style={[styles.policyInsurer, styles.policyInsurerCompact, Platform.OS === 'ios' && styles.iosPolicyInsurer]} numberOfLines={Platform.OS === 'ios' ? 1 : undefined}>{customerInsurerDisplayName(selectedInsurer?.name) || 'Insurance company'} · {selectedPolicy.policy_type}</Text>
+                  <Text style={[styles.policyDates, styles.policyDatesCompact, Platform.OS === 'ios' && styles.iosPolicyDates]}>{formatDate(selectedPolicy.start_date)} – {formatDate(selectedPolicy.end_date)}</Text>
                 </View>
                 <PolicyStatusPulse condition={selectedPolicyCondition ?? 'active'} />
               </View>
@@ -493,7 +493,7 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
       style={({ pressed }) => [styles.vehicleField, pressed && styles.vehicleFieldPressed]}
     >
       <View ref={anchorRef} collapsable={false} pointerEvents="none">
-        <Text style={styles.sectionLabel}>Vehicle number *</Text>
+        <Text style={[styles.sectionLabel, Platform.OS === 'ios' && styles.iosSectionLabel]}>Vehicle number *</Text>
       </View>
       <View pointerEvents="none" style={[styles.selectButton, open && styles.selectButtonHidden]}>
         <View style={styles.selectVehicleLogoShell}>
@@ -504,12 +504,12 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
             resizeMode="contain"
           />
         </View>
-        <View style={styles.selectCopy}><Text style={[styles.selectValue, !selectedVehicle && styles.placeholder]} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>{selectedVehicle ? selectedVehicle.vehicle_no : 'Select vehicle'}</Text>{selectedVehicle ? <Text style={styles.selectMeta} numberOfLines={1}>{[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ') || selectedVehicle.vehicle_type}</Text> : null}</View>
+        <View style={styles.selectCopy}><Text style={[styles.selectValue, Platform.OS === 'ios' && styles.iosSelectValue, !selectedVehicle && styles.placeholder]} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>{selectedVehicle ? selectedVehicle.vehicle_no : 'Select vehicle'}</Text>{selectedVehicle ? <Text style={[styles.selectMeta, Platform.OS === 'ios' && styles.iosSelectMeta]} numberOfLines={1}>{[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ') || selectedVehicle.vehicle_type}</Text> : null}</View>
         <View style={styles.vehicleSelectorTrigger} accessible={false}>
           <MaterialCommunityIcons name="format-list-bulleted" size={20} color={palette.navy} />
         </View>
       </View>
-      <Text style={styles.helper}>Start typing to find a vehicle.</Text>
+      <Text style={[styles.helper, Platform.OS === 'ios' && styles.iosHelper]}>Start typing to find a vehicle.</Text>
     </Pressable>
 
     <Modal
@@ -584,20 +584,25 @@ function policyCondition(endDate: string): PolicyCondition { const days = daysUn
 
 const styles = StyleSheet.create({
   hero: { minHeight: 126, marginHorizontal: 0, marginBottom: 2, flexDirection: 'row', alignItems: 'flex-start' },
-  iosHero: { flexDirection: 'column', minHeight: 0, marginBottom: 10 },
-  iosHeroTopRow: { flexDirection: 'row', alignItems: 'flex-start', minHeight: 90 },
+  iosHero: { flexDirection: 'column', minHeight: 0, marginBottom: 12 },
+  iosHeroTopRow: { flexDirection: 'row', alignItems: 'flex-start', minHeight: 104 },
   heroCopy: { flex: 1, minWidth: 0, paddingHorizontal: 0, paddingTop: 12, paddingBottom: 4, paddingRight: 4 },
   eyebrow: { color: '#145ED7', fontSize: 10, fontWeight: Platform.OS === 'ios' ? '400' : '900', letterSpacing: 0.55 },
   title: { color: palette.navy, fontSize: Platform.OS === 'ios' ? 13.5 : 23, lineHeight: Platform.OS === 'ios' ? 19 : 27, fontWeight: Platform.OS === 'ios' ? '500' : '900', marginTop: 2 },
   subtitle: { color: '#68778D', fontSize: Platform.OS === 'ios' ? 9.5 : 10, lineHeight: 14, fontWeight: Platform.OS === 'ios' ? '400' : '600', marginTop: 4, maxWidth: 190 },
-  iosSubtitle: { maxWidth: '100%', marginTop: 0, fontWeight: '400' },
+  iosEyebrow: { fontSize: 12, lineHeight: 17, fontWeight: '800', letterSpacing: 1.1 },
+  iosTitle: { fontSize: 22, lineHeight: 28, fontWeight: '800', marginTop: 3 },
+  iosSubtitle: { maxWidth: '100%', fontSize: 13, lineHeight: 19, fontWeight: '500', marginTop: 3, paddingRight: 6 },
   heroArtwork: { width: '46%', height: 122, marginTop: -2, marginRight: -4 },
-  iosHeroArtwork: { width: '42%', height: 94, marginTop: -2 },
+  iosHeroArtwork: { width: '42%', height: 104, marginTop: -2 },
   section: { marginBottom: 14 },
   vehicleSection: { marginTop: -2 },
   sectionHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 },
   sectionLabel: { color: palette.navy, fontSize: 12, fontWeight: Platform.OS === 'ios' ? '500' : '900', marginBottom: 7 },
   sectionTitle: { color: palette.navy, fontSize: 15, fontWeight: Platform.OS === 'ios' ? '500' : '900' },
+  iosSectionLabel: { fontSize: 15, lineHeight: 21, fontWeight: '700' },
+  iosSectionTitle: { fontSize: 18, lineHeight: 24, fontWeight: '800' },
+  iosHelper: { fontSize: 12, lineHeight: 17, fontWeight: '500' },
   helper: { color: '#778296', fontSize: 10, fontWeight: Platform.OS === 'ios' ? '400' : '600', marginTop: 5 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { minHeight: 40, maxWidth: 190, justifyContent: 'center', borderRadius: 999, borderWidth: 1, borderColor: '#D6E2F0', backgroundColor: '#FFFFFF', paddingHorizontal: 13 },
@@ -616,6 +621,8 @@ const styles = StyleSheet.create({
   selectCopy: { flex: 1, minWidth: 0 },
   selectValue: { color: palette.navy, fontSize: 14.5, fontWeight: Platform.OS === 'ios' ? '500' : '900' },
   selectMeta: { color: '#718198', fontSize: 10.5, fontWeight: Platform.OS === 'ios' ? '400' : '600', marginTop: 2 },
+  iosSelectValue: { fontSize: 16, fontWeight: '800' },
+  iosSelectMeta: { fontSize: 12, fontWeight: '500' },
   placeholder: { color: '#7A8798', fontWeight: Platform.OS === 'ios' ? '400' : '700' },
   makeMenu: { borderRadius: 15, borderWidth: 1, borderColor: '#C8D9EF', backgroundColor: '#FFFFFF', overflow: 'hidden', marginTop: 4 },
   vehicleDropdownOverlay: { flex: 1, backgroundColor: 'transparent' },
@@ -632,6 +639,7 @@ const styles = StyleSheet.create({
   emptyLookupText: { color: '#7A8799', fontSize: 11, fontWeight: Platform.OS === 'ios' ? '400' : '700', paddingHorizontal: 11, paddingVertical: 13 },
   addPolicyButton: { minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 10, borderWidth: 1, borderColor: '#C9DAF2', backgroundColor: '#F7FAFF', paddingHorizontal: 9 },
   addPolicyText: { color: '#0A43A3', fontSize: 10, fontWeight: Platform.OS === 'ios' ? '400' : '900' },
+  iosAddPolicyText: { fontSize: 12, fontWeight: '700' },
   policyCardShadow: { borderRadius: 20, shadowColor: '#07327B', shadowOpacity: 0.15, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 3, backgroundColor: '#07327B' },
   policyCardPressed: { opacity: 0.94, transform: [{ scale: 0.995 }] },
   policyCard: { position: 'relative', minHeight: 145, borderRadius: 20, backgroundColor: '#07327B', overflow: 'hidden' },
@@ -657,6 +665,10 @@ const styles = StyleSheet.create({
   policyInsurerCompact: { fontSize: 9.8, lineHeight: 12.8, marginTop: 1 },
   policyDates: { color: '#D2DEEF', fontSize: 10.5, fontWeight: Platform.OS === 'ios' ? '400' : '700', marginTop: 5 },
   policyDatesCompact: { fontSize: 9.8, marginTop: 2 },
+  iosPolicyMode: { fontSize: 10, fontWeight: '600' },
+  iosPolicyNumber: { fontSize: 17, fontWeight: '800' },
+  iosPolicyInsurer: { fontSize: 11, lineHeight: 16, fontWeight: '500' },
+  iosPolicyDates: { fontSize: 10.5, fontWeight: '500' },
   policyCheck: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#11A35D', alignItems: 'center', justifyContent: 'center' },
   policyCheckCompact: { width: 28, height: 28, borderRadius: 14 },
   policyCheckExpired: { backgroundColor: '#E85D63' },
