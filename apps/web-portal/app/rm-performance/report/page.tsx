@@ -14,7 +14,7 @@ export default async function ReportPage({searchParams}:{searchParams:Promise<Rm
     <div className="mx-auto max-w-5xl rounded-xl bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between gap-4"><div><h1 className="text-xl font-bold text-[#17365D]">INSUREIT · RM Business Performance Report</h1><p className="text-sm text-slate-500">Today + {data.period.shortLabel} · {data.period.from} to {data.period.to}</p></div><Link href="/rm-performance" className="text-sm text-blue-700">Back to RM Performance</Link></div>
       <div className="mt-4 flex gap-3"><a className="rounded-lg bg-[#17365D] px-4 py-2 text-sm text-white" href={"/api/reports/rm-performance/pdf?"+qs}>Download PDF</a></div>
-      <iframe title="RM performance report PDF" src={"/api/reports/rm-performance/pdf?"+qs} className="mt-4 h-[75vh] w-full rounded-lg border" />
+      <iframe title="RM performance report PDF" src={"/api/reports/rm-performance/pdf?"+qs+"&inline=1"} className="mt-4 h-[75vh] w-full rounded-lg border" />
     </div>
   </main>;
 }

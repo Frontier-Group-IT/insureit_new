@@ -8,6 +8,7 @@ export async function GET(request:NextRequest){
   const url=request.nextUrl.searchParams;
   try{
     const {bytes,filename}=await buildRmPerformancePdf(profile,{rm:url.get("rm")??undefined,period:url.get("period")??undefined,from:url.get("from")??undefined,to:url.get("to")??undefined});
-    return new NextResponse(Buffer.from(bytes),{headers:{"Content-Type":"application/pdf","Content-Disposition":`attachment; filename="${filename}"`,"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"}});
+    const disposition=request.nextUrl.searchParams.get("inline")==="1"?"inline":"attachment";
+    return new NextResponse(Buffer.from(bytes),{headers:{"Content-Type":"application/pdf","Content-Disposition":`${disposition}; filename="${filename}"`,"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"}});
   }catch{return NextResponse.json({error:"Report could not be generated."},{status:500});}
 }

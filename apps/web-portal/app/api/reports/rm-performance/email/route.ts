@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireCapability } from "@/lib/master-data-server";
 import { buildRmPerformancePdf } from "@/lib/rm-performance-pdf";
-import { sendResendEmail } from "@/lib/resend-email";
 export const dynamic="force-dynamic";
 export async function POST(request:NextRequest){
   const profile=await requireCapability("view_reports");
@@ -18,7 +17,19 @@ export async function POST(request:NextRequest){
   try{
     const {bytes,filename,period}=await buildRmPerformancePdf(profile,query);
     if(bytes.length>10_000_000)return NextResponse.json({error:"Report exceeds email attachment limit; use PDF download."},{status:413});
-    await sendResendEmail({to:recipient,subject:"INSUREIT RM Business Performance - "+period,text:"Attached is your authorized INSUREIT RM Business Performance report for Today and "+period+".",idempotencyKey:"rm-report-"+profile.id+"-"+crypto.randomUUID(),attachments:[{filename,content:Buffer.from(bytes).toString("base64")}]});
+    const apiKey=process.env.RESEND_API_KEY?.trim();
+    const sender=process.env.RESEND_FROM_EMAIL?.trim();
+    if(!apiKey||!sender) return NextResponse.json({error:"Report email service is not configured."},{status:503});
+    const result=await fetch("https://api.resend.com/emails",{method:"POST",headers:{
+      "Authorization":`Bearer ${apiKey}`,"Content-Type":"application/json",
+      "Idempotency-Key":"rm-performance-"+profile.id+"-"+crypto.randomUUID(),
+    },body:JSON.stringify({
+      from:sender,to:[recipient],
+      subject:"INSUREIT RM Business Performance - "+period,
+      text:"Attached is your authorized INSUREIT RM Business Performance report for Today and "+period+".",
+      attachments:[{filename,content:Buffer.from(bytes).toString("base64")}],
+    }),cache:"no-store"});
+    if(!result.ok)throw new Error("Report email delivery failed.");
     return NextResponse.json({ok:true});
   }catch{return NextResponse.json({error:"Email could not be sent. Check mail configuration or try downloading the PDF."},{status:503});}
 }

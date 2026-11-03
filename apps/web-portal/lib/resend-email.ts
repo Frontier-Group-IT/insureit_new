@@ -7,7 +7,6 @@ type ResendEmailInput = {
   text: string;
   html?: string;
   idempotencyKey: string;
-  attachments?: Array<{filename:string;content:string}>;
 };
 
 type ResendEmailResult = {
@@ -35,7 +34,6 @@ export async function sendResendEmail(input: ResendEmailInput): Promise<ResendEm
       subject: input.subject,
       text: input.text,
       ...(input.html ? { html: input.html } : {}),
-      ...(input.attachments?.length ? { attachments: input.attachments } : {}),
     }),
     cache: "no-store",
   });
