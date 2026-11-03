@@ -1,0 +1,16 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const src = readFileSync(new URL("../components/non-motor-unified-mode.tsx", import.meta.url), "utf8");
+const start = src.indexOf('<section aria-label="Non-Motor policy documents and save actions"');
+const end = src.indexOf("</section>", start);
+assert.ok(start >= 0 && end > start, "Non-Motor documents and actions must share a normal-flow section");
+const footer = src.slice(start, end);
+assert.match(footer, /<NonMotorDocumentPicker/);
+assert.match(footer, /border-b border-\[#E7ECF3\]/);
+assert.match(footer, /flex flex-wrap items-center justify-end gap-2/);
+assert.match(footer, />Cancel<\/Link>/);
+assert.match(footer, /onClick=\{submit\}/);
+assert.ok(footer.indexOf("<NonMotorDocumentPicker") < footer.indexOf(">Cancel</Link>"), "Document uploads must precede final actions");
+assert.doesNotMatch(footer, /\bfixed\b|\bsticky\b|bottom-0|z-40/, "Footer controls must not be viewport-fixed");
+assert.match(src, /<NonMotorLiveSummary/, "Non-Motor summary must remain available");
+console.log("Non-Motor document and action footer layout regression passed");
