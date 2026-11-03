@@ -81,7 +81,7 @@ export function PolicyIntakeOnboardingContextCard(){
     const copyState=await verifyPolicyIntakeCurrentPolicyCopy(context.id);
     if(!copyState.ok){
       setOpening(false);
-      setContext(null);
+      setError(copyState.error);
       return;
     }
 
@@ -98,8 +98,17 @@ export function PolicyIntakeOnboardingContextCard(){
       <FileText className="h-3.5 w-3.5"/>{opening?"Opening…":"View Policy Copy"}<ExternalLink className="h-3 w-3"/>
     </button>
     <p className="mt-1 max-w-[320px] truncate text-[8px] text-[#667085]">Policy Intake {context.number} · {context.leadSourceType} · {context.leadSource}</p>
-    {error?<p className="mt-1 text-[8px] font-semibold text-red-600">{error}</p>:null}
+
   </div>;
 
-  return footerTarget?createPortal(action,footerTarget):null;
+  return <>
+    {footerTarget?createPortal(action,footerTarget):null}
+    {error?<div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 p-4" role="presentation">
+      <div role="alertdialog" aria-modal="true" aria-labelledby="policy-copy-error-title" aria-describedby="policy-copy-error-message" className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
+        <h2 id="policy-copy-error-title" className="text-[14px] font-bold text-[#17365D]">Policy copy unavailable</h2>
+        <p id="policy-copy-error-message" className="mt-2 text-[12px] text-slate-600">{error}</p>
+        <button type="button" autoFocus onClick={()=>setError(null)} className="mt-4 rounded-lg bg-[#17365D] px-4 py-2 text-[11px] font-bold text-white">OK</button>
+      </div>
+    </div>:null}
+  </>;
 }
