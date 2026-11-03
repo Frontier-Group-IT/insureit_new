@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
+import { displayPolicyMoney } from "@/lib/policy-money-precision";
 import { ArrowDownToLine, CheckCircle2, ChevronRight, HandCoins, IndianRupee, Phone } from "lucide-react";
 import { savePolicyIntakeOnboardingDraft, type PolicyIntakeDraft } from "@/app/policy-intakes/handoff-actions";
 import { PolicyDateApprovalDialog } from "@/components/policy-date-approval-dialog";
@@ -303,6 +304,9 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
   const numeric=(value:string)=>Number(value||0);
   const calculations=useMemo(()=>{ const od=numeric(form.od),tp=isCpmClass?0:numeric(form.tp),cpa=isCpmClass?0:(form.cpaOpted==="Yes"?numeric(form.cpa):0),tpWithCpa=tp+cpa,addOn=numeric(form.addOnPremium); const net=od+tpWithCpa+addOn,gst=form.vehicleClass==="GCV"?((od+cpa+addOn)*.18)+(tp*.05):net*.18,gross=net+gst; const projectedOd=(od+addOn)*numeric(form.projectedOdPercent)/100,bundled=["TWP","PCP"].includes(form.vehicleClass)&&form.policyProduct==="Bundled",years=bundled?(form.vehicleClass==="TWP"?5:3):1,projectedTp=((form.partialTp&&bundled?tp/years:tp)+(form.partialCpa&&bundled?cpa/years:cpa))*numeric(form.projectedTpPercent)/100; const totalPayin=projectedOd+projectedTp+numeric(form.insurerScheme); const flatPayout=form.payoutBasis==="FLAT"; const payoutOd=flatPayout?0:(od+addOn)*numeric(form.payoutOdPercent)/100,payoutTp=flatPayout||form.payoutBasis==="OD"?0:((form.payoutBasis==="NET"&&bundled&&form.payoutPartialTp?tp/years:tp)+(form.payoutBasis==="NET"&&bundled&&form.payoutPartialCpa?cpa/years:cpa))*numeric(form.payoutTpPercent)/100; const grossPayout=Math.max(0,flatPayout?numeric(form.flatPayoutAmount):payoutOd+payoutTp); return{net,gst,gross,projectedOd,projectedTp,totalPayin,payoutOd,payoutTp,grossPayout}; },[form]);
   function update<K extends keyof FormState>(key:K,value:FormState[K]){if(key==="issuanceDate"||key==="policyNo")setDateApprovalId(null);setForm(current=>({...current,[key]:value}));}
+  function normalizePremiumField(key: "idv"|"od"|"addOnPremium"|"tp"|"cpa") {
+    setForm(current=>({...current,[key]: displayPolicyMoney(current[key])}));
+  }
   function changePolicyProduct(value:string){
     setForm(current=>({...current,policyProduct:value,
       validUpto:value==="Bundled"&&["TWP","PCP"].includes(current.vehicleClass)?coverExpiry(current.validFrom,1):current.validUpto,
@@ -541,15 +545,15 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
           <Select label="Policy product" value={form.policyProduct} onChange={e=>changePolicyProduct(e.target.value)} options={policyProducts} placeholder="Select product" disabled={!form.vehicleClass} required/>
           <Field label="Policy number" value={form.policyNo} onChange={e=>update("policyNo",e.target.value.toUpperCase())} placeholder="Policy number" required/>
           <div><label className={labelClass}>Insurance company <Required/></label><select className={inputClass} value={form.insurerId} onChange={e=>update("insurerId",e.target.value)} required><option value="">Select insurer</option>{insurers.map(i=><option key={i.value} value={i.value}>{i.label}</option>)}</select></div>
-          <Field label="IDV" type="number" min="0" value={isThirdPartyPolicy?"0":form.idv} onChange={e=>update("idv",e.target.value)} placeholder="₹ 0.00" disabled={isThirdPartyPolicy} required/>
-          <Field label="OD premium" type="number" min="0" value={isThirdPartyPolicy?"0":form.od} onChange={e=>update("od",e.target.value)} placeholder="₹ 0.00" disabled={isThirdPartyPolicy} required/>
-          <Field label="Add-on premium" type="number" min="0" step="any" value={form.addOnPremium} onChange={e=>update("addOnPremium",e.target.value)} placeholder="₹ 0.00"/>
+          <Field label="IDV" type="number" min="0" step="any" value={isThirdPartyPolicy?"0":form.idv} onChange={e=>update("idv",e.target.value)} onBlur={()=>normalizePremiumField("idv")} placeholder="₹ 0.00" disabled={isThirdPartyPolicy} required/>
+          <Field label="OD premium" type="number" min="0" step="any" value={isThirdPartyPolicy?"0":form.od} onChange={e=>update("od",e.target.value)} onBlur={()=>normalizePremiumField("od")} placeholder="₹ 0.00" disabled={isThirdPartyPolicy} required/>
+          <Field label="Add-on premium" type="number" min="0" step="any" value={form.addOnPremium} onChange={e=>update("addOnPremium",e.target.value)} onBlur={()=>normalizePremiumField("addOnPremium")} placeholder="₹ 0.00"/>
           {isCpmClass
             ? <BlockedPremiumField label="TP premium"/>
-            : <Field label="TP premium" type="number" min="0" value={form.tp} onChange={e=>update("tp",e.target.value)} placeholder="₹ 0.00" required={form.policyProduct!=="SAOD"}/>}
+            : <Field label="TP premium" type="number" min="0" step="any" value={form.tp} onChange={e=>update("tp",e.target.value)} onBlur={()=>normalizePremiumField("tp")} placeholder="₹ 0.00" required={form.policyProduct!=="SAOD"}/>}
           {isCpmClass
             ? <BlockedPremiumField label="CPA amount"/>
-            : <Field label="CPA amount" type="number" min={form.vehicleClass==="GCV"?"0.01":"0"} step="0.01" value={form.cpa} onChange={e=>{const value=e.target.value;setForm(current=>({...current,cpa:value,cpaOpted:Number(value||0)>0?"Yes":"No"}));}} placeholder="₹ 0.00" required={form.vehicleClass==="GCV"}/>}
+            : <Field label="CPA amount" type="number" min={form.vehicleClass==="GCV"?"0.01":"0"} step="0.01" value={form.cpa} onChange={e=>{const value=e.target.value;setForm(current=>({...current,cpa:value,cpaOpted:Number(value||0)>0?"Yes":"No"}));}} onBlur={()=>normalizePremiumField("cpa")} placeholder="₹ 0.00" required={form.vehicleClass==="GCV"}/>}
           {["TWP","PCP"].includes(form.vehicleClass) && form.policyProduct==="Bundled" ? (
             <div className="col-span-full grid gap-3 sm:grid-cols-4">
               <div>
