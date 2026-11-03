@@ -1,8 +1,8 @@
-import { Platform, MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { CompactDocumentActionBar, CompactDocumentStageHeader } from '@/components/compact-document-upload-navigation';
 import { AppDatePicker } from '@/components/design-system';
