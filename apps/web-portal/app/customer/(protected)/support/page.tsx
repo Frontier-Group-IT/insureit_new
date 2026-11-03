@@ -1,6 +1,6 @@
 import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
 import Link from "next/link";
-import { ArrowRight, FileText, Headphones, ShieldCheck, Clock3, Search, CarFront, CreditCard, CircleHelp, ClipboardList } from "lucide-react";
+import { ArrowRight, Headphones, ShieldCheck, Clock3, Search } from "lucide-react";
 import {
   CustomerAccountTabs,
   EmptyCustomerState,
@@ -61,13 +61,13 @@ export default async function CustomerSupportPage({
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
           {([
-            {label:"Policy Related",desc:"Download, renewal, changes",icon:FileText,href:"/customer/policies"},
-            {label:"Claims",desc:"Status, documents, process",icon:ShieldCheck,href:"/customer/claims"},
-            {label:"Vehicle & Policy",desc:"Add vehicle, update details",icon:CarFront,href:"/customer/vehicles"},
-            {label:"Payments",desc:"Premium, refunds, receipts",icon:CreditCard,href:"/customer/support"},
-            {label:"Other Queries",desc:"General help & FAQs",icon:CircleHelp,href:"/customer/support"},
+            {label:"Policy Related",desc:"Download, renewal, changes",icon:"support-policy",href:"/customer/policies"},
+            {label:"Claims",desc:"Status, documents, process",icon:"support-claims",href:"/customer/claims"},
+            {label:"Vehicle & Policy",desc:"Add vehicle, update details",icon:"support-vehicle",href:"/customer/vehicles"},
+            {label:"Payments",desc:"Premium, refunds, receipts",icon:"support-payments",href:"/customer/support"},
+            {label:"Other Queries",desc:"General help & FAQs",icon:"support-other",href:"/customer/support"},
           ] as const).map(item=><Link key={item.label} href={{pathname:item.href,query:{account:account.id}}} className="group flex min-h-[65px] items-center gap-2 rounded-xl border border-[#EBEDF7] bg-[#F9FAFF] p-2.5 transition hover:border-[#CFC8F9] hover:bg-[#F3F0FF]">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEEAFF] text-[#653DEC]"><item.icon className="h-4.5 w-4.5"/></span>
+            <img src={`/assets/customer-settings-3d/${item.icon}.svg`} alt="" aria-hidden="true" width={44} height={44} className="h-11 w-11 shrink-0 object-contain" />
             <span className="min-w-0 flex-1"><b className="block text-[11px] font-bold text-[#2B3268]">{item.label}</b><small className="block text-[9px] text-[#8A94AC]">{item.desc}</small></span>
             <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#7D77BD]"/>
           </Link>)}
@@ -87,7 +87,7 @@ export default async function CustomerSupportPage({
           {rows.length ? rows.map(item=>(
             <Link key={item.id} href={{pathname:`/customer/support/${item.id}`,query:{account:account.id}}} className="group flex min-h-[105px] flex-col rounded-xl border border-[#E9EBF5] bg-[#FCFCFF] p-3 transition hover:border-[#CFC7F7] hover:shadow-sm">
               <div className="flex items-start gap-2">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEEAFE] text-[#6942EB]"><FileText className="h-4 w-4"/></span>
+                <img src="/assets/customer-settings-3d/support-ticket.svg" alt="" aria-hidden="true" width={40} height={40} className="h-10 w-10 shrink-0 object-contain" />
                 <span className="min-w-0 flex-1"><b className="block truncate text-[10.5px] text-[#252B5C]">{item.subject}</b><small className="text-[9px] text-[#7D86A5]">{item.enquiry_no}</small></span>
                 {item.status.trim().toLowerCase() === "open" ? (
                   <span className="inline-flex shrink-0 origin-center items-center rounded-full border border-[#E8D39C] bg-white px-3 py-1 text-[9px] font-extrabold uppercase tracking-[0.08em] text-[#B88317] shadow-[0_4px_14px_rgba(184,131,23,0.14)] motion-safe:animate-[customerSupportOpenPulse_2.2s_ease-in-out_infinite]">OPEN</span>

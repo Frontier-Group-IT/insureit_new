@@ -51,7 +51,7 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F0F5FF]/95 via-[#F0F5FF]/75 via-40% to-transparent"/>
       <div className="relative z-10 flex min-h-[175px] items-center px-5 py-5 sm:px-7">
         <div className="flex items-start gap-3">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/75 text-[#5948F0]"><CalendarDays className="h-6 w-6"/></span>
+          <img src="/assets/customer-settings-3d/policy-renewals.svg" alt="" aria-hidden="true" width={72} height={72} className="h-14 w-14 shrink-0 object-contain sm:h-[72px] sm:w-[72px]"/>
           <div><p className="text-[10px] font-extrabold uppercase tracking-[.14em] text-[#7364D3]">Renewals</p>
             <h1 className="mt-1 text-[24px] font-extrabold leading-tight tracking-tight text-[#212D67]">Your Policy Renewals</h1>
             <p className="mt-2 text-[11px] font-medium leading-5 text-[#657698]">Stay protected and keep your vehicles covered.<br/>Renew on time, drive with confidence.</p>

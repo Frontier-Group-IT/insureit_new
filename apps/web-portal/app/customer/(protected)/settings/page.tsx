@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, FileText, Headphones, Loader2, LogOut, Settings, ShieldCheck, UserRound, PanelLeft, PanelTop } from "lucide-react";
+import { ChevronRight, Loader2, LogOut, ShieldCheck, PanelLeft, PanelTop } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useEffect, useState } from "react";
 import { customerNavigationPreferenceEvent, customerNavigationPreferenceKey } from "@/components/customer-portal/customer-sidebar-shell";
 
 const accountLinks = [
-  { href: "/customer/profile", title: "My Profile", detail: "View and update your personal information", Icon: UserRound },
-  { href: "/customer/profile#customer-profile-vault", title: "My Documents", detail: "Access and manage your important documents.", Icon: FileText },
-  { href: "/customer/support", title: "Help & Support", detail: "Get assistance or track your support request.", Icon: Headphones },
+  { href: "/customer/profile", title: "My Profile", detail: "View and update your personal information", icon: "profile" },
+  { href: "/customer/profile#customer-profile-vault", title: "My Documents", detail: "Access and manage your important documents.", icon: "documents" },
+  { href: "/customer/support", title: "Help & Support", detail: "Get assistance or track your support request.", icon: "support" },
 ];
 
 export default function CustomerSettingsPage() {
@@ -41,10 +41,10 @@ export default function CustomerSettingsPage() {
     <div className="space-y-4 sm:space-y-5">
       <section className="relative isolate overflow-hidden rounded-xl border border-[#E4E8F1] bg-white">
         <div className="relative flex min-h-[120px] items-center gap-5 px-5 py-5 sm:min-h-[140px] sm:px-6">
-          <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#9A66EC] to-[#5724C7] text-white shadow-sm"><Settings className="h-9 w-9" aria-hidden="true" /></span>
-          <span aria-hidden="true" className="h-16 w-px shrink-0 bg-[#B8A7DF]" />
+          <img src="/assets/customer-settings-3d/settings.svg" alt="" aria-hidden="true" width={76} height={76} className="h-[76px] w-[76px] shrink-0 object-contain" />
+          
           <div className="max-w-[440px]">
-            <h1 className="text-[clamp(22px,2.3vw,29px)] font-extrabold leading-tight text-[#29265B]"><img src="/assets/Custom-Icons/optimized-128/kyc.png" alt="" aria-hidden="true" width={48} height={48} className="mr-2 inline-block h-12 w-12 align-middle object-contain" />Account Settings</h1>
+            <h1 className="text-[clamp(22px,2.3vw,29px)] font-extrabold leading-tight text-[#29265B]">Account Settings</h1>
             <p className="mt-1.5 max-w-[320px] text-[12px] leading-4 text-[#777896]">Manage your account and keep your information up to date.</p>
           </div>
         </div>
@@ -52,16 +52,16 @@ export default function CustomerSettingsPage() {
 
       <section className="overflow-hidden rounded-xl border border-[#EAE5F4] bg-white p-3 shadow-[0_4px_20px_rgba(91,62,143,.035)]" aria-labelledby="settings-account-title">
         <div className="flex items-center gap-3 px-1 pb-3 pt-1">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#F0E9FF] text-[#733BD4]"><UserRound className="h-6 w-6" aria-hidden="true" /></span>
+          <img src="/assets/customer-settings-3d/account.svg" alt="" aria-hidden="true" width={48} height={48} className="h-12 w-12 shrink-0 object-contain" />
           <div className="min-w-0 flex-1">
             <h2 id="settings-account-title" className="text-[15px] font-bold text-[#292655]">My Account</h2>
             <p className="mt-1 text-[11px] text-[#8683A2]">Manage your personal and account information</p>
           </div>
         </div>
         <div className="space-y-2">
-          {accountLinks.map(({ href, title, detail, Icon }) => (
+          {accountLinks.map(({ href, title, detail, icon }) => (
             <Link key={href} href={href} className="flex items-center gap-3 rounded-lg border border-[#EAE5F4] bg-white px-3 py-2.5 transition hover:bg-[#F8F6FE] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7843DC]">
-              <img src={title === "My Profile" ? "/assets/Custom-Icons/optimized-128/customers.png" : title === "My Documents" ? "/assets/Custom-Icons/optimized-128/documents.png" : "/assets/Custom-Icons/optimized-128/tasks-work-queue.png"} alt="" aria-hidden="true" width={40} height={40} className="h-10 w-10 shrink-0 object-contain" />
+              <img src={`/assets/customer-settings-3d/${icon}.svg`} alt="" aria-hidden="true" width={44} height={44} className="h-11 w-11 shrink-0 object-contain" />
               <span className="min-w-0 flex-1"><span className="block text-[12px] font-bold text-[#292655]">{title}</span><span className="mt-1 block text-[10px] leading-4 text-[#8783A0]">{detail}</span></span>
               <ChevronRight className="h-4 w-4 shrink-0 text-[#7842DA]" aria-hidden="true" />
             </Link>
