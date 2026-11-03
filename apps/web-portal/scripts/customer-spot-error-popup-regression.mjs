@@ -8,4 +8,13 @@ assert.match(form,/noValidate onSubmit=/,"Client input validation must use modal
 assert.match(form,/setDialogError\(invalid\.validity\.valueMissing/,"Invalid required fields must trigger modal");
 assert.match(dialog,/role="alertdialog" aria-modal="true"/,"Error dialog must be accessible");
 assert.match(dialog,/>\s*OK\s*<\/button>/,"Error dialog must expose OK action");
+const spotPage = readFileSync("app/customer/(protected)/spot-intimation/page.tsx", "utf8");
+const otherStage = readFileSync("app/customer/(protected)/claims/[id]/stage/[stage]/page.tsx", "utf8");
+const stageStrip = readFileSync("components/customer-portal/customer-claim-stage-strip.tsx", "utf8");
+const stageCss = readFileSync("app/customer/(protected)/claims/[id]/stage/[stage]/customer-claim-reference.css", "utf8");
+assert.match(spotPage, /import "\.\.\/claims\/\[id\]\/stage\/\[stage\]\/customer-claim-reference\.css";/, "Initial Spot Intimation must import the shared Claim Journey stylesheet");
+assert.match(otherStage, /import "\.\/customer-claim-reference\.css";/, "Other stages must continue loading the same stylesheet");
+assert.match(spotPage, /<CustomerClaimStageStrip/, "Spot Intimation must retain its shared header");
+assert.match(stageStrip, /customer-claim-ref-journey-header/, "Shared journey header must retain the reference styling hook");
+assert.match(stageCss, /\.customer-claim-ref-journey-header\s*\{\s*background:linear-gradient/, "Reference stylesheet must define the visible blue gradient header");
 console.log("Customer Spot Intimation error popup regression passed");
