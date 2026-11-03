@@ -15,17 +15,20 @@ async function uploadSigned(signedUrl:string,file:File){const body=new FormData(
 
 export function PolicyIntakeForm({sources}:{sources:PolicyIntakeSource[]}){
   const router=useRouter();const formRef=useRef<HTMLFormElement>(null);const fileRef=useRef<HTMLInputElement>(null);
+  const submittingRef=useRef(false);
   const[fileName,setFileName]=useState("");const[policyType,setPolicyType]=useState<PolicyType>("motor");const[error,setError]=useState<string|null>(null);const[pending,startTransition]=useTransition();
   const proposalForm=policyType==="life"||policyType==="health";
   function submit(formData:FormData){
+    if(submittingRef.current)return;
     setError(null);const leadSourceId=String(formData.get("lead_source_id")??"");const selectedPolicyType=String(formData.get("policy_type")??"") as PolicyType;const customerMobile=String(formData.get("customer_mobile")??"");const file=fileRef.current?.files?.[0];
     const isProposal=selectedPolicyType==="life"||selectedPolicyType==="health";const documentName=isProposal?"proposal form":"policy copy";
     if(!file&&!isProposal){setError(`Upload the ${documentName} PDF or image.`);return;}if(file&&!ALLOWED_TYPES.has(file.type)){setError(`Upload a PDF, JPG, PNG or WebP ${documentName}.`);return;}if(file&&file.size>MAX_FILE_SIZE){setError(`${isProposal?"Proposal form":"Policy copy"} must be 15 MB or smaller.`);return;}
+    submittingRef.current=true;
     startTransition(async()=>{try{
       if(!file&&isProposal){const result=await submitLifeHealthIntakeWithoutProposal({leadSourceId,policyType:selectedPolicyType,customerMobile});if(!result.ok){setError(result.error);return;}formRef.current?.reset();setFileName("");setPolicyType("motor");router.push(`/policy-intakes/${result.id}?submitted=1`);router.refresh();return;}
       if(!file)return;
       const meta={name:file.name,type:file.type,size:file.size};const prepared=await preparePolicyIntakeUpload({leadSourceId,policyType:selectedPolicyType,customerMobile,file:meta});if(!prepared.ok){setError(prepared.error);return;}await uploadSigned(prepared.signedUrl,file);const result=await completePolicyIntakeUpload({id:prepared.id,number:prepared.number,leadSourceId,policyType:selectedPolicyType,customerMobile,storagePath:prepared.storagePath,file:meta});if(!result.ok){setError(result.error);return;}formRef.current?.reset();setFileName("");setPolicyType("motor");router.push(`/policy-intakes/${result.id}?submitted=1`);router.refresh();
-    }catch{setError("Upload couldn't be completed. Your details are still here — please try again.");}});
+    }catch{setError("Upload couldn't be completed. Your details are still here — please try again.");}finally{submittingRef.current=false;}});
   }
   return <form ref={formRef} action={submit} className="mx-auto max-w-[680px] pb-24"><section className="overflow-hidden rounded-[24px] border border-[#DCE5F1] bg-white shadow-[0_18px_50px_rgba(31,56,96,.10)]">
     <div className="bg-[linear-gradient(135deg,#071D49,#174B83)] px-5 py-5 text-white"><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-white/10"><ShieldCheck className="h-5 w-5"/></span><div><h1 className="text-[17px] font-bold">New Policy Intake</h1><p className="mt-0.5 text-[10px] text-white/72">Choose the source and policy type, then upload the document.</p></div></div></div>
