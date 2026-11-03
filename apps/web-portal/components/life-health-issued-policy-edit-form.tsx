@@ -7,6 +7,8 @@ import { useEffect, useMemo, useState, useTransition, type ReactNode } from "rea
 import { Eye, HandCoins, Phone, Upload } from "lucide-react";
 import { updateIssuedLifeHealthPolicy } from "@/app/policies/life-health-issued-policy-edit-actions";
 import { isPensionLifePolicy } from "@/lib/life-health-pension-maturity";
+import { PolicyDateApprovalWidget } from "@/components/policy-date-approval-widget";
+import { needsPolicyDateApproval, policyDateDecision } from "@/lib/policy-date-rule";
 import { updateIssuedLifeHealthCustomer } from "@/app/policies/life-health-issued-customer-edit-actions";
 import { replaceIssuedLifeHealthDocument, type LifeHealthIssuedDocument, type LifeHealthIssuedDocumentType } from "@/app/policies/life-health-issued-policy-document-actions";
 import { StandardActivityStatusCard, type StandardActivityItem } from "@/components/standard-activity-status-card";
@@ -27,6 +29,7 @@ const documentLabels: Array<[LifeHealthIssuedDocumentType,string]> = [["policy_c
 export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, activityItems, documents, commercialAccess, commercialSummary }: Props) {
   const router = useRouter();
   const [form,setForm] = useState(initial);
+  const [dateApproval,setDateApproval] = useState<{id:string;key:string}|null>(null);
   const initialSource = sources.find((source)=>source.id === initial.sourceId);
   const [intermediaryType,setIntermediaryType] = useState<LifeHealthIssuedEditSource["type"]>(initialSource?.type || "SIBL / Partner");
   const [documentState,setDocumentState] = useState(documents);
@@ -45,6 +48,9 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
   const [documentPending,startDocumentTransition] = useTransition();
   const availableSources = useMemo(()=>sources.filter((source)=>source.type === intermediaryType),[sources,intermediaryType]);
   const selectedSource = sources.find((source)=>source.id === form.sourceId);
+  const approvalKey = form.sourcingDate+":"+form.policyNumber.trim().toUpperCase();
+  const dateApprovalId = dateApproval?.key===approvalKey?dateApproval.id:null;
+  const dateApprovalRequired=needsPolicyDateApproval(form.sourcingDate,initial.sourcingDate);
   const insurer = insurers.find((item)=>item.value === form.insurerId)?.label ?? "Not selected";
   const pensionPlan = isPensionLifePolicy(form.businessLine,form.productName);
   const required = [form.sourcingDate,form.sourceId,form.customerName,form.customerPhone,form.insurerId,form.productName,form.proposalNumber,form.paymentFrequency,form.premiumAmount,form.paymentMode,form.startDate,...(pensionPlan?[]:[form.endDate]),form.finalPremium];
@@ -80,7 +86,10 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
   }
 
   function save() {
+    if(["invalid","future"].includes(policyDateDecision(form.sourcingDate))){setError("Choose a valid policy issuance date in the current or an earlier month.");return;}
+    if(dateApprovalRequired&&!dateApprovalId){setError("Verify the selected approver\u0027s email OTP before changing this policy to an earlier-month date.");return;}
     const data = new FormData(); Object.entries(form).forEach(([key,value])=>data.set(key,value));
+    if(dateApprovalId)data.set("dateApprovalId",dateApprovalId);
     Object.entries(commercial).forEach(([key,value])=>data.set(key,String(value)));
     setError(null);
     startTransition(async()=>{
@@ -124,6 +133,7 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
       <div className="space-y-4">
         <Section number="01" title="Policy source & ownership">
           <Field label="Policy issuance date" type="date" value={form.sourcingDate} onChange={(v)=>set("sourcingDate",v)} required/>
+          {dateApprovalRequired?<PolicyDateApprovalWidget key={approvalKey} issuanceDate={form.sourcingDate} policyNumber={form.policyNumber} operation="edit" existingPolicyId={form.policyId} intermediaryCode={selectedSource?.code} verifiedApprovalId={dateApprovalId} onApproved={id=>setDateApproval(id?{id,key:approvalKey}:null)}/>:null}
           <Select label="Policy type" value={form.businessLine} onChange={(v)=>set("businessLine",v as "Life"|"Health")} options={["Life","Health"]}/>
           <div><label className={labelClass}>Intermediary type <Req/></label><select className={inputClass} value={intermediaryType} onChange={(e)=>changeIntermediaryType(e.target.value as LifeHealthIssuedEditSource["type"])}><option>POSP</option><option>MISP</option><option>SIBL / Partner</option></select><div className="flex flex-wrap gap-x-4 gap-y-1"><Meta label="RM" value={selectedSource?.rmName||"—"}/><Meta label="Employee ID" value={selectedSource?.rmCode||"—"}/></div></div>
           <div><label className={labelClass}>Lead source <Req/></label><select className={inputClass} value={form.sourceId} onChange={(e)=>set("sourceId",e.target.value)}>{availableSources.map((s)=><option key={s.id} value={s.id}>{s.label} · {s.code}</option>)}</select><div className="flex gap-3"><Meta label="ID" value={selectedSource?.code||"—"}/>{selectedSource?.mobile?<span className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold text-[#244C73]"><Phone className="h-3 w-3"/>{selectedSource.mobile}</span>:null}</div></div>
