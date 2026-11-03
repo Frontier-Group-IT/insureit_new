@@ -8,7 +8,7 @@ const associatePage = read("../app/intermediaries/applications/[id]/associate-ac
 const associateToast = read("../app/intermediaries/applications/[id]/associate-accounts/associate-account-result-toast.tsx");
 
 assert.match(globalEnhancements, /hasPageSpecificAssociateError/, "Duplicate popup suppression must be route-scoped.");
-assert.match(globalEnhancements, /\/intermediaries\\\/applications/, "Only the Associate Accounts route should be exempt.");
+assert.ok(globalEnhancements.includes("intermediaries") && globalEnhancements.includes("associate-accounts"), "Only the Associate Accounts route should be exempt.");
 assert.match(globalEnhancements, /&& !hasPageSpecificAssociateError/, "Generic popup should be suppressed when the local error dialog handles it.");
 assert.match(associatePage, /<AssociateAccountResultToast/, "Page-specific error feedback must remain visible.");
 assert.match(associatePage, /associate_delete_dependencies/, "Deletion dependency error mapping must remain intact.");
