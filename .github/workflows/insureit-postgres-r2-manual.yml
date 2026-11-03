@@ -1,0 +1,79 @@
+name: INSUREIT PostgreSQL logical backup to R2 (manual gate)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: insureit-production-postgres-backup
+  cancel-in-progress: false
+
+jobs:
+  postgres_backup:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    environment: insureit-production-backup
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.122.1
+      - name: Validate backup configuration without printing credentials
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DB_BACKUP_ENCRYPTION_KEY: ${{ secrets.DB_BACKUP_ENCRYPTION_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          python - <<'PY'
+          import base64, os
+          from urllib.parse import urlsplit
+          required = ['DATABASE_URL','DB_BACKUP_ENCRYPTION_KEY','R2_ACCOUNT_ID','R2_ACCESS_KEY_ID','R2_SECRET_ACCESS_KEY']
+          if any(not os.environ.get(name) for name in required):
+              raise SystemExit('Missing one or more database backup credentials')
+          try:
+              assert len(base64.b64decode(os.environ['DB_BACKUP_ENCRYPTION_KEY'], validate=True)) == 32
+          except (AssertionError, ValueError):
+              raise SystemExit('Invalid database backup encryption key')
+          url = urlsplit(os.environ['DATABASE_URL'])
+          assert url.scheme in ('postgresql','postgres')
+          assert url.path == '/postgres'
+          assert url.hostname and ('supabase.co' in url.hostname)
+          print('Encrypted PostgreSQL backup configuration validated')
+          PY
+      - name: Install pinned encryption and R2 dependencies
+        run: python -m pip install boto3==1.35.99 cryptography==44.0.2
+      - name: Export roles, schema and data using Supabase CLI
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -m 700 -p "$RUNNER_TEMP/insureit-postgres-dump"
+          supabase db dump --db-url "$DATABASE_URL" -f "$RUNNER_TEMP/insureit-postgres-dump/roles.sql" --role-only
+          supabase db dump --db-url "$DATABASE_URL" -f "$RUNNER_TEMP/insureit-postgres-dump/schema.sql"
+          supabase db dump --db-url "$DATABASE_URL" -f "$RUNNER_TEMP/insureit-postgres-dump/data.sql" --use-copy --data-only -x "storage.buckets_vectors" -x "storage.vector_indexes"
+          test -s "$RUNNER_TEMP/insureit-postgres-dump/roles.sql"
+          test -s "$RUNNER_TEMP/insureit-postgres-dump/schema.sql"
+          test -s "$RUNNER_TEMP/insureit-postgres-dump/data.sql"
+          echo "Three nonempty logical dump components generated; no dump data logged"
+      - name: Encrypt, upload and read-back verify logical archive
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          DB_BACKUP_ENCRYPTION_KEY: ${{ secrets.DB_BACKUP_ENCRYPTION_KEY }}
+          PG_DUMP_DIR: ${{ runner.temp }}/insureit-postgres-dump
+          R2_BUCKET: insureit-production-backups
+        run: python -u scripts/backup/postgres_to_r2.py
+      - name: Remove plaintext dump files
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/insureit-postgres-dump"
