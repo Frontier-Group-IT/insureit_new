@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { UserPlus } from "lucide-react";
+import { ChevronDown, UserPlus } from "lucide-react";
 import { FormSubmitButton } from "./form-submit-button";
 import { CustomerSearchField } from "./customer-search-field";
 import { VehicleSpecificationFields } from "./vehicle-class-capacity-fields";
@@ -80,7 +80,7 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
       </VehicleSection>
 
 
-      <VehicleSection number="04" title="Additional RC Details (Optional)" columns="five">
+      <VehicleSection number="04" title="Additional RC Details" columns="five" collapsedByDefault>
         <Field variant="onboarding" label="RTO Name" name="rto_name" defaultValue={values?.rto_name?.toString() ?? ""}  />
         <Field variant="onboarding" label="RTO State" name="rto_state" defaultValue={values?.rto_state?.toString() ?? ""}  />
         <Field variant="onboarding" label="Registered Owner" name="registered_owner_name" defaultValue={values?.registered_owner_name?.toString() ?? ""}  />
@@ -98,7 +98,7 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
         <Field variant="onboarding" label="Permit Number" name="permit_no" defaultValue={values?.permit_no?.toString() ?? ""}  />
         <Field variant="onboarding" label="Blacklist Status" name="blacklist_status" defaultValue={values?.blacklist_status?.toString() ?? ""}  />
       </VehicleSection>
-      <VehicleSection number="05" title="RC Insurance Information (Optional)" columns="five">
+      <VehicleSection number="05" title="RC Insurance Information" columns="five" collapsedByDefault>
         <Field variant="onboarding" label="RC Insurance Company" name="rc_insurance_company" defaultValue={values?.rc_insurance_company?.toString() ?? ""}  />
         <Field variant="onboarding" label="RC Policy Number" name="rc_policy_number" defaultValue={values?.rc_policy_number?.toString() ?? ""}  />
         <Field variant="onboarding" label="RC Insurance Start Date" name="rc_policy_start_date" defaultValue={values?.rc_policy_start_date?.toString() ?? ""} type="date" />
@@ -154,17 +154,26 @@ function VehicleOnboardingHeader() {
   </section>;
 }
 
-function VehicleSection({ number, title, children, columns, reserveHeaderAction = false }: { number: string; title: string; children: ReactNode; columns: "two" | "three" | "four" | "five" | "six"; reserveHeaderAction?: boolean }) {
+function VehicleSection({ number, title, children, columns, reserveHeaderAction = false, collapsedByDefault = false }: { number: string; title: string; children: ReactNode; columns: "two" | "three" | "four" | "five" | "six"; reserveHeaderAction?: boolean; collapsedByDefault?: boolean }) {
   const grid = columns === "two" ? "md:grid-cols-2" : columns === "three" ? "md:grid-cols-2 xl:grid-cols-3" : columns === "four" ? "md:grid-cols-2 xl:grid-cols-4" : columns === "six" ? "md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6" : "md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5";
   const bodyPadding = reserveHeaderAction ? "px-3.5 pb-3.5 pt-[58px] sm:p-4" : "p-3.5 sm:p-4";
-  return <section className={`relative ${reserveHeaderAction ? "overflow-visible" : "overflow-hidden"} rounded-xl border border-[#D9E2F0] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]`}>
-    <div className={`flex min-h-[50px] items-center border-b border-[#E4EAF1] bg-[#FBFCFE] px-4 py-2.5 ${reserveHeaderAction ? "sm:pr-[305px]" : ""}`}>
-      <div className="flex items-center gap-2.5">
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#17365D] text-[9.5px] font-bold text-white">{number}</span>
-        <h2 className="text-[13px] font-semibold text-[#17203A]">{title}</h2>
-      </div>
-    </div>
-    <div className={`grid min-w-0 grid-cols-1 gap-x-3 gap-y-3 ${bodyPadding} ${grid}`}>{children}</div>
+  const panelClass = `relative ${reserveHeaderAction ? "overflow-visible" : "overflow-hidden"} rounded-xl border border-[#D9E2F0] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]`;
+  const headingClass = `flex min-h-[50px] items-center border-b border-[#E4EAF1] bg-[#FBFCFE] px-4 py-2.5 ${reserveHeaderAction ? "sm:pr-[305px]" : ""}`;
+  const heading = <div className="flex items-center gap-2.5">
+    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#17365D] text-[9.5px] font-bold text-white">{number}</span>
+    <h2 className="text-[13px] font-semibold text-[#17203A]">{title}</h2>
+  </div>;
+  const fields = <div className={`grid min-w-0 grid-cols-1 gap-x-3 gap-y-3 ${bodyPadding} ${grid}`}>{children}</div>;
+  if (collapsedByDefault) return <details className={`group ${panelClass}`}>
+    <summary className={`${headingClass} cursor-pointer list-none justify-between outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#5B8CC3] [&::-webkit-details-marker]:hidden`}>
+      {heading}
+      <ChevronDown aria-hidden="true" className="h-4 w-4 text-[#59718E] transition-transform group-open:rotate-180" />
+    </summary>
+    {fields}
+  </details>;
+  return <section className={panelClass}>
+    <div className={headingClass}>{heading}</div>
+    {fields}
   </section>;
 }
 
