@@ -86,7 +86,7 @@ const claimHeaderIcons = {
 } as const;
 
 export function SpotClaimHeader({ claim, heading = "Operations claim journey" }: { claim: SpotSurveyClaim; heading?: string }) {
-  return <InfoStrip claim={claim} />;
+  return <InfoStrip claim={claim} heading={heading} />;
 }
 
 export function SpotSurveyWorkspace({ claim, documents, verifications = [], surveyorDetails = null, showContext = true, showSpotDetails = true, canReusePolicyCopy = false }: { claim: SpotSurveyClaim; documents: SpotSurveyDocument[]; verifications?: SpotSurveyVerification[]; surveyorDetails?: SurveyorDetails | null; showContext?: boolean; showSpotDetails?: boolean; canReusePolicyCopy?: boolean }) {
@@ -151,7 +151,7 @@ function SurveyorColumn({ label, value, href, last = false }: { label: string; v
   return href ? <a href={href} className={`${className} transition hover:bg-[#F7FAFF]`}>{content}</a> : <div className={className}>{content}</div>;
 }
 
-function InfoStrip({ claim }: { claim: SpotSurveyClaim }) {
+function InfoStrip({ claim, heading = "Operations claim journey" }: { claim: SpotSurveyClaim; heading?: string }) {
   const customerName = claim.customers?.company_name || claim.customers?.contact_name || "-";
   const insurer = claim.insurance_companies?.name || "-";
   const insurerRef = claim.insurer_claim_no || claim.policies?.policy_no || claim.claim_no;
