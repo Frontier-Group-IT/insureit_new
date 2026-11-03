@@ -96,10 +96,10 @@ export default function VehicleDetailScreen() {
           </View>
           <View style={styles.heroCopy}>
             <View style={styles.heroVehicleLine}>
-              <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle.vehicle_no}</Text>
+              <Text style={styles.vehicleNo} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>{vehicle.vehicle_no}</Text>
               {policyState.tone === 'red' ? <PulseDot tone="red" /> : null}
             </View>
-            <Text style={styles.vehiclePolicyHelper} numberOfLines={1}>
+            <Text style={styles.vehiclePolicyHelper} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>
               {vehicleSummary}
             </Text>
           </View>
@@ -192,15 +192,15 @@ export default function VehicleDetailScreen() {
             )}
           </View>
           <View style={styles.activePolicyCopy}>
-            <Text style={styles.activePolicyInsurer} numberOfLines={1}>{latestPolicyCompany?.name ?? 'Insurance policy'}</Text>
-            <Text style={styles.activePolicyNumber} numberOfLines={1}>{latestPolicyNumber}</Text>
+            <Text style={styles.activePolicyInsurer} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>{latestPolicyCompany?.name ?? 'Insurance policy'}</Text>
+            <Text style={styles.activePolicyNumber} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>{latestPolicyNumber}</Text>
             <Text
               style={[
                 styles.policyStatusHelper,
                 policyState.tone === 'red' && styles.policyStatusHelperExpired,
                 policyState.tone === 'orange' && styles.policyStatusHelperDue,
               ]}
-              numberOfLines={1}
+              numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}
             >
               {policyState.helper}
             </Text>
