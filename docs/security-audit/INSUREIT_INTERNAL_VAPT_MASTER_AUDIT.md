@@ -1,14 +1,14 @@
 # INSUREIT — Internal VAPT & Cybersecurity Self-Audit Master Register
 
 > **Document ID:** INS-SEC-IAV-001  
-> **Version:** 0.6.0 (C03 authorization review and first provisional static finding)  
+> **Version:** 0.7.0 (C03 downstream access and partner scope trace)  
 > **Created:** 2026-11-03 (Asia/Kolkata)  
 > **Owner:** Sankalp Insurance Brokers Private Limited — designated internal audit owner **TBD**  
 > **Target systems:** INSUREIT Customer App, Partner App, Operations Portal, APIs, database, storage, infrastructure, third-party integrations and related governance  
 > **Status:** **P0 READ-ONLY DISCOVERY IN PROGRESS — DATABASE METADATA REVIEWED; 61 CONTROLS NOT YET PASSED**  
 > **Classification:** Internal / Confidential — redact secrets, customer data and exploitable details before distribution  
 > **Next review:** On each completed audit work session; formal periodic review cadence TBD
-> **Latest checkpoint:** 2026-11-03: C03 privileged-function first review completed for a targeted subset; one provisional High static authorization finding opened, no live exploitation verified. See Section 22 and the Section 9 findings register.
+> **Latest checkpoint:** 2026-11-03: C03 static review traced pending customer membership into downstream access checks and sampled partner payouts/customer visibility. One provisional High static finding remains open and untested. See Sections 22–23.
 
 ## 0. Essential boundaries and claims
 
@@ -514,3 +514,31 @@ Master document version:
 | 2026-11-03 | Read-only audit assistant | P0 / C03 | Enumerated 178 authenticated-executable privileged RPCs with heuristic source analysis, reviewed 14 targeted routine definitions and related role/trigger/schema privileges; checked Supabase user-metadata security guidance. | P0-027 through P0-034, VAPT-2026-001 (static finding, exploitability unverified). | **1 provisional High code-level finding opened; zero actual exploit tests or incidents; zero controls fully passed.** | Owner triage and isolated verified-phone regression plan, continue privileged-function review. |
 
 **CI/history:** Documentation commit `77d1a053df0c7da06a451c71e1f6979341110544` passed the `Verify web portal` GitHub workflow run `41589927853`. The new documentation commit created in this session has its own CI status and must be checked before merging. No production changes, test RPC execution, policy changes or deployments.
+
+
+## 23. C03 downstream authorization and partner/finance scope trace — 2026-11-03
+
+**Method and environment:** Read-only `pg_proc` source definitions in the already production-mapped INSUREIT Supabase project. No SQL RPC was invoked, no customer records returned, and no authorized-user or unauthorized-user runtime actions were tested.
+
+| Evidence ID | Static observation | Significance and limitation |
+|---|---|---|
+| P0-035 | `can_access_customer(uuid)` uses an active `customer_memberships` association as a root for a recursive managed-customer relationship check. A related overload additionally constrains the supplied viewer ID to `auth.uid()` except for service-role context and checks profile/agent/business scopes. | Demonstrates why incorrectly activating a pending membership (VAPT-2026-001) could affect broader customer access. **No unauthorized membership creation or resulting customer data access was tested or observed.** Review actual caller paths, nesting rules and policy dependencies. |
+| P0-036 | `partner_app_list_customers_v2` gets `partner_app_commercial_scope`, rejects absent scope, and filters customer rows by authorized intermediary IDs except when the resolved employee scope is organization-wide. `partner_app_payout_summary` denies detailed payout to employee identities and scopes intermediary payout by the active identity code; `partner_app_scoped_payout_range` bounds the requested date interval and filters payouts by scoped intermediary IDs. | Positive static allow/deny gates in sampled data-returning functions. Because outputs may include customer contact details or financial data, manual cross-partner and scoped-employee negative tests remain a **required** control before passing C03/B03. |
+| P0-037 | `partner_app_commercial_scope` derives commercial access context from resolved portal identity and current partner/employee mapping; branch/partner/group and employee organization/subtree options affect its output arrays. | Central authorization boundary shared by multiple privileged functions; this increases assurance value of targeted tests of parent/child partner identity, associate accounts, director/manager/employee permissions, and disabled accounts. Static review cannot establish correctness of every delegated identity helper. |
+| P0-038 | `can_manage_claims_organization` requires an active profile and uses employee/role permission overrides, with organization-wide access conditional on permitted scope/role; the business logic specifically excludes `backoffice_executive` from the organization-wide case. | Positive static guard. Actual business intent, inactive-user controls, override revocation, and claims/document access behavior require named-role test cases; refer to pending REV-2026-002. |
+
+**Risk interpretation:** VAPT-2026-001 remains the sole *provisional High code-level finding* discovered in this session series; the ability to exploit it against actual customer records remains unverified. The partner/finance functions sampled above show protective checks but are **not marked safe or passed**. The entire 61-control list remains incomplete.
+
+### Prioritized continuation (next audit session)
+
+- **First:** assign VAPT-2026-001 to a technical owner and confirm mobile/email/Firebase authentication and phone verification boundary. Prepare a **safe remediation design** that never uses user-modifiable identity metadata for authorization and preserves legitimate existing customer invitation/activation flows.
+- **Second:** perform further read-only review of the core identity/scope helpers (`partner_portal_access_context`, `partner_app_current_identity`, `partner_app_employee_intermediary_scope`) and build a compact caller/dependency matrix for sensitive RPCs.
+- **Third:** complete expected role-access matrix for claims, customer relationships, partner/branch boundaries, and finance; then request authorization for **staging-only, synthetic-account** verification.
+- **Fourth:** review remaining C03 access gates and begin C04 storage signed URL path review, without opening customer document objects.
+- **Documentation:** keep exact deploy commit, project ref, evidence ID, finding owner, severity, remediation state, test outcomes and retest status in this file. Do not mark any control PASS merely because a helper is present.
+
+### Session 6 log
+
+| 2026-11-03 | Read-only audit assistant | P0/C03 | Traced active customer membership into the customer-access helper; inspected partner customer list, payout summary, scoped payout range, commercial scope and organization claims-management functions. | P0-035 through P0-038, no mutations. | One provisional High static finding remains open, zero exploit tests, zero fully assessed controls. | Identity/phone verification triage; full role matrix, controlled staging test plan. |
+
+**Workflow provenance:** The documentation-only PR #3927 remains unmerged. Verify the CI conclusion for the current head commit separately. External CERT-In VAPT and formal internal sign-off have not occurred.
