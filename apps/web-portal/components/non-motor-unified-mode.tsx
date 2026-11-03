@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { PolicyDateApprovalWidget } from "@/components/policy-date-approval-widget";
+import { PolicyDateApprovalDialog } from "@/components/policy-date-approval-dialog";
 import { needsPolicyDateApproval, policyDateDecision } from "@/lib/policy-date-rule";
 import { ChevronDown, ChevronUp, HandCoins, IndianRupee, MapPin, ShieldCheck } from "lucide-react";
 import { deleteNonMotorPolicyDocument, uploadNonMotorPolicyDocument } from "@/app/policies/non-motor-policy-document-actions";
@@ -141,6 +141,7 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
   const [commercialModal, setCommercialModal] = useState<CommercialModal>(null);
   const [error, setError] = useState<string | null>(null);
   const [dateApproval, setDateApproval] = useState<{ id: string; key: string } | null>(null);
+  const [dateApprovalOpen, setDateApprovalOpen] = useState(false);
   const [savedPolicyCode, setSavedPolicyCode] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const approvalKey = [source.issuanceDate, form.policyNumber.trim().toUpperCase(), isEdit ? "edit" : "create", policyId ?? ""].join(":");
@@ -237,14 +238,13 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
     });
   }
 
-  function submit() {
+  function submit(approvalConfirmed = false) {
     if (savedPolicyCode) {
       router.push(`/policies?policy=${encodeURIComponent(savedPolicyCode)}`);
       return;
     }
     setError(null);
     if (["invalid", "future"].includes(policyDateDecision(source.issuanceDate))) { setError("Choose a valid issuance date within the current or an earlier month."); return; }
-    if (dateApprovalRequired && !dateApprovalId) { setError("Verify the selected approver\u0027s email OTP before saving this earlier-month policy."); return; }
     const selectedSource = sources.find((item) => item.value === source.sourceId);
     if (!source.issuanceDate || !source.intermediaryType || !selectedSource) { setError("Complete Policy source & ownership in Section 01 before saving the Non-Motor policy."); return; }
     if (form.customerMode === "existing" && !form.customerId) { setError("Select a customer or organisation in Section 02."); return; }
@@ -254,6 +254,7 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
     if (!form.sumInsured || !form.grossPremium || !form.startDate || !form.endDate) { setError("Complete the required Cover, premium & validity fields in Section 04."); return; }
     if (commercialAccess && form.payinBasis === "NET_PREMIUM_PERCENT" && Number(form.payinPercent || 0) > 100) { setError("Projected insurer Pay-in percentage cannot exceed 100%."); return; }
     if (commercialAccess && form.payoutBasis === "NET_PREMIUM_PERCENT" && Number(form.payoutPercent || 0) > 100) { setError("Partner Payout percentage cannot exceed 100%."); return; }
+    if (dateApprovalRequired) { if (!approvalConfirmed) { setDateApprovalOpen(true); return; } if (!dateApprovalId) { setDateApprovalOpen(true); return; } setDateApprovalOpen(false); }
 
     const payload: NonMotorPolicyPayload = {
       dateApprovalId,
@@ -310,7 +311,6 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_336px]">
       <div className="space-y-4">
         {sourceSection}
-        {dateApprovalRequired ? <PolicyDateApprovalWidget key={approvalKey} issuanceDate={source.issuanceDate} policyNumber={form.policyNumber} operation={isEdit?"edit":"create"} existingPolicyId={isEdit?policyId:null} intermediaryCode={source.intermediaryCode} verifiedApprovalId={dateApprovalId} onApproved={id=>setDateApproval(id?{id,key:approvalKey}:null)}/> : null}
 
         <Section number="02" title="Customer & policy">
           {form.customerMode === "existing" ? <>
@@ -386,9 +386,10 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
       </div>
       <div className="flex flex-wrap items-center justify-end gap-2 px-4 py-3">
         <Link href="/policies" className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Cancel</Link>
-        <button type="button" onClick={submit} disabled={isPending} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-60">{isPending ? "Saving policy…" : savedPolicyCode ? "Open Policy Register" : isEdit ? "Save Policy Changes" : "Create Policy"}</button>
+        <button type="button" onClick={()=>submit()} disabled={isPending} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-60">{isPending ? "Saving policy…" : savedPolicyCode ? "Open Policy Register" : isEdit ? "Save Policy Changes" : "Create Policy"}</button>
       </div>
     </section>
+    {dateApprovalOpen&&dateApprovalRequired?<PolicyDateApprovalDialog issuanceDate={source.issuanceDate} policyNumber={form.policyNumber} operation={isEdit?"edit":"create"} existingPolicyId={isEdit?policyId:null} intermediaryCode={source.intermediaryCode} verifiedApprovalId={dateApprovalId} onApproved={id=>setDateApproval(id?{id,key:approvalKey}:null)} onClose={()=>setDateApprovalOpen(false)} onConfirm={()=>submit(true)} submitting={isPending}/>:null}
   </>;
 }
 
