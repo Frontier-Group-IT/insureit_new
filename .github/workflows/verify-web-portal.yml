@@ -181,6 +181,8 @@ jobs:
         run: npm run register-performance-observability:regression
       - name: Nullable pension maturity policy register regression
         run: node scripts/policy-null-pension-maturity-regression.mjs
+      - name: Policy copy direct signed upload and retry regression
+        run: node scripts/policy-copy-direct-upload-regression.mjs
       - name: Policy register payload regression
         run: npm run policy-register-payload:regression
       - name: Register customer relation payload regression

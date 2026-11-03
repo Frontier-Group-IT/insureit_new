@@ -2,7 +2,8 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { uploadPolicyCopy } from "@/app/policies/policy-document-actions";
+import { preparePolicyCopyUpload, finalizePolicyCopyUpload } from "@/app/policies/policy-document-actions";
+import { createSupabaseBrowserClient } from "@/lib/auth";
 
 type SaveChoice = "upload" | "without" | null;
 type UploadNotice = { tone: "uploading" | "success" | "error"; message: string } | null;
@@ -99,6 +100,7 @@ export function PolicySaveConfirmation() {
   const pendingUploadFile = useRef<File | null>(null);
   const pendingPolicyId = useRef<string | null>(null);
   const uploadAttemptKey = useRef<string | null>(null);
+  const signedUploadSession = useRef<{ policyId: string; path: string; file: File; uploaded: boolean } | null>(null);
 
   useEffect(() => {
     if (pathname !== "/policies/new") return;
@@ -129,6 +131,7 @@ export function PolicySaveConfirmation() {
       pendingPostSaveUpload = null;
       void clearPendingUpload().catch(() => undefined);
       uploadAttemptKey.current = null;
+      signedUploadSession.current = null;
       setChoice(null);
       setFile(null);
       setFileError(null);
@@ -168,6 +171,35 @@ export function PolicySaveConfirmation() {
     };
   }, [pathname]);
 
+  async function uploadSavedPolicyCopy(policyId: string, fileToUpload: File) {
+    // Only metadata passes through Next.js. Browser uploads file bytes directly
+    // to Supabase using a short-lived, authorized signed URL.
+    let session = signedUploadSession.current;
+    if (!session || session.policyId !== policyId || session.file !== fileToUpload) {
+      const prepared = await preparePolicyCopyUpload(policyId, {
+        name: fileToUpload.name, size: fileToUpload.size, type: fileToUpload.type,
+      });
+      if (!prepared.ok) return { ok: false as const, error: prepared.error };
+      session = { policyId, path: prepared.path, file: fileToUpload, uploaded: false };
+      signedUploadSession.current = session;
+      const { error: storageError } = await createSupabaseBrowserClient().storage
+        .from("policy-documents")
+        .uploadToSignedUrl(prepared.path, prepared.token, fileToUpload, {
+          contentType: fileToUpload.type, upsert: false,
+        });
+      if (storageError) {
+        signedUploadSession.current = null;
+        return { ok: false as const, error: "Policy was saved, but the policy copy upload failed: " + storageError.message };
+      }
+      session.uploaded = true;
+    }
+    const result = await finalizePolicyCopyUpload(policyId, session.path, {
+      name: fileToUpload.name, size: fileToUpload.size, type: fileToUpload.type,
+    });
+    if (result.ok) signedUploadSession.current = null;
+    return result;
+  }
+
   useEffect(() => {
     if (pathname !== "/policies" || typeof window === "undefined") return;
 
@@ -188,9 +220,7 @@ export function PolicySaveConfirmation() {
       pendingPostSaveUpload = { file: fileToUpload, policyId };
       setUploadNotice({ tone: "uploading", message: "Policy saved. Uploading policy copy…" });
 
-      const formData = new FormData();
-      formData.set("file", fileToUpload);
-      void uploadPolicyCopy(policyId, formData).then((result) => {
+      void uploadSavedPolicyCopy(policyId, fileToUpload).then((result) => {
         if (result.ok) {
           pendingUploadFile.current = null;
           pendingPolicyId.current = null;
@@ -200,6 +230,7 @@ export function PolicySaveConfirmation() {
           setUploadNotice({ tone: "success", message: "Policy saved and policy copy uploaded successfully." });
           return;
         }
+        pendingUploadFile.current = fileToUpload;
         setUploadNotice({ tone: "error", message: result.error });
       }).catch(() => {
         setUploadNotice({ tone: "error", message: "Policy was saved, but the policy copy upload failed. You can retry without creating another policy." });
@@ -232,6 +263,7 @@ export function PolicySaveConfirmation() {
     pendingPostSaveUpload = null;
     void clearPendingUpload().catch(() => undefined);
     uploadAttemptKey.current = null;
+    signedUploadSession.current = null;
   }
 
   function selectFile(nextFile: File | null) {
@@ -260,6 +292,7 @@ export function PolicySaveConfirmation() {
     pendingPolicyId.current = null;
     pendingPostSaveUpload = choice === "upload" && file ? { file, policyId: null } : null;
     uploadAttemptKey.current = null;
+    signedUploadSession.current = null;
     if (choice === "upload" && file) {
       try {
         await persistPendingUpload(file);
@@ -282,9 +315,7 @@ export function PolicySaveConfirmation() {
 
     uploadAttemptKey.current = null;
     setUploadNotice({ tone: "uploading", message: "Retrying policy copy upload…" });
-    const formData = new FormData();
-    formData.set("file", fileToUpload);
-    void uploadPolicyCopy(policyId, formData).then((result) => {
+    void uploadSavedPolicyCopy(policyId, fileToUpload).then((result) => {
       if (result.ok) {
         pendingUploadFile.current = null;
         pendingPolicyId.current = null;

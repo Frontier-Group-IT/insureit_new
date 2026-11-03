@@ -73,63 +73,121 @@ export async function openPolicyCopy(documentId: string): Promise<PolicyCopyOpen
   return { ok: true, url: signed.signedUrl };
 }
 
-export async function uploadPolicyCopy(
-  policyId: string,
-  formData: FormData,
-): Promise<PolicyCopyUploadResult> {
+export type PolicyCopyFileMetadata = { name: string; size: number; type: string };
+export type PolicyCopySignedUpload =
+  | { ok: true; path: string; token: string }
+  | { ok: false; error: string };
+
+function validatePolicyCopyMetadata(file: PolicyCopyFileMetadata): string | null {
+  if (!file.name?.trim() || !Number.isSafeInteger(file.size) || file.size <= 0) return "Select a valid policy copy to upload.";
+  if (file.size > MAX_POLICY_COPY_BYTES) return "Policy copy must be 15 MB or smaller.";
+  if (!ALLOWED_POLICY_COPY_TYPES.has(file.type)) return "Upload a PDF, JPG, PNG or WEBP policy copy.";
+  return null;
+}
+
+async function findEditablePolicy(policyId: string) {
   const profile = await requirePolicyEditor(policyId);
-  const normalizedPolicyId = policyId.trim();
-  const file = formData.get("file");
-
-  if (!normalizedPolicyId) return { ok: false, error: "Policy reference is missing." };
-  if (!(file instanceof File) || file.size <= 0) return { ok: false, error: "Select a policy copy to upload." };
-  if (file.size > MAX_POLICY_COPY_BYTES) return { ok: false, error: "Policy copy must be 15 MB or smaller." };
-  if (!ALLOWED_POLICY_COPY_TYPES.has(file.type)) {
-    return { ok: false, error: "Upload a PDF, JPG, PNG or WEBP policy copy." };
-  }
-
   const admin = createSupabaseAdminClient();
-  const { data: policy, error: policyError } = await admin
-    .from("policies")
-    .select("id")
-    .eq("id", normalizedPolicyId)
-    .maybeSingle<{ id: string }>();
+  const { data: policy, error } = await admin
+    .from("policies").select("id").eq("id", policyId).maybeSingle<{ id: string }>();
+  if (error) throw new Error("Could not verify the saved policy. Please try again.");
+  if (!policy) throw new Error("This policy does not exist in the database. Check the policy record before retrying.");
+  return { profile, admin, policy };
+}
 
-  if (policyError) return { ok: false, error: "Could not verify the saved policy. Please try again." };
-  if (!policy?.id) return { ok: false, error: "The saved policy could not be found." };
-
-  const storagePath = `${policy.id}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
-  const { error: uploadError } = await admin.storage
-    .from(POLICY_DOCUMENT_BUCKET)
-    .upload(storagePath, file, {
-      contentType: file.type,
-      upsert: false,
-    });
-
-  if (uploadError) return { ok: false, error: `Policy was saved, but the policy copy could not be uploaded: ${uploadError.message}` };
-
-  const { data: documentRow, error: insertError } = await admin
-    .from("policy_documents")
-    .insert({
-      policy_id: policy.id,
-      document_type: "policy_copy",
-      file_name: file.name,
-      storage_bucket: POLICY_DOCUMENT_BUCKET,
-      storage_path: storagePath,
-      mime_type: file.type,
-      file_size: file.size,
-      uploaded_by: profile.id,
-    })
-    .select("id")
-    .single<{ id: string }>();
-
-  if (insertError || !documentRow?.id) {
-    await admin.storage.from(POLICY_DOCUMENT_BUCKET).remove([storagePath]);
-    return { ok: false, error: "Policy was saved, but its policy-copy record could not be created. Please try the upload again." };
+/**
+ * Send only metadata through the Next.js Server Action. File bytes go directly
+ * from the browser to private Supabase Storage using this short-lived token.
+ */
+export async function preparePolicyCopyUpload(
+  policyId: string,
+  file: PolicyCopyFileMetadata,
+): Promise<PolicyCopySignedUpload> {
+  try {
+    if (!policyId.trim()) return { ok: false, error: "Policy reference is missing." };
+    const invalid = validatePolicyCopyMetadata(file);
+    if (invalid) return { ok: false, error: invalid };
+    const { admin, policy } = await findEditablePolicy(policyId.trim());
+    const path = `${policy.id}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
+    const { data, error } = await admin.storage.from(POLICY_DOCUMENT_BUCKET)
+      .createSignedUploadUrl(path, { upsert: false });
+    if (error || !data?.token) return { ok: false, error: error?.message ?? "Could not prepare the policy copy upload." };
+    return { ok: true, path, token: data.token };
+  } catch (error) {
+    console.error("policy_copy_prepare_failed", error instanceof Error ? error.message : "Unknown error");
+    return { ok: false, error: error instanceof Error ? error.message : "Could not prepare the policy copy upload." };
   }
+}
 
-  await recordPolicyActivity(admin, policy.id, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_DOC_UPLOADED);
-  revalidatePath("/policies");
-  revalidatePath(`/policies/${policy.id}`);
-  return { ok: true, documentId: documentRow.id };
+/**
+ * Do not trust browser-supplied file details or paths. Check the signed object
+ * exists and its authoritative Storage metadata matches the expected file.
+ * Repeated finalization of one path is idempotent.
+ */
+export async function finalizePolicyCopyUpload(
+  policyId: string,
+  path: string,
+  file: PolicyCopyFileMetadata,
+): Promise<PolicyCopyUploadResult> {
+  try {
+    if (!policyId.trim()) return { ok: false, error: "Policy reference is missing." };
+    const invalid = validatePolicyCopyMetadata(file);
+    if (invalid) return { ok: false, error: invalid };
+    const { admin, policy, profile } = await findEditablePolicy(policyId.trim());
+    const expectedPrefix = `${policy.id}/`;
+    const uploadedFileName = safeFileName(file.name);
+    const suffix = path.startsWith(expectedPrefix) ? path.slice(expectedPrefix.length) : "";
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i.test(suffix)
+      || !suffix.endsWith(`-${uploadedFileName}`) || suffix.includes("/") || suffix.includes("..")) {
+      return { ok: false, error: "Invalid policy document upload reference." };
+    }
+
+    const existing = await admin.from("policy_documents")
+      .select("id").eq("policy_id", policy.id).eq("document_type", "policy_copy")
+      .eq("storage_bucket", POLICY_DOCUMENT_BUCKET).eq("storage_path", path)
+      .maybeSingle<{ id: string }>();
+    if (existing.error) return { ok: false, error: "Could not verify the policy copy registration." };
+    if (existing.data) return { ok: true, documentId: existing.data.id };
+
+    const { data: storageFile, error: infoError } = await admin.storage
+      .from(POLICY_DOCUMENT_BUCKET).info(path);
+    if (infoError || !storageFile) return { ok: false, error: "The uploaded file was not found. Retry the upload." };
+    if (storageFile.size !== file.size || storageFile.contentType !== file.type || storageFile.size > MAX_POLICY_COPY_BYTES) {
+      return { ok: false, error: "The uploaded file does not match the selected policy copy. Retry the upload." };
+    }
+
+    const { data: documentRow, error: insertError } = await admin.from("policy_documents")
+      .insert({
+        policy_id: policy.id,
+        document_type: "policy_copy",
+        file_name: file.name,
+        storage_bucket: POLICY_DOCUMENT_BUCKET,
+        storage_path: path,
+        mime_type: storageFile.contentType,
+        file_size: storageFile.size,
+        uploaded_by: profile.id,
+      })
+      .select("id").single<{ id: string }>();
+
+    if (insertError || !documentRow) {
+      const alreadyRegistered = await admin.from("policy_documents")
+        .select("id").eq("policy_id", policy.id).eq("storage_path", path)
+        .maybeSingle<{ id: string }>();
+      if (alreadyRegistered.data) return { ok: true, documentId: alreadyRegistered.data.id };
+      // Keep the uploaded file so retries can safely finalize the same path.
+      return { ok: false, error: "Policy copy uploaded, but registration failed. Retry without creating a new policy." };
+    }
+
+    try {
+      await recordPolicyActivity(admin, policy.id, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_DOC_UPLOADED);
+    } catch (activityError) {
+      console.error("policy_copy_activity_failed", activityError);
+    }
+    revalidatePath("/policies");
+    revalidatePath(`/policies/${policy.id}`);
+    return { ok: true, documentId: documentRow.id };
+  } catch (error) {
+    console.error("policy_copy_finalize_failed", error instanceof Error ? error.message : "Unknown error");
+    return { ok: false, error: error instanceof Error ? error.message : "Could not complete the policy copy upload." };
+  }
 }
