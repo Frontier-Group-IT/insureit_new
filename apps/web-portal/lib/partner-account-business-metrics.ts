@@ -1,11 +1,9 @@
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 /** Read-only lifetime metrics. Only call after server-side Partner application authorization. */
-export type AccountBusinessMetrics = { customerCount: number; netPremium: number };
 export type OptionalBusinessMetrics = { customerCount: number | null; netPremium: number | null };
 const PAGE_SIZE = 500;
 const BATCH_SIZE = 100;
-const empty = (): AccountBusinessMetrics => ({ customerCount: 0, netPremium: 0 });
 
 function chunks<T>(items: T[], size = BATCH_SIZE): T[][] {
   const result: T[][] = [];
@@ -42,11 +40,11 @@ function sumForPolicies(policyIds: Set<string>, lookup: Awaited<ReturnType<typeo
   let netPremium = 0;
   for (const id of policyIds) {
     const policy = lookup.policies.get(id);
-    if (!policy || !lookup.premiums.has(id) || !Number.isFinite(lookup.premiums.get(id))) {
-      return { customerCount: null, netPremium: null };
-    }
+    if (!policy) return { customerCount: null, netPremium: null };
     if (policy.customer_id) customerIds.add(policy.customer_id);
-    netPremium += lookup.premiums.get(id)!;
+    const premium = lookup.premiums.get(id);
+    if (typeof premium !== "number" || !Number.isFinite(premium)) return { customerCount: customerIds.size, netPremium: null };
+    netPremium += premium;
   }
   return { customerCount: customerIds.size, netPremium };
 }
