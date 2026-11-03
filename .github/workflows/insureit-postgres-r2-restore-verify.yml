@@ -34,13 +34,16 @@ jobs:
           R2_BUCKET: insureit-production-backups
           RESTORE_DIR: ${{ runner.temp }}/insureit-db-restore
         run: python -u scripts/backup/verify_postgres_r2_restore.py
-      - name: Restore into isolated local PostgreSQL 17 container
+      - name: Restore into isolated Supabase PostgreSQL 17 container
         run: |
           set -euo pipefail
           # No external network and no port mapping: never reachable by production.
+          # This pinned image is from the official Supabase self-hosted docker-compose.yml.
+          # Do not attach it to production, map ports, or provide production DB credentials.
           docker run --detach --name insureit-restore-check --network none \
             --env POSTGRES_PASSWORD=ephemeral-not-for-use \
-            postgres:17 >/dev/null
+            --env POSTGRES_DB=postgres \
+            supabase/postgres:17.6.1.136 >/dev/null
           ready=0
           for i in $(seq 1 40); do
             if docker exec insureit-restore-check pg_isready -U postgres >/dev/null 2>&1; then
@@ -53,6 +56,17 @@ jobs:
             echo "ISOLATED RESTORE FAILED: target database did not become ready"
             exit 1
           fi
+          # Test compatibility of the *isolated* image against known enabled
+          # production extension names; uses local pg_available_extensions only.
+          # The result is a count, never extension SQL or production data.
+          required_extensions="'hypopg','index_advisor','pg_stat_statements','pg_trgm','pgcrypto','supabase_vault','uuid-ossp'"
+          available="$(docker exec -u postgres insureit-restore-check psql -X -A -t -d postgres -c \
+            "select count(*) from pg_available_extensions where name in ($required_extensions);" 2>/dev/null || true)"
+          if [ "$available" != "7" ]; then
+            echo "ISOLATED TARGET INCOMPLETE: required_extension_availability=$available/7; restore not attempted"
+            exit 1
+          fi
+          echo "Isolated target extension availability preflight passed (7/7)"
           # Supabase CLI role dumps can reference reserved platform roles
           # absent from vanilla postgres:17. This is a *test-only* scaffold.
           docker cp scripts/backup/fixtures/isolated_supabase_roles.sql insureit-restore-check:/tmp/offline-fixture-roles.sql
