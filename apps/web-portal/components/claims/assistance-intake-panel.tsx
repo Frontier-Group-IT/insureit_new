@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import "../claim-manager/operations-claim-stages-motion.css";
 import {
   loadExternalClaimReadonlyJourney,
   type ExternalClaimReadonlyMilestone,
@@ -169,39 +170,13 @@ export function AssistanceIntakePanel(props: AssistanceIntakePanelProps) {
 
   return (
     <div className="space-y-3">
-      <section className="rounded-2xl border border-[#D8E3F2] bg-white p-4 shadow-[0_8px_24px_rgba(7,29,73,0.05)]">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#174EA6]">External customer-managed claim</p>
-            <h1 className="mt-1 text-xl font-semibold text-[#071D49]">Claim journey</h1>
-            <p className="mt-1 text-sm text-[#5C6878]">Operations can review the customer&apos;s nine-stage journey and evidence. All controls are view-only.</p>
-          </div>
-          <span className="rounded-full border border-[#BFD3F7] bg-[#F4F8FF] px-3 py-1 text-xs font-semibold text-[#174EA6]">View only</span>
-        </div>
-
-        <dl className="mt-4 grid gap-3 rounded-xl bg-[#F7FAFE] p-3 sm:grid-cols-2 lg:grid-cols-6">
-          <Summary label="Control no." value={props.claimNo} />
-          <Summary label="Customer" value={props.customerName} />
-          <Summary label="Vehicle" value={props.vehicleNo} />
-          <Summary label="Policy" value={snapshot?.policyNo ?? "-"} />
-          <Summary label="Insurer" value={snapshot?.insurerName ?? "-"} />
-          <Summary label="Customer status" value={props.currentStatus} />
-        </dl>
-
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#526178]">
-          <span>{completedMilestones} of 9 stages completed</span>
-          {snapshot?.policyType ? <span>{snapshot.policyType}</span> : null}
-        </div>
-        {props.assistanceNote ? <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2"><p className="text-[10px] font-semibold uppercase tracking-wide text-amber-900">Customer note</p><p className="mt-1 whitespace-pre-wrap text-xs text-amber-900">{props.assistanceNote}</p></div> : null}
-      </section>
-
-      <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
+      <section className="operations-claim-motion overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-          <h2 className="text-[17px] font-semibold text-[#071D49]">External claim journey</h2>
+          <div className="min-w-0"><h2 className="text-[17px] font-semibold text-[#071D49]">Operations claim journey</h2><p className="mt-0.5 text-[10px] text-[#667A96]">External customer-managed claim · View only · {completedMilestones} of 9 stages completed</p></div>
           <span className="rounded-full border border-[#BFD3F7] bg-[#F4F8FF] px-4 py-1.5 text-[11px] font-semibold text-[#174EA6]">{stages.find((stage) => stage.key === selectedKey)?.label}</span>
         </div>
 
-        <ol className="grid border-y border-[#D9E3F0] md:grid-cols-3 xl:grid-cols-9">
+        <ol aria-label="Nine-stage claim journey" className="operations-claim-motion-nav grid grid-cols-9 gap-1.5 overflow-x-auto border-y border-[#D5E3F7] bg-[#EAF2FF] p-2">
           {stages.map((stage, index) => {
             const milestone = progress.find((item) => item.key === stage.key);
             const completed = isCompletedStatus(milestone?.status);
@@ -209,19 +184,19 @@ export function AssistanceIntakePanel(props: AssistanceIntakePanelProps) {
             const available = journeyComplete || completed || index <= activeIndex;
             const selected = stage.key === selectedKey;
             return (
-              <li key={stage.key} className="border-b border-[#D9E3F0] last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0">
+              <li key={stage.key} className={`operations-claim-motion-step min-w-0 rounded-lg border border-[#BED2F0] bg-white ${current ? "operations-claim-motion-active" : completed ? "operations-claim-motion-completed" : ""}`}>
                 <button
                   type="button"
                   disabled={!available}
                   aria-current={selected ? "step" : undefined}
                   onClick={() => setSelectedKey(stage.key)}
-                  className={`flex min-h-[50px] w-full items-center justify-center border-b-2 px-2.5 py-1.5 text-center transition focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6] ${selected ? "border-b-[#071D49]" : "border-b-transparent"} ${current ? "bg-[#F7FAFF]" : available ? "bg-white hover:bg-[#FAFCFF]" : "cursor-not-allowed bg-white"}`}
+                  className={`operations-claim-motion-step-button flex min-h-[42px] w-full min-w-0 items-center justify-center rounded-md border-b px-1 py-1 text-center transition focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6] ${selected ? "border-b-[#071D49]" : "border-b-transparent"} ${current ? "bg-[#F7FAFF]" : available ? "bg-white hover:bg-[#FAFCFF]" : "cursor-not-allowed bg-white"}`}
                 >
-                  <span className="flex items-center justify-center gap-2">
-                    <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${completed ? "bg-[#E8F8F0] text-[#0A9B72]" : current ? "bg-[#155EEF] text-white shadow-[0_2px_6px_rgba(21,94,239,0.18)]" : "bg-[#EEF2F7] text-[#58708F]"}`}>
-                      {completed ? <CheckIcon /> : current ? <span className="text-[9px] font-semibold">{index + 1}</span> : <LockIcon />}
+                  <span className="flex min-w-0 items-center justify-center gap-1">
+                    <span className={`operations-claim-motion-indicator grid h-5 w-5 shrink-0 place-items-center rounded-full ${completed ? "bg-[#E8F8F0] text-[#0A9B72]" : current ? "bg-[#155EEF] text-white shadow-[0_2px_6px_rgba(21,94,239,0.18)]" : "bg-[#EEF2F7] text-[#58708F]"}`}>
+                      {completed ? <span className="operations-claim-motion-check"><CheckIcon /></span> : current ? <span className="text-[9px] font-semibold">{index + 1}</span> : <LockIcon />}
                     </span>
-                    <span className={`block text-[9px] font-semibold leading-none ${current ? "text-[#155EEF]" : completed ? "text-[#3E536F]" : "text-[#667A96]"}`}>{stage.label}</span>
+                    <span className={`block whitespace-nowrap text-[clamp(7px,0.62vw,10px)] font-bold leading-none ${current ? "text-[#155EEF]" : completed ? "text-[#3E536F]" : "text-[#667A96]"}`}>{stage.label}</span>
                   </span>
                 </button>
               </li>
@@ -230,6 +205,7 @@ export function AssistanceIntakePanel(props: AssistanceIntakePanelProps) {
         </ol>
 
         <div className="p-4">
+          {props.assistanceNote ? <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2"><p className="text-[10px] font-semibold uppercase tracking-wide text-amber-900">Customer note</p><p className="mt-1 whitespace-pre-wrap text-xs text-amber-900">{props.assistanceNote}</p></div> : null}
           {loading ? <div className="rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-4 text-sm text-[#526178]">Loading customer-entered stage details...</div> : null}
           {loadError ? <div role="status" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">{loadError}</div> : null}
           {!loading && !loadError ? (
