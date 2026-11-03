@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Mail, TrendingUp } from "lucide-react";
+import { TrendingUp } from "lucide-react";
+import { RmReportActions } from "@/app/rm-performance/rm-report-actions";
 
 import { AppShell } from "@/components/shell";
 import { requireCapability } from "@/lib/master-data-server";
@@ -40,7 +41,7 @@ export default async function RmPerformancePage({ searchParams }: { searchParams
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <RmPerformanceFilters rms={data.filters.rms} selectedRmId={data.selectedRmId} period={data.period} hideRm={isRm} />
-            <button type="button" disabled title="Email Report will be enabled after transactional no-reply email is connected." className="inline-flex h-9 cursor-not-allowed items-center gap-1.5 rounded-xl border border-[#D7DFEA] bg-[#F7F9FC] px-3 text-[10px] font-bold text-[#7D8999]"><Mail className="h-3.5 w-3.5" />Email Report</button>
+            <RmReportActions params={{rm:data.selectedRmId??undefined,period:data.period.key,from:data.period.from,to:data.period.to}} periodLabel={data.period.shortLabel} />
           </div>
         </header>
 
