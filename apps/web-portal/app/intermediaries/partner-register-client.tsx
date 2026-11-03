@@ -17,6 +17,8 @@ export type PartnerRegisterRow = {
   displayName: string;
   mobile: string;
   partnerId: string;
+  groupId: string | null;
+  groupName: string | null;
   accountType: string;
   assignedRm: string;
   onboardingDate: string;
@@ -230,7 +232,7 @@ function PartnerTable({ rows }: { rows: PartnerRegisterRow[] }) {
       <tbody className="divide-y">{rows.map((row) => {
         const label = `${row.createType.toUpperCase()} ${row.partnerStatus}`;
         return <tr key={row.id} className="h-[52px] transition hover:bg-[#F8FAFF]">
-          <td className="px-4 py-3"><div className="min-w-0"><FreshAccountReviewLink href={`/intermediaries/applications/${row.applicationId}`} className="block truncate font-semibold text-[#0F2A55] hover:text-[#315FEA] hover:underline">{row.displayName}</FreshAccountReviewLink><span className="mt-0.5 block truncate text-[9px] font-medium text-[#8190A4]">{row.partnerId}</span></div></td>
+          <td className="px-4 py-3"><div className="min-w-0"><FreshAccountReviewLink href={`/intermediaries/applications/${row.applicationId}`} className="block truncate font-semibold text-[#0F2A55] hover:text-[#315FEA] hover:underline">{row.displayName}</FreshAccountReviewLink><span className="mt-0.5 block truncate text-[9px] font-medium text-[#8190A4]">{row.partnerId}</span><div className="mt-0.5 flex min-w-0 items-center gap-1 text-[9.5px]"><span className="shrink-0 text-[#64748B]">Group -</span>{row.groupId && row.groupName ? <Link href={`/intermediaries/groups/${encodeURIComponent(row.groupId)}`} title={`Open ${row.groupName} Group details`} className="min-w-0 truncate font-semibold text-[#2563EB] underline-offset-2 hover:underline focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#2563EB]">{row.groupName}</Link> : <span className="truncate text-[#94A3B8]">Not assigned</span>}</div></div></td>
           <td className="truncate px-3 py-3 font-medium text-[#17203A]" title={row.mobile}>{row.mobile}</td>
           <td className={`truncate px-3 py-3 ${row.assignedRm === "Not assigned" ? "font-medium text-amber-700" : "text-[#17203A]"}`} title={row.assignedRm}>{row.assignedRm}</td>
           <td className="px-3 py-3"><Status value={label} tone="account" /></td>
