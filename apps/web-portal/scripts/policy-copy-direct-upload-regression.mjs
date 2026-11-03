@@ -14,7 +14,7 @@ assert.match(server, /requirePolicyEditor\(policyId\)/, "Every phase must check 
 assert.match(server, /\.from\("policies"\)\.select\("id"\)\.eq\("id", policyId\)/, "Must reject uploads for policies not in database.");
 assert.match(server, /createSignedUploadUrl\(path, \{ upsert: false \}\)/, "Storage token must not permit replacing existing files.");
 assert.match(server, /storageFile\.size !== file\.size/, "Server must check authoritative file size.");
-assert.match(server, /storageFile\.mimeType !== file\.type/, "Server must check authoritative MIME type.");
+assert.match(server, /storageFile\.contentType !== file\.type/, "Server must check authoritative MIME type.");
 assert.match(server, /suffix\.includes\("\/"\)/, "Do not permit arbitrary nested upload paths.");
 assert.match(server, /MAX_POLICY_COPY_BYTES = 15 \* 1024 \* 1024/, "Preserve 15MB upload limit.");
 assert.match(server, /ALLOWED_POLICY_COPY_TYPES/, "Preserve file-type allowlist.");
