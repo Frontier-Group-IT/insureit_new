@@ -260,12 +260,12 @@ function buildAttention(data: DashboardCurrentData, access: DashboardAccess, bus
     });
   }
 
-  if (access.reviewPolicyIntakes && access.viewPolicyIntakes && intakeAttention?.actionRequired !== null && intakeAttention) {
+  if (access.reviewPolicyIntakes && access.viewPolicyIntakes && intakeAttention && intakeAttention.actionRequired !== null) {
     rows.push({
       label: "Policy Intake",
       value: intakeAttention.actionRequired + intakeAttention.inReview,
       href: "/policy-intakes",
-      icon: DASHBOARD_ICON_ASSETS.policies,
+      icon: DASHBOARD_ICON_ASSETS.policyIntakeReview,
       tone: "violet",
       intakeCounts: { actionRequired: intakeAttention.actionRequired, inReview: intakeAttention.inReview },
     });
