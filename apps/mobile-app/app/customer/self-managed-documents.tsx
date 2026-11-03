@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Platform, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { readClaimDocumentBytes, claimUploadCustomerError, claimUploadFileReadMessage, logClaimUploadFailure, resolveClaimUploadDescriptor } from '@/lib/claim-document-upload';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -328,27 +328,27 @@ function stageLabel(key: ClaimMilestoneKey) {
 const styles = StyleSheet.create({
   top: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginTop: 0, marginBottom: 12 },
   back: { width: 42, height: 42, borderRadius: 14, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center' },
-  eye: { color: '#0A43A3', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.8 },
-  title: { color: palette.navy, fontSize: 22, fontWeight: '900' },
-  sub: { color: '#667085', fontSize: 10.5, lineHeight: 15, fontWeight: '700', marginTop: 3 },
+  eye: { color: '#0A43A3', fontSize: 9.5, fontWeight: Platform.OS === 'ios' ? '600' : '900', letterSpacing: 0.8 },
+  title: { color: palette.navy, fontSize: 22, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  sub: { color: '#667085', fontSize: 10.5, lineHeight: 15, fontWeight: Platform.OS === 'ios' ? '600' : '700', marginTop: 3 },
   info: { flexDirection: 'row', gap: 9, padding: 13, borderRadius: 16, backgroundColor: '#ECF9F3', borderWidth: 1, borderColor: '#BFE6D5', marginBottom: 12 },
-  infoTitle: { color: '#0A5B41', fontSize: 11.5, fontWeight: '900' },
+  infoTitle: { color: '#0A5B41', fontSize: 11.5, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
   infoText: { color: '#477061', fontSize: 9.8, lineHeight: 15, fontWeight: '600', marginTop: 2 },
   stageCard: { borderRadius: 18, borderWidth: 1, borderColor: '#DDE7F2', backgroundColor: '#FFF', padding: 12, marginBottom: 11 },
   stageHead: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingBottom: 9, borderBottomWidth: 1, borderBottomColor: '#EEF2F6' },
   stageNumber: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EAF2FF' },
-  stageNumberText: { color: '#0A43A3', fontSize: 10, fontWeight: '900' },
-  stageTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
-  stageMeta: { color: '#7A8799', fontSize: 9, fontWeight: '700', marginTop: 2 },
+  stageNumberText: { color: '#0A43A3', fontSize: 10, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  stageTitle: { color: palette.navy, fontSize: 12.5, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  stageMeta: { color: '#7A8799', fontSize: 9, fontWeight: Platform.OS === 'ios' ? '600' : '700', marginTop: 2 },
   docRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F2F4F7' },
   docIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#F1F6FD', alignItems: 'center', justifyContent: 'center' },
-  docLabel: { color: '#344054', fontSize: 10.8, fontWeight: '900' },
+  docLabel: { color: '#344054', fontSize: 10.8, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
   empty: { color: '#98A2B3', fontSize: 8.8, fontWeight: '600', marginTop: 2 },
   savedFile: { flexDirection: 'row', gap: 4, alignItems: 'center', marginTop: 4 },
-  savedName: { maxWidth: 180, color: '#4F5F72', fontSize: 8.8, fontWeight: '700' },
+  savedName: { maxWidth: 180, color: '#4F5F72', fontSize: 8.8, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
   upload: { minWidth: 68, height: 34, paddingHorizontal: 9, borderRadius: 10, flexDirection: 'row', gap: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.navy },
   uploadBusy: { opacity: 0.65 },
-  uploadText: { color: '#FFF', fontSize: 8.8, fontWeight: '900' },
+  uploadText: { color: '#FFF', fontSize: 8.8, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
   noStandard: { flexDirection: 'row', gap: 7, alignItems: 'center', paddingTop: 10 },
   noStandardText: { flex: 1, color: '#667085', fontSize: 9.5, lineHeight: 14, fontWeight: '600' },
 });
