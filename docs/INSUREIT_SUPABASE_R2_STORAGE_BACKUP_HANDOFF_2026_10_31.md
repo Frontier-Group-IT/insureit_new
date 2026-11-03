@@ -1,3 +1,14 @@
+## 2026-11-03 — Phase 2 first manual PostgreSQL backup SUCCESSFUL; restore and coverage still pending
+
+- **Evidence:** [GitHub Actions run #41588451109](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/41588451109), job `postgres_backup` #125759327620, completed **success** on `main` in **3m 47s**. GitHub reported no failed job steps.
+- **Three Supabase CLI logical export components** (`roles.sql`, `schema.sql`, `data.sql`) were generated nonempty. The encrypted archive was uploaded to private Cloudflare R2, downloaded and authenticated by the workflow's AES-256-GCM/SHA-256 read-back check.
+- **Committed snapshot:** `20261103T061621Z` (2026-11-03 06:16:21 UTC / 11:46:21 IST), **encrypted archive size 7,742,688 bytes** (~7.74 MB decimal). Existing R2 Storage backups were not deleted.
+- **Warnings:** `pg_dump` emitted numerous circular foreign-key warnings in the data export. They are not an export failure, but may require schema-first restore, transaction and foreign-key handling in a disposable test target. Avoid printing any table names or sensitive SQL from this backup into public logs.
+- **Critical coverage limitation:** The current Supabase CLI logical dump defaults exclude some Supabase-managed schemas, including `auth` and `storage`, and not all platform configuration is captured. Until scope is audited against the live database and an isolated restore succeeds, this is an **encrypted logical archive**, not a complete INSUREIT disaster-recovery image.
+- **Status:** Supabase Pro daily physical backups continue independently; document backup scheduled at 19:00 IST remains active; PostgreSQL archive is still **manual-only**, no daily database schedule, no database failure watchdog, no automated deletion/retention pruning, no production restore, no PITR activation.
+- **Next safeguards:** (1) Audit exported schema/table coverage without exposing customer data; (2) develop a controlled, secret-free restore verification tool; (3) restore into an isolated PostgreSQL 17/Supabase-compatible target with no app connections/webhooks and compare safe object counts; (4) resolve any managed-schema gaps and circular-FK import issues; (5) approve schedule and independent alerts once recoverability is proven. Avoid creating extra paid Supabase projects without cost approval.
+- Database credentials and `DB_BACKUP_ENCRYPTION_KEY` stay in protected GitHub environment secrets; **independent offline encryption-key escrow is essential**. Never paste secrets into the handoff, logs or chat.
+
 ## 2026-11-03 — Credentials supplied; manual archive readiness
 
 - User reports `DATABASE_URL` and separate `DB_BACKUP_ENCRYPTION_KEY` GitHub environment secrets are now set; values cannot be inspected via GitHub and connection permissions are **not yet verified**.
