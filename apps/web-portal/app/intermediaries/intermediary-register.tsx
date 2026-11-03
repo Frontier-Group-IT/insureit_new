@@ -11,6 +11,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { FreshAccountReviewLink } from "./applications/account-review-back-link";
 import { createLinkedIntermediaryAccount } from "./applications/[id]/account-review-actions";
 import { PartnerRegisterClient, type PartnerRegisterRow } from "./partner-register-client";
+import { loadPartnerAccountCounts } from "@/lib/partner-register-account-counts";
 import { createIntermediaryPortalLogin } from "./portal-account-actions";
 import { resendIntermediaryPortalInvite } from "./resend-portal-invite-action";
 
@@ -198,6 +199,13 @@ export async function IntermediaryRegister({
     groupsByPartner.set(membership.partner_id, list);
   }
 
+  const partnerAccountCounts = selectedType === "partner"
+    ? await loadPartnerAccountCounts(partnerCountRows.flatMap(row => {
+        const partnerId = applicationMap.get(row.application_id as string)?.partner_record_id;
+        return partnerId ? [{ partnerId, intermediaryId: row.id }] : [];
+      }))
+    : new Map<string, { associateCount: number | null; branchCount: number | null }>();
+
   if (selectedType === "partner") {
     const clientRows: PartnerRegisterRow[] = partnerCountRows.map((row) => {
       const app = applicationMap.get(row.application_id as string);
@@ -222,6 +230,8 @@ export async function IntermediaryRegister({
         partnerId,
         groupId,
         groupName,
+        associateCount: app?.partner_record_id ? partnerAccountCounts.get(app.partner_record_id)?.associateCount ?? null : null,
+        branchCount: app?.partner_record_id ? partnerAccountCounts.get(app.partner_record_id)?.branchCount ?? null : null,
         accountType: allowedType === "misp" ? "Business" : "Individual",
         assignedRm,
         onboardingDate: app?.created_at ?? row.updated_at,
