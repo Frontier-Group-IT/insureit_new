@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import "./operations-claim-stages-motion.css";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { advanceInternalSpotIntimation, saveInternalSpotIntimationDetails } from "@/app/claims/internal-spot-intimation-actions";
@@ -289,13 +290,13 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   }, [claimId, router, spotState.ok]);
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
+    <section className="operations-claim-motion overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
         <h2 className="text-[17px] font-semibold text-[#071D49]">Operations claim journey</h2>
         <span className="rounded-full border border-[#BFD3F7] bg-[#F4F8FF] px-4 py-1.5 text-[11px] font-semibold text-[#174EA6]">{selected.label}</span>
       </div>
 
-      <ol className="grid border-y border-[#D9E3F0] md:grid-cols-3 xl:grid-cols-9">
+      <ol aria-label="Nine-stage claim journey" className="operations-claim-motion-nav grid grid-cols-9 gap-1.5 overflow-x-auto border-y border-[#D5E3F7] bg-[#EAF2FF] p-2">
         {stages.map((stage, index) => {
           const externalStageCompleted = hasExternalVisualProgress && externalVisualCompletedKeys.has(stage.key);
           const available = unrestrictedStageEditing || journeyComplete || index <= activeIndex || externalStageCompleted;
@@ -304,23 +305,23 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
           const isSelected = stage.key === selected.key;
           const showSelectedMarker = isSelected;
           return (
-            <li key={stage.key} className="border-b border-[#D9E3F0] last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0">
+            <li key={stage.key} className={`operations-claim-motion-step min-w-0 rounded-lg border border-[#BED2F0] bg-white ${isCurrent ? "operations-claim-motion-active" : isCompleted ? "operations-claim-motion-completed" : ""}`}>
               <button
                 type="button"
                 disabled={!available}
                 aria-current={isCurrent ? "step" : undefined}
                 onClick={() => setSelectedKey(stage.key)}
-                className={`flex min-h-[50px] w-full items-center justify-center border-b-2 px-2.5 py-1.5 text-center transition focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6] ${showSelectedMarker ? "border-b-[#071D49]" : "border-b-transparent"} ${isCurrent ? "bg-[#F7FAFF]" : available ? "bg-white hover:bg-[#FAFCFF]" : "cursor-not-allowed bg-white"}`}
+                className={`operations-claim-motion-step-button flex min-h-[42px] w-full min-w-0 items-center justify-center rounded-md border-b px-1 py-1 text-center transition focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6] ${showSelectedMarker ? "border-b-[#071D49]" : "border-b-transparent"} ${isCurrent ? "bg-[#F7FAFF]" : available ? "bg-white hover:bg-[#FAFCFF]" : "cursor-not-allowed bg-white"}`}
               >
-                <span className="flex items-center justify-center gap-2">
-                  <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${isCompleted ? "bg-[#E8F8F0] text-[#0A9B72]" : isCurrent ? "bg-[#155EEF] text-white shadow-[0_2px_6px_rgba(21,94,239,0.18)]" : "bg-[#EEF2F7] text-[#58708F]"}`}>
+                <span className="flex min-w-0 items-center justify-center gap-1">
+                  <span className={`operations-claim-motion-indicator grid h-5 w-5 shrink-0 place-items-center rounded-full ${isCompleted ? "bg-[#E8F8F0] text-[#0A9B72]" : isCurrent ? "bg-[#155EEF] text-white shadow-[0_2px_6px_rgba(21,94,239,0.18)]" : "bg-[#EEF2F7] text-[#58708F]"}`}>
                     {isCompleted ? (
-                      <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[2.4]"><path d="m6 12 4 4 8-9" /></svg>
+                      <svg viewBox="0 0 24 24" aria-hidden="true" className="operations-claim-motion-check h-3.5 w-3.5 fill-none stroke-current stroke-[2.4]"><path d="m6 12 4 4 8-9" /></svg>
                     ) : isCurrent || unrestrictedStageEditing ? <span className="text-[9px] font-semibold">{index + 1}</span> : (
                       <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3 w-3 fill-none stroke-current stroke-[2]"><rect x="6.5" y="10.5" width="11" height="8" rx="1.5" /><path d="M9 10.5V8a3 3 0 0 1 6 0v2.5" /></svg>
                     )}
                   </span>
-                  <span className={`block text-[9px] font-semibold leading-none ${isCurrent ? "text-[#155EEF]" : isCompleted ? "text-[#3E536F]" : "text-[#667A96]"}`}>{stage.label}</span>
+                  <span className={`block whitespace-nowrap text-[clamp(7px,0.62vw,10px)] font-bold leading-none ${isCurrent ? "text-[#155EEF]" : isCompleted ? "text-[#3E536F]" : "text-[#667A96]"}`}>{stage.label}</span>
                 </span>
               </button>
             </li>
