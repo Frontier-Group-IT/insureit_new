@@ -41,7 +41,7 @@ function capacityColumns(vehicleType: string, capacity: number | null) {
 
 function parseRcSnapshot(formData: FormData) {
   const value = requiredText(formData, "rc_details_json");
-  if (!value || value.length > 64000) return null;
+  if (!value || value.length > 180000) return null;
   try {
     const parsed: unknown = JSON.parse(value);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
