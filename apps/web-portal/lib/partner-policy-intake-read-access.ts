@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { hasAnyEffectiveCapability, hasEffectiveCapability } from "@/lib/effective-permissions";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
 import { getOperationsHeadDownlinePolicyScope, operationsHeadPolicyFilter } from "@/lib/policy-access-scope";
 import { getRmPolicyIntakePredicates, hierarchyIntakeRoles } from "@/lib/rm-policy-intake-scope";
@@ -34,9 +34,11 @@ export async function getPartnerEmployeeIntakeReadScope(identity: {
   // Operations Head has an explicit, narrower downline view, gated by view_policies.
   const canView = isDownlineHead
     ? await hasEffectiveCapability(profile,"view_policies")
-    : await hasAnyEffectiveCapability(profile,[
-        "view_policy_intakes","review_policy_intakes","finalize_policy_intakes",
-      ]);
+    : (await Promise.all([
+        hasEffectiveCapability(profile,"view_policy_intakes"),
+        hasEffectiveCapability(profile,"review_policy_intakes","edit"),
+        hasEffectiveCapability(profile,"finalize_policy_intakes","approve"),
+      ])).some(Boolean);
   if (!canView) return { mode: "none" };
 
   if (isDownlineHead) {
