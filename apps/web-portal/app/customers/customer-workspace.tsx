@@ -47,7 +47,7 @@ const partnerOptions = [
   { value: "group", label: "Group", description: "Multiple linked entities under one group", available: true }
 ];
 
-export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
+export function CustomerWorkspace({ rows, title = "Customer Portfolio" }: { rows: CustomerRow[]; title?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
@@ -135,7 +135,7 @@ export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
       {partnerModalOpen ? <PartnerTypeModal onClose={closePartnerModal} /> : null}
       <BrokerRegisterShell
         eyebrow="Master register"
-        title="Customer Portfolio"
+        title={`${title} Portfolio` }
         description="Scan customer quality, fleet depth, policy coverage and claim exposure from one operational register."
         icon={<Building2 className="h-5 w-5" />}
         metrics={[
