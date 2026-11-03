@@ -1,5 +1,5 @@
-import { Platform, Link } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Link } from 'expo-router';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Screen } from '@/components/ui';
 import { legalDocuments } from '@/lib/legal-content';
