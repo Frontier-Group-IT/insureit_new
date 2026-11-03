@@ -1,3 +1,11 @@
+## 2026-11-03 — Isolated PostgreSQL restoration failed at roles stage; diagnostic fix proposed
+
+- Live manual isolated-restore run [#41590587004](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/41590587004), job #125766159579: encrypted R2 retrieval/decryption/SQL extraction passed; `postgres:17` image pulled, detached offline container started; `roles.sql` failed with exit 1; `schema.sql` and `data.sql` were NOT attempted. R2 archive remains preserved. This is **NOT evidence of encrypted backup corruption**, nor proof of successful database recovery.
+- Root SQL error **not yet known**: original workflow redirected `psql` stderr/stdout to temporary log and deliberately suppressed SQL text. A likely environmental hypothesis is that vanilla PostgreSQL does not provide Supabase-required roles/extensions. Do not claim a specific SQL error without new evidence.
+- Branch `fix/postgres-isolated-restore-safe-diagnostics-20261103` adds a strictly allowlisted categorizer that reads local error logs but prints **only** stage and failure category (`role_missing`, `role_exists`, `extension_missing`, `permission_denied`, etc.). It does not print raw logs, role identifiers, SQL, table names or user data. Failures remain hard failures and temporary logs are deleted.
+- No production Supabase reads/writes in restore workflow; R2 read-only; no R2 deletion, no daily DB schedule enabled. Next: CI -> PR merge approval -> manually retry offline rehearsal -> observe sanitized category -> create Supabase-compatible isolated target if needed and validate schema/data/auth coverage.
+- Supabase official self-hosting guidance expects a **Supabase-compatible environment**, not plain `postgres:17`; roles, extensions, platform schemas and restore ordering matter. Keep reviewing the logical-dump scope before considering it a complete recovery strategy.
+
 ## 2026-11-03 — Phase 2 isolated PostgreSQL 17 restore rehearsal (PR-only; not yet run)
 
 - Manual backup [run #41588451109](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/41588451109) succeeded; `roles.sql`, `schema.sql`, `data.sql` generated, authenticated R2 archive committed under snapshot `20261103T061621Z` (7,742,688 encrypted bytes), with circular foreign-key warnings. This is not yet recovery certification.
