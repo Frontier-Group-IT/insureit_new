@@ -16,7 +16,7 @@ create table if not exists public.policy_date_otp_approvals (
   expires_at timestamptz not null,
   verified_at timestamptz,
   consumed_at timestamptz,
-  resulting_policy_id uuid references public.policies(id),
+  resulting_policy_id uuid references public.policies(id) on delete set null,
   constraint policy_date_edit_reference check (
     (operation = 'edit' and existing_policy_id is not null)
     or (operation = 'create' and existing_policy_id is null)
