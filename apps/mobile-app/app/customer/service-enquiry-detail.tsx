@@ -88,13 +88,13 @@ function formatDate(value: string) { return new Date(value).toLocaleString('en-I
 const styles = StyleSheet.create({
   topRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   back: { width: 38, height: 38, borderRadius: 13, backgroundColor: '#F3F7FB', alignItems: 'center', justifyContent: 'center' },
-  heading: { flex: 1, textAlign: 'center', color: palette.navy, fontSize: 17, fontWeight: Platform.OS === 'ios' ? '600' : '900' }, spacer: { width: 38 },
+  heading: { flex: 1, textAlign: 'center', color: palette.navy, fontSize: 17, fontWeight: Platform.OS === 'ios' ? '500' : '900' }, spacer: { width: 38 },
   hero: { borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE8F3', padding: 13, flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   icon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }, heroCopy: { flex: 1 },
-  eyebrow: { color: '#66758A', fontSize: 10, fontWeight: Platform.OS === 'ios' ? '600' : '900' }, reference: { color: palette.navy, fontSize: 14, fontWeight: Platform.OS === 'ios' ? '600' : '900', marginTop: 2 },
-  status: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5 }, statusText: { fontSize: 9, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  eyebrow: { color: '#66758A', fontSize: 10, fontWeight: Platform.OS === 'ios' ? '400' : '900' }, reference: { color: palette.navy, fontSize: 14, fontWeight: Platform.OS === 'ios' ? '400' : '900', marginTop: 2 },
+  status: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5 }, statusText: { fontSize: 9, fontWeight: Platform.OS === 'ios' ? '400' : '900' },
   card: { borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE8F3', paddingHorizontal: 13 },
-  infoRow: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#EEF2F6' }, label: { color: '#7A8798', fontSize: 9.5, fontWeight: Platform.OS === 'ios' ? '600' : '900', textTransform: 'uppercase' }, value: { color: palette.navy, fontSize: 12, fontWeight: Platform.OS === 'ios' ? '500' : '800', marginTop: 4 }, multiline: { lineHeight: 17, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
-  note: { marginTop: 10, borderRadius: 16, backgroundColor: '#F2F7FF', borderWidth: 1, borderColor: '#CFE0FF', padding: 11, flexDirection: 'row', gap: 8, alignItems: 'flex-start' }, noteText: { flex: 1, color: '#5B6B80', fontSize: 10.5, lineHeight: 15, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
+  infoRow: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#EEF2F6' }, label: { color: '#7A8798', fontSize: 9.5, fontWeight: Platform.OS === 'ios' ? '400' : '900', textTransform: 'uppercase' }, value: { color: palette.navy, fontSize: 12, fontWeight: Platform.OS === 'ios' ? '500' : '800', marginTop: 4 }, multiline: { lineHeight: 17, fontWeight: Platform.OS === 'ios' ? '400' : '700' },
+  note: { marginTop: 10, borderRadius: 16, backgroundColor: '#F2F7FF', borderWidth: 1, borderColor: '#CFE0FF', padding: 11, flexDirection: 'row', gap: 8, alignItems: 'flex-start' }, noteText: { flex: 1, color: '#5B6B80', fontSize: 10.5, lineHeight: 15, fontWeight: Platform.OS === 'ios' ? '400' : '700' },
   pressed: { opacity: 0.7 },
 });

@@ -96,10 +96,10 @@ export default function VehicleDetailScreen() {
           </View>
           <View style={styles.heroCopy}>
             <View style={styles.heroVehicleLine}>
-              <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle.vehicle_no}</Text>
+              <Text style={styles.vehicleNo} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>{vehicle.vehicle_no}</Text>
               {policyState.tone === 'red' ? <PulseDot tone="red" /> : null}
             </View>
-            <Text style={styles.vehiclePolicyHelper} numberOfLines={1}>
+            <Text style={styles.vehiclePolicyHelper} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>
               {vehicleSummary}
             </Text>
           </View>
@@ -192,15 +192,15 @@ export default function VehicleDetailScreen() {
             )}
           </View>
           <View style={styles.activePolicyCopy}>
-            <Text style={styles.activePolicyInsurer} numberOfLines={1}>{latestPolicyCompany?.name ?? 'Insurance policy'}</Text>
-            <Text style={styles.activePolicyNumber} numberOfLines={1}>{latestPolicyNumber}</Text>
+            <Text style={styles.activePolicyInsurer} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>{latestPolicyCompany?.name ?? 'Insurance policy'}</Text>
+            <Text style={styles.activePolicyNumber} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}>{latestPolicyNumber}</Text>
             <Text
               style={[
                 styles.policyStatusHelper,
                 policyState.tone === 'red' && styles.policyStatusHelperExpired,
                 policyState.tone === 'orange' && styles.policyStatusHelperDue,
               ]}
-              numberOfLines={1}
+              numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.72}
             >
               {policyState.helper}
             </Text>
@@ -364,24 +364,24 @@ const styles = StyleSheet.create({
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   heroCopy: { flex: 1, minWidth: 0 },
   heroVehicleLine: { flexDirection: 'row', alignItems: 'center', gap: 7, minWidth: 0 },
-  vehicleNo: { flexShrink: 1, color: '#FFFFFF', fontSize: 18, lineHeight: 22, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
-  vehiclePolicyHelper: { color: 'rgba(255,255,255,0.78)', fontSize: 10.5, lineHeight: 14, fontWeight: Platform.OS === 'ios' ? '500' : '700', marginTop: 3 },
+  vehicleNo: { flexShrink: 1, color: '#FFFFFF', fontSize: 18, lineHeight: 22, fontWeight: Platform.OS === 'ios' ? '400' : '900' },
+  vehiclePolicyHelper: { color: 'rgba(255,255,255,0.78)', fontSize: 10.5, lineHeight: 14, fontWeight: Platform.OS === 'ios' ? '400' : '700', marginTop: 3 },
   vehiclePolicyHelperExpired: { color: '#FFD8D5' },
   vehicleImageShell: { width: 50, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F7FF' },
   vehicleImage: { width: 44, height: 32 },
   compactPolicyAction: { minHeight: 30, borderRadius: 10, paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#FFFFFF', marginLeft: 'auto' },
-  compactPolicyActionText: { color: palette.navy, fontSize: 9.5, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  compactPolicyActionText: { color: palette.navy, fontSize: 9.5, fontWeight: Platform.OS === 'ios' ? '400' : '900' },
   activeBadge: { minHeight: 28, borderRadius: 999, paddingHorizontal: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F8EE', marginLeft: 'auto' },
-  activeBadgeText: { color: '#18794E', fontSize: 10.5, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  activeBadgeText: { color: '#18794E', fontSize: 10.5, fontWeight: Platform.OS === 'ios' ? '400' : '900' },
   actionPressed: { opacity: 0.86, transform: [{ scale: 0.97 }] },
   activePolicyCard: { minHeight: 82, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D9E3F0' },
   activePolicyCardPressed: { opacity: 0.88, transform: [{ scale: 0.99 }] },
   activePolicyLogoWrap: { width: 56, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFD', overflow: 'hidden' },
   activePolicyLogo: { width: 48, height: 48 },
   activePolicyCopy: { flex: 1, minWidth: 0 },
-  activePolicyInsurer: { color: '#64748B', fontSize: 9, lineHeight: 12, fontWeight: Platform.OS === 'ios' ? '500' : '800', textTransform: 'uppercase' },
-  activePolicyNumber: { color: palette.navy, fontSize: 12.5, lineHeight: 16, fontWeight: Platform.OS === 'ios' ? '600' : '900', marginTop: 3 },
-  policyStatusHelper: { color: '#18794E', fontSize: 8, lineHeight: 10.5, fontWeight: Platform.OS === 'ios' ? '500' : '700', marginTop: 2 },
+  activePolicyInsurer: { color: '#64748B', fontSize: 9, lineHeight: 12, fontWeight: Platform.OS === 'ios' ? '400' : '800', textTransform: 'uppercase' },
+  activePolicyNumber: { color: palette.navy, fontSize: 12.5, lineHeight: 16, fontWeight: Platform.OS === 'ios' ? '500' : '900', marginTop: 3 },
+  policyStatusHelper: { color: '#18794E', fontSize: 8, lineHeight: 10.5, fontWeight: Platform.OS === 'ios' ? '400' : '700', marginTop: 2 },
   policyStatusHelperExpired: { color: '#B42318' },
   policyStatusHelperDue: { color: '#946200' },
   alertSection: { padding: 10, backgroundColor: '#FFFBF3', borderColor: '#E8D7B5', borderWidth: 1 },
@@ -391,26 +391,26 @@ const styles = StyleSheet.create({
   alertIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: '#FFF1D8', alignItems: 'center', justifyContent: 'center' },
   alertCountBox: { minWidth: 44, height: 30, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E8D7B5', paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 },
   alertCountBoxWarning: { backgroundColor: '#FFF4E2', borderColor: '#D8B978' },
-  alertCount: { color: '#8A641E', fontSize: 14, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  alertCount: { color: '#8A641E', fontSize: 14, fontWeight: Platform.OS === 'ios' ? '500' : '900' },
   detailIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' },
   sectionCopy: { flex: 1, minWidth: 0 },
   sectionTitle: { color: palette.navy, fontSize: 14.5, lineHeight: 18, fontWeight: Platform.OS === 'ios' ? '500' : '700' },
   sectionHint: { color: palette.slate, fontSize: 11, fontWeight: '500', lineHeight: 15, marginTop: 1, marginBottom: 2 },
   alertLegend: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, marginBottom: 8 },
-  legendText: { color: '#5F6B7A', fontSize: 10.5, fontWeight: '600', marginRight: 8 },
+  legendText: { color: '#5F6B7A', fontSize: 10.5, fontWeight: Platform.OS === 'ios' ? '400' : '600', marginRight: 8 },
   complianceRow: { minHeight: 48, borderRadius: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E8D7B5', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 7 },
   complianceCopy: { flex: 1, minWidth: 0 },
   complianceTitle: { color: palette.navy, fontSize: 12.5, lineHeight: 16, fontWeight: Platform.OS === 'ios' ? '500' : '700' },
   complianceDateRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1 },
   complianceDate: { color: '#667085', fontSize: 11, lineHeight: 14, fontWeight: '500', marginTop: 1 },
-  complianceStatus: { fontSize: 11, fontWeight: Platform.OS === 'ios' ? '500' : '700' },
+  complianceStatus: { fontSize: 11, fontWeight: Platform.OS === 'ios' ? '400' : '700' },
   complianceExpired: { color: '#C43D2D' },
   complianceDue: { color: '#B7791F' },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
   animatedDot: { width: 8, height: 8, borderRadius: 4 },
   redDot: { backgroundColor: '#C43D2D' },
   yellowDot: { backgroundColor: '#F6C33B' },
-  detailGroupLabel: { color: '#0A43A3', fontSize: 9.5, fontWeight: Platform.OS === 'ios' ? '600' : '900', letterSpacing: .55, textTransform: 'uppercase', marginTop: 8, marginBottom: 2 },
+  detailGroupLabel: { color: '#0A43A3', fontSize: 9.5, fontWeight: Platform.OS === 'ios' ? '400' : '900', letterSpacing: .55, textTransform: 'uppercase', marginTop: 8, marginBottom: 2 },
   detailGrid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 10, rowGap: 0, marginTop: 4 },
   detailCell: { width: '48%', minHeight: 50, paddingVertical: 8, flexDirection: 'row', gap: 7, borderBottomWidth: 1, borderBottomColor: '#E5ECF5' },
   detailCopy: { flex: 1, minWidth: 0 },
