@@ -9,6 +9,7 @@ on:
       - '.github/workflows/verify-r2-backup-static.yml'
       - '.github/workflows/insureit-r2-backup-monitor.yml'
       - '.github/workflows/insureit-postgres-r2-manual.yml'
+      - '.github/workflows/insureit-postgres-r2-restore-verify.yml'
   workflow_dispatch:
 
 permissions:
@@ -24,7 +25,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install boto3==1.35.99 cryptography==44.0.2 pyyaml==6.0.2
-      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/postgres_to_r2.py
+      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py
       - run: python -m unittest discover -s scripts/backup -p 'test_*.py' -v
       - name: Validate workflow safety guard
         run: |
@@ -68,5 +69,17 @@ jobs:
           assert 'supabase db dump' in str(job['steps'])
           assert 'postgres_to_r2.py' in str(job['steps'])
           assert any(step.get('env', {}).get('R2_BUCKET') == 'insureit-production-backups' for step in job['steps'])
-          print('Scheduled document backup + PostgreSQL manual gate + monitor guards verified')
+          restoration = yaml.safe_load(pathlib.Path('.github/workflows/insureit-postgres-r2-restore-verify.yml').read_text())
+          r_triggers = restoration.get('on', restoration.get(True, {}))
+          assert 'workflow_dispatch' in r_triggers and 'schedule' not in r_triggers
+          restore_job = restoration['jobs']['restore_test']
+          assert "refs/heads/main" in restore_job['if']
+          assert restore_job['environment'] == 'insureit-production-backup'
+          assert restoration['permissions']['contents'] == 'read'
+          steps_text = str(restore_job['steps'])
+          assert '--network none' in steps_text
+          assert 'verify_postgres_r2_restore.py' in steps_text
+          assert 'docker rm --force --volumes' in steps_text
+          assert 'DATABASE_URL' not in steps_text and 'SUPABASE_SERVICE_ROLE_KEY' not in steps_text
+          print('Manual offline database recovery rehearsal guards verified')
           PY
