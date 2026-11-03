@@ -1,7 +1,7 @@
-import { Platform, MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { LoadingState, Message, Screen } from '@/components/ui';
 import { getCurrentSession, getCustomerForUser } from '@/lib/auth';
