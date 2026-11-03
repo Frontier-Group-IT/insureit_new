@@ -1,3 +1,13 @@
+## 2026-11-03 — Phase 2 isolated PostgreSQL 17 restore rehearsal (PR-only; not yet run)
+
+- Manual backup [run #41588451109](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/41588451109) succeeded; `roles.sql`, `schema.sql`, `data.sql` generated, authenticated R2 archive committed under snapshot `20261103T061621Z` (7,742,688 encrypted bytes), with circular foreign-key warnings. This is not yet recovery certification.
+- New branch `feat/postgres-r2-isolated-restore-20261103` adds `verify_postgres_r2_restore.py` and manual-only workflow `insureit-postgres-r2-restore-verify.yml`. **No automatic run or merge performed.**
+- Workflow reads *only* R2 using existing GitHub environment secrets, validates project origin and timestamp in the encrypted manifest, downloads encrypted archive, authenticates AES-256-GCM and SHA-256, and safely extracts only the three expected SQL components on an ephemeral GitHub runner.
+- Workflow then attempts `roles.sql`, `schema.sql`, `data.sql` in that order against an isolated **local PostgreSQL 17 Docker container launched with `--network none`**, without exposed ports or production database connection credentials. Runs `psql` with `ON_ERROR_STOP=1`. SQL output and errors are redirected to temporary runner files and deliberately not published as artifacts/logs; reports only successful stage or failed component. It checks nonzero public table count if all stages pass.
+- **Expected limitation:** a stock PostgreSQL 17 image does not include Supabase-managed roles, schemas, extensions or app services. Consequently a failure in the rehearsal may indicate missing Supabase platform dependencies rather than a defective SQL archive; do not claim a full recovery failure or success without reviewing the stage and working toward a Supabase-compatible isolated target. A complete restored dataset including `auth.users` is **not proven** by these tests.
+- Security: no Supabase production reads or writes in restore job, no R2 DELETE/PUT, no plaintext artifact uploads, no credentials printed, no scheduled restore, no mobile builds, no paid Supabase project.
+- **Next gates:** pass PR backup-specific and web-portal CI, merge only with approval, manually run isolated restore job, review stage counts, resolve platform/schema coverage issues, then decide if daily database automation is safe. Continue retaining all R2 snapshots without automatic deletion.
+
 ## 2026-11-03 — Credentials supplied; manual archive readiness
 
 - User reports `DATABASE_URL` and separate `DB_BACKUP_ENCRYPTION_KEY` GitHub environment secrets are now set; values cannot be inspected via GitHub and connection permissions are **not yet verified**.
