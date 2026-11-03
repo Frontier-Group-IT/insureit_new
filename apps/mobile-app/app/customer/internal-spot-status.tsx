@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppDatePicker } from '@/components/design-system';
 import { ExternalClaimErrorPopup } from '@/components/external-claim-error-popup';
@@ -169,8 +169,8 @@ const styles = StyleSheet.create({
   spotStatusGlowLarge: { position: 'absolute', width: 145, height: 145, borderRadius: 73, borderWidth: 1.5, borderColor: 'rgba(81,151,255,0.22)', right: -58, top: -82 },
   spotStatusGlowSmall: { position: 'absolute', width: 82, height: 82, borderRadius: 41, backgroundColor: 'rgba(34,103,210,0.20)', right: -20, top: 10 },
   spotStatusHeaderRow: { flexDirection: 'row', alignItems: 'center', minHeight: 34 },
-  spotStatusHeaderTitle: { flex: 1, color: '#FFFFFF', fontSize: 16, fontWeight: '900', marginLeft: 8 },
-  spotStatusClaimNo: { color: '#FFFFFF', fontSize: 12, fontWeight: '900', marginLeft: 8 },
+  spotStatusHeaderTitle: { flex: 1, color: '#FFFFFF', fontSize: 16, fontWeight: Platform.OS === 'ios' ? '600' : '900', marginLeft: 8 },
+  spotStatusClaimNo: { color: '#FFFFFF', fontSize: 12, fontWeight: Platform.OS === 'ios' ? '600' : '900', marginLeft: 8 },
   spotStatusHeaderDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.18)', marginTop: 8, marginBottom: 10 },
   spotStatusInfoGrid: { flexDirection: 'row', alignItems: 'stretch' },
   spotStatusInfoSection: { flex: 1, minWidth: 0, gap: 8 },
@@ -178,9 +178,9 @@ const styles = StyleSheet.create({
   spotStatusMainInfoRow: { minHeight: 30, flexDirection: 'row', alignItems: 'center', gap: 7 },
   spotStatusSubInfoRow: { minHeight: 30, flexDirection: 'row', alignItems: 'center', gap: 7 },
   spotStatusMainInfoLine: { flex: 1, minWidth: 0, color: '#FFFFFF', fontSize: 10, lineHeight: 14 },
-  spotStatusMainInfoLabel: { fontWeight: '700', color: '#E6EEFF' },
-  spotStatusMainInfoValue: { fontWeight: '900', color: '#FFFFFF' },
-  spotStatusSubInfoText: { flex: 1, minWidth: 0, color: '#FFFFFF', fontSize: 9.5, lineHeight: 13, fontWeight: '700' },
+  spotStatusMainInfoLabel: { fontWeight: Platform.OS === 'ios' ? '600' : '700', color: '#E6EEFF' },
+  spotStatusMainInfoValue: { fontWeight: Platform.OS === 'ios' ? '600' : '900', color: '#FFFFFF' },
+  spotStatusSubInfoText: { flex: 1, minWidth: 0, color: '#FFFFFF', fontSize: 9.5, lineHeight: 13, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
   spotStatusIconBadge: { width: 31, height: 31, borderRadius: 16, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   spotStatusStageBadge: { backgroundColor: '#1964C7' },
   spotStatusVehicleBadge: { backgroundColor: '#E7F5F1' },
@@ -189,10 +189,10 @@ const styles = StyleSheet.create({
   spotStatusBadgeArtwork: { width: 25, height: 25 },
   stageFooterActions: { flexDirection: 'row', gap: 10, marginTop: 2, marginBottom: 10 },
   footerSecondary: { flex: 1, minHeight: 58, borderRadius: 17, borderWidth: 1, borderColor: '#B9CBE3', backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  footerSecondaryText: { color: '#0A43A3', fontSize: 12, fontWeight: '900' },
-  footerSecondaryArrow: { color: '#0A43A3', fontSize: 22, fontWeight: '700' },
+  footerSecondaryText: { color: '#0A43A3', fontSize: 12, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  footerSecondaryArrow: { color: '#0A43A3', fontSize: 22, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
   footerPrimary: { flex: 1, minHeight: 58, borderRadius: 17, backgroundColor: '#0A3E91', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  footerPrimaryText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' },
-  footerPrimaryArrow: { color: '#FFFFFF', fontSize: 22, fontWeight: '700' },
+  footerPrimaryText: { color: '#FFFFFF', fontSize: 12, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  footerPrimaryArrow: { color: '#FFFFFF', fontSize: 22, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
   footerDisabled: { opacity: 0.55 },
 });

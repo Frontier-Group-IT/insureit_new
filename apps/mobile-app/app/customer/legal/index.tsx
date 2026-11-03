@@ -1,5 +1,5 @@
 import { Link } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Screen } from '@/components/ui';
 import { legalDocuments } from '@/lib/legal-content';
@@ -41,14 +41,14 @@ export default function LegalCenterScreen() {
 }
 
 const styles = StyleSheet.create({
-  pageName: { color: palette.navy, fontSize: 15, lineHeight: 19, fontWeight: '900', marginBottom: 9 },
+  pageName: { color: palette.navy, fontSize: 15, lineHeight: 19, fontWeight: Platform.OS === 'ios' ? '600' : '900', marginBottom: 9 },
   hero: { borderRadius: 18, backgroundColor: palette.navy, padding: 13, marginBottom: 10 },
   heroCopy: { flex: 1, minWidth: 0 },
-  heroTitle: { color: '#FFFFFF', fontSize: 15, lineHeight: 20, fontWeight: '900' },
-  heroBody: { color: 'rgba(255,255,255,0.76)', fontSize: 11.5, lineHeight: 16, fontWeight: '700', marginTop: 4 },
+  heroTitle: { color: '#FFFFFF', fontSize: 15, lineHeight: 20, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  heroBody: { color: 'rgba(255,255,255,0.76)', fontSize: 11.5, lineHeight: 16, fontWeight: Platform.OS === 'ios' ? '600' : '700', marginTop: 4 },
   policyCard: { minHeight: 72, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 12, marginBottom: 9, flexDirection: 'row', alignItems: 'center', gap: 11 },
   policyCopy: { flex: 1, minWidth: 0 },
-  policyTitle: { color: palette.navy, fontSize: 14, fontWeight: '900' },
-  policyBody: { color: palette.slate, fontSize: 11, lineHeight: 15, fontWeight: '700', marginTop: 3 },
-  policyArrow: { color: '#0B63CE', fontSize: 11, fontWeight: '900' },
+  policyTitle: { color: palette.navy, fontSize: 14, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  policyBody: { color: palette.slate, fontSize: 11, lineHeight: 15, fontWeight: Platform.OS === 'ios' ? '600' : '700', marginTop: 3 },
+  policyArrow: { color: '#0B63CE', fontSize: 11, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
 });

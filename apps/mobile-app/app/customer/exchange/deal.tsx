@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { confirmExchangeDeal, getExchangeDealDetail, type ExchangeDealDetail } from '@/lib/exchange';
@@ -266,42 +266,42 @@ const styles = StyleSheet.create({
   headerButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F4F6F8' },
   headerButtonSpacer: { width: 40, height: 40 },
   headerCopy: { flex: 1, alignItems: 'center' },
-  headerTitle: { color: '#0F1D33', fontSize: 14, fontWeight: '900' },
-  headerSubtitle: { marginTop: 2, color: '#8793A4', fontSize: 7.8, fontWeight: '700' },
+  headerTitle: { color: '#0F1D33', fontSize: 14, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  headerSubtitle: { marginTop: 2, color: '#8793A4', fontSize: 7.8, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
 
   center: { flex: 1, padding: 28, alignItems: 'center', justifyContent: 'center' },
   centerIcon: { width: 54, height: 54, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF4FF' },
-  centerTitle: { marginTop: 11, color: '#0F1D33', fontSize: 14, fontWeight: '900' },
-  centerCopy: { marginTop: 5, color: '#7B8798', textAlign: 'center', fontSize: 8.7, lineHeight: 12.5, fontWeight: '700' },
+  centerTitle: { marginTop: 11, color: '#0F1D33', fontSize: 14, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  centerCopy: { marginTop: 5, color: '#7B8798', textAlign: 'center', fontSize: 8.7, lineHeight: 12.5, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
   retry: { marginTop: 13, height: 40, borderRadius: 20, paddingHorizontal: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#164BB8' },
-  retryText: { color: '#FFFFFF', fontSize: 8.5, fontWeight: '900' },
+  retryText: { color: '#FFFFFF', fontSize: 8.5, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
 
   hero: { borderRadius: 21, padding: 15, backgroundColor: '#0F1D33' },
   heroWarning: { backgroundColor: '#3D3021' },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   heroIcon: { width: 47, height: 47, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#164BB8' },
   heroIconWarning: { backgroundColor: '#B46A12' },
-  eyebrow: { color: '#91B9FF', fontSize: 7.2, fontWeight: '900', letterSpacing: 0.7 },
-  heroTitle: { marginTop: 3, color: '#FFFFFF', fontSize: 15, fontWeight: '900' },
-  heroMeta: { marginTop: 3, color: '#B7C1CF', fontSize: 8, fontWeight: '700' },
+  eyebrow: { color: '#91B9FF', fontSize: 7.2, fontWeight: Platform.OS === 'ios' ? '600' : '900', letterSpacing: 0.7 },
+  heroTitle: { marginTop: 3, color: '#FFFFFF', fontSize: 15, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  heroMeta: { marginTop: 3, color: '#B7C1CF', fontSize: 8, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
   priceRow: { marginTop: 15, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.13)', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  priceLabel: { color: '#95A4B8', fontSize: 6.8, fontWeight: '900', letterSpacing: 0.5 },
-  price: { marginTop: 3, color: '#FFFFFF', fontSize: 19, fontWeight: '900' },
+  priceLabel: { color: '#95A4B8', fontSize: 6.8, fontWeight: Platform.OS === 'ios' ? '600' : '900', letterSpacing: 0.5 },
+  price: { marginTop: 3, color: '#FFFFFF', fontSize: 19, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
   statusPill: { minHeight: 29, borderRadius: 15, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#DCE9FD' },
   statusPillWarning: { backgroundColor: '#FFF1DE' },
-  statusText: { color: '#164BB8', fontSize: 7, fontWeight: '900' },
+  statusText: { color: '#164BB8', fontSize: 7, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
   statusTextWarning: { color: '#9B5A0B' },
 
   actionCard: { marginTop: 11, borderRadius: 18, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#EEF4FF', borderWidth: 1, borderColor: '#D2E1F8' },
   actionIcon: { width: 43, height: 43, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
-  actionTitle: { color: '#0F1D33', fontSize: 10, fontWeight: '900' },
-  actionCopy: { marginTop: 3, color: '#6F7D92', fontSize: 7.5, lineHeight: 10.5, fontWeight: '700' },
+  actionTitle: { color: '#0F1D33', fontSize: 10, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  actionCopy: { marginTop: 3, color: '#6F7D92', fontSize: 7.5, lineHeight: 10.5, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
   confirmButton: { height: 35, borderRadius: 18, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#164BB8' },
-  confirmText: { color: '#FFFFFF', fontSize: 7.8, fontWeight: '900' },
+  confirmText: { color: '#FFFFFF', fontSize: 7.8, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
 
   section: { marginTop: 11, borderRadius: 19, padding: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E0E5EC' },
-  sectionTitle: { color: '#0F1D33', fontSize: 12.5, fontWeight: '900' },
-  sectionCopy: { marginTop: 3, color: '#8390A0', fontSize: 7.7, lineHeight: 10.5, fontWeight: '700' },
+  sectionTitle: { color: '#0F1D33', fontSize: 12.5, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  sectionCopy: { marginTop: 3, color: '#8390A0', fontSize: 7.7, lineHeight: 10.5, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
 
   timeline: { marginTop: 12 },
   stepRow: { minHeight: 78, flexDirection: 'row' },
@@ -312,22 +312,22 @@ const styles = StyleSheet.create({
   stepLine: { width: 2, flex: 1, backgroundColor: '#E1E5EA' },
   stepLineDone: { backgroundColor: '#8ACCB2' },
   stepBody: { flex: 1, paddingBottom: 13 },
-  stepTitle: { color: '#7B8798', fontSize: 9.2, fontWeight: '900' },
+  stepTitle: { color: '#7B8798', fontSize: 9.2, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
   stepTitleDone: { color: '#24344B' },
-  stepCopy: { marginTop: 3, color: '#8793A4', fontSize: 7.4, lineHeight: 10.5, fontWeight: '700' },
-  stepTime: { marginTop: 4, color: '#0D7C58', fontSize: 6.9, fontWeight: '800' },
+  stepCopy: { marginTop: 3, color: '#8793A4', fontSize: 7.4, lineHeight: 10.5, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
+  stepTime: { marginTop: 4, color: '#0D7C58', fontSize: 6.9, fontWeight: Platform.OS === 'ios' ? '500' : '800' },
 
   issueCard: { marginTop: 11, borderRadius: 16, padding: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: '#FFF3E3', borderWidth: 1, borderColor: '#F0D2A8' },
-  issueTitle: { color: '#7A4C11', fontSize: 9.3, fontWeight: '900' },
-  issueCopy: { marginTop: 3, color: '#8B672F', fontSize: 7.6, lineHeight: 10.5, fontWeight: '700' },
+  issueTitle: { color: '#7A4C11', fontSize: 9.3, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  issueCopy: { marginTop: 3, color: '#8B672F', fontSize: 7.6, lineHeight: 10.5, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
 
   safeguards: { marginTop: 10, gap: 7 },
   safeguard: { minHeight: 64, borderRadius: 14, padding: 9, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F8F9FB' },
   safeguardIcon: { width: 39, height: 39, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF4FF' },
-  safeguardTitle: { color: '#26364D', fontSize: 8.8, fontWeight: '900' },
-  safeguardCopy: { marginTop: 2, color: '#8190A2', fontSize: 7.2, lineHeight: 10, fontWeight: '700' },
+  safeguardTitle: { color: '#26364D', fontSize: 8.8, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  safeguardCopy: { marginTop: 2, color: '#8190A2', fontSize: 7.2, lineHeight: 10, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
 
   vehicleButton: { marginTop: 11, height: 46, borderRadius: 14, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#EEF4FF', borderWidth: 1, borderColor: '#D2E1F8' },
-  vehicleButtonText: { flex: 1, color: '#164BB8', fontSize: 8.8, fontWeight: '900' },
+  vehicleButtonText: { flex: 1, color: '#164BB8', fontSize: 8.8, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
 });
 
