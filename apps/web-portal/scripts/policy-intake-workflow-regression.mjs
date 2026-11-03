@@ -67,6 +67,13 @@ assert(reviewSummary.includes('options.intakeOrFilter'),"Summary must honor the 
 assert(reviewSummary.includes('options.denyAll'),"Summary must fail closed for empty hierarchy scope");
 assert(portfolioPage.includes("getRmPolicyIntakePredicates(profile.id, profile.role)"),"Portfolio counts must match Queue hierarchy authorization");
 assert(portfolioPage.includes("intakeHierarchyScoped && !intakePredicates?.length"),"Unresolved hierarchy predicates must never show organization totals");
+const dashboardPage=read("app/dashboard/page.tsx");
+const dashboardView=read("app/dashboard-v2/dashboard-view.tsx");
+assert(dashboardPage.includes('getRmPolicyIntakePredicates(profile.id, profile.role)'),"Dashboard intake counts must use Queue hierarchy scope");
+assert(dashboardPage.includes("includeNeedsAttention: true"),"Dashboard Action Required must include needs_attention records");
+assert(dashboardView.includes('label: "Policy Intake"'),"Needs attention must include Policy Intake");
+assert(dashboardView.includes('href="/policy-intakes?view=action"'),"Action Required must open the corresponding Intake Queue");
+assert(dashboardView.includes('href="/policy-intakes?view=in_review"'),"In Review must open the corresponding Intake Queue");
 const queue=read("app/policy-intakes/page.tsx");
 assert(queue.includes("loadPolicyIntakeDuplicateMatches(admin, rows)"),"Policy Intake queue must use the shared duplicate detector");
 assert(queue.includes('status: "Duplicate"'),"Detected duplicates must be removed from Ready for review and shown in the Duplicate bucket");
