@@ -8,6 +8,7 @@ import { AppBadge } from '@/components/design-system';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
 import { getInsurerLogoSource, getVehicleBrandLogoSource } from '@/lib/catalog-logos';
 import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
+import { customerInsurerDisplayName } from '@/lib/customer-insurer-display';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 
@@ -88,6 +89,8 @@ export function ClaimIdentityCard({
   vehicleMake?: string | null;
   vehicleModel?: string | null;
 }) {
+  const pathname = usePathname();
+  const customerInsurerLabel = pathname.startsWith('/customer/') ? customerInsurerDisplayName(insurerName) : insurerName;
   const parsedMeta = String(vehicleMeta ?? '').split(' · ');
   const make = vehicleMake || parsedMeta[0] || '';
   const model = vehicleModel || parsedMeta.slice(1).join(' · ') || '';
@@ -127,7 +130,7 @@ export function ClaimIdentityCard({
           </View>
           <View style={styles.claimIdentityReferenceCopy}>
             <Text style={styles.claimIdentityReferencePrimary} numberOfLines={1}>{displayedPolicyNo}</Text>
-            <Text style={styles.claimIdentityReferenceSecondary} numberOfLines={2}>{insurerName || 'Insurance company'}</Text>
+            <Text style={styles.claimIdentityReferenceSecondary} numberOfLines={2}>{customerInsurerLabel || 'Insurance company'}</Text>
           </View>
         </View>
       </View>
