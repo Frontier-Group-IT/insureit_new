@@ -6,11 +6,12 @@ import { CustomerSearchField } from "./customer-search-field";
 import { VehicleSpecificationFields } from "./vehicle-class-capacity-fields";
 import { VehicleRegistrationFields, type VehicleRegistrationMode } from "./vehicle-registration-fields";
 import { VehicleSaveActionChooser } from "./vehicle-save-action-chooser";
+import { VehicleRcSnapshot } from "./vehicle-rc-snapshot";
 
 type FormAction = (formData: FormData) => void | Promise<void>;
 type SelectOption = { label: string; value: string };
 type CustomerValues = { contact_name?: string | null; company_name?: string | null; phone?: string | null; email?: string | null; city?: string | null; state?: string | null; address?: string | null; assigned_agent_id?: string | null };
-type VehicleValues = { customer_id?: string | null; vehicle_no?: string | null; registration_status?: string | null; vehicle_type?: string | null; make?: string | null; model?: string | null; chassis_no?: string | null; engine_no?: string | null; permit_no?: string | null; year?: number | null; gvw_kg?: number | null; fuel_type?: string | null; registration_date?: string | null; fitness_expiry_date?: string | null; puc_expiry_date?: string | null; road_tax_expiry_date?: string | null; national_permit_expiry_date?: string | null; local_permit_expiry_date?: string | null };
+type VehicleValues = { rto_name?: string | number | null; rto_state?: string | number | null; registered_owner_name?: string | number | null; registered_address?: string | number | null; vehicle_category?: string | number | null; body_type?: string | number | null; manufacture_date?: string | number | null; color?: string | number | null; emission_norm?: string | number | null; unladen_weight_kg?: string | number | null; wheel_base_mm?: string | number | null; standing_capacity?: string | number | null; sleeper_capacity?: string | number | null; permit_type?: string | number | null; permit_no?: string | number | null; blacklist_status?: string | number | null; rc_insurance_company?: string | number | null; rc_policy_number?: string | number | null; rc_policy_start_date?: string | number | null; rc_policy_expiry_date?: string | number | null; rc_details_json?: unknown;  customer_id?: string | null; vehicle_no?: string | null; registration_status?: string | null; vehicle_type?: string | null; make?: string | null; model?: string | null; chassis_no?: string | null; engine_no?: string | null; permit_no?: string | null; year?: number | null; gvw_kg?: number | null; fuel_type?: string | null; registration_date?: string | null; fitness_expiry_date?: string | null; puc_expiry_date?: string | null; road_tax_expiry_date?: string | null; national_permit_expiry_date?: string | null; local_permit_expiry_date?: string | null };
 type PolicyValues = { customer_id?: string | null; vehicle_id?: string | null; insurance_company_id?: string | null; policy_no?: string | null; policy_type?: string | null; insured_declared_value?: number | null; start_date?: string | null; end_date?: string | null };
 
 const inputClass = "h-9 w-full rounded-md border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
@@ -78,6 +79,32 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
         <Field variant="onboarding" label="Local permit expiry" name="local_permit_expiry_date" type="date" defaultValue={values?.local_permit_expiry_date ?? ""} />
       </VehicleSection>
 
+
+      <VehicleSection number="04" title="Additional RC Details (Optional)" columns="five">
+        <Field variant="onboarding" label="RTO Name" name="rto_name" defaultValue={values?.rto_name?.toString() ?? ""}  />
+        <Field variant="onboarding" label="RTO State" name="rto_state" defaultValue={values?.rto_state?.toString() ?? ""}  />
+        <Field variant="onboarding" label="Registered Owner" name="registered_owner_name" defaultValue={values?.registered_owner_name?.toString() ?? ""}  />
+        <Field variant="onboarding" label="Registered Address" name="registered_address" defaultValue={values?.registered_address?.toString() ?? ""}  />
+        <Field variant="onboarding" label="Vehicle Category" name="vehicle_category" defaultValue={values?.vehicle_category?.toString() ?? ""}  />
+        <Field variant="onboarding" label="Body Type" name="body_type" defaultValue={values?.body_type?.toString() ?? ""}  />
+        <Field variant="onboarding" label="Manufacturing Month / Date" name="manufacture_date" defaultValue={values?.manufacture_date?.toString() ?? ""}  />
+        <Field variant="onboarding" label="Colour" name="color" defaultValue={values?.color?.toString() ?? ""}  />
+        <Field variant="onboarding" label="Emission Norm" name="emission_norm" defaultValue={values?.emission_norm?.toString() ?? ""}  />
+        <Field variant="onboarding" label="Unladen Weight (kg)" name="unladen_weight_kg" defaultValue={values?.unladen_weight_kg?.toString() ?? ""}  />
+        <Field variant="onboarding" label="Wheelbase (mm)" name="wheel_base_mm" defaultValue={values?.wheel_base_mm?.toString() ?? ""}  />
+        <Field variant="onboarding" label="Standing Capacity" name="standing_capacity" defaultValue={values?.standing_capacity?.toString() ?? ""}  />
+        <Field variant="onboarding" label="Sleeper Capacity" name="sleeper_capacity" defaultValue={values?.sleeper_capacity?.toString() ?? ""}  />
+        <Field variant="onboarding" label="Permit Type" name="permit_type" defaultValue={values?.permit_type?.toString() ?? ""}  />
+        <Field variant="onboarding" label="Permit Number" name="permit_no" defaultValue={values?.permit_no?.toString() ?? ""}  />
+        <Field variant="onboarding" label="Blacklist Status" name="blacklist_status" defaultValue={values?.blacklist_status?.toString() ?? ""}  />
+      </VehicleSection>
+      <VehicleSection number="05" title="RC Insurance Information (Optional)" columns="five">
+        <Field variant="onboarding" label="RC Insurance Company" name="rc_insurance_company" defaultValue={values?.rc_insurance_company?.toString() ?? ""}  />
+        <Field variant="onboarding" label="RC Policy Number" name="rc_policy_number" defaultValue={values?.rc_policy_number?.toString() ?? ""}  />
+        <Field variant="onboarding" label="RC Insurance Start Date" name="rc_policy_start_date" defaultValue={values?.rc_policy_start_date?.toString() ?? ""} type="date" />
+        <Field variant="onboarding" label="RC Insurance Expiry Date" name="rc_policy_expiry_date" defaultValue={values?.rc_policy_expiry_date?.toString() ?? ""} type="date" />
+      </VehicleSection>
+      <VehicleRcSnapshot initialDetails={values?.rc_details_json} />
       {beforeActions}
 
       <div className={`sticky bottom-0 z-20 flex flex-wrap items-center gap-2 rounded-xl border border-[#D9E2F0] bg-white/95 px-4 py-2.5 shadow-[0_-6px_24px_rgba(15,23,42,0.05)] backdrop-blur ${footerContent ? "justify-between" : "justify-end"}`}>
