@@ -7,6 +7,21 @@ import { displayVehicleRegistrationNumber } from "@/lib/vehicle-registration";
 export type VehicleRegistrationMode = "registered" | "unregistered";
 
 type RcLookupDetails = {
+  registeredOwnerName: string | null;
+  registeredAddress: string | null;
+  vehicleCategory: string | null;
+  bodyType: string | null;
+  manufactureDate: string | null;
+  rtoName: string | null;
+  rtoState: string | null;
+  unladenWeight: string | null;
+  standingCapacity: string | null;
+  sleeperCapacity: string | null;
+  wheelBase: string | null;
+  color: string | null;
+  normsType: string | null;
+  permitType: string | null;
+  blacklistStatus: string | null;
   registrationNumber: string;
   registrationDate: string | null;
   manufacturer: string | null;
@@ -139,7 +154,27 @@ export function VehicleRegistrationFields({
     setFormControlValue("national_permit_expiry_date", details.nationalPermitExpiryDate);
     setFormControlValue("local_permit_expiry_date", details.localPermitExpiryDate);
 
-    window.dispatchEvent(new CustomEvent("insureit:vehicle-rc-applied", { detail: details }));
+    setFormControlValue("rto_name", details.rtoName);
+    setFormControlValue("rto_state", details.rtoState);
+    setFormControlValue("registered_owner_name", details.registeredOwnerName);
+    setFormControlValue("registered_address", details.registeredAddress);
+    setFormControlValue("vehicle_category", details.vehicleCategory);
+    setFormControlValue("body_type", details.bodyType);
+    setFormControlValue("manufacture_date", details.manufactureDate);
+    setFormControlValue("color", details.color);
+    setFormControlValue("emission_norm", details.normsType);
+    setFormControlValue("unladen_weight_kg", details.unladenWeight);
+    setFormControlValue("wheel_base_mm", details.wheelBase);
+    setFormControlValue("standing_capacity", details.standingCapacity);
+    setFormControlValue("sleeper_capacity", details.sleeperCapacity);
+    setFormControlValue("permit_type", details.permitType);
+    setFormControlValue("permit_no", details.permitNumber);
+    setFormControlValue("blacklist_status", details.blacklistStatus);
+    setFormControlValue("rc_insurance_company", details.insuranceCompany);
+    setFormControlValue("rc_policy_number", details.policyNumber);
+    setFormControlValue("rc_policy_start_date", details.policyStartDate);
+    setFormControlValue("rc_policy_expiry_date", details.policyExpiryDate);
+    window.dispatchEvent(new CustomEvent("insureit:vehicle-rc-applied", { detail: { ...details, sections: lookupResult.sections ?? [], lookedUpAt: lookupResult.lookedUpAt ?? null, source: lookupResult.source ?? null } }));
     setLookupResult(null);
   }
 

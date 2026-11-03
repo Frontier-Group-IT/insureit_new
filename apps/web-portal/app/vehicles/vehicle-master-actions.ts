@@ -39,6 +39,26 @@ function capacityColumns(vehicleType: string, capacity: number | null) {
   };
 }
 
+function parseRcSnapshot(formData: FormData) {
+  const value = requiredText(formData, "rc_details_json");
+  if (!value || value.length > 180000) return null;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const record = parsed as Record<string, unknown>;
+    if (!Array.isArray(record.sections) || record.sections.length > 30) return null;
+    const sections = record.sections.map((section) => {
+      if (!section || typeof section !== "object") return null;
+      const item = section as Record<string, unknown>;
+      return { title: String(item.title ?? "").slice(0, 100), fields: Array.isArray(item.fields) ? item.fields.slice(0,160).map((field) => {
+        const f = (field && typeof field === "object" ? field : {}) as Record<string, unknown>;
+        return {label: String(f.label ?? "").slice(0,100),value:String(f.value ?? "").slice(0,500)};
+      }) : [] };
+    }).filter(Boolean);
+    return { sections, lookedUpAt: typeof record.lookedUpAt === "string" ? record.lookedUpAt.slice(0,50) : null, source: record.source === "authbridge" || record.source === "local_cache" ? record.source : null };
+  } catch { return null; }
+}
+
 function vehiclePayload(formData: FormData) {
   const customerId = requiredText(formData, "customer_id");
   const vehicleType = requiredText(formData, "vehicle_type");
@@ -94,6 +114,27 @@ function vehiclePayload(formData: FormData) {
       road_tax_expiry_date: dateValue(formData, "road_tax_expiry_date"),
       national_permit_expiry_date: dateValue(formData, "national_permit_expiry_date"),
       local_permit_expiry_date: dateValue(formData, "local_permit_expiry_date"),
+      rto_name: requiredText(formData, "rto_name"),
+      rto_state: requiredText(formData, "rto_state"),
+      registered_owner_name: requiredText(formData, "registered_owner_name"),
+      registered_address: requiredText(formData, "registered_address"),
+      vehicle_category: requiredText(formData, "vehicle_category"),
+      body_type: requiredText(formData, "body_type"),
+      manufacture_date: requiredText(formData, "manufacture_date"),
+      color: requiredText(formData, "color"),
+      emission_norm: requiredText(formData, "emission_norm"),
+      unladen_weight_kg: numberValue(formData, "unladen_weight_kg"),
+      wheel_base_mm: numberValue(formData, "wheel_base_mm"),
+      standing_capacity: numberValue(formData, "standing_capacity"),
+      sleeper_capacity: numberValue(formData, "sleeper_capacity"),
+      permit_type: requiredText(formData, "permit_type"),
+      permit_no: requiredText(formData, "permit_no"),
+      blacklist_status: requiredText(formData, "blacklist_status"),
+      rc_insurance_company: requiredText(formData, "rc_insurance_company"),
+      rc_policy_number: requiredText(formData, "rc_policy_number"),
+      rc_policy_start_date: dateValue(formData, "rc_policy_start_date"),
+      rc_policy_expiry_date: dateValue(formData, "rc_policy_expiry_date"),
+      rc_details_json: parseRcSnapshot(formData),
       ...capacityColumns(vehicleType, capacity),
     },
     error: null,
