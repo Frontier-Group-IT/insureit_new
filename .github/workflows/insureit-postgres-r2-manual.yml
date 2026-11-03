@@ -47,7 +47,14 @@ jobs:
           url = urlsplit(os.environ['DATABASE_URL'])
           assert url.scheme in ('postgresql','postgres')
           assert url.path == '/postgres'
-          assert url.hostname and ('supabase.co' in url.hostname)
+          ref = 'ilzhsfqqjyppzzvfscmh'
+          direct = url.hostname == f'db.{ref}.supabase.co' and url.username == 'postgres'
+          pooler = (
+              url.hostname and url.hostname.endswith('.pooler.supabase.com')
+              and url.username == f'postgres.{ref}'
+          )
+          assert direct or pooler, 'Connection must target the authorized INSUREIT database'
+          assert url.password, 'Database connection password required'
           print('Encrypted PostgreSQL backup configuration validated')
           PY
       - name: Install pinned encryption and R2 dependencies
