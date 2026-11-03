@@ -139,3 +139,49 @@ revoke execute on function public.save_motor_policy_with_date_approval_v1(text,j
   from public, anon, authenticated;
 grant execute on function public.save_motor_policy_with_date_approval_v1(text,jsonb,uuid,uuid,uuid,uuid,integer,uuid,text,date)
   to service_role;
+
+
+-- Verifies OTP and increments incorrect-attempt counters under row lock.
+-- This prevents concurrent guesses from exceeding the five-attempt limit.
+create or replace function public.verify_policy_date_otp_v1(
+  p_approval_id uuid,
+  p_requester uuid,
+  p_supplied_hash text,
+  p_date date,
+  p_policy_number text,
+  p_operation text,
+  p_existing_policy_id uuid default null
+) returns boolean language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_record public.policy_date_otp_approvals%rowtype;
+begin
+  select * into v_record from public.policy_date_otp_approvals
+    where id = p_approval_id and requester_id = p_requester
+    for update;
+  if not found
+     or v_record.issuance_date is distinct from p_date
+     or v_record.policy_number is distinct from upper(trim(p_policy_number))
+     or v_record.operation is distinct from p_operation
+     or v_record.existing_policy_id is distinct from p_existing_policy_id
+     or v_record.delivered_at is null
+     or v_record.expires_at <= now()
+     or v_record.verified_at is not null
+     or v_record.consumed_at is not null
+     or v_record.attempts >= 5
+  then return false; end if;
+
+  if v_record.code_hash = p_supplied_hash then
+    update public.policy_date_otp_approvals set verified_at = now()
+    where id = p_approval_id;
+    return true;
+  end if;
+  update public.policy_date_otp_approvals set attempts = attempts + 1
+  where id = p_approval_id;
+  return false;
+end;
+$$;
+revoke execute on function public.verify_policy_date_otp_v1(uuid,uuid,text,date,text,text,uuid)
+  from public, anon, authenticated;
+grant execute on function public.verify_policy_date_otp_v1(uuid,uuid,text,date,text,text,uuid)
+  to service_role;
