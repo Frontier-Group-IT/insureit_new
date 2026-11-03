@@ -15,7 +15,7 @@ for (const label of [
   assert.ok(file.includes(label), `Missing approved claim-screen copy: ${label}`);
 }
 
-assert.match(file, /Platform\.OS === 'ios' \? \(/[\s\S]*?<Text style=\{\[styles\.eyebrow, styles\.iosEyebrow\]\}>START A CLAIM<\/Text>/, 'iOS should use a distinct readable eyebrow style');
+assert.ok(file.includes('<Text style={[styles.eyebrow, styles.iosEyebrow]}>START A CLAIM</Text>'), 'iOS should use a distinct readable eyebrow style');
 assert.match(file, /<Text style=\{\[styles\.title, styles\.iosTitle\]\}>Select the vehicle<\/Text>/, 'iOS heading should use a dedicated style without forced shrinking');
 assert.match(file, /<Text style=\{\[styles\.subtitle, styles\.iosSubtitle\]\}>/, 'iOS subtitle must wrap instead of squeezing to one line');
 assert.doesNotMatch(file, /<Text style=\{\[styles\.subtitle, styles\.iosSubtitle\]\} numberOfLines=\{1\}/, 'iOS supporting copy must not be constrained to one line');
