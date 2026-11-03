@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Platform, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -280,34 +280,34 @@ const styles = StyleSheet.create({
   back: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F4F6F8' },
   backSpacer: { width: 40, height: 40 },
   titleWrap: { flex: 1, paddingHorizontal: 8, alignItems: 'center' },
-  topTitle: { color: '#0F1D33', fontSize: 14, fontWeight: '900' },
-  topSubtitle: { marginTop: 2, maxWidth: 210, color: '#8793A4', fontSize: 7.7, fontWeight: '700' },
+  topTitle: { color: '#0F1D33', fontSize: 14, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  topSubtitle: { marginTop: 2, maxWidth: 210, color: '#8793A4', fontSize: 7.7, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
 
   center: { flex: 1, padding: 28, alignItems: 'center', justifyContent: 'center' },
   centerIcon: { width: 56, height: 56, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF4FF' },
-  centerTitle: { marginTop: 11, color: '#0F1D33', fontSize: 14, fontWeight: '900' },
-  centerCopy: { marginTop: 5, color: '#7C899B', textAlign: 'center', fontSize: 9, lineHeight: 13, fontWeight: '700' },
+  centerTitle: { marginTop: 11, color: '#0F1D33', fontSize: 14, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  centerCopy: { marginTop: 5, color: '#7C899B', textAlign: 'center', fontSize: 9, lineHeight: 13, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
   retry: { marginTop: 13, height: 40, borderRadius: 20, paddingHorizontal: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#164BB8' },
-  retryText: { color: '#FFFFFF', fontSize: 8.5, fontWeight: '900' },
+  retryText: { color: '#FFFFFF', fontSize: 8.5, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
 
   hero: { borderRadius: 20, padding: 15, flexDirection: 'row', alignItems: 'flex-start', gap: 11, backgroundColor: '#0F1D33' },
   heroIcon: { width: 48, height: 48, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#164BB8' },
-  heroEyebrow: { color: '#8EB7FF', fontSize: 7.4, fontWeight: '900', letterSpacing: 0.7 },
-  heroTitle: { marginTop: 3, color: '#FFFFFF', fontSize: 15.5, fontWeight: '900' },
-  heroCopy: { marginTop: 5, color: '#B9C3D1', fontSize: 8.2, lineHeight: 12, fontWeight: '700' },
+  heroEyebrow: { color: '#8EB7FF', fontSize: 7.4, fontWeight: Platform.OS === 'ios' ? '600' : '900', letterSpacing: 0.7 },
+  heroTitle: { marginTop: 3, color: '#FFFFFF', fontSize: 15.5, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  heroCopy: { marginTop: 5, color: '#B9C3D1', fontSize: 8.2, lineHeight: 12, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
 
   section: { marginTop: 11, borderRadius: 19, padding: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E0E5EC' },
-  sectionTitle: { color: '#0F1D33', fontSize: 12.5, fontWeight: '900' },
-  sectionSubtitle: { marginTop: 2, color: '#8490A0', fontSize: 7.8, fontWeight: '700' },
+  sectionTitle: { color: '#0F1D33', fontSize: 12.5, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  sectionSubtitle: { marginTop: 2, color: '#8490A0', fontSize: 7.8, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
   rows: { marginTop: 10 },
   fact: { minHeight: 73, paddingVertical: 9, flexDirection: 'row', alignItems: 'flex-start', gap: 9, borderBottomWidth: 1, borderBottomColor: '#EDF0F3' },
   factLast: { borderBottomWidth: 0, paddingBottom: 2 },
   factIcon: { width: 39, height: 39, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  factLabel: { color: '#58667B', fontSize: 7.8, fontWeight: '800' },
-  factValue: { marginTop: 2, fontSize: 10.2, fontWeight: '900' },
-  factSource: { marginTop: 4, color: '#929CAA', fontSize: 6.8, lineHeight: 9.5, fontWeight: '700' },
+  factLabel: { color: '#58667B', fontSize: 7.8, fontWeight: Platform.OS === 'ios' ? '500' : '800' },
+  factValue: { marginTop: 2, fontSize: 10.2, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  factSource: { marginTop: 4, color: '#929CAA', fontSize: 6.8, lineHeight: 9.5, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
 
   disclaimer: { marginTop: 11, borderRadius: 16, padding: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: '#EEF1F4' },
-  disclaimerText: { flex: 1, color: '#657286', fontSize: 7.5, lineHeight: 11, fontWeight: '700' },
+  disclaimerText: { flex: 1, color: '#657286', fontSize: 7.5, lineHeight: 11, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
 });
 
