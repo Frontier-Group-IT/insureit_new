@@ -7,6 +7,7 @@ import { FileSizeExceededPopup } from "@/components/file-size-exceeded-popup";
 import { CalendarDays, ChevronDown, Eye, LoaderCircle, Trash2, Upload } from "lucide-react";
 import { convertLifeHealthCaseToPolicy, deleteLifeHealthCaseDocument, uploadLifeHealthCaseDocument } from "@/app/policies/life-health-policy-actions";
 import { updateLifeHealthCaseDetails } from "@/app/policies/life-health-case-edit-actions";
+import { isPensionLifePolicy } from "@/lib/life-health-pension-maturity";
 
 type CaseData={id:string;caseNumber:string;businessLine:"Life"|"Health";status:string;sourcingDate:string;customerId:string;customerName:string;customerPhone:string;customerAddress:string;insurerId:string;insurerName:string;productName:string;proposalNumber:string;ppt:string;pd:string;paymentFrequency:string;paymentMode:string;premiumAmount:number;intermediaryType:string;intermediaryCode:string;leadSource:string;intermediaryMobile:string;rmName:string;rmCode:string;remarks:string;finalPolicyId:string|null;finalPolicyNo:string|null;finalPolicyCode:string|null;convertedAt:string|null};
 type DocumentRow={id:string;document_type:string;file_name:string;created_at:string};
@@ -87,13 +88,14 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
   const[pptEndDateMode,setPptEndDateMode]=useState<DateCalculationMode>("minusOne");
   const set=(k:string,v:string)=>setForm(x=>({...x,[k]:v}));
   const setI=(k:keyof IssueState,v:string)=>setIssue(x=>({...x,[k]:v}));
+  const pensionPlan=isPensionLifePolicy(caseData.businessLine,form.productName);
   const expectedEnd=useMemo(()=>addYearsByMode(issue.startDate,form.pd,endDateMode),[issue.startDate,form.pd,endDateMode]);
   const expectedPptEnd=useMemo(()=>addYearsByMode(issue.startDate,form.ppt,pptEndDateMode),[issue.startDate,form.ppt,pptEndDateMode]);
   const expectedNext=useMemo(()=>nextInstallmentFrom(issue.startDate,form.paymentFrequency),[issue.startDate,form.paymentFrequency]);
   const pptSinglePay=form.ppt.trim().toLowerCase().includes("single");
   const oneTimePayment=canonicalPaymentFrequency(form.paymentFrequency)==="One Time";
 
-  useEffect(()=>{if(!overrides.endDate)setIssue(x=>({...x,endDate:expectedEnd}));},[expectedEnd,overrides.endDate]);
+  useEffect(()=>{if(!overrides.endDate)setIssue(x=>({...x,endDate:pensionPlan?"":expectedEnd}));},[expectedEnd,overrides.endDate,pensionPlan]);
   useEffect(()=>{if(!overrides.pptEndDate)setIssue(x=>({...x,pptEndDate:expectedPptEnd}));},[expectedPptEnd,overrides.pptEndDate]);
   useEffect(()=>{if(!overrides.nextInstallmentDate)setIssue(x=>({...x,nextInstallmentDate:expectedNext}));},[expectedNext,overrides.nextInstallmentDate]);
 
@@ -159,7 +161,7 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
       <FieldWrap title="Policy number" required><input className={field} value={issue.policyNumber} onChange={e=>setI("policyNumber",e.target.value.toUpperCase())}/></FieldWrap>
       <FieldWrap title="Issuance date"><DateInput value={issue.issuanceDate} onChange={value=>setI("issuanceDate",value)}/></FieldWrap>
       <FieldWrap title="Policy start date"><DateInput value={issue.startDate} onChange={value=>{setOverrides({endDate:false,pptEndDate:false,nextInstallmentDate:false});setI("startDate",value)}}/></FieldWrap>
-      <CalculatedDateField title="Policy end / maturity date" value={issue.endDate} expected={expectedEnd} overridden={overrides.endDate} mode={endDateMode} onModeChange={setEndDateMode} onChange={value=>{setOverrides(x=>({...x,endDate:true}));setI("endDate",value)}} missingHint={!expectedEnd&&Boolean(issue.startDate)?"Enter Policy Duration / Term in years to calculate automatically.":undefined}/>
+      <CalculatedDateField title="Policy end / maturity date" required={!pensionPlan} value={issue.endDate} expected={expectedEnd} overridden={overrides.endDate} mode={endDateMode} onModeChange={setEndDateMode} onChange={value=>{setOverrides(x=>({...x,endDate:true}));setI("endDate",value)}} missingHint={pensionPlan?"Optional for pension policies.":!expectedEnd&&Boolean(issue.startDate)?"Enter Policy Duration / Term in years to calculate automatically.":undefined}/>
       {pptSinglePay?<ReadOnlyTextField title="PPT end date" value="Not applicable · Single Pay"/>:<CalculatedDateField title="PPT end date" value={issue.pptEndDate} expected={expectedPptEnd} overridden={overrides.pptEndDate} mode={pptEndDateMode} onModeChange={setPptEndDateMode} onChange={value=>{setOverrides(x=>({...x,pptEndDate:true}));setI("pptEndDate",value)}} missingHint={!expectedPptEnd&&Boolean(issue.startDate)?"Enter PPT in years to calculate automatically.":undefined}/>}
       {oneTimePayment?<ReadOnlyTextField title="Next installment date" value="Not applicable · One Time"/>:<CalculatedDateField title="Next installment date" value={issue.nextInstallmentDate} expected={expectedNext} overridden={overrides.nextInstallmentDate} onChange={value=>{setOverrides(x=>({...x,nextInstallmentDate:true}));setI("nextInstallmentDate",value)}}/>}
       <FieldWrap title="Final premium"><input className={field} value={issue.finalPremium} onChange={e=>setI("finalPremium",e.target.value.replace(/[^0-9.]/g,""))}/></FieldWrap>
@@ -180,9 +182,9 @@ function Section({number,title,children,highlight=false,contentClassName="md:gri
 function FieldWrap({title,children,required=false}:{title:string;children:ReactNode;required?:boolean}){return <label><span className={label}>{title}{required?<span className="text-red-500">*</span>:null}</span>{children}</label>}
 function MetaLine({left,right}:{left:string;right:string}){if(!left&&!right)return null;return <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-3 text-[9px] font-semibold text-[#315B6B]"><span>{left}</span>{right?<span>{right}</span>:null}</div>}
 function ReadOnlyTextField({title,value}:{title:string;value:string}){return <FieldWrap title={title}><div className={`${readOnlyField} flex items-center`}>{value}</div></FieldWrap>}
-function CalculatedDateField({title,value,expected,overridden,onChange,missingHint}:{title:string;value:string;expected:string;overridden:boolean;mode?:DateCalculationMode;onModeChange?:(mode:DateCalculationMode)=>void;onChange:(value:string)=>void;missingHint?:string}){
+function CalculatedDateField({title,value,expected,overridden,onChange,missingHint,required=false}:{title:string;value:string;expected:string;overridden:boolean;mode?:DateCalculationMode;onModeChange?:(mode:DateCalculationMode)=>void;onChange:(value:string)=>void;missingHint?:string;required?:boolean}){
   const differs=Boolean(overridden&&expected&&value&&value!==expected);
-  return <FieldWrap title={title}>
+  return <FieldWrap title={title} required={required}>
     <DateInput value={value} onChange={onChange}/>
     {differs?<p className="mt-1 text-[8px] leading-3 text-[#9A6700]">Manually changed from the calculated date {formatDate(expected)}. Please verify before issuing.</p>:missingHint?<p className="mt-1 text-[8px] leading-3 text-[#7A869A]">{missingHint}</p>:null}
   </FieldWrap>
