@@ -136,6 +136,8 @@ function VehicleOnboardingHeader() {
     { number: "01", label: "Vehicle Ownership" },
     { number: "02", label: "Vehicle Specification" },
     { number: "03", label: "Compliance & Permit" },
+    { number: "04", label: "Extra RC Details" },
+    { number: "05", label: "RC Insurance" },
   ];
 
   return <section className="overflow-hidden rounded-xl border border-[#D7E1EE] bg-white shadow-[0_4px_18px_rgba(23,54,93,0.06)]">
@@ -143,7 +145,7 @@ function VehicleOnboardingHeader() {
       <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-white">Vehicle Onboarding</h1>
       <Link href="/vehicles" className="shrink-0 rounded-lg border border-white/20 bg-white/[0.03] px-4 py-2 text-[10px] font-semibold text-white transition hover:border-white/35 hover:bg-white/[0.08]">Back</Link>
     </div>
-    <div className="grid grid-cols-1 bg-white sm:grid-cols-3">
+    <div className="grid grid-cols-1 bg-white sm:grid-cols-5">
       {steps.map((step, index) => <div key={step.number} className={`flex min-h-[46px] items-center justify-center gap-2.5 px-4 py-2 ${index < steps.length - 1 ? "border-b border-[#E1E7EF] sm:border-b-0 sm:border-r" : ""}`}>
         <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#F1F6FB] text-[8.5px] font-bold text-[#315B6B]">{step.number}</span>
         <span className="text-[10px] font-medium text-[#53657D] sm:text-[10.5px]">{step.label}</span>
