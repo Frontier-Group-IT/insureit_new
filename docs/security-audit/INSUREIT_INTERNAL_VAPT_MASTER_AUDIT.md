@@ -1,13 +1,14 @@
 # INSUREIT — Internal VAPT & Cybersecurity Self-Audit Master Register
 
 > **Document ID:** INS-SEC-IAV-001  
-> **Version:** 0.3.0 (P0 database metadata and policy review)  
+> **Version:** 0.4.0 (P0 production deployment binding verified)  
 > **Created:** 2026-11-03 (Asia/Kolkata)  
 > **Owner:** Sankalp Insurance Brokers Private Limited — designated internal audit owner **TBD**  
 > **Target systems:** INSUREIT Customer App, Partner App, Operations Portal, APIs, database, storage, infrastructure, third-party integrations and related governance  
 > **Status:** **P0 READ-ONLY DISCOVERY IN PROGRESS — DATABASE METADATA REVIEWED; 61 CONTROLS NOT YET PASSED**  
 > **Classification:** Internal / Confidential — redact secrets, customer data and exploitable details before distribution  
 > **Next review:** On each completed audit work session; formal periodic review cadence TBD
+> **Latest checkpoint:** 2026-11-03: deployment `portal.insureit.in` and public Supabase project binding corroborated; see Sections 19–20 for evidence, review leads and next steps.
 
 ## 0. Essential boundaries and claims
 
@@ -315,7 +316,7 @@ Master document version:
 - [ ] Confirm owner/approver and written scope for internal read-only assessment.
 - [ ] Read `AGENTS.md` and repository architecture/security files at a pinned commit.
 - [ ] Inventory web/mobile apps, public domains, API routes, edge functions and data stores.
-- [ ] Corroborate actual production Supabase and hosting IDs from deployed configuration, without exposing secrets.
+- [x] Corroborate actual production Supabase and hosting IDs from deployed configuration, without exposing secrets. (2026-11-03; see P0-018–P0-020, Section 20; still inventory other environments).
 - [ ] Extract **metadata-only** RLS policy inventory and identify critical assets to review first.
 - [ ] Create initial data-flow and role-permission matrices; list unknowns explicitly.
 - [ ] Record first verified evidence entries and update A01–A06 status individually.
@@ -400,3 +401,37 @@ Master document version:
 | 2026-11-03 | Read-only audit assistant | P0 | Reviewed actual public RLS/table grant, function, view, bucket metadata; examined sampled policy and function definitions; retrieved security advisor summaries and prior documentation-PR CI status. | P0-007 through P0-017; six review leads, no confirmed exploit and no production mutation. | **All 61 checklist controls remain not yet passed.** Discovery expanded, P0 not complete. | Validate production binding; risk-rank definer functions and confirm claim-staff access design. |
 
 **Documentation handling:** This is an internal register and must not be posted publicly without confidentiality review. No third-party certification or independent attestation is claimed.
+
+
+## 20. P0 production deployment corroboration — 2026-11-03
+
+**Activity classification:** read-only Vercel project/domain/deployment inspection and **a single browser-public** project environment-variable reference lookup. The encrypted credential variables themselves were **not** decrypted, copied or written to this document. This supersedes the "production mapping not verified" caveat in earlier P0 sections for the currently mapped web portal. The broader app/mobile/cloud inventory remains incomplete.
+
+| Evidence ID | Observation | Evidence source | Limitation / next step |
+|---|---|---|---|
+| P0-018 | The Vercel project named \`insureit_new\`, ID \`prj_OLXA2UB1LwMd0UidP8MNa1O9MLuq\`, is in team \`team_DsOUqnF8Pbd7YGNt8RCE8NgA\`; its project domain listing includes verified \`portal.insureit.in\`. | Connected Vercel project/domain metadata, 2026-11-03 | Establishes project association, not all external DNS/CDN/data flows or mobile deployments. |
+| P0-019 | The production domain \`portal.insureit.in\` resolves in connected Vercel deployment metadata to READY deployment \`dpl_FzyuogLHfiN6x1hQUBiz8wM2FULH\`, GitHub \`Frontier-Group-IT/insureit_new\`, ref \`main\`, commit \`202d90b2d0e3c89e64374c42f9e92ab34addad28\` at inspection. | Connected Vercel get-deployment by domain with Git source details, 2026-11-03 | Point-in-time mapping. Compare with subsequent deployed commits on future audit days. |
+| P0-020 | Production variable **\`NEXT_PUBLIC_SUPABASE_URL\` only** (a client-public Supabase URL) resolves to project reference \`ilzhsfqqjyppzzvfscmh\`, matching the Supabase project audited in P0-005, P0-007–P0-016. | Vercel environment variable listing (\`decrypt=false\`) followed by a single exact public URL variable lookup, 2026-11-03 | Other configuration/secret values were **not** retrieved. Does not prove every server-side or mobile data path uses that project. |
+| P0-021 | Production Vercel environment-variable metadata includes a server service-role key **name**; no value read. The repository's historical README cautions against exposing it in browser code. | Vercel env metadata (\`decrypt=false\`); repository README, 2026-11-03 | Existence of a server secret is **not itself a flaw**. Review server-only usage, runtime exposure boundaries and least privilege through source inspection; never print/commit key values. |
+| P0-022 | \`AGENTS.md\`, root \`package.json\`, and \`.github/workflows/verify-web-portal.yml\` were independently fetched at exact currently inspected production commit \`202d90b2d0e3c89e64374c42f9e92ab34addad28\`. | GitHub fetch-file with pinned commit, 2026-11-03 | Records reproducible code baseline; deeper architecture and access-control source review remains pending. |
+
+### Revised P0 disposition
+
+- **Complete (narrow subtask):** Corroborate the production web application's Vercel project, domain, GitHub commit and client-public Supabase project reference.
+- **In progress:** The 61 control checklist remains unpassed. A01–A06 still need comprehensive asset inventory/owners; C01–C05 still need policy/function logic review and approved functional verification.
+- **Not started:** synthetic cross-role testing, safe dynamic scans, mobile build review, code remediation and third-party VAPT.
+- **Approval still needed:** designated internal audit owner, formal read-only assessment scope confirmation, and any future active testing plan.
+
+### Next prioritized read-only work package (P0/C03-C04)
+
+1. Inventory and classify the **178 authenticated-executable \`SECURITY DEFINER\` functions** by sensitive operations, read/write privileges, explicit caller checks and tenant-scoping design; begin with customer, policy, claim, onboarding and finance related functions, and record sampled evidence before extending.
+2. Confirm intended role-wide access to claims and claim documents with the authorized business/technical owner; validate via synthetic staging identities before any policy change.
+3. Inspect \`storage.objects\` authorization logic and signed-document URL issuers without fetching actual customer documents.
+4. Confirm Supabase Auth breached/leaked-password protection setting, password-login exposure and change risk. Propose a fix, but **do not modify settings** without approval.
+5. Expand infrastructure inventory (production/preview environments, secrets' **names only**, edge middleware and data-flow architecture). Never retrieve secret values.
+
+### Session 3 log
+
+| 2026-11-03 | Read-only audit assistant | P0 | Inspected Vercel project/domain/deployment and selected client-public Supabase URL, pinned GitHub source files, confirmed web-production binding. | P0-018 through P0-022; no sensitive env values fetched or production modifications. | Web production mapping verified; P0 scope remains open; 61 controls unpassed. | Continue C03 risk-ranked function/source authorization review and C04 object storage policy review. |
+
+**Pending CI check at writing:** The prior documentation update commit \`7220382cb1943497d99b5ce613b9d9411735d9b2\` had Verify web portal run #7898 in progress. A new documentation commit will trigger/check its own PR workflow; record the final result after it finishes, do not assume success.
