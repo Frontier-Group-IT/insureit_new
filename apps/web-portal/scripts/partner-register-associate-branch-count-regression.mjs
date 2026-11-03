@@ -1,0 +1,26 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const read = path => readFileSync(resolve(root, path), "utf8");
+const loader = read("lib/partner-register-account-counts.ts");
+const registerLoader = read("app/intermediaries/intermediary-register.tsx");
+const table = read("app/intermediaries/partner-register-client.tsx");
+assert.match(loader, /\.from\("partner_portal_associate_accounts"\)/);
+assert.match(loader, /\.in\("intermediary_id", batch\)/, "Associate counts must be scoped to Partner intermediary IDs");
+assert.match(loader, /\.from\("partners"\)/);
+assert.match(loader, /\.in\("parent_partner_id", batch\)/, "Branches must be parent Partner children only");
+assert.match(loader, /\.from\("partner_branch_profiles"\)/, "Branches must have registered profiles");
+assert.match(loader, /\.in\("partner_id", batch\)/);
+assert.match(loader, /new Set\(\)/, "Distinct accounts must be counted");
+assert.match(loader, /\.range\(offset, offset \+ PAGE_SIZE - 1\)/, "Counts must fetch complete pages");
+assert.match(loader, /associateFailure \? null/, "Failed Associate queries must not show zero");
+assert.match(loader, /branchFailure \? null/, "Failed Branch queries must not show zero");
+assert.match(registerLoader, /loadPartnerAccountCounts\(partnerCountRows\.flatMap/, "Count only already-authorized Partner rows");
+assert.match(registerLoader, /partnerId, intermediaryId: row\.id/, "Map exact Partner and intermediary IDs");
+assert.match(table, /<th className="w-\[11%\] px-3 py-3">Status<\/th>\s*<th className="w-\[9%\] px-3 py-3 text-center">Asso\.\/Branch<\/th>\s*<th className="w-\[8%\] px-3 py-3 text-right">Customers<\/th>/, "Combined header comes between Status and Customers");
+assert.match(table, /row\.associateCount === null \? "—"/);
+assert.match(table, /row\.branchCount === null \? "—"/);
+console.log("Partner Register Associate/Branch counts regression passed");
