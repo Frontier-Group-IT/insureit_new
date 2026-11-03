@@ -1,0 +1,29 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
+const read = (relativePath) => readFileSync(fileURLToPath(new URL(relativePath, import.meta.url)), "utf8");
+const page = read("../app/customers/page.tsx");
+const nav = read("../components/claim-manager/app-navigation.tsx");
+const workspace = read("../app/customers/customer-workspace.tsx");
+const backoffice = read("../components/backoffice-customer-register.tsx");
+
+assert.match(nav, /href:"\/customers",label:"Internal Customer"/, "Sidebar must expose Internal Customer.");
+assert.match(nav, /href:"\/customers\?segment=external",label:"External Customer"/, "Sidebar must expose External Customer.");
+assert.match(page, /requireCapability\("view_customers"\)/, "Customer permission checks must remain active.");
+assert.match(page, /getAccessibleCustomerIds\(profile\.id, profile\.role\)/, "Employee customer scope must remain active.");
+assert.match(page, /request = request\.in\("id", accessibleIds\)/, "Customer scope must apply before classification.");
+assert.match(page, /external_policies:external_policies!external_policies_customer_id_fkey\(count\)/, "External customer identification must use actual external policy relationships.");
+assert.match(page, /hasExternalPolicy && !hasInternalPolicy : hasInternalPolicy \|\| !hasExternalPolicy/, "Registers must partition the same permitted customers without overlap.");
+assert.match(page, /policies: isExternalRegister \? customer\.external_policies : customer\.policies/, "External register must show its own policy counts.");
+assert.match(page, /profile\.role === "relationship_manager"/, "Relationship Manager mobile masking must remain enabled.");
+assert.match(page, /key=\{registerTitle\}/, "Switching registers must reset client-side filters and selection.");
+assert.match(workspace, /title\?: string/, "Standard register must show the selected heading.");
+assert.match(backoffice, /title\?: string/, "Read-only register must show the selected heading.");
+
+const classify = (internal, external) => external > 0 && internal === 0 ? "external" : "internal";
+const scenarios = [
+  [1, 0, "internal"], [0, 1, "external"], [1, 1, "internal"], [0, 0, "internal"], [4, 3, "internal"],
+];
+for (const [internal, external, expected] of scenarios) assert.equal(classify(internal, external), expected);
+console.log("Customer internal/external register segmentation regression passed.");
