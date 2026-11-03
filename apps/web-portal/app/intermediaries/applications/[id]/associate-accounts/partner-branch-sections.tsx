@@ -1,4 +1,5 @@
 import { getBranchActivationStatuses } from "@/lib/branch-activation-status";
+import { loadBranchAccountBusinessMetrics } from "@/lib/partner-account-business-metrics";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getIntermediaryGroupManager, getIntermediaryGroupEmployeeScope } from "@/lib/intermediary-group-access";
 import { FormSubmitButton } from "@/components/form-submit-button";
@@ -35,8 +36,11 @@ export async function PartnerBranchSections({applicationId}:{applicationId:strin
  const {data:logins}=await admin.from("portal_access_identities").select("entity_id,status").eq("entity_type","branch").in("entity_id",[...branchIds].length?[...branchIds]:["00000000-0000-0000-0000-000000000000"]);
  const disabled=new Set((logins??[]).filter(x=>x.status==="disabled").map(x=>x.entity_id));
  const profileById=new Map((branchProfiles??[]).map(x=>[x.partner_id,x]));
+ // The business loader uses verified canonical Branch policy ownership only.
+ // A failed or unresolved attribution must display "—", never a fabricated zero.
+ const branchMetrics=await loadBranchAccountBusinessMetrics(partner.id,[...branchIds]);
  const rows:BranchRegisterRow[]=(branches??[]).filter(x=>branchIds.has(x.id)).map(x=>({
-   id:x.id,branch_code:x.partner_code,branch_name:x.display_name,branch_kind:x.partner_kind,branch_status:x.partner_status,email:profileById.get(x.id)?.email??null,phone:profileById.get(x.id)?.phone??null,contact_name:profileById.get(x.id)?.contact_name??null,address:profileById.get(x.id)?.address??null,login_disabled:disabled.has(x.id),invitation_status:activation.get(x.id)??"unknown",parent_partner_id:partner.id,parent_partner_code:partner.partner_code,parent_partner_name:partner.display_name,group_code:null,group_name:null,employee_code:null,employee_name:null
+   id:x.id,branch_code:x.partner_code,branch_name:x.display_name,branch_kind:x.partner_kind,branch_status:x.partner_status,customerCount:branchMetrics.get(x.id)?.customerCount??null,netPremium:branchMetrics.get(x.id)?.netPremium??null,email:profileById.get(x.id)?.email??null,phone:profileById.get(x.id)?.phone??null,contact_name:profileById.get(x.id)?.contact_name??null,address:profileById.get(x.id)?.address??null,login_disabled:disabled.has(x.id),invitation_status:activation.get(x.id)??"unknown",parent_partner_id:partner.id,parent_partner_code:partner.partner_code,parent_partner_name:partner.display_name,group_code:null,group_name:null,employee_code:null,employee_name:null
  }));
  const loadError=Boolean(branchError||profileError);
  const fieldClass="h-9 w-full rounded-lg border border-[#DCE5EF] bg-white px-3 text-[11px] text-[#17203A]";
