@@ -12,7 +12,7 @@ type Row = {
   policy_no: string;
   policy_type: string;
   start_date: string;
-  end_date: string;
+  end_date: string | null;
   insured_declared_value: number | null;
   premium_amount: number | null;
   customers: { contact_name: string } | null;
@@ -215,7 +215,7 @@ export function BackofficePolicyRegister({ rows }: { rows: Row[] }) {
                 <td className="px-2.5"><p className="truncate font-semibold text-[#334155]">{row.customers?.contact_name ?? "—"}</p></td>
                 <td className="px-2.5"><p className="truncate font-mono font-semibold text-[#334155]">{row.vehicles?.vehicle_no ?? "—"}</p></td>
                 <td className="px-2.5"><span className="block truncate">{row.insurance_companies?.name ?? "—"}</span></td>
-                <td className="px-2.5"><p className="font-semibold">{date(row.start_date)} - {date(row.end_date)}</p><p className="text-[9px] leading-4 text-[#64748B]">{validityHint(row.daysLeft)}</p></td>
+                <td className="px-2.5"><p className="font-semibold">{date(row.start_date)} - {row.end_date ? date(row.end_date) : "No fixed maturity date"}</p><p className="text-[9px] leading-4 text-[#64748B]">{validityHint(row.daysLeft)}</p></td>
                 <td className="px-2.5"><PolicyStatus status={row.status} /></td>
                 <td className="px-2.5 text-right font-semibold tabular-nums">{money(row.insured_declared_value)}</td>
                 <td className="px-2.5 text-right font-semibold tabular-nums">{money(row.premium_amount)}</td>
@@ -240,7 +240,8 @@ export function BackofficePolicyRegister({ rows }: { rows: Row[] }) {
   );
 }
 
-function PolicyStatus({ status }: { status: "Active" | "Expiring soon" | "Expired" }) {
+function PolicyStatus({ status }: { status: "Active" | "Expiring soon" | "Expired" | "No fixed maturity" }) {
+  if (status === "No fixed maturity") return <RegisterStatusPill tone="slate">No fixed maturity</RegisterStatusPill>;
   if (status === "Expired") return <RegisterStatusPill tone="red">Expired</RegisterStatusPill>;
   if (status === "Expiring soon") return <RegisterStatusPill tone="amber">Due</RegisterStatusPill>;
   return <RegisterStatusPill tone="green">Active</RegisterStatusPill>;
@@ -254,7 +255,8 @@ function pretty(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
-function date(value: string) {
+function date(value: string | null) {
+  if (!value) return "—";
   const [year, month, day] = value.split("-");
   return year && month && day ? day + "/" + month + "/" + year.slice(-2) : value;
 }
@@ -265,19 +267,23 @@ function money(value: number | null) {
     : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
 }
 
-function policyStatus(endDate: string): "Active" | "Expiring soon" | "Expired" {
+function policyStatus(endDate: string | null): "Active" | "Expiring soon" | "Expired" | "No fixed maturity" {
+  if (!endDate) return "No fixed maturity";
   const days = daysUntil(endDate);
+  if (days === null) return "No fixed maturity";
   return days < 0 ? "Expired" : days <= 30 ? "Expiring soon" : "Active";
 }
 
-function daysUntil(endDate: string) {
+function daysUntil(endDate: string | null): number | null {
+  if (!endDate) return null;
   const end = new Date(`${endDate}T23:59:59`);
   const now = new Date();
-  if (Number.isNaN(end.getTime())) return 0;
+  if (Number.isNaN(end.getTime())) return null;
   return Math.ceil((end.getTime() - now.getTime()) / 86400000);
 }
 
-function validityHint(days: number) {
+function validityHint(days: number | null) {
+  if (days === null) return "No fixed maturity date";
   if (days < 0) return `${Math.abs(days)} days overdue`;
   if (days === 0) return "Expires today";
   return `${days} days left`;
