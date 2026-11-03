@@ -41,7 +41,7 @@ export async function requestPolicyDateApproval(input: ApprovalInput): Promise<A
     const policyNumber = input.policyNumber.trim().toUpperCase();
     if (!approver || !policyNumber || policyNumber.length > 120) return { ok: false, error: "Select an approver and enter a valid policy number." };
     const emailKey = process.env.RESEND_API_KEY;
-    const from = process.env.POLICY_DATE_OTP_FROM;
+    const from = process.env.POLICY_DATE_OTP_FROM?.trim() || process.env.RESEND_FROM_EMAIL?.trim();
     if (!emailKey || !from || !process.env.POLICY_DATE_OTP_SECRET) {
       return { ok: false, error: "Email approval is not available yet. Contact your administrator." };
     }
