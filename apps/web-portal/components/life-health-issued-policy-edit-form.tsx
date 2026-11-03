@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState, useTransition, type ReactNode } from "rea
 import { Eye, HandCoins, Phone, Upload } from "lucide-react";
 import { updateIssuedLifeHealthPolicy } from "@/app/policies/life-health-issued-policy-edit-actions";
 import { isPensionLifePolicy } from "@/lib/life-health-pension-maturity";
-import { PolicyDateApprovalWidget } from "@/components/policy-date-approval-widget";
+import { PolicyDateApprovalDialog } from "@/components/policy-date-approval-dialog";
 import { needsPolicyDateApproval, policyDateDecision } from "@/lib/policy-date-rule";
 import { updateIssuedLifeHealthCustomer } from "@/app/policies/life-health-issued-customer-edit-actions";
 import { replaceIssuedLifeHealthDocument, type LifeHealthIssuedDocument, type LifeHealthIssuedDocumentType } from "@/app/policies/life-health-issued-policy-document-actions";
@@ -30,6 +30,7 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
   const router = useRouter();
   const [form,setForm] = useState(initial);
   const [dateApproval,setDateApproval] = useState<{id:string;key:string}|null>(null);
+  const [dateApprovalOpen,setDateApprovalOpen] = useState(false);
   const initialSource = sources.find((source)=>source.id === initial.sourceId);
   const [intermediaryType,setIntermediaryType] = useState<LifeHealthIssuedEditSource["type"]>(initialSource?.type || "SIBL / Partner");
   const [documentState,setDocumentState] = useState(documents);
@@ -85,9 +86,10 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
     if (first) set("sourceId", first.id);
   }
 
-  function save() {
+  function save(approvalConfirmed = false) {
     if(["invalid","future"].includes(policyDateDecision(form.sourcingDate))){setError("Choose a valid policy issuance date in the current or an earlier month.");return;}
-    if(dateApprovalRequired&&!dateApprovalId){setError("Verify the selected approver\u0027s email OTP before changing this policy to an earlier-month date.");return;}
+    if(required.some(value=>!String(value??"").trim())){setError("Complete all required policy fields before requesting approval.");return;}
+    if(dateApprovalRequired){if(!approvalConfirmed){setDateApprovalOpen(true);return;}if(!dateApprovalId){setDateApprovalOpen(true);return;}setDateApprovalOpen(false);}
     const data = new FormData(); Object.entries(form).forEach(([key,value])=>data.set(key,value));
     if(dateApprovalId)data.set("dateApprovalId",dateApprovalId);
     Object.entries(commercial).forEach(([key,value])=>data.set(key,String(value)));
@@ -133,7 +135,6 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
       <div className="space-y-4">
         <Section number="01" title="Policy source & ownership">
           <Field label="Policy issuance date" type="date" value={form.sourcingDate} onChange={(v)=>set("sourcingDate",v)} required/>
-          {dateApprovalRequired?<PolicyDateApprovalWidget key={approvalKey} issuanceDate={form.sourcingDate} policyNumber={form.policyNumber} operation="edit" existingPolicyId={form.policyId} intermediaryCode={selectedSource?.code} verifiedApprovalId={dateApprovalId} onApproved={id=>setDateApproval(id?{id,key:approvalKey}:null)}/>:null}
           <Select label="Policy type" value={form.businessLine} onChange={(v)=>set("businessLine",v as "Life"|"Health")} options={["Life","Health"]}/>
           <div><label className={labelClass}>Intermediary type <Req/></label><select className={inputClass} value={intermediaryType} onChange={(e)=>changeIntermediaryType(e.target.value as LifeHealthIssuedEditSource["type"])}><option>POSP</option><option>MISP</option><option>SIBL / Partner</option></select><div className="flex flex-wrap gap-x-4 gap-y-1"><Meta label="RM" value={selectedSource?.rmName||"—"}/><Meta label="Employee ID" value={selectedSource?.rmCode||"—"}/></div></div>
           <div><label className={labelClass}>Lead source <Req/></label><select className={inputClass} value={form.sourceId} onChange={(e)=>set("sourceId",e.target.value)}>{availableSources.map((s)=><option key={s.id} value={s.id}>{s.label} · {s.code}</option>)}</select><div className="flex gap-3"><Meta label="ID" value={selectedSource?.code||"—"}/>{selectedSource?.mobile?<span className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold text-[#244C73]"><Phone className="h-3 w-3"/>{selectedSource.mobile}</span>:null}</div></div>
@@ -153,8 +154,9 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
     <div className="mt-4"><StandardActivityStatusCard items={activityItems} emptyText="Activity not recorded"/></div>
     <div className="mt-3 flex flex-col gap-3 border border-[#DDE4EE] bg-white px-4 py-3 shadow-[0_6px_18px_rgba(15,23,42,0.035)] lg:flex-row lg:items-center lg:justify-between">
       <div className="flex min-w-0 flex-wrap items-center gap-2">{documentLabels.map(([type,label])=>{const doc=documentState.find((item)=>item.type===type);return <div key={type} className="relative">{doc?<div className={`inline-flex h-10 overflow-hidden rounded-xl border border-[#A9DCC2] bg-[#F0FBF5] text-[#168653] ${documentPending?"opacity-70":""}`}><label title={doc.fileName} className={`inline-flex items-center gap-2 px-3 text-[10px] font-semibold transition hover:bg-[#E7F8EF] ${documentPending?"cursor-wait":"cursor-pointer"}`}><Upload className="h-4 w-4"/>{documentPending?"Uploading…":`Replace ${label}`}<input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" disabled={documentPending} onChange={(e)=>uploadDocument(type,e.target.files?.[0])}/></label><a href={doc.viewUrl||undefined} target="_blank" rel="noreferrer" aria-label={`View ${label}`} title={`View ${doc.fileName}`} className={`grid w-9 shrink-0 place-items-center border-l border-[#A9DCC2] transition ${doc.viewUrl?"hover:bg-[#E7F8EF]":"pointer-events-none opacity-50"}`}><Eye className="h-3.5 w-3.5" aria-hidden="true"/></a></div>:<label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-[#BFD3F5] px-3 text-[10px] font-semibold text-[#1859B7] hover:bg-[#F5F9FF]"><Upload className="h-4 w-4"/>{documentPending?"Uploading…":`Add ${label}`}<input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" disabled={documentPending} onChange={(e)=>uploadDocument(type,e.target.files?.[0])}/></label>}</div>})}</div>
-      <div className="flex shrink-0 justify-end gap-2"><Link href="/policies" className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Cancel</Link><button type="button" onClick={save} disabled={pending||documentPending} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-60">{pending?"Saving changes…":"Save Policy Changes"}</button></div>
+      <div className="flex shrink-0 justify-end gap-2"><Link href="/policies" className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Cancel</Link><button type="button" onClick={()=>save()} disabled={pending||documentPending} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-60">{pending?"Saving changes…":"Save Policy Changes"}</button></div>
     </div>
+    {dateApprovalOpen&&dateApprovalRequired?<PolicyDateApprovalDialog issuanceDate={form.sourcingDate} policyNumber={form.policyNumber} operation="edit" existingPolicyId={form.policyId} intermediaryCode={selectedSource?.code} verifiedApprovalId={dateApprovalId} onApproved={id=>setDateApproval(id?{id,key:approvalKey}:null)} onClose={()=>setDateApprovalOpen(false)} onConfirm={()=>save(true)} submitting={pending}/>:null}
     {commercialModal==="payin"?<ProjectedPayinModal commercial={commercial} update={updateCommercial} calculations={commercialCalculations} onBasisChange={(basis)=>changeCommercialBasis("payin",basis)} onClose={()=>setCommercialModal(null)}/>:null}
     {commercialModal==="payout"?<PartnerPayoutModal commercial={commercial} update={updateCommercial} calculations={commercialCalculations} onBasisChange={(basis)=>changeCommercialBasis("payout",basis)} onClose={()=>setCommercialModal(null)}/>:null}
   </div>;
