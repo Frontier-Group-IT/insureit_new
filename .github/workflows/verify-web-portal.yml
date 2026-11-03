@@ -47,6 +47,8 @@ jobs:
         run: node scripts/operations-claim-customer-motion-parity-regression.mjs
       - name: Partner Business Report instant date filter regression
         run: node scripts/partner-business-period-filter-regression.mjs
+      - name: RM Performance inline Custom calendar regression
+        run: node scripts/rm-performance-inline-custom-calendar-regression.mjs
       - name: Partner hierarchy Reports security regression
         run: npm run partner-reports:security-regression
       - name: Operations Branch-parent policy register regression
