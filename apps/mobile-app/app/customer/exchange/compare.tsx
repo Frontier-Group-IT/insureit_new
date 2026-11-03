@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Platform, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -209,37 +209,37 @@ const styles = StyleSheet.create({
   headerButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F4F6F8' },
   headerButtonSpacer: { width: 40, height: 40 },
   headerCopy: { flex: 1, alignItems: 'center' },
-  headerTitle: { color: '#0F1D33', fontSize: 14, fontWeight: '900' },
-  headerSubtitle: { marginTop: 2, color: '#8793A4', fontSize: 7.7, fontWeight: '700' },
+  headerTitle: { color: '#0F1D33', fontSize: 14, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  headerSubtitle: { marginTop: 2, color: '#8793A4', fontSize: 7.7, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
 
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 },
-  centerTitle: { marginTop: 10, color: '#0F1D33', fontSize: 14, fontWeight: '900' },
-  centerCopy: { marginTop: 4, color: '#7A8799', textAlign: 'center', fontSize: 8.7, lineHeight: 12.5, fontWeight: '700' },
+  centerTitle: { marginTop: 10, color: '#0F1D33', fontSize: 14, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  centerCopy: { marginTop: 4, color: '#7A8799', textAlign: 'center', fontSize: 8.7, lineHeight: 12.5, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
   primaryButton: { marginTop: 13, height: 42, borderRadius: 21, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#164BB8' },
-  primaryButtonText: { color: '#FFFFFF', fontSize: 8.8, fontWeight: '900' },
+  primaryButtonText: { color: '#FFFFFF', fontSize: 8.8, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
 
   columns: { padding: 14, gap: 9 },
   vehicleHeader: { width: 176, borderRadius: 18, padding: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E0E5EC' },
   imageWrap: { height: 92, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F4F7' },
   image: { width: '90%', height: '86%' },
-  vehicleTitle: { marginTop: 8, minHeight: 28, color: '#0F1D33', fontSize: 10, lineHeight: 13.5, fontWeight: '900' },
-  price: { marginTop: 6, color: '#0F1D33', fontSize: 14, fontWeight: '900' },
+  vehicleTitle: { marginTop: 8, minHeight: 28, color: '#0F1D33', fontSize: 10, lineHeight: 13.5, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  price: { marginTop: 6, color: '#0F1D33', fontSize: 14, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
   modePill: { alignSelf: 'flex-start', marginTop: 6, minHeight: 22, borderRadius: 11, paddingHorizontal: 7, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF4FF' },
-  modeText: { color: '#164BB8', fontSize: 6.7, fontWeight: '900' },
+  modeText: { color: '#164BB8', fontSize: 6.7, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
   viewButton: { marginTop: 9, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#164BB8' },
-  viewButtonText: { color: '#FFFFFF', fontSize: 8, fontWeight: '900' },
+  viewButtonText: { color: '#FFFFFF', fontSize: 8, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
 
   section: { marginHorizontal: 14, marginBottom: 11, borderRadius: 18, overflow: 'hidden', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E0E5EC' },
-  sectionTitle: { paddingHorizontal: 12, paddingTop: 12, paddingBottom: 8, color: '#0F1D33', fontSize: 11.5, fontWeight: '900' },
+  sectionTitle: { paddingHorizontal: 12, paddingTop: 12, paddingBottom: 8, color: '#0F1D33', fontSize: 11.5, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
   rows: { borderTopWidth: 1, borderTopColor: '#EEF1F4' },
   compareRow: { minHeight: 58, borderBottomWidth: 1, borderBottomColor: '#EEF1F4' },
   compareRowLast: { borderBottomWidth: 0 },
-  compareLabel: { paddingHorizontal: 12, paddingTop: 9, color: '#7A8799', fontSize: 7.6, fontWeight: '800' },
+  compareLabel: { paddingHorizontal: 12, paddingTop: 9, color: '#7A8799', fontSize: 7.6, fontWeight: Platform.OS === 'ios' ? '500' : '800' },
   compareValues: { paddingHorizontal: 8, paddingBottom: 9, gap: 7 },
   compareCell: { width: 156, minHeight: 27, borderRadius: 9, paddingHorizontal: 8, alignItems: 'flex-start', justifyContent: 'center', backgroundColor: '#F7F8FA' },
-  compareValue: { color: '#26364D', fontSize: 8.5, fontWeight: '900' },
+  compareValue: { color: '#26364D', fontSize: 8.5, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
 
   note: { marginHorizontal: 14, marginBottom: 28, borderRadius: 15, padding: 11, flexDirection: 'row', alignItems: 'flex-start', gap: 7, backgroundColor: '#EEF1F4' },
-  noteText: { flex: 1, color: '#657286', fontSize: 7.4, lineHeight: 10.8, fontWeight: '700' },
+  noteText: { flex: 1, color: '#657286', fontSize: 7.4, lineHeight: 10.8, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
 });
 
