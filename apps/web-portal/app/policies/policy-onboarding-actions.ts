@@ -4,6 +4,7 @@ import { isBundledMotorCover, motorBundledExpiry } from "@/lib/motor-bundled-val
 import { policyDateDecision } from "@/lib/policy-date-rule";
 
 import { revalidatePath } from "next/cache";
+import { normalizePolicyMoney } from "@/lib/policy-money-precision";
 import { requirePolicyIntakeFinalizer } from "@/lib/policy-intake-server";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
@@ -200,28 +201,30 @@ function sanitizeVehicleNumbers(vehicle: PolicyOnboardingPayload["vehicle"]) {
 
 function sanitizeFinancialNumbers(payload: PolicyOnboardingPayload) {
   const numberOrZero = (value: unknown) => numericPayloadValue(value, false, "0");
+  const moneyOrZero = (value: unknown) => normalizePolicyMoney(value) ?? "0.00";
   const isThirdParty = String(payload.policy.policyType ?? "").trim().toUpperCase() === "THIRD PARTY";
   return {
-    policy: { ...payload.policy, idv: isThirdParty ? "0" : numberOrZero(payload.policy.idv) },
+    policy: { ...payload.policy, idv: isThirdParty ? "0" : moneyOrZero(payload.policy.idv) },
     premium: {
       ...payload.premium,
-      od: isThirdParty ? "0" : numberOrZero(payload.premium.od),
-      tp: numberOrZero(payload.premium.tp),
-      cpa: numberOrZero(payload.premium.cpa),
+      od: isThirdParty ? "0" : moneyOrZero(payload.premium.od),
+      tp: moneyOrZero(payload.premium.tp),
+      addOnPremium: moneyOrZero(payload.premium.addOnPremium),
+      cpa: moneyOrZero(payload.premium.cpa),
     },
     payin: {
       ...payload.payin,
       odPercent: numberOrZero(payload.payin.odPercent),
       tpPercent: numberOrZero(payload.payin.tpPercent),
-      scheme: numberOrZero(payload.payin.scheme),
+      scheme: moneyOrZero(payload.payin.scheme),
     },
-    billing: { ...payload.billing, billedAmount: numberOrZero(payload.billing.billedAmount) },
+    billing: { ...payload.billing, billedAmount: moneyOrZero(payload.billing.billedAmount) },
     payout: {
       ...payload.payout,
-      retention: numberOrZero(payload.payout.retention),
+      retention: moneyOrZero(payload.payout.retention),
       odPercent: numberOrZero(payload.payout.odPercent),
       tpPercent: numberOrZero(payload.payout.tpPercent),
-      flatAmount: numberOrZero(payload.payout.flatAmount),
+      flatAmount: moneyOrZero(payload.payout.flatAmount),
     },
   };
 }
@@ -253,7 +256,7 @@ function validatePayload(payload: PolicyOnboardingPayload) {
   const rtoState = String(payload.vehicle.rtoState ?? "").trim();
   const rtoName = String(payload.vehicle.rtoName ?? "").trim();
   const cpaAmount = Number(numericPayloadValue(payload.premium.cpa, false, "0"));
-  const addOnPremium = Number(numericPayloadValue(payload.premium.addOnPremium, false, "0"));
+  const addOnPremium = Number(normalizePolicyMoney(payload.premium.addOnPremium) ?? (String(payload.premium.addOnPremium ?? "").trim() ? "NaN" : "0"));
   if (!Number.isFinite(addOnPremium) || addOnPremium < 0 || addOnPremium > 100000000) return "Enter a valid non-negative Add-on Premium.";
   if (!name) return "Enter the insured/customer name.";
   if (!/^[6-9][0-9]{9}$/.test(phone)) return "Enter a valid 10 digit Indian mobile number.";
@@ -699,6 +702,9 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
           ignoreManagedPolicyId: replacementRequested ? replacementPolicyId : null,
         });
         if (conflict) return { ok: false, kind: "business_conflict", conflict };
+      }
+      if (lowerMessage.includes("invalid add-on premium")) {
+        return { ok: false, kind: "validation", error: "Check Add-on Premium. Enter a valid amount with up to two decimal places." };
       }
       if (lowerMessage.includes("invalid input syntax for type numeric") || lowerMessage.includes("invalid input syntax for type integer")) {
         return { ok: false, kind: "database", error: "Check the vehicle and premium amounts, then try again. Your entered details are still saved on this form." };
