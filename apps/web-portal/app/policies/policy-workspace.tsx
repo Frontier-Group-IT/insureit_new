@@ -81,6 +81,58 @@ function policySourceKey(row: Pick<PolicyRow, "intermediary_type" | "intermediar
   return type && code ? `${type}:${code}` : "";
 }
 
+
+/** Render menus through document.body so the horizontal filter strip never clips them. */
+function usePolicyFloatingMenu(width: number, height: number, align: "left" | "right" = "left") {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ top: number; left: number; maxHeight: number } | null>(null);
+  const close = () => setPosition(null);
+  const toggle = () => {
+    if (position) { close(); return; }
+    const bounds = triggerRef.current?.getBoundingClientRect();
+    if (!bounds) return;
+    const availableWidth = Math.max(0, window.innerWidth - 16);
+    const actualWidth = Math.min(width, availableWidth);
+    const left = Math.max(8, Math.min(
+      align === "right" ? bounds.right - actualWidth : bounds.left,
+      window.innerWidth - actualWidth - 8,
+    ));
+    const openBelow = bounds.bottom + height + 8 <= window.innerHeight || bounds.bottom <= window.innerHeight - bounds.top;
+    const top = openBelow ? bounds.bottom + 6 : Math.max(8, bounds.top - height - 6);
+    const maxHeight = Math.max(72, (openBelow ? window.innerHeight - top : bounds.top - 14));
+    setPosition({ top, left, maxHeight });
+  };
+  useEffect(() => {
+    if (!position) return;
+    const outside = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Node && (triggerRef.current?.contains(target) || menuRef.current?.contains(target))) return;
+      close();
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      close();
+      triggerRef.current?.focus();
+    };
+    const dismissOnScroll = (event: Event) => {
+      if (event.target instanceof Node && menuRef.current?.contains(event.target)) return;
+      close();
+    };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    window.addEventListener("scroll", dismissOnScroll, true);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", escape);
+      window.removeEventListener("scroll", dismissOnScroll, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [position]);
+  return { triggerRef, menuRef, position, toggle, close };
+}
+
 function PolicyBusinessFilter({
   business,
   onBusinessChange,
@@ -89,20 +141,28 @@ function PolicyBusinessFilter({
   onBusinessChange: (value: BusinessFilter) => void;
 }) {
   const label = business === "all" ? "All Policies" : business;
+  const menu = usePolicyFloatingMenu(250, 255);
   return (
-    <details className="group relative">
-      <summary className="flex h-10 min-w-[150px] cursor-pointer list-none items-center justify-between gap-2 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[11px] font-semibold text-[#334155] outline-none transition hover:border-[#9FB2C8] focus-visible:ring-2 focus-visible:ring-[#17365D]/10 [&::-webkit-details-marker]:hidden">
-        <span className="truncate">{label}</span><ChevronDown className="h-3.5 w-3.5 shrink-0 text-[#64748B] transition group-open:rotate-180" />
-      </summary>
-      <div className="absolute left-0 top-11 z-30 w-[250px] rounded-xl border border-[#D7E0EA] bg-white p-2 shadow-[0_18px_45px_rgba(15,23,42,.16)]">
-        <p className="px-2 pb-1.5 pt-1 text-[8px] font-black uppercase tracking-[.1em] text-[#8A96A7]">Business line</p>
-        {([["all","All Policies"],["Motor","Motor"],["Non Motor","Non Motor"],["Life","Life"],["Health","Health"]] as const).map(([value, text]) => (
-          <button key={value} type="button" onClick={(event) => { onBusinessChange(value); event.currentTarget.closest("details")?.removeAttribute("open"); }} className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[10.5px] font-semibold transition ${business === value ? "bg-[#EEF4FB] text-[#17365D]" : "text-[#475569] hover:bg-[#F8FAFC]"}`}>
-            {text}<span className={`h-2 w-2 rounded-full border ${business === value ? "border-[#17365D] bg-[#17365D]" : "border-[#CBD5E1]"}`} />
-          </button>
-        ))}
-      </div>
-    </details>
+    <>
+      <button ref={menu.triggerRef} type="button" aria-haspopup="true" aria-expanded={Boolean(menu.position)}
+        aria-label={`Policy type: ${label}`} onClick={menu.toggle}
+        className="flex h-10 w-full min-w-0 cursor-pointer items-center justify-between gap-2 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[11px] font-semibold text-[#334155] outline-none transition hover:border-[#9FB2C8] focus-visible:ring-2 focus-visible:ring-[#17365D]/10">
+        <span className="truncate">{label}</span><ChevronDown className={`h-3.5 w-3.5 shrink-0 text-[#64748B] transition ${menu.position ? "rotate-180" : ""}`} />
+      </button>
+      {menu.position && createPortal(
+        <div ref={menu.menuRef} role="group" aria-label="Business line options"
+          style={{ position: "fixed", top: menu.position.top, left: menu.position.left, width: Math.min(250, window.innerWidth - 16), maxHeight: menu.position.maxHeight, zIndex: 9999 }}
+          className="overflow-y-auto rounded-xl border border-[#D7E0EA] bg-white p-2 shadow-[0_18px_45px_rgba(15,23,42,.16)]">
+          <p className="px-2 pb-1.5 pt-1 text-[8px] font-black uppercase tracking-[.1em] text-[#8A96A7]">Business line</p>
+          {([["all","All Policies"],["Motor","Motor"],["Non Motor","Non Motor"],["Life","Life"],["Health","Health"]] as const).map(([value, text]) => (
+            <button key={value} type="button" onClick={() => { onBusinessChange(value); menu.close(); }}
+              className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[10.5px] font-semibold transition ${business === value ? "bg-[#EEF4FB] text-[#17365D]" : "text-[#475569] hover:bg-[#F8FAFC]"}`}>
+              {text}<span className={`h-2 w-2 rounded-full border ${business === value ? "border-[#17365D] bg-[#17365D]" : "border-[#CBD5E1]"}`} />
+            </button>
+          ))}
+        </div>, document.body,
+      )}
+    </>
   );
 }
 
@@ -125,34 +185,37 @@ function PolicyDateRangeFilter({
     ? `${fromDate ? shortFilterDate(fromDate) : "Any"} – ${toDate ? shortFilterDate(toDate) : "Any"}`
     : "Date Range";
   const activeQuickRange = quickDateRangeKey(fromDate, toDate);
+  const menu = usePolicyFloatingMenu(292, 165, "right");
   return (
-    <details className="group relative">
-      <summary className="flex h-10 min-w-[170px] cursor-pointer list-none items-center justify-between gap-2 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10.5px] font-semibold text-[#334155] outline-none transition hover:border-[#9FB2C8] focus-visible:ring-2 focus-visible:ring-[#17365D]/10 [&::-webkit-details-marker]:hidden">
+    <>
+      <button ref={menu.triggerRef} type="button" aria-haspopup="true" aria-expanded={Boolean(menu.position)}
+        aria-label={`Policy date range: ${label}`} onClick={menu.toggle}
+        className="flex h-10 w-full min-w-0 cursor-pointer items-center justify-between gap-2 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10.5px] font-semibold text-[#334155] outline-none transition hover:border-[#9FB2C8] focus-visible:ring-2 focus-visible:ring-[#17365D]/10">
         <span className="flex min-w-0 items-center gap-2"><CalendarDays className="h-3.5 w-3.5 shrink-0 text-[#64748B]" /><span className="truncate">{label}</span></span>
-        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[#64748B] transition group-open:rotate-180" />
-      </summary>
-      <div className="absolute right-0 top-11 z-30 w-[292px] rounded-xl border border-[#D7E0EA] bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,.16)]">
-        <div className="grid grid-cols-2 gap-2">
-          <label><span className="mb-1 block text-[8px] font-bold text-[#7C899B]">From</span><input type="date" value={fromDate} max={toDate || undefined} onChange={(event) => onFromDateChange(event.target.value)} className="h-9 w-full rounded-lg border border-[#D7E0EA] px-2 text-[9.5px] font-semibold text-[#334155] outline-none focus:border-[#17365D]" /></label>
-          <label><span className="mb-1 block text-[8px] font-bold text-[#7C899B]">To</span><input type="date" value={toDate} min={fromDate || undefined} onChange={(event) => onToDateChange(event.target.value)} className="h-9 w-full rounded-lg border border-[#D7E0EA] px-2 text-[9.5px] font-semibold text-[#334155] outline-none focus:border-[#17365D]" /></label>
-        </div>
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
-            {(["mtd", "90", "365"] as const).map((range) => (
-              <button
-                key={range}
-                type="button"
-                onClick={(event) => { onQuickRange(range); event.currentTarget.closest("details")?.removeAttribute("open"); }}
-                className={`min-w-[48px] rounded-lg border px-2.5 py-1.5 text-[9px] font-bold transition ${activeQuickRange === range ? "border-[#7DA7E8] bg-[#EAF2FF] text-[#174EA6]" : "border-[#D7E0EA] bg-[#F8FAFC] text-[#475569] hover:border-[#AFC3DB] hover:bg-[#F1F5F9]"}`}
-              >
-                {range === "mtd" ? "MTD" : range}
-              </button>
-            ))}
+        <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-[#64748B] transition ${menu.position ? "rotate-180" : ""}`} />
+      </button>
+      {menu.position && createPortal(
+        <div ref={menu.menuRef} role="group" aria-label="Policy date range options"
+          style={{ position: "fixed", top: menu.position.top, left: menu.position.left, width: Math.min(292, window.innerWidth - 16), maxHeight: menu.position.maxHeight, zIndex: 9999 }}
+          className="overflow-y-auto rounded-xl border border-[#D7E0EA] bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,.16)]">
+          <div className="grid grid-cols-2 gap-2">
+            <label><span className="mb-1 block text-[8px] font-bold text-[#7C899B]">From</span><input type="date" value={fromDate} max={toDate || undefined} onChange={(event) => onFromDateChange(event.target.value)} className="h-9 w-full min-w-0 rounded-lg border border-[#D7E0EA] px-2 text-[9.5px] font-semibold text-[#334155] outline-none focus:border-[#17365D]" /></label>
+            <label><span className="mb-1 block text-[8px] font-bold text-[#7C899B]">To</span><input type="date" value={toDate} min={fromDate || undefined} onChange={(event) => onToDateChange(event.target.value)} className="h-9 w-full min-w-0 rounded-lg border border-[#D7E0EA] px-2 text-[9.5px] font-semibold text-[#334155] outline-none focus:border-[#17365D]" /></label>
           </div>
-          <button type="button" onClick={(event) => { onClear(); event.currentTarget.closest("details")?.removeAttribute("open"); }} className="shrink-0 rounded-lg px-2.5 py-1.5 text-[9px] font-bold text-[#64748B] hover:bg-[#F8FAFC]">Clear dates</button>
-        </div>
-      </div>
-    </details>
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              {(["mtd", "90", "365"] as const).map((range) => (
+                <button key={range} type="button" onClick={() => { onQuickRange(range); menu.close(); }}
+                  className={`min-w-[48px] rounded-lg border px-2.5 py-1.5 text-[9px] font-bold transition ${activeQuickRange === range ? "border-[#7DA7E8] bg-[#EAF2FF] text-[#174EA6]" : "border-[#D7E0EA] bg-[#F8FAFC] text-[#475569] hover:border-[#AFC3DB] hover:bg-[#F1F5F9]"}`}>
+                  {range === "mtd" ? "MTD" : range}
+                </button>
+              ))}
+            </div>
+            <button type="button" onClick={() => { onClear(); menu.close(); }} className="shrink-0 rounded-lg px-2.5 py-1.5 text-[9px] font-bold text-[#64748B] hover:bg-[#F8FAFC]">Clear dates</button>
+          </div>
+        </div>, document.body,
+      )}
+    </>
   );
 }
 
