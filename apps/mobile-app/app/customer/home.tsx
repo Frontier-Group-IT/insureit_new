@@ -389,7 +389,12 @@ function QuickAction({ icon, image, label, badge, animateBadge, tone, color, onP
       <View style={[styles.quickIcon, { backgroundColor: tone }]}>
         {image ? <Image source={image} style={styles.quickIconArtwork} resizeMode="contain" /> : <MaterialCommunityIcons name={icon} size={22} color={color} />}
       </View>
-      <Text style={styles.quickLabel} numberOfLines={2}>{label}</Text>
+      <Text
+        style={styles.quickLabel}
+        numberOfLines={Platform.OS === 'ios' ? 1 : 2}
+        adjustsFontSizeToFit={Platform.OS === 'ios'}
+        minimumFontScale={0.65}
+      >{label}</Text>
     </Pressable>
   );
 }
@@ -651,7 +656,7 @@ const styles = StyleSheet.create({
   quickAction: { flex: 1, minWidth: 0, minHeight: 70, borderRadius: 14, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2, position: 'relative' },
   quickIcon: { width: 32, height: 32, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   quickIconArtwork: { width: 28, height: 28 },
-  quickLabel: { color: palette.navy, fontSize: 9.4, lineHeight: 11.5, fontWeight: Platform.OS === 'ios' ? '600' : '900', textAlign: 'center', marginTop: 4 },
+  quickLabel: { color: palette.navy, fontSize: 9.4, lineHeight: 11.5, fontWeight: Platform.OS === 'ios' ? '500' : '900', textAlign: 'center', marginTop: 4 },
   actionBadge: { position: 'absolute', right: 7, top: 7, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#E5484D', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, zIndex: 3 },
   actionBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
   claimSummaryCard: { minHeight: 156, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', overflow: 'hidden', shadowColor: '#071D49', shadowOpacity: 0.08, shadowRadius: 10, elevation: 2 },
