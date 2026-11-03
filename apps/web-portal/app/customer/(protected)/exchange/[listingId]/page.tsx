@@ -60,7 +60,7 @@ export default async function CustomerExchangeListingPage({
   ] as const;
 
   return (
-    <div className="space-y-2.5 pb-5">
+    <div className="space-y-2 pb-4">
       <Link href={backHref} className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#536C8D] hover:text-[#17365D]"><ArrowLeft className="h-3.5 w-3.5" /> {fromActivity ? "Back to Activity" : "Back to Exchange"}</Link>
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/exchange" />
       <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#DCE5F1] bg-white px-3 py-2.5 shadow-[0_5px_24px_rgba(18,51,90,.04)]">
@@ -74,20 +74,20 @@ export default async function CustomerExchangeListingPage({
         {listing.documents_verified ? <span className="inline-flex items-center gap-1 rounded-full border border-[#BDEAD3] bg-[#EAF8F1] px-3 py-1.5 text-[10px] font-bold text-[#087D55]"><BadgeCheck className="h-3.5 w-3.5" /> Documents verified</span> : <span className="inline-flex items-center gap-1 rounded-full border border-[#DCE5F1] bg-[#F6F8FC] px-3 py-1.5 text-[10px] font-bold text-[#637795]"><Clock3 className="h-3.5 w-3.5" /> Documents not yet verified</span>}
       </header>
 
-      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(260px,.5fr)]">
-        <section className="min-w-0 rounded-2xl border border-[#DCE5F1] bg-white p-2 shadow-[0_5px_24px_rgba(18,51,90,.04)]" aria-label="Vehicle photo gallery">
-          <div className="relative flex aspect-[16/9] items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#EEF5FC] to-[#E0EBF7]">
-            <img src={mainImage} alt={hasRealPhoto ? `${vehicleName} listing photo` : `${vehicleName} vehicle-category illustration`} className={`h-full w-full ${hasRealPhoto ? "object-cover" : "object-contain p-3"}`} />
+      <div className="grid items-start gap-2 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,.75fr)]">
+        <section className="min-w-0 rounded-xl border border-[#DCE5F1] bg-white p-2 shadow-[0_5px_24px_rgba(18,51,90,.04)]" aria-label="Vehicle photo gallery">
+          <div className="relative flex h-[clamp(190px,22vw,280px)] items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-[#EEF5FC] to-[#E0EBF7]">
+            <img src={mainImage} alt={hasRealPhoto ? `${vehicleName} listing photo` : `${vehicleName} vehicle-category illustration`} className={`h-full w-full ${hasRealPhoto ? "object-contain" : "object-contain p-2"}`} />
             {!hasRealPhoto ? <span className="absolute bottom-3 left-3 rounded-full border border-white/80 bg-white/90 px-3 py-1 text-[10px] font-semibold text-[#537096]"><ImageIcon className="mr-1 inline h-3 w-3" /> Illustration · photos not available</span> : null}
           </div>
-          {photos.length > 1 ? <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
-            {photos.slice(0, 6).map(photo => <a key={photo.id} href={photo.signed_url!} target="_blank" rel="noopener noreferrer" aria-label={photo.label || "Open listing photo"} className="h-[48px] w-[70px] shrink-0 overflow-hidden rounded-lg border border-[#DCE5F1]"><img src={photo.signed_url!} alt={photo.label || "Additional vehicle photograph"} className="h-full w-full object-cover" /></a>)}
+          {photos.length > 1 ? <div className="mt-1.5 flex gap-1.5 overflow-x-auto pb-0.5">
+            {photos.slice(0, 6).map(photo => <a key={photo.id} href={photo.signed_url!} target="_blank" rel="noopener noreferrer" aria-label={photo.label || "Open listing photo"} className="h-[40px] w-[58px] shrink-0 overflow-hidden rounded-md border border-[#DCE5F1]"><img src={photo.signed_url!} alt={photo.label || "Additional vehicle photograph"} className="h-full w-full object-cover" /></a>)}
           </div> : null}
           {photos.length ? <p className="mt-1 text-[9px] text-[#71829B]">{photos.length} photos</p> : null}
         </section>
 
-        <aside className="min-w-0 rounded-2xl border border-[#DCE5F1] bg-white p-3 shadow-[0_5px_24px_rgba(18,51,90,.04)] ">
-          <div className="mt-3 flex flex-wrap gap-2">
+        <aside className="min-w-0 rounded-xl border border-[#DCE5F1] bg-white p-2.5 shadow-[0_5px_24px_rgba(18,51,90,.04)] ">
+          <div className="flex flex-wrap gap-1.5">
             {listing.owner_verified ? <span className="inline-flex items-center gap-1 rounded-full bg-[#EAF8F1] px-2.5 py-1.5 text-[10px] font-bold text-[#087D55]"><BadgeCheck className="h-3.5 w-3.5" /> Owner verified</span> : null}
             {listing.inspected ? <span className="inline-flex items-center gap-1 rounded-full bg-[#E9F1FF] px-2.5 py-1.5 text-[10px] font-bold text-[#2859A7]"><CheckCircle2 className="h-3.5 w-3.5" /> Inspected {listing.inspection_score != null ? `· ${listing.inspection_score}` : ""}</span> : null}
             {detail?.authbridge_verified ? <span className="inline-flex items-center gap-1 rounded-full bg-[#EAF8F1] px-2.5 py-1.5 text-[10px] font-bold text-[#087D55]"><ShieldCheck className="h-3.5 w-3.5" /> AuthBridge verified</span> : null}
@@ -96,7 +96,7 @@ export default async function CustomerExchangeListingPage({
         </aside>
       </div>
 
-      <div className="grid gap-2.5 lg:grid-cols-2">
+      <div className="grid gap-2 lg:grid-cols-2">
         <section className="rounded-2xl border border-[#DCE5F1] bg-white p-3 shadow-[0_5px_24px_rgba(18,51,90,.04)]">
           <h2 className="flex items-center gap-2 text-[14px] font-extrabold text-[#102A50]"><Truck className="h-4 w-4 text-[#316BB8]" /> Vehicle specifications</h2>
           <dl className="mt-2 grid gap-1.5 sm:grid-cols-2">
