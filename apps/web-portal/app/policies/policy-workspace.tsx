@@ -477,7 +477,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
             onQuickRange={changeQuickDateRange}
             onClear={() => { setTimeScope("all"); setFromDate(""); setToDate(""); setView("all"); setPage(1); }}
           /></div>
-          <div className="min-w-[110px] flex-1 shrink overflow-x-auto overscroll-x-contain" role="region" aria-label="Policy period and status filters" tabIndex={0}>
+          <div className="ml-auto w-max min-w-max flex-none overflow-visible" role="region" aria-label="Policy period and status filters" tabIndex={0}>
             <div className="flex w-max min-w-max items-center gap-1 overflow-visible rounded-xl border border-[#D8E2EE] bg-[#F8FAFC] p-1">
               <PolicyPeriodFilter value={timeScope} mtdCount={mtdFiltered.length} allCount={controlFiltered.length} onChange={changeTimeScope} />
               <div className="min-w-max shrink-0 [&>div]:!w-max [&>div]:!flex-nowrap [&>div]:!overflow-visible [&>div>button]:!min-w-max [&>div>button]:!shrink-0 [&>div>button]:!whitespace-nowrap [&>div]:border-0 [&>div]:bg-transparent [&>div]:p-0 xl:[&_button]:px-2.5 xl:[&_button]:text-[10px]">
