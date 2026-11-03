@@ -25,7 +25,8 @@ assert.equal((motor.match(/save_motor_policy_with_date_approval_v1/g)||[]).lengt
 assert.match(edit,/save_motor_policy_with_date_approval_v1/);
 assert.match(nonmotor,/consumePolicyDateApproval/);
 assert.match(life,/consumePolicyDateApproval/);
-assert.match(otp,/timingSafeEqual/);
+assert.match(otp,/verify_policy_date_otp_v1/);
+assert.match(migration,/for update/i,"OTP attempts must be serialized");
 assert.match(otp,/randomInt\(100000, 1000000\)/);
 assert.match(otp,/RESEND_API_KEY/);
 assert.match(migration,/for update/i,"approval must be locked before motor save");
