@@ -3,7 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CalendarDays, ChevronDown, Files, FileText, Plus, RotateCcw, Search, ShieldCheck } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { getInsurerLogo } from "@/lib/insurer-logo";
 import {
   RegisterEmpty,
@@ -167,17 +168,79 @@ function PolicyPeriodFilter({
   onChange: (value: TimeScope) => void;
 }) {
   const selectedCount = value === "mtd" ? mtdCount : allCount;
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+
+  function openMenu() {
+    if (menuPosition) {
+      setMenuPosition(null);
+      return;
+    }
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const bounds = trigger.getBoundingClientRect();
+    const menuWidth = 132;
+    const menuHeight = 112;
+    const left = Math.max(8, Math.min(bounds.right - menuWidth, window.innerWidth - menuWidth - 8));
+    const top = bounds.bottom + menuHeight + 8 > window.innerHeight
+      ? Math.max(8, bounds.top - menuHeight - 6)
+      : bounds.bottom + 6;
+    setMenuPosition({ top, left });
+  }
+
+  useEffect(() => {
+    if (!menuPosition) return;
+    const closeOutside = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Node && (triggerRef.current?.contains(target) || menuRef.current?.contains(target))) return;
+      setMenuPosition(null);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenuPosition(null);
+        triggerRef.current?.focus();
+      }
+    };
+    const closeOnScroll = () => setMenuPosition(null);
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    window.addEventListener("scroll", closeOnScroll, true);
+    window.addEventListener("resize", closeOnScroll);
+    return () => {
+      document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+      window.removeEventListener("scroll", closeOnScroll, true);
+      window.removeEventListener("resize", closeOnScroll);
+    };
+  }, [menuPosition]);
+
   return (
-    <details className="group relative shrink-0">
-      <summary className="flex h-8 min-w-[74px] cursor-pointer list-none items-center justify-between gap-1.5 rounded-lg bg-[#0F766E] px-2.5 text-[10px] font-bold text-white shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-[#0F766E]/20 [&::-webkit-details-marker]:hidden">
+    <>
+      <button ref={triggerRef} type="button" aria-haspopup="menu" aria-expanded={Boolean(menuPosition)}
+        onClick={openMenu}
+        className="flex h-8 min-w-[74px] shrink-0 items-center justify-between gap-1.5 rounded-lg bg-[#0F766E] px-2.5 text-[10px] font-bold text-white shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-[#0F766E]/20">
         <span>{value === "mtd" ? "MTD" : "All"} <span className="opacity-80">{selectedCount}</span></span>
-        <ChevronDown className="h-3 w-3 transition group-open:rotate-180" />
-      </summary>
-      <div className="absolute right-0 top-9 z-40 min-w-[118px] rounded-xl border border-[#D7E0EA] bg-white p-1.5 shadow-[0_16px_36px_rgba(15,23,42,.16)]">
-        <button type="button" onClick={(event) => { onChange("mtd"); event.currentTarget.closest("details")?.removeAttribute("open"); }} className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left text-[10px] font-bold transition ${value === "mtd" ? "border-[#99E2D0] bg-[#E8F7F2] text-[#0F766E]" : "border-transparent bg-[#F2FBF8] text-[#16836F] hover:bg-[#E8F7F2]"}`}><span>MTD</span><span className="text-[9px] tabular-nums opacity-75">{mtdCount}</span></button>
-        <button type="button" onClick={(event) => { onChange("all"); event.currentTarget.closest("details")?.removeAttribute("open"); }} className={`mt-1 flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left text-[10px] font-bold transition ${value === "all" ? "border-[#B8CCE4] bg-[#E8F0F9] text-[#17365D]" : "border-transparent bg-[#F2F6FB] text-[#385674] hover:bg-[#E8F0F9]"}`}><span>All</span><span className="text-[9px] tabular-nums opacity-75">{allCount}</span></button>
-      </div>
-    </details>
+        <ChevronDown className={`h-3 w-3 transition ${menuPosition ? "rotate-180" : ""}`} />
+      </button>
+      {menuPosition && createPortal(
+        <div ref={menuRef} role="menu" aria-label="Policy period"
+          style={{ position: "fixed", top: menuPosition.top, left: menuPosition.left, zIndex: 9999 }}
+          className="w-[132px] rounded-xl border border-[#D7E0EA] bg-white p-1.5 shadow-[0_16px_36px_rgba(15,23,42,.16)]">
+          <button type="button" role="menuitemradio" aria-checked={value === "mtd"}
+            onClick={() => { onChange("mtd"); setMenuPosition(null); }}
+            className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left text-[10px] font-bold transition ${value === "mtd" ? "border-[#99E2D0] bg-[#E8F7F2] text-[#0F766E]" : "border-transparent bg-[#F2FBF8] text-[#16836F] hover:bg-[#E8F7F2]"}`}>
+            <span>MTD</span><span className="text-[9px] tabular-nums opacity-75">{mtdCount}</span>
+          </button>
+          <button type="button" role="menuitemradio" aria-checked={value === "all"}
+            onClick={() => { onChange("all"); setMenuPosition(null); }}
+            className={`mt-1 flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left text-[10px] font-bold transition ${value === "all" ? "border-[#B8CCE4] bg-[#E8F0F9] text-[#17365D]" : "border-transparent bg-[#F2F6FB] text-[#385674] hover:bg-[#E8F0F9]"}`}>
+            <span>All</span><span className="text-[9px] tabular-nums opacity-75">{allCount}</span>
+          </button>
+        </div>,
+        document.body,
+      )}
+    </>
   );
 }
 
@@ -384,7 +447,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
 
       <div className="border-b border-[#E5ECF5] bg-white px-3 py-2 sm:px-4">
         <div className="flex w-full min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto overscroll-x-contain pb-1 [&>*]:shrink-0" role="region" aria-label="Policy portfolio filters" tabIndex={0}>
-          <div className="w-[140px] min-w-[140px] [&_button]:!w-full [&_button]:!min-w-0 [&_button]:!max-w-full"><PolicyBusinessFilter
+          <div className="w-[155px] min-w-[155px] [&_button]:!w-full [&_button]:!min-w-0 [&_button]:!max-w-full"><PolicyBusinessFilter
             business={business}
             onBusinessChange={(value) => {
               setBusiness(value);
@@ -392,7 +455,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
               setPage(1);
             }}
           /></div>
-          <div className="w-[145px] min-w-[145px] [&>label]:block [&>label]:w-full [&_select]:!min-w-0 [&_select]:w-full">
+          <div className="w-[165px] min-w-[165px] [&>label]:block [&>label]:w-full [&_select]:!min-w-0 [&_select]:w-full">
             <RegisterSelect value={sourceSelectValue} onChange={(value) => { setSource(value); setPage(1); }} label="Lead source">
               <option value="all">All Sources</option>
               {visibleSourceOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
