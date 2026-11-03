@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import { PropsWithChildren, ReactNode, useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
 
 import { AppBadge } from '@/components/design-system';
@@ -230,20 +230,20 @@ export function ClaimFinancialSummary({ rows }: { rows: Array<{ label: string; v
   );
 }
 
-export function ClaimPrimaryAction({ label, icon = 'arrow-right', disabled, fill = false, onPress }: { label: string; icon?: keyof typeof MaterialCommunityIcons.glyphMap; disabled?: boolean; fill?: boolean; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={[styles.primaryAction, fill && styles.actionBarItem, disabled && styles.primaryActionDisabled]}><Text style={styles.primaryActionText}>{label}</Text><MaterialCommunityIcons name={icon} size={20} color="#FFFFFF" /></Pressable>;
+export function ClaimPrimaryAction({ label, icon = 'arrow-right', disabled, fill = false, onPress, customerIosText = false }: { label: string; icon?: keyof typeof MaterialCommunityIcons.glyphMap; disabled?: boolean; fill?: boolean; onPress: () => void; customerIosText?: boolean }) {
+  return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={[styles.primaryAction, fill && styles.actionBarItem, disabled && styles.primaryActionDisabled]}><Text style={[styles.primaryActionText, customerIosText && Platform.OS === 'ios' && styles.customerIosActionText]}>{label}</Text><MaterialCommunityIcons name={icon} size={20} color="#FFFFFF" /></Pressable>;
 }
 
-export function ClaimSecondaryAction({ icon, label, fill = false, onPress }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; fill?: boolean; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" onPress={onPress} style={[styles.secondaryAction, fill && styles.actionBarItem]}><MaterialCommunityIcons name={icon} size={18} color="#0A43A3" /><Text style={styles.secondaryActionText}>{label}</Text></Pressable>;
+export function ClaimSecondaryAction({ icon, label, fill = false, onPress, customerIosText = false }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; fill?: boolean; onPress: () => void; customerIosText?: boolean }) {
+  return <Pressable accessibilityRole="button" onPress={onPress} style={[styles.secondaryAction, fill && styles.actionBarItem]}><MaterialCommunityIcons name={icon} size={18} color="#0A43A3" /><Text style={[styles.secondaryActionText, customerIosText && Platform.OS === 'ios' && styles.customerIosActionText]}>{label}</Text></Pressable>;
 }
 
-export function ClaimActionBar({ primaryLabel, primaryIcon = 'arrow-right', primaryDisabled, onPrimary, onAssistance }: { primaryLabel: string; primaryIcon?: keyof typeof MaterialCommunityIcons.glyphMap; primaryDisabled?: boolean; onPrimary: () => void; onAssistance: () => void }) {
+export function ClaimActionBar({ primaryLabel, primaryIcon = 'arrow-right', primaryDisabled, onPrimary, onAssistance, customerIosText = false }: { primaryLabel: string; primaryIcon?: keyof typeof MaterialCommunityIcons.glyphMap; primaryDisabled?: boolean; onPrimary: () => void; onAssistance: () => void; customerIosText?: boolean }) {
   return (
     <View>
       <View style={styles.actionBar}>
-        <ClaimSecondaryAction fill icon="account-tie-voice-outline" label="Get Assistance" onPress={onAssistance} />
-        <ClaimPrimaryAction fill label={primaryLabel} icon={primaryIcon} disabled={primaryDisabled} onPress={onPrimary} />
+        <ClaimSecondaryAction fill icon="account-tie-voice-outline" label="Get Assistance" onPress={onAssistance} customerIosText={customerIosText} />
+        <ClaimPrimaryAction fill label={primaryLabel} icon={primaryIcon} disabled={primaryDisabled} onPress={onPrimary} customerIosText={customerIosText} />
       </View>
       <SelfManagedStageNavigation />
     </View>
@@ -379,6 +379,7 @@ function SelfManagedStageNavigation() {
 export function ClaimMetaRow({ children }: { children: ReactNode }) { return <View style={styles.metaRow}>{children}</View>; }
 
 const styles = StyleSheet.create({
+  customerIosActionText: { fontWeight: '400' },
   headerWrap: { marginBottom: 14 },
   progressWrap: { flexDirection: 'row', gap: 7, paddingHorizontal: 3, marginBottom: 18 },
   progressSegment: { flex: 1, height: 7, borderRadius: 999, backgroundColor: '#DEE4EC' },
