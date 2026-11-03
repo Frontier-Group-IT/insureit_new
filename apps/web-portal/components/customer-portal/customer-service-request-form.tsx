@@ -201,7 +201,7 @@ export function CustomerServiceRequestForm(props: Props) {
       <div className="space-y-2.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <img src="/assets/Custom-Icons/optimized-128/fleet-vehicle.png" alt="" aria-hidden="true" width={38} height={38} className="h-[38px] w-[38px] object-contain" />
+            <img src="/assets/customer-settings-3d/challan-registration.svg" alt="" aria-hidden="true" width={44} height={44} className="h-11 w-11 shrink-0 object-contain" />
             <h2 className="text-[18px] font-bold text-[#23284C]">Vehicle Details</h2>
           </div>
           <span className="rounded-full bg-[#F2EEFF] px-3 py-1 text-[10px] font-bold text-[#815CCB]">Recent vehicles</span>
