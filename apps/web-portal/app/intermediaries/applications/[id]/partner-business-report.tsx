@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { PartnerBusinessPeriodFilter } from "./partner-business-period-filter";
 import { ReportEmptyState } from "@/components/reports/report-page-shell";
 import { getInsurerLogo } from "@/lib/insurer-logo";
 import { emptyFinanceReport, loadFinanceReport, type FinanceQuery, type FinanceReport } from "@/lib/reports/finance";
@@ -51,17 +52,10 @@ export async function PartnerBusinessReport({ applicationId, intermediaryCode, v
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#dbe3ee] bg-white px-3 py-2">
       <strong className="text-[13px] text-[#172c4c]">Business Report</strong>
       <div className="flex flex-wrap items-center gap-2">
-        <form action={basePath} method="get" className="flex items-center gap-1">
-          <input type="hidden" name="tab" value="business" />
-          <select name="period" defaultValue={filters.period} aria-label="Report period" className="h-9 rounded-lg border border-[#d7dfeb] bg-white px-2 text-[11px] font-semibold" >
-            <option value="mtd">MTD</option><option value="90d">Last 90 days</option><option value="ytd">Year to date</option><option value="all">All time</option><option value="custom">Custom</option>
-          </select>
-          <button type="submit" className="h-9 rounded-lg border border-[#d7dfeb] px-3 text-[10px] font-semibold">Apply</button>
-        </form>
+        <PartnerBusinessPeriodFilter basePath={basePath} period={filters.period} fromDate={filters.fromDate} toDate={filters.toDate} mix={mixMode} />
         <a href={exportHref} className="inline-flex h-9 items-center rounded-lg bg-[#1262ae] px-4 text-[11px] font-bold text-white">↓ Export</a>
       </div>
     </div>
-    {filters.period === "custom" ? <form action={basePath} method="get" className="flex flex-wrap items-end gap-2 rounded-xl border bg-white p-3"><input type="hidden" name="tab" value="business" /><input type="hidden" name="period" value="custom" /><label className="text-[10px]">From<input type="date" name="from" required defaultValue={filters.fromDate ?? ""} className="ml-1 rounded border px-2 py-1" /></label><label className="text-[10px]">To<input type="date" name="to" required defaultValue={filters.toDate ?? ""} className="ml-1 rounded border px-2 py-1" /></label><button type="submit" className="rounded bg-[#174a90] px-3 py-2 text-[10px] text-white">Apply dates</button></form> : null}
     {loadError ? <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-[12px] text-red-700">Unable to load the selected partner business report. Please retry.</p> : null}
     <CommercialFlow finance={finance} policyCount={report.summary.policy_count} />
     <section className="grid gap-3 xl:grid-cols-2">
