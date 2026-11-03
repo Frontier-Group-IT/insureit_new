@@ -138,10 +138,10 @@ assert(partnerWeb.includes("policy_service_source: string | null"), "Partner cla
 const insurerLogoResolver = read("lib/insurer-logo.ts");
 // Validate the actual decimal formatter in the CI regression path.
 const { normalizePolicyMoney } = await import("../lib/policy-money-precision.ts");
-assert.equal(normalizePolicyMoney("8179.549999999999"), "8179.55");
-assert.equal(normalizePolicyMoney("2607.000000000001"), "2607.00");
-assert.equal(normalizePolicyMoney("425"), "425.00");
-assert.equal(normalizePolicyMoney("0.005"), "0.01");
+assert(normalizePolicyMoney("8179.549999999999") === "8179.55", "Money normalization failed for 8179.549999999999");
+assert(normalizePolicyMoney("2607.000000000001") === "2607.00", "Money normalization failed for 2607.000000000001");
+assert(normalizePolicyMoney("425") === "425.00", "Money normalization failed for 425");
+assert(normalizePolicyMoney("0.005") === "0.01", "Money normalization failed for 0.005");
 const policyOnboardingAction = read("app/policies/policy-onboarding-actions.ts");
 assert(policyOnboardingAction.includes('addOnPremium: moneyOrZero(payload.premium.addOnPremium)'), "Policy booking must normalize Add-on Premium before RPC");
 assert(policyOnboardingAction.includes('lowerMessage.includes("invalid add-on premium")'), "Policy booking must identify Add-on Premium errors");
