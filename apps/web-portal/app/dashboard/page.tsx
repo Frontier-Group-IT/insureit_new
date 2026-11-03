@@ -2,6 +2,8 @@ import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shel
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { accessRank, getEffectivePermissionAccessMap } from "@/lib/effective-permissions";
 import { loadLifeHealthCaseSummary } from "@/lib/life-health-case-summary";
+import { loadPolicyIntakeReviewSummary } from "@/lib/policy-intake-review-summary";
+import { getRmPolicyIntakePredicates, hierarchyIntakeRoles } from "@/lib/rm-policy-intake-scope";
 import { getOperationsDashboardData } from "@/lib/operations-dashboard";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -79,14 +81,26 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     access.commercial = true;
   }
 
+  const intakeReviewPredicates = profile?.id && profile.role && hierarchyIntakeRoles.has(profile.role) && viewPolicyIntakes && reviewPolicyIntakes
+    ? await getRmPolicyIntakePredicates(profile.id, profile.role)
+    : null;
+  const intakeAttentionRequest = viewPolicyIntakes && reviewPolicyIntakes && !isDownlineHead
+    ? loadPolicyIntakeReviewSummary(createSupabaseAdminClient(), {
+        intakeOrFilter: intakeReviewPredicates?.join(","),
+        denyAll: intakeReviewPredicates !== null && !intakeReviewPredicates.length,
+        includeNeedsAttention: true,
+      })
+    : Promise.resolve(null);
+
   const proposalSummaryRequest = viewPolicies && !isDownlineHead
     ? loadLifeHealthCaseSummary(createSupabaseAdminClient())
     : Promise.resolve(null);
 
-  const [data, business, proposalSummary] = await Promise.all([
+  const [data, business, proposalSummary, intakeAttention] = await Promise.all([
     getDashboardCurrentData(profile, access, base),
     getDashboardBusinessData(profile, query, isDownlineHead || dashboardCommercialAccess, !isDownlineHead && dashboardCommercialOperationsAccess),
     proposalSummaryRequest,
+    intakeAttentionRequest,
   ]);
 
   return (
@@ -97,6 +111,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         business={business}
         canCreatePolicy={isDownlineHead || createPolicies || editPolicies}
         canCreatePolicyIntake={createPolicyIntakes}
+        intakeAttention={intakeAttention}
         showRmPerformanceButton={viewReports && !isRelationshipManager}
       />
       <DashboardRegisterSync proposalPending={proposalSummary?.pending ?? 0} />

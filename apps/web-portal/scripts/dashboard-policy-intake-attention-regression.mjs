@@ -1,0 +1,16 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const read = (path) => readFileSync(path, "utf8");
+const dashboard = read("app/dashboard/page.tsx");
+const view = read("app/dashboard-v2/dashboard-view.tsx");
+const summary = read("lib/policy-intake-review-summary.ts");
+assert(dashboard.includes('getRmPolicyIntakePredicates(profile.id, profile.role)'), "Dashboard must use the Queue hierarchy scope");
+assert(dashboard.includes("intakeReviewPredicates !== null && !intakeReviewPredicates.length"), "Empty hierarchy scope must fail closed");
+assert(dashboard.includes("includeNeedsAttention: true"), "Dashboard action count must include needs_attention");
+assert(view.includes('label: "Policy Intake"'), "Needs attention must contain Policy Intake");
+assert(view.includes('href="/policy-intakes?view=action"'), "Action Required must open its filtered queue");
+assert(view.includes('href="/policy-intakes?view=in_review"'), "In Review must open its filtered queue");
+assert(view.includes('DASHBOARD_ICON_ASSETS.policyIntakeReview'), "Use a valid bundled Policy Intake icon");
+assert(summary.includes('fetchAllPages<PolicyIntakeSummaryRow'), "Counts must not truncate after 500 rows");
+assert(summary.includes('options.includeNeedsAttention && row.status === "needs_attention"'), "Action count must agree with the Queue");
+console.log("Dashboard Policy Intake attention links and scope regression passed");

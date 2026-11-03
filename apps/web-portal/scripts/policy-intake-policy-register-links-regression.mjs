@@ -22,7 +22,7 @@ assert(summary.includes('query = query.eq("submitted_by_profile_id", options.sub
 assert(summary.includes("options.includeActionRequired ?? true"), "Reviewer summaries must retain Action Required by default");
 assert(summary.includes("loadPolicyIntakeDuplicateMatches(admin, rows)"), "Policy Register counts must use the same duplicate detector as the Policy Intake queue");
 assert(summary.includes('status: "Duplicate"'), "Duplicate intakes must be excluded from actionable Policy Register counts");
-assert(summary.includes('row.status === "ready_for_review" || (row.status === "processing" && row.ocr_status === "failed")'), "Action Required count must match the Policy Intake queue definition");
+assert(summary.includes('row.status === "ready_for_review" || (options.includeNeedsAttention && row.status === "needs_attention") || (row.status === "processing" && row.ocr_status === "failed")'), "Action Required count must support Queue parity for the dashboard while keeping existing Policy Register defaults");
 assert(summary.includes('row.status === "in_review"'), "In Review count must match the Policy Intake queue definition");
 assert(summary.includes("fetchAllPages<PolicyIntakeSummaryRow"), "Policy Register summary must count every authorized intake page");
 assert(!summary.includes(".limit(500)"), "Policy Register summary must not truncate counts to 500 records");

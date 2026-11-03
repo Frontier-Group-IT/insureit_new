@@ -26,6 +26,7 @@ type PolicyIntakeReviewSummaryOptions = {
   includeActionRequired?: boolean;
   intakeOrFilter?: string;
   denyAll?: boolean;
+  includeNeedsAttention?: boolean;
 };
 
 export async function loadPolicyIntakeReviewSummary(
@@ -57,7 +58,7 @@ export async function loadPolicyIntakeReviewSummary(
     const includeActionRequired = options.includeActionRequired ?? true;
     return {
       actionRequired: includeActionRequired
-        ? queueRows.filter((row) => row.status === "ready_for_review" || (row.status === "processing" && row.ocr_status === "failed")).length
+        ? queueRows.filter((row) => row.status === "ready_for_review" || (options.includeNeedsAttention && row.status === "needs_attention") || (row.status === "processing" && row.ocr_status === "failed")).length
         : null,
       inReview: queueRows.filter((row) => row.status === "in_review").length,
       proposalPending: proposalSummary?.pending ?? null,

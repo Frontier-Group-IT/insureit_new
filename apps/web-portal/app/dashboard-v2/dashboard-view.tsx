@@ -13,6 +13,7 @@ import type {
   DashboardBusinessRankRow,
 } from "./dashboard-business";
 import { BusinessFilterPopover } from "./dashboard-business-filter-popover";
+import type { PolicyIntakeReviewSummary } from "@/lib/policy-intake-review-summary";
 
 type Props = {
   data: DashboardCurrentData;
@@ -21,6 +22,7 @@ type Props = {
   canCreatePolicy: boolean;
   canCreatePolicyIntake: boolean;
   showRmPerformanceButton: boolean;
+  intakeAttention?: PolicyIntakeReviewSummary | null;
 };
 
 type AttentionSignal = {
@@ -30,6 +32,7 @@ type AttentionSignal = {
   href: string;
   icon: string;
   tone: "red" | "amber" | "violet" | "teal" | "slate";
+  intakeCounts?: { actionRequired: number; inReview: number };
 };
 
 type RailMetric = {
@@ -46,8 +49,8 @@ type RailMetric = {
   icon: string;
 };
 
-export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, canCreatePolicyIntake, showRmPerformanceButton }: Props) {
-  const attention = buildAttention(data, access, business);
+export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, canCreatePolicyIntake, showRmPerformanceButton, intakeAttention = null }: Props) {
+  const attention = buildAttention(data, access, business, intakeAttention);
   const rail = buildMetricRail(data, access, business);
   const renewalTotal = data.renewals
     ? data.renewals.expired + data.renewals.due0to7 + data.renewals.due8to15 + data.renewals.due16to30 + data.renewals.due31to45
@@ -202,7 +205,7 @@ function buildMetricRail(data: DashboardCurrentData, access: DashboardAccess, _b
   return metrics.slice(0, 6);
 }
 
-function buildAttention(data: DashboardCurrentData, access: DashboardAccess, business: DashboardBusinessData): AttentionSignal[] {
+function buildAttention(data: DashboardCurrentData, access: DashboardAccess, business: DashboardBusinessData, intakeAttention: PolicyIntakeReviewSummary | null): AttentionSignal[] {
   const rows: AttentionSignal[] = [];
   if (data.intermediaries?.pendingApplications) {
     rows.push({
@@ -254,6 +257,17 @@ function buildAttention(data: DashboardCurrentData, access: DashboardAccess, bus
       href: "/tasks",
       icon: DASHBOARD_ICON_ASSETS.tasksWorkQueue,
       tone: "amber",
+    });
+  }
+
+  if (access.reviewPolicyIntakes && access.viewPolicyIntakes && intakeAttention && intakeAttention.actionRequired !== null) {
+    rows.push({
+      label: "Policy Intake",
+      value: intakeAttention.actionRequired + intakeAttention.inReview,
+      href: "/policy-intakes",
+      icon: DASHBOARD_ICON_ASSETS.policyIntakeReview,
+      tone: "violet",
+      intakeCounts: { actionRequired: intakeAttention.actionRequired, inReview: intakeAttention.inReview },
     });
   }
 
@@ -840,6 +854,26 @@ function AttentionItem({ item, divided }: { item: AttentionSignal; divided: bool
     teal: "bg-[#19AFA9]",
     slate: "bg-[#8A98AA]",
   }[item.tone];
+  if (item.intakeCounts) {
+    const counts = item.intakeCounts;
+    return (
+      <div className={`${divided ? "border-t xl:border-l xl:border-t-0" : ""} flex min-w-0 items-center gap-3 border-[#E7ECF2] px-3 py-2.5`}>
+        <span className={`h-8 w-[3px] shrink-0 ${tone}`} />
+        <Icon src={item.icon} size={25} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[9px] font-bold text-[#26344F]">Policy Intake</p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <Link prefetch={false} href="/policy-intakes?view=action" className="inline-flex items-center gap-1 text-[9px] font-bold text-[#C62828] hover:underline" aria-label={`Policy Intake Action Required: ${counts.actionRequired}`}>
+              Action Required <span className="tabular-nums text-[13px]">{counts.actionRequired}</span>
+            </Link>
+            <Link prefetch={false} href="/policy-intakes?view=in_review" className="inline-flex items-center gap-1 text-[9px] font-bold text-[#A75B16] hover:underline" aria-label={`Policy Intake In Review: ${counts.inReview}`}>
+              In Review <span className="tabular-nums text-[13px]">{counts.inReview}</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <Link prefetch={false} href={item.href} className={`${divided ? "border-t xl:border-l xl:border-t-0" : ""} group flex min-w-0 items-center gap-3 border-[#E7ECF2] px-4 py-3 hover:bg-[#FAFBFD]`}>
       <span className={`h-8 w-[3px] shrink-0 ${tone}`} />
