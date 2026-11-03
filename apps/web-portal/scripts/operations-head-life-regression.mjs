@@ -108,7 +108,7 @@ const lifeCaseDetail = read("components/life-health-case-detail.tsx");
 assert.ok(lifeCaseDetail.includes('onClick={saveDetails}'), "Case details require a standalone save action");
 assert.ok(lifeCaseDetail.includes('updateLifeHealthCaseDetails(editData())'), "Save must use existing authorized server action");
 assert.ok(lifeCaseDetail.includes('"Save Case Details"'), "Standalone save button must be visible");
-assert.ok(lifeCaseDetail.includes('onClick={convert}'), "Issue Policy workflow must remain available");
+assert.ok(lifeCaseDetail.includes('onClick={()=>convert()}') && lifeCaseDetail.includes('PolicyDateApprovalDialog'), "Issue Policy must remain available with submit-time approval");
 const issuedCustomerSave = read("app/policies/life-health-issued-customer-edit-actions.ts");
 assert.match(issuedCustomerSave, /const policyId = clean\(formData\.get\("policyId"\)\);[\s\S]*?await requirePolicyEditor\(policyId\);/, "Issued Life/Health customer edit must authorize its exact policy record");
 assert.doesNotMatch(issuedCustomerSave, /requirePolicyEditor\(\)/, "Never call scoped Life/Health editor authorization without policy ID");
