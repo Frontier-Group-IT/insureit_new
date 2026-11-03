@@ -163,6 +163,41 @@ export async function IntermediaryRegister({
     ((partnerBusinessData ?? []) as PartnerBusinessMetric[]).map((metric) => [metric.partner_id, metric])
   );
 
+  // Fetch current Group membership only for Partners already authorized in this register.
+  type CurrentGroupMembership = { partner_id: string; group_id: string };
+  type CurrentGroup = { id: string; group_name: string };
+  const groupMemberships: CurrentGroupMembership[] = [];
+  let groupLookupFailed = false;
+  if (selectedType === "partner" && partnerBusinessIds.length) {
+    for (let index = 0; index < partnerBusinessIds.length; index += 100) {
+      const { data, error } = await admin.from("intermediary_group_memberships")
+        .select("partner_id,group_id")
+        .in("partner_id", partnerBusinessIds.slice(index, index + 100))
+        .is("effective_to", null)
+        .returns<CurrentGroupMembership[]>();
+      if (error) { groupLookupFailed = true; break; }
+      groupMemberships.push(...(data ?? []));
+    }
+  }
+  const groupIds = [...new Set(groupMemberships.map(item => item.group_id))];
+  const groupsById = new Map<string, string>();
+  if (!groupLookupFailed) {
+    for (let index = 0; index < groupIds.length; index += 100) {
+      const { data, error } = await admin.from("intermediary_groups")
+        .select("id,group_name")
+        .in("id", groupIds.slice(index, index + 100))
+        .returns<CurrentGroup[]>();
+      if (error) { groupLookupFailed = true; break; }
+      for (const group of data ?? []) groupsById.set(group.id, group.group_name);
+    }
+  }
+  const groupsByPartner = new Map<string, string[]>();
+  for (const membership of groupMemberships) {
+    const list = groupsByPartner.get(membership.partner_id) ?? [];
+    if (!list.includes(membership.group_id)) list.push(membership.group_id);
+    groupsByPartner.set(membership.partner_id, list);
+  }
+
   if (selectedType === "partner") {
     const clientRows: PartnerRegisterRow[] = partnerCountRows.map((row) => {
       const app = applicationMap.get(row.application_id as string);
@@ -174,6 +209,10 @@ export async function IntermediaryRegister({
       const partnerId = displayIdentity(row, app, "partner");
       const metric = app?.partner_record_id && !partnerBusinessError ? partnerBusinessMap.get(app.partner_record_id) : undefined;
       const linkedLabel = linked ? linkedAccountLabel(linkedType, linked) : "Not created";
+      const matchingGroupIds = app?.partner_record_id ? groupsByPartner.get(app.partner_record_id) ?? [] : [];
+      // Ambiguous membership fails closed rather than arbitrarily choosing a Group.
+      const groupId = !groupLookupFailed && matchingGroupIds.length === 1 && groupsById.has(matchingGroupIds[0]) ? matchingGroupIds[0] : null;
+      const groupName = groupId ? groupsById.get(groupId) ?? null : null;
       return {
         id: row.id,
         applicationId: row.application_id as string,
@@ -181,6 +220,8 @@ export async function IntermediaryRegister({
         displayName: row.display_name,
         mobile: mobile10(row.mobile),
         partnerId,
+        groupId,
+        groupName,
         accountType: allowedType === "misp" ? "Business" : "Individual",
         assignedRm,
         onboardingDate: app?.created_at ?? row.updated_at,
@@ -202,6 +243,7 @@ export async function IntermediaryRegister({
           row.email,
           row.city,
           partnerId,
+          groupName,
           assignedRm,
           linkedLabel,
           portalAccessLabel(row.portal_access_status),
