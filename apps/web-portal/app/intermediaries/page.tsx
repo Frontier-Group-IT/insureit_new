@@ -1,15 +1,28 @@
-import { IntermediaryRegister, type IntermediaryType } from "./intermediary-register";
-import { OverviewIntermediaryRegister } from "./overview-register";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+// The legacy Intermediaries Overview has been retired. Keep the old URL as a
+// safe entry point, but never render the removed Overview register.
+type Query = {
+  q?: string;
+  type?: string;
+  account_status?: string;
+  registration_status?: string;
+  portal_access?: string;
+  success?: string;
+  error?: string;
+};
 
-type Query={q?:string;type?:string;account_status?:string;registration_status?:string;portal_access?:string;success?:string;error?:string};
-export default async function IntermediariesPage({searchParams}:{searchParams:Promise<Query>}){
- const query=await searchParams;const typeFilter=["posp","misp","partner"].includes(query.type??"")?query.type as IntermediaryType:null;
- const search=query.q?.trim().slice(0,80)??"";
- if(!typeFilter&&!query.account_status&&!query.registration_status&&!query.portal_access){
-  return <OverviewIntermediaryRegister search={search} success={query.success} error={query.error}/>;
- }
- return <IntermediaryRegister selectedType={null} typeFilter={typeFilter} search={search} accountStatus={query.account_status??""} registrationStatus={query.registration_status??""} portalAccess={query.portal_access??""} success={query.success} error={query.error}/>;
+export default async function IntermediariesPage({ searchParams }: { searchParams: Promise<Query> }) {
+  const query = await searchParams;
+  const destination = query.type === "posp"
+    ? "/intermediaries/posp"
+    : query.type === "misp"
+      ? "/intermediaries/misp"
+      : "/intermediaries/partner";
+  const params = new URLSearchParams();
+  for (const key of ["q", "account_status", "registration_status", "portal_access", "success", "error"] as const) {
+    const value = query[key];
+    if (typeof value === "string" && value.trim()) params.set(key, value.slice(0, 200));
+  }
+  redirect(params.size ? `${destination}?${params.toString()}` : destination);
 }
