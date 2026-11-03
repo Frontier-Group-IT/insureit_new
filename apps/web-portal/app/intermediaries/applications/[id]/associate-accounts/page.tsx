@@ -8,6 +8,7 @@ import { requireScopedPospMispManager } from "@/lib/master-data-server";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { canAccessIntermediary } from "@/lib/employee-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { loadAssociateAccountBusinessMetrics } from "@/lib/partner-account-business-metrics";
 import { createPartnerAssociateAccount } from "./actions";
 import { AssociateAccountResultToast } from "./associate-account-result-toast";
 import { AssociateAccountActionsMenu } from "./associate-account-actions-menu";
@@ -51,6 +52,7 @@ type Intermediary = {
 };
 type Associate = {
   id: string;
+  auth_user_id: string;
   name: string;
   phone_number: string;
   email: string;
@@ -100,11 +102,12 @@ export default async function PartnerAssociateAccountsPage({
   }
 
   const { data: associates, error: associatesError } = await admin.from("partner_portal_associate_accounts")
-    .select("id,name,phone_number,email,designation,address,city,state,postal_code,role,status,created_at,invited_at")
+    .select("id,auth_user_id,name,phone_number,email,designation,address,city,state,postal_code,role,status,created_at,invited_at")
     .eq("intermediary_id", intermediary.id)
     .order("created_at", { ascending: false })
     .returns<Associate[]>();
   if (associatesError) throw new Error("Associate accounts could not be loaded.");
+  const associateMetrics = await loadAssociateAccountBusinessMetrics(associates ?? []);
 
   const canManageAssociates = (await hasEffectiveCapability(reviewer, "review_intermediary_application", "edit"))
     && (await canAccessIntermediary(reviewer.id, reviewer.role, intermediary.id));
@@ -218,7 +221,7 @@ export default async function PartnerAssociateAccountsPage({
             <h2 className="text-[13px] font-semibold text-[#17203A]">Associate Accounts Register</h2>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1120px] text-left text-[10.5px]">
+            <table className="w-full min-w-[1390px] text-left text-[10.5px]">
               <thead className="border-b border-[#E7ECF3] bg-[#F8FAFC] text-[8.5px] font-bold uppercase tracking-[.06em] text-[#64748B]">
                 <tr>
                   <th className="px-5 py-3">Name</th>
@@ -227,6 +230,8 @@ export default async function PartnerAssociateAccountsPage({
                   <th className="px-3 py-3">Designation</th>
                   <th className="px-3 py-3">Address</th>
                   <th className="px-3 py-3">Role</th>
+                  <th className="px-3 py-3 text-right">Customer Count</th>
+                  <th className="px-3 py-3 text-right">Net Premium</th>
                   <th className="px-3 py-3">Status</th>
                   <th className="px-3 py-3 text-center">Action</th>
                 </tr>
@@ -240,6 +245,8 @@ export default async function PartnerAssociateAccountsPage({
                     <td className="px-3 py-3 text-[#475569]">{associate.designation}</td>
                     <td className="max-w-[260px] px-3 py-3 text-[#475569]">{associateAddress(associate)}</td>
                     <td className="px-3 py-3"><RolePill value={associate.role} /></td>
+                    <td className="px-3 py-3 text-right font-semibold tabular-nums">{associateMetrics.get(associate.id)?.customerCount == null ? "—" : associateMetrics.get(associate.id)!.customerCount!.toLocaleString("en-IN")}</td>
+                    <td className="px-3 py-3 text-right font-semibold tabular-nums">{associateMetrics.get(associate.id)?.netPremium == null ? "—" : associateMetrics.get(associate.id)!.netPremium!.toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 })}</td>
                     <td className="px-3 py-3"><StatusPill value={associate.status} /></td>
                     <td className="px-3 py-3 text-center">
                       {canManageAssociates ? (
@@ -256,7 +263,7 @@ export default async function PartnerAssociateAccountsPage({
                   </tr>
                 ))}
                 {!(associates ?? []).length ? (
-                  <tr><td colSpan={8} className="px-5 py-10 text-center text-[10.5px] text-[#94A3B8]">No associate accounts added yet.</td></tr>
+                  <tr><td colSpan={10} className="px-5 py-10 text-center text-[10.5px] text-[#94A3B8]">No associate accounts added yet.</td></tr>
                 ) : null}
               </tbody>
             </table>
