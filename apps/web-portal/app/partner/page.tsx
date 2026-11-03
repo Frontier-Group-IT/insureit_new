@@ -172,8 +172,9 @@ async function getPartnerWebClaimOutstanding() {
 export default async function PartnerHomePage({ searchParams }: { searchParams: Promise<HomeSearchParams> }) {
   const query = await searchParams;
   const trendPeriod = resolveTrendPeriod(query.trend);
+  const { identity, scope } = await getPartnerWebSession();
+  const isBranchLogin = identity.actor_kind === "intermediary" && scope.portal_access_type === "branch";
   const [
-    { identity, scope },
     home,
     externalRenewals,
     netPremiumThisMonth,
@@ -187,13 +188,12 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
     scopedPolicySummary,
     canonicalPolicySummary,
   ] = await Promise.all([
-    getPartnerWebSession(),
     getPartnerWebHome(),
     getPartnerExternalRenewalSummary(),
     getPartnerWebNetPremiumThisMonth(),
     getPartnerWebNetwork(),
     getPartnerWebClaimSummary(),
-    getPartnerWebPayoutSummary(),
+    isBranchLogin ? Promise.resolve(null) : getPartnerWebPayoutSummary(),
     getPartnerWebBusinessPerformance(),
     getPartnerWebClaimOutstanding(),
     getPartnerWebRenewalSummary(),
@@ -239,8 +239,6 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
 
   // Use the authenticated branch's designated contact, never its business/branch name.
   // Associate logins already expose the individual associate's name in the identity RPC.
-  const isBranchLogin = identity.actor_kind === "intermediary"
-    && scope.portal_access_type === "branch";
   let greetingName: string | null = null;
   if (isBranchLogin) {
     const { data: contactName, error: greetingError } = await (await createServerSupabaseClient())
@@ -258,10 +256,10 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
   const branchCounts = isBranchLogin ? await getPartnerCanonicalBranchHomeCounts(today) : null;
   const updatedTime = formatUpdatedTime(new Date());
   const schemeDeadline = activeScheme ? formatSchemeDeadline(activeScheme.ends_at) : null;
-  const payoutValue = payout.available ? formatIndianCurrency(payout.paid_amount) : "Restricted";
-  const payoutMeta = payout.available ? `${payout.paid_count} paid records` : "Commercial visibility restricted";
-  const payoutOutstandingValue = payout.available ? formatIndianCurrency(payout.pending_amount) : "Restricted";
-  const payoutOutstandingMeta = payout.available ? `${payout.pending_count} pending records` : "Commercial visibility restricted";
+  const payoutValue = payout?.available ? formatIndianCurrency(payout.paid_amount) : "Restricted";
+  const payoutMeta = payout?.available ? `${payout.paid_count} paid records` : "Commercial visibility restricted";
+  const payoutOutstandingValue = payout?.available ? formatIndianCurrency(payout.pending_amount) : "Restricted";
+  const payoutOutstandingMeta = payout?.available ? `${payout.pending_count} pending records` : "Commercial visibility restricted";
   const premiumAtRisk = [
     renewalSummary.due_0_7_premium,
     renewalSummary.due_8_15_premium,
@@ -357,14 +355,14 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
           />
         </section>
 
-        <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          <SummaryCard
+        <section className={`grid gap-2 sm:grid-cols-2 ${isBranchLogin ? "xl:grid-cols-2" : "xl:grid-cols-4"}`}>
+          {!isBranchLogin ? <SummaryCard
             label="Payout"
             value={payoutValue}
             meta={payoutMeta}
             href="/partner/payout"
             iconSrc={homeIcons.payout}
-          />
+          /> : null}
           <SummaryCard
             label="Claim Outstanding"
             value={formatIndianCurrency(claimOutstanding)}
@@ -372,13 +370,13 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
             href="/partner/claims"
             iconSrc={homeIcons.claimOutstanding}
           />
-          <SummaryCard
+          {!isBranchLogin ? <SummaryCard
             label="Payout Outstanding"
             value={payoutOutstandingValue}
             meta={payoutOutstandingMeta}
             href="/partner/payout"
             iconSrc={homeIcons.payout}
-          />
+          /> : null}
           <SummaryCard
             label="Renewals Due 30D"
             value={branchCounts?.renewalsDue30d ?? home.business.renewals_30_days}
@@ -450,7 +448,7 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
               <SnapshotCard label="Intakes Attention" value={home.service.intakes_need_attention} href="/partner/policy-intakes" iconSrc={homeIcons.intakeAttention} />
               <SnapshotCard label="Overdue Policies" value={home.business.overdue_policies} href="/partner/renewals" iconSrc={homeIcons.overduePolicies} />
               <SnapshotCard label="Follow-ups Due" value={externalRenewals.follow_up_due_count} href="/partner/renewals/external?mode=follow_up&follow_up=due" iconSrc={homeIcons.priority} />
-              <SnapshotCard label="Payout Pending Records" value={payout.available ? payout.pending_count : "—"} href="/partner/payout" iconSrc={homeIcons.payout} />
+              {!isBranchLogin && payout ? <SnapshotCard label="Payout Pending Records" value={payout.available ? payout.pending_count : "—"} href="/partner/payout" iconSrc={homeIcons.payout} /> : null}
             </div>
           </DashboardPanel>
         </section>
