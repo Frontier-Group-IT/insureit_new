@@ -67,7 +67,7 @@ jobs:
           mkdir -m 700 -p "$RUNNER_TEMP/insureit-postgres-dump"
           supabase db dump --db-url "$DATABASE_URL" -f "$RUNNER_TEMP/insureit-postgres-dump/roles.sql" --role-only
           supabase db dump --db-url "$DATABASE_URL" -f "$RUNNER_TEMP/insureit-postgres-dump/schema.sql"
-          supabase db dump --db-url "$DATABASE_URL" -f "$RUNNER_TEMP/insureit-postgres-dump/data.sql" --use-copy --data-only -x "storage.buckets_vectors" -x "storage.vector_indexes"
+          supabase db dump --db-url "$DATABASE_URL" -f "$RUNNER_TEMP/insureit-postgres-dump/data.sql" --use-copy --data-only
           test -s "$RUNNER_TEMP/insureit-postgres-dump/roles.sql"
           test -s "$RUNNER_TEMP/insureit-postgres-dump/schema.sql"
           test -s "$RUNNER_TEMP/insureit-postgres-dump/data.sql"
