@@ -62,7 +62,8 @@ jobs:
             if ! timeout 600 docker exec -u postgres insureit-restore-check \
               psql -X --set ON_ERROR_STOP=1 --dbname postgres --file "/tmp/$part.sql" \
               > "$RUNNER_TEMP/restore-$part.log" 2>&1; then
-              echo "ISOLATED RESTORE INCOMPLETE: component=$part; see handoff for platform compatibility limitations"
+              python scripts/backup/classify_pg_restore_error.py "$part" "$RUNNER_TEMP/restore-$part.log"
+              echo "ISOLATED RESTORE INCOMPLETE: component=$part; restore blocked; existing R2 archive preserved"
               exit 1
             fi
             echo "Isolated restore component validated: $part"
