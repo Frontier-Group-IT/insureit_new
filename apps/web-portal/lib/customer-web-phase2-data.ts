@@ -2,8 +2,6 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import { projectInternalClaim } from "@insureit/claim-journey";
 import { createServerSupabaseClient } from "@/lib/auth-server";
-import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { customerSpotStatusMilestone } from "@/lib/customer-internal-spot-status";
 import {
   customerDisplayVehicleNo,
   formatCustomerDate,
@@ -243,30 +241,6 @@ export async function loadCustomerClaimDetail(customerId: string, claimId: strin
   if (documentResult.error) throw new Error("Claim documents could not be loaded. Please retry.");
 
   const milestones = (milestoneResult.data ?? []) as CustomerClaimMilestone[];
-  // The customer/claim ownership check above must complete before this
-  // privileged read. Operations stores internal Stage 2 in claim_stage_details,
-  // while claim_milestones is used for self-managed/external workflows.
-  // Only expose the four customer-facing surveyor fields.
-  if (!isExternalCustomerClaim(claim) && claim.claim_service_mode === "broker_managed") {
-    const { data: stageTwo, error: stageTwoError } = await createSupabaseAdminClient()
-      .from("claim_stage_details")
-      .select("id,claim_id,details,created_at")
-      .eq("claim_id", claim.id)
-      .eq("details->>milestone_key", "spot_status")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (stageTwoError) {
-      console.error("[customer-claim] internal spot status read failed", { claimId: claim.id, code: stageTwoError.code });
-      throw new Error("Claim stage details could not be loaded. Please retry.");
-    }
-    const spotStatus = stageTwo ? customerSpotStatusMilestone(stageTwo) : null;
-    if (spotStatus) {
-      const previousIndex = milestones.findIndex(item => item.milestone_key === "spot_status");
-      if (previousIndex >= 0) milestones[previousIndex] = spotStatus;
-      else milestones.push(spotStatus);
-    }
-  }
   const documents = (documentResult.data ?? []) as CustomerClaimDocument[];
   const tasks = (taskResult.data ?? []) as CustomerClaimTask[];
 
