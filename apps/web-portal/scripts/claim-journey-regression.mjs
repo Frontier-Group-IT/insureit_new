@@ -140,3 +140,6 @@ assert.match(surveyDoneMigration, /for update/);
 assert.match(surveyDoneMigration, /if not found then\s+raise exception 'The claim status could not be updated\.'/);
 
 console.log(`Claim journey regression passed for ${INTERNAL_CLAIM_STATUSES.length} internal statuses.`);
+
+// Exercise customer-facing Operations Stage 2 synchronization and field isolation.
+await import("./customer-claim-internal-spot-status-regression.mjs");
