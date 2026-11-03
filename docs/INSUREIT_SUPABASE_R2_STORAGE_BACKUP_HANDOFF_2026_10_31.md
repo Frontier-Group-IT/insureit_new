@@ -1,3 +1,14 @@
+## 2026-11-03 — First scheduled backup verified; late watchdog bug diagnosed and fix prepared
+
+- Scheduled backup run [#41536860319](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/41536860319) was **successful** (event `schedule`, branch `main`). Scheduled for **2026-11-02 19:00 IST**, but actually started **2026-11-03 03:53 IST** (GitHub schedule delay approximately 8h53m) and finished near 04:16 IST. No evidence this delay was caused by Supabase or R2.
+- Backup run log: **3,146 source objects, nine buckets, 3,103 reused, 43 newly uploaded, zero transfer errors**; encrypted manifest committed. In-job restore verified **15 sample files across eight populated buckets**, one bucket empty. Samples are not exhaustive verification of all files.
+- Completion-triggered backup alert monitor run [#41539952426](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/41539952426) succeeded.
+- Scheduled watchdog run [#41548956773](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/41548956773) failed with `Staleness monitor unexpectedly ran too early`: its delayed execution crossed IST midnight and incorrectly targeted the **upcoming** 19:00 rather than the most recent 19:00.
+- Branch `fix/r2-watchdog-midnight-delay-20261103` corrects the target to the **most recent 19:00 IST** and removes the UTC-day restriction on run lookup, retaining a 10-minute early tolerance and three-hour grace period. Manual checks inside grace return cleanly without opening alerts. Tests cover the exact incident (late GitHub cron, after-midnight watchdog), the next day's rollover and genuinely missing runs.
+- **Status until merged/tested:** existing backup and R2 contents remain safe; alert timing correction is PR-only. No production database, auth, R2 secret, backup scheduler, encryption, or deletion rules are modified.
+- Preserve the existing append-only backups. **No automatic R2 retention deletion or 30-day pruning is enabled.** Verify first post-fix watchdog and GitHub Issue notification delivery. The GitHub-based watchdog cannot guarantee detection if GitHub scheduling is down; independent external heartbeat monitoring remains an optional later safeguard.
+- Next: CI checks -> explicit PR merge approval -> verify a scheduled/dispatch watchdog run with **no false alert**, then evaluate scheduling reliability and alert notification delivery. The observed 7 PM schedule delay does not imply a guaranteed start time.
+
 ## 2026-11-02 — Failure and missed-backup alerts (GitHub Issues)
 
 - New `insureit-r2-backup-monitor.yml` observes each completed backup run via `workflow_run` and independently checks for missing/failed 19:00 IST scheduled runs at **22:47 IST** daily (17:17 UTC). A manual monitor trigger is available.
