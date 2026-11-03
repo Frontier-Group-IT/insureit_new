@@ -116,11 +116,11 @@ export function VehicleWorkspace({ rows }: { rows: VehicleRow[] }) {
         <table className="w-full min-w-[820px] table-fixed text-left text-[11px] text-[#252944]">
           <thead className="sticky top-0 z-10 border-b border-[#E2E8F0] bg-[#F8FAFC] text-[9px] font-bold uppercase tracking-[0.06em] text-[#64748B]">
             <tr>
-              <th className="w-[180px] px-3 py-2 text-left">Vehicle</th>
-              <th className="w-[210px] px-2.5 py-2 text-center">Customer</th>
-              <th className="w-[190px] px-2.5 py-2 text-center">Make / model</th>
-              <th className="w-[140px] px-2.5 py-2 text-center">Registration</th>
-              <th className="w-[140px] px-2.5 py-2 text-center">Next action</th>
+              <th className="w-[180px] py-2 pl-[62px] pr-3 text-left">Vehicle</th>
+              <th className="w-[210px] px-2.5 py-2 text-left">">Customer</th></th>
+              <th className="w-[190px] px-2.5 py-2 text-left">">Make / model</th></th>
+              <th className="w-[140px] px-2.5 py-2 text-left">">Registration</th></th>
+              <th className="w-[140px] px-2.5 py-2 text-left">">Next action</th></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#EEF2F6]">
