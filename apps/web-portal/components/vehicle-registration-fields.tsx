@@ -7,6 +7,21 @@ import { displayVehicleRegistrationNumber } from "@/lib/vehicle-registration";
 export type VehicleRegistrationMode = "registered" | "unregistered";
 
 type RcLookupDetails = {
+  registeredOwnerName: string | null;
+  registeredAddress: string | null;
+  vehicleCategory: string | null;
+  bodyType: string | null;
+  manufactureDate: string | null;
+  rtoName: string | null;
+  rtoState: string | null;
+  unladenWeight: string | null;
+  standingCapacity: string | null;
+  sleeperCapacity: string | null;
+  wheelBase: string | null;
+  color: string | null;
+  normsType: string | null;
+  permitType: string | null;
+  blacklistStatus: string | null;
   registrationNumber: string;
   registrationDate: string | null;
   manufacturer: string | null;
