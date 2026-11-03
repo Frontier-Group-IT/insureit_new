@@ -22,6 +22,32 @@ class MonitorTests(unittest.TestCase):
         self.assertEqual(monitor.window_start(NOW),
                          dt.datetime(2026, 11, 2, 13, 20, tzinfo=UTC))
 
+    def test_cross_midnight_watchdog_targets_previous_evening(self):
+        # Observed on 3 Nov 2026 05:24 IST: GitHub cron began late,
+        # at 3 Nov 03:53 IST, from the 2 Nov 19:00 IST schedule.
+        delayed_watchdog = dt.datetime(2026, 11, 2, 23, 54, tzinfo=UTC)
+        self.assertEqual(monitor.latest_target(delayed_watchdog),
+                         dt.datetime(2026, 11, 2, 13, 30, tzinfo=UTC))
+        self.assertEqual(monitor.window_start(delayed_watchdog),
+                         dt.datetime(2026, 11, 2, 13, 20, tzinfo=UTC))
+        delayed_run = run("2026-11-02T22:23:29Z", "success")
+        self.assertEqual(monitor.scheduled_status([delayed_run], delayed_watchdog)[0],
+                         "success")
+
+    def test_new_evening_switches_nominal_target(self):
+        next_evening = dt.datetime(2026, 11, 3, 17, 17, tzinfo=UTC)
+        self.assertEqual(monitor.latest_target(next_evening),
+                         dt.datetime(2026, 11, 3, 13, 30, tzinfo=UTC))
+        prior_run = run("2026-11-02T22:23:29Z", "success")
+        self.assertEqual(monitor.scheduled_status([prior_run], next_evening)[0],
+                         "missing")
+
+    def test_delayed_run_after_utc_midnight_is_in_window(self):
+        next_morning = dt.datetime(2026, 11, 3, 2, 0, tzinfo=UTC)
+        delayed_run = run("2026-11-03T00:30:00Z", "success")
+        self.assertEqual(monitor.scheduled_status([delayed_run], next_morning)[0],
+                         "success")
+
     def test_missing_scheduled_run(self):
         self.assertEqual(monitor.scheduled_status([], NOW)[0], "missing")
 

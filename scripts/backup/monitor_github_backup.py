@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """GitHub Issues monitor for INSUREIT R2 backups. No Supabase/R2 secrets.
 
-Runs on backup workflow completion AND separately at 22:30 IST to detect
+Runs on backup workflow completion AND separately at 22:47 IST to detect
 scheduled backups that never started. One deduplicated issue; closes on recovery.
 """
 import datetime as dt
@@ -40,18 +40,25 @@ def api(method, path, token, payload=None):
         raise RuntimeError(f"GitHub API returned HTTP {exc.code} on {method}") from exc
 
 
-def window_start(now):
-    """Today's 19:00 IST (13:30 UTC), with 10-minute early tolerance."""
+def latest_target(now):
+    """Most recent 19:00 IST nominal backup, including after local midnight."""
     ist = now.astimezone(dt.timezone(dt.timedelta(hours=5, minutes=30)))
-    local = ist.replace(hour=19, minute=0, second=0, microsecond=0)
-    return local.astimezone(UTC) - dt.timedelta(minutes=10)
+    target = ist.replace(hour=19, minute=0, second=0, microsecond=0)
+    if ist < target:
+        target -= dt.timedelta(days=1)
+    return target.astimezone(UTC)
+
+
+def window_start(now):
+    """Start of target backup window, with 10-minute early tolerance."""
+    return latest_target(now) - dt.timedelta(minutes=10)
 
 
 def scheduled_status(runs, now):
     start = window_start(now)
     scheduled = [r for r in runs if r.get("event") == "schedule"
                  and r.get("head_branch") == "main"
-                 and iso(r["created_at"]) >= start]
+                 and start <= iso(r["created_at"]) <= now]
     scheduled.sort(key=lambda r: iso(r["created_at"]), reverse=True)
     if any(r.get("conclusion") == "success" and r.get("status") == "completed"
            for r in scheduled):
@@ -131,21 +138,22 @@ def main():
         return
     if event not in ("schedule", "workflow_dispatch"):
         raise RuntimeError("Unsupported trigger")
-    # Allow manual tests before evening without false alarms.
-    if event == "schedule" and now < window_start(now) + dt.timedelta(hours=3):
-        raise RuntimeError("Staleness monitor unexpectedly ran too early")
-    # Query only today's runs; bounded API request with no production secrets.
-    day = now.date().isoformat()
-    query = urllib.parse.urlencode({"branch": "main", "created": day, "per_page": 100})
+    # The watchdog itself may be delayed beyond midnight IST.
+    target = latest_target(now)
+    if now < target + dt.timedelta(hours=3):
+        print("Nominal backup still within grace period; no alert.", flush=True)
+        return
+    # No UTC-calendar-day restriction: a delayed run can cross midnight.
+    query = urllib.parse.urlencode({"branch": "main", "per_page": 100})
     runs = api("GET", f"/repos/{repo}/actions/workflows/{WORKFLOW}/runs?{query}",
                token).get("workflow_runs", [])
     status, run = scheduled_status(runs, now)
     if status == "success":
         recover(repo, token)
-        print("Today's scheduled backup succeeded")
+        print(f"Nominal backup target {target.isoformat()} succeeded")
     else:
         url = run.get("html_url") if run else None
-        alert(repo, token, f"19:00 IST scheduled run status at watchdog check: {status}",
+        alert(repo, token, f"19:00 IST target {target.isoformat()} status at watchdog check: {status}",
               url)
 
 
