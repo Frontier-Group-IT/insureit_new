@@ -16,6 +16,7 @@
 - Motor onboard/create/replacement/intake and edit: `save_motor_policy_with_date_approval_v1` wrapper, requiring single-use verified grant consumed **in the same DB transaction** as the existing canonical motor-save RPC.
 - Non-Motor create/edit: server-side approval preflight and one-time atomic claim before saving; audit event after successful policy workflow.
 - Life/Health policy issuance/conversion: server-side one-time approval preflight; proposals themselves unchanged.
+- Issued Life/Health policy edit: changing the issuance date to a restricted earlier month requires new OTP; unchanged historical dates stay editable.
 - Activity Status: `previous_month_policy_uploaded` event with uploaded-by, date and OTP approver (when required).
 
 ## Required deployment configuration (NOT in repo)
