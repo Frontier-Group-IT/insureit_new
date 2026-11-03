@@ -8,6 +8,7 @@ on:
       - '.github/workflows/insureit-r2-restore-verify.yml'
       - '.github/workflows/verify-r2-backup-static.yml'
       - '.github/workflows/insureit-r2-backup-monitor.yml'
+      - '.github/workflows/insureit-postgres-r2-manual.yml'
   workflow_dispatch:
 
 permissions:
@@ -23,7 +24,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install boto3==1.35.99 cryptography==44.0.2 pyyaml==6.0.2
-      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py
+      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/postgres_to_r2.py
       - run: python -m unittest discover -s scripts/backup -p 'test_*.py' -v
       - name: Validate workflow safety guard
         run: |
@@ -56,5 +57,16 @@ jobs:
           assert monitor['permissions']['contents'] == 'read'
           assert 'secrets.' not in str(monitor), 'No production secrets in alert workflow'
           assert monitor['jobs']['monitor']['if'] == "github.ref == 'refs/heads/main'"
-          print('Scheduled backup + alert monitor safety guards verified')
+          pg = yaml.safe_load(pathlib.Path('.github/workflows/insureit-postgres-r2-manual.yml').read_text())
+          pg_triggers = pg.get('on', pg.get(True, {}))
+          assert 'workflow_dispatch' in pg_triggers
+          assert 'schedule' not in pg_triggers, 'PostgreSQL backup cannot schedule before restore test'
+          job = pg['jobs']['postgres_backup']
+          assert 'refs/heads/main' in job['if']
+          assert job['environment'] == 'insureit-production-backup'
+          assert pg['permissions']['contents'] == 'read'
+          assert 'supabase db dump' in str(job['steps'])
+          assert 'postgres_to_r2.py' in str(job['steps'])
+          assert any(step.get('env', {}).get('R2_BUCKET') == 'insureit-production-backups' for step in job['steps'])
+          print('Scheduled document backup + PostgreSQL manual gate + monitor guards verified')
           PY
