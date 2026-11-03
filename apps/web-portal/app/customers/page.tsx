@@ -23,13 +23,17 @@ type CustomerRow = {
   onboarding_status: string;
   vehicles: { count: number }[];
   policies: { count: number }[];
+  external_policies: { count: number }[];
   claims: { count: number }[];
 };
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function CustomersPage() {
+export default async function CustomersPage({ searchParams }: { searchParams: Promise<{ segment?: string }> }) {
+  const { segment } = await searchParams;
+  const isExternalRegister = segment === "external";
+  const registerTitle = isExternalRegister ? "External Customer" : "Internal Customer";
   const startedAt = performance.now();
   const profile = await requireCapability("view_customers");
   const afterAuth = performance.now();
@@ -48,8 +52,8 @@ export default async function CustomersPage() {
       total_ms: finishedAt - startedAt,
     });
     return (
-      <AppShell title="Customers">
-        {profile.role === "backoffice_executive" ? <div className="mx-auto max-w-[1480px]"><BackofficeCustomerRegister rows={[]} /></div> : <><DealershipEntryActivator /><div className="mx-auto max-w-[1480px]"><CustomerWorkspace rows={[]} /></div></>}
+      <AppShell title={registerTitle}>
+        {profile.role === "backoffice_executive" ? <div className="mx-auto max-w-[1480px]"><BackofficeCustomerRegister rows={[]} title={registerTitle} /></div> : <><DealershipEntryActivator /><div className="mx-auto max-w-[1480px]"><CustomerWorkspace rows={[]} title={registerTitle} /></div></>}
       </AppShell>
     );
   }
@@ -57,7 +61,7 @@ export default async function CustomersPage() {
   const customersResult = await fetchAllPages<CustomerRow, unknown>((from, to) => {
     let request = admin
       .from("customers")
-      .select("id, customer_code, partner_type, company_name, contact_name, phone, city, fleet_size_band, onboarding_status, vehicles:vehicles!vehicles_customer_id_fkey(count), policies(count), claims(count)")
+      .select("id, customer_code, partner_type, company_name, contact_name, phone, city, fleet_size_band, onboarding_status, vehicles:vehicles!vehicles_customer_id_fkey(count), policies(count), external_policies:external_policies!external_policies_customer_id_fkey(count), claims(count)")
       .order("created_at", { ascending: false })
       .range(from, to);
     if (accessibleIds !== null) request = request.in("id", accessibleIds);
@@ -72,8 +76,15 @@ export default async function CustomersPage() {
   });
   // Remove full customer mobile numbers from the RM server-rendered payload,
   // including client-side search, exports, clipboard, and the register table.
-  const rows: CustomerRow[] = (customersResult.data ?? []).map((customer) => ({
+  const rows: CustomerRow[] = (customersResult.data ?? [])
+    .filter((customer) => {
+      const hasInternalPolicy = (customer.policies?.[0]?.count ?? 0) > 0;
+      const hasExternalPolicy = (customer.external_policies?.[0]?.count ?? 0) > 0;
+      return isExternalRegister ? hasExternalPolicy && !hasInternalPolicy : hasInternalPolicy || !hasExternalPolicy;
+    })
+    .map((customer) => ({
     ...customer,
+    policies: isExternalRegister ? customer.external_policies : customer.policies,
     phone: profile.role === "relationship_manager"
       ? customer.phone.replace(/\d(?=\d{4,})/g, "•")
       : customer.phone,
@@ -97,9 +108,9 @@ export default async function CustomersPage() {
         {customersResult.error ? (
           <DataError message="The customer register could not be loaded." />
         ) : profile.role === "backoffice_executive" ? (
-          <BackofficeCustomerRegister rows={rows} />
+          <BackofficeCustomerRegister rows={rows} title={registerTitle} />
         ) : (
-          <CustomerWorkspace rows={rows} />
+          <CustomerWorkspace rows={rows} title={registerTitle} />
         )}
       </div>
     </AppShell>
