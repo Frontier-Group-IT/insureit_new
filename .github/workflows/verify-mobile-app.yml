@@ -131,6 +131,9 @@ jobs:
       - name: Customer Start Claim full-field vehicle selector regression
         run: node apps/mobile-app/scripts/customer-start-claim-full-field-selector-regression.mjs
 
+      - name: Customer Start Claim iOS reference typography regression
+        run: node apps/mobile-app/scripts/customer-start-claim-ios-typography-regression.mjs
+
       - name: Customer Start Claim manufacturer logo regression
         run: node apps/mobile-app/scripts/customer-start-claim-manufacturer-logo-regression.mjs
 
