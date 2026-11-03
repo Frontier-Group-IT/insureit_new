@@ -233,13 +233,30 @@ export default function StartClaimScreen() {
 
   return (
     <Screen title="Start Claim" showTitleHeader={false} showBackNavigation={false} topSpacing="tight">
-      <View style={styles.hero} onTouchStart={() => console.warn('[claim-navigation] touch-region', { region: 'hero' })}>
-        <View style={styles.heroCopy}>
-          <Text style={styles.eyebrow}>START A CLAIM</Text>
-          <Text style={styles.title}>Select the vehicle</Text>
-          <Text style={styles.subtitle}>Choose the vehicle involved and we’ll use its active policy.</Text>
-        </View>
-        <Image accessible={false} source={require('../../assets/brand/start-claim/start-claim-hero.png')} style={styles.heroArtwork} resizeMode="contain" />
+      <View style={[styles.hero, Platform.OS === 'ios' && styles.iosHero]} onTouchStart={() => console.warn('[claim-navigation] touch-region', { region: 'hero' })}>
+        {Platform.OS === 'ios' ? (
+          <>
+            <View style={styles.iosHeroTopRow}>
+              <View style={styles.heroCopy}>
+                <Text style={styles.eyebrow}>START A CLAIM</Text>
+                <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>Select the vehicle</Text>
+              </View>
+              <Image accessible={false} source={require('../../assets/brand/start-claim/start-claim-hero.png')} style={[styles.heroArtwork, styles.iosHeroArtwork]} resizeMode="contain" />
+            </View>
+            <Text style={[styles.subtitle, styles.iosSubtitle]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+              Choose the vehicle involved and we’ll use its active policy.
+            </Text>
+          </>
+        ) : (
+          <>
+            <View style={styles.heroCopy}>
+              <Text style={styles.eyebrow}>START A CLAIM</Text>
+              <Text style={styles.title}>Select the vehicle</Text>
+              <Text style={styles.subtitle}>Choose the vehicle involved and we’ll use its active policy.</Text>
+            </View>
+            <Image accessible={false} source={require('../../assets/brand/start-claim/start-claim-hero.png')} style={styles.heroArtwork} resizeMode="contain" />
+          </>
+        )}
       </View>
 
       {message ? <Message type="error">{message}</Message> : null}
@@ -567,11 +584,15 @@ function policyCondition(endDate: string): PolicyCondition { const days = daysUn
 
 const styles = StyleSheet.create({
   hero: { minHeight: 126, marginHorizontal: 0, marginBottom: 2, flexDirection: 'row', alignItems: 'flex-start' },
+  iosHero: { flexDirection: 'column', minHeight: 0, marginBottom: 10 },
+  iosHeroTopRow: { flexDirection: 'row', alignItems: 'flex-start', minHeight: 90 },
   heroCopy: { flex: 1, minWidth: 0, paddingHorizontal: 0, paddingTop: 12, paddingBottom: 4, paddingRight: 4 },
   eyebrow: { color: '#145ED7', fontSize: 10, fontWeight: Platform.OS === 'ios' ? '400' : '900', letterSpacing: 0.55 },
-  title: { color: palette.navy, fontSize: 23, lineHeight: 27, fontWeight: Platform.OS === 'ios' ? '500' : '900', marginTop: 2 },
-  subtitle: { color: '#68778D', fontSize: 10, lineHeight: 14, fontWeight: Platform.OS === 'ios' ? '500' : '600', marginTop: 4, maxWidth: 190 },
+  title: { color: palette.navy, fontSize: Platform.OS === 'ios' ? 13.5 : 23, lineHeight: Platform.OS === 'ios' ? 19 : 27, fontWeight: Platform.OS === 'ios' ? '500' : '900', marginTop: 2 },
+  subtitle: { color: '#68778D', fontSize: Platform.OS === 'ios' ? 9.5 : 10, lineHeight: 14, fontWeight: Platform.OS === 'ios' ? '400' : '600', marginTop: 4, maxWidth: 190 },
+  iosSubtitle: { maxWidth: '100%', marginTop: 0, fontWeight: '400' },
   heroArtwork: { width: '46%', height: 122, marginTop: -2, marginRight: -4 },
+  iosHeroArtwork: { width: '42%', height: 94, marginTop: -2 },
   section: { marginBottom: 14 },
   vehicleSection: { marginTop: -2 },
   sectionHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 },
