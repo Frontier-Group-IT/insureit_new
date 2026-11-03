@@ -61,7 +61,7 @@ def verify_file(encrypted, key, expected):
         nonce = f.read(12)
         f.seek(-16, os.SEEK_END)
         tag = f.read(16)
-        length = f.tell() - 16 - len(MAGIC) - 12
+        length = f.tell() - len(MAGIC) - 12
         f.seek(len(MAGIC) + 12)
         dec = Cipher(algorithms.AES(key), modes.GCM(nonce, tag)).decryptor()
         digest = hashlib.sha256()
