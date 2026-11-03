@@ -73,6 +73,8 @@ jobs:
         run: node scripts/exchange-it-visibility-regression.mjs
       - name: Associate deletion confirmation regression
         run: node scripts/associate-delete-confirmation-regression.mjs
+      - name: Branch management single error feedback regression
+        run: node scripts/branch-management-error-popup-isolation-regression.mjs
       - name: Associate Accounts single error dialog regression
         run: node scripts/associate-error-popup-isolation-regression.mjs
       - name: Associate Accounts portal menu interaction regression
