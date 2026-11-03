@@ -199,7 +199,7 @@ assert(policyForm.includes('const isCpmClass=form.vehicleClass.trim().toUpperCas
 assert(policyForm.includes('cpaOpted:isCpmClass?false'));
 
 assert(policyForm.includes('? <BlockedPremiumField label="TP premium"/>'));
-assert(policyForm.includes(': <Field label="TP premium" type="number" min="0" value={form.tp}'));
+assert(policyForm.includes(': <Field label="TP premium" type="number" min="0" step="any" value={form.tp}'));
 assert(policyForm.includes('? <BlockedPremiumField label="CPA amount"/>'));
 
 assert(policyForm.includes('function BlockedPremiumField({label}:{label:string})'));
