@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Platform, MaterialCommunityIcons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import * as Updates from 'expo-updates';
@@ -131,23 +131,23 @@ const styles = StyleSheet.create({
   backButton: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   headerIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF5FF' },
   headerCopy: { flex: 1, minWidth: 0 },
-  eyebrow: { color: roleTheme.customer.accent, fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
-  title: { marginTop: 2, color: palette.ink, fontSize: 20, lineHeight: 25, fontWeight: '900' },
-  sectionLabel: { marginTop: 34, marginBottom: 10, color: '#6F7C90', fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
+  eyebrow: { color: roleTheme.customer.accent, fontSize: 10, fontWeight: Platform.OS === 'ios' ? '600' : '900', letterSpacing: 1.4 },
+  title: { marginTop: 2, color: palette.ink, fontSize: 20, lineHeight: 25, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  sectionLabel: { marginTop: 34, marginBottom: 10, color: '#6F7C90', fontSize: 10, fontWeight: Platform.OS === 'ios' ? '600' : '900', letterSpacing: 1.4 },
   card: { overflow: 'hidden', borderRadius: 20, borderWidth: 1, borderColor: '#E0E6EE', backgroundColor: '#FFFFFF' },
   securityRow: { minHeight: 82, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 10 },
   rowIcon: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1EDFF' },
   rowCopy: { flex: 1, minWidth: 0 },
-  rowTitle: { color: palette.ink, fontSize: 14, fontWeight: '900' },
-  rowSubtitle: { marginTop: 4, color: palette.slate, fontSize: 11.5, lineHeight: 16, fontWeight: '700' },
+  rowTitle: { color: palette.ink, fontSize: 14, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  rowSubtitle: { marginTop: 4, color: palette.slate, fontSize: 11.5, lineHeight: 16, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
   infoRow: { minHeight: 61, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16 },
-  infoLabel: { color: palette.slate, fontSize: 12, fontWeight: '700' },
-  infoValue: { flex: 1, color: palette.ink, textAlign: 'right', fontSize: 12.5, fontWeight: '900' },
+  infoLabel: { color: palette.slate, fontSize: 12, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
+  infoValue: { flex: 1, color: palette.ink, textAlign: 'right', fontSize: 12.5, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E8EDF3' },
   updateCard: { minHeight: 70, marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: '#E0E6EE', backgroundColor: '#FFFFFF' },
   updateIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF5FF' },
-  updateTitle: { flex: 1, color: palette.ink, fontSize: 14, fontWeight: '900' },
-  message: { marginTop: 8, paddingHorizontal: 4, color: palette.slate, fontSize: 11, lineHeight: 16, fontWeight: '700' },
+  updateTitle: { flex: 1, color: palette.ink, fontSize: 14, fontWeight: Platform.OS === 'ios' ? '600' : '900' },
+  message: { marginTop: 8, paddingHorizontal: 4, color: palette.slate, fontSize: 11, lineHeight: 16, fontWeight: Platform.OS === 'ios' ? '600' : '700' },
   pressed: { opacity: 0.82 },
   disabled: { opacity: 0.58 },
 });
