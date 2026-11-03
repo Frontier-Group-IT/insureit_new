@@ -1,6 +1,6 @@
 "use server";
 
-import { createHmac, randomInt, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHmac, randomInt, randomUUID } from "node:crypto";
 import { requirePolicyCreator, requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { policyDateDecision, POLICY_DATE_APPROVERS } from "@/lib/policy-date-rule";
@@ -104,33 +104,17 @@ export async function verifyPolicyDateApproval(
       return { ok: false, error: "Enter the six-digit code sent to the approver." };
     }
     const admin = createSupabaseAdminClient();
-    const { data: record, error } = await admin.from(TABLE)
-      .select("id,requester_id,code_hash,attempts,delivered_at,expires_at,verified_at,consumed_at,issuance_date,policy_number,operation,existing_policy_id")
-      .eq("id", approvalId).eq("requester_id", profile.id).maybeSingle();
-    if (error || !record) return { ok: false, error: "This approval request is no longer available. Request a new OTP." };
-    if (record.issuance_date !== input.issuanceDate ||
-      record.policy_number !== input.policyNumber.trim().toUpperCase() ||
-      record.operation !== input.operation ||
-      (record.existing_policy_id ?? null) !== (input.existingPolicyId ?? null)) {
-      return { ok: false, error: "Policy details changed. Request a fresh approval." };
-    }
-    if (!record.delivered_at || record.consumed_at || record.verified_at ||
-      new Date(record.expires_at).getTime() <= Date.now() || record.attempts >= 5) {
-      return { ok: false, error: "This code is expired or already used. Request a new OTP." };
-    }
-    const received = Buffer.from(otpHash(approvalId, otp), "hex");
-    const expected = Buffer.from(record.code_hash, "hex");
-    if (received.length !== expected.length || !timingSafeEqual(received, expected)) {
-      await admin.from(TABLE).update({ attempts: record.attempts + 1 })
-        .eq("id", approvalId).eq("attempts", record.attempts).is("verified_at", null);
-      return { ok: false, error: "The code doesn't match. Please check the email and try again." };
-    }
-    const { data: verified, error: updateError } = await admin.from(TABLE)
-      .update({ verified_at: new Date().toISOString() })
-      .eq("id", approvalId).eq("requester_id", profile.id)
-      .eq("attempts", record.attempts).is("verified_at", null)
-      .select("id").maybeSingle();
-    if (updateError || !verified) return { ok: false, error: "Couldn't verify the code. Please request a fresh OTP." };
+    const { data: verified, error } = await admin.rpc("verify_policy_date_otp_v1", {
+      p_approval_id: approvalId,
+      p_requester: profile.id,
+      p_supplied_hash: otpHash(approvalId, otp),
+      p_date: input.issuanceDate,
+      p_policy_number: input.policyNumber,
+      p_operation: input.operation,
+      p_existing_policy_id: input.existingPolicyId ?? null,
+    });
+    if (error) return { ok: false, error: "Couldn't verify approval right now. Please try again." };
+    if (verified !== true) return { ok: false, error: "The code is incorrect, expired, already used, or doesn't match this policy. Check the email or request a new OTP." };
     return { ok: true };
   } catch {
     return { ok: false, error: "Approval verification is unavailable. Please try again." };
