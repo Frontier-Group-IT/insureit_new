@@ -232,7 +232,7 @@ export function PolicySaveConfirmation() {
         }
         pendingUploadFile.current = fileToUpload;
         setUploadNotice({ tone: "error", message: result.error });
-      })    }).catch(() => {
+      }).catch(() => {
         setUploadNotice({ tone: "error", message: "Policy was saved, but the policy copy upload failed. You can retry without creating another policy." });
       });
     }).catch(() => {
@@ -326,7 +326,7 @@ export function PolicySaveConfirmation() {
         return;
       }
       setUploadNotice({ tone: "error", message: result.error });
-    })    }).catch(() => {
+    }).catch(() => {
       setUploadNotice({ tone: "error", message: "Policy copy upload failed again. The policy itself is already saved." });
     });
   }
