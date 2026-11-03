@@ -2,13 +2,14 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Card, EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { getInsurerLogoSource } from '@/lib/catalog-logos';
 import { getOperationalCustomerContexts } from '@/lib/customer-context';
 import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
+import { customerInsurerDisplayName } from '@/lib/customer-insurer-display';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany } from '@/lib/types';
@@ -273,7 +274,7 @@ export default function CustomerLifeHealthPolicyDetailScreen() {
 
         <Text style={styles.detailGroupLabel}>Policy information</Text>
         <View style={styles.detailGrid}>
-          <DetailCell icon="office-building-outline" label="Insurer" value={company?.name ?? null} logo={getInsurerLogoSource(company?.name)} />
+          <DetailCell icon="office-building-outline" label="Insurer" value={customerInsurerDisplayName(company?.name) || null} logo={getInsurerLogoSource(company?.name)} />
           <DetailCell icon="shield-star-outline" label="Policy product" value={product} />
           <DetailCell icon="identifier" label="Policy number" value={displayPolicyNumber} />
           <DetailCell icon="file-sign" label="Proposal number" value={details?.proposal_number} />
@@ -399,30 +400,30 @@ function policyStatusTone(value: string): 'green' | 'orange' | 'red' {
 
 const styles = StyleSheet.create({
   pageHeaderRow: { marginBottom: 8 },
-  pageTitle: { color: palette.navy, fontSize: 21, fontWeight: '900' },
+  pageTitle: { color: palette.navy, fontSize: 21, fontWeight: Platform.OS === 'ios' ? '500' : '900' },
   detailSection: { borderRadius: 22, padding: 16, gap: 0 },
   sectionRow: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingBottom: 12 },
   detailIcon: { width: 43, height: 43, borderRadius: 14, backgroundColor: '#EEF5FC', alignItems: 'center', justifyContent: 'center' },
   sectionCopy: { flex: 1 },
-  sectionTitle: { color: palette.navy, fontSize: 17, fontWeight: '900' },
-  sectionHint: { marginTop: 2, color: '#667589', fontSize: 12.5, fontWeight: '600' },
+  sectionTitle: { color: palette.navy, fontSize: 17, fontWeight: Platform.OS === 'ios' ? '500' : '900' },
+  sectionHint: { marginTop: 2, color: '#667589', fontSize: 12.5, fontWeight: Platform.OS === 'ios' ? '400' : '600' },
   statusPill: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5 },
-  statusText: { fontSize: 10, fontWeight: '900' },
-  detailGroupLabel: { color: '#0A43A3', fontSize: 12, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5, paddingTop: 13, paddingBottom: 5 },
+  statusText: { fontSize: 10, fontWeight: Platform.OS === 'ios' ? '400' : '900' },
+  detailGroupLabel: { color: '#0A43A3', fontSize: 12, fontWeight: Platform.OS === 'ios' ? '500' : '900', textTransform: 'uppercase', letterSpacing: 0.5, paddingTop: 13, paddingBottom: 5 },
   detailGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   detailCell: { width: '50%', minHeight: 74, flexDirection: 'row', alignItems: 'flex-start', gap: 9, paddingVertical: 13, paddingHorizontal: 2, borderBottomWidth: 1, borderBottomColor: '#E4EAF1' },
   detailCellLogo: { width: 19, height: 19 },
   detailCopy: { flex: 1, paddingRight: 7 },
-  detailLabel: { color: '#6B7889', fontSize: 10.5, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.25 },
-  detailValue: { marginTop: 4, color: palette.navy, fontSize: 13.5, lineHeight: 18, fontWeight: '800' },
+  detailLabel: { color: '#6B7889', fontSize: 10.5, fontWeight: Platform.OS === 'ios' ? '500' : '800', textTransform: 'uppercase', letterSpacing: 0.25 },
+  detailValue: { marginTop: 4, color: palette.navy, fontSize: 13.5, lineHeight: 18, fontWeight: Platform.OS === 'ios' ? '500' : '800' },
   noteBox: { minHeight: 54, flexDirection: 'row', gap: 9, alignItems: 'flex-start', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#E4EAF1' },
-  noteText: { flex: 1, color: palette.navy, fontSize: 13, lineHeight: 18, fontWeight: '700' },
+  noteText: { flex: 1, color: palette.navy, fontSize: 13, lineHeight: 18, fontWeight: Platform.OS === 'ios' ? '400' : '700' },
   documentList: { borderTopWidth: 1, borderTopColor: '#E4EAF1' },
   documentRow: { minHeight: 61, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: 1, borderBottomColor: '#E4EAF1', paddingVertical: 9, paddingHorizontal: 2 },
   documentRowPressed: { opacity: 0.72 },
   documentCopy: { flex: 1 },
-  documentLabel: { color: '#6B7889', fontSize: 10.5, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.25 },
-  documentValue: { marginTop: 3, color: palette.navy, fontSize: 12.5, fontWeight: '800' },
-  documentValueMuted: { color: '#8B97A6', fontWeight: '700' },
-  uploadMessage: { marginTop: 8, color: '#C43838', fontSize: 12, fontWeight: '700' },
+  documentLabel: { color: '#6B7889', fontSize: 10.5, fontWeight: Platform.OS === 'ios' ? '500' : '800', textTransform: 'uppercase', letterSpacing: 0.25 },
+  documentValue: { marginTop: 3, color: palette.navy, fontSize: 12.5, fontWeight: Platform.OS === 'ios' ? '500' : '800' },
+  documentValueMuted: { color: '#8B97A6', fontWeight: Platform.OS === 'ios' ? '500' : '700' },
+  uploadMessage: { marginTop: 8, color: '#C43838', fontSize: 12, fontWeight: Platform.OS === 'ios' ? '400' : '700' },
 });

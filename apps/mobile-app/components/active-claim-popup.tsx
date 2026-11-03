@@ -1,14 +1,16 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 export function ActiveClaimPopup({
   visible,
   onViewClaim,
   onCancel,
+  customerIosText = false,
 }: {
   visible: boolean;
   onViewClaim: () => void;
   onCancel: () => void;
+  customerIosText?: boolean;
 }) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
@@ -17,13 +19,13 @@ export function ActiveClaimPopup({
           <View style={styles.icon}>
             <MaterialCommunityIcons name="alert-outline" size={24} color="#E66A4E" />
           </View>
-          <Text style={styles.title}>Claim already in progress</Text>
-          <Text style={styles.body}>An active claim already exists for this policy.</Text>
+          <Text style={[styles.title, customerIosText && Platform.OS === 'ios' && styles.customerIosText]}>Claim already in progress</Text>
+          <Text style={[styles.body, customerIosText && Platform.OS === 'ios' && styles.customerIosText]}>An active claim already exists for this policy.</Text>
           <Pressable accessibilityRole="button" onPress={onViewClaim} style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>View Existing Claim</Text>
+            <Text style={[styles.primaryButtonText, customerIosText && Platform.OS === 'ios' && styles.customerIosText]}>View Existing Claim</Text>
           </Pressable>
           <Pressable accessibilityRole="button" onPress={onCancel} style={styles.secondaryButton}>
-            <Text style={styles.secondaryButtonText}>Cancel</Text>
+            <Text style={[styles.secondaryButtonText, customerIosText && Platform.OS === 'ios' && styles.customerIosText]}>Cancel</Text>
           </Pressable>
         </View>
       </View>
@@ -32,6 +34,7 @@ export function ActiveClaimPopup({
 }
 
 const styles = StyleSheet.create({
+  customerIosText: { fontWeight: '400' },
   backdrop: {
     flex: 1,
     alignItems: 'center',

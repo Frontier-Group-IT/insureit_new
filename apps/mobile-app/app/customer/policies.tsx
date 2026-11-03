@@ -11,6 +11,7 @@ import { getOperationalCustomerContexts } from '@/lib/customer-context';
 import { getInsurerLogoSource, getVehicleBrandLogoSource, getVehicleBrandSvgAssetPath } from '@/lib/catalog-logos';
 import { supabase } from '@/lib/supabase';
 import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
+import { customerInsurerDisplayName } from '@/lib/customer-insurer-display';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
 
@@ -336,7 +337,7 @@ export default function PoliciesScreen() {
                 kind={lifeHealthKind}
                 insurerLogo={insurerLogo}
                 insurerLogoUrl={insurerLogoUrl}
-                companyName={company?.name ?? '-'}
+                companyName={customerInsurerDisplayName(company?.name) || '-'}
                 toneColor={colors.accent}
               />
             ) : (
@@ -346,7 +347,7 @@ export default function PoliciesScreen() {
                   remoteLogoUrl={insurerLogoUrl}
                   fallbackIcon="shield-outline"
                   primaryValue={policy.source === 'external' ? formatExternalPolicyNumber(policy.policy_no) : policy.policy_no}
-                  secondaryValue={company?.name ?? '-'}
+                  secondaryValue={customerInsurerDisplayName(company?.name) || '-'}
                   tertiaryValue={formatDate(policy.end_date)}
                   tertiaryDotColor={colors.accent}
                 />
@@ -536,7 +537,7 @@ function PolicySummaryColumn({
       </View>
       <View style={styles.summaryCopy}>
         <Text style={styles.summaryPrimary} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.65}>{primaryValue}</Text>
-        <Text style={styles.summarySecondary} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.75}>{secondaryValue}</Text>
+        <Text style={styles.summarySecondary} numberOfLines={1}>{secondaryValue}</Text>
         <View style={styles.summaryTertiaryRow}>
           <Text style={[styles.summaryTertiary, tertiaryMuted && styles.summaryTertiaryMuted]} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.78}>{tertiaryValue}</Text>
           {tertiaryDotColor ? <View style={[styles.expiryDot, { backgroundColor: tertiaryDotColor }]} /> : null}
@@ -698,7 +699,7 @@ const styles = StyleSheet.create({
   catalogIcon: { width: Platform.OS === 'ios' ? 31 : 34, height: Platform.OS === 'ios' ? 31 : 34 },
   summaryCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
   summaryPrimary: { color: palette.ink, fontSize: Platform.OS === 'ios' ? 11.3 : 12.4, lineHeight: 16, fontWeight: Platform.OS === 'ios' ? '500' : '900' },
-  summarySecondary: { color: palette.ink, fontSize: Platform.OS === 'ios' ? 10 : 10.8, lineHeight: 14, fontWeight: Platform.OS === 'ios' ? '400' : '800', marginTop: 2 },
+  summarySecondary: { color: palette.ink, fontSize: Platform.OS === 'ios' ? 11 : 10.8, lineHeight: 15, fontWeight: Platform.OS === 'ios' ? '400' : '800', marginTop: 2 },
   summaryTertiaryRow: { marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
   summaryTertiary: { color: '#64748B', fontSize: 10.4, lineHeight: 13, fontWeight: Platform.OS === 'ios' ? '400' : '700', flexShrink: 1 },
   summaryTertiaryMuted: { color: '#97A2B2', fontWeight: Platform.OS === 'ios' ? '400' : '700' },

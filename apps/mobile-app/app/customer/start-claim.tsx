@@ -12,6 +12,7 @@ import { customerAccountTitle, getOperationalCustomerContexts, type CustomerAcco
 import { supabase } from '@/lib/supabase';
 import { getInsurerLogoSource, getVehicleBrandLogoSource } from '@/lib/catalog-logos';
 import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
+import { customerInsurerDisplayName } from '@/lib/customer-insurer-display';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
 
@@ -311,7 +312,7 @@ export default function StartClaimScreen() {
                 <View style={styles.policyCopy}>
                   <Text style={[styles.policyMode, styles.policyModeCompact]}>{selectedPolicy.source === 'external' ? 'SELF TRACKED CLAIM' : 'SANKALP MANAGED CLAIM'}</Text>
                   <Text style={[styles.policyNo, styles.policyNoCompact]}>{selectedPolicy.source === 'external' ? formatExternalPolicyNumber(selectedPolicy.policy_no) : selectedPolicy.policy_no}</Text>
-                  <Text style={[styles.policyInsurer, styles.policyInsurerCompact]}>{selectedInsurer?.name ?? 'Insurance company'} · {selectedPolicy.policy_type}</Text>
+                  <Text style={[styles.policyInsurer, styles.policyInsurerCompact]} numberOfLines={Platform.OS === 'ios' ? 1 : undefined}>{customerInsurerDisplayName(selectedInsurer?.name) || 'Insurance company'} · {selectedPolicy.policy_type}</Text>
                   <Text style={[styles.policyDates, styles.policyDatesCompact]}>{formatDate(selectedPolicy.start_date)} – {formatDate(selectedPolicy.end_date)}</Text>
                 </View>
                 <PolicyStatusPulse condition={selectedPolicyCondition ?? 'active'} />
@@ -324,6 +325,7 @@ export default function StartClaimScreen() {
       </View>
 
       <ClaimActionBar
+        customerIosText
         primaryDisabled={!selectedVehicle || checkingActiveClaim}
         primaryLabel={checkingActiveClaim ? 'Checking...' : 'Start Claim'}
         primaryIcon="arrow-right"
@@ -332,6 +334,7 @@ export default function StartClaimScreen() {
       />
 
       <ActiveClaimPopup
+        customerIosText
         visible={Boolean(existingActiveClaimId)}
         onViewClaim={viewExistingClaim}
         onCancel={() => setExistingActiveClaimId('')}
@@ -415,7 +418,7 @@ function PolicyStatusPulse({ condition }: { condition: PolicyCondition }) {
 }
 
 function ChoiceChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" accessibilityState={{ selected: active }} onPress={onPress} style={[styles.chip, active && styles.chipActive]}><Text numberOfLines={1} style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text></Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityState={{ selected: active }} onPress={onPress} style={[styles.chip, active && styles.chipActive]}><Text numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.82} style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text></Pressable>;
 }
 
 function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQueryChange, onSelect }: { vehicles: Vehicle[]; query: string; selectedVehicle: Vehicle | null; open: boolean; onToggle: () => void; onQueryChange: (value: string) => void; onSelect: (vehicle: Vehicle) => void }) {
@@ -544,8 +547,8 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
                 style={[styles.makeOption, selectedVehicle?.id === vehicle.id && styles.selectOptionActive]}
               >
                 <View style={styles.vehicleOptionCopy}>
-                  <Text style={[styles.selectOptionText, selectedVehicle?.id === vehicle.id && styles.selectOptionTextActive]} numberOfLines={1}>{vehicle.vehicle_no}</Text>
-                  <Text style={styles.optionMeta} numberOfLines={1}>{[vehicle.make, vehicle.model].filter(Boolean).join(' · ') || vehicle.vehicle_type}</Text>
+                  <Text style={[styles.selectOptionText, selectedVehicle?.id === vehicle.id && styles.selectOptionTextActive]} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.8}>{vehicle.vehicle_no}</Text>
+                  <Text style={styles.optionMeta} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.85}>{[vehicle.make, vehicle.model].filter(Boolean).join(' · ') || vehicle.vehicle_type}</Text>
                 </View>
                 {selectedVehicle?.id === vehicle.id ? <MaterialCommunityIcons name="check-circle" size={17} color="#0A43A3" /> : null}
               </Pressable>

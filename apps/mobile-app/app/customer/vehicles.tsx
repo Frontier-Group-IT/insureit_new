@@ -8,6 +8,7 @@ import type { ImageSourcePropType } from 'react-native';
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { getInsurerLogoSource } from '@/lib/catalog-logos';
+import { customerInsurerDisplayName } from '@/lib/customer-insurer-display';
 import { getOperationalCustomerContexts, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
@@ -185,10 +186,10 @@ export default function VehiclesScreen() {
           <View style={styles.titleRow}>
             <Text style={styles.pageTitle}>My Vehicles</Text>
             <View style={styles.countBadge}>
-              <Text style={styles.countBadgeText}>{vehicles.length} Vehicle{vehicles.length === 1 ? '' : 's'}</Text>
+              <Text style={styles.countBadgeText}>{Platform.OS === 'ios' ? vehicles.length : `${vehicles.length} Vehicle${vehicles.length === 1 ? '' : 's'}`}</Text>
             </View>
           </View>
-          <Text style={styles.pageSub}>Manage your vehicle insurance policies</Text>
+          <Text style={styles.pageSub} numberOfLines={Platform.OS === 'ios' ? 1 : undefined} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.8}>Manage your vehicle insurance policies</Text>
         </View>
 
         <Pressable accessibilityRole="button" onPress={openAddVehicle} style={styles.addButton}>
@@ -270,7 +271,7 @@ export default function VehiclesScreen() {
                       iconBg="#EAF3FF"
                       iconColor={palette.navy}
                       label="Insurance Company"
-                      value={insurer?.name ?? 'Insurance company pending'}
+                      value={customerInsurerDisplayName(insurer?.name) || 'Insurance company pending'}
                       logo={insurerLogo}
                       badge={externalPolicy ? 'External' : undefined}
                     />
@@ -1157,11 +1158,11 @@ const styles = StyleSheet.create({
   okText: { color: '#FFFFFF', fontSize: 18, fontWeight: Platform.OS === 'ios' ? '400' : '900' },
   pageHeader: { marginTop: 0, marginBottom: 12, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
   iosHeaderCopy: { flex: 1, minWidth: 0 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, ...(Platform.OS === 'ios' ? { flexWrap: 'wrap' as const } : {}) },
-  pageTitle: { color: palette.navy, fontSize: 22, lineHeight: 27, fontWeight: Platform.OS === 'ios' ? '500' : '900' },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: Platform.OS === 'ios' ? 5 : 8 },
+  pageTitle: { color: palette.navy, fontSize: Platform.OS === 'ios' ? 13 : 22, lineHeight: Platform.OS === 'ios' ? 18 : 27, fontWeight: Platform.OS === 'ios' ? '500' : '900' },
   countBadge: { height: 24, borderRadius: 7, backgroundColor: '#EAF3FF', paddingHorizontal: 9, alignItems: 'center', justifyContent: 'center' },
   countBadgeText: { color: '#2563EB', fontSize: 11, fontWeight: Platform.OS === 'ios' ? '500' : '900' },
-  pageSub: { color: palette.slate, fontSize: 12, fontWeight: Platform.OS === 'ios' ? '400' : '700', marginTop: 3 },
+  pageSub: { color: palette.slate, fontSize: Platform.OS === 'ios' ? 9.6 : 12, fontWeight: Platform.OS === 'ios' ? '400' : '700', marginTop: 3 },
   addButton: { ...(Platform.OS === 'ios' ? { flexShrink: 0, alignSelf: 'flex-start' as const } : {}), height: 40, borderRadius: 8, backgroundColor: palette.navy, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   addButtonText: { color: '#FFFFFF', fontSize: 12, fontWeight: Platform.OS === 'ios' ? '500' : '900' },
   filterPanel: { marginTop: -2, marginBottom: 10, gap: 7, zIndex: 20 },
