@@ -4,7 +4,7 @@ import { CustomerAnimatedSearchInput } from "@/components/customer-portal/custom
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { Search, CarFront, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { getVehicleBrandLogo } from "@/lib/vehicle-brand-logo";
 import { getInsurerLogo } from "@/lib/insurer-logo";
@@ -40,13 +40,13 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EEF7FF]/85 via-[#EEF7FF]/45 via-45% to-transparent" />
       <div className="relative flex min-h-[175px] items-center px-5 py-6 sm:px-7">
         <div className="max-w-[500px]">
-          <h1 className="text-[clamp(28px,3.2vw,40px)] font-bold tracking-tight">My <span className="text-[#1769DC]">Vehicles</span></h1>
+          <div className="flex items-center gap-3 sm:gap-4"><img src="/assets/customer-settings-3d/vehicles-fleet.svg" alt="" aria-hidden="true" width={84} height={84} className="h-[68px] w-[68px] shrink-0 object-contain sm:h-[84px] sm:w-[84px]"/><h1 className="text-[clamp(28px,3.2vw,40px)] font-bold tracking-tight">My <span className="text-[#1769DC]">Vehicles</span></h1></div>
         </div>
       </div>
     </section>
     <section className="customer-register-panel rounded-2xl border border-[#DFE9F5] bg-white p-3 shadow-sm sm:p-4">
       <header className="mb-3 flex flex-wrap items-center gap-2">
-        <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><CarFront className="h-6 w-6 text-[#176CE7]"/>Vehicle Register</h2>
+        <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><img src="/assets/customer-settings-3d/vehicle-register.svg" alt="" aria-hidden="true" width={44} height={44} className="h-11 w-11 shrink-0 object-contain"/>Vehicle Register</h2>
         <label className="customer-register-control flex w-full min-w-0 items-center gap-2 rounded-lg border border-[#DCE7F5] bg-[#FAFCFF] px-3 py-2 sm:w-[250px] lg:w-[320px]">
           <Search className="h-4 w-4 shrink-0 text-[#7D95B7]" aria-hidden="true"/><span className="sr-only">Search vehicles</span>
           <CustomerAnimatedSearchInput aria-label="Search vehicles" value={query} onChange={e=>{setQuery(e.target.value);setPage(1);}} hints={["Search registration number…", "Search chassis number…", "Search engine number…", "Search make or model…", "Search policy number…"]} className="text-[13px] text-[#203650] placeholder:text-[#95A2B7]"/>
