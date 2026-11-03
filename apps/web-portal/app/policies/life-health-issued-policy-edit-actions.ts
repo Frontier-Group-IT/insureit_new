@@ -235,13 +235,21 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
   }).eq("id", policyId);
   if (policyError) return { ok: false, error: "The policy record could not be updated." };
 
-  await admin.from("life_health_policy_details").update({
+  const { data: existingDetails, error: detailsLoadError } = await admin.from("life_health_policy_details")
+    .select("additional_details").eq("policy_id", policyId).maybeSingle<{ additional_details: Record<string, unknown> | null }>();
+  if (detailsLoadError || !existingDetails) return { ok: false, error: "Unable to load issued policy schedule details." };
+  const savedAdditional = existingDetails.additional_details ?? {};
+  const savedSchedule = savedAdditional.issued_schedule && typeof savedAdditional.issued_schedule === "object" && !Array.isArray(savedAdditional.issued_schedule)
+    ? savedAdditional.issued_schedule as Record<string, unknown> : {};
+  const { error: detailsUpdateError } = await admin.from("life_health_policy_details").update({
+    additional_details: { ...savedAdditional, issued_schedule: { ...savedSchedule, policy_start_date: startDate, policy_end_maturity_date: endDate || null } },
     proposal_number: proposalNumber,
     premium_paying_term: ppt || null,
     policy_duration: pd || null,
     payment_frequency: paymentFrequency,
     payment_mode: paymentMode,
   }).eq("policy_id", policyId);
+  if (detailsUpdateError) return { ok: false, error: "Unable to update the issued policy schedule." };
   await admin.from("policy_premium_details").update({ net_premium: finalPremium, gross_premium: finalPremium }).eq("policy_id", policyId);
 
   if (commercialAccess) {
