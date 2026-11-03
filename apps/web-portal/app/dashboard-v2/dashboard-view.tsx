@@ -22,7 +22,7 @@ type Props = {
   canCreatePolicy: boolean;
   canCreatePolicyIntake: boolean;
   showRmPerformanceButton: boolean;
-  intakeAttention: PolicyIntakeReviewSummary | null;
+  intakeAttention?: PolicyIntakeReviewSummary | null;
 };
 
 type AttentionSignal = {
@@ -49,7 +49,7 @@ type RailMetric = {
   icon: string;
 };
 
-export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, canCreatePolicyIntake, showRmPerformanceButton, intakeAttention }: Props) {
+export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, canCreatePolicyIntake, showRmPerformanceButton, intakeAttention = null }: Props) {
   const attention = buildAttention(data, access, business, intakeAttention);
   const rail = buildMetricRail(data, access, business);
   const renewalTotal = data.renewals
