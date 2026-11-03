@@ -1,7 +1,7 @@
-import { Platform, MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
+import { Platform, Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 
 import { LoadingState, Screen } from '@/components/ui';
 import { buildComplianceRenewals, RENEWAL_DUE_WINDOW_DAYS, type ComplianceDocumentKey } from '@/lib/compliance-renewals';
