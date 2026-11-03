@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
+import { PolicyDateApprovalWidget } from "@/components/policy-date-approval-widget";
+import { needsPolicyDateApproval, policyDateDecision } from "@/lib/policy-date-rule";
 import { ChevronDown, ChevronUp, HandCoins, IndianRupee, MapPin, ShieldCheck } from "lucide-react";
 import { deleteNonMotorPolicyDocument, uploadNonMotorPolicyDocument } from "@/app/policies/non-motor-policy-document-actions";
 import { createNonMotorPolicy, updateNonMotorPolicy, type NonMotorCommercialBasis, type NonMotorPolicyPayload } from "@/app/policies/non-motor-policy-actions";
@@ -29,6 +31,7 @@ type Props = {
   initialValues?: NonMotorUnifiedInitialValues;
   existingDocuments?: ExistingNonMotorDocuments;
   activityStatus?: ReactNode;
+  originalIssuanceDate?: string | null;
   sourceSection: ReactNode;
   source: {
     issuanceDate: string;
@@ -126,7 +129,7 @@ const emptyForm: FormState = {
   proposalNumber: "", previousInsurer: "", previousPolicyNumber: "", previousClaims: "", addOns: "", warranties: "", specialConditions: "", endorsements: "", remarks: "",
 };
 
-export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, existingDocuments = {}, activityStatus, sourceSection, source, insurers, customers, sources, onProgressChange }: Props) {
+export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, existingDocuments = {}, activityStatus, originalIssuanceDate, sourceSection, source, insurers, customers, sources, onProgressChange }: Props) {
   const router = useRouter();
   const commercialAccess = usePolicyCommercialAccess();
   const isEdit = mode === "edit";
@@ -137,8 +140,12 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
   const [additionalOpen, setAdditionalOpen] = useState(false);
   const [commercialModal, setCommercialModal] = useState<CommercialModal>(null);
   const [error, setError] = useState<string | null>(null);
+  const [dateApproval, setDateApproval] = useState<{ id: string; key: string } | null>(null);
   const [savedPolicyCode, setSavedPolicyCode] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const approvalKey = [source.issuanceDate, form.policyNumber.trim().toUpperCase(), isEdit ? "edit" : "create", policyId ?? ""].join(":");
+  const dateApprovalId = dateApproval?.key === approvalKey ? dateApproval.id : null;
+  const dateApprovalRequired = needsPolicyDateApproval(source.issuanceDate, isEdit ? originalIssuanceDate : null);
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((current) => ({ ...current, [key]: value }));
 
   const selectedInsurer = insurers.find((item) => item.value === form.insurerId)?.label ?? "Not selected";
@@ -236,6 +243,8 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
       return;
     }
     setError(null);
+    if (["invalid", "future"].includes(policyDateDecision(source.issuanceDate))) { setError("Choose a valid issuance date within the current or an earlier month."); return; }
+    if (dateApprovalRequired && !dateApprovalId) { setError("Verify the selected approver\u0027s email OTP before saving this earlier-month policy."); return; }
     const selectedSource = sources.find((item) => item.value === source.sourceId);
     if (!source.issuanceDate || !source.intermediaryType || !selectedSource) { setError("Complete Policy source & ownership in Section 01 before saving the Non-Motor policy."); return; }
     if (form.customerMode === "existing" && !form.customerId) { setError("Select a customer or organisation in Section 02."); return; }
@@ -247,6 +256,7 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
     if (commercialAccess && form.payoutBasis === "NET_PREMIUM_PERCENT" && Number(form.payoutPercent || 0) > 100) { setError("Partner Payout percentage cannot exceed 100%."); return; }
 
     const payload: NonMotorPolicyPayload = {
+      dateApprovalId,
       source: { issuanceDate: source.issuanceDate, intermediaryType: source.intermediaryType, intermediaryCode: selectedSource.code, leadSource: selectedSource.label, rmName: selectedSource.rmName },
       customerId: form.customerMode === "existing" ? form.customerId : undefined,
       customer: { customerType: form.customerType, insuredName: form.insuredName, contactName: form.contactName, phone: form.phone, email: form.email, address: form.address },
@@ -300,6 +310,7 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_336px]">
       <div className="space-y-4">
         {sourceSection}
+        {dateApprovalRequired ? <PolicyDateApprovalWidget key={approvalKey} issuanceDate={source.issuanceDate} policyNumber={form.policyNumber} operation={isEdit?"edit":"create"} existingPolicyId={isEdit?policyId:null} intermediaryCode={source.intermediaryCode} verifiedApprovalId={dateApprovalId} onApproved={id=>setDateApproval(id?{id,key:approvalKey}:null)}/> : null}
 
         <Section number="02" title="Customer & policy">
           {form.customerMode === "existing" ? <>
