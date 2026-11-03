@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -8,7 +9,7 @@ import {
   ReceiptIndianRupee,
 } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { getPartnerWebPayoutSummary, getPartnerWebPolicyDetail } from "@/lib/partner-web";
+import { getPartnerWebPayoutSummary, getPartnerWebPolicyDetail, getPartnerWebSession } from "@/lib/partner-web";
 import { getInsurerLogo } from "@/lib/insurer-logo";
 import { PayoutSearch } from "./payout-search";
 
@@ -65,6 +66,9 @@ function PayoutMetric({ label, value, meta, icon: Icon, iconClassName }: MetricI
 }
 
 export default async function PartnerPayoutPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  // Server-side route gate: Branch login must not access or fetch payout data.
+  const { identity, scope } = await getPartnerWebSession();
+  if (identity.actor_kind === "intermediary" && scope.portal_access_type === "branch") redirect("/partner");
   const query = await searchParams;
   const q = query.q?.trim() ?? "";
   const normalizedQuery = q.toLowerCase();
