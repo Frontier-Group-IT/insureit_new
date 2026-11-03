@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { advanceInternalSpotIntimation, saveInternalSpotIntimationDetails } from "@/app/claims/internal-spot-intimation-actions";
 import { completeClaimJourneyStage } from "@/app/claims/stage-actions";
 import { ClaimStageSuccessPopup } from "@/components/claim-manager/claim-stage-success-popup";
+import { OperationsClaimStageOneAttachments } from "@/components/claim-manager/operations-claim-stage-one-attachments";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { managerTransitions, type ClaimStatus } from "@/lib/claim-workflow";
 import type { InternalSpotIntimationDetails } from "@/lib/internal-spot-intimation";
@@ -347,6 +348,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
               onSubmitStart={() => setSpotSubmitting(true)}
             />
             <div className="mt-3">{spotContent}</div>
+            {!partnerReadOnlyJourney && !partnerManagedJourney && !partnerInternalStageOne ? <OperationsClaimStageOneAttachments claimId={claimId} /> : null}
             <div className="mt-3 flex justify-end gap-2">
               <button
                 type="button"
