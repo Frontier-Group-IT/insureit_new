@@ -40,12 +40,12 @@ export default async function CustomerEChallanPage({
           <h2 className="flex items-center gap-2 text-[18px] font-bold text-[#242B51]"><img src="/assets/Custom-Icons/optimized-128/tasks-work-queue.png" alt="" aria-hidden="true" width={36} height={36} className="h-9 w-9 object-contain" />How it works</h2>
           <ol className="mt-4 space-y-4">
             {[
-              { title: "Enter vehicle details", description: "Provide your vehicle registration number and optional challan details.", art: "challan-vehicle.svg" },
+              { title: "Enter vehicle details", description: "Provide your vehicle registration number and optional challan details.", art: "fleet-vehicle.png" },
               { title: "We review your request", description: "Our team helps you find the relevant challan information and next steps.", art: "policy-intake-review.png" },
               { title: "Get guidance", description: "Receive assistance with the applicable process for payment or resolution.", art: "tasks-completed.png" },
             ].map(({title,description,art},index)=><li key={title} className="flex items-start gap-3">
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#F0EBFF] text-[13px] font-bold text-[#6941CA]">{index+1}</span>
-              <img src={art.endsWith(".svg") ? `/assets/customer-settings-3d/${art}` : `/assets/Custom-Icons/optimized-128/${art}`} alt="" aria-hidden="true" width={36} height={36} className="h-9 w-9 shrink-0 object-contain" />
+              <img src={`/assets/Custom-Icons/optimized-128/${art}`} alt="" aria-hidden="true" width={36} height={36} className="h-9 w-9 shrink-0 object-contain" />
               <span><strong className="block text-[12px] font-bold text-[#252A4D]">{title}</strong><span className="mt-1 block text-[11px] leading-5 text-[#7B809B]">{description}</span></span>
             </li>)}
           </ol>
