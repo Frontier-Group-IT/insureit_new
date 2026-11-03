@@ -4,7 +4,7 @@ import Link from "next/link";
 import motionStyles from "./claim-document-motion.module.css";
 import { ClaimDocumentDeleteConfirmation } from "@/components/claim-manager/claim-document-delete-confirmation";
 import Image from "next/image";
-import { Shield, ShieldCheck, Trash2, Mic } from "lucide-react";
+import { Shield, ShieldCheck, Trash2, Mic, Video } from "lucide-react";
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { ClaimDocumentCollapsedStatus } from "@/components/claim-manager/claim-document-collapsed-status";
 import { ReplaceDocumentButton } from "./replace-document-button";
@@ -232,7 +232,9 @@ const categoryArtwork: Record<string, string> = {
 };
 function DocumentCategoryIcon({ category }: { category: string }) {
   const image = categoryArtwork[category];
-  return image
+  return category === "video"
+    ? <span aria-hidden="true" className={`grid h-7 w-7 shrink-0 place-items-center rounded-md bg-[#F21E38] text-white ${motionStyles.videoIcon}`}><Video className="h-4 w-4 fill-current" /></span>
+    : image
     ? <Image src={image} alt="" aria-hidden="true" width={25} height={25} className="h-[25px] w-[25px] shrink-0 object-contain" />
     : <Mic aria-hidden="true" className="h-5 w-5 shrink-0 text-[#2563EB]" strokeWidth={2.1} />;
 }
