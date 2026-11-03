@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PartnerBusinessReport } from "./partner-business-report";
 import { notFound } from "next/navigation";
 import { compactLightActionClassName, primaryActionClassName } from "@/components/action-styles";
 import { DocumentVisualCard } from "@/components/document-visual-card";
@@ -126,7 +127,7 @@ const reviewErrorMessages: Record<string, string> = {
   partner_account_required: "Activate the Partner account before creating a linked POSP/MISP account.",
 };
 
-export default async function IntermediaryAccountReviewPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; success?: string }> }) {
+export default async function IntermediaryAccountReviewPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; success?: string; tab?: string; period?: string; from?: string; to?: string; mix?: string }> }) {
   const { id } = await params;
   const query = await searchParams;
   const reviewer = await requireScopedPospMispManager(id, true);
@@ -256,6 +257,13 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
           <div className="grid border-t border-white/15 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">{stats.map((stat) => <HeaderStat key={stat.label} {...stat} />)}</div>
         </section>
 
+        {isPartner ? <nav aria-label="Partner review sections" className="flex items-center gap-1 rounded-xl border border-[#dce5f1] bg-white p-1.5 shadow-sm">
+          <Link href={returnPath} aria-current={query.tab !== "business" ? "page" : undefined} className={`rounded-lg px-4 py-2 text-[12px] font-bold transition ${query.tab !== "business" ? "bg-[#0c2b63] text-white" : "text-[#52647b] hover:bg-slate-100"}`}>Profile</Link>
+          <Link href={`${returnPath}?tab=business`} aria-current={query.tab === "business" ? "page" : undefined} className={`rounded-lg px-4 py-2 text-[12px] font-bold transition ${query.tab === "business" ? "bg-[#0c2b63] text-white" : "text-[#52647b] hover:bg-slate-100"}`}>Business Report</Link>
+        </nav> : null}
+        {isPartner && query.tab === "business" ? (
+          <PartnerBusinessReport applicationId={id} intermediaryCode={partnerId ?? ""} viewer={{ id: reviewer.id, role: reviewer.role }} query={{ period: query.period, from: query.from, to: query.to, mix: query.mix }} />
+        ) : (<>
         <section id="overview" className={!isPartner && !onboardingComplete ? "-mt-2 space-y-4" : "space-y-4"}>
           {legacyPreviouslyActive ? (
             <div className="rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-[12px] text-slate-700">
@@ -288,6 +296,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
         </section>
 
         {(documents ?? []).length > 0 ? <section id="documents"><DocumentsCard><DocumentChecklist documents={documents ?? []} /></DocumentsCard></section> : null}
+        </>)}
       </div>
     </AppShell>
   );

@@ -1,7 +1,8 @@
 import { unzipSync, zipSync, strFromU8, strToU8 } from "fflate";
 import { NextRequest } from "next/server";
 import * as XLSX from "xlsx";
-import { requireCapability } from "@/lib/master-data-server";
+import { requireCapability, requireScopedPospMispManager } from "@/lib/master-data-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { loadPolicyBusinessMisExport, type PolicyBusinessMisRow } from "@/lib/reports/policy-business-mis-export";
 import type { PolicyBusinessQuery } from "@/lib/reports/policy-business";
 
@@ -40,8 +41,27 @@ function headerColumn(header: string) {
 }
 
 export async function GET(request: NextRequest) {
-  const profile = await requireCapability("view_reports");
+  const applicationId = request.nextUrl.searchParams.get("application");
+  // An application-bound export never trusts a caller-supplied intermediary.
+  const profile = applicationId
+    ? await requireScopedPospMispManager(applicationId, true)
+    : await requireCapability("view_reports");
   const query = toQuery(request.nextUrl.searchParams);
+  if (applicationId) {
+    const { data: application, error: appError } = await createSupabaseAdminClient()
+      .from("posp_misp_onboarding_profiles")
+      .select("partner_id")
+      .eq("application_id", applicationId)
+      .maybeSingle();
+    const code = typeof application?.partner_id === "string" ? application.partner_id.trim() : "";
+    if (appError || !code || code.startsWith("PENDING-")) {
+      return new Response("Partner business identifier is unavailable.", { status: 404, headers: { "Cache-Control": "no-store" } });
+    }
+    query.intermediary = code;
+    query.business = undefined;
+    query.insurer = undefined;
+    query.rm = undefined;
+  }
 
   try {
     const { rows, truncated } = await loadPolicyBusinessMisExport(profile, query);
