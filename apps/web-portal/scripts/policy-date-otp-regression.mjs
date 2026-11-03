@@ -33,6 +33,7 @@ assert.match(otp,/verify_policy_date_otp_v1/);
 assert.match(migration,/for update/i,"OTP attempts must be serialized");
 assert.match(otp,/randomInt\(100000, 1000000\)/);
 assert.match(otp,/RESEND_API_KEY/);
+assert.match(otp,/POLICY_DATE_OTP_FROM\?\.trim\(\) \|\| process\.env\.RESEND_FROM_EMAIL\?\.trim\(\)/, "OTP sending must fall back to the existing verified Resend sender.");
 assert.match(migration,/for update/i,"approval must be locked before motor save");
 assert.match(migration,/grant execute on function public.save_motor_policy_with_date_approval_v1[\s\S]*to service_role/i);
 assert.match(migration,/revoke all on public.policy_date_otp_approvals from public, anon, authenticated/i);
