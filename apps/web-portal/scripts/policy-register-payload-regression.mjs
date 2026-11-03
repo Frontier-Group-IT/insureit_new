@@ -48,4 +48,15 @@ assert.ok(reportMigration.includes("b.rm_employee_id=p_rm_employee_id"), "Select
 assert.ok(reportMigration.includes("sum(net_premium)"), "Report SQL must aggregate net premium for report values.");
 assert.ok(!reportMigration.includes("select full_name from public.employees where id=p_rm_employee_id"), "Report SQL must not translate selected RM id back to a name for authorization/filtering.");
 
+assert.match(workspace, /function usePolicyFloatingMenu\(/, "Policy register custom menus must use a shared floating menu mechanism");
+assert.match(workspace, /menu\.position && createPortal\(/g, "Both custom filter menus should escape the horizontal scroller");
+assert.equal((workspace.match(/menu\.position && createPortal\(/g) ?? []).length, 2, "Business and Date Range must each render through a portal");
+assert.match(workspace, /document\.body/, "Menus must render outside the clipped toolbar");
+assert.match(workspace, /document\.addEventListener\("pointerdown", outside\)/, "Floating menus must close on outside click");
+assert.match(workspace, /event\.key !== "Escape"/, "Floating menus must support Escape");
+assert.match(workspace, /window\.addEventListener\("scroll", dismissOnScroll, true\)/, "Floating menus must respond to toolbar scrolling");
+assert.match(workspace, /onBusinessChange\(value\); menu\.close\(\)/, "Business selection must retain filtering and close menu");
+assert.match(workspace, /onQuickRange\(range\); menu\.close\(\)/, "Quick dates must retain range selection");
+assert.match(workspace, /onFromDateChange\(event\.target\.value\)/, "Custom From date must remain functional");
+assert.match(workspace, /onToDateChange\(event\.target\.value\)/, "Custom To date must remain functional");
 console.log("Policy register and business scope regression passed.");
