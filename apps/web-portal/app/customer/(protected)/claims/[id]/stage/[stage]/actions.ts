@@ -214,13 +214,12 @@ export async function saveCustomerInternalSpotCorrection(
   const fail = (error: string) => ({ error, saved: false });
   const { account } = await resolveCustomerWebScope(String(form.get("account") || ""));
   const claimId = String(form.get("claim") || "");
-  const { claim, milestones, internal_projection } = await loadCustomerClaimDetail(account.id, claimId);
+  const { claim, internal_projection } = await loadCustomerClaimDetail(account.id, claimId);
   if (isExternalCustomerClaim(claim) || claim.claim_service_mode !== "broker_managed" || !internal_projection || internal_projection.completedStageCount < 1) {
     return fail("Stage 1 corrections are not available for this claim.");
   }
-  if (internal_projection.completedStageCount >= 2 || milestones.some(item =>
-    item.milestone_key === "spot_status" && ["completed", "not_applicable"].includes(item.milestone_status)
-  )) return fail("Spot Status is complete. Stage 1 details are locked.");
+  // Allow scoped corrections to saved Spot Intimation fields even when later stages
+  // have completed. Do not modify milestone states or claim progression here.
 
   const accident = String(form.get("accidentAt") || "");
   const spot = String(form.get("spotAt") || "");
