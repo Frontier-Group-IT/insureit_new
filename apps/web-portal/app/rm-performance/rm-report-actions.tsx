@@ -26,7 +26,7 @@ export function RmReportActions({params,periodLabel}:Props){
     {open?<div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/40 p-4" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)setOpen(false);}}>
       <form onSubmit={send} role="dialog" aria-modal="true" aria-label="Email RM business report" className="w-full max-w-md space-y-4 rounded-2xl bg-white p-5 shadow-xl">
         <div className="flex items-center justify-between"><h2 className="text-base font-bold text-[#17365D]">Email Business Report</h2><button type="button" onClick={()=>setOpen(false)} aria-label="Close"><X className="h-4 w-4"/></button></div>
-        <p className="text-xs text-[#64748B]">PDF includes Today's data and {periodLabel}, RM hierarchy and Direct Partners.</p>
+        <p className="text-xs text-[#64748B]">PDF includes Today&apos;s data and {periodLabel}, RM hierarchy and Direct Partners.</p>
         <label className="block text-xs font-semibold text-[#334155]">Recipient email
           <input type="email" required autoFocus maxLength={254} value={to} onChange={e=>setTo(e.target.value)} placeholder="name@example.com" className="mt-1 h-10 w-full rounded-lg border border-[#CBD5E1] px-3 text-sm"/>
         </label>
