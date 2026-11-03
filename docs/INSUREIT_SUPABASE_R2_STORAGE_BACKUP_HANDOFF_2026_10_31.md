@@ -1,3 +1,12 @@
+## 2026-11-03 — Isolated restore verification workflow merged (execution still pending)
+
+- PR [#3938](https://github.com/Frontier-Group-IT/insureit_new/pull/3938) passed both R2/backup-specific and web portal CI and was merged into `main` at commit `9fe6cbc9c5747628ab31d6687d2916ce6cbbcbdb`.
+- Manual-only workflow `.github/workflows/insureit-postgres-r2-restore-verify.yml` is now available in GitHub Actions. It retrieves the latest encrypted PostgreSQL archive from R2, authenticates its manifest and content, and attempts an offline restore in a disposable PostgreSQL 17 Docker container with networking disabled.
+- **No live restore rehearsal has been launched or verified at the time of this entry.** The available connector cannot dispatch a fresh workflow; manual dispatch through GitHub UI on `main` is required.
+- Important limitation: plain PostgreSQL 17 is missing Supabase-managed roles, extensions and schemas. A failing `roles.sql`, `schema.sql` or `data.sql` step may demonstrate an environmental gap, not corruption. Review only sanitized job steps; never publish SQL contents or connection secrets.
+- Existing archive snapshot `20261103T061621Z` (7,742,688-byte encrypted archive) remains preserved. No production database changes, no R2 deletions, no daily DB schedule and no PITR add-on activation.
+- Next: manually dispatch the workflow at https://github.com/Frontier-Group-IT/insureit_new/actions/workflows/insureit-postgres-r2-restore-verify.yml, inspect the run's result, record exact tested stages and any gaps in this same handoff, then plan a Supabase-compatible recovery validation before certifying the backup as complete.
+
 ## 2026-11-03 — Phase 2 isolated PostgreSQL 17 restore rehearsal (PR-only; not yet run)
 
 - Manual backup [run #41588451109](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/41588451109) succeeded; `roles.sql`, `schema.sql`, `data.sql` generated, authenticated R2 archive committed under snapshot `20261103T061621Z` (7,742,688 encrypted bytes), with circular foreign-key warnings. This is not yet recovery certification.
