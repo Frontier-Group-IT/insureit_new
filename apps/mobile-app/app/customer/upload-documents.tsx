@@ -1,10 +1,10 @@
-﻿import { Platform, MaterialCommunityIcons } from '@expo/vector-icons';
+﻿import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { readClaimDocumentBytes, claimUploadCustomerError, claimUploadFileReadMessage, logClaimUploadFailure, resolveClaimUploadDescriptor } from '@/lib/claim-document-upload';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Message, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
