@@ -1,11 +1,11 @@
 # INSUREIT — Internal VAPT & Cybersecurity Self-Audit Master Register
 
 > **Document ID:** INS-SEC-IAV-001  
-> **Version:** 0.2.0 (P0 discovery initiated)  
+> **Version:** 0.3.0 (P0 database metadata and policy review)  
 > **Created:** 2026-11-03 (Asia/Kolkata)  
 > **Owner:** Sankalp Insurance Brokers Private Limited — designated internal audit owner **TBD**  
 > **Target systems:** INSUREIT Customer App, Partner App, Operations Portal, APIs, database, storage, infrastructure, third-party integrations and related governance  
-> **Status:** **P0 READ-ONLY DISCOVERY IN PROGRESS — 61 CONTROLS NOT YET PASSED**  
+> **Status:** **P0 READ-ONLY DISCOVERY IN PROGRESS — DATABASE METADATA REVIEWED; 61 CONTROLS NOT YET PASSED**  
 > **Classification:** Internal / Confidential — redact secrets, customer data and exploitable details before distribution  
 > **Next review:** On each completed audit work session; formal periodic review cadence TBD
 
@@ -351,3 +351,52 @@ Master document version:
 | 2026-11-03 | GitHub/Supabase read-only discovery | P0 | Read `AGENTS.md`, root `README.md`, `package.json`, web portal verification workflow and aggregate Supabase project/RLS metadata. | Evidence P0-001 through P0-006; no production configuration or data writes. | P0 started; 61 controls unassessed. | Review RLS definitions, source authorization boundaries and deployment mappings. |
 
 **Git discipline:** This document is introduced on a separate documentation-only branch and PR. Do not merge or deploy without explicit user approval. Update this file on each audit session; keep chronological evidence and report history intact.
+
+
+## 19. P0 database security metadata and role-boundary review — 2026-11-03
+
+**Assessment type:** read-only SQL metadata, Supabase Security Advisor, and narrowly scoped database function/policy definition inspection. **System:** connected Supabase project \`Insureit_Web\` (\`ilzhsfqqjyppzzvfscmh\`). **Environment status:** associated with INSUREIT by project naming and prior context; production application-to-project mapping **NOT YET independently corroborated** using deployed configuration. No real customer, policy, claims or file records were queried. No endpoint scans, auth test requests, changes or deployments performed.
+
+### Verified observation register (metadata only)
+
+| Evidence ID | Observation | Evidence source | Interpretation and next validation |
+|---|---|---|---|
+| P0-007 | Current \`public\` schema has **181/181 base tables with RLS enabled**; **64** tables have at least one policy, **117** have no policy; **252** policies total. Prior snapshot P0-005 counted 180/180, so record both time-dependent results. | Read-only \`pg_tables\` + \`pg_policies\` aggregate SQL, 2026-11-03 | Enabled RLS does not validate policy logic. No-policy tables may intentionally be service-only; inspect actual grants, RPCs and intended access. |
+| P0-008 | Supabase Security Advisor returns four security lint categories: **117 \`rls_enabled_no_policy\` (INFO), 178 \`authenticated_security_definer_function_executable\` (WARN), 1 \`anon_security_definer_function_executable\` (WARN), 1 \`auth_leaked_password_protection\` (WARN)**. | Connected Supabase \`get_advisors(security)\`, 2026-11-03 | Lint counts are review leads, **not** 297 confirmed exploitable vulnerabilities. [Advisory: no policy](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy), [authenticated definer](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable), [anonymous definer](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable), [password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). |
+| P0-009 | **434** public-schema functions; **380** are \`SECURITY DEFINER\`; of those **178** are callable by \`authenticated\` and **1** by \`anon\` (current effective \`EXECUTE\` privileges). | Read-only \`pg_proc\`, \`pg_namespace\`, \`has_function_privilege\` aggregates | Prioritize access-path + caller-auth checks, sensitive data/function ownership, and cross-tenant authorization. Presence of \`SECURITY DEFINER\` is not in itself proof of a bug. |
+| P0-010 | All **4** public ordinary views use \`security_invoker=true\`; none of the 4 was classified as a non-invoker view. | \`pg_class\` view reloptions | Favorable view setting; view definitions and authorization behavior still require review. |
+| P0-011 | **9** storage buckets; **2** public asset buckets (\`insurer-assets\`, \`manufacturer-assets\`); claims, policy, customer, POSP, support, partner-profile and exchange buckets marked private; **35** storage-object RLS policies recorded. | \`storage.buckets\` public flag and \`pg_policies\` aggregate | Bucket privacy metadata only; verify signed URL flows, file ownership, object policies and upload/download authorization with test accounts. Public asset buckets should hold only intended public material. |
+| P0-012 | **56** public base tables grant effective SELECT privilege to \`anon\`, **64** to \`authenticated\`; **0** base tables have disabled RLS and effective \`anon\` SELECT. Some sensitive tables have \`anon\` table grants but RLS conditions constrain rows; these layers must be assessed together. | \`has_table_privilege\` aggregate + targeted table-policy metadata | SQL GRANT permits reaching a table, but RLS still filters rows. No unauthorized data access verified. |
+| P0-013 | Sensitive policy/customer/claim tables use non-trivial ownership/role helper predicates rather than an unrestricted \`USING true\` rule in sampled SELECT policies. Six literal-true SELECT/ALL policies were observed on reference/lookup tables (banks, India locations, insurer directory, vehicle manufacturer reference tables). | \`pg_policies\` targeted read-only review | Sample only, **not a proof of all policy correctness**. Validate reference data classification and helper functions. |
+| P0-014 | Exactly one \`anon\`-executable \`SECURITY DEFINER\` function was observed: \`customer_firebase_data_api_pre_request()\`. Static review shows conditional issuer handling, a delegated Firebase profile resolver, \`search_path\` fixed to empty, and transaction-local claim context. | \`pg_proc\` function definition + grants, 2026-11-03 | Review intended pre-request hook exposure and security of delegated resolver; **not classified as exploitable** based on static review alone. |
+| P0-015 | A claims-document SELECT policy and claims SELECT policy use the \`is_claim_portal_user()\` role predicate. The predicate permits certain active staff roles without an additional row-specific scope inside that policy. | Targeted \`pg_policies\` and \`pg_proc\` definitions, 2026-11-03 | **Authorization-design review required:** verify that role-wide claim and document visibility is intended and documented; do not assume a breach or change the policy without role-owner approval and regression tests. |
+| P0-016 | Security Advisor warns that Supabase Auth leaked-password protection is not enabled/configured to suppress this warning. | Security Advisor \`auth_leaked_password_protection\` warning | Confirm live Auth setting and email-password applicability; propose enabling with compatibility tests and separate authorized change request. |
+| P0-017 | Documentation PR head \`f86b075cbfe4944c4204a819f1a6cae0fcbf7881\` completed \`Verify web portal\` workflow #7866 successfully. | GitHub Actions run #41584046169, 2026-11-03 | Confirms that run's checks passed; **not** a substitute for VAPT, staging authorization tests or production login verification. |
+
+### Open review leads — no confirmed exploit, no remediation authorized
+
+| Review lead | Priority | Control(s) | Question to answer | Decision / status |
+|---|---|---|---|---|
+| REV-2026-001 | High investigation priority | C03, B03, B04 | Do authenticated-callable privileged functions consistently authorize correct roles, customer/partner ownership and tenant boundaries? Audit in risk-ranked batches. | OPEN — static/metadata only |
+| REV-2026-002 | High investigation priority | C02, B03 | Is role-wide claims and claim-document access explicitly authorized for the listed staff roles? If not, prepare scoped hardening proposal. | OPEN — business role-owner confirmation and test required |
+| REV-2026-003 | Medium investigation priority | C03, B01 | Is anonymous execution of the Firebase pre-request function essential and safely bounded by the full identity resolver and gateway configuration? | OPEN — no exploit claimed |
+| REV-2026-004 | Medium / configuration | B02 | Should leaked-password protection be enabled for password sign-ins, and what is its current dashboard setting? | OPEN — advisor warning to confirm |
+| REV-2026-005 | Normal inventory | C01, C04 | Are the 117 RLS/no-policy tables intentionally private, and are the 2 public buckets restricted to non-sensitive assets? | OPEN — grants/storage review incomplete |
+| REV-2026-006 | Normal inventory | A03, C01 | Does the production deployment definitely use this Supabase project and what explains the one-table count change during these snapshots? | OPEN — deployed environment mapping not confirmed |
+
+**Risk-handling discipline:** Do not create numbered \`VAPT-YYYY-NNN\` confirmed vulnerability entries solely from automated warnings. Promote a review lead to a finding only after confirming an actual misconfiguration or policy violation, recording sufficient evidence, severity and an owner. Store any exploit-sensitive details in a restricted evidence location rather than here.
+
+### Step-by-step continuation queue
+
+1. **P0.1 — Bind deployed environment:** corroborate INSUREIT production website deployment, verified branch/commit and Supabase project reference using permitted read-only configuration views; capture only project identifiers, never secret values.
+2. **P0.2 — Inventory high-risk functions:** risk-rank the 178 authenticated-executable definer functions and inspect authorization and tenant checks. Review delegated Firebase identity resolver. Mark C03 as PASS only after defined coverage and validation.
+3. **P0.3 — Role design:** have system owner decide whether staff-wide claims/claim-document SELECT is intended. Prepare dedicated synthetic Customer A/B, Partner A/B and role-test cases in staging; no production exploitation.
+4. **P0.4 — Storage review:** inspect \`storage.objects\` RLS policy predicates, bucket asset classifications, and source code for signed URL issuance. No user files opened.
+5. **P0.5 — Auth config:** confirm leaked-password protection setting and applicability, then stage a risk-aware recommendation. Do not modify live Auth settings without approval.
+6. **P0.6 — Evidence traceability:** update control status individually only upon completed and reproducible testing, include deployed commit/config identifier and reviewer in the evidence index.
+
+### Session 2 log
+
+| 2026-11-03 | Read-only audit assistant | P0 | Reviewed actual public RLS/table grant, function, view, bucket metadata; examined sampled policy and function definitions; retrieved security advisor summaries and prior documentation-PR CI status. | P0-007 through P0-017; six review leads, no confirmed exploit and no production mutation. | **All 61 checklist controls remain not yet passed.** Discovery expanded, P0 not complete. | Validate production binding; risk-rank definer functions and confirm claim-staff access design. |
+
+**Documentation handling:** This is an internal register and must not be posted publicly without confidentiality review. No third-party certification or independent attestation is claimed.
