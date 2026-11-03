@@ -67,6 +67,6 @@ jobs:
           assert pg['permissions']['contents'] == 'read'
           assert 'supabase db dump' in str(job['steps'])
           assert 'postgres_to_r2.py' in str(job['steps'])
-          assert 'R2_BUCKET: insureit-production-backups' in str(job['steps'])
+          assert any(step.get('env', {}).get('R2_BUCKET') == 'insureit-production-backups' for step in job['steps'])
           print('Scheduled document backup + PostgreSQL manual gate + monitor guards verified')
           PY
