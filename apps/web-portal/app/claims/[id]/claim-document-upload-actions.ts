@@ -46,12 +46,20 @@ function validateSpotFile(file: ClaimUploadFileMetadata) {
 }
 function validateSingleDocumentFile(documentType: string, file: ClaimUploadFileMetadata) {
   if (!documentType.trim() || !file.name.trim() || !Number.isFinite(file.size) || file.size <= 0) throw new Error("Missing replacement document details.");
+  const expectedAudio = documentType === "Incident Voice Note";
+  const audioExtension = /\.(m4a|mp4|webm|ogg)$/i.test(file.name);
+  const allowedAudioTypes = ["audio/mp4", "audio/x-m4a", "audio/m4a", "audio/webm", "audio/ogg"];
+  if (expectedAudio) {
+    if (!allowedAudioTypes.includes(file.type) && !(audioExtension && !file.type)) throw new Error("Please upload an audio recording in M4A, MP4, WEBM or OGG format.");
+    if (file.size > maxDocumentSizeBytes) throw new Error("Incident voice note must be 5 MB or smaller.");
+    return;
+  }
   const expectedVideo = documentType.toLowerCase().includes("video"); const actualVideo = isVideoMetadata(file);
   if (expectedVideo !== actualVideo) throw new Error(expectedVideo ? "Please upload a supported video file." : "Video files are not allowed for this document type.");
   const maxSize = expectedVideo ? maxVideoSizeBytes : maxDocumentSizeBytes;
   if (file.size > maxSize) throw new Error(`The selected file exceeds the ${expectedVideo ? "50 MB" : "5 MB"} limit.`);
-  const allowedTypes = expectedVideo ? ["video/mp4", "video/quicktime", "video/webm", "video/x-matroska", "video/x-msvideo"] : ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-  const extensionAllowed = expectedVideo ? /\.(mp4|mov|webm|mkv|avi)$/i.test(file.name) : /\.(jpg|jpeg|png|webp|pdf)$/i.test(file.name);
+  const allowedTypes = expectedVideo ? ["video/mp4", "video/quicktime", "video/webm", "video/x-matroska", "video/x-msvideo"] : ["image/jpeg", "image/png", "image/webp", "image/heic", "application/pdf"];
+  const extensionAllowed = expectedVideo ? /\.(mp4|mov|webm|mkv|avi)$/i.test(file.name) : /\.(jpg|jpeg|png|webp|heic|pdf)$/i.test(file.name);
   if (file.type && !allowedTypes.includes(file.type) && !extensionAllowed) throw new Error("Unsupported document format.");
 }
 function assertCanonicalUploadPath(claim: ClaimForUpload, path: string, spot: boolean) {
