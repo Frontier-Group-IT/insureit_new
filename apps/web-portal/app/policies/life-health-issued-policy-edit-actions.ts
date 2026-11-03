@@ -5,6 +5,7 @@ import { isPensionLifePolicy } from "@/lib/life-health-pension-maturity";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { consumePolicyDateApproval, recordPreviousMonthPolicyUpload, linkConsumedPolicyDateApproval } from "@/lib/policy-date-approval-server";
 import { recordPolicyActivity, POLICY_ACTIVITY_ACTIONS } from "@/lib/policy-activity";
 
 export type LifeHealthIssuedPolicyEditResult = { ok: true } | { ok: false; error: string };
@@ -168,7 +169,7 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
   }
 
   const [{ data: policy }, { data: caseRow }, { data: source }] = await Promise.all([
-    admin.from("policies").select("id,business_line,rm_employee_id,rm_name").eq("id", policyId).maybeSingle<{ id: string; business_line: string | null; rm_employee_id: string | null; rm_name: string | null }>(),
+    admin.from("policies").select("id,business_line,rm_employee_id,rm_name,policy_no,issuance_date").eq("id", policyId).maybeSingle<{ id: string; business_line: string | null; rm_employee_id: string | null; rm_name: string | null; policy_no: string | null; issuance_date: string | null }>(),
     admin.from("life_health_cases").select("id,final_policy_id,customer_id,intermediary_id,rm_employee_id,rm_name,rm_code").eq("id", caseId).eq("final_policy_id", policyId).maybeSingle<{ id: string; final_policy_id: string | null; customer_id: string; intermediary_id: string | null; rm_employee_id: string | null; rm_name: string | null; rm_code: string | null }>(),
     admin.from("intermediaries").select("id,intermediary_type,intermediary_code,display_name,mobile,associate_employee_id").eq("id", sourceId).eq("account_status", "active").maybeSingle<{ id: string; intermediary_type: string; intermediary_code: string | null; display_name: string; mobile: string | null; associate_employee_id: string | null }>(),
   ]);
@@ -190,6 +191,8 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
     rmCode = caseRow.rm_code?.trim() || null;
   }
 
+  const dateGuard = await consumePolicyDateApproval(admin,{requesterId:profile.id,issuanceDate:sourcingDate,policyNumber:policy.policy_no??"",operation:"edit",existingPolicyId:policyId,originalIssuanceDate:policy.issuance_date,approvalId:clean(formData.get("dateApprovalId"))});
+  if(!dateGuard.ok)return{ok:false,error:dateGuard.error};
   const { error: caseError } = await admin.from("life_health_cases").update({
     business_line: businessLine,
     sourcing_date: sourcingDate,
@@ -303,6 +306,8 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
   }
 
   await recordPolicyActivity(admin, policyId, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_EDITED);
+  if(dateGuard.previousMonth)await recordPreviousMonthPolicyUpload(admin,policyId,profile.id,sourcingDate,dateGuard.approverName);
+  if(dateGuard.approverName)await linkConsumedPolicyDateApproval(admin,clean(formData.get("dateApprovalId")),policyId,profile.id);
   revalidateIssuedPolicy(policyId, caseId);
   return { ok: true };
 }
