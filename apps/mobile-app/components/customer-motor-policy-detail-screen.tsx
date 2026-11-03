@@ -2,13 +2,14 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Card, EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { getInsurerLogoSource, getVehicleBrandLogoSource } from '@/lib/catalog-logos';
 import { getOperationalCustomerContexts } from '@/lib/customer-context';
 import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
+import { customerInsurerDisplayName } from '@/lib/customer-insurer-display';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
@@ -314,7 +315,7 @@ export default function CustomerMotorPolicyDetailScreen() {
 
         <Text style={styles.detailGroupLabel}>Insurer details</Text>
         <View style={styles.detailGrid}>
-          <DetailCell icon="office-building-outline" label="Insurance company" value={company?.name ?? '-'} logo={getInsurerLogoSource(company?.name)} />
+          <DetailCell icon="office-building-outline" label="Insurance company" value={customerInsurerDisplayName(company?.name) || '-'} logo={getInsurerLogoSource(company?.name)} />
           <DetailCell icon="file-document-outline" label="Policy number" value={displayPolicyNumber} />
           <DetailCell icon="shield-outline" label="Policy product" value={product} />
           <DetailCell icon="cash-lock" label="IDV" value={formatCurrency(policy.insured_declared_value)} />
@@ -446,39 +447,39 @@ function formatFileSize(value?: number | null) {
 
 const styles = StyleSheet.create({
   pageHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 },
-  pageTitle: { color: palette.navy, fontSize: 20, fontWeight: '900' },
+  pageTitle: { color: palette.navy, fontSize: 20, fontWeight: Platform.OS === 'ios' ? '500' : '900' },
   pageRenewAction: { minHeight: 34, borderRadius: 10, backgroundColor: palette.navy, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  pageRenewActionText: { color: '#FFFFFF', fontSize: 11.5, fontWeight: '800' },
+  pageRenewActionText: { color: '#FFFFFF', fontSize: 11.5, fontWeight: Platform.OS === 'ios' ? '500' : '800' },
   detailSection: { borderRadius: 18, borderWidth: 1, borderColor: '#DCE6F1', padding: 12, backgroundColor: '#FFFFFF' },
   sectionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   detailIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: '#EEF4FB', alignItems: 'center', justifyContent: 'center' },
   sectionCopy: { flex: 1 },
-  sectionTitle: { color: palette.navy, fontSize: 16, fontWeight: '900' },
+  sectionTitle: { color: palette.navy, fontSize: 16, fontWeight: Platform.OS === 'ios' ? '500' : '900' },
   sectionHint: { color: '#6D7B8F', fontSize: 10.5, marginTop: 1 },
   statusPill: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 5 },
-  statusText: { fontSize: 9.5, fontWeight: '900' },
-  detailGroupLabel: { color: '#0A4A92', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.45, marginTop: 5, marginBottom: 1 },
+  statusText: { fontSize: 9.5, fontWeight: Platform.OS === 'ios' ? '400' : '900' },
+  detailGroupLabel: { color: '#0A4A92', fontSize: 11, fontWeight: Platform.OS === 'ios' ? '500' : '900', textTransform: 'uppercase', letterSpacing: 0.45, marginTop: 5, marginBottom: 1 },
   detailGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   detailCell: { width: '50%', minHeight: 58, flexDirection: 'row', gap: 7, paddingVertical: 8, paddingRight: 7, borderBottomWidth: 1, borderBottomColor: '#E8EDF3' },
   detailCopy: { flex: 1 },
-  detailLabel: { color: '#718096', fontSize: 9.5, fontWeight: '700', textTransform: 'uppercase' },
-  detailValue: { color: '#102445', fontSize: 12.5, fontWeight: '800', marginTop: 2, lineHeight: 16 },
+  detailLabel: { color: '#718096', fontSize: 9.5, fontWeight: Platform.OS === 'ios' ? '500' : '700', textTransform: 'uppercase' },
+  detailValue: { color: '#102445', fontSize: 12.5, fontWeight: Platform.OS === 'ios' ? '500' : '800', marginTop: 2, lineHeight: 16 },
   detailValueEmphasis: { color: '#254DDB' },
   detailLogo: { width: 16, height: 16 },
   noteBox: { minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: '#E8EDF3' },
-  noteText: { flex: 1, color: '#102445', fontSize: 12.5, fontWeight: '700', lineHeight: 17 },
+  noteText: { flex: 1, color: '#102445', fontSize: 12.5, fontWeight: Platform.OS === 'ios' ? '400' : '700', lineHeight: 17 },
   documentRow: { minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#E8EDF3' },
   pressed: { opacity: 0.72 },
   documentIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: '#EEF4FB', alignItems: 'center', justifyContent: 'center' },
   documentCopy: { flex: 1 },
-  documentTitle: { color: palette.navy, fontSize: 13, fontWeight: '900' },
-  documentName: { color: '#43536B', fontSize: 11, fontWeight: '700', marginTop: 1 },
+  documentTitle: { color: palette.navy, fontSize: 13, fontWeight: Platform.OS === 'ios' ? '500' : '900' },
+  documentName: { color: '#43536B', fontSize: 11, fontWeight: Platform.OS === 'ios' ? '500' : '700', marginTop: 1 },
   documentMeta: { color: '#8793A4', fontSize: 9.5, marginTop: 1 },
   uploadMessage: { color: '#C43838', fontSize: 11, marginTop: 4 },
   vehicleCard: { marginTop: 10, borderRadius: 16, borderWidth: 1, borderColor: '#DCE6F1', backgroundColor: '#FFFFFF', padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
   vehicleLogoShell: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F2F6FB', alignItems: 'center', justifyContent: 'center' },
   vehicleLogo: { width: 26, height: 26 },
   vehicleCopy: { flex: 1 },
-  vehicleLabel: { color: '#718096', fontSize: 9.5, fontWeight: '700', textTransform: 'uppercase' },
-  vehicleValue: { color: palette.navy, fontSize: 13.5, fontWeight: '900', marginTop: 1 },
+  vehicleLabel: { color: '#718096', fontSize: 9.5, fontWeight: Platform.OS === 'ios' ? '500' : '700', textTransform: 'uppercase' },
+  vehicleValue: { color: palette.navy, fontSize: 13.5, fontWeight: Platform.OS === 'ios' ? '500' : '900', marginTop: 1 },
 });

@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import {
+import { Platform,
   ActivityIndicator,
   Image,
   Pressable,
@@ -17,6 +17,7 @@ import { getCurrentSession } from '@/lib/auth';
 import { getInsurerLogoSource, getVehicleBrandLogoSource } from '@/lib/catalog-logos';
 import { getOperationalCustomerContexts } from '@/lib/customer-context';
 import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
+import { customerInsurerDisplayName } from '@/lib/customer-insurer-display';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
@@ -337,7 +338,7 @@ export default function CustomerPolicyDetailScreen() {
             <HeroMetric
               image={getInsurerLogoSource(company?.name) ?? policyDetailIcons.insurer}
               label="Insurer"
-              value={company?.name ?? 'Insurer pending'}
+              value={customerInsurerDisplayName(company?.name) || 'Insurer pending'}
             />
             <HeroMetric
               image={policyDetailIcons.policy}
@@ -666,7 +667,7 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 8,
   },
-  pageTitle: { color: palette.navy, fontSize: 21, fontWeight: '900' },
+  pageTitle: { color: palette.navy, fontSize: 21, fontWeight: Platform.OS === 'ios' ? '500' : '900' },
   pageRenewAction: {
     minHeight: 36,
     borderRadius: 10,
@@ -676,7 +677,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  pageRenewActionText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
+  pageRenewActionText: { color: '#FFFFFF', fontSize: 12, fontWeight: Platform.OS === 'ios' ? '500' : '800' },
   contentStack: { gap: 14, paddingBottom: 16 },
   heroLayout: {
     position: 'relative',
@@ -692,9 +693,9 @@ const styles = StyleSheet.create({
   healthHeroLayout: { gap: 9 },
   heroAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 },
   heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  policyNo: { flex: 1, color: palette.navy, fontSize: 18, fontWeight: '900' },
+  policyNo: { flex: 1, color: palette.navy, fontSize: 18, fontWeight: Platform.OS === 'ios' ? '400' : '900' },
   statusBadge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
-  statusText: { fontSize: 10, fontWeight: '900' },
+  statusText: { fontSize: 10, fontWeight: Platform.OS === 'ios' ? '400' : '900' },
   heroMetaRow: { flexDirection: 'row', gap: 9 },
   heroMetric: {
     flex: 1,
@@ -722,8 +723,8 @@ const styles = StyleSheet.create({
   healthPremiumRow: { flexDirection: 'row' },
   heroMetricIconImage: { width: 28, height: 28 },
   heroMetricCopy: { flex: 1, minWidth: 0 },
-  heroMetricLabel: { color: '#728196', fontSize: 10, fontWeight: '700', marginBottom: 3 },
-  heroMetricValue: { color: palette.navy, fontSize: 12, fontWeight: '800' },
+  heroMetricLabel: { color: '#728196', fontSize: 10, fontWeight: Platform.OS === 'ios' ? '500' : '700', marginBottom: 3 },
+  heroMetricValue: { color: palette.navy, fontSize: 12, fontWeight: Platform.OS === 'ios' ? '500' : '800' },
   dateFinancialMetric: {
     flex: 1,
     borderRadius: 14,
@@ -733,7 +734,7 @@ const styles = StyleSheet.create({
   },
   dateFinancialRow: { minHeight: 45, flexDirection: 'row', alignItems: 'center', gap: 8 },
   dateFinancialIcon: { width: 23, height: 23, resizeMode: 'contain' },
-  dateFinancialValue: { color: palette.navy, fontSize: 11, fontWeight: '800' },
+  dateFinancialValue: { color: palette.navy, fontSize: 11, fontWeight: Platform.OS === 'ios' ? '500' : '800' },
   dateFinancialDivider: { height: 1, backgroundColor: '#E2E9F1' },
   policyCopyCard: {
     overflow: 'hidden',
@@ -768,8 +769,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   policyCopyContent: { flex: 1, minWidth: 0 },
-  policyCopyTitle: { color: palette.navy, fontSize: 13, fontWeight: '900' },
-  policyCopyFileName: { color: '#40516A', fontSize: 11, fontWeight: '600', marginTop: 3 },
+  policyCopyTitle: { color: palette.navy, fontSize: 13, fontWeight: Platform.OS === 'ios' ? '500' : '900' },
+  policyCopyFileName: { color: '#40516A', fontSize: 11, fontWeight: Platform.OS === 'ios' ? '500' : '600', marginTop: 3 },
   policyCopyMeta: { color: '#8A97A7', fontSize: 10, marginTop: 3 },
   policyCopyPreview: {
     width: '100%',
@@ -812,7 +813,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  uploadMessage: { marginTop: -6, color: '#C43838', fontSize: 11, fontWeight: '600' },
+  uploadMessage: { marginTop: -6, color: '#C43838', fontSize: 11, fontWeight: Platform.OS === 'ios' ? '400' : '600' },
   vehicleCard: {
     minHeight: 70,
     borderRadius: 18,
@@ -835,6 +836,6 @@ const styles = StyleSheet.create({
   },
   vehicleBrandIconImage: { width: '100%', height: '100%' },
   vehicleSummaryCopy: { flex: 1 },
-  vehicleSummaryTitle: { color: '#718096', fontSize: 10, fontWeight: '700' },
-  vehicleSummaryNumber: { color: palette.navy, fontSize: 13, fontWeight: '900', marginTop: 3 },
+  vehicleSummaryTitle: { color: '#718096', fontSize: 10, fontWeight: Platform.OS === 'ios' ? '500' : '700' },
+  vehicleSummaryNumber: { color: palette.navy, fontSize: 13, fontWeight: Platform.OS === 'ios' ? '500' : '900', marginTop: 3 },
 });
