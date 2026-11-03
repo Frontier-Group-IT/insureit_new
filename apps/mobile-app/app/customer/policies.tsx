@@ -535,10 +535,10 @@ function PolicySummaryColumn({
         )}
       </View>
       <View style={styles.summaryCopy}>
-        <Text style={styles.summaryPrimary} numberOfLines={1}>{primaryValue}</Text>
-        <Text style={styles.summarySecondary} numberOfLines={1}>{secondaryValue}</Text>
+        <Text style={styles.summaryPrimary} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.65}>{primaryValue}</Text>
+        <Text style={styles.summarySecondary} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.75}>{secondaryValue}</Text>
         <View style={styles.summaryTertiaryRow}>
-          <Text style={[styles.summaryTertiary, tertiaryMuted && styles.summaryTertiaryMuted]} numberOfLines={1}>{tertiaryValue}</Text>
+          <Text style={[styles.summaryTertiary, tertiaryMuted && styles.summaryTertiaryMuted]} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.78}>{tertiaryValue}</Text>
           {tertiaryDotColor ? <View style={[styles.expiryDot, { backgroundColor: tertiaryDotColor }]} /> : null}
         </View>
       </View>
@@ -674,10 +674,10 @@ const styles = StyleSheet.create({
   categoryDropdownOptionCount: { color: '#7B8798', fontSize: 10.5, fontWeight: Platform.OS === 'ios' ? '500' : '900' },
   categoryDropdownOptionTextActive: { color: palette.navy },
   statusFilterScroller: { flex: 1, maxHeight: 42 },
-  statusFilterWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 14 },
-  filterChip: { height: 34, borderRadius: 999, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center' },
+  statusFilterWrap: { flexDirection: 'row', alignItems: 'center', gap: Platform.OS === 'ios' ? 5 : 8, paddingRight: 14 },
+  filterChip: { height: 34, borderRadius: 999, paddingHorizontal: Platform.OS === 'ios' ? 8 : 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center' },
   filterChipActive: { backgroundColor: palette.navy, borderColor: palette.navy },
-  filterText: { color: palette.slate, fontSize: 11.5, fontWeight: Platform.OS === 'ios' ? '400' : '900' },
+  filterText: { color: palette.slate, fontSize: Platform.OS === 'ios' ? 10.4 : 11.5, fontWeight: Platform.OS === 'ios' ? '400' : '900' },
   filterTextActive: { color: '#FFFFFF' },
   policyCard: { backgroundColor: '#FBFCFE', borderWidth: 1, borderColor: '#D8E3EE', borderRadius: 18, padding: 12, paddingLeft: 17, marginBottom: 10, overflow: 'hidden', shadowColor: palette.ink, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 },
   lifeHealthPolicyCard: { paddingBottom: 11 },
@@ -692,13 +692,13 @@ const styles = StyleSheet.create({
   lifeHealthTypePill: { borderRadius: 999, backgroundColor: palette.navy, paddingHorizontal: 9, paddingVertical: 4 },
   lifeHealthTypeText: { color: '#FFFFFF', fontSize: 7.8, fontWeight: Platform.OS === 'ios' ? '400' : '900', letterSpacing: 0.45 },
   policyContentRow: { marginTop: 10, flexDirection: 'row', alignItems: 'stretch' },
-  summaryColumn: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 2, paddingVertical: 4 },
-  contentDivider: { width: 1, backgroundColor: '#E1E8F0', marginHorizontal: 10, marginVertical: 2 },
-  catalogIconWrap: { width: 42, height: 42, borderRadius: 11, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4EAF1', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  catalogIcon: { width: 34, height: 34 },
+  summaryColumn: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: Platform.OS === 'ios' ? 6 : 10, paddingHorizontal: 2, paddingVertical: 4 },
+  contentDivider: { width: 1, backgroundColor: '#E1E8F0', marginHorizontal: Platform.OS === 'ios' ? 6 : 10, marginVertical: 2 },
+  catalogIconWrap: { width: Platform.OS === 'ios' ? 38 : 42, height: Platform.OS === 'ios' ? 38 : 42, borderRadius: 11, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4EAF1', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  catalogIcon: { width: Platform.OS === 'ios' ? 31 : 34, height: Platform.OS === 'ios' ? 31 : 34 },
   summaryCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
-  summaryPrimary: { color: palette.ink, fontSize: 12.4, lineHeight: 16, fontWeight: Platform.OS === 'ios' ? '500' : '900' },
-  summarySecondary: { color: palette.ink, fontSize: 10.8, lineHeight: 14, fontWeight: Platform.OS === 'ios' ? '400' : '800', marginTop: 2 },
+  summaryPrimary: { color: palette.ink, fontSize: Platform.OS === 'ios' ? 11.3 : 12.4, lineHeight: 16, fontWeight: Platform.OS === 'ios' ? '500' : '900' },
+  summarySecondary: { color: palette.ink, fontSize: Platform.OS === 'ios' ? 10 : 10.8, lineHeight: 14, fontWeight: Platform.OS === 'ios' ? '400' : '800', marginTop: 2 },
   summaryTertiaryRow: { marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
   summaryTertiary: { color: '#64748B', fontSize: 10.4, lineHeight: 13, fontWeight: Platform.OS === 'ios' ? '400' : '700', flexShrink: 1 },
   summaryTertiaryMuted: { color: '#97A2B2', fontWeight: Platform.OS === 'ios' ? '400' : '700' },
