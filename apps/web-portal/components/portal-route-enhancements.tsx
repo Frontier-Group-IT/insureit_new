@@ -33,7 +33,15 @@ export function PortalRouteEnhancements() {
   // Avoid stacking the generic raw error popup over that dialog.
   const hasPageSpecificAssociateError = /^\/intermediaries\/applications\/[^/]+\/associate-accounts\/?$/.test(pathname)
     && (searchParams.has("error") || searchParams.has("associate_error"));
-  const hasPopupMessage = (searchParams.has("success") || searchParams.has("error")) && !hasPageSpecificAssociateError;
+  // Branch management routes display their own contextual error notice.
+  // Do not show an additional global popup containing the same raw error.
+  const hasPageSpecificBranchError = searchParams.has("error") && (
+    pathname === "/intermediaries/groups/branches/new"
+    || pathname === "/intermediaries/groups/login-access"
+    || pathname === "/intermediaries/groups"
+  );
+  const hasPopupMessage = (searchParams.has("success") || searchParams.has("error"))
+    && !hasPageSpecificAssociateError && !hasPageSpecificBranchError;
 
   return (
     <>
