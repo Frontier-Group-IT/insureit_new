@@ -92,7 +92,7 @@ export function PolicyDateApprovalWidget(props: Props) {
               )}
             </div>
           )}
-          {requestId && !props.verifiedApprovalId ? <p className="mt-1 text-[10px] text-[#6A7F9A]">Code sent to the selected approver's email. Valid for 5 minutes.</p> : null}
+          {requestId && !props.verifiedApprovalId ? <p className="mt-1 text-[10px] text-[#6A7F9A]">Code sent to the selected approver&apos;s email. Valid for 5 minutes.</p> : null}
           {error ? <p role="alert" className="mt-1 text-[11px] text-red-700">{error}</p> : null}
         </div>
       </div>
