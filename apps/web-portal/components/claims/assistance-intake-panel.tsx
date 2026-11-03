@@ -218,7 +218,7 @@ export function AssistanceIntakePanel(props: AssistanceIntakePanelProps) {
                   </div>
                   <span className="rounded-full bg-[#EEF2F7] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wide text-[#58708F]">{formatMilestoneStatus(selectedMilestone?.status)}</span>
                 </div>
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                   {fields[selectedKey].map((field) => (
                     <ReadOnlyField key={field.key} label={field.label} value={fieldValue(field, selectedDetails, snapshot)} kind={field.kind} />
                   ))}
@@ -232,10 +232,6 @@ export function AssistanceIntakePanel(props: AssistanceIntakePanelProps) {
       </section>
     </div>
   );
-}
-
-function Summary({ label, value }: { label: string; value: string }) {
-  return <div className="min-w-0"><dt className="text-[9px] font-semibold uppercase tracking-wide text-[#7B8797]">{label}</dt><dd className="mt-1 truncate text-[12px] font-semibold text-[#071D49]">{value || "-"}</dd></div>;
 }
 
 function ReadOnlyField({ label, value, kind = "text" }: { label: string; value: unknown; kind?: FieldKind }) {
