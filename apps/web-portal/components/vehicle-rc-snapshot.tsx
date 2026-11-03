@@ -27,34 +27,6 @@ export function VehicleRcSnapshot({ initialDetails }: { initialDetails?: unknown
     return () => window.removeEventListener("insureit:vehicle-rc-applied", apply);
   }, []);
 
-  return (
-    <div className="rounded-xl border border-[#D9E2F0] bg-white px-4 py-3">
-      <input type="hidden" name="rc_details_json" value={snapshot ? JSON.stringify(snapshot) : ""} readOnly />
-      <details>
-        <summary className="cursor-pointer text-[12px] font-semibold text-[#17365D]">
-          Complete RC API Details (Optional) {snapshot ? "· saved snapshot" : "· available after RC fetch"}
-        </summary>
-        {snapshot ? (
-          <div className="mt-3 space-y-3">
-            <p className="text-[10px] text-[#64748B]">
-              Source: {snapshot.source ?? "Previously saved RC data"} {snapshot.lookedUpAt ? `· Fetched ${snapshot.lookedUpAt}` : ""}
-            </p>
-            {snapshot.sections.map((section, index) => (
-              <section key={index} className="rounded-lg border border-[#E2E8F0]">
-                <h3 className="border-b bg-[#F8FAFC] px-3 py-2 text-[11px] font-bold">{section.title}</h3>
-                <dl className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {section.fields.map((field, fieldIndex) => (
-                    <div key={fieldIndex} className="min-w-0">
-                      <dt className="text-[9px] font-semibold text-[#667085]">{field.label}</dt>
-                      <dd className="break-words text-[11px] text-[#17203A]">{field.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </section>
-            ))}
-          </div>
-        ) : <p className="mt-2 text-[11px] text-[#667085]">No RC snapshot saved. You can still enter and save vehicle details manually.</p>}
-      </details>
-    </div>
-  );
+  // Preserve fetched RC details in the vehicle form submission without a separate UI panel.
+  return <input type="hidden" name="rc_details_json" value={snapshot ? JSON.stringify(snapshot) : ""} readOnly />;
 }
