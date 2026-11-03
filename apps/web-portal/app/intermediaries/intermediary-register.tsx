@@ -8,6 +8,7 @@ import { getAccessibleIntermediaryIds } from "@/lib/employee-access-scope";
 import { requirePospMispManager } from "@/lib/master-data-server";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { FreshAccountReviewLink } from "./applications/account-review-back-link";
 import { createLinkedIntermediaryAccount } from "./applications/[id]/account-review-actions";
 import { PartnerRegisterClient, type PartnerRegisterRow } from "./partner-register-client";
@@ -73,18 +74,25 @@ export async function IntermediaryRegister({
   const accessibleIds = await getAccessibleIntermediaryIds(profile.id, profile.role);
   const canReview = await hasEffectiveCapability(profile, "review_intermediary_application", "edit");
 
-  let request = admin
-    .from("intermediaries")
-    .select("id,intermediary_code,onboarding_id,intermediary_type,requested_type,display_name,mobile,email,city,iib_status,compliance_status,account_status,portal_access_status,visibility_level,application_id,updated_at")
-    .order("updated_at", { ascending: false })
-    .limit(250);
-  if (accessibleIds !== null) request = accessibleIds.length ? request.in("id", accessibleIds) : request.in("id", ["00000000-0000-0000-0000-000000000000"]);
-  if (effectiveType) request = request.eq("intermediary_type", effectiveType);
-  if (accountStatus && selectedType !== "partner") request = request.eq("account_status", accountStatus);
-  if (portalAccess) request = request.eq("portal_access_status", portalAccess);
-  if (search && selectedType !== "partner") request = request.or(`display_name.ilike.%${search}%,mobile.ilike.%${search}%,email.ilike.%${search}%,intermediary_code.ilike.%${search}%`);
+  const buildRequest = (from?: number, to?: number) => {
+    let request = admin
+      .from("intermediaries")
+      .select("id,intermediary_code,onboarding_id,intermediary_type,requested_type,display_name,mobile,email,city,iib_status,compliance_status,account_status,portal_access_status,visibility_level,application_id,updated_at")
+      .order("updated_at", { ascending: false })
+      .order("id", { ascending: false });
+    if (accessibleIds !== null) request = accessibleIds.length ? request.in("id", accessibleIds) : request.in("id", ["00000000-0000-0000-0000-000000000000"]);
+    if (effectiveType) request = request.eq("intermediary_type", effectiveType);
+    if (accountStatus && selectedType !== "partner") request = request.eq("account_status", accountStatus);
+    if (portalAccess) request = request.eq("portal_access_status", portalAccess);
+    if (search && selectedType !== "partner") request = request.or(`display_name.ilike.%${search}%,mobile.ilike.%${search}%,email.ilike.%${search}%,intermediary_code.ilike.%${search}%`);
+    return from === undefined || to === undefined ? request.limit(250) : request.range(from, to);
+  };
 
-  const { data, error: loadError } = await request.returns<IntermediaryRow[]>();
+  // Partner metrics must be ranked across the entire authorized set, not only
+  // the 250 most recently updated intermediaries.
+  const { data, error: loadError } = selectedType === "partner"
+    ? await fetchAllPages<IntermediaryRow, unknown>((from, to) => buildRequest(from, to).returns<IntermediaryRow[]>())
+    : await buildRequest().returns<IntermediaryRow[]>();
   let rows = data ?? [];
   const appIds = rows.map((row) => row.application_id).filter((value): value is string => Boolean(value));
   const { data: apps } = appIds.length
