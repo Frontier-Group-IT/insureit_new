@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/auth-server";
+import { createCustomerServerSupabaseClient } from "@/lib/auth-server";
 import { getCustomerWebSession } from "@/lib/customer-web";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   if (!ALLOWED_TYPES.has(file.type)) return NextResponse.json({ error: "Upload PDF, JPG or PNG only." }, { status: 400 });
   if (file.size <= 0 || file.size > MAX_FILE_SIZE) return NextResponse.json({ error: "KYC document must be 5 MB or smaller." }, { status: 400 });
 
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createCustomerServerSupabaseClient();
   const application = await supabase
     .from("customer_onboarding_applications")
     .select("id,status,partner_type")
