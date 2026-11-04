@@ -8,7 +8,7 @@ export function CustomerSupportTicketPanel({customerId,claims,search}:{customerI
   const [open,setOpen]=useState(false);
   return <div className="customer-workflow space-y-3">
     <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
-      <h2 className="flex items-center gap-2 whitespace-nowrap text-[15px] font-bold text-[#29305D]"><img src="/assets/customer-3d-icons/support.png" alt="" aria-hidden="true" width={36} height={36} className="h-9 w-9 shrink-0 object-contain" />My Support Requests</h2>
+      <h2 className="flex items-center gap-2 whitespace-nowrap text-[15px] font-bold text-[#29305D]"><img src="/assets/customer-3d-icons/total_documents.png" alt="" aria-hidden="true" width={36} height={36} className="h-9 w-9 shrink-0 object-contain" />My Support Requests</h2>
       {search}
       <div className="flex justify-start sm:justify-end">
     <button type="button" onClick={()=>setOpen(value=>!value)} aria-expanded={open} aria-controls="raise-support-ticket"
