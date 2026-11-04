@@ -26,4 +26,9 @@ const scenarios = [
   [1, 0, "internal"], [0, 1, "external"], [1, 1, "internal"], [0, 0, "internal"], [4, 3, "internal"],
 ];
 for (const [internal, external, expected] of scenarios) assert.equal(classify(internal, external), expected);
-console.log("Customer internal/external register segmentation regression passed.");
+assert.match(workspace, /const PAGE_SIZE = 15;/, "Both customer registers must display 15 records per page.");
+assert.match(workspace, /Math\.ceil\(filteredRows\.length \/ PAGE_SIZE\)/, "Page count must use the 15-row page size.");
+assert.match(workspace, /filteredRows\.slice\(\(safePage - 1\) \* PAGE_SIZE, safePage \* PAGE_SIZE\)/, "Rows must paginate in groups of 15.");
+assert.match(workspace, /pageSize=\{PAGE_SIZE\}/, "Pagination label must use the same 15-row page size.");
+assert.match(page, /<CustomerWorkspace key=\{registerTitle\}/, "Both Internal and External customer registers must share the page size.");
+console.log("Customer internal/external register segmentation and 15-row pagination regression passed.");

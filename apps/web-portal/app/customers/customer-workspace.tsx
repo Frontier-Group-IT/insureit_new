@@ -30,7 +30,7 @@ type CustomerRow = {
 
 type ViewKey = "all" | "active" | "inactive";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 15;
 const fleetLabels: Record<string, string> = { less_than_5: "< 5", "5_to_20": "5-20", "20_to_50": "20-50", more_than_50: "> 50" };
 const partnerOptions = [
   { value: "individual_proprietor", label: "Individual / Proprietor", description: "Owner, proprietor or individual fleet operator", available: true },
