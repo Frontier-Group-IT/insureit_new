@@ -371,7 +371,7 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
             </label>
             
             <div className="mt-5 grid grid-cols-2 gap-3">
-              <button type="button" disabled={isPending} onClick={closeClaimNumberPrompt} className="h-10 rounded-lg border border-[#CFD9E8] bg-white text-[12px] font-semibold text-[#071D49] disabled:opacity-50">Not Now</button>
+              <button type="button" disabled={isPending} onClick={() => closeClaimNumberPrompt()} className="h-10 rounded-lg border border-[#CFD9E8] bg-white text-[12px] font-semibold text-[#071D49] disabled:opacity-50">Not Now</button>
               <button type="button" disabled={isPending} onClick={addClaimNumber} className="h-10 rounded-lg bg-[#071D49] text-[12px] font-semibold text-white disabled:opacity-50">{pendingAction === "claim-number" ? "Saving..." : "Add"}</button>
             </div>
           </section>
