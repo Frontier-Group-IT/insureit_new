@@ -127,7 +127,7 @@ export async function saveCustomerExternalStage(form:FormData, navigate = true) 
     ? "/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(key)+"?account="+encodeURIComponent(account.id)+"&mode=edit&saved=updated"
     : next
       ? "/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(next.key)+"?account="+encodeURIComponent(account.id)+"&mode=edit"+(key==="claim_intimation"?"&saved=claim_intimation":"")
-      : "/customer/claims/"+encodeURIComponent(claim.id)+"?account="+encodeURIComponent(account.id));
+      : "/customer/claims/"+encodeURIComponent(claim.id)+"?account="+encodeURIComponent(account.id);
   if (navigate) redirect(destination);
   return destination;
 }
