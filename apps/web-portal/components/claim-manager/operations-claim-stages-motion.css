@@ -38,6 +38,43 @@
   transform-origin: center;
   animation: operationsClaimCheckAppear 330ms cubic-bezier(.2,.8,.25,1) both;
 }
+/* One shared stage panel for all nine milestones, Internal and External.
+   backwards releases transform after entry instead of blocking subsequent hover. */
+@keyframes operationsClaimPanelEnter {
+  from { opacity: .72; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.operations-claim-motion-panel {
+  animation: operationsClaimPanelEnter 280ms cubic-bezier(.2,.8,.25,1) backwards;
+}
+.operations-claim-motion-panel > :is(form, section, div.mt-3) {
+  transition: border-color 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
+}
+.operations-claim-motion-panel :is(input, select, textarea) {
+  transition: border-color 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
+}
+.operations-claim-motion-panel :is(button, [role="button"]) {
+  transition: transform 200ms ease, box-shadow 200ms ease, background-color 200ms ease, border-color 200ms ease, filter 200ms ease;
+}
+.operations-claim-motion-panel :is(button, [role="button"]):focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+@media (hover:hover) and (pointer:fine) {
+  .operations-claim-motion-panel > :is(form, section):hover {
+    border-color: #b8d0f0;
+    box-shadow: 0 8px 22px rgba(17,75,150,.09);
+  }
+  .operations-claim-motion-panel :is(input:not(:disabled), select:not(:disabled), textarea:not(:disabled)):hover {
+    border-color: #96b9ed;
+  }
+  .operations-claim-motion-panel :is(button:not(:disabled), [role="button"]:not([aria-disabled="true"])):hover {
+    filter: brightness(1.035);
+  }
+  .operations-claim-motion-panel :is(button:not(:disabled), [role="button"]:not([aria-disabled="true"])):active {
+    transform: translateY(1px);
+  }
+}
 @media (hover:hover) and (pointer:fine) {
   .operations-claim-motion .operations-claim-motion-step:has(button:not(:disabled)):hover {
     transform: translateY(-2px);
@@ -45,6 +82,9 @@
   }
 }
 @media (prefers-reduced-motion:reduce) {
+  .operations-claim-motion-panel { animation: none !important; }
+  .operations-claim-motion-panel > :is(form, section, div.mt-3),
+  .operations-claim-motion-panel :is(input, select, textarea, button, [role="button"]) { transition: none !important; }
   .operations-claim-motion .operations-claim-motion-active,
   .operations-claim-motion .operations-claim-motion-active .operations-claim-motion-indicator,
   .operations-claim-motion .operations-claim-motion-completed .operations-claim-motion-check {
