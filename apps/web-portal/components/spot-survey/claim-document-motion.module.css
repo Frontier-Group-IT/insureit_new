@@ -3,7 +3,7 @@
 .card {
   position: relative;
   isolation: isolate;
-  animation: documentEnter .32s ease-out both;
+  animation: documentEnter .32s ease-out backwards;
   transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease, background-color 200ms ease;
 }
 .card:focus-within {
