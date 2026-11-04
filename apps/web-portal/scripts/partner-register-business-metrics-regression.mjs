@@ -41,6 +41,7 @@ assert.match(client, /if \(a\.mtdNetPremium === null\)/, "Unavailable MTD is sor
 assert.match(client, /router\.refresh\(\)/, "Visible Partner Register periodically refreshes MTD rank");
 assert.match(client, /document\.visibilityState !== "visible"/, "Background tabs must not poll");
 assert.match(client, /Sorted by MTD Net Premium/, "User must see default ordering basis");
+assert.match(client, /MTD \{money\(row\.mtdNetPremium\)\}/, "Each Partner row must reveal the MTD amount used in ranking");
 assert.match(mtdSql, /timezone\('Asia\/Kolkata', now\(\)\)/, "Month boundary must use India calendar time");
 assert.match(mtdSql, /coalesce\(p\.issuance_date, \(p\.created_at at time zone 'Asia\/Kolkata'\)::date\)/, "MTD must use issuance date with creation fallback");
 assert.match(mtdSql, /select distinct f\.partner_id, p\.id as policy_id/, "MTD must deduplicate partner-family policies");
