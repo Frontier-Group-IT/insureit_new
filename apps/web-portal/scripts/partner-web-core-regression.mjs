@@ -407,7 +407,7 @@ if (!process.exitCode) {
 // Partner review tabs must attach to the original blue header and split 50/50.
 const partnerApplicationReview = read("app/intermediaries/applications/[id]/page.tsx");
 assert(partnerApplicationReview.includes('rounded-t-2xl rounded-b-none'), "Partner header must attach flush to the tabs");
-assert(partnerApplicationReview.includes('aria-label="Partner review sections" className="-mt-4 grid grid-cols-2'), "Partner tabs must attach to the header and use equal columns");
+assert(partnerApplicationReview.includes('aria-label="Partner review sections" className="!mt-0 grid grid-cols-2'), "Partner tabs must sit flush under the header and use equal columns");
 assert(partnerApplicationReview.includes('transition-[background-color,color,box-shadow,transform] duration-200'), "Partner tab hover/selection must transition smoothly");
 assert(partnerApplicationReview.includes('hover:bg-[#eef4ff]'), "Partner tab hover must be subtle");
 assert(partnerApplicationReview.includes('aria-current={query.tab !== "business" ? "page" : undefined}'), "Profile remains selected by default");
