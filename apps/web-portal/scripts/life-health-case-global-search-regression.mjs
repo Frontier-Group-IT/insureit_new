@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const page=readFileSync(new URL("../app/policies/life-health-cases/page.tsx",import.meta.url),"utf8");
+const register=readFileSync(new URL("../components/life-health-case-register.tsx",import.meta.url),"utf8");
+assert.match(page,/const filter: CaseFilter = params\?\.status === "issued" \|\| params\?\.status === "all" \? params\.status : "pending"/,"Existing Pending default remains unchanged");
+assert.match(page,/allRows\.map\(\(row\) =>/,"All authorized cases must be passed to client");
+assert.match(page,/<LifeHealthCaseRegister rows=\{registerRows\} statusFilter=\{filter\}/,"Tab selection must be passed separately");
+assert.match(register,/if \(!normalizedQuery\) return rows\.filter\(\(row\) => statusFilter === "all"/,"Only empty search should apply tab filter");
+assert.match(register,/return rows\.filter\(\(row\) => \{/,"Typed search must search all authorized rows");
+assert.match(register,/across all statuses/,"Search scope should be shown to users");
+console.log("Life/Health global search independent of status tabs regression passed.");
