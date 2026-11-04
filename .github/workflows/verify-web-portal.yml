@@ -147,6 +147,8 @@ jobs:
         run: npm run partner-web:core-regression
       - name: Customer Web foundation isolation regression
         run: npm run customer-web:foundation-regression
+      - name: Customer Portal full-height layout regression
+        run: node scripts/customer-full-height-layout-regression.mjs
       - name: Policyless customer claim ownership RLS regression
         run: node scripts/customer-policyless-claim-rls-regression.mjs
       - name: Customer Claims phone and insurer number regression
