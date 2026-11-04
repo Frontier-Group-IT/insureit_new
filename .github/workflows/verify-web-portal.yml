@@ -158,6 +158,9 @@ jobs:
       - name: Customer Home permanent Start Claim regression
         working-directory: apps/web-portal
         run: node scripts/customer-home-start-claim-regression.mjs
+      - name: Customer Start Claim inline policy summary regression
+        working-directory: apps/web-portal
+        run: node scripts/customer-start-claim-inline-policy-summary-regression.mjs
       - name: Customer action-first Home regression
         working-directory: apps/web-portal
         run: node scripts/customer-action-first-home-regression.mjs
