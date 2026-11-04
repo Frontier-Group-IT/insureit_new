@@ -380,7 +380,7 @@ function documentsForType(documents: FinalVerificationDocument[], documentType: 
 
 function isDocumentVerified(document: FinalVerificationDocument, data: FinalVerificationData) {
   const verification = data.verifications.find((row) => row.document_id === document.id);
-  return document.verification_status === "verified" || Boolean(verification?.is_valid);
+  return document.verification_status !== "rejected" && (document.verification_status === "verified" || Boolean(verification?.is_valid));
 }
 
 function verificationKeyFor(documentType: string): Stage3DocumentVerificationItem["verificationKey"] {
