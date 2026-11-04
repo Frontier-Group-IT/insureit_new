@@ -73,3 +73,18 @@ assert.doesNotMatch(verifiedStatusFunction, /Final Documents Submitted/, "Stage 
 assert.match(claimWorkflow, /advance_initial_documents_verified RPC/, "The Stage 3 RPC boundary must be documented beside the status guard.");
 
 console.log("Claim document Stage 1/Stage 3 Internal/External parity, shared claim authorization, compact pill status summary and workflow-boundary regression passed.");
+
+const stageActions = await readFile(new URL("../app/claims/stage-actions.ts", import.meta.url), "utf8");
+const finalActions = await readFile(new URL("../components/final-documents/final-documents-actions.ts", import.meta.url), "utf8");
+assert.match(stageActions, /export async function completeClaimJourneyStageWithFeedback\(/, "Operations Stage 3 must have a safe server-action result boundary.");
+assert.match(stageActions, /await completeClaimJourneyStage\(claimId, formData\)/, "Safe wrapper must preserve existing authorization and document verification.");
+assert.match(stageActions, /Verify first/, "Safe wrapper must recognize the document verification guard.");
+assert.match(stageActions, /advanced: false/, "Rejected stage completion must never advance the claim.");
+assert.match(stage3Workspace, /completeClaimJourneyStageWithFeedback\(claimId, formData\)/, "Stage 3 must use the safe completion action.");
+assert.match(stage3Workspace, /if \(!response\.ok\)/, "Stage 3 must display the server's validation result.");
+assert.match(stage3Workspace, /sessionStorage\.setItem\(draftKey/, "Entering stage details must protect unsaved input from remount.");
+assert.match(stage3Workspace, /sessionStorage\.removeItem\(draftKey\)/, "Successfully saved stage entries must clean up the local draft.");
+assert.match(stage3Workspace, /submitFinalDocumentsDraft\(stageDetailsForm\(\)\)/, "Save as Draft must include entered dealership details.");
+assert.match(finalActions, /draft: true/, "Partial Stage 3 drafts must be distinguishable from completed details.");
+assert.match(finalActions, /hasFieldValues/, "Empty and populated drafts must be handled.");
+assert.match(finalActions, /verification_type: "final_documents_dealership_details"/, "Draft entries must use the existing details loader.");
