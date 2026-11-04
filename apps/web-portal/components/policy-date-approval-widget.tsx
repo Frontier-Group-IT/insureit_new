@@ -5,7 +5,7 @@ import { CheckCircle2, KeyRound, Mail, ShieldCheck } from "lucide-react";
 import {
   requestPolicyDateApproval, verifyPolicyDateApproval,
 } from "@/app/policies/policy-date-approval-actions";
-import { POLICY_DATE_APPROVERS } from "@/lib/policy-date-rule";
+import { policyDateApprovalReason, POLICY_DATE_APPROVERS } from "@/lib/policy-date-rule";
 
 type Props = {
   issuanceDate: string;
@@ -21,6 +21,7 @@ export function PolicyDateApprovalWidget(props: Props) {
   const [approver, setApprover] = useState("jatin");
   const [requestId, setRequestId] = useState<string | null>(null);
   const [otp, setOtp] = useState("");
+  const [justification, setJustification] = useState("");
   const [error, setError] = useState("");
   const [busy, startTransition] = useTransition();
   const input = {
@@ -30,12 +31,13 @@ export function PolicyDateApprovalWidget(props: Props) {
     existingPolicyId: props.existingPolicyId,
     intermediaryCode: props.intermediaryCode,
   };
+  const ruleReason = policyDateApprovalReason(props.issuanceDate);
 
   function requestOtp() {
     setError("");
     props.onApproved(null);
     startTransition(async () => {
-      const response = await requestPolicyDateApproval({ ...input, approverKey: approver });
+      const response = await requestPolicyDateApproval({ ...input, approverKey: approver, justification });
       if (!response.ok) { setError(response.error); return; }
       setRequestId(response.approvalId);
       setOtp("");
@@ -60,8 +62,26 @@ export function PolicyDateApprovalWidget(props: Props) {
         <div className="min-w-0 flex-1">
           <p className="text-[12px] font-bold text-[#17365D]">Earlier-month policy approval</p>
           <p className="mt-0.5 text-[11px] leading-5 text-[#536C8D]">
-            This policy date requires approval. Select an approver and verify the email code before saving.
+            {ruleReason ?? "This policy date requires approval."} Select an approver, explain the earlier date and verify the email code before saving.
           </p>
+          <label className="mt-3 block text-[10px] font-semibold text-[#536C8D]">
+            Reason for backdated issuance <span aria-hidden="true" className="text-red-600">*</span>
+            <textarea
+              value={justification}
+              onChange={event => setJustification(event.target.value.slice(0, 500))}
+              disabled={busy || Boolean(requestId) || Boolean(props.verifiedApprovalId)}
+              required
+              minLength={12}
+              maxLength={500}
+              rows={2}
+              aria-describedby="policy-date-justification-help"
+              placeholder="Explain why the policy needs this earlier issuance date"
+              className="mt-1 block w-full resize-y rounded-lg border border-[#C8D9EF] bg-white px-3 py-2 text-[12px] font-medium text-[#19375D] outline-none focus:border-[#245C96] disabled:bg-[#F1F5FA]"
+            />
+            <span id="policy-date-justification-help" className="mt-1 block text-[10px] font-normal text-[#64748B]">
+              Required, 12–500 characters. The reason will be included in the approval email and audit record.
+            </span>
+          </label>
           {props.verifiedApprovalId ? (
             <p className="mt-2 flex items-center gap-1 text-[11px] font-bold text-[#14845B]">
               <CheckCircle2 className="h-4 w-4" /> Email OTP verified. You can now save the policy.
@@ -75,7 +95,7 @@ export function PolicyDateApprovalWidget(props: Props) {
                 </select>
               </label>
               {!requestId ? (
-                <button type="button" onClick={requestOtp} disabled={busy || !props.policyNumber.trim()} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#17365D] px-3 text-[11px] font-bold text-white disabled:opacity-50">
+                <button type="button" onClick={requestOtp} disabled={busy || !props.policyNumber.trim() || justification.trim().length < 12 || justification.trim().length > 500} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#17365D] px-3 text-[11px] font-bold text-white disabled:opacity-50">
                   <Mail className="h-3.5 w-3.5" /> {busy ? "Sending…" : "Send OTP"}
                 </button>
               ) : (

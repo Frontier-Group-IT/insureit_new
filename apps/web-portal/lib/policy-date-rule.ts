@@ -42,3 +42,15 @@ export function needsPolicyDateApproval(
   if (originalIssuanceDate === issuanceDate) return false;
   return policyDateDecision(issuanceDate, currentIndiaDate) === "otp_required";
 }
+
+/** Human-readable reason computed from the same India-calendar cutoff as OTP eligibility. */
+export function policyDateApprovalReason(issuanceDate: string, currentIndiaDate = indiaDate()): string | null {
+  if (policyDateDecision(issuanceDate, currentIndiaDate) !== "otp_required") return null;
+  const [year, month] = issuanceDate.split("-").map(Number);
+  const [currentYear, currentMonth] = currentIndiaDate.split("-").map(Number);
+  const monthsEarlier = (currentYear - year) * 12 + currentMonth - month;
+  if (monthsEarlier === 1) {
+    return "Previous-month issuance after the 15th-day approval cutoff";
+  }
+  return "Older-month policy issuance outside the permitted direct-submission window";
+}
