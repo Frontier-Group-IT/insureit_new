@@ -15,7 +15,7 @@ const dlRequiredFields = ["licence_valid_upto", "dl_inbound", "dl_valid_for_loss
 const grRequiredFields = ["gr_gvw_kg", "unladen_weight_kg", "load_weight_kg", "load_difference_kg"] as const;
 const maxBulkVerificationDocuments = 25;
 
-type ClaimForVerification = { id: string; customer_id: string; current_status: ClaimStatus; accident_at: string | null; claim_service_mode: "broker_managed" | "self_managed" };
+type ClaimForVerification = { id: string; customer_id: string; current_status: ClaimStatus; accident_at: string | null; claim_service_mode: "broker_managed" | "self_managed"; policy_service_source: "sibl" | "external" | null };
 type ClaimDocumentStatus = { id: string; document_type: string; verification_status: string };
 type ActionResult = { ok: boolean; message?: string };
 type VerificationType = "rc" | "insurance" | "document" | "detail";
@@ -24,9 +24,11 @@ type WorkflowProfile = Awaited<ReturnType<typeof requireClaimWorkflowAccess>>["p
 
 async function context(claimId: string) {
   const access = await requireClaimWorkflowAccess(claimId, "You do not have permission to verify claim documents.");
-  const { data, error } = await access.supabase.from("claims").select("id, customer_id, current_status, accident_at, claim_service_mode").eq("id", claimId).maybeSingle<ClaimForVerification>();
+  const { data, error } = await access.supabase.from("claims").select("id, customer_id, current_status, accident_at, claim_service_mode, policy_service_source").eq("id", claimId).maybeSingle<ClaimForVerification>();
   if (error || !data) throw new Error(error?.message ?? "Claim not found.");
-  if (data.claim_service_mode !== "broker_managed") throw new Error("Operations can process this claim only after assistance is accepted.");
+  if (data.claim_service_mode !== "broker_managed" && (data.policy_service_source !== "external" || access.isPartner)) {
+    throw new Error("Only authorized Operations users may manage documents for self-managed external claims.");
+  }
   return { ...access, claim: data };
 }
 

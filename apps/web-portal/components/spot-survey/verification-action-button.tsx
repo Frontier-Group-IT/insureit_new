@@ -4,7 +4,7 @@ import { DocumentVerificationModalButton } from "./document-verification-modal-v
 import { InsuranceVerificationModalButton } from "./insurance-verification-modal";
 import { VerifyDocumentButton } from "./verify-buttons";
 import { useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { FileCheck2 } from "lucide-react";
 import { createPortal } from "react-dom";
 
 const reverifyIconClass = "absolute inset-0 [&_button]:!h-8 [&_button]:!w-8 [&_button]:!min-w-0 [&_button]:!p-0 [&_button]:!border-0 [&_button]:!bg-transparent [&_button]:!text-[0px] [&_button]:!shadow-none [&_button]:!rounded-md [&_button:hover]:!bg-amber-50";
@@ -54,7 +54,7 @@ export function VerificationActionButton({ claimId, documentId, documentIds, ite
   }
 
   const headerClassName = attention ? verifyHeaderAttentionPillClass : verifyHeaderPillClass;
-  if (variant === "icon") return <div title="Reverify document" className="relative h-8 w-8 shrink-0 text-[#B68A42]"><div className={reverifyIconClass}>{action}</div><RefreshCw aria-hidden="true" size={16} strokeWidth={2} className="pointer-events-none absolute left-2 top-2" /></div>;
+  if (variant === "icon") return <div title="Reverify document" className="relative h-8 w-8 shrink-0 text-[#174EA6]"><div className={reverifyIconClass}>{action}</div><FileCheck2 aria-hidden="true" size={16} strokeWidth={2} className="pointer-events-none absolute left-2 top-2" /></div>;
   return <div className={variant === "row" ? verifyHoverOnlyClass : headerClassName}>{action}</div>;
 }
 

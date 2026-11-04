@@ -255,7 +255,7 @@ function latestVerificationForDocument(document: DocumentRow, verifications: Ver
 
 function isDocumentVerified(document: DocumentRow, verifications: VerificationRow[]) {
   const verification = latestVerificationForDocument(document, verifications);
-  return document.verification_status === "verified" || Boolean(verification?.is_valid);
+  return document.verification_status !== "rejected" && (document.verification_status === "verified" || Boolean(verification?.is_valid));
 }
 
 function isLegacyAdditionalUpload(document: DocumentRow) {
