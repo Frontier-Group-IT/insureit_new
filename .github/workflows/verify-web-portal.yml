@@ -53,6 +53,8 @@ jobs:
         run: node scripts/operations-stage3-autosave-completion-regression.mjs
       - name: Operations claim Customer motion parity regression
         run: node scripts/operations-claim-customer-motion-parity-regression.mjs
+      - name: Operations Claim Journey vehicle and insurer header regression
+        run: node scripts/operations-claim-header-vehicle-insurer-regression.mjs
       - name: Partner Business Report instant date filter regression
         run: node scripts/partner-business-period-filter-regression.mjs
       - name: Partner Reports RM calendar auto-filter regression
