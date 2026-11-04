@@ -263,6 +263,8 @@ jobs:
         run: npm run policy-edit-helper-performance:regression
       - name: Add and Edit Policy motion regression
         run: node scripts/policy-form-motion-regression.mjs
+      - name: Add and Edit Policy hover visibility regression
+        run: node scripts/policy-form-hover-visibility-regression.mjs
       - name: Claims nine-stage and Policy hover motion regression
         run: node scripts/claim-nine-stage-policy-motion-regression.mjs
       - name: Reconciliation stylesheet performance regression
