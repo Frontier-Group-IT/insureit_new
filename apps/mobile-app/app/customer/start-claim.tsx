@@ -239,7 +239,7 @@ export default function StartClaimScreen() {
             <View style={styles.iosHeroTopRow}>
               <View style={styles.heroCopy}>
                 <Text style={[styles.eyebrow, styles.iosEyebrow]}>START A CLAIM</Text>
-                <Text style={[styles.title, styles.iosTitle]}>Select the vehicle</Text>
+                <Text style={[styles.title, styles.iosTitle]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}>Select the vehicle</Text>
               </View>
               <Image accessible={false} source={require('../../assets/brand/start-claim/start-claim-hero.png')} style={[styles.heroArtwork, styles.iosHeroArtwork]} resizeMode="contain" />
             </View>
