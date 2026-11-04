@@ -245,13 +245,13 @@ export async function completeClaimJourneyStageWithFeedback(
       stage: String(formData.get("milestone_key") ?? ""),
       reason,
     });
-    const pending = /^Verify first — (\\d+) uploaded documents? pending verification\\.$/.exec(reason);
+    const pending = /^Verify first — (\d+) uploaded documents? pending verification\.$/.exec(reason);
     if (pending) {
       const count = Number(pending[1]);
       return {
         ok: false,
         advanced: false,
-        message: `Verify the ${count} uploaded document${count === 1 ? "" : "s"} awaiting verification before completing this claim stage. Your entered details are preserved.`,
+        message: `Verify ${count} uploaded document${count === 1 ? "" : "s"} before saving this stage.`,
       };
     }
     const safeMessages = [
