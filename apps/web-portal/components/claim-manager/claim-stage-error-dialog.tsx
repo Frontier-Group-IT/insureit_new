@@ -27,16 +27,18 @@ export function ClaimStageErrorDialog({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
+        event.stopImmediatePropagation();
         closeRef.current();
       }
       if (event.key === "Tab") {
         event.preventDefault();
+        event.stopImmediatePropagation();
         okRef.current?.focus();
       }
     };
-    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keydown", onKeyDown, true);
     return () => {
-      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keydown", onKeyDown, true);
       if (previous?.isConnected) previous.focus();
     };
   }, [message]);
