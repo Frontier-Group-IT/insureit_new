@@ -221,6 +221,10 @@ function PolicyDateRangeFilter({
   );
 }
 
+/**
+ * Direct period buttons avoid portal event/scroll dismissal races.
+ * The same state drives the visible policy table, counters and pagination.
+ */
 function PolicyPeriodFilter({
   value,
   mtdCount,
@@ -232,82 +236,25 @@ function PolicyPeriodFilter({
   allCount: number;
   onChange: (value: TimeScope) => void;
 }) {
-  const selectedCount = value === "mtd" ? mtdCount : allCount;
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-
-  function openMenu() {
-    if (menuPosition) {
-      setMenuPosition(null);
-      return;
-    }
-    const trigger = triggerRef.current;
-    if (!trigger) return;
-    const bounds = trigger.getBoundingClientRect();
-    const menuWidth = 132;
-    const menuHeight = 112;
-    const left = Math.max(8, Math.min(bounds.right - menuWidth, window.innerWidth - menuWidth - 8));
-    const top = bounds.bottom + menuHeight + 8 > window.innerHeight
-      ? Math.max(8, bounds.top - menuHeight - 6)
-      : bounds.bottom + 6;
-    setMenuPosition({ top, left });
-  }
-
-  useEffect(() => {
-    if (!menuPosition) return;
-    const closeOutside = (event: PointerEvent) => {
-      const target = event.target;
-      if (target instanceof Node && (triggerRef.current?.contains(target) || menuRef.current?.contains(target))) return;
-      setMenuPosition(null);
-    };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setMenuPosition(null);
-        triggerRef.current?.focus();
-      }
-    };
-    const closeOnScroll = () => setMenuPosition(null);
-    document.addEventListener("pointerdown", closeOutside);
-    document.addEventListener("keydown", closeOnEscape);
-    window.addEventListener("scroll", closeOnScroll, true);
-    window.addEventListener("resize", closeOnScroll);
-    return () => {
-      document.removeEventListener("pointerdown", closeOutside);
-      document.removeEventListener("keydown", closeOnEscape);
-      window.removeEventListener("scroll", closeOnScroll, true);
-      window.removeEventListener("resize", closeOnScroll);
-    };
-  }, [menuPosition]);
-
   return (
-    <>
-      <button ref={triggerRef} type="button" aria-haspopup="menu" aria-expanded={Boolean(menuPosition)}
-        onClick={openMenu}
-        className="flex h-8 min-w-[74px] shrink-0 items-center justify-between gap-1.5 rounded-lg bg-[#0F766E] px-2.5 text-[10px] font-bold text-white shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-[#0F766E]/20">
-        <span>{value === "mtd" ? "MTD" : "All"} <span className="opacity-80">{selectedCount}</span></span>
-        <ChevronDown className={`h-3 w-3 transition ${menuPosition ? "rotate-180" : ""}`} />
-      </button>
-      {menuPosition && createPortal(
-        <div ref={menuRef} role="menu" aria-label="Policy period"
-          style={{ position: "fixed", top: menuPosition.top, left: menuPosition.left, zIndex: 9999 }}
-          className="w-[132px] rounded-xl border border-[#D7E0EA] bg-white p-1.5 shadow-[0_16px_36px_rgba(15,23,42,.16)]">
-          <button type="button" role="menuitemradio" aria-checked={value === "mtd"}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={() => { onChange("mtd"); setMenuPosition(null); }}
-            className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left text-[10px] font-bold transition ${value === "mtd" ? "border-[#99E2D0] bg-[#E8F7F2] text-[#0F766E]" : "border-transparent bg-[#F2FBF8] text-[#16836F] hover:bg-[#E8F7F2]"}`}>
-            <span>MTD</span><span className="text-[9px] tabular-nums opacity-75">{mtdCount}</span>
-          </button>
-          <button type="button" role="menuitemradio" aria-checked={value === "all"}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={() => { onChange("all"); setMenuPosition(null); }}
-            className={`mt-1 flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left text-[10px] font-bold transition ${value === "all" ? "border-[#B8CCE4] bg-[#E8F0F9] text-[#17365D]" : "border-transparent bg-[#F2F6FB] text-[#385674] hover:bg-[#E8F0F9]"}`}>
-            <span>All</span><span className="text-[9px] tabular-nums opacity-75">{allCount}</span>
-          </button>
-        </div>,
-        document.body,
-      )}
-    </>
+    <div role="group" aria-label="Policy period" className="inline-flex h-9 shrink-0 items-center gap-0.5 rounded-xl border border-[#CBD5E1] bg-[#F3F6FA] p-0.5">
+      {([
+        { value: "mtd", label: "MTD", count: mtdCount },
+        { value: "all", label: "All", count: allCount },
+      ] as const).map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          aria-pressed={value === option.value}
+          onClick={() => onChange(option.value)}
+          className={`inline-flex h-8 min-w-[74px] shrink-0 items-center justify-center gap-1 rounded-lg px-2.5 text-[10px] font-bold tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F766E]/30 ${value === option.value
+            ? "bg-[#0F766E] text-white shadow-sm"
+            : "text-[#475569] hover:bg-white hover:text-[#17365D]"}`}
+        >
+          <span>{option.label}</span><span className={value === option.value ? "text-white/80" : "text-[#64748B]"}>{option.count}</span>
+        </button>
+      ))}
+    </div>
   );
 }
 
