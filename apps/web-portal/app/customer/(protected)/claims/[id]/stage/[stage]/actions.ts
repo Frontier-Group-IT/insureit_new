@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
-import { createServerSupabaseClient } from "@/lib/auth-server";
+import { createCustomerServerSupabaseClient } from "@/lib/auth-server";
 import { getCustomerWebSession } from "@/lib/customer-web";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim } from "@/lib/customer-web-phase2-data";
@@ -96,7 +96,7 @@ export async function saveCustomerExternalStage(form:FormData) {
     const previousDate=previous.details[prevKey];
     if(typeof previousDate==="string"&&date<previousDate.slice(0,10))throw new Error("Stage date precedes the previous stage");
   }
-  const db=await createServerSupabaseClient();
+  const db=await createCustomerServerSupabaseClient();
   const session=await getCustomerWebSession();
   const current=milestones.find(m=>m.milestone_key===key);
   const editingCompleted = Boolean(current && ["completed","not_applicable"].includes(current.milestone_status));
@@ -160,7 +160,7 @@ export async function saveCustomerClaimIntimationDraft(form: FormData) {
       values[field.key] = value;
     }
   }
-  const db = await createServerSupabaseClient();
+  const db = await createCustomerServerSupabaseClient();
   const session = await getCustomerWebSession();
   const { error } = await db.from("claim_milestones").upsert({
     claim_id: claim.id, milestone_key: key, milestone_status: current && ["completed","not_applicable"].includes(current.milestone_status) ? "completed" : "in_progress",
@@ -240,7 +240,7 @@ export async function saveCustomerInternalSpotCorrection(
   const location = String(form.get("location") || "").trim().slice(0, 500);
   if (phone && !/^\+?[0-9 ]{10,15}$/.test(phone)) return fail("Enter a valid driver contact number.");
 
-  const db = await createServerSupabaseClient();
+  const db = await createCustomerServerSupabaseClient();
   const { data, error } = await db.from("claims").update({
     accident_at: incidentDate.toISOString(),
     spot_intimation_at: spotDate.toISOString(),
