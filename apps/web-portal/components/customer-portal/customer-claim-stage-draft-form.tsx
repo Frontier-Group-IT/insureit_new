@@ -60,7 +60,11 @@ export function CustomerClaimStageDraftForm({
     const form = formRef.current;
     if (!form) return;
     restoreCustomerClaimDraft(form, key);
-    const onChoice = () => window.setTimeout(() => saveCustomerClaimDraft(form, key), 0);
+    const onChoice = (event: MouseEvent) => {
+      if (event.target instanceof Element && event.target.closest("[data-claim-choice]")) {
+        window.setTimeout(() => saveCustomerClaimDraft(form, key), 0);
+      }
+    };
     form.addEventListener("click", onChoice);
     return () => form.removeEventListener("click", onChoice);
   }, [key]);
