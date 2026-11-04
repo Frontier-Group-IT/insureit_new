@@ -124,9 +124,10 @@ export function PartnerReportsFilters({
         </select>
         {draftPeriod === "custom" ? (
           <button type="button" aria-label="Open custom date calendar" aria-haspopup="dialog"
-            aria-expanded={calendarOpen} className="absolute right-7 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-[#60738b] hover:bg-slate-100"
-            onClick={() => setCalendarOpen(true)}>
-            <CalendarDays size={14} />
+            aria-expanded={calendarOpen} className="absolute inset-y-0 left-0 right-7 flex items-center justify-end pr-1 rounded-l-lg text-[#60738b] hover:bg-[#F4F8FF]/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={() => { setFiltersOpen(false); setCalendarOpen((value) => !value); }}>
+            <CalendarDays size={14} aria-hidden="true" />
           </button>
         ) : null}
         <ChevronDown aria-hidden="true" size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#64748b]" />
@@ -189,6 +190,17 @@ export function PartnerReportsFilters({
         </div>
       ) : null}
 
+      {isPending ? <div role="status" aria-live="polite" className="pointer-events-none absolute inset-x-0 top-[calc(100%+12px)] z-40 rounded-xl border border-[#E2E8F0] bg-[#F6F8FC]/95 p-4 shadow-lg" aria-label="Updating report records">
+        <div className="mb-3 h-3 w-48 animate-pulse rounded bg-[#CBD5E1]" />
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+          {Array.from({length:4},(_,index)=><div key={index} className="h-16 animate-pulse rounded-lg bg-[#E2E8F0]"/>) }
+        </div>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div className="h-44 animate-pulse rounded-lg bg-[#E2E8F0]" />
+          <div className="h-44 animate-pulse rounded-lg bg-[#E2E8F0]" />
+        </div>
+        <span className="sr-only">Loading updated report records</span>
+      </div> : null}
       <a href={exportHref} className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg bg-[#1166ad] px-4 text-[11px] font-bold text-white hover:bg-[#0e5795]">
         <Download size={15} /> Export
       </a>
