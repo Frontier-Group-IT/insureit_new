@@ -28,17 +28,9 @@ type CustomerRow = {
   claims: { count: number }[];
 };
 
-type ViewKey = "all" | "active" | "kyc" | "fleet" | "claims";
+type ViewKey = "all" | "active" | "inactive";
 
 const PAGE_SIZE = 10;
-const partnerLabels: Record<string, string> = {
-  individual_proprietor: "Individual / Proprietor",
-  dealership: "Dealership",
-  corporate: "Corporate",
-  group: "Group",
-  posp: "POSP",
-  misp: "MISP"
-};
 const fleetLabels: Record<string, string> = { less_than_5: "< 5", "5_to_20": "5-20", "20_to_50": "20-50", more_than_50: "> 50" };
 const partnerOptions = [
   { value: "individual_proprietor", label: "Individual / Proprietor", description: "Owner, proprietor or individual fleet operator", available: true },
@@ -56,13 +48,12 @@ export function CustomerWorkspace({ rows, title = "Customer Portfolio" }: { rows
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState(false);
   const partnerModalOpen = searchParams.get("choose_partner") === "1";
+  const customerType = title.startsWith("External") ? "External" : "Internal";
+  const customerRegisterUrl = customerType === "External" ? "/customers?segment=external" : "/customers";
 
   const stats = useMemo(() => {
     const active = rows.filter((row) => row.onboarding_status === "active").length;
-    const kyc = rows.length - active;
-    const fleet = rows.filter((row) => vehicleCount(row) >= 5).length;
-    const claims = rows.reduce((total, row) => total + claimCount(row), 0);
-    return { active, kyc, fleet, claims };
+    return { active, inactive: rows.length - active };
   }, [rows]);
 
   const filteredRows = useMemo(() => {
@@ -71,9 +62,7 @@ export function CustomerWorkspace({ rows, title = "Customer Portfolio" }: { rows
       const matchesView =
         view === "all" ||
         (view === "active" && row.onboarding_status === "active") ||
-        (view === "kyc" && row.onboarding_status !== "active") ||
-        (view === "fleet" && vehicleCount(row) >= 5) ||
-        (view === "claims" && claimCount(row) > 0);
+        (view === "inactive" && row.onboarding_status !== "active");
       const haystack = [row.customer_code, row.contact_name, row.company_name, row.phone, row.city, row.partner_type].filter(Boolean).join(" ").toLowerCase();
       return matchesView && (!normalized || haystack.includes(normalized));
     });
@@ -91,10 +80,10 @@ export function CustomerWorkspace({ rows, title = "Customer Portfolio" }: { rows
     setPage(1);
   }
   function openPartnerModal() {
-    router.push("/customers?choose_partner=1");
+    router.push(`${customerRegisterUrl}${customerType === "External" ? "&" : "?"}choose_partner=1`);
   }
   function closePartnerModal() {
-    router.push("/customers");
+    router.push(customerRegisterUrl);
   }
   function toggleRow(id: string) {
     setSelectedIds((current) => {
@@ -113,8 +102,8 @@ export function CustomerWorkspace({ rows, title = "Customer Portfolio" }: { rows
   }
   function exportSelected() {
     if (!selectedRows.length) return;
-    const headings = ["Customer", "Code", "Legal Trade Name", "Partner Type", "Mobile", "City", "Fleet", "Vehicles", "Policies", "Claims", "Status"];
-    const lines = selectedRows.map((row) => [row.contact_name, row.customer_code, row.company_name ?? "", row.partner_type ? partnerLabels[row.partner_type] ?? row.partner_type : "", row.phone, row.city ?? "", row.fleet_size_band ? fleetLabels[row.fleet_size_band] ?? row.fleet_size_band : "", String(vehicleCount(row)), String(policyCount(row)), String(claimCount(row)), statusLabel(row.onboarding_status)]);
+    const headings = ["Customer", "Code", "Legal Trade Name", "Customer Type", "Mobile", "City", "Fleet", "Vehicles", "Policies", "Claims", "Status"];
+    const lines = selectedRows.map((row) => [row.contact_name, row.customer_code, row.company_name ?? "", customerType, row.phone, row.city ?? "", row.fleet_size_band ? fleetLabels[row.fleet_size_band] ?? row.fleet_size_band : "", String(vehicleCount(row)), String(policyCount(row)), String(claimCount(row)), statusLabel(row.onboarding_status)]);
     const csv = [headings, ...lines].map((line) => line.map(csvCell).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const anchor = document.createElement("a");
@@ -134,22 +123,16 @@ export function CustomerWorkspace({ rows, title = "Customer Portfolio" }: { rows
     <>
       {partnerModalOpen ? <PartnerTypeModal onClose={closePartnerModal} /> : null}
       <BrokerRegisterShell
-        eyebrow="Master register"
-        title={`${title} Portfolio` }
-        description="Scan customer quality, fleet depth, policy coverage and claim exposure from one operational register."
+        eyebrow=""
+        title={title}
+        description=""
         icon={<Building2 className="h-5 w-5" />}
-        metrics={[
-          { label: "Customers", value: rows.length, hint: "Accessible records", tone: "navy" },
-          { label: "Active", value: stats.active, hint: "KYC complete", tone: "green" },
-          { label: "KYC gaps", value: stats.kyc, hint: "Need attention", tone: stats.kyc ? "amber" : "slate" },
-          { label: "Open claims", value: stats.claims, hint: "Linked exposure", tone: stats.claims ? "red" : "slate" }
-        ]}
+        metrics={[]}
       >
         <BrokerRegisterToolbar
           query={query}
           onQueryChange={(value) => { setQuery(value); setPage(1); }}
           searchPlaceholder="Search customer, code, trade name, mobile or city"
-          activeViewLabel={`${filteredRows.length} in current view`}
           action={<button type="button" onClick={openPartnerModal} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-3 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.22)]"><Plus className="h-4 w-4" />Add Customer</button>}
         >
           <RegisterViewTabs
@@ -158,9 +141,7 @@ export function CustomerWorkspace({ rows, title = "Customer Portfolio" }: { rows
             options={[
               { value: "all", label: "All", count: rows.length },
               { value: "active", label: "Active", count: stats.active },
-              { value: "kyc", label: "KYC gaps", count: stats.kyc },
-              { value: "fleet", label: "Fleet", count: stats.fleet },
-              { value: "claims", label: "Claims", count: rows.filter((row) => claimCount(row) > 0).length }
+              { value: "inactive", label: "Inactive", count: stats.inactive }
             ]}
           />
         </BrokerRegisterToolbar>
@@ -201,7 +182,7 @@ export function CustomerWorkspace({ rows, title = "Customer Portfolio" }: { rows
                   <td className="px-2.5">
                     <Link prefetch={false} href={`/customers/${customer.id}/edit`} className="block truncate text-[12px] font-normal text-[#0F172A] hover:text-[#17365D]">{properCase(customer.contact_name)}</Link>
                   </td>
-                  <td className="px-2.5"><p className="truncate text-[#334155]">{customer.partner_type ? partnerLabels[customer.partner_type] ?? customer.partner_type : "Not classified"}</p></td>
+                  <td className="px-2.5"><p className="truncate text-[#334155]">{customerType}</p></td>
                   <td className="px-2.5 tabular-nums">{customer.phone}</td>
                   <td className="px-2.5 text-center font-medium tabular-nums">{vehicleCount(customer)}</td>
                   <td className="px-2.5 text-center font-medium tabular-nums">{policyCount(customer)}</td>
@@ -279,7 +260,7 @@ function RowActions({ customer }: { customer: CustomerRow }) {
 }
 
 function CustomerStatus({ status }: { status: string }) {
-  return status === "active" ? <RegisterStatusPill tone="green">Active</RegisterStatusPill> : <RegisterStatusPill tone="amber">KYC incomplete</RegisterStatusPill>;
+  return status === "active" ? <RegisterStatusPill tone="green">Active</RegisterStatusPill> : <RegisterStatusPill tone="amber">Inactive</RegisterStatusPill>;
 }
 
 function properCase(value: string) {
@@ -288,5 +269,5 @@ function properCase(value: string) {
 function vehicleCount(row: CustomerRow) { return row.vehicles?.[0]?.count ?? 0; }
 function policyCount(row: CustomerRow) { return row.policies?.[0]?.count ?? 0; }
 function claimCount(row: CustomerRow) { return row.claims?.[0]?.count ?? 0; }
-function statusLabel(status: string) { return status === "active" ? "Active" : "KYC incomplete"; }
+function statusLabel(status: string) { return status === "active" ? "Active" : "Inactive"; }
 function csvCell(value: string) { return `"${value.replaceAll('"', '""')}"`; }
