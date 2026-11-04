@@ -11,6 +11,7 @@ const report=source("../components/reports/report-date-range-picker.tsx");
 const webDate=source("../lib/indian-date.ts");
 const mobile=source("../../mobile-app/lib/indian-date.ts");
 const partner=source("../../partner-app/lib/indian-date.ts");
+const partnerSpot=source("../../partner-app/components/partner-spot-intimation.tsx");
 const partnerPicker=source("../../partner-app/components/ui/partner-date-picker.tsx");
 const customerClaims=source("../../mobile-app/app/customer/claims.tsx");
 const customerRenewals=source("../../mobile-app/app/customer/renewals.tsx");
@@ -37,6 +38,9 @@ for (const value of [mobile,partner]) {
   assert.match(value,/Date\.UTC\(year, month - 1, day\)/,"ISO date-only values avoid timezone shifts");
 }
 assert.match(partnerPicker,/formatAppDate\(value\)/,"Partner native date picker label is day-first");
+assert.match(partnerSpot,/placeholder="DD\/MM\/YYYY"/,"Partner Spot Intimation accepts day-first text");
+assert.match(partnerSpot,/parseAppDate\(formatted\)/,"Partner Spot Intimation converts manual day-first entry into ISO");
+assert.match(partnerSpot,/setFromPicker\(date\)/,"Native calendar retains ISO submission");
 assert.match(customerClaims,/formatAppDate\(value\)/,"Customer Claims dates are day-first");
 assert.match(customerRenewals,/formatAppDate\(value\)/,"Customer Renewals dates are day-first");
 assert.match(partnerPolicies,/formatAppDate\(value\)/,"Partner Policies dates are day-first");
