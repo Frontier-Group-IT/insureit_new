@@ -32,6 +32,20 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
   const activeIndex=INTERNAL_JOURNEY_STAGES.findIndex(s=>s.key===selected.key);
   const completed=external ? projection?.stages.find(s=>s.key===p.stage)?.completed || false : activeIndex<(internal_projection?.completedStageCount??0);
   const milestone=milestones.find(m=>m.milestone_key===selected.key);
+  // Legacy claims may have a linked policy without an explicit policy_service_source.
+  // Resolve from the actual linked policy after respecting the external-policy marker.
+  const policySource=claim.policy_service_source==="external"||Boolean(claim.external_policy_id)
+    ?"External Policy"
+    :claim.policy_service_source==="sibl"||Boolean(claim.policy_id)
+      ?"Sankalp Policy"
+      :"—";
+  // Some historical Spot Intimation submissions only persisted driver fields in
+  // accident_description, with no spot_intimation milestone row.
+  const description=claim.accident_description??"";
+  const descriptionDriverName=description.match(/(?:^|\n)Driver:\s*([^\n]+)/i)?.[1]?.trim()||null;
+  const descriptionDriverNumber=description.match(/(?:^|\n)Driver phone:\s*([^\n]+)/i)?.[1]?.trim()||null;
+  const spotDetails=milestones.find(item=>item.milestone_key==="spot_intimation")?.details;
+
   if (selected.key==="spot_intimation" && claim.current_status==="Draft") {
     redirect("/customer/spot-intimation?account="+encodeURIComponent(account.id)+"&id="+encodeURIComponent(claim.id));
   }
@@ -57,7 +71,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
           status:claim.current_status,
           manufacturer:claim.vehicle_make,
           insurer:claim.insurer_name,
-          policySource:claim.policy_service_source==="sibl"?"Sankalp Policy":claim.policy_service_source==="external"||claim.external_policy_id?"External Policy":"—",
+          policySource,
         }}
       />
       <CustomerInternalCompletedJourney
@@ -69,8 +83,8 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
         spot={{
           accidentAt:claim.accident_at,
           spotAt:claim.spot_intimation_at,
-          driverName:milestones.find(item=>item.milestone_key==="spot_intimation")?.details?.driver_name as string | undefined,
-          driverNumber:milestones.find(item=>item.milestone_key==="spot_intimation")?.details?.driver_phone as string | undefined,
+          driverName:(typeof spotDetails?.driver_name==="string"&&spotDetails.driver_name.trim())||descriptionDriverName,
+          driverNumber:(typeof spotDetails?.driver_phone==="string"&&spotDetails.driver_phone.trim())||descriptionDriverNumber,
           location:claim.accident_location,
         }}
       />
@@ -82,7 +96,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
   const allowEdit = canEditStage || canUploadStage;
   return <div className="customer-claim-ref-page space-y-3">
     {q.saved==="claim_intimation" && selected.key==="work_approval" ? <CustomerClaimStageSuccessToast /> : null}
-    <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey={selected.key} currentKey={INTERNAL_JOURNEY_STAGES[currentIndex]?.key || "spot_intimation"} editMode claimSummary={{controlNo:claim.claim_no,policyNo:claim.policy_no,makeModel:[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" - ")||null,vehicleNo:claim.vehicle_no,status:claim.current_status,manufacturer:claim.vehicle_make,insurer:claim.insurer_name,policySource:claim.policy_service_source==="sibl"?"Sankalp Policy":claim.policy_service_source==="external"||claim.external_policy_id?"External Policy":"—"}} completedKeys={INTERNAL_JOURNEY_STAGES.filter((stage,i)=>external?projection?.stages.some(x=>x.key===stage.key&&x.completed):i<(internal_projection?.completedStageCount??0)).map(stage=>stage.key)} />
+    <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey={selected.key} currentKey={INTERNAL_JOURNEY_STAGES[currentIndex]?.key || "spot_intimation"} editMode claimSummary={{controlNo:claim.claim_no,policyNo:claim.policy_no,makeModel:[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" - ")||null,vehicleNo:claim.vehicle_no,status:claim.current_status,manufacturer:claim.vehicle_make,insurer:claim.insurer_name,policySource}} completedKeys={INTERNAL_JOURNEY_STAGES.filter((stage,i)=>external?projection?.stages.some(x=>x.key===stage.key&&x.completed):i<(internal_projection?.completedStageCount??0)).map(stage=>stage.key)} />
     {!(editMode && canEditStage) ? <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white">
       <h2 className="border-b border-[#D9E3F0] px-5 py-4 text-[17px] font-semibold text-[#071D49]">{selected.key==="spot_intimation"?"Accident & Spot Intimation Details":selected.label+" Details"}</h2>
       {selected.key==="spot_intimation" ? (
@@ -90,8 +104,8 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
           {([
             ["Accident Date & Time",claim.accident_at],
             ["Spot Intimation Date & Time",claim.spot_intimation_at||(typeof milestone?.details?.spot_intimation_at==="string"?milestone.details.spot_intimation_at:null)],
-            ["Driver Name",milestone?.details?.driver_name||(claim.accident_description?.match(/Driver:\\s*([^\\n]+)/)?.[1]??null)],
-            ["Driver Number",milestone?.details?.driver_phone||(claim.accident_description?.match(/Driver phone:\\s*([^\\n]+)/)?.[1]??null)],
+            ["Driver Name",milestone?.details?.driver_name||descriptionDriverName],
+            ["Driver Number",milestone?.details?.driver_phone||descriptionDriverNumber],
             ["Location",claim.accident_location||milestone?.details?.location],
           ] as Array<[string,unknown]>).map(([label,value])=>{
             const isDateTime=label==="Accident Date & Time"||label==="Spot Intimation Date & Time";
