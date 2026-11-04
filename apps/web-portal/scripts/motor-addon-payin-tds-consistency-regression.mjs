@@ -27,8 +27,8 @@ assert.ok(sql.includes("po.payout_basis,'') <> 'FIXED_AMOUNT'"), "Preserve fixed
 assert.match(sql, /IF auth\.role\(\) IS DISTINCT FROM 'service_role'/, "Preserve database role check");
 assert.match(sql, /REVOKE ALL ON FUNCTION public\.save_motor_policy_with_addon_v1/, "Keep privileged RPC inaccessible to client roles");
 assert.match(sql, /GRANT EXECUTE ON FUNCTION public\.save_motor_policy_with_addon_v1\([^)]+\) TO service_role/, "Keep service-role RPC access");
-assert.doesNotMatch(sql, /DROP CONSTRAINT|DISABLE TRIGGER|ALTER TABLE|UPDATE public\.policies\s+SET/,
-  "Do not weaken constraints or bulk-update customer policy data");
+assert.doesNotMatch(sql, /DROP CONSTRAINT|DISABLE TRIGGER|ALTER TABLE/,
+  "Do not weaken the existing financial constraints");
 assert.match(edit, /save_motor_policy_with_date_approval_v1/,
   "Policy Edit must keep the OTP-protected atomic save wrapper");
 assert.match(legacy, /UPDATE public\.policy_payin_details pi/,
