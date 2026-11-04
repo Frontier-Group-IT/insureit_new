@@ -251,9 +251,41 @@ export async function submitFinalDocumentsDraft(formData: FormData): Promise<Act
     if (!claimId) throw new Error("Missing claim id.");
     const { profile, supabase } = await requireClaimWorkflowAccess(claimId, "You do not have permission to update final documents.");
     const claim = await loadClaim(claimId);
-    await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: claim.current_status ?? "Final Documents", details: { verification_type: "final_documents_draft_saved", saved_at: new Date().toISOString(), saved_by: profile.id }, created_by: profile.id });
+    // Draft save is intentionally independent of document verification and
+    // mandatory-field completion. It never changes claim status or verifies a file.
+    const fields = {
+      claim_intimation_date: clean(formData.get("claim_intimation_date")),
+      dealership_name: clean(formData.get("dealership_name")),
+      dealership_location: clean(formData.get("dealership_location")),
+      gate_in_date: clean(formData.get("gate_in_date")),
+      estimate_amount: clean(formData.get("estimate_amount")),
+    };
+    const hasFieldValues = Object.values(fields).some(Boolean);
+    if (hasFieldValues) {
+      const { error: draftError } = await supabase.from("claim_stage_details").insert({
+        claim_id: claimId,
+        stage: claim.current_status ?? "Final Documents",
+        details: {
+          verification_type: "final_documents_dealership_details",
+          ...fields,
+          draft: true,
+          saved_at: new Date().toISOString(),
+          saved_by: profile.id,
+        },
+        created_by: profile.id,
+      });
+      if (draftError) throw new Error(draftError.message);
+    } else {
+      const { error: draftError } = await supabase.from("claim_stage_details").insert({
+        claim_id: claimId,
+        stage: claim.current_status ?? "Final Documents",
+        details: { verification_type: "final_documents_draft_saved", saved_at: new Date().toISOString(), saved_by: profile.id },
+        created_by: profile.id,
+      });
+      if (draftError) throw new Error(draftError.message);
+    }
     revalidateClaimPaths(claimId);
-    return { ok: true, message: "Draft saved." };
+    return { ok: true, message: "Draft saved. Verification is still required before completing this stage." };
   } catch (error) {
     console.error("submitFinalDocumentsDraft failed", error);
     return { ok: false, message: error instanceof Error ? error.message : "Unable to save draft." };
