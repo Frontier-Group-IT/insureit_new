@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/auth-server";
+import { createCustomerServerSupabaseClient } from "@/lib/auth-server";
 import { getCustomerWebSession } from "@/lib/customer-web";
 
 function clean(value: unknown, max: number) {
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   if (phone && phone.replace(/\D/g, "").length < 10) return NextResponse.json({ error: "Enter a valid mobile number." }, { status: 400 });
   if (email && !/^\S+@\S+\.\S+$/.test(email)) return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
 
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createCustomerServerSupabaseClient();
   const customer = await supabase
     .from("customers")
     .update({ contact_name: name, phone, email: email || null, address: address || null })
