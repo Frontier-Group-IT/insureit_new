@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CalendarDays, ChevronDown, Search } from "lucide-react";
 import { IntermediaryTabs } from "./intermediary-tabs";
@@ -63,6 +64,7 @@ export function PartnerRegisterClient({
   error?: string;
   loadError: boolean;
 }) {
+  const router = useRouter();
   const [search, setSearch] = useState(initialSearch);
   const initialFilter = initialStatus === "active" || initialStatus === "onboarding" ? initialStatus : "";
   const [status, setStatus] = useState(initialFilter);
@@ -117,6 +119,26 @@ export function PartnerRegisterClient({
   useEffect(() => {
     setCurrentPage((page) => Math.min(page, totalPages));
   }, [totalPages]);
+  // Keep the ranking fresh without reloading the page or polling in background tabs.
+  // New business appears after the next foreground refresh; a new India calendar
+  // month recomputes the MTD amount on the next refresh without stored counters.
+  useEffect(() => {
+    let lastSyncAt = Date.now();
+    const refreshIfDue = () => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastSyncAt < 5 * 60_000) return;
+      lastSyncAt = Date.now();
+      router.refresh();
+    };
+    const interval = window.setInterval(refreshIfDue, 60_000);
+    document.addEventListener("visibilitychange", refreshIfDue);
+    window.addEventListener("focus", refreshIfDue);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshIfDue);
+      window.removeEventListener("focus", refreshIfDue);
+    };
+  }, [router]);
 
   const successMessage = success === "portal_login_invited"
     ? "Password creation link sent."
