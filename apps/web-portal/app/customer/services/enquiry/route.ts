@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/auth-server";
+import { createCustomerServerSupabaseClient } from "@/lib/auth-server";
 import { getCustomerWebSession } from "@/lib/customer-web";
 
 type ServiceType = "insurance_quote" | "challan_assistance" | "support_ticket";
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unsupported request type." }, { status: 400 });
   }
 
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createCustomerServerSupabaseClient();
   let vehicleId = text(body.vehicleId, 64) || null;
   let vehicleNo = text(body.vehicleNo, 32).toUpperCase() || null;
   const claimId = text(body.claimId, 64) || null;
