@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import motionStyles from "@/components/spot-survey/claim-document-motion.module.css";
 import { ClaimDocumentDeleteConfirmation } from "@/components/claim-manager/claim-document-delete-confirmation";
 import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
 import Image from "next/image";
@@ -69,7 +70,7 @@ export function Stage3DocumentVerificationGroup({ item, claim, verifications }: 
   return (
     <article
       onClick={handleCardClick}
-      className={`rounded-xl border bg-white ${hasNoFiles ? "px-2.5 py-2" : "p-2.5"} shadow-[0_6px_16px_rgba(7,29,73,0.028)] ${allVerified ? "border-green-200" : "border-[#E2EAF4]"} ${hasMultipleFiles ? "cursor-pointer" : ""}`}
+      className={`${motionStyles.card} rounded-xl border bg-white ${hasNoFiles ? "px-2.5 py-2" : "p-2.5"} shadow-[0_6px_16px_rgba(7,29,73,0.028)] ${allVerified ? `border-green-200 ${motionStyles.verified}` : "border-[#E2EAF4]"} ${hasMultipleFiles ? "cursor-pointer" : ""}`}
     >
       <div className={`flex items-center justify-between gap-2 ${showDocumentRows ? "mb-2" : ""}`}>
         {hasMultipleFiles ? (
