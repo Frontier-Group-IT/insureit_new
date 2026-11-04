@@ -22,6 +22,8 @@ export function RequestCustomerDocumentReuploadButton({ claimId, documentId, fil
   const [reason, setReason] = useState("");
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
+  const pendingRef = useRef(pending);
+  pendingRef.current = pending;
 
   useEffect(() => setMounted(true), []);
 
@@ -33,7 +35,7 @@ export function RequestCustomerDocumentReuploadButton({ claimId, documentId, fil
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        if (!pending) {
+        if (!pendingRef.current) {
           event.preventDefault();
           setOpen(false);
         }
@@ -62,7 +64,7 @@ export function RequestCustomerDocumentReuploadButton({ claimId, documentId, fil
       document.removeEventListener("keydown", onKeyDown);
       triggerRef.current?.focus();
     };
-  }, [open, pending]);
+  }, [open]);
 
   const requestReupload = () => {
     const formData = new FormData();
