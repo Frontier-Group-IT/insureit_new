@@ -15,8 +15,10 @@ export function CustomerClaimVoiceRecorder({ claimId, accountId }: { claimId: st
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [uploadErrorNotice,setUploadErrorNotice]=useState<string|null>(null);
   const router = useRouter();
   const [uploadState, uploadAction, uploadPending] = useActionState(uploadCustomerClaimDocument, {error:null});
+  useEffect(() => {if(uploadState.error)setUploadErrorNotice(uploadState.error);},[uploadState.error]);
   useEffect(() => {if(uploadState.uploaded && !uploadState.error){setAudioFile(null);if(fileRef.current)fileRef.current.value="";router.refresh();}},[uploadState.uploaded?.id,uploadState.error,router]);
   useEffect(() => {
     if (!audioFile) { setAudioUrl(null); return; }
@@ -77,7 +79,7 @@ export function CustomerClaimVoiceRecorder({ claimId, accountId }: { claimId: st
     formRef.current.requestSubmit();
   }
   return <section className="rounded-2xl border border-[#DBE4F0] bg-white p-4 shadow-sm sm:p-5">
-    <CustomerErrorDialog title="Voice note unavailable" message={error || uploadState.error} onClose={() => setError("")}/>
+    <CustomerErrorDialog title="Voice note unavailable" message={error || uploadErrorNotice} onClose={() => {setError("");setUploadErrorNotice(null);}}/>
     <div className="mb-3 flex items-center gap-2 border-b border-[#E5EDF6] pb-3">
       <span className="grid h-9 w-9 place-items-center rounded-lg bg-[#EDF4FF] text-[#2860AD]"><Mic className="h-5 w-5" /></span>
       <h2 className="text-[17px] font-bold text-[#112B51]">Incident Voice Note</h2>
