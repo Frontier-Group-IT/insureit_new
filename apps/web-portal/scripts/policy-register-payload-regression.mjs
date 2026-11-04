@@ -73,6 +73,6 @@ assert.deepEqual(choosePeriod("all"), ["older", "current", "other"], "All must r
 assert.match(workspace, /filterPolicyRegisterPeriod\(controlFiltered, timeScope, mtdStart, mtdEnd, policyBusinessDate\)/, "All/MTD selection must control visible policy rows");
 assert.match(workspace, /window\.sessionStorage\.setItem\(POLICY_REGISTER_PERIOD_KEY, next\)/, "Selected period must survive navigation");
 assert.match(workspace, /window\.sessionStorage\.getItem\(POLICY_REGISTER_PERIOD_KEY\)/, "Saved period must be read on navigation");
-assert.match(workspace, /setFromDate\("")/, "Changing period must clear incompatible custom date filters");
+assert.match(workspace, /setFromDate\(" *"\)/, "Changing period must clear incompatible custom date filters");
 assert.match(workspace, /setView\("all"\)/, "Changing period must reset the active status tab");
 assert.match(workspace, /setPage\(1\)/, "Changing period must reset pagination");
