@@ -25,7 +25,6 @@
 .policySummaryAction {
   transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease, background-color 200ms ease;
 }
-.policyField:focus-within { border-color:#315B9A; box-shadow:0 0 0 2px rgba(49,91,154,.1); }
 .policyPage :is(input,select,textarea) {
   transition: border-color 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
 }
@@ -38,7 +37,7 @@
   .policySummaryAction:not(:disabled):hover { transform:translateY(-2px); box-shadow:0 7px 16px rgba(55,75,149,.10); }
 }
 @media (prefers-reduced-motion:reduce) {
-  .policyPage :is(.policyHeader,.policySection,.policyNavStep,.policyCheck,.policySummary,.policySummaryAction,.policyRing),
+  :is(.policyHeader,.policySection,.policyNavStep,.policyCheck,.policySummary,.policySummaryAction,.policyRing),
   .policyPage :is(input,select,textarea) { animation:none!important;transition:none!important; }
   .policySection:hover,.policySummaryAction:hover { transform:none!important; }
 }
