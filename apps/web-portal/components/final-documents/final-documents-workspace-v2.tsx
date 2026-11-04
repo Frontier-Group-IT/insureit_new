@@ -496,4 +496,13 @@ function documentVisual(row: FinalDocumentRowV2): DocumentVisual {
 }
 
 function Field({ label, value, onChange, inputMode }: { label: string; value: string; onChange: (value: string) => void; inputMode?: "decimal" | "numeric" }) { return <label><span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{label} <span className="text-red-600">*</span></span><input value={value} inputMode={inputMode} onChange={(event) => onChange(event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold text-[#071D49] outline-none focus:border-[#174EA6]" /></label>; }
-function DateField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <label><span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{label} <span className="text-red-600">*</span></span><input type="date" value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold text-[#071D49] outline-none focus:border-[#174EA6]" /></label>; }
+function DateField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const matched = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const display = matched ? `${matched[3]}/${matched[2]}/${matched[1]}` : "DD/MM/YYYY";
+  return <label><span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{label} <span className="text-red-600">*</span></span>
+    <span className="relative mt-1 flex h-10 w-full items-center justify-between rounded-lg border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold text-[#071D49] focus-within:border-[#174EA6]">
+      <span aria-hidden="true">{display}</span><span aria-hidden="true">▦</span>
+      <input aria-label={label} type="date" value={value} onChange={(event) => onChange(event.target.value)} onClick={(event) => event.currentTarget.showPicker?.()} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
+    </span>
+  </label>;
+}
