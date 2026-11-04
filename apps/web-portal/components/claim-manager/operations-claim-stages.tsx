@@ -5,7 +5,7 @@ import "./operations-claim-stages-motion.css";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { advanceInternalSpotIntimation, saveInternalSpotIntimationDetails } from "@/app/claims/internal-spot-intimation-actions";
-import { completeClaimJourneyStage } from "@/app/claims/stage-actions";
+import { completeClaimJourneyStageWithFeedback } from "@/app/claims/stage-actions";
 import { ClaimStageSuccessPopup } from "@/components/claim-manager/claim-stage-success-popup";
 import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
 import { OperationsClaimStageOneAttachments } from "@/components/claim-manager/operations-claim-stage-one-attachments";
@@ -216,7 +216,8 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
       try {
         const milestoneKey = formData.get("milestone_key");
         if (typeof milestoneKey === "string" && milestoneKey && milestoneKey !== "spot_intimation") {
-          const result = await completeClaimJourneyStage(claimId, formData);
+          const result = await completeClaimJourneyStageWithFeedback(claimId, formData);
+          if (!result.ok) return { ok: false, message: result.message ?? "Unable to save this claim stage.", advanced: false, nextStageKey: null };
           const message = result.advanced ? "Claim stage updated." : "Stage details saved.";
           setSuccessNotice(message);
           return {
@@ -639,6 +640,11 @@ function toDateTimeLocal(value: string, type?: string) {
   return value;
 }
 function summarizeClaimActionError(message: string): string {
+  const pending = /^Verify first — (\\d+) uploaded documents? pending verification\\.$/.exec(message.trim());
+  if (pending) {
+    const count = Number(pending[1]);
+    return `Verify ${count} uploaded document${count === 1 ? "" : "s"} before saving this stage.`;
+  }
   if (/server components render|digest property|specific message is omitted/i.test(message)) {
     return "Unable to complete the action. Please try again.";
   }
