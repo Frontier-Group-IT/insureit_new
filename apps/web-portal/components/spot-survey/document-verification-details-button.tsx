@@ -30,7 +30,7 @@ function insuranceRows(details: Record<string, unknown>): DetailRow[] {
   ];
 }
 
-export function DocumentVerificationDetailsButton({ document, verification, title }: { document: SpotSurveyDocument; verification: SpotSurveyVerification; title: string }) {
+export function DocumentVerificationDetailsButton({ document, verification, title, triggerVariant = "eye" }: { document: SpotSurveyDocument; verification: SpotSurveyVerification; title: string; triggerVariant?: "eye" | "verified" }) {
   const [open, setOpen] = useState(false);
   const details = verification.details ?? {};
   const verificationType = verification.verification_type;
@@ -62,11 +62,13 @@ export function DocumentVerificationDetailsButton({ document, verification, titl
         type="button"
         onClick={() => setOpen(true)}
         data-document-action="view"
-        aria-label="View details"
-        title="View details"
-        className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-[#174EA6] transition hover:bg-[#F4F8FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/30"
+        aria-label={triggerVariant === "verified" ? "View " + title + " verification details" : "View details"}
+        title={triggerVariant === "verified" ? "View verification details" : "View details"}
+        className={triggerVariant === "verified"
+          ? "inline-flex h-7 shrink-0 items-center rounded-full border border-green-200 bg-green-100 px-2 text-[10px] font-semibold text-green-700 transition hover:bg-green-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/40"
+          : "grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-[#174EA6] transition hover:bg-[#F4F8FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/30"}
       >
-        <Eye aria-hidden="true" size={17} strokeWidth={2} />
+        {triggerVariant === "verified" ? "Verified" : <Eye aria-hidden="true" size={17} strokeWidth={2} />}
       </button>
       {modal}
     </>
