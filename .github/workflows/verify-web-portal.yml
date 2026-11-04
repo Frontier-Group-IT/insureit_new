@@ -57,6 +57,8 @@ jobs:
         run: node scripts/operations-dashboard-partner-branch-layout-regression.mjs
       - name: Operations claim Stage 3 autosave and green completion regression
         run: node scripts/operations-stage3-autosave-completion-regression.mjs
+      - name: Operations Claim Journey save navigation, Stage 9 layout and 3D icon regression
+        run: node scripts/operations-claim-save-navigation-layout-regression.mjs
       - name: Operations claim Customer motion parity regression
         run: node scripts/operations-claim-customer-motion-parity-regression.mjs
       - name: Operations Claim Journey vehicle and insurer header regression
