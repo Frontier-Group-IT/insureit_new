@@ -51,6 +51,8 @@ jobs:
         run: node scripts/customer-spot-draft-sync-regression.mjs
       - name: External self-managed Claim Journey layout and read-only regression
         run: node scripts/external-self-managed-claim-layout-parity-regression.mjs
+      - name: Operations Dashboard and Partner layout regression
+        run: node scripts/operations-dashboard-partner-branch-layout-regression.mjs
       - name: Operations claim Stage 3 autosave and green completion regression
         run: node scripts/operations-stage3-autosave-completion-regression.mjs
       - name: Operations claim Customer motion parity regression

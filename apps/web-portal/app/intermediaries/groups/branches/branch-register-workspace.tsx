@@ -190,7 +190,7 @@ export function BranchRegisterWorkspace({
         <table className={`w-full ${applicationBranchView ? "min-w-[1160px]" : hideParentPartner ? "min-w-[820px]" : "min-w-[1040px]"} table-fixed ${applicationBranchView ? "text-center" : "text-left"} text-[11px] text-[#1E293B]`}>
           <thead className="sticky top-0 z-10 border-b border-[#E2E8F0] bg-[#F8FAFC] text-[9px] font-bold uppercase tracking-[0.06em] text-[#64748B]">
             <tr>
-              <th className="w-[220px] px-3 py-2.5">Branch</th>
+              <th className={applicationBranchView ? "w-[185px] py-2.5 pl-3 pr-2 text-left" : "w-[220px] px-3 py-2.5"}>Branch</th>
               {!hideParentPartner ? <th className="w-[220px] px-3 py-2.5">Parent Partner</th> : null}
               {applicationBranchView ? <th className="w-[160px] px-3 py-2.5">Contact Name</th> : <><th className="w-[190px] px-3 py-2.5">Business Group</th><th className="w-[190px] px-3 py-2.5">Assigned Employee</th></>}
               <th className="w-[190px] px-3 py-2.5">Email</th>
@@ -202,8 +202,8 @@ export function BranchRegisterWorkspace({
           <tbody className="divide-y divide-[#EEF2F6]">
             {pageRows.map((branch) => (
               <tr key={branch.id} className="h-12 hover:bg-[#FAFCFF]">
-                <td className="px-3">
-                  <div className="min-w-0">
+                <td className={applicationBranchView ? "py-2 pl-3 pr-2 text-left" : "px-3"}>
+                  <div className="min-w-0 text-left">
                     <p className="truncate text-[12.5px] font-bold text-[#0F172A]">{branch.branch_name}</p>
                     <p className="mt-0.5 truncate text-[9px] font-medium text-[#64748B]">{branch.branch_code}</p>
                   </div>
