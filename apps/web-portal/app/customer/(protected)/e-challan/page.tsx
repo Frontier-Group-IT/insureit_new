@@ -30,8 +30,13 @@ export default async function CustomerEChallanPage({
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F5F3FF] via-[#F5F3FF]/95 via-[40%] to-[#F5F3FF]/10" />
         <div className="relative flex min-h-[145px] items-center px-5 py-4 sm:min-h-[168px] sm:px-6">
           <div className="max-w-[610px]">
-            <div className="flex items-center gap-3"><img src="/assets/customer-3d-icons/e_challan.png" alt="" aria-hidden="true" width={72} height={72} className="h-[64px] w-[64px] shrink-0 object-contain sm:h-[72px] sm:w-[72px]" /><h1 className="text-[clamp(24px,2.5vw,34px)] font-extrabold leading-[1.15] tracking-tight">Check and manage your<br /><span className="text-[#7540D9]">E-Challan</span> easily.</h1></div>
-            <p className="mt-2 text-[12px] text-[#777C9B]">View your vehicle details, challan information and take action — all in one place.</p>
+            <div className="flex items-center gap-3">
+              <img src="/assets/customer-3d-icons/e_challan.png" alt="" aria-hidden="true" width={72} height={72} className="h-[64px] w-[64px] shrink-0 object-contain sm:h-[72px] sm:w-[72px]" />
+              <div className="min-w-0">
+                <h1 className="text-[clamp(24px,2.5vw,34px)] font-extrabold leading-[1.15] tracking-tight">Check and manage your<br /><span className="text-[#7540D9]">E-Challan</span> easily.</h1>
+                <p className="mt-2 text-[12px] text-[#777C9B]">View your vehicle details, challan information and take action — all in one place.</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>

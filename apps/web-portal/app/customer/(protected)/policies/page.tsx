@@ -90,8 +90,13 @@ export default async function CustomerPoliciesPage({
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EEF7FF]/85 via-[#EEF7FF]/45 via-45% to-transparent" />
         <div className="relative flex min-h-[170px] items-center px-5 py-6 sm:px-7">
           <div className="max-w-[520px]">
-            <h1 className="flex items-center gap-3 text-[clamp(28px,3.2vw,40px)] font-bold tracking-tight"><img src="/assets/Custom-Icons/optimized-128/policy.png" alt="" aria-hidden="true" width={72} height={72} className="h-[64px] w-[64px] shrink-0 object-contain sm:h-[72px] sm:w-[72px]" />My <span className="text-[#1769DC]">Policies</span></h1>
-            <p className="mt-2 text-[14px] leading-relaxed text-[#4B6C94]">All your insurance covers and documents in one place.</p>
+            <div className="flex items-center gap-3">
+              <img src="/assets/Custom-Icons/optimized-128/policy.png" alt="" aria-hidden="true" width={72} height={72} className="h-[64px] w-[64px] shrink-0 object-contain sm:h-[72px] sm:w-[72px]" />
+              <div className="min-w-0">
+                <h1 className="text-[clamp(28px,3.2vw,40px)] font-bold tracking-tight">My <span className="text-[#1769DC]">Policies</span></h1>
+                <p className="mt-1 text-[14px] leading-relaxed text-[#4B6C94]">All your insurance covers and documents in one place.</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>

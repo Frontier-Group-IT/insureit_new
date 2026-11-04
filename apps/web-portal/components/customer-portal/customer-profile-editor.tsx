@@ -127,12 +127,12 @@ export function CustomerProfileEditor({
 
               {message ? <p className="mt-3 rounded-lg bg-[#FFF0F0] px-3 py-2 text-[10px] font-bold text-[#A13B3B]">{message}</p> : null}
 
-              <div className="mt-5 flex justify-end gap-2">
-                <button type="button" disabled={busy} onClick={cancel} className="inline-flex items-center gap-1.5 rounded-lg border border-[#D6E0EB] bg-white px-4 py-2.5 text-[10px] font-black text-[#53627A] disabled:opacity-60">
+              <div className="mt-5 grid grid-cols-2 gap-2 sm:flex sm:justify-end">
+                <button type="button" disabled={busy} onClick={cancel} className="inline-flex min-h-11 min-w-0 w-full items-center justify-center gap-1.5 rounded-lg border border-[#D6E0EB] bg-white px-2 py-2.5 text-[11px] font-black text-[#53627A] transition hover:bg-[#F1F6FD] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#155BAA] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-4 sm:text-[10px]">
                   Cancel
                 </button>
-                <button type="button" disabled={busy} onClick={() => void save()} className="inline-flex items-center gap-1.5 rounded-lg bg-[#142746] px-4 py-2.5 text-[10px] font-black text-white disabled:opacity-60">
-                  {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Save Changes
+                <button type="button" disabled={busy} aria-busy={busy} onClick={() => void save()} className="inline-flex min-h-11 min-w-0 w-full items-center justify-center gap-1.5 rounded-lg bg-[#142746] px-2 py-2.5 text-[11px] font-black text-white transition hover:bg-[#1B3D68] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#155BAA] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-4 sm:text-[10px]">
+                  {busy ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden="true" /> : <Save className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />} {busy ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </div>
