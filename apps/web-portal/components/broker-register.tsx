@@ -95,13 +95,24 @@ export function BrokerRegisterShell({
       children: compactTabs
     });
 
-    headerActions = (
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        {secondaryHeaderActions}
-        {compactToolbar.props.action}
-      </div>
-    );
-    renderedChildren = [renderedToolbar, ...childItems.slice(1)];
+    if (customerSegmentRegister) {
+      // Customer register controls belong in the title header, not a second toolbar.
+      headerActions = (
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+          {compactTabs}
+          {compactToolbar.props.action}
+        </div>
+      );
+      renderedChildren = childItems.slice(1);
+    } else {
+      headerActions = (
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {secondaryHeaderActions}
+          {compactToolbar.props.action}
+        </div>
+      );
+      renderedChildren = [renderedToolbar, ...childItems.slice(1)];
+    }
   }
 
   return (
@@ -109,6 +120,24 @@ export function BrokerRegisterShell({
       <div className={`border-b border-[#E5ECF5] bg-[#F8FAFC] px-4 sm:px-5 ${branchRegisterTitleOnly || compactReferenceLayout || useCompactMetrics ? "py-3" : "py-4"}`}>
         {branchRegisterTitleOnly ? (
           <div className="flex flex-wrap items-center gap-3"><h2 className="shrink-0 text-[18px] font-semibold leading-tight text-[#0F172A]">{title}</h2>{branchHeaderActions}</div>
+        ) : customerSegmentRegister && compactToolbar ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex shrink-0 items-center gap-2.5">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#17365D] text-white shadow-[0_10px_22px_rgba(23,54,93,0.18)]">{icon}</span>
+              <h2 className="whitespace-nowrap text-[18px] font-semibold leading-tight text-[#0F172A]">{title}</h2>
+            </div>
+            <label className="relative min-w-[210px] max-w-[410px] flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B93AA]" />
+              <input
+                value={compactToolbar.props.query}
+                onChange={(event) => compactToolbar.props.onQueryChange(event.target.value)}
+                placeholder={compactToolbar.props.searchPlaceholder}
+                aria-label={compactToolbar.props.searchPlaceholder}
+                className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white pl-10 pr-3 text-[12px] text-[#0F172A] outline-none transition focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10"
+              />
+            </label>
+            {headerActions}
+          </div>
         ) : compactReferenceLayout ? (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-2.5">
