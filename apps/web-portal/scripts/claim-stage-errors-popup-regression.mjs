@@ -15,6 +15,9 @@ const reuse = await load("../components/spot-survey/reuse-policy-copy-button.tsx
 const replace = await load("../components/spot-survey/replace-document-button.tsx");
 const reupload = await load("../components/spot-survey/request-customer-document-reupload-button.tsx");
 const claimPage = await load("../app/claims/[id]/page.tsx");
+const attachments = await load("../components/claim-manager/operations-claim-stage-one-attachments.tsx");
+const media = await load("../components/spot-survey/spot-media-upload-button.tsx");
+const insurance = await load("../components/spot-survey/insurance-verification-modal.tsx");
 
 assert.match(shared, /role="alertdialog"/, "Errors must use an accessible alert dialog");
 assert.match(shared, /aria-modal="true"/, "Dialogs must be modal");
@@ -50,3 +53,12 @@ assert.match(replace, /result\?\.ok \? <p/, "Successful uploads can retain non-e
 assert.doesNotMatch(replace, /result \? <p className/, "Failed uploads cannot use inline banners");
 
 console.log("Internal and External claim stage error-dialog regression passed.");
+
+for (const [file, label] of [[attachments, "Stage 1 document and voice upload"], [media, "Spot Survey media"], [insurance, "Insurance verification"]]) {
+  assert.match(file, /<ClaimStageErrorDialog/, label + " failures must display OK popup");
+}
+assert.doesNotMatch(attachments, /bulkMessage\.ok \? "text-emerald-700" : "text-red-700"/, "Stage 1 upload errors cannot appear inline");
+assert.doesNotMatch(attachments, /voiceMessage\.ok \? "text-emerald-700" : "text-red-700"/, "Stage 1 voice errors cannot appear inline");
+assert.doesNotMatch(media, /result\.ok \? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"/, "Spot upload errors cannot appear inline");
+assert.doesNotMatch(insurance, /result\.ok \? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"/, "Insurance verification errors cannot appear inline");
+assert.doesNotMatch(insurance, /\{capacityError \? <p /, "Capacity loading errors cannot appear inline");
