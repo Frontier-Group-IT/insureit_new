@@ -12,6 +12,7 @@ import { CustomerClaimDocumentGroups } from "@/components/customer-portal/custom
 import { CustomerClaimBooleanChoice } from "@/components/customer-portal/customer-claim-boolean-choice";
 import { Check, Circle, LockKeyhole, CalendarDays, Clock3, ClipboardList } from "lucide-react";
 import { CustomerClaimStageSuccessToast } from "@/components/customer-portal/customer-claim-stage-success-toast";
+import { CustomerSpotSaveSuccess } from "@/components/customer-portal/customer-spot-save-success";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
 import { CustomerInternalCompletedJourney } from "@/components/customer-portal/customer-internal-completed-journey";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
@@ -55,7 +56,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
   const completedInternalStages = !external ? (internal_projection?.completedStageCount ?? 0) : 0;
   if (!external && completedInternalStages > 0) {
     return <div className="customer-claim-ref-page space-y-3">
-      {q.updated==="1" ? <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-[12px] font-semibold text-emerald-800">Spot Intimation details updated successfully.</p> : null}
+      {q.updated==="1" && selected.key==="spot_intimation" ? <CustomerSpotSaveSuccess /> : null}
       <CustomerClaimStageStrip
         claimId={claim.id}
         accountId={account.id}
