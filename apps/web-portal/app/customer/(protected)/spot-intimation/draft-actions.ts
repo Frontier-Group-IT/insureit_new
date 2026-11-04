@@ -14,7 +14,7 @@ const fieldLimits = {
   location: 500,
 } as const;
 
-export type SpotDraftFields = { [K in keyof typeof fieldLimits]: string };
+export type SpotDraftFields = { -readonly [K in keyof typeof fieldLimits]: string };
 export type SpotDraftResult = { ok: boolean; message?: string };
 
 export async function saveCustomerSpotDraft(
