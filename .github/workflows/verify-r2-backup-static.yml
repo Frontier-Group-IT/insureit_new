@@ -81,6 +81,9 @@ jobs:
           assert 'NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS' in fixture
           assert 'NEVER apply to the managed INSUREIT database' in fixture
           assert 'isolated_supabase_roles.sql' in steps_text
+          assert 'supabase/postgres:17.6.1.136' in steps_text
+          assert 'pg_available_extensions' in steps_text
+          assert 'required_extension_availability' in steps_text
           assert '--network none' in steps_text
           assert 'verify_postgres_r2_restore.py' in steps_text
           assert 'docker rm --force --volumes' in steps_text
