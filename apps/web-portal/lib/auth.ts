@@ -18,12 +18,13 @@ export function createSupabaseBrowserClient() {
   // Customer sign-in/OTP/logout must not replace Operations tokens in localStorage.
   const isCustomerRoute = typeof window !== "undefined" &&
     (window.location.pathname === "/customer" || window.location.pathname.startsWith("/customer/"));
-  const storageKey = isCustomerRoute ? "insureit-customer-web-auth" : "insureit-operations-web-auth";
+  // Operations retains the Supabase SDK default key to avoid signing out existing staff sessions.
+  const customerStorage = isCustomerRoute ? { storageKey: "insureit-customer-web-auth" } : {};
 
   return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true,
-      storageKey,
+      ...customerStorage,
       autoRefreshToken: true,
       detectSessionInUrl: true
     }
