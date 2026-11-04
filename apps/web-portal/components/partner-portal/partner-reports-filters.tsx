@@ -4,6 +4,7 @@ import { CalendarDays, ChevronDown, Download, SlidersHorizontal } from "lucide-r
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { ReportDateRangePicker } from "@/components/reports/report-date-range-picker";
+import { usePartnerReportsPending } from "@/components/partner-portal/partner-reports-loading";
 
 type FilterOption = { value: string; label: string };
 type Props = {
@@ -44,6 +45,8 @@ export function PartnerReportsFilters({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const setReportPending = usePartnerReportsPending();
+  useEffect(() => { setReportPending(isPending); }, [isPending, setReportPending]);
   const [draftPeriod, setDraftPeriod] = useState(period);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -81,6 +84,7 @@ export function PartnerReportsFilters({
       else next.set(key, value);
     }
     const qs = next.toString();
+    setReportPending(true);
     startTransition(() => router.replace(qs ? pathname + "?" + qs : pathname, { scroll: false }));
   }
 
@@ -124,9 +128,10 @@ export function PartnerReportsFilters({
         </select>
         {draftPeriod === "custom" ? (
           <button type="button" aria-label="Open custom date calendar" aria-haspopup="dialog"
-            aria-expanded={calendarOpen} className="absolute right-7 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-[#60738b] hover:bg-slate-100"
-            onClick={() => setCalendarOpen(true)}>
-            <CalendarDays size={14} />
+            aria-expanded={calendarOpen} className="absolute inset-y-0 left-0 right-7 flex items-center justify-end pr-1 rounded-l-lg text-[#60738b] hover:bg-[#F4F8FF]/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={() => { setFiltersOpen(false); setCalendarOpen((value) => !value); }}>
+            <CalendarDays size={14} aria-hidden="true" />
           </button>
         ) : null}
         <ChevronDown aria-hidden="true" size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#64748b]" />
@@ -188,6 +193,7 @@ export function PartnerReportsFilters({
           ) : null}
         </div>
       ) : null}
+
 
       <a href={exportHref} className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg bg-[#1166ad] px-4 text-[11px] font-bold text-white hover:bg-[#0e5795]">
         <Download size={15} /> Export

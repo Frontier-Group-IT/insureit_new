@@ -80,15 +80,15 @@ export default async function PartnerReportsPage({searchParams}:{searchParams:Pr
   <div className="reports-v2-page reports-overview-reference">
 
    <section className="ov-card ov-kpis" aria-label="Overview key performance indicators">
-    <Kpi label="Gross Premium" value={compactMoney(totalPremium)} note="Selected period · authorized scope"/>
-    <Kpi label="Policies" value={number(filtered.length)} note="Selected period"/>
+    <Kpi label="Gross Premium" value={compactMoney(totalPremium)} note={`${bounds.from} to ${bounds.to} · authorized scope`}/>
+    <Kpi label="Policies" value={number(filtered.length)} note={`${bounds.from} to ${bounds.to}`}/>
     <Kpi label="Active Policies" value={number(policies.in_force_policies)} note="Currently in force"/>
     <Kpi label="Customers" value={number(uniqueCustomers)} note="Unique customers in selected period"/>
     <Kpi label="Open Claims" value={number(claims.active_claims)} note="Under processing"/>
     <Kpi label="Renewals 30d" value={number(policies.expiring_30_days)} note="Due within 30 days"/>
    </section>
    <section className="ov-grid ov-grid--top">
-    <BusinessTrendCard activePeriod="last_6_months" options={[{value:"last_6_months",label:"Last 6 Months",href:"/partner/reports"}]} points={trendPoints}/>
+    <BusinessTrendCard activePeriod="last_6_months" options={[{value:"last_6_months",label:period==="custom"?`${bounds.from} – ${bounds.to}`:period==="mtd"?"MTD":period==="last-month"?"Last Month":"Last 6 Months",href:`/partner/reports?${filterQuery.toString()}`}]} points={trendPoints}/>
     <article className="ov-card ov-section"><div className="ov-section-head"><h2>Attention</h2><Link href="/partner/reports" className="ov-view-link">View all <ArrowRight className="h-3 w-3"/></Link></div><div className="ov-attention">
      <AttentionRow label="Renewals due (30 days)" count={Number(policies.expiring_30_days)} detail="Policies requiring renewal attention" href="/partner/renewals" alert/>
      <AttentionRow label="Overdue renewals" count={Number(renewals.overdue_count)} detail="Renewals past expiry" href="/partner/renewals" alert/>
