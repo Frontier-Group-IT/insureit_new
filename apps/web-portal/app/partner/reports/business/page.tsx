@@ -3,12 +3,11 @@ import Link from "next/link";
 import {
   BarChart3,
   BriefcaseBusiness,
-  Download,
-  SlidersHorizontal,
   UsersRound,
 } from "lucide-react";
 
 import { PartnerReportsShell } from "@/components/partner-portal/partner-reports-shell";
+import { PartnerReportsFilters } from "@/components/partner-portal/partner-reports-filters";
 import { requirePartnerReportScope } from "@/lib/reports/partner-report-scope";
 import {
   getPartnerWebBusinessPerformance,
@@ -255,56 +254,13 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
 
   return (
     <PartnerReportsShell active="Business" scope={reportScope} toolbar={
-          <form method="get" className="flex flex-wrap items-center justify-end gap-1.5">
-            <select name="period" defaultValue={period} className="h-9 min-w-[110px] rounded-lg border border-[#d4deeb] bg-white px-3 text-[11px] font-bold text-[#30445f]">
-              <option value="mtd">MTD</option>
-              <option value="last-month">Last Month</option>
-              <option value="last-6-months">Last 6 Months</option>
-              <option value="custom">Custom</option>
-            </select>
-            <select name="business" defaultValue={business} className="h-9 min-w-[135px] rounded-lg border border-[#d4deeb] bg-white px-3 text-[11px] font-bold text-[#30445f]">
-              <option value="all">All Business</option>
-              <option value="motor">Motor</option>
-              <option value="non motor">Non Motor</option>
-              <option value="life">Life</option>
-              <option value="health">Health</option>
-            </select>
-
-            <details className="relative">
-              <summary className="flex h-9 cursor-pointer list-none items-center gap-2 rounded-lg border border-[#d4deeb] bg-white px-3 text-[11px] font-bold text-[#30445f]">
-                <SlidersHorizontal size={15} /> Filters
-              </summary>
-              <div className="absolute right-0 z-30 mt-2 w-[280px] space-y-2 rounded-xl border border-[#dbe3ee] bg-white p-3 shadow-xl">
-                <select name="insurer" defaultValue={query.insurer || ""} className="h-9 w-full rounded-lg border border-[#dbe3ee] px-2 text-[10px]">
-                  <option value="">All insurers</option>
-                  {insurerOptions.map((name) => <option key={name} value={name}>{name}</option>)}
-                </select>
-                <select name="rm" defaultValue={query.rm || ""} className="h-9 w-full rounded-lg border border-[#dbe3ee] px-2 text-[10px]">
-                  <option value="">All RMs</option>
-                  {rmOptions.map((name) => <option key={name} value={name}>{name}</option>)}
-                </select>
-                <select name="intermediary" defaultValue={query.intermediary || ""} className="h-9 w-full rounded-lg border border-[#dbe3ee] px-2 text-[10px]">
-                  <option value="">All intermediaries</option>
-                  {intermediaryOptions.map((code) => <option key={code} value={code}>{code}</option>)}
-                </select>
-                {period === "custom" ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    <input name="from" type="date" defaultValue={bounds.from} className="h-9 rounded-lg border border-[#dbe3ee] px-2 text-[9px]" />
-                    <input name="to" type="date" defaultValue={bounds.to} className="h-9 rounded-lg border border-[#dbe3ee] px-2 text-[9px]" />
-                  </div>
-                ) : null}
-                <div className="flex justify-end gap-2 pt-1">
-                  <Link href="/partner/reports/business" className="rounded-lg border border-[#d4deeb] px-3 py-2 text-[9px] font-bold text-[#52657f]">Clear</Link>
-                  <button type="submit" className="rounded-lg bg-[#1f5fae] px-3 py-2 text-[9px] font-bold text-white">Apply</button>
-                </div>
-              </div>
-            </details>
-
-            <button type="submit" className="h-9 rounded-lg border border-[#d4deeb] bg-white px-4 text-[11px] font-bold text-[#30445f]">Apply</button>
-            <Link href={exportHref} className="flex h-9 items-center gap-2 rounded-lg bg-[#1166ad] px-4 text-[11px] font-extrabold text-white">
-              <Download size={15} /> Export
-            </Link>
-          </form>
+      <PartnerReportsFilters
+        period={period} business={business} from={bounds.from} to={bounds.to}
+        exportHref={exportHref} showAdvanced
+        insurerOptions={insurerOptions} rmOptions={rmOptions}
+        intermediaryOptions={intermediaryOptions}
+        insurer={query.insurer || ""} rm={query.rm || ""} intermediary={query.intermediary || ""}
+      />
     }>
       <div className="space-y-3 pb-4">
         {hierarchySummary ? (
