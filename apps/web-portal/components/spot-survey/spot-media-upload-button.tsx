@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
 import { useMemo, useState, useTransition } from "react";
 import {
   cancelClaimDocumentUploads,
@@ -34,6 +35,7 @@ export function SpotMediaUploadButton({ claimId }: { claimId: string }) {
 
   return (
     <>
+      <ClaimStageErrorDialog message={result && !result.ok ? result.message ?? "Upload failed." : null} onClose={() => setResult(null)} />
       <button
         type="button"
         onClick={() => { setFiles([]); setResult(null); setOpen(true); }}
@@ -150,7 +152,7 @@ export function SpotMediaUploadButton({ claimId }: { claimId: string }) {
                 ) : <p className="mt-2 rounded-lg border border-[#DCE7F5] bg-[#F8FBFF] px-3 py-3 text-[12px] text-[#8B98A9]">No files selected.</p>}
               </div>
 
-              {result ? <p className={`rounded-lg border px-3 py-2 text-[12px] font-semibold ${result.ok ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>{result.message}</p> : null}
+              {result?.ok ? <p role="status" className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-[12px] font-semibold text-green-700">{result.message}</p> : null}
             </div>
 
             <div className="flex items-center justify-between border-t border-[#E6EEF7] px-5 py-4">

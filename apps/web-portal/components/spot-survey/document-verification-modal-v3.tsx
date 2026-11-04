@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
 import { createPortal } from "react-dom";
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { RefreshCw } from "lucide-react";
@@ -32,6 +33,7 @@ export function DocumentVerificationModalButton({ claimId, documentId, modalType
   const [saved, setSaved] = useState(false);
   const [rcLoading, setRcLoading] = useState(false);
   const [rcLookupMessage, setRcLookupMessage] = useState("");
+  const [rcLookupError, setRcLookupError] = useState("");
   const [rcRegistrationNumber, setRcRegistrationNumber] = useState("");
   const [spot, setSpot] = useState<SpotState>({
     axleStatus: detailText(initialDetails, "spot_axle_status"),
@@ -52,15 +54,16 @@ export function DocumentVerificationModalButton({ claimId, documentId, modalType
           return next;
         });
         setRcLookupMessage(response.source === "none" ? "No stored RC dates found. Enter dates manually or use AuthBridge lookup." : "Available expiry dates prefilled from stored vehicle records / RC cache. Review against the RC copy.");
-      } else setRcLookupMessage(response.message);
+      } else setRcLookupError(response.message);
       setRcLoading(false);
-    }).catch(() => { if (active) { setRcLoading(false); setRcLookupMessage("Stored RC details unavailable. Manual entry remains available."); } });
+    }).catch(() => { if (active) { setRcLoading(false); setRcLookupError("Stored RC details unavailable. Manual entry remains available."); } });
     return () => { active = false; };
   }, [open, modalType, claimId]);
 
   const fetchRcFromAuthbridge = () => {
     if (rcLoading || !rcRegistrationNumber) return;
     setRcLoading(true);
+    setRcLookupError("");
     setRcLookupMessage("Fetching fresh RC details directly from AuthBridge…");
     void (async () => {
       try {
@@ -97,7 +100,7 @@ export function DocumentVerificationModalButton({ claimId, documentId, modalType
         });
         setRcLookupMessage("Fresh AuthBridge lookup completed. Returned dates updated; fields omitted by the provider remain unchanged. Review against RC before verification.");
       } catch (error) {
-        setRcLookupMessage(error instanceof Error ? error.message : "AuthBridge lookup unavailable. Manual entry remains available.");
+        setRcLookupError(error instanceof Error ? error.message : "AuthBridge lookup unavailable. Manual entry remains available.");
       } finally {
         setRcLoading(false);
       }
@@ -186,7 +189,7 @@ export function DocumentVerificationModalButton({ claimId, documentId, modalType
           {modalType === "insurance" ? <InsuranceRows incidentDate={incident} values={insurance} setValues={setInsurance} /> : null}
           {modalType === "dl" ? <DlRows values={dl} setValues={setDl} incidentDate={incident} /> : null}
           {modalType === "gr" ? <GrRows values={gr} setValues={setGr} /> : null}
-          <div className="px-6 pb-4"><p className={`rounded-lg border px-3 py-2 text-[12px] font-semibold ${canSave ? "border-green-200 bg-green-50 text-green-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>{message}</p>{result ? <p className={`mt-2 rounded-lg border px-3 py-2 text-[12px] font-semibold ${result.ok ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>{result.message ?? "Verification response received."}</p> : null}</div>
+          <div className="px-6 pb-4"><p className={`rounded-lg border px-3 py-2 text-[12px] font-semibold ${canSave ? "border-green-200 bg-green-50 text-green-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>{message}</p>{result?.ok ? <p role="status" className="mt-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-[12px] font-semibold text-green-700">{result.message ?? "Verification completed."}</p> : null}</div>
         </div>
         <div className="flex items-center justify-between border-t border-[#E6EEF7] px-6 py-4"><button type="button" onClick={() => setOpen(false)} className="h-10 rounded-md border border-[#B8C5D6] px-7 text-[13px] font-semibold text-[#071D49]">{result?.ok ? "Close" : "Cancel"}</button><button type="submit" disabled={pending || Boolean(result?.ok) || !canSave} className="h-10 rounded-md bg-[#071D49] px-10 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-[#A9B4C5] disabled:opacity-70">{pending ? "Saving..." : result?.ok ? "Saved" : modalType === "spot" ? "Submit" : "Save & Close"}</button></div>
       </form>
@@ -195,6 +198,7 @@ export function DocumentVerificationModalButton({ claimId, documentId, modalType
 
   return (
     <div>
+      <ClaimStageErrorDialog message={result && !result.ok ? result.message ?? "Verification failed." : rcLookupError || null} onClose={() => { if (result && !result.ok) setResult(null); else setRcLookupError(""); }} />
       <button type="button" onClick={() => { setResult(null); setOpen(true); }} className={`h-8 w-full rounded-md border text-[12px] font-semibold ${saved ? "border-green-300 bg-green-50 text-green-700" : "border-[#16A36A] bg-white text-[#16895C] hover:bg-[#F2FBF7]"}`}>{saved ? "Verified" : "Verify"}</button>
       {open && typeof document !== "undefined" ? createPortal(modal, document.body) : null}
     </div>

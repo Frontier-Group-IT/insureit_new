@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { advanceInternalSpotIntimation, saveInternalSpotIntimationDetails } from "@/app/claims/internal-spot-intimation-actions";
 import { completeClaimJourneyStage } from "@/app/claims/stage-actions";
 import { ClaimStageSuccessPopup } from "@/components/claim-manager/claim-stage-success-popup";
+import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
 import { OperationsClaimStageOneAttachments } from "@/components/claim-manager/operations-claim-stage-one-attachments";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { managerTransitions, type ClaimStatus } from "@/lib/claim-workflow";
@@ -341,6 +342,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
               formAction={spotCurrentEditable && !partnerInternalStageOne ? formAction : spotFormAction}
               standalone={!spotCurrentEditable || partnerInternalStageOne}
               onSubmitStart={() => setSpotSubmitting(true)}
+              onInvalidField={(message) => setErrorNotice(message)}
             />
             <div className="mt-3">{spotContent}</div>
             {!partnerReadOnlyJourney && !partnerManagedJourney && !partnerInternalStageOne ? <OperationsClaimStageOneAttachments claimId={claimId} /> : null}
@@ -385,7 +387,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
           </div>
         ) : null}
         {stageEditable ? (
-          <form action={formAction} className="mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
+          <form action={formAction} onInvalidCapture={(event) => { event.preventDefault(); setErrorNotice("Please complete all required fields before saving this stage."); }} className="mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
             <input type="hidden" name="milestone_key" value={selected.key} />
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
             <input type="hidden" name="save_only" value={partnerManagedJourney || selectedSaveOnly ? "true" : "false"} />
@@ -456,18 +458,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
       </div>
 
       {successNotice ? <ClaimStageSuccessPopup message={successNotice} /> : null}
-      {errorNotice ? (
-        <div className="fixed inset-0 z-[1000] grid place-items-center bg-[#07152F]/60 px-4" role="presentation">
-          <div role="alertdialog" aria-modal="true" aria-labelledby="spot-error-title" aria-describedby="spot-error-description" className="w-full max-w-[525px] overflow-hidden rounded-[20px] bg-white shadow-2xl">
-            <div className="flex flex-col items-center px-5 pb-6 pt-7 text-center">
-              <div aria-hidden="true" className="flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#FFF1E6] text-[24px] font-medium text-[#E87525]">!</div>
-              <h2 id="spot-error-title" className="mt-5 text-[18px] font-semibold text-[#142C4B]">Check details</h2>
-              <p id="spot-error-description" className="mt-3 text-[13px] leading-5 text-[#77849A]">{summarizeClaimActionError(errorNotice)}</p>
-            </div>
-            <div className="border-t border-[#E4E9F0] px-6 py-4"><button type="button" autoFocus onClick={() => setErrorNotice(null)} className="h-[50px] w-full rounded-xl bg-[#19385E] text-[13px] font-semibold text-white">OK</button></div>
-          </div>
-        </div>
-      ) : null}
+      <ClaimStageErrorDialog message={errorNotice ? summarizeClaimActionError(errorNotice) : null} onClose={() => setErrorNotice(null)} />
     </section>
   );
 }
@@ -533,7 +524,7 @@ function formatDisplayDate(value: string) {
   return match ? `${match[3]}-${match[2]}-${match[1]}` : value;
 }
 
-function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accidentAt, spotIntimationAt, formAction, standalone = false, onSubmitStart }: { claimId: string; stage: (typeof stages)[number]; active: (typeof stages)[number]; detail: StageDetail | undefined; spotDetails?: InternalSpotIntimationDetails | null; next?: ClaimStatus; accidentAt?: string | null; spotIntimationAt?: string | null; formAction: (formData: FormData) => void; standalone?: boolean; onSubmitStart?: () => void }) {
+function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accidentAt, spotIntimationAt, formAction, standalone = false, onSubmitStart, onInvalidField }: { claimId: string; stage: (typeof stages)[number]; active: (typeof stages)[number]; detail: StageDetail | undefined; spotDetails?: InternalSpotIntimationDetails | null; next?: ClaimStatus; accidentAt?: string | null; spotIntimationAt?: string | null; formAction: (formData: FormData) => void; standalone?: boolean; onSubmitStart?: () => void; onInvalidField?: (message: string) => void }) {
   const [location, setLocation] = useState(spotDetails?.location ?? "");
   const formRef = useRef<HTMLFormElement>(null);
   const draftKey = `insureit:spot-intimation-draft:${claimId}`;
@@ -586,7 +577,7 @@ function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accid
   const groupedInputClassName = "h-full min-w-0 w-full border-0 bg-transparent pl-2 pr-[10%] text-[11px] font-semibold normal-case tracking-normal text-[#071D49] outline-none";
 
   return (
-    <form ref={formRef} id="spot-intimation-form" action={formAction} onInput={preserveDraft} onChange={preserveDraft} onSubmit={onSubmitStart} className="mt-3 overflow-hidden rounded-2xl border border-[#BFD7F6] bg-white shadow-[0_8px_20px_rgba(23,78,166,0.05)]">
+    <form ref={formRef} id="spot-intimation-form" action={formAction} onInput={preserveDraft} onChange={preserveDraft} onSubmit={onSubmitStart} onInvalidCapture={(event) => { event.preventDefault(); onInvalidField?.("Please complete all required Spot Intimation fields before saving."); }} className="mt-3 overflow-hidden rounded-2xl border border-[#BFD7F6] bg-white shadow-[0_8px_20px_rgba(23,78,166,0.05)]">
       {!standalone ? <><input type="hidden" name="next_status" value={next} /><input type="hidden" name="notes" value={`Operations updated ${active.label} and moved the claim to ${next}.`} /></> : null}
       <div className="flex items-center gap-3 border-b border-[#DCE9F8] px-4 py-3">
         <h3 className="text-[16px] font-semibold tracking-[-0.01em] text-[#071D49]">Accident &amp; Spot Intimation Details</h3>

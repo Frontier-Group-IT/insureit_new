@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
 import { freshDynamicRouteUrl } from "@/components/fresh-dynamic-route-navigation";
 import { InsureItButtonLoader } from "@/components/loading/insureit-loader";
 import { markSpotSurveyDone } from "./survey-done-actions";
@@ -29,7 +30,7 @@ export function SurveyDoneButton({ claimId }: { claimId: string }) {
       >
         {pending ? <InsureItButtonLoader label="Saving" /> : "Survey Done"}
       </button>
-      {message ? <p className="max-w-[260px] text-right text-[11px] font-semibold text-red-600">{message}</p> : null}
+      <ClaimStageErrorDialog message={message} onClose={() => setMessage(null)} />
     </div>
   );
 }
