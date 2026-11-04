@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
 import { createPortal } from "react-dom";
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { loadInsuranceVerificationCapacity } from "@/app/claims/[id]/insurance-verification-actions";
@@ -142,11 +143,10 @@ export function InsuranceVerificationModalButton({
             setValues={setInsurance}
             capacity={capacity}
             capacityLoading={capacityLoading}
-            capacityError={capacityError}
           />
           <div className="px-6 pb-4">
             <p className={`rounded-lg border px-3 py-2 text-[12px] font-semibold ${canSave ? "border-green-200 bg-green-50 text-green-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>{message}</p>
-            {result ? <p className={`mt-2 rounded-lg border px-3 py-2 text-[12px] font-semibold ${result.ok ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>{result.message ?? "Verification response received."}</p> : null}
+            {result?.ok ? <p role="status" className="mt-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-[12px] font-semibold text-green-700">{result.message ?? "Verification completed."}</p> : null}
           </div>
         </div>
 
@@ -160,6 +160,7 @@ export function InsuranceVerificationModalButton({
 
   return (
     <div>
+      <ClaimStageErrorDialog message={result && !result.ok ? result.message ?? "Verification failed." : capacityError || null} onClose={() => { if (result && !result.ok) setResult(null); else setCapacityError(""); }} />
       <button type="button" onClick={() => { setResult(null); setOpen(true); }} className={`h-8 w-full rounded-md border text-[12px] font-semibold ${saved ? "border-green-300 bg-green-50 text-green-700" : "border-[#16A36A] bg-white text-[#16895C] hover:bg-[#F2FBF7]"}`}>{saved ? "Verified" : "Verify"}</button>
       {open && typeof document !== "undefined" ? createPortal(modal, document.body) : null}
     </div>
@@ -172,14 +173,12 @@ function InsuranceRows({
   setValues,
   capacity,
   capacityLoading,
-  capacityError,
 }: {
   incidentDate: string | null;
   values: InsuranceState;
   setValues: (next: InsuranceState | ((previous: InsuranceState) => InsuranceState)) => void;
   capacity: InsuranceVerificationCapacity | null;
   capacityLoading: boolean;
-  capacityError: string;
 }) {
   const policyStatus = getStatus(values.start, values.end, incidentDate);
   const dateOrderInvalid = Boolean(values.start && values.end && values.start > values.end);
@@ -239,7 +238,7 @@ function InsuranceRows({
             {capacity?.unit ? <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-[#68758A]">{capacity.unit}</span> : null}
           </div>
           <p className="mt-1 text-[10px] font-medium text-[#68758A]">Vehicle class: {classDisplay}. {capacity?.value ? "Prefilled from the vehicle record; adjust only if the insurance copy shows a different value." : "Enter the value shown on the insurance copy."}</p>
-          {capacityError ? <p className="mt-1 text-[10px] font-semibold text-amber-700">{capacityError}</p> : null}
+          
         </div>
       </InsuranceRow>
 
