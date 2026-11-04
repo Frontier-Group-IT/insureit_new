@@ -283,9 +283,19 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
       created_at: "1970-01-01T00:00:00.000Z",
     }));
   const customerSpotIntimationDetails = externalCustomerMilestones?.find((milestone) => milestone.milestone_key === "spot_intimation")?.details;
-  const effectiveSpotDetails = claim.policy_service_source === "external"
+  // Only unsubmitted claims can show customer drafts. Existing finalized / Operations
+  // stage details take precedence; draft values never complete a stage by themselves.
+  const { data: spotDraft } = claim.current_status === "Draft"
+    ? await admin.from("claim_spot_intimation_drafts")
+        .select("fields")
+        .eq("claim_id", id)
+        .eq("customer_id", claim.customer_id)
+        .maybeSingle<{ fields: Record<string, unknown> }>()
+    : { data: null };
+  const submittedSpotDetails = claim.policy_service_source === "external"
     ? mergeExternalSpotDetails(spotDetails, customerSpotIntimationDetails)
     : spotDetails;
+  const effectiveSpotDetails = mergeCustomerSpotDraft(submittedSpotDetails, spotDraft?.fields);
   const effectiveClaimWithSpotIntimation = {
     ...claimWithSpotIntimation,
     spotIntimationAt: effectiveSpotDetails.spot_intimation_at,
@@ -317,6 +327,30 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
       </div>
     </ClaimManagerShell>
   );
+}
+
+function mergeCustomerSpotDraft(
+  submitted: InternalSpotIntimationDetails,
+  draft: Record<string, unknown> | null | undefined,
+): InternalSpotIntimationDetails {
+  if (!draft) return submitted;
+  const get = (key: string) => typeof draft[key] === "string" && (draft[key] as string).trim()
+    ? (draft[key] as string).trim() : null;
+  const timestamp = (dateKey: string, timeKey: string) => {
+    const date = get(dateKey);
+    const time = get(timeKey);
+    if (!date || !time || !/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || !/^\\d{2}:\\d{2}$/.test(time)) return null;
+    const parsed = new Date(`${date}T${time}:00+05:30`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  };
+  return {
+    ...submitted,
+    incident_at: submitted.incident_at ?? timestamp("accidentDate", "accidentTime"),
+    spot_intimation_at: submitted.spot_intimation_at ?? timestamp("spotDate", "spotTime"),
+    driver_name: submitted.driver_name ?? get("driver"),
+    driver_phone: submitted.driver_phone ?? get("phone"),
+    location: submitted.location ?? get("location"),
+  };
 }
 
 function mergeExternalSpotDetails(operations: InternalSpotIntimationDetails, customerDetails: Record<string, unknown> | null | undefined): InternalSpotIntimationDetails {
