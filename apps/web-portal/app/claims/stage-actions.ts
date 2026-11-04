@@ -224,6 +224,52 @@ export async function completeClaimJourneyStage(claimId: string, formData: FormD
   return { ok: true, nextStatus, advanced: true };
 }
 
+/**
+ * Safe action boundary for interactive Operations Stage 3 submissions.
+ * Validation errors must be returned as data, not sent to the RSC error
+ * boundary (which shows a generic production Server Components failure).
+ * The original completion function retains all permission and verification
+ * rules; this wrapper never advances or persists anything by itself.
+ */
+export async function completeClaimJourneyStageWithFeedback(
+  claimId: string,
+  formData: FormData,
+): Promise<{ ok: boolean; advanced: boolean; message?: string }> {
+  try {
+    const result = await completeClaimJourneyStage(claimId, formData);
+    return { ok: true, advanced: result.advanced };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "";
+    console.error("Operations claim stage save rejected", {
+      claimId,
+      stage: String(formData.get("milestone_key") ?? ""),
+      reason,
+    });
+    const pending = /^Verify first — (\\d+) uploaded documents? pending verification\\.$/.exec(reason);
+    if (pending) {
+      const count = Number(pending[1]);
+      return {
+        ok: false,
+        advanced: false,
+        message: `Verify the ${count} uploaded document${count === 1 ? "" : "s"} awaiting verification before completing this claim stage. Your entered details are preserved.`,
+      };
+    }
+    const safeMessages = [
+      "Complete all mandatory stage fields before saving details.",
+      "This stage is not available yet. Complete the current stage first.",
+      "Vehicle Received Date is mandatory when the vehicle is received.",
+      "This claim stage cannot be saved from this form.",
+      "The claim stage could not be persisted. Refresh the claim and try again.",
+      "Unable to check document verification. Please try again.",
+    ];
+    return {
+      ok: false,
+      advanced: false,
+      message: safeMessages.includes(reason) ? reason : "Unable to save this claim stage. Your entered details are preserved; please try again.",
+    };
+  }
+}
+
 function revalidateClaimPaths(claimId: string) {
   revalidatePath(`/claims/${claimId}`);
   revalidatePath(`/partner/claims/${claimId}`);
