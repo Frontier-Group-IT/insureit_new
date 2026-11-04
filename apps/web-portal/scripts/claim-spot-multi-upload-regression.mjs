@@ -34,9 +34,12 @@ assert.match(verificationAction, /Please select a document before verifying\./, 
 assert.match(verificationAction, /aria-describedby="verify-selection-message"/, "Document warning must describe the reference popup accessibly.");
 assert.match(verificationAction, /h-\[50px\] w-full rounded-xl/, "Document warning must keep the full-width reference OK button.");
 const operationsStages = await readFile(new URL("../components/claim-manager/operations-claim-stages.tsx", import.meta.url), "utf8");
-assert.match(operationsStages, />Check details<\/h2>/, "Claim action errors must use the Check details reference title.");
+const sharedClaimErrorDialog = await readFile(new URL("../components/claim-manager/claim-stage-error-dialog.tsx", import.meta.url), "utf8");
+assert.match(sharedClaimErrorDialog, /title = "Check details"/, "Claim action errors must retain the Check details reference title.");
+assert.match(sharedClaimErrorDialog, /role="alertdialog"/, "Claim errors must render in an accessible popup.");
+assert.match(sharedClaimErrorDialog, /onClick=\{onClose\}/, "Dismissing an error must only close the popup.");
 assert.match(operationsStages, /summarizeClaimActionError\(errorNotice\)/, "Production server errors must use a short safe message.");
-assert.match(operationsStages, /onClick=\{\(\) => setErrorNotice\(null\)\}/, "Dismissing an error must only close the popup.");
+assert.match(operationsStages, /onClose=\{\(\) => setErrorNotice\(null\)\}/, "Operations stage must dismiss errors without discarding edits.");
 assert.match(operationsStages, /onInput=\{preserveDraft\} onChange=\{preserveDraft\}/, "Claim edits must be preserved as unsaved drafts.");
 assert.match(operationsStages, /if \(state\.ok \|\| !state\.message\) return;/, "Failed stage actions must retain form state.");
 
