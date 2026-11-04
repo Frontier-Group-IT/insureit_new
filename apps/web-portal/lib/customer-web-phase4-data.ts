@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { createServerSupabaseClient } from "@/lib/auth-server";
+import { createCustomerServerSupabaseClient } from "@/lib/auth-server";
 import { getCustomerWebSession } from "@/lib/customer-web";
 
 export type CustomerProfileRecord = {
@@ -62,7 +62,7 @@ export const loadCustomerProfile = cache(async (customerId: string) => {
   const session = await getCustomerWebSession();
   if (!session.accounts.some((account) => account.id === customerId)) throw new Error("Customer account is not authorized.");
 
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createCustomerServerSupabaseClient();
   const [customerResult, documentsResult, onboardingResult] = await Promise.all([
     supabase
       .from("customers")
@@ -108,7 +108,7 @@ export async function createCustomerDocumentSignedUrl(customerId: string, docume
   const { documents } = await loadCustomerProfile(customerId);
   const document = documents.find((item) => item.id === documentId);
   if (!document) return null;
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createCustomerServerSupabaseClient();
   const { data, error } = await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 300);
   return error ? null : data.signedUrl;
 }
