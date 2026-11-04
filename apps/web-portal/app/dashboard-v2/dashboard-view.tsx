@@ -859,17 +859,17 @@ function AttentionItem({ item, divided }: { item: AttentionSignal; divided: bool
     return (
       <div className={`${divided ? "border-t xl:border-l xl:border-t-0" : ""} flex min-w-0 items-center gap-3 border-[#E7ECF2] px-3 py-2.5`}>
         <span className={`h-8 w-[3px] shrink-0 ${tone}`} />
-        <Icon src={item.icon} size={25} />
-        <div className="min-w-0 flex-1">
-          <p className="text-[9px] font-bold text-[#26344F]">Policy Intake</p>
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <Link prefetch={false} href="/policy-intakes?view=action" className="inline-flex items-center gap-1 text-[9px] font-bold text-[#C62828] hover:underline" aria-label={`Policy Intake Action Required: ${counts.actionRequired}`}>
-              Action Required <span className="tabular-nums text-[13px]">{counts.actionRequired}</span>
-            </Link>
-            <Link prefetch={false} href="/policy-intakes?view=in_review" className="inline-flex items-center gap-1 text-[9px] font-bold text-[#A75B16] hover:underline" aria-label={`Policy Intake In Review: ${counts.inReview}`}>
-              In Review <span className="tabular-nums text-[13px]">{counts.inReview}</span>
-            </Link>
-          </div>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <Icon src={item.icon} size={25} />
+          <p className="min-w-0 text-[9px] font-bold text-[#26344F]">Policy Intake</p>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1 border-l border-[#E1E7F0] pl-2">
+          <Link prefetch={false} href="/policy-intakes?view=action" className="inline-flex items-center gap-1.5 whitespace-nowrap text-[9px] font-bold text-[#C62828] hover:underline" aria-label={`Policy Intake Action Required: ${counts.actionRequired}`}>
+            Action Required <span className="tabular-nums text-[13px]">{counts.actionRequired}</span>
+          </Link>
+          <Link prefetch={false} href="/policy-intakes?view=in_review" className="inline-flex items-center gap-1.5 whitespace-nowrap text-[9px] font-bold text-[#A75B16] hover:underline" aria-label={`Policy Intake In Review: ${counts.inReview}`}>
+            In Review <span className="tabular-nums text-[13px]">{counts.inReview}</span>
+          </Link>
         </div>
       </div>
     );
