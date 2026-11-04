@@ -224,6 +224,6 @@ function monthTitle(monthKey: string) {
 }
 
 function formatRange(from: string, to: string) { return `${formatShortDate(from)} – ${formatShortDate(to)}`; }
-function formatShortDate(value: string) { return new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "2-digit", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`)); }
+function formatShortDate(value: string) { const match=value.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/); return match ? `${match[3]}/${match[2]}/${match[1]}` : value; }
 function formatLongDate(value: string) { return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`)); }
 function todayUtc() { return new Date().toISOString().slice(0, 10); }
