@@ -17,7 +17,7 @@
 .customer-claim-ref-journey-header {background:linear-gradient(102deg,#23469e 0%,#175da8 55%,#2892b7 100%);}
 .customer-claim-ref-journey .customer-workflow-step {box-shadow:0 2px 5px rgba(54,75,160,.06);}
 .customer-claim-ref-journey .customer-workflow-step a[aria-current="step"] {color:#2559b5;}
-.customer-claim-ref-details {background:linear-gradient(120deg,#f8f6ff,#f5f7ff);box-shadow:inset 0 0 0 1px rgba(213,214,250,.25);}
+.customer-claim-ref-details {background:#fff;box-shadow:inset 0 0 0 1px rgba(213,214,250,.25);}
 .customer-claim-ref-details input {box-shadow:0 2px 6px rgba(63,82,150,.03);}
 .customer-claim-ref-docs {background:#fff;}
 .customer-claim-ref-docs-heading {display:flex;align-items:center;gap:9px;}
