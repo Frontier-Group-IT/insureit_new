@@ -159,6 +159,8 @@ jobs:
         run: node scripts/customer-exchange-recovery-regression.mjs
       - name: Customer Web login and signup entry regression
         run: node scripts/customer-web-auth-entry-regression.mjs
+      - name: Customer and Operations session isolation regression
+        run: node scripts/customer-operations-session-isolation-regression.mjs
       - name: External renewal intake visibility regression
         run: node scripts/partner-external-renewal-intake-visibility-regression.mjs
       - name: External renewal Administration import regression
