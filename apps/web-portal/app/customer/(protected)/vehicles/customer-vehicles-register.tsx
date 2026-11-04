@@ -34,7 +34,7 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
   const currentPage = Math.min(page, pageCount);
   const visibleRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const openVehicle = (id: string) => router.push(`/customer/vehicles/${encodeURIComponent(id)}?account=${encodeURIComponent(accountId)}`);
-  return <div className="customer-register-motion space-y-3">
+  return <div className="customer-register-motion customer-vehicles-page space-y-3">
     <section className="customer-register-hero relative isolate overflow-hidden rounded-2xl border border-[#D6E7FA] bg-[#DDEEFF] text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.05)]">
       <div className="pointer-events-none absolute inset-0 bg-[url('/assets/vehicle.jpeg')] bg-cover bg-center bg-no-repeat opacity-95" />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EEF7FF]/85 via-[#EEF7FF]/45 via-45% to-transparent" />
