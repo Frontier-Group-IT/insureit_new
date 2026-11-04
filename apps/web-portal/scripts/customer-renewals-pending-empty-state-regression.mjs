@@ -9,7 +9,7 @@ const art = readFileSync(resolve(root, "public/assets/customer-renewals/empty-st
 
 assert.match(page, /const \[status,setStatus\]=useState\("due"\)/, "Pending renewals must be the default");
 assert.match(page, /categories\.find\(cat => cat\.key === "insurance_policy"\)/, "Insurance Policy must open by default");
-assert.match(page, /categories\[0\]\?\.key \?\? null/, "Missing Insurance Policy must fall back gracefully");
+assert.match(page, /categories\[0\]\?\.key \?\? \(items\.length \? "__other__" : null\)/, "Missing category summaries must fall back to Other if items exist");
 assert.match(page, /status==="expired"\?item\.daysUntil<0:item\.daysUntil>=0&&item\.daysUntil<=45/, "Existing due/expired logic must remain");
 assert.match(page, /onClick=\{\(\) => setActiveCategory\(selected \? null : cat\.key\)\}/, "Categories must remain interactive");
 assert.match(page, /<option value="all">All Status<\/option><option value="due">Due<\/option><option value="expired">Expired<\/option>/, "Status choices must remain");
