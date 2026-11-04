@@ -28,8 +28,9 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
   if(!q.id) redirect("/customer/start-claim?account="+encodeURIComponent(account.id));
   const {claim,documents,milestones,internal_projection}=await loadCustomerClaimDetail(account.id,q.id);
   const editing=q.mode==="edit";
+  const stageTwoComplete=(internal_projection?.completedStageCount??0)>=2 || milestones.some(item=>item.milestone_key==="claim_intimation" && ["completed","not_applicable"].includes(item.milestone_status));
   const eligible=editing && !isExternalCustomerClaim(claim) && claim.claim_service_mode==="broker_managed" &&
-    (internal_projection?.completedStageCount??0)>=1;
+    (internal_projection?.completedStageCount??0)>=1 && !stageTwoComplete;
   const detailsHref="/customer/claims/"+encodeURIComponent(claim.id)+"/stage/spot_intimation?account="+encodeURIComponent(account.id);
   if(editing && !eligible) redirect(detailsHref);
   const spotDetails=milestones.find(m=>m.milestone_key==="spot_intimation")?.details;
