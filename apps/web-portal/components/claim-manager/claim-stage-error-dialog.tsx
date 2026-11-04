@@ -8,7 +8,7 @@ import { AlertCircle } from "lucide-react";
 export function ClaimStageErrorDialog({
   message,
   onClose,
-  title = "Action required",
+  title = "Check details",
 }: {
   message: string | null | undefined;
   onClose: () => void;
