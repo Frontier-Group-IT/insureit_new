@@ -447,12 +447,7 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
         ) : (
           <div className="mt-3 rounded-xl border border-[#E2EAF4] bg-[#FBFCFE] px-4 py-5 text-center text-[11px] font-semibold text-[#68758A]">{verificationLoadError ? "Unable to load documents. Please retry or refresh the claim." : "Loading documents..."}</div>
         )}
-        {verificationData && verificationData.documents.filter(document => document.verification_status !== "verified" && document.verification_status !== "rejected" && !verificationData.verifications.some(row => row.document_id === document.id && row.is_valid)).length > 0 ? (
-          <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] font-medium text-amber-900">
-            Pending verification: review uploaded documents marked Verify before completing this stage. You can save dealership details separately.
-          </p>
-        ) : null}
-        
+
         <div className="mt-4 flex justify-end"><div className="flex items-center gap-3"><button type="button" disabled={isPending} onClick={() => run("draft", () => submitFinalDocumentsDraft(stageDetailsForm()))} className="rounded-lg border border-[#D9E3F0] bg-white px-5 py-2 text-[12px] font-semibold text-[#071D49] transition disabled:cursor-not-allowed disabled:bg-[#F1F4F8] disabled:text-[#8A97A8] disabled:opacity-70">{isPending && pendingAction === "draft" ? "Saving..." : "Save as Draft"}</button><button type="button" disabled={isPending} onClick={saveAndContinue} className="rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white disabled:bg-[#A9B4C5]">{isPending && pendingAction === "save-continue" ? "Saving..." : "Save Details"}</button></div></div>
       </section>
 
