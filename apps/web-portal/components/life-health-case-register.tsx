@@ -28,15 +28,18 @@ function normalize(value: string | number | null | undefined) {
 export function LifeHealthCaseRegister({
   rows,
   emptyLabel,
+  statusFilter,
 }: {
   rows: LifeHealthCaseRegisterRow[];
   emptyLabel: string;
+  statusFilter: "pending" | "issued" | "all";
 }) {
   const [query, setQuery] = useState("");
   const normalizedQuery = normalize(query);
 
   const filteredRows = useMemo(() => {
-    if (!normalizedQuery) return rows;
+    // Search all authorized cases regardless of the active status tab.
+    if (!normalizedQuery) return rows.filter((row) => statusFilter === "all" || (statusFilter === "issued" ? Boolean(row.finalPolicyId) : !row.finalPolicyId));
     return rows.filter((row) => {
       const status = row.finalPolicyId ? "issued" : "awaiting policy";
       const searchable = [
@@ -56,7 +59,7 @@ export function LifeHealthCaseRegister({
       ].map(normalize).join(" ");
       return searchable.includes(normalizedQuery);
     });
-  }, [normalizedQuery, rows]);
+  }, [normalizedQuery, rows, statusFilter]);
 
   return (
     <section className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-sm">
@@ -84,7 +87,7 @@ export function LifeHealthCaseRegister({
         </div>
         {query ? (
           <p className="mt-1.5 text-[9px] font-medium text-[#667085]">
-            {filteredRows.length} of {rows.length} cases match “{query.trim()}”
+            {filteredRows.length} of {rows.length} cases match “{query.trim()}” across all statuses
           </p>
         ) : null}
       </div>
