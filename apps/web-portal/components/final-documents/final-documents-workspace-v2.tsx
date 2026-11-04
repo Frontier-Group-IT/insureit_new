@@ -260,11 +260,13 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
     return () => window.clearTimeout(timer);
   }, [claimId, details, draftKey]);
 
-  function closeClaimNumberPrompt() {
+  function closeClaimNumberPrompt(advanceToWorkApproval = advanceAfterClaimNumber) {
     setClaimNumberPromptOpen(false);
-    if (advanceAfterClaimNumber) {
-      setAdvanceAfterClaimNumber(false);
+    setAdvanceAfterClaimNumber(false);
+    if (advanceToWorkApproval) {
+      // Navigation re-fetches the claim. A parallel refresh can restore the previous stage.
       router.replace(`/claims/${claimId}?stage=work_approval`);
+      return;
     }
     router.refresh();
   }
@@ -288,7 +290,7 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
           return;
         }
         setSuccessNotice(saved.message ?? "Claim number saved.");
-        closeClaimNumberPrompt();
+        closeClaimNumberPrompt(advanceAfterClaimNumber);
       } catch (error) {
         setPendingAction(null);
         setClaimNumberError(error instanceof Error ? error.message : "Unable to save claim number.");
@@ -347,8 +349,8 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
           setAdvanceAfterClaimNumber(true);
           setClaimNumberPromptOpen(true);
         } else {
+          // The stage query navigation refreshes the server tree without racing a second refresh.
           router.replace(`/claims/${claimId}?stage=work_approval`);
-          router.refresh();
         }
       } catch (error) {
         setPendingAction(null);
@@ -369,7 +371,7 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
             </label>
             
             <div className="mt-5 grid grid-cols-2 gap-3">
-              <button type="button" disabled={isPending} onClick={closeClaimNumberPrompt} className="h-10 rounded-lg border border-[#CFD9E8] bg-white text-[12px] font-semibold text-[#071D49] disabled:opacity-50">Not Now</button>
+              <button type="button" disabled={isPending} onClick={() => closeClaimNumberPrompt()} className="h-10 rounded-lg border border-[#CFD9E8] bg-white text-[12px] font-semibold text-[#071D49] disabled:opacity-50">Not Now</button>
               <button type="button" disabled={isPending} onClick={addClaimNumber} className="h-10 rounded-lg bg-[#071D49] text-[12px] font-semibold text-white disabled:opacity-50">{pendingAction === "claim-number" ? "Saving..." : "Add"}</button>
             </div>
           </section>

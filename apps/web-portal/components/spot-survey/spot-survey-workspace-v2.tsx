@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { FileText } from "lucide-react";
 import headerStyles from "./claim-journey-header.module.css";
 import { BulkDocumentVerificationGroup, type BulkDocumentGroupItem } from "./bulk-document-verification-group";
 import { ReusePolicyCopyButton } from "./reuse-policy-copy-button";
@@ -163,8 +162,28 @@ function InfoStrip({ claim, heading = "Operations claim journey" }: { claim: Spo
       <div aria-hidden="true" className={headerStyles.sheen} />
       <div className="relative flex min-h-[48px] items-center justify-between gap-2 px-3 py-2 sm:px-4">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/15 shadow-inner">
-            <FileText aria-hidden="true" className="h-4 w-4 text-white" />
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/20 bg-white/15 shadow-[inset_0_1px_2px_rgba(255,255,255,0.2),0_3px_8px_rgba(0,12,42,0.25)]">
+            <svg viewBox="0 0 40 40" aria-hidden="true" className="h-7 w-7 drop-shadow-[0_2px_2px_rgba(0,12,42,0.35)]">
+              <defs>
+                <linearGradient id="operations-journey-cube-top" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stopColor="#E5FAFF" />
+                  <stop offset="1" stopColor="#74C9F7" />
+                </linearGradient>
+                <linearGradient id="operations-journey-cube-left" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stopColor="#5CC4FF" />
+                  <stop offset="1" stopColor="#2477D3" />
+                </linearGradient>
+                <linearGradient id="operations-journey-cube-right" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stopColor="#296AB7" />
+                  <stop offset="1" stopColor="#133B85" />
+                </linearGradient>
+              </defs>
+              <path d="M20 3 36 12.5 20 22 4 12.5Z" fill="url(#operations-journey-cube-top)" />
+              <path d="M4 12.5 20 22 20 38 4 28.5Z" fill="url(#operations-journey-cube-left)" />
+              <path d="M20 22 36 12.5 36 28.5 20 38Z" fill="url(#operations-journey-cube-right)" />
+              <path d="m12.5 13 5.2 3 9.7-6" fill="none" stroke="#FFFFFF" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M20 22v16" fill="none" stroke="#E5F7FF" strokeOpacity=".45" />
+            </svg>
           </span>
           <h1 className="text-[16px] font-bold leading-tight tracking-[-0.025em] text-white sm:text-[18px]">{heading}</h1>
         </div>
