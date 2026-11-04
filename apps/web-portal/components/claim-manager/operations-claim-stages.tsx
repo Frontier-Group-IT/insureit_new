@@ -224,8 +224,9 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             ok: true,
             message,
             advanced: result.advanced,
-            // Navigate only when the workflow actually advanced. A save-only edit must not skip a locked stage.
-            nextStageKey: result.advanced ? nextStageKeyFor(milestoneKey) : null,
+            // Move to the next visible tab after a successful save, including authorized save-only edits.
+            // The server still controls workflow status and stage availability.
+            nextStageKey: nextStageKeyFor(milestoneKey),
           };
         }
         await advanceInternalSpotIntimation(claimId, formData);
