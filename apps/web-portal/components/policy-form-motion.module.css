@@ -5,7 +5,8 @@
 }
 .policyHeader { animation: policyEnter 320ms cubic-bezier(.2,.8,.25,1) both; }
 .policySection {
-  animation: policyEnter 320ms cubic-bezier(.2,.8,.25,1) both;
+  /* backwards releases the keyframe transform after entry so :hover can lift. */
+  animation: policyEnter 320ms cubic-bezier(.2,.8,.25,1) backwards;
   transition: transform var(--policy-motion-duration) ease, box-shadow var(--policy-motion-duration) ease, border-color var(--policy-motion-duration) ease;
 }
 .policySection:nth-of-type(2) { animation-delay: 45ms; }
@@ -19,7 +20,7 @@
 }
 .policyCheck { transform-origin: center; animation: policyCheckAppear 330ms cubic-bezier(.2,.8,.25,1) both; }
 .policySummary {
-  animation: policyEnter 320ms cubic-bezier(.2,.8,.25,1) both;
+  animation: policyEnter 320ms cubic-bezier(.2,.8,.25,1) backwards;
   transition: box-shadow 200ms ease, border-color 200ms ease;
 }
 .policySummaryAction {
