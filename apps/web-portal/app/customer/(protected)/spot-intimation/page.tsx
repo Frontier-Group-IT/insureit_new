@@ -9,6 +9,7 @@ import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-c
 import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/customer-claim-evidence-workspace";
 import { CustomerClaimVoiceRecorder } from "@/components/customer-portal/customer-claim-voice-recorder";
 import { SpotIntimationSaveForm, type SpotSaveState } from "./spot-intimation-save-form";
+import { saveCustomerSpotDraft, type SpotDraftFields } from "./draft-actions";
 import { AutoCloseTimeInput } from "@/components/customer-portal/auto-close-time-input";
 
 export const dynamic="force-dynamic";
@@ -28,6 +29,11 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
   if(!q.id) redirect("/customer/start-claim?account="+encodeURIComponent(account.id));
   const {claim,documents,milestones,internal_projection}=await loadCustomerClaimDetail(account.id,q.id);
   const editing=q.mode==="edit";
+  const draftDb = await createCustomerServerSupabaseClient();
+  const draftQuery = claim.current_status === "Draft"
+    ? await draftDb.from("claim_spot_intimation_drafts").select("fields, updated_at").eq("claim_id", claim.id).eq("customer_id", account.id).maybeSingle<{ fields: SpotDraftFields; updated_at: string }>()
+    : null;
+  const serverDraft = draftQuery?.data ? { fields: draftQuery.data.fields, updatedAt: draftQuery.data.updated_at } : null;
   const stageTwoComplete=(internal_projection?.completedStageCount??0)>=2 || milestones.some(item=>item.milestone_key==="claim_intimation" && ["completed","not_applicable"].includes(item.milestone_status));
   const eligible=editing && !isExternalCustomerClaim(claim) && claim.claim_service_mode==="broker_managed" &&
     (internal_projection?.completedStageCount??0)>=1 && !stageTwoComplete;
@@ -127,7 +133,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
   const splitFieldClass = "block h-[42px] min-w-0 flex-1 bg-transparent px-3 text-[13px] font-medium text-[#193659] outline-none";
   return <div className="mx-auto w-full max-w-[90rem] space-y-3">
     <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} hideStageNav selectedKey="spot_intimation" currentKey="spot_intimation" completedKeys={editing?["spot_intimation"]:[]} claimSummary={{controlNo:claim.claim_no,policyNo:claim.policy_no,makeModel:[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" - ")||null,vehicleNo:claim.vehicle_no,status:claim.current_status,manufacturer:claim.vehicle_make,insurer:claim.insurer_name,policySource:claim.policy_service_source==="sibl"?"Sankalp Policy":claim.policy_service_source==="external"||claim.external_policy_id?"External Policy":"—"}}/>
-    <SpotIntimationSaveForm action={editing?submitCorrection:submit} editMode={editing} draftKey={account.id+":"+claim.id+(editing?":edit":"")} cancelHref={editing?detailsHref:`/customer/start-claim?account=${encodeURIComponent(account.id)}`} evidence={<><CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage="spot_intimation" returnToSpotIntimation/><CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id}/></>}>
+    <SpotIntimationSaveForm action={editing?submitCorrection:submit} editMode={editing} serverDraft={serverDraft} saveServerDraft={claim.current_status === "Draft" ? saveCustomerSpotDraft.bind(null, account.id, claim.id) : undefined} draftKey={account.id+":"+claim.id+(editing?":edit":"")} cancelHref={editing?detailsHref:`/customer/start-claim?account=${encodeURIComponent(account.id)}`} evidence={<><CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage="spot_intimation" returnToSpotIntimation/><CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id}/></>}>
       <input type="hidden" name="account" value={account.id}/><input type="hidden" name="claim" value={claim.id}/>
       <div className="-mx-4 -mt-4 border-b border-[#D8E3F1] px-4 py-3 sm:-mx-5 sm:-mt-5 sm:px-5">
         <h2 className="text-[17px] font-bold text-[#112B51]">Accident &amp; Spot Intimation Details</h2>
