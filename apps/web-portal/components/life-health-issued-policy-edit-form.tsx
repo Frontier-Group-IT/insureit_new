@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState, useTransition, type ReactNode } from "rea
 import { Eye, HandCoins, Phone, Upload } from "lucide-react";
 import { updateIssuedLifeHealthPolicy } from "@/app/policies/life-health-issued-policy-edit-actions";
 import { isPensionLifePolicy } from "@/lib/life-health-pension-maturity";
+import { addYearsByMode, nextInstallmentFrom, canonicalPaymentFrequency, type DateCalculationMode } from "@/lib/life-health-issued-schedule";
 import { PolicyDateApprovalDialog } from "@/components/policy-date-approval-dialog";
 import { needsPolicyDateApproval, policyDateDecision } from "@/lib/policy-date-rule";
 import { updateIssuedLifeHealthCustomer } from "@/app/policies/life-health-issued-customer-edit-actions";
@@ -14,7 +15,7 @@ import { replaceIssuedLifeHealthDocument, type LifeHealthIssuedDocument, type Li
 import { StandardActivityStatusCard, type StandardActivityItem } from "@/components/standard-activity-status-card";
 
 export type LifeHealthIssuedEditSource = { id:string; type:"POSP"|"MISP"|"SIBL / Partner"; label:string; code:string; mobile:string; rmName:string; rmCode:string };
-export type LifeHealthIssuedEditInitial = { policyId:string; caseId:string; businessLine:"Life"|"Health"; sourcingDate:string; sourceId:string; customerName:string; customerPhone:string; customerEmail:string; insurerId:string; productName:string; policyNumber:string; proposalNumber:string; ppt:string; pd:string; paymentFrequency:string; premiumAmount:string; paymentMode:string; remarks:string; startDate:string; endDate:string; finalPremium:string; sumInsured:string };
+export type LifeHealthIssuedEditInitial = { policyId:string; caseId:string; businessLine:"Life"|"Health"; sourcingDate:string; proposalDate:string; sourceId:string; customerAddress:string; pptEndDate:string; nextInstallmentDate:string; customerName:string; customerPhone:string; customerEmail:string; insurerId:string; productName:string; policyNumber:string; proposalNumber:string; ppt:string; pd:string; paymentFrequency:string; premiumAmount:string; paymentMode:string; remarks:string; startDate:string; endDate:string; finalPremium:string; sumInsured:string };
 type CommercialBasis = "NET_PREMIUM_PERCENT"|"FIXED_AMOUNT";
 type CommercialModal = "payin"|"payout"|null;
 export type LifeHealthCommercialSummary = { payinEntered:boolean; payoutEntered:boolean; payinBasis:CommercialBasis; payinPercent:number; payinFixedAmount:number; insurerSchemeAmount:number; payoutBasis:CommercialBasis; payoutPercent:number; payoutFixedAmount:number; insurerPayin:number; partnerPayout:number; payinAfterTds:number; retention:number };
@@ -29,6 +30,9 @@ const documentLabels: Array<[LifeHealthIssuedDocumentType,string]> = [["policy_c
 export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, activityItems, documents, commercialAccess, commercialSummary }: Props) {
   const router = useRouter();
   const [form,setForm] = useState(initial);
+  const [endDateMode,setEndDateMode] = useState<DateCalculationMode>("minusOne");
+  const [pptEndDateMode,setPptEndDateMode] = useState<DateCalculationMode>("minusOne");
+  const [policyNumberUnlocked,setPolicyNumberUnlocked] = useState(false);
   const [dateApproval,setDateApproval] = useState<{id:string;key:string}|null>(null);
   const [dateApprovalOpen,setDateApprovalOpen] = useState(false);
   const initialSource = sources.find((source)=>source.id === initial.sourceId);
@@ -65,7 +69,23 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
     const totalPayout = commercial.payoutBasis === "FIXED_AMOUNT" ? Number(commercial.payoutFixedAmount || 0) : premium * Number(commercial.payoutPercent || 0) / 100;
     return { payinBase, totalPayin, tds, payinAfterTds, totalPayout, retention:payinAfterTds-totalPayout };
   },[commercial,form.finalPremium]);
-  const set = <K extends keyof LifeHealthIssuedEditInitial>(key:K,value:LifeHealthIssuedEditInitial[K])=>setForm((current)=>({...current,[key]:value}));
+  const expectedEnd=useMemo(()=>addYearsByMode(form.startDate,form.pd,endDateMode),[form.startDate,form.pd,endDateMode]);
+  const expectedPptEnd=useMemo(()=>addYearsByMode(form.startDate,form.ppt,pptEndDateMode),[form.startDate,form.ppt,pptEndDateMode]);
+  const expectedNext=useMemo(()=>nextInstallmentFrom(form.startDate,form.paymentFrequency),[form.startDate,form.paymentFrequency]);
+  const pptSinglePay=form.ppt.trim().toLowerCase().includes("single");
+  const oneTimePayment=canonicalPaymentFrequency(form.paymentFrequency)==="One Time";
+  const policyNumberChanged=form.policyNumber.trim().toUpperCase()!==initial.policyNumber.trim().toUpperCase();
+  const set = <K extends keyof LifeHealthIssuedEditInitial>(key:K,value:LifeHealthIssuedEditInitial[K])=>setForm((current)=>{
+    const next={...current,[key]:value};
+    if(key==="startDate"||key==="pd"||key==="ppt"||key==="paymentFrequency"){
+      if(key==="startDate"||key==="pd") next.endDate=addYearsByMode(next.startDate,next.pd,endDateMode);
+      if(key==="startDate"||key==="ppt") next.pptEndDate=next.ppt.trim().toLowerCase().includes("single")?"":addYearsByMode(next.startDate,next.ppt,pptEndDateMode);
+      if(key==="startDate"||key==="paymentFrequency") next.nextInstallmentDate=nextInstallmentFrom(next.startDate,next.paymentFrequency);
+    }
+    return next;
+  });
+  const changeEndDateMode=(mode:DateCalculationMode)=>{setEndDateMode(mode);setForm(current=>({...current,endDate:addYearsByMode(current.startDate,current.pd,mode)}))};
+  const changePptEndDateMode=(mode:DateCalculationMode)=>{setPptEndDateMode(mode);setForm(current=>({...current,pptEndDate:addYearsByMode(current.startDate,current.ppt,mode)}))};
   useEffect(()=>{
     if(!commercialModal)return;
     const previous=document.body.style.overflow;
@@ -89,6 +109,9 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
   function save(approvalConfirmed = false) {
     if(["invalid","future"].includes(policyDateDecision(form.sourcingDate))){setError("Choose a valid policy issuance date in the current or an earlier month.");return;}
     if(required.some(value=>!String(value??"").trim())){setError("Complete all required policy fields before requesting approval.");return;}
+    if(policyNumberChanged&&dateApprovalRequired){setError("Save the policy-number change first, then request separate OTP approval for the issuance-date change.");return;}
+    if(policyNumberChanged&&!policyNumberUnlocked){setError("Unlock the policy number to make a change.");return;}
+    if(policyNumberChanged&&!window.confirm("Change the issued policy number from "+initial.policyNumber+" to "+form.policyNumber.trim().toUpperCase()+"? This will update the Policy Register and must be unique."))return;
     if(dateApprovalRequired){if(!approvalConfirmed){setDateApprovalOpen(true);return;}if(!dateApprovalId){setDateApprovalOpen(true);return;}setDateApprovalOpen(false);}
     const data = new FormData(); Object.entries(form).forEach(([key,value])=>data.set(key,value));
     if(dateApprovalId)data.set("dateApprovalId",dateApprovalId);
@@ -134,15 +157,28 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_336px]">
       <div className="space-y-4">
         <Section number="01" title="Policy source & ownership">
+          <Field label="Proposal date" type="date" value={form.proposalDate} onChange={(v)=>set("proposalDate",v)} required/>
           <Field label="Policy issuance date" type="date" value={form.sourcingDate} onChange={(v)=>set("sourcingDate",v)} required/>
           <Select label="Policy type" value={form.businessLine} onChange={(v)=>set("businessLine",v as "Life"|"Health")} options={["Life","Health"]}/>
           <div><label className={labelClass}>Intermediary type <Req/></label><select className={inputClass} value={intermediaryType} onChange={(e)=>changeIntermediaryType(e.target.value as LifeHealthIssuedEditSource["type"])}><option>POSP</option><option>MISP</option><option>SIBL / Partner</option></select><div className="flex flex-wrap gap-x-4 gap-y-1"><Meta label="RM" value={selectedSource?.rmName||"—"}/><Meta label="Employee ID" value={selectedSource?.rmCode||"—"}/></div></div>
           <div><label className={labelClass}>Lead source <Req/></label><select className={inputClass} value={form.sourceId} onChange={(e)=>set("sourceId",e.target.value)}>{availableSources.map((s)=><option key={s.id} value={s.id}>{s.label} · {s.code}</option>)}</select><div className="flex gap-3"><Meta label="ID" value={selectedSource?.code||"—"}/>{selectedSource?.mobile?<span className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold text-[#244C73]"><Phone className="h-3 w-3"/>{selectedSource.mobile}</span>:null}</div></div>
         </Section>
-        <Section number="02" title="Customer / proposer"><div><label className={labelClass}>Customer record</label><div className="grid h-10 grid-cols-2 rounded-xl border border-[#D8DEE9] bg-[#F8FAFC] p-1 text-[10px] font-semibold"><span className="grid place-items-center rounded-lg bg-[#17365D] text-white">Existing</span><span className="grid place-items-center text-[#98A2B3]">Linked</span></div></div><Field label="Client / proposer name" value={form.customerName} onChange={(v)=>set("customerName",v)} required/><Field label="Client mobile number" value={form.customerPhone} onChange={(v)=>set("customerPhone",v.replace(/\D/g,"").slice(0,10))} required/><Field label="Email" value={form.customerEmail} onChange={(v)=>set("customerEmail",v)}/></Section>
+        <Section number="02" title="Customer / proposer"><div><label className={labelClass}>Customer record</label><div className="grid h-10 grid-cols-2 rounded-xl border border-[#D8DEE9] bg-[#F8FAFC] p-1 text-[10px] font-semibold"><span className="grid place-items-center rounded-lg bg-[#17365D] text-white">Existing</span><span className="grid place-items-center text-[#98A2B3]">Linked</span></div></div><Field label="Client / proposer name" value={form.customerName} onChange={(v)=>set("customerName",v)} required/><Field label="Client mobile number" value={form.customerPhone} onChange={(v)=>set("customerPhone",v.replace(/\D/g,"").slice(0,10))} required/><Field label="Email" value={form.customerEmail} onChange={(v)=>set("customerEmail",v)}/><Field label="Address" value={form.customerAddress} onChange={(v)=>set("customerAddress",v)}/></Section>
         <Section number="03" title="Policy product & case details"><div><label className={labelClass}>Insurance company <Req/></label><select className={inputClass} value={form.insurerId} onChange={(e)=>set("insurerId",e.target.value)}>{insurers.map((i)=><option key={i.value} value={i.value}>{i.label}</option>)}</select></div><Field label="Product name" value={form.productName} onChange={(v)=>set("productName",v)}/><Field label="Case / proposal number" value={form.proposalNumber} onChange={(v)=>set("proposalNumber",v.toUpperCase())}/><Select label="PPT · Premium Paying Term" value={form.ppt} onChange={(v)=>set("ppt",v)} options={["Single Pay",...years]} optional/><Select label="PD · Policy Duration / Term" value={form.pd} onChange={(v)=>set("pd",v)} options={years} optional/><Select label="Payment frequency" value={form.paymentFrequency} onChange={(v)=>set("paymentFrequency",v)} options={frequencies}/></Section>
         <Section number="04" title="Premium & payment"><Field label="Case premium amount" value={form.premiumAmount} onChange={(v)=>set("premiumAmount",v.replace(/[^0-9.]/g,""))}/><Select label="Payment mode" value={form.paymentMode} onChange={(v)=>set("paymentMode",v)} options={modes}/><div><label className={labelClass}>Remarks</label><textarea className="h-10 w-full resize-none rounded-xl border border-[#D8DEE9] px-3 py-2.5 text-[11px] outline-none transition hover:border-[#B8C2D1] focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]" value={form.remarks} onChange={(e)=>set("remarks",e.target.value)} rows={1}/></div></Section>
-        <Section number="05" title="Issued policy details"><Field label="Policy start date" type="date" value={form.startDate} onChange={(v)=>set("startDate",v)} required/><Field label="Policy end / maturity date" type="date" value={form.endDate} onChange={(v)=>set("endDate",v)} required={!pensionPlan}/><Field label="Final premium" value={form.finalPremium} onChange={(v)=>set("finalPremium",v.replace(/[^0-9.]/g,""))} required/><Field label="Sum assured / insured" value={form.sumInsured} onChange={(v)=>set("sumInsured",v.replace(/[^0-9.]/g,""))}/></Section>
+        <Section number="05" title="Issued policy details">
+          <div>
+            <label className={labelClass}>Policy number <Req/></label>
+            <div className="flex gap-2"><input aria-label="Policy number" className={inputClass} value={form.policyNumber} readOnly={!policyNumberUnlocked} onChange={event=>set("policyNumber",event.target.value.toUpperCase())}/><button type="button" className="shrink-0 rounded-lg border border-[#BFD3F5] px-3 text-[10px] font-bold text-[#1859B7]" onClick={()=>{setPolicyNumberUnlocked(value=>!value);if(policyNumberUnlocked)set("policyNumber",initial.policyNumber)}}>{policyNumberUnlocked?"Lock":"Change"}</button></div>
+            <p className="mt-1 text-[9px] text-[#667085]">Changing an issued policy number requires confirmation and a unique number.</p>
+          </div>
+          <Field label="Policy start date" type="date" value={form.startDate} onChange={(v)=>set("startDate",v)} required/>
+          <div><Field label="Policy end / maturity date" type="date" value={form.endDate} onChange={(v)=>set("endDate",v)} required={!pensionPlan}/><div className="mt-1 flex items-center gap-2"><label className="text-[9px] text-[#667085]">Calculation</label><select aria-label="Policy end date calculation" value={endDateMode} className="rounded border border-[#D8DEE9] bg-white px-1 text-[10px]" onChange={e=>changeEndDateMode(e.target.value as DateCalculationMode)}><option value="minusOne">Term minus 1 day</option><option value="sameDay">Same calendar day</option></select></div>{form.endDate&&expectedEnd&&form.endDate!==expectedEnd?<p className="mt-1 text-[9px] text-amber-700">Manual override; calculated value: {expectedEnd}</p>:null}</div>
+          <div>{pptSinglePay?<Field label="PPT end date" value="Not applicable · Single Pay" onChange={()=>{}}/>:<Field label="PPT end date" type="date" value={form.pptEndDate} onChange={v=>set("pptEndDate",v)}/>}<div className="mt-1 flex items-center gap-2"><label className="text-[9px] text-[#667085]">Calculation</label><select aria-label="PPT end date calculation" value={pptEndDateMode} disabled={pptSinglePay} className="rounded border border-[#D8DEE9] bg-white px-1 text-[10px]" onChange={e=>changePptEndDateMode(e.target.value as DateCalculationMode)}><option value="minusOne">Term minus 1 day</option><option value="sameDay">Same calendar day</option></select></div>{form.pptEndDate&&expectedPptEnd&&form.pptEndDate!==expectedPptEnd?<p className="mt-1 text-[9px] text-amber-700">Manual override; calculated value: {expectedPptEnd}</p>:null}</div>
+          {oneTimePayment?<Field label="Next installment date" value="Not applicable · One Time" onChange={()=>{}}/>:<div><Field label="Next installment date" type="date" value={form.nextInstallmentDate} onChange={v=>set("nextInstallmentDate",v)}/>{form.nextInstallmentDate&&expectedNext&&form.nextInstallmentDate!==expectedNext?<p className="mt-1 text-[9px] text-amber-700">Manual override; calculated value: {expectedNext}</p>:null}</div>}
+          <Field label="Final premium" value={form.finalPremium} onChange={(v)=>set("finalPremium",v.replace(/[^0-9.]/g,""))} required/>
+          <Field label="Sum assured / insured" value={form.sumInsured} onChange={(v)=>set("sumInsured",v.replace(/[^0-9.]/g,""))}/>
+        </Section>
       </div>
       <aside className="self-start rounded-2xl border border-[#D9E2F0] bg-white shadow-sm xl:sticky xl:top-4">
         <div className="flex items-center justify-between border-b border-[#E5ECF5] p-4"><div><p className="text-[8px] font-bold uppercase tracking-[.08em] text-[#7A8799]">Policy status</p><h2 className="mt-1 text-[13px] font-semibold text-[#17365D]">Onboarding summary</h2></div><span className="grid h-12 w-12 place-items-center rounded-full border-[5px] border-[#E7EEF7] text-[10px] font-bold text-[#17365D]">{completion}%</span></div>
