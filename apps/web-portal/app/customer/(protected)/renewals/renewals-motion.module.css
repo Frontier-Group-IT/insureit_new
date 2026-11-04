@@ -43,8 +43,13 @@
 .rowArrow svg { transition: transform 190ms ease; }
 .renewalRow:hover .rowArrow svg, .rowArrow:focus-visible svg { transform: translateX(3px); }
 .upcomingBadge { animation: badgeNotice 500ms 500ms ease-out 1 both; }
+@keyframes countGlow {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.035); filter: brightness(1.06); }
+}
+.countPulse { animation: countGlow 2.5s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
-  .pageEnter, .renewalRow, .upcomingBadge { animation: none !important; }
+  .pageEnter, .renewalRow, .upcomingBadge, .countPulse { animation: none !important; }
   .heroParallax, .pageEnter:hover .heroParallax { transform: none !important; }
   .heroParallax, .controls :is(input,select), .filterControl, .section, .chevron, .collapse, .renewalRow, .rowArrow svg { transition: none !important; }
 }
