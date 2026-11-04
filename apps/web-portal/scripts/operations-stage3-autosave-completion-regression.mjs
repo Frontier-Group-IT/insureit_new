@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const read = (path) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8");
 const stage3 = read("../components/final-documents/final-documents-workspace-v2.tsx");
+const stage3DocumentRow = read("../components/final-documents/stage3-document-verification-group.tsx");
 const stages = read("../components/claim-manager/operations-claim-stages.tsx");
 const motion = read("../components/claim-manager/operations-claim-stages-motion.css");
 const actions = read("../components/final-documents/final-documents-actions.ts");
@@ -23,4 +24,7 @@ assert.match(stage3, /<ClaimStageErrorDialog/, "Stage completion errors must con
 assert.match(actions, /requireClaimWorkflowAccess\(claimId/, "Autosave must continue through the existing claim authorization gate.");
 assert.match(stages, /isCompleted \? "bg-\[#16A34A\] text-white/, "Completed step checkmarks must use a filled green circle.");
 assert.match(motion, /operations-claim-motion-completed \.operations-claim-motion-step-button\s*\{\s*background: #dcfce7;/, "Completed stage tiles must have full green backgrounds.");
+assert.match(stage3DocumentRow, /!rejected && !verified \? <VerificationActionButton/, "Stage 3 must offer verification only for pending documents.");
+assert.doesNotMatch(stage3DocumentRow, /\{!rejected \? <VerificationActionButton/, "Already-verified documents must never display the reverify icon.");
+assert.match(stage3DocumentRow, /verified && showVerifiedDetails/, "Verified document details must remain available.");
 console.log("Operations Stage 3 autosave and completed-stage styling regression passed.");

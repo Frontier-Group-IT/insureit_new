@@ -226,21 +226,76 @@ export async function loadCustomerClaimListContext(customerId: string) {
   return { claims, milestones_by_claim: grouped };
 }
 
+/**
+ * Merge customer-owned milestone values with a claim-scoped, allowlisted
+ * Operations snapshot. This is read-only; never changes milestone status or
+ * exposes raw Operations verification metadata.
+ */
+export function mergeCustomerClaimOperationsDetails(
+  milestones: CustomerClaimMilestone[],
+  operations: Record<string, unknown> | null,
+  claimId: string,
+  isExternal: boolean,
+): CustomerClaimMilestone[] {
+  if (!operations || typeof operations !== "object" || Array.isArray(operations)) return milestones;
+  const merged = milestones.map((milestone) => ({ ...milestone, details: { ...(milestone.details ?? {}) } }));
+  for (const [stageKey, rawDetails] of Object.entries(operations)) {
+    if (!externalMilestones.some(([key]) => key === stageKey)) continue;
+    if (!rawDetails || typeof rawDetails !== "object" || Array.isArray(rawDetails)) continue;
+    const visibleDetails = Object.fromEntries(
+      Object.entries(rawDetails).filter(([, value]) => (
+        (typeof value === "string" && value.trim() !== "") ||
+        typeof value === "number" || typeof value === "boolean"
+      )),
+    );
+    if (!Object.keys(visibleDetails).length) continue;
+    const existing = merged.find((item) => item.milestone_key === stageKey);
+    if (existing) {
+      // Customer-entered, non-empty fields remain authoritative. Operations
+      // fills gaps; system-owned milestones receive the latest Operations data.
+      const customerValues = Object.fromEntries(
+        Object.entries(existing.details ?? {}).filter(([, value]) => value !== null && value !== undefined && value !== ""),
+      );
+      existing.details = isExternal
+        ? { ...visibleDetails, ...customerValues }
+        : { ...customerValues, ...visibleDetails };
+    } else {
+      merged.push({
+        id: `operations-view-${stageKey}`,
+        claim_id: claimId,
+        milestone_key: stageKey,
+        milestone_status: "not_started",
+        details: visibleDetails,
+        completed_at: null,
+        updated_at: null,
+      });
+    }
+  }
+  return merged;
+}
+
 export async function loadCustomerClaimDetail(customerId: string, claimId: string) {
   const claims = await loadCustomerClaims(customerId);
   const claim = claims.find((item) => item.id === claimId);
   if (!claim) notFound();
 
   const supabase = await createCustomerServerSupabaseClient();
-  const [milestoneResult, documentResult, taskResult] = await Promise.all([
+  const [milestoneResult, documentResult, taskResult, operationsResult] = await Promise.all([
     supabase.from("claim_milestones").select("id,claim_id,milestone_key,milestone_status,details,completed_at,updated_at").eq("claim_id", claimId),
     supabase.from("claim_documents").select("id,claim_id,document_type,verification_status,created_at,file_name").eq("claim_id", claimId).order("created_at", { ascending: false }),
     supabase.from("claim_tasks").select("id,claim_id,title,status").eq("claim_id", claimId).eq("status", "open"),
+    supabase.rpc("customer_claim_operations_stage_details", { p_claim_id: claimId }),
   ]);
 
   if (documentResult.error) throw new Error("Claim documents could not be loaded. Please retry.");
 
-  const milestones = (milestoneResult.data ?? []) as CustomerClaimMilestone[];
+  const milestones = mergeCustomerClaimOperationsDetails(
+    (milestoneResult.data ?? []) as CustomerClaimMilestone[],
+    !operationsResult.error && operationsResult.data && typeof operationsResult.data === "object" && !Array.isArray(operationsResult.data)
+      ? operationsResult.data as Record<string, unknown> : null,
+    claimId,
+    isExternalCustomerClaim(claim),
+  );
   const documents = (documentResult.data ?? []) as CustomerClaimDocument[];
   const tasks = (taskResult.data ?? []) as CustomerClaimTask[];
 
