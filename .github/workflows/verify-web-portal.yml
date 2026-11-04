@@ -225,6 +225,8 @@ jobs:
         run: node scripts/policy-edit-duplicate-actions-regression.mjs
       - name: Policy edit helper performance regression
         run: npm run policy-edit-helper-performance:regression
+      - name: Add and Edit Policy motion regression
+        run: node scripts/policy-form-motion-regression.mjs
       - name: Reconciliation stylesheet performance regression
         run: npm run reconciliation-stylesheet-performance:regression
       - name: Policy reference data cache regression
