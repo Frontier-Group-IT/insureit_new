@@ -292,11 +292,6 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
 
   return (
     <section className="operations-claim-motion overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-        <h2 className="text-[17px] font-semibold text-[#071D49]">Operations claim journey</h2>
-        <span className="rounded-full border border-[#BFD3F7] bg-[#F4F8FF] px-4 py-1.5 text-[11px] font-semibold text-[#174EA6]">{selected.label}</span>
-      </div>
-
       <ol aria-label="Nine-stage claim journey" className="operations-claim-motion-nav grid grid-cols-9 gap-1.5 overflow-x-auto border-y border-[#D5E3F7] bg-[#EAF2FF] p-2">
         {stages.map((stage, index) => {
           const externalStageCompleted = hasExternalVisualProgress && externalVisualCompletedKeys.has(stage.key);

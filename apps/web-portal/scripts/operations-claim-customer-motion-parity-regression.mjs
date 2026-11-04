@@ -20,6 +20,8 @@ assert.match(operations, /isCurrent \? "operations-claim-motion-active" : isComp
 assert.match(operations, /operations-claim-motion-indicator/, "Active ring must be attached to status indicator.");
 assert.match(operations, /operations-claim-motion-check/, "Completed check must be animated.");
 assert.match(operations, /Nine-stage claim journey/, "Nine stages must remain accessible.");
+assert.doesNotMatch(operations, /<h2[^>]*>Operations claim journey<\/h2>/, "Remove repeated white card claim journey title.");
+assert.doesNotMatch(operations, /\{selected\.label\}<\/span>/, "Remove duplicate right-side stage label while retaining navigation.");
 
 const matches = [
   ["active indicator", "customerClaimActiveRing", "operationsClaimActiveRing"],

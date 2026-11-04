@@ -12,7 +12,6 @@ import { classifySpotSurveyAttachmentForm } from "@/app/claims/[id]/spot-survey-
 import { ClassifySubmitButton } from "./classify-submit-button";
 import type { InternalSpotIntimationDetails } from "@/lib/internal-spot-intimation";
 import { getVehicleBrandLogo } from "@/lib/vehicle-brand-logo";
-import { getInsurerLogo } from "@/lib/insurer-logo";
 
 export type SpotSurveyClaim = {
   id: string;
@@ -153,13 +152,10 @@ function SurveyorColumn({ label, value, href, last = false }: { label: string; v
 
 function InfoStrip({ claim, heading = "Operations claim journey" }: { claim: SpotSurveyClaim; heading?: string }) {
   const customerName = claim.customers?.company_name || claim.customers?.contact_name || "-";
-  const insurer = claim.insurance_companies?.name || "-";
-  const insurerRef = claim.insurer_claim_no || claim.policies?.policy_no || claim.claim_no;
   const make = claim.vehicles?.make || "-";
+  const vehicleNumber = claim.vehicles?.vehicle_no || "-";
   const model = claim.vehicles?.model || "-";
-  const makeModel = [make, model].filter((value) => value && value !== "-").join(" - ") || "-";
-  const insurerDisplay = insurerRef && insurerRef !== "-" ? `${insurer} - ${insurerRef}` : insurer;
-  const spotAt = claim.spotIntimationAt ?? claim.created_at;
+  const vehicleNumberAndModel = [vehicleNumber, model].filter((value) => value && value !== "-").join(" • ") || "-";
 
   return (
     <section aria-label="Claim Journey summary" className={`${headerStyles.header} overflow-hidden rounded-[20px] text-white`}>
@@ -173,19 +169,13 @@ function InfoStrip({ claim, heading = "Operations claim journey" }: { claim: Spo
         </div>
         <Link prefetch={false} href="/claims" className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg bg-[#2086BF]/75 px-3 text-[11px] font-bold text-white transition duration-200 hover:bg-[#2A99D1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">Back</Link>
       </div>
-      <div className={`${headerStyles.fields} relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5`}>
+      <div className={`${headerStyles.fields} relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6`}>
         <Info label="Customer" title={customerName} subtitle={claim.customers?.phone ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.customer} alt="Customer" />} />
-        <Info label="Vehicle No." title={claim.vehicles?.vehicle_no ?? "-"} logo={<ManufacturerLogo name={make} />} />
-        <Info label="Make & Model" title={makeModel} logo={<ManufacturerLogo name={make} />} />
-        <Info label="Insurer" title={insurerDisplay} logo={<InsurerLogo name={insurer} />} />
+        <Info label="Vehicle No. & Model" title={vehicleNumberAndModel} logo={<ManufacturerLogo name={make} />} />
         <Info label="Loss Date" title={formatDateShort(claim.accident_at)} logo={<HeaderIcon src={claimHeaderIcons.lossDate} alt="Loss date" />} />
-      </div>
-      <div className={`${headerStyles.fields} relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5`}>
         <Info label="Policy No." title={claim.policies?.policy_no ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.policy} alt="Policy" />} />
         <Info label="Control No." title={claim.claim_no} logo={<HeaderIcon src={claimHeaderIcons.control} alt="Control number" />} />
         <Info label="Claim No." title={claim.insurer_claim_no ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.claim} alt="Claim number" />} />
-        <Info label="Claim Status" title={claim.current_status ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.status} alt="Claim status" />} />
-        <Info label="Spot Intimation Date & Time" title={`${formatIntimationDate(spotAt)} • ${formatIntimationTime(spotAt)}`} logo={<HeaderIcon src={claimHeaderIcons.intimation} alt="Spot intimation" />} />
       </div>
       <div className="relative grid gap-x-3 gap-y-1 bg-[#052755]/55 px-3 py-1.5 text-[10px] sm:grid-cols-2 sm:px-4 lg:grid-cols-4">
         <PolicyMeta label="Policy source" value={claim.policySource === "external" ? "External policy" : "Sankalp policy"} />
@@ -295,12 +285,6 @@ function ManufacturerLogo({ name }: { name: string }) {
   return <Image src={src} alt={name && name !== "-" ? `${name} logo` : "Vehicle manufacturer"} width={36} height={24} className="max-h-6 max-w-9 object-contain" />;
 }
 
-function InsurerLogo({ name }: { name: string }) {
-  const src = getInsurerLogo(name);
-  if (!src) return <span className="text-[8px] font-bold uppercase text-[#DCE6F5]">ins</span>;
-  return <Image src={src} alt={name && name !== "-" ? `${name} logo` : "Insurance company"} width={36} height={24} className="max-h-6 max-w-9 object-contain" />;
-}
-
 function latestVerificationForDocument(document: SpotSurveyDocument, verifications: SpotSurveyVerification[]) {
   return verifications.find((verification) => verification.document_id === document.id);
 }
@@ -319,18 +303,6 @@ function formatDateShort(value?: string | null) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
   return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
-}
-
-function formatIntimationDate(value?: string | null) {
-  if (!value) return "-";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "-" : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Asia/Kolkata" }).format(date);
-}
-
-function formatIntimationTime(value?: string | null) {
-  if (!value) return "-";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "-" : new Intl.DateTimeFormat("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" }).format(date);
 }
 
 function extractDriverName(description?: string | null) {
