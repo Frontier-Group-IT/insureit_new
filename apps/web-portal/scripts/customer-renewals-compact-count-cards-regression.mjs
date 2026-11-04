@@ -1,0 +1,28 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const page = readFileSync(resolve(root, "app/customer/(protected)/renewals/page.tsx"), "utf8");
+const register = readFileSync(resolve(root, "app/customer/(protected)/renewals/customer-renewals-register.tsx"), "utf8");
+const css = readFileSync(resolve(root, "app/customer/(protected)/renewals/renewals-motion.module.css"), "utf8");
+
+assert.match(page, /due: summary\.due/, "Due counts must use existing summaries");
+assert.match(page, /expired: summary\.expired/, "Expired counts must use existing summaries");
+assert.match(register, /grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6/, "Cards must adapt to mobile, tablet and desktop");
+assert.match(register, /flex min-h-\[68px\] min-w-0 items-start gap-2 rounded-xl/, "Card uses horizontal icon/name/badges layout");
+assert.match(register, /<CategoryIcon title=\{cat\.title\}/, "Existing 3D category artwork retained");
+assert.match(register, /min-w-0 flex-1 self-center/, "Category name occupies flexible middle column");
+assert.match(register, /flex w-\[25px\] shrink-0 flex-col items-center gap-1 self-start/, "Count badges stack vertically at right");
+assert.match(register, /cat\.due > 0 \? <span/, "Hide zero Due badges");
+assert.match(register, /cat\.expired > 0 \? <span/, "Hide zero Expired badges");
+assert.match(register, /bg-\[#FFF0D8\]/, "Due badge uses orange tone");
+assert.match(register, /bg-\[#FDE7E9\]/, "Expired badge uses red tone");
+assert.doesNotMatch(register, />Due \{cat\.due\}</, "Badge text should be count only");
+assert.doesNotMatch(register, />Expired \{cat\.expired\}</, "Badge text should be count only");
+assert.match(register, /aria-label=\{`Due \$\{cat\.due\}, expired \$\{cat\.expired\}`\}/, "Color-only badges remain accessible");
+assert.match(register, /onClick=\{\(\) => setActiveCategory\(selected \? null : cat\.key\)\}/, "Category toggling preserved");
+assert.match(register, /const \[status,setStatus\]=useState\("due"\)/, "Due default preserved");
+assert.match(css, /\.countPulse \{ animation: countGlow 2\.5s/, "Subtle badge pulse present");
+assert.match(css, /\.countPulse \{ animation: none !important; \}/, "Reduced-motion disables badge animation");
+console.log("Customer Renewals compact status-count card regression passed");
