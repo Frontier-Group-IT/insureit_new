@@ -1,0 +1,44 @@
+/* Scoped Add/Edit Policy motion; matches Customer Claims' 200ms interactions.
+   Cosmetic only: no changes to form state, data flow, validation, or calculations. */
+.policyPage {
+  --policy-motion-duration: 200ms;
+}
+.policyHeader { animation: policyEnter 320ms cubic-bezier(.2,.8,.25,1) both; }
+.policySection {
+  animation: policyEnter 320ms cubic-bezier(.2,.8,.25,1) both;
+  transition: transform var(--policy-motion-duration) ease, box-shadow var(--policy-motion-duration) ease, border-color var(--policy-motion-duration) ease;
+}
+.policySection:nth-of-type(2) { animation-delay: 45ms; }
+.policySection:nth-of-type(3) { animation-delay: 85ms; }
+.policyNavStep {
+  transition: color 200ms ease, background-color 200ms ease, border-color 200ms ease;
+}
+.policyNavStep[aria-current="step"] {
+  background: linear-gradient(135deg,rgba(234,242,255,.75),rgba(255,255,255,.4));
+  box-shadow: inset 0 -1px rgba(79,70,229,.1);
+}
+.policyCheck { transform-origin: center; animation: policyCheckAppear 330ms cubic-bezier(.2,.8,.25,1) both; }
+.policySummary {
+  animation: policyEnter 320ms cubic-bezier(.2,.8,.25,1) both;
+  transition: box-shadow 200ms ease, border-color 200ms ease;
+}
+.policySummaryAction {
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease, background-color 200ms ease;
+}
+.policyField:focus-within { border-color:#315B9A; box-shadow:0 0 0 2px rgba(49,91,154,.1); }
+.policyPage :is(input,select,textarea) {
+  transition: border-color 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
+}
+.policyRing { transition: stroke-dashoffset 330ms cubic-bezier(.2,.8,.25,1); }
+@keyframes policyEnter { from {opacity:0;transform:translateY(8px);} to {opacity:1;transform:translateY(0);} }
+@keyframes policyCheckAppear { from {opacity:.35;transform:scale(.78);} to {opacity:1;transform:scale(1);} }
+@media (hover:hover) and (pointer:fine) {
+  .policySection:hover { transform:translateY(-2px); box-shadow:0 7px 18px rgba(17,75,150,.12); border-color:#c2d5ef; }
+  .policySummary:hover { box-shadow:0 12px 32px rgba(17,75,150,.12); border-color:#bfd0e9; }
+  .policySummaryAction:not(:disabled):hover { transform:translateY(-2px); box-shadow:0 7px 16px rgba(55,75,149,.10); }
+}
+@media (prefers-reduced-motion:reduce) {
+  .policyPage :is(.policyHeader,.policySection,.policyNavStep,.policyCheck,.policySummary,.policySummaryAction,.policyRing),
+  .policyPage :is(input,select,textarea) { animation:none!important;transition:none!important; }
+  .policySection:hover,.policySummaryAction:hover { transform:none!important; }
+}
