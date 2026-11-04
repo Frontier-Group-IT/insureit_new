@@ -81,9 +81,14 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
         <div className="claims-motion-hero-overlay pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EEF7FF]/85 via-[#EEF7FF]/45 via-45% to-transparent" />
         <div className="relative flex min-h-[170px] items-center px-5 py-6 sm:px-7">
           <div className="max-w-[520px]">
-            <div className="flex items-center gap-3"><img src="/assets/Custom-Icons/optimized-128/claims.png" alt="" aria-hidden="true" width={60} height={60} className="h-[60px] w-[60px] shrink-0 object-contain" /><h1 className="text-[clamp(28px,3.2vw,40px)] font-bold tracking-tight text-[#242C89]">Claims</h1></div>
-            <p className="mt-2 text-[12px] font-medium leading-5 text-[#5D6F8F] sm:text-[13px]">Track and manage your claims easily.<span className="block">Stay updated at every step.</span></p>
-            <span className="mt-3 block h-1 w-14 rounded-full bg-gradient-to-r from-[#6953DC] to-[#B5B4F7]" aria-hidden="true"/>
+            <div className="flex items-center gap-3">
+              <img src="/assets/Custom-Icons/optimized-128/claims.png" alt="" aria-hidden="true" width={60} height={60} className="h-[60px] w-[60px] shrink-0 object-contain" />
+              <div className="min-w-0">
+                <h1 className="text-[clamp(28px,3.2vw,40px)] font-bold tracking-tight text-[#242C89]">Claims</h1>
+                <p className="mt-2 text-[12px] font-medium leading-5 text-[#5D6F8F] sm:text-[13px]">Track and manage your claims easily.<span className="block">Stay updated at every step.</span></p>
+                <span className="mt-3 block h-1 w-14 rounded-full bg-gradient-to-r from-[#6953DC] to-[#B5B4F7]" aria-hidden="true"/>
+              </div>
+            </div>
           </div>
         </div>
       </section>
