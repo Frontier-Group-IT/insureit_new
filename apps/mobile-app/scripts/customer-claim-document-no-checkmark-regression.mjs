@@ -14,9 +14,8 @@ for (const [name, source] of [
   ['legacy Spot Intimation', legacy],
   ['new internal Spot Intimation', entry],
 ]) {
-  assert.doesNotMatch(
-    source,
-    /<MaterialCommunityIcons name="check" size={15} color="#18864B" \/>/,
+  assert.ok(
+    !source.includes('<MaterialCommunityIcons name="check" size={15} color="#18864B" />'),
     name + ' must not show the decorative saved-document tick',
   );
 }
@@ -25,9 +24,9 @@ assert.match(self, /name="file-document-multiple-outline" size={29}/);
 
 // Keep actual uploaded/verified state, remove actions, and the lock semantics.
 assert.match(self, /saved \? 'Saved' : ready \? 'Ready' : 'Tap to upload'/);
-assert.match(self, /accessibilityLabel={`Remove ${title}`}/);
+assert.ok(self.includes('accessibilityLabel={`Remove ${title}`}'));
 assert.match(tracker, /disabled={busy \|\| locked}/);
-assert.match(tracker, /name="lock-outline" size={15}/);
+assert.ok(tracker.includes('name="lock-outline" size={15}'));
 assert.match(tracker, /saved \? 'Saved' : requested \? 'REQUEST UPLOAD'/);
 assert.match(tracker, /onRemove\(\)/);
 assert.match(legacy, /saved \? 'Saved' : 'Tap to upload'/);
