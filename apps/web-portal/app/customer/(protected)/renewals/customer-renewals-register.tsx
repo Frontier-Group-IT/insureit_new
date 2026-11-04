@@ -30,8 +30,11 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
   accountId:string;items:RenewalRegisterItem[];categories:RenewalCategory[];
 }) {
   const [query,setQuery]=useState("");
-  const [status,setStatus]=useState("all");
-  const [activeCategory,setActiveCategory]=useState<string | null>(null);
+  const [status,setStatus]=useState("due");
+  // Open the pending Insurance Policy register on first visit.
+  const [activeCategory,setActiveCategory]=useState<string | null>(
+    () => categories.find(cat => cat.key === "insurance_policy")?.key ?? categories[0]?.key ?? null,
+  );
   const groups=useMemo(()=>{
     const filtered=items.filter(item=>{
       const matches=[item.vehicleNo,item.title,item.reference,item.expiry,item.status].some(v=>v.toLowerCase().includes(query.trim().toLowerCase()));
@@ -45,6 +48,23 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
     }))};
   },[items,categories,query,status]);
   const selectedGroup = groups.groupList.find(cat=>cat.key===activeCategory);
+  const emptyTitle = query.trim()
+    ? "No renewals match your search"
+    : status === "due"
+      ? !groups.filtered.length ? "You're all caught up!" : "No pending renewals in this category"
+      : status === "expired" ? "No expired renewals here" : "No renewals in this category";
+  const emptyDescription = query.trim()
+    ? "Try a different vehicle number, policy or reference."
+    : status === "due"
+      ? !groups.filtered.length ? "No pending renewals right now. Upcoming reminders will appear here." : "Choose another category to review pending renewals."
+      : status === "expired" ? "There are no expired records for this selection." : "Renewal records will appear here when available.";
+  const emptyState = (
+    <div className="flex min-h-[240px] flex-col items-center justify-center gap-2 px-4 py-7 text-center" role="status">
+      <Image src="/assets/customer-renewals/empty-state.webp" alt="Completed renewals clipboard, calendar and protective checkmark shield" width={190} height={139} unoptimized className="h-auto w-[160px] object-contain sm:w-[190px]" />
+      <h2 className="text-[15px] font-bold text-[#243763]">{emptyTitle}</h2>
+      <p className="max-w-sm text-[11px] leading-5 text-[#7384A5]">{emptyDescription}</p>
+    </div>
+  );
   return <div className={`customer-register-motion space-y-4 text-[#293461] ${motion.pageEnter}`}>
     <section className="customer-register-hero relative isolate min-h-[175px] overflow-hidden rounded-xl border border-[#E1E8F9] bg-[#EDF4FF]">
       <div aria-hidden="true" className={`pointer-events-none absolute -inset-2 bg-[url('/assets/renewal.jpeg')] bg-cover bg-center ${motion.heroParallax}`}/>
@@ -79,7 +99,7 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
       {selectedGroup ? (() => {
         const cat = selectedGroup;
         return <section className={`customer-register-card overflow-hidden rounded-xl border border-[#E2E9F5] bg-white shadow-[0_3px_12px_rgba(43,65,120,.035)] ${motion.section}`}>
-          <div className="overflow-x-auto">
+          {cat.records.length ? <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] table-fixed border-collapse">
               <thead className="bg-[#F8FAFE] text-left text-[10px] font-semibold text-[#93A1BB]"><tr>
                 <th className="w-[35%] px-5 py-2.5">Policy / Ref. No.</th><th className="w-[28%] px-4 py-2.5">Vehicle No.</th><th className="w-[21%] px-4 py-2.5">Expiry Date</th><th className="w-[16%] px-3 py-2.5">Status</th>
@@ -95,13 +115,12 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
                     <td className="px-3 py-3"><span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${!expired ? motion.upcomingBadge : ""} ${expired ? "bg-[#FFF0F2] text-[#D34358]" : due ? "bg-[#FFF5E3] text-[#C98E29]" : "bg-[#EAF9F0] text-[#239B68]"}`}><Clock3 className="h-3 w-3"/>{expired ? "Expired" : due ? `Due in ${item.daysUntil} days` : `In ${item.daysUntil} days`}</span></td>
                   </tr>;
                 })}
-                {!cat.records.length?<tr><td colSpan={4} className="p-4 text-center text-[11px] text-[#8492AC]">No renewals in this category.</td></tr>:null}
               </tbody>
             </table>
-          </div>
+          </div> : emptyState}
         </section>;
       })() : null}
-      {!groups.filtered.length?<p className="rounded-xl border border-[#E2E9F5] bg-white px-4 py-8 text-center text-[12px] text-[#7889A6]">No renewal records match your search or filters.</p>:null}
+      {!selectedGroup && !groups.filtered.length ? <section className="rounded-xl border border-[#E2E9F5] bg-white">{emptyState}</section> : null}
     </div>
   </div>;
 }
