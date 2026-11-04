@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
 import { Files, Mic, Play, Plus, Square, Trash2, Upload } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/auth";
 import {
@@ -156,6 +157,7 @@ export function OperationsClaimStageOneAttachments({ claimId }: { claimId: strin
 
   return (
     <div className="mt-3 space-y-3">
+      <ClaimStageErrorDialog message={bulkMessage && !bulkMessage.ok ? bulkMessage.text : voiceMessage && !voiceMessage.ok ? voiceMessage.text : null} onClose={() => { if (bulkMessage && !bulkMessage.ok) setBulkMessage(null); else setVoiceMessage(null); }} />
       <section aria-label="Upload multiple claim documents">
         <input ref={bulkPicker} type="file" multiple accept={acceptedDocuments} className="sr-only" aria-label="Select multiple claim documents" onChange={e => {
           const files = Array.from(e.currentTarget.files || []); e.currentTarget.value = "";
@@ -168,7 +170,7 @@ export function OperationsClaimStageOneAttachments({ claimId }: { claimId: strin
             <small className="text-[10px] text-[#7787A2]">{busy ? "Uploading files…" : "Select several files now, or choose more later (up to 10 at once)."}</small></span>
           {busy ? <span className="text-[11px] font-semibold text-[#1952A1]">Uploading…</span> : <Plus className="h-5 w-5 text-[#1952A1]" />}
         </button>
-        {bulkMessage && <p role="status" className={"mt-2 text-xs " + (bulkMessage.ok ? "text-emerald-700" : "text-red-700")}>{bulkMessage.text}</p>}
+        {bulkMessage?.ok ? <p role="status" className="mt-2 text-xs text-emerald-700">{bulkMessage.text}</p> : null}
       </section>
 
       <section aria-label="Incident voice note" className="rounded-xl border border-[#DFE8F4] bg-white p-3 shadow-sm">
@@ -194,7 +196,7 @@ export function OperationsClaimStageOneAttachments({ claimId }: { claimId: strin
           <button type="button" aria-label="Remove selected audio" onClick={() => setAudioFile(null)} className="rounded-md p-2 text-red-600"><Trash2 className="h-4 w-4" /></button>
           <button type="button" disabled={busy || recording} onClick={() => { if (audioFile) submitFiles([audioFile], true); }} className="rounded-lg bg-[#1253A7] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50">Upload voice note</button>
         </div>}
-        {voiceMessage && <p role="status" className={"mt-2 text-xs " + (voiceMessage.ok ? "text-emerald-700" : "text-red-700")}>{voiceMessage.text}</p>}
+        {voiceMessage?.ok ? <p role="status" className="mt-2 text-xs text-emerald-700">{voiceMessage.text}</p> : null}
       </section>
     </div>
   );
