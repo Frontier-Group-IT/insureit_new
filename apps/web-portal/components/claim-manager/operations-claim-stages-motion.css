@@ -31,8 +31,16 @@
   background: linear-gradient(135deg,#eaf2ff,#fff);
 }
 .operations-claim-motion .operations-claim-motion-completed {
-  border-color: #65c3a2;
-  background: #f4fffa;
+  border-color: #4ade80;
+  background: #dcfce7;
+}
+.operations-claim-motion .operations-claim-motion-completed .operations-claim-motion-step-button {
+  background: #dcfce7;
+}
+@media (hover: hover) and (pointer: fine) {
+  .operations-claim-motion .operations-claim-motion-completed .operations-claim-motion-step-button:hover {
+    background: #bbf7d0;
+  }
 }
 .operations-claim-motion .operations-claim-motion-completed .operations-claim-motion-check {
   transform-origin: center;
