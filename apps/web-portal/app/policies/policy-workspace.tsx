@@ -6,6 +6,7 @@ import { CalendarDays, ChevronDown, Files, FileText, Plus, RotateCcw, Search, Sh
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { getInsurerLogo } from "@/lib/insurer-logo";
+import { filterPolicyRegisterPeriod } from "@/lib/policy-register-period";
 import {
   RegisterEmpty,
   RegisterPagination,
@@ -66,6 +67,7 @@ type PolicyRegisterReturnState = {
 };
 const PAGE_SIZE = 10;
 const POLICY_REGISTER_RETURN_STATE_KEY = "insureit:policy-register:return-state:v1";
+const POLICY_REGISTER_PERIOD_KEY = "insureit:policy-register:period:v1";
 
 function policySourceDatabaseType(value: string | null) {
   const normalized = value?.trim().toLowerCase();
@@ -291,11 +293,13 @@ function PolicyPeriodFilter({
           style={{ position: "fixed", top: menuPosition.top, left: menuPosition.left, zIndex: 9999 }}
           className="w-[132px] rounded-xl border border-[#D7E0EA] bg-white p-1.5 shadow-[0_16px_36px_rgba(15,23,42,.16)]">
           <button type="button" role="menuitemradio" aria-checked={value === "mtd"}
+            onPointerDown={(event) => event.stopPropagation()}
             onClick={() => { onChange("mtd"); setMenuPosition(null); }}
             className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left text-[10px] font-bold transition ${value === "mtd" ? "border-[#99E2D0] bg-[#E8F7F2] text-[#0F766E]" : "border-transparent bg-[#F2FBF8] text-[#16836F] hover:bg-[#E8F7F2]"}`}>
             <span>MTD</span><span className="text-[9px] tabular-nums opacity-75">{mtdCount}</span>
           </button>
           <button type="button" role="menuitemradio" aria-checked={value === "all"}
+            onPointerDown={(event) => event.stopPropagation()}
             onClick={() => { onChange("all"); setMenuPosition(null); }}
             className={`mt-1 flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left text-[10px] font-bold transition ${value === "all" ? "border-[#B8CCE4] bg-[#E8F0F9] text-[#17365D]" : "border-transparent bg-[#F2F6FB] text-[#385674] hover:bg-[#E8F0F9]"}`}>
             <span>All</span><span className="text-[9px] tabular-nums opacity-75">{allCount}</span>
@@ -322,19 +326,26 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
 
   useEffect(() => {
     try {
+      // A saved navigation-return snapshot has priority; otherwise remember
+      // MTD/All selection during normal register navigation and refresh.
       const raw = window.sessionStorage.getItem(POLICY_REGISTER_RETURN_STATE_KEY);
-      if (!raw) return;
-      window.sessionStorage.removeItem(POLICY_REGISTER_RETURN_STATE_KEY);
-      const saved = JSON.parse(raw) as Partial<PolicyRegisterReturnState>;
-      if (typeof saved.query === "string") setQuery(saved.query);
-      if (["all", "active", "expiring", "expired", "claims"].includes(saved.view ?? "")) setView(saved.view as ViewKey);
-      if (saved.timeScope === "mtd" || saved.timeScope === "all") setTimeScope(saved.timeScope);
-      if (saved.business === "all" || saved.business === "Motor" || saved.business === "Non Motor" || saved.business === "Life" || saved.business === "Health") setBusiness(saved.business);
-      if (typeof saved.source === "string") setSource(saved.source);
-      if (!isRelationshipManager && typeof saved.rm === "string") setRm(saved.rm);
-      if (typeof saved.fromDate === "string") setFromDate(saved.fromDate);
-      if (typeof saved.toDate === "string") setToDate(saved.toDate);
-      if (typeof saved.page === "number" && Number.isFinite(saved.page) && saved.page > 0) setPage(Math.floor(saved.page));
+      const storedPeriod = window.sessionStorage.getItem(POLICY_REGISTER_PERIOD_KEY);
+      if (raw) {
+        window.sessionStorage.removeItem(POLICY_REGISTER_RETURN_STATE_KEY);
+        const saved = JSON.parse(raw) as Partial<PolicyRegisterReturnState>;
+        if (typeof saved.query === "string") setQuery(saved.query);
+        if (["all", "active", "expiring", "expired", "claims"].includes(saved.view ?? "")) setView(saved.view as ViewKey);
+        if (saved.timeScope === "mtd" || saved.timeScope === "all") setTimeScope(saved.timeScope);
+        else if (storedPeriod === "mtd" || storedPeriod === "all") setTimeScope(storedPeriod);
+        if (saved.business === "all" || saved.business === "Motor" || saved.business === "Non Motor" || saved.business === "Life" || saved.business === "Health") setBusiness(saved.business);
+        if (typeof saved.source === "string") setSource(saved.source);
+        if (!isRelationshipManager && typeof saved.rm === "string") setRm(saved.rm);
+        if (typeof saved.fromDate === "string") setFromDate(saved.fromDate);
+        if (typeof saved.toDate === "string") setToDate(saved.toDate);
+        if (typeof saved.page === "number" && Number.isFinite(saved.page) && saved.page > 0) setPage(Math.floor(saved.page));
+      } else if (storedPeriod === "mtd" || storedPeriod === "all") {
+        setTimeScope(storedPeriod);
+      }
     } catch {
       window.sessionStorage.removeItem(POLICY_REGISTER_RETURN_STATE_KEY);
     }
@@ -380,12 +391,16 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
     return matchesBusiness && matchesSource && matchesRm && matchesFromDate && matchesToDate && matchesQuery;
   }), [business, enriched, fromDate, isRelationshipManager, query, rm, source, toDate]);
 
-  const mtdFiltered = useMemo(() => controlFiltered.filter((row) => {
-    const businessDate = policyBusinessDate(row);
-    return businessDate >= mtdStart && businessDate <= mtdEnd;
-  }), [controlFiltered, mtdEnd, mtdStart]);
-  const hasSearch = query.trim().length > 0;
-  const baseFiltered = hasSearch ? controlFiltered : timeScope === "mtd" ? mtdFiltered : controlFiltered;
+  const mtdFiltered = useMemo(
+    () => filterPolicyRegisterPeriod(controlFiltered, "mtd", mtdStart, mtdEnd, policyBusinessDate),
+    [controlFiltered, mtdEnd, mtdStart],
+  );
+  // Apply the chosen period consistently, including while searching.
+  // "All" must never silently fall back to the current-month subset.
+  const baseFiltered = useMemo(
+    () => filterPolicyRegisterPeriod(controlFiltered, timeScope, mtdStart, mtdEnd, policyBusinessDate),
+    [controlFiltered, timeScope, mtdEnd, mtdStart],
+  );
 
   const stats = useMemo(() => {
     const active = baseFiltered.filter((row) => row.status === "Active").length;
@@ -413,6 +428,9 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
   }
 
   function changeTimeScope(next: TimeScope) {
+    // Persist only the display choice; server-side RM / policy authorization
+    // remains untouched. The explicit selection also resets status and dates.
+    try { window.sessionStorage.setItem(POLICY_REGISTER_PERIOD_KEY, next); } catch {}
     setTimeScope(next);
     setFromDate("");
     setToDate("");
@@ -449,6 +467,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
     setSource("all");
     setRm("all");
     setTimeScope("mtd");
+    try { window.sessionStorage.setItem(POLICY_REGISTER_PERIOD_KEY, "mtd"); } catch {}
     setFromDate("");
     setToDate("");
     setView("all");
