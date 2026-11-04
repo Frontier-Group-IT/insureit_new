@@ -178,6 +178,8 @@ jobs:
         run: node scripts/customer-spot-success-two-second-regression.mjs
       - name: Customer Claim Stage Details and Uploaded Document contrast regression
         run: node scripts/customer-claim-stage-document-contrast-regression.mjs
+      - name: Customer completed Payment Encashment heading-only regression
+        run: node scripts/customer-hide-payment-encashment-details-regression.mjs
       - name: Customer Home permanent Start Claim regression
         working-directory: apps/web-portal
         run: node scripts/customer-home-start-claim-regression.mjs
