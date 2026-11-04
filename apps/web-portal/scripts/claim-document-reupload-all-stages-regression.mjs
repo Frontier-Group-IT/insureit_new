@@ -15,9 +15,9 @@ for (const source of [stage1, stage3]) {
   assert.match(source, /<RequestCustomerDocumentReuploadButton claimId=\{claim\.id\} documentId=\{document\.id\} fileName=\{document\.file_name\}/, "Every Operations document row must offer the same exact-document customer re-upload dialog.");
   assert.match(source, /document\.verification_status !== "rejected" && \(document\.verification_status === "verified" \|\| Boolean\(verification\?\.is_valid\)\)/, "An explicitly rejected document must not remain visually verified from historical verification.");
 }
-assert.match(stage3, /<VerificationActionButton[^\n]*variant="icon"/, "Reverification must remain a separate Stage 3 action.");
-assert.match(stage3, /!rejected \? <VerificationActionButton/, "Rejected files must require replacement instead of attempting to reverify.");
-assert.match(verificationButton, /<FileCheck2/, "Stage 3 Reverify must not reuse the circular re-upload icon.");
+assert.match(stage3, /<VerificationActionButton[^\n]*variant="icon"/, "Stage 3 pending verification must keep its dedicated icon action.");
+assert.match(stage3, /!rejected && !verified \? <VerificationActionButton/, "Only pending non-rejected documents should offer verification; verified and rejected files must not show the button.");
+assert.match(verificationButton, /<FileCheck2/, "Stage 3 verification icon must not reuse the circular re-upload icon.");
 assert.doesNotMatch(verificationButton, /<RefreshCw/, "Circular refresh icon is reserved for customer re-upload.");
 assert.match(requestButton, /createPortal\(/, "The request dialog must escape document-card stacking contexts.");
 assert.match(requestButton, /document\.body/, "The request dialog must be attached to document.body.");
@@ -28,4 +28,4 @@ assert.match(server, /event_type: "claim_document_reuploaded"/, "Re-upload reque
 assert.match(stage3Workspace, /document\.verification_status !== "rejected" && \(document\.verification_status === "verified" \|\| Boolean\(verification\?\.is_valid\)\)/, "Stage 3 header counts must respect rejected document status.");
 assert.match(operations, /<SpotSurveyWorkspace/, "Operations Stage 1 must remain shared for internal and external claims.");
 assert.match(operations, /<FinalDocumentsWorkspaceV2/, "Operations Stage 3 must remain shared for internal and external claims.");
-console.log("Operations Stage 1/3 internal/external document re-upload and distinct reverify regressions passed.");
+console.log("Operations Stage 1/3 internal/external re-upload and pending-only Stage 3 verification regressions passed.");
