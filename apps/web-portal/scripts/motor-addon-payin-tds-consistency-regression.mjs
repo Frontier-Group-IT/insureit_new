@@ -23,7 +23,7 @@ assert.match(sql, /PERFORM public\.set_motor_policy_addon_premium_v1\(v_id,v_amo
 assert.match(sql, /IF v_amount <> 0 OR coalesce\(v_existing_amount,0\) <> 0 THEN/,
   "Preserve legacy zero-add-on skip");
 assert.match(sql, /IF v_amount > 0 THEN/, "Zero add-on should not get a new uplift");
-assert.match(sql, /po\.payout_basis,'\) <> 'FIXED_AMOUNT'/, "Preserve fixed-amount payout exclusion");
+assert.ok(sql.includes("po.payout_basis,'') <> 'FIXED_AMOUNT'"), "Preserve fixed-amount payout exclusion");
 assert.match(sql, /IF auth\.role\(\) IS DISTINCT FROM 'service_role'/, "Preserve database role check");
 assert.match(sql, /REVOKE ALL ON FUNCTION public\.save_motor_policy_with_addon_v1/, "Keep privileged RPC inaccessible to client roles");
 assert.match(sql, /GRANT EXECUTE ON FUNCTION public\.save_motor_policy_with_addon_v1\([^)]+\) TO service_role/, "Keep service-role RPC access");
