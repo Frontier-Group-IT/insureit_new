@@ -49,9 +49,10 @@ export function BrokerRegisterShell({
   children: ReactNode;
 }) {
   const branchRegisterTitleOnly = title === "Branch Register";
+  const customerSegmentRegister = title === "Internal Customer" || title === "External Customer";
   const showSupportingCopy = title !== "Customer Portfolio" && title !== "Vehicle Portfolio" && title !== "Policy Portfolio" && title !== "External Policy Portfolio" && title !== "External Policies";
   const policyIntakeCompactLayout = title === "Policy Intake Queue" || title === "My Policy Intakes";
-  const compactReferenceLayout = title === "Customer Portfolio" || title === "Vehicle Portfolio" || title === "Policy Portfolio" || title === "External Policy Portfolio" || title === "External Policies";
+  const compactReferenceLayout = customerSegmentRegister || title === "Customer Portfolio" || title === "Vehicle Portfolio" || title === "Policy Portfolio" || title === "External Policy Portfolio" || title === "External Policies";
   const useCompactMetrics = compactMetrics || policyIntakeCompactLayout;
   const childItems = Children.toArray(children);
   const firstChild = childItems[0];
