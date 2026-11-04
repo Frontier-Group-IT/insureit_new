@@ -41,6 +41,8 @@ jobs:
         run: node scripts/claim-payment-stage-authorized-write-regression.mjs
       - name: Operations stage-one multiple documents and voice-note regression
         run: node scripts/operations-claim-stage-one-media-parity-regression.mjs
+      - name: Customer document re-upload dialog layering regression
+        run: node scripts/customer-document-reupload-dialog-regression.mjs
       - name: External self-managed Claim Journey layout and read-only regression
         run: node scripts/external-self-managed-claim-layout-parity-regression.mjs
       - name: Operations claim Customer motion parity regression
