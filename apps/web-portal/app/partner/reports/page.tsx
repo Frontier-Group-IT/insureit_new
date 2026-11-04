@@ -73,7 +73,7 @@ export default async function PartnerReportsPage({searchParams}:{searchParams:Pr
  const filterQuery=new URLSearchParams({period,business,...(period==="custom"?{from:bounds.from,to:bounds.to}:{})});
  return <PartnerReportsShell active="Overview" scope={reportScope} toolbar={
    <PartnerReportsFilters
-     period={period} business={business} from={bounds.from} to={bounds.to}
+     period={period} business={business} from={bounds.from} to={bounds.to} showAdvanced
      exportHref={`/partner/business/export?${filterQuery.toString()}`}
    />
  }>
