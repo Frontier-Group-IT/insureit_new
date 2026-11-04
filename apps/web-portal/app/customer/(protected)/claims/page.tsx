@@ -1,7 +1,7 @@
 import "./customer-claims-motion.css";
 import Link from "next/link";
 import { ChevronDown, ClipboardList, Plus, ShieldCheck } from "lucide-react";
-import { createServerSupabaseClient } from "@/lib/auth-server";
+import { createCustomerServerSupabaseClient } from "@/lib/auth-server";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
 import { CustomerClaimsSearch } from "./customer-claims-search";
 import { INTERNAL_JOURNEY_STAGES, projectInternalClaim } from "@insureit/claim-journey";
@@ -26,7 +26,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
   const { account, accounts } = await resolveCustomerWebScope(params.account);
   const { claims, milestones_by_claim } = await loadCustomerClaimListContext(account.id);
   // Query only the authorized customer record; missing mobile must not block the register.
-  const db = await createServerSupabaseClient();
+  const db = await createCustomerServerSupabaseClient();
   const { data: customerContact } = await db.from("customers").select("id,phone").eq("id", account.id).maybeSingle();
   const customerName = account.customer_name || account.contact_name || "Account holder";
   const customerMobile = typeof customerContact?.phone === "string" ? customerContact.phone : null;
