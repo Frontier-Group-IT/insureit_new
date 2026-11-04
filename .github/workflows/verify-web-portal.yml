@@ -47,6 +47,8 @@ jobs:
         run: node scripts/claim-document-reupload-all-stages-regression.mjs
       - name: Internal and External claim stage error popup regression
         run: node scripts/claim-stage-errors-popup-regression.mjs
+      - name: Internal and External customer spot draft sync regression
+        run: node scripts/customer-spot-draft-sync-regression.mjs
       - name: External self-managed Claim Journey layout and read-only regression
         run: node scripts/external-self-managed-claim-layout-parity-regression.mjs
       - name: Operations claim Stage 3 autosave and green completion regression
