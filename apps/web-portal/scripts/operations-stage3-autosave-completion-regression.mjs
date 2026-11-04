@@ -18,6 +18,8 @@ assert.match(stage3, /JSON\.stringify\(latestDetailsRef\.current\) === signature
 assert.match(stage3, /lastSavedSignatureRef\.current = signature/, "Skip redundant saves for unchanged snapshots.");
 assert.match(stage3, /role="status"/, "Automatic save must show accessible feedback.");
 assert.match(stage3, /function saveAndContinue\(\)/, "Explicit stage completion must remain available.");
+assert.doesNotMatch(stage3, /Pending verification: review uploaded documents/, "Do not show an inline verification warning on Stage 3.");
+assert.match(stage3, /<ClaimStageErrorDialog/, "Stage completion errors must continue to use the existing OK popup.");
 assert.match(actions, /requireClaimWorkflowAccess\(claimId/, "Autosave must continue through the existing claim authorization gate.");
 assert.match(stages, /isCompleted \? "bg-\[#16A34A\] text-white/, "Completed step checkmarks must use a filled green circle.");
 assert.match(motion, /operations-claim-motion-completed \.operations-claim-motion-step-button\s*\{\s*background: #dcfce7;/, "Completed stage tiles must have full green backgrounds.");
