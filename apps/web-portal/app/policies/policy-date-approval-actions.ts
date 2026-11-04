@@ -155,7 +155,7 @@ export async function requestPolicyDateApproval(input: ApprovalInput): Promise<A
 export async function verifyPolicyDateApproval(
   approvalId: string,
   otp: string,
-  input: Omit<ApprovalInput, "approverKey">,
+  input: Omit<ApprovalInput, "approverKey" | "justification">,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const profile = await profileFor(input);
