@@ -30,6 +30,7 @@ export type PartnerRegisterRow = {
   partnerStatus: string;
   customerCount: number | null;
   netPremium: number | null;
+  mtdNetPremium: number | null;
   payout: number | null;
   active: boolean;
   createType: "posp" | "misp";
@@ -88,14 +89,13 @@ export function PartnerRegisterClient({
   }, { active: 0, onboarding: 0 }), [scopedRows]);
   const visibleRows = useMemo(() => {
     const filtered = status === "active" ? scopedRows.filter((row) => row.active) : status === "onboarding" ? scopedRows.filter((row) => !row.active) : scopedRows;
-    // Rank the full filtered set BEFORE pagination. Preserve the original order for ties.
+    // MTD (India calendar month) ranking BEFORE pagination, including all authorized rows.
+    // Unavailable MTD metrics sort last instead of pretending they are zero.
+    // Stable source order is preserved for equal MTD amounts.
     return [...filtered].sort((a, b) => {
-      const rank = (row: PartnerRegisterRow) => row.netPremium !== null && row.netPremium > 0 ? 0 : row.customerCount !== null && row.customerCount > 0 ? 1 : row.netPremium === null || row.customerCount === null ? 3 : 2;
-      const priority = rank(a) - rank(b);
-      if (priority !== 0) return priority;
-      if (rank(a) === 0) return (b.netPremium ?? 0) - (a.netPremium ?? 0);
-      if (rank(a) === 1) return (b.customerCount ?? 0) - (a.customerCount ?? 0);
-      return 0;
+      if (a.mtdNetPremium === null) return b.mtdNetPremium === null ? 0 : 1;
+      if (b.mtdNetPremium === null) return -1;
+      return b.mtdNetPremium - a.mtdNetPremium;
     });
   }, [scopedRows, status]);
   const totalRecords = visibleRows.length;
@@ -147,7 +147,10 @@ export function PartnerRegisterClient({
       <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
         <IntermediaryTabs active="partner" embedded />
         <div className="flex flex-wrap items-center gap-2 border-b border-[#E7ECF3] bg-[#FAFBFD] px-5 py-3">
-          <h2 className="mr-1 whitespace-nowrap text-[12.5px] font-semibold text-[#17203A]">Partner Register</h2>
+          <div className="mr-1 flex shrink-0 flex-col gap-0.5">
+            <h2 className="whitespace-nowrap text-[12.5px] font-semibold text-[#17203A]">Partner Register</h2>
+            <span className="text-[9px] font-medium text-[#64748B]">Sorted by MTD Net Premium ↓</span>
+          </div>
           <form onSubmit={(event) => event.preventDefault()} className="relative min-w-[240px] flex-1 lg:max-w-[380px]">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94A3B8]" />
             <input value={search} onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }} placeholder="Search partner, mobile, email, ID or RM" className="h-9 w-full rounded-lg border border-[#D8E1EC] bg-white pl-9 pr-3 text-[10.5px] text-[#17203A] outline-none placeholder:text-[#94A3B8] focus:border-[#315FEA] focus:ring-2 focus:ring-[#E6ECFF]" />
@@ -239,7 +242,7 @@ function PartnerTable({ rows }: { rows: PartnerRegisterRow[] }) {
         <th className="w-[11%] px-3 py-3">Status</th>
         <th className="w-[9%] px-3 py-3 text-center">Asso./Branch</th>
         <th className="w-[8%] px-3 py-3 text-right">Customers</th>
-        <th className="w-[10%] px-3 py-3 text-right">Net Premium</th>
+        <th className="w-[10%] px-3 py-3 text-right" title="All-time net premium; sorting is based on current-month MTD">Net Premium</th>
         <th className="w-[9%] px-3 py-3 text-right">Payout</th>
         <th className="w-[10%] px-3 py-3 text-center">Action</th>
       </tr></thead>
