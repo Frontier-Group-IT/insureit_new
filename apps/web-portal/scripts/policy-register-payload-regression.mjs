@@ -60,3 +60,19 @@ assert.match(workspace, /onQuickRange\(range\); menu\.close\(\)/, "Quick dates m
 assert.match(workspace, /onFromDateChange\(event\.target\.value\)/, "Custom From date must remain functional");
 assert.match(workspace, /onToDateChange\(event\.target\.value\)/, "Custom To date must remain functional");
 console.log("Policy register and business scope regression passed.");
+
+const periodModule = await import("../lib/policy-register-period.ts");
+const periodRows = [
+  { id: "older", businessDate: "2026-09-15" },
+  { id: "current", businessDate: "2026-11-04" },
+  { id: "other", businessDate: "2026-10-23" },
+];
+const choosePeriod = (scope) => periodModule.filterPolicyRegisterPeriod(periodRows, scope, "2026-11-01", "2026-11-04", (row) => row.businessDate).map((row) => row.id);
+assert.deepEqual(choosePeriod("mtd"), ["current"], "MTD must show only current-month policies");
+assert.deepEqual(choosePeriod("all"), ["older", "current", "other"], "All must restore all authorized matching policies");
+assert.match(workspace, /filterPolicyRegisterPeriod\(controlFiltered, timeScope, mtdStart, mtdEnd, policyBusinessDate\)/, "All/MTD selection must control visible policy rows");
+assert.match(workspace, /window\.sessionStorage\.setItem\(POLICY_REGISTER_PERIOD_KEY, next\)/, "Selected period must survive navigation");
+assert.match(workspace, /window\.sessionStorage\.getItem\(POLICY_REGISTER_PERIOD_KEY\)/, "Saved period must be read on navigation");
+assert.match(workspace, /setFromDate\("")/, "Changing period must clear incompatible custom date filters");
+assert.match(workspace, /setView\("all"\)/, "Changing period must reset the active status tab");
+assert.match(workspace, /setPage\(1\)/, "Changing period must reset pagination");
