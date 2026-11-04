@@ -326,7 +326,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         })}
       </ol>
 
-      <div className="p-4">
+      <div key={selected.key} data-claim-stage-panel={selected.key} className="operations-claim-motion-panel p-4">
         {selected.key === "spot_intimation" && (!partnerReadOnlyJourney || partnerInternalStageOne) && !partnerManagedJourney ? (
           <>
             <StageOneForm
