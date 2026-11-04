@@ -8,7 +8,6 @@ const root = resolve(here, "../../..");
 const sql = readFileSync(resolve(root, "supabase/migrations/20261008183000_partner_register_business_metrics.sql"), "utf8");
 const loader = readFileSync(resolve(here, "../app/intermediaries/intermediary-register.tsx"), "utf8");
 const client = readFileSync(resolve(here, "../app/intermediaries/partner-register-client.tsx"), "utf8");
-const mtdSql = readFileSync(resolve(root, "supabase/migrations/20261104101500_partner_register_mtd_net_premium.sql"), "utf8");
 
 for (const [description, pattern] of [
   ["service-role-only function", /create or replace function public\.partner_register_business_metrics\(p_partner_ids uuid\[\]\)/i],
@@ -22,7 +21,7 @@ for (const [description, pattern] of [
   ["service role grant", /grant execute on function public\.partner_register_business_metrics\(uuid\[\]\) to service_role/i],
 ]) assert.match(sql, pattern, description);
 
-assert.match(loader, /admin\.rpc\("partner_register_business_metrics", \{ p_partner_ids: partnerBusinessIds \}\)/);
+assert.match(loader, /admin\.rpc\("partner_register_period_business_metrics", \{ p_partner_ids: partnerBusinessIds, p_from_date: periodFrom, p_to_date: periodTo \}\)/);
 assert.match(loader, /partnerBusinessError/);
 assert.match(loader, /customerCount: metric \? Number\(metric\.customer_count\) : null/);
 assert.match(loader, /netPremium: metric \? Number\(metric\.net_premium\) : null/);
@@ -34,20 +33,8 @@ assert.match(client, /row\.payout === null/);
 assert.match(loader, /selectedType === "partner"\s*\? await fetchAllPages<IntermediaryRow, unknown>/, "All authorized Partners must be paginated before ranking");
 assert.match(loader, /\.order\("id", \{ ascending: false \}\)/, "Partner backend pagination must use deterministic ordering");
 assert.match(client, /return \[\.\.\.filtered\]\.sort\(/, "Business ranking must use a copy, not mutate source data");
-assert.match(loader, /admin\.rpc\("partner_register_mtd_net_premium", \{ p_partner_ids: partnerBusinessIds \}\)/, "MTD ranking must use server-side scoped metric");
-assert.match(loader, /mtdNetPremium: mtdMetric \? Number\(mtdMetric\.mtd_net_premium\) : null/, "MTD premium must not be substituted with lifetime premium");
-assert.match(client, /return b\.mtdNetPremium - a\.mtdNetPremium/, "MTD net premium sorts descending");
-assert.match(client, /if \(a\.mtdNetPremium === null\)/, "Unavailable MTD is sorted separately from real zero");
-assert.match(client, /router\.refresh\(\)/, "Visible Partner Register periodically refreshes MTD rank");
-assert.match(client, /document\.visibilityState !== "visible"/, "Background tabs must not poll");
-assert.match(client, /Sorted by MTD Net Premium/, "User must see default ordering basis");
-assert.match(client, /MTD \{money\(row\.mtdNetPremium\)\}/, "Each Partner row must reveal the MTD amount used in ranking");
-assert.match(mtdSql, /timezone\('Asia\/Kolkata', now\(\)\)/, "Month boundary must use India calendar time");
-assert.match(mtdSql, /coalesce\(p\.issuance_date, \(p\.created_at at time zone 'Asia\/Kolkata'\)::date\)/, "MTD must use issuance date with creation fallback");
-assert.match(mtdSql, /select distinct f\.partner_id, p\.id as policy_id/, "MTD must deduplicate partner-family policies");
-assert.match(mtdSql, /sum\(ppd\.net_premium\)/, "MTD uses the same net premium basis as lifetime values");
-assert.match(mtdSql, /revoke all on function public\.partner_register_mtd_net_premium\(uuid\[\]\) from public, anon, authenticated;/, "MTD RPC must not be available to clients");
-assert.match(mtdSql, /grant execute on function public\.partner_register_mtd_net_premium\(uuid\[\]\) to service_role;/, "Only server service role may execute MTD RPC");
+assert.match(client, /\(row\.policyCount \?\? 0\) > 0/, "Only period-producing partners should appear");
+assert.match(client, /\(b\.netPremium \?\? 0\) - \(a\.netPremium \?\? 0\)/, "Rank by period net premium descending");
 assert.ok(client.indexOf("return [...filtered].sort(") < client.indexOf("visibleRows.slice(pageStartIndex"), "Business priority must apply before page slicing");
 console.log("Partner Register business metrics migration and UI contract regression passed");
 
