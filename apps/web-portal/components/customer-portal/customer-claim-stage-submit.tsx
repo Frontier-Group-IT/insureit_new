@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { clearCustomerClaimDraft, customerClaimStageDraftKey, saveCustomerClaimDraft } from "@/components/customer-portal/customer-claim-stage-draft-form";
 import { LoaderCircle } from "lucide-react";
 import { saveCustomerClaimStageWithFeedback } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/actions";
 
 export function CustomerClaimStageSubmit({ formId, variant = "intimation" }: { formId: string; variant?: "intimation" | "continue" }) {
+  const router = useRouter();
   const [saving, setSaving] = useState<"draft" | "details" | null>(null);
   const [feedback, setFeedback] = useState("");
   const [errorPopup, setErrorPopup] = useState("");
@@ -17,6 +20,8 @@ export function CustomerClaimStageSubmit({ formId, variant = "intimation" }: { f
     // Drafts deliberately allow empty required fields; final saves do not.
     if (mode === "details" && !form.reportValidity()) return;
     const data = new FormData(form);
+    const key = customerClaimStageDraftKey(String(data.get("account") || ""), String(data.get("claim") || ""), String(data.get("stage") || ""));
+    saveCustomerClaimDraft(form, key);
     setSaving(mode);
     try {
       const result = await saveCustomerClaimStageWithFeedback(mode, data);
@@ -24,7 +29,9 @@ export function CustomerClaimStageSubmit({ formId, variant = "intimation" }: { f
         setErrorPopup(result.error);
         return;
       }
+      clearCustomerClaimDraft(key);
       setFeedback(mode === "draft" ? "Draft saved." : "Details saved.");
+      if (result.destination) router.push(result.destination);
     } catch (error) {
       setErrorPopup(error instanceof Error && error.message && !error.message.includes("NEXT_REDIRECT")
         ? error.message
@@ -41,7 +48,7 @@ export function CustomerClaimStageSubmit({ formId, variant = "intimation" }: { f
         {saving === "draft" ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
         {saving === "draft" ? "Saving draft..." : "Save Draft"}
       </button> : null}
-      <button type="button" disabled={saving !== null} aria-busy={saving === "details"} onClick={() => void submit("details")}
+      <button type="button" data-claim-stage-save={formId} disabled={saving !== null} aria-busy={saving === "details"} onClick={() => void submit("details")}
         className="inline-flex min-h-10 min-w-[112px] items-center justify-center gap-2 rounded-lg bg-[#1253A7] px-6 text-[12px] font-bold text-white transition hover:bg-[#0B3884] disabled:opacity-70">
         {saving === "details" ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
         {saving === "details" ? "Saving..." : variant === "continue" ? "Save & Continue" : "Save Details"}

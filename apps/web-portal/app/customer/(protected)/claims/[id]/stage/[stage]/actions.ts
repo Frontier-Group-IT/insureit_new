@@ -46,7 +46,7 @@ const stageDates:Record<string,string>={
   payment_encashment:"payment_received_date",
 };
 
-export async function saveCustomerExternalStage(form:FormData) {
+export async function saveCustomerExternalStage(form:FormData, navigate = true) {
   const accountId=String(form.get("account")||"");
   const claimId=String(form.get("claim")||"");
   const key=String(form.get("stage")||"");
@@ -123,15 +123,17 @@ export async function saveCustomerExternalStage(form:FormData) {
     }
   }
   const next=INTERNAL_JOURNEY_STAGES[index+1];
-  redirect(editingCompleted
+  const destination = editingCompleted
     ? "/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(key)+"?account="+encodeURIComponent(account.id)+"&mode=edit&saved=updated"
     : next
       ? "/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(next.key)+"?account="+encodeURIComponent(account.id)+"&mode=edit"+(key==="claim_intimation"?"&saved=claim_intimation":"")
-      : "/customer/claims/"+encodeURIComponent(claim.id)+"?account="+encodeURIComponent(account.id));
+      : "/customer/claims/"+encodeURIComponent(claim.id)+"?account="+encodeURIComponent(account.id);
+  if (navigate) redirect(destination);
+  return destination;
 }
 
 /** Save incomplete Stage 3 details without completing the claim milestone. */
-export async function saveCustomerClaimIntimationDraft(form: FormData) {
+export async function saveCustomerClaimIntimationDraft(form: FormData, navigate = true) {
   const accountId = String(form.get("account") || "");
   const claimId = String(form.get("claim") || "");
   const key = String(form.get("stage") || "");
@@ -168,17 +170,20 @@ export async function saveCustomerClaimIntimationDraft(form: FormData) {
     completed_at: current?.completed_at ?? null, recorded_by: session.user.id, recorded_by_actor: "customer",
   }, { onConflict: "claim_id,milestone_key" });
   if (error) throw new Error("Could not save Claim Intimation draft");
-  redirect("/customer/claims/" + encodeURIComponent(claim.id) + "/stage/claim_intimation?account=" +
-    encodeURIComponent(account.id) + "&mode=edit");
+  const destination = "/customer/claims/" + encodeURIComponent(claim.id) + "/stage/claim_intimation?account=" +
+    encodeURIComponent(account.id) + "&mode=edit";
+  if (navigate) redirect(destination);
+  return destination;
 }
 
 
 /** Action boundary: user-correctable validation failures must not become RSC render errors. */
-export async function saveCustomerClaimStageWithFeedback(mode: "draft" | "details", form: FormData): Promise<{error: string | null}> {
+export async function saveCustomerClaimStageWithFeedback(mode: "draft" | "details", form: FormData): Promise<{error: string | null; destination?: string}> {
   try {
-    if (mode === "draft") await saveCustomerClaimIntimationDraft(form);
-    else await saveCustomerExternalStage(form);
-    return {error:null};
+    const destination = mode === "draft"
+      ? await saveCustomerClaimIntimationDraft(form, false)
+      : await saveCustomerExternalStage(form, false);
+    return {error:null, destination};
   } catch (error) {
     // Next.js redirects are thrown internally; preserve successful navigation.
     if (error && typeof error === "object" && "digest" in error &&

@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, LoaderCircle } from "lucide-react";
 import { CustomerErrorDialog } from "@/components/customer-portal/customer-error-dialog";
 
-export type SpotSaveState = { error: string | null };
+export type SpotSaveState = { error: string | null; destination?: string };
 const initialState: SpotSaveState = { error: null };
 
 export function SpotIntimationSaveForm({ action, children, cancelHref, evidence, draftKey, editMode = false }: {
@@ -16,11 +17,12 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
   draftKey: string;
   editMode?: boolean;
 }) {
-  const [state, formAction, pending] = useActionState(action, initialState);
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [dialogError, setDialogError] = useState<string | null>(null);
   const closeError = useCallback(() => setDialogError(null), []);
-  useEffect(() => { if (state.error) setDialogError(state.error); }, [state]);
+
   const storageKey = "insureit:customer-spot-draft:" + draftKey;
   const fieldNames = ["accidentDate", "accidentTime", "spotDate", "spotTime", "driver", "phone", "location"] as const;
 
@@ -58,13 +60,36 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
     try { sessionStorage.setItem(storageKey, JSON.stringify({ savedAt: Date.now(), values })); }
     catch { /* Browser storage is optional. */ }
   };
-  return <div className="customer-workflow space-y-3"><CustomerErrorDialog message={dialogError} onClose={closeError} /><form ref={formRef} id="customer-spot-intimation-form" noValidate onSubmit={(event) => {
+  return <div className="customer-workflow space-y-3"><CustomerErrorDialog message={dialogError} onClose={closeError} /><form ref={formRef} id="customer-spot-intimation-form" noValidate onSubmit={async (event) => {
+    event.preventDefault(); // Prevent native form-action resetting entered values on validation errors.
+    if (pending) return;
+    saveDraft();
     const invalid = Array.from(event.currentTarget.elements).find((element) => element instanceof HTMLInputElement && !element.checkValidity());
     if (invalid instanceof HTMLInputElement) {
       event.preventDefault();
       setDialogError(invalid.validity.valueMissing ? "Please complete " + (invalid.getAttribute("aria-label") || invalid.name || "the required field") + "." : invalid.validationMessage);
+      invalid.focus();
+      return;
     }
-  }} onInput={saveDraft} onChange={saveDraft} action={formAction} aria-busy={pending} className="space-y-4 rounded-2xl border border-[#DBE4F0] bg-white p-4 shadow-[0_6px_24px_rgba(20,58,100,.04)] sm:p-5">
+    const currentForm = event.currentTarget;
+    const payload = new FormData(currentForm);
+    setPending(true);
+    setDialogError(null);
+    try {
+      const result = await action(initialState, payload);
+      if (result.error) {
+        setDialogError(result.error);
+      } else if (result.destination) {
+        // Only clear the local draft after the backend confirms the save.
+        try { window.sessionStorage.removeItem(storageKey); } catch {}
+        router.push(result.destination);
+      }
+    } catch {
+      setDialogError("Unable to save claim details. Your entries are preserved; please try again.");
+    } finally {
+      setPending(false);
+    }
+  }} onInput={saveDraft} onChange={saveDraft} aria-busy={pending} className="space-y-4 rounded-2xl border border-[#DBE4F0] bg-white p-4 shadow-[0_6px_24px_rgba(20,58,100,.04)] sm:p-5">
     {children}
     </form>
     {evidence}
