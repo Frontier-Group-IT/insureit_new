@@ -18,6 +18,8 @@ const claimPage = await load("../app/claims/[id]/page.tsx");
 const attachments = await load("../components/claim-manager/operations-claim-stage-one-attachments.tsx");
 const media = await load("../components/spot-survey/spot-media-upload-button.tsx");
 const insurance = await load("../components/spot-survey/insurance-verification-modal.tsx");
+const verification = await load("../components/spot-survey/document-verification-modal-v3.tsx");
+const verifyButtons = await load("../components/spot-survey/verify-buttons.tsx");
 
 assert.match(shared, /role="alertdialog"/, "Errors must use an accessible alert dialog");
 assert.match(shared, /aria-modal="true"/, "Dialogs must be modal");
@@ -62,3 +64,10 @@ assert.doesNotMatch(attachments, /voiceMessage\.ok \? "text-emerald-700" : "text
 assert.doesNotMatch(media, /result\.ok \? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"/, "Spot upload errors cannot appear inline");
 assert.doesNotMatch(insurance, /result\.ok \? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"/, "Insurance verification errors cannot appear inline");
 assert.doesNotMatch(insurance, /\{capacityError \? <p /, "Capacity loading errors cannot appear inline");
+
+for (const [file, label] of [[verification, "Spot/RC/DL/GR verification"], [verifyButtons, "Detail and document verification"]]) {
+  assert.match(file, /<ClaimStageErrorDialog/, label + " failures must use the OK dialog");
+}
+assert.doesNotMatch(verifyButtons, /state && !state\.ok \? <p /, "Verification failures must not be rendered inline");
+assert.doesNotMatch(verification, /result\.ok \? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"/, "RC/DL/GR/Spot verification failures must not be rendered inline");
+assert.match(verification, /setRcLookupError\(/, "RC lookup API failures must use popup rather than status paragraph");
