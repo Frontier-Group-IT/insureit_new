@@ -63,7 +63,7 @@ export function CustomerInternalCompletedJourney({
           {milestone?.completed_at ? <span className="hidden text-[11px] text-[#536782] sm:inline">{new Date(milestone.completed_at).toLocaleDateString("en-GB",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric"})}</span> : null}
           {stage.key === "spot_intimation" && !stageTwoLocked ? <Link href={`/customer/spot-intimation?account=${encodeURIComponent(accountId)}&id=${encodeURIComponent(claimId)}&mode=edit`} aria-label="Edit Spot Intimation" title="Edit Spot Intimation" className="ml-2 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#17365D] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#155BAA]"><Pencil className="h-4 w-4" aria-hidden="true" /></Link> : null}
         </div>
-        <div className="space-y-3 border-t border-[#E5EBF4] px-4 py-3">
+        {stage.key !== "payment_encashment" ? <div className="space-y-3 border-t border-[#E5EBF4] px-4 py-3">
           {fields.length || extra.length ? <div className="rounded-xl border border-[#DFE7F2] bg-white">
             <h3 className="border-b border-[#DFE7F2] px-3 py-3 text-[15px] font-semibold text-[#102B54]">{stage.key === "spot_intimation" ? "Accident & Spot Intimation Details" : stage.label+" Details"}</h3>
             <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -75,7 +75,7 @@ export function CustomerInternalCompletedJourney({
           </div> : <p className="rounded-lg bg-[#F6F9FD] px-3 py-3 text-[12px] text-[#64748B]">No details recorded for this stage yet.</p>}
           {stage.key === "spot_intimation" && true ? <CustomerClaimEvidenceWorkspace documents={spotDocuments} claimId={claimId} accountId={accountId} stage="spot_intimation" allowUpload={false} /> : null}
           {stage.key === "claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claimId} accountId={accountId} stage="claim_intimation" allowUpload={false} /> : null}
-        </div>
+        </div> : null}
       </section>;
     })}
   </section>;
