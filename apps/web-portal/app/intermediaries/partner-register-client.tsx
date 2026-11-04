@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CalendarDays, ChevronDown, Search } from "lucide-react";
 import { IntermediaryTabs } from "./intermediary-tabs";
@@ -30,6 +31,7 @@ export type PartnerRegisterRow = {
   partnerStatus: string;
   customerCount: number | null;
   netPremium: number | null;
+  mtdNetPremium: number | null;
   payout: number | null;
   active: boolean;
   createType: "posp" | "misp";
@@ -62,6 +64,7 @@ export function PartnerRegisterClient({
   error?: string;
   loadError: boolean;
 }) {
+  const router = useRouter();
   const [search, setSearch] = useState(initialSearch);
   const initialFilter = initialStatus === "active" || initialStatus === "onboarding" ? initialStatus : "";
   const [status, setStatus] = useState(initialFilter);
@@ -88,14 +91,13 @@ export function PartnerRegisterClient({
   }, { active: 0, onboarding: 0 }), [scopedRows]);
   const visibleRows = useMemo(() => {
     const filtered = status === "active" ? scopedRows.filter((row) => row.active) : status === "onboarding" ? scopedRows.filter((row) => !row.active) : scopedRows;
-    // Rank the full filtered set BEFORE pagination. Preserve the original order for ties.
+    // MTD (India calendar month) ranking BEFORE pagination, including all authorized rows.
+    // Unavailable MTD metrics sort last instead of pretending they are zero.
+    // Stable source order is preserved for equal MTD amounts.
     return [...filtered].sort((a, b) => {
-      const rank = (row: PartnerRegisterRow) => row.netPremium !== null && row.netPremium > 0 ? 0 : row.customerCount !== null && row.customerCount > 0 ? 1 : row.netPremium === null || row.customerCount === null ? 3 : 2;
-      const priority = rank(a) - rank(b);
-      if (priority !== 0) return priority;
-      if (rank(a) === 0) return (b.netPremium ?? 0) - (a.netPremium ?? 0);
-      if (rank(a) === 1) return (b.customerCount ?? 0) - (a.customerCount ?? 0);
-      return 0;
+      if (a.mtdNetPremium === null) return b.mtdNetPremium === null ? 0 : 1;
+      if (b.mtdNetPremium === null) return -1;
+      return b.mtdNetPremium - a.mtdNetPremium;
     });
   }, [scopedRows, status]);
   const totalRecords = visibleRows.length;
@@ -117,6 +119,26 @@ export function PartnerRegisterClient({
   useEffect(() => {
     setCurrentPage((page) => Math.min(page, totalPages));
   }, [totalPages]);
+  // Keep the ranking fresh without reloading the page or polling in background tabs.
+  // New business appears after the next foreground refresh; a new India calendar
+  // month recomputes the MTD amount on the next refresh without stored counters.
+  useEffect(() => {
+    let lastSyncAt = Date.now();
+    const refreshIfDue = () => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastSyncAt < 5 * 60_000) return;
+      lastSyncAt = Date.now();
+      router.refresh();
+    };
+    const interval = window.setInterval(refreshIfDue, 60_000);
+    document.addEventListener("visibilitychange", refreshIfDue);
+    window.addEventListener("focus", refreshIfDue);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshIfDue);
+      window.removeEventListener("focus", refreshIfDue);
+    };
+  }, [router]);
 
   const successMessage = success === "portal_login_invited"
     ? "Password creation link sent."
@@ -147,7 +169,10 @@ export function PartnerRegisterClient({
       <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
         <IntermediaryTabs active="partner" embedded />
         <div className="flex flex-wrap items-center gap-2 border-b border-[#E7ECF3] bg-[#FAFBFD] px-5 py-3">
-          <h2 className="mr-1 whitespace-nowrap text-[12.5px] font-semibold text-[#17203A]">Partner Register</h2>
+          <div className="mr-1 flex shrink-0 flex-col gap-0.5">
+            <h2 className="whitespace-nowrap text-[12.5px] font-semibold text-[#17203A]">Partner Register</h2>
+            <span className="text-[9px] font-medium text-[#64748B]">Sorted by MTD Net Premium ↓</span>
+          </div>
           <form onSubmit={(event) => event.preventDefault()} className="relative min-w-[240px] flex-1 lg:max-w-[380px]">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94A3B8]" />
             <input value={search} onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }} placeholder="Search partner, mobile, email, ID or RM" className="h-9 w-full rounded-lg border border-[#D8E1EC] bg-white pl-9 pr-3 text-[10.5px] text-[#17203A] outline-none placeholder:text-[#94A3B8] focus:border-[#315FEA] focus:ring-2 focus:ring-[#E6ECFF]" />
@@ -239,7 +264,7 @@ function PartnerTable({ rows }: { rows: PartnerRegisterRow[] }) {
         <th className="w-[11%] px-3 py-3">Status</th>
         <th className="w-[9%] px-3 py-3 text-center">Asso./Branch</th>
         <th className="w-[8%] px-3 py-3 text-right">Customers</th>
-        <th className="w-[10%] px-3 py-3 text-right">Net Premium</th>
+        <th className="w-[10%] px-3 py-3 text-right" title="All-time net premium; sorting is based on current-month MTD">Net Premium</th>
         <th className="w-[9%] px-3 py-3 text-right">Payout</th>
         <th className="w-[10%] px-3 py-3 text-center">Action</th>
       </tr></thead>
@@ -252,7 +277,7 @@ function PartnerTable({ rows }: { rows: PartnerRegisterRow[] }) {
           <td className="px-3 py-3"><Status value={label} tone="account" /></td>
           <td className="px-3 py-3 text-center font-semibold tabular-nums text-[#17365D]" title="Associate accounts / registered branches">{row.associateCount === null ? "—" : row.associateCount.toLocaleString("en-IN")}/{row.branchCount === null ? "—" : row.branchCount.toLocaleString("en-IN")}</td>
           <td className="px-3 py-3 text-right tabular-nums" title={row.customerCount === null ? "Customer attribution unavailable" : undefined}>{row.customerCount === null ? "—" : row.customerCount.toLocaleString("en-IN")}</td>
-          <td className="px-3 py-3 text-right tabular-nums" title={row.netPremium === null ? "Net premium attribution unavailable" : undefined}>{money(row.netPremium)}</td>
+          <td className="px-3 py-3 text-right tabular-nums" title={row.netPremium === null ? "Net premium attribution unavailable" : "Lifetime net premium with current-month ranking shown below"}><span>{money(row.netPremium)}</span><span className="mt-0.5 block text-[9px] font-semibold text-[#0F766E]" title="Current-month net premium (India time)">MTD {money(row.mtdNetPremium)}</span></td>
           <td className="px-3 py-3 text-right tabular-nums" title={row.payout === null ? "Payout attribution unavailable" : undefined}>{money(row.payout)}</td>
           <td className="px-3 py-3 text-center"><div className="flex flex-col items-center gap-1.5">{renderAction(row)}</div></td>
         </tr>;

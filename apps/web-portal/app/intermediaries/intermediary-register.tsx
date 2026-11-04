@@ -171,6 +171,17 @@ export async function IntermediaryRegister({
   const partnerBusinessMap = new Map<string, PartnerBusinessMetric>(
     ((partnerBusinessData ?? []) as PartnerBusinessMetric[]).map((metric) => [metric.partner_id, metric])
   );
+  // Ranking uses current-month business, independently of the lifetime Net Premium/Payout.
+  // Failure must not silently fall back to lifetime sorting.
+  const { data: mtdBusinessData, error: mtdBusinessError } =
+    selectedType === "partner" && partnerBusinessIds.length
+      ? await admin.rpc("partner_register_mtd_net_premium", { p_partner_ids: partnerBusinessIds })
+      : { data: [], error: null };
+  type PartnerMtdMetric = { partner_id: string; mtd_net_premium: number | string };
+  const mtdBusinessMap = new Map<string, PartnerMtdMetric>(
+    ((mtdBusinessData ?? []) as PartnerMtdMetric[]).map((metric) => [metric.partner_id, metric])
+  );
+
 
   // Fetch current Group membership only for Partners already authorized in this register.
   type CurrentGroupMembership = { partner_id: string; group_id: string };
@@ -224,6 +235,7 @@ export async function IntermediaryRegister({
       const partnerComplete = app?.partner_status === "active_partner";
       const partnerId = displayIdentity(row, app, "partner");
       const metric = app?.partner_record_id && !partnerBusinessError ? partnerBusinessMap.get(app.partner_record_id) : undefined;
+      const mtdMetric = app?.partner_record_id && !mtdBusinessError ? mtdBusinessMap.get(app.partner_record_id) : undefined;
       const linkedLabel = linked ? linkedAccountLabel(linkedType, linked) : "Not created";
       const matchingGroupIds = app?.partner_record_id ? groupsByPartner.get(app.partner_record_id) ?? [] : [];
       // Ambiguous membership fails closed rather than arbitrarily choosing a Group.
@@ -251,6 +263,7 @@ export async function IntermediaryRegister({
           : "Not Created",
         customerCount: metric ? Number(metric.customer_count) : null,
         netPremium: metric ? Number(metric.net_premium) : null,
+        mtdNetPremium: mtdMetric ? Number(mtdMetric.mtd_net_premium) : null,
         payout: metric ? Number(metric.payout) : null,
         active: partnerComplete,
         createType: allowedType,
