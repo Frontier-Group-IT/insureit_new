@@ -98,6 +98,9 @@ jobs:
       - name: Customer claim document upload regression
         run: node apps/mobile-app/scripts/customer-document-upload-regression.mjs
 
+      - name: Customer claim document no-checkmark regression
+        run: node apps/mobile-app/scripts/customer-claim-document-no-checkmark-regression.mjs
+
       - name: Customer KYC filesystem document reader regression
         run: node apps/mobile-app/scripts/customer-kyc-document-reader-regression.mjs
 

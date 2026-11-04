@@ -624,7 +624,7 @@ function StageOneValue({ label, value, icon, trailingLabel }: { label: string; v
 function DocumentReadyTile({ title, source, artwork, saved, onPress }: { title: string; source?: any; artwork?: 'accident-video'; saved: boolean; onPress: () => void }) {
   return (
     <Pressable accessibilityRole="button" accessibilityState={{ selected: saved }} onPress={onPress} style={[styles.documentReadyTile, saved && styles.documentReadyTileSelected]}>
-      {saved ? <View style={styles.documentSelectedCheck}><MaterialCommunityIcons name="check" size={15} color="#18864B" /></View> : null}
+      
       {saved ? <View style={styles.documentRemoveButton}><MaterialCommunityIcons name="close" size={13} color="#C43232" /></View> : null}
       <View style={styles.documentReadyArtworkWrap}>
         {artwork === 'accident-video' ? <AccidentVideoArtwork /> : source ? <Image source={source} style={styles.documentReadyArtwork} resizeMode="contain" /> : null}
