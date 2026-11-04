@@ -166,7 +166,9 @@ export async function completeClaimJourneyStage(claimId: string, formData: FormD
 
   const { data: claim, error: claimError } = await supabase.from("claims").select("id,current_status,claim_service_mode,policy_service_source").eq("id", claimId).maybeSingle<ManagedClaim>();
   if (claimError || !claim) throw new Error(claimError?.message ?? "Claim not found.");
-  if (claim.claim_service_mode !== "broker_managed") throw new Error("Operations can update only managed claims.");
+  if (claim.claim_service_mode !== "broker_managed" && (claim.policy_service_source !== "external" || access.isPartner)) {
+    throw new Error("Only authorized Operations users can edit self-managed external claims.");
+  }
   if (access.isPartner && (claim.policy_service_source !== "external" || !saveOnly)) {
     throw new Error("Partners may save External Claim stage details without advancing Operations stages.");
   }

@@ -227,7 +227,7 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
   const backHref = "/claims";
   const title = `Documents Verification - ${claimForVerification.claim_no}${claimForVerification.insurer_claim_no ? ` / ${claimForVerification.insurer_claim_no}` : ""}`;
 
-  if (claim.claim_service_mode === "self_managed") {
+  if (claim.claim_service_mode === "self_managed" && claim.policy_service_source !== "external") {
     const { data: milestoneRows } = await admin
       .from("claim_milestones")
       .select("milestone_key, milestone_status")
@@ -291,8 +291,8 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
     spotIntimationAt: effectiveSpotDetails.spot_intimation_at,
     spotDetails: effectiveSpotDetails,
   };
-  const isExternalManagedClaim = claim.policy_service_source === "external" && claim.claim_service_mode === "broker_managed";
-  const canAdvanceClaimIntimation = !isExternalManagedClaim || claimIntimationStageStatuses.includes(claim.current_status);
+  const isExternalOperationsClaim = claim.policy_service_source === "external";
+  const canAdvanceClaimIntimation = !isExternalOperationsClaim || claimIntimationStageStatuses.includes(claim.current_status);
 
   return (
     <ClaimManagerShell title={title} backHref={backHref}>
@@ -312,7 +312,7 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
           claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} allowStageAdvance={canAdvanceClaimIntimation} showClaimNumberPrompt={claim.policy_service_source !== "external" && !claim.insurer_claim_no?.trim()} />}
           initialStageKey={requestedStage}
           externalCustomerMilestones={externalCustomerMilestones?.map((milestone) => ({ key: milestone.milestone_key, status: milestone.milestone_status }))}
-          unrestrictedStageEditing={isExternalManagedClaim}
+          unrestrictedStageEditing={isExternalOperationsClaim}
         />
       </div>
     </ClaimManagerShell>

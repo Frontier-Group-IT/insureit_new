@@ -11,7 +11,7 @@ const maxDocumentSizeBytes = 5 * 1024 * 1024;
 const maxVideoSizeBytes = 50 * 1024 * 1024;
 const maxSpotPhotoSizeBytes = 20 * 1024 * 1024;
 
-type ClaimForUpload = { id: string; customer_id: string; current_status: ClaimStatus; accident_at: string | null; claim_service_mode: "broker_managed" | "self_managed" };
+type ClaimForUpload = { id: string; customer_id: string; current_status: ClaimStatus; accident_at: string | null; claim_service_mode: "broker_managed" | "self_managed"; policy_service_source: "sibl" | "external" | null };
 type ExistingClaimDocument = { id: string; customer_id: string; document_type: string; file_name: string; storage_bucket: string; storage_path: string; verification_status: string; rejection_reason: string | null; verified_by: string | null; verified_at: string | null };
 export type ClaimUploadFileMetadata = { name: string; size: number; type: string };
 export type ClaimSignedUpload = { path: string; token: string; fileName: string; documentType: string; contentType: string };
@@ -22,9 +22,11 @@ type VerificationType = "rc" | "insurance" | "document";
 
 async function uploadContext(claimId: string) {
   const access = await requireClaimWorkflowAccess(claimId, "You do not have permission to upload claim documents.");
-  const { data, error } = await access.supabase.from("claims").select("id, customer_id, current_status, accident_at, claim_service_mode").eq("id", claimId).maybeSingle<ClaimForUpload>();
+  const { data, error } = await access.supabase.from("claims").select("id, customer_id, current_status, accident_at, claim_service_mode, policy_service_source").eq("id", claimId).maybeSingle<ClaimForUpload>();
   if (error || !data) throw new Error(error?.message ?? "Claim not found.");
-  if (data.claim_service_mode !== "broker_managed") throw new Error("Operations can process this claim only after assistance is accepted.");
+  if (data.claim_service_mode !== "broker_managed" && (data.policy_service_source !== "external" || access.isPartner)) {
+    throw new Error("Only authorized Operations users can upload documents to self-managed external claims.");
+  }
   return { ...access, claim: data };
 }
 

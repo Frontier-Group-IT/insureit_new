@@ -55,15 +55,15 @@ assert.match(stage3Workspace, /\[claimId, rows\]/, "Stage 3 verification data mu
 assert.match(stage3Loader, /requireClaimWorkflowAccess\(claimId, "You do not have permission to verify claim documents\."\)/, "Stage 3 parity loader must pass through the shared claim workflow authorization guard.");
 assert.match(claimWorkflowAccess, /hasEffectiveCapability\(profile, "manage_claims", "edit"\)/, "Shared claim workflow authorization must preserve employee manage_claims edit capability checks.");
 assert.match(claimWorkflowAccess, /canAccessCustomer\(profile\.id, profile\.role, claim\.customer_id, "manage_claims"\)/, "Shared claim workflow authorization must preserve employee customer-scope enforcement.");
-assert.match(stage3Loader, /claim\.claim_service_mode !== "broker_managed"/, "Stage 3 parity must remain within the broker-managed Operations boundary.");
+assert.match(stage3Loader, /claim\.policy_service_source !== "external" \|\| access\.isPartner/, "Stage 3 self-managed external verification must remain Operations-only.");
 assert.match(stage3Loader, /from\("external_policies"\)/, "External Claim Stage 3 must resolve external-policy validity dates.");
 assert.match(stage3Loader, /from\("policies"\)/, "Internal Claim Stage 3 must resolve internal-policy validity dates.");
 assert.match(stage3Loader, /from\("claim_document_verifications"\)/, "Stage 3 must load the same verification history used by Stage 1 behavior.");
 
 assert.match(claimPage, /spotContent=\{<SpotSurveyWorkspace/, "Operations claim Stage 1 must keep the shared SpotSurveyWorkspace for broker-managed claims.");
 assert.match(claimPage, /claimIntimationContent=\{<FinalDocumentsWorkspaceV2/, "Operations claim Stage 3 must use the shared final-document workspace for broker-managed claims.");
-assert.match(claimPage, /if \(claim\.claim_service_mode === "self_managed"\)/, "Only self-managed claims may use the read-only assistance journey instead of broker-managed Operations stages.");
-assert.match(claimPage, /<AssistanceIntakePanel/, "Self-managed External Claims must retain the scoped read-only journey.");
+assert.match(claimPage, /if \(claim\.claim_service_mode === "self_managed" && claim\.policy_service_source !== "external"\)/, "External self-managed claims use Operations, while other self-managed claims retain the assistance view.");
+assert.match(claimPage, /<AssistanceIntakePanel/, "The separate scoped assistance viewer remains available for other self-managed claims.");
 
 const verifiedStatusFunction = claimWorkflow.match(/export function verifiedStatusFor\(status: ClaimStatus\) \{[\s\S]*?\n\}/)?.[0];
 assert.ok(verifiedStatusFunction, "The document verification status guard must remain available.");

@@ -11,6 +11,7 @@ type ClaimRow = {
   current_status: ClaimStatus;
   claim_service_mode: "broker_managed" | "self_managed";
   accident_description: string | null;
+  policy_service_source: "sibl" | "external" | null;
 };
 
 function textValue(formData: FormData, name: string) {
@@ -45,10 +46,12 @@ function mergeCustomerDriverDescription(existing: string | null, driverName: str
   return [preserved, ...driverLines].filter(Boolean).join("\n") || null;
 }
 
-async function loadManagedClaim(claimId: string, supabase: Awaited<ReturnType<typeof requireClaimWorkflowAccess>>["supabase"]) {
-  const { data, error } = await supabase.from("claims").select("id,current_status,claim_service_mode,accident_description").eq("id", claimId).maybeSingle<ClaimRow>();
+async function loadManagedClaim(claimId: string, supabase: Awaited<ReturnType<typeof requireClaimWorkflowAccess>>["supabase"], isPartner: boolean) {
+  const { data, error } = await supabase.from("claims").select("id,current_status,claim_service_mode,policy_service_source,accident_description").eq("id", claimId).maybeSingle<ClaimRow>();
   if (error || !data) throw new Error(error?.message ?? "Claim not found.");
-  if (data.claim_service_mode !== "broker_managed") throw new Error("Operations can update Spot Intimation only for managed claims.");
+  if (data.claim_service_mode !== "broker_managed" && (data.policy_service_source !== "external" || isPartner)) {
+    throw new Error("Only authorized Operations users can edit self-managed external claim Spot Intimation.");
+  }
   if (!isClaimStatus(data.current_status)) throw new Error("Claim has an unsupported status.");
   return data;
 }
@@ -84,7 +87,7 @@ export async function advanceInternalSpotIntimation(claimId: string, formData: F
   requireInternalSpotIntimationDriverDetails(formData);
   const access = await requireClaimWorkflowAccess(claimId, "You do not have permission to update claim workflow stages.");
   const { profile, supabase } = access;
-  const claim = await loadManagedClaim(claimId, supabase);
+  const claim = await loadManagedClaim(claimId, supabase, access.isPartner);
   const requestedStatus = textValue(formData, "next_status");
   const nextStatus = isClaimStatus(requestedStatus) ? requestedStatus : null;
   const allowedStatus = managerTransitions[claim.current_status];
@@ -105,7 +108,7 @@ export async function saveInternalSpotIntimationDetails(claimId: string, formDat
   requireInternalSpotIntimationDriverDetails(formData);
   const access = await requireClaimWorkflowAccess(claimId, "You do not have permission to update claim workflow stages.");
   const { profile, supabase } = access;
-  const claim = await loadManagedClaim(claimId, supabase);
+  const claim = await loadManagedClaim(claimId, supabase, access.isPartner);
   const { normalized, location, accidentDescription, details } = normalizedDetails(claim, formData);
   const { data: persistedClaim, error: claimError } = await supabase.from("claims").update({ accident_at: normalized.incidentAt, spot_intimation_at: normalized.spotIntimationAt, accident_location: location, accident_description: accidentDescription }).eq("id", claimId).select("id").maybeSingle<{ id: string }>();
   if (claimError) throw new Error(claimError.message);

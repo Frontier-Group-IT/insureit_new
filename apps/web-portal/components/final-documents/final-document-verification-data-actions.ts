@@ -10,6 +10,7 @@ type ClaimRow = {
   external_policy_id: string | null;
   accident_at: string | null;
   claim_service_mode: "broker_managed" | "self_managed" | null;
+  policy_service_source: "sibl" | "external" | null;
 };
 
 type PolicyDates = { start_date: string | null; end_date: string | null };
@@ -48,15 +49,17 @@ type Result = { ok: true; data: FinalVerificationData } | { ok: false; message: 
 export async function loadFinalDocumentVerificationData(claimId: string): Promise<Result> {
   try {
     if (!claimId.trim()) throw new Error("Missing claim id.");
-    await requireClaimWorkflowAccess(claimId, "You do not have permission to verify claim documents.");
+    const access = await requireClaimWorkflowAccess(claimId, "You do not have permission to verify claim documents.");
     const admin = createSupabaseAdminClient();
     const { data: claim, error: claimError } = await admin
       .from("claims")
-      .select("id, customer_id, policy_id, external_policy_id, accident_at, claim_service_mode")
+      .select("id, customer_id, policy_id, external_policy_id, accident_at, claim_service_mode, policy_service_source")
       .eq("id", claimId)
       .maybeSingle<ClaimRow>();
     if (claimError || !claim) throw new Error(claimError?.message ?? "Claim not found.");
-    if (claim.claim_service_mode !== "broker_managed") throw new Error("Operations can process this claim only after assistance is accepted.");
+    if (claim.claim_service_mode !== "broker_managed" && (claim.policy_service_source !== "external" || access.isPartner)) {
+      throw new Error("Only authorized Operations users can verify self-managed external claims.");
+    }
 
     let policyDates: PolicyDates | null = null;
     if (claim.external_policy_id) {

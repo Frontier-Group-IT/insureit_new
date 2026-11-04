@@ -53,7 +53,7 @@ assert(loader.includes('.from("claim_milestones")'), 'Read-only loader must use 
 assert(loader.includes('.from("claim_documents")'), 'Read-only loader must load customer claim evidence without mutations.');
 assert(loader.includes('milestone_key,document_type,file_name,verification_status'), 'Read-only loader must retrieve persisted claim document milestone keys.');
 
-assert(page.includes('if (claim.claim_service_mode === "self_managed")'), 'Claim detail route must keep self-managed claims on the external branch.');
-assert(page.includes('<AssistanceIntakePanel'), 'Self-managed claim route must render the isolated external read-only viewer component.');
+assert(page.includes('if (claim.claim_service_mode === "self_managed" && claim.policy_service_source !== "external")'), 'Non-external self-managed claims retain the isolated assistance viewer; external claims use Operations.');
+assert(page.includes('<AssistanceIntakePanel'), 'The scoped assistance viewer component must remain available for non-external self-managed claims.');
 
 console.log('External claim read-only nine-stage regression passed.');
