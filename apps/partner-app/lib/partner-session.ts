@@ -18,7 +18,9 @@ export type PartnerIdentity =
       auth_user_id: string;
       portal_account_id: string;
       intermediary_id: string;
-      intermediary_type: 'partner' | 'posp' | 'misp';
+      intermediary_type: 'partner' | 'posp' | 'misp' | 'group' | 'branch';
+      portal_access_type?: 'partner' | 'posp' | 'misp' | 'group' | 'branch' | null;
+      branch_id?: string | null;
       intermediary_code: string | null;
       display_name: string;
       partner_id: string;
@@ -33,12 +35,23 @@ export type PartnerCommercialScope = {
   partner_ids: string[];
   intermediary_ids: string[];
   group_ids: string[];
+  portal_access_type?: 'group' | 'branch' | null;
 };
 
 export type PartnerSessionContext = {
   identity: PartnerIdentity;
   scope: PartnerCommercialScope;
 };
+
+/** Identify authenticated Branch accounts by server-provided identity/scope—not name or intermediary role alone. */
+export function isPartnerBranchSession(context: PartnerSessionContext | null | undefined): boolean {
+  if (context?.identity.actor_kind !== 'intermediary') return false;
+  return context.identity.portal_access_type === 'branch'
+    || context.scope.portal_access_type === 'branch'
+    || context.identity.intermediary_type === 'branch'
+    || Boolean(context.identity.branch_id);
+}
+
 
 export async function getCurrentSession(): Promise<Session | null> {
   const { data, error } = await supabase.auth.getSession();
