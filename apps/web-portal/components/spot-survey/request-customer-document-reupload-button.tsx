@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
 import { requestSpotSurveyDocumentReupload } from "@/app/claims/[id]/spot-survey-actions";
 
 /** Ask the customer to re-upload: never opens an Operations file picker. */
@@ -97,7 +98,7 @@ export function RequestCustomerDocumentReuploadButton({ claimId, documentId, fil
         <textarea id={`${dialogId}-reason`} value={reason} onChange={(event) => setReason(event.target.value)}
           placeholder="Please re-upload this document with a clear, valid copy." rows={3}
           className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm text-slate-800" />
-        {message ? <p role="alert" className="mt-2 text-xs text-red-600">{message}</p> : null}
+        
         <div className="mt-4 flex justify-end gap-2">
           <button ref={closeRef} type="button" disabled={pending} onClick={() => setOpen(false)}
             className="rounded-lg border px-4 py-2 text-xs font-semibold">Cancel</button>
@@ -113,6 +114,7 @@ export function RequestCustomerDocumentReuploadButton({ claimId, documentId, fil
 
   return (
     <>
+      <ClaimStageErrorDialog message={message} onClose={() => setMessage("")} />
       <button ref={triggerRef} type="button" aria-label="Request customer to re-upload document" title="Request customer re-upload"
         onClick={() => { setMessage(""); setOpen(true); }}
         className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-[#C68A22] transition hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30">
