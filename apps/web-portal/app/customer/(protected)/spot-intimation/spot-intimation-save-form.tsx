@@ -5,23 +5,29 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, LoaderCircle } from "lucide-react";
 import { CustomerErrorDialog } from "@/components/customer-portal/customer-error-dialog";
+import type { SpotDraftFields, SpotDraftResult } from "./draft-actions";
 
 export type SpotSaveState = { error: string | null; destination?: string };
 const initialState: SpotSaveState = { error: null };
 
-export function SpotIntimationSaveForm({ action, children, cancelHref, evidence, draftKey, editMode = false }: {
+export function SpotIntimationSaveForm({ action, children, cancelHref, evidence, draftKey, editMode = false, serverDraft, saveServerDraft }: {
   action: (state: SpotSaveState, form: FormData) => Promise<SpotSaveState>;
   children: React.ReactNode;
   cancelHref: string;
   evidence?: React.ReactNode;
   draftKey: string;
   editMode?: boolean;
+  serverDraft?: { fields: SpotDraftFields; updatedAt: string } | null;
+  saveServerDraft?: (fields: SpotDraftFields) => Promise<SpotDraftResult>;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [dialogError, setDialogError] = useState<string | null>(null);
   const closeError = useCallback(() => setDialogError(null), []);
+  const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const syncSequence = useRef(0);
+  const [syncState, setSyncState] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   const storageKey = "insureit:customer-spot-draft:" + draftKey;
   const fieldNames = ["accidentDate", "accidentTime", "spotDate", "spotTime", "driver", "phone", "location"] as const;
@@ -32,37 +38,63 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
     if (!form) return;
     try {
       const raw = sessionStorage.getItem(storageKey);
-      if (!raw) return;
-      const draft = JSON.parse(raw) as { savedAt: number; values: Record<string, string> };
-      if (!draft?.savedAt || Date.now() - draft.savedAt > 30 * 60 * 1000) {
-        sessionStorage.removeItem(storageKey);
-        return;
-      }
+      const local = raw ? JSON.parse(raw) as { savedAt: number; values: Record<string, string> } : null;
+      const localIsRecent = Boolean(local?.savedAt && Date.now() - local.savedAt <= 30 * 60 * 1000);
+      if (raw && !localIsRecent) sessionStorage.removeItem(storageKey);
+      const serverAt = serverDraft?.updatedAt ? new Date(serverDraft.updatedAt).getTime() : 0;
+      const values = localIsRecent && (local?.savedAt ?? 0) > serverAt ? local?.values : serverDraft?.fields;
+      if (!values) return;
       for (const name of fieldNames) {
         const input = form.elements.namedItem(name);
-        if (input instanceof HTMLInputElement && typeof draft.values?.[name] === "string") {
-          input.value = draft.values[name];
-        }
+        if (input instanceof HTMLInputElement && typeof values[name] === "string") input.value = values[name];
       }
     } catch {
       // Browser storage restrictions must not block claim entry.
     }
-  }, [storageKey]);
+  }, [storageKey, serverDraft]);
 
-  const saveDraft = () => {
+  const collectDraft = (): SpotDraftFields | null => {
     const form = formRef.current;
-    if (!form) return;
-    const values: Record<string, string> = {};
+    if (!form) return null;
+    const fields = {} as SpotDraftFields;
     for (const name of fieldNames) {
       const input = form.elements.namedItem(name);
-      if (input instanceof HTMLInputElement) values[name] = input.value;
+      fields[name] = input instanceof HTMLInputElement ? input.value : "";
     }
+    return fields;
+  };
+  const saveDraft = () => {
+    const values = collectDraft();
+    if (!values) return;
     try { sessionStorage.setItem(storageKey, JSON.stringify({ savedAt: Date.now(), values })); }
     catch { /* Browser storage is optional. */ }
   };
+  const syncDraft = () => {
+    if (!saveServerDraft || pending) return;
+    const values = collectDraft();
+    if (!values) return;
+    const sequence = ++syncSequence.current;
+    setSyncState("saving");
+    void saveServerDraft(values).then((result) => {
+      if (sequence !== syncSequence.current) return;
+      setSyncState(result.ok ? "saved" : "error");
+    }).catch(() => {
+      if (sequence === syncSequence.current) setSyncState("error");
+    });
+  };
+  const queueSync = () => {
+    saveDraft();
+    if (syncTimer.current) clearTimeout(syncTimer.current);
+    if (saveServerDraft && !pending) syncTimer.current = setTimeout(syncDraft, 650);
+  };
+  useEffect(() => () => {
+    if (syncTimer.current) clearTimeout(syncTimer.current);
+  }, []);
   return <div className="customer-workflow space-y-3"><CustomerErrorDialog message={dialogError} onClose={closeError} /><form ref={formRef} id="customer-spot-intimation-form" noValidate onSubmit={async (event) => {
     event.preventDefault(); // Prevent native form-action resetting entered values on validation errors.
     if (pending) return;
+    if (syncTimer.current) clearTimeout(syncTimer.current);
+    syncSequence.current++;
     saveDraft();
     const invalid = Array.from(event.currentTarget.elements).find((element) => element instanceof HTMLInputElement && !element.checkValidity());
     if (invalid instanceof HTMLInputElement) {
@@ -89,9 +121,10 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
     } finally {
       setPending(false);
     }
-  }} onInput={saveDraft} onChange={saveDraft} aria-busy={pending} className="space-y-4 rounded-2xl border border-[#DBE4F0] bg-white p-4 shadow-[0_6px_24px_rgba(20,58,100,.04)] sm:p-5">
+  }} onInput={queueSync} onChange={queueSync} onBlurCapture={() => { if (syncTimer.current) clearTimeout(syncTimer.current); syncDraft(); }} aria-busy={pending} className="space-y-4 rounded-2xl border border-[#DBE4F0] bg-white p-4 shadow-[0_6px_24px_rgba(20,58,100,.04)] sm:p-5">
     {children}
     </form>
+    {saveServerDraft ? <p role="status" aria-live="polite" className="text-right text-[10px] text-[#687A94]">{syncState === "saving" ? "Saving draft…" : syncState === "saved" ? "Draft saved securely" : syncState === "error" ? "Draft not synced yet — entries remain in this browser" : "Details are saved automatically as draft"}</p> : null}
     {evidence}
     <div className="rounded-2xl border border-[#DBE4F0] bg-white p-3 sm:p-4"><div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
       {pending
