@@ -60,7 +60,7 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
       : status === "expired" ? "There are no expired records for this selection." : "Renewal records will appear here when available.";
   const emptyState = (
     <div className="flex min-h-[240px] flex-col items-center justify-center gap-2 px-4 py-7 text-center" role="status">
-      <Image src="/assets/customer-renewals/empty-state.webp" alt="Completed renewals clipboard, calendar and protective checkmark shield" width={190} height={139} unoptimized className="h-auto w-[160px] object-contain sm:w-[190px]" />
+      <Image src="/assets/customer-renewals/empty-state.svg" alt="Completed renewals clipboard, calendar and protective checkmark shield" width={260} height={188} unoptimized className="h-auto w-[160px] object-contain sm:w-[190px]" />
       <h2 className="text-[15px] font-bold text-[#243763]">{emptyTitle}</h2>
       <p className="max-w-sm text-[11px] leading-5 text-[#7384A5]">{emptyDescription}</p>
     </div>
