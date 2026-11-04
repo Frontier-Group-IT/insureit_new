@@ -39,11 +39,8 @@ export function CustomerInternalCompletedJourney({
 }) {
   const completedStages = Math.max(0, Math.min(completedCount, INTERNAL_JOURNEY_STAGES.length));
   const spotDocuments = documents.filter(doc => spotTypes.has(normalize(doc.document_type)));
+  const stageTwoLocked = completedStages >= 2 || milestones.some(item => item.milestone_key === "claim_intimation" && (item.milestone_status === "completed" || item.milestone_status === "not_applicable"));
   return <section className="overflow-hidden rounded-2xl border border-[#DCE5F1] bg-white">
-    <header className="border-b border-[#DCE5F1] bg-[#F6F9FD] px-4 py-3">
-      <h2 className="text-[16px] font-bold text-[#102B54]">Claim Journey</h2>
-      <p className="text-[11px] text-[#63748F]">{completedStages} completed {completedStages === 1 ? "stage" : "stages"} · {INTERNAL_JOURNEY_STAGES.length} total</p>
-    </header>
     {INTERNAL_JOURNEY_STAGES.slice(0,completedStages).map((stage) => {
       const status = "Completed";
       const milestone = milestones.find(item => item.milestone_key === stage.key);
@@ -64,7 +61,7 @@ export function CustomerInternalCompletedJourney({
           <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#188460] text-white"><Check className="h-4 w-4"/></span>
           <span className="min-w-0 flex-1"><span className="block text-[14px] font-bold text-[#132D54]">{stage.label}</span><span className="text-[11px] text-[#71819A]">{status}</span></span>
           {milestone?.completed_at ? <span className="hidden text-[11px] text-[#536782] sm:inline">{new Date(milestone.completed_at).toLocaleDateString("en-GB",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric"})}</span> : null}
-          {stage.key === "spot_intimation" ? <Link href={`/customer/spot-intimation?account=${encodeURIComponent(accountId)}&id=${encodeURIComponent(claimId)}&mode=edit`} className="ml-2 inline-flex h-8 items-center gap-1 rounded-lg bg-[#17365D] px-3 text-[11px] font-semibold text-white"><Pencil className="h-3.5 w-3.5" />Edit</Link> : null}
+          {stage.key === "spot_intimation" && !stageTwoLocked ? <Link href={`/customer/spot-intimation?account=${encodeURIComponent(accountId)}&id=${encodeURIComponent(claimId)}&mode=edit`} aria-label="Edit Spot Intimation" title="Edit Spot Intimation" className="ml-2 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#17365D] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#155BAA]"><Pencil className="h-4 w-4" aria-hidden="true" /></Link> : null}
         </div>
         <div className="space-y-3 border-t border-[#E5EBF4] px-4 py-3">
           {fields.length || extra.length ? <div className="rounded-xl border border-[#DFE7F2] bg-white">
