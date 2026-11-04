@@ -161,6 +161,9 @@ jobs:
         run: node scripts/customer-full-height-layout-regression.mjs
       - name: Policyless customer claim ownership RLS regression
         run: node scripts/customer-policyless-claim-rls-regression.mjs
+      - name: Customer Claim upload and voice recovery regression
+        working-directory: apps/web-portal
+        run: node scripts/customer-claim-upload-voice-recovery-regression.mjs
       - name: Customer Claims phone and insurer number regression
         run: node scripts/customer-claims-phone-claimno-regression.mjs
       - name: Customer Claim policy source and legacy driver fallback regression

@@ -38,9 +38,9 @@ export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadS
   if (String(form.get("stage") || "") === "spot_intimation" &&
     claim.claim_service_mode === "broker_managed" && !claim.external_policy_id &&
     ((internal_projection?.completedStageCount ?? 0) >= 2 ||
-      milestones.some(item => item.milestone_key === "spot_status" &&
+      milestones.some(item => item.milestone_key === "claim_intimation" &&
         ["completed", "not_applicable"].includes(item.milestone_status)))) {
-    return {error:"Spot Status is complete. Stage 1 documents are locked."};
+    return {error:"Claim Intimation (Stage 2) is complete. Stage 1 documents are locked."};
   }
   if(claim.claim_service_mode==="broker_managed" && ["Settled","Closed","Claim Complete"].includes(claim.current_status))
     return {error:"Completed managed claims cannot accept new customer documents."};
@@ -67,7 +67,7 @@ export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadS
       return {error:"Unable to register "+file.name+"; "+uploadedCount+" previous file(s) saved.",uploadedCount};
     }
     uploadedCount++;
-    if(files.length===1) return { error: null, uploaded: saved.data };
+    if(files.length===1) return { error: null, uploaded: saved.data, uploadedCount: 1 };
     lastUploaded=saved.data;
   }
   // Preserve the current-main no-redirect contract: unsaved stage fields must not reset.
