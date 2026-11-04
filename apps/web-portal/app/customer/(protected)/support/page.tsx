@@ -45,8 +45,13 @@ export default async function CustomerSupportPage({
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[url('/assets/supclaim.jpeg')] bg-cover bg-center bg-no-repeat" />
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F5F7FF]/94 via-[#F5F7FF]/72 via-45% to-[#F5F7FF]/14" />
         <div className="relative z-10 max-w-[530px]">
-          <div className="flex items-center gap-3"><img src="/assets/customer-3d-icons/support.png" alt="" aria-hidden="true" width={70} height={70} className="h-[64px] w-[64px] shrink-0 object-contain" /><h1 className="text-[29px] font-extrabold leading-tight tracking-tight text-[#212755]">Need Help?</h1></div>
-          <p className="mt-1 max-w-[360px] text-[11px] font-medium leading-4 text-[#7781A5]">Get quick support, track your requests<br/>and resolve your queries — all in one place.</p>
+          <div className="flex items-center gap-3">
+            <img src="/assets/customer-3d-icons/support.png" alt="" aria-hidden="true" width={70} height={70} className="h-[64px] w-[64px] shrink-0 object-contain" />
+            <div className="min-w-0">
+              <h1 className="text-[29px] font-extrabold leading-tight tracking-tight text-[#212755]">Need Help?</h1>
+              <p className="mt-1 max-w-[360px] text-[11px] font-medium leading-4 text-[#7781A5]">Get quick support, track your requests<br/>and resolve your queries — all in one place.</p>
+            </div>
+          </div>
           <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
             <div className="flex items-center gap-2"><Headphones className="h-4 w-4 text-[#693CEC]"/><span><b className="block text-[10px] text-[#343B73]">Quick Response</b><small className="text-[9px] text-[#8791AB]">We&apos;re here to help</small></span></div>
             <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#693CEC]"/><span><b className="block text-[10px] text-[#343B73]">Trusted Support</b><small className="text-[9px] text-[#8791AB]">From real experts</small></span></div>
