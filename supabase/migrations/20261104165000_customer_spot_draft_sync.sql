@@ -21,7 +21,7 @@ ON public.claim_spot_intimation_drafts FOR SELECT TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.claims c
-    WHERE c.id = claim_id AND c.customer_id = customer_id
+    WHERE c.id = claim_spot_intimation_drafts.claim_id AND c.customer_id = claim_spot_intimation_drafts.customer_id
       AND public.can_access_claim((SELECT auth.uid()), c.id)
   )
 );
@@ -32,7 +32,7 @@ ON public.claim_spot_intimation_drafts FOR INSERT TO authenticated
 WITH CHECK (
   EXISTS (
     SELECT 1 FROM public.claims c
-    WHERE c.id = claim_id AND c.customer_id = customer_id
+    WHERE c.id = claim_spot_intimation_drafts.claim_id AND c.customer_id = claim_spot_intimation_drafts.customer_id
       AND c.current_status = 'Draft'
       AND public.can_access_claim((SELECT auth.uid()), c.id)
   )
@@ -42,7 +42,7 @@ ON public.claim_spot_intimation_drafts FOR UPDATE TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.claims c
-    WHERE c.id = claim_id AND c.customer_id = customer_id
+    WHERE c.id = claim_spot_intimation_drafts.claim_id AND c.customer_id = claim_spot_intimation_drafts.customer_id
       AND c.current_status = 'Draft'
       AND public.can_access_claim((SELECT auth.uid()), c.id)
   )
@@ -50,7 +50,7 @@ USING (
 WITH CHECK (
   EXISTS (
     SELECT 1 FROM public.claims c
-    WHERE c.id = claim_id AND c.customer_id = customer_id
+    WHERE c.id = claim_spot_intimation_drafts.claim_id AND c.customer_id = claim_spot_intimation_drafts.customer_id
       AND c.current_status = 'Draft'
       AND public.can_access_claim((SELECT auth.uid()), c.id)
   )
