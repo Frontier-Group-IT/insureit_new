@@ -18,6 +18,18 @@ for (const label of [
 assert.ok(file.includes('<Text style={[styles.eyebrow, styles.iosEyebrow]}>START A CLAIM</Text>'), 'iOS should use a distinct readable eyebrow style');
 assert.match(file, /<Text style=\{\[styles\.title, styles\.iosTitle\]\} numberOfLines=\{1\} adjustsFontSizeToFit minimumFontScale=\{0\.82\}>Select the vehicle<\/Text>/, 'iOS heading must stay one line and shrink only when necessary, no lower than approximately 18pt');
 assert.match(file, /<Text style=\{\[styles\.subtitle, styles\.iosSubtitle\]\}>/, 'iOS subtitle must wrap instead of squeezing to one line');
+
+// On iOS the subtitle must be inside the left heroCopy column, directly after
+// the title. It must not be rendered after the artwork row (which creates a gap).
+const iosHero = file.split("{Platform.OS === 'ios' ? (")[1]?.split(") : (")[0];
+assert.ok(iosHero, 'The iOS hero branch must exist');
+assert.match(
+  iosHero,
+  /<Text style=\{\[styles\.title, styles\.iosTitle\]\}[^>]*>Select the vehicle<\/Text>\s*<Text style=\{\[styles\.subtitle, styles\.iosSubtitle\]\}>\s*Choose the vehicle involved and we’ll use its active policy\.\s*<\/Text>\s*<\/View>\s*<Image/,
+  'iOS supporting copy must sit immediately under the title inside heroCopy, before the right-side artwork',
+);
+assert.equal((iosHero.match(/styles\.iosSubtitle/g) ?? []).length, 1, 'iOS subtitle must appear exactly once');
+
 assert.doesNotMatch(file, /<Text style=\{\[styles\.subtitle, styles\.iosSubtitle\]\} numberOfLines=\{1\}/, 'iOS supporting copy must not be constrained to one line');
 assert.match(file, /iosEyebrow:\s*\{\s*fontSize:\s*12,/, 'iOS eyebrow size should match approved visual hierarchy');
 assert.match(file, /iosTitle:\s*\{\s*fontSize:\s*22,/, 'iOS heading size should match approved visual hierarchy');
