@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { matchesClaimIntimationDocument } from "@insureit/claim-journey";
-import { completeClaimJourneyStage } from "@/app/claims/stage-actions";
+import { completeClaimJourneyStageWithFeedback } from "@/app/claims/stage-actions";
 import { ClaimStageSuccessPopup } from "@/components/claim-manager/claim-stage-success-popup";
 import { finalDocumentDefinitions, finalDocumentTabs } from "./final-document-groups";
 import { loadFinalClaimIntimationDetails, saveFinalDealershipDetails, saveOperationsInsurerClaimNumber, submitFinalDocumentsDraft } from "./final-documents-actions";
@@ -61,6 +61,7 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
   const [verificationData, setVerificationData] = useState<FinalVerificationData | null>(null);
   const [verificationLoadError, setVerificationLoadError] = useState("");
   const dirtyDetailFieldsRef = useRef<Set<keyof ClaimIntimationDetails>>(new Set());
+  const draftKey = `insureit:operations:final-documents:stage-details:${claimId}`;
   const [details, setDetails] = useState<ClaimIntimationDetails>({
     claim_intimation_date: "",
     dealership_name: dealershipDetails?.dealership_name ?? "",
@@ -78,9 +79,31 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
     }).length;
   }, [rows, verificationData]);
 
+  // Restore only this claim's local unsaved form details (never upload files or
+  // persist verification state in browser storage).
+  useEffect(() => {
+    try {
+      const raw = window.sessionStorage.getItem(draftKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as { at: number; fields: Partial<ClaimIntimationDetails> };
+      if (!saved.at || Date.now() - saved.at > 24 * 60 * 60 * 1000 || !saved.fields) {
+        window.sessionStorage.removeItem(draftKey);
+        return;
+      }
+      const allowed = ["claim_intimation_date", "dealership_name", "dealership_location", "gate_in_date", "estimate_amount"] as const;
+      for (const key of allowed) {
+        if (typeof saved.fields[key] === "string") dirtyDetailFieldsRef.current.add(key);
+      }
+      setDetails(current => {
+        const next = { ...current };
+        for (const key of allowed) if (typeof saved.fields[key] === "string") next[key] = saved.fields[key];
+        return next;
+      });
+    } catch { /* Draft recovery is optional; never block claim work. */ }
+  }, [draftKey]);
+
   useEffect(() => {
     let cancelled = false;
-    dirtyDetailFieldsRef.current = new Set();
 
     loadFinalClaimIntimationDetails(claimId).then((detailsResponse) => {
       if (cancelled || !detailsResponse.ok || !detailsResponse.details) return;
@@ -125,7 +148,11 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
 
   function updateStageDetail<K extends keyof ClaimIntimationDetails>(key: K, value: ClaimIntimationDetails[K]) {
     dirtyDetailFieldsRef.current.add(key);
-    setDetails((current) => ({ ...current, [key]: value }));
+    setDetails((current) => {
+      const next = { ...current, [key]: value };
+      try { window.sessionStorage.setItem(draftKey, JSON.stringify({ at: Date.now(), fields: next })); } catch {}
+      return next;
+    });
   }
 
   function baseForm() {
@@ -148,7 +175,13 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
     setResult(null);
     setPendingAction(label);
     startTransition(async () => {
-      const response = await action();
+      let response: ActionResult;
+      try {
+        response = await action();
+      } catch (error) {
+        console.error("Final document operation rejected", { claimId, action: label, error });
+        response = { ok: false, message: "The request could not be completed. Your entered details are preserved; please try again." };
+      }
       setPendingAction(null);
       if (response.ok) {
         setResult(null);
@@ -183,6 +216,7 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
 
   function saveStageDetails() {
     run("stage-details", () => saveFinalDealershipDetails(stageDetailsForm()), () => {
+      try { window.sessionStorage.removeItem(draftKey); } catch {}
       if (showClaimNumberPrompt) {
         setClaimNumberError("");
         setClaimNumberPromptOpen(true);
@@ -257,8 +291,13 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
       formData.set("estimate_amount", details.estimate_amount);
 
       try {
-        const response = await completeClaimJourneyStage(claimId, formData);
+        const response = await completeClaimJourneyStageWithFeedback(claimId, formData);
         setPendingAction(null);
+        if (!response.ok) {
+          setResult({ ok: false, message: response.message ?? "Unable to complete Claim Intimation." });
+          return;
+        }
+        try { window.sessionStorage.removeItem(draftKey); } catch {}
         setResult(null);
         setSuccessNotice(response.advanced ? "Claim Intimation completed. Work Approval is now open." : "Stage details saved.");
         if (showClaimNumberPrompt) {
@@ -365,6 +404,11 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
         ) : (
           <div className="mt-3 rounded-xl border border-[#E2EAF4] bg-[#FBFCFE] px-4 py-5 text-center text-[11px] font-semibold text-[#68758A]">{verificationLoadError || "Loading documents..."}</div>
         )}
+        {verificationData && verificationData.documents.filter(document => document.verification_status !== "verified" && document.verification_status !== "rejected" && !verificationData.verifications.some(row => row.document_id === document.id && row.is_valid)).length > 0 ? (
+          <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] font-medium text-amber-900">
+            Pending verification: review uploaded documents marked Verify before completing this stage. You can save dealership details separately.
+          </p>
+        ) : null}
         {result && !result.ok ? <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] font-semibold text-red-700">{result.message}</p> : null}
         <div className="mt-4 flex justify-end"><div className="flex items-center gap-3"><button type="button" disabled={isPending} onClick={() => run("draft", () => submitFinalDocumentsDraft(baseForm()))} className="rounded-lg border border-[#D9E3F0] bg-white px-5 py-2 text-[12px] font-semibold text-[#071D49] transition disabled:cursor-not-allowed disabled:bg-[#F1F4F8] disabled:text-[#8A97A8] disabled:opacity-70">{isPending && pendingAction === "draft" ? "Saving..." : "Save as Draft"}</button><button type="button" disabled={isPending} onClick={saveAndContinue} className="rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white disabled:bg-[#A9B4C5]">{isPending && pendingAction === "save-continue" ? "Saving..." : "Save Details"}</button></div></div>
       </section>
