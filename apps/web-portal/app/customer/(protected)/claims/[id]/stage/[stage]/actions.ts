@@ -214,12 +214,16 @@ export async function saveCustomerInternalSpotCorrection(
   const fail = (error: string) => ({ error, saved: false });
   const { account } = await resolveCustomerWebScope(String(form.get("account") || ""));
   const claimId = String(form.get("claim") || "");
-  const { claim, internal_projection } = await loadCustomerClaimDetail(account.id, claimId);
+  const { claim, internal_projection, milestones } = await loadCustomerClaimDetail(account.id, claimId);
   if (isExternalCustomerClaim(claim) || claim.claim_service_mode !== "broker_managed" || !internal_projection || internal_projection.completedStageCount < 1) {
     return fail("Stage 1 corrections are not available for this claim.");
   }
-  // Allow scoped corrections to saved Spot Intimation fields even when later stages
-  // have completed. Do not modify milestone states or claim progression here.
+  // Re-read persisted Stage 2 completion on every submission; a hidden button or
+  // a previously opened edit form is not authorization to modify completed claims.
+  const stageTwoComplete = internal_projection.completedStageCount >= 2 || milestones.some(
+    item => item.milestone_key === "claim_intimation" && ["completed", "not_applicable"].includes(item.milestone_status),
+  );
+  if (stageTwoComplete) return fail("Spot Intimation is locked because Claim Intimation (Stage 2) is complete.");
 
   const accident = String(form.get("accidentAt") || "");
   const spot = String(form.get("spotAt") || "");
