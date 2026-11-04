@@ -29,9 +29,9 @@ export type PartnerRegisterRow = {
   linkedHref: string | null;
   portalAccess: string;
   partnerStatus: string;
+  policyCount: number | null;
   customerCount: number | null;
   netPremium: number | null;
-  mtdNetPremium: number | null;
   payout: number | null;
   active: boolean;
   createType: "posp" | "misp";
@@ -55,6 +55,10 @@ export function PartnerRegisterClient({
   error,
   loadError,
   canPermanentDelete,
+  initialDateFrom,
+  initialDateTo,
+  mtdFrom,
+  mtdTo,
 }: {
   rows: PartnerRegisterRow[];
   canPermanentDelete: boolean;
@@ -63,6 +67,10 @@ export function PartnerRegisterClient({
   success?: string;
   error?: string;
   loadError: boolean;
+  initialDateFrom: string;
+  initialDateTo: string;
+  mtdFrom: string;
+  mtdTo: string;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState(initialSearch);
@@ -70,8 +78,8 @@ export function PartnerRegisterClient({
   const [status, setStatus] = useState(initialFilter);
   const [selectedFilter, setSelectedFilter] = useState<PartnerFilter>(initialFilter || "all");
   const [rmFilter, setRmFilter] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [dateFrom, setDateFrom] = useState(initialDateFrom);
+  const [dateTo, setDateTo] = useState(initialDateTo);
   const [currentPage, setCurrentPage] = useState(1);
   const normalized = search.trim().toLowerCase();
 
@@ -79,11 +87,8 @@ export function PartnerRegisterClient({
   const searchedRows = useMemo(() => normalized ? rows.filter((row) => row.searchText.includes(normalized) || (normalized.replace(/\D/g, "").length >= 3 && row.mobile.replace(/\D/g, "").includes(normalized.replace(/\D/g, "")))) : rows, [normalized, rows]);
   const scopedRows = useMemo(() => searchedRows.filter((row) => {
     if (rmFilter && row.assignedRm !== rmFilter) return false;
-    const date = indiaDateKey(row.onboardingDate);
-    if (dateFrom && date < dateFrom) return false;
-    if (dateTo && date > dateTo) return false;
-    return true;
-  }), [searchedRows, rmFilter, dateFrom, dateTo]);
+    return (row.policyCount ?? 0) > 0;
+  }), [searchedRows, rmFilter]);
   const counts = useMemo(() => scopedRows.reduce((acc, row) => {
     if (row.active) acc.active += 1;
     else acc.onboarding += 1;
@@ -91,14 +96,11 @@ export function PartnerRegisterClient({
   }, { active: 0, onboarding: 0 }), [scopedRows]);
   const visibleRows = useMemo(() => {
     const filtered = status === "active" ? scopedRows.filter((row) => row.active) : status === "onboarding" ? scopedRows.filter((row) => !row.active) : scopedRows;
-    // MTD (India calendar month) ranking BEFORE pagination, including all authorized rows.
-    // Unavailable MTD metrics sort last instead of pretending they are zero.
-    // Stable source order is preserved for equal MTD amounts.
-    return [...filtered].sort((a, b) => {
-      if (a.mtdNetPremium === null) return b.mtdNetPremium === null ? 0 : 1;
-      if (b.mtdNetPremium === null) return -1;
-      return b.mtdNetPremium - a.mtdNetPremium;
-    });
+    // Full authorized result set ranked BEFORE pagination. Every listed partner
+    // has at least one policy issued within the selected date range.
+    return [...filtered].sort((a, b) => (b.netPremium ?? 0) - (a.netPremium ?? 0)
+      || (b.policyCount ?? 0) - (a.policyCount ?? 0)
+      || a.displayName.localeCompare(b.displayName));
   }, [scopedRows, status]);
   const totalRecords = visibleRows.length;
   const totalPages = Math.max(1, Math.ceil(totalRecords / PARTNER_PAGE_SIZE));
@@ -106,19 +108,24 @@ export function PartnerRegisterClient({
   const pageRows = visibleRows.slice(pageStartIndex, pageStartIndex + PARTNER_PAGE_SIZE);
   const showingStart = totalRecords === 0 ? 0 : pageStartIndex + 1;
   const showingEnd = totalRecords === 0 ? 0 : Math.min(pageStartIndex + PARTNER_PAGE_SIZE, totalRecords);
-  const extraFilterCount = Number(Boolean(rmFilter)) + Number(Boolean(dateFrom)) + Number(Boolean(dateTo));
+  const hasCustomRange = Boolean(dateFrom && dateTo && (dateFrom !== mtdFrom || dateTo !== mtdTo));
+  const extraFilterCount = Number(Boolean(rmFilter)) + Number(hasCustomRange);
 
   useEffect(() => {
     const params = new URLSearchParams();
     if (search.trim()) params.set("q", search.trim());
     if (status) params.set("account_status", status);
+    if (initialDateFrom && initialDateTo && (initialDateFrom !== mtdFrom || initialDateTo !== mtdTo)) { params.set("from", initialDateFrom); params.set("to", initialDateTo); }
     const nextUrl = `/intermediaries/partner${params.size ? `?${params.toString()}` : ""}`;
     if (`${window.location.pathname}${window.location.search}` !== nextUrl) window.history.replaceState(null, "", nextUrl);
-  }, [search, status]);
+  }, [search, status, initialDateFrom, initialDateTo, mtdFrom, mtdTo]);
+
+  useEffect(() => { setDateFrom(initialDateFrom); setDateTo(initialDateTo); }, [initialDateFrom, initialDateTo]);
 
   useEffect(() => {
     setCurrentPage((page) => Math.min(page, totalPages));
   }, [totalPages]);
+
   // Keep the ranking fresh without reloading the page or polling in background tabs.
   // New business appears after the next foreground refresh; a new India calendar
   // month recomputes the MTD amount on the next refresh without stored counters.
@@ -154,11 +161,31 @@ export function PartnerRegisterClient({
     setCurrentPage(1);
   }
 
+  function applyBusinessRange(from: string, to: string) {
+    if (!from || !to || from > to) return;
+    const params = new URLSearchParams();
+    if (search.trim()) params.set("q", search.trim());
+    if (status) params.set("account_status", status);
+    if (from !== mtdFrom || to !== mtdTo) { params.set("from", from); params.set("to", to); }
+    router.replace(`/intermediaries/partner${params.size ? `?${params.toString()}` : ""}`, { scroll: false });
+  }
+  function changeFrom(value: string) {
+    const nextTo = value && dateTo && value > dateTo ? "" : dateTo;
+    setDateFrom(value); setDateTo(nextTo); setCurrentPage(1);
+    if (value && nextTo) applyBusinessRange(value, nextTo);
+  }
+  function changeTo(value: string) {
+    const nextFrom = value && dateFrom && value < dateFrom ? "" : dateFrom;
+    setDateFrom(nextFrom); setDateTo(value); setCurrentPage(1);
+    if (value && nextFrom) applyBusinessRange(nextFrom, value);
+  }
+  function resetToMtd() {
+    setDateFrom(mtdFrom); setDateTo(mtdTo); setCurrentPage(1);
+    applyBusinessRange(mtdFrom, mtdTo);
+  }
   function clearExtraFilters() {
     setRmFilter("");
-    setDateFrom("");
-    setDateTo("");
-    setCurrentPage(1);
+    resetToMtd();
   }
 
   return (
@@ -169,10 +196,7 @@ export function PartnerRegisterClient({
       <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
         <IntermediaryTabs active="partner" embedded />
         <div className="flex flex-wrap items-center gap-2 border-b border-[#E7ECF3] bg-[#FAFBFD] px-5 py-3">
-          <div className="mr-1 flex shrink-0 flex-col gap-0.5">
-            <h2 className="whitespace-nowrap text-[12.5px] font-semibold text-[#17203A]">Partner Register</h2>
-            <span className="text-[9px] font-medium text-[#64748B]">Sorted by MTD Net Premium ↓</span>
-          </div>
+          <h2 className="mr-1 whitespace-nowrap text-[12.5px] font-semibold text-[#17203A]">Partner Register</h2>
           <form onSubmit={(event) => event.preventDefault()} className="relative min-w-[240px] flex-1 lg:max-w-[380px]">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94A3B8]" />
             <input value={search} onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }} placeholder="Search partner, mobile, email, ID or RM" className="h-9 w-full rounded-lg border border-[#D8E1EC] bg-white pl-9 pr-3 text-[10.5px] text-[#17203A] outline-none placeholder:text-[#94A3B8] focus:border-[#315FEA] focus:ring-2 focus:ring-[#E6ECFF]" />
@@ -184,9 +208,9 @@ export function PartnerRegisterClient({
           <PartnerDateRangeFilter
             fromDate={dateFrom}
             toDate={dateTo}
-            onFromDateChange={(value) => { setDateFrom(value); setCurrentPage(1); }}
-            onToDateChange={(value) => { setDateTo(value); setCurrentPage(1); }}
-            onClear={() => { setDateFrom(""); setDateTo(""); setCurrentPage(1); }}
+            onFromDateChange={changeFrom}
+            onToDateChange={changeTo}
+            onClear={resetToMtd}
           />
           {extraFilterCount ? <button type="button" onClick={clearExtraFilters} className="h-9 rounded-lg px-2.5 text-[8.5px] font-bold text-[#526178] hover:bg-[#F1F5F9] hover:text-[#17365D]">Clear filters ({extraFilterCount})</button> : null}
           <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5 whitespace-nowrap text-[9.5px] font-semibold">
@@ -195,7 +219,7 @@ export function PartnerRegisterClient({
             <FilterButton label="Onboarding" count={counts.onboarding} active={selectedFilter === "onboarding"} onClick={() => selectFilter("onboarding")} />
           </div>
         </div>
-        {loadError ? <div className="px-4 py-12 text-center text-[11px] text-red-700">The register could not be loaded. Please refresh the page and try again.</div> : pageRows.length ? <PartnerTable rows={pageRows} /> : <div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold">No records found</p><p className="mt-1 text-[10px] text-[#64748B]">Try changing the search, RM, onboarding date or status filter.</p></div>}
+        {loadError ? <div className="px-4 py-12 text-center text-[11px] text-red-700">The register could not be loaded. Please refresh the page and try again.</div> : pageRows.length ? <PartnerTable rows={pageRows} /> : <div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold">No records found</p><p className="mt-1 text-[10px] text-[#64748B]">Try changing the search, RM, business date range or status filter.</p></div>}
         {!loadError ? (
           <div className="flex flex-col gap-3 border-t border-[#E7ECF3] bg-white px-4 py-3.5 text-[10px] text-[#64748B] sm:flex-row sm:items-center sm:justify-between">
             <span>Showing {showingStart}–{showingEnd} of {totalRecords}</span>
@@ -226,7 +250,7 @@ function PartnerDateRangeFilter({
 }) {
   const label = fromDate || toDate
     ? `${fromDate ? shortDate(fromDate) : "Any"} – ${toDate ? shortDate(toDate) : "Any"}`
-    : "Date Range";
+    : "MTD";
   return <details className="group relative">
     <summary className="flex h-9 min-w-[160px] cursor-pointer list-none items-center justify-between gap-2 rounded-lg border border-[#D8E1EC] bg-white px-2.5 text-[9.5px] font-semibold text-[#26374F] outline-none transition hover:border-[#AFC0D4] focus-visible:ring-2 focus-visible:ring-[#315FEA]/10 [&::-webkit-details-marker]:hidden">
       <span className="flex min-w-0 items-center gap-2"><CalendarDays className="h-3.5 w-3.5 shrink-0 text-[#8090A5]" /><span className="truncate">{label}</span></span>
@@ -238,7 +262,7 @@ function PartnerDateRangeFilter({
         <label><span className="mb-1 block text-[8px] font-bold text-[#7C899B]">To</span><input type="date" value={toDate} min={fromDate || undefined} onChange={(event) => onToDateChange(event.target.value)} className="h-9 w-full rounded-lg border border-[#D7E0EA] px-2 text-[9.5px] font-semibold text-[#334155] outline-none focus:border-[#17365D]" /></label>
       </div>
       <div className="mt-2 flex justify-end">
-        <button type="button" onClick={(event) => { onClear(); event.currentTarget.closest("details")?.removeAttribute("open"); }} className="rounded-lg px-2.5 py-1.5 text-[9px] font-bold text-[#64748B] hover:bg-[#F8FAFC]">Clear dates</button>
+        <button type="button" onClick={(event) => { onClear(); event.currentTarget.closest("details")?.removeAttribute("open"); }} className="rounded-lg px-2.5 py-1.5 text-[9px] font-bold text-[#64748B] hover:bg-[#F8FAFC]">Reset to MTD</button>
       </div>
     </div>
   </details>;
@@ -264,7 +288,7 @@ function PartnerTable({ rows }: { rows: PartnerRegisterRow[] }) {
         <th className="w-[11%] px-3 py-3">Status</th>
         <th className="w-[9%] px-3 py-3 text-center">Asso./Branch</th>
         <th className="w-[8%] px-3 py-3 text-right">Customers</th>
-        <th className="w-[10%] px-3 py-3 text-right" title="All-time net premium; sorting is based on current-month MTD">Net Premium</th>
+        <th className="w-[10%] px-3 py-3 text-right">Net Premium</th>
         <th className="w-[9%] px-3 py-3 text-right">Payout</th>
         <th className="w-[10%] px-3 py-3 text-center">Action</th>
       </tr></thead>
@@ -277,7 +301,7 @@ function PartnerTable({ rows }: { rows: PartnerRegisterRow[] }) {
           <td className="px-3 py-3"><Status value={label} tone="account" /></td>
           <td className="px-3 py-3 text-center" title="Associate accounts / registered branches"><span className="inline-flex min-w-[52px] items-center justify-center rounded-md border border-[#BFDBFE] bg-[#EFF6FF] px-2 py-1 font-bold tabular-nums text-[#1D4ED8]">{row.associateCount === null ? "—" : row.associateCount.toLocaleString("en-IN")}/{row.branchCount === null ? "—" : row.branchCount.toLocaleString("en-IN")}</span></td>
           <td className="px-3 py-3 text-right tabular-nums" title={row.customerCount === null ? "Customer attribution unavailable" : undefined}>{row.customerCount === null ? "—" : row.customerCount.toLocaleString("en-IN")}</td>
-          <td className="px-3 py-3 text-right tabular-nums" title={row.netPremium === null ? "Net premium attribution unavailable" : "Lifetime net premium with current-month ranking shown below"}><span>{money(row.netPremium)}</span><span className="mt-0.5 block text-[9px] font-semibold text-[#0F766E]" title="Current-month net premium (India time)">MTD {money(row.mtdNetPremium)}</span></td>
+          <td className="px-3 py-3 text-right tabular-nums" title={row.netPremium === null ? "Net premium attribution unavailable" : undefined}>{money(row.netPremium)}</td>
           <td className="px-3 py-3 text-right tabular-nums" title={row.payout === null ? "Payout attribution unavailable" : undefined}>{money(row.payout)}</td>
           <td className="px-3 py-3 text-center"><div className="flex flex-col items-center gap-1.5">{renderAction(row)}</div></td>
         </tr>;
@@ -291,13 +315,6 @@ function renderAction(row: PartnerRegisterRow) {
   if (!row.active) return <FreshAccountReviewLink href={`/intermediaries/applications/${row.applicationId}`} className={partnerReviewActionClassName}>Review</FreshAccountReviewLink>;
   if (!row.canCreateLinked) return <span className="text-[#94A3B8]">-</span>;
   return <form action={createLinkedIntermediaryAccount}><input type="hidden" name="application_id" value={row.applicationId} /><input type="hidden" name="registration_type" value={row.createType} /><FormSubmitButton label={`Create ${row.createType.toUpperCase()}`} pendingLabel={`Creating ${row.createType.toUpperCase()}...`} className={partnerCreateActionClassName} /></form>;
-}
-
-function indiaDateKey(value: string) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value.slice(0, 10);
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
 }
 
 function Status({ value, tone = "default" }: { value: string; tone?: "default" | "linked" | "portal" | "account" }) {
