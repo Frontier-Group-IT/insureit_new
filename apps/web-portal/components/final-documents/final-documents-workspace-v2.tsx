@@ -149,16 +149,21 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
     setResult(null);
     setPendingAction(label);
     startTransition(async () => {
-      const response = await action();
-      setPendingAction(null);
-      if (response.ok) {
-        setResult(null);
-        setSuccessNotice(response.message || "Changes saved successfully.");
-        onSuccess?.();
-        setTimeout(() => router.refresh(), 0);
-        return;
+      try {
+        const response = await action();
+        if (response.ok) {
+          setResult(null);
+          setSuccessNotice(response.message || "Changes saved successfully.");
+          onSuccess?.();
+          setTimeout(() => router.refresh(), 0);
+          return;
+        }
+        setResult(response);
+      } catch (error) {
+        setResult({ ok: false, message: error instanceof Error ? error.message : "Unable to save claim details." });
+      } finally {
+        setPendingAction(null);
       }
-      setResult(response);
     });
   }
 
@@ -232,7 +237,14 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
     setResult(null);
     setPendingAction("save-continue");
     startTransition(async () => {
-      const saved = await saveFinalDealershipDetails(stageDetailsForm());
+      let saved: ActionResult;
+      try {
+        saved = await saveFinalDealershipDetails(stageDetailsForm());
+      } catch (error) {
+        setPendingAction(null);
+        setResult({ ok: false, message: error instanceof Error ? error.message : "Unable to save claim details." });
+        return;
+      }
       if (!saved.ok) {
         setResult(saved);
         setPendingAction(null);
