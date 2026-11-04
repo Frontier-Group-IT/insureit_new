@@ -179,16 +179,16 @@ export default async function PartnerAssociateAccountsPage({
         </section>
 
         <AccountTabs initialTab={query.tab === "branch" ? "branch" : "associate"} branchForm={branchSections.form} branchRegister={branchSections.register} associateForm={<>
-        <section className="bg-white">
-          <div className="border-b border-[#E7ECF3] px-5 py-3">
-            <h2 className="text-[13px] font-semibold text-[#17203A]">Associate Accounts</h2>
+        <section className="overflow-hidden rounded-xl border border-[#B6CDEF] bg-[#F3F8FF]">
+          <div className="border-b border-[#B6CDEF] bg-[#DCEBFF] px-5 py-3">
+            <h2 className="text-[13px] font-semibold text-[#17457C]">Associate Accounts</h2>
           </div>
           {!canManageAssociates ? (
             <p role="status" className="mx-5 mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] text-amber-900">
               This account can view associate accounts but cannot manage them. Ask an administrator for Intermediary Application Review edit permission and partner access.
             </p>
           ) : null}
-          <form action={createPartnerAssociateAccount} className="space-y-3 px-5 py-3">
+          <form action={createPartnerAssociateAccount} className="space-y-3 bg-[#F3F8FF] px-5 py-3">
             <input type="hidden" name="application_id" value={id} />
             <input type="hidden" name="intermediary_id" value={intermediary.id} />
             <input type="hidden" name="return_path" value={returnPath} />
