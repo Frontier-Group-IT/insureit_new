@@ -4,6 +4,7 @@ import { CalendarDays, ChevronDown, Download, SlidersHorizontal } from "lucide-r
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { ReportDateRangePicker } from "@/components/reports/report-date-range-picker";
+import { usePartnerReportsPending } from "@/components/partner-portal/partner-reports-loading";
 
 type FilterOption = { value: string; label: string };
 type Props = {
@@ -44,6 +45,8 @@ export function PartnerReportsFilters({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const setReportPending = usePartnerReportsPending();
+  useEffect(() => { setReportPending(isPending); }, [isPending, setReportPending]);
   const [draftPeriod, setDraftPeriod] = useState(period);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -81,6 +84,7 @@ export function PartnerReportsFilters({
       else next.set(key, value);
     }
     const qs = next.toString();
+    setReportPending(true);
     startTransition(() => router.replace(qs ? pathname + "?" + qs : pathname, { scroll: false }));
   }
 
@@ -190,17 +194,7 @@ export function PartnerReportsFilters({
         </div>
       ) : null}
 
-      {isPending ? <div role="status" aria-live="polite" className="pointer-events-none absolute inset-x-0 top-[calc(100%+12px)] z-40 rounded-xl border border-[#E2E8F0] bg-[#F6F8FC]/95 p-4 shadow-lg" aria-label="Updating report records">
-        <div className="mb-3 h-3 w-48 animate-pulse rounded bg-[#CBD5E1]" />
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-          {Array.from({length:4},(_,index)=><div key={index} className="h-16 animate-pulse rounded-lg bg-[#E2E8F0]"/>) }
-        </div>
-        <div className="mt-3 grid gap-3 md:grid-cols-2">
-          <div className="h-44 animate-pulse rounded-lg bg-[#E2E8F0]" />
-          <div className="h-44 animate-pulse rounded-lg bg-[#E2E8F0]" />
-        </div>
-        <span className="sr-only">Loading updated report records</span>
-      </div> : null}
+
       <a href={exportHref} className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg bg-[#1166ad] px-4 text-[11px] font-bold text-white hover:bg-[#0e5795]">
         <Download size={15} /> Export
       </a>
