@@ -53,8 +53,12 @@ assert.doesNotMatch(read("components/partner-portal/partner-mobile-navigation.ts
 assert.match(read(pages[1][0]), /const pageSize = 100/, "Business loading must match RPC page cap");
 assert.match(read("app/partner/business/export/route.ts"), /const pageSize = 100/, "Business export must match RPC page cap");
 const overview = read(pages[0][0]);
-assert.match(overview, /name="period"/, "Overview must expose a date period filter");
-assert.match(overview, /name="business"/, "Overview must expose a business category filter");
+const reportFilters = read("components/partner-portal/partner-reports-filters.tsx");
+assert.match(overview, /<PartnerReportsFilters/, "Overview must expose the shared report filters");
+assert.match(read(pages[1][0]), /<PartnerReportsFilters/, "Business must expose the shared report filters");
+assert.match(reportFilters, /aria-label="Report period"/, "Shared filters must expose date period selection");
+assert.match(reportFilters, /aria-label="Business type"/, "Shared filters must expose business category selection");
+assert.match(reportFilters, /ReportDateRangePicker/, "Custom period must reuse the RM date range calendar");
 assert.match(overview, /scopedPolicyRows\(\)/, "Overview must use scoped policy rows");
 assert.match(overview, /filtered\.reduce/, "Premium must derive from filtered scoped rows");
 assert.match(overview, /points={trendPoints}/, "Trend must respond to the chosen scope");
