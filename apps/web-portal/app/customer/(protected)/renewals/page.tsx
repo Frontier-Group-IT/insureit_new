@@ -30,6 +30,8 @@ export default async function CustomerRenewalsPage({
     key: summary.key,
     title: summary.title,
     count: summary.total_pending,
+    due: summary.due,
+    expired: summary.expired,
   }));
   return (
     <div className="space-y-3">
