@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
 import { useState, useTransition } from "react";
 import { verifyClaimDocumentWithAdditionalUploadCompat } from "@/app/claims/[id]/claim-document-verification-compat-actions";
 import { verifySpotSurveyDetail } from "@/app/claims/[id]/spot-survey-actions";
@@ -17,6 +18,7 @@ export function VerifyDocumentButton({ claimId, documentId, disabled = false }: 
 
   return (
     <div className="min-w-0">
+      <ClaimStageErrorDialog message={state && !state.ok ? state.message ?? "Verification failed." : null} onClose={() => setState(null)} />
       <button
         type="button"
         disabled={disabled || isPending}
@@ -26,16 +28,20 @@ export function VerifyDocumentButton({ claimId, documentId, disabled = false }: 
             const formData = new FormData();
             formData.set("claimId", claimId);
             formData.set("documentId", documentId);
-            const result = await verifyClaimDocumentWithAdditionalUploadCompat(formData);
-            setState(result);
-            if (result.ok) router.refresh();
+            try {
+              const result = await verifyClaimDocumentWithAdditionalUploadCompat(formData);
+              setState(result);
+              if (result.ok) router.refresh();
+            } catch (error) {
+              setState({ ok: false, message: error instanceof Error ? error.message : "Verification failed. Please try again." });
+            }
           });
         }}
         className="h-8 w-full rounded-md border border-[#16A36A] bg-white text-[12px] font-semibold text-[#16895C] transition hover:bg-[#F2FBF7] disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400"
       >
         {isPending ? "Verifying..." : state?.ok ? "Verified" : "Verify"}
       </button>
-      {state && !state.ok ? <p className="mt-1 text-[10px] leading-4 text-red-600">{state.message ?? "Verification failed"}</p> : null}
+      
     </div>
   );
 }
@@ -47,6 +53,7 @@ export function VerifyDetailButton({ claimId, detailKey, detailLabel, detailValu
 
   return (
     <div className="min-w-0">
+      <ClaimStageErrorDialog message={state && !state.ok ? state.message ?? "Verification failed." : null} onClose={() => setState(null)} />
       <button
         type="button"
         disabled={disabled || isPending}
@@ -58,16 +65,20 @@ export function VerifyDetailButton({ claimId, detailKey, detailLabel, detailValu
             formData.set("detailKey", detailKey);
             formData.set("detailLabel", detailLabel);
             formData.set("detailValue", detailValue);
-            const result = await verifySpotSurveyDetail(formData);
-            setState(result);
-            if (result.ok) router.refresh();
+            try {
+              const result = await verifySpotSurveyDetail(formData);
+              setState(result);
+              if (result.ok) router.refresh();
+            } catch (error) {
+              setState({ ok: false, message: error instanceof Error ? error.message : "Verification failed. Please try again." });
+            }
           });
         }}
         className="h-8 w-full rounded-md border border-[#16A36A] bg-white text-[12px] font-semibold text-[#16895C] transition hover:bg-[#F2FBF7] disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400"
       >
         {isPending ? "Verifying..." : state?.ok ? "Verified" : "Verify"}
       </button>
-      {state && !state.ok ? <p className="mt-1 text-[10px] leading-4 text-red-600">{state.message ?? "Verification failed"}</p> : null}
+      
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { FilePenLine, FilePlus2 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
 import {
   cancelClaimDocumentUploads,
   finalizeClaimDocumentUpload,
@@ -192,7 +193,7 @@ export function ReplaceDocumentButton({ claimId, documentId, documentType, label
             </div> : <p className="mt-2 rounded-lg border border-[#DCE7F5] bg-[#F8FBFF] px-3 py-3 text-[12px] text-[#8B98A9]">No files selected.</p>}
             {progress ? <p role="status" className="mt-2 text-[11px] font-medium text-[#174EA6]">{progress}</p> : null}
           </div>
-          {result ? <p className={`rounded-lg border px-3 py-2 text-[12px] font-semibold ${result.ok ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>{result.message ?? (result.ok ? (isReplaceAction ? "Replacement completed." : "Upload completed.") : (isReplaceAction ? "Replacement failed." : "Upload failed."))}</p> : null}
+          {result?.ok ? <p className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-[12px] font-semibold text-green-700">{result.message ?? "Upload completed."}</p> : null}
         </div>
 
         <div className="flex items-center justify-between border-t border-[#E6EEF7] px-5 py-4">
@@ -208,6 +209,7 @@ export function ReplaceDocumentButton({ claimId, documentId, documentType, label
 
   return (
     <>
+      <ClaimStageErrorDialog message={result && !result.ok ? result.message ?? "Unable to upload document." : null} onClose={() => setResult(null)} />
       <button
         type="button"
         disabled={isReplaceAction && !documentId}

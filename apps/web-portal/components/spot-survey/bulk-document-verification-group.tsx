@@ -3,6 +3,7 @@
 import Link from "next/link";
 import motionStyles from "./claim-document-motion.module.css";
 import { ClaimDocumentDeleteConfirmation } from "@/components/claim-manager/claim-document-delete-confirmation";
+import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
 import Image from "next/image";
 import { Shield, ShieldCheck, Trash2, Mic, Video } from "lucide-react";
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
@@ -174,13 +175,14 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
   const router = useRouter();
   const [deletePending, setDeletePending] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const confirmDelete = async () => {
     setDeletePending(true);
     try {
       const result = await deleteVerifiedSpotSurveyDocument(claim.id, document.id);
-      if (!result.ok) window.alert(result.message ?? 'Document could not be deleted.');
+      if (!result.ok) { setDeleteOpen(false); setDeleteError(result.message ?? 'Document could not be deleted.'); }
       else { setDeleteOpen(false); router.refresh(); }
-    } catch { window.alert('Document could not be deleted.'); }
+    } catch { setDeleteOpen(false); setDeleteError('Document could not be deleted.'); }
     finally { setDeletePending(false); }
   };
   const normalizedDocumentType = document.document_type?.toLowerCase() ?? "";
@@ -218,6 +220,7 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
       </div>
       {rejected ? <p className="sr-only">{document.rejection_reason ?? "Customer reupload requested."}</p> : null}
       {deleteOpen ? <ClaimDocumentDeleteConfirmation filename={document.file_name} pending={deletePending} onCancel={() => setDeleteOpen(false)} onConfirm={() => void confirmDelete()} /> : null}
+      <ClaimStageErrorDialog message={deleteError} onClose={() => setDeleteError(null)} />
     </div>
   );
 }
