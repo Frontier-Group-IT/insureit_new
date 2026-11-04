@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
-import { createServerSupabaseClient } from "@/lib/auth-server";
+import { createCustomerServerSupabaseClient } from "@/lib/auth-server";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
 import { CustomerRcLookup } from "@/components/customer-portal/customer-rc-lookup";
 import { CustomerVehicleForm, type SaveVehicleState } from "./customer-vehicle-form";
@@ -44,7 +44,7 @@ export default async function AddCustomerVehicle({ searchParams }: { searchParam
       pucDate=date("pucDate"); roadTaxDate=date("roadTaxDate");
       nationalPermitDate=date("nationalPermitDate"); localPermitDate=date("localPermitDate");
     } catch { return { error: "Enter a valid date in the vehicle details." }; }
-    const db=await createServerSupabaseClient();
+    const db=await createCustomerServerSupabaseClient();
     const { error }=await (db.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>)("create_customer_vehicle_v2",{
       p_customer_id:authorized.id,p_vehicle_no:reg,p_vehicle_type:klass,p_make:make,p_model:model,p_year:year,
       p_chassis_no:String(form.get("chassis")||"").trim().toUpperCase()||null,
