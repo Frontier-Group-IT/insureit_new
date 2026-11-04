@@ -27,6 +27,7 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
   const closeError = useCallback(() => setDialogError(null), []);
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncSequence = useRef(0);
+  const syncQueue = useRef<Promise<void>>(Promise.resolve());
   const [syncState, setSyncState] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   const storageKey = "insureit:customer-spot-draft:" + draftKey;
@@ -75,9 +76,10 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
     if (!values) return;
     const sequence = ++syncSequence.current;
     setSyncState("saving");
-    void saveServerDraft(values).then((result) => {
-      if (sequence !== syncSequence.current) return;
-      setSyncState(result.ok ? "saved" : "error");
+    // Serialize writes: a slower previous request must never overwrite newer typing.
+    syncQueue.current = syncQueue.current.catch(() => {}).then(async () => {
+      const result = await saveServerDraft(values);
+      if (sequence === syncSequence.current) setSyncState(result.ok ? "saved" : "error");
     }).catch(() => {
       if (sequence === syncSequence.current) setSyncState("error");
     });
